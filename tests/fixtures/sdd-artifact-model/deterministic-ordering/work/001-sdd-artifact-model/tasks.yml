@@ -1,0 +1,20 @@
+schemaVersion: 1
+tasks:
+  - id: T002
+    title: Second task
+    status: pending
+    owner: codex
+    requirements: [FR-002]
+    decisions: [DEC-002]
+    dependencies: [T001]
+    requiredSkills: [fs-gg-sdd-project]
+    requiredEvidence: [EV002]
+  - id: T001
+    title: First task
+    status: pending
+    owner: codex
+    requirements: [FR-001]
+    decisions: [DEC-001]
+    dependencies: []
+    requiredSkills: [fs-gg-sdd-project]
+    requiredEvidence: [EV001]

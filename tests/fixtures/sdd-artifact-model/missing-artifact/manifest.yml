@@ -1,0 +1,6 @@
+schemaVersion: 1
+id: missing-artifact
+purpose: Missing required lifecycle files produce missingArtifact diagnostics.
+expectedDiagnostics:
+  - missingArtifact
+expectedBlocking: true

@@ -1,0 +1,10 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  FS.GG.SDD.Artifacts -> /home/developer/projects/FS.GG.SDD/src/FS.GG.SDD.Artifacts/bin/Release/net10.0/FS.GG.SDD.Artifacts.dll
+  FS.GG.SDD.Artifacts.Tests -> /home/developer/projects/FS.GG.SDD/tests/FS.GG.SDD.Artifacts.Tests/bin/Release/net10.0/FS.GG.SDD.Artifacts.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:01.32

@@ -1,0 +1,7 @@
+schemaVersion: 1
+id: malformed-schema-version
+purpose: Malformed and unsupported schema versions produce schema diagnostics.
+expectedDiagnostics:
+  - malformedSchemaVersion
+  - unsupportedSchemaVersion
+expectedBlocking: true

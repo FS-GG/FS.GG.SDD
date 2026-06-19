@@ -1,0 +1,11 @@
+schemaVersion: 1
+tasks:
+  - id: T001
+    title: References unknown graph nodes
+    status: pending
+    owner: codex
+    requirements: [FR-999]
+    decisions: [DEC-999]
+    dependencies: [T999]
+    requiredSkills: [fs-gg-sdd-project]
+    requiredEvidence: [EV999]

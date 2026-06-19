@@ -208,6 +208,9 @@ Progress markers:
 - [x] Replace copied Governance-only roadmap with an SDD-scoped plan.
 - [x] Expand this plan to cover the full `initial-design.md` design with
   explicit owner boundaries.
+- [x] Implement `001-sdd-artifact-model` as the first packable SDD artifact
+  model library with fixtures, diagnostics, deterministic JSON, optional
+  Governance boundary contracts, and readiness evidence.
 
 ### Phase 1: SDD Artifact Model
 
@@ -216,30 +219,34 @@ Owner: `FS.GG.SDD`.
 Purpose: define the typed lifecycle contract before SDD commands or generators
 exist.
 
-- [ ] Create the first feature spec for `001-sdd-artifact-model`.
-- [ ] Define `WorkId`, `Stage`, `RequirementId`, `DecisionId`, `TaskId`,
+- [x] Create the first feature spec for `001-sdd-artifact-model`.
+- [x] Define `WorkId`, `Stage`, `RequirementId`, `DecisionId`, `TaskId`,
   `EvidenceId`, `ArtifactRef`, `SchemaVersion`, source digest, and generator
   version types.
-- [ ] Specify SDD-owned schemas for `.fsgg/project.yml`, `.fsgg/sdd.yml`, and
+- [x] Specify SDD-owned schemas for `.fsgg/project.yml`, `.fsgg/sdd.yml`, and
   `.fsgg/agents.yml`.
-- [ ] Specify schemas for `work/<id>` metadata, structured front matter where
+- [x] Specify schemas for `work/<id>` metadata, structured front matter where
   used, `tasks.yml`, and `evidence.yml`.
-- [ ] Define diagnostic ids for missing artifacts, malformed schema versions,
+- [x] Define diagnostic ids for missing artifacts, malformed schema versions,
   duplicate ids, unknown references, stale generated views, and
   prose/structured mismatch.
-- [ ] Define the first SDD lifecycle rule contracts for required spec sections,
+- [x] Define the first SDD lifecycle rule contracts for required spec sections,
   plan obligations, task graph shape, evidence declarations, loaded skills, and
   test obligations.
-- [ ] Express lifecycle rules in a Governance-compatible check model without
+- [x] Express lifecycle rules in a Governance-compatible check model without
   implementing route/profile/freshness/gate semantics in SDD.
-- [ ] Define conflict behavior for requirement ids, task references, decision
+- [x] Define conflict behavior for requirement ids, task references, decision
   references, status, dependency, owner, and required-evidence disagreement.
-- [ ] Add `.fsi` signatures before implementation.
-- [ ] Add semantic tests for schema validation, id stability, conflict
+- [x] Add `.fsi` signatures before implementation.
+- [x] Add semantic tests for schema validation, id stability, conflict
   diagnostics, stale-view diagnostics, and deterministic ordering.
-- [ ] Record compatibility boundaries for Governance-owned `.fsgg/policy.yml`,
+- [x] Record compatibility boundaries for Governance-owned `.fsgg/policy.yml`,
   `.fsgg/capabilities.yml`, and `.fsgg/tooling.yml` without implementing
   Governance semantics.
+
+Status: complete on 2026-06-19. The implemented library is
+`src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj`; verification evidence is
+recorded in `specs/001-sdd-artifact-model/readiness/`.
 
 Exit criteria:
 

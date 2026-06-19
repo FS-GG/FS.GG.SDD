@@ -1,0 +1,5 @@
+schemaVersion: 1
+id: valid-work-item
+purpose: Representative SDD work item with zero blocking diagnostics.
+expectedDiagnostics: []
+expectedBlocking: false

@@ -1,0 +1,6 @@
+schemaVersion: 1
+id: prose-structured-mismatch
+purpose: Prose and structured lifecycle state disagreement is visible.
+expectedDiagnostics:
+  - proseStructuredMismatch
+expectedBlocking: false

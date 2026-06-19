@@ -9,10 +9,9 @@ agents, CLI tools, and optional Governance gates the same contract.
 Its lifecycle checks are expressed as Governance-compatible rules for artifact
 shape, required skills, evidence obligations, and expected tests.
 
-This repository is intentionally scaffold-only right now. It contains the Spec
-Kit setup, the project constitution, agent guidance for Claude and Codex, and
-the design/implementation plan. Product code will be added only through normal
-Spec Kit feature work.
+This repository started scaffold-only. The first Spec Kit feature,
+`001-sdd-artifact-model`, now adds the initial packable F# artifact-model
+library and fixture-backed tests for the SDD lifecycle contract.
 
 ## Scope
 
@@ -36,7 +35,7 @@ freshness, routing, profiles, and gate enforcement belong in
 - Spec Kit initialized under `.specify/`.
 - F# constitution ratified for this SDD product.
 - Claude and Codex guidance files are present.
-- No source projects are present yet.
+- `FS.GG.SDD.Artifacts` defines the first typed lifecycle artifact model.
 - The detailed implementation roadmap lives in
   [docs/initial-implementation-plan.md](docs/initial-implementation-plan.md).
 

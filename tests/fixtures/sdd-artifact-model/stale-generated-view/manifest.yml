@@ -1,0 +1,6 @@
+schemaVersion: 1
+id: stale-generated-view
+purpose: Generated-view metadata with stale generator version is diagnosed.
+expectedDiagnostics:
+  - staleGeneratedView
+expectedBlocking: true

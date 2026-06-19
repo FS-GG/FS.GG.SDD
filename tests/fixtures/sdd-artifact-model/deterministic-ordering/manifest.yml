@@ -1,0 +1,5 @@
+schemaVersion: 1
+id: deterministic-ordering
+purpose: Differently ordered inputs serialize deterministically.
+expectedDiagnostics: []
+expectedBlocking: false

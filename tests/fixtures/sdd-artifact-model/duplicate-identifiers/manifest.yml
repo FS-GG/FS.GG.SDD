@@ -1,0 +1,6 @@
+schemaVersion: 1
+id: duplicate-identifiers
+purpose: Duplicate lifecycle identifiers produce actionable diagnostics.
+expectedDiagnostics:
+  - duplicateIdentifier
+expectedBlocking: true

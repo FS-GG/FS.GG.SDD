@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>FS.GG.SDD.Artifacts</PackageId>
+    <Version>0.1.0</Version>
+    <Description>Typed lifecycle artifact contracts for FS.GG.SDD.</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Identifiers.fsi" />
+    <Compile Include="Identifiers.fs" />
+    <Compile Include="SchemaVersion.fsi" />
+    <Compile Include="SchemaVersion.fs" />
+    <Compile Include="ArtifactRef.fsi" />
+    <Compile Include="ArtifactRef.fs" />
+    <Compile Include="Diagnostics.fsi" />
+    <Compile Include="Diagnostics.fs" />
+    <Compile Include="GenerationManifest.fsi" />
+    <Compile Include="GenerationManifest.fs" />
+    <Compile Include="LifecycleArtifacts.fsi" />
+    <Compile Include="LifecycleArtifacts.fs" />
+    <Compile Include="LifecycleRuleContracts.fsi" />
+    <Compile Include="LifecycleRuleContracts.fs" />
+    <Compile Include="WorkModel.fsi" />
+    <Compile Include="WorkModel.fs" />
+    <Compile Include="Serialization.fsi" />
+    <Compile Include="Serialization.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FSharp.Core" />
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+</Project>

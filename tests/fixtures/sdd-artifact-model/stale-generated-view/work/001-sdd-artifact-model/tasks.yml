@@ -1,0 +1,11 @@
+schemaVersion: 1
+tasks:
+  - id: T001
+    title: Stale view fixture task
+    status: pending
+    owner: codex
+    requirements: [FR-001]
+    decisions: [DEC-001]
+    dependencies: []
+    requiredSkills: [fs-gg-sdd-project]
+    requiredEvidence: [EV001]

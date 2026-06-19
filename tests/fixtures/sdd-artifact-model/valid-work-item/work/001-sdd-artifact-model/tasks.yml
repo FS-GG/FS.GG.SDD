@@ -1,0 +1,20 @@
+schemaVersion: 1
+tasks:
+  - id: T001
+    title: Add public signatures for lifecycle identifiers
+    status: pending
+    owner: codex
+    requirements: [FR-001]
+    decisions: [DEC-001]
+    dependencies: []
+    requiredSkills: [fs-gg-sdd-project]
+    requiredEvidence: [EV001]
+  - id: T002
+    title: Add project artifact schema contracts
+    status: pending
+    owner: codex
+    requirements: [FR-002, FR-003]
+    decisions: [DEC-001]
+    dependencies: [T001]
+    requiredSkills: [fs-gg-sdd-project]
+    requiredEvidence: [EV002]

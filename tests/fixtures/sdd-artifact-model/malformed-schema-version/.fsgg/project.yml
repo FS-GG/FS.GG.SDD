@@ -1,0 +1,8 @@
+schemaVersion: banana
+project:
+  id: fs-gg-sdd
+  defaultWorkRoot: work
+sdd:
+  schemaVersion: 1
+  config: .fsgg/sdd.yml
+  agents: .fsgg/agents.yml

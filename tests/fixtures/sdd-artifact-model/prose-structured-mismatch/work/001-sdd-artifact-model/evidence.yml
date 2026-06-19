@@ -1,0 +1,10 @@
+schemaVersion: 1
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    artifacts: [tests/FS.GG.SDD.Artifacts.Tests/WorkModelTests.fs]
+    result: pending
+    synthetic: false

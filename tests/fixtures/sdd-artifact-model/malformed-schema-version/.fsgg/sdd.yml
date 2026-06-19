@@ -1,0 +1,10 @@
+schemaVersion: 2
+lifecycle:
+  stages: [specify, plan, tasks]
+artifacts:
+  workRoot: work
+  readinessRoot: readiness
+generatedViews:
+  requireSourceDigests: true
+  requireGeneratorVersion: true
+  staleBehavior: diagnostic

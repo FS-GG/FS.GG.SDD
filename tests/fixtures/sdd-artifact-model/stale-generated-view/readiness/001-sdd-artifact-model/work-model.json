@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "modelVersion": "1.0.0",
+  "workId": "001-sdd-artifact-model",
+  "generatedViews": [
+    {
+      "path": "readiness/001-sdd-artifact-model/work-model.json",
+      "kind": "workModel",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "0.0.0"
+      },
+      "sources": []
+    }
+  ]
+}

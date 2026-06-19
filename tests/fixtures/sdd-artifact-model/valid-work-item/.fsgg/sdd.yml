@@ -1,0 +1,27 @@
+schemaVersion: 1
+lifecycle:
+  stages:
+    - charter
+    - specify
+    - clarify
+    - checklist
+    - plan
+    - tasks
+    - analyze
+    - implement
+    - evidence
+    - verify
+    - ship
+artifacts:
+  workRoot: work
+  readinessRoot: readiness
+  specFile: spec.md
+  planFile: plan.md
+  tasksFile: tasks.yml
+  evidenceFile: evidence.yml
+generatedViews:
+  requireSourceDigests: true
+  requireGeneratorVersion: true
+  staleBehavior: diagnostic
+migrations:
+  unsupportedVersionBehavior: diagnostic

@@ -1,0 +1,7 @@
+schemaVersion: 1
+id: unknown-reference
+purpose: Unknown task, requirement, decision, and evidence references are diagnosed.
+expectedDiagnostics:
+  - unknownReference
+  - workModelInconsistent
+expectedBlocking: true
