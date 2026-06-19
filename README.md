@@ -2,6 +2,13 @@
 
 Spec-driven development lifecycle tooling for FS.GG.
 
+FS.GG.SDD is the consumer-facing product a project team uses to develop its own
+projects through SDD: initialize a lifecycle skeleton, author specs and plans,
+generate typed task/evidence models, produce readiness views, and give humans,
+agents, CLI tools, and optional Governance gates the same contract.
+Its lifecycle checks are expressed as Governance-compatible rules for artifact
+shape, required skills, evidence obligations, and expected tests.
+
 This repository is intentionally scaffold-only right now. It contains the Spec
 Kit setup, the project constitution, agent guidance for Claude and Codex, and
 the design/implementation plan. Product code will be added only through normal

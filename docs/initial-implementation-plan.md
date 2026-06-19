@@ -3,15 +3,16 @@ title: Initial implementation plan
 category: SDD
 categoryindex: 6
 index: 12
-description: Implementation plan for the FS.GG governance capability design, with explicit SDD, Governance, Rendering, and generated-product ownership.
+description: Implementation plan for the FS.GG.SDD consumer product design, with explicit SDD, Governance, Rendering, and generated-product ownership.
 ---
 
 # Initial implementation plan
 
-This is the implementation plan for the full FS.GG capability design in
+This is the implementation plan for the FS.GG.SDD consumer product design in
 [initial-design.md](initial-design.md). It is maintained in this repository
-because FS.GG.SDD owns the native spec-driven development lifecycle, but the
-plan covers more than this repository.
+because FS.GG.SDD owns the native spec-driven development lifecycle. The plan
+also names optional Governance, Rendering, and generated-product work where the
+consumer workflow crosses repository boundaries.
 
 The design is implemented by coordinated work across:
 
@@ -24,6 +25,17 @@ The design is implemented by coordinated work across:
 
 FS.GG.SDD remains independently buildable and usable without Governance
 installed. Governance integration is optional and versioned.
+
+Implementation is driven by the consumer experience:
+
+| Consumer need | Product response |
+|---|---|
+| Start a project without hidden FS.GG repository knowledge. | `fsgg-sdd init` creates the SDD skeleton, work root, policy pointers, and agent guidance targets. |
+| Turn intent into executable work. | Charter, spec, clarify, checklist, plan, tasks, evidence, verify, and ship share one typed lifecycle model. |
+| Know what artifacts must contain. | SDD lifecycle rules define valid spec/plan/task/evidence shape, loaded-skill expectations, and test obligations. |
+| Use agents safely. | Claude and Codex guidance is generated from the lifecycle model and cannot become a second source of truth. |
+| Keep local authoring cheap. | SDD validates lifecycle artifacts and generated-view currency before optional broad product gates. |
+| Add protected-boundary rigor later. | SDD emits versioned readiness JSON that Governance can inspect for routing, freshness, profiles, and enforcement. |
 
 ## Development Workflow
 
@@ -69,7 +81,9 @@ products.
 
 | Design area | Primary owner | Implementation track |
 |---|---|---|
+| Consumer SDD experience | `FS.GG.SDD` | `fsgg-sdd init`, lifecycle commands, readable diagnostics, quickstart, migration, and no-Governance workflow. |
 | Native SDD lifecycle | `FS.GG.SDD` | Artifact model, work model, lifecycle commands, task/evidence state, agent guidance. |
+| Lifecycle rule pack | `FS.GG.SDD` with Governance machinery | Spec/plan/task/evidence contracts, skill requirements, test obligations, and Governance-compatible checks. |
 | Normalized work model | `FS.GG.SDD` | `WorkModel` assembly, source digests, conflict diagnostics, deterministic JSON. |
 | Capability catalog MVP | `FS.GG.Governance` | `.fsgg/capabilities.yml`, path map, surfaces, checks, governed-root classification. |
 | Project policy and tooling | `FS.GG.Governance` | `.fsgg/policy.yml`, `.fsgg/tooling.yml`, profile, command, timeout, and environment schemas. |
@@ -99,7 +113,7 @@ products.
 - Generated views are outputs. Their presence is not proof of currency.
 - Agent-reviewed findings are advisory until cache, prompt-isolation,
   confidence, and calibration constraints are implemented.
-- SDD must remain useful without Governance installed.
+- SDD must remain useful without the Governance gate runtime installed.
 
 ## Command Naming
 
@@ -213,6 +227,11 @@ exist.
 - [ ] Define diagnostic ids for missing artifacts, malformed schema versions,
   duplicate ids, unknown references, stale generated views, and
   prose/structured mismatch.
+- [ ] Define the first SDD lifecycle rule contracts for required spec sections,
+  plan obligations, task graph shape, evidence declarations, loaded skills, and
+  test obligations.
+- [ ] Express lifecycle rules in a Governance-compatible check model without
+  implementing route/profile/freshness/gate semantics in SDD.
 - [ ] Define conflict behavior for requirement ids, task references, decision
   references, status, dependency, owner, and required-evidence disagreement.
 - [ ] Add `.fsi` signatures before implementation.
@@ -228,6 +247,8 @@ Exit criteria:
 - Public signatures define the SDD machine contract.
 - Fixtures cover valid, malformed, duplicate-id, unknown-reference,
   prose/structured mismatch, and stale-view cases.
+- Lifecycle rule fixtures explain what a consumer must fix in specs, plans,
+  tasks, evidence, skills, and test declarations.
 - The plan for every lifecycle artifact identifies authored source, structured
   model, generated view, stale behavior, and diagnostics.
 
@@ -360,6 +381,10 @@ turning SDD into the Governance rule engine.
 
 - [ ] Validate task graph structure, dependencies, ids, owners, required skills,
   required evidence, and status transitions.
+- [ ] Check that required Claude/Codex skills or capability tags are available
+  before agent-driven task execution.
+- [ ] Derive required test/evidence obligations from lifecycle rules and changed
+  artifact impact.
 - [ ] Parse and normalize evidence declarations.
 - [ ] Distinguish real evidence, accepted deferrals, missing evidence, and
   synthetic evidence disclosures.
@@ -381,6 +406,8 @@ Exit criteria:
   Governance consumers.
 - Missing, stale, synthetic, and deferred evidence produces actionable
   diagnostics.
+- Task readiness explains missing skills and missing tests before implementation
+  or ship.
 
 ### Phase 7: Generated Views And Refresh
 
@@ -451,7 +478,7 @@ Purpose: make FS.GG.SDD useful for new products and existing Spec Kit projects.
   itself.
 - [ ] Add quickstart docs for `fsgg-sdd init` through `fsgg-sdd ship`.
 - [ ] Add smoke tests that create a temporary SDD project and run the lifecycle
-  without Governance installed.
+  without the Governance gate runtime installed.
 - [ ] Document how Governance can add `.fsgg/policy.yml`,
   `.fsgg/capabilities.yml`, and `.fsgg/tooling.yml` after SDD initialization.
 
@@ -608,12 +635,13 @@ catalog before the full lifecycle command suite is complete.
 
 | Design acceptance item | Planned coverage |
 |---|---|
-| Start as a greenfield project through `fsgg new`. | SDD bootstrap and migration phase; optional template-provider delegation. |
+| Start as a greenfield project through `fsgg-sdd init`. | SDD bootstrap and migration phase; optional template-provider delegation. |
 | Spec-drive work through charter, specify, clarify, checklist, plan, tasks, analyze, implement, verify, and ship. | SDD artifact model, work model, lifecycle commands, task/evidence, verify, and ship phases. |
 | Declare project policy, capabilities, work, and evidence in `.fsgg` and `work/<id>`. | SDD source model plus Governance policy, capability, and tooling schemas. |
-| Route a local scoped change cheaply and explain selected gates. | Governance ship skeleton, route parity, cost/cache, and capability expansion phases. |
-| Distinguish routine unclassified files from unknown governed paths. | Governance catalog MVP and route parity phases. |
-| Run `fsgg ship --mode gate --profile standard --json` as a protected boundary before the full lifecycle suite is complete. | Governance ship walking skeleton phase. |
+| Produce deterministic SDD readiness without the Governance gate runtime installed. | SDD work model, lifecycle commands, verify, ship, generated views, and refresh phases. |
+| Route a local scoped change cheaply and explain selected gates. | Optional Governance ship skeleton, route parity, cost/cache, and capability expansion phases. |
+| Distinguish routine unclassified files from unknown governed paths. | Optional Governance catalog MVP and route parity phases. |
+| Run `fsgg ship --mode gate --profile standard --json` as a protected boundary after SDD readiness exists. | Governance ship walking skeleton phase. |
 | Refresh generated views from declared sources and detect drift. | Shared generated views and refresh phase. |
 | Validate public package surfaces, docs, examples, skills, design artifacts, generated consumers, and release metadata. | Governance capability and product adapter expansion plus release readiness phases. |
 | Cache fresh expensive evidence and rerun only when inputs change. | Governance cost, cache, and provenance phase. |
@@ -638,27 +666,37 @@ catalog before the full lifecycle command suite is complete.
 
 ## Acceptance Bar
 
-The full design is implemented when a generated product can:
+The SDD consumer product is implemented when a consumer can:
 
-1. Start as a greenfield project through `fsgg new` or the approved FS.GG
-   umbrella equivalent.
+1. Start as a greenfield project through `fsgg-sdd init` or an approved FS.GG
+   umbrella command that delegates to it.
 2. Spec-drive work through charter, specify, clarify, checklist, plan, tasks,
    analyze, implement, verify, and ship.
-3. Declare project policy, capabilities, work, and evidence in `.fsgg` and
-   `work/<id>`.
-4. Route a local scoped change cheaply and explain selected gates.
-5. Distinguish routine unclassified files from unknown governed paths and
-   explain why either does or does not block.
-6. Run `fsgg ship --mode gate --profile standard --json` as a minimal protected
-   boundary before the full lifecycle command suite is complete.
+3. Declare lifecycle policy, work, and evidence in `.fsgg` and `work/<id>`.
+4. Produce a deterministic normalized work model.
+5. Generate Claude and Codex guidance from the same contract.
+6. Run lifecycle commands without the Governance gate runtime installed.
 7. Refresh generated views from declared sources and detect drift.
-8. Validate public package surfaces, docs, examples, skills, design artifacts,
+8. Emit deterministic `analysis.json`, `verify.json`, `ship.json`, and
+   `summary.md`.
+9. Record task and evidence state in structured artifacts.
+10. Evolve schemas with explicit migration notes.
+
+The optional Governance integration is implemented when a generated product can:
+
+1. Add Governance policy, capability, and tooling files after SDD initialization.
+2. Route a local scoped change cheaply and explain selected gates.
+3. Distinguish routine unclassified files from unknown governed paths and
+   explain why either does or does not block.
+4. Run `fsgg ship --mode gate --profile standard --json` as a protected
+   boundary.
+5. Validate public package surfaces, docs, examples, skills, design artifacts,
    generated consumers, and release metadata through adapters.
-9. Cache fresh expensive evidence and rerun only when relevant inputs change.
-10. Emit deterministic route, contract, explain, evidence, and audit JSON.
-11. Render useful human CLI output without changing automation truth.
-12. Cover enforcement dials with truth-table fixtures and golden JSON snapshots.
-13. Support release checks with package, publish, and provenance evidence.
+6. Cache fresh expensive evidence and rerun only when relevant inputs change.
+7. Emit deterministic route, contract, explain, evidence, and audit JSON.
+8. Render useful human CLI output without changing automation truth.
+9. Cover enforcement dials with truth-table fixtures and golden JSON snapshots.
+10. Support release checks with package, publish, and provenance evidence.
 
 FS.GG.SDD is complete enough for its own first release when it can:
 
@@ -666,13 +704,14 @@ FS.GG.SDD is complete enough for its own first release when it can:
 2. Author lifecycle artifacts in Markdown and structured files.
 3. Produce a deterministic normalized work model.
 4. Generate Claude and Codex guidance from the same contract.
-5. Run lifecycle commands without Governance installed.
+5. Run lifecycle commands without the Governance gate runtime installed.
 6. Optionally expose readiness artifacts that Governance can inspect.
 7. Detect stale generated views.
 8. Record task and evidence state in structured artifacts.
 9. Produce verify and ship readiness JSON.
 10. Evolve schemas with explicit migration notes.
 
-The central constraint is unchanged: strict at protected boundaries, cheap in
+The central constraint is unchanged: useful to consumers before Governance is
+installed, strict at protected boundaries when Governance is adopted, cheap in
 the authoring loop, and explainable everywhere, while SDD remains the lifecycle
 product and Governance remains the rule and gate product.
