@@ -1,0 +1,7 @@
+schemaVersion: 1
+fixture:
+  id: missing-prerequisites
+  workId: 003-native-sdd-lifecycle-commands
+  purpose: Later fixture for missing lifecycle prerequisite diagnostics.
+expected:
+  status: pending

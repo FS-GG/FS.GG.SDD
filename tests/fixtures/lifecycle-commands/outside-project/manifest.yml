@@ -1,0 +1,7 @@
+schemaVersion: 1
+fixture:
+  id: outside-project
+  workId: 003-native-sdd-lifecycle-commands
+  purpose: Later fixture for commands outside an initialized SDD project.
+expected:
+  status: pending

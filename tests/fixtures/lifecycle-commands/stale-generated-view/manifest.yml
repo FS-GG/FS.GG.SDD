@@ -1,0 +1,7 @@
+schemaVersion: 1
+fixture:
+  id: stale-generated-view
+  workId: 003-native-sdd-lifecycle-commands
+  purpose: Later fixture for generated-view currency diagnostics.
+expected:
+  status: pending

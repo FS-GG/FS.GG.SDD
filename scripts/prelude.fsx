@@ -1,9 +1,15 @@
 #r "nuget: YamlDotNet, 16.3.0"
 #r "../src/FS.GG.SDD.Artifacts/bin/Release/net10.0/FS.GG.SDD.Artifacts.dll"
+#r "../src/FS.GG.SDD.Commands/bin/Release/net10.0/FS.GG.SDD.Commands.dll"
 
 open System
 open System.IO
 open FS.GG.SDD.Artifacts
+open FS.GG.SDD.Commands
+open FS.GG.SDD.Commands.CommandEffects
+open FS.GG.SDD.Commands.CommandReports
+open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Commands.CommandWorkflow
 
 let repoRoot =
     let rec findRoot (directory: DirectoryInfo) =
@@ -53,3 +59,40 @@ printfn "governanceBoundaries=%s" (model.GovernanceBoundaries |> List.map _.Path
 printfn "outputPath=%s" result.OutputPath
 printfn "outputDigest=%s:%s" result.OutputDigest.Algorithm result.OutputDigest.Value
 printfn "jsonBytes=%d" (Text.Encoding.UTF8.GetByteCount result.Json)
+
+let commandRoot =
+    Path.Combine(Path.GetTempPath(), "fsgg-sdd-prelude-" + Guid.NewGuid().ToString("N"))
+
+Directory.CreateDirectory commandRoot |> ignore
+
+let commandRequest =
+    ({ Command = Init
+       ProjectRoot = commandRoot
+       WorkId = None
+       Title = None
+       InputText = None
+       OutputFormat = Json
+       DryRun = true
+       OverwritePolicy = RefuseUnsafe
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+    : CommandRequest)
+
+let commandModel, commandEffects =
+    CommandWorkflow.init commandRequest
+
+let commandFinalModel =
+    CommandEffects.interpretAll commandRoot false commandEffects
+    |> List.fold (fun state result -> CommandWorkflow.update (EffectInterpreted result) state |> fst) commandModel
+    |> fun state -> CommandWorkflow.update BuildReport state |> fst
+
+let commandReport =
+    commandFinalModel.Report
+    |> Option.defaultWith (fun () -> CommandReports.buildReport commandFinalModel)
+
+printfn "command=%s" (CommandTypes.commandName commandReport.Command)
+printfn "outcome=%s" (CommandTypes.outcomeValue commandReport.Outcome)
+printfn "changedArtifacts=%d" commandReport.ChangedArtifacts.Length
+printfn "generatedViews=%d" commandReport.GeneratedViews.Length
+printfn "blockingDiagnostics=%d" (commandReport.Diagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = Diagnostics.DiagnosticSeverity.DiagnosticError) |> List.length)
+printfn "nextAction=%s" (commandReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
+printfn "createdProjectConfig=%b" (File.Exists(Path.Combine(commandRoot, ".fsgg", "project.yml")))

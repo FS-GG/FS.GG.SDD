@@ -1,0 +1,7 @@
+schemaVersion: 1
+fixture:
+  id: unknown-reference
+  workId: 003-native-sdd-lifecycle-commands
+  purpose: Later fixture for unknown-reference diagnostics.
+expected:
+  status: pending

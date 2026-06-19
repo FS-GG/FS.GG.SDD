@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>FS.GG.SDD.Commands</PackageId>
+    <Version>0.1.0</Version>
+    <Description>Native lifecycle command workflow contracts for FS.GG.SDD.</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="CommandTypes.fsi" />
+    <Compile Include="CommandTypes.fs" />
+    <Compile Include="CommandReports.fsi" />
+    <Compile Include="CommandReports.fs" />
+    <Compile Include="CommandWorkflow.fsi" />
+    <Compile Include="CommandWorkflow.fs" />
+    <Compile Include="CommandEffects.fsi" />
+    <Compile Include="CommandEffects.fs" />
+    <Compile Include="CommandSerialization.fsi" />
+    <Compile Include="CommandSerialization.fs" />
+    <Compile Include="CommandRendering.fsi" />
+    <Compile Include="CommandRendering.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj" />
+    <PackageReference Include="FSharp.Core" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,7 @@
+schemaVersion: 1
+fixture:
+  id: duplicate-work-id
+  workId: 003-native-sdd-lifecycle-commands
+  purpose: Later fixture for duplicate logical work-id diagnostics.
+expected:
+  status: pending

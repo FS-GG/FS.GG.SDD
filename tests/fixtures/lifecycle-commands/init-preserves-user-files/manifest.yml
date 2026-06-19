@@ -1,0 +1,8 @@
+schemaVersion: 1
+fixture:
+  id: init-preserves-user-files
+  workId: null
+  purpose: Init preserves unrelated user files.
+expected:
+  command: init
+  outcome: succeeded

@@ -1,0 +1,7 @@
+schemaVersion: 1
+fixture:
+  id: governance-boundary
+  workId: 003-native-sdd-lifecycle-commands
+  purpose: SDD commands report optional Governance boundaries without enforcement.
+expected:
+  forbiddenFields: [route, profile, freshness, gate, protectedBranch]

@@ -1,0 +1,7 @@
+schemaVersion: 1
+fixture:
+  id: text-projection
+  workId: 003-native-sdd-lifecycle-commands
+  purpose: Plain text is a projection of command report facts.
+expected:
+  command: init

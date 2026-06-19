@@ -1,0 +1,7 @@
+schemaVersion: 1
+fixture:
+  id: malformed-work-id
+  workId: "INVALID WORK ID"
+  purpose: Later fixture for malformed work-id diagnostics.
+expected:
+  diagnostics: [malformedWorkId]
