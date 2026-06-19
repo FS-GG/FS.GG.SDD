@@ -2,6 +2,8 @@
 
 Start with:
 
+- [Initial design](initial-design.md)
+- [Initial implementation plan](initial-implementation-plan.md)
 - [SDD design and implementation plan](sdd-design-and-implementation-plan.md)
 - [Decision 0001: separate SDD product](decisions/0001-separate-sdd-product.md)
 - [Imported reference docs](reference/README.md)
