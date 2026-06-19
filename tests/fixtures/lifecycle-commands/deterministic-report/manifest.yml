@@ -10,3 +10,6 @@ scenarios:
   - command: specify
     workId: 005-specify-command
     deterministic: true
+  - command: clarify
+    workId: 006-clarify-command
+    deterministic: true

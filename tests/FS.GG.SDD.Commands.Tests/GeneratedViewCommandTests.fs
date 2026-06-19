@@ -83,3 +83,35 @@ module GeneratedViewCommandTests =
             view.Path = "readiness/005-specify-command/work-model.json"
             && view.Currency = GeneratedViewCurrency.Current
             && view.DiagnosticIds |> List.contains "malformedGeneratedView")
+
+    [<Fact>]
+    let ``clarify reports missing generated work model when later sources are incomplete`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root "006-clarify-command" "Clarify Command" |> ignore
+        TestSupport.runRequest { TestSupport.specifyRequest root "006-clarify-command" "Clarify Command" with InputText = Some TestSupport.specifyIntentWithAmbiguity } |> ignore
+
+        let report = TestSupport.runClarify root "006-clarify-command" "Clarify Command"
+
+        Assert.Contains(report.GeneratedViews, fun view ->
+            view.Path = "readiness/006-clarify-command/work-model.json"
+            && view.Currency = GeneratedViewCurrency.Missing
+            && view.Sources |> List.exists (fun source -> source.Path = "work/006-clarify-command/clarifications.md"))
+
+    [<Fact>]
+    let ``clarify refreshes generated work model and reports malformed existing view`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root "006-clarify-command" "Clarify Command" |> ignore
+        TestSupport.runRequest { TestSupport.specifyRequest root "006-clarify-command" "Clarify Command" with InputText = Some TestSupport.specifyIntentWithAmbiguity } |> ignore
+        TestSupport.writeValidTasksAndEvidenceFor root "006-clarify-command"
+        TestSupport.writeRelative root "readiness/006-clarify-command/work-model.json" "{ malformed json"
+
+        let report = TestSupport.runClarify root "006-clarify-command" "Clarify Command"
+
+        Assert.Equal(CommandOutcome.SucceededWithWarnings, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "malformedGeneratedView")
+        Assert.Contains(report.GeneratedViews, fun view ->
+            view.Path = "readiness/006-clarify-command/work-model.json"
+            && view.Currency = GeneratedViewCurrency.Current
+            && view.DiagnosticIds |> List.contains "malformedGeneratedView")

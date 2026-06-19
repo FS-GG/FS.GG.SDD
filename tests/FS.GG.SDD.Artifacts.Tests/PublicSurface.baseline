@@ -30,8 +30,10 @@ FS.GG.SDD.Artifacts.GenerationManifest.viewKindValue
 FS.GG.SDD.Artifacts.Identifiers.acceptanceScenarioIdValue
 FS.GG.SDD.Artifacts.Identifiers.allStages
 FS.GG.SDD.Artifacts.Identifiers.ambiguityIdValue
+FS.GG.SDD.Artifacts.Identifiers.clarificationQuestionIdValue
 FS.GG.SDD.Artifacts.Identifiers.createAcceptanceScenarioId
 FS.GG.SDD.Artifacts.Identifiers.createAmbiguityId
+FS.GG.SDD.Artifacts.Identifiers.createClarificationQuestionId
 FS.GG.SDD.Artifacts.Identifiers.createDecisionId
 FS.GG.SDD.Artifacts.Identifiers.createEvidenceId
 FS.GG.SDD.Artifacts.Identifiers.createRequirementId
@@ -49,7 +51,9 @@ FS.GG.SDD.Artifacts.Identifiers.taskIdValue
 FS.GG.SDD.Artifacts.Identifiers.userStoryIdValue
 FS.GG.SDD.Artifacts.Identifiers.workIdValue
 FS.GG.SDD.Artifacts.LifecycleArtifacts.loadWorkItemFromSnapshots
+FS.GG.SDD.Artifacts.LifecycleArtifacts.clarificationStandardSections
 FS.GG.SDD.Artifacts.LifecycleArtifacts.parseAgentGuidanceConfig
+FS.GG.SDD.Artifacts.LifecycleArtifacts.parseClarificationFacts
 FS.GG.SDD.Artifacts.LifecycleArtifacts.parseDecisions
 FS.GG.SDD.Artifacts.LifecycleArtifacts.parseEvidence
 FS.GG.SDD.Artifacts.LifecycleArtifacts.parseProjectConfig

@@ -12,3 +12,7 @@ scenarios:
     workId: 005-specify-command
     generatedView: readiness/005-specify-command/work-model.json
     currencies: [missing, stale, malformed, blocked]
+  - command: clarify
+    workId: 006-clarify-command
+    generatedView: readiness/006-clarify-command/work-model.json
+    currencies: [missing, stale, malformed, blocked]

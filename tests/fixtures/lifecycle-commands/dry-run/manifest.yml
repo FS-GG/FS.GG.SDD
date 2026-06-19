@@ -8,4 +8,9 @@ expected:
   outcome: succeeded
   safeWriteDecision: dryRunOnly
   mutatedArtifacts: []
-
+scenarios:
+  - command: clarify
+    workId: 006-clarify-command
+    outcome: succeeded
+    safeWriteDecision: dryRunOnly
+    mutatedArtifacts: []

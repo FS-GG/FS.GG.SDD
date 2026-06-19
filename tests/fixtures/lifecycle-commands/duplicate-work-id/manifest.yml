@@ -12,3 +12,7 @@ scenarios:
     workId: 005-specify-command
     outcome: blocked
     diagnostics: [duplicateWorkId]
+  - command: clarify
+    workId: 006-clarify-command
+    outcome: blocked
+    diagnostics: [duplicateWorkId]

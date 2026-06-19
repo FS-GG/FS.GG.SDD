@@ -51,7 +51,7 @@ module CommandReports =
             DiagnosticSeverity.DiagnosticError
             None
             $"Command '{commandName command}' is declared but not implemented in the current MVP slice."
-            "Use fsgg-sdd init in this slice; later lifecycle commands remain pending in tasks.md."
+            "Use an implemented lifecycle command in this slice; later lifecycle commands remain pending in tasks.md."
             [ commandName command ]
 
     let outsideProject () =
@@ -164,6 +164,15 @@ module CommandReports =
             "Provide input with value, scope, and requirement facts before creating a new specification."
             missingFacts
 
+    let missingSpecificationPrerequisite path message =
+        commandDiagnostic
+            "missingSpecificationPrerequisite"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Run fsgg-sdd specify for the selected work item before running fsgg-sdd clarify."
+            [ path ]
+
     let specificationIdentityMismatch path expectedWorkId actualWorkId =
         commandDiagnostic
             "specificationIdentityMismatch"
@@ -180,6 +189,15 @@ module CommandReports =
             (Some path)
             message
             "Add schemaVersion, workId, title, stage: specify, changeTier, and status front matter before rerunning."
+            [ path ]
+
+    let malformedSpecificationFacts path message =
+        commandDiagnostic
+            "malformedSpecificationFacts"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Fix specification ids, references, and required sections before recording clarification decisions."
             [ path ]
 
     let duplicateSpecificationId path id =
@@ -208,6 +226,71 @@ module CommandReports =
             $"Specification reference '{id}' does not resolve."
             "Declare the referenced specification id or remove the stale structured link before rerunning."
             [ id ]
+
+    let missingClarificationAnswer path missingIds =
+        let missingText = String.concat ", " (missingIds |> List.sort)
+
+        commandDiagnostic
+            "missingClarificationAnswer"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Clarification input is missing answers for blocking ambiguity: {missingText}."
+            "Provide an answer, accepted deferral, or explicit still-open note for each blocking ambiguity."
+            missingIds
+
+    let clarificationIdentityMismatch path expectedWorkId actualWorkId =
+        commandDiagnostic
+            "clarificationIdentityMismatch"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Clarification work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Move clarifications.md under the matching work id or update its front matter before rerunning."
+            [ expectedWorkId; actualWorkId ]
+
+    let malformedClarificationFrontMatter path message =
+        commandDiagnostic
+            "malformedClarificationFrontMatter"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Add schemaVersion, workId, title, stage: clarify, changeTier, status, and sourceSpec front matter before rerunning."
+            [ path ]
+
+    let duplicateClarificationId path id =
+        commandDiagnostic
+            "duplicateClarificationId"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Clarification identifier '{id}' is declared more than once."
+            "Rename one duplicate clarification question or decision id and update references before rerunning."
+            [ id ]
+
+    let unknownClarificationReference path id =
+        commandDiagnostic
+            "unknownClarificationReference"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Clarification reference '{id}' does not resolve in the selected specification or clarification artifact."
+            "Reference a known AMB, CQ, FR, US, or AC id, or remove the stale clarification link."
+            [ id ]
+
+    let unsafeDecisionChange path id =
+        commandDiagnostic
+            "unsafeDecisionChange"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Clarification decision '{id}' would be changed by this rerun."
+            "Preserve existing decisions and add a new decision id for a replacement path."
+            [ id ]
+
+    let unresolvedBlockingAmbiguity path ids =
+        commandDiagnostic
+            "unresolvedBlockingAmbiguity"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "Blocking ambiguity remains unresolved after clarification planning."
+            "Resolve each blocking ambiguity with a concrete decision or accepted deferral before moving to checklist."
+            ids
 
     let unsafeOverwrite (path: string) =
         commandDiagnostic
@@ -346,6 +429,7 @@ module CommandReports =
                     match request.Command, request.WorkId with
                     | Charter, Some workId -> [ $"work/{workId}/charter.md" ]
                     | Specify, Some workId -> [ $"work/{workId}/charter.md"; $"work/{workId}/spec.md" ]
+                    | Clarify, Some workId -> [ $"work/{workId}/spec.md"; $"work/{workId}/clarifications.md" ]
                     | _ -> []
 
                 Some
@@ -401,6 +485,7 @@ module CommandReports =
           WorkId = model.Request.WorkId
           ChangedArtifacts = changes
           Specification = model.Specification
+          Clarification = model.Clarification
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility

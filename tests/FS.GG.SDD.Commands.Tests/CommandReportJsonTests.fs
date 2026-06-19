@@ -62,3 +62,23 @@ module CommandReportJsonTests =
         Assert.Contains("\"requirementIds\"", first)
         Assert.DoesNotContain(root, first)
         Assert.DoesNotContain("timestamp", first)
+
+    [<Fact>]
+    let ``clarify deterministic JSON includes clarification object`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root "006-clarify-command" "Clarify Command" |> ignore
+        TestSupport.runRequest { TestSupport.specifyRequest root "006-clarify-command" "Clarify Command" with InputText = Some TestSupport.specifyIntentWithAmbiguity } |> ignore
+        let request = { TestSupport.clarifyRequest root "006-clarify-command" "Clarify Command" with DryRun = true }
+
+        let first = TestSupport.runRequest request |> serializeReport
+        let second = TestSupport.runRequest request |> serializeReport
+        let third = TestSupport.runRequest request |> serializeReport
+
+        Assert.Equal(first, second)
+        Assert.Equal(second, third)
+        Assert.Contains("\"name\": \"clarify\"", first)
+        Assert.Contains("\"clarification\"", first)
+        Assert.Contains("\"questionIds\"", first)
+        Assert.DoesNotContain(root, first)
+        Assert.DoesNotContain("timestamp", first)

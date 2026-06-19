@@ -11,3 +11,6 @@ scenarios:
   - command: specify
     outcome: blocked
     diagnostics: [outsideProject]
+  - command: clarify
+    outcome: blocked
+    diagnostics: [outsideProject]

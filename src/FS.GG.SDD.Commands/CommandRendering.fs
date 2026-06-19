@@ -18,6 +18,15 @@ module CommandRendering =
             builder.AppendLine($"unresolvedAmbiguities: {specification.UnresolvedAmbiguityCount}") |> ignore
         | None -> ()
 
+        match report.Clarification with
+        | Some clarification ->
+            builder.AppendLine($"clarificationQuestions: {List.length clarification.QuestionIds}") |> ignore
+            builder.AppendLine($"clarificationDecisions: {List.length clarification.DecisionIds}") |> ignore
+            builder.AppendLine($"acceptedDeferrals: {List.length clarification.AcceptedDeferralIds}") |> ignore
+            builder.AppendLine($"remainingAmbiguities: {clarification.RemainingAmbiguityCount}") |> ignore
+            builder.AppendLine($"blockingAmbiguities: {clarification.BlockingAmbiguityCount}") |> ignore
+        | None -> ()
+
         builder.AppendLine($"generatedViews: {List.length report.GeneratedViews}") |> ignore
         builder.AppendLine($"diagnostics: {List.length report.Diagnostics}") |> ignore
 

@@ -17,3 +17,15 @@ scenarios:
       - generatedViews
       - diagnostics
       - nextAction
+  - command: clarify
+    fields:
+      - command
+      - outcome
+      - changedArtifacts
+      - clarificationQuestions
+      - clarificationDecisions
+      - acceptedDeferrals
+      - remainingAmbiguities
+      - generatedViews
+      - diagnostics
+      - nextAction

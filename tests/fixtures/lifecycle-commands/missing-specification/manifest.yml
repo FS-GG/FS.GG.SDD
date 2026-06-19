@@ -1,0 +1,11 @@
+schemaVersion: 1
+scenario: missing-specification
+command: clarify
+workId: 006-clarify-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.CommandWorkflowTests.clarify blocking diagnostics prevent write effects
+expected:
+  outcome: blocked
+  diagnostics: [missingSpecificationPrerequisite]
+  mutation: none

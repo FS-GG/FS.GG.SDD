@@ -1,0 +1,15 @@
+schemaVersion: 1
+scenario: clarify-create
+command: clarify
+workId: 006-clarify-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.ClarifyCommandTests.clarify creates authored clarification with real filesystem evidence
+expected:
+  outcome: succeeded
+  changedArtifacts:
+    - work/006-clarify-command/clarifications.md
+  clarification:
+    questionIds: [CQ-001]
+    decisionIds: [DEC-001]
+  nextAction: checklist

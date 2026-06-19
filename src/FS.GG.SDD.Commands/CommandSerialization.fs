@@ -88,6 +88,23 @@ module CommandSerialization =
             writer.WriteEndObject()
         | None -> writer.WriteNull "specification"
 
+    let writeClarification (writer: Utf8JsonWriter) (summary: ClarificationSummary option) =
+        match summary with
+        | Some summary ->
+            writer.WriteStartObject("clarification")
+            writer.WriteString("workId", summary.WorkId)
+            writer.WriteString("stage", summary.Stage)
+            writer.WriteString("status", summary.Status)
+            writer.WriteString("sourceSpec", summary.SourceSpec)
+            writeStringList writer "questionIds" summary.QuestionIds
+            writeStringList writer "answeredQuestionIds" summary.AnsweredQuestionIds
+            writeStringList writer "decisionIds" summary.DecisionIds
+            writeStringList writer "acceptedDeferralIds" summary.AcceptedDeferralIds
+            writer.WriteNumber("remainingAmbiguityCount", summary.RemainingAmbiguityCount)
+            writer.WriteNumber("blockingAmbiguityCount", summary.BlockingAmbiguityCount)
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "clarification"
+
     let writeGeneratedSource (writer: Utf8JsonWriter) (source: GeneratedViewSource) =
         writer.WriteStartObject()
         writer.WriteString("path", source.Path)
@@ -180,6 +197,7 @@ module CommandSerialization =
         |> List.iter (writeChange writer)
         writer.WriteEndArray()
         writeSpecification writer report.Specification
+        writeClarification writer report.Clarification
         writer.WriteStartArray("generatedViews")
         report.GeneratedViews |> List.sortBy (fun view -> view.Path) |> List.iter (writeGeneratedView writer)
         writer.WriteEndArray()

@@ -95,6 +95,21 @@ module TestSupport =
     let runSpecify root workId title =
         specifyRequest root workId title |> runRequest
 
+    let clarifyIntent =
+        "AMB-001: Clarification decisions live in clarifications.md."
+
+    let specifyIntentWithAmbiguity =
+        "value: create a native clarify command\nscope: one specified work item\nrequirement: create a clarification artifact with stable ids\nambiguity: where should durable clarification decisions be recorded?"
+
+    let clarifyRequest root workId title =
+        { request Clarify root with
+            WorkId = Some workId
+            Title = Some title
+            InputText = Some clarifyIntent }
+
+    let runClarify root workId title =
+        clarifyRequest root workId title |> runRequest
+
     let validSpec workId title =
         $"""---
 schemaVersion: 1
@@ -137,3 +152,7 @@ evidence: []
     let writeValidTasksAndEvidence root =
         writeRelative root "work/005-specify-command/tasks.yml" validTasks
         writeRelative root "work/005-specify-command/evidence.yml" validEvidence
+
+    let writeValidTasksAndEvidenceFor root workId =
+        writeRelative root $"work/{workId}/tasks.yml" validTasks
+        writeRelative root $"work/{workId}/evidence.yml" validEvidence

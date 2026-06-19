@@ -1,0 +1,17 @@
+Human summary review for 006-clarify-command
+
+Reviewed source:
+- specs/006-clarify-command/readiness/cli-smoke.txt
+- specs/006-clarify-command/readiness/clarify-traceability-tests.txt
+
+Result: PASS
+
+Text output is rendered from CommandReport through CommandRendering.renderText.
+The clarify text projection includes command, outcome, changed artifact count,
+clarification question count, decision count, accepted deferral count,
+remaining ambiguity count, blocking ambiguity count, generated-view count,
+diagnostic count, and next action.
+
+The text projection does not add route, profile, freshness, gate, audit,
+protected-branch, release, or other Governance-owned facts. JSON remains the
+authoritative automation contract.

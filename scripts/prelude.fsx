@@ -106,8 +106,8 @@ let initFinalModel =
 let charterRequest =
     ({ Command = Charter
        ProjectRoot = commandRoot
-       WorkId = Some "005-specify-command"
-       Title = Some "Specify Command"
+       WorkId = Some "006-clarify-command"
+       Title = Some "Clarify Command"
        InputText = None
        OutputFormat = Json
        DryRun = false
@@ -121,9 +121,24 @@ let charterFinalModel =
 let specifyRequest =
     ({ Command = Specify
        ProjectRoot = commandRoot
-       WorkId = Some "005-specify-command"
-       Title = Some "Specify Command"
-       InputText = Some "value: create a native specify command\nscope: one chartered work item\nrequirement: create a specification artifact with stable ids"
+       WorkId = Some "006-clarify-command"
+       Title = Some "Clarify Command"
+       InputText = Some "value: create a native clarify command\nscope: one specified work item\nrequirement: create a clarification artifact with stable ids\nambiguity: where should durable clarification decisions be recorded?"
+       OutputFormat = Json
+       DryRun = false
+       OverwritePolicy = RefuseUnsafe
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+    : CommandRequest)
+
+let specifyFinalModel =
+    runCommand specifyRequest
+
+let clarifyRequest =
+    ({ Command = Clarify
+       ProjectRoot = commandRoot
+       WorkId = Some "006-clarify-command"
+       Title = Some "Clarify Command"
+       InputText = Some "AMB-001: Clarification decisions live in clarifications.md."
        OutputFormat = Json
        DryRun = false
        OverwritePolicy = RefuseUnsafe
@@ -131,7 +146,7 @@ let specifyRequest =
     : CommandRequest)
 
 let commandFinalModel =
-    runCommand specifyRequest
+    runCommand clarifyRequest
 
 let commandReport =
     commandFinalModel.Report
@@ -140,10 +155,14 @@ let commandReport =
 printfn "command=%s" (CommandTypes.commandName commandReport.Command)
 printfn "outcome=%s" (CommandTypes.outcomeValue commandReport.Outcome)
 printfn "changedArtifacts=%d" commandReport.ChangedArtifacts.Length
-printfn "parsedSpecificationFacts=%d" (commandReport.Specification |> Option.map (fun summary -> summary.StoryIds.Length + summary.RequirementIds.Length + summary.AcceptanceScenarioIds.Length + summary.AmbiguityIds.Length) |> Option.defaultValue 0)
+printfn "parsedClarificationQuestions=%d" (commandReport.Clarification |> Option.map (fun summary -> summary.QuestionIds.Length) |> Option.defaultValue 0)
+printfn "parsedClarificationDecisions=%d" (commandReport.Clarification |> Option.map (fun summary -> summary.DecisionIds.Length) |> Option.defaultValue 0)
+printfn "acceptedDeferrals=%d" (commandReport.Clarification |> Option.map (fun summary -> summary.AcceptedDeferralIds.Length) |> Option.defaultValue 0)
+printfn "remainingAmbiguity=%d" (commandReport.Clarification |> Option.map (fun summary -> summary.RemainingAmbiguityCount) |> Option.defaultValue 0)
 printfn "generatedViews=%d" commandReport.GeneratedViews.Length
 printfn "blockingDiagnostics=%d" (commandReport.Diagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = Diagnostics.DiagnosticSeverity.DiagnosticError) |> List.length)
 printfn "nextAction=%s" (commandReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
 printfn "createdProjectConfig=%b" (File.Exists(Path.Combine(commandRoot, ".fsgg", "project.yml")))
-printfn "createdCharter=%b" (File.Exists(Path.Combine(commandRoot, "work", "005-specify-command", "charter.md")))
-printfn "createdSpecification=%b" (File.Exists(Path.Combine(commandRoot, "work", "005-specify-command", "spec.md")))
+printfn "createdCharter=%b" (File.Exists(Path.Combine(commandRoot, "work", "006-clarify-command", "charter.md")))
+printfn "createdSpecification=%b" (File.Exists(Path.Combine(commandRoot, "work", "006-clarify-command", "spec.md")))
+printfn "createdClarification=%b" (File.Exists(Path.Combine(commandRoot, "work", "006-clarify-command", "clarifications.md")))

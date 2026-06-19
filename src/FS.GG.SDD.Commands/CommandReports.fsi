@@ -29,11 +29,20 @@ module CommandReports =
     val charterIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
     val malformedCharterFrontMatter: path: string -> message: string -> Diagnostic
     val missingSpecificationIntent: path: string -> missingFacts: string list -> Diagnostic
+    val missingSpecificationPrerequisite: path: string -> message: string -> Diagnostic
     val specificationIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
     val malformedSpecificationFrontMatter: path: string -> message: string -> Diagnostic
+    val malformedSpecificationFacts: path: string -> message: string -> Diagnostic
     val duplicateSpecificationId: path: string -> id: string -> Diagnostic
     val missingSpecificationId: path: string -> idFamily: string -> Diagnostic
     val unknownSpecificationReference: path: string -> id: string -> Diagnostic
+    val missingClarificationAnswer: path: string -> missingIds: string list -> Diagnostic
+    val clarificationIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
+    val malformedClarificationFrontMatter: path: string -> message: string -> Diagnostic
+    val duplicateClarificationId: path: string -> id: string -> Diagnostic
+    val unknownClarificationReference: path: string -> id: string -> Diagnostic
+    val unsafeDecisionChange: path: string -> id: string -> Diagnostic
+    val unresolvedBlockingAmbiguity: path: string -> ids: string list -> Diagnostic
     val unsafeOverwrite: path: string -> Diagnostic
     val malformedGeneratedView: path: string -> Diagnostic
     val blockedGeneratedViewRefresh: path: string -> relatedIds: string list -> Diagnostic

@@ -93,6 +93,7 @@ of truth.
 
     let charterPath workId = $"work/{workId}/charter.md"
     let specPath workId = $"work/{workId}/spec.md"
+    let clarificationPath workId = $"work/{workId}/clarifications.md"
     let tasksPath workId = $"work/{workId}/tasks.yml"
     let evidencePath workId = $"work/{workId}/evidence.yml"
     let workModelPath workId = GenerationManifestModule.expectedWorkModelOutputPath workId
@@ -104,6 +105,18 @@ of truth.
           ReadFile ".fsgg/agents.yml"
           ReadFile(charterPath workId)
           ReadFile(specPath workId)
+          ReadFile(tasksPath workId)
+          ReadFile(evidencePath workId)
+          ReadFile(workModelPath workId)
+          EnumerateDirectory "work" ]
+
+    let clarifyReadEffects workId =
+        [ ReadFile ".fsgg/project.yml"
+          ReadFile ".fsgg/sdd.yml"
+          ReadFile ".fsgg/agents.yml"
+          ReadFile(charterPath workId)
+          ReadFile(specPath workId)
+          ReadFile(clarificationPath workId)
           ReadFile(tasksPath workId)
           ReadFile(evidencePath workId)
           ReadFile(workModelPath workId)
@@ -128,6 +141,7 @@ of truth.
             | Init, _ -> [], initEffects request
             | Charter, Some workId
             | Specify, Some workId -> [], charterReadEffects workId
+            | Clarify, Some workId -> [], clarifyReadEffects workId
             | command, _ -> [ unsupportedCommand command ], []
 
     let effectKey effect =
@@ -752,6 +766,519 @@ Prose status: specified
 
                 allDiagnostics, Some text, summary
 
+    let specificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model =
+        let path = specPath workId
+
+        match snapshot path model with
+        | None ->
+            [ missingSpecificationPrerequisite path $"Specification prerequisite '{path}' is missing." ], None, None, None
+        | Some existing ->
+            match parseSpecificationForCommand path existing.Text with
+            | Error diagnostics ->
+                let mapped =
+                    diagnostics
+                    |> List.map (fun diagnostic -> malformedSpecificationFacts path diagnostic.Message)
+
+                mapped, Some existing.Text, None, None
+            | Ok(facts, diagnostics) ->
+                let identityDiagnostics =
+                    [ if facts.FrontMatter.SchemaVersion.Major <> 1 then
+                          malformedSpecificationFacts path $"Specification schemaVersion '{facts.FrontMatter.SchemaVersion.Major}' is not supported."
+                      if not (String.Equals(facts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
+                          specificationIdentityMismatch path workId facts.FrontMatter.WorkId.Value
+                      if facts.FrontMatter.Stage <> LifecycleStage.Specify then
+                          missingSpecificationPrerequisite path $"Specification stage '{IdentifiersModule.stageValue facts.FrontMatter.Stage}' is not 'specify'." ]
+
+                let mappedDiagnostics =
+                    diagnostics
+                    |> List.map (fun diagnostic ->
+                        match diagnostic.Id, diagnostic.RelatedIds with
+                        | "duplicateSpecificationId", _
+                        | "unknownSpecificationReference", _
+                        | "missingSpecificationId", _ -> diagnostic
+                        | _ -> malformedSpecificationFacts path diagnostic.Message)
+
+                let allDiagnostics = identityDiagnostics @ mappedDiagnostics |> DiagnosticsModule.sort
+                allDiagnostics, Some existing.Text, Some(specificationSummary facts), Some facts
+
+    let clarificationSectionText workId heading =
+        match heading with
+        | "Source Specification" -> $"## Source Specification\n- {specPath workId}\n"
+        | "Clarification Questions" -> "## Clarification Questions\nNo clarification questions recorded.\n"
+        | "Answers" -> "## Answers\nNo clarification answers recorded.\n"
+        | "Decisions" -> "## Decisions\nNo concrete decisions recorded.\n"
+        | "Accepted Deferrals" -> "## Accepted Deferrals\nNo accepted deferrals recorded.\n"
+        | "Remaining Ambiguity" -> "## Remaining Ambiguity\nNo blocking ambiguity remains.\n"
+        | "Lifecycle Notes" -> $"## Lifecycle Notes\n- Next lifecycle action: `fsgg-sdd checklist --work {workId}`.\n"
+        | _ -> $"## {heading}\n"
+
+    let ensureClarificationSections workId text =
+        let normalized = (if isNull text then "" else text).Replace("\r\n", "\n")
+
+        let missing =
+            LifecycleArtifactsModule.clarificationStandardSections ()
+            |> List.filter (fun heading -> not (hasSection heading normalized))
+
+        if List.isEmpty missing then
+            normalized
+        else
+            let suffix = missing |> List.map (clarificationSectionText workId) |> String.concat "\n"
+            let trimmed = normalized.TrimEnd()
+            $"{trimmed}\n\n{suffix}"
+
+    let nextScopedIndex prefix (text: string) =
+        Regex.Matches(text, $@"\b{Regex.Escape prefix}-(\d{{3,}})\b", RegexOptions.IgnoreCase)
+        |> Seq.cast<Match>
+        |> Seq.choose (fun m ->
+            match Int32.TryParse m.Groups.[1].Value with
+            | true, value -> Some value
+            | _ -> None)
+        |> Seq.fold max 0
+        |> (+) 1
+
+    let scopedId prefix index = sprintf "%s-%03d" prefix index
+
+    let clarificationSummary (facts: ClarificationFacts) : ClarificationSummary =
+        let answeredQuestionIds =
+            [ facts.Answers |> List.choose (fun answer -> answer.QuestionId |> Option.map _.Value)
+              facts.Decisions |> List.collect (fun decision -> decision.SourceQuestionIds |> List.map _.Value)
+              facts.AcceptedDeferrals |> List.collect (fun decision -> decision.SourceQuestionIds |> List.map _.Value) ]
+            |> List.concat
+            |> List.distinct
+            |> List.sort
+
+        { WorkId = facts.FrontMatter.WorkId.Value
+          Stage = IdentifiersModule.stageValue facts.FrontMatter.Stage
+          Status = facts.FrontMatter.Status
+          SourceSpec = facts.FrontMatter.SourceSpec
+          QuestionIds = facts.Questions |> List.map (fun question -> question.QuestionId.Value) |> List.sort
+          AnsweredQuestionIds = answeredQuestionIds
+          DecisionIds = facts.Decisions |> List.map (fun decision -> decision.DecisionId.Value) |> List.sort
+          AcceptedDeferralIds = facts.AcceptedDeferrals |> List.map (fun decision -> decision.DecisionId.Value) |> List.sort
+          RemainingAmbiguityCount = facts.RemainingAmbiguity.Length
+          BlockingAmbiguityCount = facts.BlockingAmbiguityCount }
+
+    let mapClarificationDiagnostics (path: string) (diagnostics: Diagnostic list) =
+        diagnostics
+        |> List.map (fun diagnostic ->
+            match diagnostic.Id, diagnostic.RelatedIds with
+            | "duplicateIdentifier", id :: _ -> duplicateClarificationId path id
+            | "unknownReference", id :: _ -> unknownClarificationReference path id
+            | "workModelInconsistent", _ -> malformedClarificationFrontMatter path diagnostic.Message
+            | "malformedSchemaVersion", _ -> malformedClarificationFrontMatter path diagnostic.Message
+            | "unsupportedSchemaVersion", _ -> malformedClarificationFrontMatter path diagnostic.Message
+            | "futureSchemaVersion", _ -> malformedClarificationFrontMatter path diagnostic.Message
+            | _ -> diagnostic)
+
+    let parseClarificationForCommand path text : Result<ClarificationFacts * Diagnostic list, Diagnostic list> =
+        let snapshot = { Path = path; Text = text }
+
+        match LifecycleArtifactsModule.parseClarificationFacts snapshot with
+        | Error diagnostics -> Error(mapClarificationDiagnostics path diagnostics)
+        | Ok facts ->
+            let diagnostics = mapClarificationDiagnostics path facts.Diagnostics
+            Ok(facts, diagnostics)
+
+    let inputLines (request: CommandRequest) =
+        request.InputText
+        |> Option.defaultValue ""
+        |> fun text -> text.Replace("\r\n", "\n").Split('\n')
+        |> Array.map (fun line -> line.Trim().TrimStart('-', '*').Trim())
+        |> Array.filter (String.IsNullOrWhiteSpace >> not)
+        |> Array.toList
+
+    let idMatches pattern (text: string) =
+        Regex.Matches(text, pattern, RegexOptions.IgnoreCase)
+        |> Seq.cast<Match>
+        |> Seq.map (fun m -> m.Value.ToUpperInvariant())
+        |> Seq.distinct
+        |> Seq.toList
+
+    let answerKindValue (line: string) =
+        let lowered = line.ToLowerInvariant()
+
+        if lowered.Contains("accepted deferral") || lowered.Contains("defer") then
+            "acceptedDeferral"
+        elif lowered.Contains("still open") || lowered.Contains("unresolved") then
+            "stillOpen"
+        else
+            "decision"
+
+    let answerTextForReference (referenceId: string) (line: string) =
+        let index = line.IndexOf(referenceId, StringComparison.OrdinalIgnoreCase)
+
+        if index >= 0 then
+            line.Substring(index + referenceId.Length).Trim().TrimStart(':', '-', ' ').Trim()
+        else
+            line.Trim()
+
+    let knownQuestionIdForAmbiguity (ambiguityIndex: int) (existingQuestions: ClarificationQuestion list) (ambiguityValue: string) =
+        existingQuestions
+        |> List.tryFind (fun question ->
+            question.SourceAmbiguityIds
+            |> List.exists (fun ambiguity -> String.Equals(ambiguity.Value, ambiguityValue, StringComparison.OrdinalIgnoreCase)))
+        |> Option.map (fun question -> question.QuestionId.Value)
+        |> Option.defaultValue (scopedId "CQ" (ambiguityIndex + 1))
+
+    let existingResolutionTextForAmbiguity (facts: ClarificationFacts option) ambiguityValue =
+        facts
+        |> Option.bind (fun facts ->
+            (facts.Decisions @ facts.AcceptedDeferrals)
+            |> List.tryFind (fun decision ->
+                decision.SourceAmbiguityIds
+                |> List.exists (fun ambiguity -> String.Equals(ambiguity.Value, ambiguityValue, StringComparison.OrdinalIgnoreCase)))
+            |> Option.map (fun decision -> decision.DecisionId.Value, decision.Text))
+
+    let normalizeDecisionText (text: string) =
+        Regex.Replace((if isNull text then "" else text).Trim().ToLowerInvariant(), @"\s+", " ")
+
+    type PlannedClarificationAnswer =
+        { AmbiguityId: string
+          QuestionId: string
+          DecisionId: string option
+          Kind: string
+          Text: string }
+
+    let unknownReferenceDiagnostics path (specFacts: SpecificationFacts) existingQuestions lines =
+        let knownAmbiguities = specFacts.AmbiguityIds |> List.map _.Value |> Set.ofList
+        let knownRequirements = specFacts.RequirementIds |> List.map _.Value |> Set.ofList
+        let knownStories = specFacts.UserStoryIds |> List.map _.Value |> Set.ofList
+        let knownScenarios = specFacts.AcceptanceScenarioIds |> List.map _.Value |> Set.ofList
+
+        let generatedQuestionIds =
+            specFacts.AmbiguityIds
+            |> List.mapi (fun index _ -> scopedId "CQ" (index + 1))
+            |> Set.ofList
+
+        let knownQuestions =
+            existingQuestions
+            |> List.map (fun (question: ClarificationQuestion) -> question.QuestionId.Value)
+            |> Set.ofList
+            |> Set.union generatedQuestionIds
+
+        let check pattern known =
+            lines
+            |> List.collect (idMatches pattern)
+            |> List.distinct
+            |> List.choose (fun id -> if Set.contains id known then None else Some(unknownClarificationReference path id))
+
+        [ check @"\bAMB-\d{3,}\b" knownAmbiguities
+          check @"\bFR-\d{3,}\b" knownRequirements
+          check @"\bUS-\d{3,}\b" knownStories
+          check @"\bAC-\d{3,}\b" knownScenarios
+          check @"\bCQ-\d{3,}\b" knownQuestions ]
+        |> List.concat
+
+    let plannedClarificationAnswers (path: string) (request: CommandRequest) (specFacts: SpecificationFacts) (existingFacts: ClarificationFacts option) =
+        let lines = inputLines request
+        let existingQuestions = existingFacts |> Option.map _.Questions |> Option.defaultValue []
+
+        let unknownReferences = unknownReferenceDiagnostics path specFacts existingQuestions lines
+
+        let unresolvedAmbiguities =
+            specFacts.AmbiguityIds
+            |> List.mapi (fun index ambiguity ->
+                let ambiguityValue = ambiguity.Value
+                let existingResolution = existingResolutionTextForAmbiguity existingFacts ambiguityValue
+
+                let matchingLine =
+                    lines
+                    |> List.tryFind (fun line ->
+                        line.IndexOf(ambiguityValue, StringComparison.OrdinalIgnoreCase) >= 0
+                        || line.IndexOf(knownQuestionIdForAmbiguity index existingQuestions ambiguityValue, StringComparison.OrdinalIgnoreCase) >= 0)
+                    |> Option.orElseWith (fun () ->
+                        if specFacts.AmbiguityIds.Length = 1 && lines.Length = 1 && List.isEmpty (idMatches @"\b(?:AMB|CQ|FR|US|AC)-\d{3,}\b" lines.Head) then
+                            Some lines.Head
+                        else
+                            None)
+
+                index, ambiguityValue, existingResolution, matchingLine)
+
+        let missing =
+            unresolvedAmbiguities
+            |> List.choose (fun (_, ambiguityValue, existingResolution, matchingLine) ->
+                match existingResolution, matchingLine with
+                | None, None -> Some ambiguityValue
+                | _ -> None)
+
+        let missingDiagnostics =
+            if not (List.isEmpty missing) && not (List.isEmpty specFacts.AmbiguityIds) then
+                [ missingClarificationAnswer path missing ]
+            else
+                []
+
+        let mutable nextDecision = 1
+
+        existingFacts
+        |> Option.iter (fun facts ->
+            let text =
+                (facts.Decisions @ facts.AcceptedDeferrals)
+                |> List.map (fun decision -> decision.DecisionId.Value)
+                |> String.concat "\n"
+
+            nextDecision <- nextScopedIndex "DEC" text)
+
+        let answers =
+            unresolvedAmbiguities
+            |> List.choose (fun (index, ambiguityValue, existingResolution, matchingLine) ->
+                match matchingLine with
+                | None -> None
+                | Some line ->
+                    let text = answerTextForReference ambiguityValue line
+                    let kind = answerKindValue line
+
+                    match existingResolution with
+                    | Some(_, existingText) when normalizeDecisionText existingText <> normalizeDecisionText text ->
+                        None
+                    | Some _ ->
+                        None
+                    | None ->
+                        let decisionId =
+                            if kind = "stillOpen" then
+                                None
+                            else
+                                let id = scopedId "DEC" nextDecision
+                                nextDecision <- nextDecision + 1
+                                Some id
+
+                        Some
+                            ({ AmbiguityId = ambiguityValue
+                               QuestionId = knownQuestionIdForAmbiguity index existingQuestions ambiguityValue
+                               DecisionId = decisionId
+                               Kind = kind
+                               Text = if String.IsNullOrWhiteSpace text then line else text }
+                            : PlannedClarificationAnswer))
+
+        let conflictDiagnostics =
+            unresolvedAmbiguities
+            |> List.choose (fun (_, ambiguityValue, existingResolution, matchingLine) ->
+                match existingResolution, matchingLine with
+                | Some(decisionId, existingText), Some line ->
+                    let text = answerTextForReference ambiguityValue line
+                    if normalizeDecisionText existingText <> normalizeDecisionText text then
+                        Some(unsafeDecisionChange path decisionId)
+                    else
+                        None
+                | _ -> None)
+
+        answers, unknownReferences @ missingDiagnostics @ conflictDiagnostics
+
+    let renderQuestionLine questionId ambiguityId =
+        $"- {questionId} [AMB:{ambiguityId}] blocking open: Resolve source ambiguity {ambiguityId} before checklist."
+
+    let renderAnswerLine (answer: PlannedClarificationAnswer) =
+        let label =
+            match answer.Kind with
+            | "acceptedDeferral" -> "accepted deferral"
+            | "stillOpen" -> "still open"
+            | _ -> "decision"
+
+        $"- {answer.QuestionId} [AMB:{answer.AmbiguityId}] {label}: {answer.Text}"
+
+    let renderDecisionLine (answer: PlannedClarificationAnswer) =
+        match answer.DecisionId with
+        | Some decisionId when answer.Kind = "acceptedDeferral" ->
+            Some $"- {decisionId} [{answer.QuestionId}] [AMB:{answer.AmbiguityId}]: {answer.Text}"
+        | Some decisionId ->
+            Some $"- {decisionId} [{answer.QuestionId}] [AMB:{answer.AmbiguityId}]: {answer.Text}"
+        | None -> None
+
+    let renderRemainingLine (answer: PlannedClarificationAnswer) =
+        if answer.Kind = "stillOpen" then
+            Some $"- {answer.AmbiguityId} [{answer.QuestionId}] blocking: {answer.Text}"
+        else
+            None
+
+    let clarificationTemplate request workId (specFacts: SpecificationFacts) answers =
+        let title = requestTitle request workId
+        let status = if answers |> List.exists (fun answer -> answer.Kind = "stillOpen") then "needsAnswers" else "clarified"
+
+        let questionLines =
+            specFacts.AmbiguityIds
+            |> List.mapi (fun index ambiguity -> renderQuestionLine (scopedId "CQ" (index + 1)) ambiguity.Value)
+            |> fun lines -> if List.isEmpty lines then [ "No clarification questions recorded." ] else lines
+
+        let answerLines =
+            if List.isEmpty answers then
+                [ "No clarification answers recorded." ]
+            else
+                answers |> List.map renderAnswerLine
+
+        let concreteDecisionLines =
+            answers
+            |> List.filter (fun answer -> answer.Kind = "decision")
+            |> List.choose renderDecisionLine
+            |> fun lines -> if List.isEmpty lines then [ "No concrete decisions recorded." ] else lines
+
+        let deferralLines =
+            answers
+            |> List.filter (fun answer -> answer.Kind = "acceptedDeferral")
+            |> List.choose renderDecisionLine
+            |> fun lines -> if List.isEmpty lines then [ "No accepted deferrals recorded." ] else lines
+
+        let remainingLines =
+            answers
+            |> List.choose renderRemainingLine
+            |> fun lines -> if List.isEmpty lines then [ "No blocking ambiguity remains." ] else lines
+
+        $"""---
+schemaVersion: 1
+workId: {workId}
+title: {title}
+stage: clarify
+changeTier: tier1
+status: {status}
+sourceSpec: {specPath workId}
+publicOrToolFacingImpact: true
+---
+
+# {title} Clarifications
+
+## Source Specification
+- {specPath workId}
+
+## Clarification Questions
+{String.concat "\n" questionLines}
+
+## Answers
+{String.concat "\n" answerLines}
+
+## Decisions
+{String.concat "\n" concreteDecisionLines}
+
+## Accepted Deferrals
+{String.concat "\n" deferralLines}
+
+## Remaining Ambiguity
+{String.concat "\n" remainingLines}
+
+## Lifecycle Notes
+- Next lifecycle action: `fsgg-sdd checklist --work {workId}`.
+"""
+
+    let appendToSection heading lines text =
+        if List.isEmpty lines then
+            text
+        else
+            let normalized = (if isNull text then "" else text).Replace("\r\n", "\n")
+            let split = normalized.Split('\n') |> Array.toList
+            let headingPattern = $"^##\\s+{Regex.Escape heading}\\s*$"
+
+            match split |> List.tryFindIndex (fun line -> Regex.IsMatch(line, headingPattern)) with
+            | None ->
+                let sectionBody = String.concat "\n" lines
+                let suffix = $"## {heading}\n{sectionBody}"
+                $"{normalized.TrimEnd()}\n\n{suffix}\n"
+            | Some start ->
+                let next =
+                    split
+                    |> List.mapi (fun index line -> index, line)
+                    |> List.tryFind (fun (index, line) -> index > start && Regex.IsMatch(line, "^##\\s+"))
+                    |> Option.map fst
+                    |> Option.defaultValue split.Length
+
+                let before = split |> List.take next
+                let after = split |> List.skip next
+                (before @ lines @ after) |> String.concat "\n"
+
+    let appendClarificationAnswers (existingText: string) (answers: PlannedClarificationAnswer list) =
+        let questionLines =
+            answers
+            |> List.filter (fun answer -> not (Regex.IsMatch(existingText, $@"\b{Regex.Escape answer.QuestionId}\b", RegexOptions.IgnoreCase)))
+            |> List.map (fun answer -> renderQuestionLine answer.QuestionId answer.AmbiguityId)
+
+        let answerLines = answers |> List.map renderAnswerLine
+
+        let decisionLines =
+            answers
+            |> List.filter (fun answer -> answer.Kind = "decision")
+            |> List.choose renderDecisionLine
+
+        let deferralLines =
+            answers
+            |> List.filter (fun answer -> answer.Kind = "acceptedDeferral")
+            |> List.choose renderDecisionLine
+
+        let remainingLines = answers |> List.choose renderRemainingLine
+
+        existingText
+        |> appendToSection "Clarification Questions" questionLines
+        |> appendToSection "Answers" answerLines
+        |> appendToSection "Decisions" decisionLines
+        |> appendToSection "Accepted Deferrals" deferralLines
+        |> appendToSection "Remaining Ambiguity" remainingLines
+
+    let clarificationDiagnosticsTextAndSummary request workId specFacts model =
+        let path = clarificationPath workId
+
+        match snapshot path model with
+        | None ->
+            let answers, answerDiagnostics = plannedClarificationAnswers path request specFacts None
+
+            if answerDiagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError) then
+                answerDiagnostics |> DiagnosticsModule.sort, None, None
+            else
+                let text = clarificationTemplate request workId specFacts answers
+
+                match parseClarificationForCommand path text with
+                | Error diagnostics -> diagnostics, Some text, None
+                | Ok(facts, diagnostics) ->
+                    let unresolved =
+                        if facts.BlockingAmbiguityCount > 0 then
+                            [ unresolvedBlockingAmbiguity path (facts.RemainingAmbiguity |> List.choose (fun item -> item.AmbiguityId |> Option.map _.Value)) ]
+                        else
+                            []
+
+                    diagnostics @ unresolved |> DiagnosticsModule.sort, Some text, Some(clarificationSummary facts)
+        | Some existing ->
+            if existing.Text.Contains("<!-- fsgg-sdd: unsafe-overwrite -->", StringComparison.OrdinalIgnoreCase) then
+                [ unsafeOverwrite path ], Some existing.Text, None
+            else
+                match parseClarificationForCommand path existing.Text with
+                | Error diagnostics -> diagnostics, Some existing.Text, None
+                | Ok(existingFacts, existingDiagnostics) ->
+                    let identityDiagnostics =
+                        [ if existingFacts.FrontMatter.SchemaVersion.Major <> 1 then
+                              malformedClarificationFrontMatter path $"Clarification schemaVersion '{existingFacts.FrontMatter.SchemaVersion.Major}' is not supported."
+                          if not (String.Equals(existingFacts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
+                              clarificationIdentityMismatch path workId existingFacts.FrontMatter.WorkId.Value
+                          if existingFacts.FrontMatter.Stage <> LifecycleStage.Clarify then
+                              malformedClarificationFrontMatter path $"Clarification stage '{IdentifiersModule.stageValue existingFacts.FrontMatter.Stage}' is not 'clarify'."
+                          if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
+                              malformedClarificationFrontMatter path $"Clarification sourceSpec '{existingFacts.FrontMatter.SourceSpec}' does not match '{specPath workId}'." ]
+
+                    let ensuredText =
+                        if List.isEmpty identityDiagnostics then
+                            ensureClarificationSections workId existing.Text
+                        else
+                            existing.Text
+
+                    let existingFactsForAnswers =
+                        match parseClarificationForCommand path ensuredText with
+                        | Ok(facts, _) -> Some facts
+                        | Error _ -> Some existingFacts
+
+                    let answers, answerDiagnostics = plannedClarificationAnswers path request specFacts existingFactsForAnswers
+
+                    let proposedText =
+                        if List.isEmpty identityDiagnostics && List.isEmpty answerDiagnostics then
+                            appendClarificationAnswers ensuredText answers
+                        else
+                            existing.Text
+
+                    let parsedProposed =
+                        parseClarificationForCommand path proposedText
+
+                    match parsedProposed with
+                    | Error diagnostics ->
+                        identityDiagnostics @ diagnostics @ answerDiagnostics |> DiagnosticsModule.sort, Some proposedText, None
+                    | Ok(facts, proposedDiagnostics) ->
+                        let diagnostics =
+                            identityDiagnostics @ proposedDiagnostics @ answerDiagnostics
+                            |> DiagnosticsModule.sort
+
+                        diagnostics, Some proposedText, Some(clarificationSummary facts)
+
     let sourceFromEntry (entry: SourceEntry) =
         { Path = entry.Path
           Digest = Some entry.SourceDigest
@@ -803,20 +1330,25 @@ Prose status: specified
                             "Regenerate readiness/<id>/work-model.json from current lifecycle sources."
                             [ path ])
 
-    let workModelSnapshots workId charterText specText model =
+    let workModelSnapshots workId charterText specText clarificationText model =
         [ snapshot ".fsgg/project.yml" model
           snapshot ".fsgg/sdd.yml" model
           snapshot ".fsgg/agents.yml" model
           specText
           |> Option.map (fun text -> { Path = specPath workId; Text = text })
           |> Option.orElseWith (fun () -> snapshot (specPath workId) model)
+          clarificationText
+          |> Option.map (fun text -> { Path = clarificationPath workId; Text = text })
+          |> Option.orElseWith (fun () -> snapshot (clarificationPath workId) model)
           snapshot (tasksPath workId) model
           snapshot (evidencePath workId) model
-          Some({ Path = charterPath workId; Text = charterText }) ]
+          charterText
+          |> Option.map (fun text -> { Path = charterPath workId; Text = text })
+          |> Option.orElseWith (fun () -> snapshot (charterPath workId) model) ]
         |> List.choose id
         |> List.map (fun snapshot -> { snapshot with Path = normalizeRelativePath snapshot.Path })
 
-    let generatedViewPlan request workId charterText specText commandDiagnostics model =
+    let generatedViewPlan request workId charterText specText clarificationText commandDiagnostics model =
         let path = workModelPath workId
         let currentDiagnostic = existingGeneratedViewDiagnostic workId path model
         let blockingCommandIds =
@@ -826,14 +1358,15 @@ Prose status: specified
 
         if not (List.isEmpty blockingCommandIds) then
             let sources =
-                [ Some(charterSource (charterPath workId) charterText)
-                  specText |> Option.map (fun text -> charterSource (specPath workId) text) ]
+                [ charterText |> Option.map (fun text -> charterSource (charterPath workId) text)
+                  specText |> Option.map (fun text -> charterSource (specPath workId) text)
+                  clarificationText |> Option.map (fun text -> charterSource (clarificationPath workId) text) ]
                 |> List.choose id
 
             let view = generatedViewState path request.GeneratorVersion sources None GeneratedViewCurrency.Blocked blockingCommandIds
             currentDiagnostic |> Option.toList, view, []
         else
-            let snapshots = workModelSnapshots workId charterText specText model
+            let snapshots = workModelSnapshots workId charterText specText clarificationText model
 
             let result =
                 SerializationModule.generateWorkModel
@@ -867,8 +1400,9 @@ Prose status: specified
                 let diagnostics = [ currentDiagnostic; diagnostic ] |> List.choose id
                 let diagnosticIds = diagnostics |> List.map _.Id
                 let sources =
-                    [ Some(charterSource (charterPath workId) charterText)
-                      specText |> Option.map (fun text -> charterSource (specPath workId) text) ]
+                    [ charterText |> Option.map (fun text -> charterSource (charterPath workId) text)
+                      specText |> Option.map (fun text -> charterSource (specPath workId) text)
+                      clarificationText |> Option.map (fun text -> charterSource (clarificationPath workId) text) ]
                     |> List.choose id
 
                 let view = generatedViewState path request.GeneratorVersion sources None currency diagnosticIds
@@ -886,7 +1420,7 @@ Prose status: specified
             let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
             let charterDiagnostics, charterText = charterDiagnosticsAndText model.Request workId model
             let commandDiagnostics = projectDiagnostics @ duplicateDiagnostics @ charterDiagnostics |> DiagnosticsModule.sort
-            let generatedDiagnostics, generatedView, generatedEffects = generatedViewPlan model.Request workId charterText None commandDiagnostics model
+            let generatedDiagnostics, generatedView, generatedEffects = generatedViewPlan model.Request workId (Some charterText) None None commandDiagnostics model
             let diagnostics = commandDiagnostics @ generatedDiagnostics |> DiagnosticsModule.sort
             let hasBlocking = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
 
@@ -910,7 +1444,7 @@ Prose status: specified
 
             let generatedDiagnostics, generatedView, generatedEffects =
                 match charterText with
-                | Some text -> generatedViewPlan model.Request workId text specText commandDiagnostics model
+                | Some text -> generatedViewPlan model.Request workId (Some text) specText None commandDiagnostics model
                 | None ->
                     let path = workModelPath workId
                     let ids =
@@ -936,9 +1470,56 @@ Prose status: specified
 
             diagnostics, specification, [ generatedView ], effects
 
+    let computeClarifyPlan model =
+        match model.Request.WorkId with
+        | None -> model.Diagnostics, None, None, [], []
+        | Some workId ->
+            let projectDiagnostics = projectDiagnostics model
+            let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
+            let specificationDiagnostics, specText, specification, specFacts = specificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
+
+            let clarificationDiagnostics, clarificationText, clarification =
+                match specFacts with
+                | Some facts -> clarificationDiagnosticsTextAndSummary model.Request workId facts model
+                | None -> [], None, None
+
+            let commandDiagnostics =
+                projectDiagnostics @ duplicateDiagnostics @ specificationDiagnostics @ clarificationDiagnostics
+                |> DiagnosticsModule.sort
+
+            let generatedDiagnostics, generatedView, generatedEffects =
+                match specText with
+                | Some text ->
+                    let charterText = snapshot (charterPath workId) model |> Option.map _.Text
+                    generatedViewPlan model.Request workId charterText (Some text) clarificationText commandDiagnostics model
+                | None ->
+                    let path = workModelPath workId
+                    let ids =
+                        commandDiagnostics
+                        |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                        |> List.map _.Id
+
+                    [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+
+            let diagnostics = commandDiagnostics @ generatedDiagnostics |> DiagnosticsModule.sort
+            let hasBlocking = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+
+            let clarificationEffects =
+                match clarificationText with
+                | Some text when not hasBlocking -> [ CreateDirectory($"work/{workId}"); WriteFile(clarificationPath workId, text, AuthoredSource) ]
+                | _ -> []
+
+            let effects =
+                if hasBlocking then
+                    []
+                else
+                    clarificationEffects @ generatedEffects
+
+            diagnostics, specification, clarification, [ generatedView ], effects
+
     let nextLifecycleEffects model =
         match model.Request.Command, model.Request.WorkId with
-        | (Charter | Specify), Some workId when not (hasPlannedWrite model) ->
+        | (Charter | Specify | Clarify), Some workId when not (hasPlannedWrite model) ->
             if not (allPlannedReadsInterpreted model) then
                 model, []
             else
@@ -949,11 +1530,16 @@ Prose status: specified
                     let effects = appendNewEffects candidateReads model
                     { model with PendingEffects = model.PendingEffects @ effects }, effects
                 | [] ->
-                    let diagnostics, specification, generatedViews, plannedEffects =
+                    let diagnostics, specification, clarification, generatedViews, plannedEffects =
                         match model.Request.Command with
-                        | Charter -> computeCharterPlan model
-                        | Specify -> computeSpecifyPlan model
-                        | _ -> model.Diagnostics, None, [], []
+                        | Charter ->
+                            let diagnostics, specification, generatedViews, effects = computeCharterPlan model
+                            diagnostics, specification, None, generatedViews, effects
+                        | Specify ->
+                            let diagnostics, specification, generatedViews, effects = computeSpecifyPlan model
+                            diagnostics, specification, None, generatedViews, effects
+                        | Clarify -> computeClarifyPlan model
+                        | _ -> model.Diagnostics, None, None, [], []
 
                     let effects = appendNewEffects plannedEffects model
 
@@ -962,6 +1548,7 @@ Prose status: specified
                             PendingEffects = model.PendingEffects @ effects
                             Diagnostics = diagnostics
                             Specification = specification
+                            Clarification = clarification
                             GeneratedViews = generatedViews }
 
                     plannedModel, effects
@@ -977,6 +1564,7 @@ Prose status: specified
               InterpretedEffects = []
               Diagnostics = diagnostics
               Specification = None
+              Clarification = None
               GeneratedViews = []
               Report = None }
 

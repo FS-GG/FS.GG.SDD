@@ -36,9 +36,11 @@ freshness, routing, profiles, and gate enforcement belong in
 - F# constitution ratified for this SDD product.
 - Claude and Codex guidance files are present.
 - `FS.GG.SDD.Artifacts` defines the first typed lifecycle artifact model.
-- `FS.GG.SDD.Commands` and `FS.GG.SDD.Cli` now provide the first native command
-  workflow slice: a public MVU/report surface plus `fsgg-sdd init` skeleton
-  creation without requiring Governance.
+- `FS.GG.SDD.Commands` and `FS.GG.SDD.Cli` provide the native command workflow
+  slices through `fsgg-sdd clarify`: a public MVU/report surface, SDD skeleton
+  creation, charter/specification authoring, clarification decisions, stable
+  question/decision ids, deterministic JSON/text reports, and no required
+  Governance runtime.
 - The detailed implementation roadmap lives in
   [docs/initial-implementation-plan.md](docs/initial-implementation-plan.md).
 

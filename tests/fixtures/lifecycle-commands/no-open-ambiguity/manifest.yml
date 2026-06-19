@@ -1,0 +1,13 @@
+schemaVersion: 1
+scenario: no-open-ambiguity
+command: clarify
+workId: 006-clarify-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.ClarifyCommandTests.clarify handles specified work item with no open ambiguity
+expected:
+  outcome: succeeded
+  clarification:
+    questionIds: []
+    decisionIds: []
+  nextAction: checklist

@@ -155,3 +155,43 @@ status: chartered
             match effect with
             | WriteFile _ -> true
             | _ -> false)
+
+    [<Fact>]
+    let ``clarify plans project specification clarification task evidence and generated-view reads before writes`` () =
+        let root = TestSupport.tempDirectory()
+        let request = { TestSupport.clarifyRequest root "006-clarify-command" "Clarify Command" with DryRun = true }
+
+        let model, effects = init request
+
+        Assert.Empty(model.Diagnostics)
+        Assert.Contains(effects, fun effect -> effect = ReadFile ".fsgg/project.yml")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "work/006-clarify-command/spec.md")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "work/006-clarify-command/clarifications.md")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "work/006-clarify-command/tasks.yml")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "work/006-clarify-command/evidence.yml")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "readiness/006-clarify-command/work-model.json")
+        Assert.DoesNotContain(effects, fun effect ->
+            match effect with
+            | WriteFile _ -> true
+            | _ -> false)
+
+    [<Fact>]
+    let ``clarify blocking diagnostics prevent write effects`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        let request = { TestSupport.clarifyRequest root "006-clarify-command" "Clarify Command" with DryRun = true }
+        let model, effects = init request
+
+        let afterReads =
+            interpretAll root true effects
+            |> List.fold (fun state result -> update (EffectInterpreted result) state |> fst) model
+
+        let final = update BuildReport afterReads |> fst
+        let report = final.Report |> Option.defaultWith (fun () -> buildReport final)
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "missingSpecificationPrerequisite")
+        Assert.DoesNotContain(afterReads.PendingEffects, fun effect ->
+            match effect with
+            | WriteFile _ -> true
+            | _ -> false)

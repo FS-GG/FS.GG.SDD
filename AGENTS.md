@@ -29,5 +29,5 @@ that defines the artifact contract and verification plan.
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/005-specify-command/plan.md
+at specs/006-clarify-command/plan.md
 <!-- SPECKIT END -->

@@ -1,0 +1,12 @@
+schemaVersion: 1
+scenario: clarify-adds-missing-sections
+command: clarify
+workId: 006-clarify-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.ClarifyCommandTests.clarify safely appends missing standard sections
+expected:
+  outcome: succeeded
+  operation: update
+  safeAdditions:
+    - Accepted Deferrals

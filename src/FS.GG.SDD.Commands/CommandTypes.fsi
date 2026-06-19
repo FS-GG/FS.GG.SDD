@@ -96,6 +96,18 @@ module CommandTypes =
           AmbiguityIds: string list
           UnresolvedAmbiguityCount: int }
 
+    type ClarificationSummary =
+        { WorkId: string
+          Stage: string
+          Status: string
+          SourceSpec: string
+          QuestionIds: string list
+          AnsweredQuestionIds: string list
+          DecisionIds: string list
+          AcceptedDeferralIds: string list
+          RemainingAmbiguityCount: int
+          BlockingAmbiguityCount: int }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -123,6 +135,7 @@ module CommandTypes =
           WorkId: string option
           ChangedArtifacts: ArtifactChange list
           Specification: SpecificationSummary option
+          Clarification: ClarificationSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -149,6 +162,7 @@ module CommandTypes =
           InterpretedEffects: CommandEffectResult list
           Diagnostics: Diagnostic list
           Specification: SpecificationSummary option
+          Clarification: ClarificationSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 

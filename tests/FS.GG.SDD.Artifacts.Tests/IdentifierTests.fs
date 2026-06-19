@@ -22,11 +22,14 @@ module IdentifierTests =
     [<Fact>]
     let ``Scoped lifecycle ids are stable and case-insensitive`` () =
         let requirement = Identifiers.createRequirementId "fr-001" |> Result.defaultWith failwith
+        let question = Identifiers.createClarificationQuestionId "cq-001" |> Result.defaultWith failwith
         let decision = Identifiers.createDecisionId "dec-001" |> Result.defaultWith failwith
         let task = Identifiers.createTaskId "t001" |> Result.defaultWith failwith
         let evidence = Identifiers.createEvidenceId "ev001" |> Result.defaultWith failwith
 
         Assert.Equal("FR-001", Identifiers.requirementIdValue requirement)
+        Assert.Equal("CQ-001", Identifiers.clarificationQuestionIdValue question)
         Assert.Equal("DEC-001", Identifiers.decisionIdValue decision)
         Assert.Equal("T001", Identifiers.taskIdValue task)
         Assert.Equal("EV001", Identifiers.evidenceIdValue evidence)
+        Assert.True(Identifiers.createClarificationQuestionId "Q-1" |> Result.isError)

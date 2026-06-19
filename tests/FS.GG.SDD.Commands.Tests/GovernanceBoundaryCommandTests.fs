@@ -62,3 +62,22 @@ module GovernanceBoundaryCommandTests =
         Assert.DoesNotContain("\"gate\"", json)
         Assert.DoesNotContain("\"audit\"", json)
         Assert.DoesNotContain("\"protectedBranch\"", json)
+
+    [<Fact>]
+    let ``clarify reports optional Governance compatibility without enforcement fields`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root "006-clarify-command" "Clarify Command" |> ignore
+        TestSupport.runRequest { TestSupport.specifyRequest root "006-clarify-command" "Clarify Command" with InputText = Some TestSupport.specifyIntentWithAmbiguity } |> ignore
+        let request = { TestSupport.clarifyRequest root "006-clarify-command" "Clarify Command" with DryRun = true }
+
+        let report = TestSupport.runRequest request
+        let json = serializeReport report
+
+        Assert.Contains(report.GovernanceCompatibility, fun fact -> fact.Path = ".fsgg/policy.yml")
+        Assert.DoesNotContain("\"route\"", json)
+        Assert.DoesNotContain("\"profile\"", json)
+        Assert.DoesNotContain("\"freshness\"", json)
+        Assert.DoesNotContain("\"gate\"", json)
+        Assert.DoesNotContain("\"audit\"", json)
+        Assert.DoesNotContain("\"protectedBranch\"", json)

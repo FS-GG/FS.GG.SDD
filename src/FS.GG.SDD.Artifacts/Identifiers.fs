@@ -23,6 +23,7 @@ module Identifiers =
     type AcceptanceScenarioId = { Value: string }
     type ScopeBoundaryId = { Value: string }
     type AmbiguityId = { Value: string }
+    type ClarificationQuestionId = { Value: string }
     type DecisionId = { Value: string }
     type TaskId = { Value: string }
     type EvidenceId = { Value: string }
@@ -107,6 +108,10 @@ module Identifiers =
         createScopedId "Ambiguity id" @"^AMB-\d{3,}$" value
         |> Result.map (fun value -> { AmbiguityId.Value = value.ToUpperInvariant() })
 
+    let createClarificationQuestionId (value: string) =
+        createScopedId "Clarification question id" @"^CQ-\d{3,}$" value
+        |> Result.map (fun value -> { ClarificationQuestionId.Value = value.ToUpperInvariant() })
+
     let createDecisionId (value: string) =
         createScopedId "Decision id" @"^DEC-\d{3,}$" value
         |> Result.map (fun value -> { DecisionId.Value = value.ToUpperInvariant() })
@@ -124,6 +129,7 @@ module Identifiers =
     let acceptanceScenarioIdValue (id: AcceptanceScenarioId) = id.Value
     let scopeBoundaryIdValue (id: ScopeBoundaryId) = id.Value
     let ambiguityIdValue (id: AmbiguityId) = id.Value
+    let clarificationQuestionIdValue (id: ClarificationQuestionId) = id.Value
     let decisionIdValue (id: DecisionId) = id.Value
     let taskIdValue (id: TaskId) = id.Value
     let evidenceIdValue (id: EvidenceId) = id.Value

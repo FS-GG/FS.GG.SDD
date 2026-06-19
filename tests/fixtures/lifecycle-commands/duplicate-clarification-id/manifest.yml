@@ -1,0 +1,11 @@
+schemaVersion: 1
+scenario: duplicate-clarification-id
+command: clarify
+workId: 006-clarify-command
+evidence:
+  tests:
+    - FS.GG.SDD.Artifacts.Tests.ClarificationArtifactTests.Clarification parser reports duplicate question and decision ids
+expected:
+  outcome: blocked
+  diagnostics: [duplicateClarificationId]
+  mutation: none

@@ -61,3 +61,24 @@ module TextProjectionTests =
         Assert.Contains($"outcome: {outcomeValue report.Outcome}", text)
         Assert.Contains($"specificationRequirements: {List.length specification.RequirementIds}", text)
         Assert.Contains($"unresolvedAmbiguities: {specification.UnresolvedAmbiguityCount}", text)
+
+    [<Fact>]
+    let ``clarify text projection includes clarification counts from report`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root "006-clarify-command" "Clarify Command" |> ignore
+        TestSupport.runRequest { TestSupport.specifyRequest root "006-clarify-command" "Clarify Command" with InputText = Some TestSupport.specifyIntentWithAmbiguity } |> ignore
+        let request =
+            { TestSupport.clarifyRequest root "006-clarify-command" "Clarify Command" with
+                DryRun = true
+                OutputFormat = Text }
+
+        let report = TestSupport.runRequest request
+        let text = renderText report
+        let clarification = report.Clarification.Value
+
+        Assert.Contains("command: clarify", text)
+        Assert.Contains($"outcome: {outcomeValue report.Outcome}", text)
+        Assert.Contains($"clarificationQuestions: {List.length clarification.QuestionIds}", text)
+        Assert.Contains($"clarificationDecisions: {List.length clarification.DecisionIds}", text)
+        Assert.Contains($"remainingAmbiguities: {clarification.RemainingAmbiguityCount}", text)

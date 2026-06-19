@@ -41,6 +41,7 @@ let printUnknown commandValue =
           InterpretedEffects = []
           Diagnostics = [ unknownCommand commandValue ]
           Specification = None
+          Clarification = None
           GeneratedViews = []
           Report = None }
 

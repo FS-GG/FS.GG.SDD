@@ -1,0 +1,10 @@
+schemaVersion: 1
+scenario: clarify-accepted-deferral
+command: clarify
+workId: 006-clarify-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.ClarifyCommandTests.clarify records accepted deferral as durable decision fact
+expected:
+  acceptedDeferralIds: [DEC-001]
+  nextAction: checklist
