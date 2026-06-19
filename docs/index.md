@@ -11,6 +11,10 @@ Start with:
 This repository starts as an empty Spec Kit product scaffold. Feature specs will
 be added under `specs/` when implementation begins.
 
+The initial implementation plan is the SDD-owned roadmap. The
+`sdd-design-and-implementation-plan.md` file is the concise design/roadmap
+summary used by agent guidance.
+
 The `reference/` directory contains copied development context from
 `FS.GG.Governance` and the FS-GG org docs. Treat those files as provenance and
 source material; SDD-owned decisions should be recorded in this repository's own
