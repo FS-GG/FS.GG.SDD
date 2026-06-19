@@ -9,7 +9,7 @@ source-empty until the first feature spec creates code.
 Read before acting:
 
 - `.specify/memory/constitution.md`
-- `docs/sdd-design-and-implementation-plan.md`
+- `docs/initial-implementation-plan.md`
 - `.codex/skills/fs-gg-sdd-project/SKILL.md`
 
 Boundary rules:

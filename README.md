@@ -32,8 +32,6 @@ freshness, routing, profiles, and gate enforcement belong in
 - No source projects are present yet.
 - The detailed implementation roadmap lives in
   [docs/initial-implementation-plan.md](docs/initial-implementation-plan.md).
-- The concise design/roadmap summary lives in
-  [docs/sdd-design-and-implementation-plan.md](docs/sdd-design-and-implementation-plan.md).
 
 ## Workflow
 

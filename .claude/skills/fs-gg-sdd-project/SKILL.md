@@ -21,7 +21,7 @@ Use this skill for work in the FS.GG.SDD repository.
 Before changing behavior, read:
 
 1. `.specify/memory/constitution.md`
-2. `docs/sdd-design-and-implementation-plan.md`
+2. `docs/initial-implementation-plan.md`
 3. `README.md`
 
 ## Working Rules

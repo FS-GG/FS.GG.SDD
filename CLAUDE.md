@@ -28,5 +28,5 @@ When working here:
 
 <!-- SPECKIT START -->
 For current project direction, read
-docs/sdd-design-and-implementation-plan.md.
+docs/initial-implementation-plan.md.
 <!-- SPECKIT END -->
