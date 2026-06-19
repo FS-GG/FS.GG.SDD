@@ -24,3 +24,8 @@ scenarios:
     outcome: succeeded
     safeWriteDecision: dryRunOnly
     mutatedArtifacts: []
+  - command: evidence
+    workId: 011-evidence-command
+    outcome: succeeded
+    safeWriteDecision: dryRunOnly
+    mutatedArtifacts: []

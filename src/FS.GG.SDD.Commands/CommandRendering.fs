@@ -81,6 +81,22 @@ module CommandRendering =
             builder.AppendLine($"analysisGeneratedViewFindings: {analysis.GeneratedViewFindingCount}") |> ignore
         | None -> ()
 
+        match report.Evidence with
+        | Some evidence ->
+            builder.AppendLine($"workId: {evidence.WorkId}") |> ignore
+            builder.AppendLine($"evidencePath: {evidence.EvidencePath}") |> ignore
+            builder.AppendLine($"evidenceReadiness: {evidence.Readiness}") |> ignore
+            builder.AppendLine($"evidenceDeclarations: {evidence.DeclarationCount}") |> ignore
+            builder.AppendLine($"evidenceObligations: {evidence.ObligationCount}") |> ignore
+            builder.AppendLine($"evidenceSupported: {evidence.SupportedCount}") |> ignore
+            builder.AppendLine($"evidenceDeferred: {evidence.DeferredCount}") |> ignore
+            builder.AppendLine($"evidenceMissing: {evidence.MissingCount}") |> ignore
+            builder.AppendLine($"evidenceStale: {evidence.StaleCount}") |> ignore
+            builder.AppendLine($"evidenceSynthetic: {evidence.SyntheticCount}") |> ignore
+            builder.AppendLine($"evidenceInvalid: {evidence.InvalidCount}") |> ignore
+            builder.AppendLine($"evidenceBlocking: {evidence.BlockingCount}") |> ignore
+        | None -> ()
+
         builder.AppendLine($"generatedViews: {List.length report.GeneratedViews}") |> ignore
         builder.AppendLine($"diagnostics: {List.length report.Diagnostics}") |> ignore
 

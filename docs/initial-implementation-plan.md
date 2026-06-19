@@ -42,7 +42,7 @@ Implementation is driven by the consumer experience:
 Standard Spec Kit remains the workflow used to develop this repository:
 
 ```text
-specify -> clarify -> checklist -> plan -> tasks -> implement -> analyze
+charter -> specify -> clarify -> checklist -> plan -> tasks -> analyze -> evidence
 ```
 
 Product code, packages, and tests are added to this repository only through a
@@ -51,8 +51,9 @@ FS.GG.SDD feature remains `001-sdd-artifact-model`; it defines the lifecycle
 artifact contract before commands or generators are implemented.
 
 For the native SDD product lifecycle, `fsgg-sdd analyze` is the tasks-ready
-readiness step that runs before implementation and emits
-`readiness/<id>/analysis.json`.
+readiness step that emits `readiness/<id>/analysis.json`; `fsgg-sdd evidence`
+records authored evidence declarations and refreshes the SDD work model before
+later verify and ship readiness slices.
 
 ## Scope Boundary
 
@@ -272,6 +273,13 @@ Progress markers:
   Governance compatibility facts, CLI smoke evidence, FSI evidence,
   performance evidence, and full-suite verification. Evidence is recorded in
   `specs/010-analyze-command/readiness/`.
+- [x] Implement `011-evidence-command` by adding `fsgg-sdd evidence`, the
+  schema-versioned `work/<id>/evidence.yml` contract, evidence summaries in
+  command reports, analysis-ready prerequisite diagnostics, safe authored
+  evidence writes, dry-run reporting, deterministic JSON/text projection,
+  optional Governance compatibility facts, CLI JSON/dry-run/text smoke
+  evidence, FSI evidence, performance evidence, and full-suite verification.
+  Evidence is recorded in `specs/011-evidence-command/readiness/`.
 
 ### Phase 1: SDD Artifact Model
 
@@ -392,13 +400,14 @@ Owner: `FS.GG.SDD`.
 Purpose: expose the native spec-driven development stages as SDD commands over
 the same model.
 
-Status: in progress as of 2026-06-19. The implemented slices add
+Status: in progress as of 2026-06-20. The implemented slices add
 `src/FS.GG.SDD.Commands`, `src/FS.GG.SDD.Cli`, command tests, lifecycle-command
 fixture roots, readiness evidence, deterministic init, charter, specify, and
-clarify/checklist/plan/tasks/analyze command reports, and real filesystem smoke paths for
-`fsgg-sdd init`, `fsgg-sdd charter`, `fsgg-sdd specify`, and
+clarify/checklist/plan/tasks/analyze/evidence command reports, and real
+filesystem smoke paths for `fsgg-sdd init`, `fsgg-sdd charter`,
+`fsgg-sdd specify`, and
 `fsgg-sdd clarify`, `fsgg-sdd checklist`, `fsgg-sdd plan`, and
-`fsgg-sdd tasks`, and `fsgg-sdd analyze`.
+`fsgg-sdd tasks`, `fsgg-sdd analyze`, and `fsgg-sdd evidence`.
 
 - [x] Add `fsgg-sdd init` for SDD skeleton creation.
 - [x] Add `fsgg-sdd charter`.
@@ -408,15 +417,16 @@ clarify/checklist/plan/tasks/analyze command reports, and real filesystem smoke 
 - [x] Add `fsgg-sdd plan`.
 - [x] Add `fsgg-sdd tasks`.
 - [x] Add `fsgg-sdd analyze`.
+- [x] Add `fsgg-sdd evidence`.
 - [x] Keep stateful or I/O command behavior behind `Model`, `Msg`, `Effect`,
   `init`, and `update` boundaries for the implemented init, charter, specify,
-  clarify, checklist, plan, tasks, and analyze slices.
+  clarify, checklist, plan, tasks, analyze, and evidence slices.
 - [x] Ensure command output has deterministic JSON for automation and plain text
   for humans for the implemented init, charter, specify, clarify, checklist,
-  plan, tasks, and analyze slices.
+  plan, tasks, analyze, and evidence slices.
 - [x] Refresh generated SDD views when possible and report stale-view
   diagnostics when not for the implemented charter, specify, clarify, and
-  checklist/plan/tasks/analyze work-model and analysis views.
+  checklist/plan/tasks/analyze/evidence work-model and analysis views.
 
 Current verification evidence for the implemented slice is recorded in
 `specs/003-native-sdd-lifecycle-commands/readiness/`: clean Release build,
@@ -466,10 +476,23 @@ tests, full suite with 189 passing tests, FSI public-surface transcript,
 disposable-directory CLI JSON/dry-run/text smoke output, performance evidence,
 SDD/Governance boundary review, human summary review, and artifact
 traceability.
+Analyze verification evidence is recorded in
+`specs/010-analyze-command/readiness/`: clean Release build, focused analysis
+view and command tests, generated-view tests, deterministic report/text/
+Governance-boundary tests, command workflow MVU tests, full suite, FSI
+public-surface transcript, disposable-directory CLI JSON/dry-run/text smoke
+output, performance evidence, SDD/Governance boundary review, human summary
+review, and artifact traceability.
+Evidence verification evidence is recorded in
+`specs/011-evidence-command/readiness/`: clean Release build, focused evidence
+artifact and command tests, output/boundary tests, full suite with 63 artifact
+tests and 152 command tests, FSI public-surface transcript, disposable-directory
+CLI JSON/dry-run/text smoke output, performance evidence, SDD/Governance
+boundary review, human summary review, and artifact traceability.
 
 Exit criteria:
 
-- A user can create and advance a work item from charter through analysis
+- A user can create and advance a work item from charter through evidence
   without product source code.
 - Commands write authored sources and refresh or diagnose generated views.
 - JSON output is deterministic and plain text is presentation only.
@@ -517,10 +540,10 @@ turning SDD into the Governance rule engine.
   before agent-driven task execution.
 - [ ] Derive required test/evidence obligations from lifecycle rules and changed
   artifact impact.
-- [ ] Parse and normalize evidence declarations.
-- [ ] Distinguish real evidence, accepted deferrals, missing evidence, and
+- [x] Parse and normalize evidence declarations.
+- [x] Distinguish real evidence, accepted deferrals, missing evidence, and
   synthetic evidence disclosures.
-- [ ] Add `fsgg-sdd evidence` or equivalent update command for authored
+- [x] Add `fsgg-sdd evidence` or equivalent update command for authored
   declarations.
 - [ ] Add `fsgg-sdd verify` to run selected SDD-owned checks and emit
   `readiness/<id>/verify.json`.

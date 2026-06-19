@@ -22,3 +22,7 @@ scenarios:
     workId: 010-analyze-command
     outcome: blocked
     diagnostics: [outsideProject]
+  - command: evidence
+    workId: 011-evidence-command
+    outcome: blocked
+    diagnostics: [outsideProject]

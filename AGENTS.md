@@ -18,6 +18,9 @@ Boundary rules:
 - SDD owns charter/spec/clarify/checklist/plan/tasks/evidence lifecycle
   artifacts, normalized work models, generated views, and agent command/skill
   generation.
+- `fsgg-sdd evidence` owns declared authored evidence and SDD readiness
+  summaries; Governance-owned effective evidence freshness and gate enforcement
+  remain optional downstream concerns.
 - Governance owns rule evaluation, evidence freshness, routing, profiles, and
   gate enforcement.
 - Markdown is an authoring surface; schema-versioned structured artifacts are
@@ -30,5 +33,5 @@ that defines the artifact contract and verification plan.
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/010-analyze-command/plan.md
+at specs/011-evidence-command/plan.md
 <!-- SPECKIT END -->

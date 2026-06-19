@@ -1,0 +1,12 @@
+schemaVersion: 1
+scenario: undisclosed-synthetic-evidence
+command: evidence
+workId: 011-evidence-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.EvidenceCommandTests.evidence blocks undisclosed synthetic evidence without mutation
+expected:
+  outcome: blocked
+  diagnostics:
+    - evidence.undisclosedSyntheticEvidence
+  writes: []

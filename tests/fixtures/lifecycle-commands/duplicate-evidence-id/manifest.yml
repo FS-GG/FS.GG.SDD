@@ -1,0 +1,12 @@
+schemaVersion: 1
+scenario: duplicate-evidence-id
+command: evidence
+workId: 011-evidence-command
+evidence:
+  tests:
+    - FS.GG.SDD.Artifacts.Tests.EvidenceArtifactTests.parseEvidenceArtifact reports duplicate evidence ids as artifact diagnostics
+expected:
+  outcome: blocked
+  diagnostics:
+    - evidence.duplicateEvidenceId
+  writes: []

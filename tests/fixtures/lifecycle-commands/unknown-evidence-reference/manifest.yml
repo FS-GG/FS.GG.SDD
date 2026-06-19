@@ -1,0 +1,9 @@
+schemaVersion: 1
+scenario: unknown-evidence-reference
+command: evidence
+workId: 011-evidence-command
+expected:
+  outcome: blocked
+  diagnostics:
+    - evidence.unknownReference
+  writes: []

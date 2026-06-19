@@ -26,3 +26,8 @@ scenarios:
       - readiness/010-analyze-command/work-model.json
       - readiness/010-analyze-command/analysis.json
     currencies: [missing, stale, malformed, blocked]
+  - command: evidence
+    workId: 011-evidence-command
+    generatedViews:
+      - readiness/011-evidence-command/work-model.json
+    currencies: [missing, stale, malformed, blocked]

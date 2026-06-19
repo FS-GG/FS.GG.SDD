@@ -420,11 +420,35 @@ module LifecycleArtifacts =
     type EvidenceKind =
         | Implementation
         | Verification
+        | Review
+        | GeneratedViewEvidence
         | Synthetic
         | Deferral
+        | Note
         | Missing
 
     type EvidenceSubject = { SubjectType: string; Id: string }
+
+    type EvidenceSourceSnapshot =
+        { Label: string
+          Path: string
+          Digest: string option
+          SchemaVersion: int option
+          SourceLocation: SourceLocation option }
+
+    type EvidenceSourceReference =
+        { ReferenceId: string option
+          Kind: string
+          Path: string option
+          Uri: string option
+          Digest: string option
+          RelatedSourceId: string option
+          Result: string option
+          SourceLocation: SourceLocation option }
+
+    type SyntheticDisclosure =
+        { StandsInFor: string
+          Reason: string }
 
     type EvidenceDeclaration =
         { Id: EvidenceId
@@ -432,12 +456,73 @@ module LifecycleArtifacts =
           Subject: EvidenceSubject
           TaskRefs: TaskId list
           RequirementRefs: RequirementId list
+          AcceptanceScenarioRefs: AcceptanceScenarioId list
+          ClarificationDecisionRefs: DecisionId list
+          ChecklistResultRefs: ChecklistResultId list
+          PlanDecisionRefs: PlanDecisionId list
+          ObligationRefs: string list
           ArtifactRefs: ArtifactRef list
+          SourceRefs: EvidenceSourceReference list
           Result: string
           Synthetic: bool
+          SyntheticDisclosure: SyntheticDisclosure option
           Rationale: string option
+          Owner: string option
+          Scope: string option
+          LaterLifecycleVisibility: string option
+          Notes: string list
           Source: ArtifactRef
           SourceLocation: SourceLocation option }
+
+    type EvidenceDispositionState =
+        | EvidenceSupported
+        | EvidenceDeferred
+        | EvidenceMissingDisposition
+        | EvidenceStale
+        | EvidenceSyntheticDisposition
+        | EvidenceInvalid
+        | EvidenceAdvisory
+        | EvidenceBlocking
+
+    type EvidenceObligation =
+        { ObligationId: string
+          Kind: string
+          SourceArtifactPath: string
+          SourceId: string option
+          LinkedTaskIds: TaskId list
+          LinkedRequirementIds: RequirementId list
+          LinkedDecisionIds: string list
+          ExpectedEvidenceKinds: string list
+          RequiredSkillOrCapabilityTags: string list
+          Blocking: bool
+          Correction: string }
+
+    type EvidenceDisposition =
+        { DispositionId: string
+          ObligationId: string
+          State: EvidenceDispositionState
+          EvidenceIds: EvidenceId list
+          AffectedTaskIds: TaskId list
+          AffectedSourceIds: string list
+          Severity: string
+          DiagnosticIds: string list
+          Correction: string }
+
+    type EvidenceArtifact =
+        { SchemaVersion: SchemaVersion
+          WorkId: WorkId
+          Stage: LifecycleStage
+          Status: string
+          SourceSpec: string
+          SourceClarifications: string
+          SourceChecklist: string
+          SourcePlan: string
+          SourceTasks: string
+          SourceAnalysis: string
+          SourceSnapshots: EvidenceSourceSnapshot list
+          Evidence: EvidenceDeclaration list
+          LifecycleNotes: string list
+          Diagnostics: Diagnostic list }
 
     type MarkdownRequirementMention =
         { Id: string
@@ -484,6 +569,7 @@ module LifecycleArtifacts =
     val parsePlanFacts: snapshot: FileSnapshot -> Result<PlanFacts, Diagnostic list>
     val parseTaskFacts: snapshot: FileSnapshot -> Result<TaskFacts, Diagnostic list>
     val parseAnalysisView: snapshot: FileSnapshot -> Result<AnalysisView, Diagnostic list>
+    val parseEvidenceArtifact: snapshot: FileSnapshot -> Result<EvidenceArtifact, Diagnostic list>
     val parseRequirements: snapshot: FileSnapshot -> Requirement list
     val parseDecisions: snapshot: FileSnapshot -> Decision list
     val parseTasks: snapshot: FileSnapshot -> Result<WorkTask list, Diagnostic list>

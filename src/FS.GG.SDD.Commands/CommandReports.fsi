@@ -75,6 +75,20 @@ module CommandReports =
     val failedTasksPrerequisite: path: string -> message: string -> relatedIds: string list -> Diagnostic
     val analysisIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
     val malformedAnalysisView: path: string -> message: string -> Diagnostic
+    val missingAnalysisPrerequisite: path: string -> message: string -> Diagnostic
+    val analysisNotReady: path: string -> readiness: string -> Diagnostic
+    val evidenceIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
+    val malformedEvidenceArtifact: path: string -> message: string -> Diagnostic
+    val duplicateEvidenceId: path: string -> id: string -> Diagnostic
+    val unknownEvidenceReference: path: string -> id: string -> Diagnostic
+    val missingRequiredEvidence: path: string -> ids: string list -> Diagnostic
+    val staleEvidence: path: string -> ids: string list -> Diagnostic
+    val staleEvidenceSource: path: string -> ids: string list -> Diagnostic
+    val undisclosedSyntheticEvidence: path: string -> ids: string list -> Diagnostic
+    val missingDeferralRationale: path: string -> ids: string list -> Diagnostic
+    val missingRequiredSkill: path: string -> ids: string list -> Diagnostic
+    val unsupportedEvidenceResultState: path: string -> states: string list -> Diagnostic
+    val unsafeEvidenceUpdate: path: string -> ids: string list -> Diagnostic
     val missingDisposition: path: string -> ids: string list -> Diagnostic
     val unsafeOverwrite: path: string -> Diagnostic
     val malformedGeneratedView: path: string -> Diagnostic

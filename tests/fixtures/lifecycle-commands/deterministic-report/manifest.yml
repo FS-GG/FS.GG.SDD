@@ -21,3 +21,7 @@ scenarios:
     workId: 010-analyze-command
     deterministic: true
     includes: [analysis, readiness, generatedViews, nextAction]
+  - command: evidence
+    workId: 011-evidence-command
+    deterministic: true
+    includes: [evidence, declarationIds, generatedViews, nextAction]

@@ -54,3 +54,20 @@ scenarios:
       - generatedViews
       - diagnostics
       - nextAction
+  - command: evidence
+    fields:
+      - command
+      - outcome
+      - changedArtifacts
+      - evidencePath
+      - evidenceReadiness
+      - evidenceDeclarations
+      - evidenceObligations
+      - evidenceSupported
+      - evidenceDeferred
+      - evidenceMissing
+      - evidenceSynthetic
+      - evidenceBlocking
+      - generatedViews
+      - diagnostics
+      - nextAction

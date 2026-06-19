@@ -1,0 +1,10 @@
+schemaVersion: 1
+scenario: stale-evidence
+command: evidence
+workId: 011-evidence-command
+expected:
+  outcome: succeededWithWarnings
+  diagnostics:
+    - evidence.staleEvidence
+    - evidence.staleEvidenceSource
+  nextAction: evidence.next.verify

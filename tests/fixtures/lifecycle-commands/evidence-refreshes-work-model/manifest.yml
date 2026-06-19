@@ -1,0 +1,12 @@
+schemaVersion: 1
+scenario: evidence-refreshes-work-model
+command: evidence
+workId: 011-evidence-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.EvidenceCommandTests.evidence creates authored evidence artifact with real filesystem evidence
+expected:
+  generatedViews:
+    - readiness/011-evidence-command/work-model.json
+  sourceIncludes:
+    - work/011-evidence-command/evidence.yml

@@ -142,6 +142,14 @@ module TestSupport =
     let runAnalyze root workId title =
         analyzeRequest root workId title |> runRequest
 
+    let evidenceRequest root workId title =
+        { request Evidence root with
+            WorkId = Some workId
+            Title = Some title }
+
+    let runEvidence root workId title =
+        evidenceRequest root workId title |> runRequest
+
     let initializePlanReadyProject root workId title =
         initializeProject root
         runCharter root workId title |> ignore
@@ -198,6 +206,10 @@ evidence:
         initializePlanReadyProject root workId title
         runTasks root workId title |> ignore
         writePassingTaskEvidenceFor root workId
+
+    let initializeAnalyzedProject root workId title =
+        initializeTasksReadyProject root workId title
+        runAnalyze root workId title |> ignore
 
     let validSpec workId title =
         $"""---
@@ -324,3 +336,10 @@ No blocking ambiguity remains.
             if summary.Readiness <> readiness then
                 failwith $"Expected analysis readiness {readiness}, got {summary.Readiness}."
         | None -> failwith "Expected analysis summary."
+
+    let assertEvidenceSummary (report: CommandReport) readiness =
+        match report.Evidence with
+        | Some summary ->
+            if summary.Readiness <> readiness then
+                failwith $"Expected evidence readiness {readiness}, got {summary.Readiness}."
+        | None -> failwith "Expected evidence summary."

@@ -73,6 +73,7 @@ FS.GG.SDD.Artifacts.LifecycleArtifacts.parseChecklistFacts
 FS.GG.SDD.Artifacts.LifecycleArtifacts.parseClarificationFacts
 FS.GG.SDD.Artifacts.LifecycleArtifacts.parseDecisions
 FS.GG.SDD.Artifacts.LifecycleArtifacts.parseEvidence
+FS.GG.SDD.Artifacts.LifecycleArtifacts.parseEvidenceArtifact
 FS.GG.SDD.Artifacts.LifecycleArtifacts.parsePlanFacts
 FS.GG.SDD.Artifacts.LifecycleArtifacts.parseProjectConfig
 FS.GG.SDD.Artifacts.LifecycleArtifacts.parseRequirements

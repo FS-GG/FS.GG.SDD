@@ -202,9 +202,12 @@ let commandReport =
     |> Option.defaultWith (fun () -> CommandReports.buildReport commandFinalModel)
 
 expectEqual "parse analyze" (Ok Analyze) (CommandTypes.parseCommand "analyze")
+expectEqual "parse evidence" (Ok Evidence) (CommandTypes.parseCommand "evidence")
 expectEqual "analyze command stage" "analyze" (CommandTypes.commandStage Analyze)
+expectEqual "evidence command stage" "evidence" (CommandTypes.commandStage Evidence)
 expectEqual "next after tasks" (Some Analyze) (CommandTypes.nextLifecycleCommand Tasks)
-expectEqual "next after analyze" None (CommandTypes.nextLifecycleCommand Analyze)
+expectEqual "next after analyze" (Some Evidence) (CommandTypes.nextLifecycleCommand Analyze)
+expectEqual "next after evidence" None (CommandTypes.nextLifecycleCommand Evidence)
 
 let analyzeRequest =
     ({ Command = Analyze
@@ -232,6 +235,101 @@ let analysisSummary =
 expectEqual "analysis command" Analyze analysisReport.Command
 expectEqual "analysis readiness" "implementationReady" analysisSummary.Readiness
 
+let evidenceInput =
+    """schemaVersion: 1
+workId: 009-tasks-command
+stage: evidence
+status: evidenceReady
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    obligationRefs: [EV001]
+    result: pass
+    synthetic: false
+  - id: EV002
+    kind: verification
+    subject:
+      type: task
+      id: T002
+    taskRefs: [T002]
+    obligationRefs: [EV002]
+    result: pass
+    synthetic: false
+  - id: EV003
+    kind: verification
+    subject:
+      type: task
+      id: T003
+    taskRefs: [T003]
+    obligationRefs: [EV003]
+    result: pass
+    synthetic: false
+  - id: EV004
+    kind: verification
+    subject:
+      type: task
+      id: T004
+    taskRefs: [T004]
+    obligationRefs: [EV004]
+    result: pass
+    synthetic: false
+  - id: EV005
+    kind: verification
+    subject:
+      type: task
+      id: T005
+    taskRefs: [T005]
+    obligationRefs: [EV005]
+    result: pass
+    synthetic: false
+  - id: EV006
+    kind: verification
+    subject:
+      type: task
+      id: T006
+    taskRefs: [T006]
+    obligationRefs: [EV006]
+    result: pass
+    synthetic: false
+"""
+
+let parsedEvidence =
+    LifecycleArtifacts.parseEvidenceArtifact
+        ({ Path = "work/009-tasks-command/evidence.yml"
+           Text = evidenceInput }
+        : LifecycleArtifacts.FileSnapshot)
+    |> Result.defaultWith (fun diagnostics -> failwithf "Expected evidence artifact: %A" diagnostics)
+
+let evidenceRequest =
+    ({ Command = Evidence
+       ProjectRoot = commandRoot
+       WorkId = Some "009-tasks-command"
+       Title = Some "Tasks Command"
+       InputText = Some evidenceInput
+       OutputFormat = Json
+       DryRun = false
+       OverwritePolicy = RefuseUnsafe
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+    : CommandRequest)
+
+let evidenceFinalModel =
+    runCommand evidenceRequest
+
+let evidenceReport =
+    evidenceFinalModel.Report
+    |> Option.defaultWith (fun () -> CommandReports.buildReport evidenceFinalModel)
+
+let evidenceSummary =
+    evidenceReport.Evidence
+    |> Option.defaultWith (fun () -> failwith "Expected evidence summary.")
+
+expectEqual "evidence command" Evidence evidenceReport.Command
+expectEqual "evidence readiness" "evidenceReady" evidenceSummary.Readiness
+
 printfn "command=%s" (CommandTypes.commandName commandReport.Command)
 printfn "tasksCommandStage=%s" (CommandTypes.commandStage Tasks)
 printfn "nextAfterTasks=%s" (CommandTypes.nextLifecycleCommand Tasks |> Option.map CommandTypes.commandName |> Option.defaultValue "none")
@@ -258,6 +356,22 @@ printfn "analysisRelationships=%d" analysisSummary.SourceRelationshipCount
 printfn "analysisGeneratedViews=%d" analysisReport.GeneratedViews.Length
 printfn "analysisDiagnostics=%s" ([ missingTasksPrerequisite "work/009-tasks-command/tasks.yml" "Tasks are required."; malformedAnalysisView "readiness/009-tasks-command/analysis.json" "Analysis JSON is malformed."; analysisIdentityMismatch "readiness/009-tasks-command/analysis.json" "009-tasks-command" "other-work" ] |> List.map _.Id |> String.concat ",")
 printfn "analysisNextAction=%s" (analysisReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
+printfn "evidenceCommand=%s" (CommandTypes.commandName evidenceReport.Command)
+printfn "evidenceCommandStage=%s" (CommandTypes.commandStage Evidence)
+printfn "nextAfterEvidence=%s" (CommandTypes.nextLifecycleCommand Evidence |> Option.map CommandTypes.commandName |> Option.defaultValue "none")
+printfn "evidenceOutcome=%s" (CommandTypes.outcomeValue evidenceReport.Outcome)
+printfn "evidencePath=%s" evidenceSummary.EvidencePath
+printfn "evidenceReadiness=%s" evidenceSummary.Readiness
+printfn "evidenceDeclarations=%d" parsedEvidence.Evidence.Length
+printfn "evidenceDeclarationIds=%s" (evidenceSummary.DeclarationIds |> String.concat ",")
+printfn "evidenceObligations=%d" evidenceSummary.ObligationCount
+printfn "evidenceSupported=%d" evidenceSummary.SupportedCount
+printfn "evidenceDeferred=%d" evidenceSummary.DeferredCount
+printfn "evidenceMissing=%d" evidenceSummary.MissingCount
+printfn "evidenceSynthetic=%d" evidenceSummary.SyntheticCount
+printfn "evidenceBlocking=%d" evidenceSummary.BlockingCount
+printfn "evidenceDiagnostics=%s" ([ missingAnalysisPrerequisite "readiness/009-tasks-command/analysis.json" "Analysis is required."; analysisNotReady "readiness/009-tasks-command/analysis.json" "blocked"; malformedEvidenceArtifact "work/009-tasks-command/evidence.yml" "Evidence YAML is malformed."; missingRequiredEvidence "work/009-tasks-command/evidence.yml" [ "EV001" ]; undisclosedSyntheticEvidence "work/009-tasks-command/evidence.yml" [ "EV002" ]; unsafeEvidenceUpdate "work/009-tasks-command/evidence.yml" [ "EV003" ] ] |> List.map _.Id |> String.concat ",")
+printfn "evidenceNextAction=%s" (evidenceReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
 printfn "createdProjectConfig=%b" (File.Exists(Path.Combine(commandRoot, ".fsgg", "project.yml")))
 printfn "createdCharter=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "charter.md")))
 printfn "createdSpecification=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "spec.md")))
@@ -266,3 +380,4 @@ printfn "createdChecklist=%b" (File.Exists(Path.Combine(commandRoot, "work", "00
 printfn "createdPlan=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "plan.md")))
 printfn "createdTasks=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "tasks.yml")))
 printfn "createdAnalysis=%b" (File.Exists(Path.Combine(commandRoot, "readiness", "009-tasks-command", "analysis.json")))
+printfn "createdEvidence=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "evidence.yml")))

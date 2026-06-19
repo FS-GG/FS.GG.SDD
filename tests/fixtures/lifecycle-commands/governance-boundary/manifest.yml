@@ -35,3 +35,9 @@ scenarios:
       - .fsgg/capabilities.yml
       - .fsgg/tooling.yml
     forbiddenFields: [route, profile, freshness, gate, audit, evidenceFreshness, protectedBoundary, releaseVerdict]
+  - command: evidence
+    optionalFacts:
+      - .fsgg/policy.yml
+      - .fsgg/capabilities.yml
+      - .fsgg/tooling.yml
+    forbiddenFields: [route, profile, freshness, gate, audit, protectedBoundary, effectiveEvidence, verifyReadiness, shipReadiness, releaseVerdict]

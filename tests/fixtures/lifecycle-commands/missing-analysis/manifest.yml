@@ -1,0 +1,12 @@
+schemaVersion: 1
+scenario: missing-analysis
+command: evidence
+workId: 011-evidence-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.EvidenceCommandTests.evidence missing analysis blocks without authored evidence write
+expected:
+  outcome: blocked
+  diagnostics:
+    - evidence.missingAnalysisPrerequisite
+  writes: []

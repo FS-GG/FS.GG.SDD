@@ -9,3 +9,9 @@ expected:
   outcome: blocked
   diagnostics: [missingTasksPrerequisite]
   analysisMutation: none
+scenarios:
+  - command: evidence
+    workId: 011-evidence-command
+    outcome: blocked
+    diagnostics: [missingTasksPrerequisite]
+    evidenceMutation: none

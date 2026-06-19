@@ -15,6 +15,7 @@ module CommandTypes =
         | Plan
         | Tasks
         | Analyze
+        | Evidence
 
     type OutputFormat =
         | Json
@@ -179,6 +180,25 @@ module CommandTypes =
           AcceptedDeferralCount: int
           Readiness: string }
 
+    type EvidenceSummary =
+        { WorkId: string
+          Stage: string
+          Status: string
+          EvidencePath: string
+          DeclarationIds: string list
+          DeclarationCount: int
+          ObligationCount: int
+          SupportedCount: int
+          DeferredCount: int
+          MissingCount: int
+          StaleCount: int
+          SyntheticCount: int
+          InvalidCount: int
+          AdvisoryCount: int
+          BlockingCount: int
+          SourceSnapshotCount: int
+          Readiness: string }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -211,6 +231,7 @@ module CommandTypes =
           Plan: PlanSummary option
           Tasks: TasksSummary option
           Analysis: AnalysisSummary option
+          Evidence: EvidenceSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -242,6 +263,7 @@ module CommandTypes =
           Plan: PlanSummary option
           Tasks: TasksSummary option
           Analysis: AnalysisSummary option
+          Evidence: EvidenceSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 
@@ -263,6 +285,7 @@ module CommandTypes =
         | Plan -> "plan"
         | Tasks -> "tasks"
         | Analyze -> "analyze"
+        | Evidence -> "evidence"
 
     let commandStage (command: SddCommand) =
         match command with
@@ -279,6 +302,7 @@ module CommandTypes =
         | "plan" -> Ok Plan
         | "tasks" -> Ok Tasks
         | "analyze" -> Ok Analyze
+        | "evidence" -> Ok Evidence
         | other -> Error $"Unknown SDD command '{other}'."
 
     let outputFormatValue (format: OutputFormat) =
@@ -330,7 +354,8 @@ module CommandTypes =
         | Checklist -> Some Plan
         | Plan -> Some Tasks
         | Tasks -> Some Analyze
-        | Analyze -> None
+        | Analyze -> Some Evidence
+        | Evidence -> None
 
     let effectPath (effect: CommandEffect) =
         match effect with

@@ -1,0 +1,11 @@
+schemaVersion: 1
+scenario: evidence-preserves-existing
+command: evidence
+workId: 011-evidence-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.EvidenceCommandTests.evidence creates authored evidence artifact with real filesystem evidence
+expected:
+  preservesExistingDeclarations: true
+  safeWriteDecision: safe
+  readiness: evidenceReady

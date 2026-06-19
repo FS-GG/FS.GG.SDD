@@ -1,0 +1,11 @@
+schemaVersion: 1
+scenario: evidence-rerun-current
+command: evidence
+workId: 011-evidence-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.EvidenceCommandTests.evidence deterministic JSON is byte stable
+expected:
+  deterministic: true
+  readiness: evidenceReady
+  nextAction: evidence.next.verify

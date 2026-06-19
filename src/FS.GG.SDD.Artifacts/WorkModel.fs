@@ -116,14 +116,17 @@ module WorkModel =
         | InProgress -> "in-progress"
         | Done -> "done"
         | Skipped _ -> "skipped"
-        | Stale -> "stale"
+        | TaskStatus.Stale -> "stale"
 
     let evidenceKindValue kind =
         match kind with
         | Implementation -> "implementation"
         | Verification -> "verification"
+        | Review -> "review"
+        | GeneratedViewEvidence -> "generated-view"
         | Synthetic -> "synthetic"
         | Deferral -> "deferral"
+        | Note -> "note"
         | Missing -> "missing"
 
     let sourceEntries (parsed: ParsedWorkItem) =

@@ -25,7 +25,7 @@ module CommandReports =
             DiagnosticSeverity.DiagnosticError
             None
             $"Unknown SDD command '{value}'."
-            "Use one of: init, charter, specify, clarify, checklist, plan, tasks, analyze."
+            "Use one of: init, charter, specify, clarify, checklist, plan, tasks, analyze, evidence."
             []
 
     let malformedWorkId (value: string) =
@@ -583,6 +583,132 @@ module CommandReports =
             "Regenerate readiness/<id>/analysis.json from current lifecycle sources."
             [ path ]
 
+    let missingAnalysisPrerequisite path message =
+        commandDiagnostic
+            "evidence.missingAnalysisPrerequisite"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Run fsgg-sdd analyze for the selected work item before recording evidence."
+            [ path ]
+
+    let analysisNotReady path readiness =
+        commandDiagnostic
+            "evidence.analysisNotReady"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Analysis readiness '{readiness}' is not implementationReady."
+            "Correct analysis findings and rerun fsgg-sdd analyze before recording evidence."
+            [ readiness ]
+
+    let evidenceIdentityMismatch path expectedWorkId actualWorkId =
+        commandDiagnostic
+            "evidence.identityMismatch"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Evidence work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Move evidence.yml under the matching work id or update its structured work id before rerunning."
+            [ expectedWorkId; actualWorkId ]
+
+    let malformedEvidenceArtifact path message =
+        commandDiagnostic
+            "evidence.malformedEvidenceArtifact"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Fix schemaVersion, workId, stage, status, source links, evidence ids, result states, and disclosure fields before rerunning."
+            [ path ]
+
+    let duplicateEvidenceId path id =
+        commandDiagnostic
+            "evidence.duplicateEvidenceId"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Evidence id '{id}' is declared more than once."
+            "Rename duplicate evidence declarations and keep stable ids unique within the selected evidence artifact."
+            [ id ]
+
+    let unknownEvidenceReference path id =
+        commandDiagnostic
+            "evidence.unknownReference"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Evidence reference '{id}' does not resolve in the selected lifecycle artifacts."
+            "Reference a known task, requirement, decision, obligation, source artifact, or generated view, or remove the stale evidence link."
+            [ id ]
+
+    let missingRequiredEvidence path ids =
+        commandDiagnostic
+            "evidence.missingRequiredEvidence"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "One or more required evidence obligations are missing current evidence or accepted deferral."
+            "Add evidence declarations or accepted deferrals linked to the missing obligation ids."
+            ids
+
+    let staleEvidence path ids =
+        commandDiagnostic
+            "evidence.staleEvidence"
+            DiagnosticSeverity.DiagnosticWarning
+            (Some path)
+            "One or more evidence declarations need review against current lifecycle facts."
+            "Review stale evidence declarations and record a compatible update before verification."
+            ids
+
+    let staleEvidenceSource path ids =
+        commandDiagnostic
+            "evidence.staleEvidenceSource"
+            DiagnosticSeverity.DiagnosticWarning
+            (Some path)
+            "One or more evidence source snapshots no longer match current source digests."
+            "Rerun the evidence command after reviewing the changed source artifacts."
+            ids
+
+    let undisclosedSyntheticEvidence path ids =
+        commandDiagnostic
+            "evidence.undisclosedSyntheticEvidence"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "Synthetic evidence is missing disclosure of the real path it stands in for."
+            "Add syntheticDisclosure.standsInFor and syntheticDisclosure.reason to every synthetic declaration."
+            ids
+
+    let missingDeferralRationale path ids =
+        commandDiagnostic
+            "evidence.missingDeferralRationale"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "Accepted deferral evidence is missing rationale, owner, scope, or later lifecycle visibility."
+            "Add rationale, owner, scope, and laterLifecycleVisibility to every deferral declaration."
+            ids
+
+    let missingRequiredSkill path ids =
+        commandDiagnostic
+            "evidence.missingRequiredSkill"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "Completed work references required skills without visible evidence support."
+            "Add evidence linked to the required task skill or move the task back to pending until the skill-backed work is complete."
+            ids
+
+    let unsupportedEvidenceResultState path states =
+        commandDiagnostic
+            "evidence.unsupportedResultState"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "Evidence contains unsupported result states."
+            "Use pass, fail, deferred, missing, stale, advisory, or blocked for evidence result."
+            states
+
+    let unsafeEvidenceUpdate path ids =
+        commandDiagnostic
+            "evidence.unsafeUpdate"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "The proposed evidence update would change existing declaration meaning."
+            "Preserve existing declaration ids and meanings; append a compatible new declaration instead."
+            ids
+
     let missingDisposition path ids =
         commandDiagnostic
             "missingDisposition"
@@ -787,6 +913,7 @@ module CommandReports =
         (plan: PlanSummary option)
         (tasks: TasksSummary option)
         (analysis: AnalysisSummary option)
+        (evidence: EvidenceSummary option)
         =
         let blocking =
             diagnostics
@@ -796,11 +923,28 @@ module CommandReports =
             |> List.sort
 
         if not (List.isEmpty blocking) then
+            let ids = blocking |> Set.ofList
+
             let correctionCommand =
                 match request.Command with
                 | Plan -> planCorrectionCommand diagnostics
                 | Tasks -> tasksCorrectionCommand diagnostics
                 | Analyze -> tasksCorrectionCommand diagnostics
+                | Evidence ->
+                    if ids |> Set.contains "evidence.missingAnalysisPrerequisite"
+                       || ids |> Set.contains "evidence.analysisNotReady"
+                       || ids |> Set.contains "malformedAnalysisView"
+                       || ids |> Set.contains "analysisIdentityMismatch" then
+                        Some Analyze
+                    elif ids |> Set.contains "missingTasksPrerequisite"
+                         || ids |> Set.contains "malformedTasksArtifact"
+                         || ids |> Set.contains "tasksIdentityMismatch"
+                         || ids |> Set.contains "evidence.missingRequiredSkill" then
+                        Some Tasks
+                    elif ids |> Set.exists (fun id -> id.StartsWith("evidence.", StringComparison.OrdinalIgnoreCase)) then
+                        Some Evidence
+                    else
+                        None
                 | _ -> None
 
             Some
@@ -855,6 +999,17 @@ module CommandReports =
                   WorkId = request.WorkId
                   Reason = "Lifecycle sources are current and ready for implementation."
                   RequiredArtifacts = analysis |> Option.map (fun summary -> [ summary.AnalysisPath ]) |> Option.defaultValue []
+                  BlockingDiagnosticIds = [] }
+        elif request.Command = Evidence then
+            Some
+                { ActionId = "evidence.next.verify"
+                  Command = None
+                  WorkId = request.WorkId
+                  Reason = "Evidence declarations are current and ready for verification."
+                  RequiredArtifacts =
+                    evidence
+                    |> Option.map (fun summary -> [ summary.EvidencePath; $"readiness/{summary.WorkId}/work-model.json" ])
+                    |> Option.defaultValue []
                   BlockingDiagnosticIds = [] }
         else
             match nextLifecycleCommand request.Command with
@@ -927,10 +1082,11 @@ module CommandReports =
           Plan = model.Plan
           Tasks = model.Tasks
           Analysis = model.Analysis
+          Evidence = model.Evidence
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility
-          NextAction = nextAction diagnostics model.Request model.Checklist model.Plan model.Tasks model.Analysis }
+          NextAction = nextAction diagnostics model.Request model.Checklist model.Plan model.Tasks model.Analysis model.Evidence }
 
     let exitCodeForReport (report: CommandReport) =
         match report.Outcome with

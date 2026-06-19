@@ -1,0 +1,12 @@
+schemaVersion: 1
+scenario: evidence-accepted-deferral
+command: evidence
+workId: 011-evidence-command
+expected:
+  acceptedDeferrals: visible
+  deferralFields:
+    - rationale
+    - owner
+    - scope
+    - laterLifecycleVisibility
+  missingDeferralRationaleDiagnostic: evidence.missingDeferralRationale

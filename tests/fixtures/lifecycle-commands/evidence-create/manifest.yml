@@ -1,0 +1,13 @@
+schemaVersion: 1
+scenario: evidence-create
+command: evidence
+workId: 011-evidence-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.EvidenceCommandTests.evidence creates authored evidence artifact with real filesystem evidence
+expected:
+  outcome: succeeded
+  changedArtifacts:
+    - work/011-evidence-command/evidence.yml
+    - readiness/011-evidence-command/work-model.json
+  nextAction: evidence.next.verify
