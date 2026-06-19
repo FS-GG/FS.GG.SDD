@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "presets": {
+    "fsharp-opinionated": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:26e5e03b5aad9c8559bdc493baa1003529296198c809dcb80840108989b570ff",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "claude": [
+          "speckit.constitution",
+          "speckit.tasks",
+          "speckit.implement"
+        ]
+      },
+      "registered_skills": [
+        "speckit-constitution",
+        "speckit-tasks",
+        "speckit-implement"
+      ],
+      "installed_at": "2026-06-18T07:15:13.762713+00:00"
+    }
+  }
+}

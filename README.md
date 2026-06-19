@@ -1,0 +1,55 @@
+# FS.GG.SDD
+
+Spec-driven development lifecycle tooling for FS.GG.
+
+This repository is intentionally scaffold-only right now. It contains the Spec
+Kit setup, the project constitution, agent guidance for Claude and Codex, and
+the design/implementation plan. Product code will be added only through normal
+Spec Kit feature work.
+
+## Scope
+
+FS.GG.SDD owns:
+
+- project charter and policy workflow;
+- specify, clarify, checklist, plan, tasks, analyze, implement, verify, and ship
+  lifecycle commands;
+- structured lifecycle artifact schemas;
+- normalized work model generation;
+- agent command and skill generation;
+- generated readiness views for SDD artifacts;
+- integration contracts with FS.GG.Governance.
+
+FS.GG.SDD does not own the governance rule engine. Rule evaluation, evidence
+freshness, routing, profiles, and gate enforcement belong in
+[FS.GG.Governance](https://github.com/FS-GG/FS.GG.Governance).
+
+## Current State
+
+- Spec Kit initialized under `.specify/`.
+- F# constitution ratified for this SDD product.
+- Claude and Codex guidance files are present.
+- No source projects are present yet.
+- The implementation roadmap lives in
+  [docs/sdd-design-and-implementation-plan.md](docs/sdd-design-and-implementation-plan.md).
+
+## Workflow
+
+Use standard Spec Kit:
+
+```text
+specify -> clarify -> plan -> tasks -> implement -> analyze
+```
+
+The first implementation feature should create the structured SDD artifact model.
+Markdown remains an authoring surface; schema-versioned structured artifacts are
+the machine contract.
+
+## Agent Context
+
+- Claude: read [CLAUDE.md](CLAUDE.md) and `.claude/skills/fs-gg-sdd-project/SKILL.md`.
+- Codex: read [AGENTS.md](AGENTS.md) and `.codex/skills/fs-gg-sdd-project/SKILL.md`.
+
+## License
+
+MIT.

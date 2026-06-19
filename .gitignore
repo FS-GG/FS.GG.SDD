@@ -1,0 +1,9 @@
+bin/
+obj/
+.ionide/
+.fake/
+.tmp/
+TestResults/
+*.user
+*.suo
+*.nupkg

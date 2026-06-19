@@ -1,0 +1,53 @@
+schema_version: "1.0"
+
+preset:
+  id: "fsharp-opinionated"
+  name: "F# Opinionated"
+  version: "1.0.0"
+  description: "Opinionated pure-F# constitution, FSI-first workflow, Elmish/MVU boundaries for stateful I/O, and lightweight synthetic-evidence disclosure. Standard Spec Kit task flow (authored tasks.md, no dependency graph or merge-readiness audit)."
+  author: "EHotwagner"
+  repository: "https://github.com/EHotwagner/speckit-fsharp-tooling"
+  license: "MIT"
+
+requires:
+  speckit_version: ">=0.7.0"
+
+provides:
+  templates:
+    - type: "template"
+      name: "constitution-template"
+      file: "templates/constitution-template.md"
+      description: "Seven-principle F# constitution with LOCKED/TAILORABLE section markers"
+      replaces: "constitution-template"
+
+    - type: "template"
+      name: "tasks-template"
+      file: "templates/tasks-template.md"
+      description: "Tasks checklist with Elmish/MVU evidence prompts and the vertical-slice rule"
+      replaces: "tasks-template"
+
+    - type: "command"
+      name: "speckit.constitution"
+      file: "commands/speckit.constitution.md"
+      description: "Fill constitution placeholders while respecting LOCKED markers"
+      replaces: "speckit.constitution"
+
+    - type: "command"
+      name: "speckit.tasks"
+      file: "commands/speckit.tasks.md"
+      description: "Generate the feature's tasks.md from its spec and plan"
+      replaces: "speckit.tasks"
+
+    - type: "command"
+      name: "speckit.implement"
+      file: "commands/speckit.implement.md"
+      description: "Implement tasks with Elmish/MVU boundaries and real-evidence discipline"
+      replaces: "speckit.implement"
+
+tags:
+  - "fsharp"
+  - "opinionated"
+  - "fsi-first"
+  - "elmish"
+  - "mvu"
+  - "synthetic-evidence"
