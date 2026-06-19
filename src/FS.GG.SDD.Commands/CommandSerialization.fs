@@ -73,6 +73,21 @@ module CommandSerialization =
         writeStringList writer "diagnosticIds" change.DiagnosticIds
         writer.WriteEndObject()
 
+    let writeSpecification (writer: Utf8JsonWriter) (summary: SpecificationSummary option) =
+        match summary with
+        | Some summary ->
+            writer.WriteStartObject("specification")
+            writer.WriteString("workId", summary.WorkId)
+            writer.WriteString("stage", summary.Stage)
+            writer.WriteString("status", summary.Status)
+            writeStringList writer "storyIds" summary.StoryIds
+            writeStringList writer "requirementIds" summary.RequirementIds
+            writeStringList writer "acceptanceScenarioIds" summary.AcceptanceScenarioIds
+            writeStringList writer "ambiguityIds" summary.AmbiguityIds
+            writer.WriteNumber("unresolvedAmbiguityCount", summary.UnresolvedAmbiguityCount)
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "specification"
+
     let writeGeneratedSource (writer: Utf8JsonWriter) (source: GeneratedViewSource) =
         writer.WriteStartObject()
         writer.WriteString("path", source.Path)
@@ -164,6 +179,7 @@ module CommandSerialization =
         |> List.sortBy (fun change -> change.Path, artifactOperationValue change.Operation, change.Ownership)
         |> List.iter (writeChange writer)
         writer.WriteEndArray()
+        writeSpecification writer report.Specification
         writer.WriteStartArray("generatedViews")
         report.GeneratedViews |> List.sortBy (fun view -> view.Path) |> List.iter (writeGeneratedView writer)
         writer.WriteEndArray()

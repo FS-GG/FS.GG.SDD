@@ -1,0 +1,13 @@
+schemaVersion: 1
+fixture:
+  id: malformed-specification
+  workId: 005-specify-command
+  purpose: Malformed specification front matter, unsupported schema, missing ids, and unknown references block writes.
+expected:
+  command: specify
+  outcome: blocked
+  diagnostics:
+    - malformedSpecificationFrontMatter
+    - missingSpecificationId
+    - unknownSpecificationReference
+

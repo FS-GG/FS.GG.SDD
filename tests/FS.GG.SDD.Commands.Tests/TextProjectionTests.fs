@@ -42,3 +42,22 @@ module TextProjectionTests =
         Assert.Contains($"changedArtifacts: {List.length report.ChangedArtifacts}", text)
         Assert.Contains($"generatedViews: {List.length report.GeneratedViews}", text)
         Assert.Contains($"diagnostics: {List.length report.Diagnostics}", text)
+
+    [<Fact>]
+    let ``specify text projection includes specification counts from report`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root "005-specify-command" "Specify Command" |> ignore
+        let request =
+            { TestSupport.specifyRequest root "005-specify-command" "Specify Command" with
+                DryRun = true
+                OutputFormat = Text }
+
+        let report = TestSupport.runRequest request
+        let text = renderText report
+        let specification = report.Specification.Value
+
+        Assert.Contains("command: specify", text)
+        Assert.Contains($"outcome: {outcomeValue report.Outcome}", text)
+        Assert.Contains($"specificationRequirements: {List.length specification.RequirementIds}", text)
+        Assert.Contains($"unresolvedAmbiguities: {specification.UnresolvedAmbiguityCount}", text)

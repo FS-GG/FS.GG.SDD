@@ -83,6 +83,18 @@ module TestSupport =
     let runCharter root workId title =
         charterRequest root workId title |> runRequest
 
+    let specifyIntent =
+        "value: create a native specify command\nscope: one chartered work item\nrequirement: create a specification artifact with stable ids"
+
+    let specifyRequest root workId title =
+        { request Specify root with
+            WorkId = Some workId
+            Title = Some title
+            InputText = Some specifyIntent }
+
+    let runSpecify root workId title =
+        specifyRequest root workId title |> runRequest
+
     let validSpec workId title =
         $"""---
 schemaVersion: 1
@@ -121,3 +133,7 @@ evidence: []
         writeRelative root $"work/{workId}/spec.md" (validSpec workId title)
         writeRelative root $"work/{workId}/tasks.yml" validTasks
         writeRelative root $"work/{workId}/evidence.yml" validEvidence
+
+    let writeValidTasksAndEvidence root =
+        writeRelative root "work/005-specify-command/tasks.yml" validTasks
+        writeRelative root "work/005-specify-command/evidence.yml" validEvidence

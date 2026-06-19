@@ -6,3 +6,14 @@ fixture:
 expected:
   command: charter
   fields: [command, outcome, changedArtifacts, generatedViews, diagnostics, nextAction]
+scenarios:
+  - command: specify
+    fields:
+      - command
+      - outcome
+      - changedArtifacts
+      - specificationRequirements
+      - unresolvedAmbiguities
+      - generatedViews
+      - diagnostics
+      - nextAction

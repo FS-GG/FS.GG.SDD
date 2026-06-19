@@ -86,6 +86,16 @@ module CommandTypes =
           Currency: GeneratedViewCurrency
           DiagnosticIds: string list }
 
+    type SpecificationSummary =
+        { WorkId: string
+          Stage: string
+          Status: string
+          StoryIds: string list
+          RequirementIds: string list
+          AcceptanceScenarioIds: string list
+          AmbiguityIds: string list
+          UnresolvedAmbiguityCount: int }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -112,6 +122,7 @@ module CommandTypes =
           Outcome: CommandOutcome
           WorkId: string option
           ChangedArtifacts: ArtifactChange list
+          Specification: SpecificationSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -137,6 +148,7 @@ module CommandTypes =
           PendingEffects: CommandEffect list
           InterpretedEffects: CommandEffectResult list
           Diagnostics: Diagnostic list
+          Specification: SpecificationSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 

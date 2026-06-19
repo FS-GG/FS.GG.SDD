@@ -126,6 +126,15 @@ module CommandReports =
             "Keep one authored source for the selected work id and move or rename the duplicate."
             (workId :: (paths |> List.sort))
 
+    let missingCharterPrerequisite path message =
+        commandDiagnostic
+            "missingCharterPrerequisite"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Run fsgg-sdd charter for the selected work item before running fsgg-sdd specify."
+            [ path ]
+
     let charterIdentityMismatch path expectedWorkId actualWorkId =
         commandDiagnostic
             "charterIdentityMismatch"
@@ -143,6 +152,62 @@ module CommandReports =
             message
             "Add schemaVersion, workId, title, stage, changeTier, and status front matter before rerunning."
             [ path ]
+
+    let missingSpecificationIntent path missingFacts =
+        let missingText = String.concat ", " missingFacts
+
+        commandDiagnostic
+            "missingSpecificationIntent"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Specification intent is missing required facts: {missingText}."
+            "Provide input with value, scope, and requirement facts before creating a new specification."
+            missingFacts
+
+    let specificationIdentityMismatch path expectedWorkId actualWorkId =
+        commandDiagnostic
+            "specificationIdentityMismatch"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Specification work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Move the specification under the matching work id or update its front matter before rerunning."
+            [ expectedWorkId; actualWorkId ]
+
+    let malformedSpecificationFrontMatter path message =
+        commandDiagnostic
+            "malformedSpecificationFrontMatter"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Add schemaVersion, workId, title, stage: specify, changeTier, and status front matter before rerunning."
+            [ path ]
+
+    let duplicateSpecificationId path id =
+        commandDiagnostic
+            "duplicateSpecificationId"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Specification identifier '{id}' is declared more than once."
+            "Rename one duplicate identifier and update all structured references before rerunning."
+            [ id ]
+
+    let missingSpecificationId path idFamily =
+        commandDiagnostic
+            "missingSpecificationId"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Specification content is missing a required {idFamily} stable id."
+            "Add stable story, requirement, scenario, scope, or ambiguity ids before rerunning."
+            [ idFamily ]
+
+    let unknownSpecificationReference path id =
+        commandDiagnostic
+            "unknownSpecificationReference"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Specification reference '{id}' does not resolve."
+            "Declare the referenced specification id or remove the stale structured link before rerunning."
+            [ id ]
 
     let unsafeOverwrite (path: string) =
         commandDiagnostic
@@ -180,7 +245,7 @@ module CommandReports =
             "Inspect the command failure and fix the tool or environment before rerunning."
             []
 
-    let changeFromEffectResult (result: CommandEffectResult) =
+    let changeFromEffectResult (request: CommandRequest) (result: CommandEffectResult) =
         match result.Effect with
         | CreateDirectory path ->
             let operation =
@@ -200,6 +265,7 @@ module CommandReports =
                   AfterDigest = None
                   SafeWriteDecision =
                     if not result.Succeeded then "refused"
+                    elif request.DryRun && operation <> ArtifactOperation.NoChange then "dryRunOnly"
                     elif operation = ArtifactOperation.NoChange then "preserveExisting"
                     else "safe"
                   DiagnosticIds = result.Diagnostic |> Option.map (fun d -> [ d.Id ]) |> Option.defaultValue [] }
@@ -229,6 +295,7 @@ module CommandReports =
                   AfterDigest = afterDigest
                   SafeWriteDecision =
                     if not result.Succeeded then "refused"
+                    elif request.DryRun && operation <> ArtifactOperation.NoChange then "dryRunOnly"
                     elif operation = ArtifactOperation.NoChange then "preserveExisting"
                     elif kind = GeneratedView then "refreshGeneratedView"
                     else "safe"
@@ -278,6 +345,7 @@ module CommandReports =
                 let requiredArtifacts =
                     match request.Command, request.WorkId with
                     | Charter, Some workId -> [ $"work/{workId}/charter.md" ]
+                    | Specify, Some workId -> [ $"work/{workId}/charter.md"; $"work/{workId}/spec.md" ]
                     | _ -> []
 
                 Some
@@ -319,7 +387,7 @@ module CommandReports =
 
         let changes =
             model.InterpretedEffects
-            |> List.choose changeFromEffectResult
+            |> List.choose (changeFromEffectResult model.Request)
             |> sortChanges
 
         { SchemaVersion = 1
@@ -332,6 +400,7 @@ module CommandReports =
           Outcome = outcome diagnostics changes
           WorkId = model.Request.WorkId
           ChangedArtifacts = changes
+          Specification = model.Specification
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility

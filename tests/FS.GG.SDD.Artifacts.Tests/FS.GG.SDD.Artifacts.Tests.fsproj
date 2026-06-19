@@ -7,6 +7,7 @@
     <Compile Include="TestSupport.fs" />
     <Compile Include="IdentifierTests.fs" />
     <Compile Include="SchemaContractTests.fs" />
+    <Compile Include="SpecificationArtifactTests.fs" />
     <Compile Include="WorkModelTests.fs" />
     <Compile Include="NormalizedWorkModelTests.fs" />
     <Compile Include="GeneratedModelCurrencyTests.fs" />

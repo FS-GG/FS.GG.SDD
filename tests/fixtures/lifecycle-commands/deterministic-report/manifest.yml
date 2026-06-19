@@ -6,3 +6,7 @@ fixture:
 expected:
   command: charter
   deterministic: true
+scenarios:
+  - command: specify
+    workId: 005-specify-command
+    deterministic: true

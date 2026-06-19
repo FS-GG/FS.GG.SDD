@@ -1,0 +1,11 @@
+schemaVersion: 1
+fixture:
+  id: specify-rerun-preserves-content
+  workId: 005-specify-command
+  purpose: Rerunning specify preserves existing authored prose and stable identifiers.
+expected:
+  command: specify
+  outcome: noChange
+  preservedIds: [US-001, FR-001, AC-001, SB-001]
+  nextAction: clarify
+

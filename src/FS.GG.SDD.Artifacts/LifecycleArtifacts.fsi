@@ -46,6 +46,34 @@ module LifecycleArtifacts =
           Status: string
           ProseStatus: string option }
 
+    type SpecificationFrontMatter =
+        { SchemaVersion: SchemaVersion
+          WorkId: WorkId
+          Title: string
+          Stage: LifecycleStage
+          ChangeTier: string
+          Status: string
+          PublicOrToolFacingImpact: bool option }
+
+    type SpecificationRequirementReference =
+        { RequirementId: RequirementId
+          StoryIds: UserStoryId list
+          AcceptanceScenarioIds: AcceptanceScenarioId list
+          SourceLocation: SourceLocation option }
+
+    type SpecificationFacts =
+        { FrontMatter: SpecificationFrontMatter
+          StandardSections: string list
+          MissingStandardSections: string list
+          UserStoryIds: UserStoryId list
+          RequirementIds: RequirementId list
+          AcceptanceScenarioIds: AcceptanceScenarioId list
+          ScopeBoundaryIds: ScopeBoundaryId list
+          AmbiguityIds: AmbiguityId list
+          RequirementReferences: SpecificationRequirementReference list
+          UnresolvedAmbiguityCount: int
+          Diagnostics: Diagnostic list }
+
     type Requirement =
         { Id: RequirementId
           Title: string
@@ -138,6 +166,8 @@ module LifecycleArtifacts =
     val parseSddLifecyclePolicy: snapshot: FileSnapshot -> Result<SddLifecyclePolicy, Diagnostic list>
     val parseAgentGuidanceConfig: snapshot: FileSnapshot -> Result<AgentGuidanceConfig, Diagnostic list>
     val parseWorkItemMetadata: snapshot: FileSnapshot -> Result<WorkItemMetadata, Diagnostic list>
+    val specificationStandardSections: unit -> string list
+    val parseSpecificationFacts: snapshot: FileSnapshot -> Result<SpecificationFacts, Diagnostic list>
     val parseRequirements: snapshot: FileSnapshot -> Requirement list
     val parseDecisions: snapshot: FileSnapshot -> Decision list
     val parseTasks: snapshot: FileSnapshot -> Result<WorkTask list, Diagnostic list>

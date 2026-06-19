@@ -8,6 +8,7 @@
     <Compile Include="CommandWorkflowTests.fs" />
     <Compile Include="InitCommandTests.fs" />
     <Compile Include="CharterCommandTests.fs" />
+    <Compile Include="SpecifyCommandTests.fs" />
     <Compile Include="GeneratedViewCommandTests.fs" />
     <Compile Include="CommandReportJsonTests.fs" />
     <Compile Include="TextProjectionTests.fs" />

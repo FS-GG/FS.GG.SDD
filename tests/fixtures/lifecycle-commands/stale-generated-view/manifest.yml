@@ -7,3 +7,8 @@ expected:
   command: charter
   generatedView: readiness/004-charter-command/work-model.json
   diagnostics: [malformedGeneratedView, staleGeneratedView, blockedGeneratedViewRefresh]
+scenarios:
+  - command: specify
+    workId: 005-specify-command
+    generatedView: readiness/005-specify-command/work-model.json
+    currencies: [missing, stale, malformed, blocked]

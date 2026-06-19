@@ -1,0 +1,15 @@
+Review: PASS
+
+Text output for `fsgg-sdd specify --text` identifies:
+
+- command and outcome;
+- changed artifact count;
+- parsed requirement, story, acceptance-scenario, and unresolved ambiguity
+  counts when a specification summary exists;
+- generated-view count;
+- diagnostic count;
+- next action.
+
+The text is rendered from `CommandReport` and introduces no separate lifecycle
+facts. Evidence is captured in `traceable-output-tests.txt` and
+`specify-cli-smoke.txt`.

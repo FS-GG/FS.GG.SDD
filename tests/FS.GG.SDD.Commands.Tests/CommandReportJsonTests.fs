@@ -43,3 +43,22 @@ module CommandReportJsonTests =
         Assert.Contains("\"name\": \"charter\"", first)
         Assert.DoesNotContain(root, first)
         Assert.DoesNotContain("timestamp", first)
+
+    [<Fact>]
+    let ``specify deterministic JSON includes specification object`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root "005-specify-command" "Specify Command" |> ignore
+        let request = { TestSupport.specifyRequest root "005-specify-command" "Specify Command" with DryRun = true }
+
+        let first = TestSupport.runRequest request |> serializeReport
+        let second = TestSupport.runRequest request |> serializeReport
+        let third = TestSupport.runRequest request |> serializeReport
+
+        Assert.Equal(first, second)
+        Assert.Equal(second, third)
+        Assert.Contains("\"name\": \"specify\"", first)
+        Assert.Contains("\"specification\"", first)
+        Assert.Contains("\"requirementIds\"", first)
+        Assert.DoesNotContain(root, first)
+        Assert.DoesNotContain("timestamp", first)

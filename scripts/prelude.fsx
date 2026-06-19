@@ -103,11 +103,11 @@ let runCommand request =
 let initFinalModel =
     runCommand initRequest
 
-let commandRequest =
+let charterRequest =
     ({ Command = Charter
        ProjectRoot = commandRoot
-       WorkId = Some "004-charter-command"
-       Title = Some "Charter Command"
+       WorkId = Some "005-specify-command"
+       Title = Some "Specify Command"
        InputText = None
        OutputFormat = Json
        DryRun = false
@@ -115,8 +115,23 @@ let commandRequest =
        GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
     : CommandRequest)
 
+let charterFinalModel =
+    runCommand charterRequest
+
+let specifyRequest =
+    ({ Command = Specify
+       ProjectRoot = commandRoot
+       WorkId = Some "005-specify-command"
+       Title = Some "Specify Command"
+       InputText = Some "value: create a native specify command\nscope: one chartered work item\nrequirement: create a specification artifact with stable ids"
+       OutputFormat = Json
+       DryRun = false
+       OverwritePolicy = RefuseUnsafe
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+    : CommandRequest)
+
 let commandFinalModel =
-    runCommand commandRequest
+    runCommand specifyRequest
 
 let commandReport =
     commandFinalModel.Report
@@ -125,8 +140,10 @@ let commandReport =
 printfn "command=%s" (CommandTypes.commandName commandReport.Command)
 printfn "outcome=%s" (CommandTypes.outcomeValue commandReport.Outcome)
 printfn "changedArtifacts=%d" commandReport.ChangedArtifacts.Length
+printfn "parsedSpecificationFacts=%d" (commandReport.Specification |> Option.map (fun summary -> summary.StoryIds.Length + summary.RequirementIds.Length + summary.AcceptanceScenarioIds.Length + summary.AmbiguityIds.Length) |> Option.defaultValue 0)
 printfn "generatedViews=%d" commandReport.GeneratedViews.Length
 printfn "blockingDiagnostics=%d" (commandReport.Diagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = Diagnostics.DiagnosticSeverity.DiagnosticError) |> List.length)
 printfn "nextAction=%s" (commandReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
 printfn "createdProjectConfig=%b" (File.Exists(Path.Combine(commandRoot, ".fsgg", "project.yml")))
-printfn "createdCharter=%b" (File.Exists(Path.Combine(commandRoot, "work", "004-charter-command", "charter.md")))
+printfn "createdCharter=%b" (File.Exists(Path.Combine(commandRoot, "work", "005-specify-command", "charter.md")))
+printfn "createdSpecification=%b" (File.Exists(Path.Combine(commandRoot, "work", "005-specify-command", "spec.md")))

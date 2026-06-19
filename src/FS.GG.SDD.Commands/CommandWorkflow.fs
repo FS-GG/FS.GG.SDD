@@ -126,7 +126,8 @@ of truth.
         else
             match request.Command, request.WorkId with
             | Init, _ -> [], initEffects request
-            | Charter, Some workId -> [], charterReadEffects workId
+            | Charter, Some workId
+            | Specify, Some workId -> [], charterReadEffects workId
             | command, _ -> [ unsupportedCommand command ], []
 
     let effectKey effect =
@@ -317,6 +318,201 @@ policyPointers:
 - Next lifecycle action: `fsgg-sdd specify --work {workId}`.
 """
 
+    type SpecificationIntent =
+        { UserValue: string option
+          Scope: string list
+          NonGoals: string list
+          Stories: string list
+          Requirements: string list
+          AcceptanceScenarios: string list
+          Ambiguities: string list
+          Impact: string list }
+
+    let emptySpecificationIntent =
+        { UserValue = None
+          Scope = []
+          NonGoals = []
+          Stories = []
+          Requirements = []
+          AcceptanceScenarios = []
+          Ambiguities = []
+          Impact = [] }
+
+    let appendIntent (label: string) (value: string) (intent: SpecificationIntent) =
+        let value = if isNull value then "" else value.Trim()
+
+        if String.IsNullOrWhiteSpace value then
+            intent
+        else
+            match label with
+            | "value"
+            | "user value"
+            | "goal"
+            | "intent" -> { intent with UserValue = Some value }
+            | "scope"
+            | "in scope"
+            | "in-scope" -> { intent with Scope = intent.Scope @ [ value ] }
+            | "non-goal"
+            | "non goal"
+            | "out of scope"
+            | "out-of-scope" -> { intent with NonGoals = intent.NonGoals @ [ value ] }
+            | "story"
+            | "user story" -> { intent with Stories = intent.Stories @ [ value ] }
+            | "requirement"
+            | "functional requirement"
+            | "fr" -> { intent with Requirements = intent.Requirements @ [ value ] }
+            | "acceptance"
+            | "acceptance scenario"
+            | "scenario" -> { intent with AcceptanceScenarios = intent.AcceptanceScenarios @ [ value ] }
+            | "ambiguity"
+            | "question" -> { intent with Ambiguities = intent.Ambiguities @ [ value ] }
+            | "impact"
+            | "public or tool-facing impact" -> { intent with Impact = intent.Impact @ [ value ] }
+            | _ ->
+                match intent.UserValue with
+                | None -> { intent with UserValue = Some value }
+                | Some _ -> intent
+
+    let normalizeSpecificationIntent (request: CommandRequest) =
+        let input = request.InputText |> Option.defaultValue ""
+
+        let parsed =
+            input.Replace("\r\n", "\n").Split('\n')
+            |> Array.fold
+                (fun intent line ->
+                    let trimmed = line.Trim().TrimStart('-', '*').Trim()
+                    let separator = trimmed.IndexOf(':')
+
+                    if separator > 0 then
+                        let label = trimmed.Substring(0, separator).Trim().ToLowerInvariant()
+                        let value = trimmed.Substring(separator + 1).Trim()
+                        appendIntent label value intent
+                    elif String.IsNullOrWhiteSpace trimmed then
+                        intent
+                    else
+                        appendIntent "value" trimmed intent)
+                emptySpecificationIntent
+
+        let missing =
+            [ if Option.isNone parsed.UserValue then "user value"
+              if List.isEmpty parsed.Scope then "scope"
+              if List.isEmpty parsed.Requirements then "measurable requirement" ]
+
+        parsed, missing
+
+    let numberedId prefix index = sprintf "%s-%03d" prefix (index + 1)
+
+    let specificationTemplate request workId intent =
+        let title = requestTitle request workId
+        let userValue = intent.UserValue |> Option.defaultValue $"Specify work item {workId}."
+        let scope = if List.isEmpty intent.Scope then [ "Author one chartered SDD work item specification." ] else intent.Scope
+        let nonGoals =
+            if List.isEmpty intent.NonGoals then
+                [ "Do not implement later lifecycle commands or Governance enforcement in this specification." ]
+            else
+                intent.NonGoals
+
+        let requirements = if List.isEmpty intent.Requirements then [ "Create a specification artifact with stable ids." ] else intent.Requirements
+        let stories = if List.isEmpty intent.Stories then [ $"As a maintainer, I can specify {title} after chartering the work item." ] else intent.Stories
+        let acceptanceScenarios =
+            if List.isEmpty intent.AcceptanceScenarios then
+                [ "Given a chartered work item, when specify runs with intent, then spec.md is created with stable ids." ]
+            else
+                intent.AcceptanceScenarios
+
+        let scopeLines =
+            scope
+            |> List.mapi (fun index text ->
+                let id = numberedId "SB" index
+                $"- {id}: {text}")
+            |> String.concat "\n"
+
+        let nonGoalLines =
+            nonGoals
+            |> List.mapi (fun index text ->
+                let id = numberedId "SB" (index + List.length scope)
+                $"- {id}: {text}")
+            |> String.concat "\n"
+
+        let storyLines =
+            stories
+            |> List.mapi (fun index text ->
+                let id = numberedId "US" index
+                $"- {id} (P1): {text}")
+            |> String.concat "\n"
+
+        let acceptanceLines =
+            acceptanceScenarios
+            |> List.mapi (fun index text ->
+                let id = numberedId "AC" index
+                $"- {id} [US-001] [FR-001]: {text}")
+            |> String.concat "\n"
+
+        let requirementLines =
+            requirements
+            |> List.mapi (fun index text ->
+                let id = numberedId "FR" index
+                $"- {id}: {text} (Stories: US-001; Acceptance: AC-001)")
+            |> String.concat "\n"
+
+        let ambiguityLines =
+            if List.isEmpty intent.Ambiguities then
+                "No material ambiguities recorded."
+            else
+                intent.Ambiguities
+                |> List.mapi (fun index text ->
+                    let id = numberedId "AMB" index
+                    $"- {id} open: {text}")
+                |> String.concat "\n"
+
+        let impactLines =
+            if List.isEmpty intent.Impact then
+                "- This specification is an SDD lifecycle artifact and command-report contract input."
+            else
+                intent.Impact |> List.map (fun text -> $"- {text}") |> String.concat "\n"
+
+        $"""---
+schemaVersion: 1
+workId: {workId}
+title: {title}
+stage: specify
+changeTier: tier1
+status: specified
+publicOrToolFacingImpact: true
+---
+
+# {title} Specification
+
+Prose status: specified
+
+## User Value
+{userValue}
+
+## Scope
+{scopeLines}
+
+## Non-Goals
+{nonGoalLines}
+
+## User Stories
+{storyLines}
+
+## Acceptance Scenarios
+{acceptanceLines}
+
+## Functional Requirements
+{requirementLines}
+
+## Ambiguities
+{ambiguityLines}
+
+## Public Or Tool-Facing Impact
+{impactLines}
+
+## Lifecycle Notes
+- Next lifecycle action: `fsgg-sdd clarify --work {workId}`.
+"""
+
     let hasSection (heading: string) (text: string) =
         Regex.IsMatch(text, $"(?m)^##\\s+{Regex.Escape heading}\\s*$")
 
@@ -345,6 +541,33 @@ policyPointers:
                 |> List.map (sectionText workId)
                 |> String.concat "\n"
 
+            let trimmed = normalized.TrimEnd()
+            $"{trimmed}\n\n{suffix}"
+
+    let specificationSectionText heading =
+        match heading with
+        | "User Value" -> "## User Value\n"
+        | "Scope" -> "## Scope\n"
+        | "Non-Goals" -> "## Non-Goals\n"
+        | "User Stories" -> "## User Stories\n"
+        | "Acceptance Scenarios" -> "## Acceptance Scenarios\n"
+        | "Functional Requirements" -> "## Functional Requirements\n"
+        | "Ambiguities" -> "## Ambiguities\n"
+        | "Public Or Tool-Facing Impact" -> "## Public Or Tool-Facing Impact\n"
+        | "Lifecycle Notes" -> "## Lifecycle Notes\n"
+        | _ -> $"## {heading}\n"
+
+    let ensureSpecificationSections text =
+        let normalized = (if isNull text then "" else text).Replace("\r\n", "\n")
+
+        let missing =
+            LifecycleArtifactsModule.specificationStandardSections ()
+            |> List.filter (fun heading -> not (hasSection heading normalized))
+
+        if List.isEmpty missing then
+            normalized
+        else
+            let suffix = missing |> List.map specificationSectionText |> String.concat "\n"
             let trimmed = normalized.TrimEnd()
             $"{trimmed}\n\n{suffix}"
 
@@ -432,6 +655,103 @@ policyPointers:
                 [ unsafeOverwrite path ], existing.Text
             | Ok _ -> [], ensureStandardSections workId existing.Text
 
+    let charterPrerequisiteDiagnosticsAndText workId model =
+        let path = charterPath workId
+
+        match snapshot path model with
+        | None -> [ missingCharterPrerequisite path $"Charter prerequisite '{path}' is missing." ], None
+        | Some existing ->
+            match parseCharterFrontMatter path existing.Text with
+            | Error _ -> [ missingCharterPrerequisite path "Charter prerequisite front matter is malformed." ], Some existing.Text
+            | Ok frontMatter when frontMatter.SchemaVersion <> "1" ->
+                [ missingCharterPrerequisite path $"Charter schemaVersion '{frontMatter.SchemaVersion}' is not supported." ], Some existing.Text
+            | Ok frontMatter when not (String.Equals(frontMatter.WorkId, workId, StringComparison.OrdinalIgnoreCase)) ->
+                [ charterIdentityMismatch path workId frontMatter.WorkId ], Some existing.Text
+            | Ok frontMatter when not (String.Equals(frontMatter.Stage, "charter", StringComparison.OrdinalIgnoreCase)) ->
+                [ missingCharterPrerequisite path $"Charter stage '{frontMatter.Stage}' is not 'charter'." ], Some existing.Text
+            | Ok _ -> [], Some existing.Text
+
+    let specificationSummary (facts: SpecificationFacts) : SpecificationSummary =
+        { WorkId = facts.FrontMatter.WorkId.Value
+          Stage = IdentifiersModule.stageValue facts.FrontMatter.Stage
+          Status = facts.FrontMatter.Status
+          StoryIds = facts.UserStoryIds |> List.map _.Value |> List.sort
+          RequirementIds = facts.RequirementIds |> List.map _.Value |> List.sort
+          AcceptanceScenarioIds = facts.AcceptanceScenarioIds |> List.map _.Value |> List.sort
+          AmbiguityIds = facts.AmbiguityIds |> List.map _.Value |> List.sort
+          UnresolvedAmbiguityCount = facts.UnresolvedAmbiguityCount }
+
+    let mapSpecificationDiagnostics (path: string) (diagnostics: Diagnostic list) : Diagnostic list =
+        diagnostics
+        |> List.map (fun diagnostic ->
+            match diagnostic.Id, diagnostic.RelatedIds with
+            | "duplicateIdentifier", id :: _ -> duplicateSpecificationId path id
+            | "unknownReference", id :: _ -> unknownSpecificationReference path id
+            | "workModelInconsistent", idFamily :: _ when idFamily.EndsWith("###", StringComparison.Ordinal) -> missingSpecificationId path idFamily
+            | _ -> diagnostic)
+
+    let parseSpecificationForCommand path text : Result<SpecificationFacts * Diagnostic list, Diagnostic list> =
+        let snapshot = { Path = path; Text = text }
+
+        match LifecycleArtifactsModule.parseSpecificationFacts snapshot with
+        | Error diagnostics -> Error(mapSpecificationDiagnostics path diagnostics)
+        | Ok facts ->
+            let diagnostics = mapSpecificationDiagnostics path facts.Diagnostics
+            Ok(facts, diagnostics)
+
+    let specificationDiagnosticsTextAndSummary request workId model =
+        let path = specPath workId
+
+        match snapshot path model with
+        | None ->
+            let intent, missingFacts = normalizeSpecificationIntent request
+
+            if not (List.isEmpty missingFacts) then
+                [ missingSpecificationIntent path missingFacts ], None, None
+            else
+                let text = specificationTemplate request workId intent
+
+                match parseSpecificationForCommand path text with
+                | Error diagnostics -> diagnostics, Some text, None
+                | Ok(facts, diagnostics) -> diagnostics, Some text, Some(specificationSummary facts)
+        | Some existing ->
+            let unsafe =
+                if existing.Text.Contains("<!-- fsgg-sdd: unsafe-overwrite -->", StringComparison.OrdinalIgnoreCase) then
+                    [ unsafeOverwrite path ]
+                else
+                    []
+
+            match parseSpecificationForCommand path existing.Text with
+            | Error diagnostics ->
+                let mapped =
+                    diagnostics
+                    |> List.map (fun diagnostic ->
+                        if diagnostic.Id = "workModelInconsistent" || diagnostic.Id = "malformedSchemaVersion" then
+                            malformedSpecificationFrontMatter path diagnostic.Message
+                        else
+                            diagnostic)
+
+                unsafe @ mapped |> DiagnosticsModule.sort, Some existing.Text, None
+            | Ok(facts, diagnostics) ->
+                let identityDiagnostics =
+                    [ if facts.FrontMatter.SchemaVersion.Major <> 1 then
+                          malformedSpecificationFrontMatter path $"Specification schemaVersion '{facts.FrontMatter.SchemaVersion.Major}' is not supported."
+                      if not (String.Equals(facts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
+                          specificationIdentityMismatch path workId facts.FrontMatter.WorkId.Value
+                      if facts.FrontMatter.Stage <> LifecycleStage.Specify then
+                          malformedSpecificationFrontMatter path $"Specification stage '{IdentifiersModule.stageValue facts.FrontMatter.Stage}' is not 'specify'." ]
+
+                let allDiagnostics = unsafe @ identityDiagnostics @ diagnostics |> DiagnosticsModule.sort
+                let hasBlocking = allDiagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                let text = if hasBlocking then existing.Text else ensureSpecificationSections existing.Text
+
+                let summary =
+                    match parseSpecificationForCommand path text with
+                    | Ok(nextFacts, _) -> Some(specificationSummary nextFacts)
+                    | Error _ -> Some(specificationSummary facts)
+
+                allDiagnostics, Some text, summary
+
     let sourceFromEntry (entry: SourceEntry) =
         { Path = entry.Path
           Digest = Some entry.SourceDigest
@@ -483,18 +803,20 @@ policyPointers:
                             "Regenerate readiness/<id>/work-model.json from current lifecycle sources."
                             [ path ])
 
-    let workModelSnapshots workId charterText model =
+    let workModelSnapshots workId charterText specText model =
         [ snapshot ".fsgg/project.yml" model
           snapshot ".fsgg/sdd.yml" model
           snapshot ".fsgg/agents.yml" model
-          snapshot (specPath workId) model
+          specText
+          |> Option.map (fun text -> { Path = specPath workId; Text = text })
+          |> Option.orElseWith (fun () -> snapshot (specPath workId) model)
           snapshot (tasksPath workId) model
           snapshot (evidencePath workId) model
           Some({ Path = charterPath workId; Text = charterText }) ]
         |> List.choose id
         |> List.map (fun snapshot -> { snapshot with Path = normalizeRelativePath snapshot.Path })
 
-    let generatedViewPlan request workId charterText commandDiagnostics model =
+    let generatedViewPlan request workId charterText specText commandDiagnostics model =
         let path = workModelPath workId
         let currentDiagnostic = existingGeneratedViewDiagnostic workId path model
         let blockingCommandIds =
@@ -503,11 +825,15 @@ policyPointers:
             |> List.map _.Id
 
         if not (List.isEmpty blockingCommandIds) then
-            let sources = [ charterSource (charterPath workId) charterText ]
+            let sources =
+                [ Some(charterSource (charterPath workId) charterText)
+                  specText |> Option.map (fun text -> charterSource (specPath workId) text) ]
+                |> List.choose id
+
             let view = generatedViewState path request.GeneratorVersion sources None GeneratedViewCurrency.Blocked blockingCommandIds
             currentDiagnostic |> Option.toList, view, []
         else
-            let snapshots = workModelSnapshots workId charterText model
+            let snapshots = workModelSnapshots workId charterText specText model
 
             let result =
                 SerializationModule.generateWorkModel
@@ -540,7 +866,11 @@ policyPointers:
 
                 let diagnostics = [ currentDiagnostic; diagnostic ] |> List.choose id
                 let diagnosticIds = diagnostics |> List.map _.Id
-                let sources = [ charterSource (charterPath workId) charterText ]
+                let sources =
+                    [ Some(charterSource (charterPath workId) charterText)
+                      specText |> Option.map (fun text -> charterSource (specPath workId) text) ]
+                    |> List.choose id
+
                 let view = generatedViewState path request.GeneratorVersion sources None currency diagnosticIds
                 diagnostics, view, []
 
@@ -550,13 +880,13 @@ policyPointers:
 
     let computeCharterPlan model =
         match model.Request.WorkId with
-        | None -> model.Diagnostics, [], []
+        | None -> model.Diagnostics, None, [], []
         | Some workId ->
             let projectDiagnostics = projectDiagnostics model
             let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
             let charterDiagnostics, charterText = charterDiagnosticsAndText model.Request workId model
             let commandDiagnostics = projectDiagnostics @ duplicateDiagnostics @ charterDiagnostics |> DiagnosticsModule.sort
-            let generatedDiagnostics, generatedView, generatedEffects = generatedViewPlan model.Request workId charterText commandDiagnostics model
+            let generatedDiagnostics, generatedView, generatedEffects = generatedViewPlan model.Request workId charterText None commandDiagnostics model
             let diagnostics = commandDiagnostics @ generatedDiagnostics |> DiagnosticsModule.sort
             let hasBlocking = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
 
@@ -566,11 +896,49 @@ policyPointers:
                 else
                     charterWriteEffects workId charterText @ generatedEffects
 
-            diagnostics, [ generatedView ], effects
+            diagnostics, None, [ generatedView ], effects
 
-    let nextCharterEffects model =
+    let computeSpecifyPlan model =
+        match model.Request.WorkId with
+        | None -> model.Diagnostics, None, [], []
+        | Some workId ->
+            let projectDiagnostics = projectDiagnostics model
+            let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
+            let charterDiagnostics, charterText = charterPrerequisiteDiagnosticsAndText workId model
+            let specificationDiagnostics, specText, specification = specificationDiagnosticsTextAndSummary model.Request workId model
+            let commandDiagnostics = projectDiagnostics @ duplicateDiagnostics @ charterDiagnostics @ specificationDiagnostics |> DiagnosticsModule.sort
+
+            let generatedDiagnostics, generatedView, generatedEffects =
+                match charterText with
+                | Some text -> generatedViewPlan model.Request workId text specText commandDiagnostics model
+                | None ->
+                    let path = workModelPath workId
+                    let ids =
+                        commandDiagnostics
+                        |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                        |> List.map _.Id
+
+                    [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+
+            let diagnostics = commandDiagnostics @ generatedDiagnostics |> DiagnosticsModule.sort
+            let hasBlocking = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+
+            let specificationEffects =
+                match specText with
+                | Some text when not hasBlocking -> [ CreateDirectory($"work/{workId}"); WriteFile(specPath workId, text, AuthoredSource) ]
+                | _ -> []
+
+            let effects =
+                if hasBlocking then
+                    []
+                else
+                    specificationEffects @ generatedEffects
+
+            diagnostics, specification, [ generatedView ], effects
+
+    let nextLifecycleEffects model =
         match model.Request.Command, model.Request.WorkId with
-        | Charter, Some workId when not (hasPlannedWrite model) ->
+        | (Charter | Specify), Some workId when not (hasPlannedWrite model) ->
             if not (allPlannedReadsInterpreted model) then
                 model, []
             else
@@ -581,13 +949,19 @@ policyPointers:
                     let effects = appendNewEffects candidateReads model
                     { model with PendingEffects = model.PendingEffects @ effects }, effects
                 | [] ->
-                    let diagnostics, generatedViews, plannedEffects = computeCharterPlan model
+                    let diagnostics, specification, generatedViews, plannedEffects =
+                        match model.Request.Command with
+                        | Charter -> computeCharterPlan model
+                        | Specify -> computeSpecifyPlan model
+                        | _ -> model.Diagnostics, None, [], []
+
                     let effects = appendNewEffects plannedEffects model
 
                     let plannedModel =
                         { model with
                             PendingEffects = model.PendingEffects @ effects
                             Diagnostics = diagnostics
+                            Specification = specification
                             GeneratedViews = generatedViews }
 
                     plannedModel, effects
@@ -602,6 +976,7 @@ policyPointers:
               PendingEffects = effects
               InterpretedEffects = []
               Diagnostics = diagnostics
+              Specification = None
               GeneratedViews = []
               Report = None }
 
@@ -614,7 +989,7 @@ policyPointers:
                 { model with
                     InterpretedEffects = model.InterpretedEffects @ [ result ] }
 
-            nextCharterEffects next
+            nextLifecycleEffects next
         | BuildReport ->
             let report = CommandReports.buildReport model
             { model with Report = Some report }, ([] : CommandEffect list)

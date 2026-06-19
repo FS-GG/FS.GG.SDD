@@ -1,0 +1,16 @@
+Review: PASS
+
+`fsgg-sdd specify` stays inside FS.GG.SDD ownership:
+
+- Creates or safely updates `work/<id>/spec.md`.
+- Reports optional Governance files only as compatibility facts.
+- Does not parse Governance-owned policy, capabilities, or tooling schemas.
+- Does not emit route, freshness, profile, gate, protected-branch, audit, or
+  release verdict fields.
+
+Evidence:
+
+- `traceable-output-tests.txt`
+- `specify-cli-smoke.txt`
+- `full-test-suite.txt`
+

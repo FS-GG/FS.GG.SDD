@@ -7,3 +7,8 @@ expected:
   command: charter
   outcome: blocked
   diagnostics: [malformedWorkId]
+scenarios:
+  - command: specify
+    workId: "INVALID WORK ID"
+    outcome: blocked
+    diagnostics: [malformedWorkId]

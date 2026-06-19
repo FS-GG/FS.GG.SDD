@@ -25,8 +25,15 @@ module CommandReports =
     val missingAgentsConfig: path: string -> Diagnostic
     val malformedAgentsConfig: path: string -> Diagnostic
     val duplicateWorkId: workId: string -> paths: string list -> Diagnostic
+    val missingCharterPrerequisite: path: string -> message: string -> Diagnostic
     val charterIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
     val malformedCharterFrontMatter: path: string -> message: string -> Diagnostic
+    val missingSpecificationIntent: path: string -> missingFacts: string list -> Diagnostic
+    val specificationIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
+    val malformedSpecificationFrontMatter: path: string -> message: string -> Diagnostic
+    val duplicateSpecificationId: path: string -> id: string -> Diagnostic
+    val missingSpecificationId: path: string -> idFamily: string -> Diagnostic
+    val unknownSpecificationReference: path: string -> id: string -> Diagnostic
     val unsafeOverwrite: path: string -> Diagnostic
     val malformedGeneratedView: path: string -> Diagnostic
     val blockedGeneratedViewRefresh: path: string -> relatedIds: string list -> Diagnostic

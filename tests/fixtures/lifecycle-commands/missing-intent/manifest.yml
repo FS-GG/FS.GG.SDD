@@ -1,0 +1,10 @@
+schemaVersion: 1
+fixture:
+  id: missing-intent
+  workId: 005-specify-command
+  purpose: New specifications require user value, scope, and measurable requirement intent.
+expected:
+  command: specify
+  outcome: blocked
+  diagnostics: [missingSpecificationIntent]
+

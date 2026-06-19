@@ -1,0 +1,10 @@
+schemaVersion: 1
+fixture:
+  id: duplicate-spec-id
+  workId: 005-specify-command
+  purpose: Duplicate story, requirement, acceptance scenario, scope boundary, or ambiguity ids block writes.
+expected:
+  command: specify
+  outcome: blocked
+  diagnostics: [duplicateSpecificationId]
+

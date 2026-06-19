@@ -7,3 +7,7 @@ expected:
   command: charter
   outcome: blocked
   diagnostics: [unsafeOverwrite]
+scenarios:
+  - command: specify
+    outcome: blocked
+    diagnostics: [unsafeOverwrite]

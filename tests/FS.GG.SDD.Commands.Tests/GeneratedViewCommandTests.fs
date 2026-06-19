@@ -53,3 +53,33 @@ module GeneratedViewCommandTests =
             && view.Currency = GeneratedViewCurrency.Current
             && view.DiagnosticIds |> List.contains "malformedGeneratedView")
         Assert.Contains("\"workId\": \"004-charter-command\"", TestSupport.readRelative root workModelPath)
+
+    [<Fact>]
+    let ``specify reports missing generated work model when later sources are incomplete`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root "005-specify-command" "Specify Command" |> ignore
+
+        let report = TestSupport.runSpecify root "005-specify-command" "Specify Command"
+
+        Assert.Contains(report.GeneratedViews, fun view ->
+            view.Path = "readiness/005-specify-command/work-model.json"
+            && view.Currency = GeneratedViewCurrency.Missing
+            && view.Sources |> List.exists (fun source -> source.Path = "work/005-specify-command/spec.md"))
+
+    [<Fact>]
+    let ``specify refreshes generated work model and reports malformed existing view`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root "005-specify-command" "Specify Command" |> ignore
+        TestSupport.writeValidTasksAndEvidence root
+        TestSupport.writeRelative root "readiness/005-specify-command/work-model.json" "{ malformed json"
+
+        let report = TestSupport.runSpecify root "005-specify-command" "Specify Command"
+
+        Assert.Equal(CommandOutcome.SucceededWithWarnings, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "malformedGeneratedView")
+        Assert.Contains(report.GeneratedViews, fun view ->
+            view.Path = "readiness/005-specify-command/work-model.json"
+            && view.Currency = GeneratedViewCurrency.Current
+            && view.DiagnosticIds |> List.contains "malformedGeneratedView")

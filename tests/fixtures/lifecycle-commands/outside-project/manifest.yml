@@ -7,3 +7,7 @@ expected:
   command: charter
   outcome: blocked
   diagnostics: [outsideProject]
+scenarios:
+  - command: specify
+    outcome: blocked
+    diagnostics: [outsideProject]

@@ -19,6 +19,10 @@ module Identifiers =
         | Ship
 
     type RequirementId = { Value: string }
+    type UserStoryId = { Value: string }
+    type AcceptanceScenarioId = { Value: string }
+    type ScopeBoundaryId = { Value: string }
+    type AmbiguityId = { Value: string }
     type DecisionId = { Value: string }
     type TaskId = { Value: string }
     type EvidenceId = { Value: string }
@@ -87,6 +91,22 @@ module Identifiers =
         createScopedId "Requirement id" @"^FR-\d{3,}$" value
         |> Result.map (fun value -> { RequirementId.Value = value.ToUpperInvariant() })
 
+    let createUserStoryId (value: string) =
+        createScopedId "User story id" @"^US-\d{3,}$" value
+        |> Result.map (fun value -> { UserStoryId.Value = value.ToUpperInvariant() })
+
+    let createAcceptanceScenarioId (value: string) =
+        createScopedId "Acceptance scenario id" @"^AC-\d{3,}$" value
+        |> Result.map (fun value -> { AcceptanceScenarioId.Value = value.ToUpperInvariant() })
+
+    let createScopeBoundaryId (value: string) =
+        createScopedId "Scope boundary id" @"^SB-\d{3,}$" value
+        |> Result.map (fun value -> { ScopeBoundaryId.Value = value.ToUpperInvariant() })
+
+    let createAmbiguityId (value: string) =
+        createScopedId "Ambiguity id" @"^AMB-\d{3,}$" value
+        |> Result.map (fun value -> { AmbiguityId.Value = value.ToUpperInvariant() })
+
     let createDecisionId (value: string) =
         createScopedId "Decision id" @"^DEC-\d{3,}$" value
         |> Result.map (fun value -> { DecisionId.Value = value.ToUpperInvariant() })
@@ -100,6 +120,10 @@ module Identifiers =
         |> Result.map (fun value -> { EvidenceId.Value = value.ToUpperInvariant() })
 
     let requirementIdValue (id: RequirementId) = id.Value
+    let userStoryIdValue (id: UserStoryId) = id.Value
+    let acceptanceScenarioIdValue (id: AcceptanceScenarioId) = id.Value
+    let scopeBoundaryIdValue (id: ScopeBoundaryId) = id.Value
+    let ambiguityIdValue (id: AmbiguityId) = id.Value
     let decisionIdValue (id: DecisionId) = id.Value
     let taskIdValue (id: TaskId) = id.Value
     let evidenceIdValue (id: EvidenceId) = id.Value

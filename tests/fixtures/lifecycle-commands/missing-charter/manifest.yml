@@ -1,0 +1,10 @@
+schemaVersion: 1
+fixture:
+  id: missing-charter
+  workId: 005-specify-command
+  purpose: Specify requires a valid charter prerequisite before spec writes.
+expected:
+  command: specify
+  outcome: blocked
+  diagnostics: [missingCharterPrerequisite]
+

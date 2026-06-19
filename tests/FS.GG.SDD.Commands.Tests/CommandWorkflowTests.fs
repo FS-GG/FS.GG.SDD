@@ -115,3 +115,43 @@ status: chartered
             match effect with
             | WriteFile _ -> true
             | _ -> false)
+
+    [<Fact>]
+    let ``specify plans project and work reads before write effects`` () =
+        let root = TestSupport.tempDirectory()
+        let request = { TestSupport.specifyRequest root "005-specify-command" "Specify Command" with DryRun = true }
+
+        let model, effects = init request
+
+        Assert.Empty(model.Diagnostics)
+        Assert.Contains(effects, fun effect -> effect = ReadFile ".fsgg/project.yml")
+        Assert.Contains(effects, fun effect -> effect = ReadFile ".fsgg/sdd.yml")
+        Assert.Contains(effects, fun effect -> effect = ReadFile ".fsgg/agents.yml")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "work/005-specify-command/charter.md")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "work/005-specify-command/spec.md")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "readiness/005-specify-command/work-model.json")
+        Assert.DoesNotContain(effects, fun effect ->
+            match effect with
+            | WriteFile _ -> true
+            | _ -> false)
+
+    [<Fact>]
+    let ``specify blocking diagnostics prevent write effects`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        let request = { TestSupport.specifyRequest root "005-specify-command" "Specify Command" with DryRun = true }
+        let model, effects = init request
+
+        let afterReads =
+            interpretAll root true effects
+            |> List.fold (fun state result -> update (EffectInterpreted result) state |> fst) model
+
+        let final = update BuildReport afterReads |> fst
+        let report = final.Report |> Option.defaultWith (fun () -> buildReport final)
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "missingCharterPrerequisite")
+        Assert.DoesNotContain(afterReads.PendingEffects, fun effect ->
+            match effect with
+            | WriteFile _ -> true
+            | _ -> false)
