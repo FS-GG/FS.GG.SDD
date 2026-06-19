@@ -29,3 +29,16 @@ scenarios:
       - generatedViews
       - diagnostics
       - nextAction
+  - command: plan
+    fields:
+      - command
+      - outcome
+      - changedArtifacts
+      - planDecisions
+      - planContractReferences
+      - planVerificationObligations
+      - planAcceptedDeferrals
+      - planStaleDecisions
+      - generatedViews
+      - diagnostics
+      - nextAction

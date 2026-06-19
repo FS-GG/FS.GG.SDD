@@ -192,6 +192,84 @@ module LifecycleArtifacts =
           StaleResultCount: int
           Diagnostics: Diagnostic list }
 
+    type PlanFrontMatter =
+        { SchemaVersion: SchemaVersion
+          WorkId: WorkId
+          Title: string
+          Stage: LifecycleStage
+          ChangeTier: string
+          Status: string
+          SourceSpec: string
+          SourceClarifications: string
+          SourceChecklist: string
+          PublicOrToolFacingImpact: bool option }
+
+    type PlanSourceSnapshot =
+        { Label: string
+          Path: string
+          Digest: string option
+          SchemaVersion: int option
+          SourceLocation: SourceLocation option }
+
+    type PlanDecision =
+        { DecisionId: PlanDecisionId
+          Title: string
+          Status: string
+          Text: string
+          SourceIds: string list
+          SourceLocation: SourceLocation option }
+
+    type PlanContractReference =
+        { ContractId: PlanContractReferenceId
+          Kind: string
+          Target: string
+          SourceIds: string list
+          SourceLocation: SourceLocation option }
+
+    type VerificationObligation =
+        { ObligationId: VerificationObligationId
+          Title: string
+          EvidenceKind: string
+          SourceIds: string list
+          SourceLocation: SourceLocation option }
+
+    type PlanMigrationNote =
+        { MigrationId: PlanMigrationNoteId
+          Posture: string
+          Text: string
+          SourceIds: string list
+          SourceLocation: SourceLocation option }
+
+    type GeneratedViewImpact =
+        { ImpactId: GeneratedViewImpactId
+          Target: string
+          CurrencyBehavior: string
+          SourceIds: string list
+          SourceLocation: SourceLocation option }
+
+    type AcceptedPlanDeferral =
+        { Id: string
+          Text: string
+          SourceIds: string list
+          SourceLocation: SourceLocation option }
+
+    type PlanFacts =
+        { FrontMatter: PlanFrontMatter
+          StandardSections: string list
+          MissingStandardSections: string list
+          SourceSnapshots: PlanSourceSnapshot list
+          Decisions: PlanDecision list
+          ContractReferences: PlanContractReference list
+          VerificationObligations: VerificationObligation list
+          MigrationNotes: PlanMigrationNote list
+          GeneratedViewImpacts: GeneratedViewImpact list
+          AcceptedDeferrals: AcceptedPlanDeferral list
+          BlockingFindings: string list
+          AdvisoryNotes: string list
+          LifecycleNotes: string list
+          StaleDecisionCount: int
+          Diagnostics: Diagnostic list }
+
     type Requirement =
         { Id: RequirementId
           Title: string
@@ -290,6 +368,8 @@ module LifecycleArtifacts =
     val parseClarificationFacts: snapshot: FileSnapshot -> Result<ClarificationFacts, Diagnostic list>
     val checklistStandardSections: unit -> string list
     val parseChecklistFacts: snapshot: FileSnapshot -> Result<ChecklistFacts, Diagnostic list>
+    val planStandardSections: unit -> string list
+    val parsePlanFacts: snapshot: FileSnapshot -> Result<PlanFacts, Diagnostic list>
     val parseRequirements: snapshot: FileSnapshot -> Requirement list
     val parseDecisions: snapshot: FileSnapshot -> Decision list
     val parseTasks: snapshot: FileSnapshot -> Result<WorkTask list, Diagnostic list>

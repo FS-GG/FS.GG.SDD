@@ -16,3 +16,7 @@ scenarios:
     workId: "INVALID WORK ID"
     outcome: blocked
     diagnostics: [malformedWorkId]
+  - command: plan
+    workId: "INVALID WORK ID"
+    outcome: blocked
+    diagnostics: [malformedWorkId]

@@ -364,6 +364,78 @@ module CommandReports =
             "Preserve the existing result and add a new result or mark it stale before changing the review decision."
             [ id ]
 
+    let missingChecklistPrerequisite path message =
+        commandDiagnostic
+            "missingChecklistPrerequisite"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Run fsgg-sdd checklist for the selected work item before running fsgg-sdd plan."
+            [ path ]
+
+    let failedChecklistPrerequisite path message relatedIds =
+        commandDiagnostic
+            "failedChecklistPrerequisite"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Correct blocking checklist findings, stale review results, or unresolved deferrals before planning."
+            relatedIds
+
+    let planIdentityMismatch path expectedWorkId actualWorkId =
+        commandDiagnostic
+            "planIdentityMismatch"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Plan work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Move plan.md under the matching work id or update its front matter before rerunning."
+            [ expectedWorkId; actualWorkId ]
+
+    let malformedPlanFrontMatter path message =
+        commandDiagnostic
+            "malformedPlanFrontMatter"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Add schemaVersion, workId, title, stage: plan, status, sourceSpec, sourceClarifications, and sourceChecklist front matter before rerunning."
+            [ path ]
+
+    let duplicatePlanId path id =
+        commandDiagnostic
+            "duplicatePlanId"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Plan identifier '{id}' is declared more than once."
+            "Rename one duplicate planning identifier and update all structured references before rerunning."
+            [ id ]
+
+    let unknownPlanSourceReference path id =
+        commandDiagnostic
+            "unknownPlanSourceReference"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Plan reference '{id}' does not resolve in the selected specification, clarification, checklist, or plan artifact."
+            "Reference a known FR, US, AC, SB, AMB, CQ, DEC, CHK, CR, PD, PC, VO, PM, or GV id, or remove the stale plan link."
+            [ id ]
+
+    let stalePlanDecision path decisionIds =
+        commandDiagnostic
+            "stalePlanDecision"
+            DiagnosticSeverity.DiagnosticWarning
+            (Some path)
+            "One or more plan decisions were recorded against older source snapshots."
+            "Review the stale plan decisions before treating the plan as ready for task generation."
+            decisionIds
+
+    let unsafePlanDecisionChange path id =
+        commandDiagnostic
+            "unsafePlanDecisionChange"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Plan decision '{id}' would be changed by this rerun."
+            "Preserve existing plan decisions and add a new decision id for the replacement path."
+            [ id ]
+
     let unsafeOverwrite (path: string) =
         commandDiagnostic
             "unsafeOverwrite"
@@ -478,7 +550,35 @@ module CommandReports =
             State = "notEvaluated"
             DiagnosticIds = [] } ]
 
-    let nextAction (diagnostics: Diagnostic list) (request: CommandRequest) (checklist: ChecklistSummary option) =
+    let planCorrectionCommand (diagnostics: Diagnostic list) =
+        let ids = diagnostics |> List.map _.Id |> Set.ofList
+
+        if Set.contains "missingSpecificationPrerequisite" ids
+           || Set.contains "malformedSpecificationFacts" ids
+           || Set.contains "specificationIdentityMismatch" ids then
+            Some Specify
+        elif Set.contains "missingClarificationPrerequisite" ids
+             || Set.contains "malformedClarificationFrontMatter" ids
+             || Set.contains "clarificationIdentityMismatch" ids then
+            Some Clarify
+        elif Set.contains "missingChecklistPrerequisite" ids
+             || Set.contains "failedChecklistPrerequisite" ids
+             || Set.contains "checklistIdentityMismatch" ids
+             || Set.contains "malformedChecklistFrontMatter" ids
+             || Set.contains "duplicateChecklistId" ids
+             || Set.contains "unknownChecklistSourceReference" ids then
+            Some Checklist
+        elif Set.contains "planIdentityMismatch" ids
+             || Set.contains "malformedPlanFrontMatter" ids
+             || Set.contains "duplicatePlanId" ids
+             || Set.contains "unknownPlanSourceReference" ids
+             || Set.contains "stalePlanDecision" ids
+             || Set.contains "unsafePlanDecisionChange" ids then
+            Some Plan
+        else
+            None
+
+    let nextAction (diagnostics: Diagnostic list) (request: CommandRequest) (checklist: ChecklistSummary option) (plan: PlanSummary option) =
         let blocking =
             diagnostics
             |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
@@ -487,13 +587,26 @@ module CommandReports =
             |> List.sort
 
         if not (List.isEmpty blocking) then
+            let correctionCommand =
+                match request.Command with
+                | Plan -> planCorrectionCommand diagnostics
+                | _ -> None
+
             Some
                 { ActionId = "correctBlockingDiagnostics"
-                  Command = None
+                  Command = correctionCommand
                   WorkId = request.WorkId
                   Reason = "The command is blocked by diagnostics."
                   RequiredArtifacts = []
                   BlockingDiagnosticIds = blocking }
+        elif request.Command = Plan && diagnostics |> List.exists (fun diagnostic -> diagnostic.Id = "stalePlanDecision") then
+            Some
+                { ActionId = "plan.correctStaleDecisions"
+                  Command = Some Plan
+                  WorkId = request.WorkId
+                  Reason = "Plan decisions need review before task generation."
+                  RequiredArtifacts = plan |> Option.map (fun summary -> [ $"work/{summary.WorkId}/plan.md" ]) |> Option.defaultValue []
+                  BlockingDiagnosticIds = [ "stalePlanDecision" ] }
         elif
             checklist
             |> Option.exists (fun summary -> summary.FailedBlockingCount > 0 || summary.StaleResultCount > 0)
@@ -525,6 +638,7 @@ module CommandReports =
                     | Specify, Some workId -> [ $"work/{workId}/charter.md"; $"work/{workId}/spec.md" ]
                     | Clarify, Some workId -> [ $"work/{workId}/spec.md"; $"work/{workId}/clarifications.md" ]
                     | Checklist, Some workId -> [ $"work/{workId}/spec.md"; $"work/{workId}/clarifications.md"; $"work/{workId}/checklist.md" ]
+                    | Plan, Some workId -> [ $"work/{workId}/plan.md" ]
                     | _ -> []
 
                 Some
@@ -582,10 +696,11 @@ module CommandReports =
           Specification = model.Specification
           Clarification = model.Clarification
           Checklist = model.Checklist
+          Plan = model.Plan
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility
-          NextAction = nextAction diagnostics model.Request model.Checklist }
+          NextAction = nextAction diagnostics model.Request model.Checklist model.Plan }
 
     let exitCodeForReport (report: CommandReport) =
         match report.Outcome with

@@ -1,0 +1,11 @@
+schemaVersion: 1
+scenario: missing-checklist
+command: plan
+workId: 008-plan-command
+expected:
+  outcome: blocked
+  diagnostics: [missingChecklistPrerequisite]
+  mutation: none
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.PlanCommandTests.plan missing checklist blocks before authored write

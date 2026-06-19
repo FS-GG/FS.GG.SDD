@@ -124,6 +124,28 @@ module CommandSerialization =
             writer.WriteEndObject()
         | None -> writer.WriteNull "checklist"
 
+    let writePlan (writer: Utf8JsonWriter) (summary: PlanSummary option) =
+        match summary with
+        | Some summary ->
+            writer.WriteStartObject("plan")
+            writer.WriteString("workId", summary.WorkId)
+            writer.WriteString("stage", summary.Stage)
+            writer.WriteString("status", summary.Status)
+            writer.WriteString("sourceSpec", summary.SourceSpec)
+            writer.WriteString("sourceClarifications", summary.SourceClarifications)
+            writer.WriteString("sourceChecklist", summary.SourceChecklist)
+            writeStringList writer "decisionIds" summary.DecisionIds
+            writeStringList writer "contractReferenceIds" summary.ContractReferenceIds
+            writeStringList writer "verificationObligationIds" summary.VerificationObligationIds
+            writeStringList writer "migrationNoteIds" summary.MigrationNoteIds
+            writeStringList writer "generatedViewImpactIds" summary.GeneratedViewImpactIds
+            writer.WriteNumber("acceptedDeferralCount", summary.AcceptedDeferralCount)
+            writer.WriteNumber("staleDecisionCount", summary.StaleDecisionCount)
+            writer.WriteNumber("blockingFindingCount", summary.BlockingFindingCount)
+            writer.WriteNumber("advisoryCount", summary.AdvisoryCount)
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "plan"
+
     let writeGeneratedSource (writer: Utf8JsonWriter) (source: GeneratedViewSource) =
         writer.WriteStartObject()
         writer.WriteString("path", source.Path)
@@ -218,6 +240,7 @@ module CommandSerialization =
         writeSpecification writer report.Specification
         writeClarification writer report.Clarification
         writeChecklist writer report.Checklist
+        writePlan writer report.Plan
         writer.WriteStartArray("generatedViews")
         report.GeneratedViews |> List.sortBy (fun view -> view.Path) |> List.iter (writeGeneratedView writer)
         writer.WriteEndArray()

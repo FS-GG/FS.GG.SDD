@@ -43,3 +43,19 @@ module IdentifierTests =
         Assert.Equal("CR-001", Identifiers.checklistResultIdValue result)
         Assert.True(Identifiers.createChecklistItemId "CHECK-1" |> Result.isError)
         Assert.True(Identifiers.createChecklistResultId "R-1" |> Result.isError)
+
+    [<Fact>]
+    let ``Plan ids are stable and case-insensitive`` () =
+        let decision = Identifiers.createPlanDecisionId "pd-001" |> Result.defaultWith failwith
+        let contract = Identifiers.createPlanContractReferenceId "pc-001" |> Result.defaultWith failwith
+        let obligation = Identifiers.createVerificationObligationId "vo-001" |> Result.defaultWith failwith
+        let migration = Identifiers.createPlanMigrationNoteId "pm-001" |> Result.defaultWith failwith
+        let generated = Identifiers.createGeneratedViewImpactId "gv-001" |> Result.defaultWith failwith
+
+        Assert.Equal("PD-001", Identifiers.planDecisionIdValue decision)
+        Assert.Equal("PC-001", Identifiers.planContractReferenceIdValue contract)
+        Assert.Equal("VO-001", Identifiers.verificationObligationIdValue obligation)
+        Assert.Equal("PM-001", Identifiers.planMigrationNoteIdValue migration)
+        Assert.Equal("GV-001", Identifiers.generatedViewImpactIdValue generated)
+        Assert.True(Identifiers.createPlanDecisionId "DEC-001" |> Result.isError)
+        Assert.True(Identifiers.createPlanContractReferenceId "CONTRACT-1" |> Result.isError)

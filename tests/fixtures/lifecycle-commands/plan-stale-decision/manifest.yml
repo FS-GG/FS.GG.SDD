@@ -1,0 +1,13 @@
+schemaVersion: 1
+fixture:
+  id: plan-stale-decision
+  workId: 008-plan-command
+  purpose: Source snapshot changes mark plan decisions stale and point to plan review.
+expected:
+  command: plan
+  outcome: succeededWithWarnings
+  diagnostics: [stalePlanDecision]
+  nextAction: plan.correctStaleDecisions
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.PlanCommandTests.plan appends safe missing requirement and marks source decisions stale

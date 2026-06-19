@@ -9,3 +9,9 @@ expected:
   outcome: blocked
   diagnostics: [missingSpecificationPrerequisite]
   mutation: none
+scenarios:
+  - command: plan
+    workId: 008-plan-command
+    outcome: blocked
+    diagnostics: [missingSpecificationPrerequisite]
+    mutation: none

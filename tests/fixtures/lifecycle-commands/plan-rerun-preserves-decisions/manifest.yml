@@ -1,0 +1,12 @@
+schemaVersion: 1
+fixture:
+  id: plan-rerun-preserves-decisions
+  workId: 008-plan-command
+  purpose: Plan rerun preserves stable ids and authored prose when source facts are unchanged.
+expected:
+  command: plan
+  outcome: noChange
+  preservedArtifacts: [work/008-plan-command/plan.md]
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.PlanCommandTests.plan rerun preserves authored content and stable ids

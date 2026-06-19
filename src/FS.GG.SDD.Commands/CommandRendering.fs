@@ -38,6 +38,17 @@ module CommandRendering =
             builder.AppendLine($"checklistAdvisory: {checklist.AdvisoryCount}") |> ignore
         | None -> ()
 
+        match report.Plan with
+        | Some plan ->
+            builder.AppendLine($"planDecisions: {List.length plan.DecisionIds}") |> ignore
+            builder.AppendLine($"planContractReferences: {List.length plan.ContractReferenceIds}") |> ignore
+            builder.AppendLine($"planVerificationObligations: {List.length plan.VerificationObligationIds}") |> ignore
+            builder.AppendLine($"planAcceptedDeferrals: {plan.AcceptedDeferralCount}") |> ignore
+            builder.AppendLine($"planStaleDecisions: {plan.StaleDecisionCount}") |> ignore
+            builder.AppendLine($"planBlockingFindings: {plan.BlockingFindingCount}") |> ignore
+            builder.AppendLine($"planAdvisory: {plan.AdvisoryCount}") |> ignore
+        | None -> ()
+
         builder.AppendLine($"generatedViews: {List.length report.GeneratedViews}") |> ignore
         builder.AppendLine($"diagnostics: {List.length report.Diagnostics}") |> ignore
 

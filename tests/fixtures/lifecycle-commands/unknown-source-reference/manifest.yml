@@ -1,0 +1,11 @@
+schemaVersion: 1
+scenario: unknown-source-reference
+command: plan
+workId: 008-plan-command
+expected:
+  outcome: blocked
+  diagnostics: [unknownPlanSourceReference]
+  mutation: none
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.PlanCommandTests.plan unknown source reference blocks without mutation

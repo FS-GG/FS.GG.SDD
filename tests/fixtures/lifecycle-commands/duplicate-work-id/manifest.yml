@@ -16,3 +16,7 @@ scenarios:
     workId: 006-clarify-command
     outcome: blocked
     diagnostics: [duplicateWorkId]
+  - command: plan
+    workId: 008-plan-command
+    outcome: blocked
+    diagnostics: [duplicateWorkId]

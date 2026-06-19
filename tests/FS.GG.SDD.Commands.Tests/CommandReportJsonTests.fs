@@ -103,3 +103,25 @@ module CommandReportJsonTests =
         Assert.Contains("\"itemIds\"", first)
         Assert.DoesNotContain(root, first)
         Assert.DoesNotContain("timestamp", first)
+
+    [<Fact>]
+    let ``plan deterministic JSON includes plan object`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root "008-plan-command" "Plan Command" |> ignore
+        TestSupport.runSpecify root "008-plan-command" "Plan Command" |> ignore
+        TestSupport.runRequest { TestSupport.clarifyRequest root "008-plan-command" "Plan Command" with InputText = None } |> ignore
+        TestSupport.runChecklist root "008-plan-command" "Plan Command" |> ignore
+        let request = { TestSupport.planRequest root "008-plan-command" "Plan Command" with DryRun = true }
+
+        let first = TestSupport.runRequest request |> serializeReport
+        let second = TestSupport.runRequest request |> serializeReport
+        let third = TestSupport.runRequest request |> serializeReport
+
+        Assert.Equal(first, second)
+        Assert.Equal(second, third)
+        Assert.Contains("\"name\": \"plan\"", first)
+        Assert.Contains("\"decisionIds\"", first)
+        Assert.Contains("\"contractReferenceIds\"", first)
+        Assert.DoesNotContain(root, first)
+        Assert.DoesNotContain("timestamp", first)

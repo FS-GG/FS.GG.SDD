@@ -51,6 +51,14 @@ module CommandReports =
     val unknownChecklistSourceReference: path: string -> id: string -> Diagnostic
     val staleChecklistResult: path: string -> resultIds: string list -> Diagnostic
     val unsafeChecklistResultChange: path: string -> id: string -> Diagnostic
+    val missingChecklistPrerequisite: path: string -> message: string -> Diagnostic
+    val failedChecklistPrerequisite: path: string -> message: string -> relatedIds: string list -> Diagnostic
+    val planIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
+    val malformedPlanFrontMatter: path: string -> message: string -> Diagnostic
+    val duplicatePlanId: path: string -> id: string -> Diagnostic
+    val unknownPlanSourceReference: path: string -> id: string -> Diagnostic
+    val stalePlanDecision: path: string -> decisionIds: string list -> Diagnostic
+    val unsafePlanDecisionChange: path: string -> id: string -> Diagnostic
     val unsafeOverwrite: path: string -> Diagnostic
     val malformedGeneratedView: path: string -> Diagnostic
     val blockedGeneratedViewRefresh: path: string -> relatedIds: string list -> Diagnostic

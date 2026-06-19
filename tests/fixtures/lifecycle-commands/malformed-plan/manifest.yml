@@ -1,0 +1,11 @@
+schemaVersion: 1
+scenario: malformed-plan
+command: plan
+workId: 008-plan-command
+expected:
+  outcome: blocked
+  diagnostics: [malformedPlanFrontMatter]
+  mutation: none
+evidence:
+  tests:
+    - FS.GG.SDD.Artifacts.Tests.PlanArtifactTests.Plan parser diagnoses unsupported schema versions

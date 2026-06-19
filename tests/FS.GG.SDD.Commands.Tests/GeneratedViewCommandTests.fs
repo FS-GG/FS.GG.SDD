@@ -149,3 +149,20 @@ module GeneratedViewCommandTests =
             view.Path = "readiness/007-checklist-command/work-model.json"
             && view.Currency = GeneratedViewCurrency.Current
             && view.DiagnosticIds |> List.contains "malformedGeneratedView")
+
+    [<Fact>]
+    let ``plan reports generated work model state and includes plan source`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root "008-plan-command" "Plan Command" |> ignore
+        TestSupport.runSpecify root "008-plan-command" "Plan Command" |> ignore
+        TestSupport.runRequest { TestSupport.clarifyRequest root "008-plan-command" "Plan Command" with InputText = None } |> ignore
+        TestSupport.runChecklist root "008-plan-command" "Plan Command" |> ignore
+        TestSupport.writeValidTasksAndEvidenceFor root "008-plan-command"
+
+        let report = TestSupport.runPlan root "008-plan-command" "Plan Command"
+
+        Assert.Contains(report.GeneratedViews, fun view ->
+            view.Path = "readiness/008-plan-command/work-model.json"
+            && view.Currency = GeneratedViewCurrency.Current
+            && view.Sources |> List.exists (fun source -> source.Path = "work/008-plan-command/plan.md"))

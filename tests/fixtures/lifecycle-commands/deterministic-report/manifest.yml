@@ -13,3 +13,7 @@ scenarios:
   - command: clarify
     workId: 006-clarify-command
     deterministic: true
+  - command: plan
+    workId: 008-plan-command
+    deterministic: true
+    includes: [plan, decisionIds, contractReferenceIds]

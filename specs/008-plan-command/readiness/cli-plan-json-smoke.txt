@@ -1,0 +1,211 @@
+{
+  "schemaVersion": 1,
+  "reportVersion": "1.0.0",
+  "command": {
+    "name": "plan",
+    "stage": "plan"
+  },
+  "context": {
+    "projectRoot": ".",
+    "workId": "008-plan-command"
+  },
+  "invocation": {
+    "outputFormat": "json",
+    "dryRun": false,
+    "overwritePolicy": "refuseUnsafe"
+  },
+  "outcome": "succeeded",
+  "changedArtifacts": [
+    {
+      "path": "work/008-plan-command",
+      "kind": "directory",
+      "ownership": "sdd",
+      "operation": "noChange",
+      "beforeDigest": null,
+      "afterDigest": null,
+      "safeWriteDecision": "preserveExisting",
+      "diagnosticIds": []
+    },
+    {
+      "path": "work/008-plan-command/plan.md",
+      "kind": "authoredSource",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "bb722d29803b9f18ac49e5b94bd0e789cc7e109fc08f9cac597e5576d9662039"
+      },
+      "safeWriteDecision": "safe",
+      "diagnosticIds": []
+    }
+  ],
+  "specification": {
+    "workId": "008-plan-command",
+    "stage": "specify",
+    "status": "specified",
+    "storyIds": [
+      "US-001"
+    ],
+    "requirementIds": [
+      "FR-001"
+    ],
+    "acceptanceScenarioIds": [
+      "AC-001"
+    ],
+    "ambiguityIds": [],
+    "unresolvedAmbiguityCount": 0
+  },
+  "clarification": {
+    "workId": "008-plan-command",
+    "stage": "clarify",
+    "status": "clarified",
+    "sourceSpec": "work/008-plan-command/spec.md",
+    "questionIds": [],
+    "answeredQuestionIds": [],
+    "decisionIds": [],
+    "acceptedDeferralIds": [],
+    "remainingAmbiguityCount": 0,
+    "blockingAmbiguityCount": 0
+  },
+  "checklist": {
+    "workId": "008-plan-command",
+    "stage": "checklist",
+    "status": "checklistReady",
+    "sourceSpec": "work/008-plan-command/spec.md",
+    "sourceClarifications": "work/008-plan-command/clarifications.md",
+    "itemIds": [
+      "CHK-001"
+    ],
+    "resultIds": [
+      "CR-001"
+    ],
+    "passedCount": 1,
+    "failedBlockingCount": 0,
+    "acceptedDeferralCount": 0,
+    "staleResultCount": 0,
+    "advisoryCount": 0
+  },
+  "plan": {
+    "workId": "008-plan-command",
+    "stage": "plan",
+    "status": "planned",
+    "sourceSpec": "work/008-plan-command/spec.md",
+    "sourceClarifications": "work/008-plan-command/clarifications.md",
+    "sourceChecklist": "work/008-plan-command/checklist.md",
+    "decisionIds": [
+      "PD-001"
+    ],
+    "contractReferenceIds": [
+      "PC-001"
+    ],
+    "verificationObligationIds": [
+      "VO-001"
+    ],
+    "migrationNoteIds": [
+      "PM-001"
+    ],
+    "generatedViewImpactIds": [
+      "GV-001"
+    ],
+    "acceptedDeferralCount": 0,
+    "staleDecisionCount": 0,
+    "blockingFindingCount": 0,
+    "advisoryCount": 1
+  },
+  "generatedViews": [
+    {
+      "path": "readiness/008-plan-command/work-model.json",
+      "kind": "workModel",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "0.2.0"
+      },
+      "sources": [
+        {
+          "path": "work/008-plan-command/charter.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "5eb176812efdd9d20b2574574aaecbcb2ad9246375467216e8ffdb0cfbc6bfff"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/008-plan-command/checklist.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "2501efb3d3b0a6c165aa458692e5cccb9a399ae639ced45fcdd34c9317db30f9"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/008-plan-command/clarifications.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "e7b5d1103fba1745081512c152552e7730a2fc34cdaa1cb0ebf0488fa969c5c0"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/008-plan-command/plan.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "bb722d29803b9f18ac49e5b94bd0e789cc7e109fc08f9cac597e5576d9662039"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/008-plan-command/spec.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "ea387fecd75d9c9387f75a0b1a99d6023e3d4945c78095491f68be5ab991bf87"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        }
+      ],
+      "outputDigest": null,
+      "currency": "missing",
+      "diagnosticIds": []
+    }
+  ],
+  "diagnostics": [],
+  "governanceCompatibility": [
+    {
+      "path": ".fsgg/capabilities.yml",
+      "relationship": "optionalGovernanceCapabilities",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/policy.yml",
+      "relationship": "optionalGovernancePolicy",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/tooling.yml",
+      "relationship": "optionalGovernanceTooling",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    }
+  ],
+  "nextAction": {
+    "actionId": "nextLifecycleCommand",
+    "command": "tasks",
+    "workId": "008-plan-command",
+    "reason": "Command \u0027plan\u0027 completed.",
+    "requiredArtifacts": [
+      "work/008-plan-command/plan.md"
+    ],
+    "blockingDiagnosticIds": []
+  }
+}

@@ -1,0 +1,11 @@
+schemaVersion: 1
+scenario: missing-clarification
+command: plan
+workId: 008-plan-command
+expected:
+  outcome: blocked
+  diagnostics: [missingClarificationPrerequisite]
+  mutation: none
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.PlanCommandTests.plan missing clarification blocks before authored write

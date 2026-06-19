@@ -1,0 +1,12 @@
+schemaVersion: 1
+fixture:
+  id: plan-preserves-stable-ids
+  workId: 008-plan-command
+  purpose: Existing PD/PC/VO/PM/GV ids remain stable across reruns.
+expected:
+  command: plan
+  outcome: noChange
+  stableIds: [PD-001, PC-001, VO-001, PM-001, GV-001]
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.PlanCommandTests.plan rerun preserves authored content and stable ids

@@ -123,6 +123,23 @@ module CommandTypes =
           StaleResultCount: int
           AdvisoryCount: int }
 
+    type PlanSummary =
+        { WorkId: string
+          Stage: string
+          Status: string
+          SourceSpec: string
+          SourceClarifications: string
+          SourceChecklist: string
+          DecisionIds: string list
+          ContractReferenceIds: string list
+          VerificationObligationIds: string list
+          MigrationNoteIds: string list
+          GeneratedViewImpactIds: string list
+          AcceptedDeferralCount: int
+          StaleDecisionCount: int
+          BlockingFindingCount: int
+          AdvisoryCount: int }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -152,6 +169,7 @@ module CommandTypes =
           Specification: SpecificationSummary option
           Clarification: ClarificationSummary option
           Checklist: ChecklistSummary option
+          Plan: PlanSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -180,6 +198,7 @@ module CommandTypes =
           Specification: SpecificationSummary option
           Clarification: ClarificationSummary option
           Checklist: ChecklistSummary option
+          Plan: PlanSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 

@@ -14,3 +14,8 @@ scenarios:
     outcome: succeeded
     safeWriteDecision: dryRunOnly
     mutatedArtifacts: []
+  - command: plan
+    workId: 008-plan-command
+    outcome: succeeded
+    safeWriteDecision: dryRunOnly
+    mutatedArtifacts: []

@@ -104,3 +104,26 @@ module TextProjectionTests =
         Assert.Contains($"checklistItems: {List.length checklist.ItemIds}", text)
         Assert.Contains($"checklistPassed: {checklist.PassedCount}", text)
         Assert.Contains($"checklistFailedBlocking: {checklist.FailedBlockingCount}", text)
+
+    [<Fact>]
+    let ``plan text projection includes plan counts from report`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root "008-plan-command" "Plan Command" |> ignore
+        TestSupport.runSpecify root "008-plan-command" "Plan Command" |> ignore
+        TestSupport.runRequest { TestSupport.clarifyRequest root "008-plan-command" "Plan Command" with InputText = None } |> ignore
+        TestSupport.runChecklist root "008-plan-command" "Plan Command" |> ignore
+        let request =
+            { TestSupport.planRequest root "008-plan-command" "Plan Command" with
+                DryRun = true
+                OutputFormat = Text }
+
+        let report = TestSupport.runRequest request
+        let text = renderText report
+        let plan = report.Plan.Value
+
+        Assert.Contains("command: plan", text)
+        Assert.Contains($"outcome: {outcomeValue report.Outcome}", text)
+        Assert.Contains($"planDecisions: {List.length plan.DecisionIds}", text)
+        Assert.Contains($"planContractReferences: {List.length plan.ContractReferenceIds}", text)
+        Assert.Contains($"planVerificationObligations: {List.length plan.VerificationObligationIds}", text)

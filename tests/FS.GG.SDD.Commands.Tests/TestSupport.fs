@@ -118,6 +118,14 @@ module TestSupport =
     let runChecklist root workId title =
         checklistRequest root workId title |> runRequest
 
+    let planRequest root workId title =
+        { request Plan root with
+            WorkId = Some workId
+            Title = Some title }
+
+    let runPlan root workId title =
+        planRequest root workId title |> runRequest
+
     let validSpec workId title =
         $"""---
 schemaVersion: 1
@@ -210,9 +218,19 @@ No blocking ambiguity remains.
     let dryRunDigest text =
         SchemaVersionModule.sha256Text text
 
-    let assertChecklistSummary report itemCount resultCount =
+    let assertChecklistSummary (report: CommandReport) itemCount resultCount =
         match report.Checklist with
         | Some summary ->
             if summary.ItemIds.Length <> itemCount || summary.ResultIds.Length <> resultCount then
                 failwith $"Expected checklist summary {itemCount}/{resultCount}, got {summary.ItemIds.Length}/{summary.ResultIds.Length}."
         | None -> failwith "Expected checklist summary."
+
+    let assertPlanSummary (report: CommandReport) decisionCount contractCount obligationCount =
+        match report.Plan with
+        | Some summary ->
+            if summary.DecisionIds.Length <> decisionCount
+               || summary.ContractReferenceIds.Length <> contractCount
+               || summary.VerificationObligationIds.Length <> obligationCount then
+                failwith
+                    $"Expected plan summary {decisionCount}/{contractCount}/{obligationCount}, got {summary.DecisionIds.Length}/{summary.ContractReferenceIds.Length}/{summary.VerificationObligationIds.Length}."
+        | None -> failwith "Expected plan summary."

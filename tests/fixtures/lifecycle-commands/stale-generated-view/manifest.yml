@@ -16,3 +16,7 @@ scenarios:
     workId: 006-clarify-command
     generatedView: readiness/006-clarify-command/work-model.json
     currencies: [missing, stale, malformed, blocked]
+  - command: plan
+    workId: 008-plan-command
+    generatedView: readiness/008-plan-command/work-model.json
+    currencies: [missing, stale, malformed, blocked]

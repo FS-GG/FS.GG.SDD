@@ -14,3 +14,7 @@ scenarios:
   - command: clarify
     outcome: blocked
     diagnostics: [outsideProject]
+  - command: plan
+    workId: 008-plan-command
+    outcome: blocked
+    diagnostics: [outsideProject]

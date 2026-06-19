@@ -27,6 +27,11 @@ module Identifiers =
     type DecisionId = { Value: string }
     type ChecklistItemId = { Value: string }
     type ChecklistResultId = { Value: string }
+    type PlanDecisionId = { Value: string }
+    type PlanContractReferenceId = { Value: string }
+    type VerificationObligationId = { Value: string }
+    type PlanMigrationNoteId = { Value: string }
+    type GeneratedViewImpactId = { Value: string }
     type TaskId = { Value: string }
     type EvidenceId = { Value: string }
 
@@ -126,6 +131,26 @@ module Identifiers =
         createScopedId "Checklist result id" @"^CR-\d{3,}$" value
         |> Result.map (fun value -> { ChecklistResultId.Value = value.ToUpperInvariant() })
 
+    let createPlanDecisionId (value: string) =
+        createScopedId "Plan decision id" @"^PD-\d{3,}$" value
+        |> Result.map (fun value -> { PlanDecisionId.Value = value.ToUpperInvariant() })
+
+    let createPlanContractReferenceId (value: string) =
+        createScopedId "Plan contract reference id" @"^PC-\d{3,}$" value
+        |> Result.map (fun value -> { PlanContractReferenceId.Value = value.ToUpperInvariant() })
+
+    let createVerificationObligationId (value: string) =
+        createScopedId "Verification obligation id" @"^VO-\d{3,}$" value
+        |> Result.map (fun value -> { VerificationObligationId.Value = value.ToUpperInvariant() })
+
+    let createPlanMigrationNoteId (value: string) =
+        createScopedId "Plan migration note id" @"^PM-\d{3,}$" value
+        |> Result.map (fun value -> { PlanMigrationNoteId.Value = value.ToUpperInvariant() })
+
+    let createGeneratedViewImpactId (value: string) =
+        createScopedId "Generated-view impact id" @"^GV-\d{3,}$" value
+        |> Result.map (fun value -> { GeneratedViewImpactId.Value = value.ToUpperInvariant() })
+
     let createTaskId (value: string) =
         createScopedId "Task id" @"^T\d{3,}$" value
         |> Result.map (fun value -> { TaskId.Value = value.ToUpperInvariant() })
@@ -143,5 +168,10 @@ module Identifiers =
     let decisionIdValue (id: DecisionId) = id.Value
     let checklistItemIdValue (id: ChecklistItemId) = id.Value
     let checklistResultIdValue (id: ChecklistResultId) = id.Value
+    let planDecisionIdValue (id: PlanDecisionId) = id.Value
+    let planContractReferenceIdValue (id: PlanContractReferenceId) = id.Value
+    let verificationObligationIdValue (id: VerificationObligationId) = id.Value
+    let planMigrationNoteIdValue (id: PlanMigrationNoteId) = id.Value
+    let generatedViewImpactIdValue (id: GeneratedViewImpactId) = id.Value
     let taskIdValue (id: TaskId) = id.Value
     let evidenceIdValue (id: EvidenceId) = id.Value

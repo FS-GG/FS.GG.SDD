@@ -106,8 +106,8 @@ let initFinalModel =
 let charterRequest =
     ({ Command = Charter
        ProjectRoot = commandRoot
-       WorkId = Some "007-checklist-command"
-       Title = Some "Checklist Command"
+       WorkId = Some "008-plan-command"
+       Title = Some "Plan Command"
        InputText = None
        OutputFormat = Json
        DryRun = false
@@ -121,9 +121,9 @@ let charterFinalModel =
 let specifyRequest =
     ({ Command = Specify
        ProjectRoot = commandRoot
-       WorkId = Some "007-checklist-command"
-       Title = Some "Checklist Command"
-       InputText = Some "value: create a native checklist command\nscope: one clarified work item\nrequirement: create a requirements-quality checklist with stable ids"
+       WorkId = Some "008-plan-command"
+       Title = Some "Plan Command"
+       InputText = Some "value: create a native plan command\nscope: one checklist-ready work item\nrequirement: create a technical plan with stable ids"
        OutputFormat = Json
        DryRun = false
        OverwritePolicy = RefuseUnsafe
@@ -136,8 +136,8 @@ let specifyFinalModel =
 let clarifyRequest =
     ({ Command = Clarify
        ProjectRoot = commandRoot
-       WorkId = Some "007-checklist-command"
-       Title = Some "Checklist Command"
+       WorkId = Some "008-plan-command"
+       Title = Some "Plan Command"
        InputText = None
        OutputFormat = Json
        DryRun = false
@@ -151,8 +151,23 @@ let clarifyFinalModel =
 let checklistRequest =
     ({ Command = Checklist
        ProjectRoot = commandRoot
-       WorkId = Some "007-checklist-command"
-       Title = Some "Checklist Command"
+       WorkId = Some "008-plan-command"
+       Title = Some "Plan Command"
+       InputText = None
+       OutputFormat = Json
+       DryRun = false
+       OverwritePolicy = RefuseUnsafe
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+    : CommandRequest)
+
+let checklistFinalModel =
+    runCommand checklistRequest
+
+let planRequest =
+    ({ Command = Plan
+       ProjectRoot = commandRoot
+       WorkId = Some "008-plan-command"
+       Title = Some "Plan Command"
        InputText = None
        OutputFormat = Json
        DryRun = false
@@ -161,7 +176,7 @@ let checklistRequest =
     : CommandRequest)
 
 let commandFinalModel =
-    runCommand checklistRequest
+    runCommand planRequest
 
 let commandReport =
     commandFinalModel.Report
@@ -170,16 +185,17 @@ let commandReport =
 printfn "command=%s" (CommandTypes.commandName commandReport.Command)
 printfn "outcome=%s" (CommandTypes.outcomeValue commandReport.Outcome)
 printfn "changedArtifacts=%d" commandReport.ChangedArtifacts.Length
-printfn "checklistItems=%d" (commandReport.Checklist |> Option.map (fun summary -> summary.ItemIds.Length) |> Option.defaultValue 0)
-printfn "checklistPassed=%d" (commandReport.Checklist |> Option.map (fun summary -> summary.PassedCount) |> Option.defaultValue 0)
-printfn "checklistFailedBlocking=%d" (commandReport.Checklist |> Option.map (fun summary -> summary.FailedBlockingCount) |> Option.defaultValue 0)
-printfn "checklistAcceptedDeferrals=%d" (commandReport.Checklist |> Option.map (fun summary -> summary.AcceptedDeferralCount) |> Option.defaultValue 0)
-printfn "checklistStaleResults=%d" (commandReport.Checklist |> Option.map (fun summary -> summary.StaleResultCount) |> Option.defaultValue 0)
+printfn "planDecisions=%d" (commandReport.Plan |> Option.map (fun summary -> summary.DecisionIds.Length) |> Option.defaultValue 0)
+printfn "planContractReferences=%d" (commandReport.Plan |> Option.map (fun summary -> summary.ContractReferenceIds.Length) |> Option.defaultValue 0)
+printfn "planVerificationObligations=%d" (commandReport.Plan |> Option.map (fun summary -> summary.VerificationObligationIds.Length) |> Option.defaultValue 0)
+printfn "planAcceptedDeferrals=%d" (commandReport.Plan |> Option.map (fun summary -> summary.AcceptedDeferralCount) |> Option.defaultValue 0)
+printfn "planStaleDecisions=%d" (commandReport.Plan |> Option.map (fun summary -> summary.StaleDecisionCount) |> Option.defaultValue 0)
 printfn "generatedViews=%d" commandReport.GeneratedViews.Length
 printfn "blockingDiagnostics=%d" (commandReport.Diagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = Diagnostics.DiagnosticSeverity.DiagnosticError) |> List.length)
 printfn "nextAction=%s" (commandReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
 printfn "createdProjectConfig=%b" (File.Exists(Path.Combine(commandRoot, ".fsgg", "project.yml")))
-printfn "createdCharter=%b" (File.Exists(Path.Combine(commandRoot, "work", "007-checklist-command", "charter.md")))
-printfn "createdSpecification=%b" (File.Exists(Path.Combine(commandRoot, "work", "007-checklist-command", "spec.md")))
-printfn "createdClarification=%b" (File.Exists(Path.Combine(commandRoot, "work", "007-checklist-command", "clarifications.md")))
-printfn "createdChecklist=%b" (File.Exists(Path.Combine(commandRoot, "work", "007-checklist-command", "checklist.md")))
+printfn "createdCharter=%b" (File.Exists(Path.Combine(commandRoot, "work", "008-plan-command", "charter.md")))
+printfn "createdSpecification=%b" (File.Exists(Path.Combine(commandRoot, "work", "008-plan-command", "spec.md")))
+printfn "createdClarification=%b" (File.Exists(Path.Combine(commandRoot, "work", "008-plan-command", "clarifications.md")))
+printfn "createdChecklist=%b" (File.Exists(Path.Combine(commandRoot, "work", "008-plan-command", "checklist.md")))
+printfn "createdPlan=%b" (File.Exists(Path.Combine(commandRoot, "work", "008-plan-command", "plan.md")))
