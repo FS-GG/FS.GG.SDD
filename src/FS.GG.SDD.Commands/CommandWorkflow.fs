@@ -2,6 +2,8 @@ namespace FS.GG.SDD.Commands
 
 open System
 open System.IO
+open System.Text
+open System.Text.Json
 open System.Text.RegularExpressions
 open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Artifacts.Diagnostics
@@ -100,6 +102,7 @@ of truth.
     let tasksPath workId = $"work/{workId}/tasks.yml"
     let evidencePath workId = $"work/{workId}/evidence.yml"
     let workModelPath workId = GenerationManifestModule.expectedWorkModelOutputPath workId
+    let analysisPath workId = $"readiness/{workId}/analysis.json"
     let readinessDirectory workId = $"readiness/{workId}"
 
     let charterReadEffects workId =
@@ -166,6 +169,20 @@ of truth.
           ReadFile(workModelPath workId)
           EnumerateDirectory "work" ]
 
+    let analyzeReadEffects workId =
+        [ ReadFile ".fsgg/project.yml"
+          ReadFile ".fsgg/sdd.yml"
+          ReadFile ".fsgg/agents.yml"
+          ReadFile(specPath workId)
+          ReadFile(clarificationPath workId)
+          ReadFile(checklistPath workId)
+          ReadFile(planPath workId)
+          ReadFile(tasksPath workId)
+          ReadFile(evidencePath workId)
+          ReadFile(workModelPath workId)
+          ReadFile(analysisPath workId)
+          EnumerateDirectory "work" ]
+
     let workIdDiagnostics (request: CommandRequest) =
         match request.Command, request.WorkId with
         | Init, _ -> []
@@ -189,6 +206,7 @@ of truth.
             | Checklist, Some workId -> [], checklistReadEffects workId
             | Plan, Some workId -> [], planReadEffects workId
             | Tasks, Some workId -> [], tasksReadEffects workId
+            | Analyze, Some workId -> [], analyzeReadEffects workId
             | command, _ -> [ unsupportedCommand command ], []
 
     let effectKey effect =
@@ -2958,6 +2976,489 @@ tasks:
                             Some text,
                             Some(tasksSummary facts)
 
+    let tasksPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts planFacts model =
+        let path = tasksPath workId
+        let evidence, evidenceDiagnostics = parseEvidenceForCommand workId model
+
+        match snapshot path model with
+        | None -> [ missingTasksPrerequisite path $"Tasks prerequisite '{path}' is missing." ], None, None, None
+        | Some existing ->
+            match parseTasksForCommand path existing.Text with
+            | Error diagnostics -> diagnostics, Some existing.Text, None, None
+            | Ok(facts, diagnostics) ->
+                let identityDiagnostics =
+                    [ if facts.FrontMatter.SchemaVersion.Major <> 1 then
+                          malformedTasksArtifact path $"Tasks schemaVersion '{facts.FrontMatter.SchemaVersion.Major}' is not supported."
+                      if not (String.Equals(facts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
+                          tasksIdentityMismatch path workId facts.FrontMatter.WorkId.Value
+                      if facts.FrontMatter.Stage <> LifecycleStage.Tasks then
+                          missingTasksPrerequisite path $"Tasks stage '{IdentifiersModule.stageValue facts.FrontMatter.Stage}' is not 'tasks'."
+                      if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
+                          malformedTasksArtifact path $"Tasks sourceSpec '{facts.FrontMatter.SourceSpec}' does not match '{specPath workId}'."
+                      if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceClarifications, clarificationPath workId, StringComparison.OrdinalIgnoreCase)) then
+                          malformedTasksArtifact path $"Tasks sourceClarifications '{facts.FrontMatter.SourceClarifications}' does not match '{clarificationPath workId}'."
+                      if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceChecklist, checklistPath workId, StringComparison.OrdinalIgnoreCase)) then
+                          malformedTasksArtifact path $"Tasks sourceChecklist '{facts.FrontMatter.SourceChecklist}' does not match '{checklistPath workId}'."
+                      if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourcePlan, planPath workId, StringComparison.OrdinalIgnoreCase)) then
+                          malformedTasksArtifact path $"Tasks sourcePlan '{facts.FrontMatter.SourcePlan}' does not match '{planPath workId}'."
+                      if not (String.Equals(facts.FrontMatter.Status, "tasksReady", StringComparison.OrdinalIgnoreCase)) then
+                          failedTasksPrerequisite path $"Tasks status '{facts.FrontMatter.Status}' is not tasksReady." [ facts.FrontMatter.Status ] ]
+
+                let staleDiagnostics =
+                    if taskSourceSnapshotStale workId "" "" "" "" facts then
+                        []
+                    else
+                        []
+
+                let taskDiagnostics = taskValidationDiagnostics path specFacts clarificationFacts checklistFacts planFacts evidence facts
+
+                let graphDiagnostics =
+                    [ let staleIds =
+                          facts.Tasks
+                          |> List.filter (fun task -> task.Status = TaskStatus.Stale)
+                          |> List.map (fun task -> task.Id.Value)
+
+                      if not (List.isEmpty staleIds) then
+                          staleTask path staleIds
+
+                      let blockingFindings =
+                          facts.Findings
+                          |> List.filter (fun finding -> finding.Severity.Equals("error", StringComparison.OrdinalIgnoreCase))
+                          |> List.map (fun finding -> finding.FindingId)
+
+                      if not (List.isEmpty blockingFindings) then
+                          failedTasksPrerequisite path "Tasks contain blocking findings." blockingFindings ]
+
+                let allDiagnostics =
+                    identityDiagnostics @ diagnostics @ staleDiagnostics @ taskDiagnostics @ graphDiagnostics @ evidenceDiagnostics
+                    |> DiagnosticsModule.sort
+
+                allDiagnostics, Some existing.Text, Some(tasksSummary facts), Some facts
+
+    let allTaskDispositionIds (facts: TaskFacts) =
+        [ facts.Tasks |> List.collect (fun task -> task.SourceIds)
+          facts.Tasks |> List.collect (fun task -> task.Requirements |> List.map _.Value)
+          facts.Tasks |> List.collect (fun task -> task.Decisions |> List.map _.Value)
+          facts.AcceptedDeferrals ]
+        |> List.concat
+        |> List.map (fun value -> value.ToUpperInvariant())
+        |> Set.ofList
+
+    let missingDispositionDiagnostics workId (specFacts: SpecificationFacts) (clarificationFacts: ClarificationFacts) (checklistFacts: ChecklistFacts) (planFacts: PlanFacts) (taskFacts: TaskFacts) =
+        let dispositions = allTaskDispositionIds taskFacts
+
+        let required =
+            [ specFacts.RequirementIds |> List.map _.Value
+              specFacts.AcceptanceScenarioIds |> List.map _.Value
+              clarificationFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
+              clarificationFacts.AcceptedDeferrals |> List.map (fun decision -> decision.DecisionId.Value)
+              checklistFacts.AcceptedDeferrals |> List.map (fun result -> result.ResultId.Value)
+              planFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
+              planFacts.ContractReferences |> List.map (fun contract -> contract.ContractId.Value)
+              planFacts.VerificationObligations |> List.map (fun obligation -> obligation.ObligationId.Value)
+              planFacts.MigrationNotes |> List.map (fun migration -> migration.MigrationId.Value)
+              planFacts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value)
+              planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id) ]
+            |> List.concat
+            |> List.distinct
+            |> List.sort
+
+        let missing =
+            required
+            |> List.filter (fun id -> not (Set.contains (id.ToUpperInvariant()) dispositions))
+
+        if List.isEmpty missing then [] else [ missingDisposition (tasksPath workId) missing ]
+
+    type AnalysisRelationshipDraft =
+        { SourcePath: string
+          TargetPath: string
+          SourceId: string option
+          TargetId: string option
+          Relationship: string
+          State: string
+          DiagnosticIds: string list }
+
+    let relationship
+        (sourcePath: string)
+        (targetPath: string)
+        (sourceId: string option)
+        (targetId: string option)
+        (relationship: string)
+        (state: string)
+        (diagnosticIds: string list)
+        : AnalysisRelationshipDraft
+        =
+        { SourcePath = sourcePath
+          TargetPath = targetPath
+          SourceId = sourceId
+          TargetId = targetId
+          Relationship = relationship
+          State = state
+          DiagnosticIds = diagnosticIds }
+
+    let analysisRelationships workId (specFacts: SpecificationFacts) (clarificationFacts: ClarificationFacts) (checklistFacts: ChecklistFacts) (planFacts: PlanFacts) (taskFacts: TaskFacts) =
+        let taskDispositionIds = allTaskDispositionIds taskFacts
+
+        let dispositionRelationships (sourcePath: string) (relationshipName: string) (ids: string list) =
+            ids
+            |> List.map (fun id ->
+                let current = Set.contains (id.ToUpperInvariant()) taskDispositionIds
+                relationship sourcePath (tasksPath workId) (Some id) None relationshipName (if current then "current" else "missing") (if current then [] else [ "missingDisposition" ]))
+
+        [ [ relationship (specPath workId) (clarificationPath workId) None None "sourceSpec" "current" []
+            relationship (specPath workId) (checklistPath workId) None None "checklistSourceSpec" "current" []
+            relationship (clarificationPath workId) (checklistPath workId) None None "checklistSourceClarifications" "current" []
+            relationship (specPath workId) (planPath workId) None None "planSourceSpec" "current" []
+            relationship (clarificationPath workId) (planPath workId) None None "planSourceClarifications" "current" []
+            relationship (checklistPath workId) (planPath workId) None None "planSourceChecklist" "current" []
+            relationship (specPath workId) (tasksPath workId) None None "taskSourceSpec" "current" []
+            relationship (clarificationPath workId) (tasksPath workId) None None "taskSourceClarifications" "current" []
+            relationship (checklistPath workId) (tasksPath workId) None None "taskSourceChecklist" "current" []
+            relationship (planPath workId) (tasksPath workId) None None "taskSourcePlan" "current" [] ]
+          dispositionRelationships (specPath workId) "requirementDisposition" (specFacts.RequirementIds |> List.map _.Value)
+          dispositionRelationships (specPath workId) "acceptanceDisposition" (specFacts.AcceptanceScenarioIds |> List.map _.Value)
+          dispositionRelationships (clarificationPath workId) "clarificationDisposition" (clarificationFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value))
+          dispositionRelationships (checklistPath workId) "checklistDeferralDisposition" (checklistFacts.AcceptedDeferrals |> List.map (fun result -> result.ResultId.Value))
+          dispositionRelationships (planPath workId) "planDecisionDisposition" (planFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value))
+          dispositionRelationships (planPath workId) "contractDisposition" (planFacts.ContractReferences |> List.map (fun contract -> contract.ContractId.Value))
+          dispositionRelationships (planPath workId) "verificationDisposition" (planFacts.VerificationObligations |> List.map (fun obligation -> obligation.ObligationId.Value))
+          dispositionRelationships (planPath workId) "migrationDisposition" (planFacts.MigrationNotes |> List.map (fun migration -> migration.MigrationId.Value))
+          dispositionRelationships (planPath workId) "generatedViewDisposition" (planFacts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value))
+          taskFacts.Tasks
+          |> List.collect (fun task ->
+              task.Dependencies
+              |> List.map (fun dependency -> relationship (tasksPath workId) (tasksPath workId) (Some task.Id.Value) (Some dependency.Value) "taskDependency" "current" [])) ]
+        |> List.concat
+        |> List.sortBy (fun relationship -> relationship.SourcePath, relationship.Relationship, relationship.SourceId, relationship.TargetId)
+
+    let analysisSourceFromSnapshot (path: string) (text: string) : GeneratedViewSource =
+        { Path = path
+          Digest = Some(SchemaVersionModule.sha256Text text)
+          SchemaVersion = Some 1
+          SchemaStatus = Some "current" }
+
+    let analysisSources workId workModelJson specText clarificationText checklistText planText tasksText model : GeneratedViewSource list =
+        [ snapshot ".fsgg/project.yml" model |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
+          snapshot ".fsgg/sdd.yml" model |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
+          snapshot ".fsgg/agents.yml" model |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
+          Some(analysisSourceFromSnapshot (specPath workId) specText)
+          Some(analysisSourceFromSnapshot (clarificationPath workId) clarificationText)
+          Some(analysisSourceFromSnapshot (checklistPath workId) checklistText)
+          Some(analysisSourceFromSnapshot (planPath workId) planText)
+          Some(analysisSourceFromSnapshot (tasksPath workId) tasksText)
+          workModelJson |> Option.map (analysisSourceFromSnapshot (workModelPath workId)) ]
+        |> List.choose id
+        |> List.sortBy (fun source -> source.Path)
+
+    let analysisSourceKind (path: string) =
+        if path = ".fsgg/project.yml" then "projectConfig"
+        elif path = ".fsgg/sdd.yml" then "sddConfig"
+        elif path = ".fsgg/agents.yml" then "agentsConfig"
+        elif path.EndsWith("/spec.md", StringComparison.OrdinalIgnoreCase) then "specification"
+        elif path.EndsWith("/clarifications.md", StringComparison.OrdinalIgnoreCase) then "clarification"
+        elif path.EndsWith("/checklist.md", StringComparison.OrdinalIgnoreCase) then "checklist"
+        elif path.EndsWith("/plan.md", StringComparison.OrdinalIgnoreCase) then "plan"
+        elif path.EndsWith("/tasks.yml", StringComparison.OrdinalIgnoreCase) then "tasks"
+        elif path.EndsWith("/work-model.json", StringComparison.OrdinalIgnoreCase) then "workModel"
+        else "source"
+
+    let writeStringArray (writer: Utf8JsonWriter) (name: string) (values: string list) =
+        writer.WriteStartArray(name)
+        values |> List.sort |> List.iter (fun value -> writer.WriteStringValue(value: string))
+        writer.WriteEndArray()
+
+    let writeDigestObject (writer: Utf8JsonWriter) (name: string) (digest: SourceDigest option) =
+        match digest with
+        | Some digest ->
+            writer.WriteStartObject(name)
+            writer.WriteString("algorithm", digest.Algorithm)
+            writer.WriteString("value", digest.Value)
+            writer.WriteEndObject()
+        | None -> writer.WriteNull name
+
+    let writeAnalysisDiagnosticJson (writer: Utf8JsonWriter) (diagnostic: Diagnostic) =
+        writer.WriteStartObject()
+        writer.WriteString("id", diagnostic.Id)
+        writer.WriteString("severity", DiagnosticsModule.severityValue diagnostic.Severity)
+        match diagnostic.Artifact with
+        | Some artifact -> writer.WriteString("artifact", artifact.Path)
+        | None -> writer.WriteNull "artifact"
+        writer.WriteString("message", diagnostic.Message)
+        writer.WriteString("correction", diagnostic.Correction)
+        writeStringArray writer "relatedIds" diagnostic.RelatedIds
+        writer.WriteEndObject()
+
+    let analysisFindingSeverity (diagnostic: Diagnostic) =
+        match diagnostic.Id with
+        | "missingDisposition" -> "missingDisposition"
+        | "staleTask"
+        | "stalePlanDecision"
+        | "staleChecklistResult"
+        | "staleGeneratedView" -> "staleSource"
+        | "malformedGeneratedView"
+        | "malformedAnalysisView"
+        | "malformedTasksArtifact"
+        | "malformedPlanFrontMatter"
+        | "malformedChecklistFrontMatter"
+        | "malformedClarificationFrontMatter"
+        | "malformedSpecificationFacts"
+        | "malformedSpecificationFrontMatter" -> "malformedSource"
+        | "blockedGeneratedViewRefresh" -> "generatedView"
+        | _ ->
+            match diagnostic.Severity with
+            | DiagnosticSeverity.DiagnosticError -> "blocking"
+            | DiagnosticSeverity.DiagnosticWarning -> "warning"
+            | DiagnosticSeverity.DiagnosticInfo -> "advisory"
+
+    let analysisFindingCategory severity =
+        match severity with
+        | "missingDisposition" -> "missingDisposition"
+        | "staleSource" -> "staleSource"
+        | "malformedSource" -> "malformedSource"
+        | "generatedView" -> "generatedView"
+        | "blocking" -> "blocking"
+        | "warning" -> "warning"
+        | _ -> "advisory"
+
+    let diagnosticPath (diagnostic: Diagnostic) =
+        diagnostic.Artifact |> Option.map _.Path |> Option.defaultValue ""
+
+    let analysisFindings (diagnostics: Diagnostic list) =
+        diagnostics
+        |> DiagnosticsModule.sort
+        |> List.mapi (fun index diagnostic ->
+            let severity = analysisFindingSeverity diagnostic
+            let id = sprintf "AF%03d" (index + 1)
+            id, diagnostic, severity)
+
+    let countFindings severity (findings: (string * Diagnostic * string) list) =
+        findings |> List.filter (fun (_, _, findingSeverity) -> findingSeverity = severity) |> List.length
+
+    let analysisReadiness (acceptedDeferralCount: int) (relationships: AnalysisRelationshipDraft list) (diagnostics: Diagnostic list) =
+        let findings = analysisFindings diagnostics
+        let blockingCount = countFindings "blocking" findings
+        let missingDispositionCount = countFindings "missingDisposition" findings
+        let staleSourceCount = countFindings "staleSource" findings
+        let malformedSourceCount = countFindings "malformedSource" findings
+        let generatedViewFindingCount = countFindings "generatedView" findings
+        let warningCount = countFindings "warning" findings
+        let advisoryCount = countFindings "advisory" findings + acceptedDeferralCount
+
+        let status =
+            if blockingCount > 0 || missingDispositionCount > 0 || malformedSourceCount > 0 then "needsCorrection"
+            elif staleSourceCount > 0 || generatedViewFindingCount > 0 then "needsGeneratedViewRefresh"
+            else "implementationReady"
+
+        { WorkId = ""
+          Stage = "analyze"
+          Status = status
+          AnalysisPath = ""
+          SourceCount = 0
+          SourceRelationshipCount = List.length relationships
+          ReadyFindingCount = if status = "implementationReady" then List.length relationships else 0
+          AdvisoryCount = advisoryCount
+          WarningCount = warningCount
+          BlockingCount = blockingCount
+          StaleSourceCount = staleSourceCount
+          MissingDispositionCount = missingDispositionCount
+          MalformedSourceCount = malformedSourceCount
+          GeneratedViewFindingCount = generatedViewFindingCount
+          AcceptedDeferralCount = acceptedDeferralCount
+          Readiness = status }
+
+    let analysisGeneratedViewState
+        (path: string)
+        (generator: GeneratorVersion)
+        (sources: GeneratedViewSource list)
+        (outputDigest: OutputDigest option)
+        (currency: GeneratedViewCurrency)
+        (diagnosticIds: string list)
+        : GeneratedViewState
+        =
+        { Path = path
+          Kind = "analysis"
+          SchemaVersion = Some 1
+          Generator = Some generator
+          Sources = sources |> List.sortBy _.Path
+          OutputDigest = outputDigest
+          Currency = currency
+          DiagnosticIds = diagnosticIds |> List.distinct |> List.sort }
+
+    let analysisBoundaryFacts () : GovernanceCompatibilityFact list =
+        [ { Path = ".fsgg/policy.yml"; Relationship = "optionalGovernancePolicy"; RequiredBySdd = false; State = "notEvaluated"; DiagnosticIds = [] }
+          { Path = ".fsgg/capabilities.yml"; Relationship = "optionalGovernanceCapabilities"; RequiredBySdd = false; State = "notEvaluated"; DiagnosticIds = [] }
+          { Path = ".fsgg/tooling.yml"; Relationship = "optionalGovernanceTooling"; RequiredBySdd = false; State = "notEvaluated"; DiagnosticIds = [] } ]
+
+    let analysisJson
+        (workId: string)
+        (generator: GeneratorVersion)
+        (sources: GeneratedViewSource list)
+        (relationships: AnalysisRelationshipDraft list)
+        (readiness: AnalysisSummary)
+        (diagnostics: Diagnostic list)
+        (generatedViews: GeneratedViewState list)
+        =
+        use stream = new MemoryStream()
+        use writer = new Utf8JsonWriter(stream, JsonWriterOptions(Indented = true))
+
+        let findings = analysisFindings diagnostics
+
+        writer.WriteStartObject()
+        writer.WriteNumber("schemaVersion", 1)
+        writer.WriteString("viewVersion", "1.0")
+        writer.WriteString("workId", workId)
+        writer.WriteString("stage", "analyze")
+        writer.WriteString("status", readiness.Readiness)
+        writer.WriteString("generator", $"{generator.Id}/{generator.Version}")
+        writer.WriteStartArray("sources")
+        sources
+        |> List.sortBy (fun source -> source.Path)
+        |> List.iter (fun source ->
+            writer.WriteStartObject()
+            writer.WriteString("path", source.Path)
+            writer.WriteString("kind", analysisSourceKind source.Path)
+            writeDigestObject writer "digest" source.Digest
+            match source.SchemaVersion with
+            | Some version -> writer.WriteNumber("schemaVersion", version)
+            | None -> writer.WriteNull "schemaVersion"
+            match source.SchemaStatus with
+            | Some status -> writer.WriteString("schemaStatus", status)
+            | None -> writer.WriteNull "schemaStatus"
+            writer.WriteEndObject())
+        writer.WriteEndArray()
+        writer.WriteStartArray("sourceRelationships")
+        relationships
+        |> List.mapi (fun index relationship -> sprintf "AR%03d" (index + 1), relationship)
+        |> List.iter (fun (id, relationship) ->
+            writer.WriteStartObject()
+            writer.WriteString("id", id)
+            writer.WriteString("sourcePath", relationship.SourcePath)
+            writer.WriteString("targetPath", relationship.TargetPath)
+            match relationship.SourceId with
+            | Some value -> writer.WriteString("sourceId", value)
+            | None -> writer.WriteNull "sourceId"
+            match relationship.TargetId with
+            | Some value -> writer.WriteString("targetId", value)
+            | None -> writer.WriteNull "targetId"
+            writer.WriteString("relationship", relationship.Relationship)
+            writer.WriteString("state", relationship.State)
+            writeStringArray writer "diagnosticIds" relationship.DiagnosticIds
+            writer.WriteEndObject())
+        writer.WriteEndArray()
+        writer.WriteStartObject("readiness")
+        writer.WriteString("status", readiness.Readiness)
+        writer.WriteNumber("readyCount", readiness.ReadyFindingCount)
+        writer.WriteNumber("advisoryCount", readiness.AdvisoryCount)
+        writer.WriteNumber("warningCount", readiness.WarningCount)
+        writer.WriteNumber("blockingCount", readiness.BlockingCount)
+        writer.WriteNumber("staleSourceCount", readiness.StaleSourceCount)
+        writer.WriteNumber("missingDispositionCount", readiness.MissingDispositionCount)
+        writer.WriteNumber("malformedSourceCount", readiness.MalformedSourceCount)
+        writer.WriteNumber("generatedViewFindingCount", readiness.GeneratedViewFindingCount)
+        writer.WriteNumber("acceptedDeferralCount", readiness.AcceptedDeferralCount)
+        writer.WriteEndObject()
+        writer.WriteStartArray("findings")
+        findings
+        |> List.iter (fun (id, diagnostic, severity) ->
+            writer.WriteStartObject()
+            writer.WriteString("id", id)
+            writer.WriteString("category", analysisFindingCategory severity)
+            writer.WriteString("severity", severity)
+            writer.WriteString("state", if severity = "ready" then "closed" else "open")
+            writer.WriteString("path", diagnosticPath diagnostic)
+            writeStringArray writer "relatedIds" diagnostic.RelatedIds
+            writer.WriteString("message", diagnostic.Message)
+            writer.WriteString("correction", diagnostic.Correction)
+            writer.WriteEndObject())
+        writer.WriteEndArray()
+        writer.WriteStartArray("generatedViews")
+        generatedViews
+        |> List.sortBy (fun view -> view.Path)
+        |> List.iter (fun view ->
+            writer.WriteStartObject()
+            writer.WriteString("path", view.Path)
+            writer.WriteString("kind", view.Kind)
+            writer.WriteString("currency", generatedViewCurrencyValue view.Currency)
+            writeStringArray writer "diagnosticIds" view.DiagnosticIds
+            writer.WriteEndObject())
+        writer.WriteEndArray()
+        writer.WriteStartArray("optionalBoundaryFacts")
+        analysisBoundaryFacts()
+        |> List.iter (fun fact ->
+            writer.WriteStartObject()
+            writer.WriteString("path", fact.Path)
+            writer.WriteString("relationship", fact.Relationship)
+            writer.WriteBoolean("requiredBySdd", fact.RequiredBySdd)
+            writer.WriteString("state", fact.State)
+            writeStringArray writer "diagnosticIds" fact.DiagnosticIds
+            writer.WriteEndObject())
+        writer.WriteEndArray()
+        writer.WriteStartArray("diagnostics")
+        diagnostics |> DiagnosticsModule.sort |> List.iter (writeAnalysisDiagnosticJson writer)
+        writer.WriteEndArray()
+        writer.WriteStartObject("nextAction")
+        if readiness.Readiness = "implementationReady" then
+            writer.WriteString("actionId", "analysis.next.implement")
+            writer.WriteNull("command")
+            writer.WriteString("reason", "Lifecycle sources are current and ready for implementation.")
+        else
+            writer.WriteString("actionId", "correctBlockingDiagnostics")
+            writer.WriteNull("command")
+            writer.WriteString("reason", "Analysis found lifecycle diagnostics that must be corrected before implementation.")
+        writer.WriteEndObject()
+        writer.WriteEndObject()
+        writer.Flush()
+        Encoding.UTF8.GetString(stream.ToArray())
+
+    let existingAnalysisDiagnostic workId model =
+        let path = analysisPath workId
+
+        match snapshot path model with
+        | None -> None
+        | Some existing ->
+            match LifecycleArtifactsModule.parseAnalysisView existing with
+            | Error diagnostics ->
+                diagnostics
+                |> List.tryHead
+                |> Option.map (fun diagnostic -> malformedAnalysisView path diagnostic.Message)
+            | Ok view when not (String.Equals(view.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) ->
+                Some(analysisIdentityMismatch path workId view.WorkId.Value)
+            | Ok _ -> None
+
+    let analysisPlan
+        (workId: string)
+        (specText: string)
+        (clarificationText: string)
+        (checklistText: string)
+        (planText: string)
+        (tasksText: string)
+        (workModelJson: string option)
+        (relationships: AnalysisRelationshipDraft list)
+        (diagnostics: Diagnostic list)
+        (generatedViews: GeneratedViewState list)
+        (model: CommandModel)
+        =
+        let path = analysisPath workId
+        let sources = analysisSources workId workModelJson specText clarificationText checklistText planText tasksText model
+        let acceptedDeferralCount =
+            diagnostics
+            |> List.collect (fun diagnostic -> diagnostic.RelatedIds)
+            |> List.filter (fun id -> id.StartsWith("DEC-", StringComparison.OrdinalIgnoreCase) || id.StartsWith("CR-", StringComparison.OrdinalIgnoreCase))
+            |> List.distinct
+            |> List.length
+
+        let readiness = analysisReadiness acceptedDeferralCount relationships diagnostics
+        let summary =
+            { readiness with
+                WorkId = workId
+                AnalysisPath = path
+                SourceCount = List.length sources }
+
+        let text = analysisJson workId model.Request.GeneratorVersion sources relationships summary diagnostics generatedViews
+        let outputDigest = SchemaVersionModule.outputSha256Text text
+        let view = analysisGeneratedViewState path model.Request.GeneratorVersion sources (Some outputDigest) GeneratedViewCurrency.Current []
+        summary, text, view
+
     let sourceFromEntry (entry: SourceEntry) =
         { Path = entry.Path
           Digest = Some entry.SourceDigest
@@ -3399,9 +3900,108 @@ tasks:
 
             diagnostics, specification, clarification, checklist, plan, tasks, [ generatedView ], effects
 
+    let workModelJsonFromGeneratedEffects workId effects model =
+        effects
+        |> List.tryPick (function
+            | WriteFile(path, text, GeneratedView) when normalizeRelativePath path = workModelPath workId -> Some text
+            | _ -> None)
+        |> Option.orElseWith (fun () -> snapshot (workModelPath workId) model |> Option.map _.Text)
+
+    let computeAnalyzePlan model =
+        match model.Request.WorkId with
+        | None -> model.Diagnostics, None, None, None, None, None, None, [], []
+        | Some workId ->
+            let projectDiagnostics = projectDiagnostics model
+            let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
+            let specificationDiagnostics, specText, specification, specFacts = specificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
+            let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = clarificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
+
+            let checklistDiagnostics, checklistText, checklist, checklistFacts =
+                match specFacts, clarificationFacts with
+                | Some specFacts, Some clarificationFacts ->
+                    checklistPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts model
+                | _ -> [], None, None, None
+
+            let planDiagnostics, planText, plan, planFacts =
+                match specFacts, clarificationFacts, checklistFacts with
+                | Some specFacts, Some clarificationFacts, Some checklistFacts ->
+                    planPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts model
+                | _ -> [], None, None, None
+
+            let taskDiagnostics, taskText, tasks, taskFacts =
+                match specFacts, clarificationFacts, checklistFacts, planFacts with
+                | Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts ->
+                    tasksPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts planFacts model
+                | _ -> [], None, None, None
+
+            let dispositionDiagnostics =
+                match specFacts, clarificationFacts, checklistFacts, planFacts, taskFacts with
+                | Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts, Some taskFacts ->
+                    missingDispositionDiagnostics workId specFacts clarificationFacts checklistFacts planFacts taskFacts
+                | _ -> []
+
+            let analysisViewDiagnostics = existingAnalysisDiagnostic workId model |> Option.toList
+
+            let commandDiagnostics =
+                projectDiagnostics
+                @ duplicateDiagnostics
+                @ specificationDiagnostics
+                @ clarificationDiagnostics
+                @ checklistDiagnostics
+                @ planDiagnostics
+                @ taskDiagnostics
+                @ dispositionDiagnostics
+                @ analysisViewDiagnostics
+                |> DiagnosticsModule.sort
+
+            let generatedDiagnostics, workModelView, workModelEffects =
+                match specText, clarificationText, checklistText, planText, taskText with
+                | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText ->
+                    let charterText = snapshot (charterPath workId) model |> Option.map _.Text
+                    generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) commandDiagnostics model
+                | _ ->
+                    let path = workModelPath workId
+                    let ids =
+                        commandDiagnostics
+                        |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                        |> List.map _.Id
+
+                    [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+
+            let diagnostics = commandDiagnostics @ generatedDiagnostics |> DiagnosticsModule.sort
+            let hasBlocking = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+
+            let analysisSummary, analysisView, analysisEffects =
+                match specText, clarificationText, checklistText, planText, taskText, specFacts, clarificationFacts, checklistFacts, planFacts, taskFacts with
+                | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText, Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts, Some taskFacts ->
+                    let workModelJson = workModelJsonFromGeneratedEffects workId workModelEffects model
+                    let relationships = analysisRelationships workId specFacts clarificationFacts checklistFacts planFacts taskFacts
+                    let generatedViewsForAnalysis = [ workModelView ]
+                    let summary, text, view = analysisPlan workId specText clarificationText checklistText planText taskText workModelJson relationships diagnostics generatedViewsForAnalysis model
+                    let effects =
+                        if hasBlocking then
+                            []
+                        else
+                            [ CreateDirectory(readinessDirectory workId)
+                              WriteFile(analysisPath workId, text, GeneratedView) ]
+
+                    Some summary, Some view, effects
+                | _ ->
+                    None, None, []
+
+            let generatedViews = [ Some workModelView; analysisView ] |> List.choose id
+
+            let effects =
+                if hasBlocking then
+                    []
+                else
+                    workModelEffects @ analysisEffects
+
+            diagnostics, specification, clarification, checklist, plan, tasks, analysisSummary, generatedViews, effects
+
     let nextLifecycleEffects model =
         match model.Request.Command, model.Request.WorkId with
-        | (Charter | Specify | Clarify | Checklist | Plan | Tasks), Some workId when not (hasPlannedWrite model) ->
+        | (Charter | Specify | Clarify | Checklist | Plan | Tasks | Analyze), Some workId when not (hasPlannedWrite model) ->
             if not (allPlannedReadsInterpreted model) then
                 model, []
             else
@@ -3412,26 +4012,29 @@ tasks:
                     let effects = appendNewEffects candidateReads model
                     { model with PendingEffects = model.PendingEffects @ effects }, effects
                 | [] ->
-                    let diagnostics, specification, clarification, checklist, plan, tasks, generatedViews, plannedEffects =
+                    let diagnostics, specification, clarification, checklist, plan, tasks, analysis, generatedViews, plannedEffects =
                         match model.Request.Command with
                         | Charter ->
                             let diagnostics, specification, generatedViews, effects = computeCharterPlan model
-                            diagnostics, specification, None, None, None, None, generatedViews, effects
+                            diagnostics, specification, None, None, None, None, None, generatedViews, effects
                         | Specify ->
                             let diagnostics, specification, generatedViews, effects = computeSpecifyPlan model
-                            diagnostics, specification, None, None, None, None, generatedViews, effects
+                            diagnostics, specification, None, None, None, None, None, generatedViews, effects
                         | Clarify ->
                             let diagnostics, specification, clarification, generatedViews, effects = computeClarifyPlan model
-                            diagnostics, specification, clarification, None, None, None, generatedViews, effects
+                            diagnostics, specification, clarification, None, None, None, None, generatedViews, effects
                         | Checklist ->
                             let diagnostics, specification, clarification, checklist, generatedViews, effects = computeChecklistPlan model
-                            diagnostics, specification, clarification, checklist, None, None, generatedViews, effects
+                            diagnostics, specification, clarification, checklist, None, None, None, generatedViews, effects
                         | Plan ->
                             let diagnostics, specification, clarification, checklist, plan, generatedViews, effects = computePlanPlan model
-                            diagnostics, specification, clarification, checklist, plan, None, generatedViews, effects
+                            diagnostics, specification, clarification, checklist, plan, None, None, generatedViews, effects
                         | Tasks ->
-                            computeTasksPlan model
-                        | _ -> model.Diagnostics, None, None, None, None, None, [], []
+                            let diagnostics, specification, clarification, checklist, plan, tasks, generatedViews, effects = computeTasksPlan model
+                            diagnostics, specification, clarification, checklist, plan, tasks, None, generatedViews, effects
+                        | Analyze ->
+                            computeAnalyzePlan model
+                        | _ -> model.Diagnostics, None, None, None, None, None, None, [], []
 
                     let effects = appendNewEffects plannedEffects model
 
@@ -3444,6 +4047,7 @@ tasks:
                             Checklist = checklist
                             Plan = plan
                             Tasks = tasks
+                            Analysis = analysis
                             GeneratedViews = generatedViews }
 
                     plannedModel, effects
@@ -3463,6 +4067,7 @@ tasks:
               Checklist = None
               Plan = None
               Tasks = None
+              Analysis = None
               GeneratedViews = []
               Report = None }
 

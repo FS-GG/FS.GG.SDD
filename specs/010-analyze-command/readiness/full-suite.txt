@@ -1,0 +1,14 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  FS.GG.SDD.Artifacts -> /home/developer/projects/FS.GG.SDD/src/FS.GG.SDD.Artifacts/bin/Release/net10.0/FS.GG.SDD.Artifacts.dll
+  FS.GG.SDD.Commands -> /home/developer/projects/FS.GG.SDD/src/FS.GG.SDD.Commands/bin/Release/net10.0/FS.GG.SDD.Commands.dll
+  FS.GG.SDD.Artifacts.Tests -> /home/developer/projects/FS.GG.SDD/tests/FS.GG.SDD.Artifacts.Tests/bin/Release/net10.0/FS.GG.SDD.Artifacts.Tests.dll
+Test run for /home/developer/projects/FS.GG.SDD/tests/FS.GG.SDD.Artifacts.Tests/bin/Release/net10.0/FS.GG.SDD.Artifacts.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+  FS.GG.SDD.Commands.Tests -> /home/developer/projects/FS.GG.SDD/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll
+Test run for /home/developer/projects/FS.GG.SDD/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:    61, Skipped:     0, Total:    61, Duration: 442 ms - FS.GG.SDD.Artifacts.Tests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:   142, Skipped:     0, Total:   142, Duration: 6 s - FS.GG.SDD.Commands.Tests.dll (net10.0)

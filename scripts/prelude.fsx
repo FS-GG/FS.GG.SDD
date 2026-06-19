@@ -11,6 +11,10 @@ open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.CommandWorkflow
 
+let expectEqual label expected actual =
+    if expected <> actual then
+        failwithf "%s expected %A, got %A" label expected actual
+
 let repoRoot =
     let rec findRoot (directory: DirectoryInfo) =
         if File.Exists(Path.Combine(directory.FullName, "FS.GG.SDD.sln")) then
@@ -197,9 +201,42 @@ let commandReport =
     commandFinalModel.Report
     |> Option.defaultWith (fun () -> CommandReports.buildReport commandFinalModel)
 
+expectEqual "parse analyze" (Ok Analyze) (CommandTypes.parseCommand "analyze")
+expectEqual "analyze command stage" "analyze" (CommandTypes.commandStage Analyze)
+expectEqual "next after tasks" (Some Analyze) (CommandTypes.nextLifecycleCommand Tasks)
+expectEqual "next after analyze" None (CommandTypes.nextLifecycleCommand Analyze)
+
+let analyzeRequest =
+    ({ Command = Analyze
+       ProjectRoot = commandRoot
+       WorkId = Some "009-tasks-command"
+       Title = Some "Tasks Command"
+       InputText = None
+       OutputFormat = Json
+       DryRun = false
+       OverwritePolicy = RefuseUnsafe
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+    : CommandRequest)
+
+let analysisFinalModel =
+    runCommand analyzeRequest
+
+let analysisReport =
+    analysisFinalModel.Report
+    |> Option.defaultWith (fun () -> CommandReports.buildReport analysisFinalModel)
+
+let analysisSummary =
+    analysisReport.Analysis
+    |> Option.defaultWith (fun () -> failwith "Expected analysis summary.")
+
+expectEqual "analysis command" Analyze analysisReport.Command
+expectEqual "analysis readiness" "implementationReady" analysisSummary.Readiness
+
 printfn "command=%s" (CommandTypes.commandName commandReport.Command)
 printfn "tasksCommandStage=%s" (CommandTypes.commandStage Tasks)
 printfn "nextAfterTasks=%s" (CommandTypes.nextLifecycleCommand Tasks |> Option.map CommandTypes.commandName |> Option.defaultValue "none")
+printfn "analyzeCommandStage=%s" (CommandTypes.commandStage Analyze)
+printfn "nextAfterAnalyze=%s" (CommandTypes.nextLifecycleCommand Analyze |> Option.map CommandTypes.commandName |> Option.defaultValue "none")
 printfn "outcome=%s" (CommandTypes.outcomeValue commandReport.Outcome)
 printfn "changedArtifacts=%d" commandReport.ChangedArtifacts.Length
 printfn "tasks=%d" (commandReport.Tasks |> Option.map (fun summary -> summary.TaskIds.Length) |> Option.defaultValue 0)
@@ -212,6 +249,15 @@ printfn "generatedViews=%d" commandReport.GeneratedViews.Length
 printfn "blockingDiagnostics=%d" (commandReport.Diagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = Diagnostics.DiagnosticSeverity.DiagnosticError) |> List.length)
 printfn "taskDiagnostics=%s" ([ missingPlanPrerequisite "work/009-tasks-command/plan.md" "Plan is required."; staleTask "work/009-tasks-command/tasks.yml" [ "T001" ]; doneTaskMissingEvidence "work/009-tasks-command/tasks.yml" [ "T001" ] ] |> List.map _.Id |> String.concat ",")
 printfn "nextAction=%s" (commandReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
+printfn "analysisCommand=%s" (CommandTypes.commandName analysisReport.Command)
+printfn "analysisOutcome=%s" (CommandTypes.outcomeValue analysisReport.Outcome)
+printfn "analysisPath=%s" analysisSummary.AnalysisPath
+printfn "analysisReadiness=%s" analysisSummary.Readiness
+printfn "analysisSources=%d" analysisSummary.SourceCount
+printfn "analysisRelationships=%d" analysisSummary.SourceRelationshipCount
+printfn "analysisGeneratedViews=%d" analysisReport.GeneratedViews.Length
+printfn "analysisDiagnostics=%s" ([ missingTasksPrerequisite "work/009-tasks-command/tasks.yml" "Tasks are required."; malformedAnalysisView "readiness/009-tasks-command/analysis.json" "Analysis JSON is malformed."; analysisIdentityMismatch "readiness/009-tasks-command/analysis.json" "009-tasks-command" "other-work" ] |> List.map _.Id |> String.concat ",")
+printfn "analysisNextAction=%s" (analysisReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
 printfn "createdProjectConfig=%b" (File.Exists(Path.Combine(commandRoot, ".fsgg", "project.yml")))
 printfn "createdCharter=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "charter.md")))
 printfn "createdSpecification=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "spec.md")))
@@ -219,3 +265,4 @@ printfn "createdClarification=%b" (File.Exists(Path.Combine(commandRoot, "work",
 printfn "createdChecklist=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "checklist.md")))
 printfn "createdPlan=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "plan.md")))
 printfn "createdTasks=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "tasks.yml")))
+printfn "createdAnalysis=%b" (File.Exists(Path.Combine(commandRoot, "readiness", "009-tasks-command", "analysis.json")))

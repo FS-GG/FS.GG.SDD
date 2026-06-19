@@ -18,3 +18,7 @@ scenarios:
     workId: 008-plan-command
     outcome: blocked
     diagnostics: [outsideProject]
+  - command: analyze
+    workId: 010-analyze-command
+    outcome: blocked
+    diagnostics: [outsideProject]

@@ -2,6 +2,7 @@ namespace FS.GG.SDD.Artifacts
 
 open System
 open System.IO
+open System.Text.Json
 open System.Text.RegularExpressions
 open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Artifacts.Diagnostics
@@ -347,6 +348,79 @@ module LifecycleArtifacts =
           LifecycleNotes: string list
           StaleTaskCount: int
           Diagnostics: Diagnostic list }
+
+    type AnalysisSourceRecord =
+        { Path: string
+          Kind: string
+          Digest: SourceDigest option
+          SchemaVersion: int option
+          SchemaStatus: string option }
+
+    type AnalysisSourceRelationship =
+        { Id: string
+          SourcePath: string
+          TargetPath: string
+          SourceId: string option
+          TargetId: string option
+          Relationship: string
+          State: string
+          DiagnosticIds: string list }
+
+    type AnalysisFinding =
+        { Id: string
+          Category: string
+          Severity: string
+          State: string
+          Path: string
+          RelatedIds: string list
+          Message: string
+          Correction: string }
+
+    type AnalysisReadiness =
+        { Status: string
+          ReadyCount: int
+          AdvisoryCount: int
+          WarningCount: int
+          BlockingCount: int
+          StaleSourceCount: int
+          MissingDispositionCount: int
+          MalformedSourceCount: int
+          GeneratedViewFindingCount: int
+          AcceptedDeferralCount: int }
+
+    type AnalysisGeneratedViewRecord =
+        { Path: string
+          Kind: string
+          Currency: string
+          DiagnosticIds: string list }
+
+    type AnalysisOptionalBoundaryFact =
+        { Path: string
+          Relationship: string
+          RequiredBySdd: bool
+          State: string
+          DiagnosticIds: string list }
+
+    type AnalysisNextAction =
+        { ActionId: string
+          Command: string option
+          Reason: string }
+
+    type AnalysisView =
+        { SchemaVersion: SchemaVersion
+          ViewVersion: string
+          WorkId: WorkId
+          Stage: LifecycleStage
+          Status: string
+          Generator: string
+          Sources: AnalysisSourceRecord list
+          SourceRelationships: AnalysisSourceRelationship list
+          Readiness: AnalysisReadiness
+          Findings: AnalysisFinding list
+          GeneratedViews: AnalysisGeneratedViewRecord list
+          OptionalBoundaryFacts: AnalysisOptionalBoundaryFact list
+          Diagnostics: Diagnostic list
+          NextAction: AnalysisNextAction option }
 
     type EvidenceKind =
         | Implementation
@@ -1906,6 +1980,244 @@ module LifecycleArtifacts =
                       StaleTaskCount = staleCount
                       Diagnostics = diagnostics }
             | _ -> Error versionDiagnostics
+
+    let tryJsonProperty (name: string) (element: JsonElement) =
+        let mutable value = Unchecked.defaultof<JsonElement>
+
+        if element.ValueKind = JsonValueKind.Object && element.TryGetProperty(name, &value) then
+            Some value
+        else
+            None
+
+    let jsonString name element =
+        tryJsonProperty name element
+        |> Option.bind (fun value ->
+            if value.ValueKind = JsonValueKind.String then
+                Some(value.GetString())
+            elif value.ValueKind = JsonValueKind.Null then
+                None
+            else
+                Some(value.ToString()))
+
+    let jsonRequiredString name element =
+        jsonString name element |> Option.defaultValue ""
+
+    let jsonInt name element =
+        tryJsonProperty name element
+        |> Option.bind (fun value ->
+            if value.ValueKind = JsonValueKind.Number then
+                match value.TryGetInt32() with
+                | true, parsed -> Some parsed
+                | _ -> None
+            elif value.ValueKind = JsonValueKind.String then
+                match Int32.TryParse(value.GetString()) with
+                | true, parsed -> Some parsed
+                | _ -> None
+            else
+                None)
+
+    let jsonBool name element =
+        tryJsonProperty name element
+        |> Option.bind (fun value ->
+            if value.ValueKind = JsonValueKind.True then Some true
+            elif value.ValueKind = JsonValueKind.False then Some false
+            else None)
+
+    let jsonArray name element =
+        tryJsonProperty name element
+        |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Array)
+        |> Option.map (fun value -> value.EnumerateArray() |> Seq.toList)
+        |> Option.defaultValue []
+
+    let jsonStringList name element =
+        jsonArray name element
+        |> List.choose (fun value ->
+            if value.ValueKind = JsonValueKind.String then
+                Some(value.GetString())
+            else
+                None)
+        |> List.filter (String.IsNullOrWhiteSpace >> not)
+        |> List.sort
+
+    let parseJsonDigest (element: JsonElement) =
+        match element.ValueKind with
+        | JsonValueKind.String ->
+            let value = element.GetString()
+            if String.IsNullOrWhiteSpace value then
+                None
+            else
+                let parts = value.Split([| ':' |], 2)
+                if parts.Length = 2 then
+                    SchemaVersion.createSourceDigest parts.[0] parts.[1] |> Result.toOption
+                else
+                    SchemaVersion.createSourceDigest "sha256" value |> Result.toOption
+        | JsonValueKind.Object ->
+            match jsonString "algorithm" element, jsonString "value" element with
+            | Some algorithm, Some value -> SchemaVersion.createSourceDigest algorithm value |> Result.toOption
+            | _ -> None
+        | _ -> None
+
+    let jsonDigest name element =
+        tryJsonProperty name element |> Option.bind parseJsonDigest
+
+    let diagnosticSeverityFromJson value =
+        match (if isNull value then "" else value).Trim().ToLowerInvariant() with
+        | "error"
+        | "blocking" -> Diagnostics.DiagnosticError
+        | "warning"
+        | "stalesource"
+        | "missingdisposition"
+        | "malformedsource"
+        | "generatedview" -> Diagnostics.DiagnosticWarning
+        | _ -> Diagnostics.DiagnosticInfo
+
+    let artifactFromJsonPath path =
+        if String.IsNullOrWhiteSpace path then
+            None
+        else
+            ArtifactRef.create (normalizePath path) (ArtifactKind.Other "analysis") ArtifactOwner.Sdd true
+            |> Result.toOption
+
+    let parseAnalysisDiagnostic (element: JsonElement) =
+        Diagnostics.create
+            (jsonRequiredString "id" element)
+            (jsonRequiredString "severity" element |> diagnosticSeverityFromJson)
+            (jsonString "artifact" element |> Option.orElseWith (fun () -> jsonString "path" element) |> Option.bind artifactFromJsonPath)
+            None
+            (jsonRequiredString "message" element)
+            (jsonRequiredString "correction" element)
+            (jsonStringList "relatedIds" element)
+
+    let parseAnalysisSource (element: JsonElement) =
+        { Path = normalizePath (jsonRequiredString "path" element)
+          Kind = jsonRequiredString "kind" element
+          Digest = jsonDigest "digest" element |> Option.orElseWith (fun () -> jsonDigest "sourceDigest" element)
+          SchemaVersion = jsonInt "schemaVersion" element
+          SchemaStatus = jsonString "schemaStatus" element }
+
+    let parseAnalysisRelationship (element: JsonElement) =
+        { Id = jsonRequiredString "id" element
+          SourcePath = normalizePath (jsonRequiredString "sourcePath" element)
+          TargetPath = normalizePath (jsonRequiredString "targetPath" element)
+          SourceId = jsonString "sourceId" element
+          TargetId = jsonString "targetId" element
+          Relationship = jsonRequiredString "relationship" element
+          State = jsonRequiredString "state" element
+          DiagnosticIds = jsonStringList "diagnosticIds" element }
+
+    let parseAnalysisFinding (element: JsonElement) =
+        { Id = jsonRequiredString "id" element
+          Category = jsonRequiredString "category" element
+          Severity = jsonRequiredString "severity" element
+          State = jsonRequiredString "state" element
+          Path = normalizePath (jsonRequiredString "path" element)
+          RelatedIds = jsonStringList "relatedIds" element
+          Message = jsonRequiredString "message" element
+          Correction = jsonRequiredString "correction" element }
+
+    let parseAnalysisReadiness (element: JsonElement) =
+        { Status = jsonString "status" element |> Option.defaultValue "blocked"
+          ReadyCount = jsonInt "readyCount" element |> Option.defaultValue 0
+          AdvisoryCount = jsonInt "advisoryCount" element |> Option.defaultValue 0
+          WarningCount = jsonInt "warningCount" element |> Option.defaultValue 0
+          BlockingCount = jsonInt "blockingCount" element |> Option.defaultValue 0
+          StaleSourceCount = jsonInt "staleSourceCount" element |> Option.defaultValue 0
+          MissingDispositionCount = jsonInt "missingDispositionCount" element |> Option.defaultValue 0
+          MalformedSourceCount = jsonInt "malformedSourceCount" element |> Option.defaultValue 0
+          GeneratedViewFindingCount = jsonInt "generatedViewFindingCount" element |> Option.defaultValue 0
+          AcceptedDeferralCount = jsonInt "acceptedDeferralCount" element |> Option.defaultValue 0 }
+
+    let parseAnalysisGeneratedView (element: JsonElement) =
+        { Path = normalizePath (jsonRequiredString "path" element)
+          Kind = jsonRequiredString "kind" element
+          Currency = jsonRequiredString "currency" element
+          DiagnosticIds = jsonStringList "diagnosticIds" element }
+
+    let parseAnalysisBoundaryFact (element: JsonElement) =
+        { Path = normalizePath (jsonRequiredString "path" element)
+          Relationship = jsonRequiredString "relationship" element
+          RequiredBySdd = jsonBool "requiredBySdd" element |> Option.defaultValue false
+          State = jsonRequiredString "state" element
+          DiagnosticIds = jsonStringList "diagnosticIds" element }
+
+    let parseAnalysisNextAction (element: JsonElement) =
+        { ActionId = jsonRequiredString "actionId" element
+          Command = jsonString "command" element
+          Reason = jsonRequiredString "reason" element }
+
+    let parseAnalysisView (snapshot: FileSnapshot) =
+        let artifact = sourceArtifact snapshot.Path ArtifactKind.GeneratedView
+
+        try
+            use document = JsonDocument.Parse snapshot.Text
+            let root = document.RootElement
+            let rawVersion = jsonInt "schemaVersion" root |> Option.map string
+            let compatibility = SchemaVersion.classifyRaw rawVersion
+
+            match compatibility.Version, compatibility.Status with
+            | Some schema, SchemaCompatibilityStatus.Current
+            | Some schema, SchemaCompatibilityStatus.Deprecated ->
+                let workIdText = jsonRequiredString "workId" root
+                let stageText = jsonRequiredString "stage" root
+
+                match Identifiers.createWorkId workIdText, Identifiers.parseStage stageText with
+                | Ok workId, Ok stage ->
+                    let readiness =
+                        tryJsonProperty "readiness" root
+                        |> Option.map parseAnalysisReadiness
+                        |> Option.defaultValue
+                            { Status = jsonString "status" root |> Option.defaultValue "blocked"
+                              ReadyCount = 0
+                              AdvisoryCount = 0
+                              WarningCount = 0
+                              BlockingCount = 0
+                              StaleSourceCount = 0
+                              MissingDispositionCount = 0
+                              MalformedSourceCount = 0
+                              GeneratedViewFindingCount = 0
+                              AcceptedDeferralCount = 0 }
+
+                    let diagnostics = jsonArray "diagnostics" root |> List.map parseAnalysisDiagnostic |> Diagnostics.sort
+
+                    Ok
+                        { SchemaVersion = schema
+                          ViewVersion = jsonString "viewVersion" root |> Option.defaultValue "1.0"
+                          WorkId = workId
+                          Stage = stage
+                          Status = jsonString "status" root |> Option.defaultValue readiness.Status
+                          Generator = jsonString "generator" root |> Option.defaultValue "fsgg-sdd"
+                          Sources = jsonArray "sources" root |> List.map parseAnalysisSource |> List.sortBy (fun source -> source.Path)
+                          SourceRelationships =
+                            jsonArray "sourceRelationships" root
+                            |> List.map parseAnalysisRelationship
+                            |> List.sortBy (fun relationship -> relationship.Id)
+                          Readiness = readiness
+                          Findings = jsonArray "findings" root |> List.map parseAnalysisFinding |> List.sortBy (fun finding -> finding.Id)
+                          GeneratedViews =
+                            jsonArray "generatedViews" root
+                            |> List.map parseAnalysisGeneratedView
+                            |> List.sortBy (fun view -> view.Path)
+                          OptionalBoundaryFacts =
+                            jsonArray "optionalBoundaryFacts" root
+                            |> List.map parseAnalysisBoundaryFact
+                            |> List.sortBy (fun fact -> fact.Path)
+                          Diagnostics = diagnostics
+                          NextAction = tryJsonProperty "nextAction" root |> Option.map parseAnalysisNextAction }
+                | _ ->
+                    Error
+                        [ Diagnostics.workModelInconsistent
+                              artifact
+                              "Analysis view identity fields are malformed."
+                              "Regenerate analysis.json with a valid workId and stage: analyze."
+                              [ workIdText; stageText ] ]
+            | _, SchemaCompatibilityStatus.Malformed ->
+                Error [ Diagnostics.malformedSchemaVersion artifact "Analysis view is missing or has malformed schemaVersion." ]
+            | _, SchemaCompatibilityStatus.Unsupported ->
+                Error [ Diagnostics.unsupportedSchemaVersion artifact (rawVersion |> Option.defaultValue "") ]
+            | _, SchemaCompatibilityStatus.Future ->
+                Error [ Diagnostics.futureSchemaVersion artifact (rawVersion |> Option.defaultValue "") ]
+        with ex ->
+            Error [ Diagnostics.workModelInconsistent artifact $"Analysis view JSON is malformed: {ex.Message}" "Regenerate readiness/<id>/analysis.json with valid JSON." [ snapshot.Path ] ]
 
     let parseTasks (snapshot: FileSnapshot) =
         parseTaskFacts snapshot |> Result.map (fun facts -> facts.Tasks)

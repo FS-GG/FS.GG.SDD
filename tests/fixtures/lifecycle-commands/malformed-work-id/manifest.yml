@@ -20,3 +20,7 @@ scenarios:
     workId: "INVALID WORK ID"
     outcome: blocked
     diagnostics: [malformedWorkId]
+  - command: analyze
+    workId: "INVALID WORK ID"
+    outcome: blocked
+    diagnostics: [malformedWorkId]

@@ -50,6 +50,10 @@ Spec Kit feature that defines artifact contracts and verification. The first
 FS.GG.SDD feature remains `001-sdd-artifact-model`; it defines the lifecycle
 artifact contract before commands or generators are implemented.
 
+For the native SDD product lifecycle, `fsgg-sdd analyze` is the tasks-ready
+readiness step that runs before implementation and emits
+`readiness/<id>/analysis.json`.
+
 ## Scope Boundary
 
 FS.GG.SDD owns:
@@ -261,6 +265,13 @@ Progress markers:
   Governance compatibility facts, CLI smoke evidence, FSI evidence,
   performance evidence, and full-suite verification. Evidence is recorded in
   `specs/009-tasks-command/readiness/`.
+- [x] Implement `010-analyze-command` by adding `fsgg-sdd analyze`, the
+  generated `readiness/<id>/analysis.json` contract, analysis summaries in
+  command reports, tasks-ready prerequisite diagnostics, authored-source
+  preservation, dry-run reporting, deterministic JSON/text projection, optional
+  Governance compatibility facts, CLI smoke evidence, FSI evidence,
+  performance evidence, and full-suite verification. Evidence is recorded in
+  `specs/010-analyze-command/readiness/`.
 
 ### Phase 1: SDD Artifact Model
 
@@ -384,10 +395,10 @@ the same model.
 Status: in progress as of 2026-06-19. The implemented slices add
 `src/FS.GG.SDD.Commands`, `src/FS.GG.SDD.Cli`, command tests, lifecycle-command
 fixture roots, readiness evidence, deterministic init, charter, specify, and
-clarify/checklist/plan/tasks command reports, and real filesystem smoke paths for
+clarify/checklist/plan/tasks/analyze command reports, and real filesystem smoke paths for
 `fsgg-sdd init`, `fsgg-sdd charter`, `fsgg-sdd specify`, and
 `fsgg-sdd clarify`, `fsgg-sdd checklist`, `fsgg-sdd plan`, and
-`fsgg-sdd tasks`.
+`fsgg-sdd tasks`, and `fsgg-sdd analyze`.
 
 - [x] Add `fsgg-sdd init` for SDD skeleton creation.
 - [x] Add `fsgg-sdd charter`.
@@ -396,16 +407,16 @@ clarify/checklist/plan/tasks command reports, and real filesystem smoke paths fo
 - [x] Add `fsgg-sdd checklist`.
 - [x] Add `fsgg-sdd plan`.
 - [x] Add `fsgg-sdd tasks`.
-- [ ] Add `fsgg-sdd analyze`.
+- [x] Add `fsgg-sdd analyze`.
 - [x] Keep stateful or I/O command behavior behind `Model`, `Msg`, `Effect`,
   `init`, and `update` boundaries for the implemented init, charter, specify,
-  clarify, checklist, plan, and tasks slices.
+  clarify, checklist, plan, tasks, and analyze slices.
 - [x] Ensure command output has deterministic JSON for automation and plain text
-  for humans for the implemented init, charter, specify, clarify, and checklist
-  plan, and tasks slices.
+  for humans for the implemented init, charter, specify, clarify, checklist,
+  plan, tasks, and analyze slices.
 - [x] Refresh generated SDD views when possible and report stale-view
   diagnostics when not for the implemented charter, specify, clarify, and
-  checklist/plan/tasks work-model views.
+  checklist/plan/tasks/analyze work-model and analysis views.
 
 Current verification evidence for the implemented slice is recorded in
 `specs/003-native-sdd-lifecycle-commands/readiness/`: clean Release build,

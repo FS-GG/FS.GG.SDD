@@ -11,7 +11,7 @@ shape, required skills, evidence obligations, and expected tests.
 
 This repository started scaffold-only. Spec Kit features have since added the
 packable artifact-model library, normalized work-model generation, and native
-command workflow slices through `fsgg-sdd tasks`.
+command workflow slices through `fsgg-sdd analyze`.
 
 ## Scope
 
@@ -37,13 +37,13 @@ freshness, routing, profiles, and gate enforcement belong in
 - Claude and Codex guidance files are present.
 - `FS.GG.SDD.Artifacts` defines the first typed lifecycle artifact model.
 - `FS.GG.SDD.Commands` and `FS.GG.SDD.Cli` provide the native command workflow
-  slices through `fsgg-sdd tasks`: a public MVU/report surface, SDD
+  slices through `fsgg-sdd analyze`: a public MVU/report surface, SDD
   skeleton creation, charter/specification authoring, clarification decisions,
   requirements-quality checklist authoring, technical plan authoring, stable
   task graph authoring, question/decision, checklist item/result, plan
-  decision/contract/verification, and task ids, deterministic JSON/text
-  reports, generated work-model refresh/diagnostics, and no required
-  Governance runtime.
+  decision/contract/verification, task ids, cross-artifact analysis readiness,
+  deterministic JSON/text reports, generated work-model and analysis-view
+  refresh/diagnostics, and no required Governance runtime.
 - The detailed implementation roadmap lives in
   [docs/initial-implementation-plan.md](docs/initial-implementation-plan.md).
 
@@ -54,6 +54,9 @@ Use standard Spec Kit:
 ```text
 specify -> clarify -> checklist -> plan -> tasks -> implement -> analyze
 ```
+
+For the native SDD product lifecycle, `fsgg-sdd analyze` runs after
+`fsgg-sdd tasks` and points ready work toward implementation.
 
 The first implementation feature should create the structured SDD artifact model.
 Markdown remains an authoring surface; schema-versioned structured artifacts are

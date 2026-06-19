@@ -1,0 +1,348 @@
+$ fsgg-sdd analyze --root <temporary-project-root> --work 010-analyze-command --dry-run
+{
+  "schemaVersion": 1,
+  "reportVersion": "1.0.0",
+  "command": {
+    "name": "analyze",
+    "stage": "analyze"
+  },
+  "context": {
+    "projectRoot": ".",
+    "workId": "010-analyze-command"
+  },
+  "invocation": {
+    "outputFormat": "json",
+    "dryRun": true,
+    "overwritePolicy": "refuseUnsafe"
+  },
+  "outcome": "succeeded",
+  "changedArtifacts": [
+    {
+      "path": "readiness/010-analyze-command",
+      "kind": "directory",
+      "ownership": "sdd",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": null,
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": "readiness/010-analyze-command/analysis.json",
+      "kind": "generatedView",
+      "ownership": "generated",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "6e7baec37e936957319d10a1871fbaaa9cd13fb82c30731a808f1e5f56b1116c"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    }
+  ],
+  "specification": {
+    "workId": "010-analyze-command",
+    "stage": "specify",
+    "status": "specified",
+    "storyIds": [
+      "US-001"
+    ],
+    "requirementIds": [
+      "FR-001"
+    ],
+    "acceptanceScenarioIds": [
+      "AC-001"
+    ],
+    "ambiguityIds": [],
+    "unresolvedAmbiguityCount": 0
+  },
+  "clarification": {
+    "workId": "010-analyze-command",
+    "stage": "clarify",
+    "status": "clarified",
+    "sourceSpec": "work/010-analyze-command/spec.md",
+    "questionIds": [],
+    "answeredQuestionIds": [],
+    "decisionIds": [],
+    "acceptedDeferralIds": [],
+    "remainingAmbiguityCount": 0,
+    "blockingAmbiguityCount": 0
+  },
+  "checklist": {
+    "workId": "010-analyze-command",
+    "stage": "checklist",
+    "status": "checklistReady",
+    "sourceSpec": "work/010-analyze-command/spec.md",
+    "sourceClarifications": "work/010-analyze-command/clarifications.md",
+    "itemIds": [
+      "CHK-001"
+    ],
+    "resultIds": [
+      "CR-001"
+    ],
+    "passedCount": 1,
+    "failedBlockingCount": 0,
+    "acceptedDeferralCount": 0,
+    "staleResultCount": 0,
+    "advisoryCount": 0
+  },
+  "plan": {
+    "workId": "010-analyze-command",
+    "stage": "plan",
+    "status": "planned",
+    "sourceSpec": "work/010-analyze-command/spec.md",
+    "sourceClarifications": "work/010-analyze-command/clarifications.md",
+    "sourceChecklist": "work/010-analyze-command/checklist.md",
+    "decisionIds": [
+      "PD-001"
+    ],
+    "contractReferenceIds": [
+      "PC-001"
+    ],
+    "verificationObligationIds": [
+      "VO-001"
+    ],
+    "migrationNoteIds": [
+      "PM-001"
+    ],
+    "generatedViewImpactIds": [
+      "GV-001"
+    ],
+    "acceptedDeferralCount": 0,
+    "staleDecisionCount": 0,
+    "blockingFindingCount": 0,
+    "advisoryCount": 1
+  },
+  "tasks": {
+    "workId": "010-analyze-command",
+    "stage": "tasks",
+    "status": "tasksReady",
+    "sourceSpec": "work/010-analyze-command/spec.md",
+    "sourceClarifications": "work/010-analyze-command/clarifications.md",
+    "sourceChecklist": "work/010-analyze-command/checklist.md",
+    "sourcePlan": "work/010-analyze-command/plan.md",
+    "taskIds": [
+      "T001",
+      "T002",
+      "T003",
+      "T004",
+      "T005",
+      "T006"
+    ],
+    "dependencyCount": 5,
+    "requiredSkillCount": 6,
+    "requiredEvidenceCount": 6,
+    "pendingCount": 6,
+    "inProgressCount": 0,
+    "doneCount": 0,
+    "skippedCount": 0,
+    "staleCount": 0,
+    "acceptedDeferralCount": 0,
+    "blockingFindingCount": 0,
+    "advisoryCount": 1
+  },
+  "analysis": {
+    "workId": "010-analyze-command",
+    "stage": "analyze",
+    "status": "implementationReady",
+    "analysisPath": "readiness/010-analyze-command/analysis.json",
+    "sourceCount": 8,
+    "sourceRelationshipCount": 22,
+    "readyFindingCount": 22,
+    "advisoryCount": 0,
+    "warningCount": 0,
+    "blockingCount": 0,
+    "staleSourceCount": 0,
+    "missingDispositionCount": 0,
+    "malformedSourceCount": 0,
+    "generatedViewFindingCount": 0,
+    "acceptedDeferralCount": 0,
+    "readiness": "implementationReady"
+  },
+  "generatedViews": [
+    {
+      "path": "readiness/010-analyze-command/analysis.json",
+      "kind": "analysis",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "0.2.0"
+      },
+      "sources": [
+        {
+          "path": ".fsgg/agents.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": ".fsgg/project.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "336dd88419f9cf229b9e0dad7c3a05e7c7348624812163ef7c70f50c471c0bed"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": ".fsgg/sdd.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "05deb1b6ae6632aed6ad2bcaaf70e3dee66889e64a1e076cf633f570802720de"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/010-analyze-command/checklist.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "eaa696f42657e4af0c89f4defe88552fd1460bff64230d3567bd506ec25c9340"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/010-analyze-command/clarifications.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "f9a22d6f6108caba5e0c1006873b79ffc0d04e1ea10892c786c0ac5fc7b4c4f8"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/010-analyze-command/plan.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "e3b6726c6af051345cc51a93f94d3d1e3b1824f53a83dda5d20d539ca8da79a3"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/010-analyze-command/spec.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "d87fe0552d820a60bd8ea08a4377dc06d6a844008559a6e445347a159e8767e2"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/010-analyze-command/tasks.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "ec91412a1395910daf3f2c8a8d1ca7a273bbc35237c949dd73ad4f54be8ba0ef"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        }
+      ],
+      "outputDigest": {
+        "algorithm": "sha256",
+        "value": "6e7baec37e936957319d10a1871fbaaa9cd13fb82c30731a808f1e5f56b1116c"
+      },
+      "currency": "current",
+      "diagnosticIds": []
+    },
+    {
+      "path": "readiness/010-analyze-command/work-model.json",
+      "kind": "workModel",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "0.2.0"
+      },
+      "sources": [
+        {
+          "path": "work/010-analyze-command/checklist.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "eaa696f42657e4af0c89f4defe88552fd1460bff64230d3567bd506ec25c9340"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/010-analyze-command/clarifications.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "f9a22d6f6108caba5e0c1006873b79ffc0d04e1ea10892c786c0ac5fc7b4c4f8"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/010-analyze-command/plan.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "e3b6726c6af051345cc51a93f94d3d1e3b1824f53a83dda5d20d539ca8da79a3"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/010-analyze-command/spec.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "d87fe0552d820a60bd8ea08a4377dc06d6a844008559a6e445347a159e8767e2"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/010-analyze-command/tasks.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "ec91412a1395910daf3f2c8a8d1ca7a273bbc35237c949dd73ad4f54be8ba0ef"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        }
+      ],
+      "outputDigest": null,
+      "currency": "missing",
+      "diagnosticIds": []
+    }
+  ],
+  "diagnostics": [],
+  "governanceCompatibility": [
+    {
+      "path": ".fsgg/capabilities.yml",
+      "relationship": "optionalGovernanceCapabilities",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/policy.yml",
+      "relationship": "optionalGovernancePolicy",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/tooling.yml",
+      "relationship": "optionalGovernanceTooling",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    }
+  ],
+  "nextAction": {
+    "actionId": "analysis.next.implement",
+    "command": null,
+    "workId": "010-analyze-command",
+    "reason": "Lifecycle sources are current and ready for implementation.",
+    "requiredArtifacts": [
+      "readiness/010-analyze-command/analysis.json"
+    ],
+    "blockingDiagnosticIds": []
+  }
+}
+dryRunAnalysisCreated=false

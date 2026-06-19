@@ -71,6 +71,11 @@ module CommandReports =
     val unsafeTaskStatusChange: path: string -> id: string -> Diagnostic
     val doneTaskMissingEvidence: path: string -> ids: string list -> Diagnostic
     val skippedTaskMissingRationale: path: string -> ids: string list -> Diagnostic
+    val missingTasksPrerequisite: path: string -> message: string -> Diagnostic
+    val failedTasksPrerequisite: path: string -> message: string -> relatedIds: string list -> Diagnostic
+    val analysisIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
+    val malformedAnalysisView: path: string -> message: string -> Diagnostic
+    val missingDisposition: path: string -> ids: string list -> Diagnostic
     val unsafeOverwrite: path: string -> Diagnostic
     val malformedGeneratedView: path: string -> Diagnostic
     val blockedGeneratedViewRefresh: path: string -> relatedIds: string list -> Diagnostic

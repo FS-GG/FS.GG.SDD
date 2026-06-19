@@ -45,6 +45,7 @@ let printUnknown commandValue =
           Checklist = None
           Plan = None
           Tasks = None
+          Analysis = None
           GeneratedViews = []
           Report = None }
 

@@ -1,0 +1,7 @@
+schemaVersion: 1
+scenario: analysis-accepted-deferral
+command: analyze
+workId: 010-analyze-command
+expected:
+  acceptedDeferralsVisible: true
+  governanceRequired: false

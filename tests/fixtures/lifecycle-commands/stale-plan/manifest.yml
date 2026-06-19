@@ -1,0 +1,8 @@
+schemaVersion: 1
+scenario: stale-plan
+command: analyze
+workId: 010-analyze-command
+expected:
+  outcome: blocked
+  diagnostics: [failedPlanPrerequisite, stalePlanDecision]
+  correctionCommand: plan

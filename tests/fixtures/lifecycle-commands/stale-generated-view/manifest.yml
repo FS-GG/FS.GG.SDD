@@ -20,3 +20,9 @@ scenarios:
     workId: 008-plan-command
     generatedView: readiness/008-plan-command/work-model.json
     currencies: [missing, stale, malformed, blocked]
+  - command: analyze
+    workId: 010-analyze-command
+    generatedViews:
+      - readiness/010-analyze-command/work-model.json
+      - readiness/010-analyze-command/analysis.json
+    currencies: [missing, stale, malformed, blocked]

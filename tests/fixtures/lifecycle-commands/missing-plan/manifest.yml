@@ -1,0 +1,8 @@
+schemaVersion: 1
+scenario: missing-plan
+command: analyze
+workId: 010-analyze-command
+expected:
+  outcome: blocked
+  diagnostics: [missingPlanPrerequisite]
+  analysisMutation: none

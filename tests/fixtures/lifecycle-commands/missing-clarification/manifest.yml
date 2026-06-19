@@ -9,3 +9,9 @@ expected:
 evidence:
   tests:
     - FS.GG.SDD.Commands.Tests.PlanCommandTests.plan missing clarification blocks before authored write
+scenarios:
+  - command: analyze
+    workId: 010-analyze-command
+    outcome: blocked
+    diagnostics: [missingClarificationPrerequisite]
+    mutation: none

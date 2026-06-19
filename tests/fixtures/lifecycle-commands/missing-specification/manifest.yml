@@ -15,3 +15,8 @@ scenarios:
     outcome: blocked
     diagnostics: [missingSpecificationPrerequisite]
     mutation: none
+  - command: analyze
+    workId: 010-analyze-command
+    outcome: blocked
+    diagnostics: [missingSpecificationPrerequisite]
+    mutation: none

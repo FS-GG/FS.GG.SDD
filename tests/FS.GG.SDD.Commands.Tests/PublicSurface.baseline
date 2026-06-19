@@ -1,6 +1,7 @@
 FS.GG.SDD.Commands.CommandEffects.interpret
 FS.GG.SDD.Commands.CommandEffects.interpretAll
 FS.GG.SDD.Commands.CommandRendering.renderText
+FS.GG.SDD.Commands.CommandReports.analysisIdentityMismatch
 FS.GG.SDD.Commands.CommandReports.blockedGeneratedViewRefresh
 FS.GG.SDD.Commands.CommandReports.buildReport
 FS.GG.SDD.Commands.CommandReports.charterIdentityMismatch
@@ -17,12 +18,14 @@ FS.GG.SDD.Commands.CommandReports.duplicateWorkId
 FS.GG.SDD.Commands.CommandReports.exitCodeForReport
 FS.GG.SDD.Commands.CommandReports.failedChecklistPrerequisite
 FS.GG.SDD.Commands.CommandReports.failedPlanPrerequisite
+FS.GG.SDD.Commands.CommandReports.failedTasksPrerequisite
 FS.GG.SDD.Commands.CommandReports.failedRequirementsQuality
 FS.GG.SDD.Commands.CommandReports.malformedAgentsConfig
 FS.GG.SDD.Commands.CommandReports.malformedCharterFrontMatter
 FS.GG.SDD.Commands.CommandReports.malformedChecklistFrontMatter
 FS.GG.SDD.Commands.CommandReports.malformedClarificationFrontMatter
 FS.GG.SDD.Commands.CommandReports.malformedGeneratedView
+FS.GG.SDD.Commands.CommandReports.malformedAnalysisView
 FS.GG.SDD.Commands.CommandReports.malformedTasksArtifact
 FS.GG.SDD.Commands.CommandReports.malformedProjectConfig
 FS.GG.SDD.Commands.CommandReports.malformedPlanFrontMatter
@@ -41,6 +44,8 @@ FS.GG.SDD.Commands.CommandReports.missingSddConfig
 FS.GG.SDD.Commands.CommandReports.missingSpecificationPrerequisite
 FS.GG.SDD.Commands.CommandReports.missingSpecificationId
 FS.GG.SDD.Commands.CommandReports.missingSpecificationIntent
+FS.GG.SDD.Commands.CommandReports.missingDisposition
+FS.GG.SDD.Commands.CommandReports.missingTasksPrerequisite
 FS.GG.SDD.Commands.CommandReports.missingWorkId
 FS.GG.SDD.Commands.CommandReports.outsideProject
 FS.GG.SDD.Commands.CommandReports.planIdentityMismatch

@@ -259,6 +259,27 @@ status: chartered
             | _ -> false)
 
     [<Fact>]
+    let ``analyze plans lifecycle source and generated-view reads before writes`` () =
+        let root = TestSupport.tempDirectory()
+        let request = { TestSupport.analyzeRequest root "010-analyze-command" "Analyze Command" with DryRun = true }
+
+        let model, effects = init request
+
+        Assert.Empty(model.Diagnostics)
+        Assert.Contains(effects, fun effect -> effect = ReadFile ".fsgg/project.yml")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "work/010-analyze-command/spec.md")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "work/010-analyze-command/clarifications.md")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "work/010-analyze-command/checklist.md")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "work/010-analyze-command/plan.md")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "work/010-analyze-command/tasks.yml")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "readiness/010-analyze-command/work-model.json")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "readiness/010-analyze-command/analysis.json")
+        Assert.DoesNotContain(effects, fun effect ->
+            match effect with
+            | WriteFile _ -> true
+            | _ -> false)
+
+    [<Fact>]
     let ``plan requests project prerequisite plan and generated-view reads before writes`` () =
         let root = TestSupport.tempDirectory()
         let request = { TestSupport.planRequest root "008-plan-command" "Plan Command" with DryRun = true }

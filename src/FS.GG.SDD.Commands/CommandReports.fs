@@ -547,6 +547,51 @@ module CommandReports =
             "Add skipRationale for every skipped task before treating the task graph as ready."
             ids
 
+    let missingTasksPrerequisite path message =
+        commandDiagnostic
+            "missingTasksPrerequisite"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Run fsgg-sdd tasks for the selected work item before running fsgg-sdd analyze."
+            [ path ]
+
+    let failedTasksPrerequisite path message relatedIds =
+        commandDiagnostic
+            "failedTasksPrerequisite"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Correct tasks.yml or rerun fsgg-sdd tasks before treating the work item as implementation-ready."
+            relatedIds
+
+    let analysisIdentityMismatch path expectedWorkId actualWorkId =
+        commandDiagnostic
+            "analysisIdentityMismatch"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Analysis view work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Regenerate the analysis view for the selected work id."
+            [ expectedWorkId; actualWorkId ]
+
+    let malformedAnalysisView path message =
+        commandDiagnostic
+            "malformedAnalysisView"
+            DiagnosticSeverity.DiagnosticWarning
+            (Some path)
+            message
+            "Regenerate readiness/<id>/analysis.json from current lifecycle sources."
+            [ path ]
+
+    let missingDisposition path ids =
+        commandDiagnostic
+            "missingDisposition"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "One or more lifecycle facts have no current task disposition."
+            "Update tasks.yml or rerun fsgg-sdd tasks after correcting the source artifact."
+            ids
+
     let unsafeOverwrite (path: string) =
         commandDiagnostic
             "unsafeOverwrite"
@@ -722,12 +767,27 @@ module CommandReports =
              || Set.contains "taskDependencyCycle" ids
              || Set.contains "unsafeTaskStatusChange" ids
              || Set.contains "doneTaskMissingEvidence" ids
-             || Set.contains "skippedTaskMissingRationale" ids then
+             || Set.contains "skippedTaskMissingRationale" ids
+             || Set.contains "missingTasksPrerequisite" ids
+             || Set.contains "failedTasksPrerequisite" ids
+             || Set.contains "missingDisposition" ids then
             Some Tasks
+        elif Set.contains "malformedAnalysisView" ids
+             || Set.contains "analysisIdentityMismatch" ids
+             || Set.contains "blockedGeneratedViewRefresh" ids
+             || Set.contains "malformedGeneratedView" ids then
+            None
         else
             None
 
-    let nextAction (diagnostics: Diagnostic list) (request: CommandRequest) (checklist: ChecklistSummary option) (plan: PlanSummary option) (tasks: TasksSummary option) =
+    let nextAction
+        (diagnostics: Diagnostic list)
+        (request: CommandRequest)
+        (checklist: ChecklistSummary option)
+        (plan: PlanSummary option)
+        (tasks: TasksSummary option)
+        (analysis: AnalysisSummary option)
+        =
         let blocking =
             diagnostics
             |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
@@ -740,6 +800,7 @@ module CommandReports =
                 match request.Command with
                 | Plan -> planCorrectionCommand diagnostics
                 | Tasks -> tasksCorrectionCommand diagnostics
+                | Analyze -> tasksCorrectionCommand diagnostics
                 | _ -> None
 
             Some
@@ -787,6 +848,14 @@ module CommandReports =
                   Reason = "Checklist has requirements-quality findings or stale review results."
                   RequiredArtifacts = [ summary.SourceSpec; summary.SourceClarifications; $"work/{summary.WorkId}/checklist.md" ] |> List.sort
                   BlockingDiagnosticIds = ids }
+        elif request.Command = Analyze then
+            Some
+                { ActionId = "analysis.next.implement"
+                  Command = None
+                  WorkId = request.WorkId
+                  Reason = "Lifecycle sources are current and ready for implementation."
+                  RequiredArtifacts = analysis |> Option.map (fun summary -> [ summary.AnalysisPath ]) |> Option.defaultValue []
+                  BlockingDiagnosticIds = [] }
         else
             match nextLifecycleCommand request.Command with
             | Some command ->
@@ -857,10 +926,11 @@ module CommandReports =
           Checklist = model.Checklist
           Plan = model.Plan
           Tasks = model.Tasks
+          Analysis = model.Analysis
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility
-          NextAction = nextAction diagnostics model.Request model.Checklist model.Plan model.Tasks }
+          NextAction = nextAction diagnostics model.Request model.Checklist model.Plan model.Tasks model.Analysis }
 
     let exitCodeForReport (report: CommandReport) =
         match report.Outcome with

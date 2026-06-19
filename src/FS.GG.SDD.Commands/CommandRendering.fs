@@ -65,6 +65,22 @@ module CommandRendering =
             builder.AppendLine($"taskAdvisory: {tasks.AdvisoryCount}") |> ignore
         | None -> ()
 
+        match report.Analysis with
+        | Some analysis ->
+            builder.AppendLine($"workId: {analysis.WorkId}") |> ignore
+            builder.AppendLine($"analysisPath: {analysis.AnalysisPath}") |> ignore
+            builder.AppendLine($"analysisReadiness: {analysis.Readiness}") |> ignore
+            builder.AppendLine($"analysisSources: {analysis.SourceCount}") |> ignore
+            builder.AppendLine($"analysisRelationships: {analysis.SourceRelationshipCount}") |> ignore
+            builder.AppendLine($"analysisReadyFindings: {analysis.ReadyFindingCount}") |> ignore
+            builder.AppendLine($"analysisAdvisory: {analysis.AdvisoryCount}") |> ignore
+            builder.AppendLine($"analysisWarnings: {analysis.WarningCount}") |> ignore
+            builder.AppendLine($"analysisBlocking: {analysis.BlockingCount}") |> ignore
+            builder.AppendLine($"analysisStaleSources: {analysis.StaleSourceCount}") |> ignore
+            builder.AppendLine($"analysisMissingDispositions: {analysis.MissingDispositionCount}") |> ignore
+            builder.AppendLine($"analysisGeneratedViewFindings: {analysis.GeneratedViewFindingCount}") |> ignore
+        | None -> ()
+
         builder.AppendLine($"generatedViews: {List.length report.GeneratedViews}") |> ignore
         builder.AppendLine($"diagnostics: {List.length report.Diagnostics}") |> ignore
 

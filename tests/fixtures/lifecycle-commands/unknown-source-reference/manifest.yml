@@ -9,3 +9,9 @@ expected:
 evidence:
   tests:
     - FS.GG.SDD.Commands.Tests.PlanCommandTests.plan unknown source reference blocks without mutation
+scenarios:
+  - command: analyze
+    workId: 010-analyze-command
+    outcome: blocked
+    diagnostics: [unknownTaskSourceReference]
+    mutation: none

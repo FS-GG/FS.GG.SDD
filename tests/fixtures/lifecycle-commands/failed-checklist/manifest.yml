@@ -9,3 +9,9 @@ expected:
 evidence:
   tests:
     - FS.GG.SDD.Commands.Tests.PlanCommandTests.plan failed checklist blocks before authored write
+scenarios:
+  - command: analyze
+    workId: 010-analyze-command
+    outcome: blocked
+    diagnostics: [failedChecklistPrerequisite]
+    mutation: none

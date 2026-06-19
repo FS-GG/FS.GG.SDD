@@ -1,0 +1,11 @@
+schemaVersion: 1
+scenario: missing-tasks
+command: analyze
+workId: 010-analyze-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.AnalyzeCommandTests.analyze missing tasks blocks without analysis write
+expected:
+  outcome: blocked
+  diagnostics: [missingTasksPrerequisite]
+  analysisMutation: none

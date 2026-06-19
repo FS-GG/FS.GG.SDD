@@ -1,0 +1,8 @@
+schemaVersion: 1
+scenario: stale-tasks
+command: analyze
+workId: 010-analyze-command
+expected:
+  outcome: blocked
+  diagnostics: [staleTask]
+  correctionCommand: tasks

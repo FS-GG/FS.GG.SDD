@@ -68,6 +68,7 @@ FS.GG.SDD.Artifacts.LifecycleArtifacts.loadWorkItemFromSnapshots
 FS.GG.SDD.Artifacts.LifecycleArtifacts.checklistStandardSections
 FS.GG.SDD.Artifacts.LifecycleArtifacts.clarificationStandardSections
 FS.GG.SDD.Artifacts.LifecycleArtifacts.parseAgentGuidanceConfig
+FS.GG.SDD.Artifacts.LifecycleArtifacts.parseAnalysisView
 FS.GG.SDD.Artifacts.LifecycleArtifacts.parseChecklistFacts
 FS.GG.SDD.Artifacts.LifecycleArtifacts.parseClarificationFacts
 FS.GG.SDD.Artifacts.LifecycleArtifacts.parseDecisions

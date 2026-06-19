@@ -13,6 +13,7 @@
     <Compile Include="ChecklistCommandTests.fs" />
     <Compile Include="PlanCommandTests.fs" />
     <Compile Include="TasksCommandTests.fs" />
+    <Compile Include="AnalyzeCommandTests.fs" />
     <Compile Include="GeneratedViewCommandTests.fs" />
     <Compile Include="CommandReportJsonTests.fs" />
     <Compile Include="TextProjectionTests.fs" />

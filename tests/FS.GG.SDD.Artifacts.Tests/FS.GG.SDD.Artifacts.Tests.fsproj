@@ -12,6 +12,7 @@
     <Compile Include="ChecklistArtifactTests.fs" />
     <Compile Include="PlanArtifactTests.fs" />
     <Compile Include="TasksArtifactTests.fs" />
+    <Compile Include="AnalysisViewTests.fs" />
     <Compile Include="WorkModelTests.fs" />
     <Compile Include="NormalizedWorkModelTests.fs" />
     <Compile Include="GeneratedModelCurrencyTests.fs" />

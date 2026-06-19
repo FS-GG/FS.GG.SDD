@@ -42,3 +42,15 @@ scenarios:
       - generatedViews
       - diagnostics
       - nextAction
+  - command: analyze
+    fields:
+      - command
+      - outcome
+      - changedArtifacts
+      - analysisPath
+      - analysisReadiness
+      - analysisSources
+      - analysisRelationships
+      - generatedViews
+      - diagnostics
+      - nextAction

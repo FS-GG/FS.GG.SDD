@@ -1,0 +1,13 @@
+schemaVersion: 1
+scenario: analysis-create
+command: analyze
+workId: 010-analyze-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.AnalyzeCommandTests.analyze creates generated analysis view with real filesystem evidence
+expected:
+  outcome: succeeded
+  generatedViews:
+    - readiness/010-analyze-command/work-model.json
+    - readiness/010-analyze-command/analysis.json
+  nextAction: analysis.next.implement

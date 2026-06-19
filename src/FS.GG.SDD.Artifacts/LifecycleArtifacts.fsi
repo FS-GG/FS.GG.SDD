@@ -344,6 +344,79 @@ module LifecycleArtifacts =
           StaleTaskCount: int
           Diagnostics: Diagnostic list }
 
+    type AnalysisSourceRecord =
+        { Path: string
+          Kind: string
+          Digest: SourceDigest option
+          SchemaVersion: int option
+          SchemaStatus: string option }
+
+    type AnalysisSourceRelationship =
+        { Id: string
+          SourcePath: string
+          TargetPath: string
+          SourceId: string option
+          TargetId: string option
+          Relationship: string
+          State: string
+          DiagnosticIds: string list }
+
+    type AnalysisFinding =
+        { Id: string
+          Category: string
+          Severity: string
+          State: string
+          Path: string
+          RelatedIds: string list
+          Message: string
+          Correction: string }
+
+    type AnalysisReadiness =
+        { Status: string
+          ReadyCount: int
+          AdvisoryCount: int
+          WarningCount: int
+          BlockingCount: int
+          StaleSourceCount: int
+          MissingDispositionCount: int
+          MalformedSourceCount: int
+          GeneratedViewFindingCount: int
+          AcceptedDeferralCount: int }
+
+    type AnalysisGeneratedViewRecord =
+        { Path: string
+          Kind: string
+          Currency: string
+          DiagnosticIds: string list }
+
+    type AnalysisOptionalBoundaryFact =
+        { Path: string
+          Relationship: string
+          RequiredBySdd: bool
+          State: string
+          DiagnosticIds: string list }
+
+    type AnalysisNextAction =
+        { ActionId: string
+          Command: string option
+          Reason: string }
+
+    type AnalysisView =
+        { SchemaVersion: SchemaVersion
+          ViewVersion: string
+          WorkId: WorkId
+          Stage: LifecycleStage
+          Status: string
+          Generator: string
+          Sources: AnalysisSourceRecord list
+          SourceRelationships: AnalysisSourceRelationship list
+          Readiness: AnalysisReadiness
+          Findings: AnalysisFinding list
+          GeneratedViews: AnalysisGeneratedViewRecord list
+          OptionalBoundaryFacts: AnalysisOptionalBoundaryFact list
+          Diagnostics: Diagnostic list
+          NextAction: AnalysisNextAction option }
+
     type EvidenceKind =
         | Implementation
         | Verification
@@ -410,6 +483,7 @@ module LifecycleArtifacts =
     val planStandardSections: unit -> string list
     val parsePlanFacts: snapshot: FileSnapshot -> Result<PlanFacts, Diagnostic list>
     val parseTaskFacts: snapshot: FileSnapshot -> Result<TaskFacts, Diagnostic list>
+    val parseAnalysisView: snapshot: FileSnapshot -> Result<AnalysisView, Diagnostic list>
     val parseRequirements: snapshot: FileSnapshot -> Requirement list
     val parseDecisions: snapshot: FileSnapshot -> Decision list
     val parseTasks: snapshot: FileSnapshot -> Result<WorkTask list, Diagnostic list>

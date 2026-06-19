@@ -17,3 +17,7 @@ scenarios:
     workId: 008-plan-command
     deterministic: true
     includes: [plan, decisionIds, contractReferenceIds]
+  - command: analyze
+    workId: 010-analyze-command
+    deterministic: true
+    includes: [analysis, readiness, generatedViews, nextAction]

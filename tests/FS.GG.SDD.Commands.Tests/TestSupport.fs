@@ -134,6 +134,14 @@ module TestSupport =
     let runTasks root workId title =
         tasksRequest root workId title |> runRequest
 
+    let analyzeRequest root workId title =
+        { request Analyze root with
+            WorkId = Some workId
+            Title = Some title }
+
+    let runAnalyze root workId title =
+        analyzeRequest root workId title |> runRequest
+
     let initializePlanReadyProject root workId title =
         initializeProject root
         runCharter root workId title |> ignore
@@ -185,6 +193,11 @@ evidence:
 
     let writePassingTaskEvidenceFor root workId =
         writeRelative root $"work/{workId}/evidence.yml" passingTaskEvidence
+
+    let initializeTasksReadyProject root workId title =
+        initializePlanReadyProject root workId title
+        runTasks root workId title |> ignore
+        writePassingTaskEvidenceFor root workId
 
     let validSpec workId title =
         $"""---
@@ -304,3 +317,10 @@ No blocking ambiguity remains.
                 failwith
                     $"Expected task summary {taskCount}/{dependencyCount}/{requiredEvidenceCount}, got {summary.TaskIds.Length}/{summary.DependencyCount}/{summary.RequiredEvidenceCount}."
         | None -> failwith "Expected tasks summary."
+
+    let assertAnalysisSummary (report: CommandReport) readiness =
+        match report.Analysis with
+        | Some summary ->
+            if summary.Readiness <> readiness then
+                failwith $"Expected analysis readiness {readiness}, got {summary.Readiness}."
+        | None -> failwith "Expected analysis summary."
