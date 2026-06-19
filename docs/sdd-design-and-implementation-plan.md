@@ -80,6 +80,8 @@ Progress markers:
   Claude/Codex guidance.
 - [x] Create GitHub repository under `FS-GG`.
 - [x] Update FS-GG org profile/site to list SDD as a separate product.
+- [x] Copy development-relevant Governance and org reference docs into
+  `docs/reference/`.
 
 ### Phase 1: Artifact Model
 
