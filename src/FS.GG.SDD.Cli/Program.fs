@@ -40,6 +40,7 @@ let printUnknown commandValue =
           PendingEffects = []
           InterpretedEffects = []
           Diagnostics = [ unknownCommand commandValue ]
+          GeneratedViews = []
           Report = None }
 
     let report = buildReport model
@@ -68,15 +69,24 @@ let run args =
 
             let model, effects = init request
 
-            let interpreted =
-                if request.DryRun then
-                    interpretAll request.ProjectRoot true effects
-                else
-                    interpretAll request.ProjectRoot false effects
+            let rec interpretUntilIdle state pendingEffects =
+                match pendingEffects with
+                | [] -> state
+                | effects ->
+                    let results = interpretAll request.ProjectRoot request.DryRun effects
+
+                    let nextState, nextEffects =
+                        results
+                        |> List.fold
+                            (fun (currentState, accumulatedEffects) result ->
+                                let updatedState, producedEffects = update (EffectInterpreted result) currentState
+                                updatedState, accumulatedEffects @ producedEffects)
+                            (state, [])
+
+                    interpretUntilIdle nextState nextEffects
 
             let finalModel =
-                interpreted
-                |> List.fold (fun state result -> update (EffectInterpreted result) state |> fst) model
+                interpretUntilIdle model effects
                 |> fun state -> update BuildReport state |> fst
 
             let report = finalModel.Report |> Option.defaultWith (fun () -> buildReport finalModel)

@@ -65,25 +65,58 @@ let commandRoot =
 
 Directory.CreateDirectory commandRoot |> ignore
 
-let commandRequest =
+let initRequest =
     ({ Command = Init
        ProjectRoot = commandRoot
        WorkId = None
        Title = None
        InputText = None
        OutputFormat = Json
-       DryRun = true
+       DryRun = false
        OverwritePolicy = RefuseUnsafe
        GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
     : CommandRequest)
 
-let commandModel, commandEffects =
-    CommandWorkflow.init commandRequest
+let runCommand request =
+    let commandModel, commandEffects =
+        CommandWorkflow.init request
+
+    let rec interpretUntilIdle state pending =
+        match pending with
+        | [] -> state
+        | effects ->
+            let nextState, nextEffects =
+                CommandEffects.interpretAll request.ProjectRoot request.DryRun effects
+                |> List.fold
+                    (fun (currentState, accumulatedEffects) result ->
+                        let updatedState, producedEffects =
+                            CommandWorkflow.update (EffectInterpreted result) currentState
+
+                        updatedState, accumulatedEffects @ producedEffects)
+                    (state, [])
+
+            interpretUntilIdle nextState nextEffects
+
+    interpretUntilIdle commandModel commandEffects
+    |> fun state -> CommandWorkflow.update BuildReport state |> fst
+
+let initFinalModel =
+    runCommand initRequest
+
+let commandRequest =
+    ({ Command = Charter
+       ProjectRoot = commandRoot
+       WorkId = Some "004-charter-command"
+       Title = Some "Charter Command"
+       InputText = None
+       OutputFormat = Json
+       DryRun = false
+       OverwritePolicy = RefuseUnsafe
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+    : CommandRequest)
 
 let commandFinalModel =
-    CommandEffects.interpretAll commandRoot false commandEffects
-    |> List.fold (fun state result -> CommandWorkflow.update (EffectInterpreted result) state |> fst) commandModel
-    |> fun state -> CommandWorkflow.update BuildReport state |> fst
+    runCommand commandRequest
 
 let commandReport =
     commandFinalModel.Report
@@ -96,3 +129,4 @@ printfn "generatedViews=%d" commandReport.GeneratedViews.Length
 printfn "blockingDiagnostics=%d" (commandReport.Diagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = Diagnostics.DiagnosticSeverity.DiagnosticError) |> List.length)
 printfn "nextAction=%s" (commandReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
 printfn "createdProjectConfig=%b" (File.Exists(Path.Combine(commandRoot, ".fsgg", "project.yml")))
+printfn "createdCharter=%b" (File.Exists(Path.Combine(commandRoot, "work", "004-charter-command", "charter.md")))

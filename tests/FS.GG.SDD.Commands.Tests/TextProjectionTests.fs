@@ -24,3 +24,21 @@ module TextProjectionTests =
         Assert.Contains("command: init", text)
         Assert.Contains("outcome: succeeded", text)
         Assert.Contains($"changedArtifacts: {List.length report.ChangedArtifacts}", text)
+
+    [<Fact>]
+    let ``charter text projection summarizes report facts only`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        let request =
+            { TestSupport.charterRequest root "004-charter-command" "Charter Command" with
+                DryRun = true
+                OutputFormat = Text }
+
+        let report = TestSupport.runRequest request
+        let text = renderText report
+
+        Assert.Contains("command: charter", text)
+        Assert.Contains($"outcome: {outcomeValue report.Outcome}", text)
+        Assert.Contains($"changedArtifacts: {List.length report.ChangedArtifacts}", text)
+        Assert.Contains($"generatedViews: {List.length report.GeneratedViews}", text)
+        Assert.Contains($"diagnostics: {List.length report.Diagnostics}", text)

@@ -27,3 +27,20 @@ module GovernanceBoundaryCommandTests =
         Assert.DoesNotContain("\"freshness\"", json)
         Assert.DoesNotContain("\"gate\"", json)
         Assert.DoesNotContain("\"protectedBranch\"", json)
+
+    [<Fact>]
+    let ``charter reports optional Governance compatibility without enforcement fields`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        let request = { TestSupport.charterRequest root "004-charter-command" "Charter Command" with DryRun = true }
+
+        let report = TestSupport.runRequest request
+        let json = serializeReport report
+
+        Assert.Contains(report.GovernanceCompatibility, fun fact -> fact.Path = ".fsgg/policy.yml")
+        Assert.DoesNotContain("\"route\"", json)
+        Assert.DoesNotContain("\"profile\"", json)
+        Assert.DoesNotContain("\"freshness\"", json)
+        Assert.DoesNotContain("\"gate\"", json)
+        Assert.DoesNotContain("\"audit\"", json)
+        Assert.DoesNotContain("\"protectedBranch\"", json)

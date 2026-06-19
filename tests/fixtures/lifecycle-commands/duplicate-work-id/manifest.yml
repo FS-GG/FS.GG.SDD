@@ -1,7 +1,9 @@
 schemaVersion: 1
 fixture:
   id: duplicate-work-id
-  workId: 003-native-sdd-lifecycle-commands
-  purpose: Later fixture for duplicate logical work-id diagnostics.
+  workId: 004-charter-command
+  purpose: Charter detects duplicate logical work-id declarations in candidate work sources.
 expected:
-  status: pending
+  command: charter
+  outcome: blocked
+  diagnostics: [duplicateWorkId]

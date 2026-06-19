@@ -1,8 +1,8 @@
 schemaVersion: 1
 fixture:
   id: deterministic-report
-  workId: 003-native-sdd-lifecycle-commands
-  purpose: Dry-run command reports are byte-stable.
+  workId: 004-charter-command
+  purpose: Charter dry-run command reports are byte-stable.
 expected:
-  command: init
+  command: charter
   deterministic: true

@@ -1,7 +1,9 @@
 schemaVersion: 1
 fixture:
   id: outside-project
-  workId: 003-native-sdd-lifecycle-commands
-  purpose: Later fixture for commands outside an initialized SDD project.
+  workId: 004-charter-command
+  purpose: Charter reports outsideProject when run before initialization.
 expected:
-  status: pending
+  command: charter
+  outcome: blocked
+  diagnostics: [outsideProject]

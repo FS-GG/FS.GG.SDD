@@ -23,10 +23,26 @@ module CommandEffects =
         else
             None
 
+    let directorySnapshot (projectRoot: string) (path: string) =
+        let absolute = fullPath projectRoot path
+
+        if Directory.Exists absolute then
+            let entries =
+                Directory.EnumerateFiles(absolute, "*", SearchOption.AllDirectories)
+                |> Seq.map (fun file ->
+                    Path.GetRelativePath(projectRoot, file).Replace('\\', '/'))
+                |> Seq.sort
+                |> String.concat "\n"
+
+            Some({ Path = path; Text = entries } : FileSnapshot)
+        else
+            None
+
     let canOverwrite (kind: ArtifactWriteKind) (existing: FileSnapshot option) (text: string) =
         match existing, kind with
         | None, _ -> true
         | Some snapshot, _ when snapshot.Text = text -> true
+        | Some _, AuthoredSource -> true
         | Some _, GeneratedView -> true
         | Some _, _ -> false
 
@@ -48,16 +64,23 @@ module CommandEffects =
             | ReadFile path ->
                 match snapshotIfExists projectRoot path with
                 | Some snapshot -> success effect (Some snapshot)
-                | None -> failure effect None (toolDefect (Some path) $"File '{path}' does not exist.")
+                | None -> success effect None
             | EnumerateDirectory path ->
-                let absolute = fullPath projectRoot path
-                if Directory.Exists absolute then success effect None
-                else failure effect None (toolDefect (Some path) $"Directory '{path}' does not exist.")
+                match directorySnapshot projectRoot path with
+                | Some snapshot -> success effect (Some snapshot)
+                | None -> success effect None
             | CreateDirectory path ->
-                if not dryRun then
-                    Directory.CreateDirectory(fullPath projectRoot path) |> ignore
+                let absolute = fullPath projectRoot path
+                let existing =
+                    if Directory.Exists absolute then
+                        Some({ Path = path; Text = "<directory>" } : FileSnapshot)
+                    else
+                        None
 
-                success effect None
+                if not dryRun then
+                    Directory.CreateDirectory absolute |> ignore
+
+                success effect existing
             | WriteFile(path, text, kind) ->
                 let existing = snapshotIfExists projectRoot path
 

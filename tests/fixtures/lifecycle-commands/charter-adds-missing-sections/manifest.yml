@@ -1,0 +1,15 @@
+schemaVersion: 1
+fixture:
+  id: charter-adds-missing-sections
+  workId: 004-charter-command
+  purpose: Existing charter front matter remains authoritative while missing standard sections are appended safely.
+expected:
+  command: charter
+  operation: update
+  preservedText: Custom identity remains untouched.
+  addedSections:
+    - Principles
+    - Scope Boundaries
+    - Policy Pointers
+    - Lifecycle Notes
+  nextAction: specify

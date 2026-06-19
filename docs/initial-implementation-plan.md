@@ -215,9 +215,14 @@ Progress markers:
   library with pure normalized work-model generation, generated-view currency
   checks, schema migration posture, diagnostics, fixtures, deterministic JSON,
   and readiness evidence.
-- [ ] Continue `003-native-sdd-lifecycle-commands`; the command library, CLI
-  host, public MVU/report surface, and `fsgg-sdd init` MVP are implemented,
-  while work-item lifecycle commands and generated-view refresh remain pending.
+- [x] Complete `003-native-sdd-lifecycle-commands`; the command library, CLI
+  host, public MVU/report surface, and `fsgg-sdd init` MVP are implemented
+  with readiness evidence.
+- [x] Implement `004-charter-command` by adding `fsgg-sdd charter`, safe
+  authored charter create/rerun behavior, generated work-model state reporting
+  and refresh where source data is valid, deterministic reports, text
+  projection, optional Governance compatibility facts, CLI smoke evidence, FSI
+  evidence, and full-suite verification.
 
 ### Phase 1: SDD Artifact Model
 
@@ -338,13 +343,14 @@ Owner: `FS.GG.SDD`.
 Purpose: expose the native spec-driven development stages as SDD commands over
 the same model.
 
-Status: in progress as of 2026-06-19. The implemented slice adds
+Status: in progress as of 2026-06-19. The implemented slices add
 `src/FS.GG.SDD.Commands`, `src/FS.GG.SDD.Cli`, command tests, lifecycle-command
-fixture roots, readiness evidence, deterministic init command reports, and a
-real filesystem smoke path for `fsgg-sdd init`.
+fixture roots, readiness evidence, deterministic init and charter command
+reports, and real filesystem smoke paths for `fsgg-sdd init` and
+`fsgg-sdd charter`.
 
 - [x] Add `fsgg-sdd init` for SDD skeleton creation.
-- [ ] Add `fsgg-sdd charter`.
+- [x] Add `fsgg-sdd charter`.
 - [ ] Add `fsgg-sdd specify`.
 - [ ] Add `fsgg-sdd clarify`.
 - [ ] Add `fsgg-sdd checklist`.
@@ -352,17 +358,22 @@ real filesystem smoke path for `fsgg-sdd init`.
 - [ ] Add `fsgg-sdd tasks`.
 - [ ] Add `fsgg-sdd analyze`.
 - [x] Keep stateful or I/O command behavior behind `Model`, `Msg`, `Effect`,
-  `init`, and `update` boundaries for the implemented init slice.
+  `init`, and `update` boundaries for the implemented init and charter slices.
 - [x] Ensure command output has deterministic JSON for automation and plain text
-  for humans for the implemented init slice.
-- [ ] Refresh generated SDD views when possible and report stale-view
-  diagnostics when not.
+  for humans for the implemented init and charter slices.
+- [x] Refresh generated SDD views when possible and report stale-view
+  diagnostics when not for the charter work-model view.
 
 Current verification evidence for the implemented slice is recorded in
 `specs/003-native-sdd-lifecycle-commands/readiness/`: clean Release build,
 focused command workflow/init/report/text/Governance-boundary tests, full suite
 with 50 passing tests, FSI public-surface transcript, real init interpreter
-transcript, and disposable-directory CLI smoke output.
+transcript, and disposable-directory CLI smoke output. Charter verification
+evidence is recorded in `specs/004-charter-command/readiness/`: clean Release
+build, focused command workflow/charter/generated-view/report/text/
+Governance-boundary tests, full suite with 70 passing tests, FSI
+public-surface transcript, disposable-directory CLI smoke output, performance
+evidence, SDD/Governance boundary review, and artifact traceability.
 
 Exit criteria:
 

@@ -2,6 +2,8 @@ schemaVersion: 1
 fixture:
   id: malformed-work-id
   workId: "INVALID WORK ID"
-  purpose: Later fixture for malformed work-id diagnostics.
+  purpose: Charter rejects malformed selected work ids before effects.
 expected:
+  command: charter
+  outcome: blocked
   diagnostics: [malformedWorkId]

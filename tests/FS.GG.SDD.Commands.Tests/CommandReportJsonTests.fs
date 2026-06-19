@@ -27,3 +27,19 @@ module CommandReportJsonTests =
         Assert.Contains("\"projectRoot\": \".\"", first)
         Assert.DoesNotContain(TestSupport.repoRoot, first)
         Assert.DoesNotContain("timestamp", first)
+
+    [<Fact>]
+    let ``charter deterministic JSON is byte stable`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        let request = { TestSupport.charterRequest root "004-charter-command" "Charter Command" with DryRun = true }
+
+        let first = TestSupport.runRequest request |> serializeReport
+        let second = TestSupport.runRequest request |> serializeReport
+        let third = TestSupport.runRequest request |> serializeReport
+
+        Assert.Equal(first, second)
+        Assert.Equal(second, third)
+        Assert.Contains("\"name\": \"charter\"", first)
+        Assert.DoesNotContain(root, first)
+        Assert.DoesNotContain("timestamp", first)

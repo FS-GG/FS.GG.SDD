@@ -1,0 +1,12 @@
+schemaVersion: 1
+fixture:
+  id: charter-create
+  workId: 004-charter-command
+  purpose: Creates a new work-item charter from an initialized SDD project.
+expected:
+  command: charter
+  outcome: succeeded
+  changedArtifacts:
+    - work/004-charter-command/charter.md
+  generatedView: readiness/004-charter-command/work-model.json
+  nextAction: specify

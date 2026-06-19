@@ -137,6 +137,7 @@ module CommandTypes =
           PendingEffects: CommandEffect list
           InterpretedEffects: CommandEffectResult list
           Diagnostics: Diagnostic list
+          GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 
     type CommandMsg =

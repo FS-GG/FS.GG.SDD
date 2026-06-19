@@ -54,6 +54,96 @@ module CommandReports =
             "Use fsgg-sdd init in this slice; later lifecycle commands remain pending in tasks.md."
             [ commandName command ]
 
+    let outsideProject () =
+        commandDiagnostic
+            "outsideProject"
+            DiagnosticSeverity.DiagnosticError
+            (Some ".fsgg/project.yml")
+            "The current directory is not an initialized FS.GG.SDD project."
+            "Run fsgg-sdd init or pass --root for an initialized SDD project."
+            []
+
+    let missingProjectConfig path =
+        commandDiagnostic
+            "missingProjectConfig"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Required project config '{path}' is missing."
+            "Run fsgg-sdd init or restore the SDD project configuration."
+            [ path ]
+
+    let malformedProjectConfig path =
+        commandDiagnostic
+            "malformedProjectConfig"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Project config '{path}' is malformed."
+            "Fix schemaVersion, project.id, project.defaultWorkRoot, sdd.config, and sdd.agents before authoring a charter."
+            [ path ]
+
+    let missingSddConfig path =
+        commandDiagnostic
+            "missingSddConfig"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Required SDD config '{path}' is missing."
+            "Restore .fsgg/sdd.yml before authoring a charter."
+            [ path ]
+
+    let malformedSddConfig path =
+        commandDiagnostic
+            "malformedSddConfig"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"SDD config '{path}' is malformed."
+            "Fix the SDD lifecycle policy before authoring a charter."
+            [ path ]
+
+    let missingAgentsConfig path =
+        commandDiagnostic
+            "missingAgentsConfig"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Required agent config '{path}' is missing."
+            "Restore .fsgg/agents.yml before authoring a charter."
+            [ path ]
+
+    let malformedAgentsConfig path =
+        commandDiagnostic
+            "malformedAgentsConfig"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Agent config '{path}' is malformed."
+            "Fix .fsgg/agents.yml before authoring a charter."
+            [ path ]
+
+    let duplicateWorkId workId paths =
+        commandDiagnostic
+            "duplicateWorkId"
+            DiagnosticSeverity.DiagnosticError
+            None
+            $"Work id '{workId}' is declared by more than one work artifact."
+            "Keep one authored source for the selected work id and move or rename the duplicate."
+            (workId :: (paths |> List.sort))
+
+    let charterIdentityMismatch path expectedWorkId actualWorkId =
+        commandDiagnostic
+            "charterIdentityMismatch"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Charter work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Move the charter under the matching work id or update its front matter before rerunning."
+            [ expectedWorkId; actualWorkId ]
+
+    let malformedCharterFrontMatter path message =
+        commandDiagnostic
+            "malformedCharterFrontMatter"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Add schemaVersion, workId, title, stage, changeTier, and status front matter before rerunning."
+            [ path ]
+
     let unsafeOverwrite (path: string) =
         commandDiagnostic
             "unsafeOverwrite"
@@ -62,6 +152,24 @@ module CommandReports =
             "The command would overwrite existing authored content."
             "Review the existing file and choose an explicit safe update path before rerunning."
             [ path ]
+
+    let malformedGeneratedView path =
+        commandDiagnostic
+            "malformedGeneratedView"
+            DiagnosticSeverity.DiagnosticWarning
+            (Some path)
+            $"Generated view '{path}' is malformed and will be refreshed when source data is valid."
+            "Regenerate readiness/<id>/work-model.json from current lifecycle sources."
+            [ path ]
+
+    let blockedGeneratedViewRefresh path relatedIds =
+        commandDiagnostic
+            "blockedGeneratedViewRefresh"
+            DiagnosticSeverity.DiagnosticWarning
+            (Some path)
+            $"Generated view '{path}' cannot be refreshed from the current lifecycle sources."
+            "Fix the named lifecycle diagnostics before treating the generated view as current."
+            (path :: relatedIds)
 
     let toolDefect (path: string option) (message: string) =
         commandDiagnostic
@@ -75,14 +183,25 @@ module CommandReports =
     let changeFromEffectResult (result: CommandEffectResult) =
         match result.Effect with
         | CreateDirectory path ->
+            let operation =
+                if result.Succeeded then
+                    match result.Snapshot with
+                    | Some _ -> ArtifactOperation.NoChange
+                    | None -> ArtifactOperation.Create
+                else
+                    ArtifactOperation.Refuse
+
             Some
                 { Path = path
                   Kind = "directory"
                   Ownership = "sdd"
-                  Operation = if result.Succeeded then ArtifactOperation.Create else ArtifactOperation.Refuse
+                  Operation = operation
                   BeforeDigest = None
                   AfterDigest = None
-                  SafeWriteDecision = if result.Succeeded then "safe" else "refused"
+                  SafeWriteDecision =
+                    if not result.Succeeded then "refused"
+                    elif operation = ArtifactOperation.NoChange then "preserveExisting"
+                    else "safe"
                   DiagnosticIds = result.Diagnostic |> Option.map (fun d -> [ d.Id ]) |> Option.defaultValue [] }
         | WriteFile(path, text, kind) ->
             let operation =
@@ -108,7 +227,11 @@ module CommandReports =
                   Operation = operation
                   BeforeDigest = beforeDigest
                   AfterDigest = afterDigest
-                  SafeWriteDecision = if result.Succeeded then "safe" else "refused"
+                  SafeWriteDecision =
+                    if not result.Succeeded then "refused"
+                    elif operation = ArtifactOperation.NoChange then "preserveExisting"
+                    elif kind = GeneratedView then "refreshGeneratedView"
+                    else "safe"
                   DiagnosticIds = result.Diagnostic |> Option.map (fun d -> [ d.Id ]) |> Option.defaultValue [] }
         | ReadFile _
         | EnumerateDirectory _
@@ -152,12 +275,17 @@ module CommandReports =
         else
             match nextLifecycleCommand request.Command with
             | Some command ->
+                let requiredArtifacts =
+                    match request.Command, request.WorkId with
+                    | Charter, Some workId -> [ $"work/{workId}/charter.md" ]
+                    | _ -> []
+
                 Some
                     { ActionId = "nextLifecycleCommand"
                       Command = Some command
                       WorkId = request.WorkId
                       Reason = $"Command '{commandName request.Command}' completed."
-                      RequiredArtifacts = []
+                      RequiredArtifacts = requiredArtifacts
                       BlockingDiagnosticIds = [] }
             | None -> None
 
@@ -167,6 +295,8 @@ module CommandReports =
         elif diagnostics |> List.exists (fun d -> d.Severity = DiagnosticSeverity.DiagnosticWarning) then
             CommandOutcome.SucceededWithWarnings
         elif List.isEmpty changes then
+            CommandOutcome.NoChange
+        elif changes |> List.forall (fun change -> change.Operation = ArtifactOperation.NoChange || change.Operation = ArtifactOperation.Preserve) then
             CommandOutcome.NoChange
         else
             CommandOutcome.Succeeded
@@ -202,7 +332,7 @@ module CommandReports =
           Outcome = outcome diagnostics changes
           WorkId = model.Request.WorkId
           ChangedArtifacts = changes
-          GeneratedViews = []
+          GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility
           NextAction = nextAction diagnostics model.Request }

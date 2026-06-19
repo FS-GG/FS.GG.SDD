@@ -1,7 +1,8 @@
 schemaVersion: 1
 fixture:
   id: text-projection
-  workId: 003-native-sdd-lifecycle-commands
-  purpose: Plain text is a projection of command report facts.
+  workId: 004-charter-command
+  purpose: Charter plain text is a projection of command report facts.
 expected:
-  command: init
+  command: charter
+  fields: [command, outcome, changedArtifacts, generatedViews, diagnostics, nextAction]

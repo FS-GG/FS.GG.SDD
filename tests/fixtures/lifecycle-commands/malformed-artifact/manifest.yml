@@ -1,7 +1,8 @@
 schemaVersion: 1
 fixture:
   id: malformed-artifact
-  workId: 003-native-sdd-lifecycle-commands
-  purpose: Later fixture for malformed lifecycle artifact diagnostics.
+  workId: 004-charter-command
+  purpose: Charter reports malformed project config and malformed charter front matter before mutation.
 expected:
-  status: pending
+  command: charter
+  diagnostics: [malformedProjectConfig, malformedCharterFrontMatter]

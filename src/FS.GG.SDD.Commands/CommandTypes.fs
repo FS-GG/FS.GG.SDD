@@ -138,6 +138,7 @@ module CommandTypes =
           PendingEffects: CommandEffect list
           InterpretedEffects: CommandEffectResult list
           Diagnostics: Diagnostic list
+          GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 
     type CommandMsg =
@@ -188,9 +189,9 @@ module CommandTypes =
 
     let writeKindValue (kind: ArtifactWriteKind) =
         match kind with
-        | AuthoredSource -> "authored"
-        | StructuredSource -> "structured"
-        | GeneratedView -> "generated"
+        | AuthoredSource -> "authoredSource"
+        | StructuredSource -> "structuredSource"
+        | GeneratedView -> "generatedView"
         | AgentGuidanceTarget -> "agentGuidance"
 
     let artifactOperationValue (operation: ArtifactOperation) =

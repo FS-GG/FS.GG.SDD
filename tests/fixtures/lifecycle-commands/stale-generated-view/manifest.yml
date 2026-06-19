@@ -1,7 +1,9 @@
 schemaVersion: 1
 fixture:
   id: stale-generated-view
-  workId: 003-native-sdd-lifecycle-commands
-  purpose: Later fixture for generated-view currency diagnostics.
+  workId: 004-charter-command
+  purpose: Charter reports missing, stale, malformed, and blocked generated work-model states.
 expected:
-  status: pending
+  command: charter
+  generatedView: readiness/004-charter-command/work-model.json
+  diagnostics: [malformedGeneratedView, staleGeneratedView, blockedGeneratedViewRefresh]
