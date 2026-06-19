@@ -1,0 +1,8 @@
+Test run for /home/developer/projects/FS.GG.SDD/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for /home/developer/projects/FS.GG.SDD/tests/FS.GG.SDD.Artifacts.Tests/bin/Release/net10.0/FS.GG.SDD.Artifacts.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+No test matches the given testcase filter `FullyQualifiedName~CommandReportJson|FullyQualifiedName~TextProjection|FullyQualifiedName~GovernanceBoundaryCommand|FullyQualifiedName~ChecklistCommand` in /home/developer/projects/FS.GG.SDD/tests/FS.GG.SDD.Artifacts.Tests/bin/Release/net10.0/FS.GG.SDD.Artifacts.Tests.dll
+
+
+Passed!  - Failed:     0, Passed:    29, Skipped:     0, Total:    29, Duration: 842 ms - FS.GG.SDD.Commands.Tests.dll (net10.0)

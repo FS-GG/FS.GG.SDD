@@ -82,3 +82,24 @@ module CommandReportJsonTests =
         Assert.Contains("\"questionIds\"", first)
         Assert.DoesNotContain(root, first)
         Assert.DoesNotContain("timestamp", first)
+
+    [<Fact>]
+    let ``checklist deterministic JSON includes checklist object`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root "007-checklist-command" "Checklist Command" |> ignore
+        TestSupport.runSpecify root "007-checklist-command" "Checklist Command" |> ignore
+        TestSupport.runRequest { TestSupport.clarifyRequest root "007-checklist-command" "Checklist Command" with InputText = None } |> ignore
+        let request = { TestSupport.checklistRequest root "007-checklist-command" "Checklist Command" with DryRun = true }
+
+        let first = TestSupport.runRequest request |> serializeReport
+        let second = TestSupport.runRequest request |> serializeReport
+        let third = TestSupport.runRequest request |> serializeReport
+
+        Assert.Equal(first, second)
+        Assert.Equal(second, third)
+        Assert.Contains("\"name\": \"checklist\"", first)
+        Assert.Contains("\"checklist\"", first)
+        Assert.Contains("\"itemIds\"", first)
+        Assert.DoesNotContain(root, first)
+        Assert.DoesNotContain("timestamp", first)

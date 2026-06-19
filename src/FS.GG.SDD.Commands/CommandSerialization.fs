@@ -105,6 +105,25 @@ module CommandSerialization =
             writer.WriteEndObject()
         | None -> writer.WriteNull "clarification"
 
+    let writeChecklist (writer: Utf8JsonWriter) (summary: ChecklistSummary option) =
+        match summary with
+        | Some summary ->
+            writer.WriteStartObject("checklist")
+            writer.WriteString("workId", summary.WorkId)
+            writer.WriteString("stage", summary.Stage)
+            writer.WriteString("status", summary.Status)
+            writer.WriteString("sourceSpec", summary.SourceSpec)
+            writer.WriteString("sourceClarifications", summary.SourceClarifications)
+            writeStringList writer "itemIds" summary.ItemIds
+            writeStringList writer "resultIds" summary.ResultIds
+            writer.WriteNumber("passedCount", summary.PassedCount)
+            writer.WriteNumber("failedBlockingCount", summary.FailedBlockingCount)
+            writer.WriteNumber("acceptedDeferralCount", summary.AcceptedDeferralCount)
+            writer.WriteNumber("staleResultCount", summary.StaleResultCount)
+            writer.WriteNumber("advisoryCount", summary.AdvisoryCount)
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "checklist"
+
     let writeGeneratedSource (writer: Utf8JsonWriter) (source: GeneratedViewSource) =
         writer.WriteStartObject()
         writer.WriteString("path", source.Path)
@@ -198,6 +217,7 @@ module CommandSerialization =
         writer.WriteEndArray()
         writeSpecification writer report.Specification
         writeClarification writer report.Clarification
+        writeChecklist writer report.Checklist
         writer.WriteStartArray("generatedViews")
         report.GeneratedViews |> List.sortBy (fun view -> view.Path) |> List.iter (writeGeneratedView writer)
         writer.WriteEndArray()

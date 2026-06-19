@@ -42,6 +42,7 @@ let printUnknown commandValue =
           Diagnostics = [ unknownCommand commandValue ]
           Specification = None
           Clarification = None
+          Checklist = None
           GeneratedViews = []
           Report = None }
 

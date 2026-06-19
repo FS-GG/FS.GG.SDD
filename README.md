@@ -37,9 +37,10 @@ freshness, routing, profiles, and gate enforcement belong in
 - Claude and Codex guidance files are present.
 - `FS.GG.SDD.Artifacts` defines the first typed lifecycle artifact model.
 - `FS.GG.SDD.Commands` and `FS.GG.SDD.Cli` provide the native command workflow
-  slices through `fsgg-sdd clarify`: a public MVU/report surface, SDD skeleton
-  creation, charter/specification authoring, clarification decisions, stable
-  question/decision ids, deterministic JSON/text reports, and no required
+  slices through `fsgg-sdd checklist`: a public MVU/report surface, SDD
+  skeleton creation, charter/specification authoring, clarification decisions,
+  requirements-quality checklist authoring, stable question/decision and
+  checklist item/result ids, deterministic JSON/text reports, and no required
   Governance runtime.
 - The detailed implementation roadmap lives in
   [docs/initial-implementation-plan.md](docs/initial-implementation-plan.md).
@@ -49,7 +50,7 @@ freshness, routing, profiles, and gate enforcement belong in
 Use standard Spec Kit:
 
 ```text
-specify -> clarify -> plan -> tasks -> implement -> analyze
+specify -> clarify -> checklist -> plan -> tasks -> implement -> analyze
 ```
 
 The first implementation feature should create the structured SDD artifact model.

@@ -110,6 +110,14 @@ module TestSupport =
     let runClarify root workId title =
         clarifyRequest root workId title |> runRequest
 
+    let checklistRequest root workId title =
+        { request Checklist root with
+            WorkId = Some workId
+            Title = Some title }
+
+    let runChecklist root workId title =
+        checklistRequest root workId title |> runRequest
+
     let validSpec workId title =
         $"""---
 schemaVersion: 1
@@ -156,3 +164,55 @@ evidence: []
     let writeValidTasksAndEvidenceFor root workId =
         writeRelative root $"work/{workId}/tasks.yml" validTasks
         writeRelative root $"work/{workId}/evidence.yml" validEvidence
+
+    let validClarification workId title =
+        $"""---
+schemaVersion: 1
+workId: {workId}
+title: {title}
+stage: clarify
+changeTier: tier1
+status: clarified
+sourceSpec: work/{workId}/spec.md
+publicOrToolFacingImpact: true
+---
+
+# {title} Clarifications
+
+## Source Specification
+- work/{workId}/spec.md
+
+## Clarification Questions
+No clarification questions recorded.
+
+## Answers
+No clarification answers recorded.
+
+## Decisions
+No concrete decisions recorded.
+
+## Accepted Deferrals
+No accepted deferrals recorded.
+
+## Remaining Ambiguity
+No blocking ambiguity remains.
+
+## Lifecycle Notes
+- Next lifecycle action: checklist.
+"""
+
+    let writeValidClarification root workId title =
+        writeRelative root $"work/{workId}/clarifications.md" (validClarification workId title)
+
+    let writeExistingChecklist root workId text =
+        writeRelative root $"work/{workId}/checklist.md" text
+
+    let dryRunDigest text =
+        SchemaVersionModule.sha256Text text
+
+    let assertChecklistSummary report itemCount resultCount =
+        match report.Checklist with
+        | Some summary ->
+            if summary.ItemIds.Length <> itemCount || summary.ResultIds.Length <> resultCount then
+                failwith $"Expected checklist summary {itemCount}/{resultCount}, got {summary.ItemIds.Length}/{summary.ResultIds.Length}."
+        | None -> failwith "Expected checklist summary."

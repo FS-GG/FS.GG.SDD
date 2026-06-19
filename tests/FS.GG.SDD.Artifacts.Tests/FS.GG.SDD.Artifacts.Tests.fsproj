@@ -9,6 +9,7 @@
     <Compile Include="SchemaContractTests.fs" />
     <Compile Include="SpecificationArtifactTests.fs" />
     <Compile Include="ClarificationArtifactTests.fs" />
+    <Compile Include="ChecklistArtifactTests.fs" />
     <Compile Include="WorkModelTests.fs" />
     <Compile Include="NormalizedWorkModelTests.fs" />
     <Compile Include="GeneratedModelCurrencyTests.fs" />

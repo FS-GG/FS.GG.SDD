@@ -115,3 +115,37 @@ module GeneratedViewCommandTests =
             view.Path = "readiness/006-clarify-command/work-model.json"
             && view.Currency = GeneratedViewCurrency.Current
             && view.DiagnosticIds |> List.contains "malformedGeneratedView")
+
+    [<Fact>]
+    let ``checklist reports missing generated work model when later sources are incomplete`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root "007-checklist-command" "Checklist Command" |> ignore
+        TestSupport.runSpecify root "007-checklist-command" "Checklist Command" |> ignore
+        TestSupport.runRequest { TestSupport.clarifyRequest root "007-checklist-command" "Checklist Command" with InputText = None } |> ignore
+
+        let report = TestSupport.runChecklist root "007-checklist-command" "Checklist Command"
+
+        Assert.Contains(report.GeneratedViews, fun view ->
+            view.Path = "readiness/007-checklist-command/work-model.json"
+            && view.Currency = GeneratedViewCurrency.Missing
+            && view.Sources |> List.exists (fun source -> source.Path = "work/007-checklist-command/checklist.md"))
+
+    [<Fact>]
+    let ``checklist refreshes generated work model and reports malformed existing view`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root "007-checklist-command" "Checklist Command" |> ignore
+        TestSupport.runSpecify root "007-checklist-command" "Checklist Command" |> ignore
+        TestSupport.runRequest { TestSupport.clarifyRequest root "007-checklist-command" "Checklist Command" with InputText = None } |> ignore
+        TestSupport.writeValidTasksAndEvidenceFor root "007-checklist-command"
+        TestSupport.writeRelative root "readiness/007-checklist-command/work-model.json" "{ malformed json"
+
+        let report = TestSupport.runChecklist root "007-checklist-command" "Checklist Command"
+
+        Assert.Equal(CommandOutcome.SucceededWithWarnings, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "malformedGeneratedView")
+        Assert.Contains(report.GeneratedViews, fun view ->
+            view.Path = "readiness/007-checklist-command/work-model.json"
+            && view.Currency = GeneratedViewCurrency.Current
+            && view.DiagnosticIds |> List.contains "malformedGeneratedView")

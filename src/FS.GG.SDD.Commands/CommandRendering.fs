@@ -27,6 +27,17 @@ module CommandRendering =
             builder.AppendLine($"blockingAmbiguities: {clarification.BlockingAmbiguityCount}") |> ignore
         | None -> ()
 
+        match report.Checklist with
+        | Some checklist ->
+            builder.AppendLine($"checklistItems: {List.length checklist.ItemIds}") |> ignore
+            builder.AppendLine($"checklistResults: {List.length checklist.ResultIds}") |> ignore
+            builder.AppendLine($"checklistPassed: {checklist.PassedCount}") |> ignore
+            builder.AppendLine($"checklistFailedBlocking: {checklist.FailedBlockingCount}") |> ignore
+            builder.AppendLine($"checklistAcceptedDeferrals: {checklist.AcceptedDeferralCount}") |> ignore
+            builder.AppendLine($"checklistStaleResults: {checklist.StaleResultCount}") |> ignore
+            builder.AppendLine($"checklistAdvisory: {checklist.AdvisoryCount}") |> ignore
+        | None -> ()
+
         builder.AppendLine($"generatedViews: {List.length report.GeneratedViews}") |> ignore
         builder.AppendLine($"diagnostics: {List.length report.Diagnostics}") |> ignore
 

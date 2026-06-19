@@ -106,8 +106,8 @@ let initFinalModel =
 let charterRequest =
     ({ Command = Charter
        ProjectRoot = commandRoot
-       WorkId = Some "006-clarify-command"
-       Title = Some "Clarify Command"
+       WorkId = Some "007-checklist-command"
+       Title = Some "Checklist Command"
        InputText = None
        OutputFormat = Json
        DryRun = false
@@ -121,9 +121,9 @@ let charterFinalModel =
 let specifyRequest =
     ({ Command = Specify
        ProjectRoot = commandRoot
-       WorkId = Some "006-clarify-command"
-       Title = Some "Clarify Command"
-       InputText = Some "value: create a native clarify command\nscope: one specified work item\nrequirement: create a clarification artifact with stable ids\nambiguity: where should durable clarification decisions be recorded?"
+       WorkId = Some "007-checklist-command"
+       Title = Some "Checklist Command"
+       InputText = Some "value: create a native checklist command\nscope: one clarified work item\nrequirement: create a requirements-quality checklist with stable ids"
        OutputFormat = Json
        DryRun = false
        OverwritePolicy = RefuseUnsafe
@@ -136,9 +136,24 @@ let specifyFinalModel =
 let clarifyRequest =
     ({ Command = Clarify
        ProjectRoot = commandRoot
-       WorkId = Some "006-clarify-command"
-       Title = Some "Clarify Command"
-       InputText = Some "AMB-001: Clarification decisions live in clarifications.md."
+       WorkId = Some "007-checklist-command"
+       Title = Some "Checklist Command"
+       InputText = None
+       OutputFormat = Json
+       DryRun = false
+       OverwritePolicy = RefuseUnsafe
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+    : CommandRequest)
+
+let clarifyFinalModel =
+    runCommand clarifyRequest
+
+let checklistRequest =
+    ({ Command = Checklist
+       ProjectRoot = commandRoot
+       WorkId = Some "007-checklist-command"
+       Title = Some "Checklist Command"
+       InputText = None
        OutputFormat = Json
        DryRun = false
        OverwritePolicy = RefuseUnsafe
@@ -146,7 +161,7 @@ let clarifyRequest =
     : CommandRequest)
 
 let commandFinalModel =
-    runCommand clarifyRequest
+    runCommand checklistRequest
 
 let commandReport =
     commandFinalModel.Report
@@ -155,14 +170,16 @@ let commandReport =
 printfn "command=%s" (CommandTypes.commandName commandReport.Command)
 printfn "outcome=%s" (CommandTypes.outcomeValue commandReport.Outcome)
 printfn "changedArtifacts=%d" commandReport.ChangedArtifacts.Length
-printfn "parsedClarificationQuestions=%d" (commandReport.Clarification |> Option.map (fun summary -> summary.QuestionIds.Length) |> Option.defaultValue 0)
-printfn "parsedClarificationDecisions=%d" (commandReport.Clarification |> Option.map (fun summary -> summary.DecisionIds.Length) |> Option.defaultValue 0)
-printfn "acceptedDeferrals=%d" (commandReport.Clarification |> Option.map (fun summary -> summary.AcceptedDeferralIds.Length) |> Option.defaultValue 0)
-printfn "remainingAmbiguity=%d" (commandReport.Clarification |> Option.map (fun summary -> summary.RemainingAmbiguityCount) |> Option.defaultValue 0)
+printfn "checklistItems=%d" (commandReport.Checklist |> Option.map (fun summary -> summary.ItemIds.Length) |> Option.defaultValue 0)
+printfn "checklistPassed=%d" (commandReport.Checklist |> Option.map (fun summary -> summary.PassedCount) |> Option.defaultValue 0)
+printfn "checklistFailedBlocking=%d" (commandReport.Checklist |> Option.map (fun summary -> summary.FailedBlockingCount) |> Option.defaultValue 0)
+printfn "checklistAcceptedDeferrals=%d" (commandReport.Checklist |> Option.map (fun summary -> summary.AcceptedDeferralCount) |> Option.defaultValue 0)
+printfn "checklistStaleResults=%d" (commandReport.Checklist |> Option.map (fun summary -> summary.StaleResultCount) |> Option.defaultValue 0)
 printfn "generatedViews=%d" commandReport.GeneratedViews.Length
 printfn "blockingDiagnostics=%d" (commandReport.Diagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = Diagnostics.DiagnosticSeverity.DiagnosticError) |> List.length)
 printfn "nextAction=%s" (commandReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
 printfn "createdProjectConfig=%b" (File.Exists(Path.Combine(commandRoot, ".fsgg", "project.yml")))
-printfn "createdCharter=%b" (File.Exists(Path.Combine(commandRoot, "work", "006-clarify-command", "charter.md")))
-printfn "createdSpecification=%b" (File.Exists(Path.Combine(commandRoot, "work", "006-clarify-command", "spec.md")))
-printfn "createdClarification=%b" (File.Exists(Path.Combine(commandRoot, "work", "006-clarify-command", "clarifications.md")))
+printfn "createdCharter=%b" (File.Exists(Path.Combine(commandRoot, "work", "007-checklist-command", "charter.md")))
+printfn "createdSpecification=%b" (File.Exists(Path.Combine(commandRoot, "work", "007-checklist-command", "spec.md")))
+printfn "createdClarification=%b" (File.Exists(Path.Combine(commandRoot, "work", "007-checklist-command", "clarifications.md")))
+printfn "createdChecklist=%b" (File.Exists(Path.Combine(commandRoot, "work", "007-checklist-command", "checklist.md")))

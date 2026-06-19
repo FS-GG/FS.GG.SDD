@@ -109,6 +109,20 @@ module CommandTypes =
           RemainingAmbiguityCount: int
           BlockingAmbiguityCount: int }
 
+    type ChecklistSummary =
+        { WorkId: string
+          Stage: string
+          Status: string
+          SourceSpec: string
+          SourceClarifications: string
+          ItemIds: string list
+          ResultIds: string list
+          PassedCount: int
+          FailedBlockingCount: int
+          AcceptedDeferralCount: int
+          StaleResultCount: int
+          AdvisoryCount: int }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -137,6 +151,7 @@ module CommandTypes =
           ChangedArtifacts: ArtifactChange list
           Specification: SpecificationSummary option
           Clarification: ClarificationSummary option
+          Checklist: ChecklistSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -164,6 +179,7 @@ module CommandTypes =
           Diagnostics: Diagnostic list
           Specification: SpecificationSummary option
           Clarification: ClarificationSummary option
+          Checklist: ChecklistSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 

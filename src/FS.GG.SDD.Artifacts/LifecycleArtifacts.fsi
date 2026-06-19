@@ -145,6 +145,53 @@ module LifecycleArtifacts =
           BlockingAmbiguityCount: int
           Diagnostics: Diagnostic list }
 
+    type ChecklistFrontMatter =
+        { SchemaVersion: SchemaVersion
+          WorkId: WorkId
+          Title: string
+          Stage: LifecycleStage
+          ChangeTier: string
+          Status: string
+          SourceSpec: string
+          SourceClarifications: string
+          PublicOrToolFacingImpact: bool option }
+
+    type ChecklistSourceSnapshot =
+        { Label: string
+          Path: string
+          Digest: string option
+          SchemaVersion: int option
+          SourceLocation: SourceLocation option }
+
+    type ChecklistItem =
+        { ItemId: ChecklistItemId
+          Text: string
+          Blocking: bool
+          SourceIds: string list
+          SourceLocation: SourceLocation option }
+
+    type ChecklistReviewResult =
+        { ResultId: ChecklistResultId
+          ItemId: ChecklistItemId option
+          Status: string
+          Text: string
+          SourceIds: string list
+          SourceLocation: SourceLocation option }
+
+    type ChecklistFacts =
+        { FrontMatter: ChecklistFrontMatter
+          StandardSections: string list
+          MissingStandardSections: string list
+          SourceSnapshots: ChecklistSourceSnapshot list
+          Items: ChecklistItem list
+          Results: ChecklistReviewResult list
+          AcceptedDeferrals: ChecklistReviewResult list
+          BlockingFindings: string list
+          AdvisoryNotes: string list
+          LifecycleNotes: string list
+          StaleResultCount: int
+          Diagnostics: Diagnostic list }
+
     type Requirement =
         { Id: RequirementId
           Title: string
@@ -241,6 +288,8 @@ module LifecycleArtifacts =
     val parseSpecificationFacts: snapshot: FileSnapshot -> Result<SpecificationFacts, Diagnostic list>
     val clarificationStandardSections: unit -> string list
     val parseClarificationFacts: snapshot: FileSnapshot -> Result<ClarificationFacts, Diagnostic list>
+    val checklistStandardSections: unit -> string list
+    val parseChecklistFacts: snapshot: FileSnapshot -> Result<ChecklistFacts, Diagnostic list>
     val parseRequirements: snapshot: FileSnapshot -> Requirement list
     val parseDecisions: snapshot: FileSnapshot -> Decision list
     val parseTasks: snapshot: FileSnapshot -> Result<WorkTask list, Diagnostic list>

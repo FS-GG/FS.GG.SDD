@@ -81,3 +81,23 @@ module GovernanceBoundaryCommandTests =
         Assert.DoesNotContain("\"gate\"", json)
         Assert.DoesNotContain("\"audit\"", json)
         Assert.DoesNotContain("\"protectedBranch\"", json)
+
+    [<Fact>]
+    let ``checklist reports optional Governance compatibility without enforcement fields`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root "007-checklist-command" "Checklist Command" |> ignore
+        TestSupport.runSpecify root "007-checklist-command" "Checklist Command" |> ignore
+        TestSupport.runRequest { TestSupport.clarifyRequest root "007-checklist-command" "Checklist Command" with InputText = None } |> ignore
+        let request = { TestSupport.checklistRequest root "007-checklist-command" "Checklist Command" with DryRun = true }
+
+        let report = TestSupport.runRequest request
+        let json = serializeReport report
+
+        Assert.Contains(report.GovernanceCompatibility, fun fact -> fact.Path = ".fsgg/policy.yml")
+        Assert.DoesNotContain("\"route\"", json)
+        Assert.DoesNotContain("\"profile\"", json)
+        Assert.DoesNotContain("\"freshness\"", json)
+        Assert.DoesNotContain("\"gate\"", json)
+        Assert.DoesNotContain("\"audit\"", json)
+        Assert.DoesNotContain("\"protectedBranch\"", json)

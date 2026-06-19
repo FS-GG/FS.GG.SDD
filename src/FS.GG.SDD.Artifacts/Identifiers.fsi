@@ -23,6 +23,8 @@ module Identifiers =
     type AmbiguityId = { Value: string }
     type ClarificationQuestionId = { Value: string }
     type DecisionId = { Value: string }
+    type ChecklistItemId = { Value: string }
+    type ChecklistResultId = { Value: string }
     type TaskId = { Value: string }
     type EvidenceId = { Value: string }
 
@@ -38,6 +40,8 @@ module Identifiers =
     val createAmbiguityId: value: string -> Result<AmbiguityId, string>
     val createClarificationQuestionId: value: string -> Result<ClarificationQuestionId, string>
     val createDecisionId: value: string -> Result<DecisionId, string>
+    val createChecklistItemId: value: string -> Result<ChecklistItemId, string>
+    val createChecklistResultId: value: string -> Result<ChecklistResultId, string>
     val createTaskId: value: string -> Result<TaskId, string>
     val createEvidenceId: value: string -> Result<EvidenceId, string>
     val requirementIdValue: id: RequirementId -> string
@@ -47,5 +51,7 @@ module Identifiers =
     val ambiguityIdValue: id: AmbiguityId -> string
     val clarificationQuestionIdValue: id: ClarificationQuestionId -> string
     val decisionIdValue: id: DecisionId -> string
+    val checklistItemIdValue: id: ChecklistItemId -> string
+    val checklistResultIdValue: id: ChecklistResultId -> string
     val taskIdValue: id: TaskId -> string
     val evidenceIdValue: id: EvidenceId -> string

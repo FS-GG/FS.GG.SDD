@@ -42,7 +42,7 @@ Implementation is driven by the consumer experience:
 Standard Spec Kit remains the workflow used to develop this repository:
 
 ```text
-specify -> clarify -> plan -> tasks -> implement -> analyze
+specify -> clarify -> checklist -> plan -> tasks -> implement -> analyze
 ```
 
 Product code, packages, and tests are added to this repository only through a
@@ -237,6 +237,13 @@ Progress markers:
   valid, deterministic JSON, text projection, dry-run behavior, optional
   Governance compatibility facts, CLI smoke evidence, FSI evidence, and
   full-suite verification.
+- [x] Implement `007-checklist-command` by adding `fsgg-sdd checklist`, typed
+  checklist item/result ids and parser contracts, safe checklist create/rerun
+  behavior, durable requirements-quality results, failed-quality and stale
+  result diagnostics, checklist summaries in command reports, generated-view
+  currency reporting and refresh where source data is valid, deterministic
+  JSON, text projection, dry-run behavior, optional Governance compatibility
+  facts, CLI smoke evidence, FSI evidence, and full-suite verification.
 
 ### Phase 1: SDD Artifact Model
 
@@ -360,26 +367,27 @@ the same model.
 Status: in progress as of 2026-06-19. The implemented slices add
 `src/FS.GG.SDD.Commands`, `src/FS.GG.SDD.Cli`, command tests, lifecycle-command
 fixture roots, readiness evidence, deterministic init, charter, specify, and
-clarify command reports, and real filesystem smoke paths for
+clarify/checklist command reports, and real filesystem smoke paths for
 `fsgg-sdd init`, `fsgg-sdd charter`, `fsgg-sdd specify`, and
-`fsgg-sdd clarify`.
+`fsgg-sdd clarify`, and `fsgg-sdd checklist`.
 
 - [x] Add `fsgg-sdd init` for SDD skeleton creation.
 - [x] Add `fsgg-sdd charter`.
 - [x] Add `fsgg-sdd specify`.
 - [x] Add `fsgg-sdd clarify`.
-- [ ] Add `fsgg-sdd checklist`.
+- [x] Add `fsgg-sdd checklist`.
 - [ ] Add `fsgg-sdd plan`.
 - [ ] Add `fsgg-sdd tasks`.
 - [ ] Add `fsgg-sdd analyze`.
 - [x] Keep stateful or I/O command behavior behind `Model`, `Msg`, `Effect`,
   `init`, and `update` boundaries for the implemented init, charter, specify,
-  and clarify slices.
+  clarify, and checklist slices.
 - [x] Ensure command output has deterministic JSON for automation and plain text
-  for humans for the implemented init, charter, specify, and clarify slices.
+  for humans for the implemented init, charter, specify, clarify, and checklist
+  slices.
 - [x] Refresh generated SDD views when possible and report stale-view
-  diagnostics when not for the implemented charter, specify, and clarify
-  work-model views.
+  diagnostics when not for the implemented charter, specify, clarify, and
+  checklist work-model views.
 
 Current verification evidence for the implemented slice is recorded in
 `specs/003-native-sdd-lifecycle-commands/readiness/`: clean Release build,
@@ -405,6 +413,14 @@ report/text/Governance-boundary tests, command workflow MVU tests, full suite
 with 114 passing tests, FSI public-surface transcript, disposable-directory CLI
 smoke output, performance evidence, SDD/Governance boundary review, human
 summary review, and artifact traceability.
+Checklist verification evidence is recorded in
+`specs/007-checklist-command/readiness/`: clean Release build, focused
+checklist artifact and command create/rerun/diagnostic tests, generated-view
+tests, deterministic report/text/Governance-boundary tests, command workflow
+MVU tests, full suite with 140 passing tests, FSI public-surface transcript,
+disposable-directory CLI smoke output, performance evidence,
+SDD/Governance boundary review, human summary review, and artifact
+traceability.
 
 Exit criteria:
 

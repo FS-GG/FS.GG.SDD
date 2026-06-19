@@ -33,3 +33,13 @@ module IdentifierTests =
         Assert.Equal("T001", Identifiers.taskIdValue task)
         Assert.Equal("EV001", Identifiers.evidenceIdValue evidence)
         Assert.True(Identifiers.createClarificationQuestionId "Q-1" |> Result.isError)
+
+    [<Fact>]
+    let ``Checklist ids are stable and case-insensitive`` () =
+        let item = Identifiers.createChecklistItemId "chk-001" |> Result.defaultWith failwith
+        let result = Identifiers.createChecklistResultId "cr-001" |> Result.defaultWith failwith
+
+        Assert.Equal("CHK-001", Identifiers.checklistItemIdValue item)
+        Assert.Equal("CR-001", Identifiers.checklistResultIdValue result)
+        Assert.True(Identifiers.createChecklistItemId "CHECK-1" |> Result.isError)
+        Assert.True(Identifiers.createChecklistResultId "R-1" |> Result.isError)

@@ -37,12 +37,20 @@ module CommandReports =
     val missingSpecificationId: path: string -> idFamily: string -> Diagnostic
     val unknownSpecificationReference: path: string -> id: string -> Diagnostic
     val missingClarificationAnswer: path: string -> missingIds: string list -> Diagnostic
+    val missingClarificationPrerequisite: path: string -> message: string -> Diagnostic
     val clarificationIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
     val malformedClarificationFrontMatter: path: string -> message: string -> Diagnostic
     val duplicateClarificationId: path: string -> id: string -> Diagnostic
     val unknownClarificationReference: path: string -> id: string -> Diagnostic
     val unsafeDecisionChange: path: string -> id: string -> Diagnostic
     val unresolvedBlockingAmbiguity: path: string -> ids: string list -> Diagnostic
+    val failedRequirementsQuality: path: string -> message: string -> correction: string -> relatedIds: string list -> Diagnostic
+    val checklistIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
+    val malformedChecklistFrontMatter: path: string -> message: string -> Diagnostic
+    val duplicateChecklistId: path: string -> id: string -> Diagnostic
+    val unknownChecklistSourceReference: path: string -> id: string -> Diagnostic
+    val staleChecklistResult: path: string -> resultIds: string list -> Diagnostic
+    val unsafeChecklistResultChange: path: string -> id: string -> Diagnostic
     val unsafeOverwrite: path: string -> Diagnostic
     val malformedGeneratedView: path: string -> Diagnostic
     val blockedGeneratedViewRefresh: path: string -> relatedIds: string list -> Diagnostic

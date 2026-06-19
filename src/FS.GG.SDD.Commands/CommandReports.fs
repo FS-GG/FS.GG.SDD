@@ -238,6 +238,15 @@ module CommandReports =
             "Provide an answer, accepted deferral, or explicit still-open note for each blocking ambiguity."
             missingIds
 
+    let missingClarificationPrerequisite path message =
+        commandDiagnostic
+            "missingClarificationPrerequisite"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Run fsgg-sdd clarify for the selected work item before running fsgg-sdd checklist."
+            [ path ]
+
     let clarificationIdentityMismatch path expectedWorkId actualWorkId =
         commandDiagnostic
             "clarificationIdentityMismatch"
@@ -291,6 +300,69 @@ module CommandReports =
             "Blocking ambiguity remains unresolved after clarification planning."
             "Resolve each blocking ambiguity with a concrete decision or accepted deferral before moving to checklist."
             ids
+
+    let failedRequirementsQuality path message correction relatedIds =
+        commandDiagnostic
+            "failedRequirementsQuality"
+            DiagnosticSeverity.DiagnosticWarning
+            (Some path)
+            message
+            correction
+            relatedIds
+
+    let checklistIdentityMismatch path expectedWorkId actualWorkId =
+        commandDiagnostic
+            "checklistIdentityMismatch"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Checklist work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Move checklist.md under the matching work id or update its front matter before rerunning."
+            [ expectedWorkId; actualWorkId ]
+
+    let malformedChecklistFrontMatter path message =
+        commandDiagnostic
+            "malformedChecklistFrontMatter"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Add schemaVersion, workId, title, stage: checklist, changeTier, status, sourceSpec, and sourceClarifications front matter before rerunning."
+            [ path ]
+
+    let duplicateChecklistId path id =
+        commandDiagnostic
+            "duplicateChecklistId"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Checklist identifier '{id}' is declared more than once."
+            "Rename one duplicate checklist item or result id and update references before rerunning."
+            [ id ]
+
+    let unknownChecklistSourceReference path id =
+        commandDiagnostic
+            "unknownChecklistSourceReference"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Checklist reference '{id}' does not resolve in the selected specification, clarification, or checklist item set."
+            "Reference a known FR, US, AC, SB, AMB, CQ, DEC, or CHK id, or remove the stale checklist link."
+            [ id ]
+
+    let staleChecklistResult path resultIds =
+        commandDiagnostic
+            "staleChecklistResult"
+            DiagnosticSeverity.DiagnosticWarning
+            (Some path)
+            "One or more checklist results were reviewed against older source snapshots."
+            "Review the stale checklist results against the current specification and clarification sources."
+            resultIds
+
+    let unsafeChecklistResultChange path id =
+        commandDiagnostic
+            "unsafeChecklistResultChange"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Checklist result '{id}' would be changed by this rerun."
+            "Preserve the existing result and add a new result or mark it stale before changing the review decision."
+            [ id ]
 
     let unsafeOverwrite (path: string) =
         commandDiagnostic
@@ -406,7 +478,7 @@ module CommandReports =
             State = "notEvaluated"
             DiagnosticIds = [] } ]
 
-    let nextAction (diagnostics: Diagnostic list) (request: CommandRequest) =
+    let nextAction (diagnostics: Diagnostic list) (request: CommandRequest) (checklist: ChecklistSummary option) =
         let blocking =
             diagnostics
             |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
@@ -422,6 +494,28 @@ module CommandReports =
                   Reason = "The command is blocked by diagnostics."
                   RequiredArtifacts = []
                   BlockingDiagnosticIds = blocking }
+        elif
+            checklist
+            |> Option.exists (fun summary -> summary.FailedBlockingCount > 0 || summary.StaleResultCount > 0)
+        then
+            let summary = checklist.Value
+            let ids =
+                diagnostics
+                |> List.choose (fun diagnostic ->
+                    if diagnostic.Id = "failedRequirementsQuality" || diagnostic.Id = "staleChecklistResult" then
+                        Some diagnostic.Id
+                    else
+                        None)
+                |> List.distinct
+                |> List.sort
+
+            Some
+                { ActionId = "correctBlockingDiagnostics"
+                  Command = None
+                  WorkId = request.WorkId
+                  Reason = "Checklist has requirements-quality findings or stale review results."
+                  RequiredArtifacts = [ summary.SourceSpec; summary.SourceClarifications; $"work/{summary.WorkId}/checklist.md" ] |> List.sort
+                  BlockingDiagnosticIds = ids }
         else
             match nextLifecycleCommand request.Command with
             | Some command ->
@@ -430,6 +524,7 @@ module CommandReports =
                     | Charter, Some workId -> [ $"work/{workId}/charter.md" ]
                     | Specify, Some workId -> [ $"work/{workId}/charter.md"; $"work/{workId}/spec.md" ]
                     | Clarify, Some workId -> [ $"work/{workId}/spec.md"; $"work/{workId}/clarifications.md" ]
+                    | Checklist, Some workId -> [ $"work/{workId}/spec.md"; $"work/{workId}/clarifications.md"; $"work/{workId}/checklist.md" ]
                     | _ -> []
 
                 Some
@@ -486,10 +581,11 @@ module CommandReports =
           ChangedArtifacts = changes
           Specification = model.Specification
           Clarification = model.Clarification
+          Checklist = model.Checklist
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility
-          NextAction = nextAction diagnostics model.Request }
+          NextAction = nextAction diagnostics model.Request model.Checklist }
 
     let exitCodeForReport (report: CommandReport) =
         match report.Outcome with

@@ -10,6 +10,7 @@
     <Compile Include="CharterCommandTests.fs" />
     <Compile Include="SpecifyCommandTests.fs" />
     <Compile Include="ClarifyCommandTests.fs" />
+    <Compile Include="ChecklistCommandTests.fs" />
     <Compile Include="GeneratedViewCommandTests.fs" />
     <Compile Include="CommandReportJsonTests.fs" />
     <Compile Include="TextProjectionTests.fs" />

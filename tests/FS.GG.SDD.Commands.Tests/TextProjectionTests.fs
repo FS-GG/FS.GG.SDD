@@ -82,3 +82,25 @@ module TextProjectionTests =
         Assert.Contains($"clarificationQuestions: {List.length clarification.QuestionIds}", text)
         Assert.Contains($"clarificationDecisions: {List.length clarification.DecisionIds}", text)
         Assert.Contains($"remainingAmbiguities: {clarification.RemainingAmbiguityCount}", text)
+
+    [<Fact>]
+    let ``checklist text projection includes checklist counts from report`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root "007-checklist-command" "Checklist Command" |> ignore
+        TestSupport.runSpecify root "007-checklist-command" "Checklist Command" |> ignore
+        TestSupport.runRequest { TestSupport.clarifyRequest root "007-checklist-command" "Checklist Command" with InputText = None } |> ignore
+        let request =
+            { TestSupport.checklistRequest root "007-checklist-command" "Checklist Command" with
+                DryRun = true
+                OutputFormat = Text }
+
+        let report = TestSupport.runRequest request
+        let text = renderText report
+        let checklist = report.Checklist.Value
+
+        Assert.Contains("command: checklist", text)
+        Assert.Contains($"outcome: {outcomeValue report.Outcome}", text)
+        Assert.Contains($"checklistItems: {List.length checklist.ItemIds}", text)
+        Assert.Contains($"checklistPassed: {checklist.PassedCount}", text)
+        Assert.Contains($"checklistFailedBlocking: {checklist.FailedBlockingCount}", text)

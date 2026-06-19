@@ -25,6 +25,8 @@ module Identifiers =
     type AmbiguityId = { Value: string }
     type ClarificationQuestionId = { Value: string }
     type DecisionId = { Value: string }
+    type ChecklistItemId = { Value: string }
+    type ChecklistResultId = { Value: string }
     type TaskId = { Value: string }
     type EvidenceId = { Value: string }
 
@@ -116,6 +118,14 @@ module Identifiers =
         createScopedId "Decision id" @"^DEC-\d{3,}$" value
         |> Result.map (fun value -> { DecisionId.Value = value.ToUpperInvariant() })
 
+    let createChecklistItemId (value: string) =
+        createScopedId "Checklist item id" @"^CHK-\d{3,}$" value
+        |> Result.map (fun value -> { ChecklistItemId.Value = value.ToUpperInvariant() })
+
+    let createChecklistResultId (value: string) =
+        createScopedId "Checklist result id" @"^CR-\d{3,}$" value
+        |> Result.map (fun value -> { ChecklistResultId.Value = value.ToUpperInvariant() })
+
     let createTaskId (value: string) =
         createScopedId "Task id" @"^T\d{3,}$" value
         |> Result.map (fun value -> { TaskId.Value = value.ToUpperInvariant() })
@@ -131,5 +141,7 @@ module Identifiers =
     let ambiguityIdValue (id: AmbiguityId) = id.Value
     let clarificationQuestionIdValue (id: ClarificationQuestionId) = id.Value
     let decisionIdValue (id: DecisionId) = id.Value
+    let checklistItemIdValue (id: ChecklistItemId) = id.Value
+    let checklistResultIdValue (id: ChecklistResultId) = id.Value
     let taskIdValue (id: TaskId) = id.Value
     let evidenceIdValue (id: EvidenceId) = id.Value
