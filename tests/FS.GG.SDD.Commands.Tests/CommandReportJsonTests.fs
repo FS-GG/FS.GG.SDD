@@ -125,3 +125,21 @@ module CommandReportJsonTests =
         Assert.Contains("\"contractReferenceIds\"", first)
         Assert.DoesNotContain(root, first)
         Assert.DoesNotContain("timestamp", first)
+
+    [<Fact>]
+    let ``tasks deterministic JSON includes task graph object`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializePlanReadyProject root "009-tasks-command" "Tasks Command"
+        let request = { TestSupport.tasksRequest root "009-tasks-command" "Tasks Command" with DryRun = true }
+
+        let first = TestSupport.runRequest request |> serializeReport
+        let second = TestSupport.runRequest request |> serializeReport
+        let third = TestSupport.runRequest request |> serializeReport
+
+        Assert.Equal(first, second)
+        Assert.Equal(second, third)
+        Assert.Contains("\"name\": \"tasks\"", first)
+        Assert.Contains("\"tasks\"", first)
+        Assert.Contains("\"taskIds\"", first)
+        Assert.DoesNotContain(root, first)
+        Assert.DoesNotContain("timestamp", first)

@@ -55,6 +55,7 @@ module WorkModel =
           Dependencies: string list
           Requirements: string list
           Decisions: string list
+          SourceIds: string list
           RequiredSkills: string list
           RequiredEvidence: string list
           Source: string
@@ -115,6 +116,7 @@ module WorkModel =
         | InProgress -> "in-progress"
         | Done -> "done"
         | Skipped _ -> "skipped"
+        | Stale -> "stale"
 
     let evidenceKindValue kind =
         match kind with
@@ -463,6 +465,7 @@ module WorkModel =
                   Dependencies = task.Dependencies |> List.map (fun id -> id.Value) |> List.sort
                   Requirements = task.Requirements |> List.map (fun id -> id.Value) |> List.sort
                   Decisions = task.Decisions |> List.map (fun id -> id.Value) |> List.sort
+                  SourceIds = task.SourceIds |> List.sort
                   RequiredSkills = task.RequiredSkills |> List.sort
                   RequiredEvidence = task.RequiredEvidence |> List.map (fun id -> id.Value) |> List.sort
                   Source = task.Source.Path

@@ -127,3 +127,22 @@ module TextProjectionTests =
         Assert.Contains($"planDecisions: {List.length plan.DecisionIds}", text)
         Assert.Contains($"planContractReferences: {List.length plan.ContractReferenceIds}", text)
         Assert.Contains($"planVerificationObligations: {List.length plan.VerificationObligationIds}", text)
+
+    [<Fact>]
+    let ``tasks text projection includes task counts from report`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializePlanReadyProject root "009-tasks-command" "Tasks Command"
+        let request =
+            { TestSupport.tasksRequest root "009-tasks-command" "Tasks Command" with
+                DryRun = true
+                OutputFormat = Text }
+
+        let report = TestSupport.runRequest request
+        let text = renderText report
+        let tasks = report.Tasks.Value
+
+        Assert.Contains("command: tasks", text)
+        Assert.Contains($"outcome: {outcomeValue report.Outcome}", text)
+        Assert.Contains($"tasks: {List.length tasks.TaskIds}", text)
+        Assert.Contains($"taskDependencies: {tasks.DependencyCount}", text)
+        Assert.Contains($"taskRequiredEvidence: {tasks.RequiredEvidenceCount}", text)

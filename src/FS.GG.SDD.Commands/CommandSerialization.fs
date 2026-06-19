@@ -146,6 +146,32 @@ module CommandSerialization =
             writer.WriteEndObject()
         | None -> writer.WriteNull "plan"
 
+    let writeTasks (writer: Utf8JsonWriter) (summary: TasksSummary option) =
+        match summary with
+        | Some summary ->
+            writer.WriteStartObject("tasks")
+            writer.WriteString("workId", summary.WorkId)
+            writer.WriteString("stage", summary.Stage)
+            writer.WriteString("status", summary.Status)
+            writer.WriteString("sourceSpec", summary.SourceSpec)
+            writer.WriteString("sourceClarifications", summary.SourceClarifications)
+            writer.WriteString("sourceChecklist", summary.SourceChecklist)
+            writer.WriteString("sourcePlan", summary.SourcePlan)
+            writeStringList writer "taskIds" summary.TaskIds
+            writer.WriteNumber("dependencyCount", summary.DependencyCount)
+            writer.WriteNumber("requiredSkillCount", summary.RequiredSkillCount)
+            writer.WriteNumber("requiredEvidenceCount", summary.RequiredEvidenceCount)
+            writer.WriteNumber("pendingCount", summary.PendingCount)
+            writer.WriteNumber("inProgressCount", summary.InProgressCount)
+            writer.WriteNumber("doneCount", summary.DoneCount)
+            writer.WriteNumber("skippedCount", summary.SkippedCount)
+            writer.WriteNumber("staleCount", summary.StaleCount)
+            writer.WriteNumber("acceptedDeferralCount", summary.AcceptedDeferralCount)
+            writer.WriteNumber("blockingFindingCount", summary.BlockingFindingCount)
+            writer.WriteNumber("advisoryCount", summary.AdvisoryCount)
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "tasks"
+
     let writeGeneratedSource (writer: Utf8JsonWriter) (source: GeneratedViewSource) =
         writer.WriteStartObject()
         writer.WriteString("path", source.Path)
@@ -241,6 +267,7 @@ module CommandSerialization =
         writeClarification writer report.Clarification
         writeChecklist writer report.Checklist
         writePlan writer report.Plan
+        writeTasks writer report.Tasks
         writer.WriteStartArray("generatedViews")
         report.GeneratedViews |> List.sortBy (fun view -> view.Path) |> List.iter (writeGeneratedView writer)
         writer.WriteEndArray()

@@ -3,9 +3,9 @@
 FS.GG.SDD is the spec-driven development lifecycle product for FS.GG. It is not
 the governance rule engine.
 
-Use standard Spec Kit for work in this repo. Product code must be introduced
-through feature specs and plans; this scaffold intentionally starts without
-`src/` or `tests/`.
+Use standard Spec Kit for work in this repo. Product source and tests now exist;
+add or change them only through feature specs and plans that define the
+artifact contract and verification plan.
 
 Core boundary:
 

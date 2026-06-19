@@ -270,6 +270,32 @@ module LifecycleArtifacts =
           StaleDecisionCount: int
           Diagnostics: Diagnostic list }
 
+    type TaskFrontMatter =
+        { SchemaVersion: SchemaVersion
+          WorkId: WorkId
+          Title: string
+          Stage: LifecycleStage
+          Status: string
+          SourceSpec: string
+          SourceClarifications: string
+          SourceChecklist: string
+          SourcePlan: string
+          PublicOrToolFacingImpact: bool option }
+
+    type TaskSourceSnapshot =
+        { Label: string
+          Path: string
+          Digest: string option
+          SchemaVersion: int option
+          SourceLocation: SourceLocation option }
+
+    type TaskGraphFinding =
+        { FindingId: string
+          Severity: string
+          Text: string
+          SourceIds: string list
+          SourceLocation: SourceLocation option }
+
     type Requirement =
         { Id: RequirementId
           Title: string
@@ -291,6 +317,7 @@ module LifecycleArtifacts =
         | InProgress
         | Done
         | Skipped of string
+        | Stale
 
     type WorkTask =
         { Id: TaskId
@@ -300,10 +327,22 @@ module LifecycleArtifacts =
           Dependencies: TaskId list
           Requirements: RequirementId list
           Decisions: DecisionId list
+          SourceIds: string list
           RequiredSkills: string list
           RequiredEvidence: EvidenceId list
           Source: ArtifactRef
           SourceLocation: SourceLocation option }
+
+    type TaskFacts =
+        { FrontMatter: TaskFrontMatter
+          SourceSnapshots: TaskSourceSnapshot list
+          Tasks: WorkTask list
+          AcceptedDeferrals: string list
+          Findings: TaskGraphFinding list
+          AdvisoryNotes: string list
+          LifecycleNotes: string list
+          StaleTaskCount: int
+          Diagnostics: Diagnostic list }
 
     type EvidenceKind =
         | Implementation
@@ -370,6 +409,7 @@ module LifecycleArtifacts =
     val parseChecklistFacts: snapshot: FileSnapshot -> Result<ChecklistFacts, Diagnostic list>
     val planStandardSections: unit -> string list
     val parsePlanFacts: snapshot: FileSnapshot -> Result<PlanFacts, Diagnostic list>
+    val parseTaskFacts: snapshot: FileSnapshot -> Result<TaskFacts, Diagnostic list>
     val parseRequirements: snapshot: FileSnapshot -> Requirement list
     val parseDecisions: snapshot: FileSnapshot -> Decision list
     val parseTasks: snapshot: FileSnapshot -> Result<WorkTask list, Diagnostic list>

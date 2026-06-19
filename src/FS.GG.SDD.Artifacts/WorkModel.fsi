@@ -51,6 +51,7 @@ module WorkModel =
           Dependencies: string list
           Requirements: string list
           Decisions: string list
+          SourceIds: string list
           RequiredSkills: string list
           RequiredEvidence: string list
           Source: string

@@ -3,8 +3,9 @@
 FS.GG.SDD is the spec-driven development lifecycle product for FS.GG. It is
 separate from FS.GG.Governance.
 
-Use standard Spec Kit for all non-trivial work. This repository is intentionally
-source-empty until the first feature spec creates code.
+Use standard Spec Kit for all non-trivial work. Product source and tests now
+exist; add or change them only through a Spec Kit feature that defines the
+artifact contract and verification plan.
 
 Read before acting:
 

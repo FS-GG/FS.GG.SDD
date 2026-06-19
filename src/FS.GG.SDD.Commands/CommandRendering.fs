@@ -49,6 +49,22 @@ module CommandRendering =
             builder.AppendLine($"planAdvisory: {plan.AdvisoryCount}") |> ignore
         | None -> ()
 
+        match report.Tasks with
+        | Some tasks ->
+            builder.AppendLine($"tasks: {List.length tasks.TaskIds}") |> ignore
+            builder.AppendLine($"taskDependencies: {tasks.DependencyCount}") |> ignore
+            builder.AppendLine($"taskRequiredSkills: {tasks.RequiredSkillCount}") |> ignore
+            builder.AppendLine($"taskRequiredEvidence: {tasks.RequiredEvidenceCount}") |> ignore
+            builder.AppendLine($"taskPending: {tasks.PendingCount}") |> ignore
+            builder.AppendLine($"taskInProgress: {tasks.InProgressCount}") |> ignore
+            builder.AppendLine($"taskDone: {tasks.DoneCount}") |> ignore
+            builder.AppendLine($"taskSkipped: {tasks.SkippedCount}") |> ignore
+            builder.AppendLine($"taskStale: {tasks.StaleCount}") |> ignore
+            builder.AppendLine($"taskAcceptedDeferrals: {tasks.AcceptedDeferralCount}") |> ignore
+            builder.AppendLine($"taskBlockingFindings: {tasks.BlockingFindingCount}") |> ignore
+            builder.AppendLine($"taskAdvisory: {tasks.AdvisoryCount}") |> ignore
+        | None -> ()
+
         builder.AppendLine($"generatedViews: {List.length report.GeneratedViews}") |> ignore
         builder.AppendLine($"diagnostics: {List.length report.Diagnostics}") |> ignore
 

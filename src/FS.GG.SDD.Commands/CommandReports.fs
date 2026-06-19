@@ -1,5 +1,6 @@
 namespace FS.GG.SDD.Commands
 
+open System
 open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Artifacts.SchemaVersion
@@ -436,6 +437,116 @@ module CommandReports =
             "Preserve existing plan decisions and add a new decision id for the replacement path."
             [ id ]
 
+    let missingPlanPrerequisite path message =
+        commandDiagnostic
+            "missingPlanPrerequisite"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Run fsgg-sdd plan for the selected work item before running fsgg-sdd tasks."
+            [ path ]
+
+    let failedPlanPrerequisite path message relatedIds =
+        commandDiagnostic
+            "failedPlanPrerequisite"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Correct blocking planning findings, stale decisions, or malformed plan data before task generation."
+            relatedIds
+
+    let tasksIdentityMismatch path expectedWorkId actualWorkId =
+        commandDiagnostic
+            "tasksIdentityMismatch"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Tasks work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Move tasks.yml under the matching work id or update its work.id before rerunning."
+            [ expectedWorkId; actualWorkId ]
+
+    let malformedTasksArtifact path message =
+        commandDiagnostic
+            "malformedTasksArtifact"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Fix schemaVersion, work identity, source links, task ids, dependencies, and status fields before rerunning."
+            [ path ]
+
+    let duplicateTaskId path id =
+        commandDiagnostic
+            "duplicateTaskId"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Task id '{id}' is declared more than once."
+            "Rename one duplicate task id and update dependency and evidence references before rerunning."
+            [ id ]
+
+    let unknownTaskSourceReference path id =
+        commandDiagnostic
+            "unknownTaskSourceReference"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Task source reference '{id}' does not resolve in the selected lifecycle artifacts."
+            "Reference a known FR, AC, DEC, PD, PC, VO, PM, GV, CHK, or CR id, or remove the stale task link."
+            [ id ]
+
+    let unknownTaskDependency path id =
+        commandDiagnostic
+            "unknownTaskDependency"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Task dependency '{id}' does not resolve."
+            "Declare the dependency task id or remove the dependency edge."
+            [ id ]
+
+    let taskDependencyCycle path ids =
+        let cycleText = String.concat " -> " ids
+
+        commandDiagnostic
+            "taskDependencyCycle"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Task dependency cycle detected: {cycleText}."
+            "Remove one dependency edge so the task graph is acyclic."
+            ids
+
+    let staleTask path taskIds =
+        commandDiagnostic
+            "staleTask"
+            DiagnosticSeverity.DiagnosticWarning
+            (Some path)
+            "One or more task entries were recorded against older source snapshots."
+            "Review stale tasks and rerun fsgg-sdd tasks after updating their source links."
+            taskIds
+
+    let unsafeTaskStatusChange path id =
+        commandDiagnostic
+            "unsafeTaskStatusChange"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Task '{id}' has a status change marker that this command will not overwrite."
+            "Preserve existing task state and record replacement work as a new task id."
+            [ id ]
+
+    let doneTaskMissingEvidence path ids =
+        commandDiagnostic
+            "doneTaskMissingEvidence"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "One or more completed tasks are missing required evidence declarations."
+            "Add work/<id>/evidence.yml entries for completed tasks or move the tasks back to pending."
+            ids
+
+    let skippedTaskMissingRationale path ids =
+        commandDiagnostic
+            "skippedTaskMissingRationale"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "One or more skipped tasks are missing skip rationale."
+            "Add skipRationale for every skipped task before treating the task graph as ready."
+            ids
+
     let unsafeOverwrite (path: string) =
         commandDiagnostic
             "unsafeOverwrite"
@@ -578,7 +689,45 @@ module CommandReports =
         else
             None
 
-    let nextAction (diagnostics: Diagnostic list) (request: CommandRequest) (checklist: ChecklistSummary option) (plan: PlanSummary option) =
+    let tasksCorrectionCommand (diagnostics: Diagnostic list) =
+        let ids = diagnostics |> List.map _.Id |> Set.ofList
+
+        if Set.contains "missingSpecificationPrerequisite" ids
+           || Set.contains "malformedSpecificationFacts" ids
+           || Set.contains "specificationIdentityMismatch" ids then
+            Some Specify
+        elif Set.contains "missingClarificationPrerequisite" ids
+             || Set.contains "malformedClarificationFrontMatter" ids
+             || Set.contains "clarificationIdentityMismatch" ids then
+            Some Clarify
+        elif Set.contains "missingChecklistPrerequisite" ids
+             || Set.contains "failedChecklistPrerequisite" ids
+             || Set.contains "checklistIdentityMismatch" ids
+             || Set.contains "malformedChecklistFrontMatter" ids
+             || Set.contains "duplicateChecklistId" ids
+             || Set.contains "unknownChecklistSourceReference" ids then
+            Some Checklist
+        elif Set.contains "missingPlanPrerequisite" ids
+             || Set.contains "failedPlanPrerequisite" ids
+             || Set.contains "planIdentityMismatch" ids
+             || Set.contains "malformedPlanFrontMatter" ids
+             || Set.contains "duplicatePlanId" ids
+             || Set.contains "unknownPlanSourceReference" ids then
+            Some Plan
+        elif Set.contains "tasksIdentityMismatch" ids
+             || Set.contains "malformedTasksArtifact" ids
+             || Set.contains "duplicateTaskId" ids
+             || Set.contains "unknownTaskSourceReference" ids
+             || Set.contains "unknownTaskDependency" ids
+             || Set.contains "taskDependencyCycle" ids
+             || Set.contains "unsafeTaskStatusChange" ids
+             || Set.contains "doneTaskMissingEvidence" ids
+             || Set.contains "skippedTaskMissingRationale" ids then
+            Some Tasks
+        else
+            None
+
+    let nextAction (diagnostics: Diagnostic list) (request: CommandRequest) (checklist: ChecklistSummary option) (plan: PlanSummary option) (tasks: TasksSummary option) =
         let blocking =
             diagnostics
             |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
@@ -590,6 +739,7 @@ module CommandReports =
             let correctionCommand =
                 match request.Command with
                 | Plan -> planCorrectionCommand diagnostics
+                | Tasks -> tasksCorrectionCommand diagnostics
                 | _ -> None
 
             Some
@@ -607,6 +757,14 @@ module CommandReports =
                   Reason = "Plan decisions need review before task generation."
                   RequiredArtifacts = plan |> Option.map (fun summary -> [ $"work/{summary.WorkId}/plan.md" ]) |> Option.defaultValue []
                   BlockingDiagnosticIds = [ "stalePlanDecision" ] }
+        elif request.Command = Tasks && diagnostics |> List.exists (fun diagnostic -> diagnostic.Id = "staleTask") then
+            Some
+                { ActionId = "tasks.correctStaleTasks"
+                  Command = Some Tasks
+                  WorkId = request.WorkId
+                  Reason = "Task source links need review before analysis."
+                  RequiredArtifacts = tasks |> Option.map (fun summary -> [ $"work/{summary.WorkId}/tasks.yml" ]) |> Option.defaultValue []
+                  BlockingDiagnosticIds = [ "staleTask" ] }
         elif
             checklist
             |> Option.exists (fun summary -> summary.FailedBlockingCount > 0 || summary.StaleResultCount > 0)
@@ -639,6 +797,7 @@ module CommandReports =
                     | Clarify, Some workId -> [ $"work/{workId}/spec.md"; $"work/{workId}/clarifications.md" ]
                     | Checklist, Some workId -> [ $"work/{workId}/spec.md"; $"work/{workId}/clarifications.md"; $"work/{workId}/checklist.md" ]
                     | Plan, Some workId -> [ $"work/{workId}/plan.md" ]
+                    | Tasks, Some workId -> [ $"work/{workId}/tasks.yml" ]
                     | _ -> []
 
                 Some
@@ -697,10 +856,11 @@ module CommandReports =
           Clarification = model.Clarification
           Checklist = model.Checklist
           Plan = model.Plan
+          Tasks = model.Tasks
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility
-          NextAction = nextAction diagnostics model.Request model.Checklist model.Plan }
+          NextAction = nextAction diagnostics model.Request model.Checklist model.Plan model.Tasks }
 
     let exitCodeForReport (report: CommandReport) =
         match report.Outcome with

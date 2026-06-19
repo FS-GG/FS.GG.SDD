@@ -26,6 +26,7 @@ module NormalizedWorkModelTests =
         Assert.Contains(model.Requirements, fun requirement -> requirement.Id = "FR-001" && requirement.LinkedTaskIds = [ "T001" ])
         Assert.Contains(model.Decisions, fun decision -> decision.Id = "DEC-001" && decision.LinkedTaskIds = [ "T001"; "T002" ])
         Assert.Contains(model.Tasks, fun task -> task.Id = "T002" && task.Dependencies = [ "T001" ])
+        Assert.Contains(model.Tasks, fun task -> task.Id = "T001" && task.RequiredEvidence = [ "EV001" ] && task.RequiredSkills = [ "fs-gg-sdd-project" ])
         Assert.Contains(model.Evidence, fun evidence -> evidence.Id = "EV001" && evidence.TaskRefs = [ "T001" ])
         Assert.Contains(model.GovernanceBoundaries, fun boundary -> boundary.Path = ".fsgg/capabilities.yml")
 

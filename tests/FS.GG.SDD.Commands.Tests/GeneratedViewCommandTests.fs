@@ -166,3 +166,16 @@ module GeneratedViewCommandTests =
             view.Path = "readiness/008-plan-command/work-model.json"
             && view.Currency = GeneratedViewCurrency.Current
             && view.Sources |> List.exists (fun source -> source.Path = "work/008-plan-command/plan.md"))
+
+    [<Fact>]
+    let ``tasks refreshes generated work model and includes task source`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializePlanReadyProject root "009-tasks-command" "Tasks Command"
+        TestSupport.writePassingTaskEvidenceFor root "009-tasks-command"
+
+        let report = TestSupport.runTasks root "009-tasks-command" "Tasks Command"
+
+        Assert.Contains(report.GeneratedViews, fun view ->
+            view.Path = "readiness/009-tasks-command/work-model.json"
+            && view.Currency = GeneratedViewCurrency.Current
+            && view.Sources |> List.exists (fun source -> source.Path = "work/009-tasks-command/tasks.yml"))

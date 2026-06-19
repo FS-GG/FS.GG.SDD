@@ -106,8 +106,8 @@ let initFinalModel =
 let charterRequest =
     ({ Command = Charter
        ProjectRoot = commandRoot
-       WorkId = Some "008-plan-command"
-       Title = Some "Plan Command"
+       WorkId = Some "009-tasks-command"
+       Title = Some "Tasks Command"
        InputText = None
        OutputFormat = Json
        DryRun = false
@@ -121,9 +121,9 @@ let charterFinalModel =
 let specifyRequest =
     ({ Command = Specify
        ProjectRoot = commandRoot
-       WorkId = Some "008-plan-command"
-       Title = Some "Plan Command"
-       InputText = Some "value: create a native plan command\nscope: one checklist-ready work item\nrequirement: create a technical plan with stable ids"
+       WorkId = Some "009-tasks-command"
+       Title = Some "Tasks Command"
+       InputText = Some "value: create a native tasks command\nscope: one planned work item\nrequirement: create a traceable implementation task graph with stable ids"
        OutputFormat = Json
        DryRun = false
        OverwritePolicy = RefuseUnsafe
@@ -136,8 +136,8 @@ let specifyFinalModel =
 let clarifyRequest =
     ({ Command = Clarify
        ProjectRoot = commandRoot
-       WorkId = Some "008-plan-command"
-       Title = Some "Plan Command"
+       WorkId = Some "009-tasks-command"
+       Title = Some "Tasks Command"
        InputText = None
        OutputFormat = Json
        DryRun = false
@@ -151,8 +151,8 @@ let clarifyFinalModel =
 let checklistRequest =
     ({ Command = Checklist
        ProjectRoot = commandRoot
-       WorkId = Some "008-plan-command"
-       Title = Some "Plan Command"
+       WorkId = Some "009-tasks-command"
+       Title = Some "Tasks Command"
        InputText = None
        OutputFormat = Json
        DryRun = false
@@ -166,8 +166,23 @@ let checklistFinalModel =
 let planRequest =
     ({ Command = Plan
        ProjectRoot = commandRoot
-       WorkId = Some "008-plan-command"
-       Title = Some "Plan Command"
+       WorkId = Some "009-tasks-command"
+       Title = Some "Tasks Command"
+       InputText = None
+       OutputFormat = Json
+       DryRun = false
+       OverwritePolicy = RefuseUnsafe
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+    : CommandRequest)
+
+let planFinalModel =
+    runCommand planRequest
+
+let tasksRequest =
+    ({ Command = Tasks
+       ProjectRoot = commandRoot
+       WorkId = Some "009-tasks-command"
+       Title = Some "Tasks Command"
        InputText = None
        OutputFormat = Json
        DryRun = false
@@ -176,26 +191,31 @@ let planRequest =
     : CommandRequest)
 
 let commandFinalModel =
-    runCommand planRequest
+    runCommand tasksRequest
 
 let commandReport =
     commandFinalModel.Report
     |> Option.defaultWith (fun () -> CommandReports.buildReport commandFinalModel)
 
 printfn "command=%s" (CommandTypes.commandName commandReport.Command)
+printfn "tasksCommandStage=%s" (CommandTypes.commandStage Tasks)
+printfn "nextAfterTasks=%s" (CommandTypes.nextLifecycleCommand Tasks |> Option.map CommandTypes.commandName |> Option.defaultValue "none")
 printfn "outcome=%s" (CommandTypes.outcomeValue commandReport.Outcome)
 printfn "changedArtifacts=%d" commandReport.ChangedArtifacts.Length
-printfn "planDecisions=%d" (commandReport.Plan |> Option.map (fun summary -> summary.DecisionIds.Length) |> Option.defaultValue 0)
-printfn "planContractReferences=%d" (commandReport.Plan |> Option.map (fun summary -> summary.ContractReferenceIds.Length) |> Option.defaultValue 0)
-printfn "planVerificationObligations=%d" (commandReport.Plan |> Option.map (fun summary -> summary.VerificationObligationIds.Length) |> Option.defaultValue 0)
-printfn "planAcceptedDeferrals=%d" (commandReport.Plan |> Option.map (fun summary -> summary.AcceptedDeferralCount) |> Option.defaultValue 0)
-printfn "planStaleDecisions=%d" (commandReport.Plan |> Option.map (fun summary -> summary.StaleDecisionCount) |> Option.defaultValue 0)
+printfn "tasks=%d" (commandReport.Tasks |> Option.map (fun summary -> summary.TaskIds.Length) |> Option.defaultValue 0)
+printfn "taskDependencies=%d" (commandReport.Tasks |> Option.map (fun summary -> summary.DependencyCount) |> Option.defaultValue 0)
+printfn "taskRequiredSkills=%d" (commandReport.Tasks |> Option.map (fun summary -> summary.RequiredSkillCount) |> Option.defaultValue 0)
+printfn "taskRequiredEvidence=%d" (commandReport.Tasks |> Option.map (fun summary -> summary.RequiredEvidenceCount) |> Option.defaultValue 0)
+printfn "taskBlockingFindings=%d" (commandReport.Tasks |> Option.map (fun summary -> summary.BlockingFindingCount) |> Option.defaultValue 0)
+printfn "taskAdvisory=%d" (commandReport.Tasks |> Option.map (fun summary -> summary.AdvisoryCount) |> Option.defaultValue 0)
 printfn "generatedViews=%d" commandReport.GeneratedViews.Length
 printfn "blockingDiagnostics=%d" (commandReport.Diagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = Diagnostics.DiagnosticSeverity.DiagnosticError) |> List.length)
+printfn "taskDiagnostics=%s" ([ missingPlanPrerequisite "work/009-tasks-command/plan.md" "Plan is required."; staleTask "work/009-tasks-command/tasks.yml" [ "T001" ]; doneTaskMissingEvidence "work/009-tasks-command/tasks.yml" [ "T001" ] ] |> List.map _.Id |> String.concat ",")
 printfn "nextAction=%s" (commandReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
 printfn "createdProjectConfig=%b" (File.Exists(Path.Combine(commandRoot, ".fsgg", "project.yml")))
-printfn "createdCharter=%b" (File.Exists(Path.Combine(commandRoot, "work", "008-plan-command", "charter.md")))
-printfn "createdSpecification=%b" (File.Exists(Path.Combine(commandRoot, "work", "008-plan-command", "spec.md")))
-printfn "createdClarification=%b" (File.Exists(Path.Combine(commandRoot, "work", "008-plan-command", "clarifications.md")))
-printfn "createdChecklist=%b" (File.Exists(Path.Combine(commandRoot, "work", "008-plan-command", "checklist.md")))
-printfn "createdPlan=%b" (File.Exists(Path.Combine(commandRoot, "work", "008-plan-command", "plan.md")))
+printfn "createdCharter=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "charter.md")))
+printfn "createdSpecification=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "spec.md")))
+printfn "createdClarification=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "clarifications.md")))
+printfn "createdChecklist=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "checklist.md")))
+printfn "createdPlan=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "plan.md")))
+printfn "createdTasks=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "tasks.yml")))

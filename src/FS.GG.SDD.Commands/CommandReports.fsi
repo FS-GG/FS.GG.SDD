@@ -59,6 +59,18 @@ module CommandReports =
     val unknownPlanSourceReference: path: string -> id: string -> Diagnostic
     val stalePlanDecision: path: string -> decisionIds: string list -> Diagnostic
     val unsafePlanDecisionChange: path: string -> id: string -> Diagnostic
+    val missingPlanPrerequisite: path: string -> message: string -> Diagnostic
+    val failedPlanPrerequisite: path: string -> message: string -> relatedIds: string list -> Diagnostic
+    val tasksIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
+    val malformedTasksArtifact: path: string -> message: string -> Diagnostic
+    val duplicateTaskId: path: string -> id: string -> Diagnostic
+    val unknownTaskSourceReference: path: string -> id: string -> Diagnostic
+    val unknownTaskDependency: path: string -> id: string -> Diagnostic
+    val taskDependencyCycle: path: string -> ids: string list -> Diagnostic
+    val staleTask: path: string -> taskIds: string list -> Diagnostic
+    val unsafeTaskStatusChange: path: string -> id: string -> Diagnostic
+    val doneTaskMissingEvidence: path: string -> ids: string list -> Diagnostic
+    val skippedTaskMissingRationale: path: string -> ids: string list -> Diagnostic
     val unsafeOverwrite: path: string -> Diagnostic
     val malformedGeneratedView: path: string -> Diagnostic
     val blockedGeneratedViewRefresh: path: string -> relatedIds: string list -> Diagnostic

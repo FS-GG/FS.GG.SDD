@@ -140,6 +140,27 @@ module CommandTypes =
           BlockingFindingCount: int
           AdvisoryCount: int }
 
+    type TasksSummary =
+        { WorkId: string
+          Stage: string
+          Status: string
+          SourceSpec: string
+          SourceClarifications: string
+          SourceChecklist: string
+          SourcePlan: string
+          TaskIds: string list
+          DependencyCount: int
+          RequiredSkillCount: int
+          RequiredEvidenceCount: int
+          PendingCount: int
+          InProgressCount: int
+          DoneCount: int
+          SkippedCount: int
+          StaleCount: int
+          AcceptedDeferralCount: int
+          BlockingFindingCount: int
+          AdvisoryCount: int }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -170,6 +191,7 @@ module CommandTypes =
           Clarification: ClarificationSummary option
           Checklist: ChecklistSummary option
           Plan: PlanSummary option
+          Tasks: TasksSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -199,6 +221,7 @@ module CommandTypes =
           Clarification: ClarificationSummary option
           Checklist: ChecklistSummary option
           Plan: PlanSummary option
+          Tasks: TasksSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 

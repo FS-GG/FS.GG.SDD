@@ -126,6 +126,66 @@ module TestSupport =
     let runPlan root workId title =
         planRequest root workId title |> runRequest
 
+    let tasksRequest root workId title =
+        { request Tasks root with
+            WorkId = Some workId
+            Title = Some title }
+
+    let runTasks root workId title =
+        tasksRequest root workId title |> runRequest
+
+    let initializePlanReadyProject root workId title =
+        initializeProject root
+        runCharter root workId title |> ignore
+        runSpecify root workId title |> ignore
+        runRequest { clarifyRequest root workId title with InputText = None } |> ignore
+        runChecklist root workId title |> ignore
+        runPlan root workId title |> ignore
+
+    let passingTaskEvidence =
+        """schemaVersion: 1
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    result: pass
+  - id: EV002
+    kind: verification
+    subject:
+      type: task
+      id: T002
+    result: pass
+  - id: EV003
+    kind: verification
+    subject:
+      type: task
+      id: T003
+    result: pass
+  - id: EV004
+    kind: verification
+    subject:
+      type: task
+      id: T004
+    result: pass
+  - id: EV005
+    kind: verification
+    subject:
+      type: task
+      id: T005
+    result: pass
+  - id: EV006
+    kind: verification
+    subject:
+      type: task
+      id: T006
+    result: pass
+"""
+
+    let writePassingTaskEvidenceFor root workId =
+        writeRelative root $"work/{workId}/evidence.yml" passingTaskEvidence
+
     let validSpec workId title =
         $"""---
 schemaVersion: 1
@@ -234,3 +294,13 @@ No blocking ambiguity remains.
                 failwith
                     $"Expected plan summary {decisionCount}/{contractCount}/{obligationCount}, got {summary.DecisionIds.Length}/{summary.ContractReferenceIds.Length}/{summary.VerificationObligationIds.Length}."
         | None -> failwith "Expected plan summary."
+
+    let assertTasksSummary (report: CommandReport) taskCount dependencyCount requiredEvidenceCount =
+        match report.Tasks with
+        | Some summary ->
+            if summary.TaskIds.Length <> taskCount
+               || summary.DependencyCount <> dependencyCount
+               || summary.RequiredEvidenceCount <> requiredEvidenceCount then
+                failwith
+                    $"Expected task summary {taskCount}/{dependencyCount}/{requiredEvidenceCount}, got {summary.TaskIds.Length}/{summary.DependencyCount}/{summary.RequiredEvidenceCount}."
+        | None -> failwith "Expected tasks summary."

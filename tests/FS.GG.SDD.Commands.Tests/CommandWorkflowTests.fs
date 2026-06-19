@@ -238,6 +238,27 @@ status: chartered
             | _ -> false)
 
     [<Fact>]
+    let ``tasks plans project lifecycle sources task evidence and generated-view reads before writes`` () =
+        let root = TestSupport.tempDirectory()
+        let request = { TestSupport.tasksRequest root "009-tasks-command" "Tasks Command" with DryRun = true }
+
+        let model, effects = init request
+
+        Assert.Empty(model.Diagnostics)
+        Assert.Contains(effects, fun effect -> effect = ReadFile ".fsgg/project.yml")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "work/009-tasks-command/spec.md")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "work/009-tasks-command/clarifications.md")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "work/009-tasks-command/checklist.md")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "work/009-tasks-command/plan.md")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "work/009-tasks-command/tasks.yml")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "work/009-tasks-command/evidence.yml")
+        Assert.Contains(effects, fun effect -> effect = ReadFile "readiness/009-tasks-command/work-model.json")
+        Assert.DoesNotContain(effects, fun effect ->
+            match effect with
+            | WriteFile _ -> true
+            | _ -> false)
+
+    [<Fact>]
     let ``plan requests project prerequisite plan and generated-view reads before writes`` () =
         let root = TestSupport.tempDirectory()
         let request = { TestSupport.planRequest root "008-plan-command" "Plan Command" with DryRun = true }

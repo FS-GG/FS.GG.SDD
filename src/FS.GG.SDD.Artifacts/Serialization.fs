@@ -96,6 +96,7 @@ module Serialization =
         writeStringList writer "dependencies" task.Dependencies
         writeStringList writer "requirements" task.Requirements
         writeStringList writer "decisions" task.Decisions
+        writeStringList writer "sourceIds" task.SourceIds
         writeStringList writer "requiredSkills" task.RequiredSkills
         writeStringList writer "requiredEvidence" task.RequiredEvidence
         writer.WriteString("source", task.Source)
