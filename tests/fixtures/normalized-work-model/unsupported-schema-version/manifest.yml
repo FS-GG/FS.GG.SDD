@@ -1,0 +1,9 @@
+schemaVersion: 1
+fixture:
+  id: unsupported-schema-version
+  workId: 002-normalized-work-model
+  purpose: Source uses a known unsupported schema version.
+expected:
+  blockingDiagnostics: true
+  diagnostics: [unsupportedSchemaVersion]
+  schemaStatus: unsupported

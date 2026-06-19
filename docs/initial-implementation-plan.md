@@ -211,6 +211,10 @@ Progress markers:
 - [x] Implement `001-sdd-artifact-model` as the first packable SDD artifact
   model library with fixtures, diagnostics, deterministic JSON, optional
   Governance boundary contracts, and readiness evidence.
+- [x] Implement `002-normalized-work-model` by extending the artifact model
+  library with pure normalized work-model generation, generated-view currency
+  checks, schema migration posture, diagnostics, fixtures, deterministic JSON,
+  and readiness evidence.
 
 ### Phase 1: SDD Artifact Model
 
@@ -299,18 +303,22 @@ Owner: `FS.GG.SDD`.
 Purpose: turn authored lifecycle artifacts into the single machine-readable SDD
 contract consumed by humans, agents, CI, and optional Governance tooling.
 
-- [ ] Parse `.fsgg` and `work/<id>` authored sources into a `WorkModel`.
-- [ ] Emit `readiness/<id>/work-model.json` with model version, source paths,
+- [x] Parse `.fsgg` and `work/<id>` authored sources into a `WorkModel`.
+- [x] Emit `readiness/<id>/work-model.json` with model version, source paths,
   source digests, schema versions, generator version, and diagnostics.
-- [ ] Guarantee byte-stable JSON for identical source trees.
-- [ ] Prefer structured graph data for execution when Markdown prose disagrees,
+- [x] Guarantee byte-stable JSON for identical source trees.
+- [x] Prefer structured graph data for execution when Markdown prose disagrees,
   keep prose visible, and emit a consistency diagnostic.
-- [ ] Emit `requirementNotTyped` when a Markdown requirement id is missing from
+- [x] Emit `requirementNotTyped` when a Markdown requirement id is missing from
   the normalized model.
-- [ ] Emit `workModelInconsistent` when structured tasks reference unknown
+- [x] Emit `workModelInconsistent` when structured tasks reference unknown
   requirements or decisions.
-- [ ] Report stale or missing generated work models.
-- [ ] Document schema migration behavior and compatibility rules.
+- [x] Report stale or missing generated work models.
+- [x] Document schema migration behavior and compatibility rules.
+
+Status: complete on 2026-06-19. The implementation extends
+`src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj`; verification evidence is
+recorded in `specs/002-normalized-work-model/readiness/`.
 
 Exit criteria:
 

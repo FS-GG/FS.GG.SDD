@@ -103,6 +103,11 @@ module LifecycleArtifacts =
           Source: ArtifactRef
           SourceLocation: SourceLocation option }
 
+    type MarkdownRequirementMention =
+        { Id: string
+          Source: ArtifactRef
+          SourceLocation: SourceLocation option }
+
     type LifecycleArtifactContract =
         { Artifact: ArtifactRef
           Purpose: string
@@ -122,6 +127,7 @@ module LifecycleArtifacts =
           Decisions: Decision list
           Tasks: WorkTask list
           Evidence: EvidenceDeclaration list
+          MarkdownRequirementMentions: MarkdownRequirementMention list
           Sources: SourceIdentity list
           ExistingGeneratedViews: FileSnapshot list
           GovernanceBoundaries: ArtifactRef list

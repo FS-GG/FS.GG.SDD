@@ -1,0 +1,351 @@
+{
+  "schemaVersion": 1,
+  "modelVersion": "1.0.0",
+  "workId": "002-normalized-work-model",
+  "project": {
+    "id": "fs-gg-sdd",
+    "defaultWorkRoot": "work"
+  },
+  "sources": [
+    {
+      "path": ".fsgg/agents.yml",
+      "kind": "agentsConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+      }
+    },
+    {
+      "path": ".fsgg/project.yml",
+      "kind": "projectConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "a429bd94641b83394d21467fdb060e8a00d205030e9cc155c1d879af3035cdb4"
+      }
+    },
+    {
+      "path": ".fsgg/sdd.yml",
+      "kind": "sddConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "b34f2b1d6ab8d881a66e93d2b8d08a721d0926d17820d970d80b4758cf01c8b5"
+      }
+    },
+    {
+      "path": "work/002-normalized-work-model/evidence.yml",
+      "kind": "evidence",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "60f0e76cf18ac362c46cba5d16377a5308850a0d5ec0ec065e8247d6e57404e7"
+      }
+    },
+    {
+      "path": "work/002-normalized-work-model/spec.md",
+      "kind": "spec",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "c232baa061dbfe96cc7cdd5eaa23685ded95a9eb17a35eb2978f728e9fb5353a"
+      }
+    },
+    {
+      "path": "work/002-normalized-work-model/tasks.yml",
+      "kind": "tasks",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "a7e1d943a8631f93c2a86d099651dc0722bb05121391d0b959bce7bb128be1d7"
+      }
+    }
+  ],
+  "workItem": {
+    "id": "002-normalized-work-model",
+    "title": "Normalized Work Model",
+    "stage": "plan",
+    "changeTier": "tier1",
+    "status": "draft"
+  },
+  "requirements": [
+    {
+      "id": "FR-001",
+      "title": "Normalize authored lifecycle work.",
+      "text": "Normalize authored lifecycle work.",
+      "acceptanceCriteria": [],
+      "priority": null,
+      "source": "work/002-normalized-work-model/spec.md",
+      "sourceLocation": {
+        "line": 16,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T001"
+      ],
+      "linkedEvidenceIds": []
+    },
+    {
+      "id": "FR-002",
+      "title": "Diagnose conflicting lifecycle data.",
+      "text": "Diagnose conflicting lifecycle data.",
+      "acceptanceCriteria": [],
+      "priority": null,
+      "source": "work/002-normalized-work-model/spec.md",
+      "sourceLocation": {
+        "line": 17,
+        "column": 1
+      },
+      "linkedTaskIds": [],
+      "linkedEvidenceIds": []
+    },
+    {
+      "id": "FR-003",
+      "title": "Check generated work-model currency.",
+      "text": "Check generated work-model currency.",
+      "acceptanceCriteria": [],
+      "priority": null,
+      "source": "work/002-normalized-work-model/spec.md",
+      "sourceLocation": {
+        "line": 18,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T002"
+      ],
+      "linkedEvidenceIds": []
+    }
+  ],
+  "decisions": [
+    {
+      "id": "DEC-001",
+      "title": "Normalize from FileSnapshot values and return generated output.",
+      "decision": "Normalize from FileSnapshot values and return generated output.",
+      "source": "work/002-normalized-work-model/spec.md",
+      "sourceLocation": {
+        "line": 22,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T001",
+        "T002"
+      ]
+    },
+    {
+      "id": "DEC-002",
+      "title": "Structured graph data remains execution authority.",
+      "decision": "Structured graph data remains execution authority.",
+      "source": "work/002-normalized-work-model/spec.md",
+      "sourceLocation": {
+        "line": 23,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T002"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "Add normalized work-model generation API",
+      "status": "pending",
+      "owner": "codex",
+      "dependencies": [],
+      "requirements": [
+        "FR-001"
+      ],
+      "decisions": [
+        "DEC-001"
+      ],
+      "requiredSkills": [
+        "fs-gg-sdd-project"
+      ],
+      "requiredEvidence": [
+        "EV001"
+      ],
+      "source": "work/002-normalized-work-model/tasks.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "T002",
+      "title": "Add generated model currency checks",
+      "status": "pending",
+      "owner": "codex",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [
+        "FR-003"
+      ],
+      "decisions": [
+        "DEC-001",
+        "DEC-002"
+      ],
+      "requiredSkills": [
+        "fs-gg-sdd-project"
+      ],
+      "requiredEvidence": [
+        "EV002"
+      ],
+      "source": "work/002-normalized-work-model/tasks.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    }
+  ],
+  "evidence": [
+    {
+      "id": "EV001",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T001",
+      "taskRefs": [
+        "T001"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Artifacts.Tests/NormalizedWorkModelTests.fs"
+      ],
+      "result": "pending",
+      "synthetic": false,
+      "rationale": null,
+      "source": "work/002-normalized-work-model/evidence.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV002",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T002",
+      "taskRefs": [
+        "T002"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Artifacts.Tests/GeneratedModelCurrencyTests.fs"
+      ],
+      "result": "pending",
+      "synthetic": false,
+      "rationale": null,
+      "source": "work/002-normalized-work-model/evidence.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    }
+  ],
+  "generatedViews": [
+    {
+      "path": "readiness/002-normalized-work-model/work-model.json",
+      "kind": "workModel",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "0.2.0"
+      },
+      "sources": [
+        {
+          "path": ".fsgg/agents.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/project.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "a429bd94641b83394d21467fdb060e8a00d205030e9cc155c1d879af3035cdb4"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/sdd.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "b34f2b1d6ab8d881a66e93d2b8d08a721d0926d17820d970d80b4758cf01c8b5"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/002-normalized-work-model/evidence.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "60f0e76cf18ac362c46cba5d16377a5308850a0d5ec0ec065e8247d6e57404e7"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/002-normalized-work-model/spec.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "c232baa061dbfe96cc7cdd5eaa23685ded95a9eb17a35eb2978f728e9fb5353a"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/002-normalized-work-model/tasks.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "a7e1d943a8631f93c2a86d099651dc0722bb05121391d0b959bce7bb128be1d7"
+          },
+          "schemaVersion": 1
+        }
+      ],
+      "outputDigest": {
+        "algorithm": "sha256",
+        "value": "80e9dbdb3b9e71e6e573a5eb753ea6142b5cf1b6727e1b14e55dd6735ff28880"
+      },
+      "currency": "current"
+    }
+  ],
+  "diagnostics": [],
+  "governanceBoundaries": [
+    {
+      "path": ".fsgg/capabilities.yml",
+      "owner": "governance",
+      "requiredBySdd": false,
+      "relationship": "optionalCompatibilityBoundary"
+    },
+    {
+      "path": ".fsgg/policy.yml",
+      "owner": "governance",
+      "requiredBySdd": false,
+      "relationship": "optionalCompatibilityBoundary"
+    },
+    {
+      "path": ".fsgg/tooling.yml",
+      "owner": "governance",
+      "requiredBySdd": false,
+      "relationship": "optionalCompatibilityBoundary"
+    }
+  ]
+}

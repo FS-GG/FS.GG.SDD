@@ -1,0 +1,18 @@
+schemaVersion: 1
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    artifacts: [tests/FS.GG.SDD.Artifacts.Tests/NormalizedWorkModelTests.fs]
+    result: pending
+    synthetic: false
+  - id: EV002
+    kind: verification
+    subject:
+      type: task
+      id: T002
+    artifacts: [tests/FS.GG.SDD.Artifacts.Tests/GeneratedModelCurrencyTests.fs]
+    result: pending
+    synthetic: false

@@ -1,0 +1,8 @@
+schemaVersion: 1
+fixture:
+  id: duplicate-logical-id
+  workId: 002-normalized-work-model
+  purpose: Logical ids are duplicated across structured entries.
+expected:
+  blockingDiagnostics: true
+  diagnostics: [duplicateIdentifier]

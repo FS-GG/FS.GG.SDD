@@ -1,0 +1,8 @@
+schemaVersion: 1
+fixture:
+  id: missing-generated-model
+  workId: 002-normalized-work-model
+  purpose: Authored sources exist but generated work model is absent.
+expected:
+  blockingDiagnostics: true
+  diagnostics: [missingGeneratedWorkModel]

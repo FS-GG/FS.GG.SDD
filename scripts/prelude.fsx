@@ -17,7 +17,7 @@ let repoRoot =
     findRoot (DirectoryInfo(Environment.CurrentDirectory))
 
 let fixtureRoot =
-    Path.Combine(repoRoot, "tests", "fixtures", "sdd-artifact-model", "valid-work-item")
+    Path.Combine(repoRoot, "tests", "fixtures", "normalized-work-model", "valid-work-item")
 
 let snapshots =
     Directory.EnumerateFiles(fixtureRoot, "*", SearchOption.AllDirectories)
@@ -28,19 +28,28 @@ let snapshots =
     |> Seq.toList
 
 let workId =
-    Identifiers.createWorkId "001-sdd-artifact-model"
+    Identifiers.createWorkId "002-normalized-work-model"
     |> Result.defaultWith failwith
 
 printfn "workId=%s" (Identifiers.workIdValue workId)
 
-let model =
-    Serialization.normalizeSnapshotsToWorkModel snapshots "001-sdd-artifact-model"
+let request =
+    ({ WorkId = Identifiers.workIdValue workId
+       Snapshots = snapshots
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion()
+       ExpectedOutputPath = None }
+    : WorkModel.WorkModelGenerationRequest)
+
+let result =
+    Serialization.generateWorkModel request
+
+let model = result.Model
 
 printfn "modelVersion=%s" model.ModelVersion
 printfn "blockingDiagnostics=%d" (WorkModel.blockingDiagnostics model |> List.length)
 printfn "requirements=%s" (model.Requirements |> List.map _.Id |> String.concat ",")
 printfn "tasks=%s" (model.Tasks |> List.map _.Id |> String.concat ",")
 printfn "governanceBoundaries=%s" (model.GovernanceBoundaries |> List.map _.Path |> String.concat ",")
-
-let json = Serialization.serializeWorkModel model
-printfn "jsonBytes=%d" (Text.Encoding.UTF8.GetByteCount json)
+printfn "outputPath=%s" result.OutputPath
+printfn "outputDigest=%s:%s" result.OutputDigest.Algorithm result.OutputDigest.Value
+printfn "jsonBytes=%d" (Text.Encoding.UTF8.GetByteCount result.Json)

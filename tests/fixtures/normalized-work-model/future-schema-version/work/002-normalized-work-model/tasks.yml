@@ -1,0 +1,11 @@
+schemaVersion: 1
+tasks:
+  - id: T001
+    title: Add normalized work-model generation API
+    status: pending
+    owner: codex
+    dependencies: []
+    requirements: [FR-001]
+    decisions: [DEC-001]
+    requiredSkills: [fs-gg-sdd-project]
+    requiredEvidence: [EV001]

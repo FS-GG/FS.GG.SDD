@@ -1,0 +1,8 @@
+schemaVersion: 1
+fixture:
+  id: stale-generator-version
+  workId: 002-normalized-work-model
+  purpose: Generated view records an older generator version.
+expected:
+  blockingDiagnostics: true
+  diagnostics: [staleGeneratedView]

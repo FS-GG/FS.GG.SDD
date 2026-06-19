@@ -1,0 +1,12 @@
+Guidance review
+===============
+
+Result: PASS
+
+No workflow behavior changed for agent guidance generation in this feature.
+AGENTS.md and CLAUDE.md remain synchronized and point at the active
+specs/002-normalized-work-model/plan.md through the managed Spec Kit section.
+
+The implementation adds normalized work-model library APIs and tests only. It
+does not add generated Claude/Codex command output or change agent-command
+semantics.

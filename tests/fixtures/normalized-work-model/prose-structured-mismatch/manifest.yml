@@ -1,0 +1,8 @@
+schemaVersion: 1
+fixture:
+  id: prose-structured-mismatch
+  workId: 002-normalized-work-model
+  purpose: Prose status conflicts with structured status.
+expected:
+  blockingDiagnostics: false
+  diagnostics: [proseStructuredMismatch]

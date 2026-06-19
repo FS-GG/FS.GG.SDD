@@ -1,0 +1,9 @@
+schemaVersion: 1
+fixture:
+  id: future-schema-version
+  workId: 002-normalized-work-model
+  purpose: Source uses a schema version newer than this generator understands.
+expected:
+  blockingDiagnostics: true
+  diagnostics: [futureSchemaVersion]
+  schemaStatus: future

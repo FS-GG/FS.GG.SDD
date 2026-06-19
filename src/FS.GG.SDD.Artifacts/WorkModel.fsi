@@ -13,6 +13,8 @@ module WorkModel =
           Kind: string
           Owner: string
           SchemaVersion: int
+          RawSchemaVersion: string option
+          SchemaStatus: string
           SourceDigest: SourceDigest }
 
     type WorkItemSummary =
@@ -22,8 +24,24 @@ module WorkModel =
           ChangeTier: string
           Status: string }
 
-    type RequirementEntry = { Id: string; Title: string; Text: string; Source: string }
-    type DecisionEntry = { Id: string; Title: string; Decision: string; Source: string }
+    type RequirementEntry =
+        { Id: string
+          Title: string
+          Text: string
+          AcceptanceCriteria: string list
+          Priority: string option
+          Source: string
+          SourceLocation: SourceLocation option
+          LinkedTaskIds: string list
+          LinkedEvidenceIds: string list }
+
+    type DecisionEntry =
+        { Id: string
+          Title: string
+          Decision: string
+          Source: string
+          SourceLocation: SourceLocation option
+          LinkedTaskIds: string list }
 
     type TaskEntry =
         { Id: string
@@ -35,7 +53,8 @@ module WorkModel =
           Decisions: string list
           RequiredSkills: string list
           RequiredEvidence: string list
-          Source: string }
+          Source: string
+          SourceLocation: SourceLocation option }
 
     type EvidenceEntry =
         { Id: string
@@ -47,7 +66,9 @@ module WorkModel =
           ArtifactRefs: string list
           Result: string
           Synthetic: bool
-          Source: string }
+          Rationale: string option
+          Source: string
+          SourceLocation: SourceLocation option }
 
     type GovernanceBoundaryEntry =
         { Path: string
@@ -69,6 +90,20 @@ module WorkModel =
           GeneratedViews: GenerationManifest list
           Diagnostics: Diagnostic list
           GovernanceBoundaries: GovernanceBoundaryEntry list }
+
+    type WorkModelGenerationRequest =
+        { WorkId: string
+          Snapshots: FileSnapshot list
+          GeneratorVersion: GeneratorVersion
+          ExpectedOutputPath: string option }
+
+    type WorkModelGenerationResult =
+        { WorkId: string
+          OutputPath: string
+          Model: WorkModel
+          Json: string
+          OutputDigest: OutputDigest
+          Diagnostics: Diagnostic list }
 
     val fromParsedWorkItem: parsed: ParsedWorkItem -> WorkModel
     val blockingDiagnostics: model: WorkModel -> Diagnostic list

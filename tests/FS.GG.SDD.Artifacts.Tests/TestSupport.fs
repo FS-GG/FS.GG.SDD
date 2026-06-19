@@ -19,11 +19,21 @@ module TestSupport =
     let fixtureDirectory name =
         Path.Combine(repoRoot, "tests", "fixtures", "sdd-artifact-model", name)
 
+    let normalizedFixtureDirectory name =
+        Path.Combine(repoRoot, "tests", "fixtures", "normalized-work-model", name)
+
     let relativePath root path =
         Path.GetRelativePath(root, path).Replace('\\', '/')
 
     let snapshots name =
         let root = fixtureDirectory name
+
+        Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+        |> Seq.map (fun path -> ({ Path = relativePath root path; Text = File.ReadAllText path } : LifecycleArtifacts.FileSnapshot))
+        |> Seq.toList
+
+    let normalizedSnapshots name =
+        let root = normalizedFixtureDirectory name
 
         Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
         |> Seq.map (fun path -> ({ Path = relativePath root path; Text = File.ReadAllText path } : LifecycleArtifacts.FileSnapshot))
@@ -35,6 +45,22 @@ module TestSupport =
 
     let model name =
         Serialization.normalizeSnapshotsToWorkModel (snapshots name) "001-sdd-artifact-model"
+
+    let normalizedModel name =
+        Serialization.normalizeSnapshotsToWorkModel (normalizedSnapshots name) "002-normalized-work-model"
+
+    let generationRequest name =
+        ({ WorkId = "002-normalized-work-model"
+           Snapshots = normalizedSnapshots name
+           GeneratorVersion = SchemaVersion.currentGeneratorVersion()
+           ExpectedOutputPath = None }
+        : WorkModel.WorkModelGenerationRequest)
+
+    let generationResult name =
+        Serialization.generateWorkModel (generationRequest name)
+
+    let currencyDiagnostics name =
+        Serialization.checkGeneratedWorkModelCurrency (normalizedSnapshots name) "002-normalized-work-model" (SchemaVersion.currentGeneratorVersion())
 
     let assertDiagnostic id (model: WorkModel.WorkModel) =
         let seen = String.Join(", ", model.Diagnostics |> List.map (fun diagnostic -> diagnostic.Id))

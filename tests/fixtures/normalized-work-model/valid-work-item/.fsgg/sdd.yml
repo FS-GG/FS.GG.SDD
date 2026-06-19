@@ -1,0 +1,21 @@
+schemaVersion: 1
+lifecycle:
+  stages:
+    - charter
+    - specify
+    - clarify
+    - checklist
+    - plan
+    - tasks
+    - analyze
+    - implement
+    - evidence
+    - verify
+    - ship
+artifacts:
+  workRoot: work
+  readinessRoot: readiness
+generatedViews:
+  requireSourceDigests: true
+  requireGeneratorVersion: true
+  staleBehavior: diagnostic

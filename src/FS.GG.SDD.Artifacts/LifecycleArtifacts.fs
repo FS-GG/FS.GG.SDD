@@ -107,6 +107,11 @@ module LifecycleArtifacts =
           Source: ArtifactRef
           SourceLocation: SourceLocation option }
 
+    type MarkdownRequirementMention =
+        { Id: string
+          Source: ArtifactRef
+          SourceLocation: SourceLocation option }
+
     type LifecycleArtifactContract =
         { Artifact: ArtifactRef
           Purpose: string
@@ -126,6 +131,7 @@ module LifecycleArtifacts =
           Decisions: Decision list
           Tasks: WorkTask list
           Evidence: EvidenceDeclaration list
+          MarkdownRequirementMentions: MarkdownRequirementMention list
           Sources: SourceIdentity list
           ExistingGeneratedViews: FileSnapshot list
           GovernanceBoundaries: ArtifactRef list
@@ -217,16 +223,25 @@ module LifecycleArtifacts =
         | Some value when value.Equals("false", StringComparison.OrdinalIgnoreCase) -> false
         | _ -> defaultValue
 
-    let schemaVersion artifact root =
-        match tryScalarAt [ "schemaVersion" ] root with
-        | None ->
-            None, [ Diagnostics.malformedSchemaVersion artifact $"Artifact '{artifact.Path}' is missing schemaVersion." ]
-        | Some raw ->
-            match SchemaVersion.parse raw with
-            | Error message -> None, [ Diagnostics.malformedSchemaVersion artifact message ]
-            | Ok version when not (SchemaVersion.isSupported version) ->
-                Some version, [ Diagnostics.unsupportedSchemaVersion artifact raw ]
-            | Ok version -> Some version, []
+    let schemaVersion (artifact: ArtifactRef) (root: YamlNode) =
+        let raw = tryScalarAt [ "schemaVersion" ] root
+        let compatibility = SchemaVersion.classifyRaw raw
+
+        match compatibility.Status with
+        | SchemaCompatibilityStatus.Current
+        | SchemaCompatibilityStatus.Deprecated -> compatibility.Version, []
+        | SchemaCompatibilityStatus.Malformed ->
+            let message =
+                if String.IsNullOrWhiteSpace compatibility.RawValue then
+                    $"Artifact '{artifact.Path}' is missing schemaVersion."
+                else
+                    defaultArg compatibility.MigrationHint "Schema version is malformed."
+
+            None, [ Diagnostics.malformedSchemaVersion artifact message ]
+        | SchemaCompatibilityStatus.Unsupported ->
+            compatibility.Version, [ Diagnostics.unsupportedSchemaVersion artifact compatibility.RawValue ]
+        | SchemaCompatibilityStatus.Future ->
+            compatibility.Version, [ Diagnostics.futureSchemaVersion artifact compatibility.RawValue ]
 
     let requiredScalar artifact label keys root =
         match tryScalarAt keys root with
@@ -271,7 +286,7 @@ module LifecycleArtifacts =
           row "readiness/<id>/summary.md" ArtifactKind.GeneratedView "Human-readable readiness summary." "Rendered projection over structured readiness facts." [ "staleGeneratedView" ]
           row "readiness/<id>/agent-commands/" ArtifactKind.GeneratedView "Generated Claude/Codex command guidance." "Projection from lifecycle model, never authority." [ "staleGeneratedView" ] ]
 
-    let parseProjectConfig snapshot =
+    let parseProjectConfig (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.ProjectConfig
 
         match parseYaml snapshot.Text with
@@ -303,7 +318,7 @@ module LifecycleArtifacts =
                       GovernanceToolingPath = tryScalarAt [ "governance"; "tooling" ] root }
             | _ -> Error(versionDiagnostics @ fieldDiagnostics)
 
-    let parseSddLifecyclePolicy snapshot =
+    let parseSddLifecyclePolicy (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.SddConfig
 
         match parseYaml snapshot.Text with
@@ -329,7 +344,7 @@ module LifecycleArtifacts =
                       StaleBehavior = tryScalarAt [ "generatedViews"; "staleBehavior" ] root |> Option.defaultValue "diagnostic" }
             | _ -> Error(versionDiagnostics @ stageDiagnostics)
 
-    let parseAgentGuidanceConfig snapshot =
+    let parseAgentGuidanceConfig (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.AgentsConfig
 
         match parseYaml snapshot.Text with
@@ -441,6 +456,22 @@ module LifecycleArtifacts =
                 None)
         |> Array.toList
 
+    let parseMarkdownRequirementMentions snapshot =
+        let artifact = sourceArtifact snapshot.Path ArtifactKind.Spec
+        let text = (if isNull snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
+
+        text.Split('\n')
+        |> Array.mapi (fun index line -> index + 1, line)
+        |> Array.collect (fun (lineNumber, line) ->
+            Regex.Matches(line, @"\b(?:FR|AC)-\d{3,}\b", RegexOptions.IgnoreCase)
+            |> Seq.cast<Match>
+            |> Seq.map (fun m ->
+                { Id = m.Value.ToUpperInvariant()
+                  Source = artifact
+                  SourceLocation = sourceLocation lineNumber })
+            |> Seq.toArray)
+        |> Array.toList
+
     let parseDecisions snapshot =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Spec
         let text = (if isNull snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
@@ -484,7 +515,7 @@ module LifecycleArtifacts =
     let parseEvidenceIds values =
         values |> List.choose (Identifiers.createEvidenceId >> Result.toOption)
 
-    let parseTasks snapshot =
+    let parseTasks (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Tasks
 
         match parseYaml snapshot.Text with
@@ -535,7 +566,7 @@ module LifecycleArtifacts =
         values
         |> List.map (fun path -> artifact path (ArtifactKind.Other "evidenceArtifact") ArtifactOwner.Sdd false)
 
-    let parseEvidence snapshot =
+    let parseEvidence (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Evidence
 
         match parseYaml snapshot.Text with
@@ -595,9 +626,40 @@ module LifecycleArtifacts =
           $"work/{workId}/tasks.yml", ArtifactKind.Tasks
           $"work/{workId}/evidence.yml", ArtifactKind.Evidence ]
 
+    let rawSchemaVersion (snapshot: FileSnapshot) kind =
+        match kind with
+        | ArtifactKind.Spec ->
+            snapshot
+            |> frontMatter
+            |> Option.bind (fun (yaml, _) -> parseYaml yaml)
+            |> Option.bind (tryScalarAt [ "schemaVersion" ])
+        | _ ->
+            if snapshot.Path.EndsWith(".md", StringComparison.OrdinalIgnoreCase) then
+                snapshot
+                |> frontMatter
+                |> Option.bind (fun (yaml, _) -> parseYaml yaml)
+                |> Option.bind (tryScalarAt [ "schemaVersion" ])
+            else
+                try
+                    snapshot.Text
+                    |> parseYaml
+                    |> Option.bind (tryScalarAt [ "schemaVersion" ])
+                with _ ->
+                    None
+
     let sourceIdentity snapshot kind =
         let source = sourceArtifact snapshot.Path kind
-        { Artifact = source; Digest = SchemaVersion.sha256Text snapshot.Text }
+        let compatibility = rawSchemaVersion snapshot kind |> SchemaVersion.classifyRaw
+
+        { Artifact = source
+          Digest = SchemaVersion.sha256Text snapshot.Text
+          SchemaVersion = compatibility.Version
+          SchemaStatus = compatibility.Status
+          RawSchemaVersion =
+            if String.IsNullOrWhiteSpace compatibility.RawValue then
+                None
+            else
+                Some compatibility.RawValue }
 
     let defaultMetadata workId =
         let parsed =
@@ -649,6 +711,7 @@ module LifecycleArtifacts =
 
         let specSnapshot = Map.tryFind $"work/{workId}/spec.md" byPath
         let requirements = specSnapshot |> Option.map parseRequirements |> Option.defaultValue []
+        let requirementMentions = specSnapshot |> Option.map parseMarkdownRequirementMentions |> Option.defaultValue []
         let decisions = specSnapshot |> Option.map parseDecisions |> Option.defaultValue []
 
         let tasks, taskDiagnostics =
@@ -671,7 +734,9 @@ module LifecycleArtifacts =
 
         let sources =
             normalized
-            |> List.filter (fun snapshot -> not (snapshot.Path.EndsWith(".json", StringComparison.OrdinalIgnoreCase)))
+            |> List.filter (fun snapshot ->
+                not (snapshot.Path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                && not (snapshot.Path.EndsWith("manifest.yml", StringComparison.OrdinalIgnoreCase)))
             |> List.map (fun snapshot -> sourceIdentity snapshot (kindFor snapshot.Path))
             |> List.sortBy (fun source -> source.Artifact.Path)
 
@@ -692,6 +757,18 @@ module LifecycleArtifacts =
             | Ok value -> value
             | Error _ -> metadata.WorkId
 
+        let selectedWorkItemDiagnostics =
+            if metadata.WorkId.Value = parsedWorkId.Value then
+                []
+            else
+                let specArtifact = sourceArtifact $"work/{workId}/spec.md" ArtifactKind.Spec
+
+                [ Diagnostics.workModelInconsistent
+                      specArtifact
+                      $"Selected work id '{parsedWorkId.Value}' does not match spec front matter workId '{metadata.WorkId.Value}'."
+                      "Move the source under the matching work id or update spec front matter to the selected work id."
+                      [ parsedWorkId.Value; metadata.WorkId.Value ] ]
+
         { WorkId = parsedWorkId
           Project = project
           SddPolicy = sdd
@@ -701,6 +778,7 @@ module LifecycleArtifacts =
           Decisions = decisions
           Tasks = tasks
           Evidence = evidence
+          MarkdownRequirementMentions = requirementMentions
           Sources = sources
           ExistingGeneratedViews = generatedViews
           GovernanceBoundaries = governanceBoundaries
@@ -710,5 +788,6 @@ module LifecycleArtifacts =
             @ sddDiagnostics
             @ agentDiagnostics
             @ metadataDiagnostics
+            @ selectedWorkItemDiagnostics
             @ taskDiagnostics
             @ evidenceDiagnostics }

@@ -17,6 +17,8 @@ module WorkModel =
           Kind: string
           Owner: string
           SchemaVersion: int
+          RawSchemaVersion: string option
+          SchemaStatus: string
           SourceDigest: SourceDigest }
 
     type WorkItemSummary =
@@ -26,8 +28,24 @@ module WorkModel =
           ChangeTier: string
           Status: string }
 
-    type RequirementEntry = { Id: string; Title: string; Text: string; Source: string }
-    type DecisionEntry = { Id: string; Title: string; Decision: string; Source: string }
+    type RequirementEntry =
+        { Id: string
+          Title: string
+          Text: string
+          AcceptanceCriteria: string list
+          Priority: string option
+          Source: string
+          SourceLocation: SourceLocation option
+          LinkedTaskIds: string list
+          LinkedEvidenceIds: string list }
+
+    type DecisionEntry =
+        { Id: string
+          Title: string
+          Decision: string
+          Source: string
+          SourceLocation: SourceLocation option
+          LinkedTaskIds: string list }
 
     type TaskEntry =
         { Id: string
@@ -39,7 +57,8 @@ module WorkModel =
           Decisions: string list
           RequiredSkills: string list
           RequiredEvidence: string list
-          Source: string }
+          Source: string
+          SourceLocation: SourceLocation option }
 
     type EvidenceEntry =
         { Id: string
@@ -51,7 +70,9 @@ module WorkModel =
           ArtifactRefs: string list
           Result: string
           Synthetic: bool
-          Source: string }
+          Rationale: string option
+          Source: string
+          SourceLocation: SourceLocation option }
 
     type GovernanceBoundaryEntry =
         { Path: string
@@ -74,6 +95,20 @@ module WorkModel =
           Diagnostics: Diagnostic list
           GovernanceBoundaries: GovernanceBoundaryEntry list }
 
+    type WorkModelGenerationRequest =
+        { WorkId: string
+          Snapshots: FileSnapshot list
+          GeneratorVersion: GeneratorVersion
+          ExpectedOutputPath: string option }
+
+    type WorkModelGenerationResult =
+        { WorkId: string
+          OutputPath: string
+          Model: WorkModel
+          Json: string
+          OutputDigest: OutputDigest
+          Diagnostics: Diagnostic list }
+
     let taskStatusValue status =
         match status with
         | Pending -> "pending"
@@ -95,7 +130,9 @@ module WorkModel =
             { Path = source.Artifact.Path
               Kind = ArtifactRef.kindValue source.Artifact.Kind
               Owner = ArtifactRef.ownerValue source.Artifact.Owner
-              SchemaVersion = 1
+              SchemaVersion = source.SchemaVersion |> Option.map (fun version -> version.Major) |> Option.defaultValue 0
+              RawSchemaVersion = source.RawSchemaVersion
+              SchemaStatus = SchemaVersion.statusValue source.SchemaStatus
               SourceDigest = source.Digest })
         |> List.sortBy (fun source -> source.Path)
 
@@ -115,7 +152,8 @@ module WorkModel =
                     None)
 
     let unknown id artifact correction =
-        Diagnostics.unknownReference artifact id correction
+        [ Diagnostics.unknownReference artifact id correction
+          Diagnostics.workModelInconsistent artifact $"Reference '{id}' does not resolve." correction [ id ] ]
 
     let referenceDiagnostics (parsed: ParsedWorkItem) =
         let requirementIds = parsed.Requirements |> List.map (fun requirement -> requirement.Id.Value) |> Set.ofList
@@ -129,17 +167,17 @@ module WorkModel =
                 let artifact = task.Source
 
                 [ task.Requirements
-                  |> List.choose (fun id ->
-                      if Set.contains id.Value requirementIds then None else Some(unknown id.Value artifact "Declare the requirement in spec.md or update the task reference."))
+                  |> List.collect (fun id ->
+                      if Set.contains id.Value requirementIds then [] else unknown id.Value artifact "Declare the requirement in spec.md or update the task reference.")
                   task.Decisions
-                  |> List.choose (fun id ->
-                      if Set.contains id.Value decisionIds then None else Some(unknown id.Value artifact "Declare the decision in plan or clarification artifacts, or update the task reference."))
+                  |> List.collect (fun id ->
+                      if Set.contains id.Value decisionIds then [] else unknown id.Value artifact "Declare the decision in plan or clarification artifacts, or update the task reference.")
                   task.Dependencies
-                  |> List.choose (fun id ->
-                      if Set.contains id.Value taskIds then None else Some(unknown id.Value artifact "Declare the dependency task or remove the dependency."))
+                  |> List.collect (fun id ->
+                      if Set.contains id.Value taskIds then [] else unknown id.Value artifact "Declare the dependency task or remove the dependency.")
                   task.RequiredEvidence
-                  |> List.choose (fun id ->
-                      if Set.contains id.Value evidenceIds then None else Some(unknown id.Value artifact "Declare the evidence id in evidence.yml or update requiredEvidence.")) ]
+                  |> List.collect (fun id ->
+                      if Set.contains id.Value evidenceIds then [] else unknown id.Value artifact "Declare the evidence id in evidence.yml or update requiredEvidence.") ]
                 |> List.concat)
 
         let evidenceDiagnostics =
@@ -148,11 +186,11 @@ module WorkModel =
                 let artifact = evidence.Source
 
                 [ evidence.TaskRefs
-                  |> List.choose (fun id ->
-                      if Set.contains id.Value taskIds then None else Some(unknown id.Value artifact "Declare the task in tasks.yml or update the evidence subject."))
+                  |> List.collect (fun id ->
+                      if Set.contains id.Value taskIds then [] else unknown id.Value artifact "Declare the task in tasks.yml or update the evidence subject.")
                   evidence.RequirementRefs
-                  |> List.choose (fun id ->
-                      if Set.contains id.Value requirementIds then None else Some(unknown id.Value artifact "Declare the requirement in spec.md or update the evidence reference.")) ]
+                  |> List.collect (fun id ->
+                      if Set.contains id.Value requirementIds then [] else unknown id.Value artifact "Declare the requirement in spec.md or update the evidence reference.") ]
                 |> List.concat)
 
         taskDiagnostics @ evidenceDiagnostics
@@ -214,7 +252,7 @@ module WorkModel =
                                 if view.TryGetProperty("generator", &generator) then
                                     let mutable version = Unchecked.defaultof<JsonElement>
                                     generator.TryGetProperty("version", &version)
-                                    && version.GetString() <> "0.1.0"
+                                    && version.GetString() <> (SchemaVersion.currentGeneratorVersion()).Version
                                 else
                                     false
 
@@ -290,6 +328,30 @@ module WorkModel =
                         [ task.Id.Value ])
             | _ -> None)
 
+    let requirementTypingDiagnostics (parsed: ParsedWorkItem) =
+        let typed =
+            parsed.Requirements
+            |> List.collect (fun requirement -> requirement.Id.Value :: requirement.AcceptanceCriteria)
+            |> List.map (fun id -> id.ToUpperInvariant())
+            |> Set.ofList
+
+        parsed.MarkdownRequirementMentions
+        |> List.filter (fun mention -> not (Set.contains mention.Id typed))
+        |> List.distinctBy (fun mention -> mention.Id)
+        |> List.map (fun mention ->
+            Diagnostics.requirementNotTyped
+                mention.Source
+                mention.Id
+                "Declare the id in the structured requirement set or remove the stale Markdown reference.")
+
+    let schemaCompatibilityDiagnostics (parsed: ParsedWorkItem) =
+        parsed.Sources
+        |> List.choose (fun source ->
+            match source.SchemaStatus, source.RawSchemaVersion with
+            | SchemaCompatibilityStatus.Deprecated, Some raw ->
+                Some(Diagnostics.deprecatedSchemaVersion source.Artifact raw)
+            | _ -> None)
+
     let validationDiagnostics (parsed: ParsedWorkItem) =
         let specArtifact =
             match parsed.Sources |> List.tryFind (fun source -> source.Artifact.Kind = ArtifactKind.Spec) with
@@ -323,17 +385,15 @@ module WorkModel =
           cycleDiagnostics parsed
           proseDiagnostics parsed
           staleDiagnostics parsed
-          missingEvidenceDiagnostics parsed ]
+          missingEvidenceDiagnostics parsed
+          requirementTypingDiagnostics parsed
+          schemaCompatibilityDiagnostics parsed ]
         |> List.concat
 
     let generatedViews (parsed: ParsedWorkItem) =
-        let generator =
-            SchemaVersion.createGeneratorVersion "FS.GG.SDD.Artifacts" "0.1.0"
-            |> function
-                | Ok value -> value
-                | Error _ -> { Id = "FS.GG.SDD.Artifacts"; Version = "0.1.0" }
+        let generator = SchemaVersion.currentGeneratorVersion()
 
-        GenerationManifest.createWorkModelManifest $"readiness/{parsed.WorkId.Value}/work-model.json" generator parsed.Sources None
+        GenerationManifest.createWorkModelManifest (GenerationManifest.expectedWorkModelOutputPath parsed.WorkId.Value) generator parsed.Sources None
         |> List.singleton
 
     let fromParsedWorkItem (parsed: ParsedWorkItem) =
@@ -355,18 +415,43 @@ module WorkModel =
           Requirements =
             parsed.Requirements
             |> List.map (fun requirement ->
+                let linkedTaskIds =
+                    parsed.Tasks
+                    |> List.filter (fun task -> task.Requirements |> List.exists (fun id -> id.Value = requirement.Id.Value))
+                    |> List.map (fun task -> task.Id.Value)
+                    |> List.sort
+
+                let linkedEvidenceIds =
+                    parsed.Evidence
+                    |> List.filter (fun evidence -> evidence.RequirementRefs |> List.exists (fun id -> id.Value = requirement.Id.Value))
+                    |> List.map (fun evidence -> evidence.Id.Value)
+                    |> List.sort
+
                 { Id = requirement.Id.Value
                   Title = requirement.Title
                   Text = requirement.Text
-                  Source = requirement.Source.Path })
+                  AcceptanceCriteria = requirement.AcceptanceCriteria
+                  Priority = requirement.Priority
+                  Source = requirement.Source.Path
+                  SourceLocation = requirement.SourceLocation
+                  LinkedTaskIds = linkedTaskIds
+                  LinkedEvidenceIds = linkedEvidenceIds })
             |> List.sortBy (fun requirement -> requirement.Id)
           Decisions =
             parsed.Decisions
             |> List.map (fun decision ->
+                let linkedTaskIds =
+                    parsed.Tasks
+                    |> List.filter (fun task -> task.Decisions |> List.exists (fun id -> id.Value = decision.Id.Value))
+                    |> List.map (fun task -> task.Id.Value)
+                    |> List.sort
+
                 { Id = decision.Id.Value
                   Title = decision.Title
                   Decision = decision.Decision
-                  Source = decision.Source.Path })
+                  Source = decision.Source.Path
+                  SourceLocation = decision.SourceLocation
+                  LinkedTaskIds = linkedTaskIds })
             |> List.sortBy (fun decision -> decision.Id)
           Tasks =
             parsed.Tasks
@@ -380,7 +465,8 @@ module WorkModel =
                   Decisions = task.Decisions |> List.map (fun id -> id.Value) |> List.sort
                   RequiredSkills = task.RequiredSkills |> List.sort
                   RequiredEvidence = task.RequiredEvidence |> List.map (fun id -> id.Value) |> List.sort
-                  Source = task.Source.Path })
+                  Source = task.Source.Path
+                  SourceLocation = task.SourceLocation })
             |> List.sortBy (fun task -> task.Id)
           Evidence =
             parsed.Evidence
@@ -394,7 +480,9 @@ module WorkModel =
                   ArtifactRefs = evidence.ArtifactRefs |> List.map (fun artifact -> artifact.Path) |> List.sort
                   Result = evidence.Result
                   Synthetic = evidence.Synthetic
-                  Source = evidence.Source.Path })
+                  Rationale = evidence.Rationale
+                  Source = evidence.Source.Path
+                  SourceLocation = evidence.SourceLocation })
             |> List.sortBy (fun evidence -> evidence.Id)
           GeneratedViews = generatedViews parsed
           Diagnostics = diagnostics
@@ -407,7 +495,7 @@ module WorkModel =
                   Relationship = "optionalCompatibilityBoundary" })
             |> List.sortBy (fun boundary -> boundary.Path) }
 
-    let blockingDiagnostics model =
+    let blockingDiagnostics (model: WorkModel) =
         model.Diagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticError)
 
-    let governanceBoundaryEntries model = model.GovernanceBoundaries
+    let governanceBoundaryEntries (model: WorkModel) = model.GovernanceBoundaries

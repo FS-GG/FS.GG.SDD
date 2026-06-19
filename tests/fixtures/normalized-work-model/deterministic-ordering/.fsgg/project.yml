@@ -1,0 +1,9 @@
+schemaVersion: 1
+project:
+  id: fs-gg-sdd
+  defaultWorkRoot: work
+sdd:
+  config: .fsgg/sdd.yml
+  agents: .fsgg/agents.yml
+governance:
+  capabilities: .fsgg/capabilities.yml

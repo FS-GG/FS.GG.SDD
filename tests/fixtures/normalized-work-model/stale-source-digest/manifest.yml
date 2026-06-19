@@ -1,0 +1,8 @@
+schemaVersion: 1
+fixture:
+  id: stale-source-digest
+  workId: 002-normalized-work-model
+  purpose: Generated view records an outdated source digest.
+expected:
+  blockingDiagnostics: true
+  diagnostics: [staleGeneratedView]

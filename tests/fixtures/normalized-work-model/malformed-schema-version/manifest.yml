@@ -1,0 +1,9 @@
+schemaVersion: 1
+fixture:
+  id: malformed-schema-version
+  workId: 002-normalized-work-model
+  purpose: Source omits a required schema version.
+expected:
+  blockingDiagnostics: true
+  diagnostics: [malformedSchemaVersion]
+  schemaStatus: malformed

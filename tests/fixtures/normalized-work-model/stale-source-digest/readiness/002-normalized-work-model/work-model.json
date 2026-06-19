@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "modelVersion": "1.0.0",
+  "workId": "002-normalized-work-model",
+  "generatedViews": [
+    {
+      "path": "readiness/002-normalized-work-model/work-model.json",
+      "kind": "workModel",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "0.2.0"
+      },
+      "sources": [
+        {
+          "path": "work/002-normalized-work-model/spec.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          "schemaVersion": 1
+        }
+      ],
+      "outputDigest": null,
+      "currency": "current"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+schemaVersion: 1
+fixture:
+  id: requirement-not-typed
+  workId: 002-normalized-work-model
+  purpose: Markdown references a requirement id missing from typed requirements.
+expected:
+  blockingDiagnostics: true
+  diagnostics: [requirementNotTyped]

@@ -1,0 +1,34 @@
+Schema migration review
+=======================
+
+Result: PASS
+
+Current schema versions:
+
+- schemaVersion: 1 is classified as current and does not emit schema diagnostics.
+
+Deprecated schema versions:
+
+- schemaVersion: 0 is classified as deprecated.
+- deprecatedSchemaVersion is emitted as a warning and does not block normalization.
+
+Unsupported schema versions:
+
+- schemaVersion: 2 is classified as unsupported.
+- unsupportedSchemaVersion is emitted as a blocking diagnostic.
+
+Future schema versions:
+
+- schemaVersion: 3 or newer is classified as future.
+- futureSchemaVersion is emitted as a blocking diagnostic unless a future
+  compatibility rule explicitly allows it.
+
+Malformed schema versions:
+
+- missing or invalid schemaVersion values are classified as malformed.
+- malformedSchemaVersion is emitted as a blocking diagnostic.
+
+Verification:
+
+- SchemaMigrationTests
+- schema-migration-tests.txt

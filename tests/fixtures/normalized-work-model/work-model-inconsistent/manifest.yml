@@ -1,0 +1,8 @@
+schemaVersion: 1
+fixture:
+  id: work-model-inconsistent
+  workId: 002-normalized-work-model
+  purpose: Structured references point at unknown graph nodes.
+expected:
+  blockingDiagnostics: true
+  diagnostics: [workModelInconsistent]

@@ -1,0 +1,8 @@
+schemaVersion: 1
+fixture:
+  id: deterministic-ordering
+  workId: 002-normalized-work-model
+  purpose: Entries appear in unstable source order but normalize deterministically.
+expected:
+  blockingDiagnostics: false
+  diagnostics: []

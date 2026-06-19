@@ -1,0 +1,8 @@
+schemaVersion: 1
+fixture:
+  id: malformed-generated-json
+  workId: 002-normalized-work-model
+  purpose: Generated work-model output cannot be parsed.
+expected:
+  blockingDiagnostics: true
+  diagnostics: [staleGeneratedView]

@@ -1,0 +1,11 @@
+schemaVersion: 1
+tasks:
+  - id: T001
+    title: Mismatch task
+    status: pending
+    owner: codex
+    dependencies: []
+    requirements: [FR-001]
+    decisions: [DEC-001]
+    requiredSkills: [fs-gg-sdd-project]
+    requiredEvidence: [EV001]

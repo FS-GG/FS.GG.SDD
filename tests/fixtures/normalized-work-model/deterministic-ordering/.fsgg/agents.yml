@@ -1,0 +1,10 @@
+schemaVersion: 1
+agents:
+  - id: codex
+    guidancePath: AGENTS.md
+    generatedRoot: readiness/{workId}/agent-commands/codex
+sourceModel:
+  workModel: readiness/{workId}/work-model.json
+policy:
+  generatedGuidanceIsAuthority: false
+  requireEquivalentClaudeAndCodexBehavior: true

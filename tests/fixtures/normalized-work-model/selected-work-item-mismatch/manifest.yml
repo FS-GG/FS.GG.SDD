@@ -1,0 +1,8 @@
+schemaVersion: 1
+fixture:
+  id: selected-work-item-mismatch
+  workId: 002-normalized-work-model
+  purpose: Requested work id is missing or does not match spec front matter.
+expected:
+  blockingDiagnostics: true
+  diagnostics: [missingArtifact, workModelInconsistent]

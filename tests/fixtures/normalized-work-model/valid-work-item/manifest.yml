@@ -1,0 +1,9 @@
+schemaVersion: 1
+fixture:
+  id: valid-work-item
+  workId: 002-normalized-work-model
+  purpose: Valid normalized work-model generation.
+expected:
+  blockingDiagnostics: false
+  diagnostics: []
+  output: readiness/002-normalized-work-model/work-model.json

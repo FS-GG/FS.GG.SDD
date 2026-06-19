@@ -1,0 +1,19 @@
+Traceability walkthrough for SC-005
+===================================
+
+Fixture: tests/fixtures/normalized-work-model/valid-work-item
+Public entry point: Serialization.generateWorkModel
+
+Requirement FR-001 traces to:
+
+- source: work/002-normalized-work-model/spec.md
+- source location: line 16, column 1
+- linked task: T001
+- task source: work/002-normalized-work-model/tasks.yml
+- required evidence: EV001
+- evidence source: work/002-normalized-work-model/evidence.yml
+- generated view: readiness/002-normalized-work-model/work-model.json
+
+The generated model records every included source path, SHA-256 source digest,
+schema version, schema status, generator version, generated view path, output
+digest, and diagnostics list. The valid fixture has zero blocking diagnostics.

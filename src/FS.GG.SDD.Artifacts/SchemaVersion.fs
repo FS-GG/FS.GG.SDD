@@ -11,6 +11,20 @@ module SchemaVersion =
     type OutputDigest = { Algorithm: string; Value: string }
     type GeneratorVersion = { Id: string; Version: string }
 
+    type SchemaCompatibilityStatus =
+        | Current
+        | Deprecated
+        | Unsupported
+        | Malformed
+        | Future
+
+    type SchemaCompatibility =
+        { RawValue: string
+          Version: SchemaVersion option
+          Status: SchemaCompatibilityStatus
+          SupportedRange: string
+          MigrationHint: string option }
+
     let create major = { Major = major; Minor = None; Raw = string major }
 
     let parse (value: string) =
@@ -29,6 +43,53 @@ module SchemaVersion =
             Error "Schema version must be an integer or major.minor value."
 
     let isSupported version = version.Major = 1
+
+    let statusValue status =
+        match status with
+        | Current -> "current"
+        | Deprecated -> "deprecated"
+        | Unsupported -> "unsupported"
+        | Malformed -> "malformed"
+        | Future -> "future"
+
+    let supportedRange = "1"
+
+    let compatibility raw version status hint =
+        { RawValue = raw
+          Version = version
+          Status = status
+          SupportedRange = supportedRange
+          MigrationHint = hint }
+
+    let classifyRaw (value: string option) =
+        let raw = value |> Option.map (fun value -> value.Trim()) |> Option.defaultValue ""
+
+        if String.IsNullOrWhiteSpace raw then
+            compatibility raw None Malformed (Some "Add schemaVersion: 1 to the structured artifact.")
+        else
+            match parse raw with
+            | Error message -> compatibility raw None Malformed (Some message)
+            | Ok version when version.Major = 1 ->
+                compatibility raw (Some version) Current None
+            | Ok version when version.Major = 0 ->
+                compatibility raw (Some version) Deprecated (Some "Migrate the artifact to schemaVersion: 1.")
+            | Ok version when version.Major = 2 ->
+                compatibility raw (Some version) Unsupported (Some "Run the documented migration to schemaVersion: 1 before normalization.")
+            | Ok version when version.Major > 2 ->
+                compatibility raw (Some version) Future (Some "Use a newer FS.GG.SDD.Artifacts generator or downgrade the artifact schema.")
+            | Ok version ->
+                compatibility raw (Some version) Unsupported (Some "Use schemaVersion: 1 or add a documented migration path.")
+
+    let isCurrent compatibility = compatibility.Status = Current
+    let isDeprecated compatibility = compatibility.Status = Deprecated
+
+    let isBlocking compatibility =
+        match compatibility.Status with
+        | Current
+        | Deprecated -> false
+        | Unsupported
+        | Malformed
+        | Future -> true
 
     let isSha256 (value: string) =
         Regex.IsMatch(value, @"^[a-f0-9]{64}$", RegexOptions.CultureInvariant)
@@ -79,3 +140,7 @@ module SchemaVersion =
             Error "Generator version is required."
         else
             Ok { Id = id; Version = version }
+
+    let currentGeneratorVersion () =
+        createGeneratorVersion "FS.GG.SDD.Artifacts" "0.2.0"
+        |> Result.defaultWith failwith

@@ -1,0 +1,20 @@
+schemaVersion: 1
+tasks:
+  - id: T002
+    title: Add generated model currency checks
+    status: pending
+    owner: codex
+    dependencies: [T001]
+    requirements: [FR-002]
+    decisions: [DEC-002]
+    requiredSkills: [fs-gg-sdd-project]
+    requiredEvidence: [EV002]
+  - id: T001
+    title: Add normalized work-model generation API
+    status: pending
+    owner: codex
+    dependencies: []
+    requirements: [FR-001]
+    decisions: [DEC-001]
+    requiredSkills: [fs-gg-sdd-project]
+    requiredEvidence: [EV001]
