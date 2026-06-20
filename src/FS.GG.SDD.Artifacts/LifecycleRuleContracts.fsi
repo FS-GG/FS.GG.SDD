@@ -5,6 +5,13 @@ open FS.GG.SDD.Artifacts.Identifiers
 open FS.GG.SDD.Artifacts.SchemaVersion
 
 module LifecycleRuleContracts =
+    /// Advisory placeholder describing how a lifecycle rule *might* relate to Governance.
+    /// SUPERSEDED by the concrete `GovernanceHandoff` generated view
+    /// (`readiness/<id>/governance-handoff.json`), which is the single, versioned, Governance-facing
+    /// source of declared facts (Constitution VII). These booleans are retained only as a coarse
+    /// pointer to that contract; they assert no route/profile/freshness/enforcement themselves
+    /// (SDD never decides those — `route`/profile/freshness/gate are Governance-owned). Prefer the
+    /// handoff for any real Governance integration.
     type GovernanceCompatibility =
         { RouteAware: bool
           ProfileAware: bool

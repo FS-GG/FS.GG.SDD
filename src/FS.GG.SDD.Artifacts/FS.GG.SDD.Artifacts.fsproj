@@ -24,6 +24,8 @@
     <Compile Include="LifecycleRuleContracts.fs" />
     <Compile Include="WorkModel.fsi" />
     <Compile Include="WorkModel.fs" />
+    <Compile Include="GovernanceHandoff.fsi" />
+    <Compile Include="GovernanceHandoff.fs" />
     <Compile Include="Serialization.fsi" />
     <Compile Include="Serialization.fs" />
   </ItemGroup>

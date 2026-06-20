@@ -19,6 +19,7 @@ open FS.GG.SDD.Commands.CommandTypes
 module CommandWorkflow =
     module DiagnosticsModule = FS.GG.SDD.Artifacts.Diagnostics
     module GenerationManifestModule = FS.GG.SDD.Artifacts.GenerationManifest
+    module GovernanceHandoffModule = FS.GG.SDD.Artifacts.GovernanceHandoff
     module IdentifiersModule = FS.GG.SDD.Artifacts.Identifiers
     module LifecycleArtifactsModule = FS.GG.SDD.Artifacts.LifecycleArtifacts
     module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
@@ -218,6 +219,10 @@ of truth.
         [ ReadFile ".fsgg/project.yml"
           ReadFile ".fsgg/sdd.yml"
           ReadFile ".fsgg/agents.yml"
+          // Optional Governance config: presence-only detection for the handoff (FR-011).
+          ReadFile ".fsgg/policy.yml"
+          ReadFile ".fsgg/capabilities.yml"
+          ReadFile ".fsgg/tooling.yml"
           ReadFile(specPath workId)
           ReadFile(clarificationPath workId)
           ReadFile(checklistPath workId)
@@ -245,6 +250,10 @@ of truth.
         [ ReadFile ".fsgg/project.yml"
           ReadFile ".fsgg/sdd.yml"
           ReadFile ".fsgg/agents.yml"
+          // Optional Governance config: presence-only detection for the handoff (FR-011).
+          ReadFile ".fsgg/policy.yml"
+          ReadFile ".fsgg/capabilities.yml"
+          ReadFile ".fsgg/tooling.yml"
           ReadFile(specPath workId)
           ReadFile(clarificationPath workId)
           ReadFile(checklistPath workId)
@@ -255,6 +264,7 @@ of truth.
           ReadFile(workModelPath workId)
           ReadFile(verifyPath workId)
           ReadFile(shipPath workId)
+          ReadFile(GenerationManifestModule.expectedGovernanceHandoffOutputPath workId)
           ReadFile(GenerationManifestModule.expectedSummaryOutputPath workId)
           EnumerateDirectory "work" ]
 
@@ -5302,6 +5312,132 @@ sourceAnalysis: {analysisPath workId}
         | EvidenceAdvisory -> "advisory"
         | EvidenceBlocking -> "blocking"
 
+    // ---- Governance handoff (generated readiness view consumed by FS.GG.Governance) ----
+
+    let governanceHandoffPath workId =
+        GenerationManifestModule.expectedGovernanceHandoffOutputPath workId
+
+    /// Presence-only detection of optional `.fsgg` Governance config from read snapshots.
+    /// SDD never parses Governance config semantics (FR-011).
+    let governanceConfigPresence model : GovernanceHandoffModule.GovernanceConfigPresence =
+        let present path = snapshot path model |> Option.isSome
+        let pointer path = if present path then Some path else None
+
+        { PolicyPresent = present ".fsgg/policy.yml"
+          PolicyPointer = pointer ".fsgg/policy.yml"
+          CapabilitiesPresent = present ".fsgg/capabilities.yml"
+          CapabilitiesPointer = pointer ".fsgg/capabilities.yml"
+          ToolingPresent = present ".fsgg/tooling.yml"
+          ToolingPointer = pointer ".fsgg/tooling.yml" }
+
+    /// Derive the handoff's advisory readiness facts from the SDD-owned ship.json text.
+    /// Both ship (emission) and refresh (regeneration) parse the same ship.json, so the
+    /// regenerated handoff is byte-identical to the emitted one when sources are unchanged.
+    let private parseShipReadinessFacts (shipText: string) (perViewState: (string * string) list) : GovernanceHandoffModule.ReadinessFacts =
+        try
+            use document = System.Text.Json.JsonDocument.Parse shipText
+            let root = document.RootElement
+
+            let tryObj (element: System.Text.Json.JsonElement) (name: string) =
+                match element.TryGetProperty name with
+                | true, value when value.ValueKind = System.Text.Json.JsonValueKind.Object -> Some value
+                | _ -> None
+
+            let strField (element: System.Text.Json.JsonElement option) (name: string) =
+                match element with
+                | Some e ->
+                    match e.TryGetProperty name with
+                    | true, value when value.ValueKind = System.Text.Json.JsonValueKind.String -> value.GetString()
+                    | _ -> ""
+                | None -> ""
+
+            let idsField (element: System.Text.Json.JsonElement option) (name: string) =
+                match element with
+                | Some e ->
+                    match e.TryGetProperty name with
+                    | true, value when value.ValueKind = System.Text.Json.JsonValueKind.Array ->
+                        [ for item in value.EnumerateArray() do
+                              if item.ValueKind = System.Text.Json.JsonValueKind.String then
+                                  yield item.GetString() ]
+                    | _ -> []
+                | None -> []
+
+            let dispositionEl = tryObj root "disposition"
+            let verificationEl = tryObj root "verificationReadiness"
+            let blocking = idsField dispositionEl "blockingFindingIds"
+
+            { ShipDisposition = strField dispositionEl "state"
+              VerificationReadiness = strField verificationEl "status"
+              AdvisoryCount = (idsField dispositionEl "advisoryFindingIds").Length
+              WarningCount = (idsField dispositionEl "warningFindingIds").Length
+              BlockingCount = blocking.Length
+              BlockingDiagnosticIds = blocking |> List.sort
+              PerViewState = perViewState }
+        with _ ->
+            { ShipDisposition = ""
+              VerificationReadiness = ""
+              AdvisoryCount = 0
+              WarningCount = 0
+              BlockingCount = 0
+              BlockingDiagnosticIds = []
+              PerViewState = perViewState }
+
+    /// Project the handoff and produce (generated-view state, write effect, json text). Pure over
+    /// the work-model JSON, verify/ship texts, and config presence; readiness is parsed from ship.json.
+    let governanceHandoffEmission
+        workId
+        (generator: GeneratorVersion)
+        (workModelJson: string option)
+        (verifyText: string option)
+        (shipText: string)
+        (config: GovernanceHandoffModule.GovernanceConfigPresence)
+        : GeneratedViewState option * CommandEffect list * string option
+        =
+        match workModelJson with
+        | Some wmJson ->
+            match WorkModelModule.parseWorkModel { Path = workModelPath workId; Text = wmJson } with
+            | Ok workModel ->
+                // The handoff's own three-source currency (identical for ship and a clean refresh).
+                let perViewState =
+                    [ "ship.json", "current"
+                      "verify.json", (match verifyText with Some _ -> "current" | None -> "missing")
+                      "work-model.json", "current" ]
+                    |> List.sortBy fst
+
+                let readiness = parseShipReadinessFacts shipText perViewState
+
+                let handoffSources =
+                    [ Some(GovernanceHandoffModule.sourceIdentity (workModelPath workId) wmJson)
+                      verifyText |> Option.map (GovernanceHandoffModule.sourceIdentity (verifyPath workId))
+                      Some(GovernanceHandoffModule.sourceIdentity (shipPath workId) shipText) ]
+                    |> List.choose id
+
+                let viewSources =
+                    [ Some(analysisSourceFromSnapshot (workModelPath workId) wmJson)
+                      verifyText |> Option.map (analysisSourceFromSnapshot (verifyPath workId))
+                      Some(analysisSourceFromSnapshot (shipPath workId) shipText) ]
+                    |> List.choose id
+
+                let handoff =
+                    GovernanceHandoffModule.fromWorkModel workModel handoffSources config readiness generator
+
+                let handoffJson = GovernanceHandoffModule.toJson handoff
+                let outputDigest = SchemaVersionModule.outputSha256Text handoffJson
+
+                let view =
+                    shipGeneratedViewState
+                        (governanceHandoffPath workId)
+                        "governance-handoff"
+                        generator
+                        viewSources
+                        (Some outputDigest)
+                        GeneratedViewCurrency.Current
+                        []
+
+                Some view, [ WriteFile(governanceHandoffPath workId, handoffJson, GeneratedView) ], Some handoffJson
+            | Error _ -> None, [], None
+        | None -> None, [], None
+
     let shipFindings (diagnostics: Diagnostic list) =
         diagnostics
         |> DiagnosticsModule.sort
@@ -5597,7 +5733,7 @@ sourceAnalysis: {analysisPath workId}
                   "evidence", stageStatus (Option.isSome existingEvidenceArtifact)
                   "verify", (if verificationStatus = "verificationReady" then "ready" else "blocked") ]
 
-            let shipSummaryOpt, shipView, shipEffects =
+            let shipSummaryOpt, shipView, shipHandoffView, shipEffects =
                 match specText, clarificationText, checklistText, planText, taskText, analysisText with
                 | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText, Some analysisText ->
                     let workModelJson = workModelJsonFromGeneratedEffects workId workModelEffects model
@@ -5658,17 +5794,32 @@ sourceAnalysis: {analysisPath workId}
                           SourceSnapshotCount = sources.Length
                           Readiness = readiness }
 
+                    // --- Governance handoff: additive, emitted alongside ship.json ---
+                    let handoffView, handoffEffects, _ =
+                        if hasBlocking then
+                            None, [], None
+                        else
+                            governanceHandoffEmission
+                                workId
+                                model.Request.GeneratorVersion
+                                workModelJson
+                                (snapshot (verifyPath workId) model |> Option.map _.Text)
+                                text
+                                (governanceConfigPresence model)
+
                     let effects =
                         if hasBlocking then
                             []
                         else
                             [ CreateDirectory(readinessDirectory workId); WriteFile(shipPath workId, text, GeneratedView) ]
+                            @ handoffEffects
 
-                    Some summary, Some view, effects
-                | _ -> None, None, []
+                    Some summary, Some view, handoffView, effects
+                | _ -> None, None, None, []
 
             let generatedViews =
-                [ Some workModelView; Some analysisViewState; Some verifyViewState; shipView ] |> List.choose id
+                [ Some workModelView; Some analysisViewState; Some verifyViewState; shipView; shipHandoffView ]
+                |> List.choose id
 
             let effects =
                 if hasBlocking then [] else workModelEffects @ shipEffects
@@ -6044,7 +6195,7 @@ sourceAnalysis: {analysisPath workId}
 
     // --- refresh orchestration (cross-cutting; reuses the per-view generators) ---
 
-    let refreshCanonicalViews = [ "work-model"; "analysis"; "verify"; "ship"; "agent-commands"; "summary" ]
+    let refreshCanonicalViews = [ "work-model"; "analysis"; "verify"; "ship"; "governance-handoff"; "agent-commands"; "summary" ]
 
     let refreshSummaryMarkdown
         (workId: string)
@@ -6264,6 +6415,43 @@ sourceAnalysis: {analysisPath workId}
                 let veClass = downstreamClass (verifyPath workId)
                 let shClass = downstreamClass (shipPath workId)
 
+                // Governance handoff currency. The handoff is a pure projection over the work
+                // model + verify/ship, so refresh CAN faithfully regenerate it — but only when its
+                // ship source is itself current (regenerating against a stale ship would mix
+                // versions). When ship is stale/missing/malformed/blocked, the handoff inherits
+                // that state; when ship is clean, the handoff is re-projected and restored.
+                let govView, govEffects, govClass =
+                    let inheritShip () = None, [], shClass
+
+                    if wmClass = "blocked" then
+                        None, [], "blocked"
+                    else
+                        match shClass with
+                        | "already-current" ->
+                            let wmText = wmWriteText |> Option.orElseWith (fun () -> textOf (workModelPath workId))
+
+                            match wmText, textOf (shipPath workId) with
+                            | Some _, Some shipText ->
+                                let view, effects, jsonOpt =
+                                    governanceHandoffEmission
+                                        workId
+                                        request.GeneratorVersion
+                                        wmText
+                                        (textOf (verifyPath workId))
+                                        shipText
+                                        (governanceConfigPresence model)
+
+                                match jsonOpt with
+                                | Some json ->
+                                    let existing = snapshot (governanceHandoffPath workId) model
+
+                                    match existing with
+                                    | Some snap when snap.Text = json -> view, [], "already-current"
+                                    | _ -> view, effects, "refreshed"
+                                | None -> None, [], "blocked"
+                            | _ -> None, [], "missing"
+                        | _ -> inheritShip ()
+
                 let structuredClasses =
                     [ "work-model", wmClass; "analysis", anClass; "verify", veClass; "ship", shClass ]
 
@@ -6360,6 +6548,7 @@ sourceAnalysis: {analysisPath workId}
                       "analysis", viewWord anClass
                       "verify", viewWord veClass
                       "ship", viewWord shClass
+                      "governance-handoff", viewWord govClass
                       "agent-commands", viewWord agentClass
                       "summary", (if summaryRenderable then "current" else "blocked") ]
 
@@ -6403,7 +6592,7 @@ sourceAnalysis: {analysisPath workId}
                     | _ -> refreshed, current, viewId :: blocked, na
 
                 let refreshedViewIds, alreadyCurrentViewIds, blockedViewIds, notApplicableViewIds =
-                    [ "work-model", wmClass; "analysis", anClass; "verify", veClass; "ship", shClass; "agent-commands", agentClass; "summary", summaryClass ]
+                    [ "work-model", wmClass; "analysis", anClass; "verify", veClass; "ship", shClass; "governance-handoff", govClass; "agent-commands", agentClass; "summary", summaryClass ]
                     |> List.fold (fun acc (viewId, state) -> classifyToBucket viewId state acc) ([], [], [], [])
 
                 let findingSeverityCount severity =
@@ -6465,11 +6654,17 @@ sourceAnalysis: {analysisPath workId}
 
                         { view with Currency = currencyOf state })
 
+                let governanceHandoffViewState =
+                    match govView with
+                    | Some view -> { view with Currency = currencyOf govClass }
+                    | None -> downstreamView (governanceHandoffPath workId) "governance-handoff" govClass
+
                 let generatedViews =
                     [ workModelViewState
                       downstreamView (analysisPath workId) "analysis" anClass
                       downstreamView (verifyPath workId) "verification" veClass
-                      downstreamView (shipPath workId) "ship" shClass ]
+                      downstreamView (shipPath workId) "ship" shClass
+                      governanceHandoffViewState ]
                     @ agentViewStates
                     @ (summaryViewState |> Option.toList)
 
@@ -6482,7 +6677,7 @@ sourceAnalysis: {analysisPath workId}
                         (Set.empty, [])
                     |> snd
 
-                let effects = dedupEffects (wmEffects @ agEffects @ summaryEffects)
+                let effects = dedupEffects (wmEffects @ agEffects @ govEffects @ summaryEffects)
 
                 // wmDiags are the reused generator's own staleness heuristics about the
                 // prior on-disk work model; refresh reports its own per-view diagnostics

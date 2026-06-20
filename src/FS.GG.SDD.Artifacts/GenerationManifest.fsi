@@ -12,6 +12,7 @@ module GenerationManifest =
         | Ship
         | Summary
         | AgentCommands
+        | GovernanceHandoff
         | Other of string
 
     type GeneratedViewCurrencyStatus =
@@ -49,6 +50,7 @@ module GenerationManifest =
     val currencyStatusValue: status: GeneratedViewCurrencyStatus -> string
     val expectedWorkModelOutputPath: workId: string -> string
     val expectedSummaryOutputPath: workId: string -> string
+    val expectedGovernanceHandoffOutputPath: workId: string -> string
     val createWorkModelManifest:
         viewPath: string -> generatorVersion: GeneratorVersion -> sources: SourceIdentity list -> outputDigest: OutputDigest option -> GenerationManifest
     val createSummaryManifest:

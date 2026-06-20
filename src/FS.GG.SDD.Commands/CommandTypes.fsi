@@ -310,6 +310,12 @@ module CommandTypes =
           SourceSnapshotCount: int
           Readiness: string }
 
+    /// Advisory per-command fact noting that an optional `.fsgg` Governance path was *not evaluated*
+    /// by SDD. SUPERSEDED by the concrete `GovernanceHandoff` view
+    /// (`readiness/<id>/governance-handoff.json`): the handoff carries the real declared
+    /// evidence/governed-reference/readiness/config-presence facts Governance consumes, whereas this
+    /// fact only marks the boundary as SDD-unevaluated. Retained as a pointer to that contract
+    /// (Constitution VII); it asserts no route/profile/gate/verdict.
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string

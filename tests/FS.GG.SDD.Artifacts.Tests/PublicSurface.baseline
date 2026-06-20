@@ -118,3 +118,10 @@ FS.GG.SDD.Artifacts.WorkModel.deriveGuidanceModel
 FS.GG.SDD.Artifacts.WorkModel.fromParsedWorkItem
 FS.GG.SDD.Artifacts.WorkModel.governanceBoundaryEntries
 FS.GG.SDD.Artifacts.WorkModel.parseWorkModel
+FS.GG.SDD.Artifacts.GenerationManifest.expectedGovernanceHandoffOutputPath
+FS.GG.SDD.Artifacts.GovernanceHandoff.declaredEvidenceStateValue
+FS.GG.SDD.Artifacts.GovernanceHandoff.fromWorkModel
+FS.GG.SDD.Artifacts.GovernanceHandoff.isStaleEvidenceResult
+FS.GG.SDD.Artifacts.GovernanceHandoff.mapEvidenceState
+FS.GG.SDD.Artifacts.GovernanceHandoff.sourceIdentity
+FS.GG.SDD.Artifacts.GovernanceHandoff.toJson

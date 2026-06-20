@@ -7,3 +7,6 @@ TestResults/
 *.user
 *.suo
 *.nupkg
+
+# Claude Code agent memory (machine-local)
+.claude/projects/

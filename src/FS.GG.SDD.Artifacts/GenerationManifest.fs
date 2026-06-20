@@ -13,6 +13,7 @@ module GenerationManifest =
         | Ship
         | Summary
         | AgentCommands
+        | GovernanceHandoff
         | Other of string
 
     type GeneratedViewCurrencyStatus =
@@ -54,6 +55,7 @@ module GenerationManifest =
         | Ship -> "ship"
         | Summary -> "summary"
         | AgentCommands -> "agentCommands"
+        | GovernanceHandoff -> "governance-handoff"
         | Other value -> value
 
     let currencyStatusValue status =
@@ -66,6 +68,9 @@ module GenerationManifest =
     let expectedWorkModelOutputPath (workId: string) = $"readiness/{workId}/work-model.json"
 
     let expectedSummaryOutputPath (workId: string) = $"readiness/{workId}/summary.md"
+
+    let expectedGovernanceHandoffOutputPath (workId: string) =
+        $"readiness/{workId}/governance-handoff.json"
 
     let createWorkModelManifest viewPath generatorVersion sources outputDigest =
         let view =

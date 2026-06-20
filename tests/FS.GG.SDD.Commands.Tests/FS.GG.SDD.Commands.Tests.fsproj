@@ -24,6 +24,7 @@
     <Compile Include="TextProjectionTests.fs" />
     <Compile Include="GovernanceBoundaryCommandTests.fs" />
     <Compile Include="LifecycleSmokeTests.fs" />
+    <Compile Include="GovernanceHandoffTests.fs" />
     <Compile Include="SurfaceBaselineTests.fs" />
   </ItemGroup>
 
