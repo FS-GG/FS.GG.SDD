@@ -19,6 +19,7 @@ module CommandTypes =
         | Verify
         | Ship
         | Agents
+        | Refresh
 
     type OutputFormat =
         | Json
@@ -286,6 +287,30 @@ module CommandTypes =
           SourceSnapshotCount: int
           Readiness: string }
 
+    type RefreshDisposition =
+        | RefreshedCurrent
+        | PartiallyBlocked
+        | RefreshBlocked
+
+    type RefreshSummary =
+        { WorkId: string
+          Stage: string
+          Status: string
+          SummaryPath: string
+          RefreshedViewIds: string list
+          AlreadyCurrentViewIds: string list
+          BlockedViewIds: string list
+          NotApplicableViewIds: string list
+          PreservedAuthoredPaths: string list
+          FindingIds: string list
+          AdvisoryCount: int
+          WarningCount: int
+          BlockingCount: int
+          Disposition: string
+          PerViewState: (string * string) list
+          SourceSnapshotCount: int
+          Readiness: string }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -322,6 +347,7 @@ module CommandTypes =
           Verification: VerificationSummary option
           Ship: ShipSummary option
           AgentGuidance: AgentGuidanceSummary option
+          Refresh: RefreshSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -357,6 +383,7 @@ module CommandTypes =
           Verification: VerificationSummary option
           Ship: ShipSummary option
           AgentGuidance: AgentGuidanceSummary option
+          Refresh: RefreshSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 
@@ -382,6 +409,7 @@ module CommandTypes =
         | Verify -> "verify"
         | Ship -> "ship"
         | Agents -> "agents"
+        | Refresh -> "refresh"
 
     let commandStage (command: SddCommand) =
         match command with
@@ -402,6 +430,7 @@ module CommandTypes =
         | "verify" -> Ok Verify
         | "ship" -> Ok Ship
         | "agents" -> Ok Agents
+        | "refresh" -> Ok Refresh
         | other -> Error $"Unknown SDD command '{other}'."
 
     let outputFormatValue (format: OutputFormat) =
@@ -444,6 +473,12 @@ module CommandTypes =
         | GuidanceBlocked -> "blocked"
         | GuidanceAdvisory -> "advisory"
 
+    let refreshDispositionValue (disposition: RefreshDisposition) =
+        match disposition with
+        | RefreshedCurrent -> "refreshed-current"
+        | PartiallyBlocked -> "partially-blocked"
+        | RefreshBlocked -> "blocked"
+
     let outcomeValue (outcome: CommandOutcome) =
         match outcome with
         | CommandOutcome.Succeeded -> "succeeded"
@@ -465,6 +500,7 @@ module CommandTypes =
         | Verify -> Some Ship
         | Ship -> None
         | Agents -> None
+        | Refresh -> None
 
     let effectPath (effect: CommandEffect) =
         match effect with

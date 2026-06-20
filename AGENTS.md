@@ -27,8 +27,13 @@ Boundary rules:
   cross-cutting generator (not a lifecycle stage) that derives per-target
   Claude/Codex command and skill guidance from `readiness/<id>/work-model.json`
   into `readiness/<id>/agent-commands/<target>/`, marked generated with source
-  digests and never a second source of truth. Governance-owned effective evidence
-  freshness and gate enforcement remain optional downstream concerns.
+  digests and never a second source of truth. `fsgg-sdd refresh` is a
+  cross-cutting generator (not a lifecycle stage) that brings a work item's
+  SDD-owned generated views back to currency: it regenerates the work model and
+  agent guidance and renders `readiness/<id>/summary.md`, and reports the
+  currency of `analysis.json`/`verify.json`/`ship.json`. Governance-owned
+  effective evidence freshness and gate enforcement remain optional downstream
+  concerns.
 - Governance owns rule evaluation, evidence freshness, routing, profiles, and
   gate enforcement.
 - Markdown is an authoring surface; schema-versioned structured artifacts are

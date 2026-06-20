@@ -569,25 +569,33 @@ Exit criteria:
 - Task readiness explains missing skills and missing tests before implementation
   or ship.
 
-### Phase 7: Generated Views And Refresh
+### Phase 7: Generated Views And Refresh — ✅ SDD slice complete
 
 Owner: Shared.
 
+Status: SDD-owned `fsgg-sdd refresh` complete on 2026-06-20 — see
+`specs/015-refresh-command/readiness/`. Governance-owned `fsgg refresh` and
+boundary stale-view blocking remain Governance concerns (out of SDD scope).
+
 Purpose: make generated artifacts explicit, reproducible, and currency-checked.
 
-- [ ] Define a generation manifest shape for source, generated view, renderer,
+- [x] Define a generation manifest shape for source, generated view, renderer,
   generator version, source digest, output digest, and currency gate.
-- [ ] Add an SDD refresh path for lifecycle views:
-  `work-model.json`, `analysis.json`, `verify.json`, `ship.json`,
-  `summary.md`, and `agent-commands/`.
+- [x] Add an SDD refresh path for lifecycle views:
+  `work-model.json`, `summary.md`, and `agent-commands/` are regenerated;
+  `analysis.json`, `verify.json`, `ship.json` are currency-reported (re-running
+  their generators out of lifecycle order corrupts evidence freshness — see
+  `specs/015-refresh-command/tasks.md` Implementation Notes).
 - [ ] Add Governance `fsgg refresh` for gate metadata, rule catalogs,
   capability docs, skill references, API-surface docs, route projections, and
-  baselines.
-- [ ] Emit stale-view diagnostics when generated views are older than their
+  baselines. (Governance-owned; out of SDD scope.)
+- [x] Emit stale-view diagnostics when generated views are older than their
   declared sources.
 - [ ] Block stale generated views at the configured Governance boundary.
-- [ ] Add snapshot or golden-fixture coverage once a generated view becomes
-  public or tool-facing.
+  (Governance-owned; SDD reports, Governance enforces.)
+- [x] Add snapshot or golden-fixture coverage once a generated view becomes
+  public or tool-facing. (Covered by real-evidence `RefreshCommandTests` over
+  disposable shipped project trees, per the 014 precedent.)
 
 Exit criteria:
 

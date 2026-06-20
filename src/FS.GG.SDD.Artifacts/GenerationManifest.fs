@@ -65,6 +65,8 @@ module GenerationManifest =
 
     let expectedWorkModelOutputPath (workId: string) = $"readiness/{workId}/work-model.json"
 
+    let expectedSummaryOutputPath (workId: string) = $"readiness/{workId}/summary.md"
+
     let createWorkModelManifest viewPath generatorVersion sources outputDigest =
         let view =
             match ArtifactRef.create viewPath ArtifactKind.GeneratedView ArtifactOwner.Sdd true with
@@ -73,6 +75,21 @@ module GenerationManifest =
 
         { View = view
           Kind = WorkModel
+          SchemaVersion = SchemaVersion.create 1
+          Generator = generatorVersion
+          Sources = sources |> List.sortBy (fun source -> source.Artifact.Path)
+          OutputDigest = outputDigest
+          Currency = CurrencyCurrent
+          Diagnostics = [] }
+
+    let createSummaryManifest viewPath generatorVersion sources outputDigest =
+        let view =
+            match ArtifactRef.create viewPath ArtifactKind.GeneratedView ArtifactOwner.Sdd true with
+            | Ok value -> value
+            | Error message -> invalidArg (nameof viewPath) message
+
+        { View = view
+          Kind = Summary
           SchemaVersion = SchemaVersion.create 1
           Generator = generatorVersion
           Sources = sources |> List.sortBy (fun source -> source.Artifact.Path)

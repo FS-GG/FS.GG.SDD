@@ -167,6 +167,32 @@ module CommandRendering =
             builder.AppendLine($"agentsGeneratedViewState: {guidance.GeneratedViewState}") |> ignore
         | None -> ()
 
+        match report.Refresh with
+        | Some refresh ->
+            builder.AppendLine($"workId: {refresh.WorkId}") |> ignore
+            builder.AppendLine($"refreshReadiness: {refresh.Readiness}") |> ignore
+            builder.AppendLine($"refreshDisposition: {refresh.Disposition}") |> ignore
+            builder.AppendLine($"refreshSummaryPath: {refresh.SummaryPath}") |> ignore
+            refresh.PerViewState
+            |> List.iter (fun (view, state) -> builder.AppendLine($"refreshView.{view}: {state}") |> ignore)
+            refresh.RefreshedViewIds
+            |> List.sort
+            |> List.iter (fun view -> builder.AppendLine($"refreshedView: {view}") |> ignore)
+            refresh.AlreadyCurrentViewIds
+            |> List.sort
+            |> List.iter (fun view -> builder.AppendLine($"refreshAlreadyCurrentView: {view}") |> ignore)
+            refresh.BlockedViewIds
+            |> List.sort
+            |> List.iter (fun view -> builder.AppendLine($"refreshBlockedView: {view}") |> ignore)
+            refresh.NotApplicableViewIds
+            |> List.sort
+            |> List.iter (fun view -> builder.AppendLine($"refreshNotApplicableView: {view}") |> ignore)
+            builder.AppendLine($"refreshAdvisory: {refresh.AdvisoryCount}") |> ignore
+            builder.AppendLine($"refreshWarnings: {refresh.WarningCount}") |> ignore
+            builder.AppendLine($"refreshBlocking: {refresh.BlockingCount}") |> ignore
+            builder.AppendLine($"refreshSourceSnapshots: {refresh.SourceSnapshotCount}") |> ignore
+        | None -> ()
+
         builder.AppendLine($"generatedViews: {List.length report.GeneratedViews}") |> ignore
         builder.AppendLine($"diagnostics: {List.length report.Diagnostics}") |> ignore
 

@@ -23,8 +23,14 @@ Core boundary:
   command and skill guidance from `readiness/<id>/work-model.json` into
   `readiness/<id>/agent-commands/<target>/` (a `guidance.json` manifest plus
   `commands.md`/`skills.md` projections), marked generated with source digests
-  and never a second source of truth. Governance-owned effective evidence
-  freshness and gate enforcement remain optional downstream concerns.
+  and never a second source of truth. `fsgg-sdd refresh` is a cross-cutting
+  generator (not a lifecycle stage; `nextLifecycleCommand Refresh = None`) that
+  brings a work item's SDD-owned generated views back to currency: it regenerates
+  the work model and agent guidance and renders the human-readable
+  `readiness/<id>/summary.md` projection, while reporting the currency of
+  `analysis.json`/`verify.json`/`ship.json` (re-running those generators out of
+  lifecycle order corrupts evidence freshness). Governance-owned effective
+  evidence freshness and gate enforcement remain optional downstream concerns.
 - FS.GG.Governance owns rule evaluation, evidence freshness, routing, profiles,
   and gate enforcement.
 - Integrations between them must be explicit, versioned, and optional until
@@ -43,5 +49,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/014-agent-guidance/plan.md
+at specs/015-refresh-command/plan.md
 <!-- SPECKIT END -->

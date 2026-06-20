@@ -117,5 +117,11 @@ module CommandReports =
     val agentsStaleGeneratedGuidance: path: string -> targetId: string -> Diagnostic
     val agentsBehaviorDivergence: path: string -> targetIds: string list -> Diagnostic
     val agentsUnsafeGeneratedViewRefresh: path: string -> relatedIds: string list -> Diagnostic
+    val refreshMissingSource: viewPath: string -> sourcePath: string -> Diagnostic
+    val refreshMalformedSource: viewPath: string -> sourcePath: string -> message: string -> Diagnostic
+    val refreshStaleView: viewPath: string -> sourcePaths: string list -> Diagnostic
+    val refreshMalformedGeneratedView: viewPath: string -> message: string -> Diagnostic
+    val refreshBlockedUpstreamView: viewPath: string -> upstreamViewPath: string -> Diagnostic
+    val refreshUnrenderableSummary: summaryPath: string -> relatedIds: string list -> Diagnostic
     val buildReport: model: CommandModel -> CommandReport
     val exitCodeForReport: report: CommandReport -> int

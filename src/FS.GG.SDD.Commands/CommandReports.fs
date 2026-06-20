@@ -961,6 +961,60 @@ module CommandReports =
             "Resolve the underlying generated-view diagnostics before refreshing agent guidance."
             relatedIds
 
+    let refreshMissingSource viewPath sourcePath =
+        commandDiagnostic
+            "refresh.missingSource"
+            DiagnosticSeverity.DiagnosticError
+            (Some viewPath)
+            $"Generated view '{viewPath}' cannot be refreshed because declared source '{sourcePath}' is missing."
+            "Restore or author the missing declared source before refreshing the generated view."
+            [ sourcePath ]
+
+    let refreshMalformedSource viewPath sourcePath message =
+        commandDiagnostic
+            "refresh.malformedSource"
+            DiagnosticSeverity.DiagnosticError
+            (Some viewPath)
+            message
+            "Repair the malformed or schema-incompatible declared source before refreshing the generated view."
+            [ sourcePath ]
+
+    let refreshStaleView viewPath sourcePaths =
+        commandDiagnostic
+            "refresh.staleView"
+            DiagnosticSeverity.DiagnosticWarning
+            (Some viewPath)
+            $"Generated view '{viewPath}' no longer matches its current declared sources."
+            "Refresh the generated view from its current declared sources."
+            sourcePaths
+
+    let refreshMalformedGeneratedView viewPath message =
+        commandDiagnostic
+            "refresh.malformedGeneratedView"
+            DiagnosticSeverity.DiagnosticWarning
+            (Some viewPath)
+            message
+            "Regenerate the malformed generated view from its current declared sources."
+            [ viewPath ]
+
+    let refreshBlockedUpstreamView viewPath upstreamViewPath =
+        commandDiagnostic
+            "refresh.blockedUpstreamView"
+            DiagnosticSeverity.DiagnosticError
+            (Some viewPath)
+            $"Generated view '{viewPath}' cannot be refreshed until upstream view '{upstreamViewPath}' is current."
+            "Bring the named upstream generated view to currency before refreshing this dependent view."
+            [ upstreamViewPath ]
+
+    let refreshUnrenderableSummary summaryPath relatedIds =
+        commandDiagnostic
+            "refresh.unrenderableSummary"
+            DiagnosticSeverity.DiagnosticError
+            (Some summaryPath)
+            $"Readiness summary '{summaryPath}' cannot be rendered because its required structured readiness data is missing, stale, or blocked."
+            "Bring the structured readiness views the summary projects to currency before rendering the summary."
+            relatedIds
+
     let changeFromEffectResult (request: CommandRequest) (result: CommandEffectResult) =
         match result.Effect with
         | CreateDirectory path ->
@@ -1166,6 +1220,7 @@ module CommandReports =
         (verification: VerificationSummary option)
         (ship: ShipSummary option)
         (agentGuidance: AgentGuidanceSummary option)
+        (refresh: RefreshSummary option)
         =
         let blocking =
             diagnostics
@@ -1207,6 +1262,7 @@ module CommandReports =
                         Some Evidence
                     else
                         None
+                | Refresh -> None
                 | _ -> None
 
             Some
@@ -1306,6 +1362,31 @@ module CommandReports =
                     |> Option.map (fun summary -> summary.GeneratedRoots)
                     |> Option.defaultValue []
                   BlockingDiagnosticIds = [] }
+        elif request.Command = Refresh then
+            let warningBlocked =
+                refresh
+                |> Option.map (fun summary -> summary.BlockedViewIds)
+                |> Option.defaultValue []
+
+            if not (List.isEmpty warningBlocked) then
+                Some
+                    { ActionId = "refresh.correctBlockedViews"
+                      Command = None
+                      WorkId = request.WorkId
+                      Reason = "Some generated views could not be refreshed; correct the named source or upstream view."
+                      RequiredArtifacts = warningBlocked |> List.sort
+                      BlockingDiagnosticIds = [] }
+            else
+                Some
+                    { ActionId = "refreshGenerated"
+                      Command = None
+                      WorkId = request.WorkId
+                      Reason = "Generated views are current; rely on the refreshed readiness for the selected work item."
+                      RequiredArtifacts =
+                        refresh
+                        |> Option.map (fun summary -> [ summary.SummaryPath ])
+                        |> Option.defaultValue []
+                      BlockingDiagnosticIds = [] }
         else
             match nextLifecycleCommand request.Command with
             | Some command ->
@@ -1381,10 +1462,11 @@ module CommandReports =
           Verification = model.Verification
           Ship = model.Ship
           AgentGuidance = model.AgentGuidance
+          Refresh = model.Refresh
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility
-          NextAction = nextAction diagnostics model.Request model.Checklist model.Plan model.Tasks model.Analysis model.Evidence model.Verification model.Ship model.AgentGuidance }
+          NextAction = nextAction diagnostics model.Request model.Checklist model.Plan model.Tasks model.Analysis model.Evidence model.Verification model.Ship model.AgentGuidance model.Refresh }
 
     let exitCodeForReport (report: CommandReport) =
         match report.Outcome with

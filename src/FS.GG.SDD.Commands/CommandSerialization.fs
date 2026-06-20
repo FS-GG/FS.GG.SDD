@@ -307,6 +307,37 @@ module CommandSerialization =
             writer.WriteEndObject()
         | None -> writer.WriteNull "agentGuidance"
 
+    let writeRefresh (writer: Utf8JsonWriter) (summary: RefreshSummary option) =
+        match summary with
+        | Some summary ->
+            writer.WriteStartObject("refresh")
+            writer.WriteString("workId", summary.WorkId)
+            writer.WriteString("stage", summary.Stage)
+            writer.WriteString("status", summary.Status)
+            writer.WriteString("summaryPath", summary.SummaryPath)
+            writeStringList writer "refreshedViewIds" summary.RefreshedViewIds
+            writeStringList writer "alreadyCurrentViewIds" summary.AlreadyCurrentViewIds
+            writeStringList writer "blockedViewIds" summary.BlockedViewIds
+            writeStringList writer "notApplicableViewIds" summary.NotApplicableViewIds
+            writeStringList writer "preservedAuthoredPaths" summary.PreservedAuthoredPaths
+            writeStringList writer "findingIds" summary.FindingIds
+            writer.WriteNumber("advisoryCount", summary.AdvisoryCount)
+            writer.WriteNumber("warningCount", summary.WarningCount)
+            writer.WriteNumber("blockingCount", summary.BlockingCount)
+            writer.WriteString("disposition", summary.Disposition)
+            writer.WriteStartArray("perViewState")
+            summary.PerViewState
+            |> List.iter (fun (view, state) ->
+                writer.WriteStartArray()
+                writer.WriteStringValue(view: string)
+                writer.WriteStringValue(state: string)
+                writer.WriteEndArray())
+            writer.WriteEndArray()
+            writer.WriteNumber("sourceSnapshotCount", summary.SourceSnapshotCount)
+            writer.WriteString("readiness", summary.Readiness)
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "refresh"
+
     let writeGeneratedSource (writer: Utf8JsonWriter) (source: GeneratedViewSource) =
         writer.WriteStartObject()
         writer.WriteString("path", source.Path)
@@ -408,6 +439,7 @@ module CommandSerialization =
         writeVerification writer report.Verification
         writeShip writer report.Ship
         writeAgentGuidance writer report.AgentGuidance
+        writeRefresh writer report.Refresh
         writer.WriteStartArray("generatedViews")
         report.GeneratedViews |> List.sortBy (fun view -> view.Path) |> List.iter (writeGeneratedView writer)
         writer.WriteEndArray()

@@ -172,6 +172,28 @@ module TestSupport =
     let runAgents root workId =
         agentsRequest root workId |> runRequest
 
+    let refreshRequest root workId =
+        { request Refresh root with WorkId = Some workId }
+
+    let runRefresh root workId =
+        refreshRequest root workId |> runRequest
+
+    let assertRefreshDisposition (report: CommandReport) disposition =
+        match report.Refresh with
+        | Some summary ->
+            if summary.Disposition <> disposition then
+                failwith $"Expected refresh disposition {disposition}, got {summary.Disposition}."
+        | None -> failwith "Expected refresh summary."
+
+    let refreshViewState (report: CommandReport) view =
+        match report.Refresh with
+        | Some summary ->
+            summary.PerViewState
+            |> List.tryFind (fun (name, _) -> name = view)
+            |> Option.map snd
+            |> Option.defaultWith (fun () -> failwith $"Expected per-view state for {view}.")
+        | None -> failwith "Expected refresh summary."
+
     let initializePlanReadyProject root workId title =
         initializeProject root
         runCharter root workId title |> ignore

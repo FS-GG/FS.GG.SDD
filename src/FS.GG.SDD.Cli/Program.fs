@@ -50,6 +50,7 @@ let printUnknown commandValue =
           Verification = None
           Ship = None
           AgentGuidance = None
+          Refresh = None
           GeneratedViews = []
           Report = None }
 
@@ -74,7 +75,7 @@ let run args =
                   InputText = optionValue "--input" rest
                   OutputFormat = format
                   DryRun = hasFlag "--dry-run" rest
-                  OverwritePolicy = RefuseUnsafe
+                  OverwritePolicy = (if command = Refresh then AllowGeneratedRefresh else RefuseUnsafe)
                   GeneratorVersion = SchemaVersionModule.currentGeneratorVersion() }
 
             let model, effects = init request

@@ -483,3 +483,21 @@ printfn "createdPlan=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tas
 printfn "createdTasks=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "tasks.yml")))
 printfn "createdAnalysis=%b" (File.Exists(Path.Combine(commandRoot, "readiness", "009-tasks-command", "analysis.json")))
 printfn "createdEvidence=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "evidence.yml")))
+
+// --- 015-refresh-command public surface ---
+printfn "refreshCommandName=%s" (CommandTypes.commandName Refresh)
+printfn "refreshCommandStage=%s" (CommandTypes.commandStage Refresh)
+printfn "refreshParsed=%b" (match CommandTypes.parseCommand "refresh" with Ok Refresh -> true | _ -> false)
+printfn "refreshNextLifecycle=%s" (CommandTypes.nextLifecycleCommand Refresh |> Option.map CommandTypes.commandName |> Option.defaultValue "none")
+printfn "shipNextLifecycle=%s" (CommandTypes.nextLifecycleCommand Ship |> Option.map CommandTypes.commandName |> Option.defaultValue "none")
+printfn "refreshDispositions=%s" ([ RefreshedCurrent; PartiallyBlocked; RefreshBlocked ] |> List.map CommandTypes.refreshDispositionValue |> String.concat ",")
+printfn "refreshDiagnostics=%s" ([ refreshMissingSource "readiness/015-refresh-command/work-model.json" "work/015-refresh-command/spec.md"; refreshMalformedSource "readiness/015-refresh-command/work-model.json" "work/015-refresh-command/spec.md" "malformed"; refreshStaleView "readiness/015-refresh-command/analysis.json" [ "readiness/015-refresh-command/work-model.json" ]; refreshMalformedGeneratedView "readiness/015-refresh-command/work-model.json" "malformed"; refreshBlockedUpstreamView "readiness/015-refresh-command/ship.json" "readiness/015-refresh-command/verify.json"; refreshUnrenderableSummary "readiness/015-refresh-command/summary.md" [ "analysis" ] ] |> List.map _.Id |> String.concat ",")
+printfn "summaryOutputPath=%s" (GenerationManifest.expectedSummaryOutputPath "015-refresh-command")
+let refreshSummarySource : GenerationManifest.SourceIdentity =
+    { Artifact = (match ArtifactRef.create "readiness/015-refresh-command/work-model.json" ArtifactRef.ArtifactKind.GeneratedView ArtifactRef.ArtifactOwner.Sdd true with Ok value -> value | Error message -> failwith message)
+      Digest = SchemaVersion.sha256Text "bytes"
+      SchemaVersion = (SchemaVersion.classifyRaw (Some "1")).Version
+      SchemaStatus = (SchemaVersion.classifyRaw (Some "1")).Status
+      RawSchemaVersion = Some "1" }
+let refreshSummaryManifest = GenerationManifest.createSummaryManifest (GenerationManifest.expectedSummaryOutputPath "015-refresh-command") (SchemaVersion.currentGeneratorVersion()) [ refreshSummarySource ] None
+printfn "summaryManifestKind=%s" (GenerationManifest.viewKindValue refreshSummaryManifest.Kind)

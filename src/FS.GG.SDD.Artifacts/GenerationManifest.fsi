@@ -48,7 +48,10 @@ module GenerationManifest =
     val viewKindValue: kind: GeneratedViewKind -> string
     val currencyStatusValue: status: GeneratedViewCurrencyStatus -> string
     val expectedWorkModelOutputPath: workId: string -> string
+    val expectedSummaryOutputPath: workId: string -> string
     val createWorkModelManifest:
+        viewPath: string -> generatorVersion: GeneratorVersion -> sources: SourceIdentity list -> outputDigest: OutputDigest option -> GenerationManifest
+    val createSummaryManifest:
         viewPath: string -> generatorVersion: GeneratorVersion -> sources: SourceIdentity list -> outputDigest: OutputDigest option -> GenerationManifest
     val isStale: currentSources: SourceIdentity list -> manifest: GenerationManifest -> bool
     val parseWorkModelMetadata: path: string -> json: string -> Result<GeneratedWorkModelMetadata, Diagnostic list>

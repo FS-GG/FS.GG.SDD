@@ -18,6 +18,7 @@ module CommandTypes =
         | Verify
         | Ship
         | Agents
+        | Refresh
 
     type OutputFormat =
         | Json
@@ -285,6 +286,30 @@ module CommandTypes =
           SourceSnapshotCount: int
           Readiness: string }
 
+    type RefreshDisposition =
+        | RefreshedCurrent
+        | PartiallyBlocked
+        | RefreshBlocked
+
+    type RefreshSummary =
+        { WorkId: string
+          Stage: string
+          Status: string
+          SummaryPath: string
+          RefreshedViewIds: string list
+          AlreadyCurrentViewIds: string list
+          BlockedViewIds: string list
+          NotApplicableViewIds: string list
+          PreservedAuthoredPaths: string list
+          FindingIds: string list
+          AdvisoryCount: int
+          WarningCount: int
+          BlockingCount: int
+          Disposition: string
+          PerViewState: (string * string) list
+          SourceSnapshotCount: int
+          Readiness: string }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -321,6 +346,7 @@ module CommandTypes =
           Verification: VerificationSummary option
           Ship: ShipSummary option
           AgentGuidance: AgentGuidanceSummary option
+          Refresh: RefreshSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -356,6 +382,7 @@ module CommandTypes =
           Verification: VerificationSummary option
           Ship: ShipSummary option
           AgentGuidance: AgentGuidanceSummary option
+          Refresh: RefreshSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 
@@ -376,6 +403,7 @@ module CommandTypes =
     val artifactOperationValue: operation: ArtifactOperation -> string
     val generatedViewCurrencyValue: currency: GeneratedViewCurrency -> string
     val guidanceDispositionValue: disposition: GuidanceDisposition -> string
+    val refreshDispositionValue: disposition: RefreshDisposition -> string
     val outcomeValue: outcome: CommandOutcome -> string
     val nextLifecycleCommand: command: SddCommand -> SddCommand option
     val effectPath: effect: CommandEffect -> string option

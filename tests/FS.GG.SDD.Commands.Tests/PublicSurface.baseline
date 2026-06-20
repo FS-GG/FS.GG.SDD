@@ -75,6 +75,12 @@ FS.GG.SDD.Commands.CommandReports.missingVerificationPrerequisite
 FS.GG.SDD.Commands.CommandReports.missingWorkId
 FS.GG.SDD.Commands.CommandReports.outsideProject
 FS.GG.SDD.Commands.CommandReports.planIdentityMismatch
+FS.GG.SDD.Commands.CommandReports.refreshBlockedUpstreamView
+FS.GG.SDD.Commands.CommandReports.refreshMalformedGeneratedView
+FS.GG.SDD.Commands.CommandReports.refreshMalformedSource
+FS.GG.SDD.Commands.CommandReports.refreshMissingSource
+FS.GG.SDD.Commands.CommandReports.refreshStaleView
+FS.GG.SDD.Commands.CommandReports.refreshUnrenderableSummary
 FS.GG.SDD.Commands.CommandReports.shipIdentityMismatch
 FS.GG.SDD.Commands.CommandReports.skippedTaskMissingRationale
 FS.GG.SDD.Commands.CommandReports.specificationIdentityMismatch
@@ -120,6 +126,7 @@ FS.GG.SDD.Commands.CommandTypes.outcomeValue
 FS.GG.SDD.Commands.CommandTypes.outputFormatValue
 FS.GG.SDD.Commands.CommandTypes.overwritePolicyValue
 FS.GG.SDD.Commands.CommandTypes.parseCommand
+FS.GG.SDD.Commands.CommandTypes.refreshDispositionValue
 FS.GG.SDD.Commands.CommandTypes.writeKindValue
 FS.GG.SDD.Commands.CommandWorkflow.init
 FS.GG.SDD.Commands.CommandWorkflow.update

@@ -21,8 +21,10 @@ FS.GG.SDD.Artifacts.Diagnostics.staleGeneratedView
 FS.GG.SDD.Artifacts.Diagnostics.unknownReference
 FS.GG.SDD.Artifacts.Diagnostics.unsupportedSchemaVersion
 FS.GG.SDD.Artifacts.Diagnostics.workModelInconsistent
+FS.GG.SDD.Artifacts.GenerationManifest.createSummaryManifest
 FS.GG.SDD.Artifacts.GenerationManifest.createWorkModelManifest
 FS.GG.SDD.Artifacts.GenerationManifest.currencyStatusValue
+FS.GG.SDD.Artifacts.GenerationManifest.expectedSummaryOutputPath
 FS.GG.SDD.Artifacts.GenerationManifest.expectedWorkModelOutputPath
 FS.GG.SDD.Artifacts.GenerationManifest.isStale
 FS.GG.SDD.Artifacts.GenerationManifest.parseWorkModelMetadata
