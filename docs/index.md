@@ -2,6 +2,9 @@
 
 Start with:
 
+- [Quickstart](quickstart.md)
+- [Migration from Spec Kit](migration-from-spec-kit.md)
+- [Adopting Governance](adopting-governance.md)
 - [Initial design](initial-design.md)
 - [Initial implementation plan](initial-implementation-plan.md)
 - [Decision 0001: separate SDD product](decisions/0001-separate-sdd-product.md)

@@ -77,6 +77,11 @@ The first implementation feature should create the structured SDD artifact model
 Markdown remains an authoring surface; schema-versioned structured artifacts are
 the machine contract.
 
+For a command-by-command walkthrough from `fsgg-sdd init` through `fsgg-sdd ship`
+with no Governance installed, see the [Quickstart](docs/quickstart.md). To adopt
+native SDD artifacts from an existing standard Spec Kit project additively, see
+[Migration from Spec Kit](docs/migration-from-spec-kit.md).
+
 ## Agent Context
 
 - Claude: read [CLAUDE.md](CLAUDE.md) and `.claude/skills/fs-gg-sdd-project/SKILL.md`.
