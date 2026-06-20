@@ -158,6 +158,14 @@ module TestSupport =
     let runVerify root workId title =
         verifyRequest root workId title |> runRequest
 
+    let shipRequest root workId title =
+        { request Ship root with
+            WorkId = Some workId
+            Title = Some title }
+
+    let runShip root workId title =
+        shipRequest root workId title |> runRequest
+
     let initializePlanReadyProject root workId title =
         initializeProject root
         runCharter root workId title |> ignore
@@ -222,6 +230,10 @@ evidence:
     let initializeEvidencedProject root workId title =
         initializeAnalyzedProject root workId title
         runEvidence root workId title |> ignore
+
+    let initializeVerifiedProject root workId title =
+        initializeEvidencedProject root workId title
+        runVerify root workId title |> ignore
 
     let validSpec workId title =
         $"""---
@@ -362,3 +374,10 @@ No blocking ambiguity remains.
             if summary.Readiness <> readiness then
                 failwith $"Expected verification readiness {readiness}, got {summary.Readiness}."
         | None -> failwith "Expected verification summary."
+
+    let assertShipSummary (report: CommandReport) readiness disposition =
+        match report.Ship with
+        | Some summary ->
+            if summary.Readiness <> readiness || summary.Disposition <> disposition then
+                failwith $"Expected ship readiness/disposition {readiness}/{disposition}, got {summary.Readiness}/{summary.Disposition}."
+        | None -> failwith "Expected ship summary."

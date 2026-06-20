@@ -8,3 +8,8 @@ expected:
     - evidence.staleEvidence
     - evidence.staleEvidenceSource
   nextAction: evidence.next.verify
+scenarios:
+  - command: ship
+    workId: 013-ship-command
+    outcome: blocked
+    note: Ship surfaces this defect through the verification gate or stale-source check before merge-boundary readiness; covered by reused prerequisite machinery aggregated from the verify view.

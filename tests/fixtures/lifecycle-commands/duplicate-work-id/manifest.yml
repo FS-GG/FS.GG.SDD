@@ -24,3 +24,7 @@ scenarios:
     workId: 010-analyze-command
     outcome: blocked
     diagnostics: [duplicateWorkId]
+  - command: ship
+    workId: 013-ship-command
+    outcome: blocked
+    diagnostics: [duplicateWorkId]

@@ -14,6 +14,7 @@
     <Compile Include="TasksArtifactTests.fs" />
     <Compile Include="AnalysisViewTests.fs" />
     <Compile Include="VerificationViewTests.fs" />
+    <Compile Include="ShipViewTests.fs" />
     <Compile Include="EvidenceArtifactTests.fs" />
     <Compile Include="WorkModelTests.fs" />
     <Compile Include="NormalizedWorkModelTests.fs" />

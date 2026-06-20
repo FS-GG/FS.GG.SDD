@@ -71,3 +71,8 @@ scenarios:
       - generatedViews
       - diagnostics
       - nextAction
+  - command: ship
+    workId: 013-ship-command
+    outcome: succeededWithWarnings
+    note: text projection of report
+    test: FS.GG.SDD.Commands.Tests.ShipCommandTests.ship text projection uses report facts

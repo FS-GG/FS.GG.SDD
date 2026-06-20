@@ -1,0 +1,12 @@
+schemaVersion: 1
+scenario: failed-verification
+command: ship
+workId: 013-ship-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.ShipCommandTests.ship not-verification-ready blocks without ship write
+expected:
+  outcome: blocked
+  diagnostics: [ship.failedVerification]
+  generatedViews: []
+  mutatedArtifacts: []

@@ -26,3 +26,7 @@ scenarios:
     workId: 011-evidence-command
     outcome: blocked
     diagnostics: [outsideProject]
+  - command: ship
+    workId: 013-ship-command
+    outcome: blocked
+    diagnostics: [outsideProject]

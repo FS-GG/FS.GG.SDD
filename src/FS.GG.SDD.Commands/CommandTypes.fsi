@@ -16,6 +16,7 @@ module CommandTypes =
         | Analyze
         | Evidence
         | Verify
+        | Ship
 
     type OutputFormat =
         | Json
@@ -226,6 +227,29 @@ module CommandTypes =
           SourceSnapshotCount: int
           Readiness: string }
 
+    type ShipSummary =
+        { WorkId: string
+          Stage: string
+          Status: string
+          ShipPath: string
+          FindingIds: string list
+          ReadyFindingCount: int
+          AdvisoryCount: int
+          WarningCount: int
+          BlockingCount: int
+          Disposition: string
+          LifecycleStageReadiness: (string * string) list
+          VerificationReadiness: string
+          EvidenceSupportedCount: int
+          EvidenceDeferredCount: int
+          EvidenceMissingCount: int
+          EvidenceStaleCount: int
+          EvidenceSyntheticCount: int
+          EvidenceInvalidCount: int
+          GeneratedViewState: string
+          SourceSnapshotCount: int
+          Readiness: string }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -260,6 +284,7 @@ module CommandTypes =
           Analysis: AnalysisSummary option
           Evidence: EvidenceSummary option
           Verification: VerificationSummary option
+          Ship: ShipSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -293,6 +318,7 @@ module CommandTypes =
           Analysis: AnalysisSummary option
           Evidence: EvidenceSummary option
           Verification: VerificationSummary option
+          Ship: ShipSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 

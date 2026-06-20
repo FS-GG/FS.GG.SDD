@@ -204,13 +204,16 @@ let commandReport =
 expectEqual "parse analyze" (Ok Analyze) (CommandTypes.parseCommand "analyze")
 expectEqual "parse evidence" (Ok Evidence) (CommandTypes.parseCommand "evidence")
 expectEqual "parse verify" (Ok Verify) (CommandTypes.parseCommand "verify")
+expectEqual "parse ship" (Ok Ship) (CommandTypes.parseCommand "ship")
 expectEqual "analyze command stage" "analyze" (CommandTypes.commandStage Analyze)
 expectEqual "evidence command stage" "evidence" (CommandTypes.commandStage Evidence)
 expectEqual "verify command stage" "verify" (CommandTypes.commandStage Verify)
+expectEqual "ship command stage" "ship" (CommandTypes.commandStage Ship)
 expectEqual "next after tasks" (Some Analyze) (CommandTypes.nextLifecycleCommand Tasks)
 expectEqual "next after analyze" (Some Evidence) (CommandTypes.nextLifecycleCommand Analyze)
 expectEqual "next after evidence" (Some Verify) (CommandTypes.nextLifecycleCommand Evidence)
-expectEqual "next after verify" None (CommandTypes.nextLifecycleCommand Verify)
+expectEqual "next after verify" (Some Ship) (CommandTypes.nextLifecycleCommand Verify)
+expectEqual "next after ship" None (CommandTypes.nextLifecycleCommand Ship)
 
 let analyzeRequest =
     ({ Command = Analyze
@@ -373,6 +376,46 @@ printfn "verifySkillVisible=%d" verificationSummary.SkillVisibleCount
 printfn "verifyBlocking=%d" verificationSummary.BlockingCount
 printfn "verifyDiagnostics=%s" ([ missingEvidencePrerequisite "work/009-tasks-command/evidence.yml" "Evidence is required."; malformedVerificationView "readiness/009-tasks-command/verify.json" "Verify JSON is malformed."; verifyIdentityMismatch "readiness/009-tasks-command/verify.json" "009-tasks-command" "other-work"; missingRequiredTest "work/009-tasks-command/tasks.yml" [ "EV001" ]; staleRequiredTest "work/009-tasks-command/tasks.yml" [ "EV001" ] ] |> List.map _.Id |> String.concat ",")
 printfn "verifyNextAction=%s" (verifyReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
+
+let shipRequest =
+    ({ Command = Ship
+       ProjectRoot = commandRoot
+       WorkId = Some "009-tasks-command"
+       Title = Some "Tasks Command"
+       InputText = None
+       OutputFormat = Json
+       DryRun = false
+       OverwritePolicy = RefuseUnsafe
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+    : CommandRequest)
+
+let shipFinalModel =
+    runCommand shipRequest
+
+let shipReport =
+    shipFinalModel.Report
+    |> Option.defaultWith (fun () -> CommandReports.buildReport shipFinalModel)
+
+let shipSummary =
+    shipReport.Ship
+    |> Option.defaultWith (fun () -> failwith "Expected ship summary.")
+
+expectEqual "ship command" Ship shipReport.Command
+expectEqual "ship readiness" "shipReady" shipSummary.Readiness
+expectEqual "ship next action" (Some "ship.next.protectedBoundary") (shipReport.NextAction |> Option.map _.ActionId)
+expectEqual "ship next command null" None (shipReport.NextAction |> Option.bind _.Command)
+
+printfn "shipCommand=%s" (CommandTypes.commandName shipReport.Command)
+printfn "shipCommandStage=%s" (CommandTypes.commandStage Ship)
+printfn "nextAfterShip=%s" (CommandTypes.nextLifecycleCommand Ship |> Option.map CommandTypes.commandName |> Option.defaultValue "none")
+printfn "shipOutcome=%s" (CommandTypes.outcomeValue shipReport.Outcome)
+printfn "shipPath=%s" shipSummary.ShipPath
+printfn "shipReadiness=%s" shipSummary.Readiness
+printfn "shipDisposition=%s" shipSummary.Disposition
+printfn "shipVerificationReadiness=%s" shipSummary.VerificationReadiness
+printfn "shipBlocking=%d" shipSummary.BlockingCount
+printfn "shipDiagnostics=%s" ([ missingVerificationPrerequisite "readiness/009-tasks-command/verify.json" "Verification is required."; verificationNotReady "readiness/009-tasks-command/verify.json" "needsVerificationCorrection"; failedVerification "readiness/009-tasks-command/verify.json" [ "VF001" ]; shipIdentityMismatch "readiness/009-tasks-command/ship.json" "009-tasks-command" "other-work"; malformedShipView "readiness/009-tasks-command/ship.json" "Ship JSON is malformed." ] |> List.map _.Id |> String.concat ",")
+printfn "shipNextAction=%s" (shipReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
 
 printfn "command=%s" (CommandTypes.commandName commandReport.Command)
 printfn "tasksCommandStage=%s" (CommandTypes.commandStage Tasks)

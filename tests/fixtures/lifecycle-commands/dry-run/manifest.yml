@@ -29,3 +29,8 @@ scenarios:
     outcome: succeeded
     safeWriteDecision: dryRunOnly
     mutatedArtifacts: []
+  - command: ship
+    workId: 013-ship-command
+    outcome: succeededWithWarnings
+    note: safeWriteDecision dryRunOnly
+    test: FS.GG.SDD.Commands.Tests.ShipCommandTests.ship dry run reports generated change without mutation

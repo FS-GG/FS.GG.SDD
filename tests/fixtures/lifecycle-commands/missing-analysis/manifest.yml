@@ -10,3 +10,8 @@ expected:
   diagnostics:
     - evidence.missingAnalysisPrerequisite
   writes: []
+scenarios:
+  - command: ship
+    workId: 013-ship-command
+    outcome: blocked
+    diagnostics: [evidence.missingAnalysisPrerequisite]

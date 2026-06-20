@@ -1,0 +1,16 @@
+schemaVersion: 1
+scenario: ship-rerun-current
+command: ship
+workId: 013-ship-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.ShipCommandTests.ship rerun over unchanged sources reports no change
+expected:
+  outcome: succeededWithWarnings
+  generatedViews:
+    - readiness/013-ship-command/work-model.json
+    - readiness/013-ship-command/verify.json
+    - readiness/013-ship-command/ship.json
+  shipReadiness: shipReady
+  shipDisposition: advisory
+  nextAction: ship.next.protectedBoundary

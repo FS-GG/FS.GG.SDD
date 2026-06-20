@@ -99,5 +99,11 @@ module CommandReports =
     val missingRequiredTest: path: string -> ids: string list -> Diagnostic
     val staleRequiredTest: path: string -> ids: string list -> Diagnostic
     val toolDefect: path: string option -> message: string -> Diagnostic
+    val missingVerificationPrerequisite: path: string -> message: string -> Diagnostic
+    val verificationNotReady: path: string -> status: string -> Diagnostic
+    val failedVerification: path: string -> ids: string list -> Diagnostic
+    val staleVerificationView: path: string -> ids: string list -> Diagnostic
+    val shipIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
+    val malformedShipView: path: string -> message: string -> Diagnostic
     val buildReport: model: CommandModel -> CommandReport
     val exitCodeForReport: report: CommandReport -> int

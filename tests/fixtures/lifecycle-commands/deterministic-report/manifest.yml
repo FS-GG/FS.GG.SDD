@@ -25,3 +25,8 @@ scenarios:
     workId: 011-evidence-command
     deterministic: true
     includes: [evidence, declarationIds, generatedViews, nextAction]
+  - command: ship
+    workId: 013-ship-command
+    outcome: succeededWithWarnings
+    note: byte-identical JSON
+    test: FS.GG.SDD.Commands.Tests.ShipCommandTests.ship deterministic JSON report is byte stable

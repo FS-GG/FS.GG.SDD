@@ -15,3 +15,7 @@ scenarios:
     outcome: blocked
     diagnostics: [unknownTaskSourceReference]
     mutation: none
+  - command: ship
+    workId: 013-ship-command
+    outcome: blocked
+    note: Ship surfaces this defect through the verification gate or stale-source check before merge-boundary readiness; covered by reused prerequisite machinery aggregated from the verify view.

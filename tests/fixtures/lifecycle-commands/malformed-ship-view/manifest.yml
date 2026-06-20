@@ -1,0 +1,12 @@
+schemaVersion: 1
+scenario: malformed-ship-view
+command: ship
+workId: 013-ship-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.ShipCommandTests.ship blocks malformed existing ship view without overwrite
+expected:
+  outcome: blocked
+  diagnostics: [ship.malformedShipView]
+  generatedViews: []
+  mutatedArtifacts: []

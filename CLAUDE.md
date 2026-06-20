@@ -15,9 +15,11 @@ Core boundary:
 - `fsgg-sdd evidence` owns declared authored evidence and SDD readiness
   summaries; `fsgg-sdd verify` evaluates SDD-owned verification readiness over
   task/evidence/test/skill obligations, emits `readiness/<id>/verify.json`, and
-  points verification-ready work to a later ship slice. Governance-owned
-  effective evidence freshness and gate enforcement remain optional downstream
-  concerns.
+  points verification-ready work to ship; `fsgg-sdd ship` aggregates SDD-owned
+  merge-boundary readiness, emits `readiness/<id>/ship.json`, and points
+  ship-ready work to the Governance-owned protected-boundary handoff.
+  Governance-owned effective evidence freshness and gate enforcement remain
+  optional downstream concerns.
 - FS.GG.Governance owns rule evaluation, evidence freshness, routing, profiles,
   and gate enforcement.
 - Integrations between them must be explicit, versioned, and optional until
@@ -36,5 +38,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/012-verify-command/plan.md
+at specs/013-ship-command/plan.md
 <!-- SPECKIT END -->

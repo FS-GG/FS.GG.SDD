@@ -15,3 +15,7 @@ scenarios:
     outcome: blocked
     diagnostics: [missingTasksPrerequisite]
     evidenceMutation: none
+  - command: ship
+    workId: 013-ship-command
+    outcome: blocked
+    diagnostics: [missingTasksPrerequisite]

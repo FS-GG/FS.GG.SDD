@@ -122,6 +122,29 @@ module CommandRendering =
             builder.AppendLine($"verifySkillMissing: {verification.SkillMissingCount}") |> ignore
         | None -> ()
 
+        match report.Ship with
+        | Some ship ->
+            builder.AppendLine($"workId: {ship.WorkId}") |> ignore
+            builder.AppendLine($"shipPath: {ship.ShipPath}") |> ignore
+            builder.AppendLine($"shipReadiness: {ship.Readiness}") |> ignore
+            builder.AppendLine($"shipDisposition: {ship.Disposition}") |> ignore
+            builder.AppendLine($"shipReadyFindings: {ship.ReadyFindingCount}") |> ignore
+            builder.AppendLine($"shipAdvisory: {ship.AdvisoryCount}") |> ignore
+            builder.AppendLine($"shipWarnings: {ship.WarningCount}") |> ignore
+            builder.AppendLine($"shipBlocking: {ship.BlockingCount}") |> ignore
+            builder.AppendLine($"shipVerificationReadiness: {ship.VerificationReadiness}") |> ignore
+            ship.LifecycleStageReadiness
+            |> List.sortBy fst
+            |> List.iter (fun (stage, status) -> builder.AppendLine($"shipStage.{stage}: {status}") |> ignore)
+            builder.AppendLine($"shipEvidenceSupported: {ship.EvidenceSupportedCount}") |> ignore
+            builder.AppendLine($"shipEvidenceDeferred: {ship.EvidenceDeferredCount}") |> ignore
+            builder.AppendLine($"shipEvidenceMissing: {ship.EvidenceMissingCount}") |> ignore
+            builder.AppendLine($"shipEvidenceStale: {ship.EvidenceStaleCount}") |> ignore
+            builder.AppendLine($"shipEvidenceSynthetic: {ship.EvidenceSyntheticCount}") |> ignore
+            builder.AppendLine($"shipEvidenceInvalid: {ship.EvidenceInvalidCount}") |> ignore
+            builder.AppendLine($"shipGeneratedViewState: {ship.GeneratedViewState}") |> ignore
+        | None -> ()
+
         builder.AppendLine($"generatedViews: {List.length report.GeneratedViews}") |> ignore
         builder.AppendLine($"diagnostics: {List.length report.Diagnostics}") |> ignore
 

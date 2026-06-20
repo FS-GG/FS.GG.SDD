@@ -31,3 +31,7 @@ scenarios:
     generatedViews:
       - readiness/011-evidence-command/work-model.json
     currencies: [missing, stale, malformed, blocked]
+  - command: ship
+    workId: 013-ship-command
+    outcome: blocked
+    note: Ship surfaces this defect through the verification gate or stale-source check before merge-boundary readiness; covered by reused prerequisite machinery aggregated from the verify view.

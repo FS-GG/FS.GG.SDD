@@ -599,6 +599,44 @@ module LifecycleArtifacts =
           Diagnostics: Diagnostic list
           Readiness: string }
 
+    type ShipReadinessFinding =
+        { Id: string
+          Severity: string
+          Category: string
+          Path: string
+          RelatedIds: string list
+          Message: string
+          Correction: string }
+
+    type ShipLifecycleStageReadiness = { Stage: string; Status: string }
+
+    type ShipVerificationReadinessSummary =
+        { Status: string
+          BlockingFindingIds: string list
+          EvidenceSupportedCount: int
+          EvidenceDeferredCount: int
+          EvidenceMissingCount: int
+          EvidenceStaleCount: int
+          EvidenceSyntheticCount: int
+          EvidenceInvalidCount: int }
+
+    type ShipView =
+        { SchemaVersion: SchemaVersion
+          ViewVersion: string
+          WorkId: WorkId
+          Stage: LifecycleStage
+          Status: string
+          Generator: string
+          Sources: AnalysisSourceRecord list
+          LifecycleReadiness: ShipLifecycleStageReadiness list
+          VerificationReadiness: ShipVerificationReadinessSummary
+          Disposition: string
+          GeneratedViews: AnalysisGeneratedViewRecord list
+          Findings: ShipReadinessFinding list
+          OptionalBoundaryFacts: AnalysisOptionalBoundaryFact list
+          Diagnostics: Diagnostic list
+          Readiness: string }
+
     type MarkdownRequirementMention =
         { Id: string
           Source: ArtifactRef
@@ -645,6 +683,7 @@ module LifecycleArtifacts =
     val parseTaskFacts: snapshot: FileSnapshot -> Result<TaskFacts, Diagnostic list>
     val parseAnalysisView: snapshot: FileSnapshot -> Result<AnalysisView, Diagnostic list>
     val parseVerificationView: snapshot: FileSnapshot -> Result<VerificationView, Diagnostic list>
+    val parseShipView: snapshot: FileSnapshot -> Result<ShipView, Diagnostic list>
     val parseEvidenceArtifact: snapshot: FileSnapshot -> Result<EvidenceArtifact, Diagnostic list>
     val parseRequirements: snapshot: FileSnapshot -> Requirement list
     val parseDecisions: snapshot: FileSnapshot -> Decision list

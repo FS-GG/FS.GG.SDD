@@ -25,7 +25,7 @@ module CommandReports =
             DiagnosticSeverity.DiagnosticError
             None
             $"Unknown SDD command '{value}'."
-            "Use one of: init, charter, specify, clarify, checklist, plan, tasks, analyze, evidence, verify."
+            "Use one of: init, charter, specify, clarify, checklist, plan, tasks, analyze, evidence, verify, ship."
             []
 
     let malformedWorkId (value: string) =
@@ -799,6 +799,60 @@ module CommandReports =
             "Inspect the command failure and fix the tool or environment before rerunning."
             []
 
+    let missingVerificationPrerequisite path message =
+        commandDiagnostic
+            "ship.missingVerificationPrerequisite"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Run fsgg-sdd verify for the selected work item before running fsgg-sdd ship."
+            [ path ]
+
+    let verificationNotReady path (status: string) =
+        commandDiagnostic
+            "ship.verificationNotReady"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Verification view reports '{status}' rather than a verification-ready status."
+            "Resolve the verification findings and rerun fsgg-sdd verify before ship."
+            [ path ]
+
+    let failedVerification path ids =
+        commandDiagnostic
+            "ship.failedVerification"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "Verification view reports unresolved blocking findings that must be corrected before ship."
+            "Correct the underlying verification findings and rerun fsgg-sdd verify before ship."
+            ids
+
+    let staleVerificationView path ids =
+        commandDiagnostic
+            "ship.staleVerificationView"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "Verification view source digests no longer match the current lifecycle sources."
+            "Rerun fsgg-sdd verify to refresh the verification view before ship."
+            ids
+
+    let shipIdentityMismatch path expectedWorkId actualWorkId =
+        commandDiagnostic
+            "ship.identityMismatch"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Ship view work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Regenerate the ship view for the selected work id."
+            [ expectedWorkId; actualWorkId ]
+
+    let malformedShipView path message =
+        commandDiagnostic
+            "ship.malformedShipView"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Remove or repair the malformed readiness/<id>/ship.json before refreshing the ship view."
+            [ path ]
+
     let changeFromEffectResult (request: CommandRequest) (result: CommandEffectResult) =
         match result.Effect with
         | CreateDirectory path ->
@@ -973,6 +1027,26 @@ module CommandReports =
         else
             None
 
+    let shipCorrectionCommand (diagnostics: Diagnostic list) =
+        let ids = diagnostics |> List.map _.Id |> Set.ofList
+
+        if ids |> Set.contains "ship.missingVerificationPrerequisite"
+           || ids |> Set.contains "ship.verificationNotReady"
+           || ids |> Set.contains "ship.failedVerification"
+           || ids |> Set.contains "ship.staleVerificationView"
+           || ids |> Set.contains "verify.identityMismatch"
+           || ids |> Set.contains "verify.malformedVerificationView" then
+            Some Verify
+        elif ids |> Set.contains "evidence.missingAnalysisPrerequisite"
+             || ids |> Set.contains "evidence.analysisNotReady"
+             || ids |> Set.contains "malformedAnalysisView"
+             || ids |> Set.contains "analysisIdentityMismatch" then
+            Some Analyze
+        elif ids |> Set.exists (fun id -> id.StartsWith("evidence.", StringComparison.OrdinalIgnoreCase)) then
+            Some Evidence
+        else
+            None
+
     let nextAction
         (diagnostics: Diagnostic list)
         (request: CommandRequest)
@@ -982,6 +1056,7 @@ module CommandReports =
         (analysis: AnalysisSummary option)
         (evidence: EvidenceSummary option)
         (verification: VerificationSummary option)
+        (ship: ShipSummary option)
         =
         let blocking =
             diagnostics
@@ -999,6 +1074,7 @@ module CommandReports =
                 | Tasks -> tasksCorrectionCommand diagnostics
                 | Analyze -> tasksCorrectionCommand diagnostics
                 | Verify -> verifyCorrectionCommand diagnostics
+                | Ship -> shipCorrectionCommand diagnostics
                 | Evidence ->
                     if ids |> Set.contains "evidence.missingAnalysisPrerequisite"
                        || ids |> Set.contains "evidence.analysisNotReady"
@@ -1091,6 +1167,17 @@ module CommandReports =
                     |> Option.map (fun summary -> [ summary.VerifyPath; $"readiness/{summary.WorkId}/work-model.json" ])
                     |> Option.defaultValue []
                   BlockingDiagnosticIds = [] }
+        elif request.Command = Ship then
+            Some
+                { ActionId = "ship.next.protectedBoundary"
+                  Command = None
+                  WorkId = request.WorkId
+                  Reason = "Ship readiness is current and ready for the protected-boundary handoff."
+                  RequiredArtifacts =
+                    ship
+                    |> Option.map (fun summary -> [ summary.ShipPath; $"readiness/{summary.WorkId}/work-model.json" ])
+                    |> Option.defaultValue []
+                  BlockingDiagnosticIds = [] }
         else
             match nextLifecycleCommand request.Command with
             | Some command ->
@@ -1164,10 +1251,11 @@ module CommandReports =
           Analysis = model.Analysis
           Evidence = model.Evidence
           Verification = model.Verification
+          Ship = model.Ship
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility
-          NextAction = nextAction diagnostics model.Request model.Checklist model.Plan model.Tasks model.Analysis model.Evidence model.Verification }
+          NextAction = nextAction diagnostics model.Request model.Checklist model.Plan model.Tasks model.Analysis model.Evidence model.Verification model.Ship }
 
     let exitCodeForReport (report: CommandReport) =
         match report.Outcome with

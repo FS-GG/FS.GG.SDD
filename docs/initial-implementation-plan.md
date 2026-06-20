@@ -42,7 +42,7 @@ Implementation is driven by the consumer experience:
 Standard Spec Kit remains the workflow used to develop this repository:
 
 ```text
-charter -> specify -> clarify -> checklist -> plan -> tasks -> analyze -> evidence -> verify
+charter -> specify -> clarify -> checklist -> plan -> tasks -> analyze -> evidence -> verify -> ship
 ```
 
 Product code, packages, and tests are added to this repository only through a
@@ -55,7 +55,10 @@ readiness step that emits `readiness/<id>/analysis.json`; `fsgg-sdd evidence`
 records authored evidence declarations and refreshes the SDD work model; and
 `fsgg-sdd verify` (complete — see `specs/012-verify-command/readiness/`) evaluates
 SDD-owned verification readiness, emits `readiness/<id>/verify.json`, refreshes
-the work model, and points verification-ready work to a later ship slice.
+the work model, and points verification-ready work to ship; and `fsgg-sdd ship`
+(complete — see `specs/013-ship-command/readiness/`) aggregates SDD-owned
+merge-boundary readiness, emits `readiness/<id>/ship.json`, and points ship-ready
+work to the Governance-owned protected-boundary handoff.
 
 ## Scope Boundary
 

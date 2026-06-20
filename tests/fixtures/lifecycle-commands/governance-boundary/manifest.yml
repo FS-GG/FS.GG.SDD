@@ -41,3 +41,8 @@ scenarios:
       - .fsgg/capabilities.yml
       - .fsgg/tooling.yml
     forbiddenFields: [route, profile, freshness, gate, audit, protectedBoundary, effectiveEvidence, verifyReadiness, shipReadiness, releaseVerdict]
+  - command: ship
+    workId: 013-ship-command
+    outcome: succeededWithWarnings
+    note: no governance verdicts
+    test: FS.GG.SDD.Commands.Tests.ShipCommandTests.ship does not require Governance files

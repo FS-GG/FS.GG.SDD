@@ -251,6 +251,38 @@ module CommandSerialization =
             writer.WriteEndObject()
         | None -> writer.WriteNull "verification"
 
+    let writeShip (writer: Utf8JsonWriter) (summary: ShipSummary option) =
+        match summary with
+        | Some summary ->
+            writer.WriteStartObject("ship")
+            writer.WriteString("workId", summary.WorkId)
+            writer.WriteString("stage", summary.Stage)
+            writer.WriteString("status", summary.Status)
+            writer.WriteString("shipPath", summary.ShipPath)
+            writeStringList writer "findingIds" summary.FindingIds
+            writer.WriteNumber("readyFindingCount", summary.ReadyFindingCount)
+            writer.WriteNumber("advisoryCount", summary.AdvisoryCount)
+            writer.WriteNumber("warningCount", summary.WarningCount)
+            writer.WriteNumber("blockingCount", summary.BlockingCount)
+            writer.WriteString("disposition", summary.Disposition)
+            writer.WriteStartObject("lifecycleStageReadiness")
+            summary.LifecycleStageReadiness
+            |> List.sortBy fst
+            |> List.iter (fun (stage, status) -> writer.WriteString(stage, status))
+            writer.WriteEndObject()
+            writer.WriteString("verificationReadiness", summary.VerificationReadiness)
+            writer.WriteNumber("evidenceSupportedCount", summary.EvidenceSupportedCount)
+            writer.WriteNumber("evidenceDeferredCount", summary.EvidenceDeferredCount)
+            writer.WriteNumber("evidenceMissingCount", summary.EvidenceMissingCount)
+            writer.WriteNumber("evidenceStaleCount", summary.EvidenceStaleCount)
+            writer.WriteNumber("evidenceSyntheticCount", summary.EvidenceSyntheticCount)
+            writer.WriteNumber("evidenceInvalidCount", summary.EvidenceInvalidCount)
+            writer.WriteString("generatedViewState", summary.GeneratedViewState)
+            writer.WriteNumber("sourceSnapshotCount", summary.SourceSnapshotCount)
+            writer.WriteString("readiness", summary.Readiness)
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "ship"
+
     let writeGeneratedSource (writer: Utf8JsonWriter) (source: GeneratedViewSource) =
         writer.WriteStartObject()
         writer.WriteString("path", source.Path)
@@ -350,6 +382,7 @@ module CommandSerialization =
         writeAnalysis writer report.Analysis
         writeEvidence writer report.Evidence
         writeVerification writer report.Verification
+        writeShip writer report.Ship
         writer.WriteStartArray("generatedViews")
         report.GeneratedViews |> List.sortBy (fun view -> view.Path) |> List.iter (writeGeneratedView writer)
         writer.WriteEndArray()

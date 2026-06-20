@@ -20,3 +20,7 @@ scenarios:
     outcome: blocked
     diagnostics: [missingSpecificationPrerequisite]
     mutation: none
+  - command: ship
+    workId: 013-ship-command
+    outcome: blocked
+    diagnostics: [missingSpecificationPrerequisite]

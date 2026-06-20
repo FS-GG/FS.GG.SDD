@@ -1,0 +1,9 @@
+schemaVersion: 1
+scenario: missing-evidence
+command: ship
+workId: 013-ship-command
+expected:
+  outcome: blocked
+  diagnostics: [verify.missingEvidencePrerequisite]
+  generatedViews: []
+  mutatedArtifacts: []
