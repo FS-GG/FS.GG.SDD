@@ -18,6 +18,7 @@ module CommandTypes =
         | Evidence
         | Verify
         | Ship
+        | Agents
 
     type OutputFormat =
         | Json
@@ -251,6 +252,40 @@ module CommandTypes =
           SourceSnapshotCount: int
           Readiness: string }
 
+    type GuidanceDisposition =
+        | GeneratedCurrent
+        | GuidanceStale
+        | GuidanceBlocked
+        | GuidanceAdvisory
+
+    type AgentGuidanceFinding =
+        { Id: string
+          Severity: string
+          Category: string
+          Path: string
+          RelatedIds: string list
+          Message: string
+          Correction: string }
+
+    type AgentGuidanceSummary =
+        { WorkId: string
+          Stage: string
+          Status: string
+          GeneratedRoots: string list
+          GeneratedTargetIds: string list
+          RefusedTargetIds: string list
+          FindingIds: string list
+          ReadyFindingCount: int
+          AdvisoryCount: int
+          WarningCount: int
+          BlockingCount: int
+          Disposition: string
+          EquivalenceRequired: bool
+          DivergentTargetIds: string list
+          GeneratedViewState: string
+          SourceSnapshotCount: int
+          Readiness: string }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -286,6 +321,7 @@ module CommandTypes =
           Evidence: EvidenceSummary option
           Verification: VerificationSummary option
           Ship: ShipSummary option
+          AgentGuidance: AgentGuidanceSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -320,6 +356,7 @@ module CommandTypes =
           Evidence: EvidenceSummary option
           Verification: VerificationSummary option
           Ship: ShipSummary option
+          AgentGuidance: AgentGuidanceSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 
@@ -344,6 +381,7 @@ module CommandTypes =
         | Evidence -> "evidence"
         | Verify -> "verify"
         | Ship -> "ship"
+        | Agents -> "agents"
 
     let commandStage (command: SddCommand) =
         match command with
@@ -363,6 +401,7 @@ module CommandTypes =
         | "evidence" -> Ok Evidence
         | "verify" -> Ok Verify
         | "ship" -> Ok Ship
+        | "agents" -> Ok Agents
         | other -> Error $"Unknown SDD command '{other}'."
 
     let outputFormatValue (format: OutputFormat) =
@@ -398,6 +437,13 @@ module CommandTypes =
         | GeneratedViewCurrency.Malformed -> "malformed"
         | GeneratedViewCurrency.Blocked -> "blocked"
 
+    let guidanceDispositionValue (disposition: GuidanceDisposition) =
+        match disposition with
+        | GeneratedCurrent -> "generated-current"
+        | GuidanceStale -> "stale"
+        | GuidanceBlocked -> "blocked"
+        | GuidanceAdvisory -> "advisory"
+
     let outcomeValue (outcome: CommandOutcome) =
         match outcome with
         | CommandOutcome.Succeeded -> "succeeded"
@@ -418,6 +464,7 @@ module CommandTypes =
         | Evidence -> Some Verify
         | Verify -> Some Ship
         | Ship -> None
+        | Agents -> None
 
     let effectPath (effect: CommandEffect) =
         match effect with

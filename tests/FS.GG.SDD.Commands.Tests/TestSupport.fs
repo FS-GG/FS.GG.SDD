@@ -166,6 +166,12 @@ module TestSupport =
     let runShip root workId title =
         shipRequest root workId title |> runRequest
 
+    let agentsRequest root workId =
+        { request Agents root with WorkId = Some workId }
+
+    let runAgents root workId =
+        agentsRequest root workId |> runRequest
+
     let initializePlanReadyProject root workId title =
         initializeProject root
         runCharter root workId title |> ignore
@@ -381,3 +387,10 @@ No blocking ambiguity remains.
             if summary.Readiness <> readiness || summary.Disposition <> disposition then
                 failwith $"Expected ship readiness/disposition {readiness}/{disposition}, got {summary.Readiness}/{summary.Disposition}."
         | None -> failwith "Expected ship summary."
+
+    let assertAgentGuidanceSummary (report: CommandReport) readiness disposition =
+        match report.AgentGuidance with
+        | Some summary ->
+            if summary.Readiness <> readiness || summary.Disposition <> disposition then
+                failwith $"Expected agent-guidance readiness/disposition {readiness}/{disposition}, got {summary.Readiness}/{summary.Disposition}."
+        | None -> failwith "Expected agent-guidance summary."

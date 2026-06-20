@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "reportVersion": "1.0.0",
+  "command": {
+    "name": "agents",
+    "stage": "agents"
+  },
+  "context": {
+    "projectRoot": ".",
+    "workId": "001-demo"
+  },
+  "invocation": {
+    "outputFormat": "json",
+    "dryRun": true,
+    "overwritePolicy": "refuseUnsafe"
+  },
+  "outcome": "succeeded",
+  "changedArtifacts": [
+    {
+      "path": "readiness/001-demo/agent-commands/claude",
+      "kind": "directory",
+      "ownership": "sdd",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": null,
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": "readiness/001-demo/agent-commands/claude/commands.md",
+      "kind": "generatedView",
+      "ownership": "generated",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "66f1a7d0a1445985955b11c23cae4ba9e8d33663776a74bffaa73588aebea22b"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": "readiness/001-demo/agent-commands/claude/guidance.json",
+      "kind": "generatedView",
+      "ownership": "generated",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "db8767e123210fcf9275b5d62045d27bd9ab5c3b5b83b37802c5f850bb3a5270"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": "readiness/001-demo/agent-commands/claude/skills.md",
+      "kind": "generatedView",
+      "ownership": "generated",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "91dcab9d3322d1ccd3916f5ebf5e6f8add05d163cd063248de944ac22a293cd7"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": "readiness/001-demo/agent-commands/codex",
+      "kind": "directory",
+      "ownership": "sdd",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": null,
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": "readiness/001-demo/agent-commands/codex/commands.md",
+      "kind": "generatedView",
+      "ownership": "generated",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "ef9f97aa5e2ae31902228ae7fefdafbeac444aab5b7ab81627eef34a19b1cf73"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": "readiness/001-demo/agent-commands/codex/guidance.json",
+      "kind": "generatedView",
+      "ownership": "generated",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "d4f5aa36fca010f826f209d82107904c0bd071cae4c642b74abcbbfc71dd78f6"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": "readiness/001-demo/agent-commands/codex/skills.md",
+      "kind": "generatedView",
+      "ownership": "generated",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "8e344dd24fad08edbdb5d07189405710c0c8fceacecfc94389c420087045832e"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    }
+  ],
+  "specification": null,
+  "clarification": null,
+  "checklist": null,
+  "plan": null,
+  "tasks": null,
+  "analysis": null,
+  "evidence": null,
+  "verification": null,
+  "ship": null,
+  "agentGuidance": {
+    "workId": "001-demo",
+    "stage": "agents",
+    "status": "generated-current",
+    "generatedRoots": [
+      "readiness/001-demo/agent-commands/claude",
+      "readiness/001-demo/agent-commands/codex"
+    ],
+    "generatedTargetIds": [
+      "claude",
+      "codex"
+    ],
+    "refusedTargetIds": [],
+    "findingIds": [],
+    "readyFindingCount": 2,
+    "advisoryCount": 0,
+    "warningCount": 0,
+    "blockingCount": 0,
+    "disposition": "generated-current",
+    "equivalenceRequired": true,
+    "divergentTargetIds": [],
+    "generatedViewState": "missing",
+    "sourceSnapshotCount": 1,
+    "readiness": "agentGuidanceReady"
+  },
+  "generatedViews": [
+    {
+      "path": "readiness/001-demo/agent-commands/claude/guidance.json",
+      "kind": "agent-commands",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "0.2.0"
+      },
+      "sources": [
+        {
+          "path": "readiness/001-demo/work-model.json",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "ec2a65dab8ba344ac030f79be4fd07ecbbd4169e2cbeddb4c51c096b05df26e7"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        }
+      ],
+      "outputDigest": null,
+      "currency": "missing",
+      "diagnosticIds": []
+    },
+    {
+      "path": "readiness/001-demo/agent-commands/codex/guidance.json",
+      "kind": "agent-commands",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "0.2.0"
+      },
+      "sources": [
+        {
+          "path": "readiness/001-demo/work-model.json",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "ec2a65dab8ba344ac030f79be4fd07ecbbd4169e2cbeddb4c51c096b05df26e7"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        }
+      ],
+      "outputDigest": null,
+      "currency": "missing",
+      "diagnosticIds": []
+    }
+  ],
+  "diagnostics": [],
+  "governanceCompatibility": [
+    {
+      "path": ".fsgg/capabilities.yml",
+      "relationship": "optionalGovernanceCapabilities",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/policy.yml",
+      "relationship": "optionalGovernancePolicy",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/tooling.yml",
+      "relationship": "optionalGovernanceTooling",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    }
+  ],
+  "nextAction": {
+    "actionId": "agentsGenerated",
+    "command": null,
+    "workId": "001-demo",
+    "reason": "Generated agent guidance is current; regenerate when the work model changes.",
+    "requiredArtifacts": [
+      "readiness/001-demo/agent-commands/claude",
+      "readiness/001-demo/agent-commands/codex"
+    ],
+    "blockingDiagnosticIds": []
+  }
+}

@@ -1,0 +1,20 @@
+command: agents
+outcome: succeeded
+changedArtifacts: 8
+workId: 001-demo
+agentsReadiness: agentGuidanceReady
+agentsDisposition: generated-current
+agentsTarget: claude
+agentsTarget: codex
+agentsGeneratedRoot: readiness/001-demo/agent-commands/claude
+agentsGeneratedRoot: readiness/001-demo/agent-commands/codex
+agentsEquivalenceRequired: True
+agentsReadyFindings: 2
+agentsAdvisory: 0
+agentsWarnings: 0
+agentsBlocking: 0
+agentsGeneratedViewState: missing
+generatedViews: 2
+diagnostics: 0
+nextAction: agentsGenerated
+

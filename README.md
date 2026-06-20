@@ -67,7 +67,11 @@ SDD-owned verification readiness over the task/evidence/test/skill obligations,
 emits `readiness/<id>/verify.json`, and points verification-ready work to ship,
 and `fsgg-sdd ship` aggregates SDD-owned merge-boundary readiness, emits
 `readiness/<id>/ship.json`, and points ship-ready work to the Governance-owned
-protected-boundary handoff.
+protected-boundary handoff. `fsgg-sdd agents` is a cross-cutting generator (not a
+lifecycle stage) that derives per-target Claude/Codex command and skill guidance
+from `readiness/<id>/work-model.json` into
+`readiness/<id>/agent-commands/<target>/`, marked generated with source digests
+and never a second source of truth.
 
 The first implementation feature should create the structured SDD artifact model.
 Markdown remains an authoring surface; schema-versioned structured artifacts are

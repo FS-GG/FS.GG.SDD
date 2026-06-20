@@ -18,8 +18,13 @@ Core boundary:
   points verification-ready work to ship; `fsgg-sdd ship` aggregates SDD-owned
   merge-boundary readiness, emits `readiness/<id>/ship.json`, and points
   ship-ready work to the Governance-owned protected-boundary handoff.
-  Governance-owned effective evidence freshness and gate enforcement remain
-  optional downstream concerns.
+  `fsgg-sdd agents` is a cross-cutting generator (not a lifecycle stage;
+  `nextLifecycleCommand Agents = None`) that derives per-target Claude/Codex
+  command and skill guidance from `readiness/<id>/work-model.json` into
+  `readiness/<id>/agent-commands/<target>/` (a `guidance.json` manifest plus
+  `commands.md`/`skills.md` projections), marked generated with source digests
+  and never a second source of truth. Governance-owned effective evidence
+  freshness and gate enforcement remain optional downstream concerns.
 - FS.GG.Governance owns rule evaluation, evidence freshness, routing, profiles,
   and gate enforcement.
 - Integrations between them must be explicit, versioned, and optional until
@@ -38,5 +43,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/013-ship-command/plan.md
+at specs/014-agent-guidance/plan.md
 <!-- SPECKIT END -->

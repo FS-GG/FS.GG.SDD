@@ -505,3 +505,241 @@ module WorkModel =
         model.Diagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticError)
 
     let governanceBoundaryEntries (model: WorkModel) = model.GovernanceBoundaries
+
+    type NormalizedGuidanceModel =
+        { WorkId: string
+          Stage: string
+          Commands: GuidanceCommandEntry list
+          Skills: GuidanceSkillEntry list
+          SourceIdentities: string list }
+
+    // ---- work-model.json reader (the agent-guidance derivation source) ----
+
+    let private jmProp (name: string) (element: JsonElement) =
+        let mutable value = Unchecked.defaultof<JsonElement>
+
+        if element.ValueKind = JsonValueKind.Object && element.TryGetProperty(name, &value) then
+            Some value
+        else
+            None
+
+    let private jmString name element =
+        jmProp name element
+        |> Option.bind (fun value -> if value.ValueKind = JsonValueKind.String then Some(value.GetString()) else None)
+        |> Option.defaultValue ""
+
+    let private jmInt name element =
+        jmProp name element
+        |> Option.bind (fun value ->
+            if value.ValueKind = JsonValueKind.Number then
+                match value.TryGetInt32() with
+                | true, parsed -> Some parsed
+                | _ -> None
+            else
+                None)
+
+    let private jmArray name element =
+        jmProp name element
+        |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Array)
+        |> Option.map (fun value -> value.EnumerateArray() |> Seq.toList)
+        |> Option.defaultValue []
+
+    let private jmStringList name element =
+        jmArray name element
+        |> List.choose (fun value -> if value.ValueKind = JsonValueKind.String then Some(value.GetString()) else None)
+        |> List.filter (String.IsNullOrWhiteSpace >> not)
+
+    let private jmSeverity (value: string) =
+        match (if isNull value then "" else value).Trim().ToLowerInvariant() with
+        | "error" -> DiagnosticError
+        | "warning" -> DiagnosticWarning
+        | _ -> DiagnosticInfo
+
+    let private parseEmbeddedDiagnostic (element: JsonElement) : Diagnostic =
+        { Id = jmString "id" element
+          Severity = jmSeverity (jmString "severity" element)
+          Artifact = None
+          Location = None
+          Message = jmString "message" element
+          Correction = jmString "correction" element
+          RelatedIds = jmStringList "relatedIds" element }
+
+    let parseWorkModel (snapshot: FileSnapshot) : Result<WorkModel, Diagnostic list> =
+        let artifact =
+            match FS.GG.SDD.Artifacts.ArtifactRef.create snapshot.Path ArtifactKind.GeneratedView ArtifactOwner.Sdd true with
+            | Ok value -> value
+            | Error message -> invalidArg (nameof snapshot.Path) message
+
+        try
+            use document = JsonDocument.Parse snapshot.Text
+            let root = document.RootElement
+            let schemaVersion = jmInt "schemaVersion" root
+
+            match schemaVersion with
+            | Some version when version >= 1 ->
+                let workItem = jmProp "workItem" root
+
+                let stage =
+                    workItem |> Option.map (jmString "stage") |> Option.defaultValue ""
+
+                let workId =
+                    match jmString "workId" root with
+                    | "" -> workItem |> Option.map (jmString "id") |> Option.defaultValue ""
+                    | value -> value
+
+                if String.IsNullOrWhiteSpace workId then
+                    Error
+                        [ Diagnostics.workModelInconsistent
+                              artifact
+                              "Work model is missing a workId."
+                              "Regenerate readiness/<id>/work-model.json from current lifecycle sources."
+                              [ snapshot.Path ] ]
+                else
+                    Ok
+                        { SchemaVersion = version
+                          ModelVersion = jmString "modelVersion" root
+                          WorkId = workId
+                          Project =
+                            jmProp "project" root
+                            |> Option.map (fun project -> { Id = jmString "id" project; DefaultWorkRoot = jmString "defaultWorkRoot" project })
+                            |> Option.defaultValue { Id = "unknown"; DefaultWorkRoot = "work" }
+                          Sources = []
+                          WorkItem =
+                            workItem
+                            |> Option.map (fun item ->
+                                { Id = jmString "id" item
+                                  Title = jmString "title" item
+                                  Stage = jmString "stage" item
+                                  ChangeTier = jmString "changeTier" item
+                                  Status = jmString "status" item })
+                            |> Option.defaultValue { Id = workId; Title = workId; Stage = stage; ChangeTier = "tier1"; Status = "draft" }
+                          Requirements =
+                            jmArray "requirements" root
+                            |> List.map (fun item ->
+                                { Id = jmString "id" item
+                                  Title = jmString "title" item
+                                  Text = jmString "text" item
+                                  AcceptanceCriteria = jmStringList "acceptanceCriteria" item
+                                  Priority = (match jmString "priority" item with "" -> None | value -> Some value)
+                                  Source = jmString "source" item
+                                  SourceLocation = None
+                                  LinkedTaskIds = jmStringList "linkedTaskIds" item |> List.sort
+                                  LinkedEvidenceIds = jmStringList "linkedEvidenceIds" item |> List.sort })
+                            |> List.sortBy (fun requirement -> requirement.Id)
+                          Decisions =
+                            jmArray "decisions" root
+                            |> List.map (fun item ->
+                                { Id = jmString "id" item
+                                  Title = jmString "title" item
+                                  Decision = jmString "decision" item
+                                  Source = jmString "source" item
+                                  SourceLocation = None
+                                  LinkedTaskIds = jmStringList "linkedTaskIds" item |> List.sort })
+                            |> List.sortBy (fun decision -> decision.Id)
+                          Tasks =
+                            jmArray "tasks" root
+                            |> List.map (fun item ->
+                                { Id = jmString "id" item
+                                  Title = jmString "title" item
+                                  Status = jmString "status" item
+                                  Owner = jmString "owner" item
+                                  Dependencies = jmStringList "dependencies" item |> List.sort
+                                  Requirements = jmStringList "requirements" item |> List.sort
+                                  Decisions = jmStringList "decisions" item |> List.sort
+                                  SourceIds = jmStringList "sourceIds" item |> List.sort
+                                  RequiredSkills = jmStringList "requiredSkills" item |> List.sort
+                                  RequiredEvidence = jmStringList "requiredEvidence" item |> List.sort
+                                  Source = jmString "source" item
+                                  SourceLocation = None })
+                            |> List.sortBy (fun task -> task.Id)
+                          Evidence =
+                            jmArray "evidence" root
+                            |> List.map (fun item ->
+                                { Id = jmString "id" item
+                                  Kind = jmString "kind" item
+                                  SubjectType = jmString "subjectType" item
+                                  SubjectId = jmString "subjectId" item
+                                  TaskRefs = jmStringList "taskRefs" item |> List.sort
+                                  RequirementRefs = jmStringList "requirementRefs" item |> List.sort
+                                  ArtifactRefs = jmStringList "artifactRefs" item |> List.sort
+                                  Result = jmString "result" item
+                                  Synthetic = (jmProp "synthetic" item |> Option.exists (fun value -> value.ValueKind = JsonValueKind.True))
+                                  Rationale = (match jmString "rationale" item with "" -> None | value -> Some value)
+                                  Source = jmString "source" item
+                                  SourceLocation = None })
+                            |> List.sortBy (fun evidence -> evidence.Id)
+                          GeneratedViews = []
+                          Diagnostics = jmArray "diagnostics" root |> List.map parseEmbeddedDiagnostic |> Diagnostics.sort
+                          GovernanceBoundaries = [] }
+            | _ ->
+                Error [ Diagnostics.malformedSchemaVersion artifact "Work model is missing or has malformed schemaVersion." ]
+        with ex ->
+            Error
+                [ Diagnostics.workModelInconsistent
+                      artifact
+                      $"Work model JSON is malformed: {ex.Message}"
+                      "Regenerate readiness/<id>/work-model.json with valid JSON."
+                      [ snapshot.Path ] ]
+
+    // ---- normalized guidance model derivation (pure over the work model) ----
+
+    let deriveGuidanceModel (model: WorkModel) : NormalizedGuidanceModel =
+        let commands =
+            model.Tasks
+            |> List.map (fun task ->
+                let relatedIds = (task.Requirements @ task.Decisions) |> List.distinct |> List.sort
+
+                let purpose =
+                    match relatedIds with
+                    | [] -> $"Carry out lifecycle task {task.Id} ({task.Status})."
+                    | ids ->
+                        let coverage = String.concat ", " ids
+                        $"Carry out lifecycle task {task.Id} ({task.Status}) covering {coverage}."
+
+                { Id = task.Id
+                  Title = task.Title
+                  Stage = model.WorkItem.Stage
+                  Purpose = purpose
+                  RelatedIds = relatedIds })
+            |> List.sortBy (fun command -> command.Id)
+
+        let skills =
+            model.Tasks
+            |> List.collect (fun task -> task.RequiredSkills |> List.map (fun skill -> skill, task.Id))
+            |> List.groupBy fst
+            |> List.map (fun (skill, pairs) ->
+                let taskIds = pairs |> List.map snd |> List.distinct |> List.sort
+                let taskList = String.concat ", " taskIds
+
+                { Id = skill
+                  Title = skill
+                  Capability = $"Required by tasks: {taskList}."
+                  RelatedIds = taskIds })
+            |> List.sortBy (fun skill -> skill.Id)
+
+        let sourceIdentities =
+            model.Sources
+            |> List.map (fun source -> source.Path)
+            |> List.append [ GenerationManifest.expectedWorkModelOutputPath model.WorkId ]
+            |> List.distinct
+            |> List.sort
+
+        { WorkId = model.WorkId
+          Stage = model.WorkItem.Stage
+          Commands = commands
+          Skills = skills
+          SourceIdentities = sourceIdentities }
+
+    let behaviorModelDigest (model: NormalizedGuidanceModel) : SourceDigest =
+        let commandText =
+            model.Commands
+            |> List.map (fun command -> String.concat "|" [ command.Id; command.Title; command.Stage; command.Purpose; String.concat "," command.RelatedIds ])
+            |> String.concat "\n"
+
+        let skillText =
+            model.Skills
+            |> List.map (fun skill -> String.concat "|" [ skill.Id; skill.Title; skill.Capability; String.concat "," skill.RelatedIds ])
+            |> String.concat "\n"
+
+        let canonical = String.concat "\n" [ model.WorkId; model.Stage; "commands"; commandText; "skills"; skillText ]
+        SchemaVersion.sha256Text canonical

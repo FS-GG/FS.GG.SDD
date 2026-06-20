@@ -145,6 +145,28 @@ module CommandRendering =
             builder.AppendLine($"shipGeneratedViewState: {ship.GeneratedViewState}") |> ignore
         | None -> ()
 
+        match report.AgentGuidance with
+        | Some guidance ->
+            builder.AppendLine($"workId: {guidance.WorkId}") |> ignore
+            builder.AppendLine($"agentsReadiness: {guidance.Readiness}") |> ignore
+            builder.AppendLine($"agentsDisposition: {guidance.Disposition}") |> ignore
+            guidance.GeneratedTargetIds
+            |> List.sort
+            |> List.iter (fun target -> builder.AppendLine($"agentsTarget: {target}") |> ignore)
+            guidance.GeneratedRoots
+            |> List.sort
+            |> List.iter (fun root -> builder.AppendLine($"agentsGeneratedRoot: {root}") |> ignore)
+            builder.AppendLine($"agentsEquivalenceRequired: {guidance.EquivalenceRequired}") |> ignore
+            guidance.DivergentTargetIds
+            |> List.sort
+            |> List.iter (fun target -> builder.AppendLine($"agentsDivergentTarget: {target}") |> ignore)
+            builder.AppendLine($"agentsReadyFindings: {guidance.ReadyFindingCount}") |> ignore
+            builder.AppendLine($"agentsAdvisory: {guidance.AdvisoryCount}") |> ignore
+            builder.AppendLine($"agentsWarnings: {guidance.WarningCount}") |> ignore
+            builder.AppendLine($"agentsBlocking: {guidance.BlockingCount}") |> ignore
+            builder.AppendLine($"agentsGeneratedViewState: {guidance.GeneratedViewState}") |> ignore
+        | None -> ()
+
         builder.AppendLine($"generatedViews: {List.length report.GeneratedViews}") |> ignore
         builder.AppendLine($"diagnostics: {List.length report.Diagnostics}") |> ignore
 

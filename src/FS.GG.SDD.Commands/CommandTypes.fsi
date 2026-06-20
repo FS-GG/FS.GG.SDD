@@ -17,6 +17,7 @@ module CommandTypes =
         | Evidence
         | Verify
         | Ship
+        | Agents
 
     type OutputFormat =
         | Json
@@ -250,6 +251,40 @@ module CommandTypes =
           SourceSnapshotCount: int
           Readiness: string }
 
+    type GuidanceDisposition =
+        | GeneratedCurrent
+        | GuidanceStale
+        | GuidanceBlocked
+        | GuidanceAdvisory
+
+    type AgentGuidanceFinding =
+        { Id: string
+          Severity: string
+          Category: string
+          Path: string
+          RelatedIds: string list
+          Message: string
+          Correction: string }
+
+    type AgentGuidanceSummary =
+        { WorkId: string
+          Stage: string
+          Status: string
+          GeneratedRoots: string list
+          GeneratedTargetIds: string list
+          RefusedTargetIds: string list
+          FindingIds: string list
+          ReadyFindingCount: int
+          AdvisoryCount: int
+          WarningCount: int
+          BlockingCount: int
+          Disposition: string
+          EquivalenceRequired: bool
+          DivergentTargetIds: string list
+          GeneratedViewState: string
+          SourceSnapshotCount: int
+          Readiness: string }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -285,6 +320,7 @@ module CommandTypes =
           Evidence: EvidenceSummary option
           Verification: VerificationSummary option
           Ship: ShipSummary option
+          AgentGuidance: AgentGuidanceSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -319,6 +355,7 @@ module CommandTypes =
           Evidence: EvidenceSummary option
           Verification: VerificationSummary option
           Ship: ShipSummary option
+          AgentGuidance: AgentGuidanceSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 
@@ -338,6 +375,7 @@ module CommandTypes =
     val writeKindValue: kind: ArtifactWriteKind -> string
     val artifactOperationValue: operation: ArtifactOperation -> string
     val generatedViewCurrencyValue: currency: GeneratedViewCurrency -> string
+    val guidanceDispositionValue: disposition: GuidanceDisposition -> string
     val outcomeValue: outcome: CommandOutcome -> string
     val nextLifecycleCommand: command: SddCommand -> SddCommand option
     val effectPath: effect: CommandEffect -> string option

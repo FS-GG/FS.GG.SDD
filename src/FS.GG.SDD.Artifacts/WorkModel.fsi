@@ -106,6 +106,16 @@ module WorkModel =
           OutputDigest: OutputDigest
           Diagnostics: Diagnostic list }
 
+    type NormalizedGuidanceModel =
+        { WorkId: string
+          Stage: string
+          Commands: GuidanceCommandEntry list
+          Skills: GuidanceSkillEntry list
+          SourceIdentities: string list }
+
     val fromParsedWorkItem: parsed: ParsedWorkItem -> WorkModel
     val blockingDiagnostics: model: WorkModel -> Diagnostic list
     val governanceBoundaryEntries: model: WorkModel -> GovernanceBoundaryEntry list
+    val parseWorkModel: snapshot: FileSnapshot -> Result<WorkModel, Diagnostic list>
+    val deriveGuidanceModel: model: WorkModel -> NormalizedGuidanceModel
+    val behaviorModelDigest: model: NormalizedGuidanceModel -> SourceDigest

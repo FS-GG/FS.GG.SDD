@@ -283,6 +283,30 @@ module CommandSerialization =
             writer.WriteEndObject()
         | None -> writer.WriteNull "ship"
 
+    let writeAgentGuidance (writer: Utf8JsonWriter) (summary: AgentGuidanceSummary option) =
+        match summary with
+        | Some summary ->
+            writer.WriteStartObject("agentGuidance")
+            writer.WriteString("workId", summary.WorkId)
+            writer.WriteString("stage", summary.Stage)
+            writer.WriteString("status", summary.Status)
+            writeStringList writer "generatedRoots" summary.GeneratedRoots
+            writeStringList writer "generatedTargetIds" summary.GeneratedTargetIds
+            writeStringList writer "refusedTargetIds" summary.RefusedTargetIds
+            writeStringList writer "findingIds" summary.FindingIds
+            writer.WriteNumber("readyFindingCount", summary.ReadyFindingCount)
+            writer.WriteNumber("advisoryCount", summary.AdvisoryCount)
+            writer.WriteNumber("warningCount", summary.WarningCount)
+            writer.WriteNumber("blockingCount", summary.BlockingCount)
+            writer.WriteString("disposition", summary.Disposition)
+            writer.WriteBoolean("equivalenceRequired", summary.EquivalenceRequired)
+            writeStringList writer "divergentTargetIds" summary.DivergentTargetIds
+            writer.WriteString("generatedViewState", summary.GeneratedViewState)
+            writer.WriteNumber("sourceSnapshotCount", summary.SourceSnapshotCount)
+            writer.WriteString("readiness", summary.Readiness)
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "agentGuidance"
+
     let writeGeneratedSource (writer: Utf8JsonWriter) (source: GeneratedViewSource) =
         writer.WriteStartObject()
         writer.WriteString("path", source.Path)
@@ -383,6 +407,7 @@ module CommandSerialization =
         writeEvidence writer report.Evidence
         writeVerification writer report.Verification
         writeShip writer report.Ship
+        writeAgentGuidance writer report.AgentGuidance
         writer.WriteStartArray("generatedViews")
         report.GeneratedViews |> List.sortBy (fun view -> view.Path) |> List.iter (writeGeneratedView writer)
         writer.WriteEndArray()

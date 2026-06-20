@@ -853,6 +853,114 @@ module CommandReports =
             "Remove or repair the malformed readiness/<id>/ship.json before refreshing the ship view."
             [ path ]
 
+    let agentsNoTargets path =
+        commandDiagnostic
+            "agents.noTargets"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "Agent guidance configuration declares no agent targets."
+            "Declare at least one agent target (for example claude or codex) in .fsgg/agents.yml."
+            [ path ]
+
+    let agentsInvalidGeneratedRoot path targetId =
+        commandDiagnostic
+            "agents.invalidGeneratedRoot"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Agent guidance target '{targetId}' has a work-model path or generated root that does not resolve within the project."
+            "Point the work-model path and each target generated root at a location inside the project."
+            [ targetId ]
+
+    let agentsWorkModelIdentityMismatch path expectedWorkId actualWorkId =
+        commandDiagnostic
+            "agents.workModelIdentityMismatch"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Work model work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Select the work id that matches the normalized work model, or regenerate the work model."
+            [ expectedWorkId; actualWorkId ]
+
+    let agentsMissingWorkModel path =
+        commandDiagnostic
+            "agents.missingWorkModel"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Normalized work model '{path}' is missing."
+            "Run fsgg-sdd verify or ship for the selected work item to generate the work model before generating agent guidance."
+            [ path ]
+
+    let agentsMalformedWorkModel path message =
+        commandDiagnostic
+            "agents.malformedWorkModel"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Regenerate readiness/<id>/work-model.json from current lifecycle sources before generating agent guidance."
+            [ path ]
+
+    let agentsStaleWorkModel path =
+        commandDiagnostic
+            "agents.staleWorkModel"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "Normalized work model source digests no longer match the current lifecycle sources."
+            "Rerun fsgg-sdd verify or ship to refresh the work model before generating agent guidance."
+            [ path ]
+
+    let agentsBlockedWorkModel path relatedIds =
+        commandDiagnostic
+            "agents.blockedWorkModel"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "Normalized work model is blocked by invalid lifecycle source data."
+            "Resolve the work-model diagnostics and refresh the work model before generating agent guidance."
+            relatedIds
+
+    let agentsUnknownSourceReference path id =
+        commandDiagnostic
+            "agents.unknownSourceReference"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Work model references unknown lifecycle fact '{id}'."
+            "Correct the lifecycle source or regenerate the work model so all references resolve."
+            [ id ]
+
+    let agentsMalformedGeneratedGuidance path message =
+        commandDiagnostic
+            "agents.malformedGeneratedGuidance"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Remove or repair the malformed generated guidance.json before refreshing agent guidance."
+            [ path ]
+
+    let agentsStaleGeneratedGuidance path targetId =
+        commandDiagnostic
+            "agents.staleGeneratedGuidance"
+            DiagnosticSeverity.DiagnosticWarning
+            (Some path)
+            $"Generated agent guidance for target '{targetId}' no longer matches the current normalized work model."
+            "Regenerate agent guidance so the generated view matches the current work model."
+            [ targetId ]
+
+    let agentsBehaviorDivergence path targetIds =
+        commandDiagnostic
+            "agents.behaviorDivergence"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "Configured agent targets would describe divergent workflow behavior for the same lifecycle model."
+            "Regenerate the divergent target guidance from the shared normalized work model so Claude and Codex behavior matches."
+            targetIds
+
+    let agentsUnsafeGeneratedViewRefresh path relatedIds =
+        commandDiagnostic
+            "agents.unsafeGeneratedViewRefresh"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "Generated agent guidance cannot be safely refreshed in this run."
+            "Resolve the underlying generated-view diagnostics before refreshing agent guidance."
+            relatedIds
+
     let changeFromEffectResult (request: CommandRequest) (result: CommandEffectResult) =
         match result.Effect with
         | CreateDirectory path ->
@@ -1057,6 +1165,7 @@ module CommandReports =
         (evidence: EvidenceSummary option)
         (verification: VerificationSummary option)
         (ship: ShipSummary option)
+        (agentGuidance: AgentGuidanceSummary option)
         =
         let blocking =
             diagnostics
@@ -1075,6 +1184,14 @@ module CommandReports =
                 | Analyze -> tasksCorrectionCommand diagnostics
                 | Verify -> verifyCorrectionCommand diagnostics
                 | Ship -> shipCorrectionCommand diagnostics
+                | Agents ->
+                    if ids |> Set.contains "agents.missingWorkModel"
+                       || ids |> Set.contains "agents.staleWorkModel"
+                       || ids |> Set.contains "agents.malformedWorkModel"
+                       || ids |> Set.contains "agents.blockedWorkModel" then
+                        Some Verify
+                    else
+                        None
                 | Evidence ->
                     if ids |> Set.contains "evidence.missingAnalysisPrerequisite"
                        || ids |> Set.contains "evidence.analysisNotReady"
@@ -1178,6 +1295,17 @@ module CommandReports =
                     |> Option.map (fun summary -> [ summary.ShipPath; $"readiness/{summary.WorkId}/work-model.json" ])
                     |> Option.defaultValue []
                   BlockingDiagnosticIds = [] }
+        elif request.Command = Agents then
+            Some
+                { ActionId = "agentsGenerated"
+                  Command = None
+                  WorkId = request.WorkId
+                  Reason = "Generated agent guidance is current; regenerate when the work model changes."
+                  RequiredArtifacts =
+                    agentGuidance
+                    |> Option.map (fun summary -> summary.GeneratedRoots)
+                    |> Option.defaultValue []
+                  BlockingDiagnosticIds = [] }
         else
             match nextLifecycleCommand request.Command with
             | Some command ->
@@ -1252,10 +1380,11 @@ module CommandReports =
           Evidence = model.Evidence
           Verification = model.Verification
           Ship = model.Ship
+          AgentGuidance = model.AgentGuidance
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility
-          NextAction = nextAction diagnostics model.Request model.Checklist model.Plan model.Tasks model.Analysis model.Evidence model.Verification model.Ship }
+          NextAction = nextAction diagnostics model.Request model.Checklist model.Plan model.Tasks model.Analysis model.Evidence model.Verification model.Ship model.AgentGuidance }
 
     let exitCodeForReport (report: CommandReport) =
         match report.Outcome with

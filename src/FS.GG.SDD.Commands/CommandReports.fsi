@@ -105,5 +105,17 @@ module CommandReports =
     val staleVerificationView: path: string -> ids: string list -> Diagnostic
     val shipIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
     val malformedShipView: path: string -> message: string -> Diagnostic
+    val agentsNoTargets: path: string -> Diagnostic
+    val agentsInvalidGeneratedRoot: path: string -> targetId: string -> Diagnostic
+    val agentsWorkModelIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
+    val agentsMissingWorkModel: path: string -> Diagnostic
+    val agentsMalformedWorkModel: path: string -> message: string -> Diagnostic
+    val agentsStaleWorkModel: path: string -> Diagnostic
+    val agentsBlockedWorkModel: path: string -> relatedIds: string list -> Diagnostic
+    val agentsUnknownSourceReference: path: string -> id: string -> Diagnostic
+    val agentsMalformedGeneratedGuidance: path: string -> message: string -> Diagnostic
+    val agentsStaleGeneratedGuidance: path: string -> targetId: string -> Diagnostic
+    val agentsBehaviorDivergence: path: string -> targetIds: string list -> Diagnostic
+    val agentsUnsafeGeneratedViewRefresh: path: string -> relatedIds: string list -> Diagnostic
     val buildReport: model: CommandModel -> CommandReport
     val exitCodeForReport: report: CommandReport -> int

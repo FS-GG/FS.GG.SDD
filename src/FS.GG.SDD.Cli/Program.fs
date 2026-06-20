@@ -49,6 +49,7 @@ let printUnknown commandValue =
           Evidence = None
           Verification = None
           Ship = None
+          AgentGuidance = None
           GeneratedViews = []
           Report = None }
 

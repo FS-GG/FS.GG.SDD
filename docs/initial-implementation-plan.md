@@ -595,30 +595,43 @@ Exit criteria:
 - Stale views are detected by source and generator digests, not by presence.
 - Markdown summaries are rendered from structured JSON.
 
-### Phase 8: Agent Guidance Generation
+### Phase 8: Agent Guidance Generation — ✅ COMPLETE
 
 Owner: `FS.GG.SDD`; Governance contributes optional rule/evidence contracts.
 
 Purpose: keep human, Claude, Codex, and future-agent workflows on one lifecycle
 contract.
 
-- [ ] Generate Claude command and skill guidance from the normalized lifecycle
+Delivered by feature `014-agent-guidance` (`fsgg-sdd agents`). Evidence:
+`specs/014-agent-guidance/readiness/`.
+
+- [x] Generate Claude command and skill guidance from the normalized lifecycle
   model.
-- [ ] Generate Codex skill guidance from the same lifecycle model.
-- [ ] Mark generated agent files as generated and include source digests.
-- [ ] Report stale generated agent guidance.
-- [ ] Keep Claude and Codex behavior equivalent when workflow behavior changes.
-- [ ] Ensure agent prompts may author Markdown but do not become a second source
-  of truth.
-- [ ] If agent guidance writes Markdown, refresh corresponding structured
+- [x] Generate Codex skill guidance from the same lifecycle model.
+- [x] Mark generated agent files as generated and include source digests.
+- [x] Report stale generated agent guidance.
+- [x] Keep Claude and Codex behavior equivalent when workflow behavior changes
+  (shared `NormalizedGuidanceModel` + `behaviorModelDigest` equivalence
+  guardrail).
+- [x] Ensure agent prompts may author Markdown but do not become a second source
+  of truth (generated view only; authored sources preserved byte-identical).
+- [x] If agent guidance writes Markdown, refresh corresponding structured
   models or report stale-view diagnostics.
 
 Exit criteria:
 
-- Agent guidance is generated from structured SDD data.
-- Stale guidance is detected when lifecycle contracts change.
-- Agent instructions identify the same authored sources and generated views as
-  the CLI.
+- [x] Agent guidance is generated from structured SDD data.
+- [x] Stale guidance is detected when lifecycle contracts change.
+- [x] Agent instructions identify the same authored sources and generated views
+  as the CLI.
+
+The cross-cutting `fsgg-sdd agents` command derives per-target guidance under
+`readiness/<id>/agent-commands/<target>/` (a `guidance.json` manifest plus
+`commands.md`/`skills.md` projections) from `readiness/<id>/work-model.json`,
+without altering the `charter -> ship` chain
+(`nextLifecycleCommand Agents = None`). See
+`specs/014-agent-guidance/readiness/artifact-traceability.md` for the full
+requirement-to-evidence map.
 
 ### Phase 9: Bootstrap And Migration Experience
 

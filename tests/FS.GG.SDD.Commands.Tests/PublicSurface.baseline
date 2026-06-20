@@ -1,6 +1,18 @@
 FS.GG.SDD.Commands.CommandEffects.interpret
 FS.GG.SDD.Commands.CommandEffects.interpretAll
 FS.GG.SDD.Commands.CommandRendering.renderText
+FS.GG.SDD.Commands.CommandReports.agentsBehaviorDivergence
+FS.GG.SDD.Commands.CommandReports.agentsBlockedWorkModel
+FS.GG.SDD.Commands.CommandReports.agentsInvalidGeneratedRoot
+FS.GG.SDD.Commands.CommandReports.agentsMalformedGeneratedGuidance
+FS.GG.SDD.Commands.CommandReports.agentsMalformedWorkModel
+FS.GG.SDD.Commands.CommandReports.agentsMissingWorkModel
+FS.GG.SDD.Commands.CommandReports.agentsNoTargets
+FS.GG.SDD.Commands.CommandReports.agentsStaleGeneratedGuidance
+FS.GG.SDD.Commands.CommandReports.agentsStaleWorkModel
+FS.GG.SDD.Commands.CommandReports.agentsUnknownSourceReference
+FS.GG.SDD.Commands.CommandReports.agentsUnsafeGeneratedViewRefresh
+FS.GG.SDD.Commands.CommandReports.agentsWorkModelIdentityMismatch
 FS.GG.SDD.Commands.CommandReports.analysisIdentityMismatch
 FS.GG.SDD.Commands.CommandReports.analysisNotReady
 FS.GG.SDD.Commands.CommandReports.blockedGeneratedViewRefresh
@@ -102,6 +114,7 @@ FS.GG.SDD.Commands.CommandTypes.commandName
 FS.GG.SDD.Commands.CommandTypes.commandStage
 FS.GG.SDD.Commands.CommandTypes.effectPath
 FS.GG.SDD.Commands.CommandTypes.generatedViewCurrencyValue
+FS.GG.SDD.Commands.CommandTypes.guidanceDispositionValue
 FS.GG.SDD.Commands.CommandTypes.nextLifecycleCommand
 FS.GG.SDD.Commands.CommandTypes.outcomeValue
 FS.GG.SDD.Commands.CommandTypes.outputFormatValue

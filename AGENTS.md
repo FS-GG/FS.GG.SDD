@@ -23,7 +23,11 @@ Boundary rules:
   task/evidence/test/skill obligations, emits `readiness/<id>/verify.json`, and
   points to ship; `fsgg-sdd ship` aggregates SDD-owned merge-boundary readiness,
   emits `readiness/<id>/ship.json`, and points ship-ready work to the
-  Governance-owned protected-boundary handoff. Governance-owned effective evidence
+  Governance-owned protected-boundary handoff. `fsgg-sdd agents` is a
+  cross-cutting generator (not a lifecycle stage) that derives per-target
+  Claude/Codex command and skill guidance from `readiness/<id>/work-model.json`
+  into `readiness/<id>/agent-commands/<target>/`, marked generated with source
+  digests and never a second source of truth. Governance-owned effective evidence
   freshness and gate enforcement remain optional downstream concerns.
 - Governance owns rule evaluation, evidence freshness, routing, profiles, and
   gate enforcement.

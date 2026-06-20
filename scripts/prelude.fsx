@@ -209,6 +209,21 @@ expectEqual "analyze command stage" "analyze" (CommandTypes.commandStage Analyze
 expectEqual "evidence command stage" "evidence" (CommandTypes.commandStage Evidence)
 expectEqual "verify command stage" "verify" (CommandTypes.commandStage Verify)
 expectEqual "ship command stage" "ship" (CommandTypes.commandStage Ship)
+expectEqual "parse agents" (Ok Agents) (CommandTypes.parseCommand "agents")
+expectEqual "agents command stage" "agents" (CommandTypes.commandStage Agents)
+expectEqual "next after agents" None (CommandTypes.nextLifecycleCommand Agents)
+expectEqual "guidance disposition value" "generated-current" (CommandTypes.guidanceDispositionValue GeneratedCurrent)
+expectEqual
+    "agent-guidance diagnostics"
+    "agents.behaviorDivergence,agents.malformedWorkModel,agents.missingWorkModel,agents.noTargets,agents.staleGeneratedGuidance"
+    ([ agentsBehaviorDivergence "p" [ "codex" ]
+       agentsMalformedWorkModel "p" "bad"
+       agentsMissingWorkModel "p"
+       agentsNoTargets "p"
+       agentsStaleGeneratedGuidance "p" "claude" ]
+     |> List.map _.Id
+     |> List.sort
+     |> String.concat ",")
 expectEqual "next after tasks" (Some Analyze) (CommandTypes.nextLifecycleCommand Tasks)
 expectEqual "next after analyze" (Some Evidence) (CommandTypes.nextLifecycleCommand Analyze)
 expectEqual "next after evidence" (Some Verify) (CommandTypes.nextLifecycleCommand Evidence)
