@@ -27,17 +27,24 @@ is on Git branch `main`; the active feature context is persisted in
 | ✅ Advisory `GovernanceCompatibility*` placeholders repointed to the handoff (T019) | ✅ | `.fsi` pointer docs (structural removal deferred) |
 | ✅ Evidence: CLI smoke, FSI transcript, quickstart validation, full suite | ✅ | `specs/017-governance-handoff/readiness/` |
 
-**FS.GG.Governance consumer side (sibling repo) — coordination accepted, build queued:**
+**FS.GG.Governance consumer side (sibling repo) — coordination accepted, host edge being wired:**
 
 The sibling repo has shipped the consumer *surface* the contract targets (F005 evidence,
 F014 config, F015 routing, F016 snapshot, F017 findings, F018 gates, F019 route selection,
-F020 route.json, F021 gates.json) and **formally accepted this contract**:
+F020 route.json, F021 gates.json) and **formally accepted this contract**. As of 2026-06-20
+it is building **F022 `fsgg route`** — the *first* host command that wires those pure cores
+together over a real repository (senses changed paths, loads/validates the `.fsgg` catalog,
+routes, selects gates, and persists `route.json`/`gates.json`). F022 is the host surface the
+queued handoff *reader* will eventually plug into, but it does **not** itself consume SDD's
+`governance-handoff.json` and computes **no** ship verdict:
 
 | Cross-repo item | Status | Source |
 |---|---|---|
 | ✅ Contract **v1.0.0** acknowledged & accepted | ✅ | Governance `docs/decisions/0002-sdd-governance-handoff-contract.md` (2026-06-20) |
 | ✅ Open mapping point `deferred → skipped` **confirmed** (no `contractVersion` bump) | ✅ | ADR 0002 — a deferral is a `[-]` skip-with-rationale, not `[ ]` pending |
 | ✅ Ownership boundary confirmed (SDD declares; Governance computes taint/route/gate/freshness) | ✅ | ADR 0002 |
+| ✅ Governance consumer cores shipped through `gates.json` (F005→F021) | ✅ | Governance `main` @ `3f093af` (F021 merged) |
+| 🟡 First host edge `fsgg route` composing the cores over a real repo (persists route.json/gates.json, no ship verdict) | 🟡 in progress | Governance `specs/022-fsgg-route-command/` (Draft, 2026-06-20) |
 | ⬜ Handoff reader/parser pinned to `contractVersion` 1.x | ⬜ queued (Governance-side, non-blocking) | ADR 0002 §queued #1 |
 | ⬜ SDD-native adapter → `Evidence.build`/`Evidence.effective` | ⬜ queued | ADR 0002 §queued #2 |
 | ⬜ Fold `governedReferences` into `Routing.route` (optional) | ⬜ queued (MAY ignore for F016 snapshot) | ADR 0002 §queued #3 |
@@ -45,8 +52,10 @@ F020 route.json, F021 gates.json) and **formally accepted this contract**:
 | ➖ Governance rule eval / freshness / enforcement | ➖ Governance-owned, out of scope for SDD | CLAUDE.md boundary |
 
 **Net**: the SDD→Governance seam is **live and accepted from both sides**. SDD emits the
-declared-facts handoff today; Governance's consumer wiring (reader → kernel adapter →
-gate/fence decision) is queued Governance-side work that does not block this feature.
+declared-facts handoff today; Governance has shipped every pure consumer core through
+`gates.json` and is now wiring its first host command (`fsgg route`). The SDD-handoff
+consumer wiring (reader → kernel adapter → gate/fence decision) remains queued
+Governance-side work that does not block this feature.
 
 ## Summary
 
@@ -151,14 +160,14 @@ case; supersession of two advisory placeholder types; the cross-repo contract do
 
 | Principle | Gate | Status |
 |---|---|---|
-| I. Spec -> FSI -> Semantic Tests -> Implementation | The new `GovernanceHandoff` projection + serialization is a public surface; it is authored `.fsi`-first, exercised through the public surface in FSI, given semantic tests over the public API, then implemented. | PASS (planned) |
-| II. Structured Artifacts Are the Machine Contract | The handoff JSON is a schema-versioned machine contract; the integration-requirements + handoff-schema contracts define authoritative data; any Markdown rendering is a projection. Prose/structured conflict follows the work model's structured-wins rule and surfaces the existing diagnostic. | PASS |
-| III. Visibility Lives in `.fsi`, Not in `.fs` | The new module ships a `.fsi`; the public surface baseline is updated; the `GeneratedViewKind` addition and any `CommandTypes` additions update signatures and baselines. | PASS |
-| IV. Idiomatic Simplicity Is the Default | The projection is plain records + a total fold over `WorkModel`; reuses existing canonical serialization. No framework, reflection, or new abstraction. | PASS |
-| V. Elmish/MVU Is the Boundary for Stateful or I/O Workflows | The projection is pure (no MVU needed). Emission reuses the existing `ship`/`refresh` `Model`/`Msg`/`Effect`/`update` boundary and effect interpreter — no new stateful workflow or I/O path. | PASS |
-| VI. Test Evidence Is Mandatory | Real disposable-project fixtures drive `ship`/`refresh`; determinism, no-Governance, boundary-exclusion, evidence-mapping, edge, stale/refresh, and byte-identity assertions; real CLI smoke evidence; green full suite. | PASS |
-| VII. Agent And Human Workflows Must Share One Contract | The handoff is a generated view derived from the one normalized model; it is not a second source of truth; authored sources are preserved; CLI, agents, CI, and Governance consume the same artifact. | PASS |
-| VIII. Observability And Safe Failure | Stale handoff, missing/partial `.fsgg` Governance config, and projection failures produce actionable diagnostics; the optional integration degrades explicitly and never fails an SDD command when Governance is absent. | PASS |
+| I. Spec -> FSI -> Semantic Tests -> Implementation | The new `GovernanceHandoff` projection + serialization is a public surface; it is authored `.fsi`-first, exercised through the public surface in FSI, given semantic tests over the public API, then implemented. | ✅ PASS (planned) |
+| II. Structured Artifacts Are the Machine Contract | The handoff JSON is a schema-versioned machine contract; the integration-requirements + handoff-schema contracts define authoritative data; any Markdown rendering is a projection. Prose/structured conflict follows the work model's structured-wins rule and surfaces the existing diagnostic. | ✅ PASS |
+| III. Visibility Lives in `.fsi`, Not in `.fs` | The new module ships a `.fsi`; the public surface baseline is updated; the `GeneratedViewKind` addition and any `CommandTypes` additions update signatures and baselines. | ✅ PASS |
+| IV. Idiomatic Simplicity Is the Default | The projection is plain records + a total fold over `WorkModel`; reuses existing canonical serialization. No framework, reflection, or new abstraction. | ✅ PASS |
+| V. Elmish/MVU Is the Boundary for Stateful or I/O Workflows | The projection is pure (no MVU needed). Emission reuses the existing `ship`/`refresh` `Model`/`Msg`/`Effect`/`update` boundary and effect interpreter — no new stateful workflow or I/O path. | ✅ PASS |
+| VI. Test Evidence Is Mandatory | Real disposable-project fixtures drive `ship`/`refresh`; determinism, no-Governance, boundary-exclusion, evidence-mapping, edge, stale/refresh, and byte-identity assertions; real CLI smoke evidence; green full suite. | ✅ PASS |
+| VII. Agent And Human Workflows Must Share One Contract | The handoff is a generated view derived from the one normalized model; it is not a second source of truth; authored sources are preserved; CLI, agents, CI, and Governance consume the same artifact. | ✅ PASS |
+| VIII. Observability And Safe Failure | Stale handoff, missing/partial `.fsgg` Governance config, and projection failures produce actionable diagnostics; the optional integration degrades explicitly and never fails an SDD command when Governance is absent. | ✅ PASS |
 
 No constitution violations. Complexity tracking not required.
 
@@ -240,12 +249,12 @@ Design artifacts generated by this plan:
 
 | Gate | Result |
 |---|---|
-| FSI-first public surface | PASS: the new projection module is `.fsi`-first with a baseline; the `GeneratedViewKind` and `CommandTypes` additions update signatures and baselines. |
-| Structured machine contract | PASS: the handoff JSON is the versioned machine contract; the integration-requirements doc pins the cross-repo schema; Markdown stays authoring-only. |
-| Public API baseline | PASS: surface baseline updated for the new module and enum case; no unrelated baseline churn. |
-| MVU boundary | PASS: pure projection; emission reuses the existing `ship`/`refresh` MVU + interpreter. |
-| Evidence | PASS: real-fixture projection/determinism/no-Governance/boundary-exclusion/mapping/stale-refresh tests, CLI smoke evidence, green full suite. |
-| Agent contract | PASS: generated view from the one model; authored sources preserved; agent context marker points at this plan. |
-| Safe failure | PASS: stale/missing/partial-config diagnostics; optional integration degrades explicitly; no SDD command fails when Governance is absent. |
+| FSI-first public surface | ✅ PASS: the new projection module is `.fsi`-first with a baseline; the `GeneratedViewKind` and `CommandTypes` additions update signatures and baselines. |
+| Structured machine contract | ✅ PASS: the handoff JSON is the versioned machine contract; the integration-requirements doc pins the cross-repo schema; Markdown stays authoring-only. |
+| Public API baseline | ✅ PASS: surface baseline updated for the new module and enum case; no unrelated baseline churn. |
+| MVU boundary | ✅ PASS: pure projection; emission reuses the existing `ship`/`refresh` MVU + interpreter. |
+| Evidence | ✅ PASS: real-fixture projection/determinism/no-Governance/boundary-exclusion/mapping/stale-refresh tests, CLI smoke evidence, green full suite. |
+| Agent contract | ✅ PASS: generated view from the one model; authored sources preserved; agent context marker points at this plan. |
+| Safe failure | ✅ PASS: stale/missing/partial-config diagnostics; optional integration degrades explicitly; no SDD command fails when Governance is absent. |
 
 No new complexity exceptions were introduced by Phase 1 design.
