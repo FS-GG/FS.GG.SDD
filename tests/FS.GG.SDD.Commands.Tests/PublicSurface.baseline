@@ -30,6 +30,11 @@ FS.GG.SDD.Commands.CommandReports.malformedClarificationFrontMatter
 FS.GG.SDD.Commands.CommandReports.malformedEvidenceArtifact
 FS.GG.SDD.Commands.CommandReports.malformedGeneratedView
 FS.GG.SDD.Commands.CommandReports.malformedAnalysisView
+FS.GG.SDD.Commands.CommandReports.malformedVerificationView
+FS.GG.SDD.Commands.CommandReports.missingEvidencePrerequisite
+FS.GG.SDD.Commands.CommandReports.missingRequiredTest
+FS.GG.SDD.Commands.CommandReports.staleRequiredTest
+FS.GG.SDD.Commands.CommandReports.verifyIdentityMismatch
 FS.GG.SDD.Commands.CommandReports.malformedTasksArtifact
 FS.GG.SDD.Commands.CommandReports.malformedProjectConfig
 FS.GG.SDD.Commands.CommandReports.malformedPlanFrontMatter

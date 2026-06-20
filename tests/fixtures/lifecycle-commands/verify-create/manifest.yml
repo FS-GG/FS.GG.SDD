@@ -1,0 +1,13 @@
+schemaVersion: 1
+scenario: verify-create
+command: verify
+workId: 012-verify-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.VerifyCommandTests.verify creates generated verification view with real filesystem evidence
+expected:
+  outcome: succeeded
+  generatedViews:
+    - readiness/012-verify-command/work-model.json
+    - readiness/012-verify-command/verify.json
+  nextAction: verify.next.ship

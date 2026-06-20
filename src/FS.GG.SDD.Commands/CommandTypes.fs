@@ -16,6 +16,7 @@ module CommandTypes =
         | Tasks
         | Analyze
         | Evidence
+        | Verify
 
     type OutputFormat =
         | Json
@@ -199,6 +200,33 @@ module CommandTypes =
           SourceSnapshotCount: int
           Readiness: string }
 
+    type VerificationSummary =
+        { WorkId: string
+          Stage: string
+          Status: string
+          VerifyPath: string
+          FindingIds: string list
+          ReadyFindingCount: int
+          AdvisoryCount: int
+          WarningCount: int
+          BlockingCount: int
+          ObligationCount: int
+          EvidenceSupportedCount: int
+          EvidenceDeferredCount: int
+          EvidenceMissingCount: int
+          EvidenceStaleCount: int
+          EvidenceSyntheticCount: int
+          EvidenceInvalidCount: int
+          TestSatisfiedCount: int
+          TestDeferredCount: int
+          TestMissingCount: int
+          TestStaleCount: int
+          TestInvalidCount: int
+          SkillVisibleCount: int
+          SkillMissingCount: int
+          SourceSnapshotCount: int
+          Readiness: string }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -232,6 +260,7 @@ module CommandTypes =
           Tasks: TasksSummary option
           Analysis: AnalysisSummary option
           Evidence: EvidenceSummary option
+          Verification: VerificationSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -264,6 +293,7 @@ module CommandTypes =
           Tasks: TasksSummary option
           Analysis: AnalysisSummary option
           Evidence: EvidenceSummary option
+          Verification: VerificationSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 
@@ -286,6 +316,7 @@ module CommandTypes =
         | Tasks -> "tasks"
         | Analyze -> "analyze"
         | Evidence -> "evidence"
+        | Verify -> "verify"
 
     let commandStage (command: SddCommand) =
         match command with
@@ -303,6 +334,7 @@ module CommandTypes =
         | "tasks" -> Ok Tasks
         | "analyze" -> Ok Analyze
         | "evidence" -> Ok Evidence
+        | "verify" -> Ok Verify
         | other -> Error $"Unknown SDD command '{other}'."
 
     let outputFormatValue (format: OutputFormat) =
@@ -355,7 +387,8 @@ module CommandTypes =
         | Plan -> Some Tasks
         | Tasks -> Some Analyze
         | Analyze -> Some Evidence
-        | Evidence -> None
+        | Evidence -> Some Verify
+        | Verify -> None
 
     let effectPath (effect: CommandEffect) =
         match effect with

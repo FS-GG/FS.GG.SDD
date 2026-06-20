@@ -11,7 +11,7 @@ shape, required skills, evidence obligations, and expected tests.
 
 This repository started scaffold-only. Spec Kit features have since added the
 packable artifact-model library, normalized work-model generation, and native
-command workflow slices through `fsgg-sdd evidence`.
+command workflow slices through `fsgg-sdd verify`.
 
 ## Scope
 
@@ -37,14 +37,16 @@ freshness, routing, profiles, and gate enforcement belong in
 - Claude and Codex guidance files are present.
 - `FS.GG.SDD.Artifacts` defines the first typed lifecycle artifact model.
 - `FS.GG.SDD.Commands` and `FS.GG.SDD.Cli` provide the native command workflow
-  slices through `fsgg-sdd evidence`: a public MVU/report surface, SDD
+  slices through `fsgg-sdd verify`: a public MVU/report surface, SDD
   skeleton creation, charter/specification authoring, clarification decisions,
   requirements-quality checklist authoring, technical plan authoring, stable
   task graph authoring, authored evidence declarations, question/decision,
   checklist item/result, plan decision/contract/verification, task ids,
   cross-artifact analysis readiness, evidence readiness summaries,
-  deterministic JSON/text reports, generated work-model and analysis-view
-  refresh/diagnostics, and no required Governance runtime.
+  verification readiness (task/evidence/test/skill dispositions over a generated
+  `readiness/<id>/verify.json` view pointing to ship),
+  deterministic JSON/text reports, generated work-model, analysis-view, and
+  verification-view refresh/diagnostics, and no required Governance runtime.
 - The detailed implementation roadmap lives in
   [docs/initial-implementation-plan.md](docs/initial-implementation-plan.md).
 
@@ -53,12 +55,15 @@ freshness, routing, profiles, and gate enforcement belong in
 Use standard Spec Kit:
 
 ```text
-charter -> specify -> clarify -> checklist -> plan -> tasks -> analyze -> evidence
+charter -> specify -> clarify -> checklist -> plan -> tasks -> analyze -> evidence -> verify
 ```
 
 For the native SDD product lifecycle, `fsgg-sdd analyze` runs after
-`fsgg-sdd tasks`, and `fsgg-sdd evidence` records declared implementation,
-verification, synthetic, and deferral evidence before later verify/ship work.
+`fsgg-sdd tasks`, `fsgg-sdd evidence` records declared implementation,
+verification, synthetic, and deferral evidence, and `fsgg-sdd verify` evaluates
+SDD-owned verification readiness over the task/evidence/test/skill obligations,
+emits `readiness/<id>/verify.json`, and points verification-ready work to a
+later ship slice.
 
 The first implementation feature should create the structured SDD artifact model.
 Markdown remains an authoring surface; schema-versioned structured artifacts are

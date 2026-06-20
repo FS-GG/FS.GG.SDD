@@ -1,0 +1,16 @@
+schemaVersion: 1
+scenario: verify-refreshes-analysis
+command: verify
+workId: 012-verify-command
+note: >-
+  Verify treats readiness/<id>/analysis.json as the prerequisite gate and reports
+  its currency without regenerating it; only the work-model and verification views
+  are refreshed (FR-021 "or explicitly diagnose" branch).
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.VerifyCommandTests.verify creates generated verification view with real filesystem evidence
+expected:
+  outcome: succeeded
+  generatedViews:
+    - readiness/012-verify-command/work-model.json
+    - readiness/012-verify-command/verify.json

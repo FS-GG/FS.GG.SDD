@@ -93,6 +93,11 @@ module CommandReports =
     val unsafeOverwrite: path: string -> Diagnostic
     val malformedGeneratedView: path: string -> Diagnostic
     val blockedGeneratedViewRefresh: path: string -> relatedIds: string list -> Diagnostic
+    val missingEvidencePrerequisite: path: string -> message: string -> Diagnostic
+    val verifyIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
+    val malformedVerificationView: path: string -> message: string -> Diagnostic
+    val missingRequiredTest: path: string -> ids: string list -> Diagnostic
+    val staleRequiredTest: path: string -> ids: string list -> Diagnostic
     val toolDefect: path: string option -> message: string -> Diagnostic
     val buildReport: model: CommandModel -> CommandReport
     val exitCodeForReport: report: CommandReport -> int

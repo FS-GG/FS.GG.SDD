@@ -1,0 +1,13 @@
+schemaVersion: 1
+scenario: verify-accepted-deferral
+command: verify
+workId: 012-verify-command
+note: >-
+  Accepted deferrals visible to later stages do not block verification readiness;
+  deferred evidence/test dispositions are advisory, not blocking.
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.VerifyCommandTests.verify creates generated verification view with real filesystem evidence
+expected:
+  outcome: succeeded
+  nextAction: verify.next.ship

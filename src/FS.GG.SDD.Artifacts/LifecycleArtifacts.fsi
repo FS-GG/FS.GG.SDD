@@ -524,6 +524,81 @@ module LifecycleArtifacts =
           LifecycleNotes: string list
           Diagnostics: Diagnostic list }
 
+    type RequiredTestDispositionState =
+        | TestSatisfied
+        | TestDeferred
+        | TestMissingDisposition
+        | TestStale
+        | TestSyntheticDisposition
+        | TestInvalid
+        | TestAdvisory
+        | TestBlocking
+
+    type RequiredTestDisposition =
+        { DispositionId: string
+          ObligationId: string
+          State: RequiredTestDispositionState
+          EvidenceIds: EvidenceId list
+          AffectedTaskIds: TaskId list
+          AffectedRequirementIds: RequirementId list
+          Severity: string
+          DiagnosticIds: string list
+          Correction: string }
+
+    type SkillVisibilityState =
+        | SkillVisible
+        | SkillMissing
+
+    type SkillVisibilityFact =
+        { Skill: string
+          RequiringTaskIds: TaskId list
+          Visibility: SkillVisibilityState
+          SourceArtifactPath: string
+          Severity: string
+          DiagnosticIds: string list
+          Correction: string }
+
+    type VerificationFinding =
+        { Id: string
+          Severity: string
+          Category: string
+          Path: string
+          RelatedIds: string list
+          Message: string
+          Correction: string }
+
+    type VerificationStageReadiness = { Stage: string; Status: string }
+
+    type VerificationLifecycleReadiness =
+        { Stages: VerificationStageReadiness list
+          Status: string }
+
+    type VerificationTaskGraphReadiness =
+        { TaskCount: int
+          DependencyCount: int
+          DependenciesValid: bool
+          StatusesValid: bool
+          FindingIds: string list }
+
+    type VerificationView =
+        { SchemaVersion: SchemaVersion
+          ViewVersion: string
+          WorkId: WorkId
+          Stage: LifecycleStage
+          Status: string
+          Generator: string
+          Sources: AnalysisSourceRecord list
+          LifecycleReadiness: VerificationLifecycleReadiness
+          TaskGraph: VerificationTaskGraphReadiness
+          EvidenceDispositions: EvidenceDisposition list
+          TestDispositions: RequiredTestDisposition list
+          SkillVisibility: SkillVisibilityFact list
+          GeneratedViews: AnalysisGeneratedViewRecord list
+          Findings: VerificationFinding list
+          OptionalBoundaryFacts: AnalysisOptionalBoundaryFact list
+          Diagnostics: Diagnostic list
+          Readiness: string }
+
     type MarkdownRequirementMention =
         { Id: string
           Source: ArtifactRef
@@ -569,6 +644,7 @@ module LifecycleArtifacts =
     val parsePlanFacts: snapshot: FileSnapshot -> Result<PlanFacts, Diagnostic list>
     val parseTaskFacts: snapshot: FileSnapshot -> Result<TaskFacts, Diagnostic list>
     val parseAnalysisView: snapshot: FileSnapshot -> Result<AnalysisView, Diagnostic list>
+    val parseVerificationView: snapshot: FileSnapshot -> Result<VerificationView, Diagnostic list>
     val parseEvidenceArtifact: snapshot: FileSnapshot -> Result<EvidenceArtifact, Diagnostic list>
     val parseRequirements: snapshot: FileSnapshot -> Requirement list
     val parseDecisions: snapshot: FileSnapshot -> Decision list

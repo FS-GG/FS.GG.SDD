@@ -42,7 +42,7 @@ Implementation is driven by the consumer experience:
 Standard Spec Kit remains the workflow used to develop this repository:
 
 ```text
-charter -> specify -> clarify -> checklist -> plan -> tasks -> analyze -> evidence
+charter -> specify -> clarify -> checklist -> plan -> tasks -> analyze -> evidence -> verify
 ```
 
 Product code, packages, and tests are added to this repository only through a
@@ -52,8 +52,10 @@ artifact contract before commands or generators are implemented.
 
 For the native SDD product lifecycle, `fsgg-sdd analyze` is the tasks-ready
 readiness step that emits `readiness/<id>/analysis.json`; `fsgg-sdd evidence`
-records authored evidence declarations and refreshes the SDD work model before
-later verify and ship readiness slices.
+records authored evidence declarations and refreshes the SDD work model; and
+`fsgg-sdd verify` (complete — see `specs/012-verify-command/readiness/`) evaluates
+SDD-owned verification readiness, emits `readiness/<id>/verify.json`, refreshes
+the work model, and points verification-ready work to a later ship slice.
 
 ## Scope Boundary
 

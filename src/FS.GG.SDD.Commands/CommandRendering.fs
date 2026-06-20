@@ -97,6 +97,31 @@ module CommandRendering =
             builder.AppendLine($"evidenceBlocking: {evidence.BlockingCount}") |> ignore
         | None -> ()
 
+        match report.Verification with
+        | Some verification ->
+            builder.AppendLine($"workId: {verification.WorkId}") |> ignore
+            builder.AppendLine($"verifyPath: {verification.VerifyPath}") |> ignore
+            builder.AppendLine($"verificationReadiness: {verification.Readiness}") |> ignore
+            builder.AppendLine($"verifyReadyFindings: {verification.ReadyFindingCount}") |> ignore
+            builder.AppendLine($"verifyAdvisory: {verification.AdvisoryCount}") |> ignore
+            builder.AppendLine($"verifyWarnings: {verification.WarningCount}") |> ignore
+            builder.AppendLine($"verifyBlocking: {verification.BlockingCount}") |> ignore
+            builder.AppendLine($"verifyObligations: {verification.ObligationCount}") |> ignore
+            builder.AppendLine($"verifyEvidenceSupported: {verification.EvidenceSupportedCount}") |> ignore
+            builder.AppendLine($"verifyEvidenceDeferred: {verification.EvidenceDeferredCount}") |> ignore
+            builder.AppendLine($"verifyEvidenceMissing: {verification.EvidenceMissingCount}") |> ignore
+            builder.AppendLine($"verifyEvidenceStale: {verification.EvidenceStaleCount}") |> ignore
+            builder.AppendLine($"verifyEvidenceSynthetic: {verification.EvidenceSyntheticCount}") |> ignore
+            builder.AppendLine($"verifyEvidenceInvalid: {verification.EvidenceInvalidCount}") |> ignore
+            builder.AppendLine($"verifyTestSatisfied: {verification.TestSatisfiedCount}") |> ignore
+            builder.AppendLine($"verifyTestDeferred: {verification.TestDeferredCount}") |> ignore
+            builder.AppendLine($"verifyTestMissing: {verification.TestMissingCount}") |> ignore
+            builder.AppendLine($"verifyTestStale: {verification.TestStaleCount}") |> ignore
+            builder.AppendLine($"verifyTestInvalid: {verification.TestInvalidCount}") |> ignore
+            builder.AppendLine($"verifySkillVisible: {verification.SkillVisibleCount}") |> ignore
+            builder.AppendLine($"verifySkillMissing: {verification.SkillMissingCount}") |> ignore
+        | None -> ()
+
         builder.AppendLine($"generatedViews: {List.length report.GeneratedViews}") |> ignore
         builder.AppendLine($"diagnostics: {List.length report.Diagnostics}") |> ignore
 

@@ -1,0 +1,511 @@
+{
+  "schemaVersion": 1,
+  "reportVersion": "1.0.0",
+  "command": {
+    "name": "verify",
+    "stage": "verify"
+  },
+  "context": {
+    "projectRoot": ".",
+    "workId": "012-verify-command"
+  },
+  "invocation": {
+    "outputFormat": "json",
+    "dryRun": true,
+    "overwritePolicy": "refuseUnsafe"
+  },
+  "outcome": "succeededWithWarnings",
+  "changedArtifacts": [
+    {
+      "path": "readiness/012-verify-command",
+      "kind": "directory",
+      "ownership": "sdd",
+      "operation": "noChange",
+      "beforeDigest": null,
+      "afterDigest": null,
+      "safeWriteDecision": "preserveExisting",
+      "diagnosticIds": []
+    },
+    {
+      "path": "readiness/012-verify-command",
+      "kind": "directory",
+      "ownership": "sdd",
+      "operation": "noChange",
+      "beforeDigest": null,
+      "afterDigest": null,
+      "safeWriteDecision": "preserveExisting",
+      "diagnosticIds": []
+    },
+    {
+      "path": "readiness/012-verify-command/verify.json",
+      "kind": "generatedView",
+      "ownership": "generated",
+      "operation": "noChange",
+      "beforeDigest": {
+        "algorithm": "sha256",
+        "value": "a74f8e423901375848342877742e20f1e085917e17fcbca72a898000f3add915"
+      },
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "a74f8e423901375848342877742e20f1e085917e17fcbca72a898000f3add915"
+      },
+      "safeWriteDecision": "preserveExisting",
+      "diagnosticIds": []
+    },
+    {
+      "path": "readiness/012-verify-command/work-model.json",
+      "kind": "generatedView",
+      "ownership": "generated",
+      "operation": "noChange",
+      "beforeDigest": {
+        "algorithm": "sha256",
+        "value": "3c9a6f3c2b28c7319d99c8556ea7c773bd0491561a59e03d15c402f08d1b7720"
+      },
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "3c9a6f3c2b28c7319d99c8556ea7c773bd0491561a59e03d15c402f08d1b7720"
+      },
+      "safeWriteDecision": "preserveExisting",
+      "diagnosticIds": []
+    }
+  ],
+  "specification": {
+    "workId": "012-verify-command",
+    "stage": "specify",
+    "status": "specified",
+    "storyIds": [
+      "US-001"
+    ],
+    "requirementIds": [
+      "FR-001"
+    ],
+    "acceptanceScenarioIds": [
+      "AC-001"
+    ],
+    "ambiguityIds": [],
+    "unresolvedAmbiguityCount": 0
+  },
+  "clarification": {
+    "workId": "012-verify-command",
+    "stage": "clarify",
+    "status": "clarified",
+    "sourceSpec": "work/012-verify-command/spec.md",
+    "questionIds": [],
+    "answeredQuestionIds": [],
+    "decisionIds": [],
+    "acceptedDeferralIds": [],
+    "remainingAmbiguityCount": 0,
+    "blockingAmbiguityCount": 0
+  },
+  "checklist": {
+    "workId": "012-verify-command",
+    "stage": "checklist",
+    "status": "checklistReady",
+    "sourceSpec": "work/012-verify-command/spec.md",
+    "sourceClarifications": "work/012-verify-command/clarifications.md",
+    "itemIds": [
+      "CHK-001"
+    ],
+    "resultIds": [
+      "CR-001"
+    ],
+    "passedCount": 1,
+    "failedBlockingCount": 0,
+    "acceptedDeferralCount": 0,
+    "staleResultCount": 0,
+    "advisoryCount": 0
+  },
+  "plan": {
+    "workId": "012-verify-command",
+    "stage": "plan",
+    "status": "planned",
+    "sourceSpec": "work/012-verify-command/spec.md",
+    "sourceClarifications": "work/012-verify-command/clarifications.md",
+    "sourceChecklist": "work/012-verify-command/checklist.md",
+    "decisionIds": [
+      "PD-001"
+    ],
+    "contractReferenceIds": [
+      "PC-001"
+    ],
+    "verificationObligationIds": [
+      "VO-001"
+    ],
+    "migrationNoteIds": [
+      "PM-001"
+    ],
+    "generatedViewImpactIds": [
+      "GV-001"
+    ],
+    "acceptedDeferralCount": 0,
+    "staleDecisionCount": 0,
+    "blockingFindingCount": 0,
+    "advisoryCount": 1
+  },
+  "tasks": {
+    "workId": "012-verify-command",
+    "stage": "tasks",
+    "status": "tasksReady",
+    "sourceSpec": "work/012-verify-command/spec.md",
+    "sourceClarifications": "work/012-verify-command/clarifications.md",
+    "sourceChecklist": "work/012-verify-command/checklist.md",
+    "sourcePlan": "work/012-verify-command/plan.md",
+    "taskIds": [
+      "T001",
+      "T002",
+      "T003",
+      "T004",
+      "T005",
+      "T006"
+    ],
+    "dependencyCount": 5,
+    "requiredSkillCount": 6,
+    "requiredEvidenceCount": 6,
+    "pendingCount": 6,
+    "inProgressCount": 0,
+    "doneCount": 0,
+    "skippedCount": 0,
+    "staleCount": 0,
+    "acceptedDeferralCount": 0,
+    "blockingFindingCount": 0,
+    "advisoryCount": 1
+  },
+  "analysis": {
+    "workId": "012-verify-command",
+    "stage": "analyze",
+    "status": "implementationReady",
+    "analysisPath": "readiness/012-verify-command/analysis.json",
+    "sourceCount": 9,
+    "sourceRelationshipCount": 22,
+    "readyFindingCount": 22,
+    "advisoryCount": 0,
+    "warningCount": 0,
+    "blockingCount": 0,
+    "staleSourceCount": 0,
+    "missingDispositionCount": 0,
+    "malformedSourceCount": 0,
+    "generatedViewFindingCount": 0,
+    "acceptedDeferralCount": 0,
+    "readiness": "implementationReady"
+  },
+  "evidence": {
+    "workId": "012-verify-command",
+    "stage": "evidence",
+    "status": "evidenceReady",
+    "evidencePath": "work/012-verify-command/evidence.yml",
+    "declarationIds": [
+      "EV001",
+      "EV002",
+      "EV003",
+      "EV004",
+      "EV005",
+      "EV006"
+    ],
+    "declarationCount": 6,
+    "obligationCount": 6,
+    "supportedCount": 6,
+    "deferredCount": 0,
+    "missingCount": 0,
+    "staleCount": 0,
+    "syntheticCount": 0,
+    "invalidCount": 0,
+    "advisoryCount": 0,
+    "blockingCount": 0,
+    "sourceSnapshotCount": 6,
+    "readiness": "evidenceReady"
+  },
+  "verification": {
+    "workId": "012-verify-command",
+    "stage": "verify",
+    "status": "verificationReady",
+    "verifyPath": "readiness/012-verify-command/verify.json",
+    "findingIds": [
+      "VF001"
+    ],
+    "readyFindingCount": 12,
+    "advisoryCount": 0,
+    "warningCount": 1,
+    "blockingCount": 0,
+    "obligationCount": 12,
+    "evidenceSupportedCount": 6,
+    "evidenceDeferredCount": 0,
+    "evidenceMissingCount": 0,
+    "evidenceStaleCount": 0,
+    "evidenceSyntheticCount": 0,
+    "evidenceInvalidCount": 0,
+    "testSatisfiedCount": 6,
+    "testDeferredCount": 0,
+    "testMissingCount": 0,
+    "testStaleCount": 0,
+    "testInvalidCount": 0,
+    "skillVisibleCount": 6,
+    "skillMissingCount": 0,
+    "sourceSnapshotCount": 11,
+    "readiness": "verificationReady"
+  },
+  "generatedViews": [
+    {
+      "path": "readiness/012-verify-command/verify.json",
+      "kind": "verification",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "0.2.0"
+      },
+      "sources": [
+        {
+          "path": ".fsgg/agents.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": ".fsgg/project.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "5a098ce7cbd007499d4309970485c416efe3a7274452f84e80f878e9dd57e91d"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": ".fsgg/sdd.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "05deb1b6ae6632aed6ad2bcaaf70e3dee66889e64a1e076cf633f570802720de"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "readiness/012-verify-command/analysis.json",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "270a16514f031336ee58eb3619e8691e0b8047784b3c8bc81be92bb56c782e02"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "readiness/012-verify-command/work-model.json",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "3c9a6f3c2b28c7319d99c8556ea7c773bd0491561a59e03d15c402f08d1b7720"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/012-verify-command/checklist.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "19708cbaf4cec77831904c1ceddcc1cfaf85985e07d324f1bd48a704e6d67878"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/012-verify-command/clarifications.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "49e1dda6a083f3eb4243e34aba3249bdc7ddf54fa3a21fd717befd159318e544"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/012-verify-command/evidence.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "82db8c2fb56b4d3c4284aafa3c846972509cefec41547b53ccd6853591d35043"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/012-verify-command/plan.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "3721be8487200a375c2d8ba1ba3e3c45ecfed662e7fff151b0affe956db43553"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/012-verify-command/spec.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "59a643cbb5530d32027c13305859bf691b162db4d6963d269482a3fc8b144d14"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/012-verify-command/tasks.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "4c4f10583ba8b87e675accd98fdd0cd7dc19e9e9dab9f87a925c1722595f7a71"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        }
+      ],
+      "outputDigest": {
+        "algorithm": "sha256",
+        "value": "a74f8e423901375848342877742e20f1e085917e17fcbca72a898000f3add915"
+      },
+      "currency": "current",
+      "diagnosticIds": []
+    },
+    {
+      "path": "readiness/012-verify-command/work-model.json",
+      "kind": "workModel",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "0.2.0"
+      },
+      "sources": [
+        {
+          "path": ".fsgg/agents.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": ".fsgg/project.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "5a098ce7cbd007499d4309970485c416efe3a7274452f84e80f878e9dd57e91d"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": ".fsgg/sdd.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "05deb1b6ae6632aed6ad2bcaaf70e3dee66889e64a1e076cf633f570802720de"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/012-verify-command/checklist.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "19708cbaf4cec77831904c1ceddcc1cfaf85985e07d324f1bd48a704e6d67878"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/012-verify-command/clarifications.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "49e1dda6a083f3eb4243e34aba3249bdc7ddf54fa3a21fd717befd159318e544"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/012-verify-command/evidence.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "82db8c2fb56b4d3c4284aafa3c846972509cefec41547b53ccd6853591d35043"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/012-verify-command/plan.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "3721be8487200a375c2d8ba1ba3e3c45ecfed662e7fff151b0affe956db43553"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/012-verify-command/spec.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "59a643cbb5530d32027c13305859bf691b162db4d6963d269482a3fc8b144d14"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        },
+        {
+          "path": "work/012-verify-command/tasks.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "4c4f10583ba8b87e675accd98fdd0cd7dc19e9e9dab9f87a925c1722595f7a71"
+          },
+          "schemaVersion": 1,
+          "schemaStatus": "current"
+        }
+      ],
+      "outputDigest": {
+        "algorithm": "sha256",
+        "value": "3c9a6f3c2b28c7319d99c8556ea7c773bd0491561a59e03d15c402f08d1b7720"
+      },
+      "currency": "current",
+      "diagnosticIds": [
+        "staleGeneratedView"
+      ]
+    }
+  ],
+  "diagnostics": [
+    {
+      "id": "staleGeneratedView",
+      "severity": "warning",
+      "artifact": "readiness/012-verify-command/work-model.json",
+      "location": null,
+      "message": "Generated view \u0027readiness/012-verify-command/work-model.json\u0027 is stale.",
+      "correction": "Regenerate readiness/\u003Cid\u003E/work-model.json from current lifecycle sources.",
+      "relatedIds": [
+        "readiness/012-verify-command/work-model.json"
+      ]
+    }
+  ],
+  "governanceCompatibility": [
+    {
+      "path": ".fsgg/capabilities.yml",
+      "relationship": "optionalGovernanceCapabilities",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/policy.yml",
+      "relationship": "optionalGovernancePolicy",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/tooling.yml",
+      "relationship": "optionalGovernanceTooling",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    }
+  ],
+  "nextAction": {
+    "actionId": "verify.next.ship",
+    "command": null,
+    "workId": "012-verify-command",
+    "reason": "Verification readiness is current and ready for ship.",
+    "requiredArtifacts": [
+      "readiness/012-verify-command/verify.json",
+      "readiness/012-verify-command/work-model.json"
+    ],
+    "blockingDiagnosticIds": []
+  }
+}

@@ -25,7 +25,7 @@ module CommandReports =
             DiagnosticSeverity.DiagnosticError
             None
             $"Unknown SDD command '{value}'."
-            "Use one of: init, charter, specify, clarify, checklist, plan, tasks, analyze, evidence."
+            "Use one of: init, charter, specify, clarify, checklist, plan, tasks, analyze, evidence, verify."
             []
 
     let malformedWorkId (value: string) =
@@ -745,6 +745,51 @@ module CommandReports =
             "Fix the named lifecycle diagnostics before treating the generated view as current."
             (path :: relatedIds)
 
+    let missingEvidencePrerequisite path message =
+        commandDiagnostic
+            "verify.missingEvidencePrerequisite"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Run fsgg-sdd evidence for the selected work item before running fsgg-sdd verify."
+            [ path ]
+
+    let verifyIdentityMismatch path expectedWorkId actualWorkId =
+        commandDiagnostic
+            "verify.identityMismatch"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            $"Verification view work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Regenerate the verification view for the selected work id."
+            [ expectedWorkId; actualWorkId ]
+
+    let malformedVerificationView path message =
+        commandDiagnostic
+            "verify.malformedVerificationView"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            message
+            "Remove or repair the malformed readiness/<id>/verify.json before refreshing the verification view."
+            [ path ]
+
+    let missingRequiredTest path ids =
+        commandDiagnostic
+            "verify.missingRequiredTest"
+            DiagnosticSeverity.DiagnosticError
+            (Some path)
+            "One or more required test obligations are missing satisfying evidence or an accepted deferral."
+            "Add verification evidence or an accepted deferral linked to the missing required test obligations."
+            ids
+
+    let staleRequiredTest path ids =
+        commandDiagnostic
+            "verify.staleRequiredTest"
+            DiagnosticSeverity.DiagnosticWarning
+            (Some path)
+            "One or more required test obligations were satisfied against older lifecycle sources."
+            "Re-run the verifying tests and record current evidence before treating the work item as verification-ready."
+            ids
+
     let toolDefect (path: string option) (message: string) =
         commandDiagnostic
             "toolDefect"
@@ -906,6 +951,28 @@ module CommandReports =
         else
             None
 
+    let verifyCorrectionCommand (diagnostics: Diagnostic list) =
+        let ids = diagnostics |> List.map _.Id |> Set.ofList
+
+        if ids |> Set.contains "evidence.missingAnalysisPrerequisite"
+           || ids |> Set.contains "evidence.analysisNotReady"
+           || ids |> Set.contains "malformedAnalysisView"
+           || ids |> Set.contains "analysisIdentityMismatch" then
+            Some Analyze
+        elif ids |> Set.contains "missingTasksPrerequisite"
+             || ids |> Set.contains "malformedTasksArtifact"
+             || ids |> Set.contains "tasksIdentityMismatch"
+             || ids |> Set.contains "duplicateTaskId"
+             || ids |> Set.contains "unknownTaskDependency"
+             || ids |> Set.contains "taskDependencyCycle"
+             || ids |> Set.contains "unsupportedTaskStatus"
+             || ids |> Set.contains "evidence.missingRequiredSkill" then
+            Some Tasks
+        elif ids |> Set.exists (fun id -> id.StartsWith("evidence.", StringComparison.OrdinalIgnoreCase) || id.StartsWith("verify.", StringComparison.OrdinalIgnoreCase)) then
+            Some Evidence
+        else
+            None
+
     let nextAction
         (diagnostics: Diagnostic list)
         (request: CommandRequest)
@@ -914,6 +981,7 @@ module CommandReports =
         (tasks: TasksSummary option)
         (analysis: AnalysisSummary option)
         (evidence: EvidenceSummary option)
+        (verification: VerificationSummary option)
         =
         let blocking =
             diagnostics
@@ -930,6 +998,7 @@ module CommandReports =
                 | Plan -> planCorrectionCommand diagnostics
                 | Tasks -> tasksCorrectionCommand diagnostics
                 | Analyze -> tasksCorrectionCommand diagnostics
+                | Verify -> verifyCorrectionCommand diagnostics
                 | Evidence ->
                     if ids |> Set.contains "evidence.missingAnalysisPrerequisite"
                        || ids |> Set.contains "evidence.analysisNotReady"
@@ -1011,6 +1080,17 @@ module CommandReports =
                     |> Option.map (fun summary -> [ summary.EvidencePath; $"readiness/{summary.WorkId}/work-model.json" ])
                     |> Option.defaultValue []
                   BlockingDiagnosticIds = [] }
+        elif request.Command = Verify then
+            Some
+                { ActionId = "verify.next.ship"
+                  Command = None
+                  WorkId = request.WorkId
+                  Reason = "Verification readiness is current and ready for ship."
+                  RequiredArtifacts =
+                    verification
+                    |> Option.map (fun summary -> [ summary.VerifyPath; $"readiness/{summary.WorkId}/work-model.json" ])
+                    |> Option.defaultValue []
+                  BlockingDiagnosticIds = [] }
         else
             match nextLifecycleCommand request.Command with
             | Some command ->
@@ -1083,10 +1163,11 @@ module CommandReports =
           Tasks = model.Tasks
           Analysis = model.Analysis
           Evidence = model.Evidence
+          Verification = model.Verification
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility
-          NextAction = nextAction diagnostics model.Request model.Checklist model.Plan model.Tasks model.Analysis model.Evidence }
+          NextAction = nextAction diagnostics model.Request model.Checklist model.Plan model.Tasks model.Analysis model.Evidence model.Verification }
 
     let exitCodeForReport (report: CommandReport) =
         match report.Outcome with

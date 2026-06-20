@@ -203,11 +203,14 @@ let commandReport =
 
 expectEqual "parse analyze" (Ok Analyze) (CommandTypes.parseCommand "analyze")
 expectEqual "parse evidence" (Ok Evidence) (CommandTypes.parseCommand "evidence")
+expectEqual "parse verify" (Ok Verify) (CommandTypes.parseCommand "verify")
 expectEqual "analyze command stage" "analyze" (CommandTypes.commandStage Analyze)
 expectEqual "evidence command stage" "evidence" (CommandTypes.commandStage Evidence)
+expectEqual "verify command stage" "verify" (CommandTypes.commandStage Verify)
 expectEqual "next after tasks" (Some Analyze) (CommandTypes.nextLifecycleCommand Tasks)
 expectEqual "next after analyze" (Some Evidence) (CommandTypes.nextLifecycleCommand Analyze)
-expectEqual "next after evidence" None (CommandTypes.nextLifecycleCommand Evidence)
+expectEqual "next after evidence" (Some Verify) (CommandTypes.nextLifecycleCommand Evidence)
+expectEqual "next after verify" None (CommandTypes.nextLifecycleCommand Verify)
 
 let analyzeRequest =
     ({ Command = Analyze
@@ -329,6 +332,47 @@ let evidenceSummary =
 
 expectEqual "evidence command" Evidence evidenceReport.Command
 expectEqual "evidence readiness" "evidenceReady" evidenceSummary.Readiness
+
+let verifyRequest =
+    ({ Command = Verify
+       ProjectRoot = commandRoot
+       WorkId = Some "009-tasks-command"
+       Title = Some "Tasks Command"
+       InputText = None
+       OutputFormat = Json
+       DryRun = false
+       OverwritePolicy = RefuseUnsafe
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+    : CommandRequest)
+
+let verifyFinalModel =
+    runCommand verifyRequest
+
+let verifyReport =
+    verifyFinalModel.Report
+    |> Option.defaultWith (fun () -> CommandReports.buildReport verifyFinalModel)
+
+let verificationSummary =
+    verifyReport.Verification
+    |> Option.defaultWith (fun () -> failwith "Expected verification summary.")
+
+expectEqual "verify command" Verify verifyReport.Command
+expectEqual "verify readiness" "verificationReady" verificationSummary.Readiness
+expectEqual "verify next action" (Some "verify.next.ship") (verifyReport.NextAction |> Option.map _.ActionId)
+
+printfn "verifyCommand=%s" (CommandTypes.commandName verifyReport.Command)
+printfn "verifyCommandStage=%s" (CommandTypes.commandStage Verify)
+printfn "nextAfterVerify=%s" (CommandTypes.nextLifecycleCommand Verify |> Option.map CommandTypes.commandName |> Option.defaultValue "none")
+printfn "verifyOutcome=%s" (CommandTypes.outcomeValue verifyReport.Outcome)
+printfn "verifyPath=%s" verificationSummary.VerifyPath
+printfn "verifyReadiness=%s" verificationSummary.Readiness
+printfn "verifyObligations=%d" verificationSummary.ObligationCount
+printfn "verifyEvidenceSupported=%d" verificationSummary.EvidenceSupportedCount
+printfn "verifyTestSatisfied=%d" verificationSummary.TestSatisfiedCount
+printfn "verifySkillVisible=%d" verificationSummary.SkillVisibleCount
+printfn "verifyBlocking=%d" verificationSummary.BlockingCount
+printfn "verifyDiagnostics=%s" ([ missingEvidencePrerequisite "work/009-tasks-command/evidence.yml" "Evidence is required."; malformedVerificationView "readiness/009-tasks-command/verify.json" "Verify JSON is malformed."; verifyIdentityMismatch "readiness/009-tasks-command/verify.json" "009-tasks-command" "other-work"; missingRequiredTest "work/009-tasks-command/tasks.yml" [ "EV001" ]; staleRequiredTest "work/009-tasks-command/tasks.yml" [ "EV001" ] ] |> List.map _.Id |> String.concat ",")
+printfn "verifyNextAction=%s" (verifyReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
 
 printfn "command=%s" (CommandTypes.commandName commandReport.Command)
 printfn "tasksCommandStage=%s" (CommandTypes.commandStage Tasks)

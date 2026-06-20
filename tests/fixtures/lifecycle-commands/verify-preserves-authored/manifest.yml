@@ -1,0 +1,13 @@
+schemaVersion: 1
+scenario: verify-preserves-authored
+command: verify
+workId: 012-verify-command
+evidence:
+  tests:
+    - FS.GG.SDD.Commands.Tests.VerifyCommandTests.verify preserves authored lifecycle sources
+expected:
+  outcome: succeeded
+  preserves:
+    - work/012-verify-command/spec.md
+    - work/012-verify-command/tasks.yml
+    - work/012-verify-command/evidence.yml

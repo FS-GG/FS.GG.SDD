@@ -219,6 +219,38 @@ module CommandSerialization =
             writer.WriteEndObject()
         | None -> writer.WriteNull "evidence"
 
+    let writeVerification (writer: Utf8JsonWriter) (summary: VerificationSummary option) =
+        match summary with
+        | Some summary ->
+            writer.WriteStartObject("verification")
+            writer.WriteString("workId", summary.WorkId)
+            writer.WriteString("stage", summary.Stage)
+            writer.WriteString("status", summary.Status)
+            writer.WriteString("verifyPath", summary.VerifyPath)
+            writeStringList writer "findingIds" summary.FindingIds
+            writer.WriteNumber("readyFindingCount", summary.ReadyFindingCount)
+            writer.WriteNumber("advisoryCount", summary.AdvisoryCount)
+            writer.WriteNumber("warningCount", summary.WarningCount)
+            writer.WriteNumber("blockingCount", summary.BlockingCount)
+            writer.WriteNumber("obligationCount", summary.ObligationCount)
+            writer.WriteNumber("evidenceSupportedCount", summary.EvidenceSupportedCount)
+            writer.WriteNumber("evidenceDeferredCount", summary.EvidenceDeferredCount)
+            writer.WriteNumber("evidenceMissingCount", summary.EvidenceMissingCount)
+            writer.WriteNumber("evidenceStaleCount", summary.EvidenceStaleCount)
+            writer.WriteNumber("evidenceSyntheticCount", summary.EvidenceSyntheticCount)
+            writer.WriteNumber("evidenceInvalidCount", summary.EvidenceInvalidCount)
+            writer.WriteNumber("testSatisfiedCount", summary.TestSatisfiedCount)
+            writer.WriteNumber("testDeferredCount", summary.TestDeferredCount)
+            writer.WriteNumber("testMissingCount", summary.TestMissingCount)
+            writer.WriteNumber("testStaleCount", summary.TestStaleCount)
+            writer.WriteNumber("testInvalidCount", summary.TestInvalidCount)
+            writer.WriteNumber("skillVisibleCount", summary.SkillVisibleCount)
+            writer.WriteNumber("skillMissingCount", summary.SkillMissingCount)
+            writer.WriteNumber("sourceSnapshotCount", summary.SourceSnapshotCount)
+            writer.WriteString("readiness", summary.Readiness)
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "verification"
+
     let writeGeneratedSource (writer: Utf8JsonWriter) (source: GeneratedViewSource) =
         writer.WriteStartObject()
         writer.WriteString("path", source.Path)
@@ -317,6 +349,7 @@ module CommandSerialization =
         writeTasks writer report.Tasks
         writeAnalysis writer report.Analysis
         writeEvidence writer report.Evidence
+        writeVerification writer report.Verification
         writer.WriteStartArray("generatedViews")
         report.GeneratedViews |> List.sortBy (fun view -> view.Path) |> List.iter (writeGeneratedView writer)
         writer.WriteEndArray()

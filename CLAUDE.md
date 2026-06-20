@@ -13,8 +13,11 @@ Core boundary:
   evidence, normalized work models, generated SDD views, lifecycle CLI
   contracts, and agent command/skill generation.
 - `fsgg-sdd evidence` owns declared authored evidence and SDD readiness
-  summaries; Governance-owned effective evidence freshness and gate enforcement
-  remain optional downstream concerns.
+  summaries; `fsgg-sdd verify` evaluates SDD-owned verification readiness over
+  task/evidence/test/skill obligations, emits `readiness/<id>/verify.json`, and
+  points verification-ready work to a later ship slice. Governance-owned
+  effective evidence freshness and gate enforcement remain optional downstream
+  concerns.
 - FS.GG.Governance owns rule evaluation, evidence freshness, routing, profiles,
   and gate enforcement.
 - Integrations between them must be explicit, versioned, and optional until
@@ -33,5 +36,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/011-evidence-command/plan.md
+at specs/012-verify-command/plan.md
 <!-- SPECKIT END -->
