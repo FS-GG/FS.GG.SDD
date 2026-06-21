@@ -2,6 +2,7 @@ namespace FS.GG.SDD.Cli
 
 open Spectre.Console
 open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Validation.ValidationContracts
 
 module Rendering =
     /// Pure detection result for the active output environment.
@@ -32,4 +33,17 @@ module Rendering =
         format: OutputFormat ->
         capabilities: TerminalCapabilities ->
         report: CommandReport ->
+            RichRenderResult
+
+    /// Render a validation-report into the given Spectre console. Pure over the
+    /// report: the only observable mutation is to the supplied console.
+    val renderValidationRichTo: console: IAnsiConsole -> report: ValidationReport -> unit
+
+    /// Resolve the effective stdout rendering for a requested format + capabilities,
+    /// degrading Rich -> plain text when non-interactive or color-disabled. `Json`
+    /// returns the canonical `serialize` JSON; `Text` returns `renderText`.
+    val resolveValidation:
+        format: OutputFormat ->
+        capabilities: TerminalCapabilities ->
+        report: ValidationReport ->
             RichRenderResult

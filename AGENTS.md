@@ -40,8 +40,9 @@ Boundary rules:
   determinism/degradation, release baseline-conformance, and Governance-handoff
   compatibility — on demand and on a schedule, separate from the cheap inner loop.
   It emits one deterministic `validation-report` JSON (`--json` default, `--text`
-  projection; `--rich` deferred), requires no Governance runtime, and computes no
-  Governance verdict. The report is not catalogued in `release-readiness.json` (a
+  projection; `--rich` renders the report richly via Spectre.Console, degrading to
+  plain text when non-interactive or color-disabled), requires no Governance
+  runtime, and computes no Governance verdict. The report is not catalogued in `release-readiness.json` (a
   declared exception in `docs/release/schema-reference.md`).
 - Governance owns rule evaluation, evidence freshness, routing, profiles, and
   gate enforcement.

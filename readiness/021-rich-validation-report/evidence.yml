@@ -1,0 +1,78 @@
+schemaVersion: 1
+# Declared authored evidence for feature 021 (rich Spectre.Console rendering of the
+# validation-report). SDD-owned, presentation-only: no validation-report JSON/schema/
+# matrix/lifecycle change and no CommandReport change (FR-009). The CLI Rendering
+# surface gains exactly two functions. Governance-owned effective freshness and gate
+# enforcement remain optional downstream concerns.
+feature: 021-rich-validation-report
+evidence:
+  - id: EV-021-PROJECTION
+    kind: test
+    subject: { type: requirement, id: FR-002 }
+    result: pass
+    source: tests/FS.GG.SDD.Cli.Tests/ValidationRichRenderingTests.fs
+    note: >-
+      Projection completeness over ValidationReport (verdict, five summary counts,
+      each matrix name+dimensions, every non-passing cell's coordinates+status,
+      Fail diagnostic); pass cells summarized not enumerated; no invented facts;
+      schemaVersion/generatorVersion absence not an omission. Real color-off Spectre
+      IAnsiConsole, no mocks.
+  - id: EV-021-STATUS-DIFF
+    kind: test
+    subject: { type: requirement, id: FR-007 }
+    result: pass
+    source: tests/FS.GG.SDD.Cli.Tests/ValidationRichRenderingTests.fs
+    note: >-
+      All-pass renders a passed verdict with no invented failing cells; a report
+      whose only non-passing cells are coverageGap/notValidated renders not-passed
+      with those tokens distinct from non-failing skipped; single-failing-cell
+      isolation (siblings not falsely failing).
+  - id: EV-021-INVARIANCE
+    kind: test
+    subject: { type: requirement, id: FR-003 }
+    result: pass
+    source: tests/FS.GG.SDD.Cli.Tests/ValidationRichRenderingTests.fs
+    note: >-
+      resolveValidation never mutates report/JSON/text; Rich degrades to byte-
+      identical renderText with UsedRichRendering=false and zero ESC when non-
+      interactive or color-disabled; Json/Text resolve to serialize/renderText
+      byte-for-byte; serialized sensed block stays null (INV-1/INV-2/INV-3).
+  - id: EV-021-CLI-E2E
+    kind: verification
+    subject: { type: requirement, id: FR-005 }
+    result: pass
+    source: tests/FS.GG.SDD.Cli.Tests/ValidateCommandTests.fs
+    note: >-
+      Host-binary: --rich redirected == --text (0 ESC); --json sensed fence null;
+      exit code identical across --json/--text/--rich and non-zero for partial run;
+      --rich --out persists deterministic text with 0 ESC (FR-010).
+  - id: EV-021-RICH-VISUAL
+    kind: verification
+    subject: { type: requirement, id: FR-001 }
+    result: pass
+    source: readiness/021-rich-validation-report/rich-tty-capture.ansi
+    note: >-
+      Real interactive (pseudo-TTY) run of the Release binary: colored verdict,
+      Matrices rollup table with box borders, per-matrix dimension sections, and
+      red-emphasized notValidated tokens. Real ANSI captured.
+  - id: EV-021-SMOKE
+    kind: verification
+    subject: { type: requirement, id: FR-010 }
+    result: pass
+    source: readiness/021-rich-validation-report/cli-smoke.md
+    note: >-
+      Disposable-directory smoke across --json/--text/--rich/--rich --out and
+      NO_COLOR; records the width=0 pseudo-TTY crash found and fixed (Profile.Width
+      guard in both resolve and resolveValidation).
+  - id: EV-021-FULL-SUITE
+    kind: verification
+    subject: { type: requirement, id: SC-002 }
+    result: pass
+    source: dotnet test -c Release FS.GG.SDD.sln
+    note: "437 tests pass (Artifacts 103, Validation 18, Commands 265, Cli 51); both public-surface baselines green."
+principleIV: not-applicable
+principleIVNote: >-
+  No new MVU Model/Msg loop. The impure edge (detectCapabilities, console write,
+  Console.Out) is isolated in Program.fs; renderValidationRichTo and
+  resolveValidation are pure over the report.
+syntheticEvidence: none

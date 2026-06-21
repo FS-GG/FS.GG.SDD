@@ -7,6 +7,7 @@ open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Commands.CommandRendering
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Validation.ValidationContracts
 
 module Rendering =
     type TerminalCapabilities =
@@ -89,7 +90,7 @@ module Rendering =
         // same plain-text projection so the rich view represents every text fact
         // and invents none (INV-5 / C-3).
         let detailLines =
-            (renderText report).Replace("\r\n", "\n").Split('\n')
+            (FS.GG.SDD.Commands.CommandRendering.renderText report).Replace("\r\n", "\n").Split('\n')
             |> Array.filter (fun line -> line.Contains ": ")
 
         if detailLines.Length > 0 then
@@ -165,6 +166,128 @@ module Rendering =
                 console.MarkupLine($"  requires: {esc artifact}")
         | None -> console.MarkupLine("[dim]Next action: none[/]")
 
+    // ----- validation-report rich projection (pure over the report) -----
+
+    /// The visible token for a cell status (color-stripped consoles differentiate
+    /// failing vs non-failing by this token alone — INV-6).
+    let private cellStatusToken (status: CellStatus) =
+        match status with
+        | Pass -> "pass"
+        | Fail _ -> "fail"
+        | SkippedWithReason _ -> "skipped"
+        | CoverageGap _ -> "coverageGap"
+        | NotValidated _ -> "notValidated"
+
+    /// Status styling: `Fail`/`CoverageGap`/`NotValidated` are emphasized red-family
+    /// (they drive the non-zero exit); `SkippedWithReason` is non-failing yellow;
+    /// `Pass` is green (summarized only). Stripped on color-off consoles.
+    let private cellStatusStyle (status: CellStatus) =
+        match status with
+        | Pass -> "green"
+        | Fail _ -> "red bold"
+        | CoverageGap _ -> "red"
+        | NotValidated _ -> "red"
+        | SkippedWithReason _ -> "yellow"
+
+    let private cellDetail (status: CellStatus) =
+        match status with
+        | Fail diagnostic -> diagnostic.Message
+        | SkippedWithReason reason -> reason
+        | CoverageGap surface -> surface
+        | NotValidated reason -> reason
+        | Pass -> ""
+
+    let private coordinateText (coordinates: (string * string) list) =
+        coordinates
+        |> List.map (fun (dimension, value) -> $"{dimension}={value}")
+        |> String.concat ", "
+
+    let renderValidationRichTo (console: IAnsiConsole) (report: ValidationReport) : unit =
+        let summary = report.Summary
+
+        // Overall verdict: green "passed" vs red "not passed", mirroring the exit rule.
+        let verdictStyle, verdictText =
+            if summary.OverallPassed then "green", "passed" else "red", "not passed"
+
+        let header = Rule("validation-report")
+        header.Justification <- Justify.Left
+        console.Write header
+        console.MarkupLine($"Verdict: [{verdictStyle}]{esc verdictText}[/]")
+
+        // The five summary counts.
+        console.MarkupLine(
+            $"Summary: passed={summary.Passed} failed={summary.Failed} "
+            + $"skipped={summary.Skipped} coverageGaps={summary.CoverageGaps} "
+            + $"notValidated={summary.NotValidated}")
+
+        let sortedMatrices = report.Matrices |> List.sortBy (fun matrix -> matrix.Name)
+
+        // Per-matrix rollup: one row per matrix with its per-status counts.
+        let rollup = Table()
+        rollup.Title <- TableTitle("Matrices")
+
+        rollup.AddColumns("matrix", "pass", "fail", "skipped", "coverageGap", "notValidated")
+        |> ignore
+
+        for matrix in sortedMatrices do
+            let countOf predicate =
+                matrix.Cells |> List.filter (fun cell -> predicate cell.Status) |> List.length
+
+            let passed = countOf (function Pass -> true | _ -> false)
+            let failed = countOf (function Fail _ -> true | _ -> false)
+            let skipped = countOf (function SkippedWithReason _ -> true | _ -> false)
+            let gaps = countOf (function CoverageGap _ -> true | _ -> false)
+            let notValidated = countOf (function NotValidated _ -> true | _ -> false)
+
+            rollup.AddRow(
+                esc matrix.Name,
+                string passed,
+                string failed,
+                string skipped,
+                string gaps,
+                string notValidated)
+            |> ignore
+
+        console.Write rollup
+
+        // Per-matrix section: name + dimensions, then every non-passing cell with its
+        // coordinates, status token, and detail (the diagnostic message for `Fail`).
+        // `Pass` cells are summarized only, keeping a large cross-product scannable.
+        for matrix in sortedMatrices do
+            let dimensions = matrix.Dimensions |> String.concat ", "
+            console.MarkupLine($"[bold]{esc matrix.Name}[/] (dimensions: {esc dimensions})")
+
+            let nonPassing =
+                matrix.Cells
+                |> List.filter (fun cell -> match cell.Status with Pass -> false | _ -> true)
+                |> List.sortBy (fun cell -> coordinateText cell.Coordinates)
+
+            if nonPassing.IsEmpty then
+                console.MarkupLine("  [dim]all evaluated cells pass[/]")
+            else
+                for cell in nonPassing do
+                    let token = cellStatusToken cell.Status
+                    let style = cellStatusStyle cell.Status
+                    let detail = cellDetail cell.Status
+                    let detailText = if System.String.IsNullOrEmpty detail then "" else $": {esc detail}"
+                    console.MarkupLine($"  ({esc (coordinateText cell.Coordinates)}) [{style}]{esc token}[/]{detailText}")
+
+        // Sensed triage facts are surfaced only when populated (C-6); never required.
+        let sensedLines =
+            [ match report.Sensed.StartedAtUtc with
+              | Some value -> $"startedAtUtc={value}"
+              | None -> ()
+              match report.Sensed.DurationMs with
+              | Some value -> $"durationMs={value}"
+              | None -> ()
+              match report.Sensed.Host with
+              | Some value -> $"host={value}"
+              | None -> () ]
+
+        if not sensedLines.IsEmpty then
+            let sensedText = String.concat ", " sensedLines
+            console.MarkupLine($"[dim]sensed: {esc sensedText}[/]")
+
     let resolve
         (format: OutputFormat)
         (capabilities: TerminalCapabilities)
@@ -172,7 +295,7 @@ module Rendering =
         : RichRenderResult =
         match format with
         | Json -> { Text = serializeReport report; UsedRichRendering = false }
-        | Text -> { Text = renderText report; UsedRichRendering = false }
+        | Text -> { Text = FS.GG.SDD.Commands.CommandRendering.renderText report; UsedRichRendering = false }
         | Rich ->
             if capabilities.IsInteractive && capabilities.ColorEnabled then
                 let writer = new StringWriter()
@@ -183,12 +306,42 @@ module Rendering =
                 let console = AnsiConsole.Create settings
 
                 match capabilities.Width with
-                | Some width -> console.Profile.Width <- width
-                | None -> ()
+                | Some width when width > 0 -> console.Profile.Width <- width
+                | _ -> ()
 
                 renderRichTo console report
                 { Text = writer.ToString(); UsedRichRendering = true }
             else
                 // Degrade to the existing plain-text projection: zero ANSI, byte-identical
                 // to `--text` for the same report (C-1, INV-2).
-                { Text = renderText report; UsedRichRendering = false }
+                { Text = FS.GG.SDD.Commands.CommandRendering.renderText report; UsedRichRendering = false }
+
+    let resolveValidation
+        (format: OutputFormat)
+        (capabilities: TerminalCapabilities)
+        (report: ValidationReport)
+        : RichRenderResult =
+        match format with
+        // `serialize` is the canonical automation contract; `renderText` is the
+        // portable plain-text projection. Both are returned byte-for-byte (INV-1).
+        | Json -> { Text = FS.GG.SDD.Validation.ValidationContracts.serialize report; UsedRichRendering = false }
+        | Text -> { Text = FS.GG.SDD.Validation.ValidationContracts.renderText report; UsedRichRendering = false }
+        | Rich ->
+            if capabilities.IsInteractive && capabilities.ColorEnabled then
+                let writer = new StringWriter()
+                let settings = AnsiConsoleSettings()
+                settings.Ansi <- AnsiSupport.Yes
+                settings.ColorSystem <- ColorSystemSupport.Standard
+                settings.Out <- new AnsiConsoleOutput(writer)
+                let console = AnsiConsole.Create settings
+
+                match capabilities.Width with
+                | Some width when width > 0 -> console.Profile.Width <- width
+                | _ -> ()
+
+                renderValidationRichTo console report
+                { Text = writer.ToString(); UsedRichRendering = true }
+            else
+                // Degrade to the exact plain-text projection: zero ANSI, byte-identical
+                // to `--text` for the same report (C-4, INV-2).
+                { Text = FS.GG.SDD.Validation.ValidationContracts.renderText report; UsedRichRendering = false }

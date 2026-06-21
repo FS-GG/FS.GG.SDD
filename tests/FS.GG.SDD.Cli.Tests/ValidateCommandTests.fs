@@ -55,3 +55,50 @@ module ValidateCommandTests =
         let stdout, exitCode = runCli [ "validate"; "--matrix"; "compatibility"; "--text" ]
         Assert.Contains("notValidated", stdout)
         Assert.NotEqual(0, exitCode)
+
+    // ----- T012: --rich end-to-end (degrades to text when redirected) -----
+
+    [<Fact>]
+    let ``validate --rich redirected carries zero ANSI and equals --text`` () =
+        // Redirected stdout (+ NO_COLOR from runCli) degrades rich to the exact plain
+        // text projection: zero ANSI, byte-identical to --text (FR-005 / C-4 / SC-005).
+        let richOut, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--rich" ]
+        let textOut, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--text" ]
+        Assert.False(richOut |> Seq.exists (fun c -> int c = 27), "rich output contains an ANSI escape")
+        Assert.Equal(textOut, richOut)
+
+    [<Fact>]
+    let ``validate --json keeps the sensed fence normalized to null`` () =
+        // FR-003 / INV-3: the rich feature changes no JSON byte; the sensed block
+        // stays null in the automation contract.
+        let stdout, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--json" ]
+        Assert.Contains("\"startedAtUtc\": null", stdout)
+        Assert.Contains("\"durationMs\": null", stdout)
+        Assert.Contains("\"host\": null", stdout)
+
+    [<Fact>]
+    let ``validate exit code is identical across --json, --text, and --rich`` () =
+        // SC-005: format selection changes presentation only, never the exit code.
+        let _, jsonExit = runCli [ "validate"; "--matrix"; "compatibility"; "--json" ]
+        let _, textExit = runCli [ "validate"; "--matrix"; "compatibility"; "--text" ]
+        let _, richExit = runCli [ "validate"; "--matrix"; "compatibility"; "--rich" ]
+        Assert.Equal(jsonExit, textExit)
+        Assert.Equal(textExit, richExit)
+        // Partial (single-matrix) run never reads as a full pass.
+        Assert.NotEqual(0, jsonExit)
+
+    [<Fact>]
+    let ``validate --rich --out persists deterministic text with zero ANSI`` () =
+        // FR-010: --out never receives rich ANSI; it persists the deterministic
+        // plain-text projection (equal to --text stdout).
+        let outPath = Path.Combine(Path.GetTempPath(), $"validate-rich-{System.Guid.NewGuid():N}.txt")
+
+        try
+            let _, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--rich"; "--out"; outPath ]
+            let persisted = File.ReadAllText outPath
+            let textOut, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--text" ]
+            Assert.False(persisted |> Seq.exists (fun c -> int c = 27), "persisted --out contains an ANSI escape")
+            // runCli appends a trailing newline to stdout; compare on trimmed content.
+            Assert.Equal(textOut.TrimEnd(), persisted.TrimEnd())
+        finally
+            if File.Exists outPath then File.Delete outPath

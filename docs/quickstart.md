@@ -49,6 +49,12 @@ whenever output is non-interactive/redirected or color is disabled (`NO_COLOR`
 present, or `TERM=dumb`). Rich output is presentation only and is excluded from
 deterministic/golden contracts; automation should keep using the default JSON.
 
+The cross-cutting `fsgg-sdd validate` harness honors the same three flags over its
+`validation-report`: `--rich` renders the verdict, summary counts, per-matrix
+rollup, and every non-passing cell via Spectre.Console, degrading to the plain-text
+projection under the same non-interactive/color-disabled rules. `--out` always
+persists a deterministic projection (JSON or plain text), never rich ANSI.
+
 ## `fsgg-sdd init`
 
 ```text

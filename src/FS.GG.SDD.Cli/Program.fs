@@ -73,19 +73,26 @@ let printValidate (rest: string list) =
 
     let report = FS.GG.SDD.Validation.ValidationRunner.run options
 
-    // --json (default) is the automation contract; --text (and the deferred --rich,
-    // which degrades to text) emit the portable plain-text projection.
-    let rendered =
-        if hasFlag "--text" rest || hasFlag "--rich" rest then
-            FS.GG.SDD.Validation.ValidationContracts.renderText report
-        else
-            FS.GG.SDD.Validation.ValidationContracts.serialize report
+    // Resolve the stdout rendering: --json (default) is the automation contract,
+    // --text the portable plain text, and --rich the Spectre projection (degrading
+    // to plain text when non-interactive or color-disabled). Pure projection over
+    // the same report; stream routing and exit code are unchanged across formats.
+    let format = selectFormat rest
+    let stdoutRendering = (resolveValidation format (detectCapabilities ()) report).Text
 
+    // --out persists a deterministic projection only (never rich ANSI): the
+    // canonical JSON for --json/default, else the portable plain text (FR-010).
     match optionValue "--out" rest with
-    | Some path -> System.IO.File.WriteAllText(path, rendered)
+    | Some path ->
+        let persisted =
+            match format with
+            | Json -> FS.GG.SDD.Validation.ValidationContracts.serialize report
+            | _ -> FS.GG.SDD.Validation.ValidationContracts.renderText report
+
+        System.IO.File.WriteAllText(path, persisted)
     | None -> ()
 
-    Console.Out.WriteLine(rendered)
+    Console.Out.WriteLine(stdoutRendering)
 
     if report.Summary.OverallPassed then 0 else 1
 

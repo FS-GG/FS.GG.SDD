@@ -341,15 +341,19 @@ Purpose: prove the protected-boundary value early, as required by the design,
 without waiting for the full lifecycle command suite.
 
 Status (rechecked 2026-06-21 against the sibling repo
-`/home/developer/projects/FS.GG.Governance`): the walking skeleton is **shipped**,
-and the enforcement audit chain has now landed. Governance has merged **F014**
-(`.fsgg` typed schemas) → **F025** (audit.json projection,
-`FS.GG.Governance.AuditJson`); **20 projects** (was 18). Since the prior recheck,
+`/home/developer/projects/FS.GG.Governance`, `main` @ `558ebd9`): the walking
+skeleton is **shipped**, and the enforcement audit chain has now fully landed.
+Governance has merged **F014** (`.fsgg` typed schemas) → **F025** (audit.json
+projection, `FS.GG.Governance.AuditJson`, merge `558ebd9`); **~19 src projects**
+(38 `.fsproj` incl. tests). Since the prior recheck,
 **F023** enforcement/effective-severity (`FS.GG.Governance.Enforcement`), **F024**
 ship verdict rollup (`FS.GG.Governance.Ship`), and **F025 audit-json projection**
 (`FS.GG.Governance.AuditJson` — the pure, total, deterministic
 `AuditJson.ofShipDecision : ShipDecision -> string` plus a `schemaVersion`
-constant) are all **merged**. The SDD→Governance handoff contract is accepted at **v1.0.0** (ADR 0002),
+constant) are all **merged**. Newest in-flight: **F026 `fsgg ship` host command**
+(`FS.GG.Governance.ShipCommand`) is **🟡 in progress** — full spec authored under
+`specs/026-fsgg-ship-command/`, src + tests present but untracked (not yet merged).
+The SDD→Governance handoff contract is accepted at **v1.0.0** (ADR 0002),
 but its Governance-side **consumer is still not implemented** (grep over Governance
 `src/`+`tests/` finds zero `governance-handoff` references; reader → evidence
 adapter → gate decision remain queued) — the seam stays one-directional and
@@ -567,9 +571,13 @@ composite order; every item tagged `kind` with identity + the six-field enforcem
 carry; emit-only, no new dependency). Evidence:
 `specs/025-audit-json-projection/readiness/` (21 green tests: projection,
 determinism + permutation-invariance + version/field-order + exclusion sweep,
-six-field/no-hide carry, totality). Still out of scope here: rule-id annotation, CLI
-`fsgg ship --mode` wiring, `.fsgg/policy.yml` per-class dial map, base/head route
-parity, and the cache-eligibility/freshness verdict (Phase 11).
+six-field/no-hide carry, totality). Update (rechecked 2026-06-21, `main` @
+`558ebd9`): the **`fsgg ship` host command** that wires the F024 rollup + F025
+`audit.json` to a CLI surface has now started as **F026
+`FS.GG.Governance.ShipCommand`** — **🟡 in progress** (spec authored under
+`specs/026-fsgg-ship-command/`; src + tests untracked, not yet merged). Still out
+of scope here: rule-id annotation, `.fsgg/policy.yml` per-class dial map, base/head
+route parity, and the cache-eligibility/freshness verdict (Phase 11).
 
 Legend: 🟢 complete · 🟡 partial (pure core landed; emission/wiring deferred) ·
 ⬜ not started.
@@ -859,10 +867,11 @@ Purpose: prepare SDD and Governance-managed products for versioned release.
 
 Status (2026-06-21): the **SDD-owned distribution slice is complete** — feature
 `018-release-readiness` froze/versioned/documented the public contracts, feature
-`019-spectre-rendering` shipped the rich projections, and feature
+`019-spectre-rendering` shipped the rich `CommandReport` projections, feature
 `020-exhaustive-validation` shipped the scheduled exhaustive validation harness
-(`fsgg-sdd validate`). The remaining rows are **Governance-owned release/provenance
-gates**.
+(`fsgg-sdd validate`), and feature `021-rich-validation-report` closed the last
+SDD-owned deferral by making `validate --rich` render the `validation-report`
+richly. The remaining rows are **Governance-owned release/provenance gates**.
 
 Legend: 🟢 complete · 🟡 partial · 🔴 not started.
 
@@ -886,7 +895,11 @@ Legend: 🟢 complete · 🟡 partial · 🔴 not started.
   publish plans, trusted publishing, and provenance. (Governance-owned; Phase 11.)
 - 🟢 [x] Add Spectre.Console projections backed by the same report objects used for
   JSON. (Feature `019-spectre-rendering`: `--rich` projection over the same
-  `CommandReport`.)
+  `CommandReport`. Feature `021-rich-validation-report` extends the same edge to the
+  `validation-report`: `fsgg-sdd validate --rich` renders verdict + summary counts +
+  per-matrix rollup + every non-passing cell via Spectre, degrading to plain text
+  when non-interactive/color-disabled. Two additive `Rendering` functions; no
+  `validation-report` JSON/schema/matrix change. 437 tests green.)
 - 🟢 [x] Add scheduled exhaustive validation for broad matrices. (Feature
   `020-exhaustive-validation`: `fsgg-sdd validate` cross-cutting harness over the
   lifecycle-output / determinism / baseline-conformance / compatibility matrices,

@@ -1,0 +1,39 @@
+[?1h=── validation-report ───────────────────────────────────────────────────────────
+Verdict: [91mnot passed[0m
+Summary: passed=2 failed=0 skipped=0 coverageGaps=0 notValidated=421
+                                  [37mMatrices[0m                                   
+┌──────────────────────┬──────┬──────┬─────────┬─────────────┬──────────────┐
+│ matrix               │ pass │ fail │ skipped │ coverageGap │ notValidated │
+├──────────────────────┼──────┼──────┼─────────┼─────────────┼──────────────┤
+│ baseline-conformance │ 0    │ 0    │ 0       │ 0           │ 20           │
+│ compatibility        │ 2    │ 0    │ 0       │ 0           │ 0            │
+│ determinism          │ 0    │ 0    │ 0       │ 0           │ 50           │
+│ lifecycle-output     │ 0    │ 0    │ 0       │ 0           │ 351          │
+└──────────────────────┴──────┴──────┴─────────┴─────────────┴──────────────┘
+[1mbaseline-conformance[0m (dimensions: contract, check)
+  (contract=agent-commands/<target>/commands.md, check=baseline) [91mnotValidated[0m: 
+not yet evaluated
+  (contract=agent-commands/<target>/commands.md, check=conformance) [91mnotValidated[0m
+: not yet evaluated
+  (contract=agent-commands/<target>/guidance.json, check=baseline) [91mnotValidated[0m:
+not yet evaluated
+  (contract=agent-commands/<target>/guidance.json, check=conformance) 
+[91mnotValidated[0m: not yet evaluated
+  (contract=agent-commands/<target>/skills.md, check=baseline) [91mnotValidated[0m: not
+yet evaluated
+  (contract=agent-commands/<target>/skills.md, check=conformance) [91mnotValidated[0m: 
+not yet evaluated
+  (contract=analysis.json, check=baseline) [91mnotValidated[0m: not yet evaluated
+  (contract=analysis.json, check=conformance) [91mnotValidated[0m: not yet evaluated
+  (contract=command-report (--json), check=baseline) [91mnotValidated[0m: not yet 
+evaluated
+  (contract=command-report (--json), check=conformance) [91mnotValidated[0m: not yet 
+evaluated
+  (contract=governance-handoff.json, check=baseline) [91mnotValidated[0m: not yet 
+evaluated
+  (contract=governance-handoff.json, check=conformance) [91mnotValidated[0m: not yet 
+evaluated
+  (contract=ship.json, check=baseline) [91mnotValidated[0m: not yet evaluated
+  (contract=ship.json, check=conformance) [91mnotValidated[0m: not yet evaluated
+  (contract=summary.md, check=baseline) [91mnotValidated[0m: not yet evaluated
+  (contract=summary.md, check=conformance) [91mnotValidated[0m: not yet evaluated
