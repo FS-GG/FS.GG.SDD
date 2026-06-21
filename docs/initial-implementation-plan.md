@@ -880,13 +880,19 @@ Exit criteria:
   cannot be hidden under a governed root without classification.
 - Generated-product checks scale by cost tier and explain broad routes.
 
-### Phase 11: Cost, Cache, And Provenance
+### Phase 11: Cost, Cache, And Provenance — 🟢 COMPLETE
 
 Owner: `FS.GG.Governance`; SDD supplies source and generated-view digests for
 its lifecycle artifacts.
 
 Purpose: keep local authoring cheap while making protected-boundary evidence
 auditable.
+
+Status (2026-06-21): **complete** — all six rows landed in `FS.GG.Governance`:
+freshness keys (**F029**), evidence reuse (**F030**), route-cost explanation
+(**F031**), command records (**F032**), provenance (**F033**), and the closing
+sensed-metadata marking + flagged-rendering core (**F034**
+`FS.GG.Governance.SensedMetadata`).
 
 - ✅ Define freshness keys over rule hash, artifact hash, command version,
   generator version, base/head, environment class, and output digest.
@@ -910,13 +916,24 @@ auditable.
   and folded via F032 `CommandRecord.canonicalId` so the sensed durations are never
   read). First core to reference three sibling cores (FreshnessKey + CommandRecord +
   Config), reusing F029/F032/F014 vocabulary verbatim; no new dependency.
-- 🟡 Mark wall-clock timestamps and durations as sensed or non-deterministic
+- ✅ Mark wall-clock timestamps and durations as sensed or non-deterministic
   metadata when included in deterministic reports.
-  _(Structural foundation merged — F032 carries the run duration as a distinct
-  `SensedDuration` apart from the reproducible facts and F033 keeps the embedded
-  durations structurally excluded from the provenance identity; the
-  deterministic-report rendering that surfaces them as flagged sensed metadata is
-  not yet built.)_
+  _(F034 — `FS.GG.Governance.SensedMetadata`, merged.)_ The structural foundation
+  was already there — F032 carries the run duration as a distinct `SensedDuration`
+  apart from the reproducible facts and F033 keeps the embedded durations
+  structurally excluded from the provenance identity — and F034 adds the missing
+  **presentation half**: pure, total `SensedMetadata.markDuration` / `markTimestamp`
+  mark an already-measured duration / timestamp (each with its label) as a
+  `SensedMetadatum` whose `Value` is a closed `SensedValue` DU, so **the type is the
+  flag** — there is no representation of a marked timestamp or duration that is
+  reproducible. `render` surfaces one metadatum behind a reserved `!sensed!` marker
+  in the F029/F032/F033 tagged, length-prefixed, injective discipline — a form no
+  reproducible field tag ever produces, so it is unmistakably distinguishable from a
+  reproducible field and unspoofable by its data — and `renderSection` groups a list
+  into one order-preserving, separable `!sensed-section!`. Identity-neutral: it
+  computes no reproducible identity and references no identity-computing core. Reuses
+  F032's `SensedDuration` verbatim (the only genuinely new fact is `SensedTimestamp`);
+  no new dependency. **This closes Phase 11** — its sixth and final row.
 
 Exit criteria:
 
