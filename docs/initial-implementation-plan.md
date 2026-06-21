@@ -285,6 +285,34 @@ Progress markers:
   optional Governance compatibility facts, CLI JSON/dry-run/text smoke
   evidence, FSI evidence, performance evidence, and full-suite verification.
   Evidence is recorded in `specs/011-evidence-command/readiness/`.
+- [x] Implement `012-verify-command` (`fsgg-sdd verify`): SDD-owned verification
+  readiness over task/evidence/test/skill obligations, emitting
+  `readiness/<id>/verify.json` and pointing verification-ready work to ship.
+- [x] Implement `013-ship-command` (`fsgg-sdd ship`): SDD-owned merge-boundary
+  readiness emitting `readiness/<id>/ship.json` and pointing ship-ready work to
+  the Governance-owned protected-boundary handoff.
+- [x] Implement `014-agent-guidance` (`fsgg-sdd agents`): per-target Claude/Codex
+  command and skill guidance generated from `readiness/<id>/work-model.json`.
+- [x] Implement `015-refresh-command` (`fsgg-sdd refresh`): regenerate SDD-owned
+  generated views and report `analysis.json`/`verify.json`/`ship.json` currency.
+- [x] Implement `016-bootstrap-migration`: end-to-end quickstart, migration
+  guidance, Governance-after-init boundary, and a no-Governance lifecycle smoke
+  harness (Phase 9 SDD slice).
+- [x] Implement `017-governance-handoff`: the versioned SDD→Governance handoff
+  contract (accepted at v1.0.0, ADR 0002; Governance-side consumer pending).
+- [x] Implement `018-release-readiness`: frozen/versioned public contracts,
+  versioning policy, compatibility matrix, schema reference, and golden baselines.
+- [x] Implement `019-spectre-rendering`: the rich `--rich` Spectre.Console
+  projection over the same `CommandReport`.
+- [x] Implement `020-exhaustive-validation` (`fsgg-sdd validate`): the scheduled
+  exhaustive validation harness emitting one deterministic `validation-report`.
+- [x] Implement `021-rich-validation-report`: `fsgg-sdd validate --rich` renders
+  the `validation-report` via Spectre, closing the last SDD-owned deferral.
+
+The SDD-owned implementation slice (Phases 1, 3, 4, 6, 7, 8, 9, and 13) is
+complete as of 2026-06-21. All remaining open roadmap items are **Governance-owned**
+(Phases 2, 5, 10, 11, 12, and the Governance rows of Phase 13) and are implemented
+in the sibling `FS.GG.Governance` repository, not here.
 
 ### Phase 1: SDD Artifact Model
 
@@ -350,9 +378,14 @@ projection, `FS.GG.Governance.AuditJson`, merge `558ebd9`); **~19 src projects**
 ship verdict rollup (`FS.GG.Governance.Ship`), and **F025 audit-json projection**
 (`FS.GG.Governance.AuditJson` — the pure, total, deterministic
 `AuditJson.ofShipDecision : ShipDecision -> string` plus a `schemaVersion`
-constant) are all **merged**. Newest in-flight: **F026 `fsgg ship` host command**
-(`FS.GG.Governance.ShipCommand`) is **🟡 in progress** — full spec authored under
-`specs/026-fsgg-ship-command/`, src + tests present but untracked (not yet merged).
+constant) are all **merged**. **F026 `fsgg ship` host command**
+(`FS.GG.Governance.ShipCommand`) is now **🟢 merged** (Governance `main` @ `8fd9517`,
+"Merge F026"), and **F027** (`027-branch-protection-guidance`) — the first GitHub
+Actions branch-protection guidance, the **Phase-2 closing row** — is **🟢 landing** as a
+docs+template deliverable (no new F# code; `docs/ci/` + `scripts/check-ship-ci-guidance.sh`,
+16/16 cross-check assertions green). With it, Phase 2's product surface is complete except
+the **cache-eligibility/freshness** verdict still deferred to Phase 11 (the one remaining
+🟡 below).
 The SDD→Governance handoff contract is accepted at **v1.0.0** (ADR 0002),
 but its Governance-side **consumer is still not implemented** (grep over Governance
 `src/`+`tests/` finds zero `governance-handoff` references; reader → evidence
@@ -388,7 +421,15 @@ Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
   `FS.GG.Governance.AuditJson` — verdict/exit-code-basis + blockers/warnings/passing
   with full six-field enforcement carry. Remaining partial: **cache eligibility /
   freshness** verdict is still deferred to Phase 11.)
-- 🔴 [ ] Publish the first GitHub Actions guidance for branch protection.
+- 🟢 [x] Publish the first GitHub Actions guidance for branch protection.
+  (Governance **F027** `027-branch-protection-guidance` — a docs+template deliverable, no
+  new F# code: the guidance `docs/ci/github-actions-branch-protection.md` + copyable
+  workflow `docs/ci/templates/fsgg-ship.yml` wire the `fsgg ship` exit code into a GitHub
+  required status check, fail-closed, with `audit.json` surfacing. `scripts/check-ship-ci-guidance.sh`
+  is the Principle-V evidence: it lints the template and cross-checks the documented
+  exit-code map against the live `Loop.exitCode` (F026) and the audit field set against the
+  F025 contract — 16/16 assertions green. `.github/workflows/` stays empty (self-hosting
+  deferred); the SC-001 live-GitHub sandbox is the one disclosed manual step.)
 
 Exit criteria:
 
@@ -430,14 +471,15 @@ Exit criteria:
 - Stale generated models are detectable from source digests and generator
   metadata.
 
-### Phase 4: Native SDD Lifecycle Commands
+### Phase 4: Native SDD Lifecycle Commands — 🟢 complete
 
 Owner: `FS.GG.SDD`.
 
 Purpose: expose the native spec-driven development stages as SDD commands over
 the same model.
 
-Status: in progress as of 2026-06-20. The implemented slices add
+Status: complete as of 2026-06-21 (every checklist item below is shipped with
+recorded evidence). The implemented slices add
 `src/FS.GG.SDD.Commands`, `src/FS.GG.SDD.Cli`, command tests, lifecycle-command
 fixture roots, readiness evidence, deterministic init, charter, specify, and
 clarify/checklist/plan/tasks/analyze/evidence command reports, and real
@@ -630,7 +672,7 @@ Exit criteria:
 - Profile-adjusted blocking is explained without changing rule truth. (Held by
   F023's reason text + base-carry/no-drop guarantees at the decision level.)
 
-### Phase 6: Tasks, Evidence, Verify, And Ship Readiness
+### Phase 6: Tasks, Evidence, Verify, And Ship Readiness — 🟢 SDD slice complete (Governance evidence inputs pending)
 
 Owner: `FS.GG.SDD` for task/evidence declarations and SDD readiness;
 `FS.GG.Governance` for effective evidence freshness and enforcement.
@@ -638,24 +680,42 @@ Owner: `FS.GG.SDD` for task/evidence declarations and SDD readiness;
 Purpose: make implementation work and merge readiness inspectable without
 turning SDD into the Governance rule engine.
 
-- [ ] Validate task graph structure, dependencies, ids, owners, required skills,
-  required evidence, and status transitions.
-- [ ] Check that required Claude/Codex skills or capability tags are available
-  before agent-driven task execution.
-- [ ] Derive required test/evidence obligations from lifecycle rules and changed
-  artifact impact.
-- [x] Parse and normalize evidence declarations.
-- [x] Distinguish real evidence, accepted deferrals, missing evidence, and
+Status (reconciled 2026-06-21): the **SDD-owned slice is complete**. Task-graph
+structure, dependencies, ids, owners, required skills, required evidence, and
+status/stale transitions landed in feature `009-tasks-command`; required
+skill/capability-tag visibility and required test/evidence obligation
+dispositions landed in feature `012-verify-command` (which also emits
+`readiness/<id>/verify.json`); merge-boundary readiness
+(`readiness/<id>/ship.json`) landed in feature `013-ship-command`. The two
+remaining boxes are **Governance-owned** effective-evidence freshness inputs and
+protected-branch enforcement.
+
+Legend: 🟢 complete · ⬜ not started (Governance-owned).
+
+- 🟢 [x] Validate task graph structure, dependencies, ids, owners, required skills,
+  required evidence, and status transitions. (Feature `009-tasks-command`: typed
+  task graph with stable ids, owners, dependency/requirement/decision links,
+  required-skill and evidence obligations, status, and stale-task diagnostics.)
+- 🟢 [x] Check that required Claude/Codex skills or capability tags are available
+  before agent-driven task execution. (Feature `012-verify-command`: required
+  skill/capability-tag visibility and disposition as a verification-readiness
+  fact.)
+- 🟢 [x] Derive required test/evidence obligations from lifecycle rules and changed
+  artifact impact. (Features `009-tasks-command` + `012-verify-command`: required
+  test/evidence obligation dispositions plus stale-source / changed-plan
+  detection.)
+- 🟢 [x] Parse and normalize evidence declarations.
+- 🟢 [x] Distinguish real evidence, accepted deferrals, missing evidence, and
   synthetic evidence disclosures.
-- [x] Add `fsgg-sdd evidence` or equivalent update command for authored
+- 🟢 [x] Add `fsgg-sdd evidence` or equivalent update command for authored
   declarations.
-- [ ] Add `fsgg-sdd verify` to run selected SDD-owned checks and emit
-  `readiness/<id>/verify.json`.
-- [ ] Add `fsgg-sdd ship` to produce SDD merge-boundary readiness in
-  `readiness/<id>/ship.json`.
-- [ ] Define Governance effective-evidence inputs for freshness, synthetic taint
-  propagation, accepted deferrals, and stale evidence.
-- [ ] Keep protected-branch enforcement decisions in Governance.
+- 🟢 [x] Add `fsgg-sdd verify` to run selected SDD-owned checks and emit
+  `readiness/<id>/verify.json`. (Feature `012-verify-command`.)
+- 🟢 [x] Add `fsgg-sdd ship` to produce SDD merge-boundary readiness in
+  `readiness/<id>/ship.json`. (Feature `013-ship-command`.)
+- ⬜ [ ] Define Governance effective-evidence inputs for freshness, synthetic taint
+  propagation, accepted deferrals, and stale evidence. (Governance-owned.)
+- ⬜ [ ] Keep protected-branch enforcement decisions in Governance. (Governance-owned.)
 
 Exit criteria:
 
@@ -740,27 +800,45 @@ without altering the `charter -> ship` chain
 `specs/014-agent-guidance/readiness/artifact-traceability.md` for the full
 requirement-to-evidence map.
 
-### Phase 9: Bootstrap And Migration Experience
+### Phase 9: Bootstrap And Migration Experience — 🟢 SDD slice complete (runtime templates optional/out of scope)
 
 Owner: `FS.GG.SDD`, with optional FS.GG.Rendering template providers and
 Governance policy setup.
 
 Purpose: make FS.GG.SDD useful for new products and existing Spec Kit projects.
 
-- [ ] Add project templates for a new SDD-governed product skeleton.
-- [ ] Create `.fsgg/project.yml`, `.fsgg/sdd.yml`, `.fsgg/agents.yml`, `work/`,
-  and initial readiness directories.
-- [ ] Optionally call a template provider for runtime code while keeping runtime
-  ownership outside SDD.
-- [ ] Provide migration guidance from existing Spec Kit projects to native SDD
-  artifacts.
-- [ ] Preserve standard Spec Kit as a valid development workflow for the SDD repo
-  itself.
-- [ ] Add quickstart docs for `fsgg-sdd init` through `fsgg-sdd ship`.
-- [ ] Add smoke tests that create a temporary SDD project and run the lifecycle
-  without the Governance gate runtime installed.
-- [ ] Document how Governance can add `.fsgg/policy.yml`,
+Status (reconciled 2026-06-21): the **SDD-owned slice is complete**. The
+`.fsgg`/`work/`/readiness skeleton is created by `fsgg-sdd init` (feature
+`003-native-sdd-lifecycle-commands`); the end-to-end quickstart, migration
+guidance, Governance-after-init integration boundary, and an automated
+no-Governance lifecycle smoke harness landed in feature `016-bootstrap-migration`
+(evidence: `specs/016-bootstrap-migration/readiness/`). Runtime product-skeleton
+templates and FS.GG.Rendering template-provider delegation are explicitly
+**optional and out of scope** for the SDD slice.
+
+Legend: 🟢 complete · ⬜ optional / not started.
+
+- ⬜ [ ] Add project templates for a new SDD-governed product skeleton. (Optional;
+  kept out of scope by feature `016-bootstrap-migration` — runtime templates are a
+  template-provider concern.)
+- 🟢 [x] Create `.fsgg/project.yml`, `.fsgg/sdd.yml`, `.fsgg/agents.yml`, `work/`,
+  and initial readiness directories. (Feature `003-native-sdd-lifecycle-commands`
+  `fsgg-sdd init`.)
+- ⬜ [ ] Optionally call a template provider for runtime code while keeping runtime
+  ownership outside SDD. (Optional; out of scope by feature
+  `016-bootstrap-migration`.)
+- 🟢 [x] Provide migration guidance from existing Spec Kit projects to native SDD
+  artifacts. (Feature `016-bootstrap-migration`.)
+- 🟢 [x] Preserve standard Spec Kit as a valid development workflow for the SDD repo
+  itself. (Feature `016-bootstrap-migration`; affirmed by `CLAUDE.md`.)
+- 🟢 [x] Add quickstart docs for `fsgg-sdd init` through `fsgg-sdd ship`. (Feature
+  `016-bootstrap-migration`.)
+- 🟢 [x] Add smoke tests that create a temporary SDD project and run the lifecycle
+  without the Governance gate runtime installed. (Feature `016-bootstrap-migration`
+  no-Governance lifecycle smoke harness.)
+- 🟢 [x] Document how Governance can add `.fsgg/policy.yml`,
   `.fsgg/capabilities.yml`, and `.fsgg/tooling.yml` after SDD initialization.
+  (Feature `016-bootstrap-migration` Governance-after-init integration boundary.)
 
 Exit criteria:
 
