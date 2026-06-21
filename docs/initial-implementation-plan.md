@@ -896,9 +896,10 @@ auditable.
 - ✅ Explain high-cost routes with matched rule, changed path, affected
   capability, selected gate, cost, and cheaper local alternative.
   _(F031 — `FS.GG.Governance.RouteExplain`, merged.)_
-- [ ] Record command runs with executable, arguments, working directory,
+- ✅ Record command runs with executable, arguments, working directory,
   environment delta, timeout, exit code, stdout digest, stderr digest, captured
   output path, and duration.
+  _(F032 — `FS.GG.Governance.CommandRecord`, merged.)_
 - [ ] Include source commit, base/head, rule hash, generator version, artifact
   digests, command records, environment class, and builder identity in
   provenance.
