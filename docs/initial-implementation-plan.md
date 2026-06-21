@@ -942,7 +942,7 @@ Exit criteria:
 - Audit records are sufficient to explain builds, tests, packs, template
   instantiation, git diffs, package inspection, and visual capture.
 
-### Phase 12: Agent-Reviewed Rule Guardrails
+### Phase 12: Agent-Reviewed Rule Guardrails — 🟡 opening row landed (core pure key shipped)
 
 Owner: `FS.GG.Governance`; SDD and generated products may provide artifacts
 under review.
@@ -950,17 +950,34 @@ under review.
 Purpose: allow judgement-heavy checks without treating uncalibrated agent output
 as deterministic proof.
 
-- [ ] Cache agent-reviewed verdicts by model id, model version, reviewer prompt
+Status (2026-06-21): the **phase-opening cache-key row is 🟢 complete** — feature
+`035-agent-review-cache-key` shipped the pure, total, deterministic core
+`FS.GG.Governance.AgentReviewKey` (the direct analogue of F029 `FreshnessKey`,
+specialised to agent-reviewed verdicts): `compute`/`matches`/`diff`/`value` over
+the seven judge / prompt / check / artifact inputs, in the byte-stable,
+length-prefixed, injective F029/F032/F033 encoding discipline, reusing F029
+`RuleHash`/`ArtifactHash` verbatim. 30 tests pass (compute, set-semantics, diff,
+injectivity, determinism, purity, surface-drift), the worked-example key is
+byte-pinned, and the new project + baseline are purely additive (no merged core
+or `surface/*.surface.txt` baseline changed). The remaining five rows
+(verdict-store invalidation, prompt isolation, review records, advisory promotion,
+calibration) are 🔴 not started.
+
+Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
+🔴 not started.
+
+- 🟢 [x] Cache agent-reviewed verdicts by model id, model version, reviewer prompt
   hash, model configuration, check hash, artifact hashes, and question text.
-- [ ] Invalidate cached verdicts when judge identity or prompt identity changes.
-- [ ] Separate governed artifact content from reviewer instructions and pass it
+  (F035 `FS.GG.Governance.AgentReviewKey` — pure key core.)
+- 🔴 [ ] Invalidate cached verdicts when judge identity or prompt identity changes.
+- 🔴 [ ] Separate governed artifact content from reviewer instructions and pass it
   as bounded data or digests.
-- [ ] Record review requests, response digests, model identity, prompt identity,
+- 🔴 [ ] Record review requests, response digests, model identity, prompt identity,
   artifact digests, and final verdict.
-- [ ] Keep agent-reviewed findings advisory until deterministic backing
+- 🔴 [ ] Keep agent-reviewed findings advisory until deterministic backing
   evidence, repeated-review confidence thresholds, or explicit human sign-off
   exists.
-- [ ] Define judge-vs-human calibration evidence before any agent-reviewed rule
+- 🔴 [ ] Define judge-vs-human calibration evidence before any agent-reviewed rule
   can block protected boundaries.
 
 Exit criteria:
