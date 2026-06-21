@@ -888,11 +888,14 @@ its lifecycle artifacts.
 Purpose: keep local authoring cheap while making protected-boundary evidence
 auditable.
 
-- [ ] Define freshness keys over rule hash, artifact hash, command version,
+- ✅ Define freshness keys over rule hash, artifact hash, command version,
   generator version, base/head, environment class, and output digest.
-- [ ] Cache reusable evidence only when all freshness inputs match.
-- [ ] Explain high-cost routes with matched rule, changed path, affected
+  _(F029 — `FS.GG.Governance.FreshnessKey`, merged.)_
+- ✅ Cache reusable evidence only when all freshness inputs match.
+  _(F030 — `FS.GG.Governance.EvidenceReuse`, merged.)_
+- ✅ Explain high-cost routes with matched rule, changed path, affected
   capability, selected gate, cost, and cheaper local alternative.
+  _(F031 — `FS.GG.Governance.RouteExplain`, merged.)_
 - [ ] Record command runs with executable, arguments, working directory,
   environment delta, timeout, exit code, stdout digest, stderr digest, captured
   output path, and duration.
