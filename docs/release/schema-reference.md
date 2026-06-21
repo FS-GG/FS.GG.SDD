@@ -21,6 +21,18 @@ Every public output has exactly one catalog entry. An output with no entry, no
 `sourceArtifact`, or no locking baseline is reported **not-ready**; the reference
 never passes a surface by omission. (FR-012)
 
+## Declared exception: the `validation-report`
+
+The `fsgg-sdd validate` harness emits a public `validation-report` JSON contract
+(`schemaVersion = 1`). It is **intentionally not catalogued** here, and this
+exclusion is declared rather than silent (the same anti-omission principle this
+reference enforces). The report is **harness output, not a produced lifecycle
+artifact**: it carries an explicitly-fenced `sensed` block (wall-clock / duration /
+host facts) excluded from its deterministic comparison, and it is written to stdout
+on demand / on a schedule rather than to `readiness/<id>/`. Because the exclusion is
+recorded here, the harness's own coverage-reconciliation does not flag the
+`validation-report` as a coverage gap. (feature 020 / validation-report C-4)
+
 ## JSON contracts vs Markdown projections
 
 - **JSON contracts** carry a real `schemaVersion` (currently `1`) and their

@@ -4,21 +4,23 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
     <!-- Reuse the Commands test support (real workflow drivers) without duplicating it. -->
     <Compile Include="../FS.GG.SDD.Commands.Tests/TestSupport.fs" />
-    <Compile Include="RichRenderingTests.fs" />
-    <Compile Include="DegradationTests.fs" />
-    <Compile Include="FormatSelectionTests.fs" />
     <Compile Include="SurfaceBaselineTests.fs" />
-    <Compile Include="ValidateCommandTests.fs" />
+    <Compile Include="LifecycleMatrixTests.fs" />
+    <Compile Include="DeterminismMatrixTests.fs" />
+    <Compile Include="BaselineMatrixTests.fs" />
+    <Compile Include="ReportDeterminismTests.fs" />
+    <Compile Include="CoverageGapTests.fs" />
+    <Compile Include="IsolationTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj" />
+    <ProjectReference Include="../../src/FS.GG.SDD.Validation/FS.GG.SDD.Validation.fsproj" />
     <ProjectReference Include="../../src/FS.GG.SDD.Commands/FS.GG.SDD.Commands.fsproj" />
     <ProjectReference Include="../../src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj" />
     <PackageReference Include="FSharp.Core" />
-    <PackageReference Include="Spectre.Console" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio">

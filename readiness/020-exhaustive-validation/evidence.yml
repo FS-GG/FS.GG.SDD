@@ -1,0 +1,121 @@
+schemaVersion: 1
+# Declared authored evidence for feature 020 (Scheduled Exhaustive Validation of
+# Broad Matrices). SDD-owned cross-cutting validation harness: adds a new public
+# FS.GG.SDD.Validation library, a new deterministic validation-report JSON contract,
+# and a CLI-level `fsgg-sdd validate` command. No lifecycle stage; no authored-source
+# schema change; no existing CommandReport contract change (FR-011). Governance-owned
+# effective freshness and gate enforcement remain optional downstream concerns.
+feature: 020-exhaustive-validation
+evidence:
+  - id: EV-020-LIFECYCLE
+    kind: test
+    subject: { type: requirement, id: FR-002 }
+    result: pass
+    source: tests/FS.GG.SDD.Validation.Tests/LifecycleMatrixTests.fs
+    note: >-
+      Every command × projection × representative state appears as a declared cell
+      with exactly one status; a seeded single-cell divergence fails that exact cell
+      with a diagnostic naming the matrix + coordinates while all others pass/skip
+      (FR-006). Real temp-dir workflow runs, no mocks.
+  - id: EV-020-DETERMINISM
+    kind: test
+    subject: { type: requirement, id: FR-003 }
+    result: pass
+    source: tests/FS.GG.SDD.Validation.Tests/DeterminismMatrixTests.fs
+    note: >-
+      Every catalogued output reproduces byte-identically over identical authored
+      sources and under a perturbed host (locale / time zone), carrying zero ANSI
+      (INV-3 / INV-3a).
+  - id: EV-020-BASELINE
+    kind: test
+    subject: { type: requirement, id: FR-004 }
+    result: pass
+    source: tests/FS.GG.SDD.Validation.Tests/BaselineMatrixTests.fs
+    note: >-
+      Every release-catalog contract has baseline + conformance cells via reused
+      ReleaseContract.evaluate; a missing baseline is NotValidated, never pass-by-
+      absence; no conformance cell is left pending (INV-4).
+  - id: EV-020-REPORT-DETERMINISM
+    kind: test
+    subject: { type: requirement, id: FR-007 }
+    result: pass
+    source: tests/FS.GG.SDD.Validation.Tests/ReportDeterminismTests.fs
+    note: >-
+      Two runs serialize byte-identically; the report carries no clock/duration/host/
+      ANSI outside the fenced sensed block (normalized to null); parse round-trips to
+      the same bytes (INV-2 / INV-5 / SC-004).
+  - id: EV-020-COVERAGE
+    kind: test
+    subject: { type: requirement, id: FR-012 }
+    result: pass
+    source: tests/FS.GG.SDD.Validation.Tests/CoverageGapTests.fs
+    note: >-
+      An uncovered real command is a CoverageGap that fails the run; a declared
+      contract absent from the real catalog is a detectable Fail; a full-surface plan
+      reports no gaps. Real surface authoritative, enumerated independently (INV-7).
+  - id: EV-020-ISOLATION
+    kind: test
+    subject: { type: requirement, id: FR-010 }
+    result: pass
+    source: tests/FS.GG.SDD.Validation.Tests/IsolationTests.fs
+    note: >-
+      run completes and emits a report with no Governance runtime; the report encodes
+      no route/profile/freshness/gate/verdict; the Commands assembly does not depend on
+      the Validation assembly (one-directional; FR-008 / SC-006 / SC-007 / INV-8).
+  - id: EV-020-SURFACE
+    kind: test
+    subject: { type: requirement, id: FR-006 }
+    result: pass
+    source: tests/FS.GG.SDD.Validation.Tests/SurfaceBaselineTests.fs
+    note: "Public FS.GG.SDD.Validation surface locked to PublicSurface.baseline (Constitution III)."
+  - id: EV-020-CLI
+    kind: test
+    subject: { type: requirement, id: FR-011 }
+    result: pass
+    source: tests/FS.GG.SDD.Cli.Tests/ValidateCommandTests.fs
+    note: >-
+      End-to-end CLI smoke: --json emits schemaVersion 1; --text carries no ANSI when
+      redirected; a single-matrix run reports the others as notValidated with a
+      non-zero exit (partial run never reads as a full pass).
+  - id: EV-020-CLI-SMOKE
+    kind: verification
+    subject: { type: requirement, id: FR-006 }
+    result: pass
+    source: readiness/020-exhaustive-validation/cli-smoke.md
+    note: >-
+      Full exhaustive sweep over the Release binary: exit 0, overallPassed true,
+      332 pass / 91 skip / 0 fail / 0 gap / 0 not-validated across 423 cells in the
+      four matrices; default==--json; byte-stable double-run; sensed fenced to null;
+      no Governance verdict tokens.
+  - id: EV-020-FSI-SURFACE
+    kind: verification
+    subject: { type: requirement, id: FR-001 }
+    result: pass
+    source: readiness/020-exhaustive-validation/fsi-validation-surface.txt
+    note: >-
+      FSI exercise of the public surface: ValidationHarness.init enumerates the four
+      declared matrices (351/50/20/2 cells, 404 effects); update folds purely;
+      ValidationRunner.run + ValidationContracts.serialize/parse round-trip
+      byte-identically; renderText is ANSI-free.
+  - id: EV-020-FULL-SUITE
+    kind: verification
+    subject: { type: requirement, id: SC-001 }
+    result: pass
+    source: dotnet test -c Release FS.GG.SDD.sln
+    note: >-
+      421 tests pass (Artifacts 103, Cli 35, Validation 18, Commands 265); all
+      public-surface baselines green; no existing contract changed.
+principleIV: applicable
+principleIVNote: >-
+  ValidationHarness is a pure Elmish Model/Msg/Effect surface: init enumerates the
+  declared cross-product into pending cells and emits effects; update folds
+  CellEvaluated/SurfaceReconciled; BuildReport projects the report. ValidationRunner
+  is the edge interpreter performing all real I/O (drive CommandWorkflow, read
+  artifacts, ReleaseContract.evaluate, coverage reconciliation), reusing the Commands
+  effect interpreter. Pure-fold tests + real-interpreter evidence above.
+syntheticEvidence: >-
+  RunnerOptions.InjectedDivergences is a documented harness self-test seam used only
+  by LifecycleMatrixTests to prove single-cell failure isolation + diagnostic shape;
+  it is empty on every real run. Genuine divergence detection is exercised over real
+  artifacts by the baseline matrix (ReleaseContract.evaluate drift) and the coverage
+  matrix (independent real-surface reconciliation).

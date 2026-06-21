@@ -24,6 +24,8 @@ FS.GG.SDD owns:
 - normalized work model generation;
 - agent command and skill generation;
 - generated readiness views for SDD artifacts;
+- the scheduled/on-demand `fsgg-sdd validate` exhaustive validation harness over
+  SDD's broad matrices (separate from the inner loop, no Governance required);
 - the SDD-owned release-readiness contract, SemVer versioning policy, schema
   reference, and `dotnet tool` distribution of the `fsgg-sdd` CLI;
 - integration contracts with FS.GG.Governance.
@@ -83,6 +85,13 @@ lifecycle stage) that derives per-target Claude/Codex command and skill guidance
 from `readiness/<id>/work-model.json` into
 `readiness/<id>/agent-commands/<target>/`, marked generated with source digests
 and never a second source of truth.
+
+`fsgg-sdd validate` is a separate cross-cutting validation harness (not a lifecycle
+stage) that exhaustively exercises SDD's broad matrices — command × projection ×
+state, determinism/degradation, release baseline-conformance, and Governance-handoff
+compatibility — on demand and on a schedule, emitting one deterministic
+`validation-report` JSON. It runs apart from the cheap inner loop, requires no
+Governance runtime, and computes no Governance verdict.
 
 The first implementation feature should create the structured SDD artifact model.
 Markdown remains an authoring surface; schema-versioned structured artifacts are

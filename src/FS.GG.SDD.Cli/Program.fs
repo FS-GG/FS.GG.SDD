@@ -61,6 +61,34 @@ let printUnknown commandValue =
     Console.Error.WriteLine(serializeReport report)
     exitCodeForReport report
 
+let printValidate (rest: string list) =
+    // CLI-level command (peer of `--version`), dispatched before `parseCommand` so
+    // `CommandReport`, `parseCommand`, and the per-command contracts stay untouched
+    // (FR-011). Emits the deterministic validation-report to stdout; exits 0 iff the
+    // report's overallPassed. Restricting to one matrix still reports the others as
+    // notValidated, so a partial run never reads as a full pass.
+    let options =
+        { FS.GG.SDD.Validation.ValidationRunner.defaultOptions with
+            OnlyMatrix = optionValue "--matrix" rest }
+
+    let report = FS.GG.SDD.Validation.ValidationRunner.run options
+
+    // --json (default) is the automation contract; --text (and the deferred --rich,
+    // which degrades to text) emit the portable plain-text projection.
+    let rendered =
+        if hasFlag "--text" rest || hasFlag "--rich" rest then
+            FS.GG.SDD.Validation.ValidationContracts.renderText report
+        else
+            FS.GG.SDD.Validation.ValidationContracts.serialize report
+
+    match optionValue "--out" rest with
+    | Some path -> System.IO.File.WriteAllText(path, rendered)
+    | None -> ()
+
+    Console.Out.WriteLine(rendered)
+
+    if report.Summary.OverallPassed then 0 else 1
+
 let printVersion () =
     // Single reconciled version source (Directory.Build.props <Version>), surfaced
     // through the generator version so the CLI reports the same number as every
@@ -72,6 +100,7 @@ let run args =
     match args with
     | [] -> printUnknown ""
     | ("--version" | "-v" | "version") :: _ -> printVersion ()
+    | "validate" :: rest -> printValidate rest
     | commandValue :: rest ->
         match parseCommand commandValue with
         | Error _ -> printUnknown commandValue

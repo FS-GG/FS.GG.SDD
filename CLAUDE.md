@@ -31,6 +31,17 @@ Core boundary:
   `analysis.json`/`verify.json`/`ship.json` (re-running those generators out of
   lifecycle order corrupts evidence freshness). Governance-owned effective
   evidence freshness and gate enforcement remain optional downstream concerns.
+- `fsgg-sdd validate` is a cross-cutting validation harness (not a lifecycle
+  stage; reachable only via the CLI, never from a lifecycle command path) that
+  exhaustively exercises SDD's broad matrices — every command × output projection
+  × representative state, determinism/degradation, release baseline-conformance,
+  and Governance-handoff compatibility — on demand and on a schedule, separate
+  from the cheap inner loop. It emits one deterministic `validation-report` JSON
+  (`--json` default, `--text` projection; `--rich` deferred), requires no
+  Governance runtime, and computes no Governance verdict. The report is **not**
+  added to the `release-readiness.json` catalog (it carries sensed metadata and is
+  harness output, not a produced lifecycle artifact) — a declared exception in
+  `docs/release/schema-reference.md`.
 - FS.GG.Governance owns rule evaluation, evidence freshness, routing, profiles,
   and gate enforcement.
 - Integrations between them must be explicit, versioned, and optional until
@@ -63,5 +74,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/019-spectre-rendering/plan.md
+at specs/020-exhaustive-validation/plan.md
 <!-- SPECKIT END -->

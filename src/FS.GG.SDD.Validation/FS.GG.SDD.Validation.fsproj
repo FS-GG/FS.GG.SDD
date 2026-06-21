@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageId>FS.GG.SDD.Validation</PackageId>
+    <Description>Cross-cutting exhaustive validation harness for FS.GG.SDD broad matrices.</Description>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <!-- Compile order: ValidationContracts -> ValidationHarness -> ValidationRunner.
+       No Spectre.Console and no Governance package reference (research Decision 2/6). -->
+  <ItemGroup>
+    <Compile Include="ValidationContracts.fsi" />
+    <Compile Include="ValidationContracts.fs" />
+    <Compile Include="ValidationHarness.fsi" />
+    <Compile Include="ValidationHarness.fs" />
+    <Compile Include="ValidationRunner.fsi" />
+    <Compile Include="ValidationRunner.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj" />
+    <ProjectReference Include="../FS.GG.SDD.Commands/FS.GG.SDD.Commands.fsproj" />
+    <PackageReference Include="FSharp.Core" />
+  </ItemGroup>
+</Project>

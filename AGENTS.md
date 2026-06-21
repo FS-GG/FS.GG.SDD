@@ -34,6 +34,15 @@ Boundary rules:
   currency of `analysis.json`/`verify.json`/`ship.json`. Governance-owned
   effective evidence freshness and gate enforcement remain optional downstream
   concerns.
+- `fsgg-sdd validate` is a cross-cutting validation harness (not a lifecycle
+  stage; reachable only via the CLI, never from a lifecycle command path) that
+  exhaustively exercises SDD's broad matrices — command × projection × state,
+  determinism/degradation, release baseline-conformance, and Governance-handoff
+  compatibility — on demand and on a schedule, separate from the cheap inner loop.
+  It emits one deterministic `validation-report` JSON (`--json` default, `--text`
+  projection; `--rich` deferred), requires no Governance runtime, and computes no
+  Governance verdict. The report is not catalogued in `release-readiness.json` (a
+  declared exception in `docs/release/schema-reference.md`).
 - Governance owns rule evaluation, evidence freshness, routing, profiles, and
   gate enforcement.
 - Markdown is an authoring surface; schema-versioned structured artifacts are

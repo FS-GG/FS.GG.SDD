@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../FS.GG.SDD.Commands/FS.GG.SDD.Commands.fsproj" />
+    <ProjectReference Include="../FS.GG.SDD.Validation/FS.GG.SDD.Validation.fsproj" />
     <PackageReference Include="FSharp.Core" />
     <PackageReference Include="Spectre.Console" />
   </ItemGroup>

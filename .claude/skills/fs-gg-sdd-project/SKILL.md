@@ -49,6 +49,18 @@ precedence `--rich` > `--text` > `--json` > default:
   non-interactive/redirected or color is disabled (`NO_COLOR`, or `TERM=dumb`).
   Rich output is presentation only and excluded from deterministic/golden contracts.
 
+## Validation harness
+
+`fsgg-sdd validate` is a cross-cutting validation harness (not a lifecycle stage;
+reachable only via the CLI, never from a lifecycle command path). It exhaustively
+exercises SDD's broad matrices — every command × output projection × representative
+state, determinism/degradation, release baseline-conformance, and Governance-handoff
+compatibility — on demand and on a schedule, separate from the cheap inner loop. It
+emits one deterministic `validation-report` JSON (`--json` default, `--text`
+projection; `--rich` deferred), requires no Governance runtime, and computes no
+Governance verdict. The report is not catalogued in `release-readiness.json` (a
+declared exception in `docs/release/schema-reference.md`).
+
 ## First Feature Bias
 
 The first implementation feature should define the SDD artifact model and

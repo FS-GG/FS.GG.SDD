@@ -333,7 +333,7 @@ Exit criteria:
 - The plan for every lifecycle artifact identifies authored source, structured
   model, generated view, stale behavior, and diagnostics.
 
-### Phase 2: Governance Ship Walking Skeleton And Catalog MVP — 🟢 SHIPPED (enforcement audit pending)
+### Phase 2: Governance Ship Walking Skeleton And Catalog MVP — 🟢 SHIPPED (handoff consumer pending)
 
 Owner: `FS.GG.Governance`; SDD provides optional lifecycle inputs.
 
@@ -341,14 +341,18 @@ Purpose: prove the protected-boundary value early, as required by the design,
 without waiting for the full lifecycle command suite.
 
 Status (rechecked 2026-06-21 against the sibling repo
-`/home/developer/projects/FS.GG.Governance`): the walking skeleton is **shipped**.
-Governance has merged **F014** (`.fsgg` typed schemas) → **F022** (`fsgg route`
-host command); latest merge `2dd9f37`, **461 tests green** across 16 projects.
-**F023** enforcement/effective-severity is in progress (the pure decision core
-exists with 28 tests; staged, not yet merged). The SDD→Governance handoff
-contract is accepted at **v1.0.0** (ADR 0002), but its Governance-side **consumer
-is not yet implemented** (reader → evidence adapter → gate decision remain
-queued) — the seam stays one-directional and optional.
+`/home/developer/projects/FS.GG.Governance`): the walking skeleton is **shipped**,
+and the enforcement audit chain has now landed. Governance has merged **F014**
+(`.fsgg` typed schemas) → **F024** (ship verdict rollup, `FS.GG.Governance.Ship`);
+latest merge `4fce4ae`, **18 projects** (was 16). Since the prior recheck,
+**F023** enforcement/effective-severity (`FS.GG.Governance.Enforcement`) and
+**F024** ship verdict rollup are both **merged**, and **F025 audit-json
+projection** (`FS.GG.Governance.AuditJson`) is **in progress** (untracked on
+`main`). The SDD→Governance handoff contract is accepted at **v1.0.0** (ADR 0002),
+but its Governance-side **consumer is still not implemented** (grep over Governance
+`src/`+`tests/` finds zero `governance-handoff` references; reader → evidence
+adapter → gate decision remain queued) — the seam stays one-directional and
+optional.
 
 Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
 🔴 not started.
@@ -367,15 +371,16 @@ Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
   boundaries. (**F017**.)
 - 🟢 [x] Define typed `GateId` metadata with prerequisites, cost, timeout, owner,
   maturity, product-check flag, and freshness key. (**F018** typed gate registry.)
-- 🟡 [ ] Add `fsgg route --paths ...`, `fsgg route --since <rev>`, and
+- 🟢 [x] Add `fsgg route --paths ...`, `fsgg route --since <rev>`, and
   `fsgg ship --mode gate --profile standard --json`. (Route selection **F019** +
   `fsgg route` host command **F022** landed; the `fsgg ship --mode gate` verdict
-  is deferred to the enforcement rows F023+.)
+  rollup landed as **F024** `FS.GG.Governance.Ship`.)
 - 🟡 [ ] Emit deterministic route and audit JSON with selected gates, matched
   rules, unmatched governed paths, expected artifacts, cost, cache eligibility,
   profile-adjusted enforcement, and exit-code basis. (`route.json` **F020** +
-  `gates.json` **F021** shipped; the profile-adjusted **enforcement** audit JSON
-  and exit-code basis are deferred to F023+.)
+  `gates.json` **F021** shipped; profile-adjusted **enforcement** effective
+  severity landed as **F023**; the `audit.json` projection is **in progress** as
+  **F025** `FS.GG.Governance.AuditJson`.)
 - 🔴 [ ] Publish the first GitHub Actions guidance for branch protection.
 
 Exit criteria:
@@ -550,9 +555,11 @@ Evidence: `specs/024-ship-verdict-rollup/readiness/` (24 green tests: rollup
 verdict/partition, the design's worked example at change scale, determinism +
 shuffle-invariance, totality over the cross-product incl. the empty route, the
 partition law `|B|+|W|+|P| = N+M`, base-severity carry / no-hide, and surface
-drift). Out of scope here (deferred to later Governance rows): `audit.json`
-emission, rule-id annotation, CLI `fsgg ship --mode` wiring, `.fsgg/policy.yml`
-per-class dial map, and base/head route parity.
+drift). Update (rechecked 2026-06-21, merge `4fce4ae`): the **`audit.json`
+emission** is now **in progress** as **F025** `FS.GG.Governance.AuditJson`
+(untracked on `main`). Still out of scope here: rule-id annotation, CLI
+`fsgg ship --mode` wiring, `.fsgg/policy.yml` per-class dial map, and base/head
+route parity.
 
 Legend: 🟢 complete · 🟡 partial (pure core landed; emission/wiring deferred) ·
 ⬜ not started.
@@ -574,7 +581,7 @@ explainable and testable.
   base severity, mode, profile, maturity, effective severity, and a lever-naming
   reason; **F024** now adds the whole-change `Verdict` + `Blockers`/`Warnings`/
   `Passing` rollup and the typed `ExitCodeBasis`. Per-finding rule id and the
-  `audit.json` JSON emission remain deferred to the projection row.)
+  `audit.json` JSON emission are **in progress** as **F025** `audit.json`.)
 - 🟡 [ ] Ensure profiles never hide underlying verdicts, alter rule hashes, or
   remove findings from JSON. (F023 proves base-severity carry (SC-003) and
   no-drop over a finding list (SC-006) at the decision level; **F024** proves the
@@ -827,27 +834,48 @@ Exit criteria:
 - Missing or stale reviews are visible findings.
 - Protected-branch blocking does not depend on uncalibrated agent judgement.
 
-### Phase 13: Release And Distribution Readiness
+### Phase 13: Release And Distribution Readiness — 🟢 SDD slice complete (Governance release gates pending)
 
 Owner: `FS.GG.Governance` for release gates; `FS.GG.SDD` for SDD package and
 CLI distribution once its lifecycle surface is stable.
 
 Purpose: prepare SDD and Governance-managed products for versioned release.
 
-- [ ] Add package identity and versioning policy for `FS.GG.SDD.*`.
-- [ ] Add SDD release checklist and compatibility matrix for Spec Kit and
-  Governance versions.
-- [ ] Add CLI installation docs.
-- [ ] Add generated artifact schema documentation.
-- [ ] Add baseline fixtures for public schemas and command output.
-- [ ] Add migration notes for breaking schema or command changes.
-- [ ] Define Governance `fsgg verify` and `fsgg release` schemas and exit
-  codes.
-- [ ] Add release rules for version bumps, package metadata, template pins,
-  publish plans, trusted publishing, and provenance.
-- [ ] Add Spectre.Console projections backed by the same report objects used for
-  JSON.
-- [ ] Add scheduled exhaustive validation for broad matrices.
+Status (2026-06-21): the **SDD-owned distribution slice is complete** — feature
+`018-release-readiness` froze/versioned/documented the public contracts, feature
+`019-spectre-rendering` shipped the rich projections, and feature
+`020-exhaustive-validation` shipped the scheduled exhaustive validation harness
+(`fsgg-sdd validate`). The remaining rows are **Governance-owned release/provenance
+gates**.
+
+Legend: 🟢 complete · 🟡 partial · 🔴 not started.
+
+- 🟢 [x] Add package identity and versioning policy for `FS.GG.SDD.*`. (Feature
+  018: single `Directory.Build.props <Version>`, `versioning-policy.md`.)
+- 🟢 [x] Add SDD release checklist and compatibility matrix for Spec Kit and
+  Governance versions. (Feature 018: `compatibility-matrix.md`,
+  `release-readiness.json` `compatibility[]`.)
+- 🟢 [x] Add CLI installation docs. (Feature 018: `installation.md`, `dotnet tool`
+  packaging of `fsgg-sdd`.)
+- 🟢 [x] Add generated artifact schema documentation. (Feature 018:
+  `schema-reference.md` projected from `release-readiness.json`.)
+- 🟢 [x] Add baseline fixtures for public schemas and command output. (Feature 018:
+  golden baselines + `ReleaseContract.evaluate` conformance.)
+- 🟢 [x] Add migration notes for breaking schema or command changes. (Feature 018:
+  `docs/release/migrations/` + additive-only posture.)
+- 🟡 [ ] Define Governance `fsgg verify` and `fsgg release` schemas and exit
+  codes. (Governance: ship verdict rollup landed as **F024**; the `release` gate
+  schema is pending.)
+- 🔴 [ ] Add release rules for version bumps, package metadata, template pins,
+  publish plans, trusted publishing, and provenance. (Governance-owned; Phase 11.)
+- 🟢 [x] Add Spectre.Console projections backed by the same report objects used for
+  JSON. (Feature `019-spectre-rendering`: `--rich` projection over the same
+  `CommandReport`.)
+- 🟢 [x] Add scheduled exhaustive validation for broad matrices. (Feature
+  `020-exhaustive-validation`: `fsgg-sdd validate` cross-cutting harness over the
+  lifecycle-output / determinism / baseline-conformance / compatibility matrices,
+  one deterministic `validation-report`, no Governance runtime required. The
+  concrete CI cron wiring is operational config, out of scope.)
 
 Exit criteria:
 

@@ -1,0 +1,37 @@
+=== FS.GG.SDD.Validation public surface (FSI-exercised) ===
+  val FS.GG.SDD.Validation.ValidationContracts.environmentClassValue
+  val FS.GG.SDD.Validation.ValidationContracts.failure
+  val FS.GG.SDD.Validation.ValidationContracts.parse
+  val FS.GG.SDD.Validation.ValidationContracts.renderText
+  val FS.GG.SDD.Validation.ValidationContracts.serialize
+  val FS.GG.SDD.Validation.ValidationContracts.summarize
+  val FS.GG.SDD.Validation.ValidationHarness.init
+  val FS.GG.SDD.Validation.ValidationHarness.update
+  val FS.GG.SDD.Validation.ValidationRunner.run
+
+=== ValidationHarness.init enumerates the declared cross-product (pure) ===
+  matrices: [("lifecycle-output", 351); ("determinism", 50); ("baseline-conformance", 20);
+ ("compatibility", 2)]
+  effects emitted: 404
+
+=== ValidationHarness.update folds a cell result (pure) ===
+  report built: true; summary.notValidated=422
+
+=== ValidationRunner.run (compatibility matrix) + ValidationContracts.serialize ===
+  serialized bytes: 155518; overallPassed=false
+  | {
+  |   "schemaVersion": 1,
+  |   "generatorVersion": {
+  |     "id": "FS.GG.SDD.Artifacts",
+  |     "version": "0.2.0"
+  |   },
+
+=== ValidationContracts.parse round-trips (serialize >> parse >> serialize) ===
+  round-trip byte-identical: true
+
+=== ValidationContracts.renderText (portable, ANSI-free) ===
+  text has ESC: false
+  | validation-report schemaVersion=1
+  | overallPassed=False
+  | summary passed=2 failed=0 skipped=0 coverageGaps=0 notValidated=421
+  | matrix baseline-conformance (20 cells)
