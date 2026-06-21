@@ -40,6 +40,20 @@ Boundary rules:
   the machine contract.
 - Keep Claude and Codex guidance synchronized when workflow behavior changes.
 
+CLI output formats:
+
+- `fsgg-sdd` projects the same `CommandReport` three ways, selected by flag with
+  precedence `--rich` > `--text` > `--json` > default.
+- default / `--json` — the deterministic JSON automation contract (unchanged; the
+  default for every command, including the unknown-command and no-args paths).
+- `--text` — portable plain-text summary.
+- `--rich` — human-oriented Spectre.Console rendering (panels, tables, color). It
+  is a pure projection over the same report: it adds and drops no facts and
+  changes no JSON byte, stream routing, or exit code. `--rich` degrades to plain
+  text with zero ANSI whenever output is non-interactive/redirected or color is
+  disabled (`NO_COLOR` present, or `TERM=dumb`). Rich output is presentation only
+  and is excluded from deterministic/golden contracts.
+
 Do not add product source, package projects, or tests without a Spec Kit feature
 that defines the artifact contract and verification plan.
 

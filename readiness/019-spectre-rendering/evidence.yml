@@ -1,0 +1,57 @@
+schemaVersion: 1
+# Declared authored evidence for feature 019 (Rich Spectre.Console CLI rendering).
+# SDD-owned: presentation-only; no JSON/schema/lifecycle change. Governance-owned
+# effective freshness and gate enforcement remain optional downstream concerns.
+feature: 019-spectre-rendering
+evidence:
+  - id: EV-019-PROJECTION
+    kind: test
+    subject: { type: requirement, id: FR-002 }
+    result: pass
+    source: tests/FS.GG.SDD.Cli.Tests/RichRenderingTests.fs
+    note: >-
+      Projection completeness + report-shape coverage + width adaptation + purity,
+      asserted against a real color-off Spectre IAnsiConsole (no mocks). 32 tests.
+  - id: EV-019-INVARIANCE
+    kind: test
+    subject: { type: requirement, id: FR-003 }
+    result: pass
+    source: tests/FS.GG.SDD.Cli.Tests/DegradationTests.fs
+    note: >-
+      resolve never mutates report/JSON; Json/Text projections unchanged; Rich
+      degrades to byte-identical plain text with zero ANSI when non-interactive or
+      NO_COLOR/TERM=dumb; stream/exit parity across formats (SC-002/003/005).
+  - id: EV-019-SELECTION
+    kind: test
+    subject: { type: requirement, id: FR-004 }
+    result: pass
+    source: tests/FS.GG.SDD.Cli.Tests/FormatSelectionTests.fs
+    note: "Flag precedence --rich > --text > --json > default; explicit --json == default bytes."
+  - id: EV-019-CLI-SMOKE
+    kind: verification
+    subject: { type: requirement, id: FR-005 }
+    result: pass
+    source: readiness/019-spectre-rendering/cli-smoke.md
+    note: >-
+      End-to-end fsgg-sdd Release binary: default==--json, --rich(redirected)==--text
+      (0 ESC), NO_COLOR --rich (0 ESC), Blocked -> stderr with unchanged exit code.
+  - id: EV-019-RICH-VISUAL
+    kind: verification
+    subject: { type: requirement, id: FR-001 }
+    result: pass
+    source: readiness/019-spectre-rendering/fsi-rich-surface.txt
+    note: >-
+      Forced-color rich rendering through public Rendering.renderRichTo: header rule,
+      outcome badge, details/diagnostics/generated-view/governance tables, colored
+      severities, stale view emphasized, next-action callout. Real ANSI captured.
+  - id: EV-019-FULL-SUITE
+    kind: verification
+    subject: { type: requirement, id: SC-002 }
+    result: pass
+    source: dotnet test -c Release FS.GG.SDD.sln
+    note: "400 tests pass (Artifacts 103, Cli 32, Commands 265); both public-surface baselines green."
+principleIV: not-applicable
+principleIVNote: >-
+  No new MVU Model/Msg loop. The impure edge (detectCapabilities, console write)
+  is isolated; renderRichTo and resolve are pure over the report.
+syntheticEvidence: none

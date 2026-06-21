@@ -36,6 +36,20 @@ Core boundary:
 - Integrations between them must be explicit, versioned, and optional until
   adopted by a feature spec.
 
+CLI output formats:
+
+- `fsgg-sdd` projects the same `CommandReport` three ways, selected by flag with
+  precedence `--rich` > `--text` > `--json` > default.
+- default / `--json` — the deterministic JSON automation contract (unchanged; the
+  default for every command, including the unknown-command and no-args paths).
+- `--text` — portable plain-text summary.
+- `--rich` — human-oriented Spectre.Console rendering (panels, tables, color). It
+  is a pure projection over the same report: it adds and drops no facts and
+  changes no JSON byte, stream routing, or exit code. `--rich` degrades to plain
+  text with zero ANSI whenever output is non-interactive/redirected or color is
+  disabled (`NO_COLOR` present, or `TERM=dumb`). Rich output is presentation only
+  and is excluded from deterministic/golden contracts.
+
 When working here:
 
 - Follow the constitution at `.specify/memory/constitution.md`.
@@ -49,5 +63,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/018-release-readiness/plan.md
+at specs/019-spectre-rendering/plan.md
 <!-- SPECKIT END -->

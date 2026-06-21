@@ -333,30 +333,50 @@ Exit criteria:
 - The plan for every lifecycle artifact identifies authored source, structured
   model, generated view, stale behavior, and diagnostics.
 
-### Phase 2: Governance Ship Walking Skeleton And Catalog MVP
+### Phase 2: Governance Ship Walking Skeleton And Catalog MVP — 🟢 SHIPPED (enforcement audit pending)
 
 Owner: `FS.GG.Governance`; SDD provides optional lifecycle inputs.
 
 Purpose: prove the protected-boundary value early, as required by the design,
 without waiting for the full lifecycle command suite.
 
-- [ ] Define versioned `.fsgg/project.yml`, `.fsgg/policy.yml`,
+Status (rechecked 2026-06-21 against the sibling repo
+`/home/developer/projects/FS.GG.Governance`): the walking skeleton is **shipped**.
+Governance has merged **F014** (`.fsgg` typed schemas) → **F022** (`fsgg route`
+host command); latest merge `2dd9f37`, **461 tests green** across 16 projects.
+**F023** enforcement/effective-severity is in progress (the pure decision core
+exists with 28 tests; staged, not yet merged). The SDD→Governance handoff
+contract is accepted at **v1.0.0** (ADR 0002), but its Governance-side **consumer
+is not yet implemented** (reader → evidence adapter → gate decision remain
+queued) — the seam stays one-directional and optional.
+
+Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
+🔴 not started.
+
+- 🟢 [x] Define versioned `.fsgg/project.yml`, `.fsgg/policy.yml`,
   `.fsgg/capabilities.yml`, and `.fsgg/tooling.yml` MVP schemas in Governance.
-- [ ] Include the minimum capability catalog fields: domains, path map,
-  surfaces, checks, cost, owner, environment, and maturity.
-- [ ] Implement deterministic glob precedence for path-to-capability routing.
-- [ ] Add git/CI snapshot facts for base ref, head ref, changed paths, dirty
+  (Governance **F014**.)
+- 🟢 [x] Include the minimum capability catalog fields: domains, path map,
+  surfaces, checks, cost, owner, environment, and maturity. (F014/**F015**.)
+- 🟢 [x] Implement deterministic glob precedence for path-to-capability routing.
+  (**F015**.)
+- 🟢 [x] Add git/CI snapshot facts for base ref, head ref, changed paths, dirty
   paths, untracked paths, branch, PR labels, status checks, and CI context.
-- [ ] Add unknown governed path findings only inside governed roots or protected
-  boundaries.
-- [ ] Define typed `GateId` metadata with prerequisites, cost, timeout, owner,
-  maturity, product-check flag, and freshness key.
-- [ ] Add `fsgg route --paths ...`, `fsgg route --since <rev>`, and
-  `fsgg ship --mode gate --profile standard --json`.
-- [ ] Emit deterministic route and audit JSON with selected gates, matched
+  (**F016**.)
+- 🟢 [x] Add unknown governed path findings only inside governed roots or protected
+  boundaries. (**F017**.)
+- 🟢 [x] Define typed `GateId` metadata with prerequisites, cost, timeout, owner,
+  maturity, product-check flag, and freshness key. (**F018** typed gate registry.)
+- 🟡 [ ] Add `fsgg route --paths ...`, `fsgg route --since <rev>`, and
+  `fsgg ship --mode gate --profile standard --json`. (Route selection **F019** +
+  `fsgg route` host command **F022** landed; the `fsgg ship --mode gate` verdict
+  is deferred to the enforcement rows F023+.)
+- 🟡 [ ] Emit deterministic route and audit JSON with selected gates, matched
   rules, unmatched governed paths, expected artifacts, cost, cache eligibility,
-  profile-adjusted enforcement, and exit-code basis.
-- [ ] Publish the first GitHub Actions guidance for branch protection.
+  profile-adjusted enforcement, and exit-code basis. (`route.json` **F020** +
+  `gates.json` **F021** shipped; the profile-adjusted **enforcement** audit JSON
+  and exit-code basis are deferred to F023+.)
+- 🔴 [ ] Publish the first GitHub Actions guidance for branch protection.
 
 Exit criteria:
 
@@ -502,34 +522,64 @@ Exit criteria:
 - Commands write authored sources and refresh or diagnose generated views.
 - JSON output is deterministic and plain text is presentation only.
 
-### Phase 5: Route Parity, Profiles, And Enforcement Fixtures
+### Phase 5: Route Parity, Profiles, And Enforcement Fixtures — 🟡 IN PROGRESS
 
 Owner: `FS.GG.Governance`.
+
+Status: the pure enforcement core landed in Governance feature
+`023-enforcement-effective-severity` (`FS.GG.Governance.Enforcement`) on
+2026-06-21 — the typed enforcement vocabulary (six-value `RunMode`, four-value
+`Profile`, base/effective `Severity`, `Recognized<'T>`) and the single total,
+deterministic `deriveEffectiveSeverity : EnforcementInput -> EnforcementDecision`
+mapping (base severity, maturity, run mode, profile) → (effective severity,
+reason), reusing F014 `Maturity`/`ProfileId` verbatim. Evidence:
+`specs/023-enforcement-effective-severity/readiness/` (28 green tests: full
+240-input truth table, totality, determinism, base-carry, no-drop, recognition,
+surface drift). The pure decision is the value the later `fsgg ship`/`audit.json`
+rows compose. Out of scope here (deferred to later Governance rows): JSON
+emission, rule-id/verdict rollup, CLI `--mode` wiring, `.fsgg/policy.yml`
+per-class dial map, and base/head route parity.
+
+Legend: 🟢 complete · 🟡 partial (pure core landed; emission/wiring deferred) ·
+⬜ not started.
 
 Purpose: make route selection, profile strictness, and blocking behavior
 explainable and testable.
 
-- [ ] Parse run modes: `sandbox`, `inner`, `focused`, `verify`, `gate`, and
-  `release`.
-- [ ] Parse Governance profiles: `light`, `standard`, `strict`, and `release`.
-- [ ] Parse rule maturity: `observe`, `warn`, `block-on-pr`, `block-on-ship`,
-  and `block-on-release`.
-- [ ] Emit every finding with rule id, verdict, base severity, mode, profile,
-  maturity, effective severity, and reason.
-- [ ] Ensure profiles never hide underlying verdicts, alter rule hashes, or
-  remove findings from JSON.
-- [ ] Add scoped `--paths` authoring and complete base/head route parity with
+- 🟢 [x] Parse run modes: `sandbox`, `inner`, `focused`, `verify`, `gate`, and
+  `release`. (F023 `recognizeMode` — total, exact-token, six values; CLI flag
+  wiring is a later host-edge row.)
+- 🟢 [x] Parse Governance profiles: `light`, `standard`, `strict`, and `release`.
+  (F023 `recognizeProfile`/`profileOfProfileId` — total, exact-token, four
+  values, round-tripping F014 `ProfileId`.)
+- 🟢 [x] Parse rule maturity: `observe`, `warn`, `block-on-pr`, `block-on-ship`,
+  and `block-on-release`. (Reused verbatim from F014 `Config.Model.Maturity`;
+  consumed by F023's derivation.)
+- 🟡 [ ] Emit every finding with rule id, verdict, base severity, mode, profile,
+  maturity, effective severity, and reason. (F023's `EnforcementDecision` carries
+  base severity, mode, profile, maturity, effective severity, and a lever-naming
+  reason; rule id, verdict, and the JSON emission are deferred to the
+  rollup/`audit.json` rows.)
+- 🟡 [ ] Ensure profiles never hide underlying verdicts, alter rule hashes, or
+  remove findings from JSON. (F023 proves base-severity carry (SC-003) and
+  no-drop over a finding list (SC-006) at the decision level; the JSON-level and
+  rule-hash guarantees follow once emission lands.)
+- ⬜ [ ] Add scoped `--paths` authoring and complete base/head route parity with
   CI.
-- [ ] Generate golden enforcement truth-table fixtures covering routine versus
+- 🟡 [ ] Generate golden enforcement truth-table fixtures covering routine versus
   fenced routes, base severity, rule tier, all modes, all profiles, all maturity
-  levels, and unknown governed paths.
-- [ ] Add representative JSON snapshots for combinations that alter blocking.
+  levels, and unknown governed paths. (F023 covers the full base-severity ×
+  maturity × mode × profile truth table as enumerated + property tests; golden
+  fixture files and the route-level routine/fenced/tier/unknown-path dimensions
+  are deferred.)
+- ⬜ [ ] Add representative JSON snapshots for combinations that alter blocking.
 
 Exit criteria:
 
 - Local route previews and CI route decisions agree for the same inputs.
 - Every enforcement dial has fixture coverage.
-- Profile-adjusted blocking is explained without changing rule truth.
+- Profile-adjusted blocking is explained without changing rule truth. (Held by
+  F023's reason text + base-carry/no-drop guarantees at the decision level.)
 
 ### Phase 6: Tasks, Evidence, Verify, And Ship Readiness
 

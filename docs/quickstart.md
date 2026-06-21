@@ -32,6 +32,23 @@ That is all. You do **not** need:
 
 Throughout, `<id>` is your work item id (for example `001-my-first-feature`).
 
+## Output formats
+
+Every command projects the same `CommandReport` three ways, selected by flag with
+precedence `--rich` > `--text` > `--json` > default:
+
+| Flag | Projection |
+|---|---|
+| default / `--json` | deterministic JSON automation contract (the default for every command) |
+| `--text` | portable plain-text summary |
+| `--rich` | human-oriented Spectre.Console rendering (panels, tables, color) |
+
+`--rich` is a pure projection over the same report — it changes no JSON byte,
+stream routing, or exit code — and degrades to plain text with **zero ANSI**
+whenever output is non-interactive/redirected or color is disabled (`NO_COLOR`
+present, or `TERM=dumb`). Rich output is presentation only and is excluded from
+deterministic/golden contracts; automation should keep using the default JSON.
+
 ## `fsgg-sdd init`
 
 ```text

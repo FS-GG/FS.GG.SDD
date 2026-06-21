@@ -24,6 +24,7 @@ module CommandTypes =
     type OutputFormat =
         | Json
         | Text
+        | Rich
 
     type OverwritePolicy =
         | RefuseUnsafe
@@ -437,6 +438,7 @@ module CommandTypes =
         match format with
         | Json -> "json"
         | Text -> "text"
+        | Rich -> "rich"
 
     let overwritePolicyValue (policy: OverwritePolicy) =
         match policy with

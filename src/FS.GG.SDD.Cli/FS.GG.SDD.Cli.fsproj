@@ -12,11 +12,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Rendering.fsi" />
+    <Compile Include="Rendering.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="../FS.GG.SDD.Commands/FS.GG.SDD.Commands.fsproj" />
     <PackageReference Include="FSharp.Core" />
+    <PackageReference Include="Spectre.Console" />
   </ItemGroup>
 </Project>

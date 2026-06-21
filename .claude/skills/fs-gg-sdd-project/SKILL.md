@@ -36,6 +36,19 @@ Before changing behavior, read:
 - Keep Claude and Codex guidance equivalent when workflow behavior changes.
 - Integrate Governance only through explicit optional contracts.
 
+## CLI output formats
+
+`fsgg-sdd` projects the same `CommandReport` three ways, selected by flag with
+precedence `--rich` > `--text` > `--json` > default:
+
+- default / `--json` — deterministic JSON automation contract (unchanged default).
+- `--text` — portable plain-text summary.
+- `--rich` — human-oriented Spectre.Console rendering (panels, tables, color),
+  a pure projection over the same report. It changes no JSON byte, stream, or exit
+  code, and degrades to plain text with zero ANSI when output is
+  non-interactive/redirected or color is disabled (`NO_COLOR`, or `TERM=dumb`).
+  Rich output is presentation only and excluded from deterministic/golden contracts.
+
 ## First Feature Bias
 
 The first implementation feature should define the SDD artifact model and

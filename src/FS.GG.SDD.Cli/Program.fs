@@ -6,6 +6,7 @@ open FS.GG.SDD.Commands.CommandRendering
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.CommandWorkflow
+open FS.GG.SDD.Cli.Rendering
 
 module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
 
@@ -19,7 +20,9 @@ let hasFlag name args =
     args |> List.exists ((=) name)
 
 let outputFormat args =
-    if hasFlag "--text" args then Text else Json
+    // Flag precedence --rich > --text > --json > default (Json); JSON stays the
+    // unconditional default for every command (output-format-selection contract).
+    selectFormat args
 
 let printUnknown commandValue =
     let generator = SchemaVersionModule.currentGeneratorVersion()
@@ -109,7 +112,11 @@ let run args =
                 |> fun state -> update BuildReport state |> fst
 
             let report = finalModel.Report |> Option.defaultWith (fun () -> buildReport finalModel)
-            let rendered = if format = Text then renderText report else serializeReport report
+
+            // Resolve the effective rendering (Rich degrades to plain text when
+            // non-interactive or color-disabled); stream routing and exit code are
+            // unchanged across formats.
+            let rendered = (resolve format (detectCapabilities ()) report).Text
 
             if report.Outcome = Blocked then Console.Error.WriteLine(rendered)
             else Console.Out.WriteLine(rendered)

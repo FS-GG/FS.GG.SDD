@@ -23,6 +23,7 @@ module CommandTypes =
     type OutputFormat =
         | Json
         | Text
+        | Rich
 
     type OverwritePolicy =
         | RefuseUnsafe
