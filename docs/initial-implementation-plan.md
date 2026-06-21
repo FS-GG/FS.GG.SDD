@@ -900,11 +900,23 @@ auditable.
   environment delta, timeout, exit code, stdout digest, stderr digest, captured
   output path, and duration.
   _(F032 — `FS.GG.Governance.CommandRecord`, merged.)_
-- [ ] Include source commit, base/head, rule hash, generator version, artifact
+- ✅ Include source commit, base/head, rule hash, generator version, artifact
   digests, command records, environment class, and builder identity in
   provenance.
-- [ ] Mark wall-clock timestamps and durations as sensed or non-deterministic
+  _(F033 — `FS.GG.Governance.Provenance`, merged.)_ Pure, total
+  `Provenance.build` over the nine already-sensed facts → one flat complete value
+  carrying all eight declared facts; `canonicalId` renders only the reproducible
+  facts to a byte-stable identity (artifact digests a set, command records ordered
+  and folded via F032 `CommandRecord.canonicalId` so the sensed durations are never
+  read). First core to reference three sibling cores (FreshnessKey + CommandRecord +
+  Config), reusing F029/F032/F014 vocabulary verbatim; no new dependency.
+- 🟡 Mark wall-clock timestamps and durations as sensed or non-deterministic
   metadata when included in deterministic reports.
+  _(Structural foundation merged — F032 carries the run duration as a distinct
+  `SensedDuration` apart from the reproducible facts and F033 keeps the embedded
+  durations structurally excluded from the provenance identity; the
+  deterministic-report rendering that surfaces them as flagged sensed metadata is
+  not yet built.)_
 
 Exit criteria:
 
