@@ -141,6 +141,26 @@ module SchemaVersion =
         else
             Ok { Id = id; Version = version }
 
+    // Derive the generator version from the single <Version> source in
+    // Directory.Build.props (baked into the assembly informational version at
+    // build time) so the generator version can never drift from the package
+    // version (feature 018 / FR-003, T004). The informational version may carry a
+    // source-control suffix (e.g. "0.2.0+<sha>"); strip it to the semantic core.
+    let private assemblyGeneratorVersion () =
+        let assembly = typeof<SchemaVersion>.Assembly
+
+        let informational =
+            assembly.GetCustomAttributes(typeof<System.Reflection.AssemblyInformationalVersionAttribute>, false)
+            |> Array.tryHead
+            |> Option.map (fun attr -> (attr :?> System.Reflection.AssemblyInformationalVersionAttribute).InformationalVersion)
+
+        match informational with
+        | Some value when not (String.IsNullOrWhiteSpace value) ->
+            let value = value.Trim()
+            let plus = value.IndexOf('+')
+            if plus >= 0 then value.Substring(0, plus) else value
+        | _ -> "0.2.0"
+
     let currentGeneratorVersion () =
-        createGeneratorVersion "FS.GG.SDD.Artifacts" "0.2.0"
+        createGeneratorVersion "FS.GG.SDD.Artifacts" (assemblyGeneratorVersion ())
         |> Result.defaultWith failwith

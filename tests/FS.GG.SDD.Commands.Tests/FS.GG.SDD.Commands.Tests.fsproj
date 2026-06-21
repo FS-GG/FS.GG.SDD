@@ -25,6 +25,10 @@
     <Compile Include="GovernanceBoundaryCommandTests.fs" />
     <Compile Include="LifecycleSmokeTests.fs" />
     <Compile Include="GovernanceHandoffTests.fs" />
+    <Compile Include="ReleaseConformanceTests.fs" />
+    <Compile Include="ReleaseDeterminismTests.fs" />
+    <Compile Include="ReleaseBoundaryTests.fs" />
+    <Compile Include="ReleaseInstallTests.fs" />
     <Compile Include="SurfaceBaselineTests.fs" />
   </ItemGroup>
 

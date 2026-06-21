@@ -25,6 +25,8 @@
     <Compile Include="DiagnosticTests.fs" />
     <Compile Include="DeterministicJsonTests.fs" />
     <Compile Include="GovernanceBoundaryTests.fs" />
+    <Compile Include="ReleaseContractTests.fs" />
+    <Compile Include="ReleaseReadinessCheckTests.fs" />
     <Compile Include="SurfaceBaselineTests.fs" />
   </ItemGroup>
 

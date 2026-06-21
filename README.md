@@ -24,6 +24,8 @@ FS.GG.SDD owns:
 - normalized work model generation;
 - agent command and skill generation;
 - generated readiness views for SDD artifacts;
+- the SDD-owned release-readiness contract, SemVer versioning policy, schema
+  reference, and `dotnet tool` distribution of the `fsgg-sdd` CLI;
 - integration contracts with FS.GG.Governance.
 
 FS.GG.SDD does not own the governance rule engine. Rule evaluation, evidence
@@ -49,6 +51,15 @@ freshness, routing, profiles, and gate enforcement belong in
   generated `readiness/<id>/ship.json` view pointing to the protected-boundary
   handoff), deterministic JSON/text reports, generated work-model, analysis-view,
   and verification-view refresh/diagnostics, and no required Governance runtime.
+- The SDD-owned release-readiness machine contract
+  ([docs/release/release-readiness.json](docs/release/release-readiness.json))
+  declares the single reconciled version, the compatibility matrix, and the
+  schema reference catalog. Its human projections — the SemVer
+  [versioning policy](docs/release/versioning-policy.md),
+  [compatibility matrix](docs/release/compatibility-matrix.md),
+  [schema reference](docs/release/schema-reference.md), and
+  [installation guide](docs/release/installation.md) for installing `fsgg-sdd`
+  via `dotnet tool install` — live in [docs/release/](docs/release/).
 - The detailed implementation roadmap lives in
   [docs/initial-implementation-plan.md](docs/initial-implementation-plan.md).
 

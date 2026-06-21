@@ -125,3 +125,15 @@ FS.GG.SDD.Artifacts.GovernanceHandoff.isStaleEvidenceResult
 FS.GG.SDD.Artifacts.GovernanceHandoff.mapEvidenceState
 FS.GG.SDD.Artifacts.GovernanceHandoff.sourceIdentity
 FS.GG.SDD.Artifacts.GovernanceHandoff.toJson
+FS.GG.SDD.Artifacts.ReleaseContract.bumpRule
+FS.GG.SDD.Artifacts.ReleaseContract.changeClassValue
+FS.GG.SDD.Artifacts.ReleaseContract.channelOfVersion
+FS.GG.SDD.Artifacts.ReleaseContract.contractFormatValue
+FS.GG.SDD.Artifacts.ReleaseContract.currentRelease
+FS.GG.SDD.Artifacts.ReleaseContract.evaluate
+FS.GG.SDD.Artifacts.ReleaseContract.inventoryKindValue
+FS.GG.SDD.Artifacts.ReleaseContract.migrationNoteRequired
+FS.GG.SDD.Artifacts.ReleaseContract.parse
+FS.GG.SDD.Artifacts.ReleaseContract.releaseChannelValue
+FS.GG.SDD.Artifacts.ReleaseContract.serialize
+FS.GG.SDD.Artifacts.ReleaseContract.stabilityClassValue

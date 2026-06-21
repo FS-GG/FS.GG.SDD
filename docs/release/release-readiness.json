@@ -1,0 +1,782 @@
+{
+  "schemaVersion": 1,
+  "generatorVersion": {
+    "id": "FS.GG.SDD.Artifacts",
+    "version": "0.2.0"
+  },
+  "identity": {
+    "version": "0.2.0",
+    "channel": "preRelease",
+    "packageIds": [
+      "FS.GG.SDD.Artifacts",
+      "FS.GG.SDD.Commands",
+      "FS.GG.SDD.Cli"
+    ],
+    "cliCommandName": "fsgg-sdd"
+  },
+  "compatibility": [
+    {
+      "sddVersionLine": "0.2.x",
+      "specKitRange": "\u003E=0.8.5",
+      "governanceContractVersionRange": "1.x"
+    }
+  ],
+  "catalog": [
+    {
+      "contract": "agent-commands/\u003Ctarget\u003E/commands.md",
+      "kind": {
+        "generatedView": "agentCommands",
+        "format": "markdown"
+      },
+      "schemaVersion": 1,
+      "contractVersion": null,
+      "stability": "additiveOptional",
+      "determinism": "byte-stable; canonical key order; no clock/path/ANSI",
+      "inventory": [
+        {
+          "name": "Agent commands",
+          "kind": "markdownSection",
+          "stability": "additiveOptional"
+        }
+      ],
+      "sourceArtifact": {
+        "path": "readiness/\u003Cid\u003E/agent-commands/\u003Ctarget\u003E/commands.md",
+        "kind": "generatedView",
+        "owner": "sdd",
+        "requiredBySdd": false
+      },
+      "baselinePresent": true
+    },
+    {
+      "contract": "agent-commands/\u003Ctarget\u003E/guidance.json",
+      "kind": {
+        "generatedView": "agentCommands",
+        "format": "json"
+      },
+      "schemaVersion": 1,
+      "contractVersion": null,
+      "stability": "additiveOptional",
+      "determinism": "byte-stable; canonical key order; no clock/path/ANSI",
+      "inventory": [
+        {
+          "name": "behaviorModelDigest",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "commands",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "diagnostics",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generated",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generator",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "renderedFiles",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "schemaVersion",
+          "kind": "jsonField",
+          "stability": "stable"
+        },
+        {
+          "name": "skills",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "targetId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "viewVersion",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "workId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        }
+      ],
+      "sourceArtifact": {
+        "path": "readiness/\u003Cid\u003E/agent-commands/\u003Ctarget\u003E/guidance.json",
+        "kind": "generatedView",
+        "owner": "sdd",
+        "requiredBySdd": false
+      },
+      "baselinePresent": true
+    },
+    {
+      "contract": "agent-commands/\u003Ctarget\u003E/skills.md",
+      "kind": {
+        "generatedView": "agentCommands",
+        "format": "markdown"
+      },
+      "schemaVersion": 1,
+      "contractVersion": null,
+      "stability": "additiveOptional",
+      "determinism": "byte-stable; canonical key order; no clock/path/ANSI",
+      "inventory": [
+        {
+          "name": "Agent skills",
+          "kind": "markdownSection",
+          "stability": "additiveOptional"
+        }
+      ],
+      "sourceArtifact": {
+        "path": "readiness/\u003Cid\u003E/agent-commands/\u003Ctarget\u003E/skills.md",
+        "kind": "generatedView",
+        "owner": "sdd",
+        "requiredBySdd": false
+      },
+      "baselinePresent": true
+    },
+    {
+      "contract": "analysis.json",
+      "kind": {
+        "generatedView": "analysis",
+        "format": "json"
+      },
+      "schemaVersion": 1,
+      "contractVersion": null,
+      "stability": "additiveOptional",
+      "determinism": "byte-stable; canonical key order; no clock/path/ANSI",
+      "inventory": [
+        {
+          "name": "diagnostics",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generator",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "nextAction",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "optionalBoundaryFacts",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "schemaVersion",
+          "kind": "jsonField",
+          "stability": "stable"
+        },
+        {
+          "name": "sourceRelationships",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "stage",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "viewVersion",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "workId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        }
+      ],
+      "sourceArtifact": {
+        "path": "readiness/\u003Cid\u003E/analysis.json",
+        "kind": "generatedView",
+        "owner": "sdd",
+        "requiredBySdd": false
+      },
+      "baselinePresent": true
+    },
+    {
+      "contract": "command-report (--json)",
+      "kind": {
+        "commandOutput": true,
+        "format": "json"
+      },
+      "schemaVersion": 1,
+      "contractVersion": null,
+      "stability": "additiveOptional",
+      "determinism": "byte-stable; canonical key order; no clock/path/ANSI",
+      "inventory": [
+        {
+          "name": "agentGuidance",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "analysis",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "changedArtifacts",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "checklist",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "clarification",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "command",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "context",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "diagnostics",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceCompatibility",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "invocation",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "nextAction",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "outcome",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "plan",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "refresh",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "reportVersion",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "schemaVersion",
+          "kind": "jsonField",
+          "stability": "stable"
+        },
+        {
+          "name": "ship",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "specification",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "verification",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        }
+      ],
+      "sourceArtifact": {
+        "path": "src/FS.GG.SDD.Commands/CommandSerialization.fs",
+        "kind": "commandOutput",
+        "owner": "sdd",
+        "requiredBySdd": false
+      },
+      "baselinePresent": true
+    },
+    {
+      "contract": "governance-handoff.json",
+      "kind": {
+        "generatedView": "governance-handoff",
+        "format": "json"
+      },
+      "schemaVersion": 1,
+      "contractVersion": "1.0.0",
+      "stability": "stable",
+      "determinism": "byte-stable; canonical key order; no clock/path/ANSI",
+      "inventory": [
+        {
+          "name": "contractVersion",
+          "kind": "jsonField",
+          "stability": "stable"
+        },
+        {
+          "name": "diagnostics",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatorVersion",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceConfig",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governedReferences",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "schemaVersion",
+          "kind": "jsonField",
+          "stability": "stable"
+        },
+        {
+          "name": "sources",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "workId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        }
+      ],
+      "sourceArtifact": {
+        "path": "readiness/\u003Cid\u003E/governance-handoff.json",
+        "kind": "generatedView",
+        "owner": "sdd",
+        "requiredBySdd": false
+      },
+      "baselinePresent": true
+    },
+    {
+      "contract": "ship.json",
+      "kind": {
+        "generatedView": "ship",
+        "format": "json"
+      },
+      "schemaVersion": 1,
+      "contractVersion": null,
+      "stability": "additiveOptional",
+      "determinism": "byte-stable; canonical key order; no clock/path/ANSI",
+      "inventory": [
+        {
+          "name": "diagnostics",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "disposition",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generator",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceCompatibility",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleReadiness",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "nextAction",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "schemaVersion",
+          "kind": "jsonField",
+          "stability": "stable"
+        },
+        {
+          "name": "sources",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "stage",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "verificationReadiness",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "viewVersion",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "workId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        }
+      ],
+      "sourceArtifact": {
+        "path": "readiness/\u003Cid\u003E/ship.json",
+        "kind": "generatedView",
+        "owner": "sdd",
+        "requiredBySdd": false
+      },
+      "baselinePresent": true
+    },
+    {
+      "contract": "summary.md",
+      "kind": {
+        "generatedView": "summary",
+        "format": "markdown"
+      },
+      "schemaVersion": 1,
+      "contractVersion": null,
+      "stability": "additiveOptional",
+      "determinism": "byte-stable; canonical key order; no clock/path/ANSI",
+      "inventory": [
+        {
+          "name": "Diagnostics",
+          "kind": "markdownSection",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "Generated-view currency",
+          "kind": "markdownSection",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "Next action",
+          "kind": "markdownSection",
+          "stability": "additiveOptional"
+        }
+      ],
+      "sourceArtifact": {
+        "path": "readiness/\u003Cid\u003E/summary.md",
+        "kind": "generatedView",
+        "owner": "sdd",
+        "requiredBySdd": false
+      },
+      "baselinePresent": true
+    },
+    {
+      "contract": "verify.json",
+      "kind": {
+        "generatedView": "verify",
+        "format": "json"
+      },
+      "schemaVersion": 1,
+      "contractVersion": null,
+      "stability": "additiveOptional",
+      "determinism": "byte-stable; canonical key order; no clock/path/ANSI",
+      "inventory": [
+        {
+          "name": "diagnostics",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generator",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceCompatibility",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleReadiness",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "nextAction",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "schemaVersion",
+          "kind": "jsonField",
+          "stability": "stable"
+        },
+        {
+          "name": "skillVisibility",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "stage",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "taskGraph",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "testDispositions",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "viewVersion",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "workId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        }
+      ],
+      "sourceArtifact": {
+        "path": "readiness/\u003Cid\u003E/verify.json",
+        "kind": "generatedView",
+        "owner": "sdd",
+        "requiredBySdd": false
+      },
+      "baselinePresent": true
+    },
+    {
+      "contract": "work-model.json",
+      "kind": {
+        "generatedView": "workModel",
+        "format": "json"
+      },
+      "schemaVersion": 1,
+      "contractVersion": null,
+      "stability": "additiveOptional",
+      "determinism": "byte-stable; canonical key order; no clock/path/ANSI",
+      "inventory": [
+        {
+          "name": "decisions",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "diagnostics",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceBoundaries",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "modelVersion",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "project",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "requirements",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "schemaVersion",
+          "kind": "jsonField",
+          "stability": "stable"
+        },
+        {
+          "name": "sources",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "workId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "workItem",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        }
+      ],
+      "sourceArtifact": {
+        "path": "readiness/\u003Cid\u003E/work-model.json",
+        "kind": "generatedView",
+        "owner": "sdd",
+        "requiredBySdd": false
+      },
+      "baselinePresent": true
+    }
+  ],
+  "migrations": []
+}

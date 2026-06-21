@@ -58,9 +58,17 @@ let printUnknown commandValue =
     Console.Error.WriteLine(serializeReport report)
     exitCodeForReport report
 
+let printVersion () =
+    // Single reconciled version source (Directory.Build.props <Version>), surfaced
+    // through the generator version so the CLI reports the same number as every
+    // FS.GG.SDD.* package (feature 018 / FR-011).
+    Console.Out.WriteLine(SchemaVersionModule.currentGeneratorVersion().Version)
+    0
+
 let run args =
     match args with
     | [] -> printUnknown ""
+    | ("--version" | "-v" | "version") :: _ -> printVersion ()
     | commandValue :: rest ->
         match parseCommand commandValue with
         | Error _ -> printUnknown commandValue

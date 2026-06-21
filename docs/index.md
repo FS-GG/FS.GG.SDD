@@ -6,6 +6,17 @@ Start with:
 - [Migration from Spec Kit](migration-from-spec-kit.md)
 - [Adopting Governance](adopting-governance.md)
 - [Initial design](initial-design.md)
+
+Release and distribution:
+
+- [Installation](release/installation.md)
+- [Versioning Policy](release/versioning-policy.md)
+- [Compatibility Matrix](release/compatibility-matrix.md)
+- [Schema Reference](release/schema-reference.md)
+- [Migration Notes](release/migrations/README.md)
+
+More:
+
 - [Initial implementation plan](initial-implementation-plan.md)
 - [Decision 0001: separate SDD product](decisions/0001-separate-sdd-product.md)
 - [Imported reference docs](reference/README.md)

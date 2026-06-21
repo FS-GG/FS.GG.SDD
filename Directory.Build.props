@@ -1,5 +1,11 @@
 <Project>
   <PropertyGroup>
+    <!-- Single semantic-version source of truth for all FS.GG.SDD.* packages and
+         the fsgg-sdd CLI (feature 018 / FR-003). Each .fsproj inherits this; none
+         declares its own <Version>. currentGeneratorVersion derives from the
+         resulting assembly informational version so the generator and package
+         versions can never silently diverge. -->
+    <Version>0.2.0</Version>
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>preview</LangVersion>
     <Deterministic>true</Deterministic>

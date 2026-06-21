@@ -49,5 +49,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/017-governance-handoff/plan.md
+at specs/018-release-readiness/plan.md
 <!-- SPECKIT END -->

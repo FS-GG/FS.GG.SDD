@@ -2,10 +2,13 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <PackageId>FS.GG.SDD.Cli</PackageId>
-    <Version>0.1.10</Version>
     <Description>Thin console host for FS.GG.SDD native lifecycle commands.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IsPackable>true</IsPackable>
+    <!-- Distribute as a .NET tool: `dotnet tool install FS.GG.SDD.Cli` exposes the
+         `fsgg-sdd` command (feature 018 / FR-011). -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>fsgg-sdd</ToolCommandName>
   </PropertyGroup>
 
   <ItemGroup>
