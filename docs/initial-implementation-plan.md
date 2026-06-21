@@ -536,8 +536,22 @@ reason), reusing F014 `Maturity`/`ProfileId` verbatim. Evidence:
 `specs/023-enforcement-effective-severity/readiness/` (28 green tests: full
 240-input truth table, totality, determinism, base-carry, no-drop, recognition,
 surface drift). The pure decision is the value the later `fsgg ship`/`audit.json`
-rows compose. Out of scope here (deferred to later Governance rows): JSON
-emission, rule-id/verdict rollup, CLI `--mode` wiring, `.fsgg/policy.yml`
+rows compose.
+
+The **whole-change verdict rollup** then landed in Governance feature
+`024-ship-verdict-rollup` (`FS.GG.Governance.Ship`) on 2026-06-21 — the single
+total, deterministic `rollup : RouteResult -> RunMode -> Profile -> ShipDecision`
+that rolls an already-routed change up into one ship decision: a closed
+`Pass`/`Fail` verdict, the deterministic `Blockers`/`Warnings`/`Passing` partition
+of every enforced item (each carrying its full F023 `EnforcementDecision`), and a
+typed `ExitCodeBasis` (clean vs blocked). It reuses F023 `deriveEffectiveSeverity`
+per item and the F019 `RouteResult`/F018 `Gate`/F017 finding values verbatim.
+Evidence: `specs/024-ship-verdict-rollup/readiness/` (24 green tests: rollup
+verdict/partition, the design's worked example at change scale, determinism +
+shuffle-invariance, totality over the cross-product incl. the empty route, the
+partition law `|B|+|W|+|P| = N+M`, base-severity carry / no-hide, and surface
+drift). Out of scope here (deferred to later Governance rows): `audit.json`
+emission, rule-id annotation, CLI `fsgg ship --mode` wiring, `.fsgg/policy.yml`
 per-class dial map, and base/head route parity.
 
 Legend: 🟢 complete · 🟡 partial (pure core landed; emission/wiring deferred) ·
@@ -558,12 +572,16 @@ explainable and testable.
 - 🟡 [ ] Emit every finding with rule id, verdict, base severity, mode, profile,
   maturity, effective severity, and reason. (F023's `EnforcementDecision` carries
   base severity, mode, profile, maturity, effective severity, and a lever-naming
-  reason; rule id, verdict, and the JSON emission are deferred to the
-  rollup/`audit.json` rows.)
+  reason; **F024** now adds the whole-change `Verdict` + `Blockers`/`Warnings`/
+  `Passing` rollup and the typed `ExitCodeBasis`. Per-finding rule id and the
+  `audit.json` JSON emission remain deferred to the projection row.)
 - 🟡 [ ] Ensure profiles never hide underlying verdicts, alter rule hashes, or
   remove findings from JSON. (F023 proves base-severity carry (SC-003) and
-  no-drop over a finding list (SC-006) at the decision level; the JSON-level and
-  rule-hash guarantees follow once emission lands.)
+  no-drop over a finding list (SC-006) at the decision level; **F024** proves the
+  no-hide rule at change scale — a relaxed blocker is always a visible
+  self-explaining `Warning`, the partition is disjoint + exhaustive (`|B|+|W|+|P|
+  = N+M`, SC-006), and base severity is byte-identical out (SC-003). The
+  JSON-level and rule-hash guarantees follow once emission lands.)
 - ⬜ [ ] Add scoped `--paths` authoring and complete base/head route parity with
   CI.
 - 🟡 [ ] Generate golden enforcement truth-table fixtures covering routine versus
