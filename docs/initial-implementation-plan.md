@@ -343,12 +343,13 @@ without waiting for the full lifecycle command suite.
 Status (rechecked 2026-06-21 against the sibling repo
 `/home/developer/projects/FS.GG.Governance`): the walking skeleton is **shipped**,
 and the enforcement audit chain has now landed. Governance has merged **F014**
-(`.fsgg` typed schemas) → **F024** (ship verdict rollup, `FS.GG.Governance.Ship`);
-latest merge `4fce4ae`, **18 projects** (was 16). Since the prior recheck,
-**F023** enforcement/effective-severity (`FS.GG.Governance.Enforcement`) and
-**F024** ship verdict rollup are both **merged**, and **F025 audit-json
-projection** (`FS.GG.Governance.AuditJson`) is **in progress** (untracked on
-`main`). The SDD→Governance handoff contract is accepted at **v1.0.0** (ADR 0002),
+(`.fsgg` typed schemas) → **F025** (audit.json projection,
+`FS.GG.Governance.AuditJson`); **20 projects** (was 18). Since the prior recheck,
+**F023** enforcement/effective-severity (`FS.GG.Governance.Enforcement`), **F024**
+ship verdict rollup (`FS.GG.Governance.Ship`), and **F025 audit-json projection**
+(`FS.GG.Governance.AuditJson` — the pure, total, deterministic
+`AuditJson.ofShipDecision : ShipDecision -> string` plus a `schemaVersion`
+constant) are all **merged**. The SDD→Governance handoff contract is accepted at **v1.0.0** (ADR 0002),
 but its Governance-side **consumer is still not implemented** (grep over Governance
 `src/`+`tests/` finds zero `governance-handoff` references; reader → evidence
 adapter → gate decision remain queued) — the seam stays one-directional and
@@ -379,8 +380,10 @@ Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
   rules, unmatched governed paths, expected artifacts, cost, cache eligibility,
   profile-adjusted enforcement, and exit-code basis. (`route.json` **F020** +
   `gates.json` **F021** shipped; profile-adjusted **enforcement** effective
-  severity landed as **F023**; the `audit.json` projection is **in progress** as
-  **F025** `FS.GG.Governance.AuditJson`.)
+  severity landed as **F023**; the `audit.json` projection **shipped** as **F025**
+  `FS.GG.Governance.AuditJson` — verdict/exit-code-basis + blockers/warnings/passing
+  with full six-field enforcement carry. Remaining partial: **cache eligibility /
+  freshness** verdict is still deferred to Phase 11.)
 - 🔴 [ ] Publish the first GitHub Actions guidance for branch protection.
 
 Exit criteria:
@@ -555,11 +558,18 @@ Evidence: `specs/024-ship-verdict-rollup/readiness/` (24 green tests: rollup
 verdict/partition, the design's worked example at change scale, determinism +
 shuffle-invariance, totality over the cross-product incl. the empty route, the
 partition law `|B|+|W|+|P| = N+M`, base-severity carry / no-hide, and surface
-drift). Update (rechecked 2026-06-21, merge `4fce4ae`): the **`audit.json`
-emission** is now **in progress** as **F025** `FS.GG.Governance.AuditJson`
-(untracked on `main`). Still out of scope here: rule-id annotation, CLI
-`fsgg ship --mode` wiring, `.fsgg/policy.yml` per-class dial map, and base/head
-route parity.
+drift). Update (rechecked 2026-06-21): the **`audit.json` emission** has now
+**shipped** as **F025** `FS.GG.Governance.AuditJson` — the pure, total,
+deterministic `AuditJson.ofShipDecision : ShipDecision -> string` (+ `schemaVersion`
+`"fsgg.audit/v1"`) that renders the `ShipDecision` to the versioned `audit.json`
+document (verdict + exit-code basis verbatim; blockers/warnings/passing each in F024
+composite order; every item tagged `kind` with identity + the six-field enforcement
+carry; emit-only, no new dependency). Evidence:
+`specs/025-audit-json-projection/readiness/` (21 green tests: projection,
+determinism + permutation-invariance + version/field-order + exclusion sweep,
+six-field/no-hide carry, totality). Still out of scope here: rule-id annotation, CLI
+`fsgg ship --mode` wiring, `.fsgg/policy.yml` per-class dial map, base/head route
+parity, and the cache-eligibility/freshness verdict (Phase 11).
 
 Legend: 🟢 complete · 🟡 partial (pure core landed; emission/wiring deferred) ·
 ⬜ not started.
@@ -579,16 +589,22 @@ explainable and testable.
 - 🟡 [ ] Emit every finding with rule id, verdict, base severity, mode, profile,
   maturity, effective severity, and reason. (F023's `EnforcementDecision` carries
   base severity, mode, profile, maturity, effective severity, and a lever-naming
-  reason; **F024** now adds the whole-change `Verdict` + `Blockers`/`Warnings`/
-  `Passing` rollup and the typed `ExitCodeBasis`. Per-finding rule id and the
-  `audit.json` JSON emission are **in progress** as **F025** `audit.json`.)
+  reason; **F024** adds the whole-change `Verdict` + `Blockers`/`Warnings`/
+  `Passing` rollup and the typed `ExitCodeBasis`; **F025** `audit.json` now **emits**
+  all of it (verdict/basis + each item's `kind`/identity + six-field `enforcement`)
+  to the versioned document. Remaining partial: per-finding **rule id** is still
+  un-modeled upstream, so it is not yet carried.)
 - 🟡 [ ] Ensure profiles never hide underlying verdicts, alter rule hashes, or
   remove findings from JSON. (F023 proves base-severity carry (SC-003) and
   no-drop over a finding list (SC-006) at the decision level; **F024** proves the
   no-hide rule at change scale — a relaxed blocker is always a visible
   self-explaining `Warning`, the partition is disjoint + exhaustive (`|B|+|W|+|P|
-  = N+M`, SC-006), and base severity is byte-identical out (SC-003). The
-  JSON-level and rule-hash guarantees follow once emission lands.)
+  = N+M`, SC-006), and base severity is byte-identical out (SC-003). **F025** now
+  carries the no-hide rule to the **JSON level** — every emitted item carries both
+  `baseSeverity` and `effectiveSeverity` (a relaxed base-`blocking` warning shows
+  both, SC-005), every item is rendered with no section overlap and none dropped
+  (SC-001), and the exclusion sweep proves no profile/dial value can suppress a
+  field (SC-007). The rule-hash guarantee follows once rule-id is modeled upstream.)
 - ⬜ [ ] Add scoped `--paths` authoring and complete base/head route parity with
   CI.
 - 🟡 [ ] Generate golden enforcement truth-table fixtures covering routine versus
