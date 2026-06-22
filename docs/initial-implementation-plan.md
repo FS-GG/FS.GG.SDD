@@ -942,7 +942,7 @@ Exit criteria:
 - Audit records are sufficient to explain builds, tests, packs, template
   instantiation, git diffs, package inspection, and visual capture.
 
-### Phase 12: Agent-Reviewed Rule Guardrails — 🟡 first three rows landed (cache key, invalidation, prompt isolation)
+### Phase 12: Agent-Reviewed Rule Guardrails — 🟡 first four rows landed (cache key, invalidation, prompt isolation, review record)
 
 Owner: `FS.GG.Governance`; SDD and generated products may provide artifacts
 under review.
@@ -950,7 +950,7 @@ under review.
 Purpose: allow judgement-heavy checks without treating uncalibrated agent output
 as deterministic proof.
 
-Status (2026-06-22): the **first three rows are 🟢 complete** — three pure, total,
+Status (2026-06-22): the **first four rows are 🟢 complete** — four pure, total,
 deterministic cores shipped in `FS.GG.Governance`, each the analogue of a Phase-11
 core specialised to agent-reviewed verdicts and reusing the F029/F032/F035
 length-prefixed, injective encoding discipline: (1) the cache-key row — feature
@@ -967,10 +967,18 @@ prompt-isolation row — feature `037-reviewer-prompt-isolation`,
 keep trusted reviewer instructions and untrusted governed-artifact content in
 separate channels, carry each artifact as a bounded excerpt or a digest, and render
 the two channels with an injective, unspoofable data fence, reusing F035
-`QuestionText` and F029 `ArtifactHash` verbatim. All three are purely additive (no
+`QuestionText` and F029 `ArtifactHash` verbatim; (4) the review-record row — feature
+`038-agent-review-record`, `FS.GG.Governance.ReviewRecord` (the agent-review analogue
+of F032 `CommandRecord` / F033 `Provenance`): `build`/`canonicalId`/`identityValue`
+assemble one completed review as an immutable record carrying the six audit facts
+(F037 `ReviewRequest`, F035 model/prompt identity, F029 `ArtifactHash` digests,
+response digest, final verdict) plus F034 `SensedMetadatum` held structurally apart,
+and derive a byte-stable, injective `RecordIdentity` over the reproducible facts only
+(artifacts as a set; sensed metadata excluded — the F032/F033 honesty boundary),
+reusing F037/F035/F029/F034 vocabulary verbatim. All four are purely additive (no
 merged core or `surface/*.surface.txt` baseline changed); F035 30 tests, F036 39
-tests, F037 35 tests pass (incl. determinism, purity, injectivity, surface-drift).
-The remaining three rows (review records, advisory promotion, calibration) are
+tests, F037 35 tests, F038 28 tests pass (incl. determinism, purity, injectivity,
+surface-drift). The remaining two rows (advisory promotion, calibration) are
 🔴 not started.
 
 Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
@@ -984,8 +992,9 @@ Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
 - 🟢 [x] Separate governed artifact content from reviewer instructions and pass it
   as bounded data or digests.
   (F037 `FS.GG.Governance.PromptIsolation` — pure channel-separation + bounded-capture + injective-render core.)
-- 🔴 [ ] Record review requests, response digests, model identity, prompt identity,
+- 🟢 [x] Record review requests, response digests, model identity, prompt identity,
   artifact digests, and final verdict.
+  (F038 `FS.GG.Governance.ReviewRecord` — pure record-assembly + injective record-identity core.)
 - 🔴 [ ] Keep agent-reviewed findings advisory until deterministic backing
   evidence, repeated-review confidence thresholds, or explicit human sign-off
   exists.
