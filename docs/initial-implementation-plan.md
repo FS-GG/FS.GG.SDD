@@ -207,39 +207,43 @@ and stale-view diagnostics.
 
 ## Roadmap
 
-Progress markers:
+Progress markers (status legend): 🟢 / ✅ complete · 🟡 partial (core landed;
+emission/wiring deferred) · 🔴 not started · ⬜ optional/out of scope. As of
+2026-06-22 every `FS.GG.SDD`-owned feature is complete (🟢); the remaining 🟡/🔴
+rows are Governance- or Rendering-owned follow-ons (host wiring, capability-catalog
+expansion, release gates).
 
-- [x] Scaffold empty repository with Spec Kit metadata, constitution, docs, and
+- 🟢 [x] Scaffold empty repository with Spec Kit metadata, constitution, docs, and
   Claude/Codex guidance.
-- [x] Create GitHub repository under `FS-GG`.
-- [x] Update FS-GG org profile/site to list SDD as a separate product.
-- [x] Copy development-relevant Governance and org reference docs into
+- 🟢 [x] Create GitHub repository under `FS-GG`.
+- 🟢 [x] Update FS-GG org profile/site to list SDD as a separate product.
+- 🟢 [x] Copy development-relevant Governance and org reference docs into
   `docs/reference/`.
-- [x] Replace copied Governance-only roadmap with an SDD-scoped plan.
-- [x] Expand this plan to cover the full `initial-design.md` design with
+- 🟢 [x] Replace copied Governance-only roadmap with an SDD-scoped plan.
+- 🟢 [x] Expand this plan to cover the full `initial-design.md` design with
   explicit owner boundaries.
-- [x] Implement `001-sdd-artifact-model` as the first packable SDD artifact
+- 🟢 [x] Implement `001-sdd-artifact-model` as the first packable SDD artifact
   model library with fixtures, diagnostics, deterministic JSON, optional
   Governance boundary contracts, and readiness evidence.
-- [x] Implement `002-normalized-work-model` by extending the artifact model
+- 🟢 [x] Implement `002-normalized-work-model` by extending the artifact model
   library with pure normalized work-model generation, generated-view currency
   checks, schema migration posture, diagnostics, fixtures, deterministic JSON,
   and readiness evidence.
-- [x] Complete `003-native-sdd-lifecycle-commands`; the command library, CLI
+- 🟢 [x] Complete `003-native-sdd-lifecycle-commands`; the command library, CLI
   host, public MVU/report surface, and `fsgg-sdd init` MVP are implemented
   with readiness evidence.
-- [x] Implement `004-charter-command` by adding `fsgg-sdd charter`, safe
+- 🟢 [x] Implement `004-charter-command` by adding `fsgg-sdd charter`, safe
   authored charter create/rerun behavior, generated work-model state reporting
   and refresh where source data is valid, deterministic reports, text
   projection, optional Governance compatibility facts, CLI smoke evidence, FSI
   evidence, and full-suite verification.
-- [x] Implement `005-specify-command` by adding `fsgg-sdd specify`, typed
+- 🟢 [x] Implement `005-specify-command` by adding `fsgg-sdd specify`, typed
   specification ids and parser contracts, safe specification create/rerun and
   refusal behavior, specification summaries in command reports, generated-view
   currency reporting and refresh where source data is valid, deterministic
   JSON, text projection, dry-run behavior, optional Governance compatibility
   facts, CLI smoke evidence, FSI evidence, and full-suite verification.
-- [x] Implement `006-clarify-command` by adding `fsgg-sdd clarify`, typed
+- 🟢 [x] Implement `006-clarify-command` by adding `fsgg-sdd clarify`, typed
   clarification question ids and parser contracts, safe clarification
   create/rerun behavior, durable decisions and accepted deferrals, missing
   answer and unsafe-change diagnostics, clarification summaries in command
@@ -247,14 +251,14 @@ Progress markers:
   valid, deterministic JSON, text projection, dry-run behavior, optional
   Governance compatibility facts, CLI smoke evidence, FSI evidence, and
   full-suite verification.
-- [x] Implement `007-checklist-command` by adding `fsgg-sdd checklist`, typed
+- 🟢 [x] Implement `007-checklist-command` by adding `fsgg-sdd checklist`, typed
   checklist item/result ids and parser contracts, safe checklist create/rerun
   behavior, durable requirements-quality results, failed-quality and stale
   result diagnostics, checklist summaries in command reports, generated-view
   currency reporting and refresh where source data is valid, deterministic
   JSON, text projection, dry-run behavior, optional Governance compatibility
   facts, CLI smoke evidence, FSI evidence, and full-suite verification.
-- [x] Implement `008-plan-command` by adding `fsgg-sdd plan`, typed plan
+- 🟢 [x] Implement `008-plan-command` by adding `fsgg-sdd plan`, typed plan
   decision/contract/verification/migration/generated-view ids and parser
   contracts, safe plan create/rerun behavior, durable planning decisions,
   accepted deferral visibility, stale decision and unsafe-change diagnostics,
@@ -262,7 +266,7 @@ Progress markers:
   refresh where source data is valid, deterministic JSON, text projection,
   dry-run behavior, optional Governance compatibility facts, CLI smoke
   evidence, FSI evidence, performance evidence, and full-suite verification.
-- [x] Implement `009-tasks-command` by adding `fsgg-sdd tasks`, typed
+- 🟢 [x] Implement `009-tasks-command` by adding `fsgg-sdd tasks`, typed
   `tasks.yml` facts and parser contracts, task source snapshots, task graph
   derivation, safe task create/rerun behavior, stable task ids, stale task
   visibility, dependency/evidence/status diagnostics, task summaries in command
@@ -271,42 +275,42 @@ Progress markers:
   Governance compatibility facts, CLI smoke evidence, FSI evidence,
   performance evidence, and full-suite verification. Evidence is recorded in
   `specs/009-tasks-command/readiness/`.
-- [x] Implement `010-analyze-command` by adding `fsgg-sdd analyze`, the
+- 🟢 [x] Implement `010-analyze-command` by adding `fsgg-sdd analyze`, the
   generated `readiness/<id>/analysis.json` contract, analysis summaries in
   command reports, tasks-ready prerequisite diagnostics, authored-source
   preservation, dry-run reporting, deterministic JSON/text projection, optional
   Governance compatibility facts, CLI smoke evidence, FSI evidence,
   performance evidence, and full-suite verification. Evidence is recorded in
   `specs/010-analyze-command/readiness/`.
-- [x] Implement `011-evidence-command` by adding `fsgg-sdd evidence`, the
+- 🟢 [x] Implement `011-evidence-command` by adding `fsgg-sdd evidence`, the
   schema-versioned `work/<id>/evidence.yml` contract, evidence summaries in
   command reports, analysis-ready prerequisite diagnostics, safe authored
   evidence writes, dry-run reporting, deterministic JSON/text projection,
   optional Governance compatibility facts, CLI JSON/dry-run/text smoke
   evidence, FSI evidence, performance evidence, and full-suite verification.
   Evidence is recorded in `specs/011-evidence-command/readiness/`.
-- [x] Implement `012-verify-command` (`fsgg-sdd verify`): SDD-owned verification
+- 🟢 [x] Implement `012-verify-command` (`fsgg-sdd verify`): SDD-owned verification
   readiness over task/evidence/test/skill obligations, emitting
   `readiness/<id>/verify.json` and pointing verification-ready work to ship.
-- [x] Implement `013-ship-command` (`fsgg-sdd ship`): SDD-owned merge-boundary
+- 🟢 [x] Implement `013-ship-command` (`fsgg-sdd ship`): SDD-owned merge-boundary
   readiness emitting `readiness/<id>/ship.json` and pointing ship-ready work to
   the Governance-owned protected-boundary handoff.
-- [x] Implement `014-agent-guidance` (`fsgg-sdd agents`): per-target Claude/Codex
+- 🟢 [x] Implement `014-agent-guidance` (`fsgg-sdd agents`): per-target Claude/Codex
   command and skill guidance generated from `readiness/<id>/work-model.json`.
-- [x] Implement `015-refresh-command` (`fsgg-sdd refresh`): regenerate SDD-owned
+- 🟢 [x] Implement `015-refresh-command` (`fsgg-sdd refresh`): regenerate SDD-owned
   generated views and report `analysis.json`/`verify.json`/`ship.json` currency.
-- [x] Implement `016-bootstrap-migration`: end-to-end quickstart, migration
+- 🟢 [x] Implement `016-bootstrap-migration`: end-to-end quickstart, migration
   guidance, Governance-after-init boundary, and a no-Governance lifecycle smoke
   harness (Phase 9 SDD slice).
-- [x] Implement `017-governance-handoff`: the versioned SDD→Governance handoff
+- 🟢 [x] Implement `017-governance-handoff`: the versioned SDD→Governance handoff
   contract (accepted at v1.0.0, ADR 0002; Governance-side consumer pending).
-- [x] Implement `018-release-readiness`: frozen/versioned public contracts,
+- 🟢 [x] Implement `018-release-readiness`: frozen/versioned public contracts,
   versioning policy, compatibility matrix, schema reference, and golden baselines.
-- [x] Implement `019-spectre-rendering`: the rich `--rich` Spectre.Console
+- 🟢 [x] Implement `019-spectre-rendering`: the rich `--rich` Spectre.Console
   projection over the same `CommandReport`.
-- [x] Implement `020-exhaustive-validation` (`fsgg-sdd validate`): the scheduled
+- 🟢 [x] Implement `020-exhaustive-validation` (`fsgg-sdd validate`): the scheduled
   exhaustive validation harness emitting one deterministic `validation-report`.
-- [x] Implement `021-rich-validation-report`: `fsgg-sdd validate --rich` renders
+- 🟢 [x] Implement `021-rich-validation-report`: `fsgg-sdd validate --rich` renders
   the `validation-report` via Spectre, closing the last SDD-owned deferral.
 
 The SDD-owned implementation slice (Phases 1, 3, 4, 6, 7, 8, 9, and 13) is
@@ -321,28 +325,28 @@ Owner: `FS.GG.SDD`.
 Purpose: define the typed lifecycle contract before SDD commands or generators
 exist.
 
-- [x] Create the first feature spec for `001-sdd-artifact-model`.
-- [x] Define `WorkId`, `Stage`, `RequirementId`, `DecisionId`, `TaskId`,
+- 🟢 [x] Create the first feature spec for `001-sdd-artifact-model`.
+- 🟢 [x] Define `WorkId`, `Stage`, `RequirementId`, `DecisionId`, `TaskId`,
   `EvidenceId`, `ArtifactRef`, `SchemaVersion`, source digest, and generator
   version types.
-- [x] Specify SDD-owned schemas for `.fsgg/project.yml`, `.fsgg/sdd.yml`, and
+- 🟢 [x] Specify SDD-owned schemas for `.fsgg/project.yml`, `.fsgg/sdd.yml`, and
   `.fsgg/agents.yml`.
-- [x] Specify schemas for `work/<id>` metadata, structured front matter where
+- 🟢 [x] Specify schemas for `work/<id>` metadata, structured front matter where
   used, `tasks.yml`, and `evidence.yml`.
-- [x] Define diagnostic ids for missing artifacts, malformed schema versions,
+- 🟢 [x] Define diagnostic ids for missing artifacts, malformed schema versions,
   duplicate ids, unknown references, stale generated views, and
   prose/structured mismatch.
-- [x] Define the first SDD lifecycle rule contracts for required spec sections,
+- 🟢 [x] Define the first SDD lifecycle rule contracts for required spec sections,
   plan obligations, task graph shape, evidence declarations, loaded skills, and
   test obligations.
-- [x] Express lifecycle rules in a Governance-compatible check model without
+- 🟢 [x] Express lifecycle rules in a Governance-compatible check model without
   implementing route/profile/freshness/gate semantics in SDD.
-- [x] Define conflict behavior for requirement ids, task references, decision
+- 🟢 [x] Define conflict behavior for requirement ids, task references, decision
   references, status, dependency, owner, and required-evidence disagreement.
-- [x] Add `.fsi` signatures before implementation.
-- [x] Add semantic tests for schema validation, id stability, conflict
+- 🟢 [x] Add `.fsi` signatures before implementation.
+- 🟢 [x] Add semantic tests for schema validation, id stability, conflict
   diagnostics, stale-view diagnostics, and deterministic ordering.
-- [x] Record compatibility boundaries for Governance-owned `.fsgg/policy.yml`,
+- 🟢 [x] Record compatibility boundaries for Governance-owned `.fsgg/policy.yml`,
   `.fsgg/capabilities.yml`, and `.fsgg/tooling.yml` without implementing
   Governance semantics.
 
@@ -384,8 +388,11 @@ constant) are all **merged**. **F026 `fsgg ship` host command**
 Actions branch-protection guidance, the **Phase-2 closing row** — is **🟢 landing** as a
 docs+template deliverable (no new F# code; `docs/ci/` + `scripts/check-ship-ci-guidance.sh`,
 16/16 cross-check assertions green). With it, Phase 2's product surface is complete except
-the **cache-eligibility/freshness** verdict still deferred to Phase 11 (the one remaining
-🟡 below).
+the **cache-eligibility/freshness** verdict's host emission (the one remaining 🟡 below): the
+cache-eligibility **core** (F041) and its deterministic **`cache-eligibility.json` projection**
+(F042, merged 2026-06-22) have now landed, so the evaluated verdict exists as a projection —
+only the CLI host wiring that resolves `FreshnessInputs` and embeds it into the route/audit
+JSON remains.
 The SDD→Governance handoff contract is accepted at **v1.0.0** (ADR 0002),
 but its Governance-side **consumer is still not implemented** (grep over Governance
 `src/`+`tests/` finds zero `governance-handoff` references; reader → evidence
@@ -419,10 +426,16 @@ Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
   `gates.json` **F021** shipped; profile-adjusted **enforcement** effective
   severity landed as **F023**; the `audit.json` projection **shipped** as **F025**
   `FS.GG.Governance.AuditJson` — verdict/exit-code-basis + blockers/warnings/passing
-  with full six-field enforcement carry. Remaining partial: the Phase-11 freshness
-  and evidence-reuse **cores** landed (F029/F030), but the emitted JSON does not yet
-  carry an **evaluated cache-eligibility verdict** — that host wiring is the one
-  remaining piece.)
+  with full six-field enforcement carry. The Phase-11 freshness and evidence-reuse
+  **cores** landed (F029/F030), and the per-gate **cache-eligibility roll-up core**
+  (**F041** `FS.GG.Governance.CacheEligibility`) plus its deterministic, versioned
+  **`cache-eligibility.json` projection** (**F042** `FS.GG.Governance.CacheEligibilityJson`
+  — pure, total `ofReport : CacheEligibilityReport -> string`, schema
+  `fsgg.cache-eligibility/v1`, merged 2026-06-22) have now landed in Governance — so
+  the evaluated cache-eligibility verdict **exists** as a deterministic projection.
+  Remaining partial: the **host wiring** that resolves each gate's `FreshnessInputs`
+  from the real repo, runs `evaluate`, and emits/embeds the verdict into the
+  route/audit JSON is the one remaining piece.)
 - 🟢 [x] Publish the first GitHub Actions guidance for branch protection.
   (Governance **F027** `027-branch-protection-guidance` — a docs+template deliverable, no
   new F# code: the guidance `docs/ci/github-actions-branch-protection.md` + copyable
@@ -448,18 +461,18 @@ Owner: `FS.GG.SDD`.
 Purpose: turn authored lifecycle artifacts into the single machine-readable SDD
 contract consumed by humans, agents, CI, and optional Governance tooling.
 
-- [x] Parse `.fsgg` and `work/<id>` authored sources into a `WorkModel`.
-- [x] Emit `readiness/<id>/work-model.json` with model version, source paths,
+- 🟢 [x] Parse `.fsgg` and `work/<id>` authored sources into a `WorkModel`.
+- 🟢 [x] Emit `readiness/<id>/work-model.json` with model version, source paths,
   source digests, schema versions, generator version, and diagnostics.
-- [x] Guarantee byte-stable JSON for identical source trees.
-- [x] Prefer structured graph data for execution when Markdown prose disagrees,
+- 🟢 [x] Guarantee byte-stable JSON for identical source trees.
+- 🟢 [x] Prefer structured graph data for execution when Markdown prose disagrees,
   keep prose visible, and emit a consistency diagnostic.
-- [x] Emit `requirementNotTyped` when a Markdown requirement id is missing from
+- 🟢 [x] Emit `requirementNotTyped` when a Markdown requirement id is missing from
   the normalized model.
-- [x] Emit `workModelInconsistent` when structured tasks reference unknown
+- 🟢 [x] Emit `workModelInconsistent` when structured tasks reference unknown
   requirements or decisions.
-- [x] Report stale or missing generated work models.
-- [x] Document schema migration behavior and compatibility rules.
+- 🟢 [x] Report stale or missing generated work models.
+- 🟢 [x] Document schema migration behavior and compatibility rules.
 
 Status: complete on 2026-06-19. The implementation extends
 `src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj`; verification evidence is
@@ -490,22 +503,22 @@ filesystem smoke paths for `fsgg-sdd init`, `fsgg-sdd charter`,
 `fsgg-sdd clarify`, `fsgg-sdd checklist`, `fsgg-sdd plan`, and
 `fsgg-sdd tasks`, `fsgg-sdd analyze`, and `fsgg-sdd evidence`.
 
-- [x] Add `fsgg-sdd init` for SDD skeleton creation.
-- [x] Add `fsgg-sdd charter`.
-- [x] Add `fsgg-sdd specify`.
-- [x] Add `fsgg-sdd clarify`.
-- [x] Add `fsgg-sdd checklist`.
-- [x] Add `fsgg-sdd plan`.
-- [x] Add `fsgg-sdd tasks`.
-- [x] Add `fsgg-sdd analyze`.
-- [x] Add `fsgg-sdd evidence`.
-- [x] Keep stateful or I/O command behavior behind `Model`, `Msg`, `Effect`,
+- 🟢 [x] Add `fsgg-sdd init` for SDD skeleton creation.
+- 🟢 [x] Add `fsgg-sdd charter`.
+- 🟢 [x] Add `fsgg-sdd specify`.
+- 🟢 [x] Add `fsgg-sdd clarify`.
+- 🟢 [x] Add `fsgg-sdd checklist`.
+- 🟢 [x] Add `fsgg-sdd plan`.
+- 🟢 [x] Add `fsgg-sdd tasks`.
+- 🟢 [x] Add `fsgg-sdd analyze`.
+- 🟢 [x] Add `fsgg-sdd evidence`.
+- 🟢 [x] Keep stateful or I/O command behavior behind `Model`, `Msg`, `Effect`,
   `init`, and `update` boundaries for the implemented init, charter, specify,
   clarify, checklist, plan, tasks, analyze, and evidence slices.
-- [x] Ensure command output has deterministic JSON for automation and plain text
+- 🟢 [x] Ensure command output has deterministic JSON for automation and plain text
   for humans for the implemented init, charter, specify, clarify, checklist,
   plan, tasks, analyze, and evidence slices.
-- [x] Refresh generated SDD views when possible and report stale-view
+- 🟢 [x] Refresh generated SDD views when possible and report stale-view
   diagnostics when not for the implemented charter, specify, clarify, and
   checklist/plan/tasks/analyze/evidence work-model and analysis views.
 
@@ -624,8 +637,11 @@ of F022 `fsgg route`. The GitHub Actions branch-protection guidance then shipped
 **F027** (`docs/ci`), and the **golden enforcement truth-table + `audit.json`
 fixtures** as **F028** (tests/fixtures). Still out of scope here: per-finding rule-id
 annotation (un-modeled upstream), `.fsgg/policy.yml` per-class dial map, and the
-cache-eligibility/freshness verdict in the emitted JSON (Phase 11 cores landed —
-F029/F030 — but the evaluated cache-eligibility verdict is not yet emitted).
+cache-eligibility/freshness verdict's **host emission** into the route/audit JSON
+(Phase 11 cores landed — F029/F030 — and the cache-eligibility roll-up core F041 +
+its `cache-eligibility.json` projection F042 have now landed too, so the evaluated
+verdict exists as a deterministic projection; only the CLI host wiring that resolves
+`FreshnessInputs` and embeds it remains).
 
 Legend: 🟢 complete · 🟡 partial (pure core landed; emission/wiring deferred) ·
 ⬜ not started.
@@ -746,21 +762,21 @@ boundary stale-view blocking remain Governance concerns (out of SDD scope).
 
 Purpose: make generated artifacts explicit, reproducible, and currency-checked.
 
-- [x] Define a generation manifest shape for source, generated view, renderer,
+- 🟢 [x] Define a generation manifest shape for source, generated view, renderer,
   generator version, source digest, output digest, and currency gate.
-- [x] Add an SDD refresh path for lifecycle views:
+- 🟢 [x] Add an SDD refresh path for lifecycle views:
   `work-model.json`, `summary.md`, and `agent-commands/` are regenerated;
   `analysis.json`, `verify.json`, `ship.json` are currency-reported (re-running
   their generators out of lifecycle order corrupts evidence freshness — see
   `specs/015-refresh-command/tasks.md` Implementation Notes).
-- [ ] Add Governance `fsgg refresh` for gate metadata, rule catalogs,
+- 🟡 [ ] Add Governance `fsgg refresh` for gate metadata, rule catalogs,
   capability docs, skill references, API-surface docs, route projections, and
   baselines. (Governance-owned; out of SDD scope.)
-- [x] Emit stale-view diagnostics when generated views are older than their
+- 🟢 [x] Emit stale-view diagnostics when generated views are older than their
   declared sources.
-- [ ] Block stale generated views at the configured Governance boundary.
+- 🟡 [ ] Block stale generated views at the configured Governance boundary.
   (Governance-owned; SDD reports, Governance enforces.)
-- [x] Add snapshot or golden-fixture coverage once a generated view becomes
+- 🟢 [x] Add snapshot or golden-fixture coverage once a generated view becomes
   public or tool-facing. (Covered by real-evidence `RefreshCommandTests` over
   disposable shipped project trees, per the 014 precedent.)
 
@@ -780,24 +796,24 @@ contract.
 Delivered by feature `014-agent-guidance` (`fsgg-sdd agents`). Evidence:
 `specs/014-agent-guidance/readiness/`.
 
-- [x] Generate Claude command and skill guidance from the normalized lifecycle
+- 🟢 [x] Generate Claude command and skill guidance from the normalized lifecycle
   model.
-- [x] Generate Codex skill guidance from the same lifecycle model.
-- [x] Mark generated agent files as generated and include source digests.
-- [x] Report stale generated agent guidance.
-- [x] Keep Claude and Codex behavior equivalent when workflow behavior changes
+- 🟢 [x] Generate Codex skill guidance from the same lifecycle model.
+- 🟢 [x] Mark generated agent files as generated and include source digests.
+- 🟢 [x] Report stale generated agent guidance.
+- 🟢 [x] Keep Claude and Codex behavior equivalent when workflow behavior changes
   (shared `NormalizedGuidanceModel` + `behaviorModelDigest` equivalence
   guardrail).
-- [x] Ensure agent prompts may author Markdown but do not become a second source
+- 🟢 [x] Ensure agent prompts may author Markdown but do not become a second source
   of truth (generated view only; authored sources preserved byte-identical).
-- [x] If agent guidance writes Markdown, refresh corresponding structured
+- 🟢 [x] If agent guidance writes Markdown, refresh corresponding structured
   models or report stale-view diagnostics.
 
 Exit criteria:
 
-- [x] Agent guidance is generated from structured SDD data.
-- [x] Stale guidance is detected when lifecycle contracts change.
-- [x] Agent instructions identify the same authored sources and generated views
+- 🟢 [x] Agent guidance is generated from structured SDD data.
+- 🟢 [x] Stale guidance is detected when lifecycle contracts change.
+- 🟢 [x] Agent instructions identify the same authored sources and generated views
   as the CLI.
 
 The cross-cutting `fsgg-sdd agents` command derives per-target guidance under
@@ -863,22 +879,22 @@ products.
 Purpose: expand beyond the MVP catalog into the product surfaces named by the
 design.
 
-- [ ] Expand `.fsgg/capabilities.yml` for generated products, package surfaces,
+- 🔴 [ ] Expand `.fsgg/capabilities.yml` for generated products, package surfaces,
   docs, skills, samples, design artifacts, release surfaces, baselines,
   template profiles, and evidence tags.
-- [ ] Add generated-product checks in cost tiers: structural scan,
+- 🔴 [ ] Add generated-product checks in cost tiers: structural scan,
   restore/build, focused tests, full verify, and release validation.
-- [ ] Ensure generated products can run Governance locally without monorepo
+- 🔴 [ ] Ensure generated products can run Governance locally without monorepo
   access.
-- [ ] Add package/API facts for package projects, public `.fsi` contracts,
+- 🔴 [ ] Add package/API facts for package projects, public `.fsi` contracts,
   baselines, compatibility notes, and FSI transcripts.
-- [ ] Add docs/examples facts for FsDocs pages, literate scripts, public API
+- 🔴 [ ] Add docs/examples facts for FsDocs pages, literate scripts, public API
   docs, links, and reference currency.
-- [ ] Add skill facts for skill ids, paths, references, capability mappings,
+- 🔴 [ ] Add skill facts for skill ids, paths, references, capability mappings,
   task skill lists, and optional mirrors.
-- [ ] Add design/rendering facts for token sources, generated tokens, captures,
+- 🔴 [ ] Add design/rendering facts for token sources, generated tokens, captures,
   contrast facts, control catalog, and interaction states.
-- [ ] Keep product vocabulary in adapters and capability catalogs, not in the
+- 🔴 [ ] Keep product vocabulary in adapters and capability catalogs, not in the
   Governance kernel or generic SDD code.
 
 Exit criteria:
