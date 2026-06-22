@@ -942,7 +942,7 @@ Exit criteria:
 - Audit records are sufficient to explain builds, tests, packs, template
   instantiation, git diffs, package inspection, and visual capture.
 
-### Phase 12: Agent-Reviewed Rule Guardrails — 🟡 first four rows landed (cache key, invalidation, prompt isolation, review record)
+### Phase 12: Agent-Reviewed Rule Guardrails — 🟡 first five rows landed (cache key, invalidation, prompt isolation, review record, advisory promotion)
 
 Owner: `FS.GG.Governance`; SDD and generated products may provide artifacts
 under review.
@@ -950,7 +950,7 @@ under review.
 Purpose: allow judgement-heavy checks without treating uncalibrated agent output
 as deterministic proof.
 
-Status (2026-06-22): the **first four rows are 🟢 complete** — four pure, total,
+Status (2026-06-22): the **first five rows are 🟢 complete** — five pure, total,
 deterministic cores shipped in `FS.GG.Governance`, each the analogue of a Phase-11
 core specialised to agent-reviewed verdicts and reusing the F029/F032/F035
 length-prefixed, injective encoding discipline: (1) the cache-key row — feature
@@ -975,11 +975,21 @@ assemble one completed review as an immutable record carrying the six audit fact
 response digest, final verdict) plus F034 `SensedMetadatum` held structurally apart,
 and derive a byte-stable, injective `RecordIdentity` over the reproducible facts only
 (artifacts as a set; sensed metadata excluded — the F032/F033 honesty boundary),
-reusing F037/F035/F029/F034 vocabulary verbatim. All four are purely additive (no
-merged core or `surface/*.surface.txt` baseline changed); F035 30 tests, F036 39
-tests, F037 35 tests, F038 28 tests pass (incl. determinism, purity, injectivity,
-surface-drift). The remaining two rows (advisory promotion, calibration) are
-🔴 not started.
+reusing F037/F035/F029/F034 vocabulary verbatim; and (5) the advisory-promotion row —
+feature `039-advisory-promotion-gate`, `FS.GG.Governance.AdvisoryPromotion` (the
+agent-review analogue of F023 `deriveEffectiveSeverity` / F030 `decide` / F036
+`lookup`): a pure decision core whose `decide : PromotionFacts -> PromotionDecision`
+promotes an agent-reviewed finding from advisory to `EligibleToBlock` **iff** one of
+the only three permitted bases holds — deterministic backing evidence, a
+repeated-review confidence count clearing the threshold at the inclusive
+`c >= t && c >= 2` floor, or an explicit human sign-off — naming **every** satisfied
+basis, and otherwise **defaults to advisory** with a no-hide reason; the model's own
+self-confidence is not a basis and `EligibleToBlock` is necessary-not-sufficient,
+reusing F030 `EvidenceRef` verbatim. All five are purely additive (no merged core or
+`surface/*.surface.txt` baseline changed); F035 30 tests, F036 39 tests, F037 35
+tests, F038 28 tests, F039 33 tests pass (incl. determinism, purity, injectivity,
+advisory-default, the inclusive no-single-sample comparator, surface-drift). The
+remaining row (calibration) is 🔴 not started.
 
 Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
 🔴 not started.
@@ -995,9 +1005,14 @@ Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
 - 🟢 [x] Record review requests, response digests, model identity, prompt identity,
   artifact digests, and final verdict.
   (F038 `FS.GG.Governance.ReviewRecord` — pure record-assembly + injective record-identity core.)
-- 🔴 [ ] Keep agent-reviewed findings advisory until deterministic backing
+- 🟢 [x] Keep agent-reviewed findings advisory until deterministic backing
   evidence, repeated-review confidence thresholds, or explicit human sign-off
-  exists.
+  exists. (F039 `FS.GG.Governance.AdvisoryPromotion` — pure advisory-to-blocking
+  promotion-gate decision core: `decide` is `EligibleToBlock` naming every satisfied
+  basis iff ≥1 of the three permitted bases holds (deterministic backing evidence,
+  repeated-review confidence at the inclusive `c >= t && c >= 2` floor, or human
+  sign-off), else defaults to advisory with a no-hide reason; self-confidence is not a
+  basis, eligibility is necessary-not-sufficient.)
 - 🔴 [ ] Define judge-vs-human calibration evidence before any agent-reviewed rule
   can block protected boundaries.
 
