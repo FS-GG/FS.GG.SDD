@@ -210,8 +210,11 @@ and stale-view diagnostics.
 Progress markers (status legend): 🟢 / ✅ complete · 🟡 partial (core landed;
 emission/wiring deferred) · 🔴 not started · ⬜ optional/out of scope. As of
 2026-06-22 every `FS.GG.SDD`-owned feature is complete (🟢); the remaining 🟡/🔴
-rows are Governance- or Rendering-owned follow-ons (host wiring, capability-catalog
-expansion, release gates).
+rows are Governance- or Rendering-owned follow-ons. The cache-eligibility **host
+wiring** landed 2026-06-22 (Governance F044 `FS.GG.Governance.CacheEligibilityCommand`);
+the remaining cache-eligibility piece is the **embed** into `route.json`/`audit.json`.
+Other open rows are capability-catalog expansion, `refresh`/stale-view blocking, and the
+`verify`/`release` gates.
 
 - 🟢 [x] Scaffold empty repository with Spec Kit metadata, constitution, docs, and
   Claude/Codex guidance.
@@ -433,9 +436,17 @@ Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
   — pure, total `ofReport : CacheEligibilityReport -> string`, schema
   `fsgg.cache-eligibility/v1`, merged 2026-06-22) have now landed in Governance — so
   the evaluated cache-eligibility verdict **exists** as a deterministic projection.
-  Remaining partial: the **host wiring** that resolves each gate's `FreshnessInputs`
-  from the real repo, runs `evaluate`, and emits/embeds the verdict into the
-  route/audit JSON is the one remaining piece.)
+  The per-gate **freshness-inputs resolution (join) core** landed as **F043**
+  (`FS.GG.Governance.FreshnessResolution` — `resolve : Gate list -> SensedFacts ->
+  FreshnessResolutionReport`, no-hide `Unresolved`, `candidate` bridge into F041,
+  merged 2026-06-22), and the **host wiring** landed as **F044**
+  (`FS.GG.Governance.CacheEligibilityCommand` — the `fsgg cache-eligibility` edge that
+  senses each gate's facts from the real repo, calls F043 `resolve`, runs F041
+  `evaluate` against a read-only F030 store, and emits a deterministic standalone
+  `cache-eligibility.json` (F042 verbatim) + a no-hide `cache-eligibility.unresolved.json`
+  sidecar — information, not a verdict; merged 2026-06-22). Remaining partial: only the
+  **embed** of the verdict *into* the route/audit JSON (editing the merged F020/F025
+  cores + baselines) is left — the standalone siblings ship now, the embed is the next row.)
 - 🟢 [x] Publish the first GitHub Actions guidance for branch protection.
   (Governance **F027** `027-branch-protection-guidance` — a docs+template deliverable, no
   new F# code: the guidance `docs/ci/github-actions-branch-protection.md` + copyable
