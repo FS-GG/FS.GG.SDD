@@ -942,7 +942,7 @@ Exit criteria:
 - Audit records are sufficient to explain builds, tests, packs, template
   instantiation, git diffs, package inspection, and visual capture.
 
-### Phase 12: Agent-Reviewed Rule Guardrails — 🟡 opening row landed (core pure key shipped)
+### Phase 12: Agent-Reviewed Rule Guardrails — 🟡 first three rows landed (cache key, invalidation, prompt isolation)
 
 Owner: `FS.GG.Governance`; SDD and generated products may provide artifacts
 under review.
@@ -950,18 +950,28 @@ under review.
 Purpose: allow judgement-heavy checks without treating uncalibrated agent output
 as deterministic proof.
 
-Status (2026-06-21): the **phase-opening cache-key row is 🟢 complete** — feature
-`035-agent-review-cache-key` shipped the pure, total, deterministic core
-`FS.GG.Governance.AgentReviewKey` (the direct analogue of F029 `FreshnessKey`,
-specialised to agent-reviewed verdicts): `compute`/`matches`/`diff`/`value` over
-the seven judge / prompt / check / artifact inputs, in the byte-stable,
-length-prefixed, injective F029/F032/F033 encoding discipline, reusing F029
-`RuleHash`/`ArtifactHash` verbatim. 30 tests pass (compute, set-semantics, diff,
-injectivity, determinism, purity, surface-drift), the worked-example key is
-byte-pinned, and the new project + baseline are purely additive (no merged core
-or `surface/*.surface.txt` baseline changed). The remaining five rows
-(verdict-store invalidation, prompt isolation, review records, advisory promotion,
-calibration) are 🔴 not started.
+Status (2026-06-22): the **first three rows are 🟢 complete** — three pure, total,
+deterministic cores shipped in `FS.GG.Governance`, each the analogue of a Phase-11
+core specialised to agent-reviewed verdicts and reusing the F029/F032/F035
+length-prefixed, injective encoding discipline: (1) the cache-key row — feature
+`035-agent-review-cache-key`, `FS.GG.Governance.AgentReviewKey` (analogue of F029
+`FreshnessKey`): `compute`/`matches`/`diff`/`value` over the seven judge / prompt /
+check / artifact inputs, reusing F029 `RuleHash`/`ArtifactHash` verbatim; (2) the
+verdict-store invalidation row — feature `036-agent-verdict-invalidation`,
+`FS.GG.Governance.VerdictReuse` (analogue of F030 `EvidenceReuse`): `lookup`/`record`
+over a cached-verdict store, Valid iff an entry F035-`matches` on every input, else
+`Invalidated` with a located cause (`NoCachedVerdict` or `InputsChanged` naming the
+moved inputs), reusing F035 `AgentReviewInputs`/`matches`/`diff` verbatim; (3) the
+prompt-isolation row — feature `037-reviewer-prompt-isolation`,
+`FS.GG.Governance.PromptIsolation` (structural sibling of F035): `assemble`/`render`
+keep trusted reviewer instructions and untrusted governed-artifact content in
+separate channels, carry each artifact as a bounded excerpt or a digest, and render
+the two channels with an injective, unspoofable data fence, reusing F035
+`QuestionText` and F029 `ArtifactHash` verbatim. All three are purely additive (no
+merged core or `surface/*.surface.txt` baseline changed); F035 30 tests, F036 39
+tests, F037 35 tests pass (incl. determinism, purity, injectivity, surface-drift).
+The remaining three rows (review records, advisory promotion, calibration) are
+🔴 not started.
 
 Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
 🔴 not started.
@@ -969,9 +979,11 @@ Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
 - 🟢 [x] Cache agent-reviewed verdicts by model id, model version, reviewer prompt
   hash, model configuration, check hash, artifact hashes, and question text.
   (F035 `FS.GG.Governance.AgentReviewKey` — pure key core.)
-- 🔴 [ ] Invalidate cached verdicts when judge identity or prompt identity changes.
-- 🔴 [ ] Separate governed artifact content from reviewer instructions and pass it
+- 🟢 [x] Invalidate cached verdicts when judge identity or prompt identity changes.
+  (F036 `FS.GG.Governance.VerdictReuse` — pure verdict-store + invalidation-decision core.)
+- 🟢 [x] Separate governed artifact content from reviewer instructions and pass it
   as bounded data or digests.
+  (F037 `FS.GG.Governance.PromptIsolation` — pure channel-separation + bounded-capture + injective-render core.)
 - 🔴 [ ] Record review requests, response digests, model identity, prompt identity,
   artifact digests, and final verdict.
 - 🔴 [ ] Keep agent-reviewed findings advisory until deterministic backing
