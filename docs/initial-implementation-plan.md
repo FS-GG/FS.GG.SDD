@@ -211,10 +211,18 @@ Progress markers (status legend): 🟢 / ✅ complete · 🟡 partial (core land
 emission/wiring deferred) · 🔴 not started · ⬜ optional/out of scope. As of
 2026-06-22 every `FS.GG.SDD`-owned feature is complete (🟢); the remaining 🟡/🔴
 rows are Governance- or Rendering-owned follow-ons. The cache-eligibility **host
-wiring** landed 2026-06-22 (Governance F044 `FS.GG.Governance.CacheEligibilityCommand`);
-the remaining cache-eligibility piece is the **embed** into `route.json`/`audit.json`.
-Other open rows are capability-catalog expansion, `refresh`/stale-view blocking, and the
-`verify`/`release` gates.
+wiring** landed 2026-06-22 (Governance F044 `FS.GG.Governance.CacheEligibilityCommand`),
+the verdict **embed** into `route.json`/`audit.json` landed 2026-06-22 (F045
+`FS.GG.Governance.RouteJson`/`AuditJson`), and **real** cache-eligibility verdicts now
+flow from `fsgg route`/`fsgg ship` themselves (F046 `FS.GG.Governance.FreshnessSensing`/
+`RouteCommand`/`ShipCommand`) — so the cache-eligibility thread is end-to-end. The
+evidence-reuse store **write half** (serialise + bounded retention + superseded-world
+pruning, as a pure core) landed 2026-06-22 (F047 `FS.GG.Governance.EvidenceReuseStore`);
+the one remaining cache-eligibility piece is the **impure on-disk store write** (atomic
+temp+rename persistence wired into `fsgg route`/`fsgg ship`, so the cache actually warms
+between runs) plus real evidence-reference capture from gate execution. Other open rows
+are capability-catalog expansion, `refresh`/stale-view blocking, and the `verify`/`release`
+gates.
 
 - 🟢 [x] Scaffold empty repository with Spec Kit metadata, constitution, docs, and
   Claude/Codex guidance.
@@ -423,7 +431,7 @@ Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
   `fsgg ship --mode gate --profile standard --json`. (Route selection **F019** +
   `fsgg route` host command **F022** landed; the `fsgg ship --mode gate` verdict
   rollup landed as **F024** `FS.GG.Governance.Ship`.)
-- 🟡 [ ] Emit deterministic route and audit JSON with selected gates, matched
+- 🟢 [x] Emit deterministic route and audit JSON with selected gates, matched
   rules, unmatched governed paths, expected artifacts, cost, cache eligibility,
   profile-adjusted enforcement, and exit-code basis. (`route.json` **F020** +
   `gates.json` **F021** shipped; profile-adjusted **enforcement** effective
@@ -434,19 +442,27 @@ Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
   (**F041** `FS.GG.Governance.CacheEligibility`) plus its deterministic, versioned
   **`cache-eligibility.json` projection** (**F042** `FS.GG.Governance.CacheEligibilityJson`
   — pure, total `ofReport : CacheEligibilityReport -> string`, schema
-  `fsgg.cache-eligibility/v1`, merged 2026-06-22) have now landed in Governance — so
-  the evaluated cache-eligibility verdict **exists** as a deterministic projection.
-  The per-gate **freshness-inputs resolution (join) core** landed as **F043**
+  `fsgg.cache-eligibility/v1`, merged 2026-06-22) landed in Governance. The per-gate
+  **freshness-inputs resolution (join) core** landed as **F043**
   (`FS.GG.Governance.FreshnessResolution` — `resolve : Gate list -> SensedFacts ->
   FreshnessResolutionReport`, no-hide `Unresolved`, `candidate` bridge into F041,
-  merged 2026-06-22), and the **host wiring** landed as **F044**
+  merged 2026-06-22), and the cache-eligibility **host wiring** landed as **F044**
   (`FS.GG.Governance.CacheEligibilityCommand` — the `fsgg cache-eligibility` edge that
   senses each gate's facts from the real repo, calls F043 `resolve`, runs F041
   `evaluate` against a read-only F030 store, and emits a deterministic standalone
   `cache-eligibility.json` (F042 verbatim) + a no-hide `cache-eligibility.unresolved.json`
-  sidecar — information, not a verdict; merged 2026-06-22). Remaining partial: only the
-  **embed** of the verdict *into* the route/audit JSON (editing the merged F020/F025
-  cores + baselines) is left — the standalone siblings ship now, the embed is the next row.)
+  sidecar; merged 2026-06-22). The verdict **embed** *into* the route/audit JSON then
+  landed as **F045** (`FS.GG.Governance.RouteJson`/`AuditJson` now carry the per-gate
+  `cacheEligibility` verdict, merged 2026-06-22), and **real** cache-eligibility verdicts
+  now flow from the host commands themselves as **F046** (`FS.GG.Governance.FreshnessSensing`
+  shared sensing edge + `RouteCommand`/`ShipCommand` emitting real verdicts from `fsgg
+  route`/`fsgg ship`, merged 2026-06-22) — so route/audit JSON carry a real, embedded,
+  recompute-safe cache-eligibility verdict end-to-end. The store **write half** (so the
+  cache can warm across runs) landed as the pure core **F047**
+  (`FS.GG.Governance.EvidenceReuseStore` — `serialise` the byte-stable inverse of the F046
+  reader + bounded `retain` + superseded-world `prune`, all pure/total/recompute-safe,
+  merged 2026-06-22); the impure on-disk store **write wiring** into `fsgg route`/`fsgg
+  ship` and real evidence-reference capture are the remaining deferred host rows.)
 - 🟢 [x] Publish the first GitHub Actions guidance for branch protection.
   (Governance **F027** `027-branch-protection-guidance` — a docs+template deliverable, no
   new F# code: the guidance `docs/ci/github-actions-branch-protection.md` + copyable
@@ -649,10 +665,13 @@ of F022 `fsgg route`. The GitHub Actions branch-protection guidance then shipped
 fixtures** as **F028** (tests/fixtures). Still out of scope here: per-finding rule-id
 annotation (un-modeled upstream), `.fsgg/policy.yml` per-class dial map, and the
 cache-eligibility/freshness verdict's **host emission** into the route/audit JSON
-(Phase 11 cores landed — F029/F030 — and the cache-eligibility roll-up core F041 +
-its `cache-eligibility.json` projection F042 have now landed too, so the evaluated
-verdict exists as a deterministic projection; only the CLI host wiring that resolves
-`FreshnessInputs` and embeds it remains).
+(Phase 11 cores landed — F029/F030 — the cache-eligibility roll-up core F041 + its
+`cache-eligibility.json` projection F042, the freshness-inputs resolution join F043, the
+`fsgg cache-eligibility` host F044, the verdict **embed** into route/audit JSON F045, and
+**real** verdicts from `fsgg route`/`fsgg ship` F046 have all now landed — so route/audit
+JSON carry a real, embedded, recompute-safe cache-eligibility verdict end-to-end. The
+evidence-reuse store **write half** landed as F047; only the impure on-disk store-write
+wiring that warms the cache between runs remains).
 
 Legend: 🟢 complete · 🟡 partial (pure core landed; emission/wiring deferred) ·
 ⬜ not started.
@@ -933,7 +952,11 @@ sensed-metadata marking + flagged-rendering core (**F034**
   generator version, base/head, environment class, and output digest.
   _(F029 — `FS.GG.Governance.FreshnessKey`, merged.)_
 - ✅ Cache reusable evidence only when all freshness inputs match.
-  _(F030 — `FS.GG.Governance.EvidenceReuse`, merged.)_
+  _(F030 — `FS.GG.Governance.EvidenceReuse` reuse-decision core, merged; the store
+  **write half** — `serialise`/`retain`/`prune`, the byte-stable inverse of the F046
+  reader plus bounded retention + superseded-world pruning, all pure/total/recompute-safe
+  — landed as F047 `FS.GG.Governance.EvidenceReuseStore`, merged 2026-06-22. The impure
+  on-disk write wiring that warms the cache between runs is the remaining deferred host row.)_
 - ✅ Explain high-cost routes with matched rule, changed path, affected
   capability, selected gate, cost, and cheaper local alternative.
   _(F031 — `FS.GG.Governance.RouteExplain`, merged.)_
