@@ -419,8 +419,10 @@ Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
   `gates.json` **F021** shipped; profile-adjusted **enforcement** effective
   severity landed as **F023**; the `audit.json` projection **shipped** as **F025**
   `FS.GG.Governance.AuditJson` — verdict/exit-code-basis + blockers/warnings/passing
-  with full six-field enforcement carry. Remaining partial: **cache eligibility /
-  freshness** verdict is still deferred to Phase 11.)
+  with full six-field enforcement carry. Remaining partial: the Phase-11 freshness
+  and evidence-reuse **cores** landed (F029/F030), but the emitted JSON does not yet
+  carry an **evaluated cache-eligibility verdict** — that host wiring is the one
+  remaining piece.)
 - 🟢 [x] Publish the first GitHub Actions guidance for branch protection.
   (Governance **F027** `027-branch-protection-guidance` — a docs+template deliverable, no
   new F# code: the guidance `docs/ci/github-actions-branch-protection.md` + copyable
@@ -576,7 +578,7 @@ Exit criteria:
 - Commands write authored sources and refresh or diagnose generated views.
 - JSON output is deterministic and plain text is presentation only.
 
-### Phase 5: Route Parity, Profiles, And Enforcement Fixtures — 🟡 IN PROGRESS
+### Phase 5: Route Parity, Profiles, And Enforcement Fixtures — 🟢 core + ship + fixtures shipped (per-finding rule-id pending upstream)
 
 Owner: `FS.GG.Governance`.
 
@@ -613,13 +615,17 @@ composite order; every item tagged `kind` with identity + the six-field enforcem
 carry; emit-only, no new dependency). Evidence:
 `specs/025-audit-json-projection/readiness/` (21 green tests: projection,
 determinism + permutation-invariance + version/field-order + exclusion sweep,
-six-field/no-hide carry, totality). Update (rechecked 2026-06-21, `main` @
-`558ebd9`): the **`fsgg ship` host command** that wires the F024 rollup + F025
-`audit.json` to a CLI surface has now started as **F026
-`FS.GG.Governance.ShipCommand`** — **🟡 in progress** (spec authored under
-`specs/026-fsgg-ship-command/`; src + tests untracked, not yet merged). Still out
-of scope here: rule-id annotation, `.fsgg/policy.yml` per-class dial map, base/head
-route parity, and the cache-eligibility/freshness verdict (Phase 11).
+six-field/no-hide carry, totality). Update (rechecked 2026-06-22): the **`fsgg ship` host command** that wires the F024
+rollup + F025 `audit.json` to a CLI surface has now **shipped** as **F026
+`FS.GG.Governance.ShipCommand`** (merged in Governance @ `8fd9517`; 44 green tests) —
+snapshot→load catalog→route→select→`Ship.rollup`→emit `audit.json`→map `ExitCodeBasis`
+to a blocking process exit (`Clean → 0`, `Blocked → 1`), the protected-branch sibling
+of F022 `fsgg route`. The GitHub Actions branch-protection guidance then shipped as
+**F027** (`docs/ci`), and the **golden enforcement truth-table + `audit.json`
+fixtures** as **F028** (tests/fixtures). Still out of scope here: per-finding rule-id
+annotation (un-modeled upstream), `.fsgg/policy.yml` per-class dial map, and the
+cache-eligibility/freshness verdict in the emitted JSON (Phase 11 cores landed —
+F029/F030 — but the evaluated cache-eligibility verdict is not yet emitted).
 
 Legend: 🟢 complete · 🟡 partial (pure core landed; emission/wiring deferred) ·
 ⬜ not started.
@@ -655,15 +661,17 @@ explainable and testable.
   both, SC-005), every item is rendered with no section overlap and none dropped
   (SC-001), and the exclusion sweep proves no profile/dial value can suppress a
   field (SC-007). The rule-hash guarantee follows once rule-id is modeled upstream.)
-- ⬜ [ ] Add scoped `--paths` authoring and complete base/head route parity with
-  CI.
-- 🟡 [ ] Generate golden enforcement truth-table fixtures covering routine versus
+- 🟢 [x] Add scoped `--paths` authoring and complete base/head route parity with
+  CI. (F022 `fsgg route` + F026 `fsgg ship` share the `--paths`/`--since`/default
+  base-head scope surface.)
+- 🟢 [x] Generate golden enforcement truth-table fixtures covering routine versus
   fenced routes, base severity, rule tier, all modes, all profiles, all maturity
-  levels, and unknown governed paths. (F023 covers the full base-severity ×
-  maturity × mode × profile truth table as enumerated + property tests; golden
-  fixture files and the route-level routine/fenced/tier/unknown-path dimensions
-  are deferred.)
-- ⬜ [ ] Add representative JSON snapshots for combinations that alter blocking.
+  levels, and unknown governed paths. (F028 — golden enforcement truth-table
+  fixtures over the enforcement dials, building on the F023 base-severity × maturity
+  × mode × profile truth table; this closed Phase 5.)
+- 🟢 [x] Add representative JSON snapshots for combinations that alter blocking.
+  (F028 — golden `audit.json` snapshots over the blocking/relaxing combinations,
+  alongside the F025 snapshot tests.)
 
 Exit criteria:
 
@@ -942,7 +950,7 @@ Exit criteria:
 - Audit records are sufficient to explain builds, tests, packs, template
   instantiation, git diffs, package inspection, and visual capture.
 
-### Phase 12: Agent-Reviewed Rule Guardrails — 🟡 first five rows landed (cache key, invalidation, prompt isolation, review record, advisory promotion)
+### Phase 12: Agent-Reviewed Rule Guardrails — 🟢 complete (cache key, invalidation, prompt isolation, review record, advisory promotion, calibration)
 
 Owner: `FS.GG.Governance`; SDD and generated products may provide artifacts
 under review.
@@ -950,7 +958,7 @@ under review.
 Purpose: allow judgement-heavy checks without treating uncalibrated agent output
 as deterministic proof.
 
-Status (2026-06-22): the **first five rows are 🟢 complete** — five pure, total,
+Status (2026-06-22): **all six rows are 🟢 complete** — six pure, total,
 deterministic cores shipped in `FS.GG.Governance`, each the analogue of a Phase-11
 core specialised to agent-reviewed verdicts and reusing the F029/F032/F035
 length-prefixed, injective encoding discipline: (1) the cache-key row — feature
@@ -985,11 +993,22 @@ repeated-review confidence count clearing the threshold at the inclusive
 `c >= t && c >= 2` floor, or an explicit human sign-off — naming **every** satisfied
 basis, and otherwise **defaults to advisory** with a no-hide reason; the model's own
 self-confidence is not a basis and `EligibleToBlock` is necessary-not-sufficient,
-reusing F030 `EvidenceRef` verbatim. All five are purely additive (no merged core or
+reusing F030 `EvidenceRef` verbatim; and (6) the calibration row — feature
+`040-calibration-evidence-gate`, `FS.GG.Governance.Calibration` (the agent-review
+analogue of F023 `deriveEffectiveSeverity` / F030 `decide` / F036 `lookup` / F039
+`decide`): a pure decision core whose `decide : CalibrationThresholds ->
+CalibrationEvidence -> CalibrationDecision` is `Calibrated` naming the satisfied
+metrics **iff** the judge-vs-human comparison-sample count clears the effective minimum
+`max(MinimumSamples, 2)` (a lone sample never calibrates) **and** the observed
+agreement clears the threshold at the inclusive `>=` floor, otherwise **defaults to
+uncalibrated** with a no-hide reason; the model's own self-confidence is not an input
+and a `Calibrated` decision is necessary-not-sufficient (the rule-pack-level
+prerequisite for moving beyond advisory maturity), reusing F035 model/prompt identity
+and F038 `RecordedVerdict` verbatim. All six are purely additive (no merged core or
 `surface/*.surface.txt` baseline changed); F035 30 tests, F036 39 tests, F037 35
-tests, F038 28 tests, F039 33 tests pass (incl. determinism, purity, injectivity,
-advisory-default, the inclusive no-single-sample comparator, surface-drift). The
-remaining row (calibration) is 🔴 not started.
+tests, F038 28 tests, F039 33 tests, F040 27 tests pass (incl. determinism, purity,
+injectivity, advisory-default, uncalibrated-default, the inclusive no-single-sample
+comparators, surface-drift). **Phase 12 is closed.**
 
 Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
 🔴 not started.
@@ -1013,8 +1032,19 @@ Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
   repeated-review confidence at the inclusive `c >= t && c >= 2` floor, or human
   sign-off), else defaults to advisory with a no-hide reason; self-confidence is not a
   basis, eligibility is necessary-not-sufficient.)
-- 🔴 [ ] Define judge-vs-human calibration evidence before any agent-reviewed rule
-  can block protected boundaries.
+- 🟢 [x] Define judge-vs-human calibration evidence before any agent-reviewed rule
+  can block protected boundaries. (F040 `FS.GG.Governance.Calibration` — pure
+  calibration-evidence decision core: `decide : CalibrationThresholds ->
+  CalibrationEvidence -> CalibrationDecision` is `Calibrated` naming the satisfied
+  metrics iff the judge-vs-human comparison-sample count clears the effective minimum
+  `max(MinimumSamples, 2)` (a lone sample never calibrates) and the observed agreement
+  clears the threshold at the inclusive `>=` floor, else defaults to `Uncalibrated`
+  with a no-hide reason (`NoCalibrationEvidence`/`TooFewSamples`/`AgreementBelowThreshold`);
+  the model's own self-confidence is not an input, and a `Calibrated` decision is
+  necessary-not-sufficient — calibration is the rule-pack-level prerequisite that
+  composes with F039 per-finding eligibility and the F023/F024 enforcement machinery
+  before a protected boundary can block. Reuses F035 model/prompt identity + F038
+  `RecordedVerdict` verbatim.)
 
 Exit criteria:
 
