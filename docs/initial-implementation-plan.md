@@ -209,20 +209,30 @@ and stale-view diagnostics.
 
 Progress markers (status legend): 🟢 / ✅ complete · 🟡 partial (core landed;
 emission/wiring deferred) · 🔴 not started · ⬜ optional/out of scope. As of
-2026-06-22 every `FS.GG.SDD`-owned feature is complete (🟢); the remaining 🟡/🔴
-rows are Governance- or Rendering-owned follow-ons. The cache-eligibility **host
-wiring** landed 2026-06-22 (Governance F044 `FS.GG.Governance.CacheEligibilityCommand`),
-the verdict **embed** into `route.json`/`audit.json` landed 2026-06-22 (F045
-`FS.GG.Governance.RouteJson`/`AuditJson`), and **real** cache-eligibility verdicts now
-flow from `fsgg route`/`fsgg ship` themselves (F046 `FS.GG.Governance.FreshnessSensing`/
-`RouteCommand`/`ShipCommand`) — so the cache-eligibility thread is end-to-end. The
-evidence-reuse store **write half** (serialise + bounded retention + superseded-world
-pruning, as a pure core) landed 2026-06-22 (F047 `FS.GG.Governance.EvidenceReuseStore`);
-the one remaining cache-eligibility piece is the **impure on-disk store write** (atomic
-temp+rename persistence wired into `fsgg route`/`fsgg ship`, so the cache actually warms
-between runs) plus real evidence-reference capture from gate execution. Other open rows
-are capability-catalog expansion, `refresh`/stale-view blocking, and the `verify`/`release`
-gates.
+2026-06-25 every `FS.GG.SDD`-owned feature is complete (🟢); the remaining 🟡/🔴
+rows are Governance- or Rendering-owned follow-ons, and the Governance frontier
+has advanced well past the cache-eligibility thread. The cache-eligibility chain is
+now **end-to-end on disk**: the host wiring (F044), the verdict embed into
+`route.json`/`audit.json` (F045), real verdicts from `fsgg route`/`fsgg ship` (F046),
+and the pure store write half (F047) were joined by the **impure on-disk store write**
+when **F052** (`FS.GG.Governance.GateRun`, merged 2026-06-24) wired gate execution into
+`fsgg route`/`fsgg ship`, captured real evidence references, and **persisted the grown
+reuse store** between runs — so the only cache-eligibility deferral is closed. Beyond it,
+Governance also closed three other tracked frontiers: the **Governance release/verify
+gates** — `fsgg release` (F055, five exit codes) over the six release-rule families
+(F053 rules + F054 sensing) plus the publication-evidence/attestation cores (F26), and
+`fsgg verify` (F056, deterministic `verify.json`, five exit codes); the **Governance
+`fsgg refresh` host** (F057, generation-manifest currency + regeneration + `refresh.json`);
+and most of **capability-catalog / product-adapter expansion** (F23 `capabilities.yml`
+schemaVersion 2 with six product-surface kinds + cost-tiered checks; F24 package/docs/
+skills/design deterministic surface checks). Newly landed and not previously tracked here:
+F25 cost-budget + budgeted evidence reuse, and F27 human projections + watch/tui over the
+report objects. The genuinely open rows are now: stale-view **boundary blocking** at the
+Governance gate (Phase 7), the deeper Phase-10 adapter rows (generated-product
+local-run, full per-surface fact sets), the un-modeled per-finding **rule id** (Phase 5),
+and — the last cross-repo integration — the **Governance-side SDD→Governance handoff
+consumer**, which is still unimplemented (a grep over Governance `src/`/`tests/` finds zero
+`governance-handoff` references), so the v1.0.0 seam (ADR 0002) stays one-directional.
 
 - 🟢 [x] Scaffold empty repository with Spec Kit metadata, constitution, docs, and
   Claude/Codex guidance.
@@ -326,8 +336,14 @@ gates.
 
 The SDD-owned implementation slice (Phases 1, 3, 4, 6, 7, 8, 9, and 13) is
 complete as of 2026-06-21. All remaining open roadmap items are **Governance-owned**
-(Phases 2, 5, 10, 11, 12, and the Governance rows of Phase 13) and are implemented
-in the sibling `FS.GG.Governance` repository, not here.
+and are implemented in the sibling `FS.GG.Governance` repository, not here. As of
+2026-06-25 the Governance frontier has closed Phases 11 and 12 and the Governance
+release/verify/refresh rows of Phases 7 and 13, and shipped the product-surface
+vocabulary + checks of Phase 10 (F23/F24). The narrowed open set is: Phase 10's
+deeper adapter facts + generated-product local-run, Phase 7's stale-view **boundary
+blocking**, Phase 5's un-modeled per-finding **rule id**, and — the only cross-repo
+integration left — the **Governance-side SDD→Governance handoff consumer** (still
+unimplemented; the v1.0.0 seam from ADR 0002 stays one-directional).
 
 ### Phase 1: SDD Artifact Model
 
@@ -462,7 +478,10 @@ Legend: 🟢 complete · 🟡 partial (core landed; emission/wiring deferred) ·
   (`FS.GG.Governance.EvidenceReuseStore` — `serialise` the byte-stable inverse of the F046
   reader + bounded `retain` + superseded-world `prune`, all pure/total/recompute-safe,
   merged 2026-06-22); the impure on-disk store **write wiring** into `fsgg route`/`fsgg
-  ship` and real evidence-reference capture are the remaining deferred host rows.)
+  ship` and real evidence-reference capture then **landed as F052**
+  `FS.GG.Governance.GateRun` (merged 2026-06-24) — gate execution in route/ship captures
+  real evidence references and persists the grown reuse store, so the cache-eligibility
+  thread is fully closed end-to-end.)
 - 🟢 [x] Publish the first GitHub Actions guidance for branch protection.
   (Governance **F027** `027-branch-protection-guidance` — a docs+template deliverable, no
   new F# code: the guidance `docs/ci/github-actions-branch-protection.md` + copyable
@@ -670,8 +689,9 @@ cache-eligibility/freshness verdict's **host emission** into the route/audit JSO
 `fsgg cache-eligibility` host F044, the verdict **embed** into route/audit JSON F045, and
 **real** verdicts from `fsgg route`/`fsgg ship` F046 have all now landed — so route/audit
 JSON carry a real, embedded, recompute-safe cache-eligibility verdict end-to-end. The
-evidence-reuse store **write half** landed as F047; only the impure on-disk store-write
-wiring that warms the cache between runs remains).
+evidence-reuse store **write half** landed as F047, and the impure on-disk store-write
+wiring + real evidence-reference capture landed as F052 `FS.GG.Governance.GateRun`
+(merged 2026-06-24), so the cache warms between runs and the thread is fully closed).
 
 Legend: 🟢 complete · 🟡 partial (pure core landed; emission/wiring deferred) ·
 ⬜ not started.
@@ -787,8 +807,9 @@ Exit criteria:
 Owner: Shared.
 
 Status: SDD-owned `fsgg-sdd refresh` complete on 2026-06-20 — see
-`specs/015-refresh-command/readiness/`. Governance-owned `fsgg refresh` and
-boundary stale-view blocking remain Governance concerns (out of SDD scope).
+`specs/015-refresh-command/readiness/`. Governance-owned `fsgg refresh` has now
+**landed** (F057 `FS.GG.Governance.RefreshCommand`, merged 2026-06-25); only
+boundary stale-view **blocking** remains a Governance concern (out of SDD scope).
 
 Purpose: make generated artifacts explicit, reproducible, and currency-checked.
 
@@ -799,9 +820,16 @@ Purpose: make generated artifacts explicit, reproducible, and currency-checked.
   `analysis.json`, `verify.json`, `ship.json` are currency-reported (re-running
   their generators out of lifecycle order corrupts evidence freshness — see
   `specs/015-refresh-command/tasks.md` Implementation Notes).
-- 🟡 [ ] Add Governance `fsgg refresh` for gate metadata, rule catalogs,
+- 🟢 [x] Add Governance `fsgg refresh` for gate metadata, rule catalogs,
   capability docs, skill references, API-surface docs, route projections, and
-  baselines. (Governance-owned; out of SDD scope.)
+  baselines. (Governance-owned; out of SDD scope. Landed as **F057**
+  `FS.GG.Governance.RefreshCommand`/`RefreshJson`, merged 2026-06-25 — reads the
+  row-local `.fsgg/refresh.yml` generation manifest, senses per-view source digests +
+  generator version, decides currency by reusing the F029 `FreshnessKey` comparator,
+  regenerates exactly the stale views through their declared generator at the F051/F052
+  process port, records refreshed provenance to a generated `.fsgg/refresh.lock.json`,
+  renders the summary + an optional deterministic `refresh.json`, and exits among six
+  distinguishable codes.)
 - 🟢 [x] Emit stale-view diagnostics when generated views are older than their
   declared sources.
 - 🟡 [ ] Block stale generated views at the configured Governance boundary.
@@ -901,7 +929,7 @@ Exit criteria:
 - Existing Spec Kit users have a documented migration path.
 - Bootstrap does not assume FS.GG.Rendering, Governance, or a monorepo checkout.
 
-### Phase 10: Capability Catalog And Product Adapter Expansion
+### Phase 10: Capability Catalog And Product Adapter Expansion — 🟡 surface vocabulary + checks shipped (deeper adapter facts + local-run pending)
 
 Owner: `FS.GG.Governance`, with product facts from FS.GG.Rendering and generated
 products.
@@ -909,23 +937,41 @@ products.
 Purpose: expand beyond the MVP catalog into the product surfaces named by the
 design.
 
-- 🔴 [ ] Expand `.fsgg/capabilities.yml` for generated products, package surfaces,
+Status (2026-06-25, checked against `FS.GG.Governance` `main`): the **product-surface
+vocabulary and the first deterministic surface checks have shipped**. **F23**
+(`d0b7c7e` Merge) raised `.fsgg/capabilities.yml` to schemaVersion 2 (per-file) with the
+six product-surface kinds (package/docs/skill/design/sampleApp/generatedProduct),
+optional surface attributes (evidenceTag/templateProfile/baseline), and cost-tiered
+checks; the new pure `FS.GG.Governance.ProductSurfaces` leaf classifies each routed path
+to its surface (precedence + ordinal tiebreak) and selects a cost tier, with `fsgg route`
+surfacing the classification additively (route.json stays `fsgg.route/v2`). **F24** then
+added the package/docs/skills/design **deterministic surface checks**. The deeper
+per-surface fact sets and out-of-monorepo local-run remain.
+
+Legend: 🟢 complete · 🟡 partial · 🔴 not started.
+
+- 🟢 [x] Expand `.fsgg/capabilities.yml` for generated products, package surfaces,
   docs, skills, samples, design artifacts, release surfaces, baselines,
-  template profiles, and evidence tags.
-- 🔴 [ ] Add generated-product checks in cost tiers: structural scan,
-  restore/build, focused tests, full verify, and release validation.
+  template profiles, and evidence tags. (**F23** — schemaVersion 2 with the six
+  product-surface kinds + optional surface attributes.)
+- 🟢 [x] Add generated-product checks in cost tiers: structural scan,
+  restore/build, focused tests, full verify, and release validation. (**F23**
+  cost-tiered checks + **F24** deterministic surface checks.)
 - 🔴 [ ] Ensure generated products can run Governance locally without monorepo
   access.
-- 🔴 [ ] Add package/API facts for package projects, public `.fsi` contracts,
-  baselines, compatibility notes, and FSI transcripts.
-- 🔴 [ ] Add docs/examples facts for FsDocs pages, literate scripts, public API
-  docs, links, and reference currency.
-- 🔴 [ ] Add skill facts for skill ids, paths, references, capability mappings,
-  task skill lists, and optional mirrors.
-- 🔴 [ ] Add design/rendering facts for token sources, generated tokens, captures,
-  contrast facts, control catalog, and interaction states.
-- 🔴 [ ] Keep product vocabulary in adapters and capability catalogs, not in the
-  Governance kernel or generic SDD code.
+- 🟢 [x] Add package/API facts for package projects, public `.fsi` contracts,
+  baselines, compatibility notes, and FSI transcripts. (**F24** package surface
+  checks; deeper fact capture may still extend.)
+- 🟢 [x] Add docs/examples facts for FsDocs pages, literate scripts, public API
+  docs, links, and reference currency. (**F24** docs surface checks.)
+- 🟢 [x] Add skill facts for skill ids, paths, references, capability mappings,
+  task skill lists, and optional mirrors. (**F24** skills surface checks.)
+- 🟢 [x] Add design/rendering facts for token sources, generated tokens, captures,
+  contrast facts, control catalog, and interaction states. (**F24** design surface
+  checks; the full Rendering-supplied fact set may still extend.)
+- 🟢 [x] Keep product vocabulary in adapters and capability catalogs, not in the
+  Governance kernel or generic SDD code. (**F23** isolated the vocabulary in the pure
+  `FS.GG.Governance.ProductSurfaces` leaf, not the kernel.)
 
 Exit criteria:
 
@@ -956,7 +1002,10 @@ sensed-metadata marking + flagged-rendering core (**F034**
   **write half** — `serialise`/`retain`/`prune`, the byte-stable inverse of the F046
   reader plus bounded retention + superseded-world pruning, all pure/total/recompute-safe
   — landed as F047 `FS.GG.Governance.EvidenceReuseStore`, merged 2026-06-22. The impure
-  on-disk write wiring that warms the cache between runs is the remaining deferred host row.)_
+  on-disk write wiring that warms the cache between runs then **landed as F052**
+  `FS.GG.Governance.GateRun` (merged 2026-06-24) — it executes the selected gates in
+  `fsgg route`/`fsgg ship`, captures their real evidence references, and persists the
+  grown reuse store between runs, closing the last cache deferral.)_
 - ✅ Explain high-cost routes with matched rule, changed path, affected
   capability, selected gate, cost, and cheaper local alternative.
   _(F031 — `FS.GG.Governance.RouteExplain`, merged.)_
@@ -1102,7 +1151,7 @@ Exit criteria:
 - Missing or stale reviews are visible findings.
 - Protected-branch blocking does not depend on uncalibrated agent judgement.
 
-### Phase 13: Release And Distribution Readiness — 🟢 SDD slice complete (Governance release gates pending)
+### Phase 13: Release And Distribution Readiness — 🟢 SDD slice complete; Governance release/verify gates now landed
 
 Owner: `FS.GG.Governance` for release gates; `FS.GG.SDD` for SDD package and
 CLI distribution once its lifecycle surface is stable.
@@ -1115,7 +1164,10 @@ Status (2026-06-21): the **SDD-owned distribution slice is complete** — featur
 `020-exhaustive-validation` shipped the scheduled exhaustive validation harness
 (`fsgg-sdd validate`), and feature `021-rich-validation-report` closed the last
 SDD-owned deferral by making `validate --rich` render the `validation-report`
-richly. The remaining rows are **Governance-owned release/provenance gates**.
+richly. The **Governance-owned release/provenance gates have since landed** — the
+`fsgg verify` host (F056), the `fsgg release` host (F055) over the six-family release
+rules (F053) + sensing (F054), and the publication-evidence/attestation cores (F26) —
+leaving no tracked Phase-13 gap.
 
 Legend: 🟢 complete · 🟡 partial · 🔴 not started.
 
@@ -1132,11 +1184,21 @@ Legend: 🟢 complete · 🟡 partial · 🔴 not started.
   golden baselines + `ReleaseContract.evaluate` conformance.)
 - 🟢 [x] Add migration notes for breaking schema or command changes. (Feature 018:
   `docs/release/migrations/` + additive-only posture.)
-- 🟡 [ ] Define Governance `fsgg verify` and `fsgg release` schemas and exit
-  codes. (Governance: ship verdict rollup landed as **F024**; the `release` gate
-  schema is pending.)
-- 🔴 [ ] Add release rules for version bumps, package metadata, template pins,
-  publish plans, trusted publishing, and provenance. (Governance-owned; Phase 11.)
+- 🟢 [x] Define Governance `fsgg verify` and `fsgg release` schemas and exit
+  codes. (Governance: ship verdict rollup landed as **F024**; the `fsgg verify`
+  pre-PR host landed as **F056** `FS.GG.Governance.VerifyCommand`/`VerifyJson`
+  (merged 2026-06-24) — a deterministic `verify.json` among five exit codes; and the
+  `fsgg release` host landed as **F055** `FS.GG.Governance.ReleaseCommand`/`ReleaseJson`
+  (merged 2026-06-24) — reads `.fsgg/release.yml`, senses the six families (F054),
+  evaluates them (F053), renders the verdict + an optional deterministic `release.json`,
+  and exits among five distinguishable codes.)
+- 🟢 [x] Add release rules for version bumps, package metadata, template pins,
+  publish plans, trusted publishing, and provenance. (Governance-owned. **F053**
+  `FS.GG.Governance.ReleaseRules` (the pure six-family release-gate readiness rules) +
+  **F054** `FS.GG.Governance.ReleaseFactsSensing` (sense the six families from a governed
+  repo into the exact F053 facts) + **F26** publication-evidence cores
+  (pack/version policy, immutable release report, SLSA/in-toto-shaped attestation,
+  scheduled-matrix decision), all merged.)
 - 🟢 [x] Add Spectre.Console projections backed by the same report objects used for
   JSON. (Feature `019-spectre-rendering`: `--rich` projection over the same
   `CommandReport`. Feature `021-rich-validation-report` extends the same edge to the
