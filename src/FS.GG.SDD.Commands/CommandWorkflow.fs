@@ -910,8 +910,11 @@ Prose status: specified
                           malformedSpecificationFrontMatter path $"Specification stage '{IdentifiersModule.stageValue facts.FrontMatter.Stage}' is not 'specify'." ]
 
                 let allDiagnostics = unsafe @ identityDiagnostics @ diagnostics |> DiagnosticsModule.sort
-                let hasBlocking = allDiagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-                let text = if hasBlocking then existing.Text else ensureSpecificationSections existing.Text
+                // Whether the spec's own diagnostics block rewriting its sections — a
+                // content decision distinct from the handler effect-gate `hasBlocking`
+                // single-sourced in `runHandler`.
+                let sectionsBlocked = allDiagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                let text = if sectionsBlocked then existing.Text else ensureSpecificationSections existing.Text
 
                 let summary =
                     match parseSpecificationForCommand path text with
@@ -3711,286 +3714,323 @@ tasks:
         [ CreateDirectory($"work/{workId}")
           WriteFile(charterPath workId, text, AuthoredSource) ]
 
-    let computeCharterPlan model =
+    // Single source of the monotonic lifecycle prerequisite cascade
+    // (specification -> clarification -> checklist -> plan -> tasks). The cascade,
+    // its ordered short-circuit, and its fact threading live here once; every
+    // cascade-consuming handler reads the prefix it needs from this record instead
+    // of re-rolling a nested match. Per-stage diagnostic lists are returned
+    // unsorted and unconcatenated: concatenation order and the single
+    // DiagnosticsModule.sort stay at each handler call site (resolver contract C-5).
+    type PrerequisiteResolution =
+        { SpecificationDiagnostics: Diagnostic list
+          SpecificationText: string option
+          Specification: SpecificationSummary option
+          SpecificationFacts: SpecificationFacts option
+          ClarificationDiagnostics: Diagnostic list
+          ClarificationText: string option
+          Clarification: ClarificationSummary option
+          ClarificationFacts: ClarificationFacts option
+          ChecklistDiagnostics: Diagnostic list
+          ChecklistText: string option
+          Checklist: ChecklistSummary option
+          ChecklistFacts: ChecklistFacts option
+          PlanDiagnostics: Diagnostic list
+          PlanText: string option
+          Plan: PlanSummary option
+          PlanFacts: PlanFacts option
+          TaskDiagnostics: Diagnostic list
+          TaskText: string option
+          Tasks: TasksSummary option
+          TaskFacts: TaskFacts option }
+
+    let resolvePrerequisites workId model : PrerequisiteResolution =
+        let specificationDiagnostics, specText, specification, specFacts = specificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
+        let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = clarificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
+
+        let checklistDiagnostics, checklistText, checklist, checklistFacts =
+            match specFacts, clarificationFacts with
+            | Some specFacts, Some clarificationFacts -> checklistPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts model
+            | _ -> [], None, None, None
+
+        let planDiagnostics, planText, plan, planFacts =
+            match specFacts, clarificationFacts, checklistFacts with
+            | Some specFacts, Some clarificationFacts, Some checklistFacts -> planPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts model
+            | _ -> [], None, None, None
+
+        let taskDiagnostics, taskText, tasks, taskFacts =
+            match specFacts, clarificationFacts, checklistFacts, planFacts with
+            | Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts -> tasksPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts planFacts model
+            | _ -> [], None, None, None
+
+        { SpecificationDiagnostics = specificationDiagnostics
+          SpecificationText = specText
+          Specification = specification
+          SpecificationFacts = specFacts
+          ClarificationDiagnostics = clarificationDiagnostics
+          ClarificationText = clarificationText
+          Clarification = clarification
+          ClarificationFacts = clarificationFacts
+          ChecklistDiagnostics = checklistDiagnostics
+          ChecklistText = checklistText
+          Checklist = checklist
+          ChecklistFacts = checklistFacts
+          PlanDiagnostics = planDiagnostics
+          PlanText = planText
+          Plan = plan
+          PlanFacts = planFacts
+          TaskDiagnostics = taskDiagnostics
+          TaskText = taskText
+          Tasks = tasks
+          TaskFacts = taskFacts }
+
+    // Shared handler shell: owns the four steps identical across every handler —
+    // the missing-WorkId guard (H-1), the final DiagnosticsModule.sort (H-3), the
+    // single hasBlocking computation (H-2), and the not-blocking effect gate (H-4).
+    // The handler's `body` returns its pre-sort command+generated diagnostics (in
+    // call-site order) paired with a continuation that, given hasBlocking and the
+    // sorted diagnostics, yields the stage-specific summaries, generated views,
+    // write effects, and generated-view effects. The continuation lets handlers
+    // whose view content depends on hasBlocking (verify/ship readiness, analyze
+    // write gating) read it from the single source instead of recomputing it.
+    let runHandler (model: CommandModel) (empty: 'summaries) (body: string -> Diagnostic list * (bool -> Diagnostic list -> 'summaries * GeneratedViewState list * CommandEffect list * CommandEffect list)) =
         match model.Request.WorkId with
-        | None -> model.Diagnostics, None, [], []
+        | None -> empty, model.Diagnostics, [], []
         | Some workId ->
-            let projectDiagnostics = projectDiagnostics model
-            let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
-            let charterDiagnostics, charterText = charterDiagnosticsAndText model.Request workId model
-            let commandDiagnostics = projectDiagnostics @ duplicateDiagnostics @ charterDiagnostics |> DiagnosticsModule.sort
-            let generatedDiagnostics, generatedView, generatedEffects = generatedViewPlan model.Request workId (Some charterText) None None None None None None commandDiagnostics model
-            let diagnostics = commandDiagnostics @ generatedDiagnostics |> DiagnosticsModule.sort
+            let commandAndGeneratedDiagnostics, resume = body workId
+            let diagnostics = commandAndGeneratedDiagnostics |> DiagnosticsModule.sort
             let hasBlocking = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+            let summaries, generatedViews, writeEffects, generatedEffects = resume hasBlocking diagnostics
+            let effects = if hasBlocking then [] else writeEffects @ generatedEffects
+            summaries, diagnostics, generatedViews, effects
 
-            let effects =
-                if hasBlocking then
-                    []
-                else
-                    charterWriteEffects workId charterText @ generatedEffects
+    let computeCharterPlan model =
+        let specification, diagnostics, generatedViews, effects =
+            runHandler model None (fun workId ->
+                let projectDiagnostics = projectDiagnostics model
+                let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
+                let charterDiagnostics, charterText = charterDiagnosticsAndText model.Request workId model
+                let commandDiagnostics = projectDiagnostics @ duplicateDiagnostics @ charterDiagnostics |> DiagnosticsModule.sort
+                let generatedDiagnostics, generatedView, generatedEffects = generatedViewPlan model.Request workId (Some charterText) None None None None None None commandDiagnostics model
 
-            diagnostics, None, [ generatedView ], effects
+                commandDiagnostics @ generatedDiagnostics,
+                (fun _ _ -> None, [ generatedView ], charterWriteEffects workId charterText, generatedEffects))
+
+        diagnostics, specification, generatedViews, effects
 
     let computeSpecifyPlan model =
-        match model.Request.WorkId with
-        | None -> model.Diagnostics, None, [], []
-        | Some workId ->
-            let projectDiagnostics = projectDiagnostics model
-            let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
-            let charterDiagnostics, charterText = charterPrerequisiteDiagnosticsAndText workId model
-            let specificationDiagnostics, specText, specification = specificationDiagnosticsTextAndSummary model.Request workId model
-            let commandDiagnostics = projectDiagnostics @ duplicateDiagnostics @ charterDiagnostics @ specificationDiagnostics |> DiagnosticsModule.sort
+        let specification, diagnostics, generatedViews, effects =
+            runHandler model None (fun workId ->
+                let projectDiagnostics = projectDiagnostics model
+                let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
+                let charterDiagnostics, charterText = charterPrerequisiteDiagnosticsAndText workId model
+                let specificationDiagnostics, specText, specification = specificationDiagnosticsTextAndSummary model.Request workId model
+                let commandDiagnostics = projectDiagnostics @ duplicateDiagnostics @ charterDiagnostics @ specificationDiagnostics |> DiagnosticsModule.sort
 
-            let generatedDiagnostics, generatedView, generatedEffects =
-                match charterText with
-                | Some text -> generatedViewPlan model.Request workId (Some text) specText None None None None None commandDiagnostics model
-                | None ->
-                    let path = workModelPath workId
-                    let ids =
-                        commandDiagnostics
-                        |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-                        |> List.map _.Id
+                let generatedDiagnostics, generatedView, generatedEffects =
+                    match charterText with
+                    | Some text -> generatedViewPlan model.Request workId (Some text) specText None None None None None commandDiagnostics model
+                    | None ->
+                        let path = workModelPath workId
+                        let ids =
+                            commandDiagnostics
+                            |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                            |> List.map _.Id
 
-                    [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
 
-            let diagnostics = commandDiagnostics @ generatedDiagnostics |> DiagnosticsModule.sort
-            let hasBlocking = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                let specificationEffects =
+                    match specText with
+                    | Some text -> [ CreateDirectory($"work/{workId}"); WriteFile(specPath workId, text, AuthoredSource) ]
+                    | None -> []
 
-            let specificationEffects =
-                match specText with
-                | Some text when not hasBlocking -> [ CreateDirectory($"work/{workId}"); WriteFile(specPath workId, text, AuthoredSource) ]
-                | _ -> []
+                commandDiagnostics @ generatedDiagnostics,
+                (fun _ _ -> specification, [ generatedView ], specificationEffects, generatedEffects))
 
-            let effects =
-                if hasBlocking then
-                    []
-                else
-                    specificationEffects @ generatedEffects
-
-            diagnostics, specification, [ generatedView ], effects
+        diagnostics, specification, generatedViews, effects
 
     let computeClarifyPlan model =
-        match model.Request.WorkId with
-        | None -> model.Diagnostics, None, None, [], []
-        | Some workId ->
-            let projectDiagnostics = projectDiagnostics model
-            let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
-            let specificationDiagnostics, specText, specification, specFacts = specificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
+        let (specification, clarification), diagnostics, generatedViews, effects =
+            runHandler model (None, None) (fun workId ->
+                let projectDiagnostics = projectDiagnostics model
+                let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
+                let prereqs = resolvePrerequisites workId model
+                let specificationDiagnostics, specText, specification, specFacts = prereqs.SpecificationDiagnostics, prereqs.SpecificationText, prereqs.Specification, prereqs.SpecificationFacts
 
-            let clarificationDiagnostics, clarificationText, clarification =
-                match specFacts with
-                | Some facts -> clarificationDiagnosticsTextAndSummary model.Request workId facts model
-                | None -> [], None, None
+                let clarificationDiagnostics, clarificationText, clarification =
+                    match specFacts with
+                    | Some facts -> clarificationDiagnosticsTextAndSummary model.Request workId facts model
+                    | None -> [], None, None
 
-            let commandDiagnostics =
-                projectDiagnostics @ duplicateDiagnostics @ specificationDiagnostics @ clarificationDiagnostics
-                |> DiagnosticsModule.sort
+                let commandDiagnostics =
+                    projectDiagnostics @ duplicateDiagnostics @ specificationDiagnostics @ clarificationDiagnostics
+                    |> DiagnosticsModule.sort
 
-            let generatedDiagnostics, generatedView, generatedEffects =
-                match specText with
-                | Some text ->
-                    let charterText = snapshot (charterPath workId) model |> Option.map _.Text
-                    generatedViewPlan model.Request workId charterText (Some text) clarificationText None None None None commandDiagnostics model
-                | None ->
-                    let path = workModelPath workId
-                    let ids =
-                        commandDiagnostics
-                        |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-                        |> List.map _.Id
+                let generatedDiagnostics, generatedView, generatedEffects =
+                    match specText with
+                    | Some text ->
+                        let charterText = snapshot (charterPath workId) model |> Option.map _.Text
+                        generatedViewPlan model.Request workId charterText (Some text) clarificationText None None None None commandDiagnostics model
+                    | None ->
+                        let path = workModelPath workId
+                        let ids =
+                            commandDiagnostics
+                            |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                            |> List.map _.Id
 
-                    [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
 
-            let diagnostics = commandDiagnostics @ generatedDiagnostics |> DiagnosticsModule.sort
-            let hasBlocking = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                let clarificationEffects =
+                    match clarificationText with
+                    | Some text -> [ CreateDirectory($"work/{workId}"); WriteFile(clarificationPath workId, text, AuthoredSource) ]
+                    | None -> []
 
-            let clarificationEffects =
-                match clarificationText with
-                | Some text when not hasBlocking -> [ CreateDirectory($"work/{workId}"); WriteFile(clarificationPath workId, text, AuthoredSource) ]
-                | _ -> []
+                commandDiagnostics @ generatedDiagnostics,
+                (fun _ _ -> (specification, clarification), [ generatedView ], clarificationEffects, generatedEffects))
 
-            let effects =
-                if hasBlocking then
-                    []
-                else
-                    clarificationEffects @ generatedEffects
-
-            diagnostics, specification, clarification, [ generatedView ], effects
+        diagnostics, specification, clarification, generatedViews, effects
 
     let computeChecklistPlan model =
-        match model.Request.WorkId with
-        | None -> model.Diagnostics, None, None, None, [], []
-        | Some workId ->
-            let projectDiagnostics = projectDiagnostics model
-            let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
-            let specificationDiagnostics, specText, specification, specFacts = specificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
-            let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = clarificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
+        let (specification, clarification, checklist), diagnostics, generatedViews, effects =
+            runHandler model (None, None, None) (fun workId ->
+                let projectDiagnostics = projectDiagnostics model
+                let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
+                let prereqs = resolvePrerequisites workId model
+                let specificationDiagnostics, specText, specification, specFacts = prereqs.SpecificationDiagnostics, prereqs.SpecificationText, prereqs.Specification, prereqs.SpecificationFacts
+                let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = prereqs.ClarificationDiagnostics, prereqs.ClarificationText, prereqs.Clarification, prereqs.ClarificationFacts
 
-            let checklistDiagnostics, checklistText, checklist =
-                match specText, clarificationText, specFacts, clarificationFacts with
-                | Some specText, Some clarificationText, Some specFacts, Some clarificationFacts ->
-                    checklistDiagnosticsTextAndSummary model.Request workId specText clarificationText specFacts clarificationFacts model
-                | _ -> [], None, None
+                let checklistDiagnostics, checklistText, checklist =
+                    match specText, clarificationText, specFacts, clarificationFacts with
+                    | Some specText, Some clarificationText, Some specFacts, Some clarificationFacts ->
+                        checklistDiagnosticsTextAndSummary model.Request workId specText clarificationText specFacts clarificationFacts model
+                    | _ -> [], None, None
 
-            let commandDiagnostics =
-                projectDiagnostics @ duplicateDiagnostics @ specificationDiagnostics @ clarificationDiagnostics @ checklistDiagnostics
-                |> DiagnosticsModule.sort
+                let commandDiagnostics =
+                    projectDiagnostics @ duplicateDiagnostics @ specificationDiagnostics @ clarificationDiagnostics @ checklistDiagnostics
+                    |> DiagnosticsModule.sort
 
-            let generatedDiagnostics, generatedView, generatedEffects =
-                match specText, clarificationText with
-                | Some specText, Some clarificationText ->
-                    let charterText = snapshot (charterPath workId) model |> Option.map _.Text
-                    generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) checklistText None None None commandDiagnostics model
-                | _ ->
-                    let path = workModelPath workId
-                    let ids =
-                        commandDiagnostics
-                        |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-                        |> List.map _.Id
+                let generatedDiagnostics, generatedView, generatedEffects =
+                    match specText, clarificationText with
+                    | Some specText, Some clarificationText ->
+                        let charterText = snapshot (charterPath workId) model |> Option.map _.Text
+                        generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) checklistText None None None commandDiagnostics model
+                    | _ ->
+                        let path = workModelPath workId
+                        let ids =
+                            commandDiagnostics
+                            |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                            |> List.map _.Id
 
-                    [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
 
-            let diagnostics = commandDiagnostics @ generatedDiagnostics |> DiagnosticsModule.sort
-            let hasBlocking = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                let checklistEffects =
+                    match checklistText with
+                    | Some text -> [ CreateDirectory($"work/{workId}"); WriteFile(checklistPath workId, text, AuthoredSource) ]
+                    | None -> []
 
-            let checklistEffects =
-                match checklistText with
-                | Some text when not hasBlocking -> [ CreateDirectory($"work/{workId}"); WriteFile(checklistPath workId, text, AuthoredSource) ]
-                | _ -> []
+                commandDiagnostics @ generatedDiagnostics,
+                (fun _ _ -> (specification, clarification, checklist), [ generatedView ], checklistEffects, generatedEffects))
 
-            let effects =
-                if hasBlocking then
-                    []
-                else
-                    checklistEffects @ generatedEffects
-
-            diagnostics, specification, clarification, checklist, [ generatedView ], effects
+        diagnostics, specification, clarification, checklist, generatedViews, effects
 
     let computePlanPlan model =
-        match model.Request.WorkId with
-        | None -> model.Diagnostics, None, None, None, None, [], []
-        | Some workId ->
-            let projectDiagnostics = projectDiagnostics model
-            let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
-            let specificationDiagnostics, specText, specification, specFacts = specificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
-            let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = clarificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
+        let (specification, clarification, checklist, plan), diagnostics, generatedViews, effects =
+            runHandler model (None, None, None, None) (fun workId ->
+                let projectDiagnostics = projectDiagnostics model
+                let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
+                let prereqs = resolvePrerequisites workId model
+                let specificationDiagnostics, specText, specification, specFacts = prereqs.SpecificationDiagnostics, prereqs.SpecificationText, prereqs.Specification, prereqs.SpecificationFacts
+                let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = prereqs.ClarificationDiagnostics, prereqs.ClarificationText, prereqs.Clarification, prereqs.ClarificationFacts
+                let checklistDiagnostics, checklistText, checklist, checklistFacts = prereqs.ChecklistDiagnostics, prereqs.ChecklistText, prereqs.Checklist, prereqs.ChecklistFacts
 
-            let checklistDiagnostics, checklistText, checklist, checklistFacts =
-                match specFacts, clarificationFacts with
-                | Some specFacts, Some clarificationFacts ->
-                    checklistPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts model
-                | _ -> [], None, None, None
+                let planDiagnostics, planText, plan =
+                    match specText, clarificationText, checklistText, specFacts, clarificationFacts, checklistFacts with
+                    | Some specText, Some clarificationText, Some checklistText, Some specFacts, Some clarificationFacts, Some checklistFacts ->
+                        planDiagnosticsTextAndSummary model.Request workId specText clarificationText checklistText specFacts clarificationFacts checklistFacts model
+                    | _ -> [], None, None
 
-            let planDiagnostics, planText, plan =
-                match specText, clarificationText, checklistText, specFacts, clarificationFacts, checklistFacts with
-                | Some specText, Some clarificationText, Some checklistText, Some specFacts, Some clarificationFacts, Some checklistFacts ->
-                    planDiagnosticsTextAndSummary model.Request workId specText clarificationText checklistText specFacts clarificationFacts checklistFacts model
-                | _ -> [], None, None
+                let commandDiagnostics =
+                    projectDiagnostics
+                    @ duplicateDiagnostics
+                    @ specificationDiagnostics
+                    @ clarificationDiagnostics
+                    @ checklistDiagnostics
+                    @ planDiagnostics
+                    |> DiagnosticsModule.sort
 
-            let commandDiagnostics =
-                projectDiagnostics
-                @ duplicateDiagnostics
-                @ specificationDiagnostics
-                @ clarificationDiagnostics
-                @ checklistDiagnostics
-                @ planDiagnostics
-                |> DiagnosticsModule.sort
+                let generatedDiagnostics, generatedView, generatedEffects =
+                    match specText, clarificationText, checklistText with
+                    | Some specText, Some clarificationText, Some checklistText ->
+                        let charterText = snapshot (charterPath workId) model |> Option.map _.Text
+                        generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) planText None None commandDiagnostics model
+                    | _ ->
+                        let path = workModelPath workId
+                        let ids =
+                            commandDiagnostics
+                            |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                            |> List.map _.Id
 
-            let generatedDiagnostics, generatedView, generatedEffects =
-                match specText, clarificationText, checklistText with
-                | Some specText, Some clarificationText, Some checklistText ->
-                    let charterText = snapshot (charterPath workId) model |> Option.map _.Text
-                    generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) planText None None commandDiagnostics model
-                | _ ->
-                    let path = workModelPath workId
-                    let ids =
-                        commandDiagnostics
-                        |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-                        |> List.map _.Id
+                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
 
-                    [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+                let planEffects =
+                    match planText with
+                    | Some text -> [ CreateDirectory($"work/{workId}"); WriteFile(planPath workId, text, AuthoredSource) ]
+                    | None -> []
 
-            let diagnostics = commandDiagnostics @ generatedDiagnostics |> DiagnosticsModule.sort
-            let hasBlocking = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                commandDiagnostics @ generatedDiagnostics,
+                (fun _ _ -> (specification, clarification, checklist, plan), [ generatedView ], planEffects, generatedEffects))
 
-            let planEffects =
-                match planText with
-                | Some text when not hasBlocking -> [ CreateDirectory($"work/{workId}"); WriteFile(planPath workId, text, AuthoredSource) ]
-                | _ -> []
-
-            let effects =
-                if hasBlocking then
-                    []
-                else
-                    planEffects @ generatedEffects
-
-            diagnostics, specification, clarification, checklist, plan, [ generatedView ], effects
+        diagnostics, specification, clarification, checklist, plan, generatedViews, effects
 
     let computeTasksPlan model =
-        match model.Request.WorkId with
-        | None -> model.Diagnostics, None, None, None, None, None, [], []
-        | Some workId ->
-            let projectDiagnostics = projectDiagnostics model
-            let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
-            let specificationDiagnostics, specText, specification, specFacts = specificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
-            let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = clarificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
+        let (specification, clarification, checklist, plan, tasks), diagnostics, generatedViews, effects =
+            runHandler model (None, None, None, None, None) (fun workId ->
+                let projectDiagnostics = projectDiagnostics model
+                let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
+                let prereqs = resolvePrerequisites workId model
+                let specificationDiagnostics, specText, specification, specFacts = prereqs.SpecificationDiagnostics, prereqs.SpecificationText, prereqs.Specification, prereqs.SpecificationFacts
+                let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = prereqs.ClarificationDiagnostics, prereqs.ClarificationText, prereqs.Clarification, prereqs.ClarificationFacts
+                let checklistDiagnostics, checklistText, checklist, checklistFacts = prereqs.ChecklistDiagnostics, prereqs.ChecklistText, prereqs.Checklist, prereqs.ChecklistFacts
+                let planDiagnostics, planText, plan, planFacts = prereqs.PlanDiagnostics, prereqs.PlanText, prereqs.Plan, prereqs.PlanFacts
 
-            let checklistDiagnostics, checklistText, checklist, checklistFacts =
-                match specFacts, clarificationFacts with
-                | Some specFacts, Some clarificationFacts ->
-                    checklistPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts model
-                | _ -> [], None, None, None
+                let taskDiagnostics, taskText, tasks =
+                    match specText, clarificationText, checklistText, planText, specFacts, clarificationFacts, checklistFacts, planFacts with
+                    | Some specText, Some clarificationText, Some checklistText, Some planText, Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts ->
+                        tasksDiagnosticsTextAndSummary model.Request workId specText clarificationText checklistText planText specFacts clarificationFacts checklistFacts planFacts model
+                    | _ -> [], None, None
 
-            let planDiagnostics, planText, plan, planFacts =
-                match specFacts, clarificationFacts, checklistFacts with
-                | Some specFacts, Some clarificationFacts, Some checklistFacts ->
-                    planPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts model
-                | _ -> [], None, None, None
+                let commandDiagnostics =
+                    projectDiagnostics
+                    @ duplicateDiagnostics
+                    @ specificationDiagnostics
+                    @ clarificationDiagnostics
+                    @ checklistDiagnostics
+                    @ planDiagnostics
+                    @ taskDiagnostics
+                    |> DiagnosticsModule.sort
 
-            let taskDiagnostics, taskText, tasks =
-                match specText, clarificationText, checklistText, planText, specFacts, clarificationFacts, checklistFacts, planFacts with
-                | Some specText, Some clarificationText, Some checklistText, Some planText, Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts ->
-                    tasksDiagnosticsTextAndSummary model.Request workId specText clarificationText checklistText planText specFacts clarificationFacts checklistFacts planFacts model
-                | _ -> [], None, None
+                let generatedDiagnostics, generatedView, generatedEffects =
+                    match specText, clarificationText, checklistText, planText with
+                    | Some specText, Some clarificationText, Some checklistText, Some planText ->
+                        let charterText = snapshot (charterPath workId) model |> Option.map _.Text
+                        generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) taskText None commandDiagnostics model
+                    | _ ->
+                        let path = workModelPath workId
+                        let ids =
+                            commandDiagnostics
+                            |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                            |> List.map _.Id
 
-            let commandDiagnostics =
-                projectDiagnostics
-                @ duplicateDiagnostics
-                @ specificationDiagnostics
-                @ clarificationDiagnostics
-                @ checklistDiagnostics
-                @ planDiagnostics
-                @ taskDiagnostics
-                |> DiagnosticsModule.sort
+                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
 
-            let generatedDiagnostics, generatedView, generatedEffects =
-                match specText, clarificationText, checklistText, planText with
-                | Some specText, Some clarificationText, Some checklistText, Some planText ->
-                    let charterText = snapshot (charterPath workId) model |> Option.map _.Text
-                    generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) taskText None commandDiagnostics model
-                | _ ->
-                    let path = workModelPath workId
-                    let ids =
-                        commandDiagnostics
-                        |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-                        |> List.map _.Id
+                let taskEffects =
+                    match taskText with
+                    | Some text -> [ CreateDirectory($"work/{workId}"); WriteFile(tasksPath workId, text, AuthoredSource) ]
+                    | None -> []
 
-                    [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+                commandDiagnostics @ generatedDiagnostics,
+                (fun _ _ -> (specification, clarification, checklist, plan, tasks), [ generatedView ], taskEffects, generatedEffects))
 
-            let diagnostics = commandDiagnostics @ generatedDiagnostics |> DiagnosticsModule.sort
-            let hasBlocking = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-
-            let taskEffects =
-                match taskText with
-                | Some text when not hasBlocking -> [ CreateDirectory($"work/{workId}"); WriteFile(tasksPath workId, text, AuthoredSource) ]
-                | _ -> []
-
-            let effects =
-                if hasBlocking then
-                    []
-                else
-                    taskEffects @ generatedEffects
-
-            diagnostics, specification, clarification, checklist, plan, tasks, [ generatedView ], effects
+        diagnostics, specification, clarification, checklist, plan, tasks, generatedViews, effects
 
     let workModelJsonFromGeneratedEffects workId effects model =
         effects
@@ -4000,96 +4040,76 @@ tasks:
         |> Option.orElseWith (fun () -> snapshot (workModelPath workId) model |> Option.map _.Text)
 
     let computeAnalyzePlan model =
-        match model.Request.WorkId with
-        | None -> model.Diagnostics, None, None, None, None, None, None, [], []
-        | Some workId ->
-            let projectDiagnostics = projectDiagnostics model
-            let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
-            let specificationDiagnostics, specText, specification, specFacts = specificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
-            let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = clarificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
+        let (specification, clarification, checklist, plan, tasks, analysisSummary), diagnostics, generatedViews, effects =
+            runHandler model (None, None, None, None, None, None) (fun workId ->
+                let projectDiagnostics = projectDiagnostics model
+                let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
+                let prereqs = resolvePrerequisites workId model
+                let specificationDiagnostics, specText, specification, specFacts = prereqs.SpecificationDiagnostics, prereqs.SpecificationText, prereqs.Specification, prereqs.SpecificationFacts
+                let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = prereqs.ClarificationDiagnostics, prereqs.ClarificationText, prereqs.Clarification, prereqs.ClarificationFacts
+                let checklistDiagnostics, checklistText, checklist, checklistFacts = prereqs.ChecklistDiagnostics, prereqs.ChecklistText, prereqs.Checklist, prereqs.ChecklistFacts
+                let planDiagnostics, planText, plan, planFacts = prereqs.PlanDiagnostics, prereqs.PlanText, prereqs.Plan, prereqs.PlanFacts
+                let taskDiagnostics, taskText, tasks, taskFacts = prereqs.TaskDiagnostics, prereqs.TaskText, prereqs.Tasks, prereqs.TaskFacts
 
-            let checklistDiagnostics, checklistText, checklist, checklistFacts =
-                match specFacts, clarificationFacts with
-                | Some specFacts, Some clarificationFacts ->
-                    checklistPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts model
-                | _ -> [], None, None, None
+                let dispositionDiagnostics =
+                    match specFacts, clarificationFacts, checklistFacts, planFacts, taskFacts with
+                    | Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts, Some taskFacts ->
+                        missingDispositionDiagnostics workId specFacts clarificationFacts checklistFacts planFacts taskFacts
+                    | _ -> []
 
-            let planDiagnostics, planText, plan, planFacts =
-                match specFacts, clarificationFacts, checklistFacts with
-                | Some specFacts, Some clarificationFacts, Some checklistFacts ->
-                    planPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts model
-                | _ -> [], None, None, None
+                let analysisViewDiagnostics = existingAnalysisDiagnostic workId model |> Option.toList
 
-            let taskDiagnostics, taskText, tasks, taskFacts =
-                match specFacts, clarificationFacts, checklistFacts, planFacts with
-                | Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts ->
-                    tasksPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts planFacts model
-                | _ -> [], None, None, None
+                let commandDiagnostics =
+                    projectDiagnostics
+                    @ duplicateDiagnostics
+                    @ specificationDiagnostics
+                    @ clarificationDiagnostics
+                    @ checklistDiagnostics
+                    @ planDiagnostics
+                    @ taskDiagnostics
+                    @ dispositionDiagnostics
+                    @ analysisViewDiagnostics
+                    |> DiagnosticsModule.sort
 
-            let dispositionDiagnostics =
-                match specFacts, clarificationFacts, checklistFacts, planFacts, taskFacts with
-                | Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts, Some taskFacts ->
-                    missingDispositionDiagnostics workId specFacts clarificationFacts checklistFacts planFacts taskFacts
-                | _ -> []
+                let generatedDiagnostics, workModelView, workModelEffects =
+                    match specText, clarificationText, checklistText, planText, taskText with
+                    | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText ->
+                        let charterText = snapshot (charterPath workId) model |> Option.map _.Text
+                        generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) None commandDiagnostics model
+                    | _ ->
+                        let path = workModelPath workId
+                        let ids =
+                            commandDiagnostics
+                            |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                            |> List.map _.Id
 
-            let analysisViewDiagnostics = existingAnalysisDiagnostic workId model |> Option.toList
+                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
 
-            let commandDiagnostics =
-                projectDiagnostics
-                @ duplicateDiagnostics
-                @ specificationDiagnostics
-                @ clarificationDiagnostics
-                @ checklistDiagnostics
-                @ planDiagnostics
-                @ taskDiagnostics
-                @ dispositionDiagnostics
-                @ analysisViewDiagnostics
-                |> DiagnosticsModule.sort
+                commandDiagnostics @ generatedDiagnostics,
+                (fun hasBlocking diagnostics ->
+                    let analysisSummary, analysisView, analysisEffects =
+                        match specText, clarificationText, checklistText, planText, taskText, specFacts, clarificationFacts, checklistFacts, planFacts, taskFacts with
+                        | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText, Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts, Some taskFacts ->
+                            let workModelJson = workModelJsonFromGeneratedEffects workId workModelEffects model
+                            let relationships = analysisRelationships workId specFacts clarificationFacts checklistFacts planFacts taskFacts
+                            let generatedViewsForAnalysis = [ workModelView ]
+                            let summary, text, view = analysisPlan workId specText clarificationText checklistText planText taskText workModelJson relationships diagnostics generatedViewsForAnalysis model
+                            let effects =
+                                if hasBlocking then
+                                    []
+                                else
+                                    [ CreateDirectory(readinessDirectory workId)
+                                      WriteFile(analysisPath workId, text, GeneratedView) ]
 
-            let generatedDiagnostics, workModelView, workModelEffects =
-                match specText, clarificationText, checklistText, planText, taskText with
-                | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText ->
-                    let charterText = snapshot (charterPath workId) model |> Option.map _.Text
-                    generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) None commandDiagnostics model
-                | _ ->
-                    let path = workModelPath workId
-                    let ids =
-                        commandDiagnostics
-                        |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-                        |> List.map _.Id
+                            Some summary, Some view, effects
+                        | _ ->
+                            None, None, []
 
-                    [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+                    let generatedViews = [ Some workModelView; analysisView ] |> List.choose id
 
-            let diagnostics = commandDiagnostics @ generatedDiagnostics |> DiagnosticsModule.sort
-            let hasBlocking = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                    (specification, clarification, checklist, plan, tasks, analysisSummary), generatedViews, workModelEffects, analysisEffects))
 
-            let analysisSummary, analysisView, analysisEffects =
-                match specText, clarificationText, checklistText, planText, taskText, specFacts, clarificationFacts, checklistFacts, planFacts, taskFacts with
-                | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText, Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts, Some taskFacts ->
-                    let workModelJson = workModelJsonFromGeneratedEffects workId workModelEffects model
-                    let relationships = analysisRelationships workId specFacts clarificationFacts checklistFacts planFacts taskFacts
-                    let generatedViewsForAnalysis = [ workModelView ]
-                    let summary, text, view = analysisPlan workId specText clarificationText checklistText planText taskText workModelJson relationships diagnostics generatedViewsForAnalysis model
-                    let effects =
-                        if hasBlocking then
-                            []
-                        else
-                            [ CreateDirectory(readinessDirectory workId)
-                              WriteFile(analysisPath workId, text, GeneratedView) ]
-
-                    Some summary, Some view, effects
-                | _ ->
-                    None, None, []
-
-            let generatedViews = [ Some workModelView; analysisView ] |> List.choose id
-
-            let effects =
-                if hasBlocking then
-                    []
-                else
-                    workModelEffects @ analysisEffects
-
-            diagnostics, specification, clarification, checklist, plan, tasks, analysisSummary, generatedViews, effects
+        diagnostics, specification, clarification, checklist, plan, tasks, analysisSummary, generatedViews, effects
 
     type EvidenceDispositionDraft =
         { ObligationId: string
@@ -4617,95 +4637,76 @@ sourceAnalysis: {analysisPath workId}
 """
 
     let computeEvidencePlan model =
-        match model.Request.WorkId with
-        | None -> model.Diagnostics, None, None, None, None, None, None, None, [], []
-        | Some workId ->
-            let projectDiagnostics = projectDiagnostics model
-            let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
-            let specificationDiagnostics, specText, specification, specFacts = specificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
-            let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = clarificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
+        let (specification, clarification, checklist, plan, tasks, analysis, evidenceSummary), diagnostics, generatedViews, effects =
+            runHandler model (None, None, None, None, None, None, None) (fun workId ->
+                let projectDiagnostics = projectDiagnostics model
+                let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
+                let prereqs = resolvePrerequisites workId model
+                let specificationDiagnostics, specText, specification, specFacts = prereqs.SpecificationDiagnostics, prereqs.SpecificationText, prereqs.Specification, prereqs.SpecificationFacts
+                let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = prereqs.ClarificationDiagnostics, prereqs.ClarificationText, prereqs.Clarification, prereqs.ClarificationFacts
+                let checklistDiagnostics, checklistText, checklist, checklistFacts = prereqs.ChecklistDiagnostics, prereqs.ChecklistText, prereqs.Checklist, prereqs.ChecklistFacts
+                let planDiagnostics, planText, plan, planFacts = prereqs.PlanDiagnostics, prereqs.PlanText, prereqs.Plan, prereqs.PlanFacts
+                let taskDiagnostics, taskText, tasks, taskFacts = prereqs.TaskDiagnostics, prereqs.TaskText, prereqs.Tasks, prereqs.TaskFacts
 
-            let checklistDiagnostics, checklistText, checklist, checklistFacts =
-                match specFacts, clarificationFacts with
-                | Some specFacts, Some clarificationFacts ->
-                    checklistPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts model
-                | _ -> [], None, None, None
+                let analysisDiagnostics, analysisText, analysis =
+                    analysisPrerequisiteDiagnosticsSummaryAndText workId model
 
-            let planDiagnostics, planText, plan, planFacts =
-                match specFacts, clarificationFacts, checklistFacts with
-                | Some specFacts, Some clarificationFacts, Some checklistFacts ->
-                    planPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts model
-                | _ -> [], None, None, None
+                let existingArtifact, existingDiagnostics, _ = parseExistingEvidence workId model
+                let inputArtifact, inputDiagnostics = parseInputEvidence workId model.Request
 
-            let taskDiagnostics, taskText, tasks, taskFacts =
-                match specFacts, clarificationFacts, checklistFacts, planFacts with
-                | Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts ->
-                    tasksPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts planFacts model
-                | _ -> [], None, None, None
+                let evidenceArtifact, mergeDiagnostics, evidenceText, evidenceSummary =
+                    match specText, clarificationText, checklistText, planText, taskText, analysisText, specFacts, clarificationFacts, checklistFacts, planFacts, taskFacts with
+                    | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText, Some analysisText, Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts, Some taskFacts ->
+                        let currentSnapshots = currentEvidenceSourceSnapshots workId specText clarificationText checklistText planText taskText analysisText
+                        let obligations = evidenceObligations taskFacts
+                        let merged, mergeDiagnostics = mergeEvidenceArtifacts workId existingArtifact inputArtifact obligations
+                        let artifact = { merged with SourceSnapshots = currentSnapshots }
+                        let validationDiagnostics = evidenceValidationDiagnostics workId specFacts clarificationFacts checklistFacts planFacts taskFacts currentSnapshots artifact
+                        let dispositions = evidenceDispositions obligations artifact
+                        let dispositionDiagnostics = evidenceDispositionDiagnostics (evidencePath workId) dispositions
+                        let summary = evidenceSummary workId artifact dispositions
+                        let text = evidenceArtifactText workId artifact summary
+                        Some artifact, mergeDiagnostics @ validationDiagnostics @ dispositionDiagnostics, Some text, Some summary
+                    | _ ->
+                        None, [], None, None
 
-            let analysisDiagnostics, analysisText, analysis =
-                analysisPrerequisiteDiagnosticsSummaryAndText workId model
+                let commandDiagnostics =
+                    projectDiagnostics
+                    @ duplicateDiagnostics
+                    @ specificationDiagnostics
+                    @ clarificationDiagnostics
+                    @ checklistDiagnostics
+                    @ planDiagnostics
+                    @ taskDiagnostics
+                    @ analysisDiagnostics
+                    @ existingDiagnostics
+                    @ inputDiagnostics
+                    @ mergeDiagnostics
+                    |> DiagnosticsModule.sort
 
-            let existingArtifact, existingDiagnostics, _ = parseExistingEvidence workId model
-            let inputArtifact, inputDiagnostics = parseInputEvidence workId model.Request
+                let generatedDiagnostics, generatedView, generatedEffects =
+                    match specText, clarificationText, checklistText, planText, taskText with
+                    | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText ->
+                        let charterText = snapshot (charterPath workId) model |> Option.map _.Text
+                        generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) evidenceText commandDiagnostics model
+                    | _ ->
+                        let path = workModelPath workId
+                        let ids =
+                            commandDiagnostics
+                            |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+                            |> List.map _.Id
 
-            let evidenceArtifact, mergeDiagnostics, evidenceText, evidenceSummary =
-                match specText, clarificationText, checklistText, planText, taskText, analysisText, specFacts, clarificationFacts, checklistFacts, planFacts, taskFacts with
-                | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText, Some analysisText, Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts, Some taskFacts ->
-                    let currentSnapshots = currentEvidenceSourceSnapshots workId specText clarificationText checklistText planText taskText analysisText
-                    let obligations = evidenceObligations taskFacts
-                    let merged, mergeDiagnostics = mergeEvidenceArtifacts workId existingArtifact inputArtifact obligations
-                    let artifact = { merged with SourceSnapshots = currentSnapshots }
-                    let validationDiagnostics = evidenceValidationDiagnostics workId specFacts clarificationFacts checklistFacts planFacts taskFacts currentSnapshots artifact
-                    let dispositions = evidenceDispositions obligations artifact
-                    let dispositionDiagnostics = evidenceDispositionDiagnostics (evidencePath workId) dispositions
-                    let summary = evidenceSummary workId artifact dispositions
-                    let text = evidenceArtifactText workId artifact summary
-                    Some artifact, mergeDiagnostics @ validationDiagnostics @ dispositionDiagnostics, Some text, Some summary
-                | _ ->
-                    None, [], None, None
+                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
 
-            let commandDiagnostics =
-                projectDiagnostics
-                @ duplicateDiagnostics
-                @ specificationDiagnostics
-                @ clarificationDiagnostics
-                @ checklistDiagnostics
-                @ planDiagnostics
-                @ taskDiagnostics
-                @ analysisDiagnostics
-                @ existingDiagnostics
-                @ inputDiagnostics
-                @ mergeDiagnostics
-                |> DiagnosticsModule.sort
+                let evidenceEffects =
+                    match evidenceText with
+                    | Some text -> [ CreateDirectory($"work/{workId}"); WriteFile(evidencePath workId, text, AuthoredSource) ]
+                    | None -> []
 
-            let generatedDiagnostics, generatedView, generatedEffects =
-                match specText, clarificationText, checklistText, planText, taskText with
-                | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText ->
-                    let charterText = snapshot (charterPath workId) model |> Option.map _.Text
-                    generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) evidenceText commandDiagnostics model
-                | _ ->
-                    let path = workModelPath workId
-                    let ids =
-                        commandDiagnostics
-                        |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-                        |> List.map _.Id
+                commandDiagnostics @ generatedDiagnostics,
+                (fun _ _ -> (specification, clarification, checklist, plan, tasks, analysis, evidenceSummary), [ generatedView ], evidenceEffects, generatedEffects))
 
-                    [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
-
-            let diagnostics = commandDiagnostics @ generatedDiagnostics |> DiagnosticsModule.sort
-            let hasBlocking = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-
-            let evidenceEffects =
-                match evidenceText with
-                | Some text when not hasBlocking -> [ CreateDirectory($"work/{workId}"); WriteFile(evidencePath workId, text, AuthoredSource) ]
-                | _ -> []
-
-            let effects =
-                if hasBlocking then []
-                else evidenceEffects @ generatedEffects
-
-            diagnostics, specification, clarification, checklist, plan, tasks, analysis, evidenceSummary, [ generatedView ], effects
+        diagnostics, specification, clarification, checklist, plan, tasks, analysis, evidenceSummary, generatedViews, effects
 
     // ---- Verify command ----
 
@@ -5092,192 +5093,179 @@ sourceAnalysis: {analysisPath workId}
         Encoding.UTF8.GetString(stream.ToArray())
 
     let computeVerifyPlan model =
-        match model.Request.WorkId with
-        | None -> model.Diagnostics, None, None, None, None, None, None, None, None, [], []
-        | Some workId ->
-            let projectDiagnostics = projectDiagnostics model
-            let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
-            let specificationDiagnostics, specText, specification, specFacts = specificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
-            let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = clarificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
+        let (specification, clarification, checklist, plan, tasks, analysis, evidenceSummaryOpt, verificationSummary), diagnostics, generatedViews, effects =
+            runHandler model (None, None, None, None, None, None, None, None) (fun workId ->
+                let projectDiagnostics = projectDiagnostics model
+                let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
+                let prereqs = resolvePrerequisites workId model
+                let specificationDiagnostics, specText, specification, specFacts = prereqs.SpecificationDiagnostics, prereqs.SpecificationText, prereqs.Specification, prereqs.SpecificationFacts
+                let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = prereqs.ClarificationDiagnostics, prereqs.ClarificationText, prereqs.Clarification, prereqs.ClarificationFacts
+                let checklistDiagnostics, checklistText, checklist, checklistFacts = prereqs.ChecklistDiagnostics, prereqs.ChecklistText, prereqs.Checklist, prereqs.ChecklistFacts
+                let planDiagnostics, planText, plan, planFacts = prereqs.PlanDiagnostics, prereqs.PlanText, prereqs.Plan, prereqs.PlanFacts
+                let taskDiagnostics, taskText, tasks, taskFacts = prereqs.TaskDiagnostics, prereqs.TaskText, prereqs.Tasks, prereqs.TaskFacts
 
-            let checklistDiagnostics, checklistText, checklist, checklistFacts =
-                match specFacts, clarificationFacts with
-                | Some specFacts, Some clarificationFacts -> checklistPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts model
-                | _ -> [], None, None, None
+                let analysisDiagnostics, analysisText, analysis = analysisPrerequisiteDiagnosticsSummaryAndText workId model
+                let existingEvidenceArtifact, existingEvidenceDiagnostics, evidenceText = parseExistingEvidence workId model
 
-            let planDiagnostics, planText, plan, planFacts =
-                match specFacts, clarificationFacts, checklistFacts with
-                | Some specFacts, Some clarificationFacts, Some checklistFacts -> planPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts model
-                | _ -> [], None, None, None
+                let evidencePresenceDiagnostics =
+                    match existingEvidenceArtifact, snapshot (evidencePath workId) model with
+                    | None, None -> [ missingEvidencePrerequisite (evidencePath workId) $"Evidence prerequisite '{evidencePath workId}' is missing." ]
+                    | _ -> []
 
-            let taskDiagnostics, taskText, tasks, taskFacts =
-                match specFacts, clarificationFacts, checklistFacts, planFacts with
-                | Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts -> tasksPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts planFacts model
-                | _ -> [], None, None, None
+                let verifyViewDiagnostics = existingVerifyDiagnostic workId model |> Option.toList
 
-            let analysisDiagnostics, analysisText, analysis = analysisPrerequisiteDiagnosticsSummaryAndText workId model
-            let existingEvidenceArtifact, existingEvidenceDiagnostics, evidenceText = parseExistingEvidence workId model
+                let verificationDiagnostics, evidenceSummaryOpt, evidenceViews, testViews, skillViews =
+                    match specFacts, clarificationFacts, checklistFacts, planFacts, taskFacts, specText, clarificationText, checklistText, planText, taskText, analysisText, existingEvidenceArtifact with
+                    | Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts, Some taskFacts, Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText, Some analysisText, Some artifact ->
+                        let currentSnapshots = currentEvidenceSourceSnapshots workId specText clarificationText checklistText planText taskText analysisText
+                        let validationDiagnostics = evidenceValidationDiagnostics workId specFacts clarificationFacts checklistFacts planFacts taskFacts currentSnapshots artifact
+                        let obligations = evidenceObligations taskFacts
+                        let dispositions = evidenceDispositions obligations artifact
+                        let dispositionDiagnostics = evidenceDispositionDiagnostics (evidencePath workId) dispositions
+                        let evidenceViews = verifyEvidenceDispositionViews dispositions
+                        let testViews = verifyTestDispositionViews taskFacts artifact
+                        let skillViews = verifySkillViews workId taskFacts dispositions
 
-            let evidencePresenceDiagnostics =
-                match existingEvidenceArtifact, snapshot (evidencePath workId) model with
-                | None, None -> [ missingEvidencePrerequisite (evidencePath workId) $"Evidence prerequisite '{evidencePath workId}' is missing." ]
-                | _ -> []
+                        let testDiagnostics =
+                            let missing = testViews |> List.filter (fun view -> view.State = "missing") |> List.map _.ObligationId |> List.sort
+                            let stale = testViews |> List.filter (fun view -> view.State = "stale") |> List.map _.ObligationId |> List.sort
 
-            let verifyViewDiagnostics = existingVerifyDiagnostic workId model |> Option.toList
+                            [ if not (List.isEmpty missing) then missingRequiredTest (tasksPath workId) missing
+                              if not (List.isEmpty stale) then staleRequiredTest (tasksPath workId) stale ]
 
-            let verificationDiagnostics, evidenceSummaryOpt, evidenceViews, testViews, skillViews =
-                match specFacts, clarificationFacts, checklistFacts, planFacts, taskFacts, specText, clarificationText, checklistText, planText, taskText, analysisText, existingEvidenceArtifact with
-                | Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts, Some taskFacts, Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText, Some analysisText, Some artifact ->
-                    let currentSnapshots = currentEvidenceSourceSnapshots workId specText clarificationText checklistText planText taskText analysisText
-                    let validationDiagnostics = evidenceValidationDiagnostics workId specFacts clarificationFacts checklistFacts planFacts taskFacts currentSnapshots artifact
-                    let obligations = evidenceObligations taskFacts
-                    let dispositions = evidenceDispositions obligations artifact
-                    let dispositionDiagnostics = evidenceDispositionDiagnostics (evidencePath workId) dispositions
-                    let evidenceViews = verifyEvidenceDispositionViews dispositions
-                    let testViews = verifyTestDispositionViews taskFacts artifact
-                    let skillViews = verifySkillViews workId taskFacts dispositions
+                        let skillDiagnostics =
+                            let missing = skillViews |> List.filter (fun view -> view.Visibility = "missing") |> List.map _.Skill |> List.sort
+                            if not (List.isEmpty missing) then [ missingRequiredSkill (tasksPath workId) missing ] else []
 
-                    let testDiagnostics =
-                        let missing = testViews |> List.filter (fun view -> view.State = "missing") |> List.map _.ObligationId |> List.sort
-                        let stale = testViews |> List.filter (fun view -> view.State = "stale") |> List.map _.ObligationId |> List.sort
+                        let summary = evidenceSummary workId artifact dispositions
+                        validationDiagnostics @ dispositionDiagnostics @ testDiagnostics @ skillDiagnostics, Some summary, evidenceViews, testViews, skillViews
+                    | _ -> [], None, [], [], []
 
-                        [ if not (List.isEmpty missing) then missingRequiredTest (tasksPath workId) missing
-                          if not (List.isEmpty stale) then staleRequiredTest (tasksPath workId) stale ]
+                let commandDiagnostics =
+                    projectDiagnostics
+                    @ duplicateDiagnostics
+                    @ specificationDiagnostics
+                    @ clarificationDiagnostics
+                    @ checklistDiagnostics
+                    @ planDiagnostics
+                    @ taskDiagnostics
+                    @ analysisDiagnostics
+                    @ existingEvidenceDiagnostics
+                    @ evidencePresenceDiagnostics
+                    @ verifyViewDiagnostics
+                    @ verificationDiagnostics
+                    |> DiagnosticsModule.sort
 
-                    let skillDiagnostics =
-                        let missing = skillViews |> List.filter (fun view -> view.Visibility = "missing") |> List.map _.Skill |> List.sort
-                        if not (List.isEmpty missing) then [ missingRequiredSkill (tasksPath workId) missing ] else []
+                let generatedDiagnostics, workModelView, workModelEffects =
+                    match specText, clarificationText, checklistText, planText, taskText with
+                    | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText ->
+                        let charterText = snapshot (charterPath workId) model |> Option.map _.Text
+                        generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) evidenceText commandDiagnostics model
+                    | _ ->
+                        let path = workModelPath workId
+                        let ids = commandDiagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError) |> List.map _.Id
+                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
 
-                    let summary = evidenceSummary workId artifact dispositions
-                    validationDiagnostics @ dispositionDiagnostics @ testDiagnostics @ skillDiagnostics, Some summary, evidenceViews, testViews, skillViews
-                | _ -> [], None, [], [], []
+                commandDiagnostics @ generatedDiagnostics,
+                (fun hasBlocking diagnostics ->
+                    let readiness = if hasBlocking then "needsVerificationCorrection" else "verificationReady"
 
-            let commandDiagnostics =
-                projectDiagnostics
-                @ duplicateDiagnostics
-                @ specificationDiagnostics
-                @ clarificationDiagnostics
-                @ checklistDiagnostics
-                @ planDiagnostics
-                @ taskDiagnostics
-                @ analysisDiagnostics
-                @ existingEvidenceDiagnostics
-                @ evidencePresenceDiagnostics
-                @ verifyViewDiagnostics
-                @ verificationDiagnostics
-                |> DiagnosticsModule.sort
+                    let verificationSummary, verifyView, verifyEffects =
+                        match specText, clarificationText, checklistText, planText, taskText, analysisText, taskFacts with
+                        | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText, Some analysisText, Some taskFacts ->
+                            let workModelJson = workModelJsonFromGeneratedEffects workId workModelEffects model
+                            let sources = verifySources workId specText clarificationText checklistText planText taskText (evidenceText |> Option.defaultValue "") (Some analysisText) workModelJson model
 
-            let generatedDiagnostics, workModelView, workModelEffects =
-                match specText, clarificationText, checklistText, planText, taskText with
-                | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText ->
-                    let charterText = snapshot (charterPath workId) model |> Option.map _.Text
-                    generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) evidenceText commandDiagnostics model
-                | _ ->
-                    let path = workModelPath workId
-                    let ids = commandDiagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError) |> List.map _.Id
-                    [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+                            let lifecycleStages =
+                                [ "specify", (if Option.isSome specFacts then "current" else "missing")
+                                  "clarify", (if Option.isSome clarificationFacts then "current" else "missing")
+                                  "checklist", (if Option.isSome checklistFacts then "current" else "missing")
+                                  "plan", (if Option.isSome planFacts then "current" else "missing")
+                                  "tasks", "current"
+                                  "analyze", (analysis |> Option.map (fun summary -> summary.Readiness) |> Option.defaultValue "missing")
+                                  "evidence", (evidenceSummaryOpt |> Option.map (fun summary -> summary.Readiness) |> Option.defaultValue "missing") ]
 
-            let diagnostics = commandDiagnostics @ generatedDiagnostics |> DiagnosticsModule.sort
-            let hasBlocking = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-            let readiness = if hasBlocking then "needsVerificationCorrection" else "verificationReady"
+                            let dependencyCount = taskFacts.Tasks |> List.collect (fun task -> task.Dependencies) |> List.length
+                            let dependencyDiagnosticIds = set [ "unknownTaskDependency"; "taskDependencyCycle" ]
+                            let statusDiagnosticIds = set [ "unsafeTaskStatusChange"; "skippedTaskMissingRationale" ]
+                            let dependenciesValid = not (diagnostics |> List.exists (fun diagnostic -> Set.contains diagnostic.Id dependencyDiagnosticIds))
+                            let statusesValid = not (diagnostics |> List.exists (fun diagnostic -> Set.contains diagnostic.Id statusDiagnosticIds))
+                            let taskFindingIds = taskFacts.Findings |> List.map (fun finding -> finding.FindingId) |> List.sort
 
-            let verificationSummary, verifyView, verifyEffects =
-                match specText, clarificationText, checklistText, planText, taskText, analysisText, taskFacts with
-                | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText, Some analysisText, Some taskFacts ->
-                    let workModelJson = workModelJsonFromGeneratedEffects workId workModelEffects model
-                    let sources = verifySources workId specText clarificationText checklistText planText taskText (evidenceText |> Option.defaultValue "") (Some analysisText) workModelJson model
+                            let generatedViewsForVerify =
+                                [ workModelView
+                                  analysis
+                                  |> Option.map (fun _ -> verifyGeneratedViewState (analysisPath workId) model.Request.GeneratorVersion [] None GeneratedViewCurrency.Current [])
+                                  |> Option.defaultValue (verifyGeneratedViewState (analysisPath workId) model.Request.GeneratorVersion [] None GeneratedViewCurrency.Missing []) ]
 
-                    let lifecycleStages =
-                        [ "specify", (if Option.isSome specFacts then "current" else "missing")
-                          "clarify", (if Option.isSome clarificationFacts then "current" else "missing")
-                          "checklist", (if Option.isSome checklistFacts then "current" else "missing")
-                          "plan", (if Option.isSome planFacts then "current" else "missing")
-                          "tasks", "current"
-                          "analyze", (analysis |> Option.map (fun summary -> summary.Readiness) |> Option.defaultValue "missing")
-                          "evidence", (evidenceSummaryOpt |> Option.map (fun summary -> summary.Readiness) |> Option.defaultValue "missing") ]
+                            let text =
+                                verifyJson
+                                    workId
+                                    model.Request.GeneratorVersion
+                                    readiness
+                                    sources
+                                    lifecycleStages
+                                    (if hasBlocking then "needsCorrection" else "implementationReady")
+                                    taskFacts.Tasks.Length
+                                    dependencyCount
+                                    dependenciesValid
+                                    statusesValid
+                                    taskFindingIds
+                                    evidenceViews
+                                    testViews
+                                    skillViews
+                                    generatedViewsForVerify
+                                    diagnostics
 
-                    let dependencyCount = taskFacts.Tasks |> List.collect (fun task -> task.Dependencies) |> List.length
-                    let dependencyDiagnosticIds = set [ "unknownTaskDependency"; "taskDependencyCycle" ]
-                    let statusDiagnosticIds = set [ "unsafeTaskStatusChange"; "skippedTaskMissingRationale" ]
-                    let dependenciesValid = not (diagnostics |> List.exists (fun diagnostic -> Set.contains diagnostic.Id dependencyDiagnosticIds))
-                    let statusesValid = not (diagnostics |> List.exists (fun diagnostic -> Set.contains diagnostic.Id statusDiagnosticIds))
-                    let taskFindingIds = taskFacts.Findings |> List.map (fun finding -> finding.FindingId) |> List.sort
+                            let outputDigest = SchemaVersionModule.outputSha256Text text
+                            let view = verifyGeneratedViewState (verifyPath workId) model.Request.GeneratorVersion sources (Some outputDigest) GeneratedViewCurrency.Current []
 
-                    let generatedViewsForVerify =
-                        [ workModelView
-                          analysis
-                          |> Option.map (fun _ -> verifyGeneratedViewState (analysisPath workId) model.Request.GeneratorVersion [] None GeneratedViewCurrency.Current [])
-                          |> Option.defaultValue (verifyGeneratedViewState (analysisPath workId) model.Request.GeneratorVersion [] None GeneratedViewCurrency.Missing []) ]
+                            let findings = verifyFindings diagnostics
+                            let findingCount severity = findings |> List.filter (fun (_, _, findingSeverity) -> findingSeverity = severity) |> List.length
+                            let evidenceCount state = evidenceViews |> List.filter (fun view -> view.State = state) |> List.length
+                            let testCount state = testViews |> List.filter (fun view -> view.State = state) |> List.length
 
-                    let text =
-                        verifyJson
-                            workId
-                            model.Request.GeneratorVersion
-                            readiness
-                            sources
-                            lifecycleStages
-                            (if hasBlocking then "needsCorrection" else "implementationReady")
-                            taskFacts.Tasks.Length
-                            dependencyCount
-                            dependenciesValid
-                            statusesValid
-                            taskFindingIds
-                            evidenceViews
-                            testViews
-                            skillViews
-                            generatedViewsForVerify
-                            diagnostics
+                            let summary : VerificationSummary =
+                                { WorkId = workId
+                                  Stage = "verify"
+                                  Status = readiness
+                                  VerifyPath = verifyPath workId
+                                  FindingIds = findings |> List.map (fun (id, _, _) -> id) |> List.sort
+                                  ReadyFindingCount = if readiness = "verificationReady" then evidenceViews.Length + testViews.Length else findingCount "ready"
+                                  AdvisoryCount = findingCount "advisory"
+                                  WarningCount = findingCount "warning"
+                                  BlockingCount = findingCount "blocking"
+                                  ObligationCount = evidenceViews.Length + testViews.Length
+                                  EvidenceSupportedCount = evidenceCount "supported"
+                                  EvidenceDeferredCount = evidenceCount "deferred"
+                                  EvidenceMissingCount = evidenceCount "missing"
+                                  EvidenceStaleCount = evidenceCount "stale"
+                                  EvidenceSyntheticCount = evidenceCount "synthetic"
+                                  EvidenceInvalidCount = evidenceCount "invalid"
+                                  TestSatisfiedCount = testCount "satisfied"
+                                  TestDeferredCount = testCount "deferred"
+                                  TestMissingCount = testCount "missing"
+                                  TestStaleCount = testCount "stale"
+                                  TestInvalidCount = testCount "invalid"
+                                  SkillVisibleCount = skillViews |> List.filter (fun view -> view.Visibility = "visible") |> List.length
+                                  SkillMissingCount = skillViews |> List.filter (fun view -> view.Visibility = "missing") |> List.length
+                                  SourceSnapshotCount = sources.Length
+                                  Readiness = readiness }
 
-                    let outputDigest = SchemaVersionModule.outputSha256Text text
-                    let view = verifyGeneratedViewState (verifyPath workId) model.Request.GeneratorVersion sources (Some outputDigest) GeneratedViewCurrency.Current []
+                            let effects =
+                                if hasBlocking then
+                                    []
+                                else
+                                    [ CreateDirectory(readinessDirectory workId); WriteFile(verifyPath workId, text, GeneratedView) ]
 
-                    let findings = verifyFindings diagnostics
-                    let findingCount severity = findings |> List.filter (fun (_, _, findingSeverity) -> findingSeverity = severity) |> List.length
-                    let evidenceCount state = evidenceViews |> List.filter (fun view -> view.State = state) |> List.length
-                    let testCount state = testViews |> List.filter (fun view -> view.State = state) |> List.length
+                            Some summary, Some view, effects
+                        | _ -> None, None, []
 
-                    let summary : VerificationSummary =
-                        { WorkId = workId
-                          Stage = "verify"
-                          Status = readiness
-                          VerifyPath = verifyPath workId
-                          FindingIds = findings |> List.map (fun (id, _, _) -> id) |> List.sort
-                          ReadyFindingCount = if readiness = "verificationReady" then evidenceViews.Length + testViews.Length else findingCount "ready"
-                          AdvisoryCount = findingCount "advisory"
-                          WarningCount = findingCount "warning"
-                          BlockingCount = findingCount "blocking"
-                          ObligationCount = evidenceViews.Length + testViews.Length
-                          EvidenceSupportedCount = evidenceCount "supported"
-                          EvidenceDeferredCount = evidenceCount "deferred"
-                          EvidenceMissingCount = evidenceCount "missing"
-                          EvidenceStaleCount = evidenceCount "stale"
-                          EvidenceSyntheticCount = evidenceCount "synthetic"
-                          EvidenceInvalidCount = evidenceCount "invalid"
-                          TestSatisfiedCount = testCount "satisfied"
-                          TestDeferredCount = testCount "deferred"
-                          TestMissingCount = testCount "missing"
-                          TestStaleCount = testCount "stale"
-                          TestInvalidCount = testCount "invalid"
-                          SkillVisibleCount = skillViews |> List.filter (fun view -> view.Visibility = "visible") |> List.length
-                          SkillMissingCount = skillViews |> List.filter (fun view -> view.Visibility = "missing") |> List.length
-                          SourceSnapshotCount = sources.Length
-                          Readiness = readiness }
+                    let generatedViews = [ Some workModelView; verifyView ] |> List.choose id
 
-                    let effects =
-                        if hasBlocking then
-                            []
-                        else
-                            [ CreateDirectory(readinessDirectory workId); WriteFile(verifyPath workId, text, GeneratedView) ]
+                    (specification, clarification, checklist, plan, tasks, analysis, evidenceSummaryOpt, verificationSummary), generatedViews, workModelEffects, verifyEffects))
 
-                    Some summary, Some view, effects
-                | _ -> None, None, []
-
-            let generatedViews = [ Some workModelView; verifyView ] |> List.choose id
-
-            let effects =
-                if hasBlocking then [] else workModelEffects @ verifyEffects
-
-            diagnostics, specification, clarification, checklist, plan, tasks, analysis, evidenceSummaryOpt, verificationSummary, generatedViews, effects
+        diagnostics, specification, clarification, checklist, plan, tasks, analysis, evidenceSummaryOpt, verificationSummary, generatedViews, effects
 
     // ---- Ship command ----
 
@@ -5637,193 +5625,180 @@ sourceAnalysis: {analysisPath workId}
         Encoding.UTF8.GetString(stream.ToArray())
 
     let computeShipPlan model =
-        match model.Request.WorkId with
-        | None -> model.Diagnostics, None, None, None, None, None, None, None, None, None, [], []
-        | Some workId ->
-            let projectDiagnostics = projectDiagnostics model
-            let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
-            let specificationDiagnostics, specText, specification, specFacts = specificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
-            let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = clarificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
+        let (specification, clarification, checklist, plan, tasks, analysis, shipSummaryOpt), diagnostics, generatedViews, effects =
+            runHandler model (None, None, None, None, None, None, None) (fun workId ->
+                let projectDiagnostics = projectDiagnostics model
+                let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
+                let prereqs = resolvePrerequisites workId model
+                let specificationDiagnostics, specText, specification, specFacts = prereqs.SpecificationDiagnostics, prereqs.SpecificationText, prereqs.Specification, prereqs.SpecificationFacts
+                let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = prereqs.ClarificationDiagnostics, prereqs.ClarificationText, prereqs.Clarification, prereqs.ClarificationFacts
+                let checklistDiagnostics, checklistText, checklist, checklistFacts = prereqs.ChecklistDiagnostics, prereqs.ChecklistText, prereqs.Checklist, prereqs.ChecklistFacts
+                let planDiagnostics, planText, plan, planFacts = prereqs.PlanDiagnostics, prereqs.PlanText, prereqs.Plan, prereqs.PlanFacts
+                let taskDiagnostics, taskText, tasks, taskFacts = prereqs.TaskDiagnostics, prereqs.TaskText, prereqs.Tasks, prereqs.TaskFacts
 
-            let checklistDiagnostics, checklistText, checklist, checklistFacts =
-                match specFacts, clarificationFacts with
-                | Some specFacts, Some clarificationFacts -> checklistPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts model
-                | _ -> [], None, None, None
+                let analysisDiagnostics, analysisText, analysis = analysisPrerequisiteDiagnosticsSummaryAndText workId model
+                let existingEvidenceArtifact, existingEvidenceDiagnostics, evidenceText = parseExistingEvidence workId model
 
-            let planDiagnostics, planText, plan, planFacts =
-                match specFacts, clarificationFacts, checklistFacts with
-                | Some specFacts, Some clarificationFacts, Some checklistFacts -> planPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts model
-                | _ -> [], None, None, None
+                let evidencePresenceDiagnostics =
+                    match existingEvidenceArtifact, snapshot (evidencePath workId) model with
+                    | None, None -> [ missingEvidencePrerequisite (evidencePath workId) $"Evidence prerequisite '{evidencePath workId}' is missing." ]
+                    | _ -> []
 
-            let taskDiagnostics, taskText, tasks, taskFacts =
-                match specFacts, clarificationFacts, checklistFacts, planFacts with
-                | Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts -> tasksPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts planFacts model
-                | _ -> [], None, None, None
+                let verificationPrereqDiagnostics, verificationView = shipVerificationPrerequisite workId model
+                let shipViewDiagnostics = existingShipDiagnostic workId model |> Option.toList
 
-            let analysisDiagnostics, analysisText, analysis = analysisPrerequisiteDiagnosticsSummaryAndText workId model
-            let existingEvidenceArtifact, existingEvidenceDiagnostics, evidenceText = parseExistingEvidence workId model
+                let commandDiagnostics =
+                    projectDiagnostics
+                    @ duplicateDiagnostics
+                    @ specificationDiagnostics
+                    @ clarificationDiagnostics
+                    @ checklistDiagnostics
+                    @ planDiagnostics
+                    @ taskDiagnostics
+                    @ analysisDiagnostics
+                    @ existingEvidenceDiagnostics
+                    @ evidencePresenceDiagnostics
+                    @ verificationPrereqDiagnostics
+                    @ shipViewDiagnostics
+                    |> DiagnosticsModule.sort
 
-            let evidencePresenceDiagnostics =
-                match existingEvidenceArtifact, snapshot (evidencePath workId) model with
-                | None, None -> [ missingEvidencePrerequisite (evidencePath workId) $"Evidence prerequisite '{evidencePath workId}' is missing." ]
-                | _ -> []
+                let generatedDiagnostics, workModelView, workModelEffects =
+                    match specText, clarificationText, checklistText, planText, taskText with
+                    | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText ->
+                        let charterText = snapshot (charterPath workId) model |> Option.map _.Text
+                        generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) evidenceText commandDiagnostics model
+                    | _ ->
+                        let path = workModelPath workId
+                        let ids = commandDiagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError) |> List.map _.Id
+                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
 
-            let verificationPrereqDiagnostics, verificationView = shipVerificationPrerequisite workId model
-            let shipViewDiagnostics = existingShipDiagnostic workId model |> Option.toList
+                commandDiagnostics @ generatedDiagnostics,
+                (fun hasBlocking diagnostics ->
+                    let readiness = if hasBlocking then "needsShipCorrection" else "shipReady"
 
-            let commandDiagnostics =
-                projectDiagnostics
-                @ duplicateDiagnostics
-                @ specificationDiagnostics
-                @ clarificationDiagnostics
-                @ checklistDiagnostics
-                @ planDiagnostics
-                @ taskDiagnostics
-                @ analysisDiagnostics
-                @ existingEvidenceDiagnostics
-                @ evidencePresenceDiagnostics
-                @ verificationPrereqDiagnostics
-                @ shipViewDiagnostics
-                |> DiagnosticsModule.sort
+                    let disposition =
+                        if hasBlocking then "blocked"
+                        elif diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticWarning) then "advisory"
+                        else "shipReady"
 
-            let generatedDiagnostics, workModelView, workModelEffects =
-                match specText, clarificationText, checklistText, planText, taskText with
-                | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText ->
-                    let charterText = snapshot (charterPath workId) model |> Option.map _.Text
-                    generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) evidenceText commandDiagnostics model
-                | _ ->
-                    let path = workModelPath workId
-                    let ids = commandDiagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError) |> List.map _.Id
-                    [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+                    let verificationStatus =
+                        verificationView
+                        |> Option.map (fun view -> view.Readiness)
+                        |> Option.defaultValue "needsVerificationCorrection"
 
-            let diagnostics = commandDiagnostics @ generatedDiagnostics |> DiagnosticsModule.sort
-            let hasBlocking = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-            let readiness = if hasBlocking then "needsShipCorrection" else "shipReady"
+                    let analysisViewState =
+                        analysis
+                        |> Option.map (fun _ -> shipGeneratedViewState (analysisPath workId) "analysis" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Current [])
+                        |> Option.defaultValue (shipGeneratedViewState (analysisPath workId) "analysis" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Missing [])
 
-            let disposition =
-                if hasBlocking then "blocked"
-                elif diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticWarning) then "advisory"
-                else "shipReady"
-
-            let verificationStatus =
-                verificationView
-                |> Option.map (fun view -> view.Readiness)
-                |> Option.defaultValue "needsVerificationCorrection"
-
-            let analysisViewState =
-                analysis
-                |> Option.map (fun _ -> shipGeneratedViewState (analysisPath workId) "analysis" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Current [])
-                |> Option.defaultValue (shipGeneratedViewState (analysisPath workId) "analysis" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Missing [])
-
-            let verifyViewState =
-                match verificationView with
-                | Some _ -> shipGeneratedViewState (verifyPath workId) "verification" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Current []
-                | None -> shipGeneratedViewState (verifyPath workId) "verification" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Missing []
-
-            let stageStatus present = if present then "ready" else "missing"
-
-            let lifecycleStages =
-                [ "specify", stageStatus (Option.isSome specFacts)
-                  "clarify", stageStatus (Option.isSome clarificationFacts)
-                  "checklist", stageStatus (Option.isSome checklistFacts)
-                  "plan", stageStatus (Option.isSome planFacts)
-                  "tasks", stageStatus (Option.isSome taskFacts)
-                  "analyze", (match analysis with Some summary -> (if summary.Readiness = "implementationReady" then "ready" else "blocked") | None -> "missing")
-                  "evidence", stageStatus (Option.isSome existingEvidenceArtifact)
-                  "verify", (if verificationStatus = "verificationReady" then "ready" else "blocked") ]
-
-            let shipSummaryOpt, shipView, shipHandoffView, shipEffects =
-                match specText, clarificationText, checklistText, planText, taskText, analysisText with
-                | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText, Some analysisText ->
-                    let workModelJson = workModelJsonFromGeneratedEffects workId workModelEffects model
-                    let baseSources = verifySources workId specText clarificationText checklistText planText taskText (evidenceText |> Option.defaultValue "") (Some analysisText) workModelJson model
-
-                    let sources =
-                        baseSources
-                        @ (snapshot (verifyPath workId) model |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text) |> Option.toList)
-                        |> List.sortBy (fun source -> source.Path)
-
-                    let generatedViewsForShip = [ workModelView; analysisViewState; verifyViewState ]
-
-                    let text =
-                        shipJson
-                            workId
-                            model.Request.GeneratorVersion
-                            readiness
-                            disposition
-                            sources
-                            lifecycleStages
-                            (if hasBlocking then "needsShipCorrection" else "shipReady")
-                            verificationView
-                            verificationStatus
-                            generatedViewsForShip
-                            diagnostics
-
-                    let outputDigest = SchemaVersionModule.outputSha256Text text
-                    let view = shipGeneratedViewState (shipPath workId) "ship" model.Request.GeneratorVersion sources (Some outputDigest) GeneratedViewCurrency.Current []
-
-                    let findings = shipFindings diagnostics
-                    let findingCount severity = findings |> List.filter (fun (_, _, findingSeverity) -> findingSeverity = severity) |> List.length
-
-                    let evidenceCount state =
+                    let verifyViewState =
                         match verificationView with
-                        | Some v -> v.EvidenceDispositions |> List.filter (fun disposition -> disposition.State = state) |> List.length
-                        | None -> 0
+                        | Some _ -> shipGeneratedViewState (verifyPath workId) "verification" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Current []
+                        | None -> shipGeneratedViewState (verifyPath workId) "verification" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Missing []
 
-                    let summary : ShipSummary =
-                        { WorkId = workId
-                          Stage = "ship"
-                          Status = readiness
-                          ShipPath = shipPath workId
-                          FindingIds = findings |> List.map (fun (id, _, _) -> id) |> List.sort
-                          ReadyFindingCount = findingCount "ready"
-                          AdvisoryCount = findingCount "advisory"
-                          WarningCount = findingCount "warning"
-                          BlockingCount = findingCount "blocking"
-                          Disposition = disposition
-                          LifecycleStageReadiness = lifecycleStages
-                          VerificationReadiness = verificationStatus
-                          EvidenceSupportedCount = evidenceCount EvidenceSupported
-                          EvidenceDeferredCount = evidenceCount EvidenceDeferred
-                          EvidenceMissingCount = evidenceCount EvidenceMissingDisposition
-                          EvidenceStaleCount = evidenceCount EvidenceStale
-                          EvidenceSyntheticCount = evidenceCount EvidenceSyntheticDisposition
-                          EvidenceInvalidCount = evidenceCount EvidenceInvalid
-                          GeneratedViewState = (if hasBlocking then "blocked" else "current")
-                          SourceSnapshotCount = sources.Length
-                          Readiness = readiness }
+                    let stageStatus present = if present then "ready" else "missing"
 
-                    // --- Governance handoff: additive, emitted alongside ship.json ---
-                    let handoffView, handoffEffects, _ =
-                        if hasBlocking then
-                            None, [], None
-                        else
-                            governanceHandoffEmission
-                                workId
-                                model.Request.GeneratorVersion
-                                workModelJson
-                                (snapshot (verifyPath workId) model |> Option.map _.Text)
-                                text
-                                (governanceConfigPresence model)
+                    let lifecycleStages =
+                        [ "specify", stageStatus (Option.isSome specFacts)
+                          "clarify", stageStatus (Option.isSome clarificationFacts)
+                          "checklist", stageStatus (Option.isSome checklistFacts)
+                          "plan", stageStatus (Option.isSome planFacts)
+                          "tasks", stageStatus (Option.isSome taskFacts)
+                          "analyze", (match analysis with Some summary -> (if summary.Readiness = "implementationReady" then "ready" else "blocked") | None -> "missing")
+                          "evidence", stageStatus (Option.isSome existingEvidenceArtifact)
+                          "verify", (if verificationStatus = "verificationReady" then "ready" else "blocked") ]
 
-                    let effects =
-                        if hasBlocking then
-                            []
-                        else
-                            [ CreateDirectory(readinessDirectory workId); WriteFile(shipPath workId, text, GeneratedView) ]
-                            @ handoffEffects
+                    let shipSummaryOpt, shipView, shipHandoffView, shipEffects =
+                        match specText, clarificationText, checklistText, planText, taskText, analysisText with
+                        | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText, Some analysisText ->
+                            let workModelJson = workModelJsonFromGeneratedEffects workId workModelEffects model
+                            let baseSources = verifySources workId specText clarificationText checklistText planText taskText (evidenceText |> Option.defaultValue "") (Some analysisText) workModelJson model
 
-                    Some summary, Some view, handoffView, effects
-                | _ -> None, None, None, []
+                            let sources =
+                                baseSources
+                                @ (snapshot (verifyPath workId) model |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text) |> Option.toList)
+                                |> List.sortBy (fun source -> source.Path)
 
-            let generatedViews =
-                [ Some workModelView; Some analysisViewState; Some verifyViewState; shipView; shipHandoffView ]
-                |> List.choose id
+                            let generatedViewsForShip = [ workModelView; analysisViewState; verifyViewState ]
 
-            let effects =
-                if hasBlocking then [] else workModelEffects @ shipEffects
+                            let text =
+                                shipJson
+                                    workId
+                                    model.Request.GeneratorVersion
+                                    readiness
+                                    disposition
+                                    sources
+                                    lifecycleStages
+                                    (if hasBlocking then "needsShipCorrection" else "shipReady")
+                                    verificationView
+                                    verificationStatus
+                                    generatedViewsForShip
+                                    diagnostics
 
-            diagnostics, specification, clarification, checklist, plan, tasks, analysis, None, None, shipSummaryOpt, generatedViews, effects
+                            let outputDigest = SchemaVersionModule.outputSha256Text text
+                            let view = shipGeneratedViewState (shipPath workId) "ship" model.Request.GeneratorVersion sources (Some outputDigest) GeneratedViewCurrency.Current []
+
+                            let findings = shipFindings diagnostics
+                            let findingCount severity = findings |> List.filter (fun (_, _, findingSeverity) -> findingSeverity = severity) |> List.length
+
+                            let evidenceCount state =
+                                match verificationView with
+                                | Some v -> v.EvidenceDispositions |> List.filter (fun disposition -> disposition.State = state) |> List.length
+                                | None -> 0
+
+                            let summary : ShipSummary =
+                                { WorkId = workId
+                                  Stage = "ship"
+                                  Status = readiness
+                                  ShipPath = shipPath workId
+                                  FindingIds = findings |> List.map (fun (id, _, _) -> id) |> List.sort
+                                  ReadyFindingCount = findingCount "ready"
+                                  AdvisoryCount = findingCount "advisory"
+                                  WarningCount = findingCount "warning"
+                                  BlockingCount = findingCount "blocking"
+                                  Disposition = disposition
+                                  LifecycleStageReadiness = lifecycleStages
+                                  VerificationReadiness = verificationStatus
+                                  EvidenceSupportedCount = evidenceCount EvidenceSupported
+                                  EvidenceDeferredCount = evidenceCount EvidenceDeferred
+                                  EvidenceMissingCount = evidenceCount EvidenceMissingDisposition
+                                  EvidenceStaleCount = evidenceCount EvidenceStale
+                                  EvidenceSyntheticCount = evidenceCount EvidenceSyntheticDisposition
+                                  EvidenceInvalidCount = evidenceCount EvidenceInvalid
+                                  GeneratedViewState = (if hasBlocking then "blocked" else "current")
+                                  SourceSnapshotCount = sources.Length
+                                  Readiness = readiness }
+
+                            // --- Governance handoff: additive, emitted alongside ship.json ---
+                            let handoffView, handoffEffects, _ =
+                                if hasBlocking then
+                                    None, [], None
+                                else
+                                    governanceHandoffEmission
+                                        workId
+                                        model.Request.GeneratorVersion
+                                        workModelJson
+                                        (snapshot (verifyPath workId) model |> Option.map _.Text)
+                                        text
+                                        (governanceConfigPresence model)
+
+                            let effects =
+                                if hasBlocking then
+                                    []
+                                else
+                                    [ CreateDirectory(readinessDirectory workId); WriteFile(shipPath workId, text, GeneratedView) ]
+                                    @ handoffEffects
+
+                            Some summary, Some view, handoffView, effects
+                        | _ -> None, None, None, []
+
+                    let generatedViews =
+                        [ Some workModelView; Some analysisViewState; Some verifyViewState; shipView; shipHandoffView ]
+                        |> List.choose id
+
+                    (specification, clarification, checklist, plan, tasks, analysis, shipSummaryOpt), generatedViews, workModelEffects, shipEffects))
+
+        diagnostics, specification, clarification, checklist, plan, tasks, analysis, None, None, shipSummaryOpt, generatedViews, effects
 
     // ---- Agents command (cross-cutting generated agent guidance) ----
 
@@ -5980,217 +5955,219 @@ sourceAnalysis: {analysisPath workId}
         |> List.mapi (fun index diagnostic -> sprintf "GF%03d" (index + 1), diagnostic, agentGuidanceFindingSeverity diagnostic)
 
     let computeAgentsPlan model =
-        match model.Request.WorkId with
-        | None -> model.Diagnostics, None, [], []
-        | Some workId ->
-            let request = model.Request
-            let projectDiags = projectDiagnostics model
-            let duplicateDiags = duplicateWorkIdDiagnostics workId model
-            let configOpt = agentsConfigOpt model
+        let summaries, diagnostics, generatedViews, effects =
+            runHandler model None (fun workId ->
+                let request = model.Request
+                let projectDiags = projectDiagnostics model
+                let duplicateDiags = duplicateWorkIdDiagnostics workId model
+                let configOpt = agentsConfigOpt model
 
-            let configDiags =
-                match configOpt with
-                | None -> []
-                | Some config ->
-                    let noTargets =
-                        if List.isEmpty config.Targets then [ agentsNoTargets ".fsgg/agents.yml" ] else []
+                let configDiags =
+                    match configOpt with
+                    | None -> []
+                    | Some config ->
+                        let noTargets =
+                            if List.isEmpty config.Targets then [ agentsNoTargets ".fsgg/agents.yml" ] else []
 
-                    let invalidTargets =
+                        let invalidTargets =
+                            config.Targets
+                            |> List.filter (fun target -> not (agentRootResolvesWithinProject workId target.GeneratedRoot))
+                            |> List.map (fun target -> agentsInvalidGeneratedRoot ".fsgg/agents.yml" target.Id)
+
+                        let invalidWorkModel =
+                            if agentRootResolvesWithinProject workId config.WorkModelPath then
+                                []
+                            else
+                                [ agentsInvalidGeneratedRoot ".fsgg/agents.yml" "workModel" ]
+
+                        noTargets @ invalidTargets @ invalidWorkModel
+
+                let workModelP = workModelPath workId
+                let workModelSnap = snapshot workModelP model
+
+                let workModelDiags, workModelOpt =
+                    match workModelSnap with
+                    | None -> [ agentsMissingWorkModel workModelP ], None
+                    | Some snap ->
+                        match WorkModelModule.parseWorkModel snap with
+                        | Error errs -> (errs |> List.map (fun diagnostic -> agentsMalformedWorkModel workModelP diagnostic.Message)), None
+                        | Ok wm when not (String.Equals(wm.WorkId, workId, StringComparison.OrdinalIgnoreCase)) ->
+                            [ agentsWorkModelIdentityMismatch workModelP workId wm.WorkId ], None
+                        | Ok wm ->
+                            let embedded = wm.Diagnostics
+
+                            let unknownRefs =
+                                embedded
+                                |> List.filter (fun diagnostic -> diagnostic.Id.StartsWith("unknownReference", StringComparison.OrdinalIgnoreCase))
+                                |> List.collect (fun diagnostic ->
+                                    match diagnostic.RelatedIds with
+                                    | [] -> [ agentsUnknownSourceReference workModelP diagnostic.Id ]
+                                    | ids -> ids |> List.map (agentsUnknownSourceReference workModelP))
+
+                            let staleMarkers =
+                                if embedded |> List.exists (fun diagnostic -> diagnostic.Id.IndexOf("stale", StringComparison.OrdinalIgnoreCase) >= 0) then
+                                    [ agentsStaleWorkModel workModelP ]
+                                else
+                                    []
+
+                            let otherBlocking =
+                                embedded
+                                |> List.filter (fun diagnostic ->
+                                    diagnostic.Severity = DiagnosticSeverity.DiagnosticError
+                                    && not (diagnostic.Id.StartsWith("unknownReference", StringComparison.OrdinalIgnoreCase))
+                                    && diagnostic.Id.IndexOf("stale", StringComparison.OrdinalIgnoreCase) < 0)
+
+                            let blockedDiag =
+                                if List.isEmpty otherBlocking then
+                                    []
+                                else
+                                    [ agentsBlockedWorkModel workModelP (otherBlocking |> List.map (fun diagnostic -> diagnostic.Id) |> List.distinct |> List.sort) ]
+
+                            let gateDiags = unknownRefs @ staleMarkers @ blockedDiag
+
+                            if List.isEmpty gateDiags then [], Some wm else gateDiags, None
+
+                let workModelText = workModelSnap |> Option.map (fun snap -> snap.Text) |> Option.defaultValue ""
+                let sourceDigest = SchemaVersionModule.sha256Text workModelText
+                let equivalenceRequired = configOpt |> Option.map (fun config -> config.RequireEquivalentClaudeAndCodexBehavior) |> Option.defaultValue true
+
+                let targetResults =
+                    match configOpt, workModelOpt with
+                    | Some config, Some wm ->
+                        let guidanceModel = WorkModelModule.deriveGuidanceModel wm
+                        let behaviorDigest = WorkModelModule.behaviorModelDigest guidanceModel
+
                         config.Targets
-                        |> List.filter (fun target -> not (agentRootResolvesWithinProject workId target.GeneratedRoot))
-                        |> List.map (fun target -> agentsInvalidGeneratedRoot ".fsgg/agents.yml" target.Id)
+                        |> List.sortBy (fun target -> target.Id)
+                        |> List.map (fun target ->
+                            let root = resolveGeneratedRoot workId target.GeneratedRoot
+                            let guidancePath = root + "/guidance.json"
+                            let commandsPath = root + "/commands.md"
+                            let skillsPath = root + "/skills.md"
+                            let renderedFiles = [ commandsPath, "commands"; skillsPath, "skills" ]
+                            let manifestJson = agentGuidanceManifestJson workId target.Id request.GeneratorVersion workModelP sourceDigest behaviorDigest guidanceModel.Commands guidanceModel.Skills renderedFiles
+                            let commandsMd = agentCommandsMarkdown workId target.Id guidanceModel.Commands
+                            let skillsMd = agentSkillsMarkdown workId target.Id guidanceModel.Skills
 
-                    let invalidWorkModel =
-                        if agentRootResolvesWithinProject workId config.WorkModelPath then
+                            let currency, targetDiags, divergent =
+                                match snapshot guidancePath model with
+                                | None -> GeneratedViewCurrency.Missing, [], false
+                                | Some existing ->
+                                    match parseGeneratedAgentGuidance existing with
+                                    | Error errs ->
+                                        let message = errs |> List.tryHead |> Option.map (fun diagnostic -> diagnostic.Message) |> Option.defaultValue "Generated agent guidance is malformed."
+                                        GeneratedViewCurrency.Malformed, [ agentsMalformedGeneratedGuidance guidancePath message ], false
+                                    | Ok manifest ->
+                                        let recordedDigest = manifest.Sources |> List.tryPick (fun source -> source.Digest) |> Option.map (fun digest -> digest.Value)
+                                        let digestMatches = recordedDigest = Some sourceDigest.Value
+                                        let behaviorMatches = String.Equals(manifest.BehaviorModelDigest.Value, behaviorDigest.Value, StringComparison.OrdinalIgnoreCase)
+                                        let divergent = equivalenceRequired && not behaviorMatches
+
+                                        if digestMatches && behaviorMatches then
+                                            GeneratedViewCurrency.Current, [], false
+                                        else
+                                            let staleDiag = [ agentsStaleGeneratedGuidance guidancePath target.Id ]
+                                            let divergenceDiag = if divergent then [ agentsBehaviorDivergence guidancePath [ target.Id ] ] else []
+                                            GeneratedViewCurrency.Stale, (staleDiag @ divergenceDiag), divergent
+
+                            {| TargetId = target.Id
+                               Root = root
+                               GuidancePath = guidancePath
+                               ManifestJson = manifestJson
+                               CommandsPath = commandsPath
+                               CommandsMd = commandsMd
+                               SkillsPath = skillsPath
+                               SkillsMd = skillsMd
+                               Currency = currency
+                               Diagnostics = targetDiags
+                               Divergent = divergent |})
+                    | _ -> []
+
+                let targetDiagnostics = targetResults |> List.collect (fun result -> result.Diagnostics)
+                let baseDiagnostics = projectDiags @ duplicateDiags @ configDiags @ workModelDiags
+
+                baseDiagnostics @ targetDiagnostics,
+                (fun hasBlocking diagnostics ->
+                    let hasWarning = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticWarning)
+
+                    let divergentTargetIds =
+                        targetResults |> List.filter (fun result -> result.Divergent) |> List.map (fun result -> result.TargetId) |> List.distinct |> List.sort
+
+                    let generatedTargetIds = targetResults |> List.map (fun result -> result.TargetId) |> List.distinct |> List.sort
+                    let generatedRoots = targetResults |> List.map (fun result -> result.Root) |> List.distinct |> List.sort
+
+                    let refusedTargetIds =
+                        targetResults
+                        |> List.filter (fun result -> result.Currency = GeneratedViewCurrency.Malformed)
+                        |> List.map (fun result -> result.TargetId)
+                        |> List.distinct
+                        |> List.sort
+
+                    let effects =
+                        if hasBlocking then
                             []
                         else
-                            [ agentsInvalidGeneratedRoot ".fsgg/agents.yml" "workModel" ]
+                            targetResults
+                            |> List.collect (fun result ->
+                                match result.Currency with
+                                | GeneratedViewCurrency.Current -> []
+                                | _ ->
+                                    [ CreateDirectory result.Root
+                                      WriteFile(result.GuidancePath, result.ManifestJson, GeneratedView)
+                                      WriteFile(result.CommandsPath, result.CommandsMd, GeneratedView)
+                                      WriteFile(result.SkillsPath, result.SkillsMd, GeneratedView) ])
 
-                    noTargets @ invalidTargets @ invalidWorkModel
+                    let generatedViews =
+                        targetResults
+                        |> List.map (fun result ->
+                            shipGeneratedViewState
+                                result.GuidancePath
+                                "agent-commands"
+                                request.GeneratorVersion
+                                [ { Path = workModelP; Digest = Some sourceDigest; SchemaVersion = Some 1; SchemaStatus = Some "current" } ]
+                                None
+                                (if hasBlocking && (result.Currency = GeneratedViewCurrency.Missing || result.Currency = GeneratedViewCurrency.Stale) then GeneratedViewCurrency.Blocked else result.Currency)
+                                (result.Diagnostics |> List.map (fun diagnostic -> diagnostic.Id)))
 
-            let workModelP = workModelPath workId
-            let workModelSnap = snapshot workModelP model
+                    let disposition =
+                        if hasBlocking then "blocked"
+                        elif targetResults |> List.exists (fun result -> result.Currency = GeneratedViewCurrency.Stale) && request.DryRun then "stale"
+                        elif hasWarning then "advisory"
+                        else "generated-current"
 
-            let workModelDiags, workModelOpt =
-                match workModelSnap with
-                | None -> [ agentsMissingWorkModel workModelP ], None
-                | Some snap ->
-                    match WorkModelModule.parseWorkModel snap with
-                    | Error errs -> (errs |> List.map (fun diagnostic -> agentsMalformedWorkModel workModelP diagnostic.Message)), None
-                    | Ok wm when not (String.Equals(wm.WorkId, workId, StringComparison.OrdinalIgnoreCase)) ->
-                        [ agentsWorkModelIdentityMismatch workModelP workId wm.WorkId ], None
-                    | Ok wm ->
-                        let embedded = wm.Diagnostics
+                    let readiness = if hasBlocking then "needsAgentGuidanceCorrection" else "agentGuidanceReady"
+                    let findings = agentGuidanceFindings diagnostics
+                    let findingCount severity = findings |> List.filter (fun (_, _, findingSeverity) -> findingSeverity = severity) |> List.length
 
-                        let unknownRefs =
-                            embedded
-                            |> List.filter (fun diagnostic -> diagnostic.Id.StartsWith("unknownReference", StringComparison.OrdinalIgnoreCase))
-                            |> List.collect (fun diagnostic ->
-                                match diagnostic.RelatedIds with
-                                | [] -> [ agentsUnknownSourceReference workModelP diagnostic.Id ]
-                                | ids -> ids |> List.map (agentsUnknownSourceReference workModelP))
+                    let generatedViewState =
+                        if hasBlocking then "blocked"
+                        elif targetResults |> List.exists (fun result -> result.Currency = GeneratedViewCurrency.Stale) then "stale"
+                        elif targetResults |> List.exists (fun result -> result.Currency = GeneratedViewCurrency.Missing) then "missing"
+                        elif List.isEmpty targetResults then "missing"
+                        else "current"
 
-                        let staleMarkers =
-                            if embedded |> List.exists (fun diagnostic -> diagnostic.Id.IndexOf("stale", StringComparison.OrdinalIgnoreCase) >= 0) then
-                                [ agentsStaleWorkModel workModelP ]
-                            else
-                                []
+                    let summary: AgentGuidanceSummary =
+                        { WorkId = workId
+                          Stage = "agents"
+                          Status = disposition
+                          GeneratedRoots = generatedRoots
+                          GeneratedTargetIds = generatedTargetIds
+                          RefusedTargetIds = refusedTargetIds
+                          FindingIds = findings |> List.map (fun (id, _, _) -> id) |> List.sort
+                          ReadyFindingCount = if disposition = "generated-current" then List.length generatedTargetIds else 0
+                          AdvisoryCount = findingCount "advisory"
+                          WarningCount = findingCount "warning"
+                          BlockingCount = findingCount "blocking"
+                          Disposition = disposition
+                          EquivalenceRequired = equivalenceRequired
+                          DivergentTargetIds = divergentTargetIds
+                          GeneratedViewState = generatedViewState
+                          SourceSnapshotCount = (if Option.isSome workModelSnap then 1 else 0)
+                          Readiness = readiness }
 
-                        let otherBlocking =
-                            embedded
-                            |> List.filter (fun diagnostic ->
-                                diagnostic.Severity = DiagnosticSeverity.DiagnosticError
-                                && not (diagnostic.Id.StartsWith("unknownReference", StringComparison.OrdinalIgnoreCase))
-                                && diagnostic.Id.IndexOf("stale", StringComparison.OrdinalIgnoreCase) < 0)
+                    Some summary, generatedViews, effects, []))
 
-                        let blockedDiag =
-                            if List.isEmpty otherBlocking then
-                                []
-                            else
-                                [ agentsBlockedWorkModel workModelP (otherBlocking |> List.map (fun diagnostic -> diagnostic.Id) |> List.distinct |> List.sort) ]
-
-                        let gateDiags = unknownRefs @ staleMarkers @ blockedDiag
-
-                        if List.isEmpty gateDiags then [], Some wm else gateDiags, None
-
-            let workModelText = workModelSnap |> Option.map (fun snap -> snap.Text) |> Option.defaultValue ""
-            let sourceDigest = SchemaVersionModule.sha256Text workModelText
-            let equivalenceRequired = configOpt |> Option.map (fun config -> config.RequireEquivalentClaudeAndCodexBehavior) |> Option.defaultValue true
-
-            let targetResults =
-                match configOpt, workModelOpt with
-                | Some config, Some wm ->
-                    let guidanceModel = WorkModelModule.deriveGuidanceModel wm
-                    let behaviorDigest = WorkModelModule.behaviorModelDigest guidanceModel
-
-                    config.Targets
-                    |> List.sortBy (fun target -> target.Id)
-                    |> List.map (fun target ->
-                        let root = resolveGeneratedRoot workId target.GeneratedRoot
-                        let guidancePath = root + "/guidance.json"
-                        let commandsPath = root + "/commands.md"
-                        let skillsPath = root + "/skills.md"
-                        let renderedFiles = [ commandsPath, "commands"; skillsPath, "skills" ]
-                        let manifestJson = agentGuidanceManifestJson workId target.Id request.GeneratorVersion workModelP sourceDigest behaviorDigest guidanceModel.Commands guidanceModel.Skills renderedFiles
-                        let commandsMd = agentCommandsMarkdown workId target.Id guidanceModel.Commands
-                        let skillsMd = agentSkillsMarkdown workId target.Id guidanceModel.Skills
-
-                        let currency, targetDiags, divergent =
-                            match snapshot guidancePath model with
-                            | None -> GeneratedViewCurrency.Missing, [], false
-                            | Some existing ->
-                                match parseGeneratedAgentGuidance existing with
-                                | Error errs ->
-                                    let message = errs |> List.tryHead |> Option.map (fun diagnostic -> diagnostic.Message) |> Option.defaultValue "Generated agent guidance is malformed."
-                                    GeneratedViewCurrency.Malformed, [ agentsMalformedGeneratedGuidance guidancePath message ], false
-                                | Ok manifest ->
-                                    let recordedDigest = manifest.Sources |> List.tryPick (fun source -> source.Digest) |> Option.map (fun digest -> digest.Value)
-                                    let digestMatches = recordedDigest = Some sourceDigest.Value
-                                    let behaviorMatches = String.Equals(manifest.BehaviorModelDigest.Value, behaviorDigest.Value, StringComparison.OrdinalIgnoreCase)
-                                    let divergent = equivalenceRequired && not behaviorMatches
-
-                                    if digestMatches && behaviorMatches then
-                                        GeneratedViewCurrency.Current, [], false
-                                    else
-                                        let staleDiag = [ agentsStaleGeneratedGuidance guidancePath target.Id ]
-                                        let divergenceDiag = if divergent then [ agentsBehaviorDivergence guidancePath [ target.Id ] ] else []
-                                        GeneratedViewCurrency.Stale, (staleDiag @ divergenceDiag), divergent
-
-                        {| TargetId = target.Id
-                           Root = root
-                           GuidancePath = guidancePath
-                           ManifestJson = manifestJson
-                           CommandsPath = commandsPath
-                           CommandsMd = commandsMd
-                           SkillsPath = skillsPath
-                           SkillsMd = skillsMd
-                           Currency = currency
-                           Diagnostics = targetDiags
-                           Divergent = divergent |})
-                | _ -> []
-
-            let targetDiagnostics = targetResults |> List.collect (fun result -> result.Diagnostics)
-            let baseDiagnostics = projectDiags @ duplicateDiags @ configDiags @ workModelDiags
-            let diagnostics = baseDiagnostics @ targetDiagnostics |> DiagnosticsModule.sort
-            let hasBlocking = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-            let hasWarning = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticWarning)
-
-            let divergentTargetIds =
-                targetResults |> List.filter (fun result -> result.Divergent) |> List.map (fun result -> result.TargetId) |> List.distinct |> List.sort
-
-            let generatedTargetIds = targetResults |> List.map (fun result -> result.TargetId) |> List.distinct |> List.sort
-            let generatedRoots = targetResults |> List.map (fun result -> result.Root) |> List.distinct |> List.sort
-
-            let refusedTargetIds =
-                targetResults
-                |> List.filter (fun result -> result.Currency = GeneratedViewCurrency.Malformed)
-                |> List.map (fun result -> result.TargetId)
-                |> List.distinct
-                |> List.sort
-
-            let effects =
-                if hasBlocking then
-                    []
-                else
-                    targetResults
-                    |> List.collect (fun result ->
-                        match result.Currency with
-                        | GeneratedViewCurrency.Current -> []
-                        | _ ->
-                            [ CreateDirectory result.Root
-                              WriteFile(result.GuidancePath, result.ManifestJson, GeneratedView)
-                              WriteFile(result.CommandsPath, result.CommandsMd, GeneratedView)
-                              WriteFile(result.SkillsPath, result.SkillsMd, GeneratedView) ])
-
-            let generatedViews =
-                targetResults
-                |> List.map (fun result ->
-                    shipGeneratedViewState
-                        result.GuidancePath
-                        "agent-commands"
-                        request.GeneratorVersion
-                        [ { Path = workModelP; Digest = Some sourceDigest; SchemaVersion = Some 1; SchemaStatus = Some "current" } ]
-                        None
-                        (if hasBlocking && (result.Currency = GeneratedViewCurrency.Missing || result.Currency = GeneratedViewCurrency.Stale) then GeneratedViewCurrency.Blocked else result.Currency)
-                        (result.Diagnostics |> List.map (fun diagnostic -> diagnostic.Id)))
-
-            let disposition =
-                if hasBlocking then "blocked"
-                elif targetResults |> List.exists (fun result -> result.Currency = GeneratedViewCurrency.Stale) && request.DryRun then "stale"
-                elif hasWarning then "advisory"
-                else "generated-current"
-
-            let readiness = if hasBlocking then "needsAgentGuidanceCorrection" else "agentGuidanceReady"
-            let findings = agentGuidanceFindings diagnostics
-            let findingCount severity = findings |> List.filter (fun (_, _, findingSeverity) -> findingSeverity = severity) |> List.length
-
-            let generatedViewState =
-                if hasBlocking then "blocked"
-                elif targetResults |> List.exists (fun result -> result.Currency = GeneratedViewCurrency.Stale) then "stale"
-                elif targetResults |> List.exists (fun result -> result.Currency = GeneratedViewCurrency.Missing) then "missing"
-                elif List.isEmpty targetResults then "missing"
-                else "current"
-
-            let summary: AgentGuidanceSummary =
-                { WorkId = workId
-                  Stage = "agents"
-                  Status = disposition
-                  GeneratedRoots = generatedRoots
-                  GeneratedTargetIds = generatedTargetIds
-                  RefusedTargetIds = refusedTargetIds
-                  FindingIds = findings |> List.map (fun (id, _, _) -> id) |> List.sort
-                  ReadyFindingCount = if disposition = "generated-current" then List.length generatedTargetIds else 0
-                  AdvisoryCount = findingCount "advisory"
-                  WarningCount = findingCount "warning"
-                  BlockingCount = findingCount "blocking"
-                  Disposition = disposition
-                  EquivalenceRequired = equivalenceRequired
-                  DivergentTargetIds = divergentTargetIds
-                  GeneratedViewState = generatedViewState
-                  SourceSnapshotCount = (if Option.isSome workModelSnap then 1 else 0)
-                  Readiness = readiness }
-
-            diagnostics, Some summary, generatedViews, effects
+        diagnostics, summaries, generatedViews, effects
 
     // --- refresh orchestration (cross-cutting; reuses the per-view generators) ---
 

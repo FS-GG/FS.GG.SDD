@@ -318,7 +318,7 @@ input, thread the `Result` to a diagnostic instead of throwing.
 Progress markers (status legend, matching
 `docs/initial-implementation-plan.md`): 🟢 / ✅ complete · 🟡 in progress
 (started; not landed) · 🔴 not started · ⬜ optional / deferred. The
-2026-06-26 analysis baseline started every row at 🔴; **R3 and R4 have since
+2026-06-26 analysis baseline started every row at 🔴; **R3, R4, and R1 have since
 landed** (see below). Update the marker as each refactor lands and link its evidence
 (PR / spec readiness).
 
@@ -335,7 +335,7 @@ is permitted, and byte-identical artifact output is not separately required.
 
 | ID | Status | Refactor | Refs | Severity | Effort | Risk | Payoff |
 |---|---|---|---|---|---|---|---|
-| R1 | 🔴 | Extract prerequisite combinator + `runHandler` shell | §5.1 | High | M–L | Low | Shrinks god module, kills handler copy-paste |
+| R1 | ✅ | Extract prerequisite combinator + `runHandler` shell | §5.1 | High | M–L | Low | Shrinks god module, kills handler copy-paste |
 | R2 | 🔴 | Split `CommandWorkflow.fs` into facade + internal modules | §1.1 | High | M | Very low (7-line `.fsi`) | Navigability |
 | R3 | ✅ | Split `LifecycleArtifacts.fs` per artifact family | §1.2 | High | M | Very low | Navigability, localizes §3/§4 |
 | R4 | ✅ | Extract `parseJsonView`, making the 4 matches total | §5.3 §4 | Med | S | Low | Removes latent runtime throw + ~70 LOC |
@@ -345,10 +345,24 @@ is permitted, and byte-identical artifact output is not separately required.
 
 ### Status detail
 
-- 🔴 **R1 — prerequisite combinator + `runHandler` shell.** Not started.
-  Done when the 12 `compute*Plan` handlers share one guard/`hasBlocking`/
-  effect-gating shell and an ordered prerequisite combinator; no per-stage
-  copy-pasted cascade remains.
+- ✅ **R1 — prerequisite combinator + `runHandler` shell.** Landed via
+  `specs/024-prerequisite-combinator/`. **Done:** the monotonic
+  spec→clarification→checklist→plan→tasks cascade is single-sourced in
+  `resolvePrerequisites` (a closed, hand-written resolver returning one
+  `PrerequisiteResolution` record — research R-1 showed the naive uniform
+  "ordered list fold" does not type-check against the heterogeneous, growing-arity
+  stages, so the combinator is this resolver), and the eight cascade-consuming
+  handlers read the prefix they need from it — the 5-/6-deep nested cascades in
+  `computeAnalyzePlan`/`computeEvidencePlan` are gone, and no `compute*Plan` holds
+  a hand-rolled prerequisite `match`. The guard / `DiagnosticsModule.sort` /
+  single `hasBlocking` / effect-gate are single-sourced in `runHandler` (continuation
+  encoding, since verify/ship embed `hasBlocking` in view content); **eleven**
+  handlers route through it. `computeRefreshPlan` keeps its own guard by design —
+  its early `baseBlocking` short-circuit, `distinctBy`-dedup sort, and distributed
+  per-view effect gating are not the shell's four invariants, and forcing it through
+  would change output. `grep -cE 'hasBlocking = .*List\.exists'` → **1**;
+  `.fsi` byte-identical; **438** tests green; FS0025 = 0; FS3261 = 952 unchanged;
+  handler section net −115 lines.
 - 🔴 **R2 — split `CommandWorkflow.fs`.** Not started. Done when the module
   is a facade over internal `Prerequisites` / `Parsing` / `Handlers` /
   `ViewRendering` modules and no single file exceeds ~1,500 lines; `.fsi`
