@@ -71,16 +71,19 @@ module ScaffoldCommandTests =
         // Dry-run plans every effect without spawning a child or writing files.
         let model, _ = runScaffoldModel (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false true)
 
-        let writeIndex =
-            model.PendingEffects
-            |> List.tryFindIndex (function WriteFile(".fsgg/project.yml", _, _) -> true | _ -> false)
+        let indexOf predicate = model.PendingEffects |> List.tryFindIndex predicate
+        let installIndex = indexOf (function RunProcess("dotnet", args, _) -> List.contains "install" args | _ -> false)
+        let updateIndex = indexOf (function RunProcess("dotnet", args, _) -> List.contains "update" args | _ -> false)
+        let writeIndex = indexOf (function WriteFile(".fsgg/project.yml", _, _) -> true | _ -> false)
+        let createIndex = indexOf (function RunProcess("dotnet", args, _) -> List.contains "-o" args | _ -> false)
 
-        let createIndex =
-            model.PendingEffects
-            |> List.tryFindIndex (function RunProcess("dotnet", args, _) -> List.contains "-o" args | _ -> false)
-
+        Assert.True(Option.isSome installIndex, "Expected `dotnet new install` to be planned.")
+        Assert.True(Option.isSome updateIndex, "Expected `dotnet new update` to be planned.")
         Assert.True(Option.isSome writeIndex, "Expected the init skeleton write to be planned.")
         Assert.True(Option.isSome createIndex, "Expected the provider RunProcess to be planned.")
+        // install -> update -> skeleton -> create.
+        Assert.True(installIndex.Value < updateIndex.Value, "install must precede update.")
+        Assert.True(updateIndex.Value < writeIndex.Value, "update must precede the skeleton.")
         Assert.True(writeIndex.Value < createIndex.Value, "Skeleton must be established before the provider runs.")
 
     [<Fact>]

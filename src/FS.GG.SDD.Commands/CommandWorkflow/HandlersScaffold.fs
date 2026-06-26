@@ -165,6 +165,12 @@ module internal HandlersScaffold =
 
     let scaffoldInvocationEffects (request: CommandRequest) (descriptor: ProviderDescriptor) (effective: Map<string, string>) =
         let installEffect = RunProcess("dotnet", [ "new"; "install"; descriptor.Source ], "")
+        // Best-effort: upgrade an already-installed (e.g. NuGet-sourced) template to its
+        // latest version before invoking it. A first-time/local install is handled by
+        // `installEffect`; `update` is a no-op when packages are already current. Its
+        // result is ignored (offline/up-to-date is not a failure) — only the create
+        // process drives the outcome.
+        let updateEffect = RunProcess("dotnet", [ "new"; "update" ], "")
 
         let parameterArgs =
             effective
@@ -176,10 +182,10 @@ module internal HandlersScaffold =
             @ parameterArgs
             @ (if request.Force then [ "--force" ] else [])
 
-        // install, then the SDD skeleton (reused init effects, unchanged), then the
-        // create — so the create's after-snapshot includes the skeleton (which the
-        // diff subtracts) and the provider's product.
-        [ installEffect ] @ initEffects request @ [ RunProcess("dotnet", createArgs, "") ]
+        // install + update, then the SDD skeleton (reused init effects, unchanged),
+        // then the create — so the create's after-snapshot includes the skeleton
+        // (which the diff subtracts) and the provider's product.
+        [ installEffect; updateEffect ] @ initEffects request @ [ RunProcess("dotnet", createArgs, "") ]
 
     let plannedCreateCommand (descriptor: ProviderDescriptor) (effective: Map<string, string>) (request: CommandRequest) =
         let parameters =

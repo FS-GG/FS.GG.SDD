@@ -29,9 +29,13 @@ A provider MUST declare:
 | supported contract range | the version range SDD will accept; provider's declared version must fall in it |
 | force flag | whether the author opted into overwriting a non-empty target |
 
-`dotnet new` realization: `dotnet new <templateId> -o <targetDir> -p:<key>=<value> …`
-(`--force` only when the author opted in). A non-`dotnet new` provider may realize these
-inputs by any transport, provided it honors the same outputs below.
+`dotnet new` realization: SDD first acquires/refreshes the template
+(`dotnet new install <source>` then a best-effort `dotnet new update` to upgrade an
+already-installed, e.g. NuGet-sourced, package to its latest version — its result is
+ignored, since up-to-date/offline is not a failure), then invokes
+`dotnet new <templateId> -o <targetDir> -p:<key>=<value> …` (`--force` only when the
+author opted in). A non-`dotnet new` provider may realize these inputs by any
+transport, provided it honors the same outputs below.
 
 ## Outputs the provider yields (the Scaffold Result)
 
