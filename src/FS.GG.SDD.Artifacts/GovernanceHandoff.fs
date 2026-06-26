@@ -73,7 +73,7 @@ module GovernanceHandoff =
         | Failed -> "failed"
         | Skipped -> "skipped"
 
-    let private normalize (value: string) = value.Trim().ToLowerInvariant()
+    let normalize (value: string) = value.Trim().ToLowerInvariant()
 
     let isStaleEvidenceResult (result: string) = normalize result = "stale"
 
@@ -119,15 +119,15 @@ module GovernanceHandoff =
           SchemaStatus = SchemaCompatibilityStatus.Current
           RawSchemaVersion = None }
 
-    let private taskStateOf (status: string) =
+    let taskStateOf (status: string) =
         match normalize status with
         | "done" -> Real
         | "blocked"
         | "failed" -> Failed
         | _ -> Pending
 
-    let private evidencePrefix = "evidence:"
-    let private taskPrefix = "task:"
+    let evidencePrefix = "evidence:"
+    let taskPrefix = "task:"
 
     let fromWorkModel
         (model: WorkModel)
@@ -255,7 +255,7 @@ module GovernanceHandoff =
           Readiness = readiness
           Diagnostics = diagnostics }
 
-    let private writeNullableString (writer: Utf8JsonWriter) (name: string) (value: string option) =
+    let writeNullableString (writer: Utf8JsonWriter) (name: string) (value: string option) =
         match value with
         | Some text -> writer.WriteString(name, text)
         | None -> writer.WriteNull name

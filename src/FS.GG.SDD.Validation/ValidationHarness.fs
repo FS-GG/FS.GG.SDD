@@ -33,7 +33,7 @@ module ValidationHarness =
 
     /// The catalogued determinism outputs: the nine generated views plus the
     /// `--json` command-report (matrix-runner matrix 2 / FR-003).
-    let private determinismOutputs =
+    let determinismOutputs =
         [ "work-model.json"
           "analysis.json"
           "verify.json"
@@ -57,9 +57,9 @@ module ValidationHarness =
           BaselineContracts = release.Catalog |> List.map (fun entry -> entry.Contract)
           CompatibilityEntries = release.Compatibility |> List.map (fun entry -> entry.SddVersionLine) }
 
-    let private pending = NotValidated "not yet evaluated"
+    let pending = NotValidated "not yet evaluated"
 
-    let private cell coordinates =
+    let cell coordinates =
         { Coordinates = coordinates; Status = pending }
 
     let init (plan: MatrixPlan) =

@@ -48,20 +48,20 @@ module Rendering =
 
     // ----- Presentation styling (color names; stripped on color-off consoles). -----
 
-    let private outcomeStyle (outcome: CommandOutcome) =
+    let outcomeStyle (outcome: CommandOutcome) =
         match outcome with
         | CommandOutcome.Succeeded -> "green"
         | CommandOutcome.SucceededWithWarnings -> "yellow"
         | CommandOutcome.Blocked -> "red"
         | CommandOutcome.NoChange -> "grey"
 
-    let private severityStyle (severity: DiagnosticSeverity) =
+    let severityStyle (severity: DiagnosticSeverity) =
         match severity with
         | DiagnosticError -> "red"
         | DiagnosticWarning -> "yellow"
         | DiagnosticInfo -> "blue"
 
-    let private currencyStyle (currency: GeneratedViewCurrency) =
+    let currencyStyle (currency: GeneratedViewCurrency) =
         match currency with
         | GeneratedViewCurrency.Current -> "green"
         | GeneratedViewCurrency.Missing -> "yellow"
@@ -69,7 +69,7 @@ module Rendering =
         | GeneratedViewCurrency.Malformed -> "red"
         | GeneratedViewCurrency.Blocked -> "red"
 
-    let private esc (value: string) = Markup.Escape value
+    let esc (value: string) = Markup.Escape value
 
     let renderRichTo (console: IAnsiConsole) (report: CommandReport) : unit =
         // Header: command identity (work item, dry-run) as a rule.
@@ -170,7 +170,7 @@ module Rendering =
 
     /// The visible token for a cell status (color-stripped consoles differentiate
     /// failing vs non-failing by this token alone — INV-6).
-    let private cellStatusToken (status: CellStatus) =
+    let cellStatusToken (status: CellStatus) =
         match status with
         | Pass -> "pass"
         | Fail _ -> "fail"
@@ -181,7 +181,7 @@ module Rendering =
     /// Status styling: `Fail`/`CoverageGap`/`NotValidated` are emphasized red-family
     /// (they drive the non-zero exit); `SkippedWithReason` is non-failing yellow;
     /// `Pass` is green (summarized only). Stripped on color-off consoles.
-    let private cellStatusStyle (status: CellStatus) =
+    let cellStatusStyle (status: CellStatus) =
         match status with
         | Pass -> "green"
         | Fail _ -> "red bold"
@@ -189,7 +189,7 @@ module Rendering =
         | NotValidated _ -> "red"
         | SkippedWithReason _ -> "yellow"
 
-    let private cellDetail (status: CellStatus) =
+    let cellDetail (status: CellStatus) =
         match status with
         | Fail diagnostic -> diagnostic.Message
         | SkippedWithReason reason -> reason
@@ -197,7 +197,7 @@ module Rendering =
         | NotValidated reason -> reason
         | Pass -> ""
 
-    let private coordinateText (coordinates: (string * string) list) =
+    let coordinateText (coordinates: (string * string) list) =
         coordinates
         |> List.map (fun (dimension, value) -> $"{dimension}={value}")
         |> String.concat ", "

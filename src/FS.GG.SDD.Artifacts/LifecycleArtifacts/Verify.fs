@@ -136,13 +136,13 @@ module Verify =
         | "visible" -> SkillVisible
         | _ -> SkillMissing
 
-    let private taskIdsFromJson name element =
+    let taskIdsFromJson name element =
         jsonStringList name element |> List.choose (Identifiers.createTaskId >> Result.toOption)
 
-    let private evidenceIdsFromJson name element =
+    let evidenceIdsFromJson name element =
         jsonStringList name element |> List.choose (Identifiers.createEvidenceId >> Result.toOption)
 
-    let private requirementIdsFromJson name element =
+    let requirementIdsFromJson name element =
         jsonStringList name element |> List.choose (Identifiers.createRequirementId >> Result.toOption)
 
     let parseVerificationEvidenceDisposition (element: JsonElement) : EvidenceDisposition =

@@ -138,24 +138,24 @@ module ReleaseContract =
 
     // ---- the current release contract ----
 
-    let private determinism = "byte-stable; canonical key order; no clock/path/ANSI"
+    let determinism = "byte-stable; canonical key order; no clock/path/ANSI"
 
-    let private generatedViewSource (relative: string) =
+    let generatedViewSource (relative: string) =
         match ArtifactRef.create relative ArtifactRef.GeneratedView Sdd false with
         | Ok artifact -> artifact
         | Error message -> invalidArg (nameof relative) message
 
-    let private inventory kind (stableNames: string list) (names: string list) =
+    let inventory kind (stableNames: string list) (names: string list) =
         names
         |> List.map (fun name ->
             { Name = name
               Kind = kind
               Stability = (if List.contains name stableNames then Stable else AdditiveOptional) })
 
-    let private jsonInventory stableNames names = inventory JsonField stableNames names
-    let private markdownInventory names = inventory MarkdownSection [] names
+    let jsonInventory stableNames names = inventory JsonField stableNames names
+    let markdownInventory names = inventory MarkdownSection [] names
 
-    let private jsonViewEntry contract viewKind stability stableNames names =
+    let jsonViewEntry contract viewKind stability stableNames names =
         { Contract = contract
           Kind = GeneratedViewContract(viewKind, Json)
           SchemaVersion = 1
@@ -166,7 +166,7 @@ module ReleaseContract =
           SourceArtifact = generatedViewSource ("readiness/<id>/" + contract)
           BaselinePresent = true }
 
-    let private markdownViewEntry contract viewKind sections =
+    let markdownViewEntry contract viewKind sections =
         { Contract = contract
           Kind = GeneratedViewContract(viewKind, Markdown)
           SchemaVersion = 1
@@ -263,7 +263,8 @@ module ReleaseContract =
               SourceArtifact =
                 (match ArtifactRef.create "src/FS.GG.SDD.Commands/CommandSerialization.fs" (ArtifactRef.Other "commandOutput") Sdd false with
                  | Ok artifact -> artifact
-                 | Error message -> failwith message)
+                 | Error message ->
+                     failwithf "release contract source artifact path %s rejected: %s" "src/FS.GG.SDD.Commands/CommandSerialization.fs" message)
               BaselinePresent = true }
 
         { SchemaVersion = 1
@@ -279,19 +280,19 @@ module ReleaseContract =
 
     // ---- canonical serialization ----
 
-    let private writeNullableString (writer: Utf8JsonWriter) (name: string) (value: string option) =
+    let writeNullableString (writer: Utf8JsonWriter) (name: string) (value: string option) =
         match value with
         | Some text -> writer.WriteString(name, text)
         | None -> writer.WriteNull name
 
-    let private writeInventoryItem (writer: Utf8JsonWriter) (item: InventoryItem) =
+    let writeInventoryItem (writer: Utf8JsonWriter) (item: InventoryItem) =
         writer.WriteStartObject()
         writer.WriteString("name", item.Name)
         writer.WriteString("kind", inventoryKindValue item.Kind)
         writer.WriteString("stability", stabilityClassValue item.Stability)
         writer.WriteEndObject()
 
-    let private writeKind (writer: Utf8JsonWriter) (kind: ContractKind) =
+    let writeKind (writer: Utf8JsonWriter) (kind: ContractKind) =
         writer.WriteStartObject("kind")
 
         match kind with
@@ -304,7 +305,7 @@ module ReleaseContract =
 
         writer.WriteEndObject()
 
-    let private writeEntry (writer: Utf8JsonWriter) (entry: SchemaReferenceEntry) =
+    let writeEntry (writer: Utf8JsonWriter) (entry: SchemaReferenceEntry) =
         writer.WriteStartObject()
         writer.WriteString("contract", entry.Contract)
         writeKind writer entry.Kind
@@ -383,7 +384,7 @@ module ReleaseContract =
 
     // ---- parse (round-trip) ----
 
-    let private parseViewKind (value: string) =
+    let parseViewKind (value: string) =
         match value with
         | "workModel" -> WorkModel
         | "analysis" -> Analysis
@@ -394,40 +395,40 @@ module ReleaseContract =
         | "governance-handoff" -> GovernanceHandoff
         | other -> Other other
 
-    let private parseFormat (value: string) =
+    let parseFormat (value: string) =
         match value with
         | "markdown" -> Markdown
         | _ -> Json
 
-    let private parseStability (value: string) =
+    let parseStability (value: string) =
         match value with
         | "stable" -> Stable
         | "experimental" -> Experimental
         | _ -> AdditiveOptional
 
-    let private parseInventoryKind (value: string) =
+    let parseInventoryKind (value: string) =
         match value with
         | "markdownSection" -> MarkdownSection
         | _ -> JsonField
 
-    let private parseChannel (value: string) =
+    let parseChannel (value: string) =
         match value with
         | "stable" -> StableRelease
         | _ -> PreRelease
 
-    let private parseArtifactKind (value: string) =
+    let parseArtifactKind (value: string) =
         match value with
         | "generatedView" -> ArtifactRef.GeneratedView
         | other -> ArtifactRef.Other other
 
-    let private parseOwner (value: string) =
+    let parseOwner (value: string) =
         match value with
         | "governance" -> Governance
         | "rendering" -> Rendering
         | "generatedProduct" -> GeneratedProduct
         | _ -> Sdd
 
-    let private optString (element: JsonElement) (name: string) =
+    let optString (element: JsonElement) (name: string) =
         match element.TryGetProperty name with
         | true, value when value.ValueKind = JsonValueKind.String -> Option.ofObj (value.GetString())
         | _ -> None
@@ -448,7 +449,8 @@ module ReleaseContract =
 
                 match ArtifactRef.create path kind owner required with
                 | Ok artifact -> artifact
-                | Error message -> failwith message
+                | Error message ->
+                    failwithf "release contract: parsed-back artifact path %s rejected: %s" path message
 
             let generatorElement = prop "generatorVersion" root
 
@@ -528,7 +530,7 @@ module ReleaseContract =
 
     // ---- pure readiness check ----
 
-    let private gap id artifact message correction =
+    let gap id artifact message correction =
         Diagnostics.create id DiagnosticError artifact None message correction []
 
     let evaluate (release: ReleaseReadiness) (produced: ProducedArtifact list) : Diagnostic list =

@@ -86,19 +86,25 @@ module internal ParsingTasks =
         | TaskStatus.Stale -> "stale"
 
     let taskEvidenceId index =
-        match IdentifiersModule.createEvidenceId (sprintf "EV%03d" index) with
+        let candidate = sprintf "EV%03d" index
+        match IdentifiersModule.createEvidenceId candidate with
         | Ok id -> id
-        | Error message -> failwith message
+        | Error message ->
+            failwithf "taskEvidenceId: invariant violated — constructed evidence id %s rejected: %s" candidate message
 
     let taskArtifactRef workId =
-        match FS.GG.SDD.Artifacts.ArtifactRef.create (tasksPath workId) ArtifactKind.Tasks ArtifactOwner.Sdd true with
+        let path = tasksPath workId
+        match FS.GG.SDD.Artifacts.ArtifactRef.create path ArtifactKind.Tasks ArtifactOwner.Sdd true with
         | Ok artifact -> artifact
-        | Error message -> failwith message
+        | Error message ->
+            failwithf "taskArtifactRef: invariant violated — tasks artifact path %s rejected: %s" path message
 
     let taskId index =
-        match IdentifiersModule.createTaskId (sprintf "T%03d" index) with
+        let candidate = sprintf "T%03d" index
+        match IdentifiersModule.createTaskId candidate with
         | Ok id -> id
-        | Error message -> failwith message
+        | Error message ->
+            failwithf "taskId: invariant violated — constructed task id %s rejected: %s" candidate message
 
     let taskIdNumber (id: TaskId) =
         let digits = Regex.Match(id.Value, @"\d+").Value

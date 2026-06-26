@@ -34,14 +34,14 @@ module ValidationRunner =
     // ---- canned fixture content (mirrors the real-fixture drivers in TestSupport;
     // the library cannot reference the test assembly, so the inputs are replicated) ----
 
-    let private fixtureWorkId = "020-validation-fixture"
-    let private fixtureTitle = "Validation Fixture"
-    let private generator = currentGeneratorVersion ()
+    let fixtureWorkId = "020-validation-fixture"
+    let fixtureTitle = "Validation Fixture"
+    let generator = currentGeneratorVersion ()
 
-    let private specifyIntent =
+    let specifyIntent =
         "value: create a native specify command\nscope: one chartered work item\nrequirement: create a specification artifact with stable ids"
 
-    let private passingTaskEvidence =
+    let passingTaskEvidence =
         "schemaVersion: 1\n"
         + "evidence:\n"
         + ([ 1..6 ]
@@ -51,7 +51,7 @@ module ValidationRunner =
 
     // ---- command driving (mirrors Program.fs run loop) ----
 
-    let private baseRequest command root =
+    let baseRequest command root =
         { Command = command
           ProjectRoot = root
           WorkId = None
@@ -62,7 +62,7 @@ module ValidationRunner =
           OverwritePolicy = (if command = Refresh then AllowGeneratedRefresh else RefuseUnsafe)
           GeneratorVersion = generator }
 
-    let private runRequest (request: CommandRequest) =
+    let runRequest (request: CommandRequest) =
         let model, effects = CW.init request
 
         let rec interpretUntilIdle state pending =
@@ -87,21 +87,21 @@ module ValidationRunner =
 
         finalModel.Report |> Option.defaultWith (fun () -> buildReport finalModel)
 
-    let private workRequest command root inputText =
+    let workRequest command root inputText =
         { baseRequest command root with
             WorkId = Some fixtureWorkId
             Title = Some fixtureTitle
             InputText = inputText }
 
-    let private runWork command root inputText =
+    let runWork command root inputText =
         runRequest (workRequest command root inputText)
 
-    let private tempDirectory () =
+    let tempDirectory () =
         let path = Path.Combine(Path.GetTempPath(), "fsgg-sdd-validate-" + Guid.NewGuid().ToString("N"))
         Directory.CreateDirectory path |> ignore
         path
 
-    let private writeRelative (root: string) (relative: string) (text: string) =
+    let writeRelative (root: string) (relative: string) (text: string) =
         let absolute = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar))
 
         match Path.GetDirectoryName absolute with
@@ -121,7 +121,7 @@ module ValidationRunner =
 
     // ---- state ladder ----
 
-    let private stateRank state =
+    let stateRank state =
         match state with
         | "fresh" -> 0
         | "specified" -> 20
@@ -134,7 +134,7 @@ module ValidationRunner =
         | "shipped" -> 100
         | _ -> 0
 
-    let private commandMinRank command =
+    let commandMinRank command =
         match command with
         | Init -> 0
         | Charter -> 0
@@ -153,7 +153,7 @@ module ValidationRunner =
     /// Build a disposable project at the requested state by driving the real
     /// CommandWorkflow over a temp dir (matrix-runner C-1). `withEvidence = false`
     /// yields the `blocked` ladder (tasks present, passing evidence withheld).
-    let private buildProjectAt root rank withEvidence =
+    let buildProjectAt root rank withEvidence =
         runRequest (baseRequest Init root) |> ignore
 
         if rank >= 20 then
@@ -174,7 +174,7 @@ module ValidationRunner =
         if rank >= 90 then runWork Verify root None |> ignore
         if rank >= 100 then runWork Ship root None |> ignore
 
-    let private buildState state =
+    let buildState state =
         let root = tempDirectory ()
         let withEvidence = state <> "blocked"
         buildProjectAt root (stateRank state) withEvidence
@@ -182,7 +182,7 @@ module ValidationRunner =
 
     /// A fully-generated project: ship plus the cross-cutting agents/refresh
     /// generators, so every catalogued generated view is produced.
-    let private buildFullProject () =
+    let buildFullProject () =
         let root = tempDirectory ()
         buildProjectAt root 100 true
         runWork Agents root None |> ignore
@@ -191,7 +191,7 @@ module ValidationRunner =
 
     // ---- projections ----
 
-    let private renderProjection projection (report: CommandReport) =
+    let renderProjection projection (report: CommandReport) =
         match projection with
         | Json -> serializeReport report
         // Rich degrades to plain text in this library (no Spectre dependency;
@@ -199,17 +199,17 @@ module ValidationRunner =
         | Text
         | Rich -> CR.renderText report
 
-    let private hasAnsi (text: string) = text.Contains('')
+    let hasAnsi (text: string) = text.Contains('')
 
     // ---- coordinate helpers ----
 
-    let private coord name coordinates =
+    let coord name coordinates =
         coordinates
         |> List.tryFind (fun (dimension, _) -> dimension = name)
         |> Option.map snd
         |> Option.defaultValue ""
 
-    let private projectionOfValue value =
+    let projectionOfValue value =
         match value with
         | "text" -> Text
         | "rich" -> Rich
@@ -217,9 +217,9 @@ module ValidationRunner =
 
     // ---- produced-output reproduction (determinism matrix) ----
 
-    let private readinessRoot root = Path.Combine(root, "readiness")
+    let readinessRoot root = Path.Combine(root, "readiness")
 
-    let private findProducedFile root (output: string) =
+    let findProducedFile root (output: string) =
         let readiness = readinessRoot root
 
         if not (Directory.Exists readiness) then
@@ -242,14 +242,14 @@ module ValidationRunner =
 
     /// Reproduce one catalogued output's bytes from a built project, or `None` when
     /// the fixture does not produce it.
-    let private produceOutput root (output: string) =
+    let produceOutput root (output: string) =
         match output with
         | "command-report (--json)" -> Some(serializeReport (runWork Ship root None))
         | _ -> findProducedFile root output |> Option.map File.ReadAllText
 
     // ---- JSON key extraction (baseline conformance) ----
 
-    let private topLevelKeys (text: string) =
+    let topLevelKeys (text: string) =
         try
             use document = JsonDocument.Parse text
 
@@ -264,7 +264,7 @@ module ValidationRunner =
     //  cell evaluators
     // ============================================================
 
-    let private evaluateLifecycleCell (stateRoots: Map<string, string>) coordinates =
+    let evaluateLifecycleCell (stateRoots: Map<string, string>) coordinates =
         let commandValue = coord "command" coordinates
         let projection = projectionOfValue (coord "projection" coordinates)
         let state = coord "state" coordinates
@@ -300,7 +300,7 @@ module ValidationRunner =
     /// from the SAME authored sources: `neutral` and `repeat` are two regenerations
     /// under the neutral host (byte-identical reproduction, INV-3); `perturbed` is a
     /// regeneration under a varied locale/time zone/cwd (host-variance, INV-3a).
-    let private evaluateDeterminismCell
+    let evaluateDeterminismCell
         (neutral: Map<string, string option>)
         (repeat: Map<string, string option>)
         (perturbed: Map<string, string option>)
@@ -325,7 +325,7 @@ module ValidationRunner =
                 | Some _ -> Fail(failure determinismMatrixName coordinates output "output is not reproduced byte-identically over identical inputs" "Remove ordering/clock/host nondeterminism from the producer.")
                 | None -> SkippedWithReason $"output {output} is not produced on reproduction"
 
-    let private evaluateBaselineCells (release: ReleaseReadiness) (fullRoot: string) =
+    let evaluateBaselineCells (release: ReleaseReadiness) (fullRoot: string) =
         // Build a produced snapshot from the real generated JSON views, reuse
         // ReleaseContract.evaluate, then map drift back to each contract's cell.
         let produced =
@@ -366,7 +366,7 @@ module ValidationRunner =
             [ { Coordinates = baselineCoordinates; Status = baselineStatus }
               { Coordinates = conformanceCoordinates; Status = conformanceStatus } ])
 
-    let private evaluateCompatibilityCells (release: ReleaseReadiness) (fullRoot: string) =
+    let evaluateCompatibilityCells (release: ReleaseReadiness) (fullRoot: string) =
         let handoffContractVersion =
             findProducedFile fullRoot "governance-handoff.json"
             |> Option.bind (fun file ->
@@ -406,7 +406,7 @@ module ValidationRunner =
 
     // ---- host perturbation ----
 
-    let private withPerturbedHost (action: unit -> 'a) =
+    let withPerturbedHost (action: unit -> 'a) =
         let originalCulture = Thread.CurrentThread.CurrentCulture
         let originalTz = Environment.GetEnvironmentVariable "TZ"
 
@@ -425,7 +425,7 @@ module ValidationRunner =
     /// The real command surface, enumerated from an **exhaustive `SddCommand` match**
     /// independent of the declared matrix: adding a DU case is a compile-time break
     /// here that forces the author to cover it (INV-7; no reflection — Constitution IV).
-    let private realCommandTokens =
+    let realCommandTokens =
         let token command =
             match command with
             | Init -> "init"
@@ -447,7 +447,7 @@ module ValidationRunner =
 
     /// Map a produced readiness file to its catalogued generated-view name, or `None`
     /// when it is not a catalogued view (those files are not reconciled here).
-    let private classifyProducedView (path: string) =
+    let classifyProducedView (path: string) =
         let normalized = path.Replace('\\', '/')
         let basename = normalized.Substring(normalized.LastIndexOf('/') + 1)
 
@@ -471,7 +471,7 @@ module ValidationRunner =
     /// from sources independent of the declared matrix (matrix-runner C-7). An
     /// uncovered real surface is a `CoverageGap`; a declared entry naming a vanished
     /// surface is a detectable `Fail` — the real surface is authoritative.
-    let private reconcileSurface (plan: MatrixPlan) (release: ReleaseReadiness) (fullRoot: string) =
+    let reconcileSurface (plan: MatrixPlan) (release: ReleaseReadiness) (fullRoot: string) =
         let declaredCommands = plan.LifecycleCommands |> List.map commandName |> Set.ofList
         let realCommands = Set.ofList realCommandTokens
 
@@ -537,7 +537,7 @@ module ValidationRunner =
     //  run
     // ============================================================
 
-    let private isInjected divergences matrixName coordinates =
+    let isInjected divergences matrixName coordinates =
         divergences
         |> List.exists (fun (name, coords) -> name = matrixName && coords = coordinates)
 
@@ -639,6 +639,9 @@ module ValidationRunner =
         let reportModel, _ = update ValidationMsg.BuildReport reconciled
 
         let report =
-            reportModel.Report |> Option.defaultWith (fun () -> failwith "report not built")
+            reportModel.Report
+            |> Option.defaultWith (fun () ->
+                failwith
+                    "ValidationRunner.run: invariant violated — validation report model has no Report after ValidationMsg.BuildReport")
 
         report

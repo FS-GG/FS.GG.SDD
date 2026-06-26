@@ -77,7 +77,7 @@ module internal HandlersShip =
     /// Derive the handoff's advisory readiness facts from the SDD-owned ship.json text.
     /// Both ship (emission) and refresh (regeneration) parse the same ship.json, so the
     /// regenerated handoff is byte-identical to the emitted one when sources are unchanged.
-    let private parseShipReadinessFacts (shipText: string) (perViewState: (string * string) list) : GovernanceHandoffModule.ReadinessFacts =
+    let parseShipReadinessFacts (shipText: string) (perViewState: (string * string) list) : GovernanceHandoffModule.ReadinessFacts =
         try
             use document = System.Text.Json.JsonDocument.Parse shipText
             let root = document.RootElement

@@ -217,7 +217,8 @@ module internal HandlersEvidence =
           Source =
             match FS.GG.SDD.Artifacts.ArtifactRef.create (evidencePath workId) ArtifactKind.Evidence ArtifactOwner.Sdd true with
             | Ok artifact -> artifact
-            | Error message -> failwith message
+            | Error message ->
+                failwithf "evidence obligation source: invariant violated — evidence artifact path %s rejected: %s" (evidencePath workId) message
           SourceLocation = None }
 
     let mergeEvidenceArtifacts
@@ -255,8 +256,10 @@ module internal HandlersEvidence =
         | None, Some inputArtifact -> inputArtifact, []
         | None, None ->
             let workIdValue =
-                IdentifiersModule.createWorkId workId
-                |> Result.defaultWith failwith
+                match IdentifiersModule.createWorkId workId with
+                | Ok value -> value
+                | Error message ->
+                    failwithf "mergeEvidenceArtifacts: invariant violated — pre-validated work id %s rejected: %s" workId message
 
             ({ SchemaVersion = SchemaVersionModule.create 1
                WorkId = workIdValue

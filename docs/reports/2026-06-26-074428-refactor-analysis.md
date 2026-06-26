@@ -342,7 +342,7 @@ is permitted, and byte-identical artifact output is not separately required.
 | R4 | ✅ | Extract `parseJsonView`, making the 4 matches total | §5.3 §4 | Med | S | Low | Removes latent runtime throw + ~70 LOC |
 | R5 | ✅ | Centralize JSON null-access helpers, then enable `WarningsAsErrors` | §3 | Med | M | Low | Cleared 282 sites (952 raw); gate prevents regression |
 | R6 | ✅ | Collapse diagnostic builder + unify serializers | §5.2 §5.4 | Med | S | Low | ~90 LOC, one shape |
-| R7 | 🔴 | Strip redundant `private`; fix `failwith` context | §2 §6 | Low | S | None | Noise removal |
+| R7 | ✅ | Strip redundant `private`; fix `failwith` context | §2 §6 | Low | S | None | Noise removal |
 
 ### Status detail
 
@@ -447,12 +447,26 @@ is permitted, and byte-identical artifact output is not separately required.
   `…Artifacts.Json` sub-namespace, outside the exact-namespace surface
   reflection); one-way `Artifacts → Commands` layering preserved; Release build
   green with no new warning category; net `src` LOC **−143**.
-- 🔴 **R7 — `private` + `failwith` cleanup.** Not started. Done when no
-  `.fsi`-guarded `.fs` carries a redundant `private` and each remaining
-  `failwith` is either total/unreachable-by-construction or replaced by a
-  threaded diagnostic.
+- ✅ **R7 — `private` + `failwith` cleanup.** Landed via
+  `specs/028-strip-private-failwith/`. **Done:** all **81** redundant top-level
+  `private` modifiers removed across the 9 `.fsi`-guarded modules
+  (`ValidationRunner.fs` 33, `ReleaseContract.fs` 20, `Rendering.fs` 8,
+  `WorkModel.fs` 7, `GovernanceHandoff.fs` 5, `ValidationHarness.fs` 3,
+  `LifecycleArtifacts/Verify.fs` 3, `SchemaVersion.fs` 1) plus the no-`.fsi`
+  edge case `HandlersShip.fs` (1, gate-proven non-load-bearing) — zero retained,
+  the `.fsi` is now the sole visibility arbiter (Principle III). All **9**
+  `failwith`/`defaultWith failwith` escapes (`ParsingTasks.fs` ×3,
+  `HandlersEvidence.fs` ×2, `ReleaseContract.fs` ×2, `SchemaVersion.fs`,
+  `ValidationRunner.fs`) now throw context-bearing messages naming the offending
+  id/path/value + inner error instead of a bare inner string; all are
+  unreachable-by-construction, so no diagnostic was threaded and output is
+  unchanged. Behavior-preserving: **438** tests green; `charter`/`analyze`/`refresh`
+  `--json`/`--text` byte-identical; every `.fsi` and `PublicSurface.baseline`
+  byte-stable; Release build green with no new warning category and the
+  FS3261/FS0025 ratchet still at 0; `Directory.Build.props` unchanged, no `#nowarn`
+  added.
 
-**Aggregate:** 5 / 7 complete · 0 in progress · 2 not started.
+**Aggregate:** 7 / 7 complete · 0 in progress · 0 not started.
 
 ## Appendix: what is *not* a problem
 

@@ -146,7 +146,7 @@ module SchemaVersion =
     // build time) so the generator version can never drift from the package
     // version (feature 018 / FR-003, T004). The informational version may carry a
     // source-control suffix (e.g. "0.2.0+<sha>"); strip it to the semantic core.
-    let private assemblyGeneratorVersion () =
+    let assemblyGeneratorVersion () =
         let assembly = typeof<SchemaVersion>.Assembly
 
         let informational =
@@ -162,5 +162,8 @@ module SchemaVersion =
         | _ -> "0.2.0"
 
     let currentGeneratorVersion () =
-        createGeneratorVersion "FS.GG.SDD.Artifacts" (assemblyGeneratorVersion ())
-        |> Result.defaultWith failwith
+        let version = assemblyGeneratorVersion ()
+        match createGeneratorVersion "FS.GG.SDD.Artifacts" version with
+        | Ok value -> value
+        | Error message ->
+            failwithf "currentGeneratorVersion: invariant violated — generator version %s/%s rejected: %s" "FS.GG.SDD.Artifacts" version message

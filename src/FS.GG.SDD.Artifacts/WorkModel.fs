@@ -515,7 +515,7 @@ module WorkModel =
 
     // ---- work-model.json reader (the agent-guidance derivation source) ----
 
-    let private jmProp (name: string) (element: JsonElement) =
+    let jmProp (name: string) (element: JsonElement) =
         let mutable value = Unchecked.defaultof<JsonElement>
 
         if element.ValueKind = JsonValueKind.Object && element.TryGetProperty(name, &value) then
@@ -523,12 +523,12 @@ module WorkModel =
         else
             None
 
-    let private jmString name element =
+    let jmString name element =
         jmProp name element
         |> Option.bind (fun value -> if value.ValueKind = JsonValueKind.String then Option.ofObj (value.GetString()) else None)
         |> Option.defaultValue ""
 
-    let private jmInt name element =
+    let jmInt name element =
         jmProp name element
         |> Option.bind (fun value ->
             if value.ValueKind = JsonValueKind.Number then
@@ -538,24 +538,24 @@ module WorkModel =
             else
                 None)
 
-    let private jmArray name element =
+    let jmArray name element =
         jmProp name element
         |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Array)
         |> Option.map (fun value -> value.EnumerateArray() |> Seq.toList)
         |> Option.defaultValue []
 
-    let private jmStringList name element =
+    let jmStringList name element =
         jmArray name element
         |> List.choose (fun value -> if value.ValueKind = JsonValueKind.String then Option.ofObj (value.GetString()) else None)
         |> List.filter (String.IsNullOrWhiteSpace >> not)
 
-    let private jmSeverity (value: string) =
+    let jmSeverity (value: string) =
         match value.Trim().ToLowerInvariant() with
         | "error" -> DiagnosticError
         | "warning" -> DiagnosticWarning
         | _ -> DiagnosticInfo
 
-    let private parseEmbeddedDiagnostic (element: JsonElement) : Diagnostic =
+    let parseEmbeddedDiagnostic (element: JsonElement) : Diagnostic =
         { Id = jmString "id" element
           Severity = jmSeverity (jmString "severity" element)
           Artifact = None
