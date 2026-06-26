@@ -45,5 +45,20 @@ module Diagnostics =
     val staleGeneratedView: artifact: ArtifactRef -> message: string -> correction: string -> Diagnostic
     val missingGeneratedWorkModel: artifact: ArtifactRef -> expectedPath: string -> Diagnostic
     val malformedDigest: artifact: ArtifactRef -> value: string -> Diagnostic
+
+    // Scaffold (`fsgg-sdd scaffold`) diagnostics. User-input ids resolve to exit 1;
+    // provider-defect ids (`scaffold.providerFailed` / `providerUnavailable` /
+    // `providerWroteSddTree`) carry the tool-defect class consumed at exit 2.
+    val scaffoldProviderMissing: unit -> Diagnostic
+    val scaffoldProviderUnknown: name: string -> Diagnostic
+    val scaffoldProviderVersionUnsupported: name: string -> declaredVersion: string -> supportedRange: string -> Diagnostic
+    val scaffoldProviderParamMissing: name: string -> missingKeys: string list -> Diagnostic
+    val scaffoldTargetCollision: paths: string list -> Diagnostic
+    val scaffoldProviderEmpty: name: string -> Diagnostic
+    val scaffoldProviderFailed: name: string -> exitCode: int -> Diagnostic
+    val scaffoldProviderUnavailable: name: string -> Diagnostic
+    val scaffoldProviderWroteSddTree: paths: string list -> Diagnostic
+    val scaffoldProvenanceMalformed: path: string -> Diagnostic
+
     val sort: diagnostics: Diagnostic list -> Diagnostic list
     val hasBlocking: diagnostics: Diagnostic list -> bool

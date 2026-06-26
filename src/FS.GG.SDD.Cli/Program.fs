@@ -19,6 +19,22 @@ let rec optionValue name args =
 let hasFlag name args =
     args |> List.exists ((=) name)
 
+/// Collect every value following a repeatable option (e.g. `--param k=v`).
+let rec collectOptions name args =
+    match args with
+    | current :: value :: rest when current = name -> value :: collectOptions name rest
+    | _ :: rest -> collectOptions name rest
+    | [] -> []
+
+/// Parse repeatable `--param key=value` into ordered (key, value) pairs. A value
+/// with no `=` is treated as an empty-valued key.
+let parseParams args =
+    collectOptions "--param" args
+    |> List.map (fun pair ->
+        match pair.IndexOf '=' with
+        | index when index >= 0 -> pair.Substring(0, index), pair.Substring(index + 1)
+        | _ -> pair, "")
+
 let outputFormat args =
     // Flag precedence --rich > --text > --json > default (Json); JSON stays the
     // unconditional default for every command (output-format-selection contract).
@@ -36,7 +52,10 @@ let printUnknown commandValue =
           OutputFormat = Json
           DryRun = true
           OverwritePolicy = RefuseUnsafe
-          GeneratorVersion = generator }
+          GeneratorVersion = generator
+          Provider = None
+          Parameters = []
+          Force = false }
 
     let model =
         { Request = request
@@ -54,6 +73,7 @@ let printUnknown commandValue =
           Ship = None
           AgentGuidance = None
           Refresh = None
+          Scaffold = None
           GeneratedViews = []
           Report = None }
 
@@ -123,7 +143,10 @@ let run args =
                   OutputFormat = format
                   DryRun = hasFlag "--dry-run" rest
                   OverwritePolicy = (if command = Refresh then AllowGeneratedRefresh else RefuseUnsafe)
-                  GeneratorVersion = SchemaVersionModule.currentGeneratorVersion() }
+                  GeneratorVersion = SchemaVersionModule.currentGeneratorVersion()
+                  Provider = optionValue "--provider" rest
+                  Parameters = parseParams rest
+                  Force = hasFlag "--force" rest }
 
             let model, effects = init request
 

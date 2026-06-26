@@ -19,6 +19,7 @@ module CommandTypes =
         | Ship
         | Agents
         | Refresh
+        | Scaffold
 
     type OutputFormat =
         | Json
@@ -64,7 +65,11 @@ module CommandTypes =
           OutputFormat: OutputFormat
           DryRun: bool
           OverwritePolicy: OverwritePolicy
-          GeneratorVersion: GeneratorVersion }
+          GeneratorVersion: GeneratorVersion
+          // Scaffold inputs (`fsgg-sdd scaffold`); ignored by other commands.
+          Provider: string option
+          Parameters: (string * string) list
+          Force: bool }
 
     type GeneratedViewSource =
         { Path: string
@@ -317,6 +322,16 @@ module CommandTypes =
     /// evidence/governed-reference/readiness/config-presence facts Governance consumes, whereas this
     /// fact only marks the boundary as SDD-unevaluated. Retained as a pointer to that contract
     /// (Constitution VII); it asserts no route/profile/gate/verdict.
+    type ScaffoldSummary =
+        { ProviderName: string option
+          ProviderContractVersion: string option
+          Outcome: string
+          SkeletonCreated: bool
+          ProviderInvoked: bool
+          ProducedPathCount: int
+          ProducedPaths: string list
+          NextActionHint: string }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -354,6 +369,7 @@ module CommandTypes =
           Ship: ShipSummary option
           AgentGuidance: AgentGuidanceSummary option
           Refresh: RefreshSummary option
+          Scaffold: ScaffoldSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -364,14 +380,23 @@ module CommandTypes =
         | EnumerateDirectory of path: string
         | CreateDirectory of path: string
         | WriteFile of path: string * text: string * kind: ArtifactWriteKind
+        | RunProcess of command: string * args: string list * workingDir: string
         | EmitStdout of text: string
         | EmitStderr of text: string
         | SetExitCode of code: int
+
+    /// Captured outcome of a `RunProcess` effect at the edge. `Started = false`
+    /// means the process could not be launched (engine/command absent). Process
+    /// stdout/stderr are intentionally excluded from the deterministic contract.
+    type ProcessRunResult =
+        { Started: bool
+          ExitCode: int }
 
     type CommandEffectResult =
         { Effect: CommandEffect
           Succeeded: bool
           Snapshot: FileSnapshot option
+          Process: ProcessRunResult option
           Diagnostic: Diagnostic option }
 
     type CommandModel =
@@ -390,6 +415,7 @@ module CommandTypes =
           Ship: ShipSummary option
           AgentGuidance: AgentGuidanceSummary option
           Refresh: RefreshSummary option
+          Scaffold: ScaffoldSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 

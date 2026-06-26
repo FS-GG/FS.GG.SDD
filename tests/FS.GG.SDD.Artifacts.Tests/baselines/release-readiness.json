@@ -339,6 +339,11 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "scaffold",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "schemaVersion",
           "kind": "jsonField",
           "stability": "stable"

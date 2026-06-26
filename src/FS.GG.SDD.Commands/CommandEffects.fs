@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Commands
 
 open System
+open System.Diagnostics
 open System.IO
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.CommandReports
@@ -50,13 +51,63 @@ module CommandEffects =
         { Effect = effect
           Succeeded = true
           Snapshot = snapshot
+          Process = None
           Diagnostic = None }
 
     let failure (effect: CommandEffect) (snapshot: FileSnapshot option) diagnostic =
         { Effect = effect
           Succeeded = false
           Snapshot = snapshot
+          Process = None
           Diagnostic = Some diagnostic }
+
+    // Edge interpreter for `RunProcess`: launches a real child process, captures the
+    // exit code, and snapshots the working directory afterwards so the handler can
+    // diff produced paths. Honors DryRun (plans without spawning). Process
+    // stdout/stderr are drained to avoid deadlock but excluded from the contract.
+    let runProcess (projectRoot: string) (effect: CommandEffect) (command: string) (args: string list) (workingDir: string) =
+        let absolute = fullPath projectRoot workingDir
+        Directory.CreateDirectory absolute |> ignore
+
+        let startInfo =
+            ProcessStartInfo(
+                FileName = command,
+                WorkingDirectory = absolute,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false
+            )
+
+        args |> List.iter startInfo.ArgumentList.Add
+
+        try
+            use proc = Process.Start startInfo
+
+            match proc with
+            | null ->
+                { Effect = effect
+                  Succeeded = true
+                  Snapshot = None
+                  Process = Some { Started = false; ExitCode = -1 }
+                  Diagnostic = None }
+            | proc ->
+                proc.StandardOutput.ReadToEnd() |> ignore
+                proc.StandardError.ReadToEnd() |> ignore
+                proc.WaitForExit()
+
+                { Effect = effect
+                  Succeeded = true
+                  Snapshot = directorySnapshot projectRoot workingDir
+                  Process = Some { Started = true; ExitCode = proc.ExitCode }
+                  Diagnostic = None }
+        with _ ->
+            // The provider engine/command could not be launched: surfaced as
+            // scaffold.providerUnavailable by the handler (Started = false).
+            { Effect = effect
+              Succeeded = true
+              Snapshot = None
+              Process = Some { Started = false; ExitCode = -1 }
+              Diagnostic = None }
 
     let interpret (projectRoot: string) (dryRun: bool) (effect: CommandEffect) =
         try
@@ -93,6 +144,9 @@ module CommandEffects =
                     success effect existing
                 else
                     failure effect existing (unsafeOverwrite path)
+            | RunProcess(command, args, workingDir) ->
+                if dryRun then success effect None
+                else runProcess projectRoot effect command args workingDir
             | EmitStdout text ->
                 if not dryRun then Console.Out.Write text
                 success effect None

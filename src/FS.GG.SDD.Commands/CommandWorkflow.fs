@@ -126,6 +126,11 @@ module CommandWorkflow =
                             GeneratedViews = generatedViews }
 
                     plannedModel, effects
+        | Scaffold, _ ->
+            // Scaffold has its own multi-stage driver (resolve → invoke → diff →
+            // provenance); it does not use the generic write-once guard above.
+            if not (allPlannedReadsInterpreted model) then model, []
+            else computeScaffoldNext model
         | _ -> model, []
 
     let init (request: CommandRequest) =
@@ -148,6 +153,7 @@ module CommandWorkflow =
               Ship = None
               AgentGuidance = None
               Refresh = None
+              Scaffold = None
               GeneratedViews = []
               Report = None }
 

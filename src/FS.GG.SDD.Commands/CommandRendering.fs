@@ -193,6 +193,22 @@ module CommandRendering =
             builder.AppendLine($"refreshSourceSnapshots: {refresh.SourceSnapshotCount}") |> ignore
         | None -> ()
 
+        match report.Scaffold with
+        | Some scaffold ->
+            let providerName = defaultArg scaffold.ProviderName "(none)"
+            let providerVersion = defaultArg scaffold.ProviderContractVersion "(none)"
+            builder.AppendLine($"scaffoldProvider: {providerName}") |> ignore
+            builder.AppendLine($"scaffoldProviderContractVersion: {providerVersion}") |> ignore
+            builder.AppendLine($"scaffoldOutcome: {scaffold.Outcome}") |> ignore
+            builder.AppendLine($"scaffoldSkeletonCreated: {scaffold.SkeletonCreated}") |> ignore
+            builder.AppendLine($"scaffoldProviderInvoked: {scaffold.ProviderInvoked}") |> ignore
+            builder.AppendLine($"scaffoldProducedPaths: {scaffold.ProducedPathCount}") |> ignore
+            scaffold.ProducedPaths
+            |> List.sort
+            |> List.iter (fun path -> builder.AppendLine($"scaffoldProducedPath: {path}") |> ignore)
+            builder.AppendLine($"scaffoldNextAction: {scaffold.NextActionHint}") |> ignore
+        | None -> ()
+
         builder.AppendLine($"generatedViews: {List.length report.GeneratedViews}") |> ignore
         builder.AppendLine($"diagnostics: {List.length report.Diagnostics}") |> ignore
 

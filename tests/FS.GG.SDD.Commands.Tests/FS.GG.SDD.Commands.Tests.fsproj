@@ -29,6 +29,8 @@
     <Compile Include="ReleaseDeterminismTests.fs" />
     <Compile Include="ReleaseBoundaryTests.fs" />
     <Compile Include="ReleaseInstallTests.fs" />
+    <Compile Include="ScaffoldCommandTests.fs" />
+    <Compile Include="ScaffoldGuardTests.fs" />
     <Compile Include="SurfaceBaselineTests.fs" />
   </ItemGroup>
 

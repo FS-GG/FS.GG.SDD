@@ -1,0 +1,1 @@
+A legitimate product file that lands outside the SDD-owned trees.

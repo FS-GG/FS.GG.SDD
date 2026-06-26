@@ -1,0 +1,9 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "FS.GG.SDD scaffold fixtures",
+  "classifications": [ "Test" ],
+  "identity": "FsggSdd.Fixture.Empty",
+  "name": "FS.GG.SDD scaffold fixture (empty)",
+  "shortName": "fsgg-fixture-empty",
+  "tags": { "type": "item" }
+}

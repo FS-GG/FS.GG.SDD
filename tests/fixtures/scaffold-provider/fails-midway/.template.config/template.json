@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "FS.GG.SDD scaffold fixtures",
+  "classifications": [ "Test" ],
+  "identity": "FsggSdd.Fixture.FailMidway",
+  "name": "FS.GG.SDD scaffold fixture (fails midway)",
+  "shortName": "fsgg-fixture-fail",
+  "tags": { "type": "item" },
+  "primaryOutputs": [ { "path": "partial.txt" } ],
+  "postActions": [
+    {
+      "description": "Force a provider failure after the partial file is materialized.",
+      "actionId": "3A1E182F-9E2D-4F8C-9F8C-7E2D9E2D4F8C",
+      "continueOnError": false,
+      "args": { "executable": "false", "args": "" }
+    }
+  ]
+}

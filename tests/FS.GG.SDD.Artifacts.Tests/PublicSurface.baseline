@@ -10,6 +10,7 @@ FS.GG.SDD.Artifacts.Clarification.clarificationStandardSections
 FS.GG.SDD.Artifacts.Clarification.parseClarificationFacts
 FS.GG.SDD.Artifacts.Config.parseAgentGuidanceConfig
 FS.GG.SDD.Artifacts.Config.parseProjectConfig
+FS.GG.SDD.Artifacts.Config.parseProviderRegistry
 FS.GG.SDD.Artifacts.Config.parseSddLifecyclePolicy
 FS.GG.SDD.Artifacts.Core.standardArtifactContracts
 FS.GG.SDD.Artifacts.Diagnostics.create
@@ -23,6 +24,16 @@ FS.GG.SDD.Artifacts.Diagnostics.missingArtifact
 FS.GG.SDD.Artifacts.Diagnostics.missingGeneratedWorkModel
 FS.GG.SDD.Artifacts.Diagnostics.proseStructuredMismatch
 FS.GG.SDD.Artifacts.Diagnostics.requirementNotTyped
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldProvenanceMalformed
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderEmpty
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderFailed
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderMissing
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderParamMissing
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderUnavailable
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderUnknown
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderVersionUnsupported
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderWroteSddTree
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldTargetCollision
 FS.GG.SDD.Artifacts.Diagnostics.severityRank
 FS.GG.SDD.Artifacts.Diagnostics.severityValue
 FS.GG.SDD.Artifacts.Diagnostics.sort
@@ -104,6 +115,8 @@ FS.GG.SDD.Artifacts.ReleaseContract.serialize
 FS.GG.SDD.Artifacts.ReleaseContract.stabilityClassValue
 FS.GG.SDD.Artifacts.RequirementModel.parseDecisions
 FS.GG.SDD.Artifacts.RequirementModel.parseRequirements
+FS.GG.SDD.Artifacts.ScaffoldProvenance.serialize
+FS.GG.SDD.Artifacts.ScaffoldProvenance.tryParse
 FS.GG.SDD.Artifacts.SchemaVersion.classifyRaw
 FS.GG.SDD.Artifacts.SchemaVersion.create
 FS.GG.SDD.Artifacts.SchemaVersion.createGeneratorVersion

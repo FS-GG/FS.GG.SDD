@@ -60,7 +60,10 @@ module ValidationRunner =
           OutputFormat = Json
           DryRun = false
           OverwritePolicy = (if command = Refresh then AllowGeneratedRefresh else RefuseUnsafe)
-          GeneratorVersion = generator }
+          GeneratorVersion = generator
+          Provider = None
+          Parameters = []
+          Force = false }
 
     let runRequest (request: CommandRequest) =
         let model, effects = CW.init request
@@ -149,6 +152,7 @@ module ValidationRunner =
         | Evidence -> 60
         | Verify -> 70
         | Ship -> 80
+        | Scaffold -> 0
 
     /// Build a disposable project at the requested state by driving the real
     /// CommandWorkflow over a temp dir (matrix-runner C-1). `withEvidence = false`
@@ -441,7 +445,14 @@ module ValidationRunner =
             | Ship -> "ship"
             | Agents -> "agents"
             | Refresh -> "refresh"
+            | Scaffold -> "scaffold"
 
+        // `scaffold` is deliberately excluded from determinism-matrix reconciliation:
+        // its real exercise spawns an external `dotnet new` template engine, so it is
+        // environment-sensed rather than byte-deterministic. It is covered by the
+        // scaffold semantic suite and the cross-repo Rendering proof, not these
+        // matrices (mirrors the harness needing no Governance runtime). The exhaustive
+        // `token` match above still forces a compile-time decision for any new case.
         [ Init; Charter; Specify; Clarify; Checklist; Plan; Tasks; Analyze; Evidence; Verify; Ship; Agents; Refresh ]
         |> List.map token
 

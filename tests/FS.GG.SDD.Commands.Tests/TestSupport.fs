@@ -34,7 +34,10 @@ module TestSupport =
           OutputFormat = Json
           DryRun = false
           OverwritePolicy = RefuseUnsafe
-          GeneratorVersion = SchemaVersionModule.currentGeneratorVersion() }
+          GeneratorVersion = SchemaVersionModule.currentGeneratorVersion()
+          Provider = None
+          Parameters = []
+          Force = false }
 
     let readRelative (root: string) (path: string) =
         File.ReadAllText(Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar)))

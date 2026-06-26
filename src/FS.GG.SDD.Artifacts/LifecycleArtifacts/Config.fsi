@@ -37,6 +37,22 @@ module Config =
           GeneratedGuidanceIsAuthority: bool
           RequireEquivalentClaudeAndCodexBehavior: bool }
 
+    /// One declared `--param` of a template provider (`.fsgg/providers.yml`).
+    type ProviderParameterSpec =
+        { Key: string
+          Required: bool
+          Default: string option }
+
+    /// An author-/provider-supplied template-provider descriptor. Every field is
+    /// opaque to SDD except `ContractVersion`, which SDD validates before invoking.
+    type ProviderDescriptor =
+        { Name: string
+          ContractVersion: string
+          TemplateId: string
+          Source: string
+          Parameters: ProviderParameterSpec list }
+
     val parseProjectConfig: snapshot: FileSnapshot -> Result<ProjectLifecycleConfig, Diagnostic list>
     val parseSddLifecyclePolicy: snapshot: FileSnapshot -> Result<SddLifecyclePolicy, Diagnostic list>
     val parseAgentGuidanceConfig: snapshot: FileSnapshot -> Result<AgentGuidanceConfig, Diagnostic list>
+    val parseProviderRegistry: snapshot: FileSnapshot -> Result<ProviderDescriptor list, Diagnostic list>

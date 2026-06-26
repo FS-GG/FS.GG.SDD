@@ -137,6 +137,119 @@ module Diagnostics =
             "Use lowercase sha256 hex digests generated from normalized source bytes."
             [ value ]
 
+    let scaffoldRef (path: string) =
+        match ArtifactRef.create path (ArtifactKind.Other "scaffold") ArtifactOwner.Sdd false with
+        | Ok artifact -> Some artifact
+        | Error _ -> None
+
+    let scaffoldProviderMissing () =
+        create
+            "scaffold.providerMissing"
+            DiagnosticError
+            None
+            None
+            "No template provider was selected for scaffold."
+            "Pass `--provider <name>`; for the SDD skeleton only, use `fsgg-sdd init`."
+            []
+
+    let scaffoldProviderUnknown name =
+        create
+            "scaffold.providerUnknown"
+            DiagnosticError
+            (scaffoldRef ".fsgg/providers.yml")
+            None
+            $"No provider named '{name}' is registered."
+            $"Register '{name}' in `.fsgg/providers.yml` or correct the `--provider` name."
+            [ name ]
+
+    let scaffoldProviderVersionUnsupported name declaredVersion supportedRange =
+        create
+            "scaffold.providerVersionUnsupported"
+            DiagnosticError
+            (scaffoldRef ".fsgg/providers.yml")
+            None
+            $"Provider '{name}' declares contract version '{declaredVersion}'; supported range is '{supportedRange}'."
+            "Upgrade FS.GG.SDD or the provider so the declared contract version falls within the supported range."
+            [ name; declaredVersion; supportedRange ]
+
+    let scaffoldProviderParamMissing name (missingKeys: string list) =
+        let keys = missingKeys |> List.sort
+        let rendered = String.concat ", " keys
+
+        create
+            "scaffold.providerParamMissing"
+            DiagnosticError
+            (scaffoldRef ".fsgg/providers.yml")
+            None
+            $"Provider '{name}' requires parameter(s) with no supplied value: {rendered}."
+            "Supply each missing parameter with `--param <key>=<value>`."
+            (name :: keys)
+
+    let scaffoldTargetCollision (paths: string list) =
+        let ordered = paths |> List.sort
+
+        create
+            "scaffold.targetCollision"
+            DiagnosticError
+            None
+            None
+            $"Target is not empty; {List.length ordered} existing path(s) would be overwritten."
+            "Re-run with `--force` to materialize into a non-empty target."
+            ordered
+
+    let scaffoldProviderEmpty name =
+        create
+            "scaffold.providerEmpty"
+            DiagnosticInfo
+            None
+            None
+            $"Provider '{name}' ran successfully but produced no files."
+            "No action required; the provider produced an empty scaffold."
+            [ name ]
+
+    let scaffoldProviderFailed name (exitCode: int) =
+        create
+            "scaffold.providerFailed"
+            DiagnosticError
+            None
+            None
+            $"Provider '{name}' exited {exitCode}."
+            "Inspect and fix the provider, then re-run scaffold. Any partial output is listed in the produced paths."
+            [ name; string exitCode ]
+
+    let scaffoldProviderUnavailable name =
+        create
+            "scaffold.providerUnavailable"
+            DiagnosticError
+            None
+            None
+            $"Could not run provider '{name}' (`dotnet`/template engine not found)."
+            "Install the .NET SDK and the named template, then re-run scaffold."
+            [ name ]
+
+    let scaffoldProviderWroteSddTree (paths: string list) =
+        let ordered = paths |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.providerWroteSddTree"
+            DiagnosticError
+            None
+            None
+            $"Provider wrote into SDD-owned tree(s): {rendered}."
+            "Fix the provider so it materializes only into the product target; SDD state was not modified."
+            ordered
+
+    let scaffoldProvenanceMalformed path =
+        create
+            "scaffold.provenanceMalformed"
+            DiagnosticError
+            (scaffoldRef path)
+            None
+            $"`{path}` is unreadable scaffold provenance."
+            "Repair or remove the malformed scaffold-provenance file before re-scaffolding or refreshing."
+            [ path ]
+
     let locationKey location =
         match location with
         | Some loc -> defaultArg loc.Line 0, defaultArg loc.Column 0

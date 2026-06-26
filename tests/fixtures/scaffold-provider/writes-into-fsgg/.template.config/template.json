@@ -1,0 +1,9 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "FS.GG.SDD scaffold fixtures",
+  "classifications": [ "Test" ],
+  "identity": "FsggSdd.Fixture.Intrusion",
+  "name": "FS.GG.SDD scaffold fixture (writes into SDD trees)",
+  "shortName": "fsgg-fixture-intrusion",
+  "tags": { "type": "item" }
+}

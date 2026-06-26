@@ -1,0 +1,9 @@
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "9.0.0"
+    templateId: fsgg-fixture-app
+    source: __FIXTURE__/ok
+    parameters:
+      - key: productName
+        required: true

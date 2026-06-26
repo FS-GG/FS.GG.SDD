@@ -259,13 +259,23 @@ of truth.
           ReadFile(workModelPath workId)
           ReadFile(verifyPath workId)
           ReadFile(shipPath workId)
+          // Scaffold provenance: provider-produced paths are excluded from refresh.
+          ReadFile ".fsgg/scaffold-provenance.json"
           ReadFile(GenerationManifestModule.expectedGovernanceHandoffOutputPath workId)
           ReadFile(GenerationManifestModule.expectedSummaryOutputPath workId)
           EnumerateDirectory "work" ]
 
+    let scaffoldReadEffects =
+        // Provider registry + a before-snapshot of the target root (for the produced
+        // diff and the non-empty-target collision guard).
+        [ ReadFile ".fsgg/providers.yml"
+          EnumerateDirectory "" ]
+
     let workIdDiagnostics (request: CommandRequest) =
         match request.Command, request.WorkId with
         | Init, _ -> []
+        // Scaffold is cross-cutting and operates on --root, not a work item.
+        | Scaffold, _ -> []
         | _, None -> [ missingWorkId request.Command ]
         | _, Some value ->
             match IdentifiersModule.createWorkId value with
@@ -292,6 +302,7 @@ of truth.
             | Ship, Some workId -> [], shipReadEffects workId
             | Agents, Some workId -> [], agentsReadEffects workId
             | Refresh, Some workId -> [], refreshReadEffects workId
+            | Scaffold, _ -> [], scaffoldReadEffects
             | command, _ -> [ unsupportedCommand command ], []
 
     let effectKey effect =
@@ -300,6 +311,9 @@ of truth.
         | EnumerateDirectory path -> "enumerate:" + normalizeRelativePath path
         | CreateDirectory path -> "mkdir:" + normalizeRelativePath path
         | WriteFile(path, _, kind) -> $"write:{normalizeRelativePath path}:{writeKindValue kind}"
+        | RunProcess(command, args, workingDir) ->
+            let renderedArgs = String.concat " " args
+            $"run:{command} {renderedArgs}@{normalizeRelativePath workingDir}"
         | EmitStdout text -> "stdout:" + text
         | EmitStderr text -> "stderr:" + text
         | SetExitCode code -> "exit:" + string code

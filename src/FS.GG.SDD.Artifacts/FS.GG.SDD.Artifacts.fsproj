@@ -24,6 +24,8 @@
     <Compile Include="LifecycleArtifacts/Core.fs" />
     <Compile Include="LifecycleArtifacts/Config.fsi" />
     <Compile Include="LifecycleArtifacts/Config.fs" />
+    <Compile Include="ScaffoldProvenance.fsi" />
+    <Compile Include="ScaffoldProvenance.fs" />
     <Compile Include="LifecycleArtifacts/WorkItemMetadata.fsi" />
     <Compile Include="LifecycleArtifacts/WorkItemMetadata.fs" />
     <Compile Include="LifecycleArtifacts/Specification.fsi" />

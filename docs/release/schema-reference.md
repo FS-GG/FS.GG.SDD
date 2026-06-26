@@ -33,6 +33,36 @@ on demand / on a schedule rather than to `readiness/<id>/`. Because the exclusio
 recorded here, the harness's own coverage-reconciliation does not flag the
 `validation-report` as a coverage gap. (feature 020 / validation-report C-4)
 
+## Declared exception: scaffold provenance + provider registry
+
+`fsgg-sdd scaffold` produces two project-level artifacts that are **intentionally
+not catalogued** in the machine catalog's lifecycle equality set (which enumerates
+exactly the `readiness/<id>/` views plus the command report). Both are real,
+schema-versioned, byte-deterministic artifacts; the exclusion is declared here
+rather than silent.
+
+- **`.fsgg/scaffold-provenance.json`** (schema v1, `owner: sdd`,
+  `requiredBySdd: false`, `stability: additiveOptional`) — SDD writes it whenever a
+  provider actually runs. It records the provider name, the provider
+  `contractVersion`, the `templateRef`, the `outcome`
+  (`providerSucceeded` / `providerSucceededEmpty` / `providerFailed`), and the
+  `producedPaths` (sorted, each marked `owner: generatedProduct`). It is the
+  **authority for refresh exclusion** (FR-007 / SC-007): `fsgg-sdd refresh` reads it
+  and never regenerates or flags provider-produced runtime files as stale SDD views;
+  malformed provenance surfaces `scaffold.provenanceMalformed` and is treated as
+  absent (fail-safe). Unlike the `validation-report` it represents
+  *externally-owned output references* rather than sensed metadata.
+- **`.fsgg/providers.yml`** (schema v1, `owner: author/provider`) — the
+  author-/provider-supplied selection registry mapping a `--provider <name>` to its
+  `contractVersion`, `templateId`, `source`, and declared `parameters`. SDD ships no
+  default entries and embeds none of these values in code (FR-002 / SC-005).
+
+These are produced by the cross-cutting scaffold command (whose real exercise spawns
+an external `dotnet new` template engine), not by the standard lifecycle the catalog
+conformance reconciles — the same boundary that excludes the `validation-report`.
+Their schema/round-trip contracts are enforced by the scaffold semantic suite and
+the `ScaffoldProvenance` round-trip tests.
+
 ## JSON contracts vs Markdown projections
 
 - **JSON contracts** carry a real `schemaVersion` (currently `1`) and their
@@ -107,8 +137,8 @@ in the authoritative `catalog[].inventory` of
 - **`command-report (--json)`** — `agentGuidance`, `analysis`, `changedArtifacts`,
   `checklist`, `clarification`, `command`, `context`, `diagnostics`, `evidence`,
   `generatedViews`, `governanceCompatibility`, `invocation`, `nextAction`,
-  `outcome`, `plan`, `refresh`, `reportVersion`, `schemaVersion` *(Stable)*,
-  `ship`, `specification`, `tasks`, `verification`.
+  `outcome`, `plan`, `refresh`, `reportVersion`, `scaffold`, `schemaVersion`
+  *(Stable)*, `ship`, `specification`, `tasks`, `verification`.
 
 ### Markdown projections (sections)
 

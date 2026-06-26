@@ -90,7 +90,19 @@ module internal HandlersRefresh =
             let projectDiags = projectDiagnostics model
             let duplicateDiags = duplicateWorkIdDiagnostics workId model
 
-            let baseDiags = model.Diagnostics @ projectDiags @ duplicateDiags
+            // Scaffold-produced files are externally owned (FR-007): they are never SDD
+            // generated views, so they are excluded from the refresh ledger by
+            // construction. Malformed provenance is surfaced and treated as absent
+            // (fail-safe) rather than silently regenerating anything (SC-007).
+            let provenanceDiags =
+                match snapshot ScaffoldProvenance.provenancePath model with
+                | Some provenanceSnapshot ->
+                    match ScaffoldProvenance.tryParse provenanceSnapshot.Text with
+                    | Some _ -> []
+                    | None -> [ scaffoldProvenanceMalformed ScaffoldProvenance.provenancePath ]
+                | None -> []
+
+            let baseDiags = model.Diagnostics @ projectDiags @ duplicateDiags @ provenanceDiags
 
             let baseBlocking =
                 baseDiags |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
@@ -147,6 +159,7 @@ module internal HandlersRefresh =
                         { Effect = ReadFile path
                           Succeeded = true
                           Snapshot = Some { Path = path; Text = text }
+                          Process = None
                           Diagnostic = None }
 
                     { m with

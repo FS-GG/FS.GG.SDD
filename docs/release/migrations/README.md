@@ -37,5 +37,11 @@ The current `0.2.0` release is **additive-only** and therefore intentionally
 carries no migration note. This is consistent with the policy: the `migrations[]`
 array in [`release-readiness.json`](../release-readiness.json) is empty.
 
+The `030-scaffold-template-provider` change is additive: it adds the cross-cutting
+`fsgg-sdd scaffold` command, the new `command-report` `scaffold` field, and the new
+project-level `.fsgg/scaffold-provenance.json` and `.fsgg/providers.yml` artifacts.
+It breaks no existing public contract — `fsgg-sdd init` stays byte-identical (SC-003)
+and every existing report field is unchanged — so no migration note is required.
+
 When a release introduces a breaking change, add its note here as
 `<version>.md` and list it in this index.

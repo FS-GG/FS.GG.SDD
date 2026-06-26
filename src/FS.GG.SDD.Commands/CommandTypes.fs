@@ -20,6 +20,7 @@ module CommandTypes =
         | Ship
         | Agents
         | Refresh
+        | Scaffold
 
     type OutputFormat =
         | Json
@@ -65,7 +66,10 @@ module CommandTypes =
           OutputFormat: OutputFormat
           DryRun: bool
           OverwritePolicy: OverwritePolicy
-          GeneratorVersion: GeneratorVersion }
+          GeneratorVersion: GeneratorVersion
+          Provider: string option
+          Parameters: (string * string) list
+          Force: bool }
 
     type GeneratedViewSource =
         { Path: string
@@ -312,6 +316,16 @@ module CommandTypes =
           SourceSnapshotCount: int
           Readiness: string }
 
+    type ScaffoldSummary =
+        { ProviderName: string option
+          ProviderContractVersion: string option
+          Outcome: string
+          SkeletonCreated: bool
+          ProviderInvoked: bool
+          ProducedPathCount: int
+          ProducedPaths: string list
+          NextActionHint: string }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -349,6 +363,7 @@ module CommandTypes =
           Ship: ShipSummary option
           AgentGuidance: AgentGuidanceSummary option
           Refresh: RefreshSummary option
+          Scaffold: ScaffoldSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -359,14 +374,20 @@ module CommandTypes =
         | EnumerateDirectory of path: string
         | CreateDirectory of path: string
         | WriteFile of path: string * text: string * kind: ArtifactWriteKind
+        | RunProcess of command: string * args: string list * workingDir: string
         | EmitStdout of text: string
         | EmitStderr of text: string
         | SetExitCode of code: int
+
+    type ProcessRunResult =
+        { Started: bool
+          ExitCode: int }
 
     type CommandEffectResult =
         { Effect: CommandEffect
           Succeeded: bool
           Snapshot: FileSnapshot option
+          Process: ProcessRunResult option
           Diagnostic: Diagnostic option }
 
     type CommandModel =
@@ -385,6 +406,7 @@ module CommandTypes =
           Ship: ShipSummary option
           AgentGuidance: AgentGuidanceSummary option
           Refresh: RefreshSummary option
+          Scaffold: ScaffoldSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 
@@ -411,6 +433,7 @@ module CommandTypes =
         | Ship -> "ship"
         | Agents -> "agents"
         | Refresh -> "refresh"
+        | Scaffold -> "scaffold"
 
     let commandStage (command: SddCommand) =
         match command with
@@ -432,6 +455,7 @@ module CommandTypes =
         | "ship" -> Ok Ship
         | "agents" -> Ok Agents
         | "refresh" -> Ok Refresh
+        | "scaffold" -> Ok Scaffold
         | other -> Error $"Unknown SDD command '{other}'."
 
     let outputFormatValue (format: OutputFormat) =
@@ -503,6 +527,7 @@ module CommandTypes =
         | Ship -> None
         | Agents -> None
         | Refresh -> None
+        | Scaffold -> None
 
     let effectPath (effect: CommandEffect) =
         match effect with
@@ -510,6 +535,7 @@ module CommandTypes =
         | EnumerateDirectory path
         | CreateDirectory path
         | WriteFile(path, _, _) -> Some path
+        | RunProcess(_, _, workingDir) -> Some workingDir
         | EmitStdout _
         | EmitStderr _
         | SetExitCode _ -> None

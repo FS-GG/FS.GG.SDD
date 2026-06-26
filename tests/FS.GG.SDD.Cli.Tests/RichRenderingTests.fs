@@ -93,6 +93,7 @@ module RichRenderingTests =
           Ship = None
           AgentGuidance = None
           Refresh = None
+          Scaffold = None
           GeneratedViews =
             [ generatedView "readiness/042-rich-sample/work-model.json" GeneratedViewCurrency.Current
               generatedView "readiness/042-rich-sample/analysis.json" GeneratedViewCurrency.Stale ]

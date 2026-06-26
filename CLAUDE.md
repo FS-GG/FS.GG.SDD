@@ -43,6 +43,26 @@ Core boundary:
   added to the `release-readiness.json` catalog (it carries sensed metadata and is
   harness output, not a produced lifecycle artifact) — a declared exception in
   `docs/release/schema-reference.md`.
+- `fsgg-sdd scaffold` is a cross-cutting command (not a lifecycle stage;
+  `nextLifecycleCommand Scaffold = None`, FR-015) that takes a product author from
+  an empty directory to a buildable, runnable, SDD-managed product in one
+  invocation. It establishes the SDD skeleton (reusing `init`'s effects, unchanged,
+  so `init` stays byte-identical), then invokes an **external template provider**
+  selected by `--provider <name>` and resolved from an author-/provider-owned
+  `.fsgg/providers.yml` registry through a generic, schema-versioned provider
+  contract (v1). The provider is realized via a generic `dotnet new` wrapper at the
+  MVU `RunProcess` edge; SDD owns only the contract, the invocation protocol, the
+  `.fsgg/scaffold-provenance.json` record (schema v1, marking produced paths
+  `generatedProduct` — externally owned, which `refresh` excludes, FR-007), the
+  `scaffold.*` diagnostics, and the three report projections — **never** any
+  provider-specific package id, template id, path, or docs URL (FR-002 / SC-005).
+  Scaffold requires `--provider`; with none it blocks with `scaffold.providerMissing`
+  pointing to `fsgg-sdd init` for the skeleton only. User-input failures resolve at
+  exit 1; provider defects (`providerFailed`/`providerUnavailable`/
+  `providerWroteSddTree`) at exit 2; an incomplete scaffold is never reported as
+  complete (FR-009). The reference provider (a full runnable UI app) ships in the
+  FS.GG.Rendering repo, demonstrated against the contract without placing any
+  Rendering knowledge in generic SDD.
 - FS.GG.Governance owns rule evaluation, evidence freshness, routing, profiles,
   and gate enforcement.
 - Integrations between them must be explicit, versioned, and optional until
@@ -75,5 +95,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/029-unify-view-state/plan.md
+at specs/030-scaffold-template-provider/plan.md
 <!-- SPECKIT END -->

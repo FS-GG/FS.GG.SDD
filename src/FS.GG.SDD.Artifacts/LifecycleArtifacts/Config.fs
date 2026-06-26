@@ -41,6 +41,18 @@ module Config =
           GeneratedGuidanceIsAuthority: bool
           RequireEquivalentClaudeAndCodexBehavior: bool }
 
+    type ProviderParameterSpec =
+        { Key: string
+          Required: bool
+          Default: string option }
+
+    type ProviderDescriptor =
+        { Name: string
+          ContractVersion: string
+          TemplateId: string
+          Source: string
+          Parameters: ProviderParameterSpec list }
+
     let parseProjectConfig (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.ProjectConfig
 
@@ -130,4 +142,60 @@ module Config =
                       WorkModelPath = tryScalarAt [ "sourceModel"; "workModel" ] root |> Option.defaultValue "readiness/{workId}/work-model.json"
                       GeneratedGuidanceIsAuthority = boolAt [ "policy"; "generatedGuidanceIsAuthority" ] root false
                       RequireEquivalentClaudeAndCodexBehavior = boolAt [ "policy"; "requireEquivalentClaudeAndCodexBehavior" ] root true }
+            | _ -> Error versionDiagnostics
+
+    let parseProviderRegistry (snapshot: FileSnapshot) =
+        let artifact = sourceArtifact snapshot.Path (ArtifactKind.Other "providerRegistry")
+
+        match parseYaml snapshot.Text with
+        | None -> Error [ Diagnostics.malformedSchemaVersion artifact "Provider registry is empty." ]
+        | Some root ->
+            let version, versionDiagnostics = schemaVersion artifact root
+
+            // Each entry needs name/contractVersion/templateId/source; declared
+            // parameters are optional. Incomplete entries are dropped (a `--provider`
+            // naming a dropped entry then resolves to scaffold.providerUnknown).
+            let descriptors =
+                trySequenceAt [ "providers" ] root
+                |> Option.map (fun sequence ->
+                    sequence.Children
+                    |> Seq.choose (fun node ->
+                        node
+                        |> tryMapping
+                        |> Option.bind (fun mapping ->
+                            match
+                                tryScalarAt [ "name" ] mapping,
+                                tryScalarAt [ "contractVersion" ] mapping,
+                                tryScalarAt [ "templateId" ] mapping,
+                                tryScalarAt [ "source" ] mapping
+                            with
+                            | Some name, Some contractVersion, Some templateId, Some source ->
+                                let parameters =
+                                    trySequenceAt [ "parameters" ] mapping
+                                    |> Option.map (fun parameterSequence ->
+                                        parameterSequence.Children
+                                        |> Seq.choose (fun parameterNode ->
+                                            parameterNode
+                                            |> tryMapping
+                                            |> Option.bind (fun parameterMapping ->
+                                                tryScalarAt [ "key" ] parameterMapping
+                                                |> Option.map (fun key ->
+                                                    { Key = key
+                                                      Required = boolAt [ "required" ] parameterMapping false
+                                                      Default = tryScalarAt [ "default" ] parameterMapping })))
+                                        |> Seq.toList)
+                                    |> Option.defaultValue []
+
+                                Some
+                                    { Name = name
+                                      ContractVersion = contractVersion
+                                      TemplateId = templateId
+                                      Source = source
+                                      Parameters = parameters }
+                            | _ -> None))
+                    |> Seq.toList)
+                |> Option.defaultValue []
+
+            match version, versionDiagnostics with
+            | Some _, [] -> Ok descriptors
             | _ -> Error versionDiagnostics

@@ -944,6 +944,7 @@ module CommandReports =
                   DiagnosticIds = result.Diagnostic |> Option.map (fun d -> [ d.Id ]) |> Option.defaultValue [] }
         | ReadFile _
         | EnumerateDirectory _
+        | RunProcess _
         | EmitStdout _
         | EmitStderr _
         | SetExitCode _ -> None
@@ -1309,9 +1310,26 @@ module CommandReports =
             model.Diagnostics @ effectDiagnostics
             |> DiagnosticsModule.sort
 
+        // Produced provider files are not SDD write effects; they are discovered by
+        // the scaffold diff and recorded as externally-owned change entries so the
+        // artifact ledger is complete (data-model §5).
+        let scaffoldChanges =
+            model.Scaffold
+            |> Option.map (fun summary ->
+                summary.ProducedPaths
+                |> List.map (fun path ->
+                    { Path = path
+                      Kind = "product"
+                      Ownership = ArtifactOwner.GeneratedProduct |> ArtifactRefModule.ownerValue
+                      Operation = ArtifactOperation.Create
+                      BeforeDigest = None
+                      AfterDigest = None
+                      SafeWriteDecision = "externalProvider"
+                      DiagnosticIds = [] }))
+            |> Option.defaultValue []
+
         let changes =
-            model.InterpretedEffects
-            |> List.choose (changeFromEffectResult model.Request)
+            (model.InterpretedEffects |> List.choose (changeFromEffectResult model.Request)) @ scaffoldChanges
             |> sortChanges
 
         { SchemaVersion = 1
@@ -1335,15 +1353,21 @@ module CommandReports =
           Ship = model.Ship
           AgentGuidance = model.AgentGuidance
           Refresh = model.Refresh
+          Scaffold = model.Scaffold
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility
           NextAction = nextAction diagnostics model.Request model.Checklist model.Plan model.Tasks model.Analysis model.Evidence model.Verification model.Ship model.AgentGuidance model.Refresh }
 
+    // Provider-defect diagnostics escalate to exit 2 (tool-defect class), the same
+    // boundary `toolDefect` uses; malformed user input stays at exit 1.
+    let providerDefectIds =
+        set [ "toolDefect"; "scaffold.providerFailed"; "scaffold.providerUnavailable"; "scaffold.providerWroteSddTree" ]
+
     let exitCodeForReport (report: CommandReport) =
         match report.Outcome with
         | CommandOutcome.Blocked ->
-            if report.Diagnostics |> List.exists (fun d -> d.Id = "toolDefect") then 2 else 1
+            if report.Diagnostics |> List.exists (fun d -> Set.contains d.Id providerDefectIds) then 2 else 1
         | CommandOutcome.Succeeded
         | CommandOutcome.SucceededWithWarnings
         | CommandOutcome.NoChange -> 0

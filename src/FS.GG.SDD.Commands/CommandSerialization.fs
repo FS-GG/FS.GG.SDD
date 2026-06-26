@@ -288,6 +288,28 @@ module CommandSerialization =
             writer.WriteEndObject()
         | None -> writer.WriteNull "refresh"
 
+    let writeScaffold (writer: Utf8JsonWriter) (summary: ScaffoldSummary option) =
+        match summary with
+        | Some summary ->
+            writer.WriteStartObject("scaffold")
+
+            match summary.ProviderName with
+            | Some name -> writer.WriteString("providerName", name)
+            | None -> writer.WriteNull "providerName"
+
+            match summary.ProviderContractVersion with
+            | Some version -> writer.WriteString("providerContractVersion", version)
+            | None -> writer.WriteNull "providerContractVersion"
+
+            writer.WriteString("outcome", summary.Outcome)
+            writer.WriteBoolean("skeletonCreated", summary.SkeletonCreated)
+            writer.WriteBoolean("providerInvoked", summary.ProviderInvoked)
+            writer.WriteNumber("producedPathCount", summary.ProducedPathCount)
+            writeStringList writer Sorted "producedPaths" summary.ProducedPaths
+            writer.WriteString("nextActionHint", summary.NextActionHint)
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "scaffold"
+
     let writeGeneratedSource (writer: Utf8JsonWriter) (source: GeneratedViewSource) =
         writer.WriteStartObject()
         writer.WriteString("path", source.Path)
@@ -390,6 +412,7 @@ module CommandSerialization =
         writeShip writer report.Ship
         writeAgentGuidance writer report.AgentGuidance
         writeRefresh writer report.Refresh
+        writeScaffold writer report.Scaffold
         writer.WriteStartArray("generatedViews")
         report.GeneratedViews |> List.sortBy (fun view -> view.Path) |> List.iter (writeGeneratedView writer)
         writer.WriteEndArray()

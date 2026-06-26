@@ -1,0 +1,6 @@
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-fail
+    source: __FIXTURE__/fails-midway
