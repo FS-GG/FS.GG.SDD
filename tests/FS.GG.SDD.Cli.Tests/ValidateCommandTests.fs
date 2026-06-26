@@ -30,7 +30,11 @@ module ValidateCommandTests =
         startInfo.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] <- "1"
         startInfo.Environment["NO_COLOR"] <- "1"
 
-        use proc = Process.Start startInfo
+        use proc =
+            match Process.Start startInfo with
+            | null -> failwith "Failed to start the dotnet process."
+            | started -> started
+
         let stdout = proc.StandardOutput.ReadToEnd()
         proc.StandardError.ReadToEnd() |> ignore
         proc.WaitForExit()

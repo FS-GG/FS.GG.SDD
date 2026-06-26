@@ -73,7 +73,7 @@ module Core =
           row "readiness/<id>/agent-commands/" ArtifactKind.GeneratedView "Generated Claude/Codex command guidance." "Projection from lifecycle model, never authority." [ "staleGeneratedView" ] ]
 
     let frontMatter (snapshot: FileSnapshot) : (string * string) option =
-        let normalized = (if isNull snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
+        let normalized = (if String.IsNullOrEmpty snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
         let lines = normalized.Split('\n')
 
         if lines.Length > 0 && lines.[0].Trim() = "---" then

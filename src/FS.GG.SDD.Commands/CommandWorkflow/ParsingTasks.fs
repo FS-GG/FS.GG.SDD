@@ -69,7 +69,7 @@ module internal ParsingTasks =
             Ok(facts, diagnostics)
 
     let yamlString (value: string) =
-        let text = if isNull value then "" else value
+        let text = if String.IsNullOrEmpty value then "" else value
         "\"" + text.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\""
 
     let yamlInlineList (values: string list) =

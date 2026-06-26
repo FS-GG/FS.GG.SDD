@@ -43,6 +43,6 @@ module IsolationTests =
 
         let references =
             commandsAssembly.GetReferencedAssemblies()
-            |> Array.map (fun reference -> reference.Name)
+            |> Array.map (fun reference -> reference.Name |> Option.ofObj |> Option.defaultValue "")
 
         Assert.DoesNotContain("FS.GG.SDD.Validation", references)

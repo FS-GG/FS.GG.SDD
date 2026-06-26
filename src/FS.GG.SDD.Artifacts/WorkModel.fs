@@ -273,7 +273,7 @@ module WorkModel =
                                            && source.TryGetProperty("digest", &digest)
                                            && digest.TryGetProperty("value", &digestValue) then
                                             match Map.tryFind (path.GetString()) sourceMap with
-                                            | Some current -> current <> digestValue.GetString()
+                                            | Some current -> current <> (Option.ofObj (digestValue.GetString()) |> Option.defaultValue "")
                                             | None -> true
                                         else
                                             false)
@@ -525,7 +525,7 @@ module WorkModel =
 
     let private jmString name element =
         jmProp name element
-        |> Option.bind (fun value -> if value.ValueKind = JsonValueKind.String then Some(value.GetString()) else None)
+        |> Option.bind (fun value -> if value.ValueKind = JsonValueKind.String then Option.ofObj (value.GetString()) else None)
         |> Option.defaultValue ""
 
     let private jmInt name element =
@@ -546,11 +546,11 @@ module WorkModel =
 
     let private jmStringList name element =
         jmArray name element
-        |> List.choose (fun value -> if value.ValueKind = JsonValueKind.String then Some(value.GetString()) else None)
+        |> List.choose (fun value -> if value.ValueKind = JsonValueKind.String then Option.ofObj (value.GetString()) else None)
         |> List.filter (String.IsNullOrWhiteSpace >> not)
 
     let private jmSeverity (value: string) =
-        match (if isNull value then "" else value).Trim().ToLowerInvariant() with
+        match value.Trim().ToLowerInvariant() with
         | "error" -> DiagnosticError
         | "warning" -> DiagnosticWarning
         | _ -> DiagnosticInfo

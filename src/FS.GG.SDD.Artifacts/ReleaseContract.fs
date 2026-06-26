@@ -113,7 +113,7 @@ module ReleaseContract =
     // ---- policy ----
 
     let channelOfVersion (version: string) =
-        let value = if isNull version then "" else version.Trim()
+        let value = if String.IsNullOrEmpty version then "" else version.Trim()
         let major =
             match value.Split('.') |> Array.tryHead with
             | Some head ->
@@ -429,7 +429,7 @@ module ReleaseContract =
 
     let private optString (element: JsonElement) (name: string) =
         match element.TryGetProperty name with
-        | true, value when value.ValueKind = JsonValueKind.String -> Some(value.GetString())
+        | true, value when value.ValueKind = JsonValueKind.String -> Option.ofObj (value.GetString())
         | _ -> None
 
     let parse (json: string) : Result<ReleaseReadiness, string> =
@@ -437,7 +437,7 @@ module ReleaseContract =
             use document = JsonDocument.Parse json
             let root = document.RootElement
             let prop (name: string) (element: JsonElement) = element.GetProperty name
-            let str name element = (prop name element).GetString()
+            let str name element = (prop name element).GetString() |> Option.ofObj |> Option.defaultValue ""
             let intp name element = (prop name element).GetInt32()
 
             let artifactOf (element: JsonElement) =
@@ -463,7 +463,7 @@ module ReleaseContract =
                   Channel = parseChannel (str "channel" identityElement)
                   PackageIds =
                     (prop "packageIds" identityElement).EnumerateArray()
-                    |> Seq.map (fun item -> item.GetString())
+                    |> Seq.map (fun item -> item.GetString() |> Option.ofObj |> Option.defaultValue "")
                     |> Seq.toList
                   CliCommandName = str "cliCommandName" identityElement }
 
@@ -483,7 +483,7 @@ module ReleaseContract =
                     let kind =
                         match kindElement.TryGetProperty "generatedView" with
                         | true, view ->
-                            GeneratedViewContract(parseViewKind (view.GetString()), parseFormat (str "format" kindElement))
+                            GeneratedViewContract(parseViewKind (view.GetString() |> Option.ofObj |> Option.defaultValue ""), parseFormat (str "format" kindElement))
                         | _ -> CommandOutputContract
 
                     let inventory =
@@ -512,7 +512,7 @@ module ReleaseContract =
                       Path = str "path" note
                       BreakingChanges =
                         (prop "breakingChanges" note).EnumerateArray()
-                        |> Seq.map (fun change -> change.GetString())
+                        |> Seq.map (fun change -> change.GetString() |> Option.ofObj |> Option.defaultValue "")
                         |> Seq.toList })
                 |> Seq.toList
 

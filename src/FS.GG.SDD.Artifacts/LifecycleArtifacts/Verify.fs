@@ -110,7 +110,7 @@ module Verify =
           Readiness: string }
 
     let evidenceDispositionStateFromString (value: string) =
-        match (if isNull value then "" else value).Trim().ToLowerInvariant() with
+        match (if String.IsNullOrEmpty value then "" else value).Trim().ToLowerInvariant() with
         | "supported" -> EvidenceSupported
         | "deferred" -> EvidenceDeferred
         | "missing" -> EvidenceMissingDisposition
@@ -121,7 +121,7 @@ module Verify =
         | _ -> EvidenceBlocking
 
     let requiredTestDispositionStateFromString (value: string) =
-        match (if isNull value then "" else value).Trim().ToLowerInvariant() with
+        match (if String.IsNullOrEmpty value then "" else value).Trim().ToLowerInvariant() with
         | "satisfied" -> TestSatisfied
         | "deferred" -> TestDeferred
         | "missing" -> TestMissingDisposition
@@ -132,7 +132,7 @@ module Verify =
         | _ -> TestBlocking
 
     let skillVisibilityStateFromString (value: string) =
-        match (if isNull value then "" else value).Trim().ToLowerInvariant() with
+        match (if String.IsNullOrEmpty value then "" else value).Trim().ToLowerInvariant() with
         | "visible" -> SkillVisible
         | _ -> SkillMissing
 

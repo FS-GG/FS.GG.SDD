@@ -271,7 +271,7 @@ module Clarification =
         match parseClarificationFrontMatter snapshot with
         | Error diagnostics -> Error diagnostics
         | Ok(frontMatter, _) ->
-            let text = (if isNull snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
+            let text = (if String.IsNullOrEmpty snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
             let standardSections = clarificationStandardSections ()
             let missingStandardSections = standardSections |> List.filter (fun heading -> not (hasHeading heading text))
             let questions = parseClarificationQuestions text

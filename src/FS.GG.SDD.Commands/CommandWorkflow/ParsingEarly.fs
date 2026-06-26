@@ -111,7 +111,7 @@ policyPointers:
           Impact = [] }
 
     let appendIntent (label: string) (value: string) (intent: SpecificationIntent) =
-        let value = if isNull value then "" else value.Trim()
+        let value = if String.IsNullOrEmpty value then "" else value.Trim()
 
         if String.IsNullOrWhiteSpace value then
             intent
@@ -298,7 +298,7 @@ Prose status: specified
         | _ -> $"## {heading}\n"
 
     let ensureStandardSections workId text =
-        let normalized = (if isNull text then "" else text).Replace("\r\n", "\n")
+        let normalized = (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
         let required = [ "Identity"; "Principles"; "Scope Boundaries"; "Policy Pointers"; "Lifecycle Notes" ]
 
         let missing =
@@ -330,7 +330,7 @@ Prose status: specified
         | _ -> $"## {heading}\n"
 
     let ensureSpecificationSections text =
-        let normalized = (if isNull text then "" else text).Replace("\r\n", "\n")
+        let normalized = (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
 
         let missing =
             specificationStandardSections ()
@@ -574,7 +574,7 @@ Prose status: specified
         | _ -> $"## {heading}\n"
 
     let ensureClarificationSections workId text =
-        let normalized = (if isNull text then "" else text).Replace("\r\n", "\n")
+        let normalized = (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
 
         let missing =
             clarificationStandardSections ()
@@ -691,7 +691,7 @@ Prose status: specified
             |> Option.map (fun decision -> decision.DecisionId.Value, decision.Text))
 
     let normalizeDecisionText (text: string) =
-        Regex.Replace((if isNull text then "" else text).Trim().ToLowerInvariant(), @"\s+", " ")
+        Regex.Replace((if String.IsNullOrEmpty text then "" else text).Trim().ToLowerInvariant(), @"\s+", " ")
 
     type PlannedClarificationAnswer =
         { AmbiguityId: string
@@ -921,7 +921,7 @@ publicOrToolFacingImpact: true
         if List.isEmpty lines then
             text
         else
-            let normalized = (if isNull text then "" else text).Replace("\r\n", "\n")
+            let normalized = (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
             let split = normalized.Split('\n') |> Array.toList
             let headingPattern = $"^##\\s+{Regex.Escape heading}\\s*$"
 

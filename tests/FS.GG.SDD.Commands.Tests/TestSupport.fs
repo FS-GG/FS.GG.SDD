@@ -41,7 +41,11 @@ module TestSupport =
 
     let writeRelative (root: string) (path: string) (text: string) =
         let absolute = Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar))
-        Directory.CreateDirectory(Path.GetDirectoryName absolute) |> ignore
+
+        match Path.GetDirectoryName absolute with
+        | null -> ()
+        | directory -> Directory.CreateDirectory directory |> ignore
+
         File.WriteAllText(absolute, text)
 
     let existsRelative (root: string) (path: string) =

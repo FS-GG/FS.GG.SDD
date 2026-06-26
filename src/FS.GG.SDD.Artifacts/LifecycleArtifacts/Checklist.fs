@@ -211,7 +211,7 @@ module Checklist =
         match parseChecklistFrontMatter snapshot with
         | Error diagnostics -> Error diagnostics
         | Ok(frontMatter, _) ->
-            let text = (if isNull snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
+            let text = (if String.IsNullOrEmpty snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
             let standardSections = checklistStandardSections ()
             let missingStandardSections = standardSections |> List.filter (fun heading -> not (hasHeading heading text))
             let snapshots = parseChecklistSourceSnapshots text

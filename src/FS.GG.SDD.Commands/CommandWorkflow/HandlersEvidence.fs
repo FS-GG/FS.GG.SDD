@@ -44,7 +44,7 @@ module internal HandlersEvidence =
         [ "pass"; "fail"; "deferred"; "missing"; "stale"; "advisory"; "blocked" ] |> Set.ofList
 
     let normalizedEvidenceResult (result: string) =
-        (if isNull result then "" else result.Trim().ToLowerInvariant())
+        (if String.IsNullOrEmpty result then "" else result.Trim().ToLowerInvariant())
 
     let evidenceAnalysisSummary path (view: AnalysisView) : AnalysisSummary =
         { WorkId = view.WorkId.Value

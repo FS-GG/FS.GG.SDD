@@ -36,7 +36,7 @@ module RequirementModel =
 
     let parseRequirements (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Spec
-        let text = (if isNull snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
+        let text = (if String.IsNullOrEmpty snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
 
         text.Split('\n')
         |> Array.mapi (fun index line -> index + 1, line)
@@ -68,7 +68,7 @@ module RequirementModel =
 
     let parseMarkdownRequirementMentions (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Spec
-        let text = (if isNull snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
+        let text = (if String.IsNullOrEmpty snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
 
         text.Split('\n')
         |> Array.mapi (fun index line -> index + 1, line)
@@ -92,7 +92,7 @@ module RequirementModel =
                 ArtifactKind.Spec
 
         let artifact = sourceArtifact snapshot.Path kind
-        let text = (if isNull snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
+        let text = (if String.IsNullOrEmpty snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
 
         text.Split('\n')
         |> Array.mapi (fun index line -> index + 1, line)

@@ -25,7 +25,7 @@ module internal HandlersAgents =
     // ---- Agents command (cross-cutting generated agent guidance) ----
 
     let resolveGeneratedRoot workId (raw: string) =
-        normalizeRelativePath ((if isNull raw then "" else raw).Replace("{workId}", workId))
+        normalizeRelativePath ((if String.IsNullOrEmpty raw then "" else raw).Replace("{workId}", workId))
 
     let agentRootResolvesWithinProject workId (raw: string) =
         if String.IsNullOrWhiteSpace raw then

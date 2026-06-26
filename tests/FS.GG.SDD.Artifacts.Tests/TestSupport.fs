@@ -9,10 +9,10 @@ module TestSupport =
     let rec findRepoRoot (directory: DirectoryInfo) =
         if File.Exists(Path.Combine(directory.FullName, "FS.GG.SDD.sln")) then
             directory.FullName
-        elif isNull directory.Parent then
-            failwith "Could not locate repository root."
         else
-            findRepoRoot directory.Parent
+            match directory.Parent with
+            | null -> failwith "Could not locate repository root."
+            | parent -> findRepoRoot parent
 
     let repoRoot = findRepoRoot (DirectoryInfo AppContext.BaseDirectory)
 

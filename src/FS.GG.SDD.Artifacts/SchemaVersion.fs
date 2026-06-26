@@ -28,7 +28,7 @@ module SchemaVersion =
     let create major = { Major = major; Minor = None; Raw = string major }
 
     let parse (value: string) =
-        let value = if isNull value then "" else value.Trim()
+        let value = if String.IsNullOrEmpty value then "" else value.Trim()
         let m = Regex.Match(value, @"^(\d+)(?:\.(\d+))?$")
 
         if m.Success then
@@ -95,8 +95,8 @@ module SchemaVersion =
         Regex.IsMatch(value, @"^[a-f0-9]{64}$", RegexOptions.CultureInvariant)
 
     let createSourceDigest (algorithm: string) (value: string) =
-        let algorithm = if isNull algorithm then "" else algorithm.Trim().ToLowerInvariant()
-        let value = if isNull value then "" else value.Trim()
+        let algorithm = if String.IsNullOrEmpty algorithm then "" else algorithm.Trim().ToLowerInvariant()
+        let value = if String.IsNullOrEmpty value then "" else value.Trim()
 
         if algorithm <> "sha256" then
             Error "Only sha256 source digests are supported."
@@ -106,8 +106,8 @@ module SchemaVersion =
             Error "SHA-256 digests must be lowercase hexadecimal."
 
     let createOutputDigest (algorithm: string) (value: string) =
-        let algorithm = if isNull algorithm then "" else algorithm.Trim().ToLowerInvariant()
-        let value = if isNull value then "" else value.Trim()
+        let algorithm = if String.IsNullOrEmpty algorithm then "" else algorithm.Trim().ToLowerInvariant()
+        let value = if String.IsNullOrEmpty value then "" else value.Trim()
 
         if algorithm <> "sha256" then
             Error "Only sha256 output digests are supported."
@@ -122,7 +122,7 @@ module SchemaVersion =
         |> String.concat ""
 
     let sha256Text (text: string) =
-        let bytes = Encoding.UTF8.GetBytes(if isNull text then "" else text.Replace("\r\n", "\n"))
+        let bytes = Encoding.UTF8.GetBytes(if String.IsNullOrEmpty text then "" else text.Replace("\r\n", "\n"))
         let digest = SHA256.HashData bytes |> hex
         ({ Algorithm = "sha256"; Value = digest } : SourceDigest)
 
@@ -131,8 +131,8 @@ module SchemaVersion =
         ({ Algorithm = digest.Algorithm; Value = digest.Value } : OutputDigest)
 
     let createGeneratorVersion (id: string) (version: string) =
-        let id = if isNull id then "" else id.Trim()
-        let version = if isNull version then "" else version.Trim()
+        let id = if String.IsNullOrEmpty id then "" else id.Trim()
+        let version = if String.IsNullOrEmpty version then "" else version.Trim()
 
         if String.IsNullOrWhiteSpace id then
             Error "Generator id is required."

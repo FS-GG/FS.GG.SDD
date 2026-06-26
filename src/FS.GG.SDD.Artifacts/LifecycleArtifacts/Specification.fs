@@ -166,7 +166,7 @@ module Specification =
         match parseSpecificationFrontMatter snapshot with
         | Error diagnostics -> Error diagnostics
         | Ok(frontMatter, body) ->
-            let text = (if isNull snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
+            let text = (if String.IsNullOrEmpty snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
             let standardSections = specificationStandardSections ()
             let missingStandardSections = standardSections |> List.filter (fun heading -> not (hasHeading heading text))
             let stories = scopedIdLocationsInSections [ "User Stories" ] @"\bUS-\d{3,}\b" Identifiers.createUserStoryId text

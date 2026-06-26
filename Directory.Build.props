@@ -12,6 +12,11 @@
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- Scoped regression gate (feature 026 / FR-006): once the FS3261 (nullness)
+         count reached zero, promote FS3261 and FS0025 (incomplete match) to build
+         errors so the clean state cannot silently re-accumulate. No other category
+         is promoted; TreatWarningsAsErrors stays false. -->
+    <WarningsAsErrors>FS3261;FS0025</WarningsAsErrors>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <Company>FS.GG</Company>
     <Authors>FS.GG</Authors>

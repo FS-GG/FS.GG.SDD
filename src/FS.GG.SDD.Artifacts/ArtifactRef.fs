@@ -34,7 +34,7 @@ module ArtifactRef =
           RequiredBySdd: bool }
 
     let normalizePath (path: string) =
-        (if isNull path then "" else path.Trim().Replace('\\', '/')).TrimStart('/')
+        (if String.IsNullOrEmpty path then "" else path.Trim().Replace('\\', '/')).TrimStart('/')
 
     let create (path: string) kind owner requiredBySdd =
         let path = normalizePath path

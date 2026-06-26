@@ -72,7 +72,7 @@ module Task =
           Diagnostics: Diagnostic list }
 
     let parseTaskStatus (value: string) =
-        match if isNull value then "" else value.Trim().ToLowerInvariant() with
+        match if String.IsNullOrEmpty value then "" else value.Trim().ToLowerInvariant() with
         | "pending" -> Pending
         | "in-progress" -> InProgress
         | "done" -> Done

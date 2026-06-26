@@ -318,9 +318,9 @@ input, thread the `Result` to a diagnostic instead of throwing.
 Progress markers (status legend, matching
 `docs/initial-implementation-plan.md`): 🟢 / ✅ complete · 🟡 in progress
 (started; not landed) · 🔴 not started · ⬜ optional / deferred. The
-2026-06-26 analysis baseline started every row at 🔴; **R3, R4, R1, and R2 have
-since landed** (see below), completing the suggested **R3 → R4 → R1 → R2**
-structure-first sequence. Update the marker as each refactor lands and link its evidence
+2026-06-26 analysis baseline started every row at 🔴; **R3, R4, R1, R2, and R5
+have since landed** (see below), completing the suggested **R3 → R4 → R1 → R2**
+structure-first sequence plus **R5**. Update the marker as each refactor lands and link its evidence
 (PR / spec readiness).
 
 Suggested sequence: **R3 → R4 → R1 → R2** (structure first so the handler
@@ -340,7 +340,7 @@ is permitted, and byte-identical artifact output is not separately required.
 | R2 | ✅ | Split `CommandWorkflow.fs` into facade + internal modules | §1.1 | High | M | Very low (7-line `.fsi`) | Navigability |
 | R3 | ✅ | Split `LifecycleArtifacts.fs` per artifact family | §1.2 | High | M | Very low | Navigability, localizes §3/§4 |
 | R4 | ✅ | Extract `parseJsonView`, making the 4 matches total | §5.3 §4 | Med | S | Low | Removes latent runtime throw + ~70 LOC |
-| R5 | 🔴 | Centralize JSON null-access helpers, then enable `WarningsAsErrors` | §3 | Med | M | Low | Clears ~290 warnings, prevents regression |
+| R5 | ✅ | Centralize JSON null-access helpers, then enable `WarningsAsErrors` | §3 | Med | M | Low | Cleared 282 sites (952 raw); gate prevents regression |
 | R6 | 🔴 | Collapse diagnostic builder + unify serializers | §5.2 §5.4 | Med | S | Low | ~90 LOC, one shape |
 | R7 | 🔴 | Strip redundant `private`; fix `failwith` context | §2 §6 | Low | S | None | Noise removal |
 
@@ -411,9 +411,24 @@ is permitted, and byte-identical artifact output is not separately required.
   the skeleton takes `path`/`text` strings rather than a `FileSnapshot` record,
   because `FileSnapshot` (in `Core.fs`) compiles after `Internal.fs` — behavior
   is byte-identical and no public surface changes.
-- 🔴 **R5 — null-clean JSON helpers + `WarningsAsErrors`.** Not started.
-  Done when FS3261 count is ~0 and `Directory.Build.props` sets
-  `WarningsAsErrors` (or `WarningsAsErrors=FS3261;FS0025`).
+- ✅ **R5 — null-clean JSON helpers + `WarningsAsErrors`.** Landed via
+  `specs/026-null-clean-json-helpers/`. **Done:** the FS3261 (nullness) count is
+  driven to **0** across all four `src` assemblies and the four test projects
+  (baseline **282** unique sites / **952** raw emissions; **0** FS0025, no other
+  category emitted). The bulk cleared by centralizing `System.Text.Json`
+  `GetString()` coalescing with `Option.ofObj` at each assembly's JSON-access
+  boundary (Artifacts `Internal.jsonString`/`jsonStringList`, `WorkModel.jmString`,
+  `GenerationManifest.stringProperty`, `ReleaseContract.str`/`optString`,
+  Commands `HandlersShip.strField`/`idsField`, Validation `getString`), which also
+  clears the downstream "compatible nullability" propagation in the parser `build`
+  callbacks; residual sites use `String.IsNullOrEmpty` for defensive `isNull` on
+  non-null `string` params/fields and null pattern-matches for BCL
+  `Process`/`DirectoryInfo`/`Path` returns. `Directory.Build.props` then adds the
+  scoped `<WarningsAsErrors>FS3261;FS0025</WarningsAsErrors>` ratchet (keeping
+  `TreatWarningsAsErrors=false`). Behavior-preserving: all **438** tests pass;
+  charter/analyze/refresh `--json` byte-identical; no public `.fsi` or
+  surface-baseline diff; no `#nowarn` introduced; injected-defect check confirms
+  the gate fails the build with `error FS3261`; off-scope category count is 0.
 - 🔴 **R6 — diagnostic builder + serializer unification.** Not started.
   Done when diagnostics route through one generic builder and the duplicate
   JSON writers live in a single shared module.
@@ -422,7 +437,7 @@ is permitted, and byte-identical artifact output is not separately required.
   `failwith` is either total/unreachable-by-construction or replaced by a
   threaded diagnostic.
 
-**Aggregate:** 3 / 7 complete · 0 in progress · 4 not started.
+**Aggregate:** 4 / 7 complete · 0 in progress · 3 not started.
 
 ## Appendix: what is *not* a problem
 

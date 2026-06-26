@@ -103,17 +103,21 @@ module ValidationRunner =
 
     let private writeRelative (root: string) (relative: string) (text: string) =
         let absolute = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar))
-        Directory.CreateDirectory(Path.GetDirectoryName absolute) |> ignore
+
+        match Path.GetDirectoryName absolute with
+        | null -> ()
+        | directory -> Directory.CreateDirectory directory |> ignore
+
         File.WriteAllText(absolute, text)
 
     let rec private copyDirectory (source: string) (destination: string) =
         Directory.CreateDirectory destination |> ignore
 
         for file in Directory.GetFiles source do
-            File.Copy(file, Path.Combine(destination, Path.GetFileName file), true)
+            File.Copy(file, Path.Combine(destination, Path.GetFileName file |> Option.ofObj |> Option.defaultValue ""), true)
 
         for directory in Directory.GetDirectories source do
-            copyDirectory directory (Path.Combine(destination, Path.GetFileName directory))
+            copyDirectory directory (Path.Combine(destination, Path.GetFileName directory |> Option.ofObj |> Option.defaultValue ""))
 
     // ---- state ladder ----
 

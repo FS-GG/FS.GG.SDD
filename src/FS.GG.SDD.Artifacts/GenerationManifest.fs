@@ -128,7 +128,7 @@ module GenerationManifest =
         tryProperty name element
         |> Option.bind (fun value ->
             if value.ValueKind = JsonValueKind.String then
-                Some(value.GetString())
+                Option.ofObj (value.GetString())
             else
                 None)
 

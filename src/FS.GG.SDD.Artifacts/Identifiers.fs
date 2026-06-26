@@ -36,7 +36,7 @@ module Identifiers =
     type EvidenceId = { Value: string }
 
     let createWorkId (value: string) =
-        let value = if isNull value then "" else value.Trim()
+        let value = if System.String.IsNullOrEmpty value then "" else value.Trim()
 
         if Regex.IsMatch(value, @"^(?:\d+[a-z0-9]*|[a-z][a-z0-9]*)(?:-[a-z0-9]+)*$") then
             Ok ({ Value = value } : WorkId)
@@ -46,7 +46,7 @@ module Identifiers =
     let workIdValue (workId: WorkId) = workId.Value
 
     let parseStage (value: string) =
-        match if isNull value then "" else value.Trim().ToLowerInvariant() with
+        match if System.String.IsNullOrEmpty value then "" else value.Trim().ToLowerInvariant() with
         | "charter" -> Ok Charter
         | "specify" -> Ok Specify
         | "clarify" -> Ok Clarify
@@ -88,7 +88,7 @@ module Identifiers =
           Ship ]
 
     let createScopedId (label: string) (pattern: string) (value: string) =
-        let value = if isNull value then "" else value.Trim()
+        let value = if System.String.IsNullOrEmpty value then "" else value.Trim()
 
         if Regex.IsMatch(value, pattern, RegexOptions.IgnoreCase) then
             Ok value

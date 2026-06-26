@@ -13,8 +13,8 @@ open YamlDotNet.RepresentationModel
 
 [<AutoOpen>]
 module internal Internal =
-    let normalizePath (path: string) =
-        (if isNull path then "" else path.Trim().Replace('\\', '/')).TrimStart('/')
+    let normalizePath (path: string | null) =
+        (Option.ofObj path |> Option.defaultValue "").Trim().Replace('\\', '/').TrimStart('/')
 
     let artifact path kind owner requiredBySdd =
         match FS.GG.SDD.Artifacts.ArtifactRef.create (normalizePath path) kind owner requiredBySdd with
@@ -23,9 +23,9 @@ module internal Internal =
 
     let sourceArtifact path kind = artifact path kind Sdd true
 
-    let parseYaml text =
+    let parseYaml (text: string | null) =
         let stream = YamlStream()
-        use reader = new StringReader(if isNull text then "" else text)
+        use reader = new StringReader(Option.ofObj text |> Option.defaultValue "")
         stream.Load reader
 
         if stream.Documents.Count = 0 then
@@ -45,7 +45,7 @@ module internal Internal =
 
     let tryScalar (node: YamlNode) =
         match node with
-        | :? YamlScalarNode as scalar -> Some(if isNull scalar.Value then "" else scalar.Value)
+        | :? YamlScalarNode as scalar -> Some(Option.ofObj scalar.Value |> Option.defaultValue "")
         | _ -> None
 
     let tryChild key (mapping: YamlMappingNode) =
@@ -243,7 +243,7 @@ module internal Internal =
         tryJsonProperty name element
         |> Option.bind (fun value ->
             if value.ValueKind = JsonValueKind.String then
-                Some(value.GetString())
+                Option.ofObj (value.GetString())
             elif value.ValueKind = JsonValueKind.Null then
                 None
             else
@@ -260,7 +260,7 @@ module internal Internal =
                 | true, parsed -> Some parsed
                 | _ -> None
             elif value.ValueKind = JsonValueKind.String then
-                match Int32.TryParse(value.GetString()) with
+                match Int32.TryParse(Option.ofObj (value.GetString()) |> Option.defaultValue "") with
                 | true, parsed -> Some parsed
                 | _ -> None
             else
@@ -283,7 +283,7 @@ module internal Internal =
         jsonArray name element
         |> List.choose (fun value ->
             if value.ValueKind = JsonValueKind.String then
-                Some(value.GetString())
+                Option.ofObj (value.GetString())
             else
                 None)
         |> List.filter (String.IsNullOrWhiteSpace >> not)
@@ -292,7 +292,7 @@ module internal Internal =
     let parseJsonDigest (element: JsonElement) =
         match element.ValueKind with
         | JsonValueKind.String ->
-            let value = element.GetString()
+            let value = Option.ofObj (element.GetString()) |> Option.defaultValue ""
             if String.IsNullOrWhiteSpace value then
                 None
             else
@@ -310,8 +310,8 @@ module internal Internal =
     let jsonDigest name element =
         tryJsonProperty name element |> Option.bind parseJsonDigest
 
-    let diagnosticSeverityFromJson value =
-        match (if isNull value then "" else value).Trim().ToLowerInvariant() with
+    let diagnosticSeverityFromJson (value: string | null) =
+        match (Option.ofObj value |> Option.defaultValue "").Trim().ToLowerInvariant() with
         | "error"
         | "blocking" -> Diagnostics.DiagnosticError
         | "warning"

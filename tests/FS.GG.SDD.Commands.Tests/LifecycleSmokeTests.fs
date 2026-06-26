@@ -342,7 +342,7 @@ module LifecycleSmokeTests =
         // or monorepo checkout: nothing of the sort is written or named in output.
         let names =
             Directory.GetFileSystemEntries d.Root
-            |> Array.map (fun entry -> (Path.GetFileName entry).ToLowerInvariant())
+            |> Array.map (fun entry -> (Path.GetFileName entry |> Option.ofObj |> Option.defaultValue "").ToLowerInvariant())
         for name in names do
             Assert.DoesNotContain("rendering", name)
             Assert.DoesNotContain("template", name)

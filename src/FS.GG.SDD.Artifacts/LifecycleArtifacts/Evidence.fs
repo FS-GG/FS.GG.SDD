@@ -100,7 +100,7 @@ module Evidence =
           Diagnostics: Diagnostic list }
 
     let parseEvidenceKind (value: string) =
-        match if isNull value then "" else value.Trim().ToLowerInvariant() with
+        match if String.IsNullOrEmpty value then "" else value.Trim().ToLowerInvariant() with
         | "implementation" -> Implementation
         | "verification" -> Verification
         | "review" -> Review

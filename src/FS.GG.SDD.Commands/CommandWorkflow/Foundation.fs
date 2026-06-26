@@ -25,7 +25,7 @@ module internal Foundation =
         if String.IsNullOrWhiteSpace path then "." else path.Trim()
 
     let normalizeRelativePath (path: string) =
-        (if isNull path then "" else path.Trim().Replace('\\', '/')).TrimStart('/')
+        (if String.IsNullOrEmpty path then "" else path.Trim().Replace('\\', '/')).TrimStart('/')
 
     let projectIdFromRoot (root: string) =
         let name = DirectoryInfo(normalizeRoot root).Name
@@ -377,7 +377,7 @@ of truth.
         |> Array.toList
 
     let stripQuotes (value: string) =
-        let value = if isNull value then "" else value.Trim()
+        let value = if String.IsNullOrEmpty value then "" else value.Trim()
         value.Trim([| '"'; '\'' |])
 
     let tryScalar key (yaml: string) =
@@ -391,7 +391,7 @@ of truth.
             None
 
     let splitFrontMatter (text: string) =
-        let normalized = (if isNull text then "" else text).Replace("\r\n", "\n")
+        let normalized = (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
         let lines = normalized.Split('\n')
 
         if lines.Length > 0 && lines.[0].Trim() = "---" then

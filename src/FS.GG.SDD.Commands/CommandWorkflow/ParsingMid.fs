@@ -36,7 +36,7 @@ module internal ParsingMid =
         | _ -> $"## {heading}\n"
 
     let ensureChecklistSections workId text =
-        let normalized = (if isNull text then "" else text).Replace("\r\n", "\n")
+        let normalized = (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
 
         let missing =
             checklistStandardSections ()
@@ -491,7 +491,7 @@ Prose status: {status}
         | _ -> $"## {heading}\n"
 
     let ensurePlanSections workId text =
-        let normalized = (if isNull text then "" else text).Replace("\r\n", "\n")
+        let normalized = (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
 
         let missing =
             planStandardSections ()

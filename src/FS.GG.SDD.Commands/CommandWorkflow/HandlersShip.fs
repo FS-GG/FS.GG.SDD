@@ -91,7 +91,7 @@ module internal HandlersShip =
                 match element with
                 | Some e ->
                     match e.TryGetProperty name with
-                    | true, value when value.ValueKind = System.Text.Json.JsonValueKind.String -> value.GetString()
+                    | true, value when value.ValueKind = System.Text.Json.JsonValueKind.String -> value.GetString() |> Option.ofObj |> Option.defaultValue ""
                     | _ -> ""
                 | None -> ""
 
@@ -102,7 +102,7 @@ module internal HandlersShip =
                     | true, value when value.ValueKind = System.Text.Json.JsonValueKind.Array ->
                         [ for item in value.EnumerateArray() do
                               if item.ValueKind = System.Text.Json.JsonValueKind.String then
-                                  yield item.GetString() ]
+                                  yield (item.GetString() |> Option.ofObj |> Option.defaultValue "") ]
                     | _ -> []
                 | None -> []
 
