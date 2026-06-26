@@ -605,12 +605,8 @@ sourceAnalysis: {analysisPath workId}
                         generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) evidenceText commandDiagnostics model
                     | _ ->
                         let path = workModelPath workId
-                        let ids =
-                            commandDiagnostics
-                            |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-                            |> List.map _.Id
-
-                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+                        let ids = blockingDiagnosticIds commandDiagnostics
+                        [], blockedWorkModelView path model.Request.GeneratorVersion ids, []
 
                 let evidenceEffects =
                     match evidenceText with

@@ -26,25 +26,6 @@ module internal HandlersShip =
 
     // ---- Ship command ----
 
-    let shipGeneratedViewState
-        (path: string)
-        (kind: string)
-        (generator: GeneratorVersion)
-        (sources: GeneratedViewSource list)
-        (outputDigest: OutputDigest option)
-        (currency: GeneratedViewCurrency)
-        (diagnosticIds: string list)
-        : GeneratedViewState
-        =
-        { Path = path
-          Kind = kind
-          SchemaVersion = Some 1
-          Generator = Some generator
-          Sources = sources |> List.sortBy _.Path
-          OutputDigest = outputDigest
-          Currency = currency
-          DiagnosticIds = diagnosticIds |> List.distinct |> List.sort }
-
     let shipEvidenceStateValue (state: EvidenceDispositionState) =
         match state with
         | EvidenceSupported -> "supported"
@@ -169,7 +150,7 @@ module internal HandlersShip =
                 let outputDigest = SchemaVersionModule.outputSha256Text handoffJson
 
                 let view =
-                    shipGeneratedViewState
+                    generatedViewState
                         (governanceHandoffPath workId)
                         "governance-handoff"
                         generator
@@ -426,8 +407,8 @@ module internal HandlersShip =
                         generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) evidenceText commandDiagnostics model
                     | _ ->
                         let path = workModelPath workId
-                        let ids = commandDiagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError) |> List.map _.Id
-                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+                        let ids = blockingDiagnosticIds commandDiagnostics
+                        [], blockedWorkModelView path model.Request.GeneratorVersion ids, []
 
                 commandDiagnostics @ generatedDiagnostics,
                 (fun hasBlocking diagnostics ->
@@ -445,13 +426,13 @@ module internal HandlersShip =
 
                     let analysisViewState =
                         analysis
-                        |> Option.map (fun _ -> shipGeneratedViewState (analysisPath workId) "analysis" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Current [])
-                        |> Option.defaultValue (shipGeneratedViewState (analysisPath workId) "analysis" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Missing [])
+                        |> Option.map (fun _ -> generatedViewState (analysisPath workId) "analysis" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Current [])
+                        |> Option.defaultValue (generatedViewState (analysisPath workId) "analysis" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Missing [])
 
                     let verifyViewState =
                         match verificationView with
-                        | Some _ -> shipGeneratedViewState (verifyPath workId) "verification" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Current []
-                        | None -> shipGeneratedViewState (verifyPath workId) "verification" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Missing []
+                        | Some _ -> generatedViewState (verifyPath workId) "verification" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Current []
+                        | None -> generatedViewState (verifyPath workId) "verification" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Missing []
 
                     let stageStatus present = if present then "ready" else "missing"
 
@@ -493,7 +474,7 @@ module internal HandlersShip =
                                     diagnostics
 
                             let outputDigest = SchemaVersionModule.outputSha256Text text
-                            let view = shipGeneratedViewState (shipPath workId) "ship" model.Request.GeneratorVersion sources (Some outputDigest) GeneratedViewCurrency.Current []
+                            let view = generatedViewState (shipPath workId) "ship" model.Request.GeneratorVersion sources (Some outputDigest) GeneratedViewCurrency.Current []
 
                             let findings = shipFindings diagnostics
                             let findingCount severity = findings |> List.filter (fun (_, _, findingSeverity) -> findingSeverity = severity) |> List.length

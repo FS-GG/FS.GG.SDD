@@ -255,24 +255,6 @@ module internal ViewGeneration =
           AcceptedDeferralCount = acceptedDeferralCount
           Readiness = status }
 
-    let analysisGeneratedViewState
-        (path: string)
-        (generator: GeneratorVersion)
-        (sources: GeneratedViewSource list)
-        (outputDigest: OutputDigest option)
-        (currency: GeneratedViewCurrency)
-        (diagnosticIds: string list)
-        : GeneratedViewState
-        =
-        { Path = path
-          Kind = "analysis"
-          SchemaVersion = Some 1
-          Generator = Some generator
-          Sources = sources |> List.sortBy _.Path
-          OutputDigest = outputDigest
-          Currency = currency
-          DiagnosticIds = diagnosticIds |> List.distinct |> List.sort }
-
     let analysisBoundaryFacts () : GovernanceCompatibilityFact list =
         [ { Path = ".fsgg/policy.yml"; Relationship = "optionalGovernancePolicy"; RequiredBySdd = false; State = "notEvaluated"; DiagnosticIds = [] }
           { Path = ".fsgg/capabilities.yml"; Relationship = "optionalGovernanceCapabilities"; RequiredBySdd = false; State = "notEvaluated"; DiagnosticIds = [] }
@@ -445,7 +427,7 @@ module internal ViewGeneration =
 
         let text = analysisJson workId model.Request.GeneratorVersion sources relationships summary diagnostics generatedViews
         let outputDigest = SchemaVersionModule.outputSha256Text text
-        let view = analysisGeneratedViewState path model.Request.GeneratorVersion sources (Some outputDigest) GeneratedViewCurrency.Current []
+        let view = generatedViewState path "analysis" model.Request.GeneratorVersion sources (Some outputDigest) GeneratedViewCurrency.Current []
         summary, text, view
 
     let sourceFromEntry (entry: SourceEntry) =
@@ -459,16 +441,6 @@ module internal ViewGeneration =
           Digest = Some(SchemaVersionModule.sha256Text text)
           SchemaVersion = Some 1
           SchemaStatus = Some "current" }
-
-    let generatedViewState path generator sources outputDigest currency diagnosticIds =
-        { Path = path
-          Kind = "workModel"
-          SchemaVersion = Some 1
-          Generator = Some generator
-          Sources = sources |> List.sortBy _.Path
-          OutputDigest = outputDigest
-          Currency = currency
-          DiagnosticIds = diagnosticIds |> List.distinct |> List.sort }
 
     let existingGeneratedViewDiagnostic workId path model =
         match snapshot path model with
@@ -544,10 +516,7 @@ module internal ViewGeneration =
         =
         let path = workModelPath workId
         let currentDiagnostic = existingGeneratedViewDiagnostic workId path model
-        let blockingCommandIds =
-            commandDiagnostics
-            |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-            |> List.map _.Id
+        let blockingCommandIds = blockingDiagnosticIds commandDiagnostics
 
         if not (List.isEmpty blockingCommandIds) then
             let sources =
@@ -559,7 +528,7 @@ module internal ViewGeneration =
                   tasksText |> Option.map (fun text -> charterSource (tasksPath workId) text) ]
                 |> List.choose id
 
-            let view = generatedViewState path request.GeneratorVersion sources None GeneratedViewCurrency.Blocked blockingCommandIds
+            let view = generatedViewState path "workModel" request.GeneratorVersion sources None GeneratedViewCurrency.Blocked blockingCommandIds
             currentDiagnostic |> Option.toList, view, []
         else
             let snapshots = workModelSnapshots workId charterText specText clarificationText checklistText planText tasksText evidenceText model
@@ -576,7 +545,7 @@ module internal ViewGeneration =
             if List.isEmpty blockingModelDiagnostics then
                 let sources = result.Model.Sources |> List.map sourceFromEntry
                 let diagnosticIds = currentDiagnostic |> Option.map (fun diagnostic -> [ diagnostic.Id ]) |> Option.defaultValue []
-                let view = generatedViewState path request.GeneratorVersion sources (Some result.OutputDigest) GeneratedViewCurrency.Current diagnosticIds
+                let view = generatedViewState path "workModel" request.GeneratorVersion sources (Some result.OutputDigest) GeneratedViewCurrency.Current diagnosticIds
                 let effects = [ CreateDirectory(readinessDirectory workId); WriteFile(path, result.Json, GeneratedView) ]
                 currentDiagnostic |> Option.toList, view, effects
             else
@@ -604,7 +573,7 @@ module internal ViewGeneration =
                       tasksText |> Option.map (fun text -> charterSource (tasksPath workId) text) ]
                     |> List.choose id
 
-                let view = generatedViewState path request.GeneratorVersion sources None currency diagnosticIds
+                let view = generatedViewState path "workModel" request.GeneratorVersion sources None currency diagnosticIds
                 diagnostics, view, []
 
     let charterWriteEffects workId text =

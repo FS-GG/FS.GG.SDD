@@ -225,24 +225,6 @@ module internal HandlersVerify =
                 Some(verifyIdentityMismatch path workId view.WorkId.Value)
             | Ok _ -> None
 
-    let verifyGeneratedViewState
-        (path: string)
-        (generator: GeneratorVersion)
-        (sources: GeneratedViewSource list)
-        (outputDigest: OutputDigest option)
-        (currency: GeneratedViewCurrency)
-        (diagnosticIds: string list)
-        : GeneratedViewState
-        =
-        { Path = path
-          Kind = "verification"
-          SchemaVersion = Some 1
-          Generator = Some generator
-          Sources = sources |> List.sortBy _.Path
-          OutputDigest = outputDigest
-          Currency = currency
-          DiagnosticIds = diagnosticIds |> List.distinct |> List.sort }
-
     let verifyJson
         (workId: string)
         (generator: GeneratorVersion)
@@ -475,8 +457,8 @@ module internal HandlersVerify =
                         generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) evidenceText commandDiagnostics model
                     | _ ->
                         let path = workModelPath workId
-                        let ids = commandDiagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError) |> List.map _.Id
-                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+                        let ids = blockingDiagnosticIds commandDiagnostics
+                        [], blockedWorkModelView path model.Request.GeneratorVersion ids, []
 
                 commandDiagnostics @ generatedDiagnostics,
                 (fun hasBlocking diagnostics ->
@@ -507,8 +489,8 @@ module internal HandlersVerify =
                             let generatedViewsForVerify =
                                 [ workModelView
                                   analysis
-                                  |> Option.map (fun _ -> verifyGeneratedViewState (analysisPath workId) model.Request.GeneratorVersion [] None GeneratedViewCurrency.Current [])
-                                  |> Option.defaultValue (verifyGeneratedViewState (analysisPath workId) model.Request.GeneratorVersion [] None GeneratedViewCurrency.Missing []) ]
+                                  |> Option.map (fun _ -> generatedViewState (analysisPath workId) "verification" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Current [])
+                                  |> Option.defaultValue (generatedViewState (analysisPath workId) "verification" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Missing []) ]
 
                             let text =
                                 verifyJson
@@ -530,7 +512,7 @@ module internal HandlersVerify =
                                     diagnostics
 
                             let outputDigest = SchemaVersionModule.outputSha256Text text
-                            let view = verifyGeneratedViewState (verifyPath workId) model.Request.GeneratorVersion sources (Some outputDigest) GeneratedViewCurrency.Current []
+                            let view = generatedViewState (verifyPath workId) "verification" model.Request.GeneratorVersion sources (Some outputDigest) GeneratedViewCurrency.Current []
 
                             let findings = verifyFindings diagnostics
                             let findingCount severity = findings |> List.filter (fun (_, _, findingSeverity) -> findingSeverity = severity) |> List.length

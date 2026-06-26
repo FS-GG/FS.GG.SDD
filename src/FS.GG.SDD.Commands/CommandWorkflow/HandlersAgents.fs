@@ -342,7 +342,7 @@ module internal HandlersAgents =
                     let generatedViews =
                         targetResults
                         |> List.map (fun result ->
-                            shipGeneratedViewState
+                            generatedViewState
                                 result.GuidancePath
                                 "agent-commands"
                                 request.GeneratorVersion
@@ -361,7 +361,7 @@ module internal HandlersAgents =
                     let findings = agentGuidanceFindings diagnostics
                     let findingCount severity = findings |> List.filter (fun (_, _, findingSeverity) -> findingSeverity = severity) |> List.length
 
-                    let generatedViewState =
+                    let generatedViewStateLabel =
                         if hasBlocking then "blocked"
                         elif targetResults |> List.exists (fun result -> result.Currency = GeneratedViewCurrency.Stale) then "stale"
                         elif targetResults |> List.exists (fun result -> result.Currency = GeneratedViewCurrency.Missing) then "missing"
@@ -383,7 +383,7 @@ module internal HandlersAgents =
                           Disposition = disposition
                           EquivalenceRequired = equivalenceRequired
                           DivergentTargetIds = divergentTargetIds
-                          GeneratedViewState = generatedViewState
+                          GeneratedViewState = generatedViewStateLabel
                           SourceSnapshotCount = (if Option.isSome workModelSnap then 1 else 0)
                           Readiness = readiness }
 

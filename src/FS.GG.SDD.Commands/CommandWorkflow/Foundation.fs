@@ -413,3 +413,30 @@ of truth.
           ChangeTier: string
           Status: string }
 
+    let generatedViewState
+        (path: string)
+        (kind: string)
+        (generator: GeneratorVersion)
+        (sources: GeneratedViewSource list)
+        (outputDigest: OutputDigest option)
+        (currency: GeneratedViewCurrency)
+        (diagnosticIds: string list)
+        : GeneratedViewState
+        =
+        { Path = path
+          Kind = kind
+          SchemaVersion = Some 1
+          Generator = Some generator
+          Sources = sources |> List.sortBy _.Path
+          OutputDigest = outputDigest
+          Currency = currency
+          DiagnosticIds = diagnosticIds |> List.distinct |> List.sort }
+
+    let blockingDiagnosticIds (diagnostics: Diagnostic list) : string list =
+        diagnostics
+        |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+        |> List.map _.Id
+
+    let blockedWorkModelView (path: string) (generator: GeneratorVersion) (blockingIds: string list) : GeneratedViewState =
+        generatedViewState path "workModel" generator [] None GeneratedViewCurrency.Blocked blockingIds
+

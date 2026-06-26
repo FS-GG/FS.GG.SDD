@@ -48,12 +48,8 @@ module internal HandlersEarly =
                     | Some text -> generatedViewPlan model.Request workId (Some text) specText None None None None None commandDiagnostics model
                     | None ->
                         let path = workModelPath workId
-                        let ids =
-                            commandDiagnostics
-                            |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-                            |> List.map _.Id
-
-                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+                        let ids = blockingDiagnosticIds commandDiagnostics
+                        [], blockedWorkModelView path model.Request.GeneratorVersion ids, []
 
                 let specificationEffects =
                     match specText with
@@ -89,12 +85,8 @@ module internal HandlersEarly =
                         generatedViewPlan model.Request workId charterText (Some text) clarificationText None None None None commandDiagnostics model
                     | None ->
                         let path = workModelPath workId
-                        let ids =
-                            commandDiagnostics
-                            |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-                            |> List.map _.Id
-
-                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+                        let ids = blockingDiagnosticIds commandDiagnostics
+                        [], blockedWorkModelView path model.Request.GeneratorVersion ids, []
 
                 let clarificationEffects =
                     match clarificationText with
@@ -132,12 +124,8 @@ module internal HandlersEarly =
                         generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) checklistText None None None commandDiagnostics model
                     | _ ->
                         let path = workModelPath workId
-                        let ids =
-                            commandDiagnostics
-                            |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-                            |> List.map _.Id
-
-                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+                        let ids = blockingDiagnosticIds commandDiagnostics
+                        [], blockedWorkModelView path model.Request.GeneratorVersion ids, []
 
                 let checklistEffects =
                     match checklistText with
@@ -181,12 +169,8 @@ module internal HandlersEarly =
                         generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) planText None None commandDiagnostics model
                     | _ ->
                         let path = workModelPath workId
-                        let ids =
-                            commandDiagnostics
-                            |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-                            |> List.map _.Id
-
-                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+                        let ids = blockingDiagnosticIds commandDiagnostics
+                        [], blockedWorkModelView path model.Request.GeneratorVersion ids, []
 
                 let planEffects =
                     match planText with
@@ -232,12 +216,8 @@ module internal HandlersEarly =
                         generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) taskText None commandDiagnostics model
                     | _ ->
                         let path = workModelPath workId
-                        let ids =
-                            commandDiagnostics
-                            |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-                            |> List.map _.Id
-
-                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+                        let ids = blockingDiagnosticIds commandDiagnostics
+                        [], blockedWorkModelView path model.Request.GeneratorVersion ids, []
 
                 let taskEffects =
                     match taskText with

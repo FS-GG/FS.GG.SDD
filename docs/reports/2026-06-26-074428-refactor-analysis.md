@@ -343,6 +343,7 @@ is permitted, and byte-identical artifact output is not separately required.
 | R5 | ✅ | Centralize JSON null-access helpers, then enable `WarningsAsErrors` | §3 | Med | M | Low | Cleared 282 sites (952 raw); gate prevents regression |
 | R6 | ✅ | Collapse diagnostic builder + unify serializers | §5.2 §5.4 | Med | S | Low | ~90 LOC, one shape |
 | R7 | ✅ | Strip redundant `private`; fix `failwith` context | §2 §6 | Low | S | None | Noise removal |
+| R8 | ✅ | Unify 4 generated-view-state constructors + extract view/effect helpers | §5.5 | Low | S | Low | 1 constructor, −69 LOC |
 
 ### Status detail
 
@@ -466,7 +467,30 @@ is permitted, and byte-identical artifact output is not separately required.
   FS3261/FS0025 ratchet still at 0; `Directory.Build.props` unchanged, no `#nowarn`
   added.
 
-**Aggregate:** 7 / 7 complete · 0 in progress · 0 not started.
+- ✅ **R8 — unify generated-view-state construction.** Landed via
+  `specs/029-unify-view-state/`. **Done:** the four byte-identical
+  `*generatedViewState` constructors (`generatedViewState` `"workModel"`,
+  `analysisGeneratedViewState` `"analysis"`, `verifyGeneratedViewState`
+  `"verification"`, and the already-parameterized `shipGeneratedViewState`)
+  collapse to **one** `kind`-parameterized `generatedViewState` in `Foundation.fs`
+  (compiles before every consumer; keeps `Sources |> List.sortBy _.Path` and
+  `DiagnosticIds |> List.distinct |> List.sort` verbatim), with all ~20 call sites
+  re-pointed to pass `Kind` explicitly. The two adjacent §5.5 helper patterns are
+  extracted once: `blockingDiagnosticIds` (the `Error`-filter→`.Id`-map projection,
+  **10** inline sites → 0) and `blockedWorkModelView` (the
+  `… GeneratorVersion [] None Blocked ids` shape, **9** handler sites → 0). The
+  `HandlersAgents.fs` local string shadow `generatedViewState` was renamed to
+  `generatedViewStateLabel`. Out of scope by design (output-drift risk): refresh's
+  inline `Kind = "summary"` record (`Sources` follow `structuredSourcePaths` order,
+  not `List.sortBy _.Path`-normalized) and `ViewGeneration.fs`'s non-identical
+  blocked-workModel site (non-empty sources). Behavior-preserving: **438** tests
+  green; `--json`/`--text` byte-identical across every command (the golden suite
+  pins them); the public `CommandWorkflow.fsi` and all four `PublicSurface.baseline`
+  files byte-stable; Release build clean with no new warning category and the
+  FS3261/FS0025 ratchet still at 0; `Directory.Build.props` unchanged, no `#nowarn`
+  added; net `src/…/CommandWorkflow/` LOC **−69** (62 ins / 131 del across 8 files).
+
+**Aggregate:** 8 / 8 complete · 0 in progress · 0 not started.
 
 ## Appendix: what is *not* a problem
 

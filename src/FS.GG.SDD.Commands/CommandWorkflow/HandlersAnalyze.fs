@@ -59,12 +59,8 @@ module internal HandlersAnalyze =
                         generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) None commandDiagnostics model
                     | _ ->
                         let path = workModelPath workId
-                        let ids =
-                            commandDiagnostics
-                            |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-                            |> List.map _.Id
-
-                        [], generatedViewState path model.Request.GeneratorVersion [] None GeneratedViewCurrency.Blocked ids, []
+                        let ids = blockingDiagnosticIds commandDiagnostics
+                        [], blockedWorkModelView path model.Request.GeneratorVersion ids, []
 
                 commandDiagnostics @ generatedDiagnostics,
                 (fun hasBlocking diagnostics ->
