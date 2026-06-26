@@ -69,7 +69,10 @@ module CommandTypes =
           // Scaffold inputs (`fsgg-sdd scaffold`); ignored by other commands.
           Provider: string option
           Parameters: (string * string) list
-          Force: bool }
+          Force: bool
+          // Refresh the provider template (`dotnet new update`) before create.
+          // Default true; `--no-update` clears it for create-only / offline runs.
+          TemplateUpdate: bool }
 
     type GeneratedViewSource =
         { Path: string

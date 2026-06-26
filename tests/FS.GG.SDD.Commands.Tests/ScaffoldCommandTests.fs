@@ -87,6 +87,19 @@ module ScaffoldCommandTests =
         Assert.True(writeIndex.Value < createIndex.Value, "Skeleton must be established before the provider runs.")
 
     [<Fact>]
+    let ``scaffold --no-update skips the update step but still installs and creates`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+        let request =
+            { scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false true with TemplateUpdate = false }
+        let model, _ = runScaffoldModel request
+
+        let has predicate = model.PendingEffects |> List.exists predicate
+        Assert.True(has (function RunProcess("dotnet", args, _) -> List.contains "install" args | _ -> false), "install still planned.")
+        Assert.True(has (function RunProcess("dotnet", args, _) -> List.contains "-o" args | _ -> false), "create still planned.")
+        Assert.False(has (function RunProcess("dotnet", args, _) -> List.contains "update" args | _ -> false), "update must be skipped.")
+
+    [<Fact>]
     let ``scaffold ok materializes a runnable product under SDD management`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"

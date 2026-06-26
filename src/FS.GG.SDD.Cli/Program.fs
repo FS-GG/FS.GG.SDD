@@ -55,7 +55,8 @@ let printUnknown commandValue =
           GeneratorVersion = generator
           Provider = None
           Parameters = []
-          Force = false }
+          Force = false
+          TemplateUpdate = true }
 
     let model =
         { Request = request
@@ -146,7 +147,8 @@ let run args =
                   GeneratorVersion = SchemaVersionModule.currentGeneratorVersion()
                   Provider = optionValue "--provider" rest
                   Parameters = parseParams rest
-                  Force = hasFlag "--force" rest }
+                  Force = hasFlag "--force" rest
+                  TemplateUpdate = not (hasFlag "--no-update" rest) }
 
             let model, effects = init request
 

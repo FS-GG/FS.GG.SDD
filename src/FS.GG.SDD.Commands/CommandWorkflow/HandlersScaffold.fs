@@ -182,10 +182,12 @@ module internal HandlersScaffold =
             @ parameterArgs
             @ (if request.Force then [ "--force" ] else [])
 
-        // install + update, then the SDD skeleton (reused init effects, unchanged),
-        // then the create — so the create's after-snapshot includes the skeleton
-        // (which the diff subtracts) and the provider's product.
-        [ installEffect; updateEffect ] @ initEffects request @ [ RunProcess("dotnet", createArgs, "") ]
+        // install (+ update by default; skipped by `--no-update`), then the SDD
+        // skeleton (reused init effects, unchanged), then the create — so the create's
+        // after-snapshot includes the skeleton (which the diff subtracts) and the
+        // provider's product.
+        let refreshEffects = if request.TemplateUpdate then [ installEffect; updateEffect ] else [ installEffect ]
+        refreshEffects @ initEffects request @ [ RunProcess("dotnet", createArgs, "") ]
 
     let plannedCreateCommand (descriptor: ProviderDescriptor) (effective: Map<string, string>) (request: CommandRequest) =
         let parameters =

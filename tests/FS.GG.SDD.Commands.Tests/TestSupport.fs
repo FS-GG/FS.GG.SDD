@@ -37,7 +37,8 @@ module TestSupport =
           GeneratorVersion = SchemaVersionModule.currentGeneratorVersion()
           Provider = None
           Parameters = []
-          Force = false }
+          Force = false
+          TemplateUpdate = true }
 
     let readRelative (root: string) (path: string) =
         File.ReadAllText(Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar)))

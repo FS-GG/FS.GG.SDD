@@ -69,7 +69,8 @@ module CommandTypes =
           GeneratorVersion: GeneratorVersion
           Provider: string option
           Parameters: (string * string) list
-          Force: bool }
+          Force: bool
+          TemplateUpdate: bool }
 
     type GeneratedViewSource =
         { Path: string

@@ -17,6 +17,7 @@ fsgg-sdd scaffold --provider <name> [--param <key>=<value> ...] [--force]
 | `--provider <name>` | **yes** | descriptor name from `.fsgg/providers.yml`. Omitted → `scaffold.providerMissing` (points to `fsgg-sdd init`). |
 | `--param <key>=<value>` | no, repeatable | provider parameter; overlays descriptor defaults |
 | `--force` | no | opt-in to materialize into a **non-empty** target (FR-010) |
+| `--no-update` | no | skip the best-effort `dotnet new update` template refresh (still installs + creates); for create-only / offline runs. Template refresh is **on by default**. |
 | `--root <path>` | no (default `.`) | project/target root |
 | `--dry-run` | no | plan + report effects (incl. the provider `RunProcess`) without executing real I/O |
 | `--json` / `--text` / `--rich` | no | output projection; precedence `--rich` > `--text` > `--json` > default(json) |

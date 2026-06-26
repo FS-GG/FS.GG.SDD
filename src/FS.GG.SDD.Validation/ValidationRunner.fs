@@ -63,7 +63,8 @@ module ValidationRunner =
           GeneratorVersion = generator
           Provider = None
           Parameters = []
-          Force = false }
+          Force = false
+          TemplateUpdate = true }
 
     let runRequest (request: CommandRequest) =
         let model, effects = CW.init request
