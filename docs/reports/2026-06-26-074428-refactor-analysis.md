@@ -318,8 +318,8 @@ input, thread the `Result` to a diagnostic instead of throwing.
 Progress markers (status legend, matching
 `docs/initial-implementation-plan.md`): 🟢 / ✅ complete · 🟡 in progress
 (started; not landed) · 🔴 not started · ⬜ optional / deferred. The
-2026-06-26 analysis baseline started every row at 🔴; **R3 has since landed**
-(see below). Update the marker as each refactor lands and link its evidence
+2026-06-26 analysis baseline started every row at 🔴; **R3 and R4 have since
+landed** (see below). Update the marker as each refactor lands and link its evidence
 (PR / spec readiness).
 
 Suggested sequence: **R3 → R4 → R1 → R2** (structure first so the handler
@@ -338,7 +338,7 @@ is permitted, and byte-identical artifact output is not separately required.
 | R1 | 🔴 | Extract prerequisite combinator + `runHandler` shell | §5.1 | High | M–L | Low | Shrinks god module, kills handler copy-paste |
 | R2 | 🔴 | Split `CommandWorkflow.fs` into facade + internal modules | §1.1 | High | M | Very low (7-line `.fsi`) | Navigability |
 | R3 | ✅ | Split `LifecycleArtifacts.fs` per artifact family | §1.2 | High | M | Very low | Navigability, localizes §3/§4 |
-| R4 | 🔴 | Extract `parseJsonView`, making the 4 matches total | §5.3 §4 | Med | S | Low | Removes latent runtime throw + ~70 LOC |
+| R4 | ✅ | Extract `parseJsonView`, making the 4 matches total | §5.3 §4 | Med | S | Low | Removes latent runtime throw + ~70 LOC |
 | R5 | 🔴 | Centralize JSON null-access helpers, then enable `WarningsAsErrors` | §3 | Med | M | Low | Clears ~290 warnings, prevents regression |
 | R6 | 🔴 | Collapse diagnostic builder + unify serializers | §5.2 §5.4 | Med | S | Low | ~90 LOC, one shape |
 | R7 | 🔴 | Strip redundant `private`; fix `failwith` context | §2 §6 | Low | S | None | Noise removal |
@@ -368,9 +368,21 @@ is permitted, and byte-identical artifact output is not separately required.
   module-qualifier rename only — member names unchanged). All 437 tests pass, and
   the 290 FS3261 / 4 FS0025 warning sites relocated unchanged (concentrating in
   `Analysis.fs`/`Verify.fs`/`Ship.fs`).
-- 🔴 **R4 — `parseJsonView` + total matches.** Not started. Done when the 4
-  view parsers route through one `parseJsonView` and `dotnet build` emits
-  zero FS0025.
+- ✅ **R4 — `parseJsonView` + total matches.** Landed via
+  `specs/023-extract-json-view-parser/`. **Done:** the four view parsers
+  (`parseAnalysisView`/`parseVerificationView`/`parseShipView`/
+  `parseGeneratedAgentGuidance`) route through one internal `parseJsonView`
+  skeleton in `LifecycleArtifacts/Internal.fs`, each supplying only its
+  artifact-specific `build` callback. The shared `version, status` match is now
+  **total** — the four `(None, Current/Deprecated)` combos fold into the
+  malformed-schema arm — clearing all **4 FS0025** sites (now 0) and removing the
+  latent `MatchFailureException`. `dotnet build -c Release` is green with zero
+  FS0025; FS3261 unchanged (952 lines); all **437** prior tests pass plus **1**
+  new required totality assertion (438 total); no public `.fsi` diff; net `src`
+  shrinks ~70 LOC (66 ins / 80 del across 5 files). One internal-only deviation:
+  the skeleton takes `path`/`text` strings rather than a `FileSnapshot` record,
+  because `FileSnapshot` (in `Core.fs`) compiles after `Internal.fs` — behavior
+  is byte-identical and no public surface changes.
 - 🔴 **R5 — null-clean JSON helpers + `WarningsAsErrors`.** Not started.
   Done when FS3261 count is ~0 and `Directory.Build.props` sets
   `WarningsAsErrors` (or `WarningsAsErrors=FS3261;FS0025`).
@@ -382,7 +394,7 @@ is permitted, and byte-identical artifact output is not separately required.
   `failwith` is either total/unreachable-by-construction or replaced by a
   threaded diagnostic.
 
-**Aggregate:** 0 / 7 complete · 0 in progress · 7 not started.
+**Aggregate:** 2 / 7 complete · 0 in progress · 5 not started.
 
 ## Appendix: what is *not* a problem
 

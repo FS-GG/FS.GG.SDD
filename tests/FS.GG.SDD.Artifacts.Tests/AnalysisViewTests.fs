@@ -88,3 +88,24 @@ module AnalysisViewTests =
         | Ok _ -> failwith "Expected malformed analysis view to fail."
         | Error diagnostics ->
             Assert.Contains(diagnostics, fun diagnostic -> diagnostic.Id = "workModelInconsistent")
+
+    // SC-005 / FR-003 / FR-004 totality assertion. The shared parseJsonView skeleton
+    // now folds the previously-unreachable (Version = None, Status = Current/Deprecated)
+    // match arm into the malformed-schema arm. That exact (None, Current/Deprecated)
+    // pairing is unreachable through SchemaVersion.classifyRaw (Current/Deprecated always
+    // carry Some version), so the equivalent observable path is a missing schemaVersion,
+    // which classifies as None/Malformed and routes through the same folded arm. This pins
+    // the byte-exact malformed-schema diagnostic and confirms the total match returns a
+    // defined Error rather than raising MatchFailureException.
+    [<Fact>]
+    let ``parseAnalysisView missing schemaVersion returns malformed-schema Error and never raises`` () =
+        let snapshot =
+            { Path = "readiness/010-analyze-command/analysis.json"
+              Text = """{ "workId": "010-analyze-command", "stage": "analyze" }""" }
+
+        match parseAnalysisView snapshot with
+        | Ok _ -> failwith "Expected missing schemaVersion to fail."
+        | Error diagnostics ->
+            let diagnostic = Assert.Single(diagnostics)
+            Assert.Equal("malformedSchemaVersion", diagnostic.Id)
+            Assert.Equal("Analysis view is missing or has malformed schemaVersion.", diagnostic.Message)

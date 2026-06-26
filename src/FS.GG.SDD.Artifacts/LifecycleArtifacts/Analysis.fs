@@ -134,17 +134,10 @@ module Analysis =
           Reason = jsonRequiredString "reason" element }
 
     let parseAnalysisView (snapshot: FileSnapshot) =
-        let artifact = sourceArtifact snapshot.Path ArtifactKind.GeneratedView
-
-        try
-            use document = JsonDocument.Parse snapshot.Text
-            let root = document.RootElement
-            let rawVersion = jsonInt "schemaVersion" root |> Option.map string
-            let compatibility = SchemaVersion.classifyRaw rawVersion
-
-            match compatibility.Version, compatibility.Status with
-            | Some schema, SchemaCompatibilityStatus.Current
-            | Some schema, SchemaCompatibilityStatus.Deprecated ->
+        parseJsonView
+            "Analysis view"
+            "Regenerate readiness/<id>/analysis.json with valid JSON."
+            (fun artifact schema root ->
                 let workIdText = jsonRequiredString "workId" root
                 let stageText = jsonRequiredString "stage" root
 
@@ -197,12 +190,6 @@ module Analysis =
                               artifact
                               "Analysis view identity fields are malformed."
                               "Regenerate analysis.json with a valid workId and stage: analyze."
-                              [ workIdText; stageText ] ]
-            | _, SchemaCompatibilityStatus.Malformed ->
-                Error [ Diagnostics.malformedSchemaVersion artifact "Analysis view is missing or has malformed schemaVersion." ]
-            | _, SchemaCompatibilityStatus.Unsupported ->
-                Error [ Diagnostics.unsupportedSchemaVersion artifact (rawVersion |> Option.defaultValue "") ]
-            | _, SchemaCompatibilityStatus.Future ->
-                Error [ Diagnostics.futureSchemaVersion artifact (rawVersion |> Option.defaultValue "") ]
-        with ex ->
-            Error [ Diagnostics.workModelInconsistent artifact $"Analysis view JSON is malformed: {ex.Message}" "Regenerate readiness/<id>/analysis.json with valid JSON." [ snapshot.Path ] ]
+                              [ workIdText; stageText ] ])
+            snapshot.Path
+            snapshot.Text

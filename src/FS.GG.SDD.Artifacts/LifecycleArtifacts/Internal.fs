@@ -336,3 +336,41 @@ module internal Internal =
 
     let parsePlanDecisionIds values =
         values |> List.choose (Identifiers.createPlanDecisionId >> Result.toOption)
+
+    // The shared parse → classify-schema → match → error-arm skeleton for the four
+    // JSON-backed lifecycle view parsers. Takes the snapshot's `path`/`text` directly
+    // rather than a `FileSnapshot` record because `FileSnapshot` is defined in
+    // LifecycleArtifacts/Core.fs, which compiles after this module.
+    let parseJsonView
+        (label: string)
+        (malformedJsonCorrection: string)
+        (build: ArtifactRef -> SchemaVersion -> JsonElement -> Result<'view, Diagnostic list>)
+        (path: string)
+        (text: string)
+        : Result<'view, Diagnostic list> =
+        let artifact = sourceArtifact path ArtifactKind.GeneratedView
+
+        try
+            use document = JsonDocument.Parse text
+            let root = document.RootElement
+            let rawVersion = jsonInt "schemaVersion" root |> Option.map string
+            let compatibility = SchemaVersion.classifyRaw rawVersion
+
+            match compatibility.Version, compatibility.Status with
+            | Some schema, SchemaCompatibilityStatus.Current
+            | Some schema, SchemaCompatibilityStatus.Deprecated -> build artifact schema root
+            | _, SchemaCompatibilityStatus.Malformed
+            | None, SchemaCompatibilityStatus.Current
+            | None, SchemaCompatibilityStatus.Deprecated ->
+                Error [ Diagnostics.malformedSchemaVersion artifact $"{label} is missing or has malformed schemaVersion." ]
+            | _, SchemaCompatibilityStatus.Unsupported ->
+                Error [ Diagnostics.unsupportedSchemaVersion artifact (rawVersion |> Option.defaultValue "") ]
+            | _, SchemaCompatibilityStatus.Future ->
+                Error [ Diagnostics.futureSchemaVersion artifact (rawVersion |> Option.defaultValue "") ]
+        with ex ->
+            Error
+                [ Diagnostics.workModelInconsistent
+                      artifact
+                      $"{label} JSON is malformed: {ex.Message}"
+                      malformedJsonCorrection
+                      [ path ] ]
