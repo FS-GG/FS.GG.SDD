@@ -1,0 +1,989 @@
+namespace FS.GG.SDD.Commands.Internal
+
+open System
+open System.IO
+open System.Text
+open System.Text.Json
+open System.Text.RegularExpressions
+open FS.GG.SDD.Artifacts.ArtifactRef
+open FS.GG.SDD.Artifacts.Diagnostics
+open FS.GG.SDD.Artifacts.GenerationManifest
+open FS.GG.SDD.Artifacts.Identifiers
+open FS.GG.SDD.Artifacts
+open FS.GG.SDD.Artifacts.SchemaVersion
+open FS.GG.SDD.Artifacts.Serialization
+open FS.GG.SDD.Artifacts.WorkModel
+open FS.GG.SDD.Commands.CommandReports
+open FS.GG.SDD.Commands.CommandTypes
+
+[<AutoOpen>]
+module internal ParsingMid =
+    module DiagnosticsModule = FS.GG.SDD.Artifacts.Diagnostics
+    module IdentifiersModule = FS.GG.SDD.Artifacts.Identifiers
+    module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
+
+    let checklistSectionText workId heading =
+        match heading with
+        | "Source Specification" -> $"## Source Specification\n- {specPath workId}\n"
+        | "Source Clarifications" -> $"## Source Clarifications\n- {clarificationPath workId}\n"
+        | "Source Snapshot" -> "## Source Snapshot\n"
+        | "Checklist Items" -> "## Checklist Items\nNo checklist items recorded.\n"
+        | "Review Results" -> "## Review Results\nNo review results recorded.\n"
+        | "Accepted Deferrals" -> "## Accepted Deferrals\nNo accepted checklist deferrals recorded.\n"
+        | "Blocking Findings" -> "## Blocking Findings\nNo blocking findings recorded.\n"
+        | "Advisory Notes" -> "## Advisory Notes\nNo advisory notes recorded.\n"
+        | "Lifecycle Notes" -> $"## Lifecycle Notes\n- Next lifecycle action: `fsgg-sdd plan --work {workId}`.\n"
+        | _ -> $"## {heading}\n"
+
+    let ensureChecklistSections workId text =
+        let normalized = (if isNull text then "" else text).Replace("\r\n", "\n")
+
+        let missing =
+            checklistStandardSections ()
+            |> List.filter (fun heading -> not (hasSection heading normalized))
+
+        if List.isEmpty missing then
+            normalized
+        else
+            let suffix = missing |> List.map (checklistSectionText workId) |> String.concat "\n"
+            let trimmed = normalized.TrimEnd()
+            $"{trimmed}\n\n{suffix}"
+
+    let checklistSummary (facts: ChecklistFacts) : ChecklistSummary =
+        let results = facts.Results
+
+        { WorkId = facts.FrontMatter.WorkId.Value
+          Stage = IdentifiersModule.stageValue facts.FrontMatter.Stage
+          Status = facts.FrontMatter.Status
+          SourceSpec = facts.FrontMatter.SourceSpec
+          SourceClarifications = facts.FrontMatter.SourceClarifications
+          ItemIds = facts.Items |> List.map (fun item -> item.ItemId.Value) |> List.sort
+          ResultIds = results |> List.map (fun result -> result.ResultId.Value) |> List.sort
+          PassedCount = results |> List.filter (fun result -> result.Status = "pass") |> List.length
+          FailedBlockingCount = results |> List.filter (fun result -> result.Status = "fail") |> List.length
+          AcceptedDeferralCount = results |> List.filter (fun result -> result.Status = "acceptedDeferral") |> List.length
+          StaleResultCount = facts.StaleResultCount
+          AdvisoryCount = results |> List.filter (fun result -> result.Status = "advisory") |> List.length }
+
+    let mapChecklistDiagnostics (path: string) (diagnostics: Diagnostic list) =
+        diagnostics
+        |> List.map (fun diagnostic ->
+            match diagnostic.Id, diagnostic.RelatedIds with
+            | "duplicateIdentifier", id :: _ -> duplicateChecklistId path id
+            | "unknownReference", id :: _ -> unknownChecklistSourceReference path id
+            | "workModelInconsistent", _ -> malformedChecklistFrontMatter path diagnostic.Message
+            | "malformedSchemaVersion", _ -> malformedChecklistFrontMatter path diagnostic.Message
+            | "unsupportedSchemaVersion", _ -> malformedChecklistFrontMatter path diagnostic.Message
+            | "futureSchemaVersion", _ -> malformedChecklistFrontMatter path diagnostic.Message
+            | _ -> diagnostic)
+
+    let parseChecklistForCommand path text : Result<ChecklistFacts * Diagnostic list, Diagnostic list> =
+        let snapshot = { Path = path; Text = text }
+
+        match parseChecklistFacts snapshot with
+        | Error diagnostics -> Error(mapChecklistDiagnostics path diagnostics)
+        | Ok facts ->
+            let diagnostics = mapChecklistDiagnostics path facts.Diagnostics
+            Ok(facts, diagnostics)
+
+    type PlannedChecklistReview =
+        { ItemId: string
+          ResultId: string
+          SourceIds: string list
+          Status: string
+          Text: string
+          Correction: string option
+          Blocking: bool }
+
+    let sourceSnapshotLine label path text =
+        let digest = (SchemaVersionModule.sha256Text text).Value
+        $"- {label}: {path} sha256:{digest} schemaVersion:1"
+
+    let requirementCoverage (specFacts: SpecificationFacts) requirementId =
+        specFacts.RequirementReferences
+        |> List.filter (fun reference -> reference.RequirementId.Value = requirementId)
+        |> List.collect (fun reference -> reference.AcceptanceScenarioIds |> List.map _.Value)
+        |> List.distinct
+        |> List.sort
+
+    let plannedChecklistReviews (specFacts: SpecificationFacts) (clarificationFacts: ClarificationFacts) existingFacts =
+        let existingSourceIds =
+            existingFacts
+            |> Option.map (fun facts ->
+                facts.Items
+                |> List.collect (fun item -> item.SourceIds)
+                |> Set.ofList)
+            |> Option.defaultValue Set.empty
+
+        let existingText =
+            existingFacts
+            |> Option.map (fun facts ->
+                [ facts.Items |> List.map (fun item -> item.ItemId.Value)
+                  facts.Results |> List.map (fun result -> result.ResultId.Value) ]
+                |> List.concat
+                |> String.concat "\n")
+            |> Option.defaultValue ""
+
+        let mutable nextItem = nextScopedIndex "CHK" existingText
+        let mutable nextResult = nextScopedIndex "CR" existingText
+
+        let allocate sourceIds status text correction blocking =
+            let itemId = scopedId "CHK" nextItem
+            let resultId = scopedId "CR" nextResult
+            nextItem <- nextItem + 1
+            nextResult <- nextResult + 1
+
+            { ItemId = itemId
+              ResultId = resultId
+              SourceIds = sourceIds
+              Status = status
+              Text = text
+              Correction = correction
+              Blocking = blocking }
+
+        let requirementReviews =
+            specFacts.RequirementIds
+            |> List.choose (fun requirement ->
+                if Set.contains requirement.Value existingSourceIds then
+                    None
+                else
+                    let coverage = requirementCoverage specFacts requirement.Value
+                    let hasCoverage = not (List.isEmpty coverage)
+
+                    allocate
+                        (requirement.Value :: coverage)
+                        (if hasCoverage then "pass" else "fail")
+                        (if hasCoverage then
+                             $"Requirement {requirement.Value} is testable and linked to acceptance coverage."
+                         else
+                             $"Requirement {requirement.Value} is missing acceptance coverage.")
+                        (if hasCoverage then
+                             None
+                         else
+                             Some $"Add an acceptance scenario for {requirement.Value} or narrow the requirement.")
+                        true
+                    |> Some)
+
+        let deferralReviews =
+            clarificationFacts.AcceptedDeferrals
+            |> List.choose (fun decision ->
+                if Set.contains decision.DecisionId.Value existingSourceIds then
+                    None
+                else
+                    allocate
+                        [ decision.DecisionId.Value ]
+                        "acceptedDeferral"
+                        $"Accepted deferral {decision.DecisionId.Value} remains visible to planning."
+                        None
+                        false
+                    |> Some)
+
+        requirementReviews @ deferralReviews
+
+    let renderChecklistItemLine review =
+        let source = review.SourceIds |> List.map (fun id -> $"[{id}]") |> String.concat " "
+        let kind = if review.Blocking then "blocking" else "advisory"
+        $"- {review.ItemId} {source} {kind}: {review.Text}".Replace("  ", " ")
+
+    let renderChecklistResultLine review =
+        let source = review.SourceIds |> List.map (fun id -> $"[{id}]") |> String.concat " "
+        let correction = review.Correction |> Option.map (fun text -> $" Correction: {text}") |> Option.defaultValue ""
+        $"- {review.ResultId} [CHK:{review.ItemId}] {source} {review.Status}: {review.Text}{correction}".Replace("  ", " ")
+
+    let renderChecklistDeferralLine review =
+        let source = review.SourceIds |> List.map (fun id -> $"[{id}]") |> String.concat " "
+        $"- {review.ResultId} [CHK:{review.ItemId}] {source} acceptedDeferral: {review.Text}".Replace("  ", " ")
+
+    let renderBlockingFindingLine review =
+        match review.Correction with
+        | Some correction -> $"- {review.ResultId} [{review.ItemId}] {review.Text} Correction: {correction}"
+        | None -> $"- {review.ResultId} [{review.ItemId}] {review.Text}"
+
+    let checklistTemplate
+        (request: CommandRequest)
+        (workId: string)
+        (specText: string)
+        (clarificationText: string)
+        (specFacts: SpecificationFacts)
+        (clarificationFacts: ClarificationFacts)
+        (reviews: PlannedChecklistReview list)
+        =
+        let title = requestTitle request workId
+        let failures = reviews |> List.filter (fun review -> review.Status = "fail")
+        let status = if List.isEmpty failures then "checklistReady" else "needsCorrection"
+        let itemLines = reviews |> List.map renderChecklistItemLine
+        let resultLines = reviews |> List.filter (fun review -> review.Status <> "acceptedDeferral") |> List.map renderChecklistResultLine
+        let deferralLines = reviews |> List.filter (fun review -> review.Status = "acceptedDeferral") |> List.map renderChecklistDeferralLine
+        let findingLines = failures |> List.map renderBlockingFindingLine
+
+        let itemText = if List.isEmpty itemLines then "No checklist items recorded." else String.concat "\n" itemLines
+        let resultText = if List.isEmpty resultLines then "No review results recorded." else String.concat "\n" resultLines
+        let deferralText = if List.isEmpty deferralLines then "No accepted checklist deferrals recorded." else String.concat "\n" deferralLines
+        let findingText = if List.isEmpty findingLines then "No blocking findings recorded." else String.concat "\n" findingLines
+        let advisoryText =
+            if List.isEmpty clarificationFacts.AcceptedDeferrals then
+                "No advisory notes recorded."
+            else
+                "- Accepted clarification deferrals remain visible before planning."
+
+        $"""---
+schemaVersion: 1
+workId: {workId}
+title: {title}
+stage: checklist
+changeTier: tier1
+status: {status}
+sourceSpec: {specPath workId}
+sourceClarifications: {clarificationPath workId}
+publicOrToolFacingImpact: true
+---
+
+# {title} Checklist
+
+Prose status: {status}
+
+## Source Specification
+- {specPath workId}
+
+## Source Clarifications
+- {clarificationPath workId}
+
+## Source Snapshot
+{sourceSnapshotLine "spec" (specPath workId) specText}
+{sourceSnapshotLine "clarifications" (clarificationPath workId) clarificationText}
+
+## Checklist Items
+{itemText}
+
+## Review Results
+{resultText}
+
+## Accepted Deferrals
+{deferralText}
+
+## Blocking Findings
+{findingText}
+
+## Advisory Notes
+{advisoryText}
+
+## Lifecycle Notes
+- Specification requirements reviewed: {specFacts.RequirementIds.Length}.
+- Clarification decisions reviewed: {clarificationFacts.Decisions.Length}.
+- Next lifecycle action: `fsgg-sdd plan --work {workId}`.
+"""
+
+    let knownChecklistSourceIds (specFacts: SpecificationFacts) (clarificationFacts: ClarificationFacts) (checklistFacts: ChecklistFacts option) =
+        [ specFacts.RequirementIds |> List.map _.Value
+          specFacts.UserStoryIds |> List.map _.Value
+          specFacts.AcceptanceScenarioIds |> List.map _.Value
+          specFacts.ScopeBoundaryIds |> List.map _.Value
+          specFacts.AmbiguityIds |> List.map _.Value
+          clarificationFacts.Questions |> List.map (fun question -> question.QuestionId.Value)
+          clarificationFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
+          clarificationFacts.AcceptedDeferrals |> List.map (fun decision -> decision.DecisionId.Value)
+          checklistFacts |> Option.map (fun facts -> facts.Items |> List.map (fun item -> item.ItemId.Value)) |> Option.defaultValue [] ]
+        |> List.concat
+        |> Set.ofList
+
+    let unknownChecklistReferences (path: string) (specFacts: SpecificationFacts) (clarificationFacts: ClarificationFacts) (checklistFacts: ChecklistFacts option) =
+        match checklistFacts with
+        | None -> []
+        | Some facts ->
+            let known = knownChecklistSourceIds specFacts clarificationFacts checklistFacts
+
+            [ facts.Items |> List.collect (fun item -> item.SourceIds)
+              facts.Results |> List.collect (fun result -> result.SourceIds) ]
+            |> List.concat
+            |> List.distinct
+            |> List.choose (fun id ->
+                if Set.contains id known then
+                    None
+                else
+                    Some(unknownChecklistSourceReference path id))
+
+    let sourceSnapshotStale (currentSpecText: string) (currentClarificationText: string) (existingFacts: ChecklistFacts) =
+        let current =
+            [ specPath existingFacts.FrontMatter.WorkId.Value, (SchemaVersionModule.sha256Text currentSpecText).Value
+              clarificationPath existingFacts.FrontMatter.WorkId.Value, (SchemaVersionModule.sha256Text currentClarificationText).Value ]
+            |> Map.ofList
+
+        existingFacts.SourceSnapshots
+        |> List.exists (fun snapshot ->
+            match snapshot.Digest, Map.tryFind snapshot.Path current with
+            | Some recorded, Some actual -> not (String.Equals(recorded, actual, StringComparison.OrdinalIgnoreCase))
+            | _ -> false)
+
+    let appendChecklistReviews (existingText: string) (reviews: PlannedChecklistReview list) =
+        let itemLines = reviews |> List.map renderChecklistItemLine
+        let resultLines = reviews |> List.filter (fun review -> review.Status <> "acceptedDeferral") |> List.map renderChecklistResultLine
+        let deferralLines = reviews |> List.filter (fun review -> review.Status = "acceptedDeferral") |> List.map renderChecklistDeferralLine
+        let findingLines = reviews |> List.filter (fun review -> review.Status = "fail") |> List.map renderBlockingFindingLine
+
+        existingText
+        |> appendToSection "Checklist Items" itemLines
+        |> appendToSection "Review Results" resultLines
+        |> appendToSection "Accepted Deferrals" deferralLines
+        |> appendToSection "Blocking Findings" findingLines
+
+    let appendStaleChecklistResult existingText (facts: ChecklistFacts) =
+        match facts.Items |> List.tryHead, facts.Results |> List.tryHead with
+        | Some item, Some result when facts.Results |> List.exists (fun result -> result.Status = "stale") |> not ->
+            let resultId = scopedId "CR" (nextScopedIndex "CR" existingText)
+            let line = $"- {resultId} [CHK:{item.ItemId.Value}] stale: Source specification or clarification changed since {result.ResultId.Value} was recorded."
+            appendToSection "Review Results" [ line ] existingText
+        | _ -> existingText
+
+    let checklistQualityDiagnostics (path: string) (reviews: PlannedChecklistReview list) =
+        reviews
+        |> List.filter (fun review -> review.Status = "fail")
+        |> List.map (fun review ->
+            failedRequirementsQuality
+                path
+                review.Text
+                (review.Correction |> Option.defaultValue "Correct the source requirement or checklist review before planning.")
+                (review.SourceIds @ [ review.ItemId; review.ResultId ] |> List.distinct |> List.sort))
+
+    let checklistDiagnosticsTextAndSummary
+        (request: CommandRequest)
+        (workId: string)
+        (specText: string)
+        (clarificationText: string)
+        (specFacts: SpecificationFacts)
+        (clarificationFacts: ClarificationFacts)
+        model
+        =
+        let path = checklistPath workId
+        let baseReviews = plannedChecklistReviews specFacts clarificationFacts None
+
+        match snapshot path model with
+        | None ->
+            let text = checklistTemplate request workId specText clarificationText specFacts clarificationFacts baseReviews
+
+            match parseChecklistForCommand path text with
+            | Error diagnostics -> diagnostics, Some text, None
+            | Ok(facts, diagnostics) ->
+                let qualityDiagnostics = checklistQualityDiagnostics (specPath workId) baseReviews
+                diagnostics @ qualityDiagnostics |> DiagnosticsModule.sort, Some text, Some(checklistSummary facts)
+        | Some existing ->
+            if existing.Text.Contains("<!-- fsgg-sdd: unsafe-overwrite -->", StringComparison.OrdinalIgnoreCase) then
+                [ unsafeOverwrite path ], Some existing.Text, None
+            elif existing.Text.Contains("<!-- fsgg-sdd: unsafe-result-change -->", StringComparison.OrdinalIgnoreCase) then
+                [ unsafeChecklistResultChange path "CR-001" ], Some existing.Text, None
+            else
+                match parseChecklistForCommand path existing.Text with
+                | Error diagnostics -> diagnostics, Some existing.Text, None
+                | Ok(existingFacts, existingDiagnostics) ->
+                    let identityDiagnostics =
+                        [ if existingFacts.FrontMatter.SchemaVersion.Major <> 1 then
+                              malformedChecklistFrontMatter path $"Checklist schemaVersion '{existingFacts.FrontMatter.SchemaVersion.Major}' is not supported."
+                          if not (String.Equals(existingFacts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
+                              checklistIdentityMismatch path workId existingFacts.FrontMatter.WorkId.Value
+                          if existingFacts.FrontMatter.Stage <> LifecycleStage.Checklist then
+                              malformedChecklistFrontMatter path $"Checklist stage '{IdentifiersModule.stageValue existingFacts.FrontMatter.Stage}' is not 'checklist'."
+                          if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
+                              malformedChecklistFrontMatter path $"Checklist sourceSpec '{existingFacts.FrontMatter.SourceSpec}' does not match '{specPath workId}'."
+                          if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourceClarifications, clarificationPath workId, StringComparison.OrdinalIgnoreCase)) then
+                              malformedChecklistFrontMatter path $"Checklist sourceClarifications '{existingFacts.FrontMatter.SourceClarifications}' does not match '{clarificationPath workId}'." ]
+
+                    let unknownDiagnostics = unknownChecklistReferences path specFacts clarificationFacts (Some existingFacts)
+                    let blockingParserDiagnostics = identityDiagnostics @ existingDiagnostics @ unknownDiagnostics |> DiagnosticsModule.sort
+                    let hasBlockingParserDiagnostics = blockingParserDiagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+
+                    if hasBlockingParserDiagnostics then
+                        blockingParserDiagnostics, Some existing.Text, None
+                    else
+                        let ensuredText = ensureChecklistSections workId existing.Text
+                        let plannedReviews = plannedChecklistReviews specFacts clarificationFacts (Some existingFacts)
+
+                        let withReviews = appendChecklistReviews ensuredText plannedReviews
+                        let stale = sourceSnapshotStale specText clarificationText existingFacts
+                        let proposedText = if stale then appendStaleChecklistResult withReviews existingFacts else withReviews
+
+                        match parseChecklistForCommand path proposedText with
+                        | Error diagnostics -> diagnostics, Some proposedText, None
+                        | Ok(proposedFacts, proposedDiagnostics) ->
+                            let staleDiagnostics =
+                                if stale then
+                                    [ staleChecklistResult path (existingFacts.Results |> List.map (fun result -> result.ResultId.Value)) ]
+                                else
+                                    []
+
+                            let qualityDiagnostics = checklistQualityDiagnostics (specPath workId) plannedReviews
+
+                            blockingParserDiagnostics @ proposedDiagnostics @ staleDiagnostics @ qualityDiagnostics
+                            |> DiagnosticsModule.sort,
+                            Some proposedText,
+                            Some(checklistSummary proposedFacts)
+
+    let checklistPrerequisiteDiagnosticsTextSummaryAndFacts workId (specFacts: SpecificationFacts) (clarificationFacts: ClarificationFacts) model =
+        let path = checklistPath workId
+
+        match snapshot path model with
+        | None ->
+            [ missingChecklistPrerequisite path $"Checklist prerequisite '{path}' is missing." ], None, None, None
+        | Some existing ->
+            match parseChecklistForCommand path existing.Text with
+            | Error diagnostics ->
+                let mapped =
+                    diagnostics
+                    |> List.map (fun diagnostic -> malformedChecklistFrontMatter path diagnostic.Message)
+
+                mapped, Some existing.Text, None, None
+            | Ok(facts, diagnostics) ->
+                let identityDiagnostics =
+                    [ if facts.FrontMatter.SchemaVersion.Major <> 1 then
+                          malformedChecklistFrontMatter path $"Checklist schemaVersion '{facts.FrontMatter.SchemaVersion.Major}' is not supported."
+                      if not (String.Equals(facts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
+                          checklistIdentityMismatch path workId facts.FrontMatter.WorkId.Value
+                      if facts.FrontMatter.Stage <> LifecycleStage.Checklist then
+                          missingChecklistPrerequisite path $"Checklist stage '{IdentifiersModule.stageValue facts.FrontMatter.Stage}' is not 'checklist'."
+                      if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
+                          malformedChecklistFrontMatter path $"Checklist sourceSpec '{facts.FrontMatter.SourceSpec}' does not match '{specPath workId}'."
+                      if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceClarifications, clarificationPath workId, StringComparison.OrdinalIgnoreCase)) then
+                          malformedChecklistFrontMatter path $"Checklist sourceClarifications '{facts.FrontMatter.SourceClarifications}' does not match '{clarificationPath workId}'." ]
+
+                let unknownDiagnostics = unknownChecklistReferences path specFacts clarificationFacts (Some facts)
+
+                let readinessDiagnostics =
+                    [ if not (String.Equals(facts.FrontMatter.Status, "checklistReady", StringComparison.OrdinalIgnoreCase)) then
+                          failedChecklistPrerequisite path $"Checklist status '{facts.FrontMatter.Status}' is not checklistReady." [ facts.FrontMatter.Status ]
+
+                      let failed =
+                          facts.Results
+                          |> List.filter (fun result -> result.Status = "fail")
+                          |> List.map (fun result -> result.ResultId.Value)
+
+                      if not (List.isEmpty failed) then
+                          failedChecklistPrerequisite path "Checklist contains failed blocking results." failed
+
+                      let stale =
+                          facts.Results
+                          |> List.filter (fun result -> result.Status = "stale")
+                          |> List.map (fun result -> result.ResultId.Value)
+
+                      if not (List.isEmpty stale) then
+                          failedChecklistPrerequisite path "Checklist contains stale review results." stale
+
+                      let findings =
+                          facts.BlockingFindings
+                          |> List.filter (fun finding -> not (finding.StartsWith("No ", StringComparison.OrdinalIgnoreCase)))
+
+                      if not (List.isEmpty findings) then
+                          failedChecklistPrerequisite path "Checklist contains blocking findings." findings ]
+
+                let allDiagnostics = identityDiagnostics @ diagnostics @ unknownDiagnostics @ readinessDiagnostics |> DiagnosticsModule.sort
+                allDiagnostics, Some existing.Text, Some(checklistSummary facts), Some facts
+
+    let planSectionText workId heading =
+        match heading with
+        | "Source Snapshot" -> "## Source Snapshot\n"
+        | "Plan Scope" -> "## Plan Scope\nNo additional plan scope recorded.\n"
+        | "Plan Decisions" -> "## Plan Decisions\nNo plan decisions recorded.\n"
+        | "Contract Impact" -> "## Contract Impact\nNo contract references recorded.\n"
+        | "Verification Obligations" -> "## Verification Obligations\nNo verification obligations recorded.\n"
+        | "Migration Posture" -> "## Migration Posture\nNo migration notes recorded.\n"
+        | "Generated View Impact" -> "## Generated View Impact\nNo generated-view impacts recorded.\n"
+        | "Accepted Deferrals" -> "## Accepted Deferrals\nNo accepted plan deferrals recorded.\n"
+        | "Planning Findings" -> "## Planning Findings\nNo blocking planning findings recorded.\n"
+        | "Advisory Notes" -> "## Advisory Notes\nNo advisory notes recorded.\n"
+        | "Lifecycle Notes" -> $"## Lifecycle Notes\n- Next lifecycle action: `fsgg-sdd tasks --work {workId}`.\n"
+        | _ -> $"## {heading}\n"
+
+    let ensurePlanSections workId text =
+        let normalized = (if isNull text then "" else text).Replace("\r\n", "\n")
+
+        let missing =
+            planStandardSections ()
+            |> List.filter (fun heading -> not (hasSection heading normalized))
+
+        if List.isEmpty missing then
+            normalized
+        else
+            let suffix = missing |> List.map (planSectionText workId) |> String.concat "\n"
+            let trimmed = normalized.TrimEnd()
+            $"{trimmed}\n\n{suffix}"
+
+    let planSummary (facts: PlanFacts) : PlanSummary =
+        { WorkId = facts.FrontMatter.WorkId.Value
+          Stage = IdentifiersModule.stageValue facts.FrontMatter.Stage
+          Status = facts.FrontMatter.Status
+          SourceSpec = facts.FrontMatter.SourceSpec
+          SourceClarifications = facts.FrontMatter.SourceClarifications
+          SourceChecklist = facts.FrontMatter.SourceChecklist
+          DecisionIds = facts.Decisions |> List.map (fun decision -> decision.DecisionId.Value) |> List.sort
+          ContractReferenceIds = facts.ContractReferences |> List.map (fun reference -> reference.ContractId.Value) |> List.sort
+          VerificationObligationIds = facts.VerificationObligations |> List.map (fun obligation -> obligation.ObligationId.Value) |> List.sort
+          MigrationNoteIds = facts.MigrationNotes |> List.map (fun note -> note.MigrationId.Value) |> List.sort
+          GeneratedViewImpactIds = facts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value) |> List.sort
+          AcceptedDeferralCount = facts.AcceptedDeferrals.Length
+          StaleDecisionCount = facts.StaleDecisionCount
+          BlockingFindingCount = facts.BlockingFindings.Length
+          AdvisoryCount = facts.AdvisoryNotes.Length }
+
+    let mapPlanDiagnostics (path: string) (diagnostics: Diagnostic list) =
+        diagnostics
+        |> List.map (fun diagnostic ->
+            match diagnostic.Id, diagnostic.RelatedIds with
+            | "duplicateIdentifier", id :: _ -> duplicatePlanId path id
+            | "unknownReference", id :: _ -> unknownPlanSourceReference path id
+            | "workModelInconsistent", _
+            | "malformedSchemaVersion", _
+            | "unsupportedSchemaVersion", _
+            | "futureSchemaVersion", _ -> malformedPlanFrontMatter path diagnostic.Message
+            | _ -> diagnostic)
+
+    let parsePlanForCommand path text : Result<PlanFacts * Diagnostic list, Diagnostic list> =
+        let snapshot = { Path = path; Text = text }
+
+        match parsePlanFacts snapshot with
+        | Error diagnostics -> Error(mapPlanDiagnostics path diagnostics)
+        | Ok facts ->
+            let diagnostics = mapPlanDiagnostics path facts.Diagnostics
+            Ok(facts, diagnostics)
+
+    type PlannedPlanEntries =
+        { DecisionLines: string list
+          ContractLines: string list
+          ObligationLines: string list
+          MigrationLines: string list
+          ImpactLines: string list
+          DeferralLines: string list
+          FindingLines: string list
+          AdvisoryLines: string list }
+
+    let emptyPlanEntries =
+        { DecisionLines = []
+          ContractLines = []
+          ObligationLines = []
+          MigrationLines = []
+          ImpactLines = []
+          DeferralLines = []
+          FindingLines = []
+          AdvisoryLines = [] }
+
+    let planIdsText (facts: PlanFacts option) =
+        facts
+        |> Option.map (fun (facts: PlanFacts) ->
+            [ facts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
+              facts.ContractReferences |> List.map (fun reference -> reference.ContractId.Value)
+              facts.VerificationObligations |> List.map (fun obligation -> obligation.ObligationId.Value)
+              facts.MigrationNotes |> List.map (fun note -> note.MigrationId.Value)
+              facts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value) ]
+            |> List.concat
+            |> String.concat "\n")
+        |> Option.defaultValue ""
+
+    let requirementScenarioIds (specFacts: SpecificationFacts) (requirementId: string) =
+        specFacts.RequirementReferences
+        |> List.tryFind (fun reference -> reference.RequirementId.Value = requirementId)
+        |> Option.map (fun reference -> reference.AcceptanceScenarioIds |> List.map _.Value)
+        |> Option.defaultValue []
+
+    let existingPlanSourceIds (facts: PlanFacts option) : Set<string> =
+        match facts with
+        | None -> Set.empty
+        | Some (facts: PlanFacts) ->
+            [ facts.Decisions |> List.collect (fun decision -> decision.SourceIds)
+              facts.ContractReferences |> List.collect (fun reference -> reference.SourceIds)
+              facts.VerificationObligations |> List.collect (fun obligation -> obligation.SourceIds)
+              facts.MigrationNotes |> List.collect (fun note -> note.SourceIds)
+              facts.GeneratedViewImpacts |> List.collect (fun impact -> impact.SourceIds)
+              facts.AcceptedDeferrals |> List.collect (fun deferral -> deferral.SourceIds) ]
+            |> List.concat
+            |> Set.ofList
+
+    let lineRefs (ids: string list) =
+        ids |> List.distinct |> List.sort |> List.map (fun id -> $"[{id}]") |> String.concat " "
+
+    let plannedPlanEntries workId (specFacts: SpecificationFacts) (clarificationFacts: ClarificationFacts) (checklistFacts: ChecklistFacts) (existingFacts: PlanFacts option) =
+        let existingSources = existingPlanSourceIds existingFacts
+        let nextDecision = ref (nextScopedIndex "PD" (planIdsText existingFacts))
+        let nextContract = ref (nextScopedIndex "PC" (planIdsText existingFacts))
+        let nextObligation = ref (nextScopedIndex "VO" (planIdsText existingFacts))
+        let nextMigration = ref (nextScopedIndex "PM" (planIdsText existingFacts))
+        let nextImpact = ref (nextScopedIndex "GV" (planIdsText existingFacts))
+
+        let allocate (prefix: string) (next: int ref) =
+            let id = scopedId prefix next.Value
+            next.Value <- next.Value + 1
+            id
+
+        let requirementDecisionLines =
+            specFacts.RequirementIds
+            |> List.choose (fun requirement ->
+                if Set.contains requirement.Value existingSources then
+                    None
+                else
+                    let id = allocate "PD" nextDecision
+                    let scenarios = requirementScenarioIds specFacts requirement.Value
+                    let refs = requirement.Value :: scenarios
+                    Some $"- {id} {lineRefs refs} complete: Plan requirement {requirement.Value} through the plan command contract.")
+
+        let deferralDecisionLines =
+            (clarificationFacts.AcceptedDeferrals |> List.map (fun decision -> decision.DecisionId.Value))
+            @ (checklistFacts.AcceptedDeferrals |> List.map (fun result -> result.ResultId.Value))
+            |> List.distinct
+            |> List.choose (fun sourceId ->
+                if Set.contains sourceId existingSources then
+                    None
+                else
+                    let id = allocate "PD" nextDecision
+                    Some $"- {id} [{sourceId}] acceptedDeferral: Accepted deferral {sourceId} remains visible to task generation.")
+
+        let firstDecision =
+            existingFacts
+            |> Option.bind (fun (facts: PlanFacts) -> facts.Decisions |> List.tryHead |> Option.map (fun decision -> decision.DecisionId.Value))
+            |> Option.orElseWith (fun () ->
+                (requirementDecisionLines @ deferralDecisionLines)
+                |> List.tryHead
+                |> Option.bind (fun line -> Regex.Match(line, @"\bPD-\d{3,}\b").Value |> function "" -> None | value -> Some value))
+            |> Option.defaultValue "PD-001"
+
+        let contractLines =
+            if existingFacts |> Option.exists (fun (facts: PlanFacts) -> not (List.isEmpty facts.ContractReferences)) then
+                []
+            else
+                let id = allocate "PC" nextContract
+                [ $"- {id} [{firstDecision}] command report: fsgg-sdd plan, {planPath workId}, and command-report JSON are tool-facing and compatibility-preserving." ]
+
+        let contractId =
+            existingFacts
+            |> Option.bind (fun (facts: PlanFacts) -> facts.ContractReferences |> List.tryHead |> Option.map (fun contract -> contract.ContractId.Value))
+            |> Option.orElseWith (fun () ->
+                contractLines
+                |> List.tryHead
+                |> Option.bind (fun line -> Regex.Match(line, @"\bPC-\d{3,}\b").Value |> function "" -> None | value -> Some value))
+            |> Option.defaultValue "PC-001"
+
+        let obligationLines =
+            if existingFacts |> Option.exists (fun (facts: PlanFacts) -> not (List.isEmpty facts.VerificationObligations)) then
+                []
+            else
+                let id = allocate "VO" nextObligation
+                [ $"- {id} [{firstDecision}] [{contractId}] semanticTest: Run focused command tests, FSI/prelude evidence, and CLI smoke evidence before task generation." ]
+
+        let migrationLines =
+            if existingFacts |> Option.exists (fun (facts: PlanFacts) -> not (List.isEmpty facts.MigrationNotes)) then
+                []
+            else
+                let id = allocate "PM" nextMigration
+                [ $"- {id} [{contractId}] diagnoseOnly: Plan schemaVersion 1 is accepted; unsupported plan schemas diagnose before write." ]
+
+        let impactLines =
+            if existingFacts |> Option.exists (fun (facts: PlanFacts) -> not (List.isEmpty facts.GeneratedViewImpacts)) then
+                []
+            else
+                let id = allocate "GV" nextImpact
+                [ $"- {id} [{firstDecision}] workModel: readiness/{workId}/work-model.json refreshes from current plan sources or reports staleGeneratedView." ]
+
+        let deferralLines =
+            (clarificationFacts.AcceptedDeferrals |> List.map (fun decision -> decision.DecisionId.Value))
+            @ (checklistFacts.AcceptedDeferrals |> List.map (fun result -> result.ResultId.Value))
+            |> List.distinct
+            |> List.choose (fun sourceId ->
+                if Set.contains sourceId existingSources then
+                    None
+                else
+                    Some $"- {sourceId} acceptedDeferral: Deferral remains visible to tasks and evidence.")
+
+        { emptyPlanEntries with
+            DecisionLines = requirementDecisionLines @ deferralDecisionLines
+            ContractLines = contractLines
+            ObligationLines = obligationLines
+            MigrationLines = migrationLines
+            ImpactLines = impactLines
+            DeferralLines = deferralLines }
+
+    let sourceSnapshotLines workId specText clarificationText checklistText planText =
+        let lines =
+            [ sourceSnapshotLine "spec" (specPath workId) specText
+              sourceSnapshotLine "clarifications" (clarificationPath workId) clarificationText
+              sourceSnapshotLine "checklist" (checklistPath workId) checklistText ]
+
+        match planText with
+        | Some text -> lines @ [ sourceSnapshotLine "plan" (planPath workId) text ]
+        | None -> lines
+
+    let planTemplate
+        (request: CommandRequest)
+        (workId: string)
+        (specText: string)
+        (clarificationText: string)
+        (checklistText: string)
+        (specFacts: SpecificationFacts)
+        (clarificationFacts: ClarificationFacts)
+        (checklistFacts: ChecklistFacts)
+        =
+        let title = requestTitle request workId
+        let entries = plannedPlanEntries workId specFacts clarificationFacts checklistFacts None
+        let decisions = if List.isEmpty entries.DecisionLines then [ "- PD-001 complete: Planning scope is recorded for the selected work item." ] else entries.DecisionLines
+        let contracts = if List.isEmpty entries.ContractLines then [ "- PC-001 [PD-001] artifact: No additional contract impact recorded." ] else entries.ContractLines
+        let obligations = if List.isEmpty entries.ObligationLines then [ "- VO-001 [PD-001] test: Run focused command tests before tasks." ] else entries.ObligationLines
+        let migrations = if List.isEmpty entries.MigrationLines then [ "- PM-001 [PC-001] diagnoseOnly: No migration is required beyond schemaVersion 1 diagnostics." ] else entries.MigrationLines
+        let impacts = if List.isEmpty entries.ImpactLines then [ $"- GV-001 [PD-001] workModel: readiness/{workId}/work-model.json records current plan sources." ] else entries.ImpactLines
+        let deferrals = if List.isEmpty entries.DeferralLines then [ "No accepted plan deferrals recorded." ] else entries.DeferralLines
+
+        $"""---
+schemaVersion: 1
+workId: {workId}
+title: {title}
+stage: plan
+changeTier: tier1
+status: planned
+sourceSpec: {specPath workId}
+sourceClarifications: {clarificationPath workId}
+sourceChecklist: {checklistPath workId}
+publicOrToolFacingImpact: true
+---
+
+# {title} Plan
+
+Prose status: planned
+
+## Source Snapshot
+{String.concat "\n" (sourceSnapshotLines workId specText clarificationText checklistText None)}
+
+## Plan Scope
+- Work item {workId} is planned from the current specification, clarification, and checklist facts.
+- Requirement count: {specFacts.RequirementIds.Length}.
+- Clarification decision count: {clarificationFacts.Decisions.Length}.
+- Checklist result count: {checklistFacts.Results.Length}.
+
+## Plan Decisions
+{String.concat "\n" decisions}
+
+## Contract Impact
+{String.concat "\n" contracts}
+
+## Verification Obligations
+{String.concat "\n" obligations}
+
+## Migration Posture
+{String.concat "\n" migrations}
+
+## Generated View Impact
+{String.concat "\n" impacts}
+
+## Accepted Deferrals
+{String.concat "\n" deferrals}
+
+## Planning Findings
+No blocking planning findings recorded.
+
+## Advisory Notes
+- Optional Governance pointers remain compatibility facts only.
+
+## Lifecycle Notes
+- Next lifecycle action: `fsgg-sdd tasks --work {workId}`.
+"""
+
+    let knownPlanSourceIds (specFacts: SpecificationFacts) (clarificationFacts: ClarificationFacts) (checklistFacts: ChecklistFacts) (planFacts: PlanFacts) =
+        [ specFacts.RequirementIds |> List.map _.Value
+          specFacts.UserStoryIds |> List.map _.Value
+          specFacts.AcceptanceScenarioIds |> List.map _.Value
+          specFacts.ScopeBoundaryIds |> List.map _.Value
+          specFacts.AmbiguityIds |> List.map _.Value
+          clarificationFacts.Questions |> List.map (fun question -> question.QuestionId.Value)
+          clarificationFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
+          clarificationFacts.AcceptedDeferrals |> List.map (fun decision -> decision.DecisionId.Value)
+          checklistFacts.Items |> List.map (fun item -> item.ItemId.Value)
+          checklistFacts.Results |> List.map (fun result -> result.ResultId.Value)
+          planFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
+          planFacts.ContractReferences |> List.map (fun reference -> reference.ContractId.Value)
+          planFacts.VerificationObligations |> List.map (fun obligation -> obligation.ObligationId.Value)
+          planFacts.MigrationNotes |> List.map (fun note -> note.MigrationId.Value)
+          planFacts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value) ]
+        |> List.concat
+        |> Set.ofList
+
+    let unknownPlanReferences path specFacts clarificationFacts checklistFacts planFacts =
+        let known = knownPlanSourceIds specFacts clarificationFacts checklistFacts planFacts
+
+        [ planFacts.Decisions |> List.collect (fun decision -> decision.SourceIds)
+          planFacts.ContractReferences |> List.collect (fun reference -> reference.SourceIds)
+          planFacts.VerificationObligations |> List.collect (fun obligation -> obligation.SourceIds)
+          planFacts.MigrationNotes |> List.collect (fun note -> note.SourceIds)
+          planFacts.GeneratedViewImpacts |> List.collect (fun impact -> impact.SourceIds)
+          planFacts.AcceptedDeferrals |> List.collect (fun deferral -> deferral.SourceIds) ]
+        |> List.concat
+        |> List.distinct
+        |> List.choose (fun id ->
+            if Set.contains id known then
+                None
+            else
+                Some(unknownPlanSourceReference path id))
+
+    let planSourceSnapshotStale workId specText clarificationText checklistText (existingFacts: PlanFacts) =
+        let current =
+            [ specPath workId, (SchemaVersionModule.sha256Text specText).Value
+              clarificationPath workId, (SchemaVersionModule.sha256Text clarificationText).Value
+              checklistPath workId, (SchemaVersionModule.sha256Text checklistText).Value ]
+            |> Map.ofList
+
+        existingFacts.SourceSnapshots
+        |> List.exists (fun snapshot ->
+            match snapshot.Digest, Map.tryFind snapshot.Path current with
+            | Some recorded, Some actual -> not (String.Equals(recorded, actual, StringComparison.OrdinalIgnoreCase))
+            | _ -> false)
+
+    let appendPlanEntries existingText entries =
+        existingText
+        |> appendToSection "Plan Decisions" entries.DecisionLines
+        |> appendToSection "Contract Impact" entries.ContractLines
+        |> appendToSection "Verification Obligations" entries.ObligationLines
+        |> appendToSection "Migration Posture" entries.MigrationLines
+        |> appendToSection "Generated View Impact" entries.ImpactLines
+        |> appendToSection "Accepted Deferrals" entries.DeferralLines
+        |> appendToSection "Planning Findings" entries.FindingLines
+        |> appendToSection "Advisory Notes" entries.AdvisoryLines
+
+    let appendStalePlanDecision existingText (facts: PlanFacts) =
+        if facts.Decisions |> List.exists (fun decision -> decision.Status = "stale") then
+            existingText
+        else
+            let decisionId = scopedId "PD" (nextScopedIndex "PD" existingText)
+            let sourceDecision =
+                facts.Decisions
+                |> List.tryHead
+                |> Option.map (fun decision -> $"[{decision.DecisionId.Value}] ")
+                |> Option.defaultValue ""
+
+            let line = $"- {decisionId} {sourceDecision}stale: Source specification, clarification, or checklist facts changed since prior plan decisions were recorded."
+            appendToSection "Plan Decisions" [ line ] existingText
+
+    let planDiagnosticsTextAndSummary
+        (request: CommandRequest)
+        (workId: string)
+        (specText: string)
+        (clarificationText: string)
+        (checklistText: string)
+        (specFacts: SpecificationFacts)
+        (clarificationFacts: ClarificationFacts)
+        (checklistFacts: ChecklistFacts)
+        model
+        =
+        let path = planPath workId
+
+        match snapshot path model with
+        | None ->
+            let text = planTemplate request workId specText clarificationText checklistText specFacts clarificationFacts checklistFacts
+
+            match parsePlanForCommand path text with
+            | Error diagnostics -> diagnostics, Some text, None
+            | Ok(facts, diagnostics) ->
+                let unknownDiagnostics = unknownPlanReferences path specFacts clarificationFacts checklistFacts facts
+                diagnostics @ unknownDiagnostics |> DiagnosticsModule.sort, Some text, Some(planSummary facts)
+        | Some existing ->
+            if existing.Text.Contains("<!-- fsgg-sdd: unsafe-overwrite -->", StringComparison.OrdinalIgnoreCase) then
+                [ unsafeOverwrite path ], Some existing.Text, None
+            elif existing.Text.Contains("<!-- fsgg-sdd: unsafe-decision-change -->", StringComparison.OrdinalIgnoreCase) then
+                [ unsafePlanDecisionChange path "PD-001" ], Some existing.Text, None
+            else
+                match parsePlanForCommand path existing.Text with
+                | Error diagnostics -> diagnostics, Some existing.Text, None
+                | Ok(existingFacts, existingDiagnostics) ->
+                    let identityDiagnostics =
+                        [ if existingFacts.FrontMatter.SchemaVersion.Major <> 1 then
+                              malformedPlanFrontMatter path $"Plan schemaVersion '{existingFacts.FrontMatter.SchemaVersion.Major}' is not supported."
+                          if not (String.Equals(existingFacts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
+                              planIdentityMismatch path workId existingFacts.FrontMatter.WorkId.Value
+                          if existingFacts.FrontMatter.Stage <> LifecycleStage.Plan then
+                              malformedPlanFrontMatter path $"Plan stage '{IdentifiersModule.stageValue existingFacts.FrontMatter.Stage}' is not 'plan'."
+                          if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
+                              malformedPlanFrontMatter path $"Plan sourceSpec '{existingFacts.FrontMatter.SourceSpec}' does not match '{specPath workId}'."
+                          if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourceClarifications, clarificationPath workId, StringComparison.OrdinalIgnoreCase)) then
+                              malformedPlanFrontMatter path $"Plan sourceClarifications '{existingFacts.FrontMatter.SourceClarifications}' does not match '{clarificationPath workId}'."
+                          if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourceChecklist, checklistPath workId, StringComparison.OrdinalIgnoreCase)) then
+                              malformedPlanFrontMatter path $"Plan sourceChecklist '{existingFacts.FrontMatter.SourceChecklist}' does not match '{checklistPath workId}'." ]
+
+                    let unknownDiagnostics = unknownPlanReferences path specFacts clarificationFacts checklistFacts existingFacts
+                    let blockingParserDiagnostics = identityDiagnostics @ existingDiagnostics @ unknownDiagnostics |> DiagnosticsModule.sort
+                    let hasBlockingParserDiagnostics = blockingParserDiagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+
+                    if hasBlockingParserDiagnostics then
+                        blockingParserDiagnostics, Some existing.Text, Some(planSummary existingFacts)
+                    else
+                        let ensuredText = ensurePlanSections workId existing.Text
+                        let entries = plannedPlanEntries workId specFacts clarificationFacts checklistFacts (Some existingFacts)
+                        let withEntries = appendPlanEntries ensuredText entries
+                        let stale = planSourceSnapshotStale workId specText clarificationText checklistText existingFacts
+                        let proposedText = if stale then appendStalePlanDecision withEntries existingFacts else withEntries
+
+                        match parsePlanForCommand path proposedText with
+                        | Error diagnostics -> diagnostics, Some proposedText, None
+                        | Ok(proposedFacts, proposedDiagnostics) ->
+                            let staleDiagnostics =
+                                if stale then
+                                    [ stalePlanDecision path (existingFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)) ]
+                                else
+                                    []
+
+                            let unknownDiagnostics = unknownPlanReferences path specFacts clarificationFacts checklistFacts proposedFacts
+
+                            blockingParserDiagnostics @ proposedDiagnostics @ unknownDiagnostics @ staleDiagnostics
+                            |> DiagnosticsModule.sort,
+                            Some proposedText,
+                            Some(planSummary proposedFacts)
+
+    let planPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts model =
+        let path = planPath workId
+
+        match snapshot path model with
+        | None ->
+            [ missingPlanPrerequisite path $"Plan prerequisite '{path}' is missing." ], None, None, None
+        | Some existing ->
+            match parsePlanForCommand path existing.Text with
+            | Error diagnostics ->
+                let mapped = diagnostics |> List.map (fun diagnostic -> malformedPlanFrontMatter path diagnostic.Message)
+                mapped, Some existing.Text, None, None
+            | Ok(facts, diagnostics) ->
+                let identityDiagnostics =
+                    [ if facts.FrontMatter.SchemaVersion.Major <> 1 then
+                          malformedPlanFrontMatter path $"Plan schemaVersion '{facts.FrontMatter.SchemaVersion.Major}' is not supported."
+                      if not (String.Equals(facts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
+                          planIdentityMismatch path workId facts.FrontMatter.WorkId.Value
+                      if facts.FrontMatter.Stage <> LifecycleStage.Plan then
+                          missingPlanPrerequisite path $"Plan stage '{IdentifiersModule.stageValue facts.FrontMatter.Stage}' is not 'plan'."
+                      if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
+                          malformedPlanFrontMatter path $"Plan sourceSpec '{facts.FrontMatter.SourceSpec}' does not match '{specPath workId}'."
+                      if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceClarifications, clarificationPath workId, StringComparison.OrdinalIgnoreCase)) then
+                          malformedPlanFrontMatter path $"Plan sourceClarifications '{facts.FrontMatter.SourceClarifications}' does not match '{clarificationPath workId}'."
+                      if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceChecklist, checklistPath workId, StringComparison.OrdinalIgnoreCase)) then
+                          malformedPlanFrontMatter path $"Plan sourceChecklist '{facts.FrontMatter.SourceChecklist}' does not match '{checklistPath workId}'." ]
+
+                let unknownDiagnostics = unknownPlanReferences path specFacts clarificationFacts checklistFacts facts
+
+                let readinessDiagnostics =
+                    [ if not (String.Equals(facts.FrontMatter.Status, "planned", StringComparison.OrdinalIgnoreCase)) then
+                          failedPlanPrerequisite path $"Plan status '{facts.FrontMatter.Status}' is not planned." [ facts.FrontMatter.Status ]
+
+                      let stale =
+                          facts.Decisions
+                          |> List.filter (fun decision -> decision.Status = "stale")
+                          |> List.map (fun decision -> decision.DecisionId.Value)
+
+                      if not (List.isEmpty stale) then
+                          failedPlanPrerequisite path "Plan contains stale decisions." stale
+
+                      let incomplete =
+                          facts.Decisions
+                          |> List.filter (fun decision -> decision.Status = "incomplete")
+                          |> List.map (fun decision -> decision.DecisionId.Value)
+
+                      if not (List.isEmpty incomplete) then
+                          failedPlanPrerequisite path "Plan contains incomplete decisions." incomplete
+
+                      let findings =
+                          facts.BlockingFindings
+                          |> List.filter (fun finding -> not (finding.StartsWith("No ", StringComparison.OrdinalIgnoreCase)))
+
+                      if not (List.isEmpty findings) then
+                          failedPlanPrerequisite path "Plan contains blocking planning findings." findings ]
+
+                let allDiagnostics =
+                    identityDiagnostics @ diagnostics @ unknownDiagnostics @ readinessDiagnostics
+                    |> DiagnosticsModule.sort
+
+                allDiagnostics, Some existing.Text, Some(planSummary facts), Some facts
+

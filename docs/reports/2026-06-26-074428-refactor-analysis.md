@@ -318,8 +318,9 @@ input, thread the `Result` to a diagnostic instead of throwing.
 Progress markers (status legend, matching
 `docs/initial-implementation-plan.md`): 🟢 / ✅ complete · 🟡 in progress
 (started; not landed) · 🔴 not started · ⬜ optional / deferred. The
-2026-06-26 analysis baseline started every row at 🔴; **R3, R4, and R1 have since
-landed** (see below). Update the marker as each refactor lands and link its evidence
+2026-06-26 analysis baseline started every row at 🔴; **R3, R4, R1, and R2 have
+since landed** (see below), completing the suggested **R3 → R4 → R1 → R2**
+structure-first sequence. Update the marker as each refactor lands and link its evidence
 (PR / spec readiness).
 
 Suggested sequence: **R3 → R4 → R1 → R2** (structure first so the handler
@@ -336,7 +337,7 @@ is permitted, and byte-identical artifact output is not separately required.
 | ID | Status | Refactor | Refs | Severity | Effort | Risk | Payoff |
 |---|---|---|---|---|---|---|---|
 | R1 | ✅ | Extract prerequisite combinator + `runHandler` shell | §5.1 | High | M–L | Low | Shrinks god module, kills handler copy-paste |
-| R2 | 🔴 | Split `CommandWorkflow.fs` into facade + internal modules | §1.1 | High | M | Very low (7-line `.fsi`) | Navigability |
+| R2 | ✅ | Split `CommandWorkflow.fs` into facade + internal modules | §1.1 | High | M | Very low (7-line `.fsi`) | Navigability |
 | R3 | ✅ | Split `LifecycleArtifacts.fs` per artifact family | §1.2 | High | M | Very low | Navigability, localizes §3/§4 |
 | R4 | ✅ | Extract `parseJsonView`, making the 4 matches total | §5.3 §4 | Med | S | Low | Removes latent runtime throw + ~70 LOC |
 | R5 | 🔴 | Centralize JSON null-access helpers, then enable `WarningsAsErrors` | §3 | Med | M | Low | Clears ~290 warnings, prevents regression |
@@ -363,10 +364,23 @@ is permitted, and byte-identical artifact output is not separately required.
   would change output. `grep -cE 'hasBlocking = .*List\.exists'` → **1**;
   `.fsi` byte-identical; **438** tests green; FS0025 = 0; FS3261 = 952 unchanged;
   handler section net −115 lines.
-- 🔴 **R2 — split `CommandWorkflow.fs`.** Not started. Done when the module
-  is a facade over internal `Prerequisites` / `Parsing` / `Handlers` /
-  `ViewRendering` modules and no single file exceeds ~1,500 lines; `.fsi`
-  unchanged (`init`/`update`).
+- ✅ **R2 — split `CommandWorkflow.fs`.** Landed via
+  `specs/025-split-command-workflow/`. **Done:** the 6,814-line flat
+  `module CommandWorkflow` is now a 170-line facade (`nextLifecycleEffects` /
+  `init` / `update`) over **13** `[<AutoOpen>] module internal` files in the
+  child namespace `FS.GG.SDD.Commands.Internal`
+  (`src/FS.GG.SDD.Commands/CommandWorkflow/`): `Foundation`, `ParsingEarly/Mid/Tasks`,
+  `ViewGeneration`, `Prerequisites`, and the per-handler `HandlersEarly/Analyze/
+  Evidence/Verify/Ship/Agents/Refresh`. The child namespace bounds AutoOpen to the
+  workflow files, so the sibling `CommandEffects`/`CommandSerialization`/
+  `CommandRendering` are untouched (no `open Internal`) and ~260 internal bindings
+  moved with **zero call-site rewrites**; each file redeclares only the
+  artifact-module aliases it uses. Largest file is `ParsingEarly.fs` at 1,076 lines
+  (≤ the ~1,500 cap); `computeRefreshPlan` keeps its self-contained guard verbatim.
+  `.fsi` **byte-identical** (zero-diff vs merge base); charter/refresh/analyze
+  `--json` output **byte-identical**; **438** tests green; Release build clean with
+  **0** errors and no new warning category (FS3261 src unique-site count unchanged
+  at 275, Commands sites 19→17); layering `Artifacts → Commands` preserved.
 - ✅ **R3 — split `LifecycleArtifacts.fs`.** Landed via
   `specs/022-split-lifecycle-artifacts/`. **Gate (relaxed):** the original
   "722-line `.fsi` contract is unchanged" criterion was dropped during planning —
@@ -408,7 +422,7 @@ is permitted, and byte-identical artifact output is not separately required.
   `failwith` is either total/unreachable-by-construction or replaced by a
   threaded diagnostic.
 
-**Aggregate:** 2 / 7 complete · 0 in progress · 5 not started.
+**Aggregate:** 3 / 7 complete · 0 in progress · 4 not started.
 
 ## Appendix: what is *not* a problem
 
