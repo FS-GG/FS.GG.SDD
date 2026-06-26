@@ -10,28 +10,12 @@ open FS.GG.SDD.Artifacts.GenerationManifest
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Artifacts.SchemaVersion
 open FS.GG.SDD.Artifacts.WorkModel
+open FS.GG.SDD.Artifacts.Json.JsonWriters
 
 module Serialization =
     let normalizeSnapshotsToWorkModel snapshots workId =
         loadWorkItemFromSnapshots snapshots workId
         |> WorkModel.fromParsedWorkItem
-
-    let writeStringList (writer: Utf8JsonWriter) (name: string) (values: string list) =
-        writer.WriteStartArray name
-        values |> List.iter (fun value -> writer.WriteStringValue(value: string))
-        writer.WriteEndArray()
-
-    let writeDigest (writer: Utf8JsonWriter) (name: string) (digest: SourceDigest) =
-        writer.WriteStartObject name
-        writer.WriteString("algorithm", digest.Algorithm)
-        writer.WriteString("value", digest.Value)
-        writer.WriteEndObject()
-
-    let writeOutputDigest (writer: Utf8JsonWriter) (name: string) (digest: OutputDigest) =
-        writer.WriteStartObject name
-        writer.WriteString("algorithm", digest.Algorithm)
-        writer.WriteString("value", digest.Value)
-        writer.WriteEndObject()
 
     let writeSource (writer: Utf8JsonWriter) (source: SourceEntry) =
         writer.WriteStartObject()
@@ -43,38 +27,22 @@ module Serialization =
         | Some raw -> writer.WriteString("rawSchemaVersion", raw)
         | None -> writer.WriteNull "rawSchemaVersion"
         writer.WriteString("schemaStatus", source.SchemaStatus)
-        writeDigest writer "sourceDigest" source.SourceDigest
+        writeSourceDigest writer "sourceDigest" (Some source.SourceDigest)
         writer.WriteEndObject()
-
-    let writeSourceLocation (writer: Utf8JsonWriter) (name: string) location =
-        match location with
-        | Some location ->
-            writer.WriteStartObject(name)
-
-            match location.Line with
-            | Some line -> writer.WriteNumber("line", line)
-            | None -> writer.WriteNull "line"
-
-            match location.Column with
-            | Some column -> writer.WriteNumber("column", column)
-            | None -> writer.WriteNull "column"
-
-            writer.WriteEndObject()
-        | None -> writer.WriteNull name
 
     let writeRequirement (writer: Utf8JsonWriter) (requirement: RequirementEntry) =
         writer.WriteStartObject()
         writer.WriteString("id", requirement.Id)
         writer.WriteString("title", requirement.Title)
         writer.WriteString("text", requirement.Text)
-        writeStringList writer "acceptanceCriteria" requirement.AcceptanceCriteria
+        writeStringList writer SourceOrder "acceptanceCriteria" requirement.AcceptanceCriteria
         match requirement.Priority with
         | Some priority -> writer.WriteString("priority", priority)
         | None -> writer.WriteNull "priority"
         writer.WriteString("source", requirement.Source)
-        writeSourceLocation writer "sourceLocation" requirement.SourceLocation
-        writeStringList writer "linkedTaskIds" requirement.LinkedTaskIds
-        writeStringList writer "linkedEvidenceIds" requirement.LinkedEvidenceIds
+        writeLocation writer "sourceLocation" requirement.SourceLocation
+        writeStringList writer SourceOrder "linkedTaskIds" requirement.LinkedTaskIds
+        writeStringList writer SourceOrder "linkedEvidenceIds" requirement.LinkedEvidenceIds
         writer.WriteEndObject()
 
     let writeDecision (writer: Utf8JsonWriter) (decision: DecisionEntry) =
@@ -83,8 +51,8 @@ module Serialization =
         writer.WriteString("title", decision.Title)
         writer.WriteString("decision", decision.Decision)
         writer.WriteString("source", decision.Source)
-        writeSourceLocation writer "sourceLocation" decision.SourceLocation
-        writeStringList writer "linkedTaskIds" decision.LinkedTaskIds
+        writeLocation writer "sourceLocation" decision.SourceLocation
+        writeStringList writer SourceOrder "linkedTaskIds" decision.LinkedTaskIds
         writer.WriteEndObject()
 
     let writeTask (writer: Utf8JsonWriter) (task: TaskEntry) =
@@ -93,14 +61,14 @@ module Serialization =
         writer.WriteString("title", task.Title)
         writer.WriteString("status", task.Status)
         writer.WriteString("owner", task.Owner)
-        writeStringList writer "dependencies" task.Dependencies
-        writeStringList writer "requirements" task.Requirements
-        writeStringList writer "decisions" task.Decisions
-        writeStringList writer "sourceIds" task.SourceIds
-        writeStringList writer "requiredSkills" task.RequiredSkills
-        writeStringList writer "requiredEvidence" task.RequiredEvidence
+        writeStringList writer SourceOrder "dependencies" task.Dependencies
+        writeStringList writer SourceOrder "requirements" task.Requirements
+        writeStringList writer SourceOrder "decisions" task.Decisions
+        writeStringList writer SourceOrder "sourceIds" task.SourceIds
+        writeStringList writer SourceOrder "requiredSkills" task.RequiredSkills
+        writeStringList writer SourceOrder "requiredEvidence" task.RequiredEvidence
         writer.WriteString("source", task.Source)
-        writeSourceLocation writer "sourceLocation" task.SourceLocation
+        writeLocation writer "sourceLocation" task.SourceLocation
         writer.WriteEndObject()
 
     let writeEvidence (writer: Utf8JsonWriter) (evidence: EvidenceEntry) =
@@ -109,22 +77,22 @@ module Serialization =
         writer.WriteString("kind", evidence.Kind)
         writer.WriteString("subjectType", evidence.SubjectType)
         writer.WriteString("subjectId", evidence.SubjectId)
-        writeStringList writer "taskRefs" evidence.TaskRefs
-        writeStringList writer "requirementRefs" evidence.RequirementRefs
-        writeStringList writer "artifactRefs" evidence.ArtifactRefs
+        writeStringList writer SourceOrder "taskRefs" evidence.TaskRefs
+        writeStringList writer SourceOrder "requirementRefs" evidence.RequirementRefs
+        writeStringList writer SourceOrder "artifactRefs" evidence.ArtifactRefs
         writer.WriteString("result", evidence.Result)
         writer.WriteBoolean("synthetic", evidence.Synthetic)
         match evidence.Rationale with
         | Some rationale -> writer.WriteString("rationale", rationale)
         | None -> writer.WriteNull "rationale"
         writer.WriteString("source", evidence.Source)
-        writeSourceLocation writer "sourceLocation" evidence.SourceLocation
+        writeLocation writer "sourceLocation" evidence.SourceLocation
         writer.WriteEndObject()
 
     let writeManifestSource (writer: Utf8JsonWriter) (source: SourceIdentity) =
         writer.WriteStartObject()
         writer.WriteString("path", source.Artifact.Path)
-        writeDigest writer "digest" source.Digest
+        writeSourceDigest writer "digest" (Some source.Digest)
         match source.SchemaVersion with
         | Some version -> writer.WriteNumber("schemaVersion", version.Major)
         | None -> writer.WriteNull "schemaVersion"
@@ -143,42 +111,9 @@ module Serialization =
         view.Sources |> List.iter (writeManifestSource writer)
         writer.WriteEndArray()
 
-        match view.OutputDigest with
-        | Some digest -> writeOutputDigest writer "outputDigest" digest
-        | None -> writer.WriteNull "outputDigest"
+        writeOutputDigest writer "outputDigest" view.OutputDigest
 
         writer.WriteString("currency", GenerationManifest.currencyStatusValue view.Currency)
-        writer.WriteEndObject()
-
-    let writeLocation (writer: Utf8JsonWriter) location =
-        match location with
-        | Some location ->
-            writer.WriteStartObject("location")
-
-            match location.Line with
-            | Some line -> writer.WriteNumber("line", line)
-            | None -> writer.WriteNull "line"
-
-            match location.Column with
-            | Some column -> writer.WriteNumber("column", column)
-            | None -> writer.WriteNull "column"
-
-            writer.WriteEndObject()
-        | None -> writer.WriteNull "location"
-
-    let writeDiagnostic (writer: Utf8JsonWriter) (diagnostic: Diagnostic) =
-        writer.WriteStartObject()
-        writer.WriteString("id", diagnostic.Id)
-        writer.WriteString("severity", Diagnostics.severityValue diagnostic.Severity)
-
-        match diagnostic.Artifact with
-        | Some artifact -> writer.WriteString("artifact", artifact.Path)
-        | None -> writer.WriteNull "artifact"
-
-        writeLocation writer diagnostic.Location
-        writer.WriteString("message", diagnostic.Message)
-        writer.WriteString("correction", diagnostic.Correction)
-        writeStringList writer "relatedIds" diagnostic.RelatedIds
         writer.WriteEndObject()
 
     let writeGovernanceBoundary (writer: Utf8JsonWriter) (boundary: GovernanceBoundaryEntry) =
@@ -227,7 +162,7 @@ module Serialization =
         model.GeneratedViews |> List.iter (writeGeneratedView writer)
         writer.WriteEndArray()
         writer.WriteStartArray("diagnostics")
-        model.Diagnostics |> List.iter (writeDiagnostic writer)
+        model.Diagnostics |> List.iter (writeDiagnostic writer SourceOrder)
         writer.WriteEndArray()
         writer.WriteStartArray("governanceBoundaries")
         model.GovernanceBoundaries |> List.iter (writeGovernanceBoundary writer)

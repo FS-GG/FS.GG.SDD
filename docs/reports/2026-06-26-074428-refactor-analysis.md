@@ -341,7 +341,7 @@ is permitted, and byte-identical artifact output is not separately required.
 | R3 | ✅ | Split `LifecycleArtifacts.fs` per artifact family | §1.2 | High | M | Very low | Navigability, localizes §3/§4 |
 | R4 | ✅ | Extract `parseJsonView`, making the 4 matches total | §5.3 §4 | Med | S | Low | Removes latent runtime throw + ~70 LOC |
 | R5 | ✅ | Centralize JSON null-access helpers, then enable `WarningsAsErrors` | §3 | Med | M | Low | Cleared 282 sites (952 raw); gate prevents regression |
-| R6 | 🔴 | Collapse diagnostic builder + unify serializers | §5.2 §5.4 | Med | S | Low | ~90 LOC, one shape |
+| R6 | ✅ | Collapse diagnostic builder + unify serializers | §5.2 §5.4 | Med | S | Low | ~90 LOC, one shape |
 | R7 | 🔴 | Strip redundant `private`; fix `failwith` context | §2 §6 | Low | S | None | Noise removal |
 
 ### Status detail
@@ -429,15 +429,30 @@ is permitted, and byte-identical artifact output is not separately required.
   charter/analyze/refresh `--json` byte-identical; no public `.fsi` or
   surface-baseline diff; no `#nowarn` introduced; injected-defect check confirms
   the gate fails the build with `error FS3261`; off-scope category count is 0.
-- 🔴 **R6 — diagnostic builder + serializer unification.** Not started.
-  Done when diagnostics route through one generic builder and the duplicate
-  JSON writers live in a single shared module.
+- ✅ **R6 — diagnostic builder + serializer unification.** Landed via
+  `specs/027-unify-diagnostic-serializers/`. **Done:** every command diagnostic
+  routes through `commandDiagnostic` via the new internal severity defaults
+  (`errorDiagnostic`/`warningDiagnostic`, collapsing 97 error + 13 warning
+  hand-spelled severity literals) and the family-shape helpers
+  `errorForPath`/`warningForPath`/`errorForRef`; severity comparisons are the only
+  `Diagnostic{Error,Warning}` tokens left outside the two defaults. The duplicate
+  JSON writers (`writeDiagnostic`, `writeOutputDigest`, and the
+  string-list/source-digest/location variants) now live once in the new
+  `FS.GG.SDD.Artifacts.Json.JsonWriters` module, consumed by both
+  `Serialization.fs` (Artifacts, `SourceOrder`) and `CommandSerialization.fs`
+  (Commands, `Sorted`), with string-list ordering and `option`/bare-digest shape
+  parameterized. Behavior-preserving: **438** tests green; command `--json` and
+  work-model JSON byte-identical; the three named `.fsi` files and both
+  `PublicSurface.baseline`s byte-stable (the new module sits under the
+  `…Artifacts.Json` sub-namespace, outside the exact-namespace surface
+  reflection); one-way `Artifacts → Commands` layering preserved; Release build
+  green with no new warning category; net `src` LOC **−143**.
 - 🔴 **R7 — `private` + `failwith` cleanup.** Not started. Done when no
   `.fsi`-guarded `.fs` carries a redundant `private` and each remaining
   `failwith` is either total/unreachable-by-construction or replaced by a
   threaded diagnostic.
 
-**Aggregate:** 4 / 7 complete · 0 in progress · 3 not started.
+**Aggregate:** 5 / 7 complete · 0 in progress · 2 not started.
 
 ## Appendix: what is *not* a problem
 

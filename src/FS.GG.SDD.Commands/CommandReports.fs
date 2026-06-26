@@ -19,997 +19,869 @@ module CommandReports =
     let commandDiagnostic id severity path message correction relatedIds =
         DiagnosticsModule.create id severity (path |> Option.bind artifactForPath) None message correction relatedIds
 
+    let errorDiagnostic id path message correction relatedIds =
+        commandDiagnostic id DiagnosticSeverity.DiagnosticError path message correction relatedIds
+
+    let warningDiagnostic id path message correction relatedIds =
+        commandDiagnostic id DiagnosticSeverity.DiagnosticWarning path message correction relatedIds
+
+    // Family-shape helpers: the common Some-path skeletons whose relatedIds are
+    // derived from the call (the named artifact, or a single referenced id).
+    let errorForPath id path message correction =
+        errorDiagnostic id (Some path) message correction [ path ]
+
+    let warningForPath id path message correction =
+        warningDiagnostic id (Some path) message correction [ path ]
+
+    let errorForRef id path message correction relatedId =
+        errorDiagnostic id (Some path) message correction [ relatedId ]
+
     let unknownCommand (value: string) =
-        commandDiagnostic
+        errorDiagnostic
             "unknownCommand"
-            DiagnosticSeverity.DiagnosticError
             None
             $"Unknown SDD command '{value}'."
             "Use one of: init, charter, specify, clarify, checklist, plan, tasks, analyze, evidence, verify, ship."
             []
 
     let malformedWorkId (value: string) =
-        commandDiagnostic
+        errorDiagnostic
             "malformedWorkId"
-            DiagnosticSeverity.DiagnosticError
             None
             $"Work id '{value}' is malformed."
             "Use a stable lowercase work id such as 003-native-sdd-lifecycle-commands."
             [ value ]
 
     let missingWorkId (command: SddCommand) =
-        commandDiagnostic
+        errorDiagnostic
             "missingWorkId"
-            DiagnosticSeverity.DiagnosticError
             None
             $"Command '{commandName command}' requires --work."
             "Pass --work <id> for work-item lifecycle commands."
             [ commandName command ]
 
     let unsupportedCommand (command: SddCommand) =
-        commandDiagnostic
+        errorDiagnostic
             "unsupportedLifecycleCommand"
-            DiagnosticSeverity.DiagnosticError
             None
             $"Command '{commandName command}' is declared but not implemented in the current MVP slice."
             "Use an implemented lifecycle command in this slice; later lifecycle commands remain pending in tasks.md."
             [ commandName command ]
 
     let outsideProject () =
-        commandDiagnostic
+        errorDiagnostic
             "outsideProject"
-            DiagnosticSeverity.DiagnosticError
             (Some ".fsgg/project.yml")
             "The current directory is not an initialized FS.GG.SDD project."
             "Run fsgg-sdd init or pass --root for an initialized SDD project."
             []
 
     let missingProjectConfig path =
-        commandDiagnostic
+        errorForPath
             "missingProjectConfig"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Required project config '{path}' is missing."
             "Run fsgg-sdd init or restore the SDD project configuration."
-            [ path ]
 
     let malformedProjectConfig path =
-        commandDiagnostic
+        errorForPath
             "malformedProjectConfig"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Project config '{path}' is malformed."
             "Fix schemaVersion, project.id, project.defaultWorkRoot, sdd.config, and sdd.agents before authoring a charter."
-            [ path ]
 
     let missingSddConfig path =
-        commandDiagnostic
+        errorForPath
             "missingSddConfig"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Required SDD config '{path}' is missing."
             "Restore .fsgg/sdd.yml before authoring a charter."
-            [ path ]
 
     let malformedSddConfig path =
-        commandDiagnostic
+        errorForPath
             "malformedSddConfig"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"SDD config '{path}' is malformed."
             "Fix the SDD lifecycle policy before authoring a charter."
-            [ path ]
 
     let missingAgentsConfig path =
-        commandDiagnostic
+        errorForPath
             "missingAgentsConfig"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Required agent config '{path}' is missing."
             "Restore .fsgg/agents.yml before authoring a charter."
-            [ path ]
 
     let malformedAgentsConfig path =
-        commandDiagnostic
+        errorForPath
             "malformedAgentsConfig"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Agent config '{path}' is malformed."
             "Fix .fsgg/agents.yml before authoring a charter."
-            [ path ]
 
     let duplicateWorkId workId paths =
-        commandDiagnostic
+        errorDiagnostic
             "duplicateWorkId"
-            DiagnosticSeverity.DiagnosticError
             None
             $"Work id '{workId}' is declared by more than one work artifact."
             "Keep one authored source for the selected work id and move or rename the duplicate."
             (workId :: (paths |> List.sort))
 
     let missingCharterPrerequisite path message =
-        commandDiagnostic
+        errorForPath
             "missingCharterPrerequisite"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Run fsgg-sdd charter for the selected work item before running fsgg-sdd specify."
-            [ path ]
 
     let charterIdentityMismatch path expectedWorkId actualWorkId =
-        commandDiagnostic
+        errorDiagnostic
             "charterIdentityMismatch"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             $"Charter work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
             "Move the charter under the matching work id or update its front matter before rerunning."
             [ expectedWorkId; actualWorkId ]
 
     let malformedCharterFrontMatter path message =
-        commandDiagnostic
+        errorForPath
             "malformedCharterFrontMatter"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Add schemaVersion, workId, title, stage, changeTier, and status front matter before rerunning."
-            [ path ]
 
     let missingSpecificationIntent path missingFacts =
         let missingText = String.concat ", " missingFacts
 
-        commandDiagnostic
+        errorDiagnostic
             "missingSpecificationIntent"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             $"Specification intent is missing required facts: {missingText}."
             "Provide input with value, scope, and requirement facts before creating a new specification."
             missingFacts
 
     let missingSpecificationPrerequisite path message =
-        commandDiagnostic
+        errorForPath
             "missingSpecificationPrerequisite"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Run fsgg-sdd specify for the selected work item before running fsgg-sdd clarify."
-            [ path ]
 
     let specificationIdentityMismatch path expectedWorkId actualWorkId =
-        commandDiagnostic
+        errorDiagnostic
             "specificationIdentityMismatch"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             $"Specification work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
             "Move the specification under the matching work id or update its front matter before rerunning."
             [ expectedWorkId; actualWorkId ]
 
     let malformedSpecificationFrontMatter path message =
-        commandDiagnostic
+        errorForPath
             "malformedSpecificationFrontMatter"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Add schemaVersion, workId, title, stage: specify, changeTier, and status front matter before rerunning."
-            [ path ]
 
     let malformedSpecificationFacts path message =
-        commandDiagnostic
+        errorForPath
             "malformedSpecificationFacts"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Fix specification ids, references, and required sections before recording clarification decisions."
-            [ path ]
 
     let duplicateSpecificationId path id =
-        commandDiagnostic
+        errorForRef
             "duplicateSpecificationId"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Specification identifier '{id}' is declared more than once."
             "Rename one duplicate identifier and update all structured references before rerunning."
-            [ id ]
+            id
 
     let missingSpecificationId path idFamily =
-        commandDiagnostic
+        errorForRef
             "missingSpecificationId"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Specification content is missing a required {idFamily} stable id."
             "Add stable story, requirement, scenario, scope, or ambiguity ids before rerunning."
-            [ idFamily ]
+            idFamily
 
     let unknownSpecificationReference path id =
-        commandDiagnostic
+        errorForRef
             "unknownSpecificationReference"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Specification reference '{id}' does not resolve."
             "Declare the referenced specification id or remove the stale structured link before rerunning."
-            [ id ]
+            id
 
     let missingClarificationAnswer path missingIds =
         let missingText = String.concat ", " (missingIds |> List.sort)
 
-        commandDiagnostic
+        errorDiagnostic
             "missingClarificationAnswer"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             $"Clarification input is missing answers for blocking ambiguity: {missingText}."
             "Provide an answer, accepted deferral, or explicit still-open note for each blocking ambiguity."
             missingIds
 
     let missingClarificationPrerequisite path message =
-        commandDiagnostic
+        errorForPath
             "missingClarificationPrerequisite"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Run fsgg-sdd clarify for the selected work item before running fsgg-sdd checklist."
-            [ path ]
 
     let clarificationIdentityMismatch path expectedWorkId actualWorkId =
-        commandDiagnostic
+        errorDiagnostic
             "clarificationIdentityMismatch"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             $"Clarification work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
             "Move clarifications.md under the matching work id or update its front matter before rerunning."
             [ expectedWorkId; actualWorkId ]
 
     let malformedClarificationFrontMatter path message =
-        commandDiagnostic
+        errorForPath
             "malformedClarificationFrontMatter"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Add schemaVersion, workId, title, stage: clarify, changeTier, status, and sourceSpec front matter before rerunning."
-            [ path ]
 
     let duplicateClarificationId path id =
-        commandDiagnostic
+        errorForRef
             "duplicateClarificationId"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Clarification identifier '{id}' is declared more than once."
             "Rename one duplicate clarification question or decision id and update references before rerunning."
-            [ id ]
+            id
 
     let unknownClarificationReference path id =
-        commandDiagnostic
+        errorForRef
             "unknownClarificationReference"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Clarification reference '{id}' does not resolve in the selected specification or clarification artifact."
             "Reference a known AMB, CQ, FR, US, or AC id, or remove the stale clarification link."
-            [ id ]
+            id
 
     let unsafeDecisionChange path id =
-        commandDiagnostic
+        errorForRef
             "unsafeDecisionChange"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Clarification decision '{id}' would be changed by this rerun."
             "Preserve existing decisions and add a new decision id for a replacement path."
-            [ id ]
+            id
 
     let unresolvedBlockingAmbiguity path ids =
-        commandDiagnostic
+        errorDiagnostic
             "unresolvedBlockingAmbiguity"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             "Blocking ambiguity remains unresolved after clarification planning."
             "Resolve each blocking ambiguity with a concrete decision or accepted deferral before moving to checklist."
             ids
 
     let failedRequirementsQuality path message correction relatedIds =
-        commandDiagnostic
+        warningDiagnostic
             "failedRequirementsQuality"
-            DiagnosticSeverity.DiagnosticWarning
             (Some path)
             message
             correction
             relatedIds
 
     let checklistIdentityMismatch path expectedWorkId actualWorkId =
-        commandDiagnostic
+        errorDiagnostic
             "checklistIdentityMismatch"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             $"Checklist work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
             "Move checklist.md under the matching work id or update its front matter before rerunning."
             [ expectedWorkId; actualWorkId ]
 
     let malformedChecklistFrontMatter path message =
-        commandDiagnostic
+        errorForPath
             "malformedChecklistFrontMatter"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Add schemaVersion, workId, title, stage: checklist, changeTier, status, sourceSpec, and sourceClarifications front matter before rerunning."
-            [ path ]
 
     let duplicateChecklistId path id =
-        commandDiagnostic
+        errorForRef
             "duplicateChecklistId"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Checklist identifier '{id}' is declared more than once."
             "Rename one duplicate checklist item or result id and update references before rerunning."
-            [ id ]
+            id
 
     let unknownChecklistSourceReference path id =
-        commandDiagnostic
+        errorForRef
             "unknownChecklistSourceReference"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Checklist reference '{id}' does not resolve in the selected specification, clarification, or checklist item set."
             "Reference a known FR, US, AC, SB, AMB, CQ, DEC, or CHK id, or remove the stale checklist link."
-            [ id ]
+            id
 
     let staleChecklistResult path resultIds =
-        commandDiagnostic
+        warningDiagnostic
             "staleChecklistResult"
-            DiagnosticSeverity.DiagnosticWarning
             (Some path)
             "One or more checklist results were reviewed against older source snapshots."
             "Review the stale checklist results against the current specification and clarification sources."
             resultIds
 
     let unsafeChecklistResultChange path id =
-        commandDiagnostic
+        errorForRef
             "unsafeChecklistResultChange"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Checklist result '{id}' would be changed by this rerun."
             "Preserve the existing result and add a new result or mark it stale before changing the review decision."
-            [ id ]
+            id
 
     let missingChecklistPrerequisite path message =
-        commandDiagnostic
+        errorForPath
             "missingChecklistPrerequisite"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Run fsgg-sdd checklist for the selected work item before running fsgg-sdd plan."
-            [ path ]
 
     let failedChecklistPrerequisite path message relatedIds =
-        commandDiagnostic
+        errorDiagnostic
             "failedChecklistPrerequisite"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             message
             "Correct blocking checklist findings, stale review results, or unresolved deferrals before planning."
             relatedIds
 
     let planIdentityMismatch path expectedWorkId actualWorkId =
-        commandDiagnostic
+        errorDiagnostic
             "planIdentityMismatch"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             $"Plan work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
             "Move plan.md under the matching work id or update its front matter before rerunning."
             [ expectedWorkId; actualWorkId ]
 
     let malformedPlanFrontMatter path message =
-        commandDiagnostic
+        errorForPath
             "malformedPlanFrontMatter"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Add schemaVersion, workId, title, stage: plan, status, sourceSpec, sourceClarifications, and sourceChecklist front matter before rerunning."
-            [ path ]
 
     let duplicatePlanId path id =
-        commandDiagnostic
+        errorForRef
             "duplicatePlanId"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Plan identifier '{id}' is declared more than once."
             "Rename one duplicate planning identifier and update all structured references before rerunning."
-            [ id ]
+            id
 
     let unknownPlanSourceReference path id =
-        commandDiagnostic
+        errorForRef
             "unknownPlanSourceReference"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Plan reference '{id}' does not resolve in the selected specification, clarification, checklist, or plan artifact."
             "Reference a known FR, US, AC, SB, AMB, CQ, DEC, CHK, CR, PD, PC, VO, PM, or GV id, or remove the stale plan link."
-            [ id ]
+            id
 
     let stalePlanDecision path decisionIds =
-        commandDiagnostic
+        warningDiagnostic
             "stalePlanDecision"
-            DiagnosticSeverity.DiagnosticWarning
             (Some path)
             "One or more plan decisions were recorded against older source snapshots."
             "Review the stale plan decisions before treating the plan as ready for task generation."
             decisionIds
 
     let unsafePlanDecisionChange path id =
-        commandDiagnostic
+        errorForRef
             "unsafePlanDecisionChange"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Plan decision '{id}' would be changed by this rerun."
             "Preserve existing plan decisions and add a new decision id for the replacement path."
-            [ id ]
+            id
 
     let missingPlanPrerequisite path message =
-        commandDiagnostic
+        errorForPath
             "missingPlanPrerequisite"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Run fsgg-sdd plan for the selected work item before running fsgg-sdd tasks."
-            [ path ]
 
     let failedPlanPrerequisite path message relatedIds =
-        commandDiagnostic
+        errorDiagnostic
             "failedPlanPrerequisite"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             message
             "Correct blocking planning findings, stale decisions, or malformed plan data before task generation."
             relatedIds
 
     let tasksIdentityMismatch path expectedWorkId actualWorkId =
-        commandDiagnostic
+        errorDiagnostic
             "tasksIdentityMismatch"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             $"Tasks work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
             "Move tasks.yml under the matching work id or update its work.id before rerunning."
             [ expectedWorkId; actualWorkId ]
 
     let malformedTasksArtifact path message =
-        commandDiagnostic
+        errorForPath
             "malformedTasksArtifact"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Fix schemaVersion, work identity, source links, task ids, dependencies, and status fields before rerunning."
-            [ path ]
 
     let duplicateTaskId path id =
-        commandDiagnostic
+        errorForRef
             "duplicateTaskId"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Task id '{id}' is declared more than once."
             "Rename one duplicate task id and update dependency and evidence references before rerunning."
-            [ id ]
+            id
 
     let unknownTaskSourceReference path id =
-        commandDiagnostic
+        errorForRef
             "unknownTaskSourceReference"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Task source reference '{id}' does not resolve in the selected lifecycle artifacts."
             "Reference a known FR, AC, DEC, PD, PC, VO, PM, GV, CHK, or CR id, or remove the stale task link."
-            [ id ]
+            id
 
     let unknownTaskDependency path id =
-        commandDiagnostic
+        errorForRef
             "unknownTaskDependency"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Task dependency '{id}' does not resolve."
             "Declare the dependency task id or remove the dependency edge."
-            [ id ]
+            id
 
     let taskDependencyCycle path ids =
         let cycleText = String.concat " -> " ids
 
-        commandDiagnostic
+        errorDiagnostic
             "taskDependencyCycle"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             $"Task dependency cycle detected: {cycleText}."
             "Remove one dependency edge so the task graph is acyclic."
             ids
 
     let staleTask path taskIds =
-        commandDiagnostic
+        warningDiagnostic
             "staleTask"
-            DiagnosticSeverity.DiagnosticWarning
             (Some path)
             "One or more task entries were recorded against older source snapshots."
             "Review stale tasks and rerun fsgg-sdd tasks after updating their source links."
             taskIds
 
     let unsafeTaskStatusChange path id =
-        commandDiagnostic
+        errorForRef
             "unsafeTaskStatusChange"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Task '{id}' has a status change marker that this command will not overwrite."
             "Preserve existing task state and record replacement work as a new task id."
-            [ id ]
+            id
 
     let doneTaskMissingEvidence path ids =
-        commandDiagnostic
+        errorDiagnostic
             "doneTaskMissingEvidence"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             "One or more completed tasks are missing required evidence declarations."
             "Add work/<id>/evidence.yml entries for completed tasks or move the tasks back to pending."
             ids
 
     let skippedTaskMissingRationale path ids =
-        commandDiagnostic
+        errorDiagnostic
             "skippedTaskMissingRationale"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             "One or more skipped tasks are missing skip rationale."
             "Add skipRationale for every skipped task before treating the task graph as ready."
             ids
 
     let missingTasksPrerequisite path message =
-        commandDiagnostic
+        errorForPath
             "missingTasksPrerequisite"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Run fsgg-sdd tasks for the selected work item before running fsgg-sdd analyze."
-            [ path ]
 
     let failedTasksPrerequisite path message relatedIds =
-        commandDiagnostic
+        errorDiagnostic
             "failedTasksPrerequisite"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             message
             "Correct tasks.yml or rerun fsgg-sdd tasks before treating the work item as implementation-ready."
             relatedIds
 
     let analysisIdentityMismatch path expectedWorkId actualWorkId =
-        commandDiagnostic
+        errorDiagnostic
             "analysisIdentityMismatch"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             $"Analysis view work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
             "Regenerate the analysis view for the selected work id."
             [ expectedWorkId; actualWorkId ]
 
     let malformedAnalysisView path message =
-        commandDiagnostic
+        warningForPath
             "malformedAnalysisView"
-            DiagnosticSeverity.DiagnosticWarning
-            (Some path)
+            path
             message
             "Regenerate readiness/<id>/analysis.json from current lifecycle sources."
-            [ path ]
 
     let missingAnalysisPrerequisite path message =
-        commandDiagnostic
+        errorForPath
             "evidence.missingAnalysisPrerequisite"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Run fsgg-sdd analyze for the selected work item before recording evidence."
-            [ path ]
 
     let analysisNotReady path readiness =
-        commandDiagnostic
+        errorForRef
             "evidence.analysisNotReady"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Analysis readiness '{readiness}' is not implementationReady."
             "Correct analysis findings and rerun fsgg-sdd analyze before recording evidence."
-            [ readiness ]
+            readiness
 
     let evidenceIdentityMismatch path expectedWorkId actualWorkId =
-        commandDiagnostic
+        errorDiagnostic
             "evidence.identityMismatch"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             $"Evidence work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
             "Move evidence.yml under the matching work id or update its structured work id before rerunning."
             [ expectedWorkId; actualWorkId ]
 
     let malformedEvidenceArtifact path message =
-        commandDiagnostic
+        errorForPath
             "evidence.malformedEvidenceArtifact"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Fix schemaVersion, workId, stage, status, source links, evidence ids, result states, and disclosure fields before rerunning."
-            [ path ]
 
     let duplicateEvidenceId path id =
-        commandDiagnostic
+        errorForRef
             "evidence.duplicateEvidenceId"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Evidence id '{id}' is declared more than once."
             "Rename duplicate evidence declarations and keep stable ids unique within the selected evidence artifact."
-            [ id ]
+            id
 
     let unknownEvidenceReference path id =
-        commandDiagnostic
+        errorForRef
             "evidence.unknownReference"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Evidence reference '{id}' does not resolve in the selected lifecycle artifacts."
             "Reference a known task, requirement, decision, obligation, source artifact, or generated view, or remove the stale evidence link."
-            [ id ]
+            id
 
     let missingRequiredEvidence path ids =
-        commandDiagnostic
+        errorDiagnostic
             "evidence.missingRequiredEvidence"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             "One or more required evidence obligations are missing current evidence or accepted deferral."
             "Add evidence declarations or accepted deferrals linked to the missing obligation ids."
             ids
 
     let staleEvidence path ids =
-        commandDiagnostic
+        warningDiagnostic
             "evidence.staleEvidence"
-            DiagnosticSeverity.DiagnosticWarning
             (Some path)
             "One or more evidence declarations need review against current lifecycle facts."
             "Review stale evidence declarations and record a compatible update before verification."
             ids
 
     let staleEvidenceSource path ids =
-        commandDiagnostic
+        warningDiagnostic
             "evidence.staleEvidenceSource"
-            DiagnosticSeverity.DiagnosticWarning
             (Some path)
             "One or more evidence source snapshots no longer match current source digests."
             "Rerun the evidence command after reviewing the changed source artifacts."
             ids
 
     let undisclosedSyntheticEvidence path ids =
-        commandDiagnostic
+        errorDiagnostic
             "evidence.undisclosedSyntheticEvidence"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             "Synthetic evidence is missing disclosure of the real path it stands in for."
             "Add syntheticDisclosure.standsInFor and syntheticDisclosure.reason to every synthetic declaration."
             ids
 
     let missingDeferralRationale path ids =
-        commandDiagnostic
+        errorDiagnostic
             "evidence.missingDeferralRationale"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             "Accepted deferral evidence is missing rationale, owner, scope, or later lifecycle visibility."
             "Add rationale, owner, scope, and laterLifecycleVisibility to every deferral declaration."
             ids
 
     let missingRequiredSkill path ids =
-        commandDiagnostic
+        errorDiagnostic
             "evidence.missingRequiredSkill"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             "Completed work references required skills without visible evidence support."
             "Add evidence linked to the required task skill or move the task back to pending until the skill-backed work is complete."
             ids
 
     let unsupportedEvidenceResultState path states =
-        commandDiagnostic
+        errorDiagnostic
             "evidence.unsupportedResultState"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             "Evidence contains unsupported result states."
             "Use pass, fail, deferred, missing, stale, advisory, or blocked for evidence result."
             states
 
     let unsafeEvidenceUpdate path ids =
-        commandDiagnostic
+        errorDiagnostic
             "evidence.unsafeUpdate"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             "The proposed evidence update would change existing declaration meaning."
             "Preserve existing declaration ids and meanings; append a compatible new declaration instead."
             ids
 
     let missingDisposition path ids =
-        commandDiagnostic
+        errorDiagnostic
             "missingDisposition"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             "One or more lifecycle facts have no current task disposition."
             "Update tasks.yml or rerun fsgg-sdd tasks after correcting the source artifact."
             ids
 
     let unsafeOverwrite (path: string) =
-        commandDiagnostic
+        errorForPath
             "unsafeOverwrite"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             "The command would overwrite existing authored content."
             "Review the existing file and choose an explicit safe update path before rerunning."
-            [ path ]
 
     let malformedGeneratedView path =
-        commandDiagnostic
+        warningForPath
             "malformedGeneratedView"
-            DiagnosticSeverity.DiagnosticWarning
-            (Some path)
+            path
             $"Generated view '{path}' is malformed and will be refreshed when source data is valid."
             "Regenerate readiness/<id>/work-model.json from current lifecycle sources."
-            [ path ]
 
     let blockedGeneratedViewRefresh path relatedIds =
-        commandDiagnostic
+        warningDiagnostic
             "blockedGeneratedViewRefresh"
-            DiagnosticSeverity.DiagnosticWarning
             (Some path)
             $"Generated view '{path}' cannot be refreshed from the current lifecycle sources."
             "Fix the named lifecycle diagnostics before treating the generated view as current."
             (path :: relatedIds)
 
     let missingEvidencePrerequisite path message =
-        commandDiagnostic
+        errorForPath
             "verify.missingEvidencePrerequisite"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Run fsgg-sdd evidence for the selected work item before running fsgg-sdd verify."
-            [ path ]
 
     let verifyIdentityMismatch path expectedWorkId actualWorkId =
-        commandDiagnostic
+        errorDiagnostic
             "verify.identityMismatch"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             $"Verification view work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
             "Regenerate the verification view for the selected work id."
             [ expectedWorkId; actualWorkId ]
 
     let malformedVerificationView path message =
-        commandDiagnostic
+        errorForPath
             "verify.malformedVerificationView"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Remove or repair the malformed readiness/<id>/verify.json before refreshing the verification view."
-            [ path ]
 
     let missingRequiredTest path ids =
-        commandDiagnostic
+        errorDiagnostic
             "verify.missingRequiredTest"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             "One or more required test obligations are missing satisfying evidence or an accepted deferral."
             "Add verification evidence or an accepted deferral linked to the missing required test obligations."
             ids
 
     let staleRequiredTest path ids =
-        commandDiagnostic
+        warningDiagnostic
             "verify.staleRequiredTest"
-            DiagnosticSeverity.DiagnosticWarning
             (Some path)
             "One or more required test obligations were satisfied against older lifecycle sources."
             "Re-run the verifying tests and record current evidence before treating the work item as verification-ready."
             ids
 
     let toolDefect (path: string option) (message: string) =
-        commandDiagnostic
+        errorDiagnostic
             "toolDefect"
-            DiagnosticSeverity.DiagnosticError
             path
             message
             "Inspect the command failure and fix the tool or environment before rerunning."
             []
 
     let missingVerificationPrerequisite path message =
-        commandDiagnostic
+        errorForPath
             "ship.missingVerificationPrerequisite"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Run fsgg-sdd verify for the selected work item before running fsgg-sdd ship."
-            [ path ]
 
     let verificationNotReady path (status: string) =
-        commandDiagnostic
+        errorForPath
             "ship.verificationNotReady"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Verification view reports '{status}' rather than a verification-ready status."
             "Resolve the verification findings and rerun fsgg-sdd verify before ship."
-            [ path ]
 
     let failedVerification path ids =
-        commandDiagnostic
+        errorDiagnostic
             "ship.failedVerification"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             "Verification view reports unresolved blocking findings that must be corrected before ship."
             "Correct the underlying verification findings and rerun fsgg-sdd verify before ship."
             ids
 
     let staleVerificationView path ids =
-        commandDiagnostic
+        errorDiagnostic
             "ship.staleVerificationView"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             "Verification view source digests no longer match the current lifecycle sources."
             "Rerun fsgg-sdd verify to refresh the verification view before ship."
             ids
 
     let shipIdentityMismatch path expectedWorkId actualWorkId =
-        commandDiagnostic
+        errorDiagnostic
             "ship.identityMismatch"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             $"Ship view work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
             "Regenerate the ship view for the selected work id."
             [ expectedWorkId; actualWorkId ]
 
     let malformedShipView path message =
-        commandDiagnostic
+        errorForPath
             "ship.malformedShipView"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Remove or repair the malformed readiness/<id>/ship.json before refreshing the ship view."
-            [ path ]
 
     let agentsNoTargets path =
-        commandDiagnostic
+        errorForPath
             "agents.noTargets"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             "Agent guidance configuration declares no agent targets."
             "Declare at least one agent target (for example claude or codex) in .fsgg/agents.yml."
-            [ path ]
 
     let agentsInvalidGeneratedRoot path targetId =
-        commandDiagnostic
+        errorForRef
             "agents.invalidGeneratedRoot"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Agent guidance target '{targetId}' has a work-model path or generated root that does not resolve within the project."
             "Point the work-model path and each target generated root at a location inside the project."
-            [ targetId ]
+            targetId
 
     let agentsWorkModelIdentityMismatch path expectedWorkId actualWorkId =
-        commandDiagnostic
+        errorDiagnostic
             "agents.workModelIdentityMismatch"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             $"Work model work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
             "Select the work id that matches the normalized work model, or regenerate the work model."
             [ expectedWorkId; actualWorkId ]
 
     let agentsMissingWorkModel path =
-        commandDiagnostic
+        errorForPath
             "agents.missingWorkModel"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Normalized work model '{path}' is missing."
             "Run fsgg-sdd verify or ship for the selected work item to generate the work model before generating agent guidance."
-            [ path ]
 
     let agentsMalformedWorkModel path message =
-        commandDiagnostic
+        errorForPath
             "agents.malformedWorkModel"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Regenerate readiness/<id>/work-model.json from current lifecycle sources before generating agent guidance."
-            [ path ]
 
     let agentsStaleWorkModel path =
-        commandDiagnostic
+        errorForPath
             "agents.staleWorkModel"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             "Normalized work model source digests no longer match the current lifecycle sources."
             "Rerun fsgg-sdd verify or ship to refresh the work model before generating agent guidance."
-            [ path ]
 
     let agentsBlockedWorkModel path relatedIds =
-        commandDiagnostic
+        errorDiagnostic
             "agents.blockedWorkModel"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             "Normalized work model is blocked by invalid lifecycle source data."
             "Resolve the work-model diagnostics and refresh the work model before generating agent guidance."
             relatedIds
 
     let agentsUnknownSourceReference path id =
-        commandDiagnostic
+        errorForRef
             "agents.unknownSourceReference"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             $"Work model references unknown lifecycle fact '{id}'."
             "Correct the lifecycle source or regenerate the work model so all references resolve."
-            [ id ]
+            id
 
     let agentsMalformedGeneratedGuidance path message =
-        commandDiagnostic
+        errorForPath
             "agents.malformedGeneratedGuidance"
-            DiagnosticSeverity.DiagnosticError
-            (Some path)
+            path
             message
             "Remove or repair the malformed generated guidance.json before refreshing agent guidance."
-            [ path ]
 
     let agentsStaleGeneratedGuidance path targetId =
-        commandDiagnostic
+        warningDiagnostic
             "agents.staleGeneratedGuidance"
-            DiagnosticSeverity.DiagnosticWarning
             (Some path)
             $"Generated agent guidance for target '{targetId}' no longer matches the current normalized work model."
             "Regenerate agent guidance so the generated view matches the current work model."
             [ targetId ]
 
     let agentsBehaviorDivergence path targetIds =
-        commandDiagnostic
+        errorDiagnostic
             "agents.behaviorDivergence"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             "Configured agent targets would describe divergent workflow behavior for the same lifecycle model."
             "Regenerate the divergent target guidance from the shared normalized work model so Claude and Codex behavior matches."
             targetIds
 
     let agentsUnsafeGeneratedViewRefresh path relatedIds =
-        commandDiagnostic
+        errorDiagnostic
             "agents.unsafeGeneratedViewRefresh"
-            DiagnosticSeverity.DiagnosticError
             (Some path)
             "Generated agent guidance cannot be safely refreshed in this run."
             "Resolve the underlying generated-view diagnostics before refreshing agent guidance."
             relatedIds
 
     let refreshMissingSource viewPath sourcePath =
-        commandDiagnostic
+        errorForRef
             "refresh.missingSource"
-            DiagnosticSeverity.DiagnosticError
-            (Some viewPath)
+            viewPath
             $"Generated view '{viewPath}' cannot be refreshed because declared source '{sourcePath}' is missing."
             "Restore or author the missing declared source before refreshing the generated view."
-            [ sourcePath ]
+            sourcePath
 
     let refreshMalformedSource viewPath sourcePath message =
-        commandDiagnostic
+        errorForRef
             "refresh.malformedSource"
-            DiagnosticSeverity.DiagnosticError
-            (Some viewPath)
+            viewPath
             message
             "Repair the malformed or schema-incompatible declared source before refreshing the generated view."
-            [ sourcePath ]
+            sourcePath
 
     let refreshStaleView viewPath sourcePaths =
-        commandDiagnostic
+        warningDiagnostic
             "refresh.staleView"
-            DiagnosticSeverity.DiagnosticWarning
             (Some viewPath)
             $"Generated view '{viewPath}' no longer matches its current declared sources."
             "Refresh the generated view from its current declared sources."
             sourcePaths
 
     let refreshMalformedGeneratedView viewPath message =
-        commandDiagnostic
+        warningForPath
             "refresh.malformedGeneratedView"
-            DiagnosticSeverity.DiagnosticWarning
-            (Some viewPath)
+            viewPath
             message
             "Regenerate the malformed generated view from its current declared sources."
-            [ viewPath ]
 
     let refreshBlockedUpstreamView viewPath upstreamViewPath =
-        commandDiagnostic
+        errorForRef
             "refresh.blockedUpstreamView"
-            DiagnosticSeverity.DiagnosticError
-            (Some viewPath)
+            viewPath
             $"Generated view '{viewPath}' cannot be refreshed until upstream view '{upstreamViewPath}' is current."
             "Bring the named upstream generated view to currency before refreshing this dependent view."
-            [ upstreamViewPath ]
+            upstreamViewPath
 
     let refreshUnrenderableSummary summaryPath relatedIds =
-        commandDiagnostic
+        errorDiagnostic
             "refresh.unrenderableSummary"
-            DiagnosticSeverity.DiagnosticError
             (Some summaryPath)
             $"Readiness summary '{summaryPath}' cannot be rendered because its required structured readiness data is missing, stale, or blocked."
             "Bring the structured readiness views the summary projects to currency before rendering the summary."

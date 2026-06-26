@@ -15,6 +15,8 @@
     <Compile Include="ArtifactRef.fs" />
     <Compile Include="Diagnostics.fsi" />
     <Compile Include="Diagnostics.fs" />
+    <Compile Include="Json/JsonWriters.fsi" />
+    <Compile Include="Json/JsonWriters.fs" />
     <Compile Include="GenerationManifest.fsi" />
     <Compile Include="GenerationManifest.fs" />
     <Compile Include="LifecycleArtifacts/Internal.fs" />

@@ -5,61 +5,11 @@ open System.Text
 open System.Text.Json
 open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Artifacts.SchemaVersion
+open FS.GG.SDD.Artifacts.Json.JsonWriters
 open FS.GG.SDD.Commands.CommandTypes
 
 module CommandSerialization =
     module DiagnosticsModule = FS.GG.SDD.Artifacts.Diagnostics
-
-    let writeStringList (writer: Utf8JsonWriter) (name: string) (values: string list) =
-        writer.WriteStartArray(name)
-        values |> List.sort |> List.iter (fun value -> writer.WriteStringValue(value: string))
-        writer.WriteEndArray()
-
-    let writeSourceDigest (writer: Utf8JsonWriter) (name: string) (digest: SourceDigest option) =
-        match digest with
-        | Some digest ->
-            writer.WriteStartObject(name)
-            writer.WriteString("algorithm", digest.Algorithm)
-            writer.WriteString("value", digest.Value)
-            writer.WriteEndObject()
-        | None -> writer.WriteNull name
-
-    let writeOutputDigest (writer: Utf8JsonWriter) (name: string) (digest: OutputDigest option) =
-        match digest with
-        | Some digest ->
-            writer.WriteStartObject(name)
-            writer.WriteString("algorithm", digest.Algorithm)
-            writer.WriteString("value", digest.Value)
-            writer.WriteEndObject()
-        | None -> writer.WriteNull name
-
-    let writeLocation (writer: Utf8JsonWriter) (location: SourceLocation option) =
-        match location with
-        | Some location ->
-            writer.WriteStartObject("location")
-            match location.Line with
-            | Some line -> writer.WriteNumber("line", line)
-            | None -> writer.WriteNull "line"
-            match location.Column with
-            | Some column -> writer.WriteNumber("column", column)
-            | None -> writer.WriteNull "column"
-            writer.WriteEndObject()
-        | None -> writer.WriteNull "location"
-
-    let writeDiagnostic (writer: Utf8JsonWriter) (diagnostic: Diagnostic) =
-        writer.WriteStartObject()
-        writer.WriteString("id", diagnostic.Id)
-        writer.WriteString("severity", DiagnosticsModule.severityValue diagnostic.Severity)
-
-        match diagnostic.Artifact with
-        | Some artifact -> writer.WriteString("artifact", artifact.Path)
-        | None -> writer.WriteNull "artifact"
-
-        writeLocation writer diagnostic.Location
-        writer.WriteString("message", diagnostic.Message)
-        writer.WriteString("correction", diagnostic.Correction)
-        writeStringList writer "relatedIds" diagnostic.RelatedIds
-        writer.WriteEndObject()
 
     let writeChange (writer: Utf8JsonWriter) (change: ArtifactChange) =
         writer.WriteStartObject()
@@ -70,7 +20,7 @@ module CommandSerialization =
         writeSourceDigest writer "beforeDigest" change.BeforeDigest
         writeSourceDigest writer "afterDigest" change.AfterDigest
         writer.WriteString("safeWriteDecision", change.SafeWriteDecision)
-        writeStringList writer "diagnosticIds" change.DiagnosticIds
+        writeStringList writer Sorted "diagnosticIds" change.DiagnosticIds
         writer.WriteEndObject()
 
     let writeSpecification (writer: Utf8JsonWriter) (summary: SpecificationSummary option) =
@@ -80,10 +30,10 @@ module CommandSerialization =
             writer.WriteString("workId", summary.WorkId)
             writer.WriteString("stage", summary.Stage)
             writer.WriteString("status", summary.Status)
-            writeStringList writer "storyIds" summary.StoryIds
-            writeStringList writer "requirementIds" summary.RequirementIds
-            writeStringList writer "acceptanceScenarioIds" summary.AcceptanceScenarioIds
-            writeStringList writer "ambiguityIds" summary.AmbiguityIds
+            writeStringList writer Sorted "storyIds" summary.StoryIds
+            writeStringList writer Sorted "requirementIds" summary.RequirementIds
+            writeStringList writer Sorted "acceptanceScenarioIds" summary.AcceptanceScenarioIds
+            writeStringList writer Sorted "ambiguityIds" summary.AmbiguityIds
             writer.WriteNumber("unresolvedAmbiguityCount", summary.UnresolvedAmbiguityCount)
             writer.WriteEndObject()
         | None -> writer.WriteNull "specification"
@@ -96,10 +46,10 @@ module CommandSerialization =
             writer.WriteString("stage", summary.Stage)
             writer.WriteString("status", summary.Status)
             writer.WriteString("sourceSpec", summary.SourceSpec)
-            writeStringList writer "questionIds" summary.QuestionIds
-            writeStringList writer "answeredQuestionIds" summary.AnsweredQuestionIds
-            writeStringList writer "decisionIds" summary.DecisionIds
-            writeStringList writer "acceptedDeferralIds" summary.AcceptedDeferralIds
+            writeStringList writer Sorted "questionIds" summary.QuestionIds
+            writeStringList writer Sorted "answeredQuestionIds" summary.AnsweredQuestionIds
+            writeStringList writer Sorted "decisionIds" summary.DecisionIds
+            writeStringList writer Sorted "acceptedDeferralIds" summary.AcceptedDeferralIds
             writer.WriteNumber("remainingAmbiguityCount", summary.RemainingAmbiguityCount)
             writer.WriteNumber("blockingAmbiguityCount", summary.BlockingAmbiguityCount)
             writer.WriteEndObject()
@@ -114,8 +64,8 @@ module CommandSerialization =
             writer.WriteString("status", summary.Status)
             writer.WriteString("sourceSpec", summary.SourceSpec)
             writer.WriteString("sourceClarifications", summary.SourceClarifications)
-            writeStringList writer "itemIds" summary.ItemIds
-            writeStringList writer "resultIds" summary.ResultIds
+            writeStringList writer Sorted "itemIds" summary.ItemIds
+            writeStringList writer Sorted "resultIds" summary.ResultIds
             writer.WriteNumber("passedCount", summary.PassedCount)
             writer.WriteNumber("failedBlockingCount", summary.FailedBlockingCount)
             writer.WriteNumber("acceptedDeferralCount", summary.AcceptedDeferralCount)
@@ -134,11 +84,11 @@ module CommandSerialization =
             writer.WriteString("sourceSpec", summary.SourceSpec)
             writer.WriteString("sourceClarifications", summary.SourceClarifications)
             writer.WriteString("sourceChecklist", summary.SourceChecklist)
-            writeStringList writer "decisionIds" summary.DecisionIds
-            writeStringList writer "contractReferenceIds" summary.ContractReferenceIds
-            writeStringList writer "verificationObligationIds" summary.VerificationObligationIds
-            writeStringList writer "migrationNoteIds" summary.MigrationNoteIds
-            writeStringList writer "generatedViewImpactIds" summary.GeneratedViewImpactIds
+            writeStringList writer Sorted "decisionIds" summary.DecisionIds
+            writeStringList writer Sorted "contractReferenceIds" summary.ContractReferenceIds
+            writeStringList writer Sorted "verificationObligationIds" summary.VerificationObligationIds
+            writeStringList writer Sorted "migrationNoteIds" summary.MigrationNoteIds
+            writeStringList writer Sorted "generatedViewImpactIds" summary.GeneratedViewImpactIds
             writer.WriteNumber("acceptedDeferralCount", summary.AcceptedDeferralCount)
             writer.WriteNumber("staleDecisionCount", summary.StaleDecisionCount)
             writer.WriteNumber("blockingFindingCount", summary.BlockingFindingCount)
@@ -157,7 +107,7 @@ module CommandSerialization =
             writer.WriteString("sourceClarifications", summary.SourceClarifications)
             writer.WriteString("sourceChecklist", summary.SourceChecklist)
             writer.WriteString("sourcePlan", summary.SourcePlan)
-            writeStringList writer "taskIds" summary.TaskIds
+            writeStringList writer Sorted "taskIds" summary.TaskIds
             writer.WriteNumber("dependencyCount", summary.DependencyCount)
             writer.WriteNumber("requiredSkillCount", summary.RequiredSkillCount)
             writer.WriteNumber("requiredEvidenceCount", summary.RequiredEvidenceCount)
@@ -203,7 +153,7 @@ module CommandSerialization =
             writer.WriteString("stage", summary.Stage)
             writer.WriteString("status", summary.Status)
             writer.WriteString("evidencePath", summary.EvidencePath)
-            writeStringList writer "declarationIds" summary.DeclarationIds
+            writeStringList writer Sorted "declarationIds" summary.DeclarationIds
             writer.WriteNumber("declarationCount", summary.DeclarationCount)
             writer.WriteNumber("obligationCount", summary.ObligationCount)
             writer.WriteNumber("supportedCount", summary.SupportedCount)
@@ -227,7 +177,7 @@ module CommandSerialization =
             writer.WriteString("stage", summary.Stage)
             writer.WriteString("status", summary.Status)
             writer.WriteString("verifyPath", summary.VerifyPath)
-            writeStringList writer "findingIds" summary.FindingIds
+            writeStringList writer Sorted "findingIds" summary.FindingIds
             writer.WriteNumber("readyFindingCount", summary.ReadyFindingCount)
             writer.WriteNumber("advisoryCount", summary.AdvisoryCount)
             writer.WriteNumber("warningCount", summary.WarningCount)
@@ -259,7 +209,7 @@ module CommandSerialization =
             writer.WriteString("stage", summary.Stage)
             writer.WriteString("status", summary.Status)
             writer.WriteString("shipPath", summary.ShipPath)
-            writeStringList writer "findingIds" summary.FindingIds
+            writeStringList writer Sorted "findingIds" summary.FindingIds
             writer.WriteNumber("readyFindingCount", summary.ReadyFindingCount)
             writer.WriteNumber("advisoryCount", summary.AdvisoryCount)
             writer.WriteNumber("warningCount", summary.WarningCount)
@@ -290,17 +240,17 @@ module CommandSerialization =
             writer.WriteString("workId", summary.WorkId)
             writer.WriteString("stage", summary.Stage)
             writer.WriteString("status", summary.Status)
-            writeStringList writer "generatedRoots" summary.GeneratedRoots
-            writeStringList writer "generatedTargetIds" summary.GeneratedTargetIds
-            writeStringList writer "refusedTargetIds" summary.RefusedTargetIds
-            writeStringList writer "findingIds" summary.FindingIds
+            writeStringList writer Sorted "generatedRoots" summary.GeneratedRoots
+            writeStringList writer Sorted "generatedTargetIds" summary.GeneratedTargetIds
+            writeStringList writer Sorted "refusedTargetIds" summary.RefusedTargetIds
+            writeStringList writer Sorted "findingIds" summary.FindingIds
             writer.WriteNumber("readyFindingCount", summary.ReadyFindingCount)
             writer.WriteNumber("advisoryCount", summary.AdvisoryCount)
             writer.WriteNumber("warningCount", summary.WarningCount)
             writer.WriteNumber("blockingCount", summary.BlockingCount)
             writer.WriteString("disposition", summary.Disposition)
             writer.WriteBoolean("equivalenceRequired", summary.EquivalenceRequired)
-            writeStringList writer "divergentTargetIds" summary.DivergentTargetIds
+            writeStringList writer Sorted "divergentTargetIds" summary.DivergentTargetIds
             writer.WriteString("generatedViewState", summary.GeneratedViewState)
             writer.WriteNumber("sourceSnapshotCount", summary.SourceSnapshotCount)
             writer.WriteString("readiness", summary.Readiness)
@@ -315,12 +265,12 @@ module CommandSerialization =
             writer.WriteString("stage", summary.Stage)
             writer.WriteString("status", summary.Status)
             writer.WriteString("summaryPath", summary.SummaryPath)
-            writeStringList writer "refreshedViewIds" summary.RefreshedViewIds
-            writeStringList writer "alreadyCurrentViewIds" summary.AlreadyCurrentViewIds
-            writeStringList writer "blockedViewIds" summary.BlockedViewIds
-            writeStringList writer "notApplicableViewIds" summary.NotApplicableViewIds
-            writeStringList writer "preservedAuthoredPaths" summary.PreservedAuthoredPaths
-            writeStringList writer "findingIds" summary.FindingIds
+            writeStringList writer Sorted "refreshedViewIds" summary.RefreshedViewIds
+            writeStringList writer Sorted "alreadyCurrentViewIds" summary.AlreadyCurrentViewIds
+            writeStringList writer Sorted "blockedViewIds" summary.BlockedViewIds
+            writeStringList writer Sorted "notApplicableViewIds" summary.NotApplicableViewIds
+            writeStringList writer Sorted "preservedAuthoredPaths" summary.PreservedAuthoredPaths
+            writeStringList writer Sorted "findingIds" summary.FindingIds
             writer.WriteNumber("advisoryCount", summary.AdvisoryCount)
             writer.WriteNumber("warningCount", summary.WarningCount)
             writer.WriteNumber("blockingCount", summary.BlockingCount)
@@ -372,7 +322,7 @@ module CommandSerialization =
         writer.WriteEndArray()
         writeOutputDigest writer "outputDigest" view.OutputDigest
         writer.WriteString("currency", generatedViewCurrencyValue view.Currency)
-        writeStringList writer "diagnosticIds" view.DiagnosticIds
+        writeStringList writer Sorted "diagnosticIds" view.DiagnosticIds
         writer.WriteEndObject()
 
     let writeGovernanceFact (writer: Utf8JsonWriter) (fact: GovernanceCompatibilityFact) =
@@ -381,7 +331,7 @@ module CommandSerialization =
         writer.WriteString("relationship", fact.Relationship)
         writer.WriteBoolean("requiredBySdd", fact.RequiredBySdd)
         writer.WriteString("state", fact.State)
-        writeStringList writer "diagnosticIds" fact.DiagnosticIds
+        writeStringList writer Sorted "diagnosticIds" fact.DiagnosticIds
         writer.WriteEndObject()
 
     let writeNextAction (writer: Utf8JsonWriter) (nextAction: NextAction option) =
@@ -396,8 +346,8 @@ module CommandSerialization =
             | Some workId -> writer.WriteString("workId", workId)
             | None -> writer.WriteNull "workId"
             writer.WriteString("reason", action.Reason)
-            writeStringList writer "requiredArtifacts" action.RequiredArtifacts
-            writeStringList writer "blockingDiagnosticIds" action.BlockingDiagnosticIds
+            writeStringList writer Sorted "requiredArtifacts" action.RequiredArtifacts
+            writeStringList writer Sorted "blockingDiagnosticIds" action.BlockingDiagnosticIds
             writer.WriteEndObject()
         | None -> writer.WriteNull "nextAction"
 
@@ -444,7 +394,7 @@ module CommandSerialization =
         report.GeneratedViews |> List.sortBy (fun view -> view.Path) |> List.iter (writeGeneratedView writer)
         writer.WriteEndArray()
         writer.WriteStartArray("diagnostics")
-        report.Diagnostics |> DiagnosticsModule.sort |> List.iter (writeDiagnostic writer)
+        report.Diagnostics |> DiagnosticsModule.sort |> List.iter (writeDiagnostic writer Sorted)
         writer.WriteEndArray()
         writer.WriteStartArray("governanceCompatibility")
         report.GovernanceCompatibility |> List.sortBy (fun fact -> fact.Path) |> List.iter (writeGovernanceFact writer)
