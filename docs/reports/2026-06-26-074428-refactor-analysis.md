@@ -317,9 +317,10 @@ input, thread the `Result` to a diagnostic instead of throwing.
 
 Progress markers (status legend, matching
 `docs/initial-implementation-plan.md`): 🟢 / ✅ complete · 🟡 in progress
-(started; not landed) · 🔴 not started · ⬜ optional / deferred. As of
-2026-06-26 every row is 🔴 — this is the analysis baseline; update the
-marker as each refactor lands and link its evidence (PR / spec readiness).
+(started; not landed) · 🔴 not started · ⬜ optional / deferred. The
+2026-06-26 analysis baseline started every row at 🔴; **R3 has since landed**
+(see below). Update the marker as each refactor lands and link its evidence
+(PR / spec readiness).
 
 Suggested sequence: **R3 → R4 → R1 → R2** (structure first so the handler
 extraction has somewhere to live), then **R5**, then the low-risk
@@ -331,7 +332,7 @@ deterministic JSON output.
 |---|---|---|---|---|---|---|---|
 | R1 | 🔴 | Extract prerequisite combinator + `runHandler` shell | §5.1 | High | M–L | Low | Shrinks god module, kills handler copy-paste |
 | R2 | 🔴 | Split `CommandWorkflow.fs` into facade + internal modules | §1.1 | High | M | Very low (7-line `.fsi`) | Navigability |
-| R3 | 🔴 | Split `LifecycleArtifacts.fs` per artifact family | §1.2 | High | M | Very low | Navigability, localizes §3/§4 |
+| R3 | ✅ | Split `LifecycleArtifacts.fs` per artifact family | §1.2 | High | M | Very low | Navigability, localizes §3/§4 |
 | R4 | 🔴 | Extract `parseJsonView`, making the 4 matches total | §5.3 §4 | Med | S | Low | Removes latent runtime throw + ~70 LOC |
 | R5 | 🔴 | Centralize JSON null-access helpers, then enable `WarningsAsErrors` | §3 | Med | M | Low | Clears ~290 warnings, prevents regression |
 | R6 | 🔴 | Collapse diagnostic builder + unify serializers | §5.2 §5.4 | Med | S | Low | ~90 LOC, one shape |
@@ -347,9 +348,15 @@ deterministic JSON output.
   is a facade over internal `Prerequisites` / `Parsing` / `Handlers` /
   `ViewRendering` modules and no single file exceeds ~1,500 lines; `.fsi`
   unchanged (`init`/`update`).
-- 🔴 **R3 — split `LifecycleArtifacts.fs`.** Not started. Done when each
-  artifact family lives in its own file under `LifecycleArtifacts/` and the
-  722-line `.fsi` contract is unchanged.
+- ✅ **R3 — split `LifecycleArtifacts.fs`.** Landed via
+  `specs/022-split-lifecycle-artifacts/`. Each artifact family now lives in its
+  own `[<AutoOpen>]` module file under `src/FS.GG.SDD.Artifacts/LifecycleArtifacts/`
+  (largest 389 lines, down from 3,161), fronted by a shared `Internal` helper
+  module and `Core` types module, with `WorkItem` aggregating last. The monolith
+  `LifecycleArtifacts.fs`/`.fsi` are removed; the public member set is preserved
+  (per-family `.fsi` slices, surface baseline regenerated for the module-qualifier
+  rename only), all 437 tests pass, and the 290 FS3261/4 FS0025 warning sites
+  relocated unchanged (concentrating in `Analysis.fs`/`Verify.fs`/`Ship.fs`).
 - 🔴 **R4 — `parseJsonView` + total matches.** Not started. Done when the 4
   view parsers route through one `parseJsonView` and `dotnet build` emits
   zero FS0025.

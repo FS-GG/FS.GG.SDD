@@ -43,11 +43,11 @@ publicOrToolFacingImpact: true
     let snapshot text =
         ({ Path = "work/006-clarify-command/clarifications.md"
            Text = text }
-        : LifecycleArtifacts.FileSnapshot)
+        : FileSnapshot)
 
     [<Fact>]
     let ``Clarification parser extracts front matter questions decisions deferrals and remaining ambiguity`` () =
-        match LifecycleArtifacts.parseClarificationFacts (snapshot clarificationText) with
+        match parseClarificationFacts (snapshot clarificationText) with
         | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
         | Ok facts ->
             Assert.Equal("006-clarify-command", facts.FrontMatter.WorkId.Value)
@@ -66,7 +66,7 @@ publicOrToolFacingImpact: true
                 .Replace("- CQ-001 [AMB:AMB-001]", "- CQ-001 [AMB:AMB-001]\n- CQ-001 [AMB:AMB-001]")
                 .Replace("- DEC-001 [CQ-001]", "- DEC-001 [CQ-001]\n- DEC-001 [CQ-001]")
 
-        match LifecycleArtifacts.parseClarificationFacts (snapshot broken) with
+        match parseClarificationFacts (snapshot broken) with
         | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
         | Ok facts ->
             let ids = facts.Diagnostics |> List.map _.Id
@@ -76,7 +76,7 @@ publicOrToolFacingImpact: true
     let ``Clarification parser diagnoses unsupported schema versions`` () =
         let broken = clarificationText.Replace("schemaVersion: 1", "schemaVersion: 2")
 
-        match LifecycleArtifacts.parseClarificationFacts (snapshot broken) with
+        match parseClarificationFacts (snapshot broken) with
         | Ok _ -> failwith "Unsupported schema version should block parsing."
         | Error diagnostics ->
             Assert.Contains(diagnostics, fun diagnostic -> diagnostic.Id = "unsupportedSchemaVersion")

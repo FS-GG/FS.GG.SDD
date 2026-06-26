@@ -29,14 +29,14 @@ module TestSupport =
         let root = fixtureDirectory name
 
         Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
-        |> Seq.map (fun path -> ({ Path = relativePath root path; Text = File.ReadAllText path } : LifecycleArtifacts.FileSnapshot))
+        |> Seq.map (fun path -> ({ Path = relativePath root path; Text = File.ReadAllText path } : FileSnapshot))
         |> Seq.toList
 
     let normalizedSnapshots name =
         let root = normalizedFixtureDirectory name
 
         Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
-        |> Seq.map (fun path -> ({ Path = relativePath root path; Text = File.ReadAllText path } : LifecycleArtifacts.FileSnapshot))
+        |> Seq.map (fun path -> ({ Path = relativePath root path; Text = File.ReadAllText path } : FileSnapshot))
         |> Seq.toList
 
     let snapshot name path =

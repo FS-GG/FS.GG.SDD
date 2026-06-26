@@ -63,11 +63,11 @@ No blocking planning findings recorded.
     let snapshot text =
         ({ Path = "work/008-plan-command/plan.md"
            Text = text }
-        : LifecycleArtifacts.FileSnapshot)
+        : FileSnapshot)
 
     [<Fact>]
     let ``Plan parser extracts front matter snapshots ids deferrals and stale counts`` () =
-        match LifecycleArtifacts.parsePlanFacts (snapshot planText) with
+        match parsePlanFacts (snapshot planText) with
         | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
         | Ok facts ->
             Assert.Equal("008-plan-command", facts.FrontMatter.WorkId.Value)
@@ -86,7 +86,7 @@ No blocking planning findings recorded.
     let ``Plan parser reports duplicate plan ids`` () =
         let broken = planText.Replace("- PD-001 [FR-001]", "- PD-001 [FR-001]\n- PD-001 [FR-001]")
 
-        match LifecycleArtifacts.parsePlanFacts (snapshot broken) with
+        match parsePlanFacts (snapshot broken) with
         | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
         | Ok facts ->
             Assert.Contains(facts.Diagnostics, fun diagnostic -> diagnostic.Id = "duplicateIdentifier")
@@ -95,7 +95,7 @@ No blocking planning findings recorded.
     let ``Plan parser diagnoses unsupported schema versions`` () =
         let broken = planText.Replace("schemaVersion: 1", "schemaVersion: 2")
 
-        match LifecycleArtifacts.parsePlanFacts (snapshot broken) with
+        match parsePlanFacts (snapshot broken) with
         | Ok _ -> failwith "Unsupported schema version should block parsing."
         | Error diagnostics ->
             Assert.Contains(diagnostics, fun diagnostic -> diagnostic.Id = "unsupportedSchemaVersion")

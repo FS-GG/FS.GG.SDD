@@ -49,7 +49,7 @@ No material ambiguities recorded.
 
     let snapshot text =
         ({ Path = "work/005-specify-command/spec.md"
-           Text = text } : LifecycleArtifacts.FileSnapshot)
+           Text = text } : FileSnapshot)
 
     [<Fact>]
     let ``Specification scoped ids validate expected shapes`` () =
@@ -61,7 +61,7 @@ No material ambiguities recorded.
 
     [<Fact>]
     let ``Specification parser extracts front matter sections ids and references`` () =
-        match LifecycleArtifacts.parseSpecificationFacts (snapshot specificationText) with
+        match parseSpecificationFacts (snapshot specificationText) with
         | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
         | Ok facts ->
             Assert.Equal("005-specify-command", facts.FrontMatter.WorkId.Value)
@@ -83,7 +83,7 @@ No material ambiguities recorded.
                 "- US-001 (P1): Create a work specification.\n- US-001 (P1): Duplicate story.")
                 .Replace("Stories: US-001; Acceptance: AC-001", "Stories: US-999; Acceptance: AC-999")
 
-        match LifecycleArtifacts.parseSpecificationFacts (snapshot broken) with
+        match parseSpecificationFacts (snapshot broken) with
         | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
         | Ok facts ->
             let ids = facts.Diagnostics |> List.map _.Id

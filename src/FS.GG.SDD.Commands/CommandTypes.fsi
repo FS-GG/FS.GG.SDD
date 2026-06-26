@@ -1,7 +1,7 @@
 namespace FS.GG.SDD.Commands
 
 open FS.GG.SDD.Artifacts.Diagnostics
-open FS.GG.SDD.Artifacts.LifecycleArtifacts
+open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Artifacts.SchemaVersion
 
 module CommandTypes =

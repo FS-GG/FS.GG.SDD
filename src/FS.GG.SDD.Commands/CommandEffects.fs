@@ -2,7 +2,7 @@ namespace FS.GG.SDD.Commands
 
 open System
 open System.IO
-open FS.GG.SDD.Artifacts.LifecycleArtifacts
+open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 

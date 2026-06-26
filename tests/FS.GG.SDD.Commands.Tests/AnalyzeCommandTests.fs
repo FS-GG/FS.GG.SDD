@@ -1,7 +1,7 @@
 namespace FS.GG.SDD.Commands.Tests
 
 open System.Diagnostics
-open FS.GG.SDD.Artifacts.LifecycleArtifacts
+open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.CommandRendering
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes

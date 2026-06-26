@@ -7,13 +7,13 @@ open System.Text.RegularExpressions
 open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Artifacts.GenerationManifest
-open FS.GG.SDD.Artifacts.LifecycleArtifacts
+open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Artifacts.SchemaVersion
 open FS.GG.SDD.Artifacts.WorkModel
 
 module Serialization =
     let normalizeSnapshotsToWorkModel snapshots workId =
-        LifecycleArtifacts.loadWorkItemFromSnapshots snapshots workId
+        loadWorkItemFromSnapshots snapshots workId
         |> WorkModel.fromParsedWorkItem
 
     let writeStringList (writer: Utf8JsonWriter) (name: string) (values: string list) =
@@ -277,7 +277,7 @@ module Serialization =
             GeneratedViews = [ { manifest with Currency = currency; Diagnostics = diagnostics } ] }
 
     let generateWorkModel request =
-        let parsed = LifecycleArtifacts.loadWorkItemFromSnapshots request.Snapshots request.WorkId
+        let parsed = loadWorkItemFromSnapshots request.Snapshots request.WorkId
         let outputPath = request.ExpectedOutputPath |> Option.defaultValue (GenerationManifest.expectedWorkModelOutputPath request.WorkId)
         let model = parsed |> WorkModel.fromParsedWorkItem |> applyGeneratedView outputPath request.GeneratorVersion None CurrencyCurrent []
         let jsonWithoutDigest = serializeWorkModel model
@@ -326,7 +326,7 @@ module Serialization =
         | None -> false
 
     let checkGeneratedWorkModelCurrency snapshots workId generatorVersion =
-        let parsed = LifecycleArtifacts.loadWorkItemFromSnapshots snapshots workId
+        let parsed = loadWorkItemFromSnapshots snapshots workId
         let outputPath = GenerationManifest.expectedWorkModelOutputPath workId
         let artifact = generatedViewArtifact outputPath
 

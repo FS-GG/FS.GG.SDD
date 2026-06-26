@@ -9,7 +9,7 @@ open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Artifacts.GenerationManifest
 open FS.GG.SDD.Artifacts.Identifiers
-open FS.GG.SDD.Artifacts.LifecycleArtifacts
+open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Artifacts.SchemaVersion
 open FS.GG.SDD.Artifacts.Serialization
 open FS.GG.SDD.Artifacts.WorkModel
@@ -21,7 +21,6 @@ module CommandWorkflow =
     module GenerationManifestModule = FS.GG.SDD.Artifacts.GenerationManifest
     module GovernanceHandoffModule = FS.GG.SDD.Artifacts.GovernanceHandoff
     module IdentifiersModule = FS.GG.SDD.Artifacts.Identifiers
-    module LifecycleArtifactsModule = FS.GG.SDD.Artifacts.LifecycleArtifacts
     module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
     module SerializationModule = FS.GG.SDD.Artifacts.Serialization
     module WorkModelModule = FS.GG.SDD.Artifacts.WorkModel
@@ -730,7 +729,7 @@ Prose status: specified
         let normalized = (if isNull text then "" else text).Replace("\r\n", "\n")
 
         let missing =
-            LifecycleArtifactsModule.specificationStandardSections ()
+            specificationStandardSections ()
             |> List.filter (fun heading -> not (hasSection heading normalized))
 
         if List.isEmpty missing then
@@ -760,7 +759,7 @@ Prose status: specified
                 | Ok frontMatter when String.Equals(frontMatter.WorkId, workId, StringComparison.OrdinalIgnoreCase) -> Some snapshot.Path
                 | _ -> None
             elif snapshot.Path.EndsWith("/spec.md", StringComparison.OrdinalIgnoreCase) then
-                match LifecycleArtifactsModule.parseWorkItemMetadata snapshot with
+                match parseWorkItemMetadata snapshot with
                 | Ok metadata when String.Equals(metadata.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase) -> Some snapshot.Path
                 | _ -> None
             else
@@ -785,21 +784,21 @@ Prose status: specified
             let malformed =
                 [ match project with
                   | Some snapshot ->
-                      match LifecycleArtifactsModule.parseProjectConfig snapshot with
+                      match parseProjectConfig snapshot with
                       | Ok _ -> ()
                       | Error _ -> yield malformedProjectConfig snapshot.Path
                   | None -> ()
 
                   match sdd with
                   | Some snapshot ->
-                      match LifecycleArtifactsModule.parseSddLifecyclePolicy snapshot with
+                      match parseSddLifecyclePolicy snapshot with
                       | Ok _ -> ()
                       | Error _ -> yield malformedSddConfig snapshot.Path
                   | None -> ()
 
                   match agents with
                   | Some snapshot ->
-                      match LifecycleArtifactsModule.parseAgentGuidanceConfig snapshot with
+                      match parseAgentGuidanceConfig snapshot with
                       | Ok _ -> ()
                       | Error _ -> yield malformedAgentsConfig snapshot.Path
                   | None -> () ]
@@ -862,7 +861,7 @@ Prose status: specified
     let parseSpecificationForCommand path text : Result<SpecificationFacts * Diagnostic list, Diagnostic list> =
         let snapshot = { Path = path; Text = text }
 
-        match LifecycleArtifactsModule.parseSpecificationFacts snapshot with
+        match parseSpecificationFacts snapshot with
         | Error diagnostics -> Error(mapSpecificationDiagnostics path diagnostics)
         | Ok facts ->
             let diagnostics = mapSpecificationDiagnostics path facts.Diagnostics
@@ -971,7 +970,7 @@ Prose status: specified
         let normalized = (if isNull text then "" else text).Replace("\r\n", "\n")
 
         let missing =
-            LifecycleArtifactsModule.clarificationStandardSections ()
+            clarificationStandardSections ()
             |> List.filter (fun heading -> not (hasSection heading normalized))
 
         if List.isEmpty missing then
@@ -1028,7 +1027,7 @@ Prose status: specified
     let parseClarificationForCommand path text : Result<ClarificationFacts * Diagnostic list, Diagnostic list> =
         let snapshot = { Path = path; Text = text }
 
-        match LifecycleArtifactsModule.parseClarificationFacts snapshot with
+        match parseClarificationFacts snapshot with
         | Error diagnostics -> Error(mapClarificationDiagnostics path diagnostics)
         | Ok facts ->
             let diagnostics = mapClarificationDiagnostics path facts.Diagnostics
@@ -1485,7 +1484,7 @@ publicOrToolFacingImpact: true
         let normalized = (if isNull text then "" else text).Replace("\r\n", "\n")
 
         let missing =
-            LifecycleArtifactsModule.checklistStandardSections ()
+            checklistStandardSections ()
             |> List.filter (fun heading -> not (hasSection heading normalized))
 
         if List.isEmpty missing then
@@ -1526,7 +1525,7 @@ publicOrToolFacingImpact: true
     let parseChecklistForCommand path text : Result<ChecklistFacts * Diagnostic list, Diagnostic list> =
         let snapshot = { Path = path; Text = text }
 
-        match LifecycleArtifactsModule.parseChecklistFacts snapshot with
+        match parseChecklistFacts snapshot with
         | Error diagnostics -> Error(mapChecklistDiagnostics path diagnostics)
         | Ok facts ->
             let diagnostics = mapChecklistDiagnostics path facts.Diagnostics
@@ -1940,7 +1939,7 @@ Prose status: {status}
         let normalized = (if isNull text then "" else text).Replace("\r\n", "\n")
 
         let missing =
-            LifecycleArtifactsModule.planStandardSections ()
+            planStandardSections ()
             |> List.filter (fun heading -> not (hasSection heading normalized))
 
         if List.isEmpty missing then
@@ -1982,7 +1981,7 @@ Prose status: {status}
     let parsePlanForCommand path text : Result<PlanFacts * Diagnostic list, Diagnostic list> =
         let snapshot = { Path = path; Text = text }
 
-        match LifecycleArtifactsModule.parsePlanFacts snapshot with
+        match parsePlanFacts snapshot with
         | Error diagnostics -> Error(mapPlanDiagnostics path diagnostics)
         | Ok facts ->
             let diagnostics = mapPlanDiagnostics path facts.Diagnostics
@@ -2466,7 +2465,7 @@ No blocking planning findings recorded.
     let parseTasksForCommand path text : Result<TaskFacts * Diagnostic list, Diagnostic list> =
         let snapshot = { Path = path; Text = text }
 
-        match LifecycleArtifactsModule.parseTaskFacts snapshot with
+        match parseTaskFacts snapshot with
         | Error diagnostics -> Error(diagnostics |> List.map (fun diagnostic -> malformedTasksArtifact path diagnostic.Message))
         | Ok facts ->
             let diagnostics =
@@ -2944,7 +2943,7 @@ tasks:
         match snapshot (evidencePath workId) model with
         | None -> [], []
         | Some snapshot ->
-            match LifecycleArtifactsModule.parseEvidence snapshot with
+            match parseEvidence snapshot with
             | Ok evidence -> evidence, []
             | Error diagnostics -> [], diagnostics
 
@@ -3506,7 +3505,7 @@ tasks:
         match snapshot path model with
         | None -> None
         | Some existing ->
-            match LifecycleArtifactsModule.parseAnalysisView existing with
+            match parseAnalysisView existing with
             | Error diagnostics ->
                 diagnostics
                 |> List.tryHead
@@ -4140,7 +4139,7 @@ tasks:
         match snapshot path model with
         | None -> [ missingAnalysisPrerequisite path $"Analysis prerequisite '{path}' is missing." ], None, None
         | Some existing ->
-            match LifecycleArtifactsModule.parseAnalysisView existing with
+            match parseAnalysisView existing with
             | Error diagnostics ->
                 diagnostics |> List.map (fun diagnostic -> malformedAnalysisView path diagnostic.Message), Some existing.Text, None
             | Ok view when not (String.Equals(view.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) ->
@@ -4161,7 +4160,7 @@ tasks:
             | _ -> diagnostic)
 
     let parseEvidenceArtifactForCommand path text : Result<EvidenceArtifact * Diagnostic list, Diagnostic list> =
-        match LifecycleArtifactsModule.parseEvidenceArtifact { Path = path; Text = text } with
+        match parseEvidenceArtifact { Path = path; Text = text } with
         | Ok artifact -> Ok(artifact, mapEvidenceDiagnostics path artifact.Diagnostics)
         | Error diagnostics -> Error(mapEvidenceDiagnostics path diagnostics)
 
@@ -4904,7 +4903,7 @@ sourceAnalysis: {analysisPath workId}
         match snapshot path model with
         | None -> None
         | Some existing ->
-            match LifecycleArtifactsModule.parseVerificationView existing with
+            match parseVerificationView existing with
             | Error diagnostics ->
                 diagnostics
                 |> List.tryHead
@@ -5449,7 +5448,7 @@ sourceAnalysis: {analysisPath workId}
         match snapshot path model with
         | None -> None
         | Some existing ->
-            match LifecycleArtifactsModule.parseShipView existing with
+            match parseShipView existing with
             | Error diagnostics ->
                 diagnostics
                 |> List.tryHead
@@ -5464,7 +5463,7 @@ sourceAnalysis: {analysisPath workId}
         match snapshot path model with
         | None -> [ missingVerificationPrerequisite path $"Verification prerequisite '{path}' is missing." ], None
         | Some existing ->
-            match LifecycleArtifactsModule.parseVerificationView existing with
+            match parseVerificationView existing with
             | Error diagnostics -> (diagnostics |> List.map (fun diagnostic -> malformedVerificationView path diagnostic.Message)), None
             | Ok view when not (String.Equals(view.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) ->
                 [ verifyIdentityMismatch path workId view.WorkId.Value ], Some view
@@ -5843,7 +5842,7 @@ sourceAnalysis: {analysisPath workId}
     let agentsConfigOpt model =
         match snapshot ".fsgg/agents.yml" model with
         | Some snap ->
-            match LifecycleArtifactsModule.parseAgentGuidanceConfig snap with
+            match parseAgentGuidanceConfig snap with
             | Ok config -> Some config
             | Error _ -> None
         | None -> None
@@ -6080,7 +6079,7 @@ sourceAnalysis: {analysisPath workId}
                             match snapshot guidancePath model with
                             | None -> GeneratedViewCurrency.Missing, [], false
                             | Some existing ->
-                                match LifecycleArtifactsModule.parseGeneratedAgentGuidance existing with
+                                match parseGeneratedAgentGuidance existing with
                                 | Error errs ->
                                     let message = errs |> List.tryHead |> Option.map (fun diagnostic -> diagnostic.Message) |> Option.defaultValue "Generated agent guidance is malformed."
                                     GeneratedViewCurrency.Malformed, [ agentsMalformedGeneratedGuidance guidancePath message ], false

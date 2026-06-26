@@ -2,7 +2,7 @@ namespace FS.GG.SDD.Commands.Tests
 
 open System.Diagnostics
 open System.IO
-open FS.GG.SDD.Artifacts.LifecycleArtifacts
+open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
 open Xunit

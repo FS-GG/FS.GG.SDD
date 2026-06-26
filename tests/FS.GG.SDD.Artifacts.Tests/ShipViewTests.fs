@@ -1,6 +1,6 @@
 namespace FS.GG.SDD.Artifacts.Tests
 
-open FS.GG.SDD.Artifacts.LifecycleArtifacts
+open FS.GG.SDD.Artifacts
 open Xunit
 
 module ShipViewTests =

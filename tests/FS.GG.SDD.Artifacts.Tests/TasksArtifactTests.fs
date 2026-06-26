@@ -62,11 +62,11 @@ lifecycleNotes:
     let snapshot text =
         ({ Path = "work/009-tasks-command/tasks.yml"
            Text = text }
-        : LifecycleArtifacts.FileSnapshot)
+        : FileSnapshot)
 
     [<Fact>]
     let ``Task parser extracts root metadata sources graph links and readiness counts`` () =
-        match LifecycleArtifacts.parseTaskFacts (snapshot taskText) with
+        match parseTaskFacts (snapshot taskText) with
         | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
         | Ok facts ->
             Assert.Equal("009-tasks-command", facts.FrontMatter.WorkId.Value)
@@ -97,7 +97,7 @@ tasks:
     requiredEvidence: []
 """
 
-        match LifecycleArtifacts.parseTaskFacts (snapshot minimal) with
+        match parseTaskFacts (snapshot minimal) with
         | Error diagnostics -> failwith $"Minimal v1 tasks should parse: {diagnostics}"
         | Ok facts ->
             Assert.Equal("009-tasks-command", facts.FrontMatter.WorkId.Value)
@@ -108,7 +108,7 @@ tasks:
     let ``Task parser reports duplicate task ids`` () =
         let broken = taskText.Replace("id: T002", "id: T001")
 
-        match LifecycleArtifacts.parseTaskFacts (snapshot broken) with
+        match parseTaskFacts (snapshot broken) with
         | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
         | Ok facts ->
             Assert.Contains(facts.Diagnostics, fun diagnostic -> diagnostic.Id = "workModelInconsistent")
@@ -117,7 +117,7 @@ tasks:
     let ``Task parser diagnoses unsupported schema versions`` () =
         let broken = taskText.Replace("schemaVersion: 1", "schemaVersion: 2")
 
-        match LifecycleArtifacts.parseTaskFacts (snapshot broken) with
+        match parseTaskFacts (snapshot broken) with
         | Ok _ -> failwith "Unsupported schema version should block parsing."
         | Error diagnostics ->
             Assert.Contains(diagnostics, fun diagnostic -> diagnostic.Id = "unsupportedSchemaVersion")

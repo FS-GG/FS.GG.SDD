@@ -55,11 +55,11 @@ No blocking findings recorded.
     let snapshot text =
         ({ Path = "work/007-checklist-command/checklist.md"
            Text = text }
-        : LifecycleArtifacts.FileSnapshot)
+        : FileSnapshot)
 
     [<Fact>]
     let ``Checklist parser extracts front matter snapshots items results deferrals and stale counts`` () =
-        match LifecycleArtifacts.parseChecklistFacts (snapshot checklistText) with
+        match parseChecklistFacts (snapshot checklistText) with
         | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
         | Ok facts ->
             Assert.Equal("007-checklist-command", facts.FrontMatter.WorkId.Value)
@@ -78,7 +78,7 @@ No blocking findings recorded.
                 .Replace("- CHK-001 [FR-001]", "- CHK-001 [FR-001]\n- CHK-001 [FR-001]")
                 .Replace("- CR-001 [CHK:CHK-001]", "- CR-001 [CHK:CHK-001]\n- CR-001 [CHK:CHK-001]")
 
-        match LifecycleArtifacts.parseChecklistFacts (snapshot broken) with
+        match parseChecklistFacts (snapshot broken) with
         | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
         | Ok facts ->
             let ids = facts.Diagnostics |> List.map _.Id
@@ -88,7 +88,7 @@ No blocking findings recorded.
     let ``Checklist parser diagnoses unsupported schema versions`` () =
         let broken = checklistText.Replace("schemaVersion: 1", "schemaVersion: 2")
 
-        match LifecycleArtifacts.parseChecklistFacts (snapshot broken) with
+        match parseChecklistFacts (snapshot broken) with
         | Ok _ -> failwith "Unsupported schema version should block parsing."
         | Error diagnostics ->
             Assert.Contains(diagnostics, fun diagnostic -> diagnostic.Id = "unsupportedSchemaVersion")
@@ -97,7 +97,7 @@ No blocking findings recorded.
     let ``Checklist parser diagnoses results that reference unknown checklist items`` () =
         let broken = checklistText.Replace("[CHK:CHK-001]", "[CHK:CHK-999]")
 
-        match LifecycleArtifacts.parseChecklistFacts (snapshot broken) with
+        match parseChecklistFacts (snapshot broken) with
         | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
         | Ok facts ->
             Assert.Contains(facts.Diagnostics, fun diagnostic -> diagnostic.Id = "unknownReference")

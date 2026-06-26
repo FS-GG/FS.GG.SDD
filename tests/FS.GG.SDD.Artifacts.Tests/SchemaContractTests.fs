@@ -10,19 +10,19 @@ module SchemaContractTests =
         let sdd = TestSupport.snapshot "valid-work-item" ".fsgg/sdd.yml"
         let agents = TestSupport.snapshot "valid-work-item" ".fsgg/agents.yml"
 
-        match LifecycleArtifacts.parseProjectConfig project with
+        match parseProjectConfig project with
         | Ok config ->
             Assert.Equal("fs-gg-sdd", config.ProjectId)
             Assert.Equal(Some ".fsgg/policy.yml", config.GovernancePolicyPath)
         | Error diagnostics -> failwith $"Project config failed: {diagnostics}"
 
-        match LifecycleArtifacts.parseSddLifecyclePolicy sdd with
+        match parseSddLifecyclePolicy sdd with
         | Ok config ->
             Assert.True(config.RequireSourceDigests)
             Assert.Equal("diagnostic", config.StaleBehavior)
         | Error diagnostics -> failwith $"SDD config failed: {diagnostics}"
 
-        match LifecycleArtifacts.parseAgentGuidanceConfig agents with
+        match parseAgentGuidanceConfig agents with
         | Ok config ->
             Assert.Contains(config.Targets, fun target -> target.Id = "claude")
             Assert.Contains(config.Targets, fun target -> target.Id = "codex")
@@ -31,7 +31,7 @@ module SchemaContractTests =
 
     [<Fact>]
     let ``Artifact inventory covers each SDD lifecycle source and generated view`` () =
-        let contracts = LifecycleArtifacts.standardArtifactContracts ()
+        let contracts = standardArtifactContracts ()
         let paths = contracts |> List.map (fun contract -> contract.Artifact.Path)
 
         Assert.Contains(".fsgg/project.yml", paths)
@@ -51,8 +51,8 @@ module SchemaContractTests =
 
     [<Fact>]
     let ``Malformed schema fixture emits malformed and unsupported schema diagnostics`` () =
-        let project = LifecycleArtifacts.parseProjectConfig (TestSupport.snapshot "malformed-schema-version" ".fsgg/project.yml")
-        let sdd = LifecycleArtifacts.parseSddLifecyclePolicy (TestSupport.snapshot "malformed-schema-version" ".fsgg/sdd.yml")
+        let project = parseProjectConfig (TestSupport.snapshot "malformed-schema-version" ".fsgg/project.yml")
+        let sdd = parseSddLifecyclePolicy (TestSupport.snapshot "malformed-schema-version" ".fsgg/sdd.yml")
 
         let projectIds =
             match project with
