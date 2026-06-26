@@ -324,9 +324,14 @@ Progress markers (status legend, matching
 
 Suggested sequence: **R3 → R4 → R1 → R2** (structure first so the handler
 extraction has somewhere to live), then **R5**, then the low-risk
-**R6 / R7** cleanups. Each row is independently shippable, guarded by the
-existing 437-test suite, and changes no public `.fsi` contract or
-deterministic JSON output.
+**R6 / R7** cleanups. Each row is independently shippable and guarded by the
+existing 437-test suite. R1/R2/R4–R7 additionally hold the public `.fsi`
+contract and deterministic JSON output byte-stable. **R3 was shipped under a
+relaxed gate** (stakeholder decision recorded in
+`specs/022-split-lifecycle-artifacts/plan.md`): because there are **no external
+consumers**, the single binding criterion is **the existing test suite passes** —
+the per-family module-qualifier `.fsi` reshape (and its surface-baseline regen)
+is permitted, and byte-identical artifact output is not separately required.
 
 | ID | Status | Refactor | Refs | Severity | Effort | Risk | Payoff |
 |---|---|---|---|---|---|---|---|
@@ -349,14 +354,20 @@ deterministic JSON output.
   `ViewRendering` modules and no single file exceeds ~1,500 lines; `.fsi`
   unchanged (`init`/`update`).
 - ✅ **R3 — split `LifecycleArtifacts.fs`.** Landed via
-  `specs/022-split-lifecycle-artifacts/`. Each artifact family now lives in its
-  own `[<AutoOpen>]` module file under `src/FS.GG.SDD.Artifacts/LifecycleArtifacts/`
-  (largest 389 lines, down from 3,161), fronted by a shared `Internal` helper
-  module and `Core` types module, with `WorkItem` aggregating last. The monolith
-  `LifecycleArtifacts.fs`/`.fsi` are removed; the public member set is preserved
-  (per-family `.fsi` slices, surface baseline regenerated for the module-qualifier
-  rename only), all 437 tests pass, and the 290 FS3261/4 FS0025 warning sites
-  relocated unchanged (concentrating in `Analysis.fs`/`Verify.fs`/`Ship.fs`).
+  `specs/022-split-lifecycle-artifacts/`. **Gate (relaxed):** the original
+  "722-line `.fsi` contract is unchanged" criterion was dropped during planning —
+  with no external consumers, the binding gate is **build + the existing 437-test
+  suite pass**, and byte-identical output is not separately required (plan.md
+  stakeholder decisions overriding FR-002/FR-003/FR-005). **Done:** each artifact
+  family now lives in its own `[<AutoOpen>]` module file under
+  `src/FS.GG.SDD.Artifacts/LifecycleArtifacts/` (largest 389 lines, down from
+  3,161), fronted by a shared `Internal` helper module and `Core` types module,
+  with `WorkItem` aggregating last. The monolith `LifecycleArtifacts.fs`/`.fsi`
+  are removed; the aggregate public **member set** is preserved (the 722-line
+  `.fsi` sliced per family; the surface baseline was regenerated for the
+  module-qualifier rename only — member names unchanged). All 437 tests pass, and
+  the 290 FS3261 / 4 FS0025 warning sites relocated unchanged (concentrating in
+  `Analysis.fs`/`Verify.fs`/`Ship.fs`).
 - 🔴 **R4 — `parseJsonView` + total matches.** Not started. Done when the 4
   view parsers route through one `parseJsonView` and `dotnet build` emits
   zero FS0025.
