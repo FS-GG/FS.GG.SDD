@@ -1,0 +1,2 @@
+lifecycle=LIFECYCLE_VALUE
+productName=PRODUCT_NAME

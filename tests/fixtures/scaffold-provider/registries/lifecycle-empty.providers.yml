@@ -1,0 +1,12 @@
+# New fixture (not a reuse of `empty/`): `dotnet new` rejects an undeclared
+# `-p:lifecycle`, so the empty-product edge needs a template that declares the
+# `lifecycle` symbol yet materializes no files. See tasks T007.
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-lifecycle-empty
+    source: __FIXTURE__/lifecycle-empty
+    parameters:
+      - key: lifecycle
+        required: false

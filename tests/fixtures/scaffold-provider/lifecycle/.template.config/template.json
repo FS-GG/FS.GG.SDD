@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "FS.GG.SDD scaffold fixtures",
+  "classifications": [ "Test" ],
+  "identity": "FsggSdd.Fixture.Lifecycle",
+  "name": "FS.GG.SDD scaffold fixture (lifecycle recording)",
+  "shortName": "fsgg-fixture-lifecycle",
+  "tags": { "language": "F#", "type": "project" },
+  "symbols": {
+    "productName": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "PRODUCT_NAME",
+      "defaultValue": "Product"
+    },
+    "lifecycle": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "LIFECYCLE_VALUE"
+    }
+  }
+}

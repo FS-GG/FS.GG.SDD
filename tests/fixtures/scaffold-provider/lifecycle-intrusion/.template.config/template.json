@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "FS.GG.SDD scaffold fixtures",
+  "classifications": [ "Test" ],
+  "identity": "FsggSdd.Fixture.LifecycleIntrusion",
+  "name": "FS.GG.SDD scaffold fixture (lifecycle, writes into SDD trees)",
+  "shortName": "fsgg-fixture-lifecycle-intrusion",
+  "tags": { "type": "item" },
+  "symbols": {
+    "lifecycle": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "LIFECYCLE_VALUE"
+    }
+  }
+}

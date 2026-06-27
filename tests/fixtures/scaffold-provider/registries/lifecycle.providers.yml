@@ -1,0 +1,11 @@
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-lifecycle
+    source: __FIXTURE__/lifecycle
+    parameters:
+      - key: productName
+        required: true
+      - key: lifecycle
+        required: false

@@ -172,10 +172,15 @@ module internal HandlersScaffold =
         // process drives the outcome.
         let updateEffect = RunProcess("dotnet", [ "new"; "update" ], "")
 
+        // `dotnet new` exposes each declared template symbol as a `--<symbol>` option;
+        // it has no MSBuild-style `-p:k=v` passthrough (in SDK 10 `-p` is merely the
+        // auto-generated short alias of the first parameter, so `-p:k=v` is mis-parsed
+        // as that option's value). Forward each effective param as a verbatim
+        // `--<key> <value>` pair so the author's value reaches the child unchanged.
         let parameterArgs =
             effective
             |> Map.toList
-            |> List.collect (fun (key, value) -> [ $"-p:{key}={value}" ])
+            |> List.collect (fun (key, value) -> [ $"--{key}"; value ])
 
         let createArgs =
             [ "new"; descriptor.TemplateId; "-o"; "." ]
@@ -193,7 +198,7 @@ module internal HandlersScaffold =
         let parameters =
             effective
             |> Map.toList
-            |> List.map (fun (key, value) -> $"-p:{key}={value}")
+            |> List.map (fun (key, value) -> $"--{key} {value}")
             |> String.concat " "
 
         let parameterSegment = if parameters = "" then "" else " " + parameters

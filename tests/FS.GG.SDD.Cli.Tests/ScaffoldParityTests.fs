@@ -56,3 +56,30 @@ module ScaffoldParityTests =
         Assert.Contains("\"producedPaths\"", json)
         Assert.Contains("scaffoldProducedPath: App.fsproj", text)
         Assert.Contains("App.fsproj", rich)
+
+    // 031 T019 (FR-006 / US2.4): the app-only produced-path facts of a lifecycle=sdd
+    // run (including the recording manifest) are identical across json/text/rich, and
+    // the rich projection adds and drops no JSON byte.
+    [<Fact>]
+    let ``scaffold lifecycle produced-path facts are identical across json text and rich`` () =
+        let lifecycleProducedPaths = [ "App.fsproj"; "Program.fs"; "scaffold-manifest.txt" ]
+        let lifecycleReport: CommandReport =
+            { report with
+                Scaffold =
+                    Some
+                        { scaffoldSummary with
+                            ProducedPathCount = lifecycleProducedPaths.Length
+                            ProducedPaths = lifecycleProducedPaths } }
+
+        // Rich is a pure projection: it changes no JSON byte.
+        let before = serializeReport lifecycleReport
+        resolve Rich interactiveColor lifecycleReport |> ignore
+        Assert.Equal(before, serializeReport lifecycleReport)
+
+        let json = (resolve Json interactiveColor lifecycleReport).Text
+        let text = (resolve Text nonInteractive lifecycleReport).Text
+        let rich = (resolve Rich interactiveColor lifecycleReport).Text
+
+        for path in lifecycleProducedPaths do
+            for projection in [ json; text; rich ] do
+                Assert.Contains(path, projection)
