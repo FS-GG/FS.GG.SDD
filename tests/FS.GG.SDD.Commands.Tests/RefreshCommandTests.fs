@@ -99,6 +99,51 @@ module RefreshCommandTests =
         Assert.Contains("\"refresh\"", json)
         Assert.Contains("\"perViewState\"", json)
 
+    // --- 033 US3: the seeded constitution behaves like authored content ---
+
+    let private editedConstitution =
+        "# Our Ratified Constitution\n\nProject-specific principles ratified by this team.\n"
+
+    // T010 (US3-AC1 / FR-008): an author-edited .fsgg/constitution.md survives a re-init
+    // under the same no-clobber policy as the other authored skeleton files; the report
+    // records it refused, not overwritten.
+    [<Fact>]
+    let ``re-init preserves an author-edited constitution`` () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.request Init root |> TestSupport.runRequest |> ignore
+        TestSupport.writeRelative root ".fsgg/constitution.md" editedConstitution
+
+        let report = TestSupport.request Init root |> TestSupport.runRequest
+
+        Assert.Equal(editedConstitution, TestSupport.readRelative root ".fsgg/constitution.md")
+        let change =
+            report.ChangedArtifacts
+            |> List.tryFind (fun c -> c.Path = ".fsgg/constitution.md")
+            |> Option.defaultWith (fun () -> failwith "Expected a changed-artifact entry for the constitution.")
+        Assert.Equal(ArtifactOperation.Refuse, change.Operation)
+        Assert.Equal("refused", change.SafeWriteDecision)
+
+    // T010 (US3-AC2 / FR-009/SC-004): refresh leaves an author-modified constitution
+    // byte-unchanged and never reports it as a generated view, a blocked view, or a
+    // generatedProduct path.
+    [<Fact>]
+    let ``refresh leaves the author-modified constitution untouched`` () =
+        let root = TestSupport.tempDirectory ()
+        let wid = "033-constitution-demo"
+        TestSupport.request Init root |> TestSupport.runRequest |> ignore
+        TestSupport.writeValidWorkSources root wid "Constitution demo"
+        TestSupport.writeRelative root ".fsgg/constitution.md" editedConstitution
+
+        let report = TestSupport.runRefresh root wid
+
+        Assert.Equal(editedConstitution, TestSupport.readRelative root ".fsgg/constitution.md")
+        Assert.DoesNotContain(report.GeneratedViews, fun v -> v.Path = ".fsgg/constitution.md")
+        match report.Refresh with
+        | Some summary ->
+            Assert.DoesNotContain(".fsgg/constitution.md", summary.RefreshedViewIds)
+            Assert.DoesNotContain(".fsgg/constitution.md", summary.BlockedViewIds)
+        | None -> failwith "Expected a refresh summary."
+
     // --- User Story 2: detect stale / unrefreshable views ---
 
     [<Fact>]

@@ -12,6 +12,11 @@ Core boundary:
 - FS.GG.SDD owns lifecycle artifacts, including declared `evidence.yml`
   evidence, normalized work models, generated SDD views, lifecycle CLI
   contracts, and agent command/skill generation.
+- `fsgg-sdd init` seeds the SDD skeleton, which includes an authored
+  `.fsgg/constitution.md` lifecycle constitution — generic, deterministic, and
+  no-clobber on re-run (same policy as `CLAUDE.md`/`AGENTS.md`). Scaffold delivers
+  it via the reused `init` effects; it is never app-only `generatedProduct`
+  provenance and `refresh` never regenerates it.
 - `fsgg-sdd evidence` owns declared authored evidence and SDD readiness
   summaries; `fsgg-sdd verify` evaluates SDD-owned verification readiness over
   task/evidence/test/skill obligations, emits `readiness/<id>/verify.json`, and
@@ -99,5 +104,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/032-scaffold-repo-init-chmod/plan.md
+at specs/033-skeleton-constitution/plan.md
 <!-- SPECKIT END -->

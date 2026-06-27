@@ -23,6 +23,21 @@ module CommandWorkflowTests =
             | WriteFile(".fsgg/project.yml", _, StructuredSource) -> true
             | _ -> false)
 
+    // T004 (033 US1, plan-level clarity / init-emission.md): initEffects plans the
+    // constitution write as an authored agent-guidance target.
+    [<Fact>]
+    let ``init plans the constitution write as an agent-guidance target`` () =
+        let root = TestSupport.tempDirectory()
+        let request = TestSupport.request Init root
+
+        let model, effects = init request
+
+        Assert.Empty(model.Diagnostics)
+        Assert.Contains(effects, fun effect ->
+            match effect with
+            | WriteFile(".fsgg/constitution.md", _, AgentGuidanceTarget) -> true
+            | _ -> false)
+
     [<Fact>]
     let ``unsupported lifecycle command builds blocked report without write effects`` () =
         let root = TestSupport.tempDirectory()

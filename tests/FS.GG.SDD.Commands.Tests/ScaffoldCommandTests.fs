@@ -901,3 +901,83 @@ module ScaffoldCommandTests =
         Assert.False(gitDirExists root)
         Assert.Contains("scaffold.providerWroteSddTree", diagnosticIds report)
         Assert.Equal(2, exitCodeForReport report)
+
+    // ===================================================================
+    // 033 — the SDD skeleton's .fsgg/constitution.md rides the reused init
+    // effects onto the scaffold path, but is never app-only provenance.
+    // Real `dotnet new` + filesystem over the public scaffold surface.
+    // ===================================================================
+
+    /// The `generatedProduct` path set recorded in .fsgg/scaffold-provenance.json.
+    let private provenanceGeneratedProductPaths root : string list =
+        let json = TestSupport.readRelative root provenancePath
+        use doc = System.Text.Json.JsonDocument.Parse json
+        let str (element: System.Text.Json.JsonElement) (name: string) =
+            match element.GetProperty(name).GetString() with
+            | null -> ""
+            | value -> value
+        [ for entry in doc.RootElement.GetProperty("producedPaths").EnumerateArray() do
+            if str entry "owner" = "generatedProduct" then
+                str entry "path" ]
+
+    // T008 (US2-AC1 / FR-004): scaffold with lifecycle=sdd delivers the constitution
+    // via the reused init skeleton; the report attributes it as the SDD skeleton's
+    // authored agent-guidance artifact, not the provider's generatedProduct.
+    [<Fact>]
+    let ``scaffold delivers the constitution via the reused init skeleton`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "lifecycle.providers.yml"
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false)
+
+        Assert.True(TestSupport.existsRelative root ".fsgg/constitution.md")
+        let change =
+            report.ChangedArtifacts
+            |> List.tryFind (fun c -> c.Path = ".fsgg/constitution.md")
+            |> Option.defaultWith (fun () -> failwith "Expected a changed-artifact entry for the constitution.")
+        Assert.Equal("agentGuidance", change.Kind)
+        Assert.Equal("authored", change.Ownership)
+        Assert.NotEqual("generatedProduct", change.Ownership)
+
+    // T008 (US2-AC2 / FR-005/SC-002): the constitution is absent from the app-only
+    // generatedProduct paths in scaffold-provenance.json.
+    [<Fact>]
+    let ``scaffold provenance excludes the constitution from generatedProduct`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "lifecycle.providers.yml"
+        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false)
+        |> ignore
+
+        Assert.DoesNotContain(".fsgg/constitution.md", provenanceGeneratedProductPaths root)
+
+    // T008 (Edge / FR-004): the constitution rides the always-run init effects, so a
+    // NON-sdd lifecycle param still produces it — emission is not gated on the provider's
+    // lifecycle parameter.
+    [<Fact>]
+    let ``scaffold emits the constitution under a non-sdd lifecycle param`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "lifecycle.providers.yml"
+        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "spec-kit" ] false false)
+        |> ignore
+
+        Assert.True(TestSupport.existsRelative root ".fsgg/constitution.md")
+        Assert.DoesNotContain(".fsgg/constitution.md", provenanceGeneratedProductPaths root)
+
+    // T009 (FR-006/SC-005): the init skeleton path set grew by EXACTLY one entry —
+    // .fsgg/constitution.md — relative to the established skeleton. Asserted by removing
+    // the constitution from the current skeleton set and comparing to the prior set.
+    [<Fact>]
+    let ``init skeleton set grew by exactly the constitution`` () =
+        let initRoot = TestSupport.tempDirectory ()
+        TestSupport.initializeProject initRoot
+        let currentSkeleton = relativeFiles initRoot |> Set.ofList
+
+        // The established (pre-033) skeleton: the .fsgg configs, the two agent-guidance
+        // targets, and (since 032) the .git the scaffold path adds is excluded by
+        // relativeFiles. init itself writes no .git, so this is the init skeleton set.
+        let establishedSkeleton =
+            Set.ofList
+                [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml"; "AGENTS.md"; "CLAUDE.md" ]
+
+        Assert.Contains(".fsgg/constitution.md", currentSkeleton)
+        Assert.Equal<Set<string>>(establishedSkeleton, Set.remove ".fsgg/constitution.md" currentSkeleton)

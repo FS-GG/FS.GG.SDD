@@ -12,6 +12,10 @@ Use this skill for work in the FS.GG.SDD repository.
 - FS.GG.SDD owns the lifecycle product: charter, specify, clarify, checklist,
   plan, tasks, analyze, evidence declarations, normalized work model, generated
   SDD views, and agent command/skill generation.
+- `fsgg-sdd init` seeds the SDD skeleton, including an authored
+  `.fsgg/constitution.md` lifecycle constitution — generic, deterministic, and
+  no-clobber on re-run. Scaffold delivers it via the reused `init` effects; it is
+  never app-only `generatedProduct` provenance and `refresh` never regenerates it.
 - FS.GG.Governance owns rule evaluation, evidence freshness, routing, profiles,
   and gate enforcement.
 - FS.GG.Rendering is a possible customer, not the shape of this repository.
