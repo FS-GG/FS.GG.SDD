@@ -49,6 +49,18 @@ module ScaffoldGuardTests =
         |> List.map (fun relative -> Path.Combine(testsRoot, relative.Replace('/', Path.DirectorySeparatorChar)))
         |> List.filter File.Exists
 
+    /// 034 (T021 / FR-009): the opt-in composition-acceptance project must be provably free of
+    /// any rendering package id / template id / path / docs URL — the real provider identity
+    /// lives only in the external registry, never in the acceptance code.
+    let private acceptanceProjectFiles () =
+        let acceptanceRoot =
+            Path.Combine(TestSupport.repoRoot, "tests", "FS.GG.SDD.Acceptance.Tests")
+
+        if Directory.Exists acceptanceRoot then
+            Directory.EnumerateFiles(acceptanceRoot, "*.fs", SearchOption.AllDirectories) |> Seq.toList
+        else
+            []
+
     /// C2 scope: the curated scaffold-source union — `HandlersScaffold.fs` plus the
     /// projection files that render the scaffold report. NOT repo-wide (research Decision 9).
     let private scaffoldSourceFiles () =
@@ -71,6 +83,11 @@ module ScaffoldGuardTests =
     let ``generic scaffold contract tests contain no provider-specific identifiers`` () =
         let found = scanFiles forbiddenTokens (genericContractTestFiles ())
         Assert.True(List.isEmpty found, "Provider-specific tokens leaked into generic-contract tests: " + String.Join("; ", found))
+
+    [<Fact>]
+    let ``composition-acceptance project contains no provider-specific identifiers`` () =
+        let found = scanFiles forbiddenTokens (acceptanceProjectFiles ())
+        Assert.True(List.isEmpty found, "Provider-specific tokens leaked into the composition-acceptance project: " + String.Join("; ", found))
 
     // ---------- C2 (T021): scoped lifecycle-value scan ----------
 

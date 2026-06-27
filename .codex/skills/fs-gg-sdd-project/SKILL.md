@@ -96,7 +96,11 @@ instantiation, scaffold itself owns two generic post-instantiation steps —
 initializing a git repository at the product root (skipped non-fatally inside an
 existing work tree or when git is absent) and setting the executable bit on each
 produced `.sh` script — reported in all three projections, never delegated to the
-provider.
+provider. The real-provider composition acceptance (`tests/FS.GG.SDD.Acceptance.Tests`)
+is opt-in and network-gated — it drives the real published provider only when
+`FSGG_SDD_ACCEPTANCE_REGISTRY` is set, stays out of the default offline inner loop, and
+emits a deterministic `composition-acceptance-result` v1 verdict (a declared
+release-catalog exception, not a lifecycle artifact).
 
 ## First Feature Bias
 

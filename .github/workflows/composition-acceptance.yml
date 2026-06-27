@@ -1,0 +1,48 @@
+name: composition-acceptance
+
+# The opt-in, network-gated real-provider composition acceptance (feature 034). It is
+# separate from the offline inner loop: it runs only on a schedule or on manual dispatch,
+# with FSGG_SDD_ACCEPTANCE_REGISTRY pointing at the external author-supplied registry that
+# resolves the real published rendering template. Generic SDD carries no rendering identity;
+# the real template is reached only through this registry (FR-009 / FR-010).
+
+on:
+  schedule:
+    # Nightly at 04:17 UTC (off-peak; avoids the top-of-hour stampede).
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+    inputs:
+      registry_path:
+        description: "Optional path to a checked-out registry file; overrides the secret."
+        required: false
+        type: string
+
+jobs:
+  composition-acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Materialize the external provider registry
+        env:
+          REGISTRY_CONTENT: ${{ secrets.FSGG_SDD_ACCEPTANCE_REGISTRY }}
+          REGISTRY_PATH_INPUT: ${{ inputs.registry_path }}
+        run: |
+          set -euo pipefail
+          if [ -n "${REGISTRY_PATH_INPUT:-}" ]; then
+            echo "FSGG_SDD_ACCEPTANCE_REGISTRY=${REGISTRY_PATH_INPUT}" >> "$GITHUB_ENV"
+          elif [ -n "${REGISTRY_CONTENT:-}" ]; then
+            mkdir -p "${RUNNER_TEMP}/fsgg"
+            printf '%s' "${REGISTRY_CONTENT}" > "${RUNNER_TEMP}/fsgg/providers.yml"
+            echo "FSGG_SDD_ACCEPTANCE_REGISTRY=${RUNNER_TEMP}/fsgg/providers.yml" >> "$GITHUB_ENV"
+          else
+            echo "::error::No registry provided (set the FSGG_SDD_ACCEPTANCE_REGISTRY secret or pass registry_path)."
+            exit 1
+          fi
+
+      - name: Run the composition acceptance
+        run: dotnet test FS.GG.SDD.sln --filter "kind=composition-acceptance"

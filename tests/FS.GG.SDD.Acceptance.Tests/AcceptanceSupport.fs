@@ -1,0 +1,313 @@
+namespace FS.GG.SDD.Acceptance.Tests
+
+open System
+open System.Diagnostics
+open System.IO
+open FS.GG.SDD.Commands.CommandEffects
+open FS.GG.SDD.Commands.CommandReports
+open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Commands.CommandWorkflow
+open Xunit
+
+/// Shared, network-gated harness for the real-provider composition acceptance. It carries
+/// NO rendering package id / template id / path / docs URL (FR-009): the real provider
+/// identity is reached only through the external registry named by
+/// `FSGG_SDD_ACCEPTANCE_REGISTRY` and copied verbatim into the product's `.fsgg/`.
+module AcceptanceSupport =
+    module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
+
+    let rec findRepoRoot (directory: DirectoryInfo) =
+        if File.Exists(Path.Combine(directory.FullName, "FS.GG.SDD.sln")) then
+            directory.FullName
+        else
+            match directory.Parent with
+            | null -> failwith "Could not locate repository root."
+            | parent -> findRepoRoot parent
+
+    let repoRoot = findRepoRoot (DirectoryInfo AppContext.BaseDirectory)
+
+    // ---------- T003: env gating + run scaffolding ----------
+
+    let registryEnvVar = "FSGG_SDD_ACCEPTANCE_REGISTRY"
+    let resultPathEnvVar = "FSGG_SDD_ACCEPTANCE_RESULT_PATH"
+
+    /// Dynamically skip the current fact (xUnit v2 dynamic skip): `SkipException.ForSkip`
+    /// produces the runner's dynamic-skip token, reported as Skipped — not passed, not failed.
+    let skipTest (reason: string) : 'a = raise (Xunit.Sdk.SkipException.ForSkip reason)
+
+    /// The external registry path, when the gating env var is set to a non-empty value.
+    let registryPath () =
+        Environment.GetEnvironmentVariable registryEnvVar
+        |> Option.ofObj
+        |> Option.map (fun value -> value.Trim())
+        |> Option.filter (fun value -> value <> "")
+
+    /// The offline-inner-loop guard: when the registry env is unset/empty the call SKIPs (it
+    /// raises the xUnit `SkipException`), so no network is touched. Returns the resolved
+    /// registry path when present. (Discovery-time gating is done by `RequiresRegistryFact`
+    /// below; this guard protects any direct call site.)
+    let requireRegistry () =
+        match registryPath () with
+        | Some path when File.Exists path -> path
+        | Some path -> skipTest $"{registryEnvVar} points to a missing file: {path}"
+        | None -> skipTest $"{registryEnvVar} is unset; the composition acceptance is opt-in and network-gated."
+
+    /// A `[<Fact>]` that is **statically skipped at discovery** when the registry env is
+    /// unset/empty, so the default offline `dotnet test` reports the network-gated facts as
+    /// Skipped and stays green (contracts/acceptance-protocol.md §Gating). Discovery-time
+    /// static skip is used because the pinned v3-era VSTest adapter does not convert xUnit v2's
+    /// dynamic-skip token to a Skipped result. The scheduled workflow sets the env, so the same
+    /// facts run there.
+    type RequiresRegistryFactAttribute() as this =
+        inherit Xunit.FactAttribute()
+
+        do
+            match registryPath () with
+            | Some path when File.Exists path -> ()
+            | _ -> this.Skip <- $"{registryEnvVar} is unset; the composition acceptance is opt-in and network-gated."
+
+    /// A fresh, empty product root for one run (temp dir, sensed — never compared).
+    let newProductRoot () =
+        let path = Path.Combine(Path.GetTempPath(), "fsgg-sdd-acceptance-" + Guid.NewGuid().ToString("N"))
+        Directory.CreateDirectory path |> ignore
+        path
+
+    /// Copy the external registry file into `<root>/.fsgg/providers.yml` verbatim. The
+    /// registry is the only channel carrying the real template identity; it is never
+    /// committed to this repo.
+    let copyRegistry (registry: string) (root: string) =
+        let target = Path.Combine(root, ".fsgg", "providers.yml")
+
+        match Path.GetDirectoryName target with
+        | null -> ()
+        | directory -> Directory.CreateDirectory directory |> ignore
+
+        File.Copy(registry, target, true)
+
+    let writeRelative (root: string) (path: string) (text: string) =
+        let absolute = Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar))
+
+        match Path.GetDirectoryName absolute with
+        | null -> ()
+        | directory -> Directory.CreateDirectory directory |> ignore
+
+        File.WriteAllText(absolute, text)
+
+    let existsRelative (root: string) (path: string) =
+        File.Exists(Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar)))
+
+    let readRelative (root: string) (path: string) =
+        File.ReadAllText(Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar)))
+
+    // ---------- T004: in-process driver over the real provider ----------
+
+    /// A neutral command request (mirrors `FS.GG.SDD.Commands.Tests.TestSupport.request`).
+    let request (command: SddCommand) (root: string) =
+        { Command = command
+          ProjectRoot = root
+          WorkId = None
+          Title = None
+          InputText = None
+          OutputFormat = Json
+          DryRun = false
+          OverwritePolicy = RefuseUnsafe
+          GeneratorVersion = SchemaVersionModule.currentGeneratorVersion ()
+          Provider = None
+          Parameters = []
+          Force = false
+          TemplateUpdate = true }
+
+    /// The acceptance's fixed composition request: `--provider rendering --param
+    /// lifecycle=sdd`. `rendering` is the author-supplied provider *name* (a generic
+    /// token, not an identifier); the real template identity lives only in the registry.
+    let scaffoldRequest (root: string) =
+        { request Scaffold root with
+            Provider = Some "rendering"
+            Parameters = [ "lifecycle", "sdd" ] }
+
+    /// Drive the `init`→…→Scaffold MVU loop to quiescence and return the `--json`
+    /// `CommandReport` (mirrors `TestSupport.runRequest`).
+    let runRequest request =
+        let model, effects = init request
+
+        let rec interpretUntilIdle state pending =
+            match pending with
+            | [] -> state
+            | effects ->
+                let results = interpretAll request.ProjectRoot request.DryRun effects
+
+                let nextState, nextEffects =
+                    results
+                    |> List.fold
+                        (fun (currentState, accumulatedEffects) result ->
+                            let updatedState, producedEffects = update (EffectInterpreted result) currentState
+                            updatedState, accumulatedEffects @ producedEffects)
+                        (state, [])
+
+                interpretUntilIdle nextState nextEffects
+
+        let finalModel =
+            interpretUntilIdle model effects
+            |> fun state -> update BuildReport state |> fst
+
+        finalModel.Report |> Option.defaultWith (fun () -> buildReport finalModel)
+
+    /// Run the real composition scaffold over the registry already copied into `root`.
+    let runScaffold (root: string) = scaffoldRequest root |> runRequest
+
+    /// The scaffold summary, or a failure if the report carried none.
+    let scaffoldSummary (report: CommandReport) =
+        report.Scaffold |> Option.defaultWith (fun () -> failwith "Expected a scaffold summary.")
+
+    /// All diagnostic ids surfaced on the report.
+    let diagnosticIds (report: CommandReport) =
+        report.Diagnostics |> List.map (fun diagnostic -> diagnostic.Id)
+
+    /// The first `scaffold.*` diagnostic code on the report, when present — the
+    /// discriminator the verdict resolution keys on alongside the outcome.
+    let scaffoldDiagnostic (report: CommandReport) =
+        report.Diagnostics
+        |> List.map (fun diagnostic -> diagnostic.Id)
+        |> List.tryFind (fun id -> id.StartsWith("scaffold.", StringComparison.Ordinal))
+
+    // ---------- T005: process-shell probes at the test edge ----------
+
+    /// The outcome of a `dotnet`/`git` probe at the test edge: the exit code, whether the
+    /// process started at all, and a surfaced diagnostic for `failure.diagnostic`.
+    type ProbeResult =
+        { Started: bool
+          ExitCode: int
+          Diagnostic: string }
+
+    let private startProcess (fileName: string) (args: string list) (workingDir: string) =
+        let info =
+            ProcessStartInfo(
+                FileName = fileName,
+                WorkingDirectory = workingDir,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false)
+
+        args |> List.iter info.ArgumentList.Add
+
+        try
+            Process.Start info |> Option.ofObj
+        with _ ->
+            None
+
+    /// Run a process to completion under `timeoutMs`; a hung process is killed and reported
+    /// as a non-zero, timed-out probe (so it fails rather than hangs).
+    let private runToCompletion (fileName: string) (args: string list) (workingDir: string) (timeoutMs: int) =
+        match startProcess fileName args workingDir with
+        | None -> { Started = false; ExitCode = -1; Diagnostic = $"could not start `{fileName}`." }
+        | Some started ->
+            use proc = started
+            let stdout = proc.StandardOutput.ReadToEndAsync()
+            let stderr = proc.StandardError.ReadToEndAsync()
+
+            if proc.WaitForExit timeoutMs then
+                let surfaced = (stderr.Result + stdout.Result).Trim()
+
+                { Started = true
+                  ExitCode = proc.ExitCode
+                  Diagnostic = (if proc.ExitCode = 0 then "" else surfaced) }
+            else
+                (try proc.Kill true with _ -> ())
+                { Started = true
+                  ExitCode = -1
+                  Diagnostic = $"`{fileName}` timed out after {timeoutMs} ms." }
+
+    /// `dotnet build` over the produced product (300 s timeout — research D6).
+    let buildProbe (root: string) = runToCompletion "dotnet" [ "build" ] root 300_000
+
+    /// A headless, bounded run smoke (research D6, contracts/acceptance-protocol.md §run
+    /// probe): launch the already-built app with `dotnet run --no-build`, require it to
+    /// either exit 0 within the grace window or survive the grace window without a non-zero
+    /// exit (it started and did not crash), then terminate it. Overall cap 60 s so a hung
+    /// app fails rather than hangs.
+    let runProbe (root: string) =
+        let graceMs = 10_000
+        let overallMs = 60_000
+
+        match startProcess "dotnet" [ "run"; "--no-build" ] root with
+        | None -> { Started = false; ExitCode = -1; Diagnostic = "could not start `dotnet run`." }
+        | Some started ->
+            use proc = started
+            let stdout = proc.StandardOutput.ReadToEndAsync()
+            let stderr = proc.StandardError.ReadToEndAsync()
+
+            if proc.WaitForExit graceMs then
+                // Exited within the grace window: pass iff it exited cleanly.
+                let surfaced = (stderr.Result + stdout.Result).Trim()
+
+                { Started = true
+                  ExitCode = proc.ExitCode
+                  Diagnostic = (if proc.ExitCode = 0 then "" else surfaced) }
+            else
+                // Survived the grace window without crashing: it started and is running.
+                (try proc.Kill true with _ -> ())
+                proc.WaitForExit(max 0 (overallMs - graceMs)) |> ignore
+                { Started = true; ExitCode = 0; Diagnostic = "" }
+
+    // ---------- refresh probe (in-process MVU over the public command surface) ----------
+
+    let private validSpec workId title =
+        $"""---
+schemaVersion: 1
+workId: {workId}
+title: {title}
+stage: charter
+changeTier: tier1
+status: draft
+---
+
+# {title} Specification
+
+- FR-001: The selected work item has one typed requirement.
+"""
+
+    let private validTasks =
+        """schemaVersion: 1
+tasks:
+  - id: T001
+    title: Implement selected lifecycle work
+    status: pending
+    owner: sdd
+    dependencies: []
+    requirements: [FR-001]
+    decisions: []
+    requiredSkills: []
+    requiredEvidence: []
+"""
+
+    let private validEvidence =
+        """schemaVersion: 1
+evidence: []
+"""
+
+    /// Plant a minimal, valid work item so `refresh` has SDD-owned views to regenerate.
+    let writeValidWorkSources root workId title =
+        writeRelative root $"work/{workId}/spec.md" (validSpec workId title)
+        writeRelative root $"work/{workId}/tasks.yml" validTasks
+        writeRelative root $"work/{workId}/evidence.yml" validEvidence
+
+    /// Run `fsgg-sdd refresh` in-process for `workId` (mirrors `TestSupport.runRefresh`).
+    let runRefresh root workId =
+        { request Refresh root with WorkId = Some workId } |> runRequest
+
+    // ---------- byte-hash helper for refresh-exclusion comparison ----------
+
+    /// Relative (forward-slash, sorted) file paths under `root`, excluding the `.git`
+    /// repository scaffold initializes (never a scaffold-produced artifact).
+    let relativeFiles (root: string) =
+        Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+        |> Seq.map (fun full -> Path.GetRelativePath(root, full).Replace('\\', '/'))
+        |> Seq.filter (fun path -> not (path = ".git" || path.StartsWith(".git/", StringComparison.Ordinal)))
+        |> Seq.sort
+        |> Seq.toList
+
+    /// A stable digest of a file's bytes, for before/after refresh-exclusion comparison.
+    let fileDigest (root: string) (relativePath: string) =
+        let bytes = File.ReadAllBytes(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)))
+        use sha = System.Security.Cryptography.SHA256.Create()
+        Convert.ToHexString(sha.ComputeHash bytes)
