@@ -306,6 +306,9 @@ module CommandSerialization =
             writer.WriteBoolean("providerInvoked", summary.ProviderInvoked)
             writer.WriteNumber("producedPathCount", summary.ProducedPathCount)
             writeStringList writer Sorted "producedPaths" summary.ProducedPaths
+            writer.WriteString("repoInitOutcome", summary.RepoInitOutcome)
+            writer.WriteNumber("executableScriptCount", summary.ExecutableScriptCount)
+            writer.WriteNumber("executableScriptsSkipped", summary.ExecutableScriptsSkipped)
             writer.WriteString("nextActionHint", summary.NextActionHint)
             writer.WriteEndObject()
         | None -> writer.WriteNull "scaffold"

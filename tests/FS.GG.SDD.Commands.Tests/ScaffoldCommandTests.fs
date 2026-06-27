@@ -415,10 +415,12 @@ module ScaffoldCommandTests =
 
     // ---------- Phase 4 / US2: app-only provenance ----------
 
-    /// Relative (forward-slash, sorted) file paths under a target directory.
+    /// Relative (forward-slash, sorted) file paths under a target directory, excluding the
+    /// `.git` repository scaffold now initializes — never a scaffold-produced artifact.
     let private relativeFiles root =
         Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
         |> Seq.map (fun full -> Path.GetRelativePath(root, full).Replace('\\', '/'))
+        |> Seq.filter (fun path -> not (path = ".git" || path.StartsWith(".git/", System.StringComparison.Ordinal)))
         |> Seq.sort
         |> Seq.toList
 
@@ -578,3 +580,324 @@ module ScaffoldCommandTests =
         // The intruded SDD-owned paths are never recorded as app-only product.
         Assert.DoesNotContain("work/leak.txt", summary.ProducedPaths)
         Assert.DoesNotContain("readiness/leak.txt", summary.ProducedPaths)
+
+    // ===================================================================
+    // 032 — scaffold owns repo-init & script executability post-instantiation
+    // Real `git` + real filesystem over the public scaffold surface (no mocks):
+    // a fresh temp dir is outside any git work tree, so the success path
+    // initializes a repo and chmods produced `.sh` scripts. US1/US2/US3/US4.
+    // ===================================================================
+
+    let private gitDirExists root =
+        Directory.Exists(Path.Combine(root, ".git"))
+
+    let private isExecutable root (relativePath: string) =
+        let mode = File.GetUnixFileMode(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)))
+        mode &&& UnixFileMode.UserExecute = UnixFileMode.UserExecute
+
+    /// Run real `git` in a directory and return (exitCode, trimmed stdout).
+    let private git root (args: string list) =
+        let info =
+            System.Diagnostics.ProcessStartInfo(
+                FileName = "git",
+                WorkingDirectory = root,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false)
+        args |> List.iter info.ArgumentList.Add
+        match System.Diagnostics.Process.Start info with
+        | null -> -1, ""
+        | started ->
+            use proc = started
+            let out = proc.StandardOutput.ReadToEnd()
+            proc.StandardError.ReadToEnd() |> ignore
+            proc.WaitForExit()
+            proc.ExitCode, out.Trim()
+
+    // ---------- Phase 3 / US1: scaffolded product lands in an initialized repo ----------
+
+    // T008 (US1-AC1): a success into a fresh temp dir outside any work tree initializes a
+    // real git repository at the product root and reports `RepoInitOutcome = initialized`.
+    [<Fact>]
+    let ``scaffold initializes a git repository at the product root`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        Assert.True(gitDirExists root, "Expected a real .git directory at the product root.")
+        Assert.Equal("initialized", (scaffoldSummary report).RepoInitOutcome)
+        Assert.Equal(0, exitCodeForReport report)
+        // The probe + init effects are planned (and ran) only on the success path.
+        let exit, inside = git root [ "rev-parse"; "--is-inside-work-tree" ]
+        Assert.Equal(0, exit)
+        Assert.Equal("true", inside)
+
+    // T009 (US1-AC2 / FR-004): the initialized work tree captures the SDD skeleton, the
+    // provider product files, and the scaffold-provenance record.
+    [<Fact>]
+    let ``scaffold repo captures the skeleton, product, and provenance`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false) |> ignore
+
+        // The work-tree root is the product root, so the whole scaffolded tree is captured.
+        let exit, _ = git root [ "rev-parse"; "--is-inside-work-tree" ]
+        Assert.Equal(0, exit)
+        Assert.True(TestSupport.existsRelative root ".fsgg/project.yml")
+        Assert.True(TestSupport.existsRelative root "App.fsproj")
+        Assert.True(TestSupport.existsRelative root ".fsgg/scaffold-provenance.json")
+        // `git add -A` over the work tree stages every scaffolded path (skeleton + product
+        // + provenance), proving they all live inside the initialized repository.
+        git root [ "add"; "-A" ] |> ignore
+        let _, staged = git root [ "ls-files" ]
+        Assert.Contains(".fsgg/project.yml", staged)
+        Assert.Contains("App.fsproj", staged)
+        Assert.Contains(".fsgg/scaffold-provenance.json", staged)
+
+    // T010 (Edge / FR-004): the empty-but-successful outcome still initializes a repo over
+    // the skeleton + provenance and reports `initialized`.
+    [<Fact>]
+    let ``scaffold empty-but-successful still initializes a repository`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "empty.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [] false false)
+
+        let summary = scaffoldSummary report
+        Assert.Equal("providerSucceededEmpty", summary.Outcome)
+        Assert.Equal("initialized", summary.RepoInitOutcome)
+        Assert.True(gitDirExists root)
+        Assert.True(TestSupport.existsRelative root ".fsgg/scaffold-provenance.json")
+        Assert.Equal(0, exitCodeForReport report)
+
+    // ---------- Phase 4 / US2: produced shell scripts are executable ----------
+
+    // T013 (US2-AC1): the produced `run.sh` carries an executable bit and the run reports
+    // exactly one script made executable, none skipped.
+    [<Fact>]
+    let ``scaffold makes a produced shell script executable`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "with-script.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "scripted") [] false false)
+
+        let summary = scaffoldSummary report
+        Assert.Contains("run.sh", summary.ProducedPaths)
+        Assert.True(isExecutable root "run.sh", "Expected the produced run.sh to be executable.")
+        Assert.Equal(1, summary.ExecutableScriptCount)
+        Assert.Equal(0, summary.ExecutableScriptsSkipped)
+        Assert.Equal(0, exitCodeForReport report)
+
+    // T014 (US2-AC2): a provider with no shell scripts is a no-op — make-executable
+    // succeeds with a zero count.
+    [<Fact>]
+    let ``scaffold with no shell scripts reports a zero executable count`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        let summary = scaffoldSummary report
+        Assert.DoesNotContain(summary.ProducedPaths, fun p -> p.EndsWith ".sh")
+        Assert.Equal(0, summary.ExecutableScriptCount)
+        Assert.Equal(0, summary.ExecutableScriptsSkipped)
+
+    // T015 (US2-AC3): the SetExecutable interpreter arm degrades gracefully. Driving it at a
+    // guaranteed-unwritable path (a file that does not exist) on a real filesystem makes the
+    // arm catch its exception and return `Succeeded = false` with NO diagnostic, never
+    // throwing past the interpreter. Narrowed to the documented try/skip contract of the arm
+    // (T005) because no in-process path forces a deterministic chmod failure for the file's
+    // owner on a Unix CI host (Principle VI substitution, noted by name).
+    [<Fact>]
+    let ``SetExecutable arm reports a skip without throwing on an unwritable path`` () =
+        let root = TestSupport.tempDirectory ()
+        let result = interpret root false (SetExecutable "does-not-exist.sh")
+        Assert.False(result.Succeeded)
+        Assert.True(Option.isNone result.Diagnostic, "A make-executable skip must carry no (blocking) diagnostic.")
+        // Dry-run is always a no-op success (FR-008).
+        let dry = interpret root true (SetExecutable "does-not-exist.sh")
+        Assert.True(dry.Succeeded)
+
+    // ---------- Phase 5 / US3: safeguards keep the steps safe and non-fatal ----------
+
+    // T018 (US3-AC1 / SC-002): scaffolding into an existing work tree creates no nested repo
+    // and reports `skippedExistingRepository`; the scaffold still succeeds.
+    [<Fact>]
+    let ``scaffold inside an existing work tree skips repo-init non-fatally`` () =
+        let root = TestSupport.tempDirectory ()
+        git root [ "init" ] |> ignore
+        writeRegistry root "ok.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] true false)
+
+        let summary = scaffoldSummary report
+        Assert.Equal("skippedExistingRepository", summary.RepoInitOutcome)
+        Assert.Contains("scaffold.repoInitSkippedExistingRepository", diagnosticIds report)
+        Assert.Equal("providerSucceeded", summary.Outcome)
+        Assert.Equal(0, exitCodeForReport report)
+        // No nested repository was created under the product subtree.
+        Assert.False(Directory.Exists(Path.Combine(root, "App.fsproj", ".git")))
+
+    // T018b (Edge re-run/--force / FR-013): the repo-init step is idempotent across re-runs.
+    // The first run creates the repository; a second `--force` run detects the existing work
+    // tree (no nesting) and the produced script's executable bit is stable. FR-013 governs the
+    // repo-init/chmod steps only — the second run still hits the *pre-existing* provenance
+    // clobber-guard (StructuredSource refuses an unsafe overwrite), so its overall exit is not
+    // asserted here; that guard is unrelated to this feature.
+    [<Fact>]
+    let ``scaffold re-run resolves to the existing-repository case with a stable script bit`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "with-script.providers.yml"
+        let first = runScaffold (scaffoldRequest root (Some "scripted") [] false false)
+        Assert.Equal(0, exitCodeForReport first)
+        Assert.Equal(1, (scaffoldSummary first).ExecutableScriptCount)
+        Assert.True(isExecutable root "run.sh")
+
+        let second = runScaffold (scaffoldRequest root (Some "scripted") [] true false)
+        let summary = scaffoldSummary second
+        // The first run initialized the repo, so the re-run skips repo-init (no nesting).
+        Assert.Equal("skippedExistingRepository", summary.RepoInitOutcome)
+        Assert.False(Directory.Exists(Path.Combine(root, "App.fsproj", ".git")))
+        // The produced script's executable bit is stable across the re-run (safe re-apply).
+        Assert.True(isExecutable root "run.sh", "run.sh must remain executable after a re-run.")
+
+    /// A PATH containing `dotnet` but no `git`, so the `git` probe cannot launch
+    /// (`Started = false`) while `dotnet new` still works. Computed from the live PATH so it
+    /// is host-independent; empty only if no such directory exists (asserted by callers).
+    let private pathWithoutGit () =
+        let separator = Path.PathSeparator
+        let current = System.Environment.GetEnvironmentVariable "PATH" |> Option.ofObj |> Option.defaultValue ""
+        current.Split separator
+        |> Array.filter (fun dir ->
+            dir <> ""
+            && File.Exists(Path.Combine(dir, "dotnet"))
+            && not (File.Exists(Path.Combine(dir, "git"))))
+        |> String.concat (string separator)
+
+    // T019 (US3-AC2 / SC-004): with `git` unavailable to the child the probe reports
+    // `Started = false`; repo-init is skipped non-fatally as `skippedGitUnavailable`, and the
+    // scaffold otherwise succeeds at exit 0. Real env (a git-free PATH for the spawned
+    // probe), restored in a finally.
+    [<Fact>]
+    let ``scaffold with git unavailable skips repo-init non-fatally`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+        let gitFreePath = pathWithoutGit ()
+        Assert.True((gitFreePath <> ""), "Test precondition: a dotnet-only, git-free PATH directory must exist.")
+
+        let original = System.Environment.GetEnvironmentVariable "PATH" |> Option.ofObj |> Option.defaultValue ""
+        let report =
+            try
+                System.Environment.SetEnvironmentVariable("PATH", gitFreePath)
+                runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+            finally
+                System.Environment.SetEnvironmentVariable("PATH", original)
+
+        let summary = scaffoldSummary report
+        Assert.Equal("skippedGitUnavailable", summary.RepoInitOutcome)
+        Assert.Contains("scaffold.repoInitSkippedGitUnavailable", diagnosticIds report)
+        Assert.Equal("providerSucceeded", summary.Outcome)
+        Assert.Equal(0, exitCodeForReport report)
+        Assert.False(gitDirExists root, "No repository should be created when git is unavailable.")
+
+    // T020 (US3-AC3 / FR-010): a successful scaffold with a skipped convenience step is not
+    // reported failed or incomplete.
+    [<Fact>]
+    let ``scaffold with a skipped step is not reported failed or incomplete`` () =
+        let root = TestSupport.tempDirectory ()
+        git root [ "init" ] |> ignore
+        writeRegistry root "ok.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] true false)
+
+        Assert.Equal(0, exitCodeForReport report)
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Equal("providerSucceeded", (scaffoldSummary report).Outcome)
+
+    // ---------- Phase 6 / US4: steps are generic and leak no provider specifics ----------
+
+    // T022 (US4-AC1): a non-rendering provider gets identical repo-init + make-executable
+    // behavior, driven only by the scaffolded tree.
+    [<Fact>]
+    let ``scaffold post-instantiation behavior is identical for a neutral provider`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "with-script.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "scripted") [] false false)
+
+        let summary = scaffoldSummary report
+        Assert.Equal("initialized", summary.RepoInitOutcome)
+        Assert.True(gitDirExists root)
+        Assert.Equal(1, summary.ExecutableScriptCount)
+        Assert.True(isExecutable root "run.sh")
+        Assert.Equal(0, exitCodeForReport report)
+
+    // T024 (US4-AC3 / FR-007): scaffold passes NO provider-specific git option to the
+    // provider; the `dotnet new` create-arg vector carries no `initGit`/`allow-scripts` — SDD
+    // performs the steps itself.
+    [<Fact>]
+    let ``scaffold passes no git options to the provider create-arg vector`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "with-script.providers.yml"
+        let createArgs = plannedCreateArgs (scaffoldRequest root (Some "scripted") [] false true)
+
+        for forbidden in [ "--initGit"; "initGit"; "--allow-scripts"; "allow-scripts"; "--allow-script" ] do
+            Assert.DoesNotContain(forbidden, createArgs)
+
+    // ---------- Phase 7 / cross-cutting: determinism, dry-run, failure paths ----------
+
+    // T028 (FR-012): two identical runs in the same environment yield byte-identical
+    // provenance AND report JSON; the sensed repo-init field is additive only.
+    [<Fact>]
+    let ``scaffold provenance and json stay deterministic with the repo-init field`` () =
+        let runOnce () =
+            let root = rootWithLeaf "scaffold-032-det"
+            writeRegistry root "ok.providers.yml"
+            let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+            TestSupport.readRelative root provenancePath, CommandSerialization.serializeReport report
+
+        let firstProvenance, firstJson = runOnce ()
+        let secondProvenance, secondJson = runOnce ()
+        Assert.Equal(firstProvenance, secondProvenance)
+        Assert.Equal(firstJson, secondJson)
+        // The repo-init outcome is the additive sensed field; provenance never carries it.
+        Assert.Contains("\"repoInitOutcome\": \"initialized\"", firstJson)
+        Assert.DoesNotContain("repoInitOutcome", firstProvenance)
+
+    // T029 (FR-008): under --dry-run nothing is performed — no repo, no chmod — and the
+    // sensed fields are inert while the hint describes the planned steps.
+    [<Fact>]
+    let ``scaffold --dry-run performs no repo-init or chmod and stays inert`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "with-script.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "scripted") [] false true)
+
+        let summary = scaffoldSummary report
+        Assert.False(gitDirExists root)
+        Assert.False(TestSupport.existsRelative root "run.sh")
+        Assert.Equal("notApplicable", summary.RepoInitOutcome)
+        Assert.Equal(0, summary.ExecutableScriptCount)
+        Assert.Equal(0, summary.ExecutableScriptsSkipped)
+        Assert.Contains("git repository", summary.NextActionHint)
+        Assert.Contains("executable", summary.NextActionHint)
+
+    // T030 (FR-009): on a provider failure the post-instantiation steps do not run —
+    // `RepoInitOutcome = notApplicable`, no repo, and the existing failure diagnostic + exit
+    // code are preserved.
+    [<Fact>]
+    let ``scaffold provider failure runs no post-instantiation steps`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "fails-midway.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [] false false)
+
+        let summary = scaffoldSummary report
+        Assert.Equal("notApplicable", summary.RepoInitOutcome)
+        Assert.Equal(0, summary.ExecutableScriptCount)
+        Assert.False(gitDirExists root)
+        Assert.Contains("scaffold.providerFailed", diagnosticIds report)
+        Assert.Equal(2, exitCodeForReport report)
+
+    [<Fact>]
+    let ``scaffold SDD-tree intrusion runs no post-instantiation steps`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "writes-into-fsgg.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [] false false)
+
+        Assert.Equal("notApplicable", (scaffoldSummary report).RepoInitOutcome)
+        Assert.False(gitDirExists root)
+        Assert.Contains("scaffold.providerWroteSddTree", diagnosticIds report)
+        Assert.Equal(2, exitCodeForReport report)

@@ -314,6 +314,7 @@ of truth.
         | RunProcess(command, args, workingDir) ->
             let renderedArgs = String.concat " " args
             $"run:{command} {renderedArgs}@{normalizeRelativePath workingDir}"
+        | SetExecutable path -> "setexec:" + normalizeRelativePath path
         | EmitStdout text -> "stdout:" + text
         | EmitStderr text -> "stderr:" + text
         | SetExitCode code -> "exit:" + string code

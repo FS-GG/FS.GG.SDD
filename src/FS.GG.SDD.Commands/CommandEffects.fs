@@ -147,6 +147,29 @@ module CommandEffects =
             | RunProcess(command, args, workingDir) ->
                 if dryRun then success effect None
                 else runProcess projectRoot effect command args workingDir
+            | SetExecutable path ->
+                if dryRun then
+                    success effect None
+                else
+                    try
+                        let absolute = fullPath projectRoot path
+                        let executable =
+                            File.GetUnixFileMode absolute
+                            ||| UnixFileMode.UserExecute
+                            ||| UnixFileMode.GroupExecute
+                            ||| UnixFileMode.OtherExecute
+
+                        File.SetUnixFileMode(absolute, executable)
+                        success effect None
+                    with _ ->
+                        // Read-only FS, non-Unix host, or a missing file: reported as a
+                        // skipped/partial make-executable (FR-005, US2-AC3), never a tool
+                        // defect. Caught here so the outer handler never escalates it.
+                        { Effect = effect
+                          Succeeded = false
+                          Snapshot = None
+                          Process = None
+                          Diagnostic = None }
             | EmitStdout text ->
                 if not dryRun then Console.Out.Write text
                 success effect None

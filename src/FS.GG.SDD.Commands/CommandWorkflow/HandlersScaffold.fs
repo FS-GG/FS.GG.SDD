@@ -115,6 +115,9 @@ module internal HandlersScaffold =
           ProviderInvoked = false
           ProducedPathCount = 0
           ProducedPaths = []
+          RepoInitOutcome = "notApplicable"
+          ExecutableScriptCount = 0
+          ExecutableScriptsSkipped = 0
           NextActionHint = hint }
 
     let resolveScaffold model =
@@ -161,6 +164,24 @@ module internal HandlersScaffold =
     let private isCreateProcess effect =
         match effect with
         | RunProcess("dotnet", args, _) -> List.contains "-o" args
+        | _ -> false
+
+    // Post-instantiation marker effects (contracts/post-instantiation-staging.md). They
+    // are disjoint from the create marker, so the staged driver detects each tick's phase
+    // unambiguously by re-deriving it from the interpreted-effect log (Decision 3).
+    let private isProbeProcess effect =
+        match effect with
+        | RunProcess("git", [ "rev-parse"; "--is-inside-work-tree" ], _) -> true
+        | _ -> false
+
+    let private isInitProcess effect =
+        match effect with
+        | RunProcess("git", [ "init" ], _) -> true
+        | _ -> false
+
+    let private isSetExecutableEffect effect =
+        match effect with
+        | SetExecutable _ -> true
         | _ -> false
 
     let scaffoldInvocationEffects (request: CommandRequest) (descriptor: ProviderDescriptor) (effective: Map<string, string>) =
@@ -219,12 +240,22 @@ module internal HandlersScaffold =
 
         [ WriteFile(ScaffoldProvenance.provenancePath, ScaffoldProvenance.serialize record, StructuredSource) ]
 
+    // The create outcome classified from the interpreted-effect log. A **terminal**
+    // outcome (dry-run, provider unavailable/failed, SDD-tree intrusion) finalizes in a
+    // single tick — summary + diagnostics + the provenance write — and runs no
+    // post-instantiation steps (FR-009). A **success** outcome (incl. the empty-but-
+    // successful one) defers the single provenance write and the final summary to the
+    // post-instantiation phase (TICK A/C), so provenance is written exactly once.
+    type ScaffoldFinalization =
+        | FinalizeTerminal of ScaffoldSummary * Diagnostic list * CommandEffect list
+        | FinalizeSuccess of ScaffoldOutcome * string list
+
     let finalizeScaffold model (descriptor: ProviderDescriptor) =
         let request = model.Request
         let name = descriptor.Name
         let version = descriptor.ContractVersion
 
-        let summaryOf outcome producedPaths providerInvoked skeletonCreated hint : ScaffoldSummary =
+        let terminalSummary outcome producedPaths providerInvoked skeletonCreated hint : ScaffoldSummary =
             { ProviderName = Some name
               ProviderContractVersion = Some version
               Outcome = scaffoldOutcomeValue outcome
@@ -232,6 +263,9 @@ module internal HandlersScaffold =
               ProviderInvoked = providerInvoked
               ProducedPathCount = List.length producedPaths
               ProducedPaths = producedPaths
+              RepoInitOutcome = "notApplicable"
+              ExecutableScriptCount = 0
+              ExecutableScriptsSkipped = 0
               NextActionHint = hint }
 
         if request.DryRun then
@@ -246,18 +280,24 @@ module internal HandlersScaffold =
                   ProviderInvoked = false
                   ProducedPathCount = 0
                   ProducedPaths = []
-                  NextActionHint = $"dry run: would run `{planned}` (produced paths are determined at execution)." }
+                  RepoInitOutcome = "notApplicable"
+                  ExecutableScriptCount = 0
+                  ExecutableScriptsSkipped = 0
+                  NextActionHint =
+                    $"dry run: would run `{planned}`, initialize a git repository, and make produced scripts executable (produced paths are determined at execution)." }
 
-            summary, [], []
+            FinalizeTerminal(summary, [], [])
         else
             let createResult = model.InterpretedEffects |> List.tryFind (fun result -> isCreateProcess result.Effect)
 
             match createResult |> Option.bind (fun result -> result.Process) with
             | None
             | Some { Started = false } ->
-                summaryOf ProviderFailed [] false true "Install the .NET SDK and the named template, then re-run scaffold.",
-                [ DiagnosticsModule.scaffoldProviderUnavailable name ],
-                []
+                FinalizeTerminal(
+                    terminalSummary ProviderFailed [] false true "Install the .NET SDK and the named template, then re-run scaffold.",
+                    [ DiagnosticsModule.scaffoldProviderUnavailable name ],
+                    []
+                )
             | Some processResult ->
                 let afterSet =
                     createResult
@@ -273,21 +313,129 @@ module internal HandlersScaffold =
                 let producedPaths = produced |> Set.filter (isSddTree >> not) |> Set.toList |> List.sort
 
                 if not (List.isEmpty intrusions) then
-                    summaryOf ProviderFailed producedPaths true true "Fix the provider; it wrote into SDD-owned trees.",
-                    [ DiagnosticsModule.scaffoldProviderWroteSddTree intrusions ],
-                    provenanceWriteEffect request descriptor ProviderFailed producedPaths
+                    FinalizeTerminal(
+                        terminalSummary ProviderFailed producedPaths true true "Fix the provider; it wrote into SDD-owned trees.",
+                        [ DiagnosticsModule.scaffoldProviderWroteSddTree intrusions ],
+                        provenanceWriteEffect request descriptor ProviderFailed producedPaths
+                    )
                 elif processResult.ExitCode <> 0 then
-                    summaryOf ProviderFailed producedPaths true true "Inspect the provider failure, then re-run scaffold.",
-                    [ DiagnosticsModule.scaffoldProviderFailed name processResult.ExitCode ],
-                    provenanceWriteEffect request descriptor ProviderFailed producedPaths
+                    FinalizeTerminal(
+                        terminalSummary ProviderFailed producedPaths true true "Inspect the provider failure, then re-run scaffold.",
+                        [ DiagnosticsModule.scaffoldProviderFailed name processResult.ExitCode ],
+                        provenanceWriteEffect request descriptor ProviderFailed producedPaths
+                    )
                 elif List.isEmpty producedPaths then
-                    summaryOf ProviderSucceededEmpty [] true true "Provider produced no files; begin the lifecycle at `charter`.",
-                    [ DiagnosticsModule.scaffoldProviderEmpty name ],
-                    provenanceWriteEffect request descriptor ProviderSucceededEmpty []
+                    FinalizeSuccess(ProviderSucceededEmpty, [])
                 else
-                    summaryOf ProviderSucceeded producedPaths true true "SDD skeleton ready; begin the lifecycle at `charter`.",
-                    [],
-                    provenanceWriteEffect request descriptor ProviderSucceeded producedPaths
+                    FinalizeSuccess(ProviderSucceeded, producedPaths)
+
+    // ----- post-instantiation staging (TICK A → B → C) -----
+
+    // TICK C: compute the terminal success summary from the interpreted post-instantiation
+    // effects — the repo-init outcome from the `git rev-parse` probe (exit-code only,
+    // Decision 1) and the make-executable counts from the `SetExecutable` results. Every
+    // emitted diagnostic is advisory and non-fatal (FR-010).
+    let private finalizePostInstantiation model (descriptor: ProviderDescriptor) outcome (producedPaths: string list) probeProcess =
+        let repoInitOutcome, repoInitDiagnostics =
+            match probeProcess with
+            | Some { Started = false } ->
+                "skippedGitUnavailable", [ DiagnosticsModule.scaffoldRepoInitSkippedGitUnavailable () ]
+            | Some { Started = true; ExitCode = 0 } ->
+                "skippedExistingRepository", [ DiagnosticsModule.scaffoldRepoInitSkippedExistingRepository () ]
+            | Some { Started = true } -> "initialized", []
+            | None -> "notApplicable", []
+
+        let execResults = model.InterpretedEffects |> List.filter (fun result -> isSetExecutableEffect result.Effect)
+        let executableCount = execResults |> List.filter (fun result -> result.Succeeded) |> List.length
+
+        let skippedPaths =
+            execResults
+            |> List.filter (fun result -> not result.Succeeded)
+            |> List.choose (fun result ->
+                match result.Effect with
+                | SetExecutable path -> Some path
+                | _ -> None)
+            |> List.sort
+
+        let execDiagnostics =
+            if List.isEmpty skippedPaths then []
+            else [ DiagnosticsModule.scaffoldScriptsNotMadeExecutable skippedPaths ]
+
+        let outcomeDiagnostics =
+            match outcome with
+            | ProviderSucceededEmpty -> [ DiagnosticsModule.scaffoldProviderEmpty descriptor.Name ]
+            | _ -> []
+
+        let hint =
+            match outcome with
+            | ProviderSucceededEmpty -> "Provider produced no files; begin the lifecycle at `charter`."
+            | _ -> "SDD skeleton ready; begin the lifecycle at `charter`."
+
+        let summary: ScaffoldSummary =
+            { ProviderName = Some descriptor.Name
+              ProviderContractVersion = Some descriptor.ContractVersion
+              Outcome = scaffoldOutcomeValue outcome
+              SkeletonCreated = true
+              ProviderInvoked = true
+              ProducedPathCount = List.length producedPaths
+              ProducedPaths = producedPaths
+              RepoInitOutcome = repoInitOutcome
+              ExecutableScriptCount = executableCount
+              ExecutableScriptsSkipped = List.length skippedPaths
+              NextActionHint = hint }
+
+        summary, outcomeDiagnostics @ repoInitDiagnostics @ execDiagnostics
+
+    // The three-tick post-instantiation machine, re-derived from the interpreted-effect
+    // log each tick (no new model field). Reached only on a success create outcome.
+    let private postInstantiationNext model (descriptor: ProviderDescriptor) outcome (producedPaths: string list) =
+        let probeInterpreted = model.InterpretedEffects |> List.exists (fun result -> isProbeProcess result.Effect)
+        let probePlanned = model.PendingEffects |> List.exists isProbeProcess
+        let initInterpreted = model.InterpretedEffects |> List.exists (fun result -> isInitProcess result.Effect)
+        let initPlanned = model.PendingEffects |> List.exists isInitProcess
+
+        if not (probeInterpreted || probePlanned) then
+            // TICK A — the success path's single provenance write (FR-004, before `git
+            // init`), the work-tree probe, and one SetExecutable per produced `.sh`.
+            let scriptEffects =
+                producedPaths
+                |> List.filter (fun path -> path.EndsWith(".sh", StringComparison.Ordinal))
+                |> List.map SetExecutable
+
+            let effects =
+                provenanceWriteEffect model.Request descriptor outcome producedPaths
+                @ [ RunProcess("git", [ "rev-parse"; "--is-inside-work-tree" ], "") ]
+                @ scriptEffects
+
+            { model with PendingEffects = model.PendingEffects @ effects }, effects
+        elif not probeInterpreted then
+            // Probe planned, awaiting interpretation.
+            model, []
+        else
+            let probeProcess =
+                model.InterpretedEffects
+                |> List.tryPick (fun result -> if isProbeProcess result.Effect then result.Process else None)
+
+            let shouldInit =
+                match probeProcess with
+                | Some { Started = true; ExitCode = code } -> code <> 0
+                | _ -> false
+
+            if shouldInit && not (initInterpreted || initPlanned) then
+                // TICK B — not inside a work tree and git is available: initialize.
+                let effect = RunProcess("git", [ "init" ], "")
+                { model with PendingEffects = model.PendingEffects @ [ effect ] }, [ effect ]
+            elif shouldInit && not initInterpreted then
+                // Init planned, awaiting interpretation.
+                model, []
+            else
+                // TICK C — init interpreted or skipped: set the terminal summary once.
+                let summary, diagnostics = finalizePostInstantiation model descriptor outcome producedPaths probeProcess
+
+                { model with
+                    Scaffold = Some summary
+                    Diagnostics = model.Diagnostics @ diagnostics },
+                []
 
     // ----- staged driver entry (called from nextLifecycleEffects) -----
 
@@ -314,10 +462,12 @@ module internal HandlersScaffold =
             elif Option.isSome model.Scaffold then
                 model, []
             else
-                let summary, diagnostics, provenanceEffects = finalizeScaffold model descriptor
-
-                { model with
-                    PendingEffects = model.PendingEffects @ provenanceEffects
-                    Scaffold = Some summary
-                    Diagnostics = model.Diagnostics @ diagnostics },
-                provenanceEffects
+                match finalizeScaffold model descriptor with
+                | FinalizeTerminal(summary, diagnostics, provenanceEffects) ->
+                    { model with
+                        PendingEffects = model.PendingEffects @ provenanceEffects
+                        Scaffold = Some summary
+                        Diagnostics = model.Diagnostics @ diagnostics },
+                    provenanceEffects
+                | FinalizeSuccess(outcome, producedPaths) ->
+                    postInstantiationNext model descriptor outcome producedPaths

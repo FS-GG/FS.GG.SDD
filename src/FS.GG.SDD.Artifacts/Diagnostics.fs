@@ -250,6 +250,38 @@ module Diagnostics =
             "Repair or remove the malformed scaffold-provenance file before re-scaffolding or refreshing."
             [ path ]
 
+    let scaffoldRepoInitSkippedExistingRepository () =
+        create
+            "scaffold.repoInitSkippedExistingRepository"
+            DiagnosticInfo
+            None
+            None
+            "Target is already inside a git work tree; repository initialization was skipped."
+            "Left the existing repository untouched; no nested repo created."
+            []
+
+    let scaffoldRepoInitSkippedGitUnavailable () =
+        create
+            "scaffold.repoInitSkippedGitUnavailable"
+            DiagnosticInfo
+            None
+            None
+            "git is not available; repository initialization was skipped."
+            "Install git and re-run, or run `git init` yourself; scaffold otherwise succeeded."
+            []
+
+    let scaffoldScriptsNotMadeExecutable (paths: string list) =
+        let ordered = paths |> List.sort
+
+        create
+            "scaffold.scriptsNotMadeExecutable"
+            DiagnosticInfo
+            None
+            None
+            $"{List.length ordered} produced script(s) could not be made executable."
+            "Set the executable bit manually (e.g. on a read-only or non-Unix filesystem)."
+            ordered
+
     let locationKey location =
         match location with
         | Some loc -> defaultArg loc.Line 0, defaultArg loc.Column 0

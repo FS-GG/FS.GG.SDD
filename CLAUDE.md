@@ -62,7 +62,11 @@ Core boundary:
   `providerWroteSddTree`) at exit 2; an incomplete scaffold is never reported as
   complete (FR-009). The reference provider (a full runnable UI app) ships in the
   FS.GG.Rendering repo, demonstrated against the contract without placing any
-  Rendering knowledge in generic SDD.
+  Rendering knowledge in generic SDD. After a successful instantiation, scaffold
+  itself owns two generic post-instantiation steps — initializing a git repository
+  at the product root (skipped, non-fatally, inside an existing work tree or when
+  git is absent) and setting the executable bit on each produced `.sh` script —
+  reported in all three projections and never delegated to the provider.
 - FS.GG.Governance owns rule evaluation, evidence freshness, routing, profiles,
   and gate enforcement.
 - Integrations between them must be explicit, versioned, and optional until
@@ -95,5 +99,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/031-scaffold-lifecycle-passthrough/plan.md
+at specs/032-scaffold-repo-init-chmod/plan.md
 <!-- SPECKIT END -->

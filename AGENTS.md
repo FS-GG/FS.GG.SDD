@@ -60,7 +60,12 @@ Boundary rules:
   `scaffold.providerMissing` pointing to `fsgg-sdd init`. User-input failures exit 1;
   provider defects (`providerFailed`/`providerUnavailable`/`providerWroteSddTree`)
   exit 2; an incomplete scaffold is never reported as complete (FR-009). The
-  reference provider ships in the FS.GG.Rendering repo, not in generic SDD.
+  reference provider ships in the FS.GG.Rendering repo, not in generic SDD. After a
+  successful instantiation, scaffold itself owns two generic post-instantiation
+  steps — initializing a git repository at the product root (skipped non-fatally
+  inside an existing work tree or when git is absent) and setting the executable bit
+  on each produced `.sh` script — reported in all three projections, never delegated
+  to the provider.
 - Governance owns rule evaluation, evidence freshness, routing, profiles, and
   gate enforcement.
 - Markdown is an authoring surface; schema-versioned structured artifacts are

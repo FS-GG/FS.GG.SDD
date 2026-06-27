@@ -206,6 +206,9 @@ module CommandRendering =
             scaffold.ProducedPaths
             |> List.sort
             |> List.iter (fun path -> builder.AppendLine($"scaffoldProducedPath: {path}") |> ignore)
+            builder.AppendLine($"scaffoldRepoInit: {scaffold.RepoInitOutcome}") |> ignore
+            builder.AppendLine($"scaffoldExecutableScripts: {scaffold.ExecutableScriptCount}") |> ignore
+            builder.AppendLine($"scaffoldExecutableScriptsSkipped: {scaffold.ExecutableScriptsSkipped}") |> ignore
             builder.AppendLine($"scaffoldNextAction: {scaffold.NextActionHint}") |> ignore
         | None -> ()
 

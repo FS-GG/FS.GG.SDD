@@ -1,0 +1,9 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "FS.GG.SDD scaffold fixtures",
+  "classifications": [ "Test" ],
+  "identity": "FsggSdd.Fixture.WithScript",
+  "name": "FS.GG.SDD scaffold fixture (with-script)",
+  "shortName": "fsgg-fixture-script-app",
+  "tags": { "language": "F#", "type": "project" }
+}

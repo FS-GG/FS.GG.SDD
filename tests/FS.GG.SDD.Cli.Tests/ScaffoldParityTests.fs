@@ -21,6 +21,9 @@ module ScaffoldParityTests =
           ProviderInvoked = true
           ProducedPathCount = 2
           ProducedPaths = [ "App.fsproj"; "Program.fs" ]
+          RepoInitOutcome = "initialized"
+          ExecutableScriptCount = 0
+          ExecutableScriptsSkipped = 0
           NextActionHint = "SDD skeleton ready; begin the lifecycle at charter." }
 
     let private report: CommandReport =
@@ -56,6 +59,39 @@ module ScaffoldParityTests =
         Assert.Contains("\"producedPaths\"", json)
         Assert.Contains("scaffoldProducedPath: App.fsproj", text)
         Assert.Contains("App.fsproj", rich)
+
+    // 032 (FR-011 / SC-006): the repo-init outcome and the make-executable counts are
+    // fact-identical across json/text/rich, and the rich projection adds/drops no JSON byte.
+    [<Fact>]
+    let ``scaffold repo-init and exec facts are identical across json text and rich`` () =
+        let postInstReport: CommandReport =
+            { report with
+                Scaffold =
+                    Some
+                        { scaffoldSummary with
+                            ProducedPathCount = 2
+                            ProducedPaths = [ "App.fsproj"; "run.sh" ]
+                            RepoInitOutcome = "initialized"
+                            ExecutableScriptCount = 1
+                            ExecutableScriptsSkipped = 0 } }
+
+        // Rich is a pure projection: it changes no JSON byte.
+        let before = serializeReport postInstReport
+        resolve Rich interactiveColor postInstReport |> ignore
+        Assert.Equal(before, serializeReport postInstReport)
+
+        let json = (resolve Json interactiveColor postInstReport).Text
+        let text = (resolve Text nonInteractive postInstReport).Text
+        let rich = (resolve Rich interactiveColor postInstReport).Text
+
+        Assert.Contains("\"repoInitOutcome\": \"initialized\"", json)
+        Assert.Contains("\"executableScriptCount\": 1", json)
+        Assert.Contains("scaffoldRepoInit: initialized", text)
+        Assert.Contains("scaffoldExecutableScripts: 1", text)
+
+        for projection in [ json; text; rich ] do
+            Assert.Contains("initialized", projection)
+            Assert.Contains("run.sh", projection)
 
     // 031 T019 (FR-006 / US2.4): the app-only produced-path facts of a lifecycle=sdd
     // run (including the recording manifest) are identical across json/text/rich, and

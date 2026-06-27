@@ -945,6 +945,7 @@ module CommandReports =
         | ReadFile _
         | EnumerateDirectory _
         | RunProcess _
+        | SetExecutable _
         | EmitStdout _
         | EmitStderr _
         | SetExitCode _ -> None

@@ -33,6 +33,9 @@ FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderUnavailable
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderUnknown
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderVersionUnsupported
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderWroteSddTree
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldRepoInitSkippedExistingRepository
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldRepoInitSkippedGitUnavailable
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldScriptsNotMadeExecutable
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldTargetCollision
 FS.GG.SDD.Artifacts.Diagnostics.severityRank
 FS.GG.SDD.Artifacts.Diagnostics.severityValue

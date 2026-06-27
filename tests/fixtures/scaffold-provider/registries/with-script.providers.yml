@@ -1,0 +1,7 @@
+schemaVersion: 1
+providers:
+  - name: scripted
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-script-app
+    source: __FIXTURE__/with-script
+    parameters: []

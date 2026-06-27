@@ -325,6 +325,9 @@ module CommandTypes =
           ProviderInvoked: bool
           ProducedPathCount: int
           ProducedPaths: string list
+          RepoInitOutcome: string
+          ExecutableScriptCount: int
+          ExecutableScriptsSkipped: int
           NextActionHint: string }
 
     type GovernanceCompatibilityFact =
@@ -376,6 +379,7 @@ module CommandTypes =
         | CreateDirectory of path: string
         | WriteFile of path: string * text: string * kind: ArtifactWriteKind
         | RunProcess of command: string * args: string list * workingDir: string
+        | SetExecutable of path: string
         | EmitStdout of text: string
         | EmitStderr of text: string
         | SetExitCode of code: int
@@ -537,6 +541,7 @@ module CommandTypes =
         | CreateDirectory path
         | WriteFile(path, _, _) -> Some path
         | RunProcess(_, _, workingDir) -> Some workingDir
+        | SetExecutable path -> Some path
         | EmitStdout _
         | EmitStderr _
         | SetExitCode _ -> None

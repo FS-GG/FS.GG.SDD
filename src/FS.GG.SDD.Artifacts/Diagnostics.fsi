@@ -60,5 +60,11 @@ module Diagnostics =
     val scaffoldProviderWroteSddTree: paths: string list -> Diagnostic
     val scaffoldProvenanceMalformed: path: string -> Diagnostic
 
+    // Post-instantiation advisory facts (FR-010): non-fatal, never change the exit
+    // code or flip the scaffold to failed/incomplete.
+    val scaffoldRepoInitSkippedExistingRepository: unit -> Diagnostic
+    val scaffoldRepoInitSkippedGitUnavailable: unit -> Diagnostic
+    val scaffoldScriptsNotMadeExecutable: paths: string list -> Diagnostic
+
     val sort: diagnostics: Diagnostic list -> Diagnostic list
     val hasBlocking: diagnostics: Diagnostic list -> bool
