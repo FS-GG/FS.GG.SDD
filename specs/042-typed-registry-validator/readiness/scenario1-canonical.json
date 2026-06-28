@@ -1,0 +1,6 @@
+{
+  "tool": "fsgg-sdd registry validate",
+  "path": "tests/fixtures/registry/dependencies.yml",
+  "valid": true,
+  "diagnostics": []
+}

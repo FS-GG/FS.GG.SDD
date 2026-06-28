@@ -1,0 +1,10 @@
+{
+  "tool": "fsgg-sdd registry validate",
+  "path": "/tmp/broken-registry.yml",
+  "valid": false,
+  "diagnostics": [
+    { "entry": "scaffold-provider", "rule": "MalformedVersion", "message": "Contract 'scaffold-provider' has a malformed 'version': '1.2.x.4'." },
+    { "entry": "scaffold-provider", "rule": "UnknownComponent", "message": "Contract 'scaffold-provider' lists an unknown consumer 'ghost'." },
+    { "entry": "templates -> nope", "rule": "UnknownComponent", "message": "Dependency edge 'templates -> nope' references an unknown 'to' repo 'nope'." }
+  ]
+}

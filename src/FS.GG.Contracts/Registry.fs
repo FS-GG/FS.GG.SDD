@@ -20,6 +20,8 @@ module Registry =
         | UnknownComponent
         | IncompatibleVersion
         | MalformedVersion
+        | DuplicateComponent
+        | MalformedDocument
 
     type RegistryDiagnostic =
         { Entry: string
@@ -29,6 +31,38 @@ module Registry =
     type ValidationResult =
         | Valid
         | Invalid of RegistryDiagnostic list
+
+    // --- Real-schema document model (feature 042, additive). ---
+
+    type RegistryRepo =
+        { Id: string
+          Name: string
+          Role: string }
+
+    type ContractEntry =
+        { Id: string
+          Version: string
+          Owner: string
+          Surface: string
+          Consumers: string list
+          PackageVersion: string option
+          Range: string option }
+
+    type DependencyEdge2 =
+        { From: string
+          To: string
+          Via: string }
+
+    type CoherenceEntry =
+        { Id: string
+          Coherent: bool }
+
+    type RegistryDocument =
+        { SchemaVersion: int
+          Repos: RegistryRepo list
+          Contracts: ContractEntry list
+          Dependencies: DependencyEdge2 list
+          Coherence: CoherenceEntry list }
 
     // --- Internal BCL-only SemVer helper (research R5; no third-party package). ---
 
@@ -181,5 +215,195 @@ module Registry =
                           | None -> () ])
 
         match componentDiagnostics @ edgeDiagnostics with
+        | [] -> Valid
+        | diagnostics -> Invalid diagnostics
+
+    // --- Real-schema version grammar (feature 042; research R3). BCL regex only,
+    // mirroring scripts/validate-registry.py exactly so the two cannot disagree. ---
+
+    /// `version` / `package-version`: full SemVer with optional prerelease/build
+    /// (`1.0.0`, `0.1.52-preview.1`) OR a bare integer (`1`, `2`).
+    let private semVerRegex =
+        System.Text.RegularExpressions.Regex(@"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$")
+
+    let private bareIntegerRegex = System.Text.RegularExpressions.Regex(@"^\d+$")
+
+    /// `range`: permissive comparator/shorthand set (`1.x`, `>=1.0.0 <2.0.0`).
+    let private rangeRegex = System.Text.RegularExpressions.Regex(@"^[\d.xX*\s<>=~^|.-]+$")
+
+    let private isValidVersion (text: string) =
+        not (isBlank text) && (semVerRegex.IsMatch text || bareIntegerRegex.IsMatch text)
+
+    let private isValidRange (text: string) =
+        not (isBlank text) && rangeRegex.IsMatch text
+
+    // --- The real-schema pure validator (research R4; mirrors the Python authority). ---
+
+    let validateDocument (document: RegistryDocument) : ValidationResult =
+        // Reference set: declared repo ids. `owner` additionally allows `github`
+        // (the org repo, owner of `shared-build-config`), matching the authority.
+        let repoIds =
+            document.Repos
+            |> List.choose (fun r -> if isBlank r.Id then None else Some r.Id)
+            |> Set.ofList
+
+        let ownerIds = repoIds |> Set.add "github"
+
+        // root: repos / contracts must be non-empty. (SchemaVersion is structurally
+        // an int via the typed model; a non-integer is rejected at the load edge.)
+        let rootDiagnostics =
+            [ if document.Repos.IsEmpty then
+                  { Entry = "<root>"
+                    Rule = MissingField "repos"
+                    Message = "Registry document has no 'repos'." }
+              if document.Contracts.IsEmpty then
+                  { Entry = "<root>"
+                    Rule = MissingField "contracts"
+                    Message = "Registry document has no 'contracts'." } ]
+
+        // repos (file order): each repo needs a non-blank id, name, role.
+        let repoDiagnostics =
+            document.Repos
+            |> List.collect (fun r ->
+                let entry = if isBlank r.Id then "<unnamed repo>" else r.Id
+
+                [ if isBlank r.Id then
+                      { Entry = entry
+                        Rule = MissingField "id"
+                        Message = "Repo entry is missing a non-blank key/'id'." }
+                  if isBlank r.Name then
+                      { Entry = entry
+                        Rule = MissingField "name"
+                        Message = $"Repo '{entry}' is missing a non-blank 'name'." }
+                  if isBlank r.Role then
+                      { Entry = entry
+                        Rule = MissingField "role"
+                        Message = $"Repo '{entry}' is missing a non-blank 'role'." } ])
+
+        // contracts (file order): structural + reference + version rules. Duplicate
+        // detection walks in order, flagging the second+ occurrence of an id.
+        let mutable seenIds = Set.empty
+
+        let contractDiagnostics =
+            document.Contracts
+            |> List.collect (fun c ->
+                let entry = if isBlank c.Id then "<unnamed contract>" else c.Id
+
+                let duplicate =
+                    not (isBlank c.Id) && Set.contains c.Id seenIds
+
+                if not (isBlank c.Id) then
+                    seenIds <- Set.add c.Id seenIds
+
+                [ if isBlank c.Id then
+                      { Entry = entry
+                        Rule = MissingField "id"
+                        Message = "Contract entry is missing a non-blank 'id'." }
+                  if duplicate then
+                      { Entry = entry
+                        Rule = DuplicateComponent
+                        Message = $"Contract '{entry}' has a duplicate 'id'." }
+
+                  if isBlank c.Version then
+                      { Entry = entry
+                        Rule = MissingField "version"
+                        Message = $"Contract '{entry}' is missing a non-blank 'version'." }
+                  elif not (isValidVersion c.Version) then
+                      { Entry = entry
+                        Rule = MalformedVersion
+                        Message = $"Contract '{entry}' has a malformed 'version': '{c.Version}'." }
+
+                  if isBlank c.Owner then
+                      { Entry = entry
+                        Rule = MissingField "owner"
+                        Message = $"Contract '{entry}' is missing a non-blank 'owner'." }
+                  elif not (Set.contains c.Owner ownerIds) then
+                      { Entry = entry
+                        Rule = UnknownComponent
+                        Message = $"Contract '{entry}' has an unknown 'owner': '{c.Owner}'." }
+
+                  if isBlank c.Surface then
+                      { Entry = entry
+                        Rule = MissingField "surface"
+                        Message = $"Contract '{entry}' is missing a non-blank 'surface'." }
+
+                  if c.Consumers.IsEmpty then
+                      { Entry = entry
+                        Rule = MissingField "consumers"
+                        Message = $"Contract '{entry}' is missing a non-empty 'consumers'." }
+                  else
+                      for consumer in c.Consumers do
+                          if isBlank consumer then
+                              { Entry = entry
+                                Rule = MissingField "consumers"
+                                Message = $"Contract '{entry}' has a blank 'consumers' entry." }
+                          elif not (Set.contains consumer repoIds) then
+                              { Entry = entry
+                                Rule = UnknownComponent
+                                Message = $"Contract '{entry}' lists an unknown consumer '{consumer}'." }
+
+                  match c.PackageVersion with
+                  | Some pv when not (isValidVersion pv) ->
+                      { Entry = entry
+                        Rule = MalformedVersion
+                        Message = $"Contract '{entry}' has a malformed 'package-version': '{pv}'." }
+                  | _ -> ()
+
+                  match c.Range with
+                  | Some range when not (isValidRange range) ->
+                      { Entry = entry
+                        Rule = MalformedVersion
+                        Message = $"Contract '{entry}' has a malformed 'range': '{range}'." }
+                  | _ -> () ])
+
+        // dependencies (file order): from/to must be present repo ids. `via` is
+        // free-text and is NOT contract-checked (research R4).
+        let dependencyDiagnostics =
+            document.Dependencies
+            |> List.collect (fun e ->
+                let label f t =
+                    let f = if isBlank f then "<blank>" else f
+                    let t = if isBlank t then "<blank>" else t
+                    $"{f} -> {t}"
+
+                let entry = label e.From e.To
+
+                [ if isBlank e.From then
+                      { Entry = entry
+                        Rule = MissingField "from"
+                        Message = $"Dependency edge '{entry}' is missing a non-blank 'from'." }
+                  elif not (Set.contains e.From repoIds) then
+                      { Entry = entry
+                        Rule = UnknownComponent
+                        Message = $"Dependency edge '{entry}' references an unknown 'from' repo '{e.From}'." }
+
+                  if isBlank e.To then
+                      { Entry = entry
+                        Rule = MissingField "to"
+                        Message = $"Dependency edge '{entry}' is missing a non-blank 'to'." }
+                  elif not (Set.contains e.To repoIds) then
+                      { Entry = entry
+                        Rule = UnknownComponent
+                        Message = $"Dependency edge '{entry}' references an unknown 'to' repo '{e.To}'." } ])
+
+        // coherence (file order): each entry needs a non-blank id. `coherent` is a
+        // bool via the typed model.
+        let coherenceDiagnostics =
+            document.Coherence
+            |> List.collect (fun co ->
+                let entry = if isBlank co.Id then "<unnamed coherence>" else co.Id
+
+                [ if isBlank co.Id then
+                      { Entry = entry
+                        Rule = MissingField "id"
+                        Message = "Coherence entry is missing a non-blank 'id'." } ])
+
+        match
+            rootDiagnostics
+            @ repoDiagnostics
+            @ contractDiagnostics
+            @ dependencyDiagnostics
+            @ coherenceDiagnostics
+        with
         | [] -> Valid
         | diagnostics -> Invalid diagnostics

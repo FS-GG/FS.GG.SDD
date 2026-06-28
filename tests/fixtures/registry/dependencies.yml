@@ -1,0 +1,332 @@
+# FS-GG cross-repo contract & dependency registry.
+# The machine-readable source of truth for who depends on whom and which contract
+# versions are coherent. A `contract-change` issue MUST update this file as part of
+# its resolution. Human projection: docs/registry/compatibility.md.
+schemaVersion: 1
+updated: "2026-06-28"   # fsgg-contracts pin 1.0.0→1.0.1 (owner sdd): Governance-owned `capabilities` schemaVersion corrected 1→2, package republished (SDD#18 / feature 040, merged SDD#22). auto-update fabric VERIFIED end-to-end (dispatch smoke-tested; Renovate installed+resolving preset; read:packages feed-auth HTTP 200) but the org GitHub Packages feed is EMPTY — FS.GG.* was never published there so every lookup is no-result; producer publish steps now the blocker: FS.GG.Rendering#15 (release-time pack+push, MERGED) + FS.GG.SDD#17 (FS.GG.Contracts, filed); feed hostRules token moved out of the shared preset into each repo's own renovate.json (Renovate won't substitute {{secrets}} in an `extends` preset). #22: cross-repo auto-update fabric authored (H4, epic #16 Pillar 4) — reusable dispatch-sender workflow (.github/workflows/dispatch-sender.yml, workflow_call; App-token repository_dispatch, since GITHUB_TOKEN can't dispatch cross-repo) + org-shared Renovate preset (default.json, `extends: github>FS-GG/.github`) with custom managers for every embedded pin the nuget manager misses (FsGgUiVersion->FS.GG.UI.Template + annotation-driven gate-set) on the org GitHub Packages feed. New coherence id cross-repo-auto-update (coherent:false) — DORMANT/fail-closed until org-admin provisions the App + feed (#21). No contract surface/version change. #20: api-breaking-change-gate carried by shared-build-config (H3, epic #16 Pillar 5) — PublicApiAnalyzers (centrally pinned 3.3.4) + SDK Package Validation/ApiCompat wired into dist/dotnet as an OPT-IN, advisory-by-default gate (FsggApiGate); off by default so a plain re-sync stays non-breaking under locked restore (enabling it adds a PackageReference → the adopting repo regenerates its lockfile). New coherence id apicompat-publicapi-gate (coherent:false) tracks per-repo adoption on FS.GG.Contracts + FS.GG.UI.*. #18: reusable contract-coherence gate landed (H3, epic #16 Pillar 3) — .github/workflows/contract-coherence.yml (workflow_call) + scripts/validate-registry.py; validates this registry's schema, asserts the declared fsgg-contracts pin == the actual FS.GG.Contracts package version (FS.GG.SDD), and runs sync-build-config.sh --check for build-config drift; .github gained its first workflows (coherence.yml self-gate). New coherence id registry-validator-typed (coherent:false) tracks converging Fsgg.Registry onto the real registry schema (FS.GG.SDD#12). #29: shared-build-config defect fix — XML-invalid comment (`--` inside <!-- -->) in dist/dotnet/Directory.Build.props broke every adopter's build (MSB4024); reworded + sync-build-config.sh now asserts source .props well-formedness (surface unchanged, no version bump); #27: register fsgg-contracts@1.0.0 (H2, epic #16 Pillar 2 — typed coherence backbone; SDD#8); #19: ADR-0006 shared-build-config contract + lockfile-restore-enforcement gate unified to GITHUB_ACTIONS (.github source of truth); #17: ADR-0005 .fsgg slot ownership (SDD project.yml / Governance governance.yml; canonical scaffold param `name`); #14: governance-overlay-populated coherent; #7: lockfile-restore-enforcement coherent
+
+repos:
+  sdd:        { name: FS.GG.SDD,        role: "spec-driven lifecycle CLI + contracts" }
+  rendering:  { name: FS.GG.Rendering,  role: "Skia/OpenGL + Elmish UI framework + fs-gg-ui template" }
+  governance: { name: FS.GG.Governance, role: "optional rule/evidence/gate tooling" }
+  templates:  { name: FS.GG.Templates,  role: "downstream composition (fs-gg-fullstack, providers, overlays)" }
+
+# Versioned contracts and where they are owned/consumed.
+contracts:
+  - id: scaffold-provider
+    version: "1.0.0"
+    owner: sdd
+    surface: ".fsgg/providers.yml + provider invocation protocol (dotnet new wrapper)"
+    consumers: [templates, rendering]   # rendering authors a provider descriptor; templates registers one
+    # ADR-0005: the canonical product-name parameter is `name` (was `productName`); invocation passes --param name=<product>.
+    parameters:
+      name:
+        type: "string (product name)"
+        notes: "Canonical scaffold product-name param. Supersedes the drifted `productName` spelling (ADR-0005)."
+  - id: fsgg-contracts
+    version: "1.0.1"            # FS.GG.Contracts package SemVer (1.0.1: Governance-owned `capabilities` schemaVersion corrected 1→2; SDD#18 / feature 040)
+    package-version: "1.0.1"
+    owner: sdd
+    # H2 (epic #16, Pillar 2): the typed coherence backbone. A BCL-only F# leaf library
+    # (FSharp.Core-only closure, no project references) that owns the machine-readable form of
+    # every other .fsgg contract id's schema + version constants. Published to a local folder feed
+    # until the H4 feed exists (SDD#8). Implemented & in review; consumers re-type onto it next:
+    # SDD#9, Governance#14, Templates#13.
+    surface: >
+      FS.GG.Contracts package — Fsgg.Schemas (typed .fsgg schema records + version constants for
+      providers/project/sdd/agents/governance/policy/capabilities/tooling/scaffold-provenance/
+      governance-handoff) / Fsgg.Provider (extended ProviderDescriptor + optional Build/Test/Run/Verify
+      commands + canonical NameParameter default "name") / Fsgg.Registry (dependencies.yml types +
+      validator) / Fsgg.ContractVersion (= 1.0.0).
+    consumers: [sdd, governance, templates]   # re-type tracked: SDD#9 / Governance#14 / Templates#13
+    notes: >
+      The reusable contract-coherence workflow (#18, LANDED) asserts this registry's declared
+      fsgg-contracts version equals the ACTUAL FS.GG.Contracts package version (read from FS.GG.SDD,
+      the schema authority) and fails on drift. Registry-schema validation currently runs through a
+      stand-in (scripts/validate-registry.py) that mirrors Fsgg.Registry's rule kinds, because
+      Fsgg.Registry has no YAML loader and its abstract model/version-grammar diverge from this file
+      (coherence id registry-validator-typed; FS.GG.SDD#12). The apicompat/PublicApiAnalyzers gate
+      (#20) guards FS.GG.Contracts' public surface.
+  - id: scaffold-provenance
+    version: "1.0.0"
+    owner: sdd
+    surface: ".fsgg/scaffold-provenance.json"
+    consumers: [sdd]
+  - id: governance-handoff
+    version: "1.0.0"
+    range: "1.x"
+    owner: sdd
+    surface: "readiness/<id>/governance-handoff.json"
+    consumers: [governance]
+  - id: governance-policy
+    version: "1"
+    owner: governance
+    surface: ".fsgg/policy.yml"
+    consumers: [templates]
+  - id: governance-capabilities
+    version: "2"
+    owner: governance
+    surface: ".fsgg/capabilities.yml"
+    consumers: [templates]
+  - id: governance-tooling
+    version: "1"
+    owner: governance
+    surface: ".fsgg/tooling.yml"
+    consumers: [templates]
+  - id: governance-descriptor
+    version: "1"
+    owner: governance
+    # ADR-0005: governance's project descriptor (ProjectFacts, read by Config.Loader) is the
+    # `.fsgg/governance.yml` slot — renamed from `.fsgg/project.yml` (clean break, no alias) so it
+    # no longer collides with SDD's `.fsgg/project.yml` in a shared `.fsgg/`. Internal type names
+    # (ProjectFacts) unchanged; only the on-disk filename/slot moves.
+    surface: ".fsgg/governance.yml"
+    consumers: [governance]
+  - id: fs-gg-ui-template
+    version: "0.1.52-preview.1"   # template FsGgUiVersion pin (tag fs-gg-ui/v0.1.52-preview.1)
+    package-version: "0.1.52-preview.1"   # PUBLISHED FS.GG.UI.Template package (was 0.1.50-preview.1)
+    package-tag: "fs-gg-ui-template/v0.1.52-preview.1"   # template-scoped coherent-set tag (Feature 206/215)
+    owner: rendering
+    surface: "dotnet new fs-gg-ui (template/base) + FS.GG.UI.* framework packages"
+    consumers: [templates, sdd]
+    # Feature 212 (FS.GG.Rendering#9), released as the coherent set 0.1.52-preview.1 (Feature 215):
+    # the template now GUARANTEES a root-buildable generated product. Additive (no behavior break);
+    # emitted for every profile × lifecycle, byte-neutral across designSystem. SDD composition-
+    # acceptance probes consume this stock surface; the release.yml template-product-tests gate
+    # asserts it on the real release. See coherence id fs-gg-ui-template.
+    root-buildable:
+      since: "Feature 212 (2026-06-28); released 0.1.52-preview.1 (Feature 215)"
+      surface: "root <Name>.slnx (refs src/<Name> + tests/<Name>.Tests) + global.json (net10.0 band, rollForward latestFeature) + build.sh/build.cmd verb wrapper (restore|build|test|run|verify|pack → FAKE; Verify/Test frozen)"
+      stock-commands: "dotnet restore|build|test; dotnet run --project src/<Name> (headless exit 0 via UnsupportedEnvironment) — no FAKE knowledge required"
+      tracking: "https://github.com/FS-GG/FS.GG.Rendering/issues/9"
+    # ADR-0002: lifecycle is a template parameter (choice symbol).
+    parameters:
+      lifecycle:
+        type: "choice (spec-kit|sdd|none)"
+        default: "spec-kit"   # byte-identical to pre-ADR-0002 output; existing profile tests unchanged
+        notes: >
+          sdd -> app-only product + SDD skeleton; none -> emits neither .specify/ nor a
+          constitution. Gates .specify/, constitution, .agents/, .template.config/generated/.
+    behavior-break:
+      feature: "FS.GG.Rendering Feature 205 — side-effect-free template generation"
+      date: "2026-06-27"
+      summary: >
+        The fs-gg-ui template no longer auto-runs git-init/chmod post-actions at generation time.
+        The `skipGitInit` opt-out option is REMOVED; a new `initGit` opt-in (bool, default false)
+        reproduces the convenience for direct callers (pair with `--allow-scripts yes` for
+        non-interactive runs). Default generation is now side-effect-free: no spawned process, no
+        Git repository, no hang in CI / IDE "new project" hosts. No emitted file changes.
+      consumer-action: >
+        SDD scaffold path must stop relying on template auto-init and own repo-init + chmod as
+        explicit post-instantiation steps (contract §5 S1–S3). Direct callers that passed
+        `--skipGitInit true` simply drop the flag; callers that relied on auto-init pass
+        `--initGit true`.
+      contract-doc: "FS.GG.Rendering specs/205-scaffold-git-init-chmod/contracts/fs-gg-ui-template-generation.md (Accepted)"
+      tracking: "https://github.com/FS-GG/FS.GG.SDD/issues/1 (cross-repo follow-up for the scaffold-path execution)"
+  - id: shared-build-config
+    version: "1.0.0"
+    owner: github   # the FS-GG/.github org repo is the source of truth
+    # ADR-0006 / .github#19 (H3, Pillar 5): the canonical org-shared .NET build config —
+    # Directory.Build.props (determinism, CPM + transitive pinning, lockfile-restore-enforcement
+    # gate, NU1603/NU1608->error), Directory.Packages.props (CPM + org FSharp.Core 10.1.301 pin),
+    # and .config/dotnet-tools.json (fake-cli 6.1.4). Distributed verbatim via
+    # scripts/sync-build-config.sh; repo-specific settings live in the imported *.local.props.
+    # The script's --check mode is the drift gate consumed by the reusable coherence workflow
+    # (#18, LANDED): consumer repos call contract-coherence.yml with check-build-config: true.
+    # #29: --check compares byte-for-byte (not XML-aware), so a malformed-but-verbatim source could
+    # pass the gate yet fail every adopter's build (MSB4024); the script now asserts source .props
+    # XML well-formedness before distributing/checking.
+    # #20 (H3, Pillar 5): the config now also carries the OPT-IN api-breaking-change-gate —
+    # PublicApiAnalyzers (pinned 3.3.4) + SDK Package Validation/ApiCompat, gated on FsggApiGate and
+    # OFF by default so a re-sync stays non-breaking under locked restore. Surface unchanged (same 3
+    # files + script); no shared-build-config version bump. Per-repo adoption: coherence id
+    # apicompat-publicapi-gate.
+    surface: "dist/dotnet/{Directory.Build.props,Directory.Packages.props,.config/dotnet-tools.json} + scripts/sync-build-config.sh"
+    consumers: [rendering, sdd, governance, templates]
+    docs: "docs/build/README.md"
+
+# Hard dependency edges (downstream -> upstream).
+dependencies:
+  # ADR-0002: vendoring retired. Templates composes the rendering app via scaffold, not a fork.
+  - { from: templates, to: rendering,  via: "fs-gg-ui-template@0.1.50-preview.1 composed via scaffold-provider (lifecycle=sdd); no vendored payload" }
+  - { from: templates, to: sdd,        via: "scaffold-provider@1 + SDD skeleton" }
+  - { from: templates, to: governance, via: "governance-policy@1 / capabilities@2 / tooling@1 config" }
+  - { from: sdd,       to: governance, via: "governance-handoff@1 (OPTIONAL; SDD runs fully without Governance)" }
+  # rendering depends on no other FS-GG product (it never depends on Governance).
+
+# Known coherence state. `coherent: false` is a standing cross-repo request.
+coherence:
+  - id: fs-gg-ui-version
+    coherent: true
+    owner: rendering
+    summary: >
+      Resolved 2026-06-27: the fs-gg-ui template pins FsGgUiVersion=0.1.50-preview.1 — the
+      complete coherent 16-package FS.GG.UI.* set — behind the immutable annotated tag
+      fs-gg-ui/v0.1.50-preview.1. All four template profiles (app, headless-scene, governed,
+      sample-pack) generate -> restore -> build -> evidence -> governance green against the single
+      pin; the phantom FS.GG.UI.Color / FS.GG.UI.SkillSupport pins were removed; restores are
+      byte-reproducible (RestorePackagesWithLockFile). The 0.1.0-preview.1 pin and the missing
+      release tag are gone.
+    resolved_by: "FS-GG/FS.GG.Rendering@57be86c — tag fs-gg-ui/v0.1.50-preview.1 (closes #1)"
+    note: >
+      Renamed fs-skia-ui-version -> fs-gg-ui-version (version property FsSkiaUiVersion ->
+      FsGgUiVersion; tag namespace fs-skia-ui/v* -> fs-gg-ui/v* at the same commits) by
+      FS.GG.Rendering feature 208 — a clean break, no compatibility alias (ADR-0003 Accepted).
+    impact: "FS.GG.Templates fs-gg-fullstack and FS.GG.SDD scaffold consumers can build the rendering app against a tagged, reproducible FS.GG.UI.* set."
+    tracking: "https://github.com/FS-GG/FS.GG.Rendering/issues/1"
+  - id: fs-gg-ui-bom
+    coherent: true
+    owner: rendering
+    summary: >
+      Resolved 2026-06-27 (Feature 207): an OPTIONAL full-set BOM / metapackage FS.GG.UI is
+      published at 0.1.51-preview.1 alongside the 16 coherent FS.GG.UI.* members, behind the
+      immutable annotated tag fs-gg-ui/v0.1.51-preview.1. Referencing the single FS.GG.UI package
+      at one version pins the entire coherent set at that version (live-verified: one
+      FS.GG.UI@0.1.51-preview.1 reference -> all 16 members at V, clean build, byte-reproducible
+      across two cache-cleared restores, preview channel matched). The metapackage ships no assembly
+      (exact [$version$] member deps only) and its membership is locked to the packable FS.GG.UI.*
+      set by an always-on parity test. Deviation is DETECTED in both directions — NU1605 (downgrade
+      Y<V) / NU1608 (upgrade Y>V) — and becomes a hard restore/build failure under the
+      warnings-as-errors posture (WarningsAsErrors=NU1605;NU1608 / TreatWarningsAsErrors, the repo +
+      governed-template default); by default the codes are warnings. Adoption is additive/optional:
+      the fs-gg-ui template default pin remains FsGgUiVersion=0.1.50-preview.1 and is NOT migrated
+      to the BOM (this corrects research R1's NU1605/NU1107 claim to the observed NU1605/NU1608 +
+      consumer policy).
+    resolved_by: "FS-GG/FS.GG.Rendering@d9f4c81 — tag fs-gg-ui/v0.1.51-preview.1 (feature 207)"
+    note: >
+      Id renamed fs-skia-ui-bom -> fs-gg-ui-bom by FS.GG.Rendering feature 208 (clean break, no
+      alias; ADR-0003 Accepted); the snapshot tag is now fs-gg-ui/v0.1.51-preview.1 at the same commit.
+    impact: "Consumers can collapse up to 16 individual FS.GG.UI.* pins to one FS.GG.UI reference; any out-of-set member version is surfaced loudly under warnings-as-errors instead of silently resolving to a mixed graph."
+    tracking: "https://github.com/FS-GG/FS.GG.Rendering (feature 207; no separate tracking issue filed)"
+  - id: fs-gg-ui-template
+    coherent: true
+    owner: rendering
+    summary: >
+      Resolved 2026-06-27 (Feature 206): the FS.GG.UI.Template package is PUBLISHED at
+      0.1.50-preview.1 (was 0.1.17-preview.1), carrying the ADR-0002 lifecycle choice symbol
+      (spec-kit|sdd|none) and the Feature 205 side-effect-free initGit opt-in (skipGitInit removed),
+      over the coherent FS.GG.UI.* 0.1.50-preview.1 framework set (tag fs-gg-ui/v0.1.50-preview.1).
+      Snapshotted behind the immutable template-scoped tag fs-gg-ui-template/v0.1.50-preview.1.
+      Verified against the INSTALLED package: resolvable > 0.1.17; manifest carries lifecycle + initGit
+      (skipGitInit absent); lifecycle=spec-kit byte-identical to the prior baseline for all four
+      profiles; default generation side-effect-free (no .git); all four profiles
+      restore→build green (0 NU1101 / 0 version-conflict); double-restore byte-reproducible; from-tag
+      repack reproduces the package.
+      Advanced 2026-06-28 (Feature 212/215, FS.GG.Rendering#9): the coherent set is re-released at
+      0.1.52-preview.1 (tag fs-gg-ui-template/v0.1.52-preview.1 over fs-gg-ui/v0.1.52-preview.1) and the
+      template now GUARANTEES a root-buildable generated product — root <Name>.slnx + net10.0 global.json
+      pin + build.sh/build.cmd verb wrapper; stock dotnet restore/build/test/run at the product root, zero
+      FAKE. Proven on the real release by the release.yml template-product-tests gate (the load-bearing #9
+      evidence). See the fs-gg-ui-template contract entry's root-buildable block.
+    resolved_by: "FS-GG/FS.GG.Rendering — tag fs-gg-ui-template/v0.1.52-preview.1 (root-buildable, Feature 212/215); prior 2862caf at 0.1.50-preview.1"
+    impact: "Consumers (Templates, SDD) can install the lifecycle + side-effect-free + root-buildable template surface by id and pin the coherent template↔framework snapshot; SDD composition-acceptance probes run the stock root commands."
+    tracking: "https://github.com/FS-GG/FS.GG.Rendering/issues/9 (root-buildable guarantee, Feature 212/215); https://github.com/FS-GG/FS.GG.SDD/issues/1 (dependent scaffold-path request — responded)"
+  - id: governance-overlay-populated
+    coherent: true
+    owner: governance
+    summary: >
+      Resolved 2026-06-28 (ADR-0002; P3 Governance + P4 Templates): Templates' fs-gg-governance
+      overlay no longer ships EMPTY — it carries REAL gates. Governance (P3) published the populated
+      reference .fsgg gate set at samples/sdd-reference-gate-set/.fsgg/ (policy/capabilities/project/
+      tooling); Templates (P4) populated templates/fs-gg-governance/.fsgg/ from it: capabilities.yml
+      has non-empty checks: (build/test/evidence, each wired to a tooling command, block-on-ship /
+      warn maturities), tooling.yml has non-empty commands: (dotnet-build, dotnet-test, build-evidence
+      EvidenceGraph/EvidenceAudit). The advertised governance-policy@1 / capabilities@2 / tooling@1
+      surfaces are now enforced, not just declared.
+    resolved_by: >
+      FS-GG/FS.GG.Governance#9 (publish populated reference gate set) +
+      FS-GG/FS.GG.Templates#9 (populate fs-gg-governance overlay from P3) +
+      FS-GG/FS.GG.Templates#10 (delete fs-gg-fullstack/ + sync-from-rendering.sh). All closed.
+    impact: "Templates' governance overlay enforces the build/test/evidence gates it advertises; the empty-stub capability gap (ADR-0002) is closed."
+    tracking: "https://github.com/FS-GG/.github/issues/14"
+  - id: lockfile-restore-enforcement
+    coherent: true
+    owner: rendering
+    summary: >
+      Resolved 2026-06-28 (P5 — FS-GG/.github#7, epic #5): the FsGgUiVersion-style staleness bug
+      class is structurally impossible across every consumer repo — committed packages.lock.json +
+      CI --locked-mode + NU1603 (silent substitution) / NU1608 (out-of-range) promoted to errors —
+      not just convention-enforced. Rendering is the reference impl (Feature 211; props gate
+      RestoreLockedMode on ContinuousIntegrationBuild). The other three consumers adopt the same
+      posture gating RestoreLockedMode on GITHUB_ACTIONS (SDD forces CIB=true unconditionally for
+      determinism, so a CIB gate would fail-closed on a fresh local clone). SDD and Governance each
+      gained their first/only per-PR CI gate as the enforcement point. Templates' packaging project
+      has no PackageReferences, so its committed lockfile is empty — a forward guardrail only; the
+      load-bearing FS.GG.UI.* enforcement for scaffolded apps stays upstream in the rendering
+      template (Feature 204/211) + the scaffold path. All consumer gates restore→build green on merge.
+    unified_by: >
+      ADR-0006 / FS-GG/.github#19 (H3): the gate condition is canonicalized to GITHUB_ACTIONS and
+      published in the org-shared `shared-build-config` (dist/dotnet/Directory.Build.props). This
+      SUPERSEDES Rendering's ContinuousIntegrationBuild gate — the lone outlier — with the
+      GITHUB_ACTIONS spelling SDD/Governance already use. Per-repo re-sync to the canonical file is
+      sequenced as H3 adoption follow-ups; drift is caught by sync-build-config.sh --check (wired by
+      the reusable contract-coherence workflow, #18 — LANDED).
+    resolved_by: >
+      rendering Feature 211 (landed) + FS-GG/FS.GG.SDD#6 (gate green 48s),
+      FS-GG/FS.GG.Governance#12 (gate green 3m25s, full 165-project build),
+      FS-GG/FS.GG.Templates#11 (composition green 22s).
+    impact: "A stale or silently substituted FS.GG.UI.* (or any) dependency version now fails restore in CI in every consumer repo instead of resolving quietly."
+    tracking: "https://github.com/FS-GG/.github/issues/7"
+  - id: registry-validator-typed
+    coherent: false
+    owner: sdd
+    summary: >
+      Standing request (2026-06-28, from FS-GG/.github#18): the reusable contract-coherence gate
+      should validate this registry against the TYPED FS.GG.Contracts validator (Fsgg.Registry), but
+      cannot yet. Fsgg.Registry has no YAML loader (no `load : string -> RegistryModel`) and its
+      abstract model (Components{Id,Version}/Edges{Consumer,Provider,CompatibleRange}, strict SemVer
+      triples) diverges from this file's real shape (contracts[]/dependencies[]/coherence[]) and
+      grammar (which also permits bare-integer schema versions such as governance-policy `1` and
+      ranges such as `1.x`). Until it converges, #18 validates the schema through a stand-in
+      (scripts/validate-registry.py) that mirrors Fsgg.Registry's rule kinds (MissingField /
+      UnknownComponent / MalformedVersion); the typed fsgg-contracts version-coupling assertion IS
+      live (registry's declared pin == actual package version).
+    impact: "Registry-schema validation is a Python stand-in, not the typed org validator; the two could drift in detail until Fsgg.Registry models the real schema."
+    tracking: "https://github.com/FS-GG/FS.GG.SDD/issues/12"
+  - id: apicompat-publicapi-gate
+    coherent: false
+    owner: github
+    summary: >
+      H3 / FS-GG/.github#20 (epic #16 Pillar 5): a public-API breaking-change gate now ships in the
+      org-shared shared-build-config — Microsoft.CodeAnalysis.PublicApiAnalyzers (centrally pinned
+      3.3.4) plus the SDK-integrated Package Validation/ApiCompat — so a break on a packable library
+      (FS.GG.Contracts, FS.GG.UI.*) forces a SemVer major that the registry ranges then enforce.
+      The .github source-of-truth slice is DONE (the gate is wired into dist/dotnet and documented),
+      but it is OPT-IN and OFF by default (FsggApiGate): enabling it adds a PackageReference and so
+      changes packages.lock.json, which would break a locked restore if forced on at sync time. Each
+      consumer therefore adopts it deliberately — set FsggApiGate=advisory, commit PublicAPI.Shipped/
+      Unshipped.txt baselines per packable project (regenerating the lockfile), then ratchet to
+      FsggApiGate=required (+ PackageValidationBaselineVersion) once the surface is stable. Stays
+      coherent:false until FS.GG.Contracts (and the FS.GG.UI.* packages) carry committed baselines
+      under the gate.
+    impact: "Public-API breaks on FS.GG.Contracts / FS.GG.UI.* are not yet caught: the shared gate is published but unadopted, so a break can still ship in a non-major release until each repo commits API baselines and turns FsggApiGate on."
+    tracking: "https://github.com/FS-GG/.github/issues/20"
+  - id: cross-repo-auto-update
+    coherent: false
+    owner: github
+    summary: >
+      H4 / FS-GG/.github#22 (epic #16 Pillar 4): the org-owned cross-repo auto-update fabric is
+      authored — both halves now live in .github. PUSH: a reusable dispatch-sender workflow
+      (.github/workflows/dispatch-sender.yml, workflow_call) mints a GitHub App installation token
+      scoped to the target repo and POSTs repository_dispatch {event_type, client_payload:{version,
+      ...}} so a producer release fires the consumer's auto-update workflow (GITHUB_TOKEN cannot
+      dispatch cross-repo — research C4). PULL: an org-shared Renovate preset (default.json,
+      consumed via `extends: ["github>FS-GG/.github"]`) adds custom managers for every embedded
+      cross-repo pin the standard nuget manager misses — the FsGgUiVersion MSBuild property
+      (-> FS.GG.UI.Template) and an annotation-driven manager (`# renovate: datasource=.. depName=..`)
+      for the FS.GG.Governance gate-set + any other non-standard literal — over the org GitHub
+      Packages feed (https://nuget.pkg.github.com/FS-GG/index.json), grouping FS.GG.UI.* and allowing
+      the -preview channel. Provisioning (#21) is DONE + verified: the GitHub App + org dispatch
+      secrets work (dispatch smoke-tested end-to-end), Renovate is installed and resolves the preset,
+      and read:packages feed auth works (HTTP 200; Mend org secret FSGG_PACKAGES_READ_TOKEN). NB:
+      Renovate does NOT substitute `{{ secrets }}` inside an `extends` preset, so the feed hostRules
+      token lives in each repo's own renovate.json, not default.json.
+    impact: >
+      The fabric is fully wired + individually verified but still INERT for one upstream reason: the
+      org GitHub Packages feed is EMPTY — no producer publishes FS.GG.* to it (count=0;
+      FS.GG.UI.Template/FS.GG.Contracts both 404), so every Renovate lookup is no-result. The
+      registry's "published" status for these packages is incoherent with the empty feed. Remaining
+      work is producer-side publish steps: FS.GG.Rendering#15 (release-time pack+push of the
+      FS.GG.UI.* set + template — MERGED) and FS.GG.SDD#17 (FS.GG.Contracts — filed). Stays
+      coherent:false until a release populates the feed and one Renovate sweep resolves it green.
+    tracking: "https://github.com/FS-GG/.github/issues/22"
