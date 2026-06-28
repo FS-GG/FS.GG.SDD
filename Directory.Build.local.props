@@ -1,0 +1,39 @@
+<Project>
+  <!-- Repo-owned MSBuild overrides for FS.GG.SDD. Imported LAST by the canonical
+       Directory.Build.props (Source of truth: FS-GG/.github → dist/dotnet/), so
+       anything here overrides an org default (MSBuild last-write-wins). All
+       SDD-specific settings live here so a future `sync-build-config.sh` can
+       replace the canonical file byte-for-byte without losing them.
+       Properties owned by the canonical file are intentionally NOT re-declared
+       here (Deterministic, ManagePackageVersionsCentrally,
+       RestorePackagesWithLockFile, RestoreLockedMode, NU1603/NU1608 promotion). -->
+  <PropertyGroup>
+    <!-- Single semantic-version source of truth for all FS.GG.SDD.* packages and
+         the fsgg-sdd CLI (feature 018 / FR-003). Each .fsproj inherits this; none
+         declares its own <Version>. currentGeneratorVersion derives from the
+         resulting assembly informational version so the generator and package
+         versions can never silently diverge. -->
+    <Version>0.2.0</Version>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <!-- Not in the org canonical: SDD forces CIB=true unconditionally for
+         determinism. The locked-restore gate is on GITHUB_ACTIONS (canonical), not
+         CIB, so this does not fail-close a fresh local clone. -->
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- Scoped regression gate (feature 026 / FR-006): once the FS3261 (nullness)
+         count reached zero, promote FS3261 and FS0025 (incomplete match) to build
+         errors so the clean state cannot silently re-accumulate. No other category
+         is promoted; TreatWarningsAsErrors stays false. APPEND to $(WarningsAsErrors)
+         — the canonical Directory.Build.props already promoted NU1603;NU1608, so a
+         plain assignment would drop them. -->
+    <WarningsAsErrors>$(WarningsAsErrors);FS3261;FS0025</WarningsAsErrors>
+    <Company>FS.GG</Company>
+    <Authors>FS.GG</Authors>
+    <Product>FS.GG.SDD</Product>
+    <RepositoryUrl>https://github.com/FS-GG/FS.GG.SDD</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+  </PropertyGroup>
+</Project>

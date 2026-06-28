@@ -15,8 +15,13 @@ module ReleaseContractTests =
     let publishedPath =
         Path.Combine(TestSupport.repoRoot, "docs", "release", "release-readiness.json")
 
+    // The single <Version> source of truth lives in the repo-owned
+    // Directory.Build.local.props (feature 037: org shared-build-config moved
+    // repo-specific MSBuild properties out of the canonical Directory.Build.props,
+    // which is now synced byte-identically from FS-GG/.github and carries no
+    // <Version>). The canonical file imports this local override last.
     let directoryBuildPropsVersion () =
-        let text = File.ReadAllText(Path.Combine(TestSupport.repoRoot, "Directory.Build.props"))
+        let text = File.ReadAllText(Path.Combine(TestSupport.repoRoot, "Directory.Build.local.props"))
         let m = System.Text.RegularExpressions.Regex.Match(text, @"<Version>([^<]+)</Version>")
         m.Groups[1].Value.Trim()
 
@@ -31,7 +36,7 @@ module ReleaseContractTests =
         | Error message -> failwith $"parse failed: {message}"
 
     [<Fact>]
-    let ``T011 identity version equals the single Directory.Build.props Version and the generator version`` () =
+    let ``T011 identity version equals the single Directory.Build.local.props Version and the generator version`` () =
         Assert.Equal(directoryBuildPropsVersion (), release.Identity.Version)
         Assert.Equal(release.Identity.Version, release.GeneratorVersion.Version)
 

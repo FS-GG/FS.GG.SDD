@@ -10,8 +10,12 @@ open Xunit
 /// reconciled version source. The end-to-end `dotnet tool install` from a public
 /// registry is validated manually (registry/signing are Governance/release-ops).
 module ReleaseInstallTests =
+    // The single <Version> source of truth lives in the repo-owned
+    // Directory.Build.local.props (feature 037: the canonical Directory.Build.props
+    // is synced byte-identically from FS-GG/.github and carries no repo-specific
+    // <Version>; it imports this local override last).
     let directoryBuildPropsVersion () =
-        let text = File.ReadAllText(Path.Combine(TestSupport.repoRoot, "Directory.Build.props"))
+        let text = File.ReadAllText(Path.Combine(TestSupport.repoRoot, "Directory.Build.local.props"))
         (Regex.Match(text, @"<Version>([^<]+)</Version>")).Groups[1].Value.Trim()
 
     [<Fact>]
@@ -26,7 +30,7 @@ module ReleaseInstallTests =
     [<Fact>]
     let ``T021 the version reported by --version is the single reconciled version source`` () =
         // `fsgg-sdd --version` prints currentGeneratorVersion().Version (see Program.fs);
-        // it must equal the single <Version> in Directory.Build.props (FR-003/FR-011).
+        // it must equal the single <Version> in Directory.Build.local.props (FR-003/FR-011).
         Assert.Equal(directoryBuildPropsVersion (), SchemaVersion.currentGeneratorVersion().Version)
 
     [<Fact>]
