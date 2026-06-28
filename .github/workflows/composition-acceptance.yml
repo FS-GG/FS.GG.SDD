@@ -1,10 +1,12 @@
 name: composition-acceptance
 
 # The opt-in, network-gated real-provider composition acceptance (feature 034). It is
-# separate from the offline inner loop: it runs only on a schedule or on manual dispatch,
-# with FSGG_SDD_ACCEPTANCE_REGISTRY pointing at the external author-supplied registry that
-# resolves the real published rendering template. Generic SDD carries no rendering identity;
-# the real template is reached only through this registry (FR-009 / FR-010).
+# separate from the offline inner loop: it runs on a schedule, on manual dispatch, or on a
+# `composition-registry-updated` repository_dispatch pushed by FS.GG.Templates (feature 041),
+# with FSGG_SDD_ACCEPTANCE_REGISTRY pointing at the registry that resolves the real published
+# rendering template. Generic SDD carries no rendering identity; the real template is reached
+# only through that registry (FR-009 / FR-010). Source selection is the deterministic resolver
+# scripts/workflows/resolve-acceptance-registry.sh; the acceptance facts run unchanged.
 
 on:
   schedule:
@@ -16,6 +18,16 @@ on:
         description: "Optional path to a checked-out registry file; overrides the secret."
         required: false
         type: string
+  repository_dispatch:
+    # The Templates producer pushes the canonical registry content on every change (feature 041,
+    # contract: composition-registry-updated v1). Only this event type triggers the acceptance.
+    types: [composition-registry-updated]
+
+# A burst of upstream registry edits supersedes in-flight runs: only the latest content is tested
+# (spec Edge Cases — "Burst of upstream registry edits").
+concurrency:
+  group: composition-acceptance
+  cancel-in-progress: true
 
 jobs:
   composition-acceptance:
@@ -29,20 +41,12 @@ jobs:
 
       - name: Materialize the external provider registry
         env:
-          REGISTRY_CONTENT: ${{ secrets.FSGG_SDD_ACCEPTANCE_REGISTRY }}
+          # Deterministic precedence (FR-004): manual input > dispatched content > scheduled secret.
           REGISTRY_PATH_INPUT: ${{ inputs.registry_path }}
-        run: |
-          set -euo pipefail
-          if [ -n "${REGISTRY_PATH_INPUT:-}" ]; then
-            echo "FSGG_SDD_ACCEPTANCE_REGISTRY=${REGISTRY_PATH_INPUT}" >> "$GITHUB_ENV"
-          elif [ -n "${REGISTRY_CONTENT:-}" ]; then
-            mkdir -p "${RUNNER_TEMP}/fsgg"
-            printf '%s' "${REGISTRY_CONTENT}" > "${RUNNER_TEMP}/fsgg/providers.yml"
-            echo "FSGG_SDD_ACCEPTANCE_REGISTRY=${RUNNER_TEMP}/fsgg/providers.yml" >> "$GITHUB_ENV"
-          else
-            echo "::error::No registry provided (set the FSGG_SDD_ACCEPTANCE_REGISTRY secret or pass registry_path)."
-            exit 1
-          fi
+          FSGG_DISPATCH_REGISTRY_CONTENT: ${{ github.event.client_payload.registry_content }}
+          FSGG_DISPATCH_REGISTRY_SHA256_12: ${{ github.event.client_payload.registry_sha256_12 }}
+          REGISTRY_SECRET_CONTENT: ${{ secrets.FSGG_SDD_ACCEPTANCE_REGISTRY }}
+        run: bash scripts/workflows/resolve-acceptance-registry.sh
 
       - name: Run the composition acceptance
         run: dotnet test FS.GG.SDD.sln --filter "kind=composition-acceptance"
