@@ -129,6 +129,11 @@ let run args =
     | [] -> printUnknown ""
     | ("--version" | "-v" | "version") :: _ -> printVersion ()
     | "validate" :: rest -> printValidate rest
+    // CLI-level cross-cutting command (peer of `validate`), dispatched before
+    // `parseCommand` so the lifecycle CommandReport/parseCommand contracts stay
+    // untouched. Composes the Artifacts YAML load edge + Fsgg.Registry.validateDocument
+    // into a deterministic verdict; exit 0 iff Valid (feature 042 / FS.GG.SDD#12).
+    | "registry" :: rest -> FS.GG.SDD.Cli.RegistryValidate.run rest
     | commandValue :: rest ->
         match parseCommand commandValue with
         | Error _ -> printUnknown commandValue

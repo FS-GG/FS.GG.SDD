@@ -14,10 +14,14 @@
   <ItemGroup>
     <Compile Include="Rendering.fsi" />
     <Compile Include="Rendering.fs" />
+    <Compile Include="RegistryValidate.fsi" />
+    <Compile Include="RegistryValidate.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../FS.GG.Contracts/FS.GG.Contracts.fsproj" />
+    <ProjectReference Include="../FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj" />
     <ProjectReference Include="../FS.GG.SDD.Commands/FS.GG.SDD.Commands.fsproj" />
     <ProjectReference Include="../FS.GG.SDD.Validation/FS.GG.SDD.Validation.fsproj" />
     <PackageReference Include="FSharp.Core" />

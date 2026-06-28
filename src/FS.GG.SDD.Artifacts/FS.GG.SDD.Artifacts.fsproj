@@ -22,6 +22,8 @@
     <Compile Include="LifecycleArtifacts/Internal.fs" />
     <Compile Include="LifecycleArtifacts/Core.fsi" />
     <Compile Include="LifecycleArtifacts/Core.fs" />
+    <Compile Include="LifecycleArtifacts/RegistryDocument.fsi" />
+    <Compile Include="LifecycleArtifacts/RegistryDocument.fs" />
     <Compile Include="LifecycleArtifacts/Config.fsi" />
     <Compile Include="LifecycleArtifacts/Config.fs" />
     <Compile Include="ScaffoldProvenance.fsi" />

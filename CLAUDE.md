@@ -109,5 +109,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/041-composition-acceptance-dispatch/plan.md
+at specs/042-typed-registry-validator/plan.md
 <!-- SPECKIT END -->

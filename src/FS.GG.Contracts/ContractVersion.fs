@@ -2,8 +2,8 @@ namespace Fsgg
 
 module ContractVersion =
 
-    let value = "1.0.1"
+    let value = "1.1.0"
 
     let major = 1
-    let minor = 0
-    let patch = 1
+    let minor = 1
+    let patch = 0
