@@ -4,6 +4,7 @@ open System
 open System.IO
 open System.Text.Json
 open System.Text.RegularExpressions
+open Fsgg.Provider
 open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Artifacts.GenerationManifest
@@ -40,18 +41,6 @@ module Config =
           WorkModelPath: string
           GeneratedGuidanceIsAuthority: bool
           RequireEquivalentClaudeAndCodexBehavior: bool }
-
-    type ProviderParameterSpec =
-        { Key: string
-          Required: bool
-          Default: string option }
-
-    type ProviderDescriptor =
-        { Name: string
-          ContractVersion: string
-          TemplateId: string
-          Source: string
-          Parameters: ProviderParameterSpec list }
 
     let parseProjectConfig (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.ProjectConfig
@@ -144,6 +133,17 @@ module Config =
                       RequireEquivalentClaudeAndCodexBehavior = boolAt [ "policy"; "requireEquivalentClaudeAndCodexBehavior" ] root true }
             | _ -> Error versionDiagnostics
 
+    // A declared `build`/`test`/`run`/`verify` command under a provider entry: read the
+    // nested `executable` scalar (default blank) and `arguments` sequence (default `[]`).
+    // A blank executable is MALFORMED (`Fsgg.Provider.isMalformed`) and maps to `None`,
+    // never a launchable empty command; an absent key likewise maps to `None` (FR-005).
+    let private declaredCommand key (mapping: YamlNode) =
+        let candidate =
+            { Executable = tryScalarAt [ key; "executable" ] mapping |> Option.defaultValue ""
+              Arguments = scalarList [ key; "arguments" ] mapping }
+
+        if isMalformed candidate then None else Some candidate
+
     let parseProviderRegistry (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path (ArtifactKind.Other "providerRegistry")
 
@@ -191,7 +191,14 @@ module Config =
                                       ContractVersion = contractVersion
                                       TemplateId = templateId
                                       Source = source
-                                      Parameters = parameters }
+                                      Parameters = parameters
+                                      Build = declaredCommand "build" mapping
+                                      Test = declaredCommand "test" mapping
+                                      Run = declaredCommand "run" mapping
+                                      Verify = declaredCommand "verify" mapping
+                                      NameParameter =
+                                        tryScalarAt [ "nameParameter" ] mapping
+                                        |> Option.defaultValue defaultNameParameter }
                             | _ -> None))
                     |> Seq.toList)
                 |> Option.defaultValue []

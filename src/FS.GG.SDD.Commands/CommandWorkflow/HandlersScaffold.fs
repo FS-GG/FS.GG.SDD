@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Commands.Internal
 
 open System
+open Fsgg.Provider
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Artifacts.Config

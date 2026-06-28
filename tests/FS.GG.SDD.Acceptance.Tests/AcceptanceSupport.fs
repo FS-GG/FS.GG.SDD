@@ -3,6 +3,8 @@ namespace FS.GG.SDD.Acceptance.Tests
 open System
 open System.Diagnostics
 open System.IO
+open Fsgg.Provider
+open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.CommandEffects
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
@@ -170,6 +172,24 @@ module AcceptanceSupport =
         |> List.map (fun diagnostic -> diagnostic.Id)
         |> List.tryFind (fun id -> id.StartsWith("scaffold.", StringComparison.Ordinal))
 
+    /// Resolve the canonical provider descriptor the run scaffolded from the registry copied
+    /// into `<root>/.fsgg/providers.yml` — the same `parseProviderRegistry` → find-by-name path
+    /// the scaffold handler uses. `None` when the registry is absent, unparseable, or names no
+    /// such provider. Pure read; no provider invoked (FR-008). Extracted so the harness's
+    /// descriptor-resolve-and-bind glue is testable offline without a real provider.
+    let resolveProviderDescriptor (root: string) (providerName: string) : ProviderDescriptor option =
+        let registryPath = ".fsgg/providers.yml"
+
+        if existsRelative root registryPath then
+            let snapshot: FileSnapshot =
+                { Path = registryPath; Text = readRelative root registryPath }
+
+            Config.parseProviderRegistry snapshot
+            |> Result.toOption
+            |> Option.bind (List.tryFind (fun descriptor -> descriptor.Name = providerName))
+        else
+            None
+
     // ---------- T005: process-shell probes at the test edge ----------
 
     /// The outcome of a `dotnet`/`git` probe at the test edge: the exit code, whether the
@@ -178,16 +198,6 @@ module AcceptanceSupport =
         { Started: bool
           ExitCode: int
           Diagnostic: string }
-
-    /// The optional provider-declared build/run command (feature 035). Consumed as
-    /// `DeclaredCommand option`; a blank `Executable` (null/empty/whitespace) is treated as
-    /// "no declared command" (FR-010). This is the 1:1 forward-compatible read of the H2
-    /// `ProviderDescriptor` build/run fields (FS-GG/FS.GG.SDD#8): adopting H2 maps the
-    /// descriptor's command field into this record with no resolver change (FR-004). The
-    /// working directory is NOT a field — FR-003 fixes it at the product root.
-    type DeclaredCommand =
-        { Executable: string
-          Arguments: string list }
 
     /// The resolved command a probe actually invokes — the single value handed to the
     /// existing process-shell edge. Either the declared command or the `dotnet` default.

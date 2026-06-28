@@ -65,6 +65,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Canonical Fsgg.Provider types (Feature 036). Clean leaf dependency — Contracts
+         is BCL-only, so this adds a project edge and no new package (Feature 038). -->
+    <ProjectReference Include="..\FS.GG.Contracts\FS.GG.Contracts.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="FSharp.Core" />
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>
