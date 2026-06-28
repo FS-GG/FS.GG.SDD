@@ -1,0 +1,190 @@
+name: release
+
+# Producer half of the cross-repo auto-update fabric for FS.GG.Contracts (feature 039).
+# On a release of FS.GG.SDD (or a pushed v* tag, or a manual dispatch), gate on the
+# FS.GG.Contracts tests, pack the single contracts package, and push it to the org
+# GitHub Packages feed (nuget.pkg.github.com/FS-GG) with --skip-duplicate, using the
+# run-scoped GITHUB_TOKEN (packages: write, no PAT), only from the canonical repo.
+#
+# THE CONTRACT for triggers + version-resolution + gating is
+# specs/039-publish-contracts-package/contracts/release-workflow.md — this YAML is its
+# implementation, not folklore. The published version is the effective Contracts fsproj
+# <Version> (SDD's org-shared contracts line, 1.0.0 — independent of the SDD product line);
+# a release tag is a coherence check against it, never the source (research Decisions 1-2).
+
+on:
+  release:
+    types: [published]
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Explicit version to pack+publish. Omit for a pack-only dry run."
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+# A single tagged release fires BOTH `release: published` and `push: tags v*`. Serialize the
+# paired runs (cancel-in-progress: false) keyed on the version/tag so they never push
+# simultaneously and no push is cancelled mid-flight; the second run no-ops via
+# --skip-duplicate. This is deliberately NOT gate.yml's cancel-in-progress: true PR key.
+concurrency:
+  group: release-${{ github.event.release.tag_name || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  contracts-tests:
+    name: Contracts tests (publish gate)
+    runs-on: ubuntu-latest
+    # Fork events never satisfy this guard ⇒ no publish path runs on a fork (FR-006).
+    if: github.repository == 'FS-GG/FS.GG.SDD'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # Locked restore, mirroring gate.yml: any dependency-graph drift or silently
+      # substituted version (NU1603) fails here instead of resolving quietly.
+      - name: Restore (locked)
+        run: |
+          set -euo pipefail
+          if ! dotnet restore tests/FS.GG.Contracts.Tests/FS.GG.Contracts.Tests.fsproj --locked-mode; then
+            echo "::error::locked restore failed — the resolved graph does not match the committed packages.lock.json (or a version was substituted, NU1603). If this is an intentional dependency change, run: dotnet restore FS.GG.SDD.sln --force-evaluate  and commit the updated packages.lock.json files."
+            exit 1
+          fi
+
+      # The gate (FR-005): publish `needs` this job, so a red run never reaches the push.
+      - name: Test (FS.GG.Contracts)
+        run: dotnet test tests/FS.GG.Contracts.Tests/FS.GG.Contracts.Tests.fsproj -c Release --no-restore
+
+  publish:
+    name: Pack + publish FS.GG.Contracts
+    needs: [contracts-tests]
+    runs-on: ubuntu-latest
+    if: github.repository == 'FS-GG/FS.GG.SDD'
+    # Least-privilege: only this job gains packages: write; the push uses the run-scoped
+    # GITHUB_TOKEN, never a PAT (FR-007).
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore (locked)
+        run: |
+          set -euo pipefail
+          if ! dotnet restore src/FS.GG.Contracts/FS.GG.Contracts.fsproj --locked-mode; then
+            echo "::error::locked restore failed — the resolved graph does not match the committed packages.lock.json (or a version was substituted, NU1603). If this is an intentional dependency change, run: dotnet restore FS.GG.SDD.sln --force-evaluate  and commit the updated packages.lock.json files."
+            exit 1
+          fi
+
+      # Version-resolution state machine — see the contract's version-resolution table.
+      # Source of truth is the EVALUATED fsproj <Version> (msbuild -getProperty, not a grep).
+      # The release/tag event's tag is a coherence check against it, never the source.
+      - name: Resolve version
+        id: ver
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          strip_v() { printf '%s' "${1#v}"; }
+
+          fsproj_version="$(dotnet msbuild src/FS.GG.Contracts/FS.GG.Contracts.fsproj -getProperty:Version)"
+          fsproj_version="$(printf '%s' "$fsproj_version" | tr -d '[:space:]')"
+
+          version=""
+          push=""
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ -n "${INPUT_VERSION:-}" ]; then
+              # Manual override: publish exactly what was asked.
+              version="$(strip_v "$INPUT_VERSION")"
+              push="true"
+            else
+              # Intentional dry run: pack the fsproj version, push nothing (FR-003).
+              if [ -z "$fsproj_version" ]; then
+                echo "::error::could not read <Version> from FS.GG.Contracts.fsproj (build defect)."
+                exit 1
+              fi
+              version="$fsproj_version"
+              push="false"
+              echo "::notice::dry run — packing FS.GG.Contracts $version but NOT pushing (manual dispatch with no version input)."
+            fi
+          else
+            # release: published  OR  push: tags v*  — a real publish from the fsproj version.
+            # Unreadable version is a defect: fail, never silently degrade to a dry run (FR-009).
+            if [ -z "$fsproj_version" ]; then
+              echo "::error::could not read <Version> from FS.GG.Contracts.fsproj on a $EVENT_NAME event (build defect); refusing to silently skip the publish."
+              exit 1
+            fi
+
+            tag="$RELEASE_TAG"
+            [ -z "$tag" ] && tag="$REF_NAME"
+
+            # Drift guard: a version-bearing tag (v<semver>) must match the fsproj version.
+            # A non-version-bearing tag is fine — the fsproj is the authority (FR-002/FR-008).
+            if printf '%s' "$tag" | grep -Eq '^v?[0-9]+\.[0-9]+\.[0-9]+'; then
+              tag_version="$(strip_v "$tag")"
+              if [ "$tag_version" != "$fsproj_version" ]; then
+                echo "::error::release tag '$tag' (version $tag_version) does not match the FS.GG.Contracts fsproj <Version> ($fsproj_version). The fsproj is the source of truth; reconcile the tag or the fsproj before releasing."
+                exit 1
+              fi
+            fi
+
+            version="$fsproj_version"
+            push="true"
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "push=$push" >> "$GITHUB_OUTPUT"
+          echo "Resolved: version=$version push=$push (event=$EVENT_NAME)"
+
+      # Single explicit project ⇒ single-package scope (FR-001). --no-restore reuses the
+      # locked restore above.
+      - name: Pack
+        run: |
+          set -euo pipefail
+          dotnet pack src/FS.GG.Contracts/FS.GG.Contracts.fsproj -c Release \
+            -p:Version=${{ steps.ver.outputs.version }} --no-restore -o artifacts/packages
+
+      # A green test plus an empty pack MUST NOT report success (FR-009): fail loudly if
+      # nothing was packed.
+      - name: Assert a package was produced
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          packages=(artifacts/packages/*.nupkg)
+          if [ ${#packages[@]} -eq 0 ]; then
+            echo "::error::pack produced no .nupkg — the tests passed but there is nothing to publish."
+            exit 1
+          fi
+          printf 'Packed: %s\n' "${packages[@]}"
+
+      # Push only when push==true (a dry run skips this entirely, FR-003). --skip-duplicate
+      # makes a re-publish of an existing version an idempotent no-op success (FR-004); any
+      # other push failure fails the run.
+      - name: Push to the org feed
+        if: steps.ver.outputs.push == 'true'
+        run: |
+          set -euo pipefail
+          dotnet nuget push "artifacts/packages/*.nupkg" \
+            --source https://nuget.pkg.github.com/FS-GG/index.json \
+            --api-key ${{ secrets.GITHUB_TOKEN }} \
+            --skip-duplicate
