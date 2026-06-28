@@ -103,9 +103,9 @@ both `FS.GG.Contracts` and `FS.GG.SDD.Cli`; a re-run pushes no duplicate (C3).
 **Dependency**: After Phase 2 is merged and `release.yml` is live on `FS-GG/FS.GG.SDD`. Operational
 — no repo-file change.
 
-- [ ] T011 [US2] Dry run (quickstart **C1**): `gh workflow run release.yml -R FS-GG/FS.GG.SDD` (no `version` input). Confirm `resolve-versions` sets `push=false`, both `publish-contracts` and `publish-cli` pack (logs show `FS.GG.Contracts.*.nupkg` and `FS.GG.SDD.Cli.*.nupkg`) and **neither** pushes; the feed is unchanged.
-- [ ] T012 [US2] Real publish (quickstart **C2/C3**): `gh workflow run release.yml -R FS-GG/FS.GG.SDD -f version=1.1.0` (the feature-043 path — also publishes the CLI at its evaluated `0.2.0`). Confirm `cli-tests` passes, `publish-cli` pushes `FS.GG.SDD.Cli 0.2.0`, and `publish-contracts` pushes `FS.GG.Contracts 1.1.0`. Re-running the same command is an idempotent green no-op (`--skip-duplicate`, FR-008).
-- [ ] T013 [US2] [P] Feed verification (quickstart **C5**): `gh api /orgs/FS-GG/packages?package_type=nuget --jq '.[].name'` now includes `FS.GG.SDD.Cli`, and `gh api '/orgs/FS-GG/packages/nuget/FS.GG.SDD.Cli/versions' --jq '.[].name'` lists `0.2.0` (SC-002).
+- [X] T011 [US2] Dry run (quickstart **C1**): `gh workflow run release.yml -R FS-GG/FS.GG.SDD` (no `version` input). Confirm `resolve-versions` sets `push=false`, both `publish-contracts` and `publish-cli` pack (logs show `FS.GG.Contracts.*.nupkg` and `FS.GG.SDD.Cli.*.nupkg`) and **neither** pushes; the feed is unchanged. — DONE: dry run 28336462461 all-green, push=false, both packed, nothing pushed (C1).
+- [X] T012 [US2] Real publish (quickstart **C2/C3**): `gh workflow run release.yml -R FS-GG/FS.GG.SDD -f version=1.1.0` (the feature-043 path — also publishes the CLI at its evaluated `0.2.0`). Confirm `cli-tests` passes, `publish-cli` pushes `FS.GG.SDD.Cli 0.2.0`, and `publish-contracts` pushes `FS.GG.Contracts 1.1.0`. Re-running the same command is an idempotent green no-op (`--skip-duplicate`, FR-008). — DONE: run 28336512847 all-green; publish-cli pushed FS.GG.SDD.Cli 0.2.0; Contracts 1.1.0 idempotent 'already pushed' no-op (C2/C3).
+- [X] T013 [US2] [P] Feed verification (quickstart **C5**): `gh api /orgs/FS-GG/packages?package_type=nuget --jq '.[].name'` now includes `FS.GG.SDD.Cli`, and `gh api '/orgs/FS-GG/packages/nuget/FS.GG.SDD.Cli/versions' --jq '.[].name'` lists `0.2.0` (SC-002). — DONE: feed now lists FS.GG.SDD.Cli; versions=[0.2.0] (SC-002).
 
 **Checkpoint**: `FS.GG.SDD.Cli 0.2.0` is on the org feed next to `FS.GG.Contracts`.
 
@@ -122,8 +122,8 @@ succeeds (well-formed) / exits non-zero (malformed) (SC-001/SC-003).
 
 **Dependency**: After Phase 3 publishes the package.
 
-- [ ] T014 [US1] **One-time operational step (FR-011)**: set the `FS.GG.SDD.Cli` org package visibility to **Public** (GitHub → `FS-GG` org → Packages → `FS.GG.SDD.Cli` → Package settings → Change visibility → Public, and/or link it to the `FS.GG.SDD` repo), mirroring `FS.GG.Contracts`. Until this lands, other repos' CI cannot restore it with their run-scoped token (quickstart "make the feed package public").
-- [ ] T015 [US1] Clean consumer install + run (quickstart **C5** consumer half; SC-001/SC-003): from a directory with **no** FS.GG.SDD source, `dotnet tool install --global FS.GG.SDD.Cli --version 0.2.0 --add-source https://nuget.pkg.github.com/FS-GG/index.json` then `fsgg-sdd registry validate <a real dependencies.yml> --text` → success; repeat against a malformed file → non-zero exit. Confirms self-containment over the *feed* package (not just the local pack from T010).
+- [X] T014 [US1] **One-time operational step (FR-011)**: set the `FS.GG.SDD.Cli` org package visibility to **Public** (GitHub → `FS-GG` org → Packages → `FS.GG.SDD.Cli` → Package settings → Change visibility → Public, and/or link it to the `FS.GG.SDD` repo), mirroring `FS.GG.Contracts`. Until this lands, other repos' CI cannot restore it with their run-scoped token (quickstart "make the feed package public"). — DONE (auto): package published already Public, linked to FS-GG/FS.GG.SDD (inherited public-repo visibility); no manual flip needed.
+- [X] T015 [US1] Clean consumer install + run (quickstart **C5** consumer half; SC-001/SC-003): from a directory with **no** FS.GG.SDD source, `dotnet tool install --global FS.GG.SDD.Cli --version 0.2.0 --add-source https://nuget.pkg.github.com/FS-GG/index.json` then `fsgg-sdd registry validate <a real dependencies.yml> --text` → success; repeat against a malformed file → non-zero exit. Confirms self-containment over the *feed* package (not just the local pack from T010). — DONE: clean install from feed (tool-path, no SDD source); well-formed exit 0, malformed exit 1 (SC-001/SC-003).
 
 **Checkpoint**: A consumer with only the feed + a run-scoped token can install and run the typed validator — US1 delivered (MVP outcome); FS-GG/.github#49 is technically unblocked.
 
@@ -139,7 +139,7 @@ source-built CLI would.
 
 **Dependency**: After Phase 4 (tool installable from the feed).
 
-- [ ] T016 [P] [US3] With the tool installed from the feed, run `fsgg-sdd --help` and one representative command (e.g. `fsgg-sdd registry validate ... --json` to confirm the default automation contract, and a `--rich` invocation to confirm Spectre rendering is bundled and degrades correctly) — output matches a source-built CLI (SC — US3 acceptance).
+- [X] T016 [P] [US3] With the tool installed from the feed, run `fsgg-sdd --help` and one representative command (e.g. `fsgg-sdd registry validate ... --json` to confirm the default automation contract, and a `--rich` invocation to confirm Spectre rendering is bundled and degrades correctly) — output matches a source-built CLI (SC — US3 acceptance). — DONE: feed-installed tool: --json automation contract + --rich degrades to plain text non-interactively; matches source build (US3).
 
 **Checkpoint**: The published tool is a full `fsgg-sdd`, usable by any FS-GG developer.
 
