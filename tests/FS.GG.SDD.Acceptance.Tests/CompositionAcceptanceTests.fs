@@ -76,12 +76,12 @@ module CompositionAcceptanceTests =
 
                 // T012 (FR-003): the product builds, then a headless run smoke starts it without
                 // crashing — distinguishing "files produced" from a working product.
-                let build = buildProbe root
+                let build = buildProbe None root
                 let appBuilds = build.ExitCode = 0
 
                 let run =
                     if appBuilds then
-                        runProbe root
+                        runProbe None root
                     else
                         { Started = false; ExitCode = -1; Diagnostic = "build failed; run probe skipped." }
 

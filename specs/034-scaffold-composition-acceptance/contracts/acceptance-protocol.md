@@ -38,14 +38,33 @@ appear in SDD source, this contract, the acceptance code, or the result document
 6. Emit one result document (deterministic body + normalized `sensed` block); fail the test iff
    the verdict is `Fail`; skip iff `SkipUnavailable`.
 
-The build/run probe (FR-003) is bounded so a hung app fails rather than hangs:
+The build/run probe (FR-003) invokes a **declared-or-default** command — see
+[`../../035-declared-command-probes/contracts/probe-command.md`](../../035-declared-command-probes/contracts/probe-command.md)
+for the full resolution contract — and is bounded so a hung app fails rather than hangs:
 
-- `dotnet build` over the produced product with a **300 s** timeout ⇒ `appBuilds` iff exit 0.
-- A **headless** run smoke (no display server required, so it is CI-reproducible): prefer a
-  non-interactive `--help`/`--version`-style invocation; if the app exposes none, launch it
-  headless and require it to survive a **10 s grace window** without a non-zero exit, then
+- **Declared-or-default**: when an optional provider-declared command is supplied, the probe
+  invokes that command (its executable and arguments) at the product root; otherwise it falls
+  back to the platform-standard `dotnet` default below. A declared command with a blank
+  (null/empty/whitespace) executable is treated as "no declared command". The declared shape is
+  the 1:1 forward-compatible read of the H2 `ProviderDescriptor` build/run fields
+  (FS-GG/FS.GG.SDD#8); no provider declares one yet, so the default is the only reachable path
+  and the suite is observably unchanged. Defaults name only `dotnet` — never a provider/template/
+  package/path or docs URL.
+- **Build default**: `dotnet build` over the produced product with a **300 s** timeout ⇒
+  `appBuilds` iff exit 0.
+- **Run default**: `dotnet run --project <discovered>` over a **deterministically** discovered
+  runnable project — enumerate `*.fsproj`/`*.csproj` under the product root, ordinal-sort the
+  forward-slash relative paths, take the first; the same product always yields the same target.
+  When no runnable project is discoverable, the probe emits a diagnosed not-started
+  `ProbeResult` (`no runnable project discovered.`) rather than hanging.
+- **Run bound**: a **headless** run smoke (no display server required, so it is CI-reproducible):
+  require the resolved command to survive a **10 s grace window** without a non-zero exit, then
   terminate it. Overall run-probe timeout **60 s**. `appRuns` iff the probe exits 0 **or** the
   process stayed alive through the grace window (it started and did not crash).
+- **Diagnosed failure modes** (declared or default, never a silent pass and never a hang): could
+  not start ⇒ `{ Started=false; ExitCode=-1; Diagnostic="could not start \`<exe>\`." }`; exited
+  non-zero ⇒ `{ Started=true; ExitCode≠0; Diagnostic=<surfaced output> }`; timed out ⇒ killed at
+  its bound with a timeout diagnostic.
 
 ## Outcome → verdict mapping (FR-008)
 

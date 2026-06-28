@@ -5,6 +5,7 @@
 
   <ItemGroup>
     <Compile Include="AcceptanceSupport.fs" />
+    <Compile Include="ProbeResolutionTests.fs" />
     <Compile Include="CompositionResult.fs" />
     <Compile Include="CompositionAcceptanceTests.fs" />
   </ItemGroup>

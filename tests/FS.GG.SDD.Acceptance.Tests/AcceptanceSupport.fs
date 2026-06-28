@@ -179,6 +179,23 @@ module AcceptanceSupport =
           ExitCode: int
           Diagnostic: string }
 
+    /// The optional provider-declared build/run command (feature 035). Consumed as
+    /// `DeclaredCommand option`; a blank `Executable` (null/empty/whitespace) is treated as
+    /// "no declared command" (FR-010). This is the 1:1 forward-compatible read of the H2
+    /// `ProviderDescriptor` build/run fields (FS-GG/FS.GG.SDD#8): adopting H2 maps the
+    /// descriptor's command field into this record with no resolver change (FR-004). The
+    /// working directory is NOT a field — FR-003 fixes it at the product root.
+    type DeclaredCommand =
+        { Executable: string
+          Arguments: string list }
+
+    /// The resolved command a probe actually invokes — the single value handed to the
+    /// existing process-shell edge. Either the declared command or the `dotnet` default.
+    type ProbeCommand =
+        { Executable: string
+          Arguments: string list
+          WorkingDirectory: string }
+
     let private startProcess (fileName: string) (args: string list) (workingDir: string) =
         let info =
             ProcessStartInfo(
@@ -196,8 +213,10 @@ module AcceptanceSupport =
             None
 
     /// Run a process to completion under `timeoutMs`; a hung process is killed and reported
-    /// as a non-zero, timed-out probe (so it fails rather than hangs).
-    let private runToCompletion (fileName: string) (args: string list) (workingDir: string) (timeoutMs: int) =
+    /// as a non-zero, timed-out probe (so it fails rather than hangs). This is the shared
+    /// bounded edge `buildProbe` routes through; it is exposed so the timeout-kill diagnostic
+    /// can be exercised at a short bound without waiting out the 300 s production bound.
+    let runToCompletion (fileName: string) (args: string list) (workingDir: string) (timeoutMs: int) =
         match startProcess fileName args workingDir with
         | None -> { Started = false; ExitCode = -1; Diagnostic = $"could not start `{fileName}`." }
         | Some started ->
@@ -217,20 +236,67 @@ module AcceptanceSupport =
                   ExitCode = -1
                   Diagnostic = $"`{fileName}` timed out after {timeoutMs} ms." }
 
-    /// `dotnet build` over the produced product (300 s timeout — research D6).
-    let buildProbe (root: string) = runToCompletion "dotnet" [ "build" ] root 300_000
+    // ---------- feature 035: declared-or-default probe-command resolution ----------
+
+    /// Deterministic runnable-project discovery (FR-008): enumerate `*.fsproj`/`*.csproj`
+    /// under `root`, map to forward-slash relative paths, ordinal-sort, and take the first;
+    /// `None` when none exist. The same product always yields the same target. References only
+    /// generic tooling — no provider/template/package/path/docs token.
+    let discoverRunnableProject (root: string) : string option =
+        [ "*.fsproj"; "*.csproj" ]
+        |> Seq.collect (fun pattern -> Directory.EnumerateFiles(root, pattern, SearchOption.AllDirectories))
+        |> Seq.map (fun full -> Path.GetRelativePath(root, full).Replace('\\', '/'))
+        |> Seq.sortWith (fun left right -> String.CompareOrdinal(left, right))
+        |> Seq.tryHead
+
+    /// A declared command is honored only when its executable is non-blank; a blank
+    /// (null/empty/whitespace) executable falls through to the default (FR-010).
+    let private declaredCommandOrDefault (declared: DeclaredCommand option) (root: string) : ProbeCommand option =
+        match declared with
+        | Some command when not (String.IsNullOrWhiteSpace command.Executable) ->
+            Some
+                { Executable = command.Executable
+                  Arguments = command.Arguments
+                  WorkingDirectory = root }
+        | _ -> None
+
+    /// Resolve the build command (pure): a non-blank declared command wins; otherwise the
+    /// platform-standard `dotnet build` at the product root (FR-001/FR-003/FR-010).
+    let resolveBuildCommand (declared: DeclaredCommand option) (root: string) : ProbeCommand =
+        match declaredCommandOrDefault declared root with
+        | Some command -> command
+        | None -> { Executable = "dotnet"; Arguments = [ "build" ]; WorkingDirectory = root }
+
+    /// Resolve the run command (pure): a non-blank declared command wins; otherwise
+    /// `dotnet run --project <discovered>` at the product root, or `None` when no runnable
+    /// project is discoverable — so the probe can emit a diagnosed not-started outcome rather
+    /// than hang (FR-002/FR-003/FR-008/FR-010).
+    let resolveRunCommand (declared: DeclaredCommand option) (root: string) : ProbeCommand option =
+        match declaredCommandOrDefault declared root with
+        | Some command -> Some command
+        | None ->
+            discoverRunnableProject root
+            |> Option.map (fun project ->
+                { Executable = "dotnet"
+                  Arguments = [ "run"; "--project"; project ]
+                  WorkingDirectory = root })
+
+    /// The build probe: resolve the declared-or-default command and route it through the
+    /// shared 300 s bounded edge (research D6). `declared = None` is today's `dotnet build`.
+    let buildProbe (declared: DeclaredCommand option) (root: string) =
+        let command = resolveBuildCommand declared root
+        runToCompletion command.Executable command.Arguments command.WorkingDirectory 300_000
 
     /// A headless, bounded run smoke (research D6, contracts/acceptance-protocol.md §run
-    /// probe): launch the already-built app with `dotnet run --no-build`, require it to
-    /// either exit 0 within the grace window or survive the grace window without a non-zero
-    /// exit (it started and did not crash), then terminate it. Overall cap 60 s so a hung
-    /// app fails rather than hangs.
-    let runProbe (root: string) =
+    /// probe): launch the resolved run command, require it to either exit 0 within the grace
+    /// window or survive the grace window without a non-zero exit (it started and did not
+    /// crash), then terminate it. Overall cap 60 s so a hung app fails rather than hangs.
+    let private runWithGrace (command: ProbeCommand) =
         let graceMs = 10_000
         let overallMs = 60_000
 
-        match startProcess "dotnet" [ "run"; "--no-build" ] root with
-        | None -> { Started = false; ExitCode = -1; Diagnostic = "could not start `dotnet run`." }
+        match startProcess command.Executable command.Arguments command.WorkingDirectory with
+        | None -> { Started = false; ExitCode = -1; Diagnostic = $"could not start `{command.Executable}`." }
         | Some started ->
             use proc = started
             let stdout = proc.StandardOutput.ReadToEndAsync()
@@ -248,6 +314,14 @@ module AcceptanceSupport =
                 (try proc.Kill true with _ -> ())
                 proc.WaitForExit(max 0 (overallMs - graceMs)) |> ignore
                 { Started = true; ExitCode = 0; Diagnostic = "" }
+
+    /// The run probe: `declared = None` resolves to `dotnet run --project <discovered>`; no
+    /// runnable project discoverable ⇒ a diagnosed not-started ProbeResult (FR-007). Declared
+    /// and default share the same bounded edge.
+    let runProbe (declared: DeclaredCommand option) (root: string) =
+        match resolveRunCommand declared root with
+        | None -> { Started = false; ExitCode = -1; Diagnostic = "no runnable project discovered." }
+        | Some command -> runWithGrace command
 
     // ---------- refresh probe (in-process MVU over the public command surface) ----------
 
