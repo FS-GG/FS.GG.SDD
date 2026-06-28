@@ -35,9 +35,18 @@ The NuGet identity/version of the shared contract package.
 | Field | Before | After | Source of truth |
 |-------|:-----:|:----:|-----------------|
 | `<Version>` | `1.0.0` | **`1.0.1`** | `src/FS.GG.Contracts/FS.GG.Contracts.fsproj` line 9 |
+| `Fsgg.ContractVersion.value` / `.patch` | `"1.0.0"` / `0` | **`"1.0.1"` / `1`** | `src/FS.GG.Contracts/ContractVersion.fs` |
 
 - **State transition**: `1.0.0` → `1.0.1` is a **forward-only, additive** bump.
   Both identities are immutable; `1.0.0` is never re-packed or mutated (FR-004).
+- **Internal-coherence coupling (discovered at delivery)**: the org
+  `contract-coherence` gate (`FS-GG/.github` `.github/workflows/contract-coherence.yml`)
+  asserts the fsproj `<Version>` **equals** the self-describing `Fsgg.ContractVersion.value`
+  (and uses that value as the "actual" version for the registry pin-drift check). The
+  package version bump therefore **requires** an in-lockstep `ContractVersion` bump
+  (`value "1.0.1"`, `patch 1`; `major`/`minor` unchanged). The `ContractVersion.fsi`
+  signature and `PublicSurface.baseline` (binding names only, not values) are unchanged.
+  `ContractVersionTests` asserts `"1.0.1"`/patch `1` (fail-before/pass-after).
 - **Validation rule (FR-005/SC-002)**: a packed `FS.GG.Contracts.1.0.1.nupkg`
   resolves from the shared local folder feed and, when its `Schemas` are read,
   reports `capabilities = 2`.
