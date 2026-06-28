@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
@@ -52,14 +52,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout (SDD)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # No org reusable coherence workflow exists yet (.github#18 is unbuilt), so check
       # out the source of truth and run its drift gate directly. Track main rather than a
       # pinned SHA: a pin would itself become silent drift from the org baseline (feature
       # 037, research Decision 5). Revisit only if upstream churn causes flakiness.
       - name: Checkout (FS-GG/.github — shared-build-config source of truth)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: FS-GG/.github
           ref: main
@@ -100,7 +100,7 @@ jobs:
       packages: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
