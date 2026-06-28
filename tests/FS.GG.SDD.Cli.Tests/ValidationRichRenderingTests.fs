@@ -27,6 +27,10 @@ module ValidationRichRenderingTests =
         settings.ColorSystem <- ColorSystemSupport.NoColors
         settings.Out <- new AnsiConsoleOutput(writer)
         let console = AnsiConsole.Create settings
+        // Spectre's CI profile enrichment (GITHUB_ACTIONS) re-enables ANSI *after*
+        // AnsiSupport.No, so [bold]/[dim] decorations still emit SGR escapes. Force the
+        // capability off so this color-off console genuinely emits zero ANSI in CI too.
+        console.Profile.Capabilities.Ansi <- false
         console.Profile.Width <- width
         writer, console
 
