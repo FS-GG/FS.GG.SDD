@@ -1,0 +1,48 @@
+name: gate
+
+# Per-PR deterministic gate. The load-bearing enforcement for the FsGgUiVersion-style
+# staleness bug class (FS-GG/.github#7, Feature 211 parity): restore in --locked-mode against
+# the committed packages.lock.json so any dependency-graph drift, or a silently substituted
+# version (NU1603) / out-of-range version (NU1608), fails the build instead of resolving
+# quietly. This is separate from composition-acceptance.yml (nightly, network-gated).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: gate-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: Deterministic gate (locked restore + build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # Locked restore is the single enforcement point. RestoreLockedMode is set in
+      # Directory.Build.props when GITHUB_ACTIONS=true and a lockfile exists; --locked-mode
+      # here forces it explicitly and gives one clear place to point at the regenerate command.
+      - name: Restore (locked)
+        run: |
+          set -euo pipefail
+          if ! dotnet restore FS.GG.SDD.sln --locked-mode; then
+            echo "::error::locked restore failed — the resolved graph does not match the committed packages.lock.json (or a version was substituted, NU1603). If this is an intentional dependency change, run: dotnet restore FS.GG.SDD.sln --force-evaluate  and commit the updated packages.lock.json files."
+            exit 1
+          fi
+
+      # --no-restore: restore already happened above (exactly once). NU1603/NU1608 are
+      # promoted to errors in Directory.Build.props.
+      - name: Build (net10.0)
+        run: dotnet build FS.GG.SDD.sln -c Debug --no-restore

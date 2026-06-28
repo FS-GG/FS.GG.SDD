@@ -17,6 +17,19 @@
          errors so the clean state cannot silently re-accumulate. No other category
          is promoted; TreatWarningsAsErrors stays false. -->
     <WarningsAsErrors>FS3261;FS0025</WarningsAsErrors>
+    <!-- #7 / Feature 211 parity: lock restore so the FsGgUiVersion-style staleness bug
+         class is structurally impossible rather than convention-enforced. Lockfiles are
+         committed (RestorePackagesWithLockFile); CI restores in locked mode so any graph
+         drift fails the build. RestoreLockedMode is gated on GITHUB_ACTIONS (NOT
+         ContinuousIntegrationBuild — this repo forces CIB=true unconditionally above for
+         determinism, so a CIB gate would also fail-closed on a fresh local clone) AND an
+         existing lockfile, so a first restore bootstraps the lockfile instead of blocking. -->
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <RestoreLockedMode Condition="'$(GITHUB_ACTIONS)' == 'true' And Exists('$(MSBuildProjectDirectory)/packages.lock.json')">true</RestoreLockedMode>
+    <!-- Feature 211 (FR-004): silent version substitution (NU1603) and out-of-range
+         (NU1608) become errors. Restore-phase NU16xx are not reliably promoted by
+         TreatWarningsAsErrors, so promote them explicitly. -->
+    <WarningsAsErrors>$(WarningsAsErrors);NU1603;NU1608</WarningsAsErrors>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <Company>FS.GG</Company>
     <Authors>FS.GG</Authors>
