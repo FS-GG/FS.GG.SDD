@@ -6,7 +6,7 @@
        NU1504/NU1011 on a duplicate PackageVersion). ManagePackageVersionsCentrally
        is owned by the canonical file and is intentionally not re-set here. -->
   <ItemGroup>
-    <PackageVersion Include="YamlDotNet" Version="16.3.0" />
+    <PackageVersion Include="YamlDotNet" Version="18.1.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.0" />
     <PackageVersion Include="Spectre.Console" Version="0.57.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
