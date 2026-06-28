@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- Org-shared, SDD-owned contract package. PackageId is the cross-repo NuGet
+         identity (FS.GG.Contracts); the F# namespace is `Fsgg` per the item's
+         mandated module breakdown. Both deviations are sanctioned by constitution
+         v1.1.0 and justified in plan.md Complexity Tracking. -->
+    <PackageId>FS.GG.Contracts</PackageId>
+    <Description>Shared, BCL-only typed source of truth for every FS.GG `.fsgg` schema, the extended template-provider descriptor, and the cross-repo dependency registry with a pure validator.</Description>
+    <Version>1.0.0</Version>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="ContractVersion.fsi" />
+    <Compile Include="ContractVersion.fs" />
+    <Compile Include="Schemas.fsi" />
+    <Compile Include="Schemas.fs" />
+    <Compile Include="Provider.fsi" />
+    <Compile Include="Provider.fs" />
+    <Compile Include="Registry.fsi" />
+    <Compile Include="Registry.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- BCL-only (FR-002/SC-004): FSharp.Core is the F# runtime/standard library
+         and the only permitted closure member. No third-party package. -->
+    <PackageReference Include="FSharp.Core" />
+  </ItemGroup>
+</Project>

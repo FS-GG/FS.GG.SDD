@@ -1,10 +1,17 @@
 <!--
 Sync Impact Report
 ==================
-This file: FS.GG.SDD Constitution v1.0.0
+This file: FS.GG.SDD Constitution v1.1.0
 
-Version change: (template) -> 1.0.0
-Bump rationale: Initial ratification for a separate FS.GG spec-driven
+Version change: 1.0.0 -> 1.1.0
+Bump rationale: Engineering Constraint "package namespace is FS.GG.SDD.*"
+materially expanded with an explicit carve-out for org-shared contract packages
+owned by SDD (e.g. FS.GG.Contracts), which intentionally use a cross-repo shared
+namespace so Governance, Templates, and Rendering can re-type onto one source of
+truth. MINOR: relaxes/expands an existing obligation without breaking any
+in-scope package.
+
+Prior rationale (1.0.0): Initial ratification for a separate FS.GG spec-driven
 development product.
 
 Source: adapted from the fsharp-opinionated Spec Kit preset and the sibling
@@ -163,7 +170,13 @@ Every feature declares a tier in its spec:
 
 - F# on .NET is the default implementation stack.
 - Target framework is `net10.0` unless a feature plan justifies otherwise.
-- The package namespace is `FS.GG.SDD.*`.
+- The package namespace is `FS.GG.SDD.*`, with one exception: an org-shared
+  contract package owned by SDD but consumed by every FS-GG repo (Governance,
+  Templates, Rendering) MAY use a deliberately cross-repo namespace
+  (`FS.GG.Contracts`, F# namespace `Fsgg`) so the shared contract is not falsely
+  scoped as SDD-internal. Such a package MUST still be SDD-owned, MUST justify
+  the name in its feature plan, and MUST embed no provider-/rendering-/Governance-
+  specific identity.
 - The CLI command family is `fsgg-sdd` unless an explicit release decision
   chooses a different name.
 - Spec Kit is the repository workflow baseline.
@@ -202,4 +215,4 @@ Versioning policy:
 - MINOR: new principles or materially expanded obligations.
 - PATCH: clarifications that do not change obligations.
 
-**Version**: 1.0.0 | **Ratified**: 2026-06-19 | **Last Amended**: 2026-06-19
+**Version**: 1.1.0 | **Ratified**: 2026-06-19 | **Last Amended**: 2026-06-28

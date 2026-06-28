@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="TestSupport.fs" />
+    <Compile Include="SchemaVersionConstantTests.fs" />
+    <Compile Include="ProviderDescriptorTests.fs" />
+    <Compile Include="RegistryValidatorTests.fs" />
+    <Compile Include="ContractVersionTests.fs" />
+    <Compile Include="DependencyClosureTests.fs" />
+    <Compile Include="PublicSurfaceTests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/FS.GG.Contracts/FS.GG.Contracts.fsproj" />
+    <PackageReference Include="FSharp.Core" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+</Project>
