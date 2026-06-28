@@ -44,10 +44,17 @@ coordinated change set:
    036/042). These are the version of record the publish path reads.
 
 2. **Publish the new version to the org feed.** Dispatch the existing publish
-   workflow (feature 039), which gates on `FS.GG.Contracts.Tests`, packs the
-   evaluated `<Version>`, and `nuget push --skip-duplicate`es it to the org feed:
+   workflow (feature 039), which gates on `FS.GG.Contracts.Tests`, packs, and
+   `nuget push --skip-duplicate`es to the org feed. The manual-dispatch path is a
+   **`version` override**: it packs and pushes **exactly the version you pass**
+   (`-p:Version=<input>`), *not* the fsproj `<Version>`, and — unlike the
+   release/tag path — applies **no source-vs-published drift guard**. So you must
+   pass the value you set in step 1; a mismatch silently publishes an incoherent
+   package:
 
    ```bash
+   # <new> MUST equal the fsproj <Version> bumped in step 1 — confirm first:
+   dotnet msbuild src/FS.GG.Contracts/FS.GG.Contracts.fsproj -getProperty:Version
    gh workflow run release.yml --repo FS-GG/FS.GG.SDD -f version=<new>
    ```
 
