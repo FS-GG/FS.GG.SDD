@@ -1,0 +1,16 @@
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-app
+    source: __FIXTURE__/ok
+    parameters:
+      - key: productName
+        required: true
+    build:
+      executable: dotnet
+      arguments: [build, -c, Release]
+    run:
+      executable: dotnet
+      arguments: [run, --no-build]
+    nameParameter: projectName

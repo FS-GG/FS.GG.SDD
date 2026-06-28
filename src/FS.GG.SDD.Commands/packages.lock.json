@@ -8,9 +8,16 @@
         "resolved": "10.1.301",
         "contentHash": "FwQFuqOA1+qQnFl6Vqg6piS83ZRuKJqXJQxOM52M5tNarT2XQ/pMvw8fOOlnhcOYvdZyje2PJ8rK/J64ZI729Q=="
       },
+      "fs.gg.contracts": {
+        "type": "Project",
+        "dependencies": {
+          "FSharp.Core": "[10.1.301, )"
+        }
+      },
       "fs.gg.sdd.artifacts": {
         "type": "Project",
         "dependencies": {
+          "FS.GG.Contracts": "[1.0.0, )",
           "FSharp.Core": "[10.1.301, )",
           "YamlDotNet": "[16.3.0, )"
         }

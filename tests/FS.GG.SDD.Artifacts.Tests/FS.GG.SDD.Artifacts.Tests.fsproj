@@ -28,6 +28,7 @@
     <Compile Include="ReleaseContractTests.fs" />
     <Compile Include="ReleaseReadinessCheckTests.fs" />
     <Compile Include="ScaffoldProvenanceTests.fs" />
+    <Compile Include="ProviderRegistryParseTests.fs" />
     <Compile Include="SurfaceBaselineTests.fs" />
   </ItemGroup>
 

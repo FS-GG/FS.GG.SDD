@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Acceptance.Tests
 
 open System.IO
+open Fsgg.Provider
 open AcceptanceSupport
 open Xunit
 
@@ -152,3 +153,50 @@ module ProbeResolutionTests =
         Assert.True(
             Set.isSubset allTokens genericTokens,
             "Default probe arguments must contain only generic tokens; saw: " + string (Set.toList allTokens))
+
+    // ---------- Feature 038 (T020): probes honor a synthetic descriptor's declared commands ----------
+
+    /// A SYNTHETIC canonical descriptor — no real provider; the build/run fields drive the probes.
+    let private syntheticDescriptor: ProviderDescriptor =
+        { Name = "demo"
+          ContractVersion = "1.0.0"
+          TemplateId = "demo-template"
+          Source = "__FIXTURE__/ok"
+          Parameters = []
+          Build = None
+          Test = None
+          Run = None
+          Verify = None
+          NameParameter = "name" }
+
+    // T020 (SC-005 / FR-009): a descriptor declaring no build/run falls through to the `dotnet`
+    // defaults — the reference-provider case, observably unchanged.
+    [<Fact>]
+    let ``descriptor with no declared build or run resolves to the dotnet defaults`` () =
+        let root = productWith [ "App.fsproj" ]
+        Assert.Equal(
+            { Executable = "dotnet"; Arguments = [ "build" ]; WorkingDirectory = root },
+            resolveBuildCommand syntheticDescriptor.Build root)
+        Assert.Equal(
+            Some { Executable = "dotnet"; Arguments = [ "run"; "--project"; "App.fsproj" ]; WorkingDirectory = root },
+            resolveRunCommand syntheticDescriptor.Run root)
+
+    // T020 (SC-005 / FR-010): a descriptor declaring a trivial build command makes `buildProbe`
+    // invoke THAT command — proven by its deterministic exit 0 in an empty root, where the `dotnet`
+    // default would be non-zero (no project). So no `dotnet` process is started for the declared case.
+    [<Fact>]
+    let ``buildProbe honors the descriptor's declared command and starts no dotnet`` () =
+        let root = newProductRoot () // empty: a dotnet build here would fail (non-zero)
+        let descriptor = { syntheticDescriptor with Build = Some { Executable = "true"; Arguments = [] } }
+        let result = buildProbe descriptor.Build root
+        Assert.True(result.Started)
+        Assert.Equal(0, result.ExitCode) // the trivial command ran, not `dotnet build`
+
+    // T020 mirror for the run probe under the grace/overall window.
+    [<Fact>]
+    let ``runProbe honors the descriptor's declared command and starts no dotnet`` () =
+        let root = newProductRoot () // empty: no runnable project, so the default would not start
+        let descriptor = { syntheticDescriptor with Run = Some { Executable = "true"; Arguments = [] } }
+        let result = runProbe descriptor.Run root
+        Assert.True(result.Started)
+        Assert.Equal(0, result.ExitCode) // the trivial command ran, not `dotnet run`

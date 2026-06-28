@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Artifacts
 
 open System.Text.Json
+open Fsgg.Provider
 open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Artifacts.GenerationManifest
@@ -36,21 +37,6 @@ module Config =
           WorkModelPath: string
           GeneratedGuidanceIsAuthority: bool
           RequireEquivalentClaudeAndCodexBehavior: bool }
-
-    /// One declared `--param` of a template provider (`.fsgg/providers.yml`).
-    type ProviderParameterSpec =
-        { Key: string
-          Required: bool
-          Default: string option }
-
-    /// An author-/provider-supplied template-provider descriptor. Every field is
-    /// opaque to SDD except `ContractVersion`, which SDD validates before invoking.
-    type ProviderDescriptor =
-        { Name: string
-          ContractVersion: string
-          TemplateId: string
-          Source: string
-          Parameters: ProviderParameterSpec list }
 
     val parseProjectConfig: snapshot: FileSnapshot -> Result<ProjectLifecycleConfig, Diagnostic list>
     val parseSddLifecyclePolicy: snapshot: FileSnapshot -> Result<SddLifecyclePolicy, Diagnostic list>

@@ -2,6 +2,7 @@ namespace FS.GG.SDD.Acceptance.Tests
 
 open System
 open System.IO
+open Fsgg.Provider
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Artifacts.ArtifactRef
 open Xunit
@@ -75,13 +76,20 @@ module CompositionAcceptanceTests =
                 let constitutionPresent = existsRelative root ".fsgg/constitution.md"
 
                 // T012 (FR-003): the product builds, then a headless run smoke starts it without
-                // crashing — distinguishing "files produced" from a working product.
-                let build = buildProbe None root
+                // crashing — distinguishing "files produced" from a working product. Feature 038
+                // (FR-008): flow the resolved descriptor's declared `Build`/`Run` into the probes;
+                // the reference provider declares none, so both fall through to the `dotnet`
+                // defaults and the verdict is unchanged (SC-004).
+                let descriptor = resolveProviderDescriptor root "rendering"
+                let declaredBuild = descriptor |> Option.bind (fun d -> d.Build)
+                let declaredRun = descriptor |> Option.bind (fun d -> d.Run)
+
+                let build = buildProbe declaredBuild root
                 let appBuilds = build.ExitCode = 0
 
                 let run =
                     if appBuilds then
-                        runProbe None root
+                        runProbe declaredRun root
                     else
                         { Started = false; ExitCode = -1; Diagnostic = "build failed; run probe skipped." }
 
@@ -245,6 +253,57 @@ module CompositionAcceptanceTests =
         | other -> Assert.Fail $"Expected a config-error fail, got %A{other}."
 
         Assert.False(existsRelative root "composition-acceptance.json")
+
+    // T019 (US3 / FR-008): offline coverage for the descriptor resolve-and-bind glue T018 adds to
+    // `composeOnce` (which otherwise runs only on the network-gated path). Over a SYNTHETIC registry
+    // written to a temp root, the same parse → find-by-name → `.Build`/`.Run` resolution the harness
+    // uses selects the declared commands; a today-shape entry and a missing provider both yield
+    // `None`. No real provider invoked; generic tooling tokens only.
+    [<Fact>]
+    let ``descriptor resolve-and-bind selects the declared build and run commands`` () =
+        let declaredRegistry =
+            """schemaVersion: 1
+providers:
+  - name: demo
+    contractVersion: "1.0.0"
+    templateId: demo-template
+    source: __FIXTURE__/ok
+    build:
+      executable: demo-build
+      arguments: [--fast]
+    run:
+      executable: demo-run
+      arguments: [--headless]
+"""
+
+        let declaredRoot = newProductRoot ()
+        writeRelative declaredRoot ".fsgg/providers.yml" declaredRegistry
+
+        let descriptor = resolveProviderDescriptor declaredRoot "demo"
+        let declaredBuild = descriptor |> Option.bind (fun d -> d.Build)
+        let declaredRun = descriptor |> Option.bind (fun d -> d.Run)
+
+        Assert.Equal(Some { Executable = "demo-build"; Arguments = [ "--fast" ] }, declaredBuild)
+        Assert.Equal(Some { Executable = "demo-run"; Arguments = [ "--headless" ] }, declaredRun)
+
+        // A `--provider` naming no registered entry binds to no declared command.
+        Assert.Equal<DeclaredCommand option>(None, resolveProviderDescriptor declaredRoot "absent" |> Option.bind (fun d -> d.Build))
+
+        // A today-shape entry (no declared commands) binds both probes to `None` (the default path).
+        let plainRegistry =
+            """schemaVersion: 1
+providers:
+  - name: demo
+    contractVersion: "1.0.0"
+    templateId: demo-template
+    source: __FIXTURE__/ok
+"""
+
+        let plainRoot = newProductRoot ()
+        writeRelative plainRoot ".fsgg/providers.yml" plainRegistry
+        let plain = resolveProviderDescriptor plainRoot "demo"
+        Assert.Equal<DeclaredCommand option>(None, plain |> Option.bind (fun d -> d.Build))
+        Assert.Equal<DeclaredCommand option>(None, plain |> Option.bind (fun d -> d.Run))
 
     // T021a (US3 / FR-012, finding F5): the acceptance project carries NO Governance reference —
     // neither in the project file nor in its non-guard sources — proving it requires no
