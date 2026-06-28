@@ -36,4 +36,19 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
+
+  <!-- api-breaking-change-gate (H3 / FS-GG/.github#20, epic #16 Pillar 5). FS.GG.Contracts is the
+       SDD-owned cross-repo contract package; it is F#, so the operative breaking-change detector is
+       the .NET SDK's Package Validation / ApiCompat (assembly+package level) — not
+       Microsoft.CodeAnalysis.PublicApiAnalyzers, a Roslyn/C# analyzer that does not analyze F#
+       (registry coherence id apicompat-publicapi-gate; FS.GG.Governance spec 088 D1). The
+       source-level public-surface record stays the committed .fsi signatures.
+       Package Validation is left OFF for the normal build/release pack on purpose: it emits MSBuild
+       ERRORS on a break, which would redden `dotnet pack` and split enforcement from the advisory
+       signal. The detector runs as a SEPARATE, advisory step — scripts/apicompat-check.sh, wired as
+       the non-required `api-compatibility-gate` job in gate.yml — which turns Package Validation on
+       per-pack against the feed baseline and reports breaks without blocking the merge. -->
+  <PropertyGroup>
+    <EnablePackageValidation>false</EnablePackageValidation>
+  </PropertyGroup>
 </Project>
