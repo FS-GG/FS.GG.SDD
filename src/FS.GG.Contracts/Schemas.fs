@@ -161,7 +161,7 @@ module Schemas =
     // Governance-owned: declared to the Governance published reference, NOT SDD-emitted.
     let governanceVersion = 1
     let policyVersion = 1
-    let capabilitiesVersion = 1
+    let capabilitiesVersion = 2
     let toolingVersion = 1
 
     let entries: SchemaContractEntry list =

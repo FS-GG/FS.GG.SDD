@@ -58,7 +58,7 @@ module SchemaVersionConstantTests =
     let ``Governance-owned schema versions equal the declared reference values`` () =
         Assert.Equal(1, Schemas.governanceVersion)
         Assert.Equal(1, Schemas.policyVersion)
-        Assert.Equal(1, Schemas.capabilitiesVersion)
+        Assert.Equal(2, Schemas.capabilitiesVersion)
         Assert.Equal(1, Schemas.toolingVersion)
 
     [<Fact>]
