@@ -105,15 +105,12 @@ shell commands, and other important information, read the current plan
 at specs/013-ship-command/plan.md
 <!-- SPECKIT END -->
 
-<!-- SKILL:spectre-console-headless-fidelity START -->
-### Spectre.Console headless fidelity
+<!-- SKILL:spectre-console START -->
+### Spectre.Console
 
-When Spectre.Console output renders correctly locally but differs or fails in CI
-(GitHub Actions) — width/wrap assertions, plain / no-color output, or snapshots
-that go red only on the runner — see the single source:
-`.claude/skills/spectre-console-headless-fidelity/SKILL.md`.
-
-It covers reproducing the divergence locally (`GITHUB_ACTIONS=true dotnet test …`),
-classifying invisible-byte artifact vs genuine display overflow, and the matching
-fix. Advisory only — it gates nothing.
-<!-- SKILL:spectre-console-headless-fidelity END -->
+For working with Spectre.Console output in this project — the capability/profile
+model, the widget tour, the rich/plain/JSON projection conventions, deterministic
+test rendering, and the headless-fidelity pitfall (renders correctly locally but
+differs/fails in CI) — see the single source:
+`.claude/skills/spectre-console/SKILL.md`. Advisory only — it gates nothing.
+<!-- SKILL:spectre-console END -->
