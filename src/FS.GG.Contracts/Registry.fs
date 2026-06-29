@@ -221,10 +221,14 @@ module Registry =
     // --- Real-schema version grammar (feature 042; research R3). BCL regex only,
     // mirroring scripts/validate-registry.py exactly so the two cannot disagree. ---
 
-    /// `version` / `package-version`: full SemVer with optional prerelease/build
-    /// (`1.0.0`, `0.1.52-preview.1`) OR a bare integer (`1`, `2`).
+    /// `version` / `package-version`: full SemVer with an optional 4th numeric
+    /// segment and optional prerelease/build (`1.0.0`, `0.1.52-preview.1`,
+    /// `1.2.1.1`, `1.2.1.1-preview.1`) OR a bare integer (`1`, `2`). The optional
+    /// `(\.\d+)?` 4th segment (feature 045) mirrors scripts/validate-registry.py's
+    /// `(?:\.\d+)?` byte-for-byte so the typed validator and the Python authority
+    /// cannot disagree on the 4-segment `major.minor.patch.revision` form (ADR-0007).
     let private semVerRegex =
-        System.Text.RegularExpressions.Regex(@"^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$")
+        System.Text.RegularExpressions.Regex(@"^\d+\.\d+\.\d+(\.\d+)?(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$")
 
     let private bareIntegerRegex = System.Text.RegularExpressions.Regex(@"^\d+$")
 

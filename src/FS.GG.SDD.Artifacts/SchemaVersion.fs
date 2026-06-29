@@ -159,7 +159,7 @@ module SchemaVersion =
             let value = value.Trim()
             let plus = value.IndexOf('+')
             if plus >= 0 then value.Substring(0, plus) else value
-        | _ -> "0.2.0"
+        | _ -> "0.2.1"
 
     let currentGeneratorVersion () =
         let version = assemblyGeneratorVersion ()
