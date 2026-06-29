@@ -100,9 +100,26 @@ module RegistryDocumentTests =
         let doc = { baseDoc with Contracts = [ { contract "a" with Range = Some "1.x" } ] }
         Assert.Equal(Registry.Valid, Registry.validateDocument doc)
 
+    // --- Feature 045: 4-segment versions accepted (FR-001, FR-002); the widening is
+    // bounded to one extra numeric segment so genuine defects still fail (FR-004). ---
+
+    [<Fact>]
+    let ``US3-045: 4-segment version 1.2.1.1 is accepted on both version and package-version`` () =
+        let doc =
+            { baseDoc with
+                Contracts = [ { contract "a" with Version = "1.2.1.1"; PackageVersion = Some "1.2.1.1" } ] }
+
+        Assert.Equal(Registry.Valid, Registry.validateDocument doc)
+
+    [<Fact>]
+    let ``US3-045: 4-segment version composes with a prerelease tag (1.2.1.1-preview.1)`` () =
+        let doc = { baseDoc with Contracts = [ { contract "a" with Version = "1.2.1.1-preview.1" } ] }
+        Assert.Equal(Registry.Valid, Registry.validateDocument doc)
+
     [<Theory>]
     [<InlineData("1.2.x.4")>]
     [<InlineData("abc")>]
+    [<InlineData("1.2.3.4.5")>]
     let ``US3: genuinely malformed version still reports MalformedVersion`` (bad: string) =
         let doc = { baseDoc with Contracts = [ { contract "a" with Version = bad } ] }
         Assert.Contains(Registry.MalformedVersion, rules (Registry.validateDocument doc))

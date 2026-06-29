@@ -34,7 +34,7 @@ module RegistryDocumentParseTests =
         Assert.Equal("scaffold-provider", (List.head document.Contracts).Id)
         Assert.Equal("shared-build-config", (List.last document.Contracts).Id)
         // dependency edges and coherence entries are present (extra keys tolerated).
-        Assert.Equal(4, document.Dependencies.Length)
+        Assert.Equal(5, document.Dependencies.Length)
         Assert.Contains("registry-validator-typed", document.Coherence |> List.map (fun c -> c.Id))
 
     [<Fact>]
@@ -44,13 +44,25 @@ module RegistryDocumentParseTests =
         Assert.Equal(Some "1.x", handoff.Range)
 
         let contracts = document.Contracts |> List.find (fun c -> c.Id = "fsgg-contracts")
-        Assert.Equal(Some "1.0.1", contracts.PackageVersion)
+        Assert.Equal(Some "1.1.0", contracts.PackageVersion)
 
     // --- The real fixture validates clean: path-in/verdict-out parity (SC-001/SC-005) ---
 
     [<Fact>]
     let ``the parsed canonical fixture validates clean`` () =
         Assert.Equal(Registry.Valid, Registry.validateDocument (loadFixture ()))
+
+    // --- Feature 045: the canonical fixture carries the 4-segment
+    // governance-reference-gate-set@1.2.1.1 (ADR-0007) and it validates clean,
+    // proving the widening end-to-end over the real on-disk registry (FR-005, SC-001). ---
+
+    [<Fact>]
+    let ``the 4-segment governance-reference-gate-set 1.2.1.1 is carried and validates clean`` () =
+        let document = loadFixture ()
+        let gateSet = document.Contracts |> List.find (fun c -> c.Id = "governance-reference-gate-set")
+        Assert.Equal("1.2.1.1", gateSet.Version)
+        Assert.Equal(Some "1.2.1.1", gateSet.PackageVersion)
+        Assert.Equal(Registry.Valid, Registry.validateDocument document)
 
     // --- Determinism (FR-007 / SC-004): repeated load + validate are identical ---
 

@@ -109,5 +109,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/044-publish-cli-tool/plan.md
+at specs/045-validator-4-segment-versions/plan.md
 <!-- SPECKIT END -->

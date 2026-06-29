@@ -179,8 +179,8 @@ module ReleaseContract =
 
     let currentRelease () : ReleaseReadiness =
         let identity =
-            { Version = "0.2.0"
-              Channel = channelOfVersion "0.2.0"
+            { Version = "0.2.1"
+              Channel = channelOfVersion "0.2.1"
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
