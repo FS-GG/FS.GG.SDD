@@ -28,7 +28,7 @@ never reads as a full pass.
 
 | Flag | Meaning |
 |---|---|
-| `--matrix <name>` | Restrict to one matrix. Names: `lifecycle`, `determinism`, `baseline`, `compatibility` (`compatibility` is the cheapest and the confirmed token). |
+| `--matrix <name>` | Restrict to one matrix. The harness defines four matrices — lifecycle, determinism, baseline, and compatibility; `compatibility` is the cheapest and the confirmed token. Omit `--matrix` to run them all; check `fsgg-sdd validate --help` for the exact token spellings of the other three. |
 | `--out <path>` | Persist a **deterministic** projection (JSON or plain text) to a file — never rich ANSI. |
 | `--rich` / `--text` / `--json` | Render the `validation-report` three ways (default JSON); `--rich` degrades to plain text when non-interactive or color-disabled. |
 

@@ -49,7 +49,7 @@ For each stage: the command, the **authored source** *you* write under
 `work/<id>/`, the **generated readiness view** the *tool* writes under
 `readiness/<id>/`, and the next action.
 
-| Stage | Command | You author (`work/<id>/`) | Tool generates (`readiness/<id>/`) | Next |
+| Stage | Command | You author (`work/<id>/`) | Tool refreshes/reports (`readiness/<id>/`) | Next |
 |---|---|---|---|---|
 | charter | `fsgg-sdd charter --work <id> --title "<title>"` | `charter.md` | `work-model.json` | specify |
 | specify | `fsgg-sdd specify --work <id> --input "<intent>"` | `spec.md` | `work-model.json` | clarify |
@@ -64,6 +64,13 @@ For each stage: the command, the **authored source** *you* write under
 
 `analyze`, `verify`, and `ship` author no `work/<id>/` source — they aggregate
 the authored sources into a generated readiness view.
+
+> **When the work model is built.** Each stage *refreshes or reports* the
+> `work-model.json` status, but the **normalized `work-model.json` is only built
+> once enough sources exist — at `verify`/`ship`**. During the early window
+> (`charter`/`specify`/`clarify`/`checklist`) it does not exist yet, which is why
+> `agents`/`refresh` fall back to `.fsgg/early-stage-guidance.md` there (see "Two
+> windows" below and [[fs-gg-sdd-refresh-agents]]).
 
 ## The one distinction everything hangs on: authored source vs generated view
 
