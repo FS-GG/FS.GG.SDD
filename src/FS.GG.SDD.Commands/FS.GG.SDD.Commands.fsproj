@@ -11,6 +11,8 @@
     <Compile Include="CommandTypes.fs" />
     <Compile Include="CommandReports.fsi" />
     <Compile Include="CommandReports.fs" />
+    <Compile Include="CommandHelp.fsi" />
+    <Compile Include="CommandHelp.fs" />
     <Compile Include="CommandWorkflow/Foundation.fs" />
     <Compile Include="CommandWorkflow/ParsingEarly.fs" />
     <Compile Include="CommandWorkflow/ParsingMid.fs" />

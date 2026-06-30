@@ -345,6 +345,26 @@ module CommandTypes =
           RequiredArtifacts: string list
           BlockingDiagnosticIds: string list }
 
+    type HelpFlag =
+        { Name: string
+          Argument: string option
+          Description: string }
+
+    type HelpCommandEntry =
+        { Name: string
+          Description: string }
+
+    type HelpScope =
+        | TopLevel
+        | Command of string
+
+    type HelpSummary =
+        { Scope: HelpScope
+          Usage: string
+          Commands: HelpCommandEntry list
+          GlobalFlags: HelpFlag list
+          CommandFlags: HelpFlag list }
+
     type CommandReport =
         { SchemaVersion: int
           ReportVersion: string
@@ -371,7 +391,8 @@ module CommandTypes =
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
-          NextAction: NextAction option }
+          NextAction: NextAction option
+          Help: HelpSummary option }
 
     type CommandEffect =
         | ReadFile of path: string

@@ -1,0 +1,24 @@
+# T027 quickstart evidence — 2026-06-30T18:25:39Z
+## US4 fsgg-sdd --help (exit code + scope)
+outcome=noChange scope=topLevel commands=17 nextAction=None
+exit=0
+## -h == --help == help (determinism)
+--help == -h: identical
+--help == help: identical
+two --help --json runs: byte-identical
+## verify --help
+command=verify flags=['--work', '--title', '--dry-run']
+## frobnicate --help → unknownCommand exit 1
+exit=1
+diagnostics=['unknownCommand']
+## NO_COLOR --help --rich → zero ANSI
+hasESC=False lines=31
+
+## US1 §3.2 specify edited re-run (live-read statement)
+outcome=noChange actionId=specify.next.clarify
+reason=specify promotes only the first-draft specification; spec.md is now authoritative and is read live by downstream stages (clarify, checklist, …). Edit spec.md directly — re-running specify does not re-promote it.
+
+## US3 §3.3 clarify with '- None outstanding' bullet ambiguity
+outcome=succeeded
+missingSpecificationId present=False
+(US1 §3.1, US2 §3.4 automated in tests/FS.GG.SDD.Commands.Tests — Checklist/Verify/ShipCommandTests; all green)

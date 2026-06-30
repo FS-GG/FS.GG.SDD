@@ -449,6 +449,11 @@ module internal ViewGeneration =
             match GenerationManifestModule.parseWorkModelMetadata path generated.Text with
             | Error _ -> Some(malformedGeneratedView path)
             | Ok _ ->
+                // §3.4: the currency-check input set MUST mirror the exact authored-source
+                // set used to generate the work model (`workModelSnapshots`), including
+                // plan.md and charter.md. Omitting them made `sourceStale`'s "recorded
+                // source absent from current set" branch fire on every clean run (FR-005/006);
+                // genuine source-digest drift still flags via `sourceStale` (FR-007).
                 let currentSnapshots =
                     [ snapshot ".fsgg/project.yml" model
                       snapshot ".fsgg/sdd.yml" model
@@ -456,6 +461,8 @@ module internal ViewGeneration =
                       snapshot (specPath workId) model
                       snapshot (clarificationPath workId) model
                       snapshot (checklistPath workId) model
+                      snapshot (planPath workId) model
+                      snapshot (charterPath workId) model
                       snapshot (tasksPath workId) model
                       snapshot (evidencePath workId) model
                       Some generated ]

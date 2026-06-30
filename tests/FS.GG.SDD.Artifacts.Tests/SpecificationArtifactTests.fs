@@ -75,6 +75,49 @@ No material ambiguities recorded.
             Assert.Empty(facts.Diagnostics)
             Assert.Contains(facts.RequirementReferences, fun reference -> reference.RequirementId.Value = "FR-001" && reference.StoryIds.Length = 1)
 
+    // §3.3 (FR-003/004): a "none outstanding" note under ## Ambiguities — prose or bullet —
+    // is a non-blocking sentinel (no AmbiguityId, no missing-id diagnostic); genuine AMB-###
+    // bullets still parse, and a sentinel alongside a real one does not suppress the real one.
+    let private ambiguityMissingId (facts: SpecificationFacts) =
+        facts.Diagnostics |> List.exists (fun diagnostic -> diagnostic.RelatedIds |> List.contains "AMB-###")
+
+    [<Fact>]
+    let ``Specification bullet none-outstanding disclaimer is a non-blocking sentinel`` () =
+        let bulletDisclaimer = specificationText.Replace("No material ambiguities recorded.", "- None outstanding")
+
+        match parseSpecificationFacts (snapshot bulletDisclaimer) with
+        | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
+        | Ok facts ->
+            Assert.Empty(facts.AmbiguityIds)
+            Assert.False(ambiguityMissingId facts)
+
+    [<Fact>]
+    let ``Specification prose none-outstanding disclaimer remains non-blocking`` () =
+        match parseSpecificationFacts (snapshot specificationText) with
+        | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
+        | Ok facts ->
+            Assert.Empty(facts.AmbiguityIds)
+            Assert.False(ambiguityMissingId facts)
+
+    [<Fact>]
+    let ``Specification genuine ambiguity bullet still yields an AmbiguityId`` () =
+        let withAmbiguity = specificationText.Replace("No material ambiguities recorded.", "- AMB-001 open: Where should durable decisions be recorded?")
+
+        match parseSpecificationFacts (snapshot withAmbiguity) with
+        | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
+        | Ok facts ->
+            Assert.Equal<string list>([ "AMB-001" ], facts.AmbiguityIds |> List.map Identifiers.ambiguityIdValue)
+
+    [<Fact>]
+    let ``Specification mixed disclaimer and genuine ambiguity keeps only the real id`` () =
+        let mixed = specificationText.Replace("No material ambiguities recorded.", "- None outstanding\n- AMB-001 open: Where should durable decisions be recorded?")
+
+        match parseSpecificationFacts (snapshot mixed) with
+        | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
+        | Ok facts ->
+            Assert.Equal<string list>([ "AMB-001" ], facts.AmbiguityIds |> List.map Identifiers.ambiguityIdValue)
+            Assert.False(ambiguityMissingId facts)
+
     [<Fact>]
     let ``Specification parser reports duplicate ids and unknown references`` () =
         let broken =

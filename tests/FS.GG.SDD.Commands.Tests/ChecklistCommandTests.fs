@@ -63,6 +63,49 @@ No material ambiguities recorded.
 - Next lifecycle action: clarify.
 """
 
+    let coverageSpec (requirements: string) =
+        $"""---
+schemaVersion: 1
+workId: {workId}
+title: {title}
+stage: specify
+changeTier: tier1
+status: specified
+publicOrToolFacingImpact: true
+---
+
+# {title} Specification
+
+Prose status: specified
+
+## User Value
+Review requirements before planning.
+
+## Scope
+- SB-001: Add checklist command behavior.
+
+## Non-Goals
+- SB-002: Do not add plan behavior.
+
+## User Stories
+- US-001 (P1): As a maintainer, I can review requirements.
+
+## Acceptance Scenarios
+- AC-001 [US-001] [FR-001]: Requirement is exercised end-to-end.
+
+## Functional Requirements
+{requirements}
+
+## Ambiguities
+No material ambiguities recorded.
+
+## Public Or Tool-Facing Impact
+- Checklist report JSON is tool-facing.
+
+## Lifecycle Notes
+- Next lifecycle action: clarify.
+"""
+
     let clarifiedNoAmbiguity =
         $"""---
 schemaVersion: 1
@@ -183,21 +226,67 @@ No blocking ambiguity remains.
         Assert.Equal(authored, TestSupport.readRelative root checklistPath)
         Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = checklistPath && change.Operation = ArtifactOperation.NoChange)
 
+    // §3.1 (FR-001, SC-001): a stale re-run purges every machine-derived result row and
+    // re-derives the full set from current sources — no superseded row or stale advisory
+    // survives. (Rewritten from the prior append-stale expectation.)
     [<Fact>]
-    let ``checklist appends safe missing requirement item and marks prior result stale`` () =
-        let root = initializedClarifiedProject ()
+    let ``checklist stale rerun purges superseded rows and re-derives from current sources`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.writeRelative root specPath (coverageSpec "- FR-001: The command creates checklist output. (Stories: US-001; Acceptance: AC-001)")
+        TestSupport.writeRelative root clarificationPath clarifiedNoAmbiguity
         TestSupport.runChecklist root workId title |> ignore
-        let updatedSpec = (TestSupport.readRelative root specPath).Replace("## Ambiguities", "- FR-002: New requirement links to AC-001. (Stories: US-001; Acceptance: AC-001)\n\n## Ambiguities")
-        TestSupport.writeRelative root specPath updatedSpec
+
+        // Author corrects/extends the source so the verdict set should change.
+        TestSupport.writeRelative root specPath (coverageSpec "- FR-001: The command creates checklist output. (Stories: US-001; Acceptance: AC-001)\n- FR-002: The command links coverage. (Stories: US-001; Acceptance: AC-001)")
 
         let report = TestSupport.runChecklist root workId title
         let checklist = TestSupport.readRelative root checklistPath
 
-        Assert.Equal(CommandOutcome.SucceededWithWarnings, report.Outcome)
         Assert.Contains("FR-002", checklist)
-        Assert.Contains("stale:", checklist)
-        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "staleChecklistResult")
-        Assert.True(report.Checklist.Value.StaleResultCount > 0)
+        Assert.DoesNotContain("stale:", checklist)
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "staleChecklistResult")
+        Assert.Equal(0, report.Checklist.Value.StaleResultCount)
+        // The report reflects the current sources: two passing requirements, no failures.
+        Assert.Equal(2, report.Checklist.Value.PassedCount)
+        Assert.Equal(0, report.Checklist.Value.FailedBlockingCount)
+
+    // §3.1 partial fix: re-evaluation is per-requirement — the corrected requirement flips
+    // to pass while the still-failing one remains fail.
+    [<Fact>]
+    let ``checklist partial fix flips corrected requirement and keeps still-failing fail`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        TestSupport.writeRelative root specPath (coverageSpec "- FR-001: First requirement.\n- FR-002: Second requirement.")
+        TestSupport.writeRelative root clarificationPath clarifiedNoAmbiguity
+        let firstReport = TestSupport.runChecklist root workId title
+        Assert.Equal(2, firstReport.Checklist.Value.FailedBlockingCount)
+
+        // Fix FR-001 only by giving it acceptance coverage.
+        TestSupport.writeRelative root specPath (coverageSpec "- FR-001: First requirement. (Stories: US-001; Acceptance: AC-001)\n- FR-002: Second requirement.")
+
+        let report = TestSupport.runChecklist root workId title
+        let checklist = TestSupport.readRelative root checklistPath
+
+        Assert.Equal(1, report.Checklist.Value.PassedCount)
+        Assert.Equal(1, report.Checklist.Value.FailedBlockingCount)
+        Assert.Contains("fail: Requirement FR-002 is missing acceptance coverage.", checklist)
+        Assert.DoesNotContain("fail: Requirement FR-001 is missing acceptance coverage.", checklist)
+
+    // §3.1 determinism (FR-012): an unchanged re-run preserves rows, reports noChange, and
+    // is byte-identical.
+    [<Fact>]
+    let ``checklist unchanged rerun is no change and byte identical`` () =
+        let root = initializedClarifiedProject ()
+        TestSupport.runChecklist root workId title |> ignore
+        let firstFile = TestSupport.readRelative root checklistPath
+
+        let report = TestSupport.runChecklist root workId title
+        let secondFile = TestSupport.readRelative root checklistPath
+
+        Assert.Equal(CommandOutcome.NoChange, report.Outcome)
+        Assert.Equal(firstFile, secondFile)
+        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = checklistPath && change.Operation = ArtifactOperation.NoChange)
 
     [<Fact>]
     let ``checklist identity mismatch blocks without mutating existing checklist`` () =

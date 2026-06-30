@@ -103,6 +103,27 @@ No material ambiguities recorded.
         Assert.Equal(authored, TestSupport.readRelative root specPath)
         Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = specPath && change.Operation = ArtifactOperation.NoChange)
 
+    // §3.2 (FR-002, SC-002): an edited-but-section-complete spec re-run is never a bare,
+    // ambiguous NoChange — the report carries the deterministic statement that specify
+    // promotes only the first draft and that spec.md is read live by downstream stages.
+    [<Fact>]
+    let ``specify edited rerun reports live-read statement and is never bare NoChange`` () =
+        let root = initializedCharteredProject ()
+        TestSupport.runSpecify root workId title |> ignore
+        let edited =
+            (TestSupport.readRelative root specPath)
+                .Replace("Prose status: specified", "Prose status: specified\nAuthor added a clarifying sentence.")
+        TestSupport.writeRelative root specPath edited
+
+        let report = TestSupport.runSpecify root workId title
+
+        Assert.Equal(CommandOutcome.NoChange, report.Outcome)
+        Assert.True(report.NextAction.IsSome)
+        let action = report.NextAction.Value
+        Assert.Equal("specify.next.clarify", action.ActionId)
+        Assert.Equal(Some Clarify, action.Command)
+        Assert.Contains("read live", action.Reason)
+
     [<Fact>]
     let ``specify safely appends missing standard sections`` () =
         let root = initializedCharteredProject ()

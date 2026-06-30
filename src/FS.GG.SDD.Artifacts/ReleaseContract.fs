@@ -259,7 +259,7 @@ module ReleaseContract =
                     [ "schemaVersion"; "reportVersion"; "command"; "context"; "invocation"; "outcome"
                       "changedArtifacts"; "specification"; "clarification"; "checklist"; "plan"; "tasks"
                       "analysis"; "evidence"; "verification"; "ship"; "agentGuidance"; "refresh"; "scaffold"
-                      "generatedViews"; "diagnostics"; "governanceCompatibility"; "nextAction" ]
+                      "generatedViews"; "diagnostics"; "governanceCompatibility"; "nextAction"; "help" ]
               SourceArtifact =
                 (match ArtifactRef.create "src/FS.GG.SDD.Commands/CommandSerialization.fs" (ArtifactRef.Other "commandOutput") Sdd false with
                  | Ok artifact -> artifact

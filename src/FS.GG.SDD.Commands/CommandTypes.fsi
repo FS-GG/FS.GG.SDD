@@ -353,6 +353,31 @@ module CommandTypes =
           RequiredArtifacts: string list
           BlockingDiagnosticIds: string list }
 
+    /// One accepted flag in a help listing. `Argument` is `Some "<id>"` for value-taking
+    /// flags and `None` for switches; aliases are listed in `Name` (e.g. `--help, -h`).
+    type HelpFlag =
+        { Name: string
+          Argument: string option
+          Description: string }
+
+    /// One command in the top-level help command list.
+    type HelpCommandEntry =
+        { Name: string
+          Description: string }
+
+    /// Whether a help summary describes the top-level CLI or one command.
+    type HelpScope =
+        | TopLevel
+        | Command of string
+
+    /// Static, deterministic help payload projected through the standard three views.
+    type HelpSummary =
+        { Scope: HelpScope
+          Usage: string
+          Commands: HelpCommandEntry list
+          GlobalFlags: HelpFlag list
+          CommandFlags: HelpFlag list }
+
     type CommandReport =
         { SchemaVersion: int
           ReportVersion: string
@@ -379,7 +404,8 @@ module CommandTypes =
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
-          NextAction: NextAction option }
+          NextAction: NextAction option
+          Help: HelpSummary option }
 
     type CommandEffect =
         | ReadFile of path: string

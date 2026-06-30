@@ -326,13 +326,36 @@ Prose status: {status}
         |> appendToSection "Accepted Deferrals" deferralLines
         |> appendToSection "Blocking Findings" findingLines
 
-    let appendStaleChecklistResult existingText (facts: ChecklistFacts) =
-        match facts.Items |> List.tryHead, facts.Results |> List.tryHead with
-        | Some item, Some result when facts.Results |> List.exists (fun result -> result.Status = "stale") |> not ->
-            let resultId = scopedId "CR" (nextScopedIndex "CR" existingText)
-            let line = $"- {resultId} [CHK:{item.ItemId.Value}] stale: Source specification or clarification changed since {result.ResultId.Value} was recorded."
-            appendToSection "Review Results" [ line ] existingText
-        | _ -> existingText
+    // §3.1: on a stale re-run, purge every machine-derived result row and re-derive the
+    // full set from current sources (no `existingSourceIds` filter), rewriting the
+    // `## Source Snapshot` digests. Authored, non-derived sections are preserved by
+    // `ensureChecklistSections` (the caller passes the ensured text). No row reviewed
+    // against the superseded snapshot survives (SC-001).
+    let rederiveStaleChecklist
+        workId
+        (specText: string)
+        (clarificationText: string)
+        (reviews: PlannedChecklistReview list)
+        (ensuredText: string)
+        =
+        let placeholder text lines =
+            if List.isEmpty lines then [ text ] else lines
+
+        let itemLines = reviews |> List.map renderChecklistItemLine
+        let resultLines = reviews |> List.filter (fun review -> review.Status <> "acceptedDeferral") |> List.map renderChecklistResultLine
+        let deferralLines = reviews |> List.filter (fun review -> review.Status = "acceptedDeferral") |> List.map renderChecklistDeferralLine
+        let findingLines = reviews |> List.filter (fun review -> review.Status = "fail") |> List.map renderBlockingFindingLine
+
+        let snapshotLines =
+            [ sourceSnapshotLine "spec" (specPath workId) specText
+              sourceSnapshotLine "clarifications" (clarificationPath workId) clarificationText ]
+
+        ensuredText
+        |> replaceSectionBody "Source Snapshot" snapshotLines
+        |> replaceSectionBody "Checklist Items" (placeholder "No checklist items recorded." itemLines)
+        |> replaceSectionBody "Review Results" (placeholder "No review results recorded." resultLines)
+        |> replaceSectionBody "Accepted Deferrals" (placeholder "No accepted checklist deferrals recorded." deferralLines)
+        |> replaceSectionBody "Blocking Findings" (placeholder "No blocking findings recorded." findingLines)
 
     let checklistQualityDiagnostics (path: string) (reviews: PlannedChecklistReview list) =
         reviews
@@ -394,24 +417,25 @@ Prose status: {status}
                         blockingParserDiagnostics, Some existing.Text, None
                     else
                         let ensuredText = ensureChecklistSections workId existing.Text
-                        let plannedReviews = plannedChecklistReviews specFacts clarificationFacts (Some existingFacts)
-
-                        let withReviews = appendChecklistReviews ensuredText plannedReviews
                         let stale = sourceSnapshotStale specText clarificationText existingFacts
-                        let proposedText = if stale then appendStaleChecklistResult withReviews existingFacts else withReviews
+
+                        // §3.1: a stale re-run purges and re-derives the full row set from
+                        // current sources (no superseded row survives, SC-001); a current
+                        // snapshot preserves rows and re-appends only newly-derived reviews.
+                        let reviews =
+                            if stale then plannedChecklistReviews specFacts clarificationFacts None
+                            else plannedChecklistReviews specFacts clarificationFacts (Some existingFacts)
+
+                        let proposedText =
+                            if stale then rederiveStaleChecklist workId specText clarificationText reviews ensuredText
+                            else appendChecklistReviews ensuredText reviews
 
                         match parseChecklistForCommand path proposedText with
                         | Error diagnostics -> diagnostics, Some proposedText, None
                         | Ok(proposedFacts, proposedDiagnostics) ->
-                            let staleDiagnostics =
-                                if stale then
-                                    [ staleChecklistResult path (existingFacts.Results |> List.map (fun result -> result.ResultId.Value)) ]
-                                else
-                                    []
+                            let qualityDiagnostics = checklistQualityDiagnostics (specPath workId) reviews
 
-                            let qualityDiagnostics = checklistQualityDiagnostics (specPath workId) plannedReviews
-
-                            blockingParserDiagnostics @ proposedDiagnostics @ staleDiagnostics @ qualityDiagnostics
+                            blockingParserDiagnostics @ proposedDiagnostics @ qualityDiagnostics
                             |> DiagnosticsModule.sort,
                             Some proposedText,
                             Some(checklistSummary proposedFacts)

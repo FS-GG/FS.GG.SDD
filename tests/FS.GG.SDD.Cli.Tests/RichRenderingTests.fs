@@ -118,7 +118,8 @@ module RichRenderingTests =
                   WorkId = Some "042-rich-sample"
                   Reason = "resolve the remaining ambiguity"
                   RequiredArtifacts = [ "work/042-rich-sample/clarifications.md" ]
-                  BlockingDiagnosticIds = [] } }
+                  BlockingDiagnosticIds = [] }
+          Help = None }
 
     [<Fact>]
     let ``T010 rich projection represents every populated report section`` () =

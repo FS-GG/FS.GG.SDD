@@ -208,6 +208,18 @@ module internal Internal =
         else
             line.Substring(index + idValue.Length).Trim().TrimStart(':', '-', ' ').Trim()
 
+    // A "no-outstanding" sentinel line: after stripping an optional leading bullet marker,
+    // the trimmed text is empty or matches the disclaimer convention used by
+    // `parseNonEmptySectionLines` (case-insensitive `No `) plus an explicit "none" phrasing
+    // (`None`, `None outstanding`). Used to exempt such lines from the "every bullet needs a
+    // stable id" rule under `## Ambiguities` (§3.3).
+    let isNoOutstandingSentinel (line: string) =
+        let trimmed = line.Trim().TrimStart('-', '*').Trim()
+
+        String.IsNullOrWhiteSpace trimmed
+        || trimmed.StartsWith("No ", StringComparison.OrdinalIgnoreCase)
+        || trimmed.StartsWith("None", StringComparison.OrdinalIgnoreCase)
+
     let parseNonEmptySectionLines heading text =
         sectionLines heading text
         |> List.choose (fun (_, line) ->

@@ -117,6 +117,34 @@ let printValidate (rest: string list) =
 
     if report.Summary.OverallPassed then 0 else 1
 
+let private helpRequest command format =
+    { Command = command
+      ProjectRoot = "."
+      WorkId = None
+      Title = None
+      InputText = None
+      OutputFormat = format
+      DryRun = true
+      OverwritePolicy = RefuseUnsafe
+      GeneratorVersion = SchemaVersionModule.currentGeneratorVersion()
+      Provider = None
+      Parameters = []
+      Force = false
+      TemplateUpdate = true }
+
+// §3.5: project a help report through the standard three views to stdout. Help carries no
+// diagnostics and no changes → NoChange → exit 0 (never `unknownCommand`, FR-008/011).
+let private emitHelp format (envelopeCommand: SddCommand) (summary: HelpSummary) =
+    let report = helpReport (helpRequest envelopeCommand format) summary
+    Console.Out.WriteLine((resolve format (detectCapabilities ()) report).Text)
+    exitCodeForReport report
+
+let private printTopLevelHelp format =
+    emitHelp format Init (CommandHelp.topLevelHelp (SchemaVersionModule.currentGeneratorVersion()))
+
+let private printCommandHelp format command =
+    emitHelp format command (CommandHelp.commandHelp command)
+
 let printVersion () =
     // Single reconciled version source (Directory.Build.props <Version>), surfaced
     // through the generator version so the CLI reports the same number as every
@@ -128,6 +156,9 @@ let run args =
     match args with
     | [] -> printUnknown ""
     | ("--version" | "-v" | "version") :: _ -> printVersion ()
+    // §3.5: top-level help (no command) — dispatched as a peer of `--version`/`validate`,
+    // before `parseCommand`, so it never falls through to `printUnknown` (FR-008).
+    | ("--help" | "-h" | "help") :: rest -> printTopLevelHelp (outputFormat rest)
     | "validate" :: rest -> printValidate rest
     // CLI-level cross-cutting command (peer of `validate`), dispatched before
     // `parseCommand` so the lifecycle CommandReport/parseCommand contracts stay
@@ -136,7 +167,12 @@ let run args =
     | "registry" :: rest -> FS.GG.SDD.Cli.RegistryValidate.run rest
     | commandValue :: rest ->
         match parseCommand commandValue with
+        // Unknown command resolves to `unknownCommand` even with `--help` (FR-011): a
+        // genuinely unknown command is never masked by a help flag.
         | Error _ -> printUnknown commandValue
+        | Ok command when hasFlag "--help" rest || hasFlag "-h" rest ->
+            // §3.5: `<known> --help` / `-h` → that command's help (FR-009).
+            printCommandHelp (outputFormat rest) command
         | Ok command ->
             let format = outputFormat rest
 

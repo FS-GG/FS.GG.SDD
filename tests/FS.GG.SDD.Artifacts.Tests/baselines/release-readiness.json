@@ -309,6 +309,11 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "help",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "invocation",
           "kind": "jsonField",
           "stability": "additiveOptional"

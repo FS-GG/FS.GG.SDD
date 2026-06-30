@@ -151,9 +151,10 @@ in the authoritative `catalog[].inventory` of
   `workId`.
 - **`command-report (--json)`** — `agentGuidance`, `analysis`, `changedArtifacts`,
   `checklist`, `clarification`, `command`, `context`, `diagnostics`, `evidence`,
-  `generatedViews`, `governanceCompatibility`, `invocation`, `nextAction`,
-  `outcome`, `plan`, `refresh`, `reportVersion`, `scaffold`, `schemaVersion`
-  *(Stable)*, `ship`, `specification`, `tasks`, `verification`.
+  `generatedViews`, `governanceCompatibility`, `help` *(present on `--help`/`-h`/`help`
+  invocations; `null` otherwise)*, `invocation`, `nextAction`, `outcome`, `plan`,
+  `refresh`, `reportVersion`, `scaffold`, `schemaVersion` *(Stable)*, `ship`,
+  `specification`, `tasks`, `verification`.
 
 ### Markdown projections (sections)
 

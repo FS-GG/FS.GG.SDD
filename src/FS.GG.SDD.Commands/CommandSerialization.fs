@@ -376,6 +376,52 @@ module CommandSerialization =
             writer.WriteEndObject()
         | None -> writer.WriteNull "nextAction"
 
+    let writeHelpFlag (writer: Utf8JsonWriter) (flag: HelpFlag) =
+        writer.WriteStartObject()
+        writer.WriteString("name", flag.Name)
+        match flag.Argument with
+        | Some argument -> writer.WriteString("argument", argument)
+        | None -> writer.WriteNull "argument"
+        writer.WriteString("description", flag.Description)
+        writer.WriteEndObject()
+
+    // §3.5: emitted like `writeScaffold` — the `help` object when `Some`, `null` when
+    // `None`, always present. Pure projection of static content (deterministic, FR-012).
+    let writeHelp (writer: Utf8JsonWriter) (help: HelpSummary option) =
+        match help with
+        | Some summary ->
+            writer.WriteStartObject("help")
+
+            match summary.Scope with
+            | TopLevel ->
+                writer.WriteString("scope", "topLevel")
+                writer.WriteNull "command"
+            | Command name ->
+                writer.WriteString("scope", "command")
+                writer.WriteString("command", name)
+
+            writer.WriteString("usage", summary.Usage)
+
+            writer.WriteStartArray("commands")
+            summary.Commands
+            |> List.iter (fun entry ->
+                writer.WriteStartObject()
+                writer.WriteString("name", entry.Name)
+                writer.WriteString("description", entry.Description)
+                writer.WriteEndObject())
+            writer.WriteEndArray()
+
+            writer.WriteStartArray("globalFlags")
+            summary.GlobalFlags |> List.iter (writeHelpFlag writer)
+            writer.WriteEndArray()
+
+            writer.WriteStartArray("commandFlags")
+            summary.CommandFlags |> List.iter (writeHelpFlag writer)
+            writer.WriteEndArray()
+
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "help"
+
     let serializeReport (report: CommandReport) =
         use stream = new MemoryStream()
         use writer = new Utf8JsonWriter(stream, JsonWriterOptions(Indented = true))
@@ -426,6 +472,7 @@ module CommandSerialization =
         report.GovernanceCompatibility |> List.sortBy (fun fact -> fact.Path) |> List.iter (writeGovernanceFact writer)
         writer.WriteEndArray()
         writeNextAction writer report.NextAction
+        writeHelp writer report.Help
         writer.WriteEndObject()
         writer.Flush()
         Encoding.UTF8.GetString(stream.ToArray())
