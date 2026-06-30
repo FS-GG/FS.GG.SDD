@@ -5,9 +5,31 @@ open System.Diagnostics
 open FS.GG.SDD.Commands.CommandRendering
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Commands.Internal
 open Xunit
 
 module TasksCommandTests =
+    [<Theory>]
+    [<InlineData("expecto", "expecto")>]
+    [<InlineData("Expecto", "expecto")>]
+    [<InlineData("NUnit", "nunit")>]
+    [<InlineData("My Custom Runner", "my-custom-runner")>]
+    [<InlineData("xunit", "xunit")>]
+    let ``resolveTestSkill normalizes a declared framework`` (declared: string) (expected: string) =
+        Assert.Equal(expected, resolveTestSkill (Some declared))
+
+    [<Fact>]
+    let ``resolveTestSkill yields the neutral skill when absent`` () =
+        Assert.Equal(neutralTestSkill, resolveTestSkill None)
+        Assert.Equal("automated-tests", resolveTestSkill None)
+
+    [<Theory>]
+    [<InlineData("")>]
+    [<InlineData("   ")>]
+    let ``resolveTestSkill yields the neutral skill when blank`` (declared: string) =
+        Assert.Equal(neutralTestSkill, resolveTestSkill (Some declared))
+        Assert.Equal("automated-tests", resolveTestSkill (Some declared))
+
     let workId = "009-tasks-command"
     let title = "Tasks Command"
     let specPath = $"work/{workId}/spec.md"
@@ -23,6 +45,94 @@ module TasksCommandTests =
         TestSupport.runChecklist root workId title |> ignore
         TestSupport.runPlan root workId title |> ignore
         root
+
+    // Declare the SDD-owned `project.testFramework` on the already-initialized
+    // `.fsgg/project.yml`; the tasks command reads it through the existing
+    // project-config read effect. An empty/whitespace string declares nothing.
+    let private declareTestFramework root (framework: string) =
+        let projectYml = TestSupport.readRelative root ".fsgg/project.yml"
+
+        let declared =
+            projectYml.Replace(
+                "  defaultWorkRoot: work",
+                $"  defaultWorkRoot: work\n  testFramework: {framework}")
+
+        TestSupport.writeRelative root ".fsgg/project.yml" declared
+
+    let private planReadyProjectDeclaring framework =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        declareTestFramework root framework
+        TestSupport.runCharter root workId title |> ignore
+        TestSupport.runSpecify root workId title |> ignore
+        TestSupport.runRequest { TestSupport.clarifyRequest root workId title with InputText = None } |> ignore
+        TestSupport.runChecklist root workId title |> ignore
+        TestSupport.runPlan root workId title |> ignore
+        root
+
+    [<Fact>]
+    let ``tasks obligation skill matches the declared Expecto framework`` () =
+        let root = planReadyProjectDeclaring "expecto"
+        // Evidence presence triggers the readiness work-model projection too.
+        TestSupport.writePassingTaskEvidenceFor root workId
+
+        let report = TestSupport.runTasks root workId title
+        let tasks = TestSupport.readRelative root tasksPath
+        let workModel = TestSupport.readRelative root workModelPath
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        // The verification-obligation task carries the Expecto-matched skill.
+        Assert.Contains("requiredSkills: [\"expecto\", \"readiness-evidence\"]", tasks)
+        // No xunit token survives anywhere in the generated task metadata.
+        Assert.DoesNotContain("xunit", tasks)
+        Assert.DoesNotContain("xunit", workModel)
+        Assert.Contains("expecto", workModel)
+
+    [<Fact>]
+    let ``tasks obligation skill is neutral when no framework is declared`` () =
+        let root = initializedPlanReadyProject ()
+        TestSupport.writePassingTaskEvidenceFor root workId
+
+        let report = TestSupport.runTasks root workId title
+        let tasks = TestSupport.readRelative root tasksPath
+        let workModel = TestSupport.readRelative root workModelPath
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains("requiredSkills: [\"automated-tests\", \"readiness-evidence\"]", tasks)
+        // No framework-specific token leaks into the generated task metadata.
+        Assert.DoesNotContain("xunit", tasks)
+        Assert.DoesNotContain("expecto", tasks)
+        Assert.DoesNotContain("xunit", workModel)
+        Assert.DoesNotContain("expecto", workModel)
+
+    [<Fact>]
+    let ``tasks non-test category skills are unchanged by the framework-aware skill`` () =
+        let root = planReadyProjectDeclaring "expecto"
+
+        TestSupport.runTasks root workId title |> ignore
+        let tasks = TestSupport.readRelative root tasksPath
+
+        // Only the verification-obligation test skill is framework-aware; every
+        // other task category keeps its exact skill list (SC-004 / FR-005).
+        Assert.Contains("requiredSkills: [\"fsharp\", \"speckit-implement\"]", tasks)
+        Assert.Contains("readiness-evidence", tasks)
+        Assert.DoesNotContain("xunit", tasks)
+
+    [<Fact>]
+    let ``tasks generation is byte-identical across re-runs`` () =
+        let root = planReadyProjectDeclaring "expecto"
+        TestSupport.writePassingTaskEvidenceFor root workId
+
+        TestSupport.runTasks root workId title |> ignore
+        let firstTasks = TestSupport.readRelative root tasksPath
+        let firstWorkModel = TestSupport.readRelative root workModelPath
+
+        TestSupport.runTasks root workId title |> ignore
+        let secondTasks = TestSupport.readRelative root tasksPath
+        let secondWorkModel = TestSupport.readRelative root workModelPath
+
+        Assert.Equal(firstTasks, secondTasks)
+        Assert.Equal(firstWorkModel, secondWorkModel)
 
     [<Fact>]
     let ``tasks creates traceable task graph with real filesystem evidence`` () =

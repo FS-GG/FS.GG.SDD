@@ -18,7 +18,8 @@ module Config =
           AgentsConfigPath: string
           GovernancePolicyPath: string option
           GovernanceCapabilitiesPath: string option
-          GovernanceToolingPath: string option }
+          GovernanceToolingPath: string option
+          TestFramework: string option }
 
     type SddLifecyclePolicy =
         { SchemaVersion: SchemaVersion

@@ -22,7 +22,8 @@ module Config =
           AgentsConfigPath: string
           GovernancePolicyPath: string option
           GovernanceCapabilitiesPath: string option
-          GovernanceToolingPath: string option }
+          GovernanceToolingPath: string option
+          TestFramework: string option }
 
     type SddLifecyclePolicy =
         { SchemaVersion: SchemaVersion
@@ -71,7 +72,10 @@ module Config =
                       AgentsConfigPath = agentsPath
                       GovernancePolicyPath = tryScalarAt [ "governance"; "policy" ] root
                       GovernanceCapabilitiesPath = tryScalarAt [ "governance"; "capabilities" ] root
-                      GovernanceToolingPath = tryScalarAt [ "governance"; "tooling" ] root }
+                      GovernanceToolingPath = tryScalarAt [ "governance"; "tooling" ] root
+                      TestFramework =
+                        tryScalarAt [ "project"; "testFramework" ] root
+                        |> Option.filter (fun value -> not (String.IsNullOrWhiteSpace value)) }
             | _ -> Error(versionDiagnostics @ fieldDiagnostics)
 
     let parseSddLifecyclePolicy (snapshot: FileSnapshot) =

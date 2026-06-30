@@ -44,7 +44,7 @@ tasks:
     requirements: []
     decisions: []
     sourceIds: [VO-001]
-    requiredSkills: [xunit]
+    requiredSkills: [automated-tests]
     requiredEvidence: [EV002]
 acceptedDeferrals:
   - "DEC-002"

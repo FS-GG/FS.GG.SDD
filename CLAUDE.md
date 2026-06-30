@@ -109,5 +109,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/046-document-authoring-contracts/plan.md
+at specs/047-framework-aware-test-skill/plan.md
 <!-- SPECKIT END -->

@@ -74,3 +74,34 @@ module SchemaContractTests =
         let model = TestSupport.model "missing-artifact"
         TestSupport.assertDiagnostic "missingArtifact" model
         Assert.True(WorkModel.blockingDiagnostics model |> List.length >= 6)
+
+    let private projectSnapshot text : FileSnapshot =
+        { Path = ".fsgg/project.yml"; Text = text }
+
+    let private parsedTestFramework text =
+        match parseProjectConfig (projectSnapshot text) with
+        | Ok config -> config.TestFramework
+        | Error diagnostics -> failwith $"Project config failed: {diagnostics}"
+
+    [<Fact>]
+    let ``project.testFramework parses present declared scalar`` () =
+        let text =
+            "schemaVersion: 1\nproject:\n  id: fs-gg-sdd\n  defaultWorkRoot: work\n  testFramework: expecto\nsdd:\n  config: .fsgg/sdd.yml\n  agents: .fsgg/agents.yml\n"
+
+        Assert.Equal(Some "expecto", parsedTestFramework text)
+
+    [<Fact>]
+    let ``project.testFramework is None when absent`` () =
+        let config =
+            match parseProjectConfig (TestSupport.snapshot "valid-work-item" ".fsgg/project.yml") with
+            | Ok config -> config
+            | Error diagnostics -> failwith $"Project config failed: {diagnostics}"
+
+        Assert.Equal(None, config.TestFramework)
+
+    [<Fact>]
+    let ``project.testFramework is None when blank or whitespace`` () =
+        let text =
+            "schemaVersion: 1\nproject:\n  id: fs-gg-sdd\n  defaultWorkRoot: work\n  testFramework: \"   \"\nsdd:\n  config: .fsgg/sdd.yml\n  agents: .fsgg/agents.yml\n"
+
+        Assert.Equal(None, parsedTestFramework text)

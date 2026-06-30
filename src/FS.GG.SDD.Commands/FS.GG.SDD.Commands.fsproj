@@ -36,6 +36,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="FS.GG.SDD.Commands.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj" />
     <PackageReference Include="FSharp.Core" />
   </ItemGroup>
