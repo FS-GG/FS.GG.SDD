@@ -7,6 +7,10 @@ name: composition-acceptance
 # rendering template. Generic SDD carries no rendering identity; the real template is reached
 # only through that registry (FR-009 / FR-010). Source selection is the deterministic resolver
 # scripts/workflows/resolve-acceptance-registry.sh; the acceptance facts run unchanged.
+#
+# A scheduled run with no FSGG_SDD_ACCEPTANCE_REGISTRY secret configured is the opt-in/unset
+# (sender-dormant) case: the Preflight step neutral-skips it rather than failing nightly.
+# Dispatch and manual runs always carry an explicit source and stay fail-closed.
 
 on:
   schedule:
@@ -39,7 +43,31 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      - name: Preflight registry source
+        id: preflight
+        env:
+          REGISTRY_SECRET_CONTENT: ${{ secrets.FSGG_SDD_ACCEPTANCE_REGISTRY }}
+        run: |
+          # The acceptance is opt-in / network-gated (034) and its registry sender stays dormant
+          # until the org App + secrets are provisioned (.github#21). A *scheduled* run with no
+          # secret configured is therefore the legitimate opt-in/unset case — nothing to resolve —
+          # so it neutral-skips instead of hard-failing nightly. Dispatch and manual runs always
+          # carry an explicit source and proceed to the fail-closed resolver, where a missing or
+          # mismatched source is still a wiring defect that MUST fail (FR-005 / SC-003).
+          if [ "${{ github.event_name }}" = "schedule" ] && [ -z "$REGISTRY_SECRET_CONTENT" ]; then
+            echo "run_acceptance=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No FSGG_SDD_ACCEPTANCE_REGISTRY secret configured; skipping the scheduled composition-acceptance run (dispatch and manual runs are unaffected)."
+            {
+              echo "### composition-acceptance skipped"
+              echo
+              echo "Scheduled run with no \`FSGG_SDD_ACCEPTANCE_REGISTRY\` secret configured — the registry sender is still dormant, so there is nothing to resolve and the real-provider acceptance was skipped. The \`composition-registry-updated\` dispatch and manual \`workflow_dispatch\` paths still run fail-closed."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "run_acceptance=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Materialize the external provider registry
+        if: steps.preflight.outputs.run_acceptance == 'true'
         env:
           # Deterministic precedence (FR-004): manual input > dispatched content > scheduled secret.
           REGISTRY_PATH_INPUT: ${{ inputs.registry_path }}
@@ -49,4 +77,5 @@ jobs:
         run: bash scripts/workflows/resolve-acceptance-registry.sh
 
       - name: Run the composition acceptance
+        if: steps.preflight.outputs.run_acceptance == 'true'
         run: dotnet test FS.GG.SDD.sln --filter "kind=composition-acceptance"

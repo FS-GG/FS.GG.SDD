@@ -127,6 +127,12 @@ acceptance.
 - **Sender dormant (org App/secrets not yet provisioned)**: when no dispatch ever arrives, the
   consumer side is simply not triggered by dispatch and the secret/manual paths continue to work —
   the consumer wiring can exist ahead of the App provisioning without breaking anything.
+- **Scheduled run before the secret is provisioned**: a `schedule`-triggered run with no
+  `FSGG_SDD_ACCEPTANCE_REGISTRY` secret configured is the opt-in/unset (sender-dormant) case — there
+  is no source to resolve, so the run MUST neutral-skip with a clear notice rather than hard-fail
+  nightly. This is the only path that may skip: it carries no caller-supplied source, mirroring the
+  034 opt-in/offline case. It is distinct from a dispatch or manual run, where an explicit source is
+  expected and a missing/empty/mismatched one MUST still fail closed (never a false green).
 
 ## Requirements *(mandatory)*
 
@@ -186,8 +192,10 @@ acceptance.
 - **SC-001**: A change to the Templates-owned registry results in SDD's composition-acceptance
   running against that exact content within one dispatch cycle, with zero manual SDD secret edits
   (observed drift between tested content and the canonical registry = 0).
-- **SC-002**: The scheduled composition-acceptance run reaches a passing verdict (green) — build and
-  run facts pass over the composed product — for the first time.
+- **SC-002**: Once the `FSGG_SDD_ACCEPTANCE_REGISTRY` secret is provisioned, the scheduled
+  composition-acceptance run reaches a passing verdict (green) — build and run facts pass over the
+  composed product — for the first time. Before provisioning, the scheduled run neutral-skips (it
+  does not fail nightly).
 - **SC-003**: No rendering package id, template id, path, or docs URL appears anywhere in SDD source
   or in the produced result document (zero leaked identity tokens).
 - **SC-004**: The default offline `dotnet test FS.GG.SDD.sln` stays green with the network-gated
