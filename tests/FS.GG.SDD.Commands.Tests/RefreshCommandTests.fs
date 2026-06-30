@@ -145,6 +145,31 @@ module RefreshCommandTests =
             Assert.DoesNotContain(".fsgg/constitution.md", summary.BlockedViewIds)
         | None -> failwith "Expected a refresh summary."
 
+    // --- 051: refresh preserves the seeded fs-gg-sdd-* process skills ---
+
+    // T009 (US2 / FR-005): the seeded skills are authored SDD-owned skeleton, not a
+    // refreshCanonicalView and not a provenance path. refresh leaves an author-edited
+    // seeded skill byte-unchanged and never rewrites, enumerates, or blocks it.
+    [<Fact>]
+    let ``refresh leaves the seeded process skills untouched`` () =
+        let root = TestSupport.tempDirectory ()
+        let wid = "051-seeded-skills-demo"
+        TestSupport.request Init root |> TestSupport.runRequest |> ignore
+        TestSupport.writeValidWorkSources root wid "Seeded skills demo"
+        let skillPath = ".claude/skills/fs-gg-sdd-plan/SKILL.md"
+        let edited = TestSupport.readRelative root skillPath + "\n\nLOCAL EDIT\n"
+        TestSupport.writeRelative root skillPath edited
+
+        let report = TestSupport.runRefresh root wid
+
+        Assert.Equal(edited, TestSupport.readRelative root skillPath)
+        Assert.DoesNotContain(report.GeneratedViews, fun v -> v.Path = skillPath)
+        match report.Refresh with
+        | Some summary ->
+            Assert.DoesNotContain(skillPath, summary.RefreshedViewIds)
+            Assert.DoesNotContain(skillPath, summary.BlockedViewIds)
+        | None -> failwith "Expected a refresh summary."
+
     // --- 049: early-stage navigable refresh (no work model yet) ---
 
     // An early-only fixture: a chartered work item with no work model and no authored

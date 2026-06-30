@@ -13,6 +13,7 @@
     <Compile Include="CommandReports.fs" />
     <Compile Include="CommandHelp.fsi" />
     <Compile Include="CommandHelp.fs" />
+    <Compile Include="CommandWorkflow/SeededSkills.fs" />
     <Compile Include="CommandWorkflow/Foundation.fs" />
     <Compile Include="CommandWorkflow/ParsingEarly.fs" />
     <Compile Include="CommandWorkflow/ParsingMid.fs" />
@@ -35,6 +36,28 @@
     <Compile Include="CommandSerialization.fs" />
     <Compile Include="CommandRendering.fsi" />
     <Compile Include="CommandRendering.fs" />
+  </ItemGroup>
+
+  <!-- 051: the 15 in-scope canonical fs-gg-sdd-* SKILL.md bodies, linked from the repo's
+       authored .claude/skills sources as embedded resources (LogicalName SeededSkill.<name>)
+       so the seeding seam reads compiled-in bytes, never the FS.GG.SDD repo at runtime.
+       fs-gg-sdd-project is deliberately excluded (product-internal, contract §1). -->
+  <ItemGroup>
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-charter/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-charter" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-specify/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-specify" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-clarify/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-clarify" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-checklist/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-checklist" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-plan/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-plan" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-tasks/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-tasks" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-analyze/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-analyze" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-evidence/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-evidence" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-verify/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-verify" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-ship/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-ship" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-lifecycle/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-lifecycle" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-getting-started/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-getting-started" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-authoring-contracts/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-authoring-contracts" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-refresh-agents/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-refresh-agents" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-validate/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-validate" />
   </ItemGroup>
 
   <ItemGroup>

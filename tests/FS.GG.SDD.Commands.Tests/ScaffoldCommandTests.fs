@@ -581,6 +581,24 @@ module ScaffoldCommandTests =
         Assert.DoesNotContain("work/leak.txt", summary.ProducedPaths)
         Assert.DoesNotContain("readiness/leak.txt", summary.ProducedPaths)
 
+    // 051 T020 (US3 / INV-6, FR-008): a provider that writes into the seeded skill trees
+    // (.claude/skills/ or .codex/skills/) is a provider defect — rejected as
+    // providerWroteSddTree (exit 2), and the skill subtrees never appear in the provenance
+    // producedPaths. Exercises the T015 isSddTree guard end-to-end over a real provider.
+    [<Fact>]
+    let ``scaffold provider writing into the seeded skill trees is a provider defect`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "skills-intrusion.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+
+        Assert.Contains("scaffold.providerWroteSddTree", diagnosticIds report)
+        Assert.Equal(2, exitCodeForReport report)
+        let summary = scaffoldSummary report
+        Assert.NotEqual("providerSucceeded", summary.Outcome)
+        // The intruded skill-tree paths are never laundered into provenance as app-only.
+        Assert.DoesNotContain(".claude/skills/leak/SKILL.md", summary.ProducedPaths)
+        Assert.DoesNotContain(".codex/skills/leak/SKILL.md", summary.ProducedPaths)
+
     // ===================================================================
     // 032 — scaffold owns repo-init & script executability post-instantiation
     // Real `git` + real filesystem over the public scaffold surface (no mocks):
@@ -965,8 +983,9 @@ module ScaffoldCommandTests =
 
     // T009 (FR-006/SC-005): the init skeleton path set grew by EXACTLY the authored
     // skeleton seeds relative to the established (pre-033) skeleton — .fsgg/constitution.md
-    // (033) and .fsgg/early-stage-guidance.md (049). Asserted by removing those seeds from
-    // the current skeleton set and comparing to the prior set.
+    // (033), .fsgg/early-stage-guidance.md (049), and the 30 fs-gg-sdd-* process skill files
+    // (051). Asserted by removing those seeds from the current skeleton set and comparing to
+    // the prior set.
     [<Fact>]
     let ``init skeleton set grew by exactly the constitution`` () =
         let initRoot = TestSupport.tempDirectory ()
@@ -980,7 +999,13 @@ module ScaffoldCommandTests =
             Set.ofList
                 [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml"; "AGENTS.md"; "CLAUDE.md" ]
 
-        let authoredSeeds = Set.ofList [ ".fsgg/constitution.md"; ".fsgg/early-stage-guidance.md" ]
+        // 051: the seeded process-skill files (15 declared skills × {.claude,.codex}).
+        let seededSkillPaths =
+            FS.GG.SDD.Commands.Internal.SeededSkills.skillNames
+            |> List.collect (fun name -> [ $".claude/skills/{name}/SKILL.md"; $".codex/skills/{name}/SKILL.md" ])
+
+        let authoredSeeds =
+            Set.ofList ([ ".fsgg/constitution.md"; ".fsgg/early-stage-guidance.md" ] @ seededSkillPaths)
 
         Assert.True(Set.isSubset authoredSeeds currentSkeleton, "Expected the authored skeleton seeds in the init set.")
         Assert.Equal<Set<string>>(establishedSkeleton, Set.difference currentSkeleton authoredSeeds)

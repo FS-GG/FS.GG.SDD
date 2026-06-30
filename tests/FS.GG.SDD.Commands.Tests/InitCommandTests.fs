@@ -194,6 +194,46 @@ module InitCommandTests =
             |> Option.defaultWith (fun () -> failwith "Expected a changed-artifact entry for the early-stage guidance.")
         Assert.Equal(ArtifactOperation.Refuse, change.Operation)
 
+    // ---- 051: SDD skeleton seeds the fs-gg-sdd-* process skill set ----
+
+    // T005 (US1 / INV-1, INV-8, SC-001): init seeds all 30 skill files (15 declared skills
+    // × {.claude,.codex}), each non-empty, and never seeds the product-internal
+    // fs-gg-sdd-project skill. Fails before the skill effects are wired into initEffects.
+    [<Fact>]
+    let ``init seeds the fs-gg-sdd process skill set on both agent surfaces`` () =
+        let root = TestSupport.tempDirectory ()
+
+        let report = runInit root
+
+        Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
+        Assert.Equal(15, List.length FS.GG.SDD.Commands.Internal.SeededSkills.skillNames)
+
+        for name in FS.GG.SDD.Commands.Internal.SeededSkills.skillNames do
+            for surface in [ ".claude"; ".codex" ] do
+                let path = $"{surface}/skills/{name}/SKILL.md"
+                Assert.True(TestSupport.existsRelative root path, $"Expected seeded skill file {path}.")
+                Assert.False(System.String.IsNullOrWhiteSpace(TestSupport.readRelative root path), $"Seeded skill file {path} is empty.")
+
+        // The product-internal skill (developing FS.GG.SDD itself) is excluded from seeding.
+        Assert.False(TestSupport.existsRelative root ".claude/skills/fs-gg-sdd-project/SKILL.md")
+        Assert.False(TestSupport.existsRelative root ".codex/skills/fs-gg-sdd-project/SKILL.md")
+
+    // T005 (US1 / FR-003): each seeded skill is reported as a created authored agent-guidance
+    // artifact — the same ownership class as the constitution / early-stage guidance.
+    [<Fact>]
+    let ``init reports a seeded skill as a created authored skeleton artifact`` () =
+        let root = TestSupport.tempDirectory ()
+
+        let report = runInit root
+
+        let change =
+            report.ChangedArtifacts
+            |> List.tryFind (fun c -> c.Path = ".claude/skills/fs-gg-sdd-charter/SKILL.md")
+            |> Option.defaultWith (fun () -> failwith "Expected a changed-artifact entry for a seeded skill.")
+        Assert.Equal("agentGuidance", change.Kind)
+        Assert.Equal("authored", change.Ownership)
+        Assert.Equal(ArtifactOperation.Create, change.Operation)
+
     // T003 (US1-AC2 determinism / FR-007/SC-003): two init runs into leaf-stable roots
     // produce byte-identical constitution content.
     [<Fact>]

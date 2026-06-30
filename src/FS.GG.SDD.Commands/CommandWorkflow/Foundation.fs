@@ -383,6 +383,11 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
           WriteFile(earlyStageGuidancePath, earlyStageGuidanceText, AgentGuidanceTarget)
           WriteFile("AGENTS.md", agentGuidance "Codex", AgentGuidanceTarget)
           WriteFile("CLAUDE.md", agentGuidance "Claude", AgentGuidanceTarget) ]
+        // 051: additively seed the 15 fs-gg-sdd-* process skills into both agent
+        // surfaces through this single seam (reused by scaffold, FR-007). They carry
+        // the same AgentGuidanceTarget no-clobber/authored-SDD-owned semantics as the
+        // constitution/early-stage guidance above; prior init effects stay byte-identical.
+        @ SeededSkills.skillEffects
 
     let charterPath workId = $"work/{workId}/charter.md"
     let specPath workId = $"work/{workId}/spec.md"

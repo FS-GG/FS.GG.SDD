@@ -16,8 +16,20 @@ Core boundary:
   `.fsgg/constitution.md` lifecycle constitution and an authored
   `.fsgg/early-stage-guidance.md` early-stage authoring guide — both generic,
   deterministic, and no-clobber on re-run (same policy as `CLAUDE.md`/`AGENTS.md`).
-  Scaffold delivers them via the reused `init` effects; they are never app-only
-  `generatedProduct` provenance and `refresh` never regenerates them.
+  The skeleton also seeds the 15 consumer-relevant `fs-gg-sdd-*` process skills (the
+  10 stage skills plus the 5 cross-cutting skills `lifecycle`/`getting-started`/
+  `authoring-contracts`/`refresh-agents`/`validate`; the product-internal
+  `fs-gg-sdd-project` is excluded) into both agent surfaces
+  (`.claude/skills/<name>/SKILL.md` and `.codex/skills/<name>/SKILL.md`), so a
+  scaffolded product's agent can discover the lifecycle without hand-copying skills.
+  They are authored, SDD-owned skeleton (the same `AgentGuidanceTarget` no-clobber
+  class as the constitution/early-stage guidance), seeded deterministically and
+  equivalently across Claude and Codex, and pinned to the on-disk authored set by a
+  drift guard.
+  Scaffold delivers all of these via the reused `init` effects; they are never app-only
+  `generatedProduct` provenance and `refresh` never regenerates them. The seeded skill
+  subtrees are SDD-owned: a provider that writes into them is rejected, and they are
+  excluded from provider routing and provenance.
   `.fsgg/early-stage-guidance.md` covers the pre-work-model stages (`charter`,
   `specify`, `clarify`, `checklist`) — per-stage command, required section
   headings, stable-id formats, and the §1.1/§1.2 authoring contracts — and is a
@@ -128,5 +140,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/050-scaffold-default-starter/plan.md
+at specs/051-scaffold-sdd-process-skills/plan.md
 <!-- SPECKIT END -->
