@@ -22,6 +22,19 @@ module internal ParsingTasks =
     module IdentifiersModule = FS.GG.SDD.Artifacts.Identifiers
     module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
 
+    // The required test skill for verification-obligation tasks is framework-aware.
+    // SDD keeps no closed allow-list: a declared framework is trusted and normalized
+    // (trim -> invariant-culture lowercase -> collapse internal whitespace runs to `-`),
+    // and an absent/blank declaration degrades to a neutral, non-misleading skill.
+    let neutralTestSkill = "automated-tests"
+
+    let resolveTestSkill (declared: string option) : string =
+        match declared with
+        | Some raw when not (String.IsNullOrWhiteSpace raw) ->
+            let lowered = raw.Trim().ToLowerInvariant()
+            Regex.Replace(lowered, @"\s+", "-")
+        | _ -> neutralTestSkill
+
     let tasksSummary (facts: TaskFacts) : TasksSummary =
         let statusCount predicate =
             facts.Tasks |> List.filter (fun task -> predicate task.Status) |> List.length
@@ -141,6 +154,7 @@ module internal ParsingTasks =
           SourceLocation = None }
 
     let plannedTasks
+        (declaredTestFramework: string option)
         (specFacts: SpecificationFacts)
         (clarificationFacts: ClarificationFacts)
         (checklistFacts: ChecklistFacts)
@@ -241,7 +255,7 @@ module internal ParsingTasks =
                     []
                     []
                     primaryDependency
-                    [ "xunit"; "readiness-evidence" ])
+                    [ resolveTestSkill declaredTestFramework; "readiness-evidence" ])
 
         let migrationTasks =
             planFacts.MigrationNotes
@@ -559,9 +573,18 @@ tasks:
         let path = tasksPath workId
         let evidence, evidenceDiagnostics = parseEvidenceForCommand workId model
 
+        // The declared test framework rides the already-loaded `.fsgg/project.yml`
+        // read effect; no new I/O edge. Absent/malformed config => neutral skill.
+        let declaredTestFramework =
+            snapshot ".fsgg/project.yml" model
+            |> Option.bind (fun projectSnapshot ->
+                match parseProjectConfig projectSnapshot with
+                | Ok config -> config.TestFramework
+                | Error _ -> None)
+
         match snapshot path model with
         | None ->
-            let tasks = plannedTasks specFacts clarificationFacts checklistFacts planFacts None
+            let tasks = plannedTasks declaredTestFramework specFacts clarificationFacts checklistFacts planFacts None
             let acceptedDeferrals =
                 [ clarificationFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.DecisionId.Value)
                   checklistFacts.AcceptedDeferrals |> List.map (fun result -> result.ResultId.Value)
@@ -610,7 +633,7 @@ tasks:
                     if hasBlockingParserDiagnostics then
                         identityDiagnostics @ existingDiagnostics |> DiagnosticsModule.sort, Some existing.Text, Some(tasksSummary existingFacts)
                     else
-                        let additions = plannedTasks specFacts clarificationFacts checklistFacts planFacts (Some existingFacts)
+                        let additions = plannedTasks declaredTestFramework specFacts clarificationFacts checklistFacts planFacts (Some existingFacts)
                         let stale = taskSourceSnapshotStale workId specText clarificationText checklistText planText existingFacts
                         let existingTasks = if stale then markTasksStale existingFacts.Tasks else existingFacts.Tasks
                         let mergedTasks = existingTasks @ additions

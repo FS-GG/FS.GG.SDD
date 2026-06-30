@@ -63,7 +63,7 @@ module VerificationViewTests =
   ],
   "skillVisibility": [
     {
-      "skill": "xunit",
+      "skill": "automated-tests",
       "requiringTaskIds": ["T004"],
       "visibility": "visible",
       "sourceArtifactPath": "work/012-verify-command/tasks.yml",

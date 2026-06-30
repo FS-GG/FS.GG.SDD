@@ -302,3 +302,74 @@ module VerifyCommandTests =
         Assert.Contains("verificationReadiness: verificationReady", result.StdOut)
         Assert.Contains("nextAction: verify.next.ship", result.StdOut)
         Assert.Equal("", result.StdErr)
+
+    // --- User Story 1 scenario 2 (FR-008): the missing-required-skill obligation
+    // re-keys to the declared framework, and supplying evidence clears it. ---
+
+    let private declareTestFramework root (framework: string) =
+        let projectYml = TestSupport.readRelative root ".fsgg/project.yml"
+
+        let declared =
+            projectYml.Replace(
+                "  defaultWorkRoot: work",
+                $"  defaultWorkRoot: work\n  testFramework: {framework}")
+
+        TestSupport.writeRelative root ".fsgg/project.yml" declared
+
+    let private obligationTaskId (tasksYml: string) =
+        let lines = tasksYml.Split('\n')
+        let titleIndex = lines |> Array.findIndex (fun line -> line.Contains("Record verification evidence"))
+        let idLine = lines.[.. titleIndex] |> Array.rev |> Array.find (fun line -> line.Contains("- id: "))
+        idLine.Substring(idLine.IndexOf("- id: ") + 6).Trim()
+
+    // The generated obligation evidence id for task `T00n` is `EV00n` (same index),
+    // so the synthetic evidence id must track the task number — otherwise a stray
+    // id collides with another task's obligation and silently satisfies it.
+    let private evidenceCovering (taskIds: string list) =
+        let entries =
+            taskIds
+            |> List.map (fun taskId ->
+                let evidenceId = "EV" + taskId.Substring(1)
+                sprintf "  - id: %s\n    kind: verification\n    subject:\n      type: task\n      id: %s\n    result: pass\n" evidenceId taskId)
+            |> String.concat ""
+
+        "schemaVersion: 1\nevidence:\n" + entries
+
+    [<Fact>]
+    let ``verify re-keys missing required skill to the declared framework`` () =
+        let root = TestSupport.tempDirectory()
+        TestSupport.initializeProject root
+        declareTestFramework root "expecto"
+        TestSupport.runCharter root workId title |> ignore
+        TestSupport.runSpecify root workId title |> ignore
+        TestSupport.runRequest { TestSupport.clarifyRequest root workId title with InputText = None } |> ignore
+        TestSupport.runChecklist root workId title |> ignore
+        TestSupport.runPlan root workId title |> ignore
+
+        let tasksReport = TestSupport.runTasks root workId title
+        let allTaskIds = tasksReport.Tasks.Value.TaskIds
+        let obligationId = obligationTaskId (TestSupport.readRelative root tasksPath)
+
+        // Evidence covers every task except the verification-obligation task, so
+        // its required test skill is missing — keyed to `expecto`, never `xunit`.
+        let withoutObligation = allTaskIds |> List.filter (fun id -> id <> obligationId)
+        TestSupport.writeRelative root evidencePath (evidenceCovering withoutObligation)
+        TestSupport.runAnalyze root workId title |> ignore
+        let missingReport = TestSupport.runVerify root workId title
+
+        let missingSkillDiagnostic =
+            missingReport.Diagnostics
+            |> List.find (fun diagnostic -> diagnostic.Id = "evidence.missingRequiredSkill")
+
+        Assert.Contains("expecto", missingSkillDiagnostic.RelatedIds)
+        Assert.DoesNotContain("xunit", missingSkillDiagnostic.RelatedIds)
+
+        // Supplying evidence that covers the verification-obligation task makes the
+        // `expecto` skill visible and clears the obligation.
+        TestSupport.writeRelative root evidencePath (evidenceCovering allTaskIds)
+        TestSupport.runVerify root workId title |> ignore
+        let clearedJson = TestSupport.readRelative root verifyPath
+
+        Assert.Contains("\"skill\": \"expecto\"", clearedJson)
+        Assert.DoesNotContain("evidence.missingRequiredSkill", clearedJson)
+        Assert.DoesNotContain("xunit", clearedJson)
