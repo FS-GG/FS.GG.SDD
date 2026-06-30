@@ -18,6 +18,12 @@ The canonical examples below are tagged so a drift-guard test
 **live parser** on each build. If the tool's behavior and this page ever
 disagree, the build fails — these contracts cannot silently drift.
 
+> **Early-stage authoring.** A scaffolded product also carries
+> `.fsgg/early-stage-guidance.md` (seeded by `fsgg-sdd init`), which restates the
+> §1.1 coverage line and §1.2 evidence rule below alongside the per-stage commands,
+> required headings, and stable-id formats for `charter`/`specify`/`clarify`/`checklist`
+> — the guidance available before a work model exists.
+
 ## Acceptance coverage line
 
 `fsgg-sdd checklist` marks a functional requirement **covered** only when a

@@ -3,6 +3,7 @@ namespace FS.GG.SDD.Commands.Tests
 open System.Diagnostics
 open System.IO
 open FS.GG.SDD.Artifacts
+open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
 open Xunit
@@ -88,16 +89,44 @@ module AgentsCommandTests =
 
     // --- User Story 2: detect missing / malformed / divergent ---
 
+    // An early-only fixture: a chartered work item with no work model yet.
+    let earlyStageProject () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root workId title |> ignore
+        root
+
+    // T010 (US2 / FR-004/006/008/011, SC-002): an *absent* work model at an early stage is
+    // a navigable advisory, not a dead-end block — exit 0, the early-stage label, best-effort
+    // facts (which artifacts exist), a pointer NextAction, and zero digest-stamped views.
     [<Fact>]
-    let ``agents blocks on missing work model`` () =
-        let root = initializedVerifiedProject ()
-        File.Delete(Path.Combine(root, workModelPath.Replace('/', Path.DirectorySeparatorChar)))
+    let ``agents emits navigable early-stage guidance when the work model is absent`` () =
+        let root = earlyStageProject ()
 
         let report = TestSupport.runAgents root workId
-        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
-        Assert.Contains(report.Diagnostics, (fun d -> d.Id = "agents.missingWorkModel"))
-        TestSupport.assertAgentGuidanceSummary report "needsAgentGuidanceCorrection" "blocked"
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Equal(0, exitCodeForReport report)
+        Assert.Contains(report.Diagnostics, (fun d -> d.Id = "agents.earlyStageGuidance"))
+        Assert.DoesNotContain(report.Diagnostics, (fun d -> d.Id = "agents.missingWorkModel"))
+        TestSupport.assertAgentGuidanceSummary report "agentGuidanceEarlyStage" "early-stage"
+
+        // Best-effort facts derived only from artifacts that exist: charter is present.
+        let early = report.Diagnostics |> List.find (fun d -> d.Id = "agents.earlyStageGuidance")
+        Assert.Contains("charter", early.RelatedIds)
+        Assert.DoesNotContain("specify", early.RelatedIds)
+
+        // A pointer NextAction routing to the seeded static guidance + next authoring command.
+        match report.NextAction with
+        | Some action ->
+            Assert.Equal("earlyStageGuidance", action.ActionId)
+            Assert.Equal(Some Specify, action.Command)
+            Assert.Contains(".fsgg/early-stage-guidance.md", action.RequiredArtifacts)
+        | None -> failwith "Expected an early-stage next action."
+
+        // No digest-stamped view written (FR-008/FR-011).
         Assert.False(TestSupport.existsRelative root $"{claudeRoot}/guidance.json")
+        Assert.False(TestSupport.existsRelative root $"{codexRoot}/guidance.json")
 
     [<Fact>]
     let ``agents blocks on malformed work model`` () =
@@ -193,6 +222,14 @@ module AgentsCommandTests =
         TestSupport.runAgents root workId |> ignore
         let second = TestSupport.readRelative root $"{claudeRoot}/guidance.json"
 
+        Assert.Equal(first, second)
+
+    // T018 (US3 / SC-004): the early-stage report is byte-identical across repeated runs.
+    [<Fact>]
+    let ``agents early-stage report is deterministic for identical state`` () =
+        let root = earlyStageProject ()
+        let first = serializeReport (TestSupport.runAgents root workId)
+        let second = serializeReport (TestSupport.runAgents root workId)
         Assert.Equal(first, second)
 
     [<Fact>]

@@ -779,6 +779,20 @@ module CommandReports =
             $"Normalized work model '{path}' is missing."
             "Run fsgg-sdd verify or ship for the selected work item to generate the work model before generating agent guidance."
 
+    // Early-stage (FR-010b): a *missing* work model at a pre-work-model stage is not a
+    // defect — it is the expected early-stage state. This advisory (DiagnosticInfo, so it
+    // never blocks) carries the best-effort facts derived only from artifacts that exist
+    // (the present pre-work-model stages, in relatedIds) and points the author at the
+    // seeded static guidance. It writes no view and is never digest-stamped (FR-008/FR-011).
+    let agentsEarlyStageGuidance (presentStages: string list) =
+        commandDiagnostic
+            "agents.earlyStageGuidance"
+            DiagnosticSeverity.DiagnosticInfo
+            (Some ".fsgg/early-stage-guidance.md")
+            "No normalized work model exists yet for this work item; this is the expected early-stage state. Full agent guidance is generated once verify or ship builds the work model."
+            "Author the pre-work-model stages (charter, specify, clarify, checklist) following .fsgg/early-stage-guidance.md; run fsgg-sdd verify or ship to build the work model before generating full agent guidance."
+            (presentStages |> List.distinct |> List.sort)
+
     let agentsMalformedWorkModel path message =
         errorForPath
             "agents.malformedWorkModel"
@@ -878,6 +892,20 @@ module CommandReports =
             $"Generated view '{viewPath}' cannot be refreshed until upstream view '{upstreamViewPath}' is current."
             "Bring the named upstream generated view to currency before refreshing this dependent view."
             upstreamViewPath
+
+    // Early-stage (FR-010b): refresh has nothing to bring to currency until the
+    // pre-work-model authoring stages exist. When the work model is absent *and* its
+    // authored sources have not been written yet, this advisory (non-blocking) reports the
+    // navigable early-stage state and points to the seeded static guidance. relatedIds
+    // carries the present pre-work-model stages; no view is written (FR-005/008/011).
+    let refreshEarlyStageGuidance (presentStages: string list) =
+        commandDiagnostic
+            "refresh.earlyStageGuidance"
+            DiagnosticSeverity.DiagnosticInfo
+            (Some ".fsgg/early-stage-guidance.md")
+            "No normalized work model exists yet for this work item; refresh has no generated views to bring to currency at this early stage."
+            "Author the pre-work-model stages (charter, specify, clarify, checklist) following .fsgg/early-stage-guidance.md; the generated views are refreshed once verify or ship builds the work model."
+            (presentStages |> List.distinct |> List.sort)
 
     let refreshUnrenderableSummary summaryPath relatedIds =
         errorDiagnostic
@@ -1083,6 +1111,19 @@ module CommandReports =
         else
             None
 
+    // The best-effort "next authoring command" for the early-stage NextAction, derived
+    // only from which pre-work-model stages already exist (the advisory's relatedIds).
+    // request.Command is Agents/Refresh here, whose nextLifecycleCommand is None, so the
+    // next step is computed from the present stages instead.
+    let earlyStageNextCommand (presentStages: string list) =
+        let present stage = List.contains stage presentStages
+
+        if present "checklist" then Plan
+        elif present "clarify" then Checklist
+        elif present "specify" then Clarify
+        elif present "charter" then Specify
+        else Charter
+
     let nextAction
         (diagnostics: Diagnostic list)
         (reportOutcome: CommandOutcome)
@@ -1147,6 +1188,29 @@ module CommandReports =
                   Reason = "The command is blocked by diagnostics."
                   RequiredArtifacts = []
                   BlockingDiagnosticIds = blocking }
+        elif
+            diagnostics
+            |> List.exists (fun diagnostic -> diagnostic.Id = "agents.earlyStageGuidance" || diagnostic.Id = "refresh.earlyStageGuidance")
+        then
+            // Early-stage (FR-004/FR-005/FR-010b): a navigable next step that routes the
+            // author to the seeded static guidance and names the next authoring command,
+            // computed from the pre-work-model stages that already exist.
+            let presentStages =
+                diagnostics
+                |> List.tryPick (fun diagnostic ->
+                    if diagnostic.Id = "agents.earlyStageGuidance" || diagnostic.Id = "refresh.earlyStageGuidance" then
+                        Some diagnostic.RelatedIds
+                    else
+                        None)
+                |> Option.defaultValue []
+
+            Some
+                { ActionId = "earlyStageGuidance"
+                  Command = Some(earlyStageNextCommand presentStages)
+                  WorkId = request.WorkId
+                  Reason = "No work model exists yet; follow .fsgg/early-stage-guidance.md for the pre-work-model stages (charter, specify, clarify, checklist)."
+                  RequiredArtifacts = [ ".fsgg/early-stage-guidance.md" ]
+                  BlockingDiagnosticIds = [] }
         elif request.Command = Plan && diagnostics |> List.exists (fun diagnostic -> diagnostic.Id = "stalePlanDecision") then
             Some
                 { ActionId = "plan.correctStaleDecisions"

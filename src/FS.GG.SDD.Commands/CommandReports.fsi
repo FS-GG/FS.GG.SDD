@@ -109,6 +109,7 @@ module CommandReports =
     val agentsInvalidGeneratedRoot: path: string -> targetId: string -> Diagnostic
     val agentsWorkModelIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
     val agentsMissingWorkModel: path: string -> Diagnostic
+    val agentsEarlyStageGuidance: presentStages: string list -> Diagnostic
     val agentsMalformedWorkModel: path: string -> message: string -> Diagnostic
     val agentsStaleWorkModel: path: string -> Diagnostic
     val agentsBlockedWorkModel: path: string -> relatedIds: string list -> Diagnostic
@@ -122,6 +123,7 @@ module CommandReports =
     val refreshStaleView: viewPath: string -> sourcePaths: string list -> Diagnostic
     val refreshMalformedGeneratedView: viewPath: string -> message: string -> Diagnostic
     val refreshBlockedUpstreamView: viewPath: string -> upstreamViewPath: string -> Diagnostic
+    val refreshEarlyStageGuidance: presentStages: string list -> Diagnostic
     val refreshUnrenderableSummary: summaryPath: string -> relatedIds: string list -> Diagnostic
     val buildReport: model: CommandModel -> CommandReport
     val helpReport: request: CommandRequest -> summary: HelpSummary -> CommandReport

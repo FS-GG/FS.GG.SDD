@@ -7,6 +7,7 @@
     <!-- Reuse the Commands test support (real workflow drivers) without duplicating it. -->
     <Compile Include="../FS.GG.SDD.Commands.Tests/TestSupport.fs" />
     <Compile Include="RichRenderingTests.fs" />
+    <Compile Include="EarlyStageProjectionTests.fs" />
     <Compile Include="HelpRenderingTests.fs" />
     <Compile Include="ScaffoldParityTests.fs" />
     <Compile Include="DegradationTests.fs" />
