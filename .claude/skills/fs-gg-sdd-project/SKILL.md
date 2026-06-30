@@ -40,6 +40,28 @@ Before changing behavior, read:
 - Keep Claude and Codex guidance equivalent when workflow behavior changes.
 - Integrate Governance only through explicit optional contracts.
 
+## Authoring contracts
+
+Three authored inputs are load-bearing — a strict grammar decides acceptance, so
+a subtly wrong form blocks a gate. The durable reference (with copyable examples
+and a drift guard) is `docs/reference/authoring-contracts.md`. Summary:
+
+- **Acceptance coverage line.** `checklist` marks `FR-###` covered only when a
+  list item leads with `- FR-###:` and carries the acceptance reference (`AC-###`,
+  optional `US-###`) **on the same line** (e.g.
+  `- FR-001: W/S move the left paddle. (covers AC-002)`). A bold `**FR-001**`, a
+  colon-less line, or a separate `(covers AC-###)` line is counted by the loose
+  scan but **not** covered.
+- **`evidence.yml` satisfaction.** `kind` ∈ `implementation · verification ·
+  review · generated-view · synthetic · deferral · note · missing` (an unknown
+  kind silently becomes `verification`); `result` ∈ `pass · fail · deferred ·
+  missing · stale · advisory · blocked`. An obligation is satisfied only by a
+  matching **non-synthetic** declaration with `result: pass`; a synthetic `pass`
+  and a `deferral` do not satisfy it. This lifecycle `evidence.yml` is distinct
+  from any unrelated "evidence" document a scaffolded product may ship.
+- **`specify --input` intent.** Supply `value:`, `scope:`, and `requirement:` on
+  their own labeled lines; an unlabeled line is read as the user value.
+
 ## CLI output formats
 
 `fsgg-sdd` projects the same `CommandReport` three ways, selected by flag with

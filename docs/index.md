@@ -3,6 +3,7 @@
 Start with:
 
 - [Quickstart](quickstart.md)
+- [Authoring Contracts](reference/authoring-contracts.md)
 - [Migration from Spec Kit](migration-from-spec-kit.md)
 - [Adopting Governance](adopting-governance.md)
 - [Initial design](initial-design.md)

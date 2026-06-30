@@ -160,7 +160,7 @@ module internal ParsingMid =
                         (if hasCoverage then
                              None
                          else
-                             Some $"Add an acceptance scenario for {requirement.Value} or narrow the requirement.")
+                             Some $"Add a coverage line for {requirement.Value}: \"- {requirement.Value}: <text> (covers AC-###)\" on a single list item — a bold \"**{requirement.Value}**\" or a colon-less line is not recognized.")
                         true
                     |> Some)
 

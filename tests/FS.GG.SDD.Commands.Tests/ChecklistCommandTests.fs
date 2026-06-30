@@ -164,6 +164,8 @@ No blocking ambiguity remains.
 
         Assert.Equal(CommandOutcome.SucceededWithWarnings, report.Outcome)
         Assert.Contains("fail: Requirement FR-001 is missing acceptance coverage.", checklist)
+        // FR-007: the missing-coverage correction shows the exact expected coverage form inline.
+        Assert.Contains("Add a coverage line for FR-001", checklist)
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "failedRequirementsQuality")
         Assert.Equal(Some "correctBlockingDiagnostics", report.NextAction |> Option.map _.ActionId)
         Assert.True(report.Checklist.Value.FailedBlockingCount > 0)

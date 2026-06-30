@@ -180,7 +180,7 @@ module internal HandlersEvidence =
                   ExpectedEvidenceKinds = [ "implementation"; "verification"; "deferral"; "synthetic" ]
                   RequiredSkillOrCapabilityTags = task.RequiredSkills
                   Blocking = true
-                  Correction = $"Add evidence declaration {id} or an accepted deferral linked to {task.Id.Value}." }))
+                  Correction = $"Add evidence {id} for {task.Id.Value} with result: pass and synthetic: false (a synthetic pass does not satisfy it), or an accepted deferral linked to {task.Id.Value}." }))
 
     let skeletonEvidenceDeclaration workId (obligation: EvidenceObligation) =
         let evidenceId =

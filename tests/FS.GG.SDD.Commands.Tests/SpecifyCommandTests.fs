@@ -149,6 +149,14 @@ No material ambiguities recorded.
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "missingSpecificationIntent")
+        // FR-009: the correction shows the exact labeled-line --input form the parser accepts.
+        Assert.Contains(
+            report.Diagnostics,
+            fun diagnostic ->
+                diagnostic.Id = "missingSpecificationIntent"
+                && diagnostic.Correction.Contains("value:")
+                && diagnostic.Correction.Contains("scope:")
+                && diagnostic.Correction.Contains("requirement:"))
         Assert.False(TestSupport.existsRelative root specPath)
 
     [<Fact>]

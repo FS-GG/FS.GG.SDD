@@ -155,7 +155,7 @@ module CommandReports =
             "missingSpecificationIntent"
             (Some path)
             $"Specification intent is missing required facts: {missingText}."
-            "Provide input with value, scope, and requirement facts before creating a new specification."
+            "Provide --input with labeled facts, one per line: \"value: <user value>\", \"scope: <scope>\", \"requirement: <measurable requirement>\"."
             missingFacts
 
     let missingSpecificationPrerequisite path message =
@@ -569,7 +569,7 @@ module CommandReports =
             "evidence.missingRequiredEvidence"
             (Some path)
             "One or more required evidence obligations are missing current evidence or accepted deferral."
-            "Add evidence declarations or accepted deferrals linked to the missing obligation ids."
+            "For each missing obligation id, add a matching evidence declaration with result: pass and synthetic: false (a synthetic pass does not satisfy it), or an accepted deferral."
             ids
 
     let staleEvidence path ids =

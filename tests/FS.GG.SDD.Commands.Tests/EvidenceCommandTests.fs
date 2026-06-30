@@ -86,6 +86,16 @@ evidence:
 """
 
     [<Fact>]
+    let ``evidence missingRequiredEvidence correction shows the non-synthetic pass form`` () =
+        // FR-008: the surfaced unsatisfied-obligation diagnostic shows what satisfies it.
+        let diagnostic =
+            FS.GG.SDD.Commands.CommandReports.missingRequiredEvidence evidencePath [ "EV001" ]
+
+        Assert.Equal("evidence.missingRequiredEvidence", diagnostic.Id)
+        Assert.Contains("result: pass", diagnostic.Correction)
+        Assert.Contains("synthetic: false", diagnostic.Correction)
+
+    [<Fact>]
     let ``evidence creates authored evidence artifact with real filesystem evidence`` () =
         let root = initializedAnalyzedProject ()
 

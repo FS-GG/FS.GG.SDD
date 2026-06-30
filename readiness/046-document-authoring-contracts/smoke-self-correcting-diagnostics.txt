@@ -1,0 +1,32 @@
+# Smoke transcript: self-correcting diagnostics (feature 046)
+#
+# Real-evidence record for the three enriched diagnostic Correction strings.
+# Each correction is shown as it appears in actual tool output, with the
+# user-reachable path that exercises it.
+
+## Site 3 — missingSpecificationIntent (FR-009)
+# Exercised end-to-end by driving the real fsgg-sdd CLI:
+#   fsgg-sdd init  ->  fsgg-sdd charter  ->  fsgg-sdd specify (no --input)
+# JSON diagnostics[].correction for id "missingSpecificationIntent":
+  Provide --input with labeled facts, one per line: "value: <user value>", "scope: <scope>", "requirement: <measurable requirement>".
+
+## Site 1 — checklist missing-coverage (FR-007)
+# Exercised end-to-end through the command workflow + real-filesystem interpreter
+# by ChecklistCommandTests."checklist failed requirements quality writes findings
+# and does not advance to plan": the test writes a spec with an uncovered FR-001,
+# runs `checklist`, reads back the written checklist.md, and asserts it contains:
+  Add a coverage line for FR-001: "- FR-001: <text> (covers AC-###)" on a single list item — a bold "**FR-001**" or a colon-less line is not recognized.
+
+## Site 2 — evidence.missingRequiredEvidence (FR-008)
+# The surfaced unsatisfied-obligation diagnostic. Its correction string is built
+# by CommandReports.missingRequiredEvidence and serialized into the default JSON
+# / work-model.json / readiness views by ViewGeneration (writer.WriteString
+# "correction" diagnostic.Correction). Asserted by EvidenceCommandTests.
+# "evidence missingRequiredEvidence correction shows the non-synthetic pass form":
+  For each missing obligation id, add a matching evidence declaration with result: pass and synthetic: false (a synthetic pass does not satisfy it), or an accepted deferral.
+
+# Drift guard (SC-005): AuthoringDocsContractTests runs every accepted/rejected
+# coverage line and satisfied/unsatisfied evidence block published in
+# docs/reference/authoring-contracts.md through the live public parsers
+# (Specification.parseSpecificationFacts, Evidence.parseEvidence) on every build —
+# the docs and the tool cannot silently drift. 4/4 passing.
