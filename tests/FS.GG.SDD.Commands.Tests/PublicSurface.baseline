@@ -6,6 +6,7 @@ FS.GG.SDD.Commands.CommandHelp.topLevelHelp
 FS.GG.SDD.Commands.CommandRendering.renderText
 FS.GG.SDD.Commands.CommandReports.agentsBehaviorDivergence
 FS.GG.SDD.Commands.CommandReports.agentsBlockedWorkModel
+FS.GG.SDD.Commands.CommandReports.agentsEarlyStageGuidance
 FS.GG.SDD.Commands.CommandReports.agentsInvalidGeneratedRoot
 FS.GG.SDD.Commands.CommandReports.agentsMalformedGeneratedGuidance
 FS.GG.SDD.Commands.CommandReports.agentsMalformedWorkModel
@@ -80,6 +81,7 @@ FS.GG.SDD.Commands.CommandReports.missingWorkId
 FS.GG.SDD.Commands.CommandReports.outsideProject
 FS.GG.SDD.Commands.CommandReports.planIdentityMismatch
 FS.GG.SDD.Commands.CommandReports.refreshBlockedUpstreamView
+FS.GG.SDD.Commands.CommandReports.refreshEarlyStageGuidance
 FS.GG.SDD.Commands.CommandReports.refreshMalformedGeneratedView
 FS.GG.SDD.Commands.CommandReports.refreshMalformedSource
 FS.GG.SDD.Commands.CommandReports.refreshMissingSource

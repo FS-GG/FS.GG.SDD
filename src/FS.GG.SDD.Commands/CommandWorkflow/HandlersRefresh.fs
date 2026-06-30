@@ -146,6 +146,39 @@ module internal HandlersRefresh =
                       Readiness = "needsRefreshCorrection" }
 
                 (baseDiags |> DiagnosticsModule.sort), Some summary, [], []
+            elif
+                Option.isNone (snapshot (workModelPath workId) model)
+                && (authoredSourcePaths |> List.exists (fun path -> Option.isNone (snapshot path model)))
+            then
+                // Early-stage (FR-005/FR-010b): the work model is absent AND its authored
+                // sources have not been written yet — the expected pre-work-model state, not
+                // a defect. Report a navigable advisory that points to the seeded static
+                // guidance; regenerate nothing and write no view (FR-008/FR-011). A *present*
+                // work model whose source was later deleted (workModelAbsent = false), or a
+                // malformed source, is NOT early-stage and still blocks in the else arm.
+                let earlyDiag = refreshEarlyStageGuidance (earlyStagePresentStages workId model)
+                let perViewState = refreshCanonicalViews |> List.map (fun view -> view, "early-stage")
+
+                let summary: RefreshSummary =
+                    { WorkId = workId
+                      Stage = "refresh"
+                      Status = "early-stage"
+                      SummaryPath = summaryPath
+                      RefreshedViewIds = []
+                      AlreadyCurrentViewIds = []
+                      BlockedViewIds = []
+                      NotApplicableViewIds = refreshCanonicalViews
+                      PreservedAuthoredPaths = authoredPreserved
+                      FindingIds = [ earlyDiag.Id ]
+                      AdvisoryCount = 1
+                      WarningCount = 0
+                      BlockingCount = 0
+                      Disposition = "early-stage"
+                      PerViewState = perViewState
+                      SourceSnapshotCount = 0
+                      Readiness = "refreshEarlyStage" }
+
+                ((baseDiags @ [ earlyDiag ]) |> DiagnosticsModule.sort), Some summary, [], []
             else
                 let writeTextIn (effects: CommandEffect list) path =
                     effects

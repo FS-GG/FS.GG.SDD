@@ -963,9 +963,10 @@ module ScaffoldCommandTests =
         Assert.True(TestSupport.existsRelative root ".fsgg/constitution.md")
         Assert.DoesNotContain(".fsgg/constitution.md", provenanceGeneratedProductPaths root)
 
-    // T009 (FR-006/SC-005): the init skeleton path set grew by EXACTLY one entry —
-    // .fsgg/constitution.md — relative to the established skeleton. Asserted by removing
-    // the constitution from the current skeleton set and comparing to the prior set.
+    // T009 (FR-006/SC-005): the init skeleton path set grew by EXACTLY the authored
+    // skeleton seeds relative to the established (pre-033) skeleton — .fsgg/constitution.md
+    // (033) and .fsgg/early-stage-guidance.md (049). Asserted by removing those seeds from
+    // the current skeleton set and comparing to the prior set.
     [<Fact>]
     let ``init skeleton set grew by exactly the constitution`` () =
         let initRoot = TestSupport.tempDirectory ()
@@ -979,5 +980,7 @@ module ScaffoldCommandTests =
             Set.ofList
                 [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml"; "AGENTS.md"; "CLAUDE.md" ]
 
-        Assert.Contains(".fsgg/constitution.md", currentSkeleton)
-        Assert.Equal<Set<string>>(establishedSkeleton, Set.remove ".fsgg/constitution.md" currentSkeleton)
+        let authoredSeeds = Set.ofList [ ".fsgg/constitution.md"; ".fsgg/early-stage-guidance.md" ]
+
+        Assert.True(Set.isSubset authoredSeeds currentSkeleton, "Expected the authored skeleton seeds in the init set.")
+        Assert.Equal<Set<string>>(establishedSkeleton, Set.difference currentSkeleton authoredSeeds)

@@ -207,9 +207,16 @@ module internal HandlersAgents =
                 let workModelP = workModelPath workId
                 let workModelSnap = snapshot workModelP model
 
+                // Early-stage (FR-004/FR-010b): an *absent* work model is the expected
+                // pre-work-model state, not a defect. Reclassify it from the blocking
+                // agents.missingWorkModel to a non-blocking advisory that points to the
+                // seeded static guidance. Malformed/stale/blocked work models below are
+                // untouched and still block (Observability VIII, FR-008).
+                let isEarlyStage = Option.isNone workModelSnap
+
                 let workModelDiags, workModelOpt =
                     match workModelSnap with
-                    | None -> [ agentsMissingWorkModel workModelP ], None
+                    | None -> [ agentsEarlyStageGuidance (earlyStagePresentStages workId model) ], None
                     | Some snap ->
                         match WorkModelModule.parseWorkModel snap with
                         | Error errs -> (errs |> List.map (fun diagnostic -> agentsMalformedWorkModel workModelP diagnostic.Message)), None
@@ -353,16 +360,21 @@ module internal HandlersAgents =
 
                     let disposition =
                         if hasBlocking then "blocked"
+                        elif isEarlyStage then "early-stage"
                         elif targetResults |> List.exists (fun result -> result.Currency = GeneratedViewCurrency.Stale) && request.DryRun then "stale"
                         elif hasWarning then "advisory"
                         else "generated-current"
 
-                    let readiness = if hasBlocking then "needsAgentGuidanceCorrection" else "agentGuidanceReady"
+                    let readiness =
+                        if hasBlocking then "needsAgentGuidanceCorrection"
+                        elif isEarlyStage then "agentGuidanceEarlyStage"
+                        else "agentGuidanceReady"
                     let findings = agentGuidanceFindings diagnostics
                     let findingCount severity = findings |> List.filter (fun (_, _, findingSeverity) -> findingSeverity = severity) |> List.length
 
                     let generatedViewStateLabel =
                         if hasBlocking then "blocked"
+                        elif isEarlyStage then "early-stage"
                         elif targetResults |> List.exists (fun result -> result.Currency = GeneratedViewCurrency.Stale) then "stale"
                         elif targetResults |> List.exists (fun result -> result.Currency = GeneratedViewCurrency.Missing) then "missing"
                         elif List.isEmpty targetResults then "missing"

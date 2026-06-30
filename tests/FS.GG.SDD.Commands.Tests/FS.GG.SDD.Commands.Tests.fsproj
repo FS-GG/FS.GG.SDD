@@ -33,6 +33,7 @@
     <Compile Include="ScaffoldGuardTests.fs" />
     <Compile Include="HelpCommandTests.fs" />
     <Compile Include="AuthoringDocsContractTests.fs" />
+    <Compile Include="EarlyStageGuidanceContractTests.fs" />
     <Compile Include="SurfaceBaselineTests.fs" />
   </ItemGroup>
 

@@ -2,6 +2,7 @@ namespace FS.GG.SDD.Commands.Tests
 
 open System.Diagnostics
 open System.IO
+open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandRendering
 open FS.GG.SDD.Commands.CommandTypes
@@ -143,6 +144,52 @@ module RefreshCommandTests =
             Assert.DoesNotContain(".fsgg/constitution.md", summary.RefreshedViewIds)
             Assert.DoesNotContain(".fsgg/constitution.md", summary.BlockedViewIds)
         | None -> failwith "Expected a refresh summary."
+
+    // --- 049: early-stage navigable refresh (no work model yet) ---
+
+    // An early-only fixture: a chartered work item with no work model and no authored
+    // sources yet.
+    let earlyStageProject () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root workId title |> ignore
+        root
+
+    // T012 (US2 / FR-005/006/011, SC-002): the pre-work-model state is a recognized,
+    // navigable advisory — exit 0, refresh.earlyStageGuidance, a pointer NextAction, and
+    // no view written — not a bare refresh.blockedUpstreamView dead end.
+    [<Fact>]
+    let ``refresh reports a navigable early-stage state when the work model is absent`` () =
+        let root = earlyStageProject ()
+
+        let report = TestSupport.runRefresh root workId
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Equal(0, exitCodeForReport report)
+        Assert.Contains(report.Diagnostics, (fun d -> d.Id = "refresh.earlyStageGuidance"))
+        Assert.DoesNotContain(report.Diagnostics, (fun d -> d.Id = "refresh.blockedUpstreamView"))
+        TestSupport.assertRefreshDisposition report "early-stage"
+
+        match report.NextAction with
+        | Some action ->
+            Assert.Equal("earlyStageGuidance", action.ActionId)
+            Assert.Contains(".fsgg/early-stage-guidance.md", action.RequiredArtifacts)
+        | None -> failwith "Expected an early-stage next action."
+
+        // No view regenerated or written (FR-005/006/011).
+        Assert.False(TestSupport.existsRelative root summaryPath)
+        Assert.False(TestSupport.existsRelative root workModelPath)
+        match report.Refresh with
+        | Some summary -> Assert.Empty summary.RefreshedViewIds
+        | None -> failwith "Expected a refresh summary."
+
+    // T018 (US3 / SC-004): the early-stage refresh report is byte-identical across runs.
+    [<Fact>]
+    let ``refresh early-stage report is deterministic for identical state`` () =
+        let root = earlyStageProject ()
+        let first = serializeReport (TestSupport.runRefresh root workId)
+        let second = serializeReport (TestSupport.runRefresh root workId)
+        Assert.Equal(first, second)
 
     // --- User Story 2: detect stale / unrefreshable views ---
 

@@ -13,10 +13,15 @@ Core boundary:
   evidence, normalized work models, generated SDD views, lifecycle CLI
   contracts, and agent command/skill generation.
 - `fsgg-sdd init` seeds the SDD skeleton, which includes an authored
-  `.fsgg/constitution.md` lifecycle constitution — generic, deterministic, and
-  no-clobber on re-run (same policy as `CLAUDE.md`/`AGENTS.md`). Scaffold delivers
-  it via the reused `init` effects; it is never app-only `generatedProduct`
-  provenance and `refresh` never regenerates it.
+  `.fsgg/constitution.md` lifecycle constitution and an authored
+  `.fsgg/early-stage-guidance.md` early-stage authoring guide — both generic,
+  deterministic, and no-clobber on re-run (same policy as `CLAUDE.md`/`AGENTS.md`).
+  Scaffold delivers them via the reused `init` effects; they are never app-only
+  `generatedProduct` provenance and `refresh` never regenerates them.
+  `.fsgg/early-stage-guidance.md` covers the pre-work-model stages (`charter`,
+  `specify`, `clarify`, `checklist`) — per-stage command, required section
+  headings, stable-id formats, and the §1.1/§1.2 authoring contracts — and is a
+  read-only mirror of the live contract, pinned by a drift-guard test.
 - `fsgg-sdd evidence` owns declared authored evidence and SDD readiness
   summaries; `fsgg-sdd verify` evaluates SDD-owned verification readiness over
   task/evidence/test/skill obligations, emits `readiness/<id>/verify.json`, and
@@ -28,7 +33,13 @@ Core boundary:
   command and skill guidance from `readiness/<id>/work-model.json` into
   `readiness/<id>/agent-commands/<target>/` (a `guidance.json` manifest plus
   `commands.md`/`skills.md` projections), marked generated with source digests
-  and never a second source of truth. `fsgg-sdd refresh` is a cross-cutting
+  and never a second source of truth. When `work-model.json` is **absent** (the
+  pre-work-model early stage), `agents` and `refresh` do not dead-end: they emit a
+  non-blocking advisory (`agents.earlyStageGuidance` / `refresh.earlyStageGuidance`,
+  exit 0) with best-effort facts from the artifacts that exist and a `NextAction`
+  pointing to `.fsgg/early-stage-guidance.md` — writing no digest-stamped view.
+  Only the *missing* case is reclassified; malformed/stale/blocked work models still
+  block. `fsgg-sdd refresh` is a cross-cutting
   generator (not a lifecycle stage; `nextLifecycleCommand Refresh = None`) that
   brings a work item's SDD-owned generated views back to currency: it regenerates
   the work model and agent guidance and renders the human-readable
@@ -109,5 +120,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/048-lifecycle-cli-papercuts/plan.md
+at specs/049-early-stage-agent-guidance/plan.md
 <!-- SPECKIT END -->
