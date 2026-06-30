@@ -104,6 +104,38 @@ Notes:
   That handoff is optional and lives outside SDD — SDD never evaluates or enforces
   it.
 
+### Authoring inputs that gate
+
+Two authored inputs are strict enough to block a stage if their form is subtly
+wrong. The full grammar, accepted/rejected forms, and copyable examples are in
+[Authoring Contracts](reference/authoring-contracts.md); the happy path is:
+
+- **`checklist`** marks a functional requirement covered only when a list item
+  leads with `- FR-###:` and carries the acceptance reference **on the same
+  line**:
+
+  ```text
+  - FR-001: W/S move the left paddle. (covers AC-002)
+  ```
+
+  A bold `**FR-001**`, a colon-less line, or an `(covers AC-###)` on a separate
+  line is counted but **not** covered.
+
+- **`evidence`** satisfies an obligation only with a matching, **non-synthetic**
+  `evidence.yml` declaration whose `result` is `pass` (a synthetic pass and a
+  deferral do not satisfy it):
+
+  ```yaml
+  evidence:
+    - id: EV001
+      kind: verification
+      subject:
+        type: task
+        id: T001
+      result: pass
+      synthetic: false
+  ```
+
 ## Cross-cutting generators
 
 Two commands are **not** lifecycle stages. They bring generated views back to
