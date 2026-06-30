@@ -130,6 +130,20 @@ module ClarifyCommandTests =
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "missingClarificationAnswer")
         Assert.False(TestSupport.existsRelative root clarificationPath)
 
+    // §3.3 (FR-003, SC-003): a bullet "none outstanding" note under ## Ambiguities does not
+    // block clarify with a missing-id error; a genuine AMB-### ambiguity still blocks (the
+    // `clarify missing answer blocks` test above covers the genuine-block case).
+    [<Fact>]
+    let ``clarify proceeds when ambiguities note is a none-outstanding bullet`` () =
+        let root = initializedSpecifiedProjectWithoutAmbiguity ()
+        let edited = (TestSupport.readRelative root specPath).Replace("No material ambiguities recorded.", "- None outstanding")
+        TestSupport.writeRelative root specPath edited
+
+        let report = runClarifyWith None root
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "missingSpecificationId")
+
     [<Fact>]
     let ``clarify unknown reference blocks before authored write`` () =
         let root = initializedSpecifiedProject ()

@@ -219,4 +219,23 @@ module CommandRendering =
         | Some action -> builder.AppendLine($"nextAction: {action.ActionId}") |> ignore
         | None -> builder.AppendLine("nextAction: none") |> ignore
 
+        // §3.5: project help (usage, commands, flags) from the same report. The --rich
+        // projection auto-derives from this plain-text projection.
+        match report.Help with
+        | Some help ->
+            builder.AppendLine($"usage: {help.Usage}") |> ignore
+
+            match help.Scope with
+            | TopLevel -> builder.AppendLine("helpScope: topLevel") |> ignore
+            | Command name -> builder.AppendLine($"helpScope: command {name}") |> ignore
+
+            let renderFlag label (flag: HelpFlag) =
+                let argument = flag.Argument |> Option.map (fun value -> $" {value}") |> Option.defaultValue ""
+                builder.AppendLine($"{label} {flag.Name}{argument}: {flag.Description}") |> ignore
+
+            help.Commands |> List.iter (fun entry -> builder.AppendLine($"command {entry.Name}: {entry.Description}") |> ignore)
+            help.GlobalFlags |> List.iter (renderFlag "globalFlag")
+            help.CommandFlags |> List.iter (renderFlag "commandFlag")
+        | None -> ()
+
         builder.ToString()

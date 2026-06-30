@@ -120,6 +120,31 @@ module VerifyCommandTests =
         Assert.Contains("\"governanceCompatibility\"", json)
         Assert.Contains("\"nextAction\"", json)
 
+    // §3.4 (FR-005, SC-004): a verify run over a current work model carries no
+    // self-inflicted staleGeneratedView advisory and does not end SucceededWithWarnings
+    // for that cause.
+    [<Fact>]
+    let ``verify on current work model carries no self-inflicted staleGeneratedView`` () =
+        let root = initializedEvidencedProject ()
+
+        let report = TestSupport.runVerify root workId title
+
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "staleGeneratedView")
+        Assert.NotEqual(CommandOutcome.SucceededWithWarnings, report.Outcome)
+
+    // §3.4 genuine staleness (FR-007): editing an upstream authored source after the work
+    // model was generated still flags staleGeneratedView — real staleness is not suppressed.
+    [<Fact>]
+    let ``verify still flags genuine upstream staleness`` () =
+        let root = initializedEvidencedProject ()
+        TestSupport.runVerify root workId title |> ignore
+        let edited = (TestSupport.readRelative root specPath) + "\n\nAuthor edited the spec after generation.\n"
+        TestSupport.writeRelative root specPath edited
+
+        let report = TestSupport.runVerify root workId title
+
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "staleGeneratedView")
+
     // --- User Story 2: find blocking readiness gaps ---
 
     [<Fact>]

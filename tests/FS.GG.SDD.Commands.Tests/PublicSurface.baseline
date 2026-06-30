@@ -1,5 +1,8 @@
 FS.GG.SDD.Commands.CommandEffects.interpret
 FS.GG.SDD.Commands.CommandEffects.interpretAll
+FS.GG.SDD.Commands.CommandHelp.commandFlags
+FS.GG.SDD.Commands.CommandHelp.commandHelp
+FS.GG.SDD.Commands.CommandHelp.topLevelHelp
 FS.GG.SDD.Commands.CommandRendering.renderText
 FS.GG.SDD.Commands.CommandReports.agentsBehaviorDivergence
 FS.GG.SDD.Commands.CommandReports.agentsBlockedWorkModel
@@ -36,6 +39,7 @@ FS.GG.SDD.Commands.CommandReports.failedPlanPrerequisite
 FS.GG.SDD.Commands.CommandReports.failedRequirementsQuality
 FS.GG.SDD.Commands.CommandReports.failedTasksPrerequisite
 FS.GG.SDD.Commands.CommandReports.failedVerification
+FS.GG.SDD.Commands.CommandReports.helpReport
 FS.GG.SDD.Commands.CommandReports.malformedAgentsConfig
 FS.GG.SDD.Commands.CommandReports.malformedAnalysisView
 FS.GG.SDD.Commands.CommandReports.malformedCharterFrontMatter

@@ -942,6 +942,32 @@ publicOrToolFacingImpact: true
                 let after = split |> List.skip next
                 (before @ lines @ after) |> String.concat "\n"
 
+    // Replace the body of an existing section (the lines between its heading and the next
+    // `##` heading) with the supplied lines, preserving the heading and the blank-line
+    // separators. If the section is absent it is appended. Used to purge and re-derive
+    // machine-generated checklist sections on a stale re-run (§3.1).
+    let replaceSectionBody heading (bodyLines: string list) (text: string) =
+        let normalized = (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
+        let split = normalized.Split('\n') |> Array.toList
+        let headingPattern = $"^##\\s+{Regex.Escape heading}\\s*$"
+
+        match split |> List.tryFindIndex (fun line -> Regex.IsMatch(line, headingPattern)) with
+        | None ->
+            let sectionBody = String.concat "\n" bodyLines
+            $"{normalized.TrimEnd()}\n\n## {heading}\n{sectionBody}\n"
+        | Some start ->
+            let next =
+                split
+                |> List.mapi (fun index line -> index, line)
+                |> List.tryFind (fun (index, line) -> index > start && Regex.IsMatch(line, "^##\\s+"))
+                |> Option.map fst
+                |> Option.defaultValue split.Length
+
+            let before = split |> List.take (start + 1)
+            let after = split |> List.skip next
+            // Re-insert a single blank-line separator before the next heading (or trailing).
+            (before @ bodyLines @ [ "" ] @ after) |> String.concat "\n"
+
     let appendClarificationAnswers (existingText: string) (answers: PlannedClarificationAnswer list) =
         let questionLines =
             answers

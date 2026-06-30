@@ -124,4 +124,5 @@ module CommandReports =
     val refreshBlockedUpstreamView: viewPath: string -> upstreamViewPath: string -> Diagnostic
     val refreshUnrenderableSummary: summaryPath: string -> relatedIds: string list -> Diagnostic
     val buildReport: model: CommandModel -> CommandReport
+    val helpReport: request: CommandRequest -> summary: HelpSummary -> CommandReport
     val exitCodeForReport: report: CommandReport -> int

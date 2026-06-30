@@ -1085,6 +1085,7 @@ module CommandReports =
 
     let nextAction
         (diagnostics: Diagnostic list)
+        (reportOutcome: CommandOutcome)
         (request: CommandRequest)
         (checklist: ChecklistSummary option)
         (plan: PlanSummary option)
@@ -1261,6 +1262,18 @@ module CommandReports =
                         |> Option.map (fun summary -> [ summary.SummaryPath ])
                         |> Option.defaultValue []
                       BlockingDiagnosticIds = [] }
+        elif request.Command = Specify && reportOutcome = CommandOutcome.NoChange then
+            // §3.2 (FR-002, SC-002): an edited-but-section-complete spec re-run makes no
+            // authored write. Rather than a bare, ambiguous NoChange, state the authoritative
+            // rule — specify promotes only the first draft; spec.md is now authoritative and
+            // is read live by downstream stages — so the author knows the edit is consumed.
+            Some
+                { ActionId = "specify.next.clarify"
+                  Command = Some Clarify
+                  WorkId = request.WorkId
+                  Reason = "specify promotes only the first-draft specification; spec.md is now authoritative and is read live by downstream stages (clarify, checklist, …). Edit spec.md directly — re-running specify does not re-promote it."
+                  RequiredArtifacts = request.WorkId |> Option.map (fun workId -> [ $"work/{workId}/charter.md"; $"work/{workId}/spec.md" ]) |> Option.defaultValue []
+                  BlockingDiagnosticIds = [] }
         else
             match nextLifecycleCommand request.Command with
             | Some command ->
@@ -1333,6 +1346,8 @@ module CommandReports =
             (model.InterpretedEffects |> List.choose (changeFromEffectResult model.Request)) @ scaffoldChanges
             |> sortChanges
 
+        let reportOutcome = outcome diagnostics changes
+
         { SchemaVersion = 1
           ReportVersion = "1.0.0"
           Command = model.Request.Command
@@ -1340,7 +1355,7 @@ module CommandReports =
           OutputFormat = model.Request.OutputFormat
           DryRun = model.Request.DryRun
           OverwritePolicy = model.Request.OverwritePolicy
-          Outcome = outcome diagnostics changes
+          Outcome = reportOutcome
           WorkId = model.Request.WorkId
           ChangedArtifacts = changes
           Specification = model.Specification
@@ -1358,7 +1373,36 @@ module CommandReports =
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility
-          NextAction = nextAction diagnostics model.Request model.Checklist model.Plan model.Tasks model.Analysis model.Evidence model.Verification model.Ship model.AgentGuidance model.Refresh }
+          NextAction = nextAction diagnostics reportOutcome model.Request model.Checklist model.Plan model.Tasks model.Analysis model.Evidence model.Verification model.Ship model.AgentGuidance model.Refresh
+          Help = None }
+
+    /// §3.5: build the informational help report. Help carries no diagnostics and no changed
+    /// artifacts → `NoChange` → exit 0, routed to stdout. `Help` is populated; `NextAction`
+    /// is dropped (help is a discoverability surface, not a lifecycle step).
+    let helpReport (request: CommandRequest) (summary: HelpSummary) =
+        let model =
+            { Request = request
+              PendingEffects = []
+              InterpretedEffects = []
+              Diagnostics = []
+              Specification = None
+              Clarification = None
+              Checklist = None
+              Plan = None
+              Tasks = None
+              Analysis = None
+              Evidence = None
+              Verification = None
+              Ship = None
+              AgentGuidance = None
+              Refresh = None
+              Scaffold = None
+              GeneratedViews = []
+              Report = None }
+
+        { buildReport model with
+            Help = Some summary
+            NextAction = None }
 
     // Provider-defect diagnostics escalate to exit 2 (tool-defect class), the same
     // boundary `toolDefect` uses; malformed user input stays at exit 1.

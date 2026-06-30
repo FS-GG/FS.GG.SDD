@@ -77,10 +77,11 @@ module ShipCommandTests =
         let shipJson = TestSupport.readRelative root shipPath
 
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
-        // readiness is shipReady (no blocking findings); disposition is advisory because ship refreshes the
-        // work-model generated view, which the currency checker reports as an advisory-level finding (same
-        // self-clearing warning that makes verify SucceededWithWarnings).
-        TestSupport.assertShipSummary report "shipReady" "advisory"
+        // §3.4 (SC-004): a clean ship over a current work model is shipReady/shipReady — the
+        // self-inflicted staleGeneratedView advisory is gone (it was the sole cause of the
+        // prior advisory disposition).
+        TestSupport.assertShipSummary report "shipReady" "shipReady"
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "staleGeneratedView")
         Assert.True(TestSupport.existsRelative root shipPath)
         Assert.Contains("\"stage\": \"ship\"", shipJson)
         Assert.Contains("\"lifecycleReadiness\"", shipJson)
@@ -137,6 +138,19 @@ module ShipCommandTests =
         Assert.Equal(verifyBefore, TestSupport.readRelative root verifyPath)
         Assert.Contains(report.GeneratedViews, fun view -> view.Path = verifyPath && view.Kind = "verification")
         Assert.DoesNotContain(report.ChangedArtifacts, fun change -> change.Path = verifyPath)
+
+    // §3.4 genuine staleness (FR-007): editing an upstream authored source after generation
+    // still flags staleGeneratedView on ship — real staleness is not suppressed.
+    [<Fact>]
+    let ``ship still flags genuine upstream staleness`` () =
+        let root = initializedVerifiedProject ()
+        TestSupport.runShip root workId title |> ignore
+        let edited = (TestSupport.readRelative root specPath) + "\n\nAuthor edited the spec after generation.\n"
+        TestSupport.writeRelative root specPath edited
+
+        let report = TestSupport.runShip root workId title
+
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "staleGeneratedView")
 
     // --- User Story 2: block merge-boundary readiness on lifecycle gaps ---
 
@@ -278,7 +292,7 @@ module ShipCommandTests =
         Assert.Contains("command: ship", text)
         Assert.Contains($"shipPath: {shipPath}", text)
         Assert.Contains("shipReadiness: shipReady", text)
-        Assert.Contains("shipDisposition: advisory", text)
+        Assert.Contains("shipDisposition: shipReady", text)
         Assert.Contains("nextAction: ship.next.protectedBoundary", text)
 
     [<Fact>]
