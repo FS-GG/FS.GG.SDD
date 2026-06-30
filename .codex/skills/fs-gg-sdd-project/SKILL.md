@@ -30,8 +30,11 @@ Before changing behavior, read:
 
 ## Working Rules
 
-- Use standard Spec Kit: specify -> clarify as needed -> plan -> tasks ->
-  implement -> analyze.
+- Drive work through the native `fsgg-sdd` lifecycle: charter -> specify ->
+  clarify -> checklist -> plan -> tasks -> analyze -> [implement] -> evidence ->
+  verify -> ship. The per-stage skills are [[fs-gg-sdd-lifecycle]] and the
+  `fs-gg-sdd-*` family; legacy `speckit-*` commands are not the active process
+  (see `docs/migration-from-spec-kit.md` for coexistence only).
 - Do not add source projects to the scaffold without a feature spec.
 - Treat Markdown as authoring surface and schema-versioned structured artifacts
   as the machine contract.

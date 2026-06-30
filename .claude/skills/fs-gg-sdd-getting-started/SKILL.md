@@ -1,0 +1,94 @@
+---
+name: fs-gg-sdd-getting-started
+description: Start an FS.GG SDD project — fsgg-sdd init (seed the lifecycle skeleton in an existing repo) and fsgg-sdd scaffold (empty directory to a buildable, runnable product via a template provider). Use before the lifecycle stages; then go to fs-gg-sdd-lifecycle.
+---
+
+# Getting Started: `init` and `scaffold`
+
+Two commands establish an SDD project. Both seed the same skeleton; `scaffold`
+additionally materializes a runnable product from a template provider. After
+either, drive the lifecycle with [[fs-gg-sdd-lifecycle]].
+
+## `fsgg-sdd init` — seed the skeleton in place
+
+Use in an existing repository to add the SDD lifecycle skeleton.
+
+```text
+fsgg-sdd init --root .
+```
+
+It creates:
+
+- `.fsgg/` — project config: `project.yml`, `sdd.yml`, `agents.yml` (and an
+  optional Governance compatibility surface).
+- `work/` — where your authored lifecycle sources will live, one dir per work item.
+- `readiness/` — where generated readiness views are written.
+- `CLAUDE.md` / `AGENTS.md` — thin agent-guidance pointer files.
+- `.fsgg/constitution.md` — the seeded product constitution (the doctrine).
+- `.fsgg/early-stage-guidance.md` — the authoring guide for the pre-work-model
+  window (`charter`/`specify`/`clarify`/`checklist`).
+
+`init` is **deterministic and no-clobber**: re-running it is safe and never
+overwrites your edits to the constitution or guidance. **Next action:** `charter`.
+
+## `fsgg-sdd scaffold` — empty directory to a runnable product
+
+Use to go from nothing to a buildable, SDD-managed product in one command. It
+seeds the `init` skeleton (byte-identical to `init`), then invokes an external
+**template provider** (selected with `--provider`, resolved from
+`.fsgg/providers.yml`) to materialize the actual product via `dotnet new`.
+
+```sh
+fsgg-sdd scaffold --root ./MyApp --provider <name> --param productName=MyApp
+
+cd ./MyApp && dotnet build && dotnet run   # the runnable product
+fsgg-sdd charter                           # continue the lifecycle
+```
+
+Options:
+
+| Flag | Meaning |
+|---|---|
+| `--provider <name>` | **Required.** Template provider from `.fsgg/providers.yml`. With none, scaffold blocks and points you at `fsgg-sdd init` for the skeleton only. |
+| `--param key=value` | Repeatable. Forwarded verbatim to the provider as `--key value`. |
+| `--force` | Materialize into a non-empty target / pass provider force. |
+| `--no-update` | Skip the managed template + agent-context refresh (otherwise `dotnet new install`/`update` runs each time). |
+| `--dry-run` | Plan the `dotnet new` invocation without executing. |
+
+What scaffold owns: the provider contract, the invocation, the
+`.fsgg/scaffold-provenance.json` record (produced paths marked `generatedProduct`
+— externally owned, out of SDD's refresh scope), and the post-instantiation steps
+(`git init` at the product root, `chmod +x` on produced `.sh` scripts). It records
+**no** provider-specific package id, template id, or path — the reference runnable
+provider ships in FS.GG.Rendering.
+
+**Boundary guard:** the provider must never write into SDD-owned trees (`.fsgg/`,
+`work/`, `readiness/`, `AGENTS.md`, `CLAUDE.md`); scaffold guards this and fails
+if violated.
+
+## Exit codes
+
+- Malformed user input (unknown provider, unsupported contract version, missing
+  required `--param`, target collision) → blocked, **exit 1**.
+- Provider defect (provider failed, engine unavailable, provider wrote into SDD
+  trees) → **exit 2**. An incomplete scaffold is never reported as complete.
+
+## Output formats
+
+Both honor `--rich` / `--text` / `--json` (default JSON) — see
+[[fs-gg-sdd-lifecycle]].
+
+## Next
+
+- `charter` — establish your first work item: [[fs-gg-sdd-charter]].
+- Adopting an existing Spec Kit project instead? It is additive — run `init`, then
+  author native sources. See `docs/migration-from-spec-kit.md`.
+
+## Related
+
+- [[fs-gg-sdd-lifecycle]] — the whole process map.
+- [[fs-gg-sdd-charter]] — the first lifecycle stage.
+
+## Sources
+
+- `README.md` ("Create a new project"), `docs/quickstart.md` (`init`).
