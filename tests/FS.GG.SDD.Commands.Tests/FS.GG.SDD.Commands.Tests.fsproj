@@ -31,6 +31,7 @@
     <Compile Include="ReleaseInstallTests.fs" />
     <Compile Include="ScaffoldCommandTests.fs" />
     <Compile Include="ScaffoldGuardTests.fs" />
+    <Compile Include="SeededSkillsTests.fs" />
     <Compile Include="HelpCommandTests.fs" />
     <Compile Include="AuthoringDocsContractTests.fs" />
     <Compile Include="EarlyStageGuidanceContractTests.fs" />

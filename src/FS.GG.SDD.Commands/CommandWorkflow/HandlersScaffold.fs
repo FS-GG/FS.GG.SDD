@@ -55,6 +55,11 @@ module internal HandlersScaffold =
         p.StartsWith(".fsgg/", StringComparison.Ordinal)
         || p.StartsWith("work/", StringComparison.Ordinal)
         || p.StartsWith("readiness/", StringComparison.Ordinal)
+        // 051: the seeded fs-gg-sdd-* process-skill subtrees are SDD-owned skeleton
+        // (FR-008). A provider that writes into them is rejected as an intrusion, and
+        // they are never recorded as generatedProduct in scaffold-provenance.json.
+        || p.StartsWith(".claude/skills/", StringComparison.Ordinal)
+        || p.StartsWith(".codex/skills/", StringComparison.Ordinal)
 
     let isSddOwned (path: string) =
         let p = normalizeRelativePath path

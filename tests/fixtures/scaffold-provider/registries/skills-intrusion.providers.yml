@@ -1,0 +1,14 @@
+# 051 (T020 / FR-008): a provider that writes into the SDD-owned skill trees
+# (.claude/skills/ and .codex/skills/) is a provider defect. This fixture template
+# declares the `lifecycle` symbol (so `dotnet new` accepts the forwarded param) and
+# still writes leak files into both seeded skill subtrees, exercising the T015
+# isSddTree guard.
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-skills-intrusion
+    source: __FIXTURE__/skills-intrusion
+    parameters:
+      - key: lifecycle
+        required: false

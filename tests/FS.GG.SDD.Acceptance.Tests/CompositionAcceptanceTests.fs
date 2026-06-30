@@ -17,16 +17,32 @@ open CompositionResult
 /// (FR-009): the real provider identity lives only in the external registry.
 module CompositionAcceptanceTests =
 
-    // The SDD skeleton (reused `init` effects) + the authored constitution — never provider
-    // output. Used to prove the provenance partition (FR-005).
+    // The 15 in-scope fs-gg-sdd-* process skills the SDD skeleton seeds on both agent
+    // surfaces (feature 051, contract §1). The declared set is pinned to the on-disk
+    // authored set by the offline drift guard (SeededSkillsTests, T013); here it backs the
+    // skeleton-shape conformance and the provenance partition (INV-5/INV-8).
+    let private seededSkillNames =
+        [ "fs-gg-sdd-analyze"; "fs-gg-sdd-authoring-contracts"; "fs-gg-sdd-charter"
+          "fs-gg-sdd-checklist"; "fs-gg-sdd-clarify"; "fs-gg-sdd-evidence"
+          "fs-gg-sdd-getting-started"; "fs-gg-sdd-lifecycle"; "fs-gg-sdd-plan"
+          "fs-gg-sdd-refresh-agents"; "fs-gg-sdd-ship"; "fs-gg-sdd-specify"
+          "fs-gg-sdd-tasks"; "fs-gg-sdd-validate"; "fs-gg-sdd-verify" ]
+
+    let private seededSkillPaths =
+        seededSkillNames
+        |> List.collect (fun name -> [ $".claude/skills/{name}/SKILL.md"; $".codex/skills/{name}/SKILL.md" ])
+
+    // The SDD skeleton (reused `init` effects) + the authored constitution + the seeded
+    // process skills — never provider output. Used to prove the provenance partition (FR-005).
     let private skeletonPaths =
         set
-            [ ".fsgg/project.yml"
-              ".fsgg/sdd.yml"
-              ".fsgg/agents.yml"
-              "AGENTS.md"
-              "CLAUDE.md"
-              ".fsgg/constitution.md" ]
+            ([ ".fsgg/project.yml"
+               ".fsgg/sdd.yml"
+               ".fsgg/agents.yml"
+               "AGENTS.md"
+               "CLAUDE.md"
+               ".fsgg/constitution.md" ]
+             @ seededSkillPaths)
 
     let private gitDirExists root = Directory.Exists(Path.Combine(root, ".git"))
 
@@ -170,6 +186,16 @@ module CompositionAcceptanceTests =
         let request = scaffoldRequest root
         // Only the generic lifecycle marker is sent; no starter/profile/variant key is named.
         Assert.Equal<(string * string) list>([ "lifecycle", "sdd" ], request.Parameters)
+
+    // 051 T016 (US1 / INV-8): the skeleton-shape conformance surface accounts for the 30
+    // seeded process-skill files (15 skills × 2 surfaces), so the produced skeleton's
+    // declared shape stays authoritative. Offline; the network-gated run additionally
+    // proves none of these paths is recorded as generatedProduct (INV-5, provenancePartitioned).
+    [<Fact>]
+    let ``the skeleton-shape surface accounts for the 30 seeded skill files`` () =
+        Assert.Equal(30, List.length seededSkillPaths)
+        for path in seededSkillPaths do
+            Assert.True(Set.contains path skeletonPaths, $"Skeleton-shape surface is missing {path}.")
 
     // T010–T017 (US1 + US2): one invocation yields the runnable app AND the SDD skeleton +
     // authored constitution; the app builds and runs; git+chmod ran; provenance is partitioned;
