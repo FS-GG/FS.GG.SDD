@@ -1,0 +1,2 @@
+productName=PRODUCT_NAME
+variant=VARIANT_VALUE

@@ -72,6 +72,14 @@ Core boundary:
   `generatedProduct` — externally owned, which `refresh` excludes, FR-007), the
   `scaffold.*` diagnostics, and the three report projections — **never** any
   provider-specific package id, template id, path, or docs URL (FR-002 / SC-005).
+  A starter selection is just a provider-declared scaffold parameter; scaffold
+  records the **effective forwarded parameters** — provider-declared
+  `parameters[].default`s overlaid by author `--param` overrides (the author value
+  always wins) — as the additive `effectiveParameters` field on
+  `.fsgg/scaffold-provenance.json` (schema stays v1) and the scaffold report
+  (json/text/rich), sorted by key and verbatim, so the chosen default starter is
+  auditable and reproducible — value-agnostically, with no provider-specific starter
+  value embedded in generic SDD (FR-003 / FR-004).
   Scaffold requires `--provider`; with none it blocks with `scaffold.providerMissing`
   pointing to `fsgg-sdd init` for the skeleton only. User-input failures resolve at
   exit 1; provider defects (`providerFailed`/`providerUnavailable`/
@@ -120,5 +128,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/049-early-stage-agent-guidance/plan.md
+at specs/050-scaffold-default-starter/plan.md
 <!-- SPECKIT END -->

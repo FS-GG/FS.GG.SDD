@@ -60,8 +60,16 @@ rather than silent.
   `requiredBySdd: false`, `stability: additiveOptional`) — SDD writes it whenever a
   provider actually runs. It records the provider name, the provider
   `contractVersion`, the `templateRef`, the `outcome`
-  (`providerSucceeded` / `providerSucceededEmpty` / `providerFailed`), and the
-  `producedPaths` (sorted, each marked `owner: generatedProduct`). It is the
+  (`providerSucceeded` / `providerSucceededEmpty` / `providerFailed`), the
+  `producedPaths` (sorted, each marked `owner: generatedProduct`), and the
+  `effectiveParameters` — the resolved `key → value` set forwarded to the provider
+  (provider-declared `parameters[].default`s overlaid by author `--param` overrides;
+  the author value always wins), emitted **after** `producedPaths` as an array of
+  `{ "key": ..., "value": ... }` objects sorted ascending by key, recorded verbatim
+  (never interpreted), and always present (`[]` when none). It records the chosen
+  starter so a scaffolded product is auditable and reproducible (FR-003). The field is
+  **additive optional** (schema stays v1; `tryParse` defaults it to `[]` for documents
+  written before it). It is the
   **authority for refresh exclusion** (FR-007 / SC-007): `fsgg-sdd refresh` reads it
   and never regenerates or flags provider-produced runtime files as stale SDD views;
   malformed provenance surfaces `scaffold.provenanceMalformed` and is treated as
@@ -69,8 +77,15 @@ rather than silent.
   *externally-owned output references* rather than sensed metadata.
 - **`.fsgg/providers.yml`** (schema v1, `owner: author/provider`) — the
   author-/provider-supplied selection registry mapping a `--provider <name>` to its
-  `contractVersion`, `templateId`, `source`, and declared `parameters`. SDD ships no
-  default entries and embeds none of these values in code (FR-002 / SC-005).
+  `contractVersion`, `templateId`, `source`, and declared `parameters`. Each
+  `parameters[]` entry carries a `key`, a `required` flag, and an optional `default`.
+  A parameter's `default` is the **default starter** for that selection: scaffold
+  forwards it as `--<key> <value>` when the author omits `--param <key>=...`, and an
+  explicit `--param` always overrides it. A `default` does **not** make a `required`
+  parameter optional (an omitted required value still surfaces
+  `scaffold.providerParamMissing`). SDD ships no default entries and embeds none of
+  these values in code (FR-002 / SC-005); changing a default starter is a data edit in
+  the provider-owned registry with zero generic-SDD code change.
 
 These are produced by the cross-cutting scaffold command (whose real exercise spawns
 an external `dotnet new` template engine), not by the standard lifecycle the catalog

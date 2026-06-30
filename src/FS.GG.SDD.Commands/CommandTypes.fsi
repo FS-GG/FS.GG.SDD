@@ -333,6 +333,11 @@ module CommandTypes =
           ProviderInvoked: bool
           ProducedPathCount: int
           ProducedPaths: string list
+          /// The effective `key → value` parameters forwarded to the provider —
+          /// provider-declared `default`s overlaid by author `--param` overrides
+          /// (author wins). Sorted ascending by key; `[]` when none forwarded
+          /// (FR-003). Projected after `producedPaths` in json/text/rich.
+          EffectiveParameters: (string * string) list
           RepoInitOutcome: string
           ExecutableScriptCount: int
           ExecutableScriptsSkipped: int

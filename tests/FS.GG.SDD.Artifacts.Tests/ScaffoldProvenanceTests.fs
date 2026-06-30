@@ -65,7 +65,8 @@ providers:
           Outcome = "providerSucceeded"
           ProducedPaths =
             [ { Path = "src/Product/Program.fs"; Owner = GeneratedProduct }
-              { Path = "src/Product/App.fsproj"; Owner = GeneratedProduct } ] }
+              { Path = "src/Product/App.fsproj"; Owner = GeneratedProduct } ]
+          EffectiveParameters = [ "variant", "alpha"; "productName", "Demo" ] }
 
     [<Fact>]
     let ``serialize then tryParse round-trips the record`` () =
@@ -89,6 +90,59 @@ providers:
         // App.fsproj sorts before Program.fs regardless of source order.
         Assert.True(first.IndexOf "App.fsproj" < first.IndexOf "Program.fs")
         Assert.DoesNotContain("timestamp", first)
+
+    // T005 (050 FR-003): the effective parameters round-trip, preserving order and content.
+    [<Fact>]
+    let ``serialize then tryParse round-trips effectiveParameters in key order`` () =
+        match tryParse (serialize record) with
+        | Some parsed ->
+            // The record declared them unsorted; serialize sorts ascending by key, so the
+            // parsed list is the sorted set (productName before variant).
+            Assert.Equal<(string * string) list>(
+                [ "productName", "Demo"; "variant", "alpha" ],
+                parsed.EffectiveParameters)
+        | None -> failwith "Expected provenance to round-trip effectiveParameters."
+
+    // T005 (050 D3): a v1 document WITHOUT effectiveParameters parses to [] (backward compat) —
+    // a provenance file written before this field still parses.
+    [<Fact>]
+    let ``tryParse defaults effectiveParameters to empty when the key is absent`` () =
+        let withoutField =
+            """{
+  "schemaVersion": 1,
+  "generator": { "id": "fsgg-sdd", "version": "0.0.0" },
+  "providerName": "fixture",
+  "providerContractVersion": "1.0.0",
+  "templateRef": "fsgg-fixture-app",
+  "outcome": "providerSucceeded",
+  "producedPaths": [ { "path": "App.fsproj", "owner": "generatedProduct" } ]
+}"""
+
+        match tryParse withoutField with
+        | Some parsed -> Assert.Equal<(string * string) list>([], parsed.EffectiveParameters)
+        | None -> failwith "A v1 document without effectiveParameters must still parse."
+
+    // T005 (050 FR-003): byte-exact emission — effectiveParameters is the LAST field, after
+    // producedPaths, sorted ascending by key, as {key,value} objects.
+    [<Fact>]
+    let ``serialize emits effectiveParameters sorted after producedPaths`` () =
+        let json = serialize record
+        Assert.True(json.IndexOf "\"producedPaths\"" < json.IndexOf "\"effectiveParameters\"")
+        // Sorted ascending by key: productName precedes variant.
+        Assert.True(json.IndexOf "\"productName\"" < json.IndexOf "\"variant\"")
+        Assert.Contains("\"key\": \"productName\"", json)
+        Assert.Contains("\"value\": \"Demo\"", json)
+        Assert.Contains("\"key\": \"variant\"", json)
+        Assert.Contains("\"value\": \"alpha\"", json)
+
+    // T005 (050 FR-003): an empty effective map serializes as [] and round-trips.
+    [<Fact>]
+    let ``serialize emits an empty effectiveParameters array when none forwarded`` () =
+        let json = serialize { record with EffectiveParameters = [] }
+        Assert.Contains("\"effectiveParameters\": []", json)
+        match tryParse json with
+        | Some parsed -> Assert.Equal<(string * string) list>([], parsed.EffectiveParameters)
+        | None -> failwith "Expected the empty-effective document to round-trip."
 
     [<Fact>]
     let ``tryParse on malformed JSON yields None`` () =

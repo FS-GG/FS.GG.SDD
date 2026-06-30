@@ -984,3 +984,180 @@ module ScaffoldCommandTests =
 
         Assert.True(Set.isSubset authoredSeeds currentSkeleton, "Expected the authored skeleton seeds in the init set.")
         Assert.Equal<Set<string>>(establishedSkeleton, Set.difference currentSkeleton authoredSeeds)
+
+    // ===================================================================
+    // 050 — honor a provider-declared default starter (value-agnostic).
+    // The `fixture` provider's registry (default-declaring.providers.yml)
+    // declares a NON-required `variant` with `default: alpha` alongside a
+    // REQUIRED `productName`. Real `dotnet new` over abstract key/values
+    // only — no rendering identity (FR-004/SC-003). US1 (default applied),
+    // US2 (explicit override wins), and the precedence edge cases.
+    // ===================================================================
+
+    /// The recorded effective parameters from .fsgg/scaffold-provenance.json, as a
+    /// sorted (key,value) list — the durable FR-003 audit record.
+    let private provenanceEffectiveParameters root : (string * string) list =
+        let json = TestSupport.readRelative root provenancePath
+        use doc = System.Text.Json.JsonDocument.Parse json
+        let str (element: System.Text.Json.JsonElement) (name: string) =
+            match element.GetProperty(name).GetString() with
+            | null -> ""
+            | value -> value
+        [ for entry in doc.RootElement.GetProperty("effectiveParameters").EnumerateArray() do
+            str entry "key", str entry "value" ]
+        |> List.sortBy fst
+
+    // T008 (US1 / FR-001 / FR-003 / SC-001): omitting `variant` forwards the declared
+    // default `alpha` to the provider verbatim, and both the report summary and provenance
+    // record `variant=alpha` (plus the supplied `productName`) as effective, sorted by key.
+    [<Fact>]
+    let ``scaffold DefaultApplied forwards the declared default and records it effective`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "default-declaring.providers.yml"
+        // productName supplied (required); variant omitted (declared default: alpha).
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        // The provider was invoked with the declared default — the recording manifest echoes it.
+        let manifest = TestSupport.readRelative root "scaffold-manifest.txt"
+        Assert.Contains("variant=alpha", manifest)
+        Assert.Contains("productName=Acme", manifest)
+
+        // The report summary records the effective set, sorted ascending by key.
+        let summary = scaffoldSummary report
+        Assert.Equal<(string * string) list>(
+            [ "productName", "Acme"; "variant", "alpha" ],
+            summary.EffectiveParameters)
+        // Provenance records the same effective set for audit/reproducibility (FR-003).
+        Assert.Equal<(string * string) list>(
+            [ "productName", "Acme"; "variant", "alpha" ],
+            provenanceEffectiveParameters root)
+        Assert.Equal(0, exitCodeForReport report)
+
+    // T009 (US1 / FR-008): the default-applied run projects effectiveParameters in json (an
+    // array of {key,value} after producedPaths, sorted) and text (one sorted
+    // `scaffoldEffectiveParam: key=value` line per entry), changing no other scaffold fact.
+    [<Fact>]
+    let ``scaffold DefaultApplied projects effectiveParameters in json and text`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "default-declaring.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        let json = CommandSerialization.serializeReport report
+        // json: the array, sorted, after producedPaths and before repoInitOutcome.
+        Assert.Contains("\"effectiveParameters\"", json)
+        Assert.Contains("\"key\": \"productName\"", json)
+        Assert.Contains("\"value\": \"Acme\"", json)
+        Assert.Contains("\"key\": \"variant\"", json)
+        Assert.Contains("\"value\": \"alpha\"", json)
+        Assert.True(json.IndexOf "\"producedPaths\"" < json.IndexOf "\"effectiveParameters\"")
+        Assert.True(json.IndexOf "\"effectiveParameters\"" < json.IndexOf "\"repoInitOutcome\"")
+        Assert.True(json.IndexOf "\"key\": \"productName\"" < json.IndexOf "\"key\": \"variant\"")
+        // Determinism: byte-identical across repeated emits.
+        Assert.Equal(json, CommandSerialization.serializeReport report)
+
+        // text: one sorted line per entry, after the producedPath lines.
+        let text = CommandRendering.renderText report
+        Assert.Contains("scaffoldEffectiveParam: productName=Acme", text)
+        Assert.Contains("scaffoldEffectiveParam: variant=alpha", text)
+        Assert.True((text.IndexOf "scaffoldEffectiveParam: productName=Acme") < (text.IndexOf "scaffoldEffectiveParam: variant=alpha"))
+
+    // T009 (FR-008): the effectiveParameters field is scaffold-scoped — a non-scaffold
+    // command's json carries no effectiveParameters key and no scaffoldEffectiveParam line.
+    [<Fact>]
+    let ``effectiveParameters is absent from a non-scaffold command report`` () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+        let workId = "050-non-scaffold"
+        TestSupport.writeValidWorkSources root workId "Non scaffold"
+        let refresh = TestSupport.runRefresh root workId
+
+        let json = CommandSerialization.serializeReport refresh
+        let text = CommandRendering.renderText refresh
+        Assert.DoesNotContain("effectiveParameters", json)
+        Assert.DoesNotContain("scaffoldEffectiveParam", text)
+
+    // T010b(a) (Edge / precedence): a declared default never makes a REQUIRED param optional —
+    // omitting required `productName` still surfaces scaffold.providerParamMissing, and the
+    // blocked summary records NO effective parameters (productName absent).
+    [<Fact>]
+    let ``scaffold omitting a required param blocks and records no effective parameters`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "default-declaring.providers.yml"
+        // productName (required) omitted; variant has a default but cannot rescue a required param.
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [] false false)
+
+        Assert.Contains("scaffold.providerParamMissing", diagnosticIds report)
+        Assert.Equal(1, exitCodeForReport report)
+        let summary = scaffoldSummary report
+        Assert.False(summary.ProviderInvoked)
+        Assert.Empty(summary.EffectiveParameters)
+        Assert.DoesNotContain("productName", (summary.EffectiveParameters |> List.map fst))
+        Assert.False(TestSupport.existsRelative root provenancePath)
+
+    // T010b(c) (Edge / verbatim): the declared default is forwarded verbatim, never
+    // interpreted — the planned create-arg vector carries exactly `--variant alpha`.
+    [<Fact>]
+    let ``scaffold forwards the declared default verbatim in the create-arg vector`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "default-declaring.providers.yml"
+        let request = scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false true
+        // effective = {productName=Acme, variant=alpha}; Map canonicalizes to sorted keys.
+        let expected = [ "--productName"; "Acme"; "--variant"; "alpha" ]
+        Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs request))
+
+    // T010b(d) (Edge / no default): a provider/parameter that declares NO default and is
+    // omitted forwards no key for it — the effective set holds only supplied values, and an
+    // optional no-default param omitted leaves the set empty (behavior unchanged).
+    [<Fact>]
+    let ``scaffold forwards no key for an omitted no-default optional parameter`` () =
+        let root = TestSupport.tempDirectory ()
+        // lifecycle-empty declares an OPTIONAL `lifecycle` with NO default.
+        writeRegistry root "lifecycle-empty.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [] false false)
+
+        let summary = scaffoldSummary report
+        // No declared default + omitted ⇒ no effective entry recorded.
+        Assert.Empty(summary.EffectiveParameters)
+        Assert.Empty(provenanceEffectiveParameters root)
+        Assert.Equal(0, exitCodeForReport report)
+
+    // ---------- Phase 4 / US2: explicit override always wins ----------
+
+    // T013 (US2 / FR-002 / FR-003 / SC-002): an explicit `--param variant=beta` is forwarded
+    // (NOT the declared default `alpha`), and the report + provenance record `variant=beta`.
+    [<Fact>]
+    let ``scaffold Override forwards the author value over the declared default`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "default-declaring.providers.yml"
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "variant", "beta" ] false false)
+
+        // The provider was invoked with the override, not the declared default.
+        let manifest = TestSupport.readRelative root "scaffold-manifest.txt"
+        Assert.Contains("variant=beta", manifest)
+        Assert.DoesNotContain("variant=alpha", manifest)
+
+        let summary = scaffoldSummary report
+        Assert.Equal<(string * string) list>(
+            [ "productName", "Acme"; "variant", "beta" ],
+            summary.EffectiveParameters)
+        Assert.Equal<(string * string) list>(
+            [ "productName", "Acme"; "variant", "beta" ],
+            provenanceEffectiveParameters root)
+        Assert.Equal(0, exitCodeForReport report)
+
+    // T014 (US2 / FR-008): the override run projects the override value (not the default) in
+    // json and text; the effectiveParameters field stays scaffold-scoped.
+    [<Fact>]
+    let ``scaffold Override projects the override value in json and text`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "default-declaring.providers.yml"
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "variant", "beta" ] false false)
+
+        let json = CommandSerialization.serializeReport report
+        Assert.Contains("\"value\": \"beta\"", json)
+        Assert.DoesNotContain("\"value\": \"alpha\"", json)
+        let text = CommandRendering.renderText report
+        Assert.Contains("scaffoldEffectiveParam: variant=beta", text)
+        Assert.DoesNotContain("scaffoldEffectiveParam: variant=alpha", text)

@@ -325,6 +325,7 @@ module CommandTypes =
           ProviderInvoked: bool
           ProducedPathCount: int
           ProducedPaths: string list
+          EffectiveParameters: (string * string) list
           RepoInitOutcome: string
           ExecutableScriptCount: int
           ExecutableScriptsSkipped: int

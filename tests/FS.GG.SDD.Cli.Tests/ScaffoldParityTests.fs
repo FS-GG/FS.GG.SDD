@@ -21,6 +21,7 @@ module ScaffoldParityTests =
           ProviderInvoked = true
           ProducedPathCount = 2
           ProducedPaths = [ "App.fsproj"; "Program.fs" ]
+          EffectiveParameters = [ "productName", "Acme"; "variant", "alpha" ]
           RepoInitOutcome = "initialized"
           ExecutableScriptCount = 0
           ExecutableScriptsSkipped = 0
@@ -59,6 +60,43 @@ module ScaffoldParityTests =
         Assert.Contains("\"producedPaths\"", json)
         Assert.Contains("scaffoldProducedPath: App.fsproj", text)
         Assert.Contains("App.fsproj", rich)
+
+    // 050 T018 (FR-003/FR-008): the effective forwarded parameters project consistently across
+    // json (array of {key,value}, sorted), text (`scaffoldEffectiveParam: key=value`), and rich
+    // (the same key/value facts via the details table); the rich path adds/drops no JSON byte and
+    // degrades to zero-ANSI when non-interactive.
+    [<Fact>]
+    let ``scaffold effective parameters are identical across json text and rich`` () =
+        // Rich is a pure projection: it changes no JSON byte.
+        let before = serializeReport report
+        resolve Rich interactiveColor report |> ignore
+        Assert.Equal(before, serializeReport report)
+
+        let json = (resolve Json interactiveColor report).Text
+        let text = (resolve Text nonInteractive report).Text
+        let rich = (resolve Rich interactiveColor report).Text
+
+        Assert.Contains("\"key\": \"productName\"", json)
+        Assert.Contains("\"value\": \"Acme\"", json)
+        Assert.Contains("\"key\": \"variant\"", json)
+        Assert.Contains("\"value\": \"alpha\"", json)
+        Assert.Contains("scaffoldEffectiveParam: productName=Acme", text)
+        Assert.Contains("scaffoldEffectiveParam: variant=alpha", text)
+
+        // Every projection (rich reuses the plain key=value lines) carries the same facts.
+        for projection in [ json; text; rich ] do
+            Assert.Contains("productName", projection)
+            Assert.Contains("Acme", projection)
+            Assert.Contains("variant", projection)
+            Assert.Contains("alpha", projection)
+
+    // 050 T018: rich redirected (non-interactive) is byte-identical to --text and carries zero ANSI.
+    [<Fact>]
+    let ``scaffold effective parameters degrade to zero-ANSI text when non-interactive`` () =
+        let result = resolve Rich nonInteractive report
+        Assert.False(result.UsedRichRendering)
+        Assert.Equal(renderText report, result.Text)
+        Assert.DoesNotContain("[", result.Text)
 
     // 032 (FR-011 / SC-006): the repo-init outcome and the make-executable counts are
     // fact-identical across json/text/rich, and the rich projection adds/drops no JSON byte.

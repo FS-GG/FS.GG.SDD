@@ -113,3 +113,73 @@ module ScaffoldGuardTests =
         let found = offenders lifecycleValueTokens "planted-source.fs" planted
         Assert.NotEmpty(found)
         Assert.Contains("planted-source.fs: spec-kit", found)
+
+    // ===================================================================
+    // 050 (T020 / FR-004 / SC-003): no provider-specific STARTER VALUE leaks into generic SDD
+    // source, the generic-contract tests, or the SDD-owned scaffold-provider fixtures. The
+    // canonical rendering registry (with its real default starter) is owned by FS.GG.Templates
+    // and consumed only through the versioned provider contract — never embedded here. This
+    // guard file names the deny-list tokens, so (as above) it is excluded from every scan.
+    // ===================================================================
+
+    // The bare starter value `game` never appears legitimately in this codebase. (`app` is NOT
+    // a bare-word token here — it legitimately suffixes `fsgg-fixture-app` and names `App.fsproj`
+    // — so `app`-as-starter is caught by the registry starter-value pattern below, not a word scan.)
+    let private starterValueTokens = [ "ga" + "me" ]
+
+    /// The SDD-owned scaffold-provider fixtures (registries + templates). These committed
+    /// FIXTURES are SDD-owned and must carry no provider-specific starter value (FR-004).
+    let private scaffoldFixtureFiles () =
+        let fixturesRoot =
+            Path.Combine(TestSupport.repoRoot, "tests", "fixtures", "scaffold-provider")
+
+        if Directory.Exists fixturesRoot then
+            Directory.EnumerateFiles(fixturesRoot, "*.*", SearchOption.AllDirectories) |> Seq.toList
+        else
+            []
+
+    /// A registry `default:`/`variant:`/`profile:`/`starter:` line whose VALUE is a known
+    /// provider-specific starter (`app`/`game`) — the precise "app-as-starter" / "game-as-starter"
+    /// shape, never matching `templateId: fsgg-fixture-app` or `App.fsproj`.
+    let private starterValuePattern =
+        System.Text.RegularExpressions.Regex(
+            "(?im)^\\s*(default|variant|profile|starter)\\s*:\\s*(" + "app" + "|" + "ga" + "me)\\s*$")
+
+    let private starterValueOffenders (location: string) (text: string) =
+        if starterValuePattern.IsMatch text then [ $"{location}: starter-value" ] else []
+
+    // ---------- C4 (050 T020): bare starter-value deny-list ----------
+
+    [<Fact>]
+    let ``generic SDD source contains no provider-specific starter value`` () =
+        let found = scanFiles starterValueTokens (sourceFiles ())
+        Assert.True(List.isEmpty found, "Provider-specific starter value leaked into generic SDD source: " + String.Join("; ", found))
+
+    [<Fact>]
+    let ``generic scaffold contract tests contain no provider-specific starter value`` () =
+        let found = scanFiles starterValueTokens (genericContractTestFiles ())
+        Assert.True(List.isEmpty found, "Provider-specific starter value leaked into generic-contract tests: " + String.Join("; ", found))
+
+    [<Fact>]
+    let ``SDD-owned scaffold fixtures carry no provider-specific starter value`` () =
+        let bareWord = scanFiles starterValueTokens (scaffoldFixtureFiles ())
+        let asValue =
+            scaffoldFixtureFiles ()
+            |> List.collect (fun path -> starterValueOffenders path (File.ReadAllText path))
+        let found = bareWord @ asValue
+        Assert.True(List.isEmpty found, "Provider-specific starter value leaked into SDD-owned scaffold fixtures: " + String.Join("; ", found))
+
+    // ---------- C5 (050 T020): planted-violation proof for both shapes ----------
+
+    [<Fact>]
+    let ``starter-value scan catches a planted bare token and a planted registry default`` () =
+        // A bare-word starter token leaking into generic source.
+        let plantedWord = "let defaultStarter = \"" + "ga" + "me\""
+        Assert.NotEmpty(offenders starterValueTokens "planted-source.fs" plantedWord)
+
+        // A registry declaring a provider-specific default starter (the literal #44 flip,
+        // redirected to FS.GG.Templates — out of scope for SDD-owned fixtures).
+        let plantedRegistry = "    parameters:\n      - key: variant\n        default: " + "ga" + "me\n"
+        Assert.NotEmpty(starterValueOffenders "planted.providers.yml" plantedRegistry)
+        // The pattern does NOT false-positive on a legitimate fixture template id.
+        Assert.Empty(starterValueOffenders "ok.providers.yml" "    templateId: fsgg-fixture-app\n")

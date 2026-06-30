@@ -122,6 +122,12 @@ module AcceptanceSupport =
     /// The acceptance's fixed composition request: `--provider rendering --param
     /// lifecycle=sdd`. `rendering` is the author-supplied provider *name* (a generic
     /// token, not an identifier); the real template identity lives only in the registry.
+    ///
+    /// 050 T016 (FR-006): the request carries NO explicit starter parameter — only the
+    /// generic `lifecycle=sdd` marker. Omitting any starter selection is precisely the
+    /// by-reference default-starter exercise: whatever default starter the Templates-owned
+    /// registry declares is forwarded, never named here (FR-004). The `effectiveParameters`
+    /// recorded in provenance reflect exactly what was sent (no invented starter key).
     let scaffoldRequest (root: string) =
         { request Scaffold root with
             Provider = Some "rendering"

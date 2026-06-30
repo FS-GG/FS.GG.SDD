@@ -18,7 +18,14 @@ module ScaffoldProvenance =
           ProviderContractVersion: string
           TemplateRef: string
           Outcome: string
-          ProducedPaths: ScaffoldProducedPath list }
+          ProducedPaths: ScaffoldProducedPath list
+          /// The effective `key → value` parameters forwarded to the provider —
+          /// provider-declared `default`s overlaid by author `--param` overrides
+          /// (author wins). Sorted ascending by key; `[]` when none. Records the
+          /// chosen starter so a scaffolded product is auditable and reproducible
+          /// (FR-003). Additive optional field; `tryParse` defaults it to `[]`
+          /// for documents written before it (schema stays v1).
+          EffectiveParameters: (string * string) list }
 
     /// The canonical project-relative path of the provenance artifact.
     val provenancePath: string

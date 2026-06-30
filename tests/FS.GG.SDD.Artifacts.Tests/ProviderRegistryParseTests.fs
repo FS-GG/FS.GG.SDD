@@ -85,3 +85,32 @@ providers:
         let descriptor = one (parseProviderRegistry (snapshot registry))
         Assert.Equal<DeclaredCommand option>(None, descriptor.Build)
         Assert.Equal("name", resolveNameParameter descriptor)
+
+    // T006 (050 FR-001 substrate): the registry parser reads `parameters[].default` into
+    // `ProviderParameterSpec.Default` — the value-agnostic default-starter mechanism #44
+    // depends on, locked as a regression. A non-required param with a declared `default`
+    // carries `Some value`; a required param with no default carries `None`.
+    [<Fact>]
+    let ``parseProviderRegistry reads a non-required parameter's declared default`` () =
+        let registry =
+            """schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-default-declaring
+    source: /abs/path/default-declaring
+    parameters:
+      - key: productName
+        required: true
+      - key: variant
+        required: false
+        default: alpha
+"""
+
+        let descriptor = one (parseProviderRegistry (snapshot registry))
+        let variant = descriptor.Parameters |> List.find (fun p -> p.Key = "variant")
+        Assert.False(variant.Required)
+        Assert.Equal(Some "alpha", variant.Default)
+        let productName = descriptor.Parameters |> List.find (fun p -> p.Key = "productName")
+        Assert.True(productName.Required)
+        Assert.Equal(None, productName.Default)

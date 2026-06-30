@@ -43,5 +43,16 @@ project-level `.fsgg/scaffold-provenance.json` and `.fsgg/providers.yml` artifac
 It breaks no existing public contract — `fsgg-sdd init` stays byte-identical (SC-003)
 and every existing report field is unchanged — so no migration note is required.
 
+The `050-scaffold-default-starter` change is additive: it adds one new optional field,
+`effectiveParameters`, to `.fsgg/scaffold-provenance.json` (schema **stays v1**) and the
+corresponding `effectiveParameters` field/line-group to the scaffold report's json/text
+projections. The field is **backward and forward compatible** — `tryParse` defaults it to
+`[]` for provenance written before it, and readers that ignore unknown keys are unaffected
+(D3). It breaks no existing public contract: every other scaffold field, key order, stream,
+and exit code is unchanged, and no non-`scaffold` command output changes (FR-008). Per this
+policy an additive change carries **no `<version>.md` migration note** (the
+`release-readiness.json` `migrations[]` array stays empty); this paragraph records the
+change instead.
+
 When a release introduces a breaking change, add its note here as
 `<version>.md` and list it in this index.

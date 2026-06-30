@@ -19,7 +19,8 @@ module ScaffoldProvenance =
           ProviderContractVersion: string
           TemplateRef: string
           Outcome: string
-          ProducedPaths: ScaffoldProducedPath list }
+          ProducedPaths: ScaffoldProducedPath list
+          EffectiveParameters: (string * string) list }
 
     let provenancePath = ".fsgg/scaffold-provenance.json"
 
@@ -55,6 +56,17 @@ module ScaffoldProvenance =
             writer.WriteEndObject())
 
         writer.WriteEndArray()
+        writer.WriteStartArray("effectiveParameters")
+
+        record.EffectiveParameters
+        |> List.sortBy fst
+        |> List.iter (fun (key, value) ->
+            writer.WriteStartObject()
+            writer.WriteString("key", key)
+            writer.WriteString("value", value)
+            writer.WriteEndObject())
+
+        writer.WriteEndArray()
         writer.WriteEndObject()
         writer.Flush()
         Encoding.UTF8.GetString(stream.ToArray())
@@ -87,6 +99,16 @@ module ScaffoldProvenance =
                                           Owner = jsonString "owner" element |> Option.map ownerFromValue |> Option.defaultValue ArtifactOwner.GeneratedProduct }
                                 | _ -> None)
 
+                        // Additive optional field (D3): absent ⇒ `[]`, so provenance
+                        // written before `effectiveParameters` still parses.
+                        let effectiveParameters =
+                            jsonArray "effectiveParameters" root
+                            |> List.choose (fun element ->
+                                match jsonString "key" element, jsonString "value" element with
+                                | Some key, Some value -> Some(key, value)
+                                | Some key, None -> Some(key, "")
+                                | _ -> None)
+
                         Some
                             { SchemaVersion = version
                               Generator = { Id = generatorId; Version = generatorVersion }
@@ -94,7 +116,8 @@ module ScaffoldProvenance =
                               ProviderContractVersion = providerContractVersion
                               TemplateRef = templateRef
                               Outcome = outcome
-                              ProducedPaths = producedPaths }
+                              ProducedPaths = producedPaths
+                              EffectiveParameters = effectiveParameters }
                     | _ -> None
                 | None -> None
             | _ -> None

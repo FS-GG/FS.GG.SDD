@@ -146,3 +146,51 @@ value: A player can rally against a second human at one keyboard.
 scope: Two-player local volley; no AI opponent, no online play.
 requirement: A rally of 20 consecutive volleys completes without a dropped frame.
 ```
+
+## Provider default-starter selection
+
+`fsgg-sdd scaffold` selects a product *starter* through a provider-declared scaffold
+parameter, never a first-class "profile" concept. A "starter" is just a parameter the
+external template uses to pick what to generate; the **default starter** is that
+parameter's `default` in the provider-owned `.fsgg/providers.yml` registry. SDD forwards
+the effective value verbatim as `--<key> <value>` and never interprets, validates, or
+enumerates the allowed starters — the provider owns which starters exist and which is
+default.
+
+Declare a default starter on the parameter (provider/author owns this registry):
+
+```yaml
+schemaVersion: 1
+providers:
+  - name: <provider>
+    contractVersion: "1.0.0"
+    templateId: <template-id>
+    source: <template-source>
+    parameters:
+      - key: <starterKey>     # the parameter your template uses to select a starter
+        required: false       # a default takes effect only for non-required/omitted params
+        default: <value>      # the DEFAULT STARTER — forwarded when --param <starterKey> is omitted
+```
+
+Selection precedence (what `fsgg-sdd scaffold` does):
+
+1. **Author omits the parameter** → the declared `default` is forwarded as
+   `--<starterKey> <value>`; the author lands on the provider's intended default with no
+   extra flags (FR-001).
+2. **Author passes `--param <starterKey>=<other>`** → `<other>` is forwarded and the
+   declared default is **not** applied; the explicit choice always wins (FR-002).
+3. The **effective value** (declared default or override) is recorded in
+   `.fsgg/scaffold-provenance.json` and the scaffold report `effectiveParameters`, so the
+   chosen starter is auditable and the product reproducible (FR-003).
+
+To **change** the default starter, edit the `default:` value in the registry. The next
+unchanged `fsgg-sdd scaffold` run forwards the new default — **zero lines of generic SDD
+code change**. The previous starter stays explicitly selectable via
+`--param <starterKey>=<previous>`.
+
+Boundaries: a `default` does **not** make a `required` parameter optional — an omitted
+required value still surfaces `scaffold.providerParamMissing`. A blank/whitespace
+`default` is surfaced as a blank declaration, never a silently invented value. The
+canonical rendering registry (with its real default starter) is owned by FS.GG.Templates
+and consumed only through the versioned provider contract and the network-gated
+composition-acceptance — generic SDD carries no provider-specific starter value.

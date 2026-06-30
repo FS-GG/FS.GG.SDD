@@ -76,3 +76,13 @@ module SchemaVersionConstantTests =
     let ``governance-handoff entry carries the string contract version`` () =
         let entry = Schemas.entries |> List.find (fun e -> e.Name = "governance-handoff")
         Assert.Equal(Some "1.0.0", entry.ContractVersion)
+
+    // T007b (050 D3): the additive `effectiveParameters` field on scaffold-provenance.json is a
+    // purely additive optional field (`tryParse` defaults it to []). It MUST NOT bump the
+    // schema major — the scaffold-provenance schema version stays 1. Guards against an
+    // unintended major bump for an additive change.
+    [<Fact>]
+    let ``scaffold-provenance schema stays v1 under the additive effectiveParameters field`` () =
+        Assert.Equal(1, Schemas.scaffoldProvenanceVersion)
+        let entry = Schemas.entries |> List.find (fun e -> e.Name = "scaffold-provenance")
+        Assert.Equal(Schemas.Sdd, entry.Owner)

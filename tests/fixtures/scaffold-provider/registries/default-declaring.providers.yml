@@ -1,0 +1,17 @@
+# Value-agnostic default-declaring fixture (feature 050). A provider whose registry
+# declares a NON-required parameter (`variant`) with a declared `default` (`alpha`),
+# alongside a REQUIRED `productName` (so required-with-default precedence is testable).
+# Abstract key/value only — no provider-specific starter value, rendering package id,
+# template id, path, or docs URL (FR-004 / SC-003; stays grep-clean under the T020 guard).
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-default-declaring
+    source: __FIXTURE__/default-declaring
+    parameters:
+      - key: productName
+        required: true
+      - key: variant
+        required: false
+        default: alpha

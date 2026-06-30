@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "FS.GG.SDD scaffold fixtures",
+  "classifications": [ "Test" ],
+  "identity": "FsggSdd.Fixture.DefaultDeclaring",
+  "name": "FS.GG.SDD scaffold fixture (default-declaring, value-agnostic)",
+  "shortName": "fsgg-fixture-default-declaring",
+  "tags": { "language": "F#", "type": "project" },
+  "symbols": {
+    "productName": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "PRODUCT_NAME",
+      "defaultValue": "Product"
+    },
+    "variant": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "VARIANT_VALUE",
+      "defaultValue": "templateDefault"
+    }
+  }
+}

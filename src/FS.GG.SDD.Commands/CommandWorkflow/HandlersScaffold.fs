@@ -116,6 +116,7 @@ module internal HandlersScaffold =
           ProviderInvoked = false
           ProducedPathCount = 0
           ProducedPaths = []
+          EffectiveParameters = []
           RepoInitOutcome = "notApplicable"
           ExecutableScriptCount = 0
           ExecutableScriptsSkipped = 0
@@ -229,7 +230,7 @@ module internal HandlersScaffold =
 
     // ----- finalization (stage 3) -----
 
-    let provenanceWriteEffect (request: CommandRequest) (descriptor: ProviderDescriptor) outcome (producedPaths: string list) =
+    let provenanceWriteEffect (request: CommandRequest) (descriptor: ProviderDescriptor) outcome (producedPaths: string list) (effective: Map<string, string>) =
         let record: ScaffoldProvenanceRecord =
             { SchemaVersion = 1
               Generator = request.GeneratorVersion
@@ -237,7 +238,10 @@ module internal HandlersScaffold =
               ProviderContractVersion = descriptor.ContractVersion
               TemplateRef = descriptor.TemplateId
               Outcome = scaffoldOutcomeValue outcome
-              ProducedPaths = producedPaths |> List.map (fun path -> { Path = path; Owner = GeneratedProduct }) }
+              ProducedPaths = producedPaths |> List.map (fun path -> { Path = path; Owner = GeneratedProduct })
+              // `Map.toList` is already ascending by key — the FR-003 effective set
+              // (declared defaults overlaid by `--param` overrides) forwarded verbatim.
+              EffectiveParameters = Map.toList effective }
 
         [ WriteFile(ScaffoldProvenance.provenancePath, ScaffoldProvenance.serialize record, StructuredSource) ]
 
@@ -251,7 +255,7 @@ module internal HandlersScaffold =
         | FinalizeTerminal of ScaffoldSummary * Diagnostic list * CommandEffect list
         | FinalizeSuccess of ScaffoldOutcome * string list
 
-    let finalizeScaffold model (descriptor: ProviderDescriptor) =
+    let finalizeScaffold model (descriptor: ProviderDescriptor) (effective: Map<string, string>) =
         let request = model.Request
         let name = descriptor.Name
         let version = descriptor.ContractVersion
@@ -264,13 +268,13 @@ module internal HandlersScaffold =
               ProviderInvoked = providerInvoked
               ProducedPathCount = List.length producedPaths
               ProducedPaths = producedPaths
+              EffectiveParameters = Map.toList effective
               RepoInitOutcome = "notApplicable"
               ExecutableScriptCount = 0
               ExecutableScriptsSkipped = 0
               NextActionHint = hint }
 
         if request.DryRun then
-            let effective = effectiveParameters descriptor request
             let planned = plannedCreateCommand descriptor effective request
 
             let summary =
@@ -281,6 +285,9 @@ module internal HandlersScaffold =
                   ProviderInvoked = false
                   ProducedPathCount = 0
                   ProducedPaths = []
+                  // The dry-run preview records exactly what would be forwarded
+                  // (FR-003 audit preview): the resolved effective set.
+                  EffectiveParameters = Map.toList effective
                   RepoInitOutcome = "notApplicable"
                   ExecutableScriptCount = 0
                   ExecutableScriptsSkipped = 0
@@ -317,13 +324,13 @@ module internal HandlersScaffold =
                     FinalizeTerminal(
                         terminalSummary ProviderFailed producedPaths true true "Fix the provider; it wrote into SDD-owned trees.",
                         [ DiagnosticsModule.scaffoldProviderWroteSddTree intrusions ],
-                        provenanceWriteEffect request descriptor ProviderFailed producedPaths
+                        provenanceWriteEffect request descriptor ProviderFailed producedPaths effective
                     )
                 elif processResult.ExitCode <> 0 then
                     FinalizeTerminal(
                         terminalSummary ProviderFailed producedPaths true true "Inspect the provider failure, then re-run scaffold.",
                         [ DiagnosticsModule.scaffoldProviderFailed name processResult.ExitCode ],
-                        provenanceWriteEffect request descriptor ProviderFailed producedPaths
+                        provenanceWriteEffect request descriptor ProviderFailed producedPaths effective
                     )
                 elif List.isEmpty producedPaths then
                     FinalizeSuccess(ProviderSucceededEmpty, [])
@@ -336,7 +343,7 @@ module internal HandlersScaffold =
     // effects — the repo-init outcome from the `git rev-parse` probe (exit-code only,
     // Decision 1) and the make-executable counts from the `SetExecutable` results. Every
     // emitted diagnostic is advisory and non-fatal (FR-010).
-    let private finalizePostInstantiation model (descriptor: ProviderDescriptor) outcome (producedPaths: string list) probeProcess =
+    let private finalizePostInstantiation model (descriptor: ProviderDescriptor) outcome (producedPaths: string list) probeProcess (effective: Map<string, string>) =
         let repoInitOutcome, repoInitDiagnostics =
             match probeProcess with
             | Some { Started = false } ->
@@ -380,6 +387,7 @@ module internal HandlersScaffold =
               ProviderInvoked = true
               ProducedPathCount = List.length producedPaths
               ProducedPaths = producedPaths
+              EffectiveParameters = Map.toList effective
               RepoInitOutcome = repoInitOutcome
               ExecutableScriptCount = executableCount
               ExecutableScriptsSkipped = List.length skippedPaths
@@ -389,7 +397,7 @@ module internal HandlersScaffold =
 
     // The three-tick post-instantiation machine, re-derived from the interpreted-effect
     // log each tick (no new model field). Reached only on a success create outcome.
-    let private postInstantiationNext model (descriptor: ProviderDescriptor) outcome (producedPaths: string list) =
+    let private postInstantiationNext model (descriptor: ProviderDescriptor) outcome (producedPaths: string list) (effective: Map<string, string>) =
         let probeInterpreted = model.InterpretedEffects |> List.exists (fun result -> isProbeProcess result.Effect)
         let probePlanned = model.PendingEffects |> List.exists isProbeProcess
         let initInterpreted = model.InterpretedEffects |> List.exists (fun result -> isInitProcess result.Effect)
@@ -404,7 +412,7 @@ module internal HandlersScaffold =
                 |> List.map SetExecutable
 
             let effects =
-                provenanceWriteEffect model.Request descriptor outcome producedPaths
+                provenanceWriteEffect model.Request descriptor outcome producedPaths effective
                 @ [ RunProcess("git", [ "rev-parse"; "--is-inside-work-tree" ], "") ]
                 @ scriptEffects
 
@@ -431,7 +439,7 @@ module internal HandlersScaffold =
                 model, []
             else
                 // TICK C — init interpreted or skipped: set the terminal summary once.
-                let summary, diagnostics = finalizePostInstantiation model descriptor outcome producedPaths probeProcess
+                let summary, diagnostics = finalizePostInstantiation model descriptor outcome producedPaths probeProcess effective
 
                 { model with
                     Scaffold = Some summary
@@ -463,7 +471,7 @@ module internal HandlersScaffold =
             elif Option.isSome model.Scaffold then
                 model, []
             else
-                match finalizeScaffold model descriptor with
+                match finalizeScaffold model descriptor effective with
                 | FinalizeTerminal(summary, diagnostics, provenanceEffects) ->
                     { model with
                         PendingEffects = model.PendingEffects @ provenanceEffects
@@ -471,4 +479,4 @@ module internal HandlersScaffold =
                         Diagnostics = model.Diagnostics @ diagnostics },
                     provenanceEffects
                 | FinalizeSuccess(outcome, producedPaths) ->
-                    postInstantiationNext model descriptor outcome producedPaths
+                    postInstantiationNext model descriptor outcome producedPaths effective

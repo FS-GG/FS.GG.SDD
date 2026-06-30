@@ -159,10 +159,25 @@ module CompositionAcceptanceTests =
 
     // ---------- US1 / US2: the green end-to-end PASS (network-gated) ----------
 
+    // 050 T017 (US3 / FR-006): the fixed composition request carries NO explicit starter
+    // parameter — only the generic `lifecycle=sdd` marker — so the gated real run below
+    // exercises whatever default starter the Templates-owned registry declares BY REFERENCE,
+    // never by name (FR-004). Offline, deterministic; this locks the by-reference posture the
+    // network-gated build+pass assertion depends on, without any rendering identity.
+    [<Fact>]
+    let ``the fixed composition request passes no explicit starter parameter`` () =
+        let root = newProductRoot ()
+        let request = scaffoldRequest root
+        // Only the generic lifecycle marker is sent; no starter/profile/variant key is named.
+        Assert.Equal<(string * string) list>([ "lifecycle", "sdd" ], request.Parameters)
+
     // T010–T017 (US1 + US2): one invocation yields the runnable app AND the SDD skeleton +
     // authored constitution; the app builds and runs; git+chmod ran; provenance is partitioned;
     // refresh excludes the app paths; and the run is reported complete only if every part held.
     // The verdict resolves the whole composition; a Fail names the first failing fact.
+    // 050 T017 (FR-006/SC-004): with no explicit starter passed (see scaffoldRequest), a Pass
+    // verdict proves the registry's declared default starter yields a product that builds and
+    // runs — the default-starter capability exercised end-to-end against the real provider.
     [<Trait("kind", "composition-acceptance")>]
     [<RequiresRegistryFact>]
     let ``real rendering composition is coherent end to end`` () =

@@ -306,6 +306,17 @@ module CommandSerialization =
             writer.WriteBoolean("providerInvoked", summary.ProviderInvoked)
             writer.WriteNumber("producedPathCount", summary.ProducedPathCount)
             writeStringList writer Sorted "producedPaths" summary.ProducedPaths
+            writer.WriteStartArray("effectiveParameters")
+
+            summary.EffectiveParameters
+            |> List.sortBy fst
+            |> List.iter (fun (key, value) ->
+                writer.WriteStartObject()
+                writer.WriteString("key", key)
+                writer.WriteString("value", value)
+                writer.WriteEndObject())
+
+            writer.WriteEndArray()
             writer.WriteString("repoInitOutcome", summary.RepoInitOutcome)
             writer.WriteNumber("executableScriptCount", summary.ExecutableScriptCount)
             writer.WriteNumber("executableScriptsSkipped", summary.ExecutableScriptsSkipped)
