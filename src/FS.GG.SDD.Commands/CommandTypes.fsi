@@ -333,6 +333,26 @@ module CommandTypes =
     /// evidence/governed-reference/readiness/config-presence facts Governance consumes, whereas this
     /// fact only marks the boundary as SDD-unevaluated. Retained as a pointer to that contract
     /// (Constitution VII); it asserts no route/profile/gate/verdict.
+    /// The diagnostic runtime facts of a provider-defect scaffold invocation, surfaced
+    /// in the scaffold report (FR-001/002/003/005) and never persisted (FR-010). Present
+    /// only on the three provider-defect outcomes; absent (`None`) on success, dry-run,
+    /// and every pre-invocation user-input block (FR-006).
+    type ProviderInvocationResult =
+        { /// Fully-resolved invoked command line, program + args as executed (FR-001).
+          CommandLine: string
+          /// Whether the provider process actually started (FR-003 discriminator).
+          ProcessStarted: bool
+          /// The provider exit code; `None` when the process never launched (FR-003) —
+          /// distinct from a real `0`. Projected as int-or-null in json.
+          ExitCode: int option
+          /// Captured standard output, bounded to the per-stream cap (FR-002/005).
+          StandardOutput: string
+          StandardOutputTruncated: bool
+          /// Captured standard error — carries the engine's own rejection text
+          /// (FR-002/005). On a launch failure this holds the launch error (R4).
+          StandardError: string
+          StandardErrorTruncated: bool }
+
     type ScaffoldSummary =
         { ProviderName: string option
           ProviderContractVersion: string option
@@ -354,7 +374,11 @@ module CommandTypes =
           RepoInitOutcome: string
           ExecutableScriptCount: int
           ExecutableScriptsSkipped: int
-          NextActionHint: string }
+          NextActionHint: string
+          /// Provider-defect diagnostic facts (FR-006 gate): `Some` only on
+          /// `providerFailed` / `providerUnavailable` / `providerWroteSddTree`;
+          /// `None` on success, empty-success, dry-run, and user-input blocks.
+          ProviderInvocation: ProviderInvocationResult option }
 
     /// One confirmable unit of `upgrade` (CLI self-update, template re-pin, or
     /// artifact re-seed), shared by `DoctorSummary.PreviewSteps` (dry-run preview) and
@@ -484,12 +508,22 @@ module CommandTypes =
         /// the next step from the confirmed results in the interpreted-effect log.
         | Confirm of stepId: string * prompt: string
 
-    /// Captured outcome of a `RunProcess` effect at the edge. `Started = false`
-    /// means the process could not be launched (engine/command absent). Process
-    /// stdout/stderr are intentionally excluded from the deterministic contract.
+    /// Captured outcome of a `RunProcess` effect at the edge. `Started = false` means the
+    /// process could not be launched (engine/command absent); its exit code is meaningless
+    /// and surfaced as `ExitCode = None` in the report (FR-003). Captured stdout/stderr are
+    /// carried forward (bounded) so the scaffold report can surface a provider defect.
     type ProcessRunResult =
         { Started: bool
-          ExitCode: int }
+          ExitCode: int
+          /// The fully-resolved command line as executed (program + args) — FR-001.
+          Command: string
+          /// Captured stdout/stderr, each bounded to `providerOutputCapChars` with a
+          /// truncation flag (FR-002/005). On a launch failure `StandardError` holds the
+          /// launch exception message (R4).
+          StandardOutput: string
+          StandardOutputTruncated: bool
+          StandardError: string
+          StandardErrorTruncated: bool }
 
     type CommandEffectResult =
         { Effect: CommandEffect

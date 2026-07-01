@@ -27,7 +27,8 @@ module ScaffoldParityTests =
           RepoInitOutcome = "initialized"
           ExecutableScriptCount = 0
           ExecutableScriptsSkipped = 0
-          NextActionHint = "SDD skeleton ready; begin the lifecycle at charter." }
+          NextActionHint = "SDD skeleton ready; begin the lifecycle at charter."
+          ProviderInvocation = None }
 
     let private report: CommandReport =
         { RichRenderingTests.sampleReport with
@@ -194,6 +195,60 @@ module ScaffoldParityTests =
     // 031 T019 (FR-006 / US2.4): the app-only produced-path facts of a lifecycle=sdd
     // run (including the recording manifest) are identical across json/text/rich, and
     // the rich projection adds and drops no JSON byte.
+    // 054 T014 (US2 / FR-004 / SC-003): on a provider defect the four provider-output facts
+    // (command line, stdout, stderr, exit code) appear identically in json/text/rich; rich
+    // redirected equals --text with zero ANSI; and the rich path changes no JSON byte.
+    let private defectReport: CommandReport =
+        { report with
+            Outcome = CommandOutcome.Blocked
+            Scaffold =
+                Some
+                    { scaffoldSummary with
+                        Outcome = "providerFailed"
+                        ProviderInvocation =
+                            Some
+                                { CommandLine = "dotnet new fsgg-fixture-app -o . --productName Acme"
+                                  ProcessStarted = true
+                                  ExitCode = Some 127
+                                  StandardOutput = "produced partial output"
+                                  StandardOutputTruncated = false
+                                  StandardError = "option --productName was not recognized"
+                                  StandardErrorTruncated = false } } }
+
+    [<Fact>]
+    let ``scaffold provider-defect output facts are identical across json text and rich`` () =
+        // Rich is a pure projection: it changes no JSON byte.
+        let before = serializeReport defectReport
+        resolve Rich interactiveColor defectReport |> ignore
+        Assert.Equal(before, serializeReport defectReport)
+
+        let json = (resolve Json interactiveColor defectReport).Text
+        let text = (resolve Text nonInteractive defectReport).Text
+        let rich = (resolve Rich interactiveColor defectReport).Text
+
+        // JSON carries the structured block…
+        Assert.Contains("\"commandLine\": \"dotnet new fsgg-fixture-app -o . --productName Acme\"", json)
+        Assert.Contains("\"exitCode\": 127", json)
+        Assert.Contains("option --productName was not recognized", json)
+        // …text carries the single-line key/value pairs…
+        Assert.Contains("scaffoldProviderCommandLine: dotnet new fsgg-fixture-app -o . --productName Acme", text)
+        Assert.Contains("scaffoldProviderExitCode: 127", text)
+        Assert.Contains("scaffoldProviderStderr: option --productName was not recognized", text)
+
+        // …and every projection (rich reuses the plain lines) carries the same four facts.
+        for projection in [ json; text; rich ] do
+            Assert.Contains("dotnet new fsgg-fixture-app -o . --productName Acme", projection)
+            Assert.Contains("127", projection)
+            Assert.Contains("produced partial output", projection)
+            Assert.Contains("option --productName was not recognized", projection)
+
+    [<Fact>]
+    let ``scaffold provider-defect output rich redirected equals the text projection with zero ANSI`` () =
+        let result = resolve Rich nonInteractive defectReport
+        Assert.False(result.UsedRichRendering)
+        Assert.Equal(renderText defectReport, result.Text)
+        Assert.DoesNotContain("[", result.Text)
+
     [<Fact>]
     let ``scaffold lifecycle produced-path facts are identical across json text and rich`` () =
         let lifecycleProducedPaths = [ "App.fsproj"; "Program.fs"; "scaffold-manifest.txt" ]

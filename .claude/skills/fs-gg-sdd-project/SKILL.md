@@ -114,7 +114,13 @@ pointing to `fsgg-sdd init` for the skeleton only. Options: `--param key=value`
 User-input failures (`providerUnknown`/`providerVersionUnsupported`/
 `providerParamMissing`/`targetCollision`) exit 1; provider defects
 (`providerFailed`/`providerUnavailable`/`providerWroteSddTree`) exit 2; an incomplete
-scaffold is never reported as complete (FR-009). The reference provider (a full
+scaffold is never reported as complete (FR-009). On a provider defect the report carries
+an additive `providerInvocation` block (json/text/rich, feature 054) — the invoked command
+line, captured stdout/stderr (bounded per stream with a truncation flag), and exit code
+(`null` when the engine never launched, FR-003) — so the failure is diagnosable from the
+report alone. It is `null` on success/dry-run/user-input blocks (FR-006), reaches
+`.fsgg/scaffold-provenance.json` never (schema v1, FR-010), and changes no outcome string
+or exit code (FR-007). The reference provider (a full
 runnable UI app) ships in the FS.GG.Rendering repo, demonstrated against the contract
 without placing any Rendering knowledge in generic SDD. After a successful
 instantiation, scaffold itself owns two generic post-instantiation steps —

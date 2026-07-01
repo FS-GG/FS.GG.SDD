@@ -91,7 +91,13 @@ silently ignored).
 - Malformed user input (unknown provider, unsupported contract version, missing
   required `--param`, target collision) → blocked, **exit 1**.
 - Provider defect (provider failed, engine unavailable, provider wrote into SDD
-  trees) → **exit 2**. An incomplete scaffold is never reported as complete.
+  trees) → **exit 2**. An incomplete scaffold is never reported as complete. On these
+  three defects the scaffold report carries a `providerInvocation` block (json/text/rich)
+  with the provider's invoked command line, captured stdout/stderr, and exit code
+  (`null` when the engine never launched) — so a failure is diagnosable from the report
+  alone, with no `PATH` shim or re-run. It is `null` on success, dry-run, and user-input
+  blocks, is bounded per stream with a truncation flag, and never touches
+  `.fsgg/scaffold-provenance.json` (schema v1).
 
 ## Output formats
 
