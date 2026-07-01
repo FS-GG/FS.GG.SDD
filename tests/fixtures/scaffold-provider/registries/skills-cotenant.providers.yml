@@ -1,0 +1,14 @@
+# 055 (FR-001 / Scenario A): a compliant provider may co-populate the shared
+# .claude/skills/ (and .codex/skills/) root with its own non-reserved skills outside
+# the fs-gg-sdd-* namespace. This fixture template declares the `lifecycle` symbol (so
+# `dotnet new` accepts the forwarded param) and writes .claude/skills/fs-gg-elmish/SKILL.md,
+# which the narrowed isSddTree guard records as generatedProduct rather than rejecting.
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-skills-cotenant
+    source: __FIXTURE__/skills-cotenant
+    parameters:
+      - key: lifecycle
+        required: false

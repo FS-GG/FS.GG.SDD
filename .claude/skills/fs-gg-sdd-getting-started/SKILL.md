@@ -63,8 +63,11 @@ What scaffold owns: the provider contract, the invocation, the
 provider ships in FS.GG.Rendering.
 
 **Boundary guard:** the provider must never write into SDD-owned trees (`.fsgg/`,
-`work/`, `readiness/`, `AGENTS.md`, `CLAUDE.md`); scaffold guards this and fails
-if violated.
+`work/`, `readiness/`, `AGENTS.md`, `CLAUDE.md`) or the reserved `fs-gg-sdd-*` skill
+namespace under the shared agent skill roots (`.claude/skills/fs-gg-sdd-*`,
+`.codex/skills/fs-gg-sdd-*`); scaffold guards this and fails if violated. It **may**
+co-populate the rest of those skill roots with its own non-reserved co-tenant skills,
+which scaffold records as `generatedProduct`.
 
 ## CLI version coherence
 
