@@ -9,7 +9,16 @@
          `fsgg-sdd` command (feature 018 / FR-011). -->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>fsgg-sdd</ToolCommandName>
+    <!-- nuget.org listing metadata (ADR-0012 §5). License + RepositoryUrl come from
+         Directory.Build.local.props; the README + icon are packed here. -->
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
   </PropertyGroup>
+
+  <ItemGroup Label="nuget.org listing (ADR-0012 §5)">
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="../../assets/icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <Compile Include="Rendering.fsi" />
