@@ -1188,6 +1188,20 @@ module CommandReports =
                   Reason = "The command is blocked by diagnostics."
                   RequiredArtifacts = []
                   BlockingDiagnosticIds = blocking }
+        elif diagnostics |> List.exists (fun diagnostic -> diagnostic.Id = "scaffold.cliBehindMinimum") then
+            // Feature 052 (US3 / FR-008 / D8): the behind-minimum advisory carries a
+            // non-blocking pointer to the SUPPORTED re-seed path. The remedy is
+            // `fsgg-sdd init` (idempotent, no-clobber) — NOT `refresh`, which does not
+            // re-seed. Names the seeded skill subtrees + early-stage guidance, sorted.
+            Some
+                { ActionId = "reseedSeededSkills"
+                  Command = Some Init
+                  WorkId = request.WorkId
+                  Reason =
+                    "Installed fsgg-sdd is behind the provider-declared minimum. Upgrade the CLI, then re-run `fsgg-sdd init` to re-seed the fs-gg-sdd-* skills and .fsgg/early-stage-guidance.md (idempotent, no-clobber). Note: fsgg-sdd refresh does not re-seed."
+                  RequiredArtifacts =
+                    [ ".claude/skills"; ".codex/skills"; ".fsgg/early-stage-guidance.md" ] |> List.sort
+                  BlockingDiagnosticIds = [] }
         elif
             diagnostics
             |> List.exists (fun diagnostic -> diagnostic.Id = "agents.earlyStageGuidance" || diagnostic.Id = "refresh.earlyStageGuidance")

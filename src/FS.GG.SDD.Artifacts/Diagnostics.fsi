@@ -60,6 +60,11 @@ module Diagnostics =
     val scaffoldProviderWroteSddTree: paths: string list -> Diagnostic
     val scaffoldProvenanceMalformed: path: string -> Diagnostic
 
+    // Feature 052 CLI-coherence advisories: both non-blocking (Info/Warning), so the
+    // scaffold's outcome classification and exit code are unchanged vs an up-to-date run.
+    val scaffoldCliBehindMinimum: installed: string -> minimum: string -> Diagnostic
+    val scaffoldProviderMinimumMalformed: rawMinimum: string -> Diagnostic
+
     // Post-instantiation advisory facts (FR-010): non-fatal, never change the exit
     // code or flip the scaffold to failed/incomplete.
     val scaffoldRepoInitSkippedExistingRepository: unit -> Diagnostic

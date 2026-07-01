@@ -14,6 +14,12 @@ module ScaffoldProvenance =
     type ScaffoldProvenanceRecord =
         { SchemaVersion: int
           Generator: GeneratorVersion
+          /// The provider-declared minimum coherent `fsgg-sdd` CLI version, recorded
+          /// beside the producing CLI version (the `Generator`) for audit (feature 052,
+          /// E1/FR-002). `None` when the provider declares none or declares a malformed
+          /// minimum. Serialized `immediately after` `generator` as string-or-null;
+          /// `tryParse` defaults absent/null to `None` (schema stays v1, additive).
+          RequiredMinimumCliVersion: string option
           ProviderName: string
           ProviderContractVersion: string
           TemplateRef: string

@@ -29,7 +29,11 @@ module Provider =
           Test: DeclaredCommand option
           Run: DeclaredCommand option
           Verify: DeclaredCommand option
-          NameParameter: string }
+          NameParameter: string
+          /// The provider-declared minimum coherent `fsgg-sdd` CLI version
+          /// (feature 052, E2). Optional and value-agnostic: SDD reads it verbatim,
+          /// never embedding a concrete value. `None` when the provider declares none.
+          MinimumCliVersion: string option }
 
     /// The default canonical name parameter when a provider declares none (FR-007).
     val defaultNameParameter: string

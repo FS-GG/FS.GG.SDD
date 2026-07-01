@@ -41,6 +41,72 @@ providers:
             Assert.Equal(Some "MIT", license.Default)
         | other -> failwith $"Expected one descriptor, got {other}."
 
+    // T009 (aligned with FS.GG.Templates#43 / ADR-0008): the coherent-set minimum is the
+    // nested `minimumFsggSdd.version` scalar; SDD reads it verbatim into the descriptor.
+    [<Fact>]
+    let ``parseProviderRegistry reads the nested minimumFsggSdd version when declared`` () =
+        let registry =
+            """schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-app
+    source: /abs/path/ok
+    minimumFsggSdd:
+      version: "0.3.0"
+      requires: "Feature 049 + 051"
+"""
+
+        match parseProviderRegistry (snapshot registry) with
+        | Ok [ descriptor ] -> Assert.Equal(Some "0.3.0", descriptor.MinimumCliVersion)
+        | other -> failwith $"Expected one descriptor, got {other}."
+
+    // T009: absent minimumFsggSdd → None; never affects entry-drop (entry is kept).
+    [<Fact>]
+    let ``parseProviderRegistry defaults the minimum to None when the axis is absent`` () =
+        match parseProviderRegistry (snapshot validRegistry) with
+        | Ok [ descriptor ] -> Assert.Equal(None, descriptor.MinimumCliVersion)
+        | other -> failwith $"Expected one descriptor, got {other}."
+
+    // T009: the real coherent-set state today — the axis is declared but `version` is null
+    // (PENDING PUBLISH). SDD reads None and degrades to "no minimum"; the entry is kept.
+    [<Fact>]
+    let ``parseProviderRegistry reads None when minimumFsggSdd version is null`` () =
+        let registry =
+            """schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-app
+    source: /abs/path/ok
+    minimumFsggSdd:
+      version: null
+      requires: "Feature 049 + 051"
+"""
+
+        match parseProviderRegistry (snapshot registry) with
+        | Ok [ descriptor ] -> Assert.Equal(None, descriptor.MinimumCliVersion)
+        | other -> failwith $"Expected one descriptor kept, got {other}."
+
+    // T009: a malformed nested version is read verbatim (validity is decided only at
+    // comparison, not at read time) and does NOT drop the entry.
+    [<Fact>]
+    let ``parseProviderRegistry keeps the entry and reads a malformed minimum verbatim`` () =
+        let registry =
+            """schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-app
+    source: /abs/path/ok
+    minimumFsggSdd:
+      version: not-a-version
+"""
+
+        match parseProviderRegistry (snapshot registry) with
+        | Ok [ descriptor ] -> Assert.Equal(Some "not-a-version", descriptor.MinimumCliVersion)
+        | other -> failwith $"Expected one descriptor kept, got {other}."
+
     [<Fact>]
     let ``parseProviderRegistry on empty input is malformed`` () =
         match parseProviderRegistry (snapshot "") with
@@ -59,6 +125,7 @@ providers:
     let private record =
         { SchemaVersion = 1
           Generator = SchemaVersion.currentGeneratorVersion ()
+          RequiredMinimumCliVersion = None
           ProviderName = "fixture"
           ProviderContractVersion = "1.0.0"
           TemplateRef = "fsgg-fixture-app"
@@ -143,6 +210,58 @@ providers:
         match tryParse json with
         | Some parsed -> Assert.Equal<(string * string) list>([], parsed.EffectiveParameters)
         | None -> failwith "Expected the empty-effective document to round-trip."
+
+    // --- Feature 052: additive requiredMinimumCliVersion ---
+
+    // T011: round-trips with a declared minimum (Some) and without (None).
+    [<Fact>]
+    let ``serialize then tryParse round-trips requiredMinimumCliVersion Some`` () =
+        let withMin = { record with RequiredMinimumCliVersion = Some "0.3.0" }
+
+        match tryParse (serialize withMin) with
+        | Some parsed -> Assert.Equal(Some "0.3.0", parsed.RequiredMinimumCliVersion)
+        | None -> failwith "Expected the with-minimum record to round-trip."
+
+    [<Fact>]
+    let ``serialize emits requiredMinimumCliVersion as null when None`` () =
+        let json = serialize { record with RequiredMinimumCliVersion = None }
+        Assert.Contains("\"requiredMinimumCliVersion\": null", json)
+
+        match tryParse json with
+        | Some parsed -> Assert.Equal(None, parsed.RequiredMinimumCliVersion)
+        | None -> failwith "Expected the null-minimum document to round-trip."
+
+    // T011: emitted immediately after the generator object, before providerName.
+    [<Fact>]
+    let ``serialize emits requiredMinimumCliVersion immediately after generator`` () =
+        let json = serialize { record with RequiredMinimumCliVersion = Some "0.3.0" }
+        Assert.True(json.IndexOf "\"generator\"" < json.IndexOf "\"requiredMinimumCliVersion\"")
+        Assert.True(json.IndexOf "\"requiredMinimumCliVersion\"" < json.IndexOf "\"providerName\"")
+
+    // T011: byte-stability across two runs (US1 scenario 3).
+    [<Fact>]
+    let ``serialize is byte-stable with a declared minimum`` () =
+        let withMin = { record with RequiredMinimumCliVersion = Some "0.3.0" }
+        Assert.Equal(serialize withMin, serialize withMin)
+
+    // T011: BACK-COMPAT — a v1 document WITHOUT the field parses with None (existing
+    // readers ignore the unknown key; records written before this field still parse).
+    [<Fact>]
+    let ``tryParse defaults requiredMinimumCliVersion to None when the key is absent`` () =
+        let withoutField =
+            """{
+  "schemaVersion": 1,
+  "generator": { "id": "fsgg-sdd", "version": "0.0.0" },
+  "providerName": "fixture",
+  "providerContractVersion": "1.0.0",
+  "templateRef": "fsgg-fixture-app",
+  "outcome": "providerSucceeded",
+  "producedPaths": [ { "path": "App.fsproj", "owner": "generatedProduct" } ]
+}"""
+
+        match tryParse withoutField with
+        | Some parsed -> Assert.Equal(None, parsed.RequiredMinimumCliVersion)
+        | None -> failwith "A v1 document without requiredMinimumCliVersion must still parse."
 
     [<Fact>]
     let ``tryParse on malformed JSON yields None`` () =

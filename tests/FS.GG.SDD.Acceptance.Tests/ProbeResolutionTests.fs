@@ -167,7 +167,8 @@ module ProbeResolutionTests =
           Test = None
           Run = None
           Verify = None
-          NameParameter = "name" }
+          NameParameter = "name"
+          MinimumCliVersion = None }
 
     // T020 (SC-005 / FR-009): a descriptor declaring no build/run falls through to the `dotnet`
     // defaults — the reference-provider case, observably unchanged.

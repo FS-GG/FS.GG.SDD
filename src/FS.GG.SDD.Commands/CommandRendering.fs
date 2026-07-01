@@ -197,8 +197,10 @@ module CommandRendering =
         | Some scaffold ->
             let providerName = defaultArg scaffold.ProviderName "(none)"
             let providerVersion = defaultArg scaffold.ProviderContractVersion "(none)"
+            let requiredMinimum = defaultArg scaffold.RequiredMinimumCliVersion "(none)"
             builder.AppendLine($"scaffoldProvider: {providerName}") |> ignore
             builder.AppendLine($"scaffoldProviderContractVersion: {providerVersion}") |> ignore
+            builder.AppendLine($"scaffoldRequiredMinimumCliVersion: {requiredMinimum}") |> ignore
             builder.AppendLine($"scaffoldOutcome: {scaffold.Outcome}") |> ignore
             builder.AppendLine($"scaffoldSkeletonCreated: {scaffold.SkeletonCreated}") |> ignore
             builder.AppendLine($"scaffoldProviderInvoked: {scaffold.ProviderInvoked}") |> ignore

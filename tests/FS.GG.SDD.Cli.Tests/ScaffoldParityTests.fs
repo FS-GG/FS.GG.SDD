@@ -1,5 +1,6 @@
 namespace FS.GG.SDD.Cli.Tests
 
+open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Commands.CommandRendering
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
@@ -16,6 +17,7 @@ module ScaffoldParityTests =
     let private scaffoldSummary: ScaffoldSummary =
         { ProviderName = Some "fixture"
           ProviderContractVersion = Some "1.0.0"
+          RequiredMinimumCliVersion = Some "0.3.0"
           Outcome = "providerSucceeded"
           SkeletonCreated = true
           ProviderInvoked = true
@@ -60,6 +62,12 @@ module ScaffoldParityTests =
         Assert.Contains("\"producedPaths\"", json)
         Assert.Contains("scaffoldProducedPath: App.fsproj", text)
         Assert.Contains("App.fsproj", rich)
+
+        // Feature 052 US1: the provider-declared required minimum appears in every projection.
+        Assert.Contains("\"requiredMinimumCliVersion\": \"0.3.0\"", json)
+        Assert.Contains("scaffoldRequiredMinimumCliVersion: 0.3.0", text)
+        for projection in [ json; text; rich ] do
+            Assert.Contains("0.3.0", projection)
 
     // 050 T018 (FR-003/FR-008): the effective forwarded parameters project consistently across
     // json (array of {key,value}, sorted), text (`scaffoldEffectiveParam: key=value`), and rich
@@ -130,6 +138,58 @@ module ScaffoldParityTests =
         for projection in [ json; text; rich ] do
             Assert.Contains("initialized", projection)
             Assert.Contains("run.sh", projection)
+
+    // Feature 052 T024 (US2 / FR-007 / SC-002): the behind-minimum advisory is a pure
+    // projection over one report — the same fact appears in json (diagnostics[] id +
+    // message), text (diagnostics count), and rich (diagnostics table), the rich path
+    // changes no JSON byte, and rich redirected degrades to zero-ANSI == --text.
+    let private behindReport: CommandReport =
+        { report with
+            Diagnostics = [ scaffoldCliBehindMinimum "0.2.1" "0.3.0" ]
+            NextAction =
+                Some
+                    { ActionId = "reseedSeededSkills"
+                      Command = Some Init
+                      WorkId = None
+                      Reason =
+                        "Installed fsgg-sdd is behind the provider-declared minimum. Upgrade the CLI, then re-run `fsgg-sdd init` to re-seed the fs-gg-sdd-* skills and .fsgg/early-stage-guidance.md (idempotent, no-clobber). Note: fsgg-sdd refresh does not re-seed."
+                      RequiredArtifacts =
+                        [ ".claude/skills"; ".codex/skills"; ".fsgg/early-stage-guidance.md" ]
+                      BlockingDiagnosticIds = [] } }
+
+    [<Fact>]
+    let ``behind-minimum advisory is fact-identical across json text and rich`` () =
+        // Rich is a pure projection: it changes no JSON byte.
+        let before = serializeReport behindReport
+        resolve Rich interactiveColor behindReport |> ignore
+        Assert.Equal(before, serializeReport behindReport)
+
+        let json = (resolve Json interactiveColor behindReport).Text
+        let text = (resolve Text nonInteractive behindReport).Text
+        let rich = (resolve Rich interactiveColor behindReport).Text
+
+        // JSON carries the full advisory: id, installed, minimum, gap.
+        Assert.Contains("scaffold.cliBehindMinimum", json)
+        Assert.Contains("0.2.1", json)
+        Assert.Contains("0.3.0", json)
+        Assert.Contains("behind by 1 minor version", json)
+        // Text surfaces it via the diagnostics count.
+        Assert.Contains("diagnostics: 1", text)
+        // Rich surfaces it via the diagnostics table (installed + minimum + gap).
+        Assert.Contains("0.2.1", rich)
+        Assert.Contains("0.3.0", rich)
+
+        // Feature 052 T026 (US3): the reseed next-action pointer appears in every projection.
+        Assert.Contains("reseedSeededSkills", json)
+        Assert.Contains("nextAction: reseedSeededSkills", text)
+        Assert.Contains("reseedSeededSkills", rich)
+
+    [<Fact>]
+    let ``behind-minimum advisory rich redirected equals the text projection with zero ANSI`` () =
+        let result = resolve Rich nonInteractive behindReport
+        Assert.False(result.UsedRichRendering)
+        Assert.Equal(renderText behindReport, result.Text)
+        Assert.DoesNotContain("[", result.Text)
 
     // 031 T019 (FR-006 / US2.4): the app-only produced-path facts of a lifecycle=sdd
     // run (including the recording manifest) are identical across json/text/rich, and

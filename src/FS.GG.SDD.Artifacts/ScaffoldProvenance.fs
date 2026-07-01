@@ -15,6 +15,7 @@ module ScaffoldProvenance =
     type ScaffoldProvenanceRecord =
         { SchemaVersion: int
           Generator: GeneratorVersion
+          RequiredMinimumCliVersion: string option
           ProviderName: string
           ProviderContractVersion: string
           TemplateRef: string
@@ -41,6 +42,14 @@ module ScaffoldProvenance =
         writer.WriteString("id", record.Generator.Id)
         writer.WriteString("version", record.Generator.Version)
         writer.WriteEndObject()
+
+        // Additive optional field (feature 052 E1): always present as string-or-null,
+        // immediately after `generator`, so the required minimum sits beside the
+        // producing CLI version. `None` ⇒ null (never fabricated).
+        match record.RequiredMinimumCliVersion with
+        | Some value -> writer.WriteString("requiredMinimumCliVersion", value)
+        | None -> writer.WriteNull("requiredMinimumCliVersion")
+
         writer.WriteString("providerName", record.ProviderName)
         writer.WriteString("providerContractVersion", record.ProviderContractVersion)
         writer.WriteString("templateRef", record.TemplateRef)
@@ -109,9 +118,14 @@ module ScaffoldProvenance =
                                 | Some key, None -> Some(key, "")
                                 | _ -> None)
 
+                        // Additive optional (feature 052 E1): absent key or JSON null
+                        // ⇒ `None`, so records written before this field still parse.
+                        let requiredMinimumCliVersion = jsonString "requiredMinimumCliVersion" root
+
                         Some
                             { SchemaVersion = version
                               Generator = { Id = generatorId; Version = generatorVersion }
+                              RequiredMinimumCliVersion = requiredMinimumCliVersion
                               ProviderName = providerName
                               ProviderContractVersion = providerContractVersion
                               TemplateRef = templateRef

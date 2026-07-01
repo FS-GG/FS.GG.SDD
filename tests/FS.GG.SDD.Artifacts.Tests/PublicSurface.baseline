@@ -24,8 +24,10 @@ FS.GG.SDD.Artifacts.Diagnostics.missingArtifact
 FS.GG.SDD.Artifacts.Diagnostics.missingGeneratedWorkModel
 FS.GG.SDD.Artifacts.Diagnostics.proseStructuredMismatch
 FS.GG.SDD.Artifacts.Diagnostics.requirementNotTyped
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldCliBehindMinimum
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProvenanceMalformed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderEmpty
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderMinimumMalformed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderMissing
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderParamMissing

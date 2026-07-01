@@ -202,7 +202,23 @@ module Config =
                                       Verify = declaredCommand "verify" mapping
                                       NameParameter =
                                         tryScalarAt [ "nameParameter" ] mapping
-                                        |> Option.defaultValue defaultNameParameter }
+                                        |> Option.defaultValue defaultNameParameter
+                                      // Optional, value-agnostic (feature 052 E2). The coherent-set
+                                      // orchestrator axis (ADR-0008, epic FS-GG/.github#85) is
+                                      // declared by Templates as a nested `minimumFsggSdd:` mapping
+                                      // whose `version` scalar carries the minimum coherent fsgg-sdd
+                                      // version (sibling metadata — requires/adr/registry/tracking —
+                                      // is ignored here). A YAML-null `version` (the real PENDING
+                                      // PUBLISH state) is treated as absent ⇒ `None`; any other value
+                                      // is read verbatim, with validity decided only at comparison
+                                      // (`Fsgg.Version`). Does NOT affect entry-drop (the four
+                                      // required scalars above).
+                                      MinimumCliVersion =
+                                        tryScalarAt [ "minimumFsggSdd"; "version" ] mapping
+                                        |> Option.filter (fun raw ->
+                                            match raw.Trim() with
+                                            | "" | "null" | "Null" | "NULL" | "~" -> false
+                                            | _ -> true) }
                             | _ -> None))
                     |> Seq.toList)
                 |> Option.defaultValue []

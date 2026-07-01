@@ -65,19 +65,14 @@ module Registry =
           Coherence: CoherenceEntry list }
 
     // --- Internal BCL-only SemVer helper (research R5; no third-party package). ---
+    // The grammar now lives in the shared `Fsgg.Version` module (feature 052 D3);
+    // these private helpers delegate so exactly one grammar exists in the repo.
 
     /// A parsed SemVer triple (major.minor.patch); pre-release/build metadata are
     /// out of scope for the registry coherence check.
-    type private SemVer = { Major: int; Minor: int; Patch: int }
+    type private SemVer = Fsgg.Version.Version
 
-    let private tryParseSemVer (text: string) : SemVer option =
-        match text.Split('.') with
-        | [| a; b; c |] ->
-            match System.Int32.TryParse a, System.Int32.TryParse b, System.Int32.TryParse c with
-            | (true, major), (true, minor), (true, patch) when major >= 0 && minor >= 0 && patch >= 0 ->
-                Some { Major = major; Minor = minor; Patch = patch }
-            | _ -> None
-        | _ -> None
+    let private tryParseSemVer (text: string) : SemVer option = Fsgg.Version.tryParse text
 
     let private compareSemVer (a: SemVer) (b: SemVer) =
         match compare a.Major b.Major with
