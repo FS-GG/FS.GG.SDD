@@ -58,6 +58,7 @@ module Diagnostics =
     val scaffoldProviderFailed: name: string -> exitCode: int -> Diagnostic
     val scaffoldProviderUnavailable: name: string -> Diagnostic
     val scaffoldProviderWroteSddTree: paths: string list -> Diagnostic
+    val scaffoldMirrorFailed: paths: string list -> Diagnostic
     val scaffoldProvenanceMalformed: path: string -> Diagnostic
 
     // Feature 052 CLI-coherence advisories: both non-blocking (Info/Warning), so the

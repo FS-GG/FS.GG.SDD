@@ -1,0 +1,13 @@
+# 056 (T003 / FR-002 / US2): a defective provider that writes into the reserved
+# fs-gg-sdd-* namespace under the neutral .agents/skills/ root — rejected as
+# providerWroteSddTree (exit 2). Declares the `lifecycle` symbol so `dotnet new`
+# accepts the forwarded param.
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-skills-intrusion-agents
+    source: __FIXTURE__/skills-intrusion-agents
+    parameters:
+      - key: lifecycle
+        required: false

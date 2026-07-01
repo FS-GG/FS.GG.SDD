@@ -58,8 +58,14 @@ module internal HandlersScaffold =
         // 051: the seeded fs-gg-sdd-* process-skill subtrees are SDD-owned skeleton
         // (FR-008). A provider that writes into them is rejected as an intrusion, and
         // they are never recorded as generatedProduct in scaffold-provenance.json.
+        // The `.claude`/`.codex` roots stay WHOLE-ROOT reserved (056 keeps the guard
+        // strict — the opposite of the reverted 055 narrowing).
         || p.StartsWith(".claude/skills/", StringComparison.Ordinal)
         || p.StartsWith(".codex/skills/", StringComparison.Ordinal)
+        // 056: the neutral `.agents/skills/` root is the provider's to write, EXCEPT the
+        // reserved `fs-gg-sdd-*` namespace — a provider write there is an intrusion, so a
+        // provider can never clobber SDD's seeded skills in the root it does own (FR-002).
+        || p.StartsWith(".agents/skills/fs-gg-sdd-", StringComparison.Ordinal)
 
     let isSddOwned (path: string) =
         let p = normalizeRelativePath path
@@ -123,6 +129,7 @@ module internal HandlersScaffold =
           ProviderInvoked = false
           ProducedPathCount = 0
           ProducedPaths = []
+          MirroredPaths = []
           EffectiveParameters = []
           RepoInitOutcome = "notApplicable"
           ExecutableScriptCount = 0
@@ -263,9 +270,36 @@ module internal HandlersScaffold =
                 | Some -1 -> [ scaffoldCliBehindMinimum installed rawMinimum ]
                 | _ -> []
 
+    // ----- 056 fan-out: the union mirror (SDD is the sole mirror authority) -----
+
+    // The provider's produced skills live under the neutral `.agents/skills/` root; the
+    // reserved `fs-gg-sdd-*` namespace there is already an intrusion (isSddTree), so a
+    // produced path under `.agents/skills/` is a provider co-tenant skill file. SDD copies
+    // each byte-identically into `.claude` and `.codex` (FR-003/FR-005).
+    let private agentsSkillsPrefix = ".agents/skills/"
+
+    let providerSkillFiles (producedPaths: string list) =
+        producedPaths
+        |> List.map normalizeRelativePath
+        |> List.filter (fun p -> p.StartsWith(agentsSkillsPrefix, StringComparison.Ordinal))
+        |> List.sort
+
+    // The two byte-identical mirror-target paths for one `.agents/skills/REST` source.
+    let mirrorTargetsFor (agentsPath: string) =
+        let rest = (normalizeRelativePath agentsPath).Substring(agentsSkillsPrefix.Length)
+        [ ".claude/skills/" + rest; ".codex/skills/" + rest ]
+
+    // The mirrored-copy path set for a produced-path set — pure, deterministic, sorted.
+    // Known before the mirror I/O runs (targets are a function of the produced paths), so
+    // provenance/report carry them independent of the read/write results (FR-007).
+    let plannedMirroredPaths (producedPaths: string list) =
+        providerSkillFiles producedPaths
+        |> List.collect mirrorTargetsFor
+        |> List.sort
+
     // ----- finalization (stage 3) -----
 
-    let provenanceWriteEffect (request: CommandRequest) (descriptor: ProviderDescriptor) outcome (producedPaths: string list) (effective: Map<string, string>) =
+    let provenanceWriteEffect (request: CommandRequest) (descriptor: ProviderDescriptor) outcome (producedPaths: string list) (mirroredPaths: string list) (effective: Map<string, string>) =
         let record: ScaffoldProvenanceRecord =
             { SchemaVersion = 1
               Generator = request.GeneratorVersion
@@ -275,6 +309,10 @@ module internal HandlersScaffold =
               TemplateRef = descriptor.TemplateId
               Outcome = scaffoldOutcomeValue outcome
               ProducedPaths = producedPaths |> List.map (fun path -> { Path = path; Owner = GeneratedProduct })
+              // 056: the fan-out mirror copies, owner `Mirrored` (never `generatedProduct`).
+              // Empty on any non-success terminal path so an incomplete fan-out is never
+              // recorded as complete (FR-012).
+              MirroredPaths = mirroredPaths |> List.map (fun path -> { Path = path; Owner = ArtifactOwner.Mirrored })
               // `Map.toList` is already ascending by key — the FR-003 effective set
               // (declared defaults overlaid by `--param` overrides) forwarded verbatim.
               EffectiveParameters = Map.toList effective }
@@ -320,6 +358,8 @@ module internal HandlersScaffold =
               ProviderInvoked = providerInvoked
               ProducedPathCount = List.length producedPaths
               ProducedPaths = producedPaths
+              // Terminal (non-success) paths perform no fan-out (FR-012).
+              MirroredPaths = []
               EffectiveParameters = Map.toList effective
               RepoInitOutcome = "notApplicable"
               ExecutableScriptCount = 0
@@ -339,6 +379,7 @@ module internal HandlersScaffold =
                   ProviderInvoked = false
                   ProducedPathCount = 0
                   ProducedPaths = []
+                  MirroredPaths = []
                   // The dry-run preview records exactly what would be forwarded
                   // (FR-003 audit preview): the resolved effective set.
                   EffectiveParameters = Map.toList effective
@@ -380,13 +421,13 @@ module internal HandlersScaffold =
                     FinalizeTerminal(
                         terminalSummary ProviderFailed producedPaths true true "Fix the provider; it wrote into SDD-owned trees." (Some(providerInvocationOf processResult)),
                         [ DiagnosticsModule.scaffoldProviderWroteSddTree intrusions ],
-                        provenanceWriteEffect request descriptor ProviderFailed producedPaths effective
+                        provenanceWriteEffect request descriptor ProviderFailed producedPaths [] effective
                     )
                 elif processResult.ExitCode <> 0 then
                     FinalizeTerminal(
                         terminalSummary ProviderFailed producedPaths true true "Inspect the provider failure, then re-run scaffold." (Some(providerInvocationOf processResult)),
                         [ DiagnosticsModule.scaffoldProviderFailed name processResult.ExitCode ],
-                        provenanceWriteEffect request descriptor ProviderFailed producedPaths effective
+                        provenanceWriteEffect request descriptor ProviderFailed producedPaths [] effective
                     )
                 elif List.isEmpty producedPaths then
                     FinalizeSuccess(ProviderSucceededEmpty, [])
@@ -399,7 +440,7 @@ module internal HandlersScaffold =
     // effects — the repo-init outcome from the `git rev-parse` probe (exit-code only,
     // Decision 1) and the make-executable counts from the `SetExecutable` results. Every
     // emitted diagnostic is advisory and non-fatal (FR-010).
-    let private finalizePostInstantiation model (descriptor: ProviderDescriptor) outcome (producedPaths: string list) probeProcess (effective: Map<string, string>) =
+    let private finalizePostInstantiation model (descriptor: ProviderDescriptor) outcome (producedPaths: string list) (mirroredPaths: string list) probeProcess (effective: Map<string, string>) =
         let repoInitOutcome, repoInitDiagnostics =
             match probeProcess with
             | Some { Started = false } ->
@@ -444,6 +485,7 @@ module internal HandlersScaffold =
               ProviderInvoked = true
               ProducedPathCount = List.length producedPaths
               ProducedPaths = producedPaths
+              MirroredPaths = mirroredPaths
               EffectiveParameters = Map.toList effective
               RepoInitOutcome = repoInitOutcome
               ExecutableScriptCount = executableCount
@@ -453,9 +495,91 @@ module internal HandlersScaffold =
 
         summary, outcomeDiagnostics @ repoInitDiagnostics @ execDiagnostics
 
-    // The three-tick post-instantiation machine, re-derived from the interpreted-effect
-    // log each tick (no new model field). Reached only on a success create outcome.
+    // The post-instantiation machine, re-derived from the interpreted-effect log each tick
+    // (no new model field). Reached only on a success create outcome. 056 prepends a MIRROR
+    // gate (TICK MIRROR) before the probe-based TICK A→C: read each provider `.agents/skills/*`
+    // skill and fan its exact body out into `.claude`/`.codex` (no-clobber) before anything
+    // finalizes, so an incomplete fan-out never reports complete (FR-005/FR-012).
     let private postInstantiationNext model (descriptor: ProviderDescriptor) outcome (producedPaths: string list) (effective: Map<string, string>) =
+        // The mirror record is a pure function of the produced paths (known before the I/O).
+        let mirroredPaths = plannedMirroredPaths producedPaths
+        let mirrorSources = providerSkillFiles producedPaths
+        let readEffects = mirrorSources |> List.map ReadFile
+        let readsInterpreted = readEffects |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
+        let readsPlanned = readEffects |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
+
+        // TICK MIRROR finalization on a read/write fault: a non-success scaffold at exit 2,
+        // provenance recording NO fan-out (FR-012). The scaffold.mirrorFailed id is additive.
+        let mirrorFailedFinalize (failedPaths: string list) =
+            let summary: ScaffoldSummary =
+                { ProviderName = Some descriptor.Name
+                  ProviderContractVersion = Some descriptor.ContractVersion
+                  RequiredMinimumCliVersion = resolvedRequiredMinimumCliVersion descriptor
+                  Outcome = scaffoldOutcomeValue ProviderFailed
+                  SkeletonCreated = true
+                  ProviderInvoked = true
+                  ProducedPathCount = List.length producedPaths
+                  ProducedPaths = producedPaths
+                  MirroredPaths = []
+                  EffectiveParameters = Map.toList effective
+                  RepoInitOutcome = "notApplicable"
+                  ExecutableScriptCount = 0
+                  ExecutableScriptsSkipped = 0
+                  NextActionHint = "The skill fan-out could not be completed; resolve the filesystem issue and re-run scaffold."
+                  ProviderInvocation = None }
+
+            let provenanceEffects = provenanceWriteEffect model.Request descriptor ProviderFailed producedPaths [] effective
+
+            { model with
+                PendingEffects = model.PendingEffects @ provenanceEffects
+                Scaffold = Some summary
+                Diagnostics = model.Diagnostics @ [ DiagnosticsModule.scaffoldMirrorFailed failedPaths ] @ cliCoherenceDiagnostics descriptor model.Request },
+            provenanceEffects
+
+        // Gate: run the MIRROR tick(s) to completion before the probe-based TICK A→C.
+        // `None` ⇒ mirror complete (proceed); `Some result` ⇒ the mirror is still working or
+        // has finalized (return that result directly).
+        let mirrorGate =
+            if List.isEmpty mirrorSources then
+                None
+            elif not readsInterpreted then
+                if readsPlanned then Some(model, [])
+                else Some({ model with PendingEffects = model.PendingEffects @ readEffects }, readEffects)
+            else
+                // Reads interpreted: a missing/unreadable source (snapshot None) is a fault.
+                let bodyOf src = snapshot src model
+                let readFailures = mirrorSources |> List.filter (fun src -> Option.isNone (bodyOf src)) |> List.sort
+
+                if not (List.isEmpty readFailures) then
+                    Some(mirrorFailedFinalize readFailures)
+                else
+                    let writeEffects =
+                        mirrorSources
+                        |> List.collect (fun src ->
+                            let body = (bodyOf src |> Option.get).Text
+                            mirrorTargetsFor src |> List.map (fun target -> WriteFile(target, body, AgentGuidanceTarget)))
+
+                    let writesInterpreted = writeEffects |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
+                    let writesPlanned = writeEffects |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
+
+                    if not writesInterpreted then
+                        if writesPlanned then Some(model, [])
+                        else Some({ model with PendingEffects = model.PendingEffects @ writeEffects }, writeEffects)
+                    else
+                        let writeFailures =
+                            writeEffects
+                            |> List.choose (fun effect ->
+                                match model.InterpretedEffects |> List.tryFind (fun result -> effectKey result.Effect = effectKey effect) with
+                                | Some result when not result.Succeeded -> effectPath effect
+                                | _ -> None)
+                            |> List.sort
+
+                        if not (List.isEmpty writeFailures) then Some(mirrorFailedFinalize writeFailures) else None
+
+        match mirrorGate with
+        | Some result -> result
+        | None ->
+
         let probeInterpreted = model.InterpretedEffects |> List.exists (fun result -> isProbeProcess result.Effect)
         let probePlanned = model.PendingEffects |> List.exists isProbeProcess
         let initInterpreted = model.InterpretedEffects |> List.exists (fun result -> isInitProcess result.Effect)
@@ -470,7 +594,7 @@ module internal HandlersScaffold =
                 |> List.map SetExecutable
 
             let effects =
-                provenanceWriteEffect model.Request descriptor outcome producedPaths effective
+                provenanceWriteEffect model.Request descriptor outcome producedPaths mirroredPaths effective
                 @ [ RunProcess("git", [ "rev-parse"; "--is-inside-work-tree" ], "") ]
                 @ scriptEffects
 
@@ -497,7 +621,7 @@ module internal HandlersScaffold =
                 model, []
             else
                 // TICK C — init interpreted or skipped: set the terminal summary once.
-                let summary, diagnostics = finalizePostInstantiation model descriptor outcome producedPaths probeProcess effective
+                let summary, diagnostics = finalizePostInstantiation model descriptor outcome producedPaths mirroredPaths probeProcess effective
 
                 // Feature 052 (US2): merge the non-blocking CLI-coherence advisory on the
                 // success path too, so the advisory appears in every descriptor-resolved outcome.

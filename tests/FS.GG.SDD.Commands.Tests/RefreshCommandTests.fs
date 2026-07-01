@@ -396,3 +396,34 @@ module RefreshCommandTests =
         let exitCode, _, _ = runRefreshCli root [ "--dry-run" ]
         Assert.Equal(0, exitCode)
         Assert.False(TestSupport.existsRelative root summaryPath)
+
+    // --- 056 US3 (T023 / FR-009 / P8): refresh re-mirrors the three-root union ---
+
+    [<Fact>]
+    let ``refresh re-mirrors the provider skill union across all three roots`` () =
+        let root = shippedProject ()
+
+        // Simulate a scaffolded product: a provider co-tenant skill in the neutral root,
+        // already mirrored into .claude/.codex.
+        let elmishBody = "# fs-gg-elmish\nprovider co-tenant skill\n"
+        for r in [ ".agents"; ".claude"; ".codex" ] do
+            TestSupport.writeRelative root $"{r}/skills/fs-gg-elmish/SKILL.md" elmishBody
+
+        // Drift: delete a mirror copy of the provider skill AND a seeded .agents copy.
+        let seededName = List.head FS.GG.SDD.Commands.Internal.SeededSkills.skillNames
+        File.Delete(Path.Combine(root, ".claude/skills/fs-gg-elmish/SKILL.md".Replace('/', Path.DirectorySeparatorChar)))
+        File.Delete(Path.Combine(root, $".agents/skills/{seededName}/SKILL.md".Replace('/', Path.DirectorySeparatorChar)))
+
+        TestSupport.runRefresh root workId |> ignore
+
+        let bytesAt (p: string) = File.ReadAllBytes(Path.Combine(root, p.Replace('/', Path.DirectorySeparatorChar)))
+
+        // The provider skill is re-mirrored byte-identically across all three roots.
+        for r in [ ".agents"; ".claude"; ".codex" ] do
+            Assert.True(TestSupport.existsRelative root $"{r}/skills/fs-gg-elmish/SKILL.md", $"expected {r} co-tenant copy")
+        Assert.Equal<byte[]>(bytesAt ".agents/skills/fs-gg-elmish/SKILL.md", bytesAt ".claude/skills/fs-gg-elmish/SKILL.md")
+        Assert.Equal<byte[]>(bytesAt ".agents/skills/fs-gg-elmish/SKILL.md", bytesAt ".codex/skills/fs-gg-elmish/SKILL.md")
+
+        // The deleted seeded .agents copy is refilled and byte-identical to its .claude sibling.
+        Assert.True(TestSupport.existsRelative root $".agents/skills/{seededName}/SKILL.md", "expected the seeded .agents copy refilled")
+        Assert.Equal<byte[]>(bytesAt $".claude/skills/{seededName}/SKILL.md", bytesAt $".agents/skills/{seededName}/SKILL.md")

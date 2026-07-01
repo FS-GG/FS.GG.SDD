@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "FS.GG.SDD scaffold fixtures",
+  "classifications": [ "Test" ],
+  "identity": "FsggSdd.Fixture.SkillsIntrusionCodex",
+  "name": "FS.GG.SDD scaffold fixture (writes into the whole-root-reserved .codex/skills tree)",
+  "shortName": "fsgg-fixture-skills-intrusion-codex",
+  "tags": { "type": "item" },
+  "symbols": {
+    "lifecycle": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "LIFECYCLE_VALUE"
+    }
+  }
+}

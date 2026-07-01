@@ -19,17 +19,25 @@ Core boundary:
   The skeleton also seeds the 15 consumer-relevant `fs-gg-sdd-*` process skills (the
   10 stage skills plus the 5 cross-cutting skills `lifecycle`/`getting-started`/
   `authoring-contracts`/`refresh-agents`/`validate`; the product-internal
-  `fs-gg-sdd-project` is excluded) into both agent surfaces
-  (`.claude/skills/<name>/SKILL.md` and `.codex/skills/<name>/SKILL.md`), so a
-  scaffolded product's agent can discover the lifecycle without hand-copying skills.
+  `fs-gg-sdd-project` is excluded) into **all three** agent-skill roots
+  (`.claude/skills/<name>/SKILL.md`, `.codex/skills/<name>/SKILL.md`, and the 056 neutral
+  `.agents/skills/<name>/SKILL.md`), byte-identically, so a scaffolded product's agent —
+  Claude, Codex, or a neutral `.agents` runtime — can discover the lifecycle without
+  hand-copying skills (`claude ≡ codex ≡ agents`).
   They are authored, SDD-owned skeleton (the same `AgentGuidanceTarget` no-clobber
   class as the constitution/early-stage guidance), seeded deterministically and
-  equivalently across Claude and Codex, and pinned to the on-disk authored set by a
+  equivalently across all three roots, and pinned to the on-disk authored set by a
   drift guard.
   Scaffold delivers all of these via the reused `init` effects; they are never app-only
-  `generatedProduct` provenance and `refresh` never regenerates them. The seeded skill
-  subtrees are SDD-owned: a provider that writes into them is rejected, and they are
-  excluded from provider routing and provenance.
+  `generatedProduct` provenance and `refresh` never regenerates them (though `refresh`
+  does re-mirror the union to currency). The seeded skill subtrees are SDD-owned: a
+  provider that writes into them is rejected, and they are excluded from provider routing
+  and provenance. `fsgg-sdd` is the **sole mirror authority**: a provider writes its own
+  `fs-gg-*` skills only into the neutral `.agents/skills/` root (never `.claude`/`.codex`,
+  and never the reserved `fs-gg-sdd-*` namespace even in `.agents`), and `scaffold` fans
+  the byte-identical **union** (seeded ∪ provider) out into all three roots, recording the
+  `.claude`/`.codex` mirror copies under `mirroredPaths` (owner `mirrored`, schema stays
+  v1) in `.fsgg/scaffold-provenance.json`.
   `.fsgg/early-stage-guidance.md` covers the pre-work-model stages (`charter`,
   `specify`, `clarify`, `checklist`) — per-stage command, required section
   headings, stable-id formats, and the §1.1/§1.2 authoring contracts — and is a
@@ -164,5 +172,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/054-surface-provider-output/plan.md
+at specs/056-orchestrator-skill-fanout/plan.md
 <!-- SPECKIT END -->

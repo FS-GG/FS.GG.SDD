@@ -208,6 +208,11 @@ module CommandRendering =
             scaffold.ProducedPaths
             |> List.sort
             |> List.iter (fun path -> builder.AppendLine($"scaffoldProducedPath: {path}") |> ignore)
+            // 056: the fan-out mirror copies, one line each (parity with the json array).
+            builder.AppendLine($"scaffoldMirroredPaths: {List.length scaffold.MirroredPaths}") |> ignore
+            scaffold.MirroredPaths
+            |> List.sort
+            |> List.iter (fun path -> builder.AppendLine($"scaffoldMirroredPath: {path}") |> ignore)
             scaffold.EffectiveParameters
             |> List.sortBy fst
             |> List.iter (fun (key, value) -> builder.AppendLine($"scaffoldEffectiveParam: {key}={value}") |> ignore)

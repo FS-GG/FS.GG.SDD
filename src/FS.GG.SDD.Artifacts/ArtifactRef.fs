@@ -8,6 +8,10 @@ module ArtifactRef =
         | Governance
         | Rendering
         | GeneratedProduct
+        // 056: the SDD orchestrator mirror-copy owner. A `.claude`/`.codex` copy of a
+        // provider-produced `.agents/skills/*` skill that SDD fanned out (never the
+        // provider's canonical `.agents` product, which stays `generatedProduct`).
+        | Mirrored
 
     type ArtifactKind =
         | ProjectConfig
@@ -52,6 +56,7 @@ module ArtifactRef =
         | Governance -> "governance"
         | Rendering -> "rendering"
         | GeneratedProduct -> "generatedProduct"
+        | Mirrored -> "mirrored"
 
     let kindValue kind =
         match kind with

@@ -63,8 +63,29 @@ What scaffold owns: the provider contract, the invocation, the
 provider ships in FS.GG.Rendering.
 
 **Boundary guard:** the provider must never write into SDD-owned trees (`.fsgg/`,
-`work/`, `readiness/`, `AGENTS.md`, `CLAUDE.md`); scaffold guards this and fails
-if violated.
+`work/`, `readiness/`, and the whole `.claude/skills/` and `.codex/skills/` roots);
+scaffold guards this and fails (exit 2) if violated. The neutral `.agents/skills/`
+root is the provider's to write, **except** the reserved `fs-gg-sdd-*` namespace,
+which is SDD's even there.
+
+## Three-root skill fan-out (the union model)
+
+An FS.GG product carries the same skills in **three** agent-skill roots —
+`.claude/skills/`, `.codex/skills/`, and the neutral `.agents/skills/` — so the
+Claude, Codex, and neutral runtimes are interchangeable (`claude ≡ codex ≡ agents`).
+`fsgg-sdd` is the **sole mirror authority**:
+
+- `init` seeds the 15 `fs-gg-sdd-*` process skills byte-identically into **all three**
+  roots (no-clobber; your edits are preserved).
+- A provider writes its own `fs-gg-*` UI skills **only** into `.agents/skills/`;
+  `scaffold` then fans the byte-identical **union** (seeded ∪ provider) out into all
+  three roots. The mirrored `.claude`/`.codex` copies are recorded in
+  `.fsgg/scaffold-provenance.json` under `mirroredPaths` (owner `mirrored`); the
+  provider's canonical `.agents` skill stays in `producedPaths` (`generatedProduct`).
+- `refresh` re-mirrors the union to currency; `doctor` reports a product whose three
+  roots have drifted (e.g. scaffolded by a two-root CLI); `upgrade` reconciles it
+  no-clobber. An incomplete fan-out is never reported complete (a mirror I/O fault
+  fails at exit 2 with `scaffold.mirrorFailed`).
 
 ## CLI version coherence
 
