@@ -267,10 +267,14 @@ correctly attributed; T016–T019 green.
   hardcodes + goldens: `ReleaseContract.currentRelease` (`0.2.1`/`0.2.x`), the `SchemaVersion`
   fallback, the `release-readiness.json` baseline + docs copy, the `valid-work-item` work-model
   fixture (regenerated via the real generator — clean version/digest/`sourceIds` diff), and the
-  `min-behind` coherence fixture + its assertions (bumped to `0.4.0`, one minor above installed).
-  Full solution now green: Contracts 64, Artifacts 149, Cli 80, Validation 18, Commands 462, 0
-  failures. Whether to further advance the coherent-set minimum to `0.4.0` for FR-011 (and sequence
-  the publish-before-flip with Templates#47) remains a cross-repo release decision, not a code gate.
+  `min-behind` coherence fixture + its assertions. Then advanced the SDD version-of-truth to
+  **`0.4.0`** for FR-011 (the fan-out's version-gated seeded-surface growth, ADR-0008): bumped
+  `Directory.Build.local.props`, `ReleaseContract`/`SchemaVersion`, regenerated the release goldens
+  + work-model fixture via the real generators, and re-anchored the coherence fixtures to the new
+  installed version (`min-equal`=`0.4.0`, `min-behind`=`0.5.0`). Full solution green at `0.4.0`:
+  Contracts 64, Artifacts 149, Cli 80, Validation 18, Commands 462, 0 failures. Remaining is the
+  cross-repo **publish-before-flip**: publish the `0.4.0` CLI, then Templates#47 declares
+  `minimumFsggSdd: 0.4.0` — a release/coordination step, not a code gate.
 - [X] T032 Run `.specify` docs-currency: `fsgg-sdd refresh`/`agents` equivalents are described in
   guidance; confirm no provider-specific package id, template id, path, or docs URL leaked into
   generic SDD (SC-005, contract "Out of scope").

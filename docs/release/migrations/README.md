@@ -119,9 +119,11 @@ currency; `doctor`/`upgrade` detect and reconcile a product whose three roots ha
 (e.g. scaffolded by a two-root CLI); an incomplete fan-out is never reported complete
 (a mirror I/O fault fails at exit 2 with the additive `scaffold.mirrorFailed` diagnostic —
 no new outcome or exit code). `init`'s seeded set growing by the third root is a declared,
-**version-gated** skeleton change (ADR-0008), not a schema migration. Per the additive-change
-policy this carries **no `<version>.md` migration note** (`release-readiness.json`
-`migrations[]` stays empty); this paragraph records the change instead.
+**version-gated** skeleton change (ADR-0008), not a schema migration — it advances the SDD
+version-of-truth to **`0.4.0`** (the coherent-set minimum a provider requiring the fan-out
+declares; publish `0.4.0` before Templates#47 flips to require it, FR-011). Per the
+additive-change policy this carries **no `<version>.md` migration note**
+(`release-readiness.json` `migrations[]` stays empty); this paragraph records the change instead.
 
 When a release introduces a breaking change, add its note here as
 `<version>.md` and list it in this index.
