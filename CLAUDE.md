@@ -27,12 +27,9 @@ Core boundary:
   equivalently across Claude and Codex, and pinned to the on-disk authored set by a
   drift guard.
   Scaffold delivers all of these via the reused `init` effects; they are never app-only
-  `generatedProduct` provenance and `refresh` never regenerates them. SDD reserves the
-  `fs-gg-sdd-*` skill **namespace** under each shared agent skill root (`.claude/skills/`,
-  `.codex/skills/`) — not the whole root: a provider that writes into that namespace is
-  rejected as an intrusion, and those subtrees are excluded from provider routing and
-  provenance. A compliant provider **may** co-populate the rest of the shared skill roots
-  with its own non-reserved co-tenant skills, which scaffold records as `generatedProduct`.
+  `generatedProduct` provenance and `refresh` never regenerates them. The seeded skill
+  subtrees are SDD-owned: a provider that writes into them is rejected, and they are
+  excluded from provider routing and provenance.
   `.fsgg/early-stage-guidance.md` covers the pre-work-model stages (`charter`,
   `specify`, `clarify`, `checklist`) — per-stage command, required section
   headings, stable-id formats, and the §1.1/§1.2 authoring contracts — and is a
@@ -167,5 +164,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/055-scaffold-cotenant-skills/plan.md
+at specs/054-surface-provider-output/plan.md
 <!-- SPECKIT END -->

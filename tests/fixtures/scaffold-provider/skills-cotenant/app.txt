@@ -1,1 +1,0 @@
-A normal product file the provider legitimately owns.

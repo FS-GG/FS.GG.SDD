@@ -102,24 +102,5 @@ the block adds diagnostic visibility only. Per this policy an additive change ca
 `<version>.md` migration note** (the `release-readiness.json` `migrations[]` array stays
 empty); this paragraph records the change instead.
 
-The `055-scaffold-cotenant-skills` change is additive: it **narrows** the `fsgg-sdd scaffold`
-intrusion guard so SDD reserves only the `fs-gg-sdd-*` skill namespace under each shared agent
-skill root (`.claude/skills/`, `.codex/skills/`) instead of the whole root. A compliant provider
-may now co-populate the rest of those roots with its own product skills (e.g. `fs-gg-elmish`),
-which scaffold records as `generatedProduct` like any other produced path. It introduces **no**
-new persisted schema (`.fsgg/scaffold-provenance.json` stays **v1** and gains no field), **no**
-new command, effect, outcome, or exit code, and **no** new versioned cross-repo contract. It
-breaks no existing public contract: `fsgg-sdd init` stays **byte-identical** (the seeded
-`fs-gg-sdd-*` skills are unchanged and excluded from product by the pre-existing skeleton
-subtraction), every scaffold field, key order, and stream is unchanged, and the exit-code
-taxonomy (defect ⇒ 2, user-input ⇒ 1, success ⇒ 0) is identical — a genuine intrusion into the
-reserved namespace or the `.fsgg/`·`work/`·`readiness/` trees still fails at exit 2 (FR-011).
-The only observable difference is additive: a formerly-rejected co-tenant scaffold now succeeds,
-and its co-tenant skill paths appear as additional `producedPaths`/`generatedProduct` entries.
-Per this policy an additive change carries **no `<version>.md` migration note** (the
-`release-readiness.json` `migrations[]` array stays empty); this paragraph records the change
-instead. This unblocks FS.GG.Rendering Feature 219; recording the co-tenant ownership model in
-the cross-repo coherence set / ADR is tracked by FS-GG/FS.GG.Templates#47.
-
 When a release introduces a breaking change, add its note here as
 `<version>.md` and list it in this index.

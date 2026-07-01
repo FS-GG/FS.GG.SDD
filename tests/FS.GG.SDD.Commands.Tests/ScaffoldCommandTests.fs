@@ -619,15 +619,12 @@ module ScaffoldCommandTests =
         Assert.DoesNotContain("work/leak.txt", summary.ProducedPaths)
         Assert.DoesNotContain("readiness/leak.txt", summary.ProducedPaths)
 
-    // 055 T009 (US2 / FR-002/007/009/011, SC-003): a provider that writes into the RESERVED
-    // fs-gg-sdd-* skill namespace under either shared root is still a provider defect —
-    // rejected as providerWroteSddTree (exit 2), symmetric across .claude and .codex, and the
-    // reserved paths never appear in the provenance producedPaths. The re-pointed fixture
-    // targets a NEW reserved name (fs-gg-sdd-custom) that skeletonFiles does not subtract, so
-    // the write reaches the narrowed isSddTree guard (research R3). Exercises the guard
-    // end-to-end over a real provider.
+    // 051 T020 (US3 / INV-6, FR-008): a provider that writes into the seeded skill trees
+    // (.claude/skills/ or .codex/skills/) is a provider defect — rejected as
+    // providerWroteSddTree (exit 2), and the skill subtrees never appear in the provenance
+    // producedPaths. Exercises the T015 isSddTree guard end-to-end over a real provider.
     [<Fact>]
-    let ``scaffold provider writing into the reserved fs-gg-sdd namespace is a provider defect`` () =
+    let ``scaffold provider writing into the seeded skill trees is a provider defect`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "skills-intrusion.providers.yml"
         let report = runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
@@ -636,115 +633,9 @@ module ScaffoldCommandTests =
         Assert.Equal(2, exitCodeForReport report)
         let summary = scaffoldSummary report
         Assert.NotEqual("providerSucceeded", summary.Outcome)
-        // Rejection is symmetric across both roots: each reserved path is flagged as an
-        // intrusion diagnostic and never laundered into provenance as app-only product.
-        let intruded =
-            report.Diagnostics
-            |> List.filter (fun d -> d.Id = "scaffold.providerWroteSddTree")
-            |> List.collect (fun d -> d.RelatedIds)
-        Assert.Contains(".claude/skills/fs-gg-sdd-custom/SKILL.md", intruded)
-        Assert.Contains(".codex/skills/fs-gg-sdd-custom/SKILL.md", intruded)
-        Assert.DoesNotContain(".claude/skills/fs-gg-sdd-custom/SKILL.md", summary.ProducedPaths)
-        Assert.DoesNotContain(".codex/skills/fs-gg-sdd-custom/SKILL.md", summary.ProducedPaths)
-
-    // ===================================================================
-    // 055 — SDD reserves only the fs-gg-sdd-* skill namespace, not the whole
-    // .claude/skills / .codex/skills root, so a compliant provider may co-populate
-    // the shared roots with its own product skills.
-    // ===================================================================
-
-    // 055 T005 (US1/US2 / P1–P4, R1/R5): the narrowed isSddTree / isSddOwned oracle,
-    // asserted as a pure truth table (data-model.md E3). Reserved: the .fsgg/·work/·readiness/
-    // trees and the fs-gg-sdd-* skill namespace under each shared root. Product: any other
-    // co-tenant skill (fs-gg-elmish) and a bare .claude/skills leaf. Skeleton (isSddOwned but
-    // not isSddTree): AGENTS.md / CLAUDE.md. Must FAIL against today's whole-root guard (the
-    // elmish/bare-leaf rows classify as SDD tree today).
-    [<Fact>]
-    let ``isSddTree reserves only the fs-gg-sdd namespace under the shared skill roots`` () =
-        let isSddTree = FS.GG.SDD.Commands.Internal.HandlersScaffold.isSddTree
-        let isSddOwned = FS.GG.SDD.Commands.Internal.HandlersScaffold.isSddOwned
-
-        // SDD-owned lifecycle trees.
-        for p in [ ".fsgg/x"; "work/x"; "readiness/x" ] do
-            Assert.True(isSddTree p, $"expected SDD tree: {p}")
-            Assert.True(isSddOwned p, $"expected SDD-owned: {p}")
-
-        // Reserved fs-gg-sdd-* skill namespace under each shared root (seeded and future names).
-        for p in
-            [ ".claude/skills/fs-gg-sdd-plan/SKILL.md"
-              ".claude/skills/fs-gg-sdd-custom/SKILL.md"
-              ".codex/skills/fs-gg-sdd-anything/SKILL.md" ] do
-            Assert.True(isSddTree p, $"expected reserved SDD tree: {p}")
-            Assert.True(isSddOwned p, $"expected SDD-owned: {p}")
-
-        // Product: a co-tenant skill outside the reserved namespace, and a bare skills leaf.
-        for p in [ ".claude/skills/fs-gg-elmish/SKILL.md"; ".codex/skills/fs-gg-elmish/SKILL.md"; ".claude/skills/leak" ] do
-            Assert.False(isSddTree p, $"expected product (not SDD tree): {p}")
-            Assert.False(isSddOwned p, $"expected product (not SDD-owned): {p}")
-
-        // Skeleton agent-guidance: SDD-owned but not an SDD tree (unchanged).
-        for p in [ "AGENTS.md"; "CLAUDE.md" ] do
-            Assert.False(isSddTree p, $"expected not an SDD tree: {p}")
-            Assert.True(isSddOwned p, $"expected SDD-owned skeleton: {p}")
-
-    // 055 T006 (US1 / Scenario A / FR-001/004/006, SC-001): a provider whose only shared-skill-root
-    // write is a NON-reserved co-tenant skill (fs-gg-elmish) completes — exit 0, providerSucceeded,
-    // NO providerWroteSddTree — lands the skill as generatedProduct, and the seeded fs-gg-sdd-*
-    // skills never appear as produced product. One co-tenant skill is the representative for the
-    // class. Must FAIL now (today's whole-root guard blocks it).
-    [<Fact>]
-    let ``scaffold provider writing a co-tenant skill succeeds`` () =
-        let root = TestSupport.tempDirectory ()
-        writeRegistry root "skills-cotenant.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
-
-        Assert.Equal(0, exitCodeForReport report)
-        let summary = scaffoldSummary report
-        Assert.Equal("providerSucceeded", summary.Outcome)
-        Assert.DoesNotContain("scaffold.providerWroteSddTree", diagnosticIds report)
-
-        // The co-tenant skill is on disk, recorded as produced product owned generatedProduct.
-        Assert.True(TestSupport.existsRelative root ".claude/skills/fs-gg-elmish/SKILL.md")
-        Assert.Contains(".claude/skills/fs-gg-elmish/SKILL.md", summary.ProducedPaths)
-        let change =
-            report.ChangedArtifacts
-            |> List.tryFind (fun c -> c.Path = ".claude/skills/fs-gg-elmish/SKILL.md")
-            |> Option.defaultWith (fun () -> failwith "Expected a changed-artifact entry for the co-tenant skill.")
-        Assert.Equal("generatedProduct", change.Ownership)
-
-        // The seeded fs-gg-sdd-* skills ride the init skeleton — never produced product.
-        for name in FS.GG.SDD.Commands.Internal.SeededSkills.skillNames do
-            Assert.DoesNotContain($".claude/skills/{name}/SKILL.md", summary.ProducedPaths)
-            Assert.DoesNotContain($".codex/skills/{name}/SKILL.md", summary.ProducedPaths)
-
-    // 055 T007 (US1 / Scenario B / FR-005/010, SC-002): after a co-tenant scaffold, every seeded
-    // fs-gg-sdd-* skill on both surfaces is byte-identical to a standalone init, and the only extra
-    // skill subtree in the scaffolded root is the co-tenant fs-gg-elmish. init stays byte-identical.
-    [<Fact>]
-    let ``scaffold co-tenant leaves seeded skills byte-identical to init`` () =
-        let leaf = "scaffold-cotenant"
-        let appRoot = rootWithLeaf leaf
-        writeRegistry appRoot "skills-cotenant.providers.yml"
-        runScaffold (scaffoldRequest appRoot (Some "fixture") [ "lifecycle", "sdd" ] false false) |> ignore
-
-        let initRoot = rootWithLeaf leaf
-        TestSupport.initializeProject initRoot
-
-        // Each seeded fs-gg-sdd-* skill on both surfaces is byte-for-byte what init seeds.
-        for name in FS.GG.SDD.Commands.Internal.SeededSkills.skillNames do
-            for surface in [ ".claude"; ".codex" ] do
-                let rel = $"{surface}/skills/{name}/SKILL.md"
-                let fromScaffold = File.ReadAllBytes(Path.Combine(appRoot, rel.Replace('/', Path.DirectorySeparatorChar)))
-                let fromInit = File.ReadAllBytes(Path.Combine(initRoot, rel.Replace('/', Path.DirectorySeparatorChar)))
-                Assert.Equal<byte[]>(fromInit, fromScaffold)
-
-        // The only skill subtree the scaffold adds over init is the co-tenant fs-gg-elmish.
-        let skillFiles root =
-            relativeFiles root
-            |> List.filter (fun p -> p.StartsWith(".claude/skills/", System.StringComparison.Ordinal) || p.StartsWith(".codex/skills/", System.StringComparison.Ordinal))
-            |> Set.ofList
-        let extra = Set.difference (skillFiles appRoot) (skillFiles initRoot)
-        Assert.Equal<Set<string>>(Set.ofList [ ".claude/skills/fs-gg-elmish/SKILL.md" ], extra)
+        // The intruded skill-tree paths are never laundered into provenance as app-only.
+        Assert.DoesNotContain(".claude/skills/leak/SKILL.md", summary.ProducedPaths)
+        Assert.DoesNotContain(".codex/skills/leak/SKILL.md", summary.ProducedPaths)
 
     // ===================================================================
     // 032 — scaffold owns repo-init & script executability post-instantiation
@@ -1127,24 +1018,6 @@ module ScaffoldCommandTests =
 
         Assert.True(TestSupport.existsRelative root ".fsgg/constitution.md")
         Assert.DoesNotContain(".fsgg/constitution.md", provenanceGeneratedProductPaths root)
-
-    // 055 T013 (US3 / P5–P7, FR-004/008, SC-004): the co-tenant scaffold's provenance is an
-    // additive, unchanged contract — schemaVersion stays 1, the co-tenant fs-gg-elmish skill is
-    // recorded with owner generatedProduct, and no seeded fs-gg-sdd-* path leaks into provenance.
-    [<Fact>]
-    let ``scaffold co-tenant provenance stays schema v1 and records only the co-tenant skill`` () =
-        let root = TestSupport.tempDirectory ()
-        writeRegistry root "skills-cotenant.providers.yml"
-        runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false) |> ignore
-
-        let provenance = TestSupport.readRelative root provenancePath
-        Assert.Contains("\"schemaVersion\": 1", provenance)
-
-        let generatedProduct = provenanceGeneratedProductPaths root
-        Assert.Contains(".claude/skills/fs-gg-elmish/SKILL.md", generatedProduct)
-        for name in FS.GG.SDD.Commands.Internal.SeededSkills.skillNames do
-            Assert.DoesNotContain($".claude/skills/{name}/SKILL.md", generatedProduct)
-            Assert.DoesNotContain($".codex/skills/{name}/SKILL.md", generatedProduct)
 
     // T009 (FR-006/SC-005): the init skeleton path set grew by EXACTLY the authored
     // skeleton seeds relative to the established (pre-033) skeleton — .fsgg/constitution.md

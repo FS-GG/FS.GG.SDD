@@ -48,14 +48,6 @@ module internal HandlersScaffold =
 
     let isSupportedContract version = contractMajor version = Some 1
 
-    // 055 (FR-002): SDD reserves only the `fs-gg-sdd-*` skill namespace under each shared
-    // agent skill root — not the whole `.claude/skills/`·`.codex/skills/` root. A provider
-    // may co-populate the rest of the root with its own product skills; only a write into
-    // the reserved namespace is an intrusion.
-    let isReservedSkillSubtree (p: string) =
-        p.StartsWith(".claude/skills/fs-gg-sdd-", StringComparison.Ordinal)
-        || p.StartsWith(".codex/skills/fs-gg-sdd-", StringComparison.Ordinal)
-
     // The SDD-owned trees a compliant provider must never write into (FR-011), and
     // the paths the SDD skeleton/provenance own (excluded from collision + diff).
     let isSddTree (path: string) =
@@ -63,11 +55,11 @@ module internal HandlersScaffold =
         p.StartsWith(".fsgg/", StringComparison.Ordinal)
         || p.StartsWith("work/", StringComparison.Ordinal)
         || p.StartsWith("readiness/", StringComparison.Ordinal)
-        // 055 (was 051): the seeded fs-gg-sdd-* process-skill subtrees are SDD-owned
-        // skeleton (FR-008) — the reservation is the `fs-gg-sdd-*` namespace, not the whole
-        // skill root. A provider that writes into that namespace is rejected as an intrusion
-        // and never recorded as generatedProduct; non-reserved co-tenant skills are product.
-        || isReservedSkillSubtree p
+        // 051: the seeded fs-gg-sdd-* process-skill subtrees are SDD-owned skeleton
+        // (FR-008). A provider that writes into them is rejected as an intrusion, and
+        // they are never recorded as generatedProduct in scaffold-provenance.json.
+        || p.StartsWith(".claude/skills/", StringComparison.Ordinal)
+        || p.StartsWith(".codex/skills/", StringComparison.Ordinal)
 
     let isSddOwned (path: string) =
         let p = normalizeRelativePath path

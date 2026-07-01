@@ -272,35 +272,3 @@ module ScaffoldParityTests =
         for path in lifecycleProducedPaths do
             for projection in [ json; text; rich ] do
                 Assert.Contains(path, projection)
-
-    // 055 T008/T014 (US1/US3 / Scenario E / FR-004/008, SC-004): a co-tenant provider skill under
-    // the shared root is a produced-product path like any other — it renders identically across
-    // json ≡ text ≡ rich (listed under producedPaths, never as an SDD-owned/skeleton entry), and
-    // the rich path adds/drops no JSON byte. This proves the change is additive: the co-tenant path
-    // flows through the existing producedPaths projection with no new or reshaped field.
-    [<Fact>]
-    let ``scaffold co-tenant skill produced-path facts are identical across json text and rich`` () =
-        let cotenantProducedPaths = [ ".claude/skills/fs-gg-elmish/SKILL.md"; "App.fsproj"; "Program.fs" ]
-        let cotenantReport: CommandReport =
-            { report with
-                Scaffold =
-                    Some
-                        { scaffoldSummary with
-                            ProducedPathCount = cotenantProducedPaths.Length
-                            ProducedPaths = cotenantProducedPaths } }
-
-        // Rich is a pure projection: it changes no JSON byte (additive-only shape).
-        let before = serializeReport cotenantReport
-        resolve Rich interactiveColor cotenantReport |> ignore
-        Assert.Equal(before, serializeReport cotenantReport)
-
-        let json = (resolve Json interactiveColor cotenantReport).Text
-        let text = (resolve Text nonInteractive cotenantReport).Text
-        let rich = (resolve Rich interactiveColor cotenantReport).Text
-
-        // The co-tenant skill is a produced-product path in json/text and appears in every projection.
-        Assert.Contains("\"producedPaths\"", json)
-        Assert.Contains("scaffoldProducedPath: .claude/skills/fs-gg-elmish/SKILL.md", text)
-        for path in cotenantProducedPaths do
-            for projection in [ json; text; rich ] do
-                Assert.Contains(path, projection)
