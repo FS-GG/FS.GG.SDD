@@ -311,6 +311,9 @@ module CommandSerialization =
             writer.WriteBoolean("providerInvoked", summary.ProviderInvoked)
             writer.WriteNumber("producedPathCount", summary.ProducedPathCount)
             writeStringList writer Sorted "producedPaths" summary.ProducedPaths
+            // 056: the `.claude`/`.codex` fan-out mirror copies (owner `mirrored` in
+            // provenance), sorted; `[]` when the provider produced no skills.
+            writeStringList writer Sorted "mirroredPaths" summary.MirroredPaths
             writer.WriteStartArray("effectiveParameters")
 
             summary.EffectiveParameters

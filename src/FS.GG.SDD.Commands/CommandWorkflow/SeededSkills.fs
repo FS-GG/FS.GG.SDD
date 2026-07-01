@@ -57,12 +57,15 @@ module internal SeededSkills =
     let seededSkills =
         skillNames |> List.map (fun name -> { Name = name; Body = loadBody name })
 
-    // Each seeded skill expands to two additive WriteFile effects — one per agent
-    // surface — both carrying the no-clobber AgentGuidanceTarget write-kind. One
-    // canonical body to both surfaces makes the Claude/Codex copies equivalent by
-    // construction (FR-002); the sorted declared list keeps the order deterministic.
+    // Each seeded skill expands to three additive WriteFile effects — one per agent
+    // surface (`.claude`, `.codex`, and the 056 neutral `.agents` root) — all carrying
+    // the no-clobber AgentGuidanceTarget write-kind. One canonical body to all three
+    // roots makes them byte-identical by construction (FR-004/FR-006); the sorted
+    // declared list keeps the order deterministic. `init` and `scaffold` both gain the
+    // third root through this single seam.
     let skillEffects =
         seededSkills
         |> List.collect (fun skill ->
             [ WriteFile($".claude/skills/{skill.Name}/SKILL.md", skill.Body, AgentGuidanceTarget)
-              WriteFile($".codex/skills/{skill.Name}/SKILL.md", skill.Body, AgentGuidanceTarget) ])
+              WriteFile($".codex/skills/{skill.Name}/SKILL.md", skill.Body, AgentGuidanceTarget)
+              WriteFile($".agents/skills/{skill.Name}/SKILL.md", skill.Body, AgentGuidanceTarget) ])

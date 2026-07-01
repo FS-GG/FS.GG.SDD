@@ -562,7 +562,10 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
           ReadFile ".fsgg/scaffold-provenance.json"
           ReadFile(GenerationManifestModule.expectedGovernanceHandoffOutputPath workId)
           ReadFile(GenerationManifestModule.expectedSummaryOutputPath workId)
-          EnumerateDirectory "work" ]
+          EnumerateDirectory "work"
+          // 056: enumerate the neutral provider-skill root so refresh can re-mirror the
+          // union (FR-009); the per-skill bodies are read in the candidate-reads phase.
+          EnumerateDirectory ".agents/skills" ]
 
     let scaffoldReadEffects =
         // Provider registry + a before-snapshot of the target root (for the produced

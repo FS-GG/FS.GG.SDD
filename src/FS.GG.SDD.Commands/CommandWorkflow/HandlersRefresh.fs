@@ -26,6 +26,46 @@ module internal HandlersRefresh =
 
     let refreshCanonicalViews = [ "work-model"; "analysis"; "verify"; "ship"; "governance-handoff"; "agent-commands"; "summary" ]
 
+    // 056 skill fan-out re-mirror (FR-009): refresh brings the three-root union to
+    // currency independent of the work-model views. The non-reserved provider skills under
+    // `.agents/skills/` (the reserved `fs-gg-sdd-*` namespace is SDD's, seeded separately)
+    // are discovered from the enumerated listing and mirrored byte-identically into
+    // `.claude`/`.codex`. Re-mirror is no-clobber (`AgentGuidanceTarget`), so a deleted copy
+    // is refilled and an author edit is preserved — the same policy as the seeded re-seed.
+    let private agentsSkillsRoot = ".agents/skills"
+
+    let private providerSkillFilesFromListing model =
+        (directoryListing agentsSkillsRoot model).Split([| '\n'; '\r' |], StringSplitOptions.RemoveEmptyEntries)
+        |> Array.map normalizeRelativePath
+        |> Array.filter (fun path ->
+            path.StartsWith(".agents/skills/", StringComparison.Ordinal)
+            && not (path.StartsWith(".agents/skills/fs-gg-sdd-", StringComparison.Ordinal)))
+        |> Array.sort
+        |> Array.toList
+
+    /// Two-phase candidate reads (like `duplicateCandidateReadEffects`): once `.agents/skills`
+    /// is enumerated, read each non-reserved provider skill body not yet snapshotted, so the
+    /// re-mirror step has the exact bytes to fan out.
+    let providerSkillMirrorReads model =
+        providerSkillFilesFromListing model
+        |> List.filter (fun path -> Option.isNone (snapshot path model))
+        |> List.map ReadFile
+
+    /// The re-seed (all three roots, no-clobber) + re-mirror (provider copies into
+    /// `.claude`/`.codex`, no-clobber) effects that keep the union current on every refresh.
+    let skillFanoutRefreshEffects model =
+        let reMirror =
+            providerSkillFilesFromListing model
+            |> List.collect (fun src ->
+                match snapshot src model with
+                | Some snap ->
+                    let rest = src.Substring(".agents/skills/".Length)
+                    [ WriteFile($".claude/skills/{rest}", snap.Text, AgentGuidanceTarget)
+                      WriteFile($".codex/skills/{rest}", snap.Text, AgentGuidanceTarget) ]
+                | None -> [])
+
+        SeededSkills.skillEffects @ reMirror
+
     let refreshSummaryMarkdown
         (workId: string)
         (generator: GeneratorVersion)

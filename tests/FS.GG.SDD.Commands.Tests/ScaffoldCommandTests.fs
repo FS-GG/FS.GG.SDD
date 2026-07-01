@@ -638,6 +638,163 @@ module ScaffoldCommandTests =
         Assert.DoesNotContain(".codex/skills/leak/SKILL.md", summary.ProducedPaths)
 
     // ===================================================================
+    // 056 — orchestrator skill fan-out: union SDD + provider skills into all
+    // three agent roots; strict, symmetric guard. Real dotnet new + filesystem.
+    // ===================================================================
+
+    let private bytesAt root (relativePath: string) =
+        File.ReadAllBytes(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)))
+
+    let private threeRoots (name: string) =
+        [ $".claude/skills/{name}/SKILL.md"; $".codex/skills/{name}/SKILL.md"; $".agents/skills/{name}/SKILL.md" ]
+
+    let private assertByteIdenticalAcrossRoots root name =
+        match threeRoots name |> List.map (bytesAt root) with
+        | [ claude; codex; agents ] ->
+            Assert.Equal<byte[]>(claude, codex)
+            Assert.Equal<byte[]>(claude, agents)
+        | _ -> failwith "expected exactly three roots"
+
+    // 056 T012 (US2 / FR-001 / SC-002 / P1): a provider write into the whole-root-reserved
+    // .claude/skills/ OR .codex/skills/ is a defect (exit 2), no fan-out, path never recorded.
+    // Each per-root fixture is driven independently so each whole-root clause is proven alone.
+    [<Theory>]
+    [<InlineData("skills-intrusion-claude.providers.yml", ".claude/skills/leak/SKILL.md")>]
+    [<InlineData("skills-intrusion-codex.providers.yml", ".codex/skills/leak/SKILL.md")>]
+    let ``scaffold provider writing a whole-root-reserved skill tree is a defect`` (registry: string) (intruded: string) =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root registry
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+
+        Assert.Contains("scaffold.providerWroteSddTree", diagnosticIds report)
+        Assert.Equal(2, exitCodeForReport report)
+        let summary = scaffoldSummary report
+        Assert.NotEqual("providerSucceeded", summary.Outcome)
+        Assert.DoesNotContain(intruded, summary.ProducedPaths)
+        Assert.DoesNotContain(intruded, summary.MirroredPaths)
+
+    // 056 T013 (US2 / FR-002 / SC-002 / P2): the fs-gg-sdd-* namespace is reserved even in the
+    // neutral .agents/skills/ root — a provider write there is a defect (exit 2), no fan-out.
+    [<Fact>]
+    let ``scaffold provider writing into the reserved namespace under .agents is a defect`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "skills-intrusion-agents.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+
+        Assert.Contains("scaffold.providerWroteSddTree", diagnosticIds report)
+        Assert.Equal(2, exitCodeForReport report)
+        let summary = scaffoldSummary report
+        Assert.NotEqual("providerSucceeded", summary.Outcome)
+        Assert.DoesNotContain(".agents/skills/fs-gg-sdd-custom/SKILL.md", summary.ProducedPaths)
+        Assert.DoesNotContain(".agents/skills/fs-gg-sdd-custom/SKILL.md", summary.MirroredPaths)
+
+    // 056 T014 (US2 / P4 regression): the .fsgg/·work/·readiness/ intrusion behavior is unchanged.
+    [<Fact>]
+    let ``scaffold provider writing into lifecycle trees remains a defect`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "lifecycle-intrusion.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+
+        Assert.Contains("scaffold.providerWroteSddTree", diagnosticIds report)
+        Assert.Equal(2, exitCodeForReport report)
+
+    // 056 T016 (US1 / FR-005/006 / SC-001 / P6): a compliant provider that writes a co-tenant
+    // skill into .agents/skills/ fans the byte-identical union into all three roots.
+    [<Fact>]
+    let ``scaffold fans out the union to all three roots byte-identically`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "skills-agents-cotenant.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+
+        Assert.DoesNotContain("scaffold.providerWroteSddTree", diagnosticIds report)
+        Assert.Equal(0, exitCodeForReport report)
+        Assert.Equal("providerSucceeded", (scaffoldSummary report).Outcome)
+
+        // Every seeded fs-gg-sdd-* skill AND the provider co-tenant fs-gg-elmish skill are
+        // present and byte-identical across .claude, .codex, and .agents.
+        for name in FS.GG.SDD.Commands.Internal.SeededSkills.skillNames do
+            assertByteIdenticalAcrossRoots root name
+        for path in threeRoots "fs-gg-elmish" do
+            Assert.True(TestSupport.existsRelative root path, $"expected {path} to exist")
+        assertByteIdenticalAcrossRoots root "fs-gg-elmish"
+
+    // 056 T017 (US1 / FR-007 / P7): the provider's .agents canonical stays generatedProduct in
+    // producedPaths; the .claude/.codex mirror copies are recorded in mirroredPaths (mirrored);
+    // no fs-gg-sdd-* path appears in either; schemaVersion stays 1.
+    [<Fact>]
+    let ``scaffold attributes the fan-out mirror copies to SDD in provenance`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "skills-agents-cotenant.providers.yml"
+        runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false) |> ignore
+
+        let provenance = TestSupport.readRelative root provenancePath
+        match FS.GG.SDD.Artifacts.ScaffoldProvenance.tryParse provenance with
+        | Some record ->
+            Assert.Equal(1, record.SchemaVersion)
+            let producedPaths = record.ProducedPaths |> List.map (fun p -> p.Path)
+            let mirroredPaths = record.MirroredPaths |> List.map (fun p -> p.Path)
+
+            Assert.Contains(".agents/skills/fs-gg-elmish/SKILL.md", producedPaths)
+            let elmishProduced = record.ProducedPaths |> List.find (fun p -> p.Path = ".agents/skills/fs-gg-elmish/SKILL.md")
+            Assert.Equal(FS.GG.SDD.Artifacts.ArtifactRef.GeneratedProduct, elmishProduced.Owner)
+
+            Assert.Contains(".claude/skills/fs-gg-elmish/SKILL.md", mirroredPaths)
+            Assert.Contains(".codex/skills/fs-gg-elmish/SKILL.md", mirroredPaths)
+            Assert.True(record.MirroredPaths |> List.forall (fun p -> p.Owner = FS.GG.SDD.Artifacts.ArtifactRef.Mirrored))
+
+            // No seeded fs-gg-sdd-* path is laundered into either array.
+            Assert.DoesNotContain(producedPaths, fun (p: string) -> p.Contains "fs-gg-sdd-")
+            Assert.DoesNotContain(mirroredPaths, fun (p: string) -> p.Contains "fs-gg-sdd-")
+        | None -> failwith "Expected the scaffold provenance to parse."
+
+    // 056 T018 (US1 acceptance #3): a provider that produces NO skills leaves all three roots
+    // with the seeded fs-gg-sdd-* set byte-identical and mirroredPaths empty.
+    [<Fact>]
+    let ``scaffold with a provider that emits no skills mirrors nothing`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "lifecycle.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false)
+
+        Assert.Equal(0, exitCodeForReport report)
+        Assert.Empty((scaffoldSummary report).MirroredPaths)
+        for name in FS.GG.SDD.Commands.Internal.SeededSkills.skillNames do
+            assertByteIdenticalAcrossRoots root name
+
+        let provenance = TestSupport.readRelative root provenancePath
+        match FS.GG.SDD.Artifacts.ScaffoldProvenance.tryParse provenance with
+        | Some record -> Assert.Empty(record.MirroredPaths)
+        | None -> failwith "Expected the scaffold provenance to parse."
+
+    // 056 T022 (FR-012 / P10): an incomplete fan-out is never reported complete. Real fault
+    // injection: pre-plant a CONFLICTING .claude mirror target so the no-clobber
+    // (AgentGuidanceTarget) mirror WriteFile is refused — the fan-out fails mid-mirror. The
+    // scaffold finalizes non-success at exit 2 with scaffold.mirrorFailed, and neither the
+    // report nor provenance records a completed fan-out.
+    [<Fact>]
+    let ``scaffold with a blocked mirror target fails the fan-out at exit 2`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "skills-agents-cotenant.providers.yml"
+        // A conflicting, author-owned copy at a mirror target: no-clobber refuses to overwrite
+        // it, so the mirror WriteFile fails. (.claude/skills/ is isSddOwned, so this pre-plant
+        // does not trip the non-empty-target collision guard.)
+        TestSupport.writeRelative root ".claude/skills/fs-gg-elmish/SKILL.md" "CONFLICTING AUTHOR CONTENT\n"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+
+        Assert.Contains("scaffold.mirrorFailed", diagnosticIds report)
+        Assert.Equal(2, exitCodeForReport report)
+        let summary = scaffoldSummary report
+        Assert.NotEqual("providerSucceeded", summary.Outcome)
+        Assert.Empty(summary.MirroredPaths)
+
+        // Provenance (if written) records NO completed fan-out.
+        if TestSupport.existsRelative root provenancePath then
+            match FS.GG.SDD.Artifacts.ScaffoldProvenance.tryParse (TestSupport.readRelative root provenancePath) with
+            | Some record ->
+                Assert.NotEqual("providerSucceeded", record.Outcome)
+                Assert.Empty(record.MirroredPaths)
+            | None -> ()
+
+    // ===================================================================
     // 032 — scaffold owns repo-init & script executability post-instantiation
     // Real `git` + real filesystem over the public scaffold surface (no mocks):
     // a fresh temp dir is outside any git work tree, so the success path
@@ -1037,10 +1194,13 @@ module ScaffoldCommandTests =
             Set.ofList
                 [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml"; "AGENTS.md"; "CLAUDE.md" ]
 
-        // 051: the seeded process-skill files (15 declared skills × {.claude,.codex}).
+        // 051/056: the seeded process-skill files (15 declared skills × {.claude,.codex,.agents}).
         let seededSkillPaths =
             FS.GG.SDD.Commands.Internal.SeededSkills.skillNames
-            |> List.collect (fun name -> [ $".claude/skills/{name}/SKILL.md"; $".codex/skills/{name}/SKILL.md" ])
+            |> List.collect (fun name ->
+                [ $".claude/skills/{name}/SKILL.md"
+                  $".codex/skills/{name}/SKILL.md"
+                  $".agents/skills/{name}/SKILL.md" ])
 
         let authoredSeeds =
             Set.ofList ([ ".fsgg/constitution.md"; ".fsgg/early-stage-guidance.md" ] @ seededSkillPaths)

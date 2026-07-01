@@ -1539,6 +1539,8 @@ module CommandReports =
               "scaffold.providerFailed"
               "scaffold.providerUnavailable"
               "scaffold.providerWroteSddTree"
+              // 056 (FR-012): an incomplete skill fan-out is a tool defect (exit 2).
+              "scaffold.mirrorFailed"
               // Feature 053 (R10): a confirmed upgrade step that failed to apply is a step
               // defect, escalated to exit 2 like a provider defect.
               "upgrade.selfUpdateFailed"

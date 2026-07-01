@@ -12,12 +12,17 @@ open FS.GG.SDD.Commands.CommandTypes
 module internal Drift =
 
     // The expected seeded-skeleton set (R3 / FR-004): for every `SeededSkills.skillNames`,
-    // both the `.claude` and `.codex` SKILL.md, plus `.fsgg/early-stage-guidance.md`. This
-    // is exactly the set `init` seeds, so `upgrade`'s re-seed re-materializes the missing
-    // subset via `initEffects` no-clobber writes (R8). Sorted, deterministic.
+    // the `.claude`, `.codex`, AND 056 neutral `.agents` SKILL.md, plus
+    // `.fsgg/early-stage-guidance.md`. This is exactly the set `init` seeds, so `upgrade`'s
+    // re-seed re-materializes the missing subset (e.g. the third root a pre-056 CLI never
+    // wrote) via `initEffects` no-clobber writes (R8/FR-010). Sorted, deterministic. A
+    // divergent/missing root among the three violates `claude ≡ codex ≡ agents` (E7).
     let expectedArtifactPaths =
         (SeededSkills.skillNames
-         |> List.collect (fun name -> [ $".claude/skills/{name}/SKILL.md"; $".codex/skills/{name}/SKILL.md" ]))
+         |> List.collect (fun name ->
+             [ $".claude/skills/{name}/SKILL.md"
+               $".codex/skills/{name}/SKILL.md"
+               $".agents/skills/{name}/SKILL.md" ]))
         @ [ ".fsgg/early-stage-guidance.md" ]
         |> List.sort
 

@@ -240,6 +240,22 @@ module Diagnostics =
             "Fix the provider so it materializes only into the product target; SDD state was not modified. The provider's captured output is in the scaffold report (`providerInvocation.standardOutput` / `.standardError`)."
             ordered
 
+    // 056 (FR-012): a `ReadFile`/`WriteFile` fault during the post-instantiation skill
+    // fan-out. Finalizes as a non-success scaffold at exit 2 (the tool-defect class), so an
+    // incomplete fan-out is never reported complete. Additive observability id only.
+    let scaffoldMirrorFailed (paths: string list) =
+        let ordered = paths |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.mirrorFailed"
+            DiagnosticError
+            None
+            None
+            $"The skill fan-out could not mirror the union into every agent root (failed path(s): {rendered})."
+            "Resolve the filesystem issue (permissions / read-only target), then re-run scaffold; the fan-out was not completed and was not recorded as complete."
+            ordered
+
     let scaffoldProvenanceMalformed path =
         create
             "scaffold.provenanceMalformed"

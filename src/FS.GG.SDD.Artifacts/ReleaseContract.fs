@@ -428,6 +428,7 @@ module ReleaseContract =
         | "governance" -> Governance
         | "rendering" -> Rendering
         | "generatedProduct" -> GeneratedProduct
+        | "mirrored" -> Mirrored
         | _ -> Sdd
 
     let optString (element: JsonElement) (name: string) =

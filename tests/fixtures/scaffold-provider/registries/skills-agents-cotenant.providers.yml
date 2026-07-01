@@ -1,0 +1,13 @@
+# 056 (T002 / FR-005 / US1): a compliant provider that writes a co-tenant UI skill into
+# the neutral .agents/skills/ root (never .claude/.codex). Declares the `lifecycle` symbol
+# so `dotnet new` accepts the forwarded param; SDD fans the produced skill out to all three
+# roots. Carries no rendering-specific identifier.
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-skills-agents-cotenant
+    source: __FIXTURE__/skills-agents-cotenant
+    parameters:
+      - key: lifecycle
+        required: false

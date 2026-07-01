@@ -6,6 +6,10 @@ module ArtifactRef =
         | Governance
         | Rendering
         | GeneratedProduct
+        /// 056: the SDD orchestrator mirror-copy owner — a `.claude`/`.codex` copy of a
+        /// provider-produced `.agents/skills/*` skill that SDD fanned out. Serialized
+        /// `"mirrored"`; appears only in `ScaffoldProvenanceRecord.MirroredPaths`.
+        | Mirrored
 
     type ArtifactKind =
         | ProjectConfig

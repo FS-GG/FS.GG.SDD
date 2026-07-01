@@ -102,5 +102,26 @@ the block adds diagnostic visibility only. Per this policy an additive change ca
 `<version>.md` migration note** (the `release-readiness.json` `migrations[]` array stays
 empty); this paragraph records the change instead.
 
+The `056-orchestrator-skill-fanout` change is additive. `fsgg-sdd` becomes the sole
+mirror authority for agent-skill roots: `init` now seeds the 15 `fs-gg-sdd-*` process
+skills into a **third** root `.agents/skills/` (in addition to `.claude/skills/` and
+`.codex/skills/`), and after a successful provider invocation `scaffold` fans the
+byte-identical **union** (seeded ∪ the provider's `.agents/skills/*` skills) into all
+three roots (`claude ≡ codex ≡ agents`). The intrusion guard stays strict — `.claude/skills/`
+and `.codex/skills/` remain whole-root reserved — and gains one clause: the `fs-gg-sdd-*`
+namespace under `.agents/skills/` is reserved too. `.fsgg/scaffold-provenance.json` gains
+one **additive** optional array `mirroredPaths` (each entry owner `"mirrored"`, the
+`.claude`/`.codex` fan-out copies), sorted after `producedPaths`; absent/null parses to
+`[]` and the schema **stays v1**. `ScaffoldProvenanceRecord` gains a `MirroredPaths` field,
+`ScaffoldSummary` a `MirroredPaths` list (projected `mirroredPaths` in json/text/rich), and
+`ArtifactOwner` a `Mirrored` case (`"mirrored"`). `refresh` re-mirrors the union to
+currency; `doctor`/`upgrade` detect and reconcile a product whose three roots have drifted
+(e.g. scaffolded by a two-root CLI); an incomplete fan-out is never reported complete
+(a mirror I/O fault fails at exit 2 with the additive `scaffold.mirrorFailed` diagnostic —
+no new outcome or exit code). `init`'s seeded set growing by the third root is a declared,
+**version-gated** skeleton change (ADR-0008), not a schema migration. Per the additive-change
+policy this carries **no `<version>.md` migration note** (`release-readiness.json`
+`migrations[]` stays empty); this paragraph records the change instead.
+
 When a release introduces a breaking change, add its note here as
 `<version>.md` and list it in this index.

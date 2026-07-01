@@ -1,0 +1,12 @@
+# 056 (T004 / FR-001 / US2): a defective provider that writes into the whole-root-reserved
+# .claude/skills/ tree — rejected as providerWroteSddTree (exit 2). Split from the combined
+# skills-intrusion fixture so each whole-root clause is proven independently.
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-skills-intrusion-claude
+    source: __FIXTURE__/skills-intrusion-claude
+    parameters:
+      - key: lifecycle
+        required: false

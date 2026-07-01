@@ -25,6 +25,13 @@ module ScaffoldProvenance =
           TemplateRef: string
           Outcome: string
           ProducedPaths: ScaffoldProducedPath list
+          /// 056: the `.claude`/`.codex` mirror copies of the provider's produced
+          /// `.agents/skills/*` skills that SDD fanned out (owner `Mirrored`). The
+          /// provider's canonical `.agents` skill stays in `ProducedPaths`
+          /// (`GeneratedProduct`); no seeded `fs-gg-sdd-*` path appears here. Additive
+          /// optional field, sorted ascending by path, serialized immediately after
+          /// `producedPaths`; `tryParse` defaults absent/null to `[]` (schema stays v1).
+          MirroredPaths: ScaffoldProducedPath list
           /// The effective `key → value` parameters forwarded to the provider —
           /// provider-declared `default`s overlaid by author `--param` overrides
           /// (author wins). Sorted ascending by key; `[]` when none. Records the

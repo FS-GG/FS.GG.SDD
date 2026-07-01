@@ -366,6 +366,10 @@ module CommandTypes =
           ProviderInvoked: bool
           ProducedPathCount: int
           ProducedPaths: string list
+          /// 056: the `.claude`/`.codex` mirror copies of the provider's produced
+          /// `.agents/skills/*` skills that SDD fanned out. Sorted; `[]` when the provider
+          /// produced no skills. Projected after `producedPaths` in json/text/rich.
+          MirroredPaths: string list
           /// The effective `key → value` parameters forwarded to the provider —
           /// provider-declared `default`s overlaid by author `--param` overrides
           /// (author wins). Sorted ascending by key; `[]` when none forwarded

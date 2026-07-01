@@ -21,6 +21,7 @@ module ScaffoldProvenance =
           TemplateRef: string
           Outcome: string
           ProducedPaths: ScaffoldProducedPath list
+          MirroredPaths: ScaffoldProducedPath list
           EffectiveParameters: (string * string) list }
 
     let provenancePath = ".fsgg/scaffold-provenance.json"
@@ -30,6 +31,7 @@ module ScaffoldProvenance =
         | "sdd" -> ArtifactOwner.Sdd
         | "governance" -> ArtifactOwner.Governance
         | "rendering" -> ArtifactOwner.Rendering
+        | "mirrored" -> ArtifactOwner.Mirrored
         | _ -> ArtifactOwner.GeneratedProduct
 
     let serialize (record: ScaffoldProvenanceRecord) =
@@ -62,6 +64,22 @@ module ScaffoldProvenance =
             writer.WriteStartObject()
             writer.WriteString("path", produced.Path)
             writer.WriteString("owner", ownerValue produced.Owner)
+            writer.WriteEndObject())
+
+        writer.WriteEndArray()
+
+        // 056: additive mirror record — the `.claude`/`.codex` fan-out copies of the
+        // provider's `.agents/skills/*` skills, owner `mirrored`. Sorted by path,
+        // immediately after `producedPaths`; empty array when nothing was mirrored
+        // (schema stays v1). `"mirrored"` appears only inside this array.
+        writer.WriteStartArray("mirroredPaths")
+
+        record.MirroredPaths
+        |> List.sortBy (fun mirrored -> mirrored.Path)
+        |> List.iter (fun mirrored ->
+            writer.WriteStartObject()
+            writer.WriteString("path", mirrored.Path)
+            writer.WriteString("owner", ownerValue mirrored.Owner)
             writer.WriteEndObject())
 
         writer.WriteEndArray()
@@ -108,6 +126,18 @@ module ScaffoldProvenance =
                                           Owner = jsonString "owner" element |> Option.map ownerFromValue |> Option.defaultValue ArtifactOwner.GeneratedProduct }
                                 | _ -> None)
 
+                        // 056: additive mirror record. Absent/null ⇒ `[]`, so provenance
+                        // written before this field still parses (schema stays v1).
+                        let mirroredPaths =
+                            jsonArray "mirroredPaths" root
+                            |> List.choose (fun element ->
+                                match jsonString "path" element with
+                                | Some path when not (String.IsNullOrWhiteSpace path) ->
+                                    Some
+                                        { Path = path
+                                          Owner = jsonString "owner" element |> Option.map ownerFromValue |> Option.defaultValue ArtifactOwner.Mirrored }
+                                | _ -> None)
+
                         // Additive optional field (D3): absent ⇒ `[]`, so provenance
                         // written before `effectiveParameters` still parses.
                         let effectiveParameters =
@@ -131,6 +161,7 @@ module ScaffoldProvenance =
                               TemplateRef = templateRef
                               Outcome = outcome
                               ProducedPaths = producedPaths
+                              MirroredPaths = mirroredPaths
                               EffectiveParameters = effectiveParameters }
                     | _ -> None
                 | None -> None

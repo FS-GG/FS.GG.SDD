@@ -123,6 +123,22 @@ module DoctorCommandTests =
         let root = behindMissingFixture ()
         Assert.Equal(serializeReport (doctorReport root), serializeReport (doctorReport root))
 
+    // 056 T024 (US3 / FR-010 / P9): a pre-056 product missing the third `.agents/skills/` root
+    // is reported as drift read-only (zero writes, exit 0).
+    [<Fact>]
+    let ``doctor reports the missing third .agents root read-only`` () =
+        let root = pre056Fixture ()
+        let before = treeHash root
+        let report = doctorReport root
+        let summary = doctor report
+        Assert.False summary.IsCoherent
+        Assert.NotEmpty summary.MissingArtifactPaths
+        Assert.Contains(summary.MissingArtifactPaths, fun (p: string) -> p.StartsWith ".agents/skills/")
+        // Strictly read-only.
+        Assert.Empty report.ChangedArtifacts
+        Assert.Equal(before, treeHash root)
+        Assert.Equal(0, exitCode report)
+
 
 /// `upgrade` non-interactive command tests (`--yes`, refusal, no-op, step-defect, ownership).
 module UpgradeCommandTests =
@@ -186,6 +202,30 @@ module UpgradeCommandTests =
         Assert.True summary.ResidualDrift
         Assert.Equal(2, exitCode report)
 
+    // 056 T025 (US3 / SC-004 / P9): upgrade reconciles a pre-056 product by re-seeding the
+    // missing third `.agents/skills/` root no-clobber to zero residual drift, preserving the
+    // present (author-owned) copies in the other roots.
+    [<Fact>]
+    let ``upgrade re-seeds the missing third .agents root to zero residual drift`` () =
+        let root = pre056Fixture ()
+        // A present .claude copy (dummy author content) must be preserved (no-clobber).
+        let presentClaude = ".claude/skills/" + List.head SeededSkills.skillNames + "/SKILL.md"
+        let preservedBefore = TestSupport.readRelative root presentClaude
+
+        let report = upgradeYes root
+        let summary = upgrade report
+        Assert.Contains("artifactReSeed", summary.AppliedStepIds)
+        Assert.False summary.ResidualDrift
+        Assert.Equal(0, exitCode report)
+
+        // The third root is materialized for every seeded skill…
+        for name in SeededSkills.skillNames do
+            Assert.True(TestSupport.existsRelative root $".agents/skills/{name}/SKILL.md", $"expected .agents copy of {name}")
+        // …the present copy is untouched…
+        Assert.Equal(preservedBefore, TestSupport.readRelative root presentClaude)
+        // …and doctor now reports coherence.
+        Assert.True(match (doctorReport root).Doctor with Some d -> d.IsCoherent | None -> false)
+
     [<Fact>]
     let ``upgrade writes only consumer-owned seeded paths (no governed or registry writes)`` () =
         let root = atOrAboveMissingFixture ()
@@ -195,6 +235,7 @@ module UpgradeCommandTests =
             let allowed =
                 change.Path.StartsWith(".claude/skills/")
                 || change.Path.StartsWith(".codex/skills/")
+                || change.Path.StartsWith(".agents/skills/")
                 || change.Path = ".fsgg/early-stage-guidance.md"
 
             Assert.True(allowed, $"upgrade wrote an unexpected path: {change.Path}")

@@ -109,14 +109,21 @@ module CommandWorkflow =
                 model, []
             else
                 let candidateReads =
-                    appendNewEffects ((duplicateCandidateReadEffects workId model) @ (agentGuidanceCandidateReadEffects workId model)) model
+                    appendNewEffects
+                        ((duplicateCandidateReadEffects workId model)
+                         @ (agentGuidanceCandidateReadEffects workId model)
+                         // 056: provider-skill bodies for the re-mirror step (two-phase).
+                         @ (providerSkillMirrorReads model))
+                        model
 
                 match candidateReads with
                 | _ :: _ ->
                     { model with PendingEffects = model.PendingEffects @ candidateReads }, candidateReads
                 | [] ->
                     let diagnostics, refresh, generatedViews, plannedEffects = computeRefreshPlan model
-                    let effects = appendNewEffects plannedEffects model
+                    // 056: re-mirror the union (re-seed all three roots + fan provider skills
+                    // into .claude/.codex) to currency on every refresh, no-clobber (FR-009).
+                    let effects = appendNewEffects (plannedEffects @ skillFanoutRefreshEffects model) model
 
                     let plannedModel =
                         { model with

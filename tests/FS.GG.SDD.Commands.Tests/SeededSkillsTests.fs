@@ -16,6 +16,8 @@ module SeededSkillsTests =
 
     let private claudePath name = $".claude/skills/{name}/SKILL.md"
     let private codexPath name = $".codex/skills/{name}/SKILL.md"
+    // 056: the neutral third agent-skill root every seeded skill also lands in.
+    let private agentsPath name = $".agents/skills/{name}/SKILL.md"
 
     let private seedInto root =
         TestSupport.request Init root |> TestSupport.runRequest
@@ -102,6 +104,68 @@ module SeededSkillsTests =
             let codex = File.ReadAllBytes(Path.Combine(root, (codexPath name).Replace('/', Path.DirectorySeparatorChar)))
             Assert.Equal<byte[]>(claude, codex)
 
+    // ---------- 056 T006 (P1–P4): the strict isSddTree/isSddOwned truth table ----------
+
+    [<Fact>]
+    let ``isSddTree and isSddOwned honor the strict 056 truth table`` () =
+        // (path, expected isSddTree, expected isSddOwned) — data-model.md E-table.
+        let rows =
+            [ ".fsgg/constitution.md", true, true
+              "work/001/spec.md", true, true
+              "readiness/001/verify.json", true, true
+              // .claude/.codex stay WHOLE-ROOT reserved (strict — NOT narrowed).
+              ".claude/skills/anything/SKILL.md", true, true
+              ".codex/skills/anything/SKILL.md", true, true
+              // .agents reserves ONLY the fs-gg-sdd-* namespace (new clause).
+              ".agents/skills/fs-gg-sdd-plan/SKILL.md", true, true
+              ".agents/skills/fs-gg-sdd-custom/SKILL.md", true, true
+              // A provider co-tenant skill in the neutral root is product, not reserved.
+              ".agents/skills/fs-gg-elmish/SKILL.md", false, false
+              ".agents/skills/", false, false
+              ".agents/other.txt", false, false
+              // Agent-guidance skeleton: owned-but-not-a-tree.
+              "AGENTS.md", false, true
+              "CLAUDE.md", false, true ]
+
+        for path, expectedTree, expectedOwned in rows do
+            Assert.Equal(expectedTree, isSddTree path)
+            Assert.Equal(expectedOwned, isSddOwned path)
+
+    // ---------- 056 T007 (US3 / FR-004, SC-003, P5): init seeds all THREE roots ----------
+
+    [<Fact>]
+    let ``init seeds every fs-gg-sdd-* skill byte-identically into all three agent roots`` () =
+        let root = TestSupport.tempDirectory ()
+        seedInto root |> ignore
+
+        let bytesAt path = File.ReadAllBytes(Path.Combine(root, (path: string).Replace('/', Path.DirectorySeparatorChar)))
+
+        Assert.NotEmpty SeededSkills.skillNames
+        for name in SeededSkills.skillNames do
+            let claude = bytesAt (claudePath name)
+            let codex = bytesAt (codexPath name)
+            let agents = bytesAt (agentsPath name)
+            Assert.Equal<byte[]>(claude, codex)
+            Assert.Equal<byte[]>(claude, agents)
+
+    [<Fact>]
+    let ``two init runs produce byte-stable three-root skill trees`` () =
+        let mk () =
+            let dir = Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + System.Guid.NewGuid().ToString("N"), "seed-3root")
+            Directory.CreateDirectory dir |> ignore
+            dir
+
+        let first = mk ()
+        let second = mk ()
+        seedInto first |> ignore
+        seedInto second |> ignore
+
+        for name in SeededSkills.skillNames do
+            for path in [ claudePath name; codexPath name; agentsPath name ] do
+                let a = File.ReadAllBytes(Path.Combine(first, path.Replace('/', Path.DirectorySeparatorChar)))
+                let b = File.ReadAllBytes(Path.Combine(second, path.Replace('/', Path.DirectorySeparatorChar)))
+                Assert.Equal<byte[]>(a, b)
+
     // ---------- T013 (US3 / INV-7, FR-010/SC-005): membership + embedded drift guard ----------
 
     [<Fact>]
@@ -140,8 +204,9 @@ module SeededSkillsTests =
 
         let planned = scaffoldInvocationEffects request descriptor Map.empty |> Set.ofList
 
-        // Every one of the 30 seeded-skill WriteFile effects flows through scaffold via the
-        // reused initEffects seam. Fails if scaffold stops reusing initEffects.
-        Assert.Equal(30, List.length SeededSkills.skillEffects)
+        // Every one of the 45 seeded-skill WriteFile effects (15 skills × 3 roots) flows
+        // through scaffold via the reused initEffects seam. Fails if scaffold stops reusing
+        // initEffects (056: the third `.agents` root grew the count 30 → 45).
+        Assert.Equal(45, List.length SeededSkills.skillEffects)
         for effect in SeededSkills.skillEffects do
             Assert.Contains(effect, planned)

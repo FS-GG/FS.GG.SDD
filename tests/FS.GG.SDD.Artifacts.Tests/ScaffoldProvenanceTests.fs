@@ -133,6 +133,7 @@ providers:
           ProducedPaths =
             [ { Path = "src/Product/Program.fs"; Owner = GeneratedProduct }
               { Path = "src/Product/App.fsproj"; Owner = GeneratedProduct } ]
+          MirroredPaths = []
           EffectiveParameters = [ "variant", "alpha"; "productName", "Demo" ] }
 
     [<Fact>]
@@ -262,6 +263,66 @@ providers:
         match tryParse withoutField with
         | Some parsed -> Assert.Equal(None, parsed.RequiredMinimumCliVersion)
         | None -> failwith "A v1 document without requiredMinimumCliVersion must still parse."
+
+    // --- 056 T008 (P10 / FR-007): additive mirroredPaths, schema stays v1 ---
+
+    let private mirroredRecord =
+        { record with
+            ProducedPaths = [ { Path = ".agents/skills/fs-gg-elmish/SKILL.md"; Owner = GeneratedProduct } ]
+            MirroredPaths =
+                [ { Path = ".codex/skills/fs-gg-elmish/SKILL.md"; Owner = Mirrored }
+                  { Path = ".claude/skills/fs-gg-elmish/SKILL.md"; Owner = Mirrored } ] }
+
+    [<Fact>]
+    let ``serialize then tryParse round-trips mirroredPaths and keeps schemaVersion 1`` () =
+        match tryParse (serialize mirroredRecord) with
+        | Some parsed ->
+            Assert.Equal(1, parsed.SchemaVersion)
+            // Sorted ascending by path; owner mirrored preserved.
+            Assert.Equal<string list>(
+                [ ".claude/skills/fs-gg-elmish/SKILL.md"; ".codex/skills/fs-gg-elmish/SKILL.md" ],
+                parsed.MirroredPaths |> List.map (fun p -> p.Path))
+            Assert.True(parsed.MirroredPaths |> List.forall (fun p -> p.Owner = Mirrored))
+        | None -> failwith "Expected the mirrored record to round-trip."
+
+    [<Fact>]
+    let ``serialize emits mirroredPaths sorted immediately after producedPaths`` () =
+        let json = serialize mirroredRecord
+        Assert.True(json.IndexOf "\"producedPaths\"" < json.IndexOf "\"mirroredPaths\"")
+        Assert.True(json.IndexOf "\"mirroredPaths\"" < json.IndexOf "\"effectiveParameters\"")
+        // .claude sorts before .codex.
+        Assert.True(json.IndexOf ".claude/skills/fs-gg-elmish" < json.IndexOf ".codex/skills/fs-gg-elmish")
+        Assert.Contains("\"owner\": \"mirrored\"", json)
+        // The seeded fs-gg-sdd-* namespace never appears in the mirror record.
+        Assert.DoesNotContain("fs-gg-sdd-", json)
+
+    [<Fact>]
+    let ``mirrored owner appears only inside mirroredPaths never in producedPaths`` () =
+        let json = serialize mirroredRecord
+        let producedSegment = json.Substring(json.IndexOf "\"producedPaths\"", json.IndexOf "\"mirroredPaths\"" - json.IndexOf "\"producedPaths\"")
+        Assert.DoesNotContain("mirrored", producedSegment)
+
+    [<Fact>]
+    let ``tryParse defaults mirroredPaths to empty when the key is absent`` () =
+        let withoutField =
+            """{
+  "schemaVersion": 1,
+  "generator": { "id": "fsgg-sdd", "version": "0.0.0" },
+  "providerName": "fixture",
+  "providerContractVersion": "1.0.0",
+  "templateRef": "fsgg-fixture-app",
+  "outcome": "providerSucceeded",
+  "producedPaths": [ { "path": "App.fsproj", "owner": "generatedProduct" } ]
+}"""
+
+        match tryParse withoutField with
+        | Some parsed -> Assert.Equal<ScaffoldProducedPath list>([], parsed.MirroredPaths)
+        | None -> failwith "A v1 document without mirroredPaths must still parse."
+
+    [<Fact>]
+    let ``serialize emits an empty mirroredPaths array when nothing mirrored`` () =
+        let json = serialize record
+        Assert.Contains("\"mirroredPaths\": []", json)
 
     [<Fact>]
     let ``tryParse on malformed JSON yields None`` () =

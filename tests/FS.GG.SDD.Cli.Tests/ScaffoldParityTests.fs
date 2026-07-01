@@ -22,7 +22,8 @@ module ScaffoldParityTests =
           SkeletonCreated = true
           ProviderInvoked = true
           ProducedPathCount = 2
-          ProducedPaths = [ "App.fsproj"; "Program.fs" ]
+          ProducedPaths = [ "App.fsproj"; "Program.fs"; ".agents/skills/fs-gg-elmish/SKILL.md" ]
+          MirroredPaths = [ ".claude/skills/fs-gg-elmish/SKILL.md"; ".codex/skills/fs-gg-elmish/SKILL.md" ]
           EffectiveParameters = [ "productName", "Acme"; "variant", "alpha" ]
           RepoInitOutcome = "initialized"
           ExecutableScriptCount = 0
@@ -69,6 +70,28 @@ module ScaffoldParityTests =
         Assert.Contains("scaffoldRequiredMinimumCliVersion: 0.3.0", text)
         for projection in [ json; text; rich ] do
             Assert.Contains("0.3.0", projection)
+
+    // 056 T019 (FR-008 / SC-005 / P10): the fan-out mirror copies project identically across
+    // json/text/rich, and the rich path changes no JSON byte.
+    [<Fact>]
+    let ``scaffold mirrored paths are identical across json text and rich`` () =
+        let before = serializeReport report
+        resolve Rich interactiveColor report |> ignore
+        Assert.Equal(before, serializeReport report)
+
+        let json = (resolve Json interactiveColor report).Text
+        let text = (resolve Text nonInteractive report).Text
+        let rich = (resolve Rich interactiveColor report).Text
+
+        Assert.Contains("\"mirroredPaths\"", json)
+        Assert.Contains(".claude/skills/fs-gg-elmish/SKILL.md", json)
+        Assert.Contains("scaffoldMirroredPath: .claude/skills/fs-gg-elmish/SKILL.md", text)
+        Assert.Contains("scaffoldMirroredPath: .codex/skills/fs-gg-elmish/SKILL.md", text)
+
+        // Every projection carries the same mirrored facts (rich reuses the plain lines).
+        for projection in [ json; text; rich ] do
+            Assert.Contains(".claude/skills/fs-gg-elmish/SKILL.md", projection)
+            Assert.Contains(".codex/skills/fs-gg-elmish/SKILL.md", projection)
 
     // 050 T018 (FR-003/FR-008): the effective forwarded parameters project consistently across
     // json (array of {key,value}, sorted), text (`scaffoldEffectiveParam: key=value`), and rich
