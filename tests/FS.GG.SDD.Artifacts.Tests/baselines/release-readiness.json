@@ -294,6 +294,11 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "doctor",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "evidence",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -365,6 +370,11 @@
         },
         {
           "name": "tasks",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "upgrade",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },

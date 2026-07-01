@@ -98,6 +98,24 @@ silently ignored).
 Both honor `--rich` / `--text` / `--json` (default JSON) — see
 [[fs-gg-sdd-lifecycle]].
 
+## Keeping a scaffolded product current
+
+Two cross-cutting commands reconcile drift between a scaffolded product and its
+coherent set (the template pin, the framework, and the `fsgg-sdd` CLI):
+
+- `fsgg-sdd doctor` — a **read-only** drift report: installed CLI vs the pin's
+  required minimum, which seeded artifacts are present vs expected, and a dry-run
+  preview of what `upgrade` would change. It never writes and exits 0 whenever it
+  reports.
+- `fsgg-sdd upgrade` — the reconciliation verb: CLI self-update, template re-pin,
+  and re-seed of the missing seeded artifacts, **each shown as a diff and
+  confirmed** before it is applied (or all at once with `--yes`). It is the **only**
+  command that mutates the CLI installation or consumer artifacts for remediation; a
+  non-interactive run without `--yes` refuses (exit 1) rather than acting silently.
+  CI keeps the tool pinned via `.config/dotnet-tools.json`.
+
+See `docs/reference/doctor-upgrade.md`.
+
 ## Next
 
 - `charter` — establish your first work item: [[fs-gg-sdd-charter]].

@@ -1,0 +1,14 @@
+# 053 quickstart evidence (2026-07-01T08:10:02Z)  installed CLI: 0.2.1
+
+A/B doctor on behind scaffold:
+  exit=0 (expect 0)
+C doctor on bare (no provenance):
+  exit=0 (expect 0)
+F upgrade --yes (at/above, re-seed):
+  exit=0 (expect 0)
+  doctor after: 
+  isCoherent True
+G upgrade non-interactive without --yes:
+  exit=0 (expect 1)
+G (fresh drifted fixture) upgrade non-interactive without --yes:
+  exit=1 (expect 1, refused)

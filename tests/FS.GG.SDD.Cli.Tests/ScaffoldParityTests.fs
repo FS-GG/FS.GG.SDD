@@ -11,7 +11,7 @@ open Xunit
 /// `--text`, and `--rich`; `--rich` redirected equals `--text`; and the rich path
 /// changes no JSON byte. Built from a constructed report (no template engine).
 module ScaffoldParityTests =
-    let private interactiveColor = { IsInteractive = true; ColorEnabled = true; Width = Some 100 }
+    let private interactiveColor = { IsInteractive = true; ColorEnabled = true; Width = Some 100; IsInputInteractive = true }
     let private nonInteractive = { interactiveColor with IsInteractive = false }
 
     let private scaffoldSummary: ScaffoldSummary =

@@ -196,11 +196,13 @@ in the authoritative `catalog[].inventory` of
   `schemaVersion` *(Stable)*, `skills`, `sources`, `targetId`, `viewVersion`,
   `workId`.
 - **`command-report (--json)`** — `agentGuidance`, `analysis`, `changedArtifacts`,
-  `checklist`, `clarification`, `command`, `context`, `diagnostics`, `evidence`,
+  `checklist`, `clarification`, `command`, `context`, `diagnostics`, `doctor`, `evidence`,
   `generatedViews`, `governanceCompatibility`, `help` *(present on `--help`/`-h`/`help`
   invocations; `null` otherwise)*, `invocation`, `nextAction`, `outcome`, `plan`,
   `refresh`, `reportVersion`, `scaffold`, `schemaVersion` *(Stable)*, `ship`,
-  `specification`, `tasks`, `verification`.
+  `specification`, `tasks`, `upgrade`, `verification`.
+  The additive `doctor` field is present on `fsgg-sdd doctor` (`null` otherwise); the
+  additive `upgrade` field is present on `fsgg-sdd upgrade` (`null` otherwise) — feature 053.
 
 ### Markdown projections (sections)
 

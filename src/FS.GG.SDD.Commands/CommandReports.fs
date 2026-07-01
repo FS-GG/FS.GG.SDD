@@ -976,7 +976,8 @@ module CommandReports =
         | SetExecutable _
         | EmitStdout _
         | EmitStderr _
-        | SetExitCode _ -> None
+        | SetExitCode _
+        | Confirm _ -> None
 
     let governanceCompatibility : GovernanceCompatibilityFact list =
         [ { Path = ".fsgg/policy.yml"
@@ -1179,6 +1180,9 @@ module CommandReports =
                     else
                         None
                 | Refresh -> None
+                // Feature 053: a blocked `upgrade` (a failed step, or the non-interactive
+                // refusal) points back at `upgrade` (re-run interactively / with `--yes`).
+                | Upgrade -> Some Upgrade
                 | _ -> None
 
             Some
@@ -1352,6 +1356,47 @@ module CommandReports =
                   Reason = "specify promotes only the first-draft specification; spec.md is now authoritative and is read live by downstream stages (clarify, checklist, …). Edit spec.md directly — re-running specify does not re-promote it."
                   RequiredArtifacts = request.WorkId |> Option.map (fun workId -> [ $"work/{workId}/charter.md"; $"work/{workId}/spec.md" ]) |> Option.defaultValue []
                   BlockingDiagnosticIds = [] }
+        elif request.Command = Doctor then
+            // Read-only report: point drift at `upgrade`, or state coherence (FR-002/FR-005).
+            let coherent = reportOutcome = CommandOutcome.NoChange
+
+            Some
+                { ActionId = if coherent then "doctor.coherent" else "doctor.next.upgrade"
+                  Command = if coherent then None else Some Upgrade
+                  WorkId = None
+                  Reason =
+                    if coherent then "Scaffold is coherent — nothing to reconcile."
+                    else "Drift detected; run `fsgg-sdd upgrade` to reconcile each step interactively (or `fsgg-sdd upgrade --yes` non-interactively)."
+                  RequiredArtifacts = []
+                  BlockingDiagnosticIds = [] }
+        elif request.Command = Upgrade then
+            // Non-blocking upgrade outcomes (blocked ones are handled above): residual drift
+            // → re-run upgrade; applied → confirm with doctor; no-op → already coherent.
+            match reportOutcome with
+            | CommandOutcome.SucceededWithWarnings ->
+                Some
+                    { ActionId = "upgrade.residualDrift"
+                      Command = Some Upgrade
+                      WorkId = None
+                      Reason = "Some reconciliation steps were skipped; residual drift remains. Re-run `fsgg-sdd upgrade` and confirm them to finish."
+                      RequiredArtifacts = []
+                      BlockingDiagnosticIds = [] }
+            | CommandOutcome.Succeeded ->
+                Some
+                    { ActionId = "upgrade.next.doctor"
+                      Command = Some Doctor
+                      WorkId = None
+                      Reason = "Reconciliation applied; run `fsgg-sdd doctor` to confirm coherence (a CLI self-update takes effect on the next invocation)."
+                      RequiredArtifacts = []
+                      BlockingDiagnosticIds = [] }
+            | _ ->
+                Some
+                    { ActionId = "upgrade.alreadyCoherent"
+                      Command = None
+                      WorkId = None
+                      Reason = "Already coherent — nothing to reconcile."
+                      RequiredArtifacts = []
+                      BlockingDiagnosticIds = [] }
         else
             match nextLifecycleCommand request.Command with
             | Some command ->
@@ -1448,6 +1493,8 @@ module CommandReports =
           AgentGuidance = model.AgentGuidance
           Refresh = model.Refresh
           Scaffold = model.Scaffold
+          Doctor = model.Doctor
+          Upgrade = model.Upgrade
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility
@@ -1475,6 +1522,8 @@ module CommandReports =
               AgentGuidance = None
               Refresh = None
               Scaffold = None
+              Doctor = None
+              Upgrade = None
               GeneratedViews = []
               Report = None }
 
@@ -1485,7 +1534,15 @@ module CommandReports =
     // Provider-defect diagnostics escalate to exit 2 (tool-defect class), the same
     // boundary `toolDefect` uses; malformed user input stays at exit 1.
     let providerDefectIds =
-        set [ "toolDefect"; "scaffold.providerFailed"; "scaffold.providerUnavailable"; "scaffold.providerWroteSddTree" ]
+        set
+            [ "toolDefect"
+              "scaffold.providerFailed"
+              "scaffold.providerUnavailable"
+              "scaffold.providerWroteSddTree"
+              // Feature 053 (R10): a confirmed upgrade step that failed to apply is a step
+              // defect, escalated to exit 2 like a provider defect.
+              "upgrade.selfUpdateFailed"
+              "upgrade.stepFailed" ]
 
     let exitCodeForReport (report: CommandReport) =
         match report.Outcome with

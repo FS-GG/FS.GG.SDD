@@ -56,7 +56,7 @@ module CommandWorkflowTests =
         let root = TestSupport.tempDirectory()
         let request = TestSupport.request Init root
         let model, effects = init request
-        let first = { Effect = List.head effects; Succeeded = true; Snapshot = None; Process = None; Diagnostic = None }
+        let first = { Effect = List.head effects; Succeeded = true; Snapshot = None; Process = None; Confirmed = None; Diagnostic = None }
 
         let updated = update (EffectInterpreted first) model |> fst
         let final = update BuildReport updated |> fst

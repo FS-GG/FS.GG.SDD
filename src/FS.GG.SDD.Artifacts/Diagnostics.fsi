@@ -71,5 +71,16 @@ module Diagnostics =
     val scaffoldRepoInitSkippedGitUnavailable: unit -> Diagnostic
     val scaffoldScriptsNotMadeExecutable: paths: string list -> Diagnostic
 
+    // Remediation (`fsgg-sdd doctor` / `fsgg-sdd upgrade`) diagnostics (feature 053,
+    // data-model E8). `doctor.driftDetected` is a non-blocking warning (doctor always
+    // exits 0). `upgrade.nonInteractiveNoYes` is a user-input refusal (exit 1);
+    // `upgrade.selfUpdateFailed` / `upgrade.stepFailed` are step defects escalated to
+    // exit 2 via `providerDefectIds`; `upgrade.residualDrift` is a non-blocking warning.
+    val doctorDriftDetected: unit -> Diagnostic
+    val upgradeNonInteractiveNoYes: unit -> Diagnostic
+    val upgradeSelfUpdateFailed: exitCode: int -> Diagnostic
+    val upgradeStepFailed: stepId: string -> Diagnostic
+    val upgradeResidualDrift: stepIds: string list -> Diagnostic
+
     val sort: diagnostics: Diagnostic list -> Diagnostic list
     val hasBlocking: diagnostics: Diagnostic list -> bool

@@ -31,6 +31,8 @@ module CommandHelp =
           { Name = "agents"; Description = "Generate per-target agent command and skill guidance." }
           { Name = "refresh"; Description = "Regenerate SDD-owned generated views to currency." }
           { Name = "scaffold"; Description = "Take an empty directory to a buildable SDD product via a provider." }
+          { Name = "doctor"; Description = "Report how a scaffolded product has drifted from its coherent set (read-only)." }
+          { Name = "upgrade"; Description = "Reconcile a behind scaffold across confirmable per-step diffs." }
           { Name = "version"; Description = "Print the CLI/generator version." }
           { Name = "validate"; Description = "Run the cross-cutting validation harness." }
           { Name = "registry"; Description = "Validate a registry document against the schema." } ]
@@ -60,6 +62,10 @@ module CommandHelp =
               flag "--param" (Some "<key=value>") "Provider parameter (repeatable)."
               flag "--force" None "Pass the provider's force flag where the contract supports it."
               flag "--no-update" None "Skip the managed template and agent-context updates." ]
+        // doctor takes only the global flags (`--root`, format selection).
+        | Doctor -> []
+        | Upgrade ->
+            [ flag "--yes" None "Apply the reconciliation without prompting (explicit non-interactive apply)." ]
 
     let topLevelHelp (generator: GeneratorVersion) =
         { Scope = TopLevel

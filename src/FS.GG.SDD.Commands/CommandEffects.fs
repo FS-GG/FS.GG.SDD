@@ -52,6 +52,7 @@ module CommandEffects =
           Succeeded = true
           Snapshot = snapshot
           Process = None
+          Confirmed = None
           Diagnostic = None }
 
     let failure (effect: CommandEffect) (snapshot: FileSnapshot option) diagnostic =
@@ -59,6 +60,7 @@ module CommandEffects =
           Succeeded = false
           Snapshot = snapshot
           Process = None
+          Confirmed = None
           Diagnostic = Some diagnostic }
 
     // Edge interpreter for `RunProcess`: launches a real child process, captures the
@@ -89,6 +91,7 @@ module CommandEffects =
                   Succeeded = true
                   Snapshot = None
                   Process = Some { Started = false; ExitCode = -1 }
+                  Confirmed = None
                   Diagnostic = None }
             | proc ->
                 proc.StandardOutput.ReadToEnd() |> ignore
@@ -99,6 +102,7 @@ module CommandEffects =
                   Succeeded = true
                   Snapshot = directorySnapshot projectRoot workingDir
                   Process = Some { Started = true; ExitCode = proc.ExitCode }
+                  Confirmed = None
                   Diagnostic = None }
         with _ ->
             // The provider engine/command could not be launched: surfaced as
@@ -107,7 +111,37 @@ module CommandEffects =
               Succeeded = true
               Snapshot = None
               Process = Some { Started = false; ExitCode = -1 }
+              Confirmed = None
               Diagnostic = None }
+
+    // Edge interpreter for `Confirm` (feature 053, confirm-effect contract). Under `DryRun`
+    // it never mutates and never reads stdin (`Some false`). Otherwise it writes the step
+    // diff/prompt and reads one line from `Console.In` (`y`/`yes`, case-insensitive →
+    // confirmed). A `Confirm` is only ever emitted on the interactive path (the pure core
+    // refuses a non-interactive run without `--yes` up front, and `--yes` applies directly
+    // without emitting `Confirm`), so this stdin read is only reached interactively; EOF/
+    // redirected-empty stdin returns null → declined, never a hang. The prompt text is
+    // presentation-only and excluded from the deterministic json; the decision
+    // (`Confirmed`) is the contract-relevant fact.
+    let confirm (dryRun: bool) (effect: CommandEffect) (prompt: string) =
+        let decision =
+            if dryRun then
+                false
+            else
+                Console.Out.Write prompt
+                Console.Out.Flush()
+
+                match (Option.ofObj (Console.In.ReadLine()) |> Option.defaultValue "").Trim().ToLowerInvariant() with
+                | "y"
+                | "yes" -> true
+                | _ -> false
+
+        { Effect = effect
+          Succeeded = true
+          Snapshot = None
+          Process = None
+          Confirmed = Some decision
+          Diagnostic = None }
 
     let interpret (projectRoot: string) (dryRun: bool) (effect: CommandEffect) =
         try
@@ -169,7 +203,9 @@ module CommandEffects =
                           Succeeded = false
                           Snapshot = None
                           Process = None
+                          Confirmed = None
                           Diagnostic = None }
+            | Confirm(_, prompt) -> confirm dryRun effect prompt
             | EmitStdout text ->
                 if not dryRun then Console.Out.Write text
                 success effect None

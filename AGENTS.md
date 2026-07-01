@@ -93,6 +93,23 @@ Boundary rules:
   of the default offline inner loop, and emits a deterministic
   `composition-acceptance-result` v1 verdict (a declared release-catalog exception,
   not a lifecycle artifact).
+- `fsgg-sdd doctor` and `fsgg-sdd upgrade` are the cross-cutting remediation verbs
+  (not lifecycle stages; `nextLifecycleCommand = None`) that reconcile a scaffolded
+  product's drift from its coherent set. `doctor` is a strictly read-only drift
+  report (installed CLI vs the feature-052 declarative minimum, seeded artifacts
+  present vs expected, a dry-run preview of what `upgrade` would change); it makes
+  zero writes and exits 0 whenever it reports. `upgrade` is the **only** command that
+  mutates the CLI installation or consumer artifacts for remediation, across up to
+  three steps — CLI self-update (`RunProcess` edge), consumer-only template re-pin
+  (`.fsgg/providers.yml`; value-agnostic and usually inert, R6), and no-clobber
+  re-seed of the **missing** seeded artifacts via `init`'s `AgentGuidanceTarget`
+  effects — each shown as a diff and applied only after its own `Confirm` (a new MVU
+  effect resolved at the edge) or all at once under `--yes`. A non-interactive run
+  without `--yes` refuses (`upgrade.nonInteractiveNoYes`, exit 1, zero writes); a
+  confirmed step that fails to apply exits 2; an incomplete reconciliation is never
+  reported as complete (residual drift + step ids surfaced, FR-013). Both add additive
+  `doctor`/`upgrade` `CommandReport` blocks (json/text/rich); no persisted schema
+  changes. See `docs/reference/doctor-upgrade.md`.
 - Governance owns rule evaluation, evidence freshness, routing, profiles, and
   gate enforcement.
 - Markdown is an authoring surface; schema-versioned structured artifacts are

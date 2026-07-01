@@ -1,0 +1,251 @@
+namespace FS.GG.SDD.Commands.Tests
+
+open System.IO
+open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Commands.CommandSerialization
+open FS.GG.SDD.Commands.Internal
+open Xunit
+
+/// Pure `Drift` model unit tests (feature 053, T011 / drift-model contract). Constructed
+/// inputs only — no I/O.
+module DriftTests =
+    open RemediationSupport
+
+    let private drift minimum installed present =
+        Drift.compute (Some(record minimum)) (Some(descriptor minimum)) installed (Set.ofList present)
+
+    [<Fact>]
+    let ``CLI axis is behind with a delta when installed is below the declared minimum`` () =
+        let report = drift (Some farAheadMinimum) installedVersion Drift.expectedArtifactPaths
+        Assert.Equal("behind", report.CliAxis)
+        Assert.True(report.CliBehindBy.IsSome)
+
+    [<Fact>]
+    let ``CLI axis is atOrAbove when installed meets the declared minimum`` () =
+        let report = drift (Some farBehindMinimum) installedVersion Drift.expectedArtifactPaths
+        Assert.Equal("atOrAbove", report.CliAxis)
+        Assert.True(report.CliBehindBy.IsNone)
+
+    [<Fact>]
+    let ``CLI axis is coherentByAbsence when the provider declares no minimum`` () =
+        let report = drift None installedVersion Drift.expectedArtifactPaths
+        Assert.Equal("coherentByAbsence", report.CliAxis)
+
+    [<Fact>]
+    let ``CLI axis is undeterminable when the installed version is unparseable`` () =
+        let report = drift (Some farAheadMinimum) "not-a-version" Drift.expectedArtifactPaths
+        Assert.Equal("undeterminable", report.CliAxis)
+
+    [<Fact>]
+    let ``missing artifacts are the sorted expected-minus-present set`` () =
+        let present = Drift.expectedArtifactPaths |> List.skip 2
+        let report = drift (Some farBehindMinimum) installedVersion present
+        Assert.Equal<string list>(Drift.expectedArtifactPaths |> List.take 2 |> List.sort, report.MissingArtifactPaths)
+
+    [<Fact>]
+    let ``a behind scaffold with missing artifacts previews self-update and re-seed as wouldApply`` () =
+        let report = drift (Some farAheadMinimum) installedVersion []
+        let outcomeOf id = report.Steps |> List.find (fun s -> s.StepId = id) |> fun s -> s.Outcome
+        Assert.Equal("wouldApply", outcomeOf "cliSelfUpdate")
+        Assert.Equal("wouldApply", outcomeOf "artifactReSeed")
+        Assert.Equal("noTarget", outcomeOf "templateRePin")
+        Assert.False report.IsCoherent
+
+    [<Fact>]
+    let ``an at-or-above scaffold with all artifacts present is coherent`` () =
+        let report = drift (Some farBehindMinimum) installedVersion Drift.expectedArtifactPaths
+        Assert.True report.IsCoherent
+
+    [<Fact>]
+    let ``no provenance yields HasProvenance false, no steps, coherent-degradation`` () =
+        let report = Drift.compute None None installedVersion Set.empty
+        Assert.False report.HasProvenance
+        Assert.Empty report.Steps
+        Assert.True report.IsCoherent
+
+
+/// `doctor` command tests (T015–T017). Real-filesystem fixtures; doctor is a read-only
+/// projection that always exits 0.
+module DoctorCommandTests =
+    open RemediationSupport
+
+    let private doctor (report: CommandReport) =
+        match report.Doctor with
+        | Some summary -> summary
+        | None -> failwith "expected a doctor summary"
+
+    [<Fact>]
+    let ``behind scaffold names installed, minimum, behind-by, missing skills, and previews upgrade`` () =
+        let root = behindMissingFixture ()
+        let report = doctorReport root
+        let summary = doctor report
+        Assert.Equal("behind", summary.CliAxis)
+        Assert.Equal(installedVersion, summary.InstalledCliVersion)
+        Assert.Equal(Some farAheadMinimum, summary.RequiredMinimumCliVersion)
+        Assert.True summary.CliBehindBy.IsSome
+        Assert.NotEmpty summary.MissingArtifactPaths
+        Assert.Contains(summary.PreviewSteps, fun s -> s.StepId = "artifactReSeed" && s.Outcome = "wouldApply")
+        Assert.False summary.IsCoherent
+        Assert.Equal(0, exitCode report)
+
+    [<Fact>]
+    let ``coherent scaffold reports nothing to reconcile and exits 0`` () =
+        let root = coherentFixture ()
+        let report = doctorReport root
+        Assert.True (doctor report).IsCoherent
+        Assert.Equal(CommandOutcome.NoChange, report.Outcome)
+        Assert.Equal(0, exitCode report)
+
+    [<Fact>]
+    let ``no declared minimum reports coherentByAbsence on the CLI axis`` () =
+        let root = noMinimumFixture ()
+        let report = doctorReport root
+        Assert.Equal("coherentByAbsence", (doctor report).CliAxis)
+        Assert.Equal(0, exitCode report)
+
+    [<Fact>]
+    let ``no scaffold provenance degrades to HasProvenance false, exit 0`` () =
+        let root = noProvenanceFixture ()
+        let report = doctorReport root
+        Assert.False (doctor report).HasProvenance
+        Assert.Equal(0, exitCode report)
+
+    [<Fact>]
+    let ``doctor makes zero writes — the working tree is byte-identical before and after`` () =
+        let root = behindMissingFixture ()
+        let before = treeHash root
+        let report = doctorReport root
+        Assert.Empty report.ChangedArtifacts
+        Assert.Equal(before, treeHash root)
+
+    [<Fact>]
+    let ``doctor json is deterministic across runs`` () =
+        let root = behindMissingFixture ()
+        Assert.Equal(serializeReport (doctorReport root), serializeReport (doctorReport root))
+
+
+/// `upgrade` non-interactive command tests (`--yes`, refusal, no-op, step-defect, ownership).
+module UpgradeCommandTests =
+    open RemediationSupport
+
+    let private upgrade (report: CommandReport) =
+        match report.Upgrade with
+        | Some summary -> summary
+        | None -> failwith "expected an upgrade summary"
+
+    [<Fact>]
+    let ``--yes on an at-or-above behind scaffold re-seeds and reports coherent afterward`` () =
+        let root = atOrAboveMissingFixture ()
+        let report = upgradeYes root
+        let summary = upgrade report
+        Assert.Equal("assumeYes", summary.Mode)
+        Assert.Contains("artifactReSeed", summary.AppliedStepIds)
+        Assert.False summary.ResidualDrift
+        Assert.Equal(0, exitCode report)
+        Assert.True (match (doctorReport root).Doctor with Some d -> d.IsCoherent | None -> false)
+
+    [<Fact>]
+    let ``non-interactive without --yes refuses with zero writes, no hang, exit 1`` () =
+        let root = atOrAboveMissingFixture ()
+        let before = treeHash root
+        let report = upgradeNonInteractive root
+        Assert.Equal("refusedNonInteractive", (upgrade report).Mode)
+        Assert.Contains("upgrade.nonInteractiveNoYes", diagnosticIds report)
+        Assert.Equal(before, treeHash root)
+        Assert.Equal(1, exitCode report)
+
+    [<Fact>]
+    let ``already-coherent scaffold is a clean no-op, exit 0`` () =
+        let root = coherentFixture ()
+        let before = treeHash root
+        let report = upgradeYes root
+        Assert.True (upgrade report).AlreadyCoherent
+        Assert.Equal(before, treeHash root)
+        Assert.Equal(0, exitCode report)
+
+    [<Fact>]
+    let ``no scaffold provenance is a no-op with zero writes, exit 0`` () =
+        let root = noProvenanceFixture ()
+        let before = treeHash root
+        let report = upgradeYes root
+        Assert.False (upgrade report).HasProvenance
+        Assert.Equal(before, treeHash root)
+        Assert.Equal(0, exitCode report)
+
+    [<Fact>]
+    let ``a confirmed step that fails to apply reports residual drift and exits 2`` () =
+        let blocked = Drift.expectedArtifactPaths |> List.head
+        let present = Drift.expectedArtifactPaths |> List.filter (fun p -> p <> blocked)
+        let root = makeFixture (Some farBehindMinimum) present true
+        // Block the one missing target by placing a directory where its file must be written:
+        // the re-seed WriteFile then fails deterministically (real filesystem, no mocks).
+        Directory.CreateDirectory(Path.Combine(root, blocked.Replace('/', Path.DirectorySeparatorChar))) |> ignore
+        let report = upgradeYes root
+        let summary = upgrade report
+        Assert.Contains("artifactReSeed", summary.FailedStepIds)
+        Assert.True summary.ResidualDrift
+        Assert.Equal(2, exitCode report)
+
+    [<Fact>]
+    let ``upgrade writes only consumer-owned seeded paths (no governed or registry writes)`` () =
+        let root = atOrAboveMissingFixture ()
+        let report = upgradeYes root
+
+        for change in report.ChangedArtifacts do
+            let allowed =
+                change.Path.StartsWith(".claude/skills/")
+                || change.Path.StartsWith(".codex/skills/")
+                || change.Path = ".fsgg/early-stage-guidance.md"
+
+            Assert.True(allowed, $"upgrade wrote an unexpected path: {change.Path}")
+
+        // The consumer registry is not rewritten (re-pin is noTarget, R6).
+        Assert.DoesNotContain(report.ChangedArtifacts, fun c -> c.Path = ".fsgg/providers.yml")
+
+    [<Fact>]
+    let ``re-seed is no-clobber — a present author-edited artifact is byte-unchanged`` () =
+        let edited = Drift.expectedArtifactPaths |> List.head
+        let missing = Drift.expectedArtifactPaths |> List.item 1
+        let present = Drift.expectedArtifactPaths |> List.filter (fun p -> p <> missing)
+        let root = makeFixture (Some farBehindMinimum) present true
+        TestSupport.writeRelative root edited "AUTHOR EDIT\n"
+        upgradeYes root |> ignore
+        Assert.Equal("AUTHOR EDIT\n", TestSupport.readRelative root edited)
+
+    [<Fact>]
+    let ``only upgrade carries a remediation summary — doctor and refresh never do`` () =
+        let root = atOrAboveMissingFixture ()
+        Assert.True (doctorReport root).Upgrade.IsNone
+        // A lifecycle/cross-cutting command never produces an upgrade summary or a doctor one.
+        let initReport = TestSupport.request Init (TestSupport.tempDirectory ()) |> TestSupport.runRequest
+        Assert.True initReport.Upgrade.IsNone
+        Assert.True initReport.Doctor.IsNone
+
+
+/// Interactive `upgrade` confirm-loop tests (T029). Synthetic scripted stdin (disclosed in
+/// the test names) drives the real `Confirm` edge interpreter; serialized via the `Console`
+/// collection because `Console.In`/`Console.Out` are process-global.
+[<Collection("Console")>]
+module UpgradeInteractiveTests =
+    open RemediationSupport
+
+    let private upgrade (report: CommandReport) = report.Upgrade.Value
+
+    [<Fact>]
+    let ``Synthetic confirm-all applies the re-seed step and exits 0`` () =
+        let root = atOrAboveMissingFixture ()
+        let report = upgradeInteractive root "y\n"
+        let summary = upgrade report
+        Assert.Equal("interactive", summary.Mode)
+        Assert.Contains("artifactReSeed", summary.AppliedStepIds)
+        Assert.Equal(0, exitCode report)
+
+    [<Fact>]
+    let ``Synthetic decline skips the step, surfaces residual drift, exits 0`` () =
+        let root = atOrAboveMissingFixture ()
+        let report = upgradeInteractive root "n\n"
+        let summary = upgrade report
+        Assert.Contains("artifactReSeed", summary.SkippedStepIds)
+        Assert.True summary.ResidualDrift
+        Assert.Contains("upgrade.residualDrift", diagnosticIds report)
+        Assert.Equal(0, exitCode report)

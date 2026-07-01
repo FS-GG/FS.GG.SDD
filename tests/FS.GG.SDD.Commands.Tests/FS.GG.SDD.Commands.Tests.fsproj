@@ -32,6 +32,8 @@
     <Compile Include="ScaffoldCommandTests.fs" />
     <Compile Include="ScaffoldCliCoherenceTests.fs" />
     <Compile Include="ScaffoldGuardTests.fs" />
+    <Compile Include="RemediationSupport.fs" />
+    <Compile Include="RemediationCommandTests.fs" />
     <Compile Include="SeededSkillsTests.fs" />
     <Compile Include="HelpCommandTests.fs" />
     <Compile Include="AuthoringDocsContractTests.fs" />

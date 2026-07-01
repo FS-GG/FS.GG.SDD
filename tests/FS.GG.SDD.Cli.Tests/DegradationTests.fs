@@ -13,7 +13,7 @@ module DegradationTests =
     /// The ANSI escape (ESC, 0x1B) that must never appear in degraded output.
     let escChar = char 0x1b
 
-    let interactiveColor = { IsInteractive = true; ColorEnabled = true; Width = Some 100 }
+    let interactiveColor = { IsInteractive = true; ColorEnabled = true; Width = Some 100; IsInputInteractive = true }
     let nonInteractive = { interactiveColor with IsInteractive = false }
     let colorDisabled = { interactiveColor with ColorEnabled = false }
 

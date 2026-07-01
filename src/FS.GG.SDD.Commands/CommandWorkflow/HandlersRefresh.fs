@@ -193,6 +193,7 @@ module internal HandlersRefresh =
                           Succeeded = true
                           Snapshot = Some { Path = path; Text = text }
                           Process = None
+                          Confirmed = None
                           Diagnostic = None }
 
                     { m with

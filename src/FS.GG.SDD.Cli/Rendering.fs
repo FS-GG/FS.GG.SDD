@@ -13,7 +13,8 @@ module Rendering =
     type TerminalCapabilities =
         { IsInteractive: bool
           ColorEnabled: bool
-          Width: int option }
+          Width: int option
+          IsInputInteractive: bool }
 
     type RichRenderResult =
         { Text: string
@@ -44,7 +45,8 @@ module Rendering =
 
         { IsInteractive = isInteractive
           ColorEnabled = colorEnabled
-          Width = width }
+          Width = width
+          IsInputInteractive = not Console.IsInputRedirected }
 
     // ----- Presentation styling (color names; stripped on color-off consoles). -----
 

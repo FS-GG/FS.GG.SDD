@@ -73,6 +73,8 @@ module HelpCommandTests =
               AgentGuidance = None
               Refresh = None
               Scaffold = None
+              Doctor = None
+              Upgrade = None
               GeneratedViews = []
               Report = None }
 
