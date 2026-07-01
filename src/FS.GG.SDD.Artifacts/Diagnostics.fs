@@ -214,7 +214,7 @@ module Diagnostics =
             None
             None
             $"Provider '{name}' exited {exitCode}."
-            "Inspect and fix the provider, then re-run scaffold. Any partial output is listed in the produced paths."
+            "Inspect the provider's captured output in the scaffold report (`providerInvocation.commandLine` / `.standardOutput` / `.standardError`), fix the provider, then re-run scaffold. Any partial output is listed in the produced paths."
             [ name; string exitCode ]
 
     let scaffoldProviderUnavailable name =
@@ -224,7 +224,7 @@ module Diagnostics =
             None
             None
             $"Could not run provider '{name}' (`dotnet`/template engine not found)."
-            "Install the .NET SDK and the named template, then re-run scaffold."
+            "Install the .NET SDK and the named template, then re-run scaffold. The attempted command line and launch error are in the scaffold report (`providerInvocation.commandLine` / `.standardError`)."
             [ name ]
 
     let scaffoldProviderWroteSddTree (paths: string list) =
@@ -237,7 +237,7 @@ module Diagnostics =
             None
             None
             $"Provider wrote into SDD-owned tree(s): {rendered}."
-            "Fix the provider so it materializes only into the product target; SDD state was not modified."
+            "Fix the provider so it materializes only into the product target; SDD state was not modified. The provider's captured output is in the scaffold report (`providerInvocation.standardOutput` / `.standardError`)."
             ordered
 
     let scaffoldProvenanceMalformed path =

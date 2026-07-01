@@ -127,7 +127,8 @@ module internal HandlersScaffold =
           RepoInitOutcome = "notApplicable"
           ExecutableScriptCount = 0
           ExecutableScriptsSkipped = 0
-          NextActionHint = hint }
+          NextActionHint = hint
+          ProviderInvocation = None }
 
     let resolveScaffold model =
         let request = model.Request
@@ -297,7 +298,20 @@ module internal HandlersScaffold =
 
         let requiredMinimum = resolvedRequiredMinimumCliVersion descriptor
 
-        let terminalSummary outcome producedPaths providerInvoked skeletonCreated hint : ScaffoldSummary =
+        // Project the edge's captured `ProcessRunResult` into the report's provider-defect
+        // diagnostic facts (E1). `ExitCode` is `Some` only when the process actually
+        // started, so a never-launched provider surfaces `null` — never a spurious `0`
+        // (FR-003).
+        let providerInvocationOf (processResult: ProcessRunResult) : ProviderInvocationResult =
+            { CommandLine = processResult.Command
+              ProcessStarted = processResult.Started
+              ExitCode = if processResult.Started then Some processResult.ExitCode else None
+              StandardOutput = processResult.StandardOutput
+              StandardOutputTruncated = processResult.StandardOutputTruncated
+              StandardError = processResult.StandardError
+              StandardErrorTruncated = processResult.StandardErrorTruncated }
+
+        let terminalSummary outcome producedPaths providerInvoked skeletonCreated hint providerInvocation : ScaffoldSummary =
             { ProviderName = Some name
               ProviderContractVersion = Some version
               RequiredMinimumCliVersion = requiredMinimum
@@ -310,7 +324,8 @@ module internal HandlersScaffold =
               RepoInitOutcome = "notApplicable"
               ExecutableScriptCount = 0
               ExecutableScriptsSkipped = 0
-              NextActionHint = hint }
+              NextActionHint = hint
+              ProviderInvocation = providerInvocation }
 
         if request.DryRun then
             let planned = plannedCreateCommand descriptor effective request
@@ -331,17 +346,19 @@ module internal HandlersScaffold =
                   ExecutableScriptCount = 0
                   ExecutableScriptsSkipped = 0
                   NextActionHint =
-                    $"dry run: would run `{planned}`, initialize a git repository, and make produced scripts executable (produced paths are determined at execution)." }
+                    $"dry run: would run `{planned}`, initialize a git repository, and make produced scripts executable (produced paths are determined at execution)."
+                  ProviderInvocation = None }
 
             FinalizeTerminal(summary, [], [])
         else
             let createResult = model.InterpretedEffects |> List.tryFind (fun result -> isCreateProcess result.Effect)
+            let createProcess = createResult |> Option.bind (fun result -> result.Process)
 
-            match createResult |> Option.bind (fun result -> result.Process) with
+            match createProcess with
             | None
             | Some { Started = false } ->
                 FinalizeTerminal(
-                    terminalSummary ProviderFailed [] false true "Install the .NET SDK and the named template, then re-run scaffold.",
+                    terminalSummary ProviderFailed [] false true "Install the .NET SDK and the named template, then re-run scaffold." (createProcess |> Option.map providerInvocationOf),
                     [ DiagnosticsModule.scaffoldProviderUnavailable name ],
                     []
                 )
@@ -361,13 +378,13 @@ module internal HandlersScaffold =
 
                 if not (List.isEmpty intrusions) then
                     FinalizeTerminal(
-                        terminalSummary ProviderFailed producedPaths true true "Fix the provider; it wrote into SDD-owned trees.",
+                        terminalSummary ProviderFailed producedPaths true true "Fix the provider; it wrote into SDD-owned trees." (Some(providerInvocationOf processResult)),
                         [ DiagnosticsModule.scaffoldProviderWroteSddTree intrusions ],
                         provenanceWriteEffect request descriptor ProviderFailed producedPaths effective
                     )
                 elif processResult.ExitCode <> 0 then
                     FinalizeTerminal(
-                        terminalSummary ProviderFailed producedPaths true true "Inspect the provider failure, then re-run scaffold.",
+                        terminalSummary ProviderFailed producedPaths true true "Inspect the provider failure, then re-run scaffold." (Some(providerInvocationOf processResult)),
                         [ DiagnosticsModule.scaffoldProviderFailed name processResult.ExitCode ],
                         provenanceWriteEffect request descriptor ProviderFailed producedPaths effective
                     )
@@ -431,7 +448,8 @@ module internal HandlersScaffold =
               RepoInitOutcome = repoInitOutcome
               ExecutableScriptCount = executableCount
               ExecutableScriptsSkipped = List.length skippedPaths
-              NextActionHint = hint }
+              NextActionHint = hint
+              ProviderInvocation = None }
 
         summary, outcomeDiagnostics @ repoInitDiagnostics @ execDiagnostics
 

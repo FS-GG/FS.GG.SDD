@@ -326,6 +326,29 @@ module CommandSerialization =
             writer.WriteNumber("executableScriptCount", summary.ExecutableScriptCount)
             writer.WriteNumber("executableScriptsSkipped", summary.ExecutableScriptsSkipped)
             writer.WriteString("nextActionHint", summary.NextActionHint)
+
+            // Feature 054: additive provider-defect diagnostic block (FR-001/002/003).
+            // Present (non-null) only on the three provider-defect outcomes; `null` on
+            // success, dry-run, and every pre-invocation user-input block (FR-006). Fixed
+            // key order; `exitCode` is int-or-null so a never-launched provider is never
+            // confused with a real `0` (FR-003).
+            match summary.ProviderInvocation with
+            | Some invocation ->
+                writer.WriteStartObject("providerInvocation")
+                writer.WriteString("commandLine", invocation.CommandLine)
+                writer.WriteBoolean("processStarted", invocation.ProcessStarted)
+
+                match invocation.ExitCode with
+                | Some code -> writer.WriteNumber("exitCode", code)
+                | None -> writer.WriteNull "exitCode"
+
+                writer.WriteString("standardOutput", invocation.StandardOutput)
+                writer.WriteBoolean("standardOutputTruncated", invocation.StandardOutputTruncated)
+                writer.WriteString("standardError", invocation.StandardError)
+                writer.WriteBoolean("standardErrorTruncated", invocation.StandardErrorTruncated)
+                writer.WriteEndObject()
+            | None -> writer.WriteNull "providerInvocation"
+
             writer.WriteEndObject()
         | None -> writer.WriteNull "scaffold"
 

@@ -63,13 +63,31 @@ module CommandEffects =
           Confirmed = None
           Diagnostic = Some diagnostic }
 
-    // Edge interpreter for `RunProcess`: launches a real child process, captures the
-    // exit code, and snapshots the working directory afterwards so the handler can
-    // diff produced paths. Honors DryRun (plans without spawning). Process
-    // stdout/stderr are drained to avoid deadlock but excluded from the contract.
+    // The per-stream retention bound for captured provider stdout/stderr (feature 054,
+    // E4). Content beyond this many characters is drained (deadlock-safe) but not
+    // retained; the stream's truncation flag records that a tail was dropped (FR-005).
+    let providerOutputCapChars = 65536
+
+    // Bound a fully-decoded stream to the retention cap, flagging truncation (CAP-1).
+    let private boundCapturedStream (raw: string) =
+        if raw.Length > providerOutputCapChars then
+            raw.Substring(0, providerOutputCapChars), true
+        else
+            raw, false
+
+    // Edge interpreter for `RunProcess`: launches a real child process, captures its
+    // exit code and (bounded) stdout/stderr, and snapshots the working directory
+    // afterwards so the handler can diff produced paths. Honors DryRun (plans without
+    // spawning). Both streams are read concurrently before `WaitForExit` so a child that
+    // fills one pipe while the parent bounds the other cannot deadlock (R1); the retained
+    // content is capped per stream (R2) and decoded as UTF-8 with replacement so non-UTF-8
+    // / binary bytes cannot throw or corrupt the JSON report (R9).
     let runProcess (projectRoot: string) (effect: CommandEffect) (command: string) (args: string list) (workingDir: string) =
         let absolute = fullPath projectRoot workingDir
         Directory.CreateDirectory absolute |> ignore
+
+        // Non-throwing UTF-8 decode: invalid bytes become replacement characters (CAP-5).
+        let decoding = System.Text.UTF8Encoding(false, false)
 
         let startInfo =
             ProcessStartInfo(
@@ -77,10 +95,15 @@ module CommandEffects =
                 WorkingDirectory = absolute,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                UseShellExecute = false
+                UseShellExecute = false,
+                StandardOutputEncoding = decoding,
+                StandardErrorEncoding = decoding
             )
 
         args |> List.iter startInfo.ArgumentList.Add
+
+        // The fully-resolved command line as executed (program + args) — FR-001.
+        let commandLine = String.concat " " (command :: args)
 
         try
             use proc = Process.Start startInfo
@@ -90,27 +113,55 @@ module CommandEffects =
                 { Effect = effect
                   Succeeded = true
                   Snapshot = None
-                  Process = Some { Started = false; ExitCode = -1 }
+                  Process =
+                    Some
+                        { Started = false
+                          ExitCode = -1
+                          Command = commandLine
+                          StandardOutput = ""
+                          StandardOutputTruncated = false
+                          StandardError = ""
+                          StandardErrorTruncated = false }
                   Confirmed = None
                   Diagnostic = None }
             | proc ->
-                proc.StandardOutput.ReadToEnd() |> ignore
-                proc.StandardError.ReadToEnd() |> ignore
+                // Read both pipes concurrently so neither can block the child (R1).
+                let stdoutTask = proc.StandardOutput.ReadToEndAsync()
+                let stderrTask = proc.StandardError.ReadToEndAsync()
                 proc.WaitForExit()
+                let stdout, stdoutTruncated = boundCapturedStream (stdoutTask.GetAwaiter().GetResult())
+                let stderr, stderrTruncated = boundCapturedStream (stderrTask.GetAwaiter().GetResult())
 
                 { Effect = effect
                   Succeeded = true
                   Snapshot = directorySnapshot projectRoot workingDir
-                  Process = Some { Started = true; ExitCode = proc.ExitCode }
+                  Process =
+                    Some
+                        { Started = true
+                          ExitCode = proc.ExitCode
+                          Command = commandLine
+                          StandardOutput = stdout
+                          StandardOutputTruncated = stdoutTruncated
+                          StandardError = stderr
+                          StandardErrorTruncated = stderrTruncated }
                   Confirmed = None
                   Diagnostic = None }
-        with _ ->
+        with ex ->
             // The provider engine/command could not be launched: surfaced as
-            // scaffold.providerUnavailable by the handler (Started = false).
+            // scaffold.providerUnavailable by the handler (Started = false). The launch
+            // error is retained on StandardError so the report can explain the failure (R4).
             { Effect = effect
               Succeeded = true
               Snapshot = None
-              Process = Some { Started = false; ExitCode = -1 }
+              Process =
+                Some
+                    { Started = false
+                      ExitCode = -1
+                      Command = commandLine
+                      StandardOutput = ""
+                      StandardOutputTruncated = false
+                      StandardError = ex.Message
+                      StandardErrorTruncated = false }
               Confirmed = None
               Diagnostic = None }
 

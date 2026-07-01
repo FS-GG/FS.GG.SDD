@@ -4,7 +4,7 @@ open System.Text
 open FS.GG.SDD.Commands.CommandTypes
 
 module CommandRendering =
-    let renderText report =
+    let renderText (report: CommandReport) =
         let builder = StringBuilder()
         builder.AppendLine($"command: {commandName report.Command}") |> ignore
         builder.AppendLine($"outcome: {outcomeValue report.Outcome}") |> ignore
@@ -215,6 +215,27 @@ module CommandRendering =
             builder.AppendLine($"scaffoldExecutableScripts: {scaffold.ExecutableScriptCount}") |> ignore
             builder.AppendLine($"scaffoldExecutableScriptsSkipped: {scaffold.ExecutableScriptsSkipped}") |> ignore
             builder.AppendLine($"scaffoldNextAction: {scaffold.NextActionHint}") |> ignore
+
+            // Feature 054: the provider-defect diagnostic facts, single-line-encoded so the
+            // rich renderer's `key: value` derivation stays intact (R6) — embedded newlines
+            // become the literal `\n`. Emitted only when a provider defect surfaced them.
+            match scaffold.ProviderInvocation with
+            | Some invocation ->
+                let singleLine (value: string) =
+                    value.Replace("\r\n", "\n").Replace("\n", "\\n").Replace("\r", "\\n")
+
+                let exitCode =
+                    match invocation.ExitCode with
+                    | Some code -> string code
+                    | None -> "(not launched)"
+
+                builder.AppendLine($"scaffoldProviderCommandLine: {singleLine invocation.CommandLine}") |> ignore
+                builder.AppendLine($"scaffoldProviderExitCode: {exitCode}") |> ignore
+                builder.AppendLine($"scaffoldProviderStdout: {singleLine invocation.StandardOutput}") |> ignore
+                builder.AppendLine($"scaffoldProviderStdoutTruncated: {invocation.StandardOutputTruncated}") |> ignore
+                builder.AppendLine($"scaffoldProviderStderr: {singleLine invocation.StandardError}") |> ignore
+                builder.AppendLine($"scaffoldProviderStderrTruncated: {invocation.StandardErrorTruncated}") |> ignore
+            | None -> ()
         | None -> ()
 
         match report.Doctor with

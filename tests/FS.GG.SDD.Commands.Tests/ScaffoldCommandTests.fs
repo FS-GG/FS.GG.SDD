@@ -1224,3 +1224,270 @@ module ScaffoldCommandTests =
         let text = CommandRendering.renderText report
         Assert.Contains("scaffoldEffectiveParam: variant=beta", text)
         Assert.DoesNotContain("scaffoldEffectiveParam: variant=alpha", text)
+
+    // ===================================================================
+    // 054 — surface provider stdout/stderr/command-line/exit-code on a
+    // provider-defect scaffold failure. Real `dotnet new` + real child
+    // processes at the `RunProcess` edge (no mocks).
+    // ===================================================================
+
+    /// Drive the `RunProcess` edge directly with a controlled child so the bounded
+    /// concurrent capture (T006) can be exercised deterministically, independent of any
+    /// SDK-worded `dotnet new` output. Unix `/bin/sh` (the repo's test host).
+    let private runShell (script: string) =
+        let root = TestSupport.tempDirectory ()
+        let result = interpret root false (RunProcess("/bin/sh", [ "-c"; script ], ""))
+        result.Process |> Option.defaultWith (fun () -> failwith "Expected a process result.")
+
+    // T005 (US1 / R1): the edge now returns the executed command line and the captured,
+    // truncation-flagged stdout/stderr (content kept, drain retained) instead of discarding
+    // them. This is the behavioral change the whole feature rests on.
+    [<Fact>]
+    let ``runProcess edge returns the command line and captured stdout and stderr`` () =
+        let processResult = runShell "printf 'OUT-MARKER'; printf 'ERR-MARKER' >&2; exit 4"
+        Assert.True(processResult.Started)
+        Assert.Equal(4, processResult.ExitCode)
+        Assert.Contains("/bin/sh", processResult.Command)
+        Assert.Contains("ERR-MARKER", processResult.Command) // the resolved args are part of the line
+        Assert.Equal("OUT-MARKER", processResult.StandardOutput)
+        Assert.Equal("ERR-MARKER", processResult.StandardError)
+        Assert.False(processResult.StandardOutputTruncated)
+        Assert.False(processResult.StandardErrorTruncated)
+
+    // T005 / SC-005: a stream larger than the per-stream cap is bounded and flagged, while
+    // the smaller stream is untouched (drain is deadlock-safe under concurrent read).
+    [<Fact>]
+    let ``runProcess edge bounds an oversize stream and flags truncation`` () =
+        let oversize = providerOutputCapChars + 4096
+        let processResult = runShell $"head -c {oversize} /dev/zero | tr '\\0' 'x'; printf 'small' >&2"
+        Assert.True(processResult.Started)
+        Assert.Equal(providerOutputCapChars, processResult.StandardOutput.Length)
+        Assert.True(processResult.StandardOutputTruncated)
+        Assert.Equal("small", processResult.StandardError)
+        Assert.False(processResult.StandardErrorTruncated)
+
+    // T005 (US1 / R9): non-UTF-8 / binary bytes on a stream decode defensively (replacement
+    // characters) — the edge returns without throwing and the captured text is representable
+    // in valid JSON. SYNTHETIC: raw bytes emitted by `printf` stand in for a provider that
+    // writes a binary blob; the real-evidence path is the same decode used for `dotnet new`.
+    [<Fact>]
+    let ``runProcess edge decodes binary bytes defensively and stays JSON-safe_Synthetic`` () =
+        let processResult = runShell "printf '\\377\\376\\375\\000A'"
+        Assert.True(processResult.Started)
+        // Round-trips through System.Text.Json without throwing or corrupting the document.
+        let json = System.Text.Json.JsonSerializer.Serialize(processResult.StandardOutput)
+        use doc = System.Text.Json.JsonDocument.Parse json
+        Assert.Equal(System.Text.Json.JsonValueKind.String, doc.RootElement.ValueKind)
+
+    // T007 edge: a child that writes nothing to stderr and exits non-zero yields a
+    // present-and-empty capture (fields emitted, not omitted).
+    [<Fact>]
+    let ``runProcess edge captures empty stderr on a silent nonzero exit`` () =
+        let processResult = runShell "exit 7"
+        Assert.True(processResult.Started)
+        Assert.Equal(7, processResult.ExitCode)
+        Assert.Equal("", processResult.StandardOutput)
+        Assert.Equal("", processResult.StandardError)
+
+    /// Navigate to the `scaffold.providerInvocation` element of a report's JSON, or `None`
+    /// when it serialized as null.
+    let private providerInvocationJson (report: CommandReport) =
+        let json = CommandSerialization.serializeReport report
+        let doc = System.Text.Json.JsonDocument.Parse json
+        let scaffold = doc.RootElement.GetProperty("scaffold")
+        let invocation = scaffold.GetProperty("providerInvocation")
+        match invocation.ValueKind with
+        | System.Text.Json.JsonValueKind.Null -> doc, None
+        | _ -> doc, Some invocation
+
+    // T007 (US1 / Scenario A + determinism, FR-001/002/009, SC-002): a provider defect
+    // surfaces the invoked command line, exit code, and captured streams in a deterministic
+    // JSON scaffold block; the outcome is still `providerFailed` at exit 2.
+    [<Fact>]
+    let ``scaffold provider failure surfaces the invocation facts deterministically`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "fails-midway.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [] false false)
+
+        Assert.Equal("providerFailed", (scaffoldSummary report).Outcome)
+        Assert.Equal(2, exitCodeForReport report)
+
+        // Deterministic serialization: byte-identical across repeated emits.
+        Assert.Equal(CommandSerialization.serializeReport report, CommandSerialization.serializeReport report)
+
+        let doc, invocation = providerInvocationJson report
+        use _ = doc
+        let invocation = invocation |> Option.defaultWith (fun () -> failwith "Expected a providerInvocation block.")
+        Assert.Contains("dotnet new fsgg-fixture-fail -o .", invocation.GetProperty("commandLine").GetString())
+        Assert.True(invocation.GetProperty("processStarted").GetBoolean())
+        Assert.Equal(System.Text.Json.JsonValueKind.Number, invocation.GetProperty("exitCode").ValueKind)
+        Assert.NotEqual(0, invocation.GetProperty("exitCode").GetInt32())
+        // Both stream fields (and their truncation flags) are always present on a defect.
+        Assert.Equal(System.Text.Json.JsonValueKind.String, invocation.GetProperty("standardOutput").ValueKind)
+        Assert.Equal(System.Text.Json.JsonValueKind.String, invocation.GetProperty("standardError").ValueKind)
+        Assert.False(invocation.GetProperty("standardOutputTruncated").GetBoolean())
+        Assert.False(invocation.GetProperty("standardErrorTruncated").GetBoolean())
+
+    // T008 (US1 / Scenario B, SC-001): the FS.GG.SDD#35 reproduction. A template that does
+    // NOT declare `productName`, invoked with `--param productName=Acme`, makes the real
+    // `dotnet new` engine reject the option — its own wording is surfaced on `standardError`
+    // with no PATH shim and no re-run. Assert-contains, not golden: the engine wording is SDK
+    // data (R7) — a real engine message stands in for any provider's own rejection text.
+    [<Fact>]
+    let ``scaffold surfaces the dotnet-new invalid-option rejection on stderr_Synthetic`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "rejects-param.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        Assert.Equal(2, exitCodeForReport report)
+        let doc, invocation = providerInvocationJson report
+        use _ = doc
+        let invocation = invocation |> Option.defaultWith (fun () -> failwith "Expected a providerInvocation block.")
+        let combined = invocation.GetProperty("standardError").GetString() + invocation.GetProperty("standardOutput").GetString()
+        Assert.Contains("'--productName' is not a valid option", combined)
+
+    // T009a (US1 / Scenario C, R4): a program that cannot start surfaces a real launch
+    // failure at the edge — `Started = false`, the attempted command line, and the OS launch
+    // error retained on `StandardError`. A truly-absent binary (real `Process.Start`
+    // failure); this is the capture the handler maps to `providerUnavailable`. (A fully
+    // end-to-end `providerUnavailable` is host-infeasible here: the create program is
+    // `dotnet`, which resolves via the apphost even with an empty PATH — see T009b.)
+    [<Fact>]
+    let ``runProcess edge surfaces the launch error when the program cannot start`` () =
+        let root = TestSupport.tempDirectory ()
+        let result = interpret root false (RunProcess("/no/such/provider-binary-xyz", [ "new" ], ""))
+        let processResult = result.Process |> Option.defaultWith (fun () -> failwith "Expected a process result.")
+        Assert.False(processResult.Started)
+        Assert.Contains("/no/such/provider-binary-xyz new", processResult.Command)
+        Assert.NotEqual("", processResult.StandardError)
+
+    // T009b (US1 / Scenario C, US1-AC3, FR-003): the report projects a never-launched
+    // provider as `processStarted = false`, `exitCode = null` (never a spurious `0`), with
+    // the attempted command line and the launch error preserved.
+    // SYNTHETIC: the `ProcessStarted = false` invocation record stands in for a create
+    // process that failed to launch — the create program is `dotnet`, which always resolves
+    // on a dotnet-equipped host, so the launch-failure path cannot be driven end-to-end here.
+    // The real-evidence path is the T009a edge launch failure, which produces exactly this
+    // shape (`Started = false` + launch error on `StandardError`).
+    [<Fact>]
+    let ``provider-unavailable report projects a null exit code and the launch error_Synthetic`` () =
+        // Start from a real provider-failure report, then swap in a never-launched
+        // invocation record (the shape T009a produces at the edge).
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "fails-midway.providers.yml"
+        let baseReport = runScaffold (scaffoldRequest root (Some "fixture") [] false false)
+
+        let summary =
+            { (scaffoldSummary baseReport) with
+                ProviderInvocation =
+                    Some
+                        { CommandLine = "dotnet new fsgg-fixture-app -o . --productName Acme"
+                          ProcessStarted = false // SYNTHETIC: create process failed to launch
+                          ExitCode = None
+                          StandardOutput = ""
+                          StandardOutputTruncated = false
+                          StandardError = "An error occurred trying to start process 'dotnet'."
+                          StandardErrorTruncated = false } }
+
+        let report = { baseReport with Scaffold = Some summary }
+        let doc, invocation = providerInvocationJson report
+        use _ = doc
+        let invocation = invocation |> Option.defaultWith (fun () -> failwith "Expected a providerInvocation block.")
+        Assert.False(invocation.GetProperty("processStarted").GetBoolean())
+        Assert.Equal(System.Text.Json.JsonValueKind.Null, invocation.GetProperty("exitCode").ValueKind)
+        Assert.Contains("dotnet new fsgg-fixture-app -o .", invocation.GetProperty("commandLine").GetString())
+        Assert.Contains("start process 'dotnet'", invocation.GetProperty("standardError").GetString())
+
+    // T010 (US1 / Scenario H, FR-010): provenance is untouched — after a provider failure it
+    // still parses as schema v1 and carries no captured-output keys.
+    [<Fact>]
+    let ``scaffold provider failure leaves provenance at schema v1 with no captured output`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "fails-midway.providers.yml"
+        runScaffold (scaffoldRequest root (Some "fixture") [] false false) |> ignore
+
+        let provenance = TestSupport.readRelative root ".fsgg/scaffold-provenance.json"
+        Assert.Contains("\"schemaVersion\": 1", provenance)
+        for forbidden in [ "commandLine"; "standardOutput"; "standardError"; "providerInvocation" ] do
+            Assert.DoesNotContain(forbidden, provenance)
+
+    // T017 (US3 / Scenario E, FR-006, SC-004): success and every pre-invocation user-input
+    // block carry no provider output — `providerInvocation` serializes as null.
+    [<Fact>]
+    let ``scaffold success and pre-invocation blocks carry a null providerInvocation`` () =
+        // (a) success ⇒ null, exit 0, no captured content.
+        let okRoot = TestSupport.tempDirectory ()
+        writeRegistry okRoot "ok.providers.yml"
+        let okReport = runScaffold (scaffoldRequest okRoot (Some "fixture") [ "productName", "Acme" ] false false)
+        Assert.Equal(0, exitCodeForReport okReport)
+        Assert.Equal(None, (scaffoldSummary okReport).ProviderInvocation)
+        Assert.Contains("\"providerInvocation\": null", CommandSerialization.serializeReport okReport)
+
+        // (b) providerMissing (no --provider) ⇒ exit 1, input diagnostic, null invocation.
+        let missingRoot = TestSupport.tempDirectory ()
+        writeRegistry missingRoot "ok.providers.yml"
+        let missingReport = runScaffold (scaffoldRequest missingRoot None [] false false)
+        Assert.Equal(1, exitCodeForReport missingReport)
+        Assert.Contains("scaffold.providerMissing", diagnosticIds missingReport)
+        Assert.Equal(None, (scaffoldSummary missingReport).ProviderInvocation)
+
+        // (c) providerUnknown ⇒ exit 1, null invocation (provider never resolved/run).
+        let unknownRoot = TestSupport.tempDirectory ()
+        writeRegistry unknownRoot "ok.providers.yml"
+        let unknownReport = runScaffold (scaffoldRequest unknownRoot (Some "does-not-exist") [] false false)
+        Assert.Equal(1, exitCodeForReport unknownReport)
+        Assert.Equal(None, (scaffoldSummary unknownReport).ProviderInvocation)
+
+    // T017 (FR-006): dry-run plans the create but spawns nothing — no captured output.
+    [<Fact>]
+    let ``scaffold dry-run carries a null providerInvocation`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false true)
+        Assert.Equal(None, (scaffoldSummary report).ProviderInvocation)
+        Assert.Contains("\"providerInvocation\": null", CommandSerialization.serializeReport report)
+
+    // T018 (US3 / Scenario F, FR-005, SC-005): a real provider that floods a stream beyond the
+    // cap is bounded in the report and flagged truncated. Driven at the edge (a `dotnet new`
+    // template cannot deterministically emit > 64 KiB), asserting the same bound the report
+    // surfaces.
+    [<Fact>]
+    let ``provider output beyond the cap is bounded and flagged in the report`` () =
+        let oversize = providerOutputCapChars + 10000
+        let processResult = runShell $"head -c {oversize} /dev/zero | tr '\\0' 'y' >&2"
+        Assert.True(processResult.StandardError.Length <= providerOutputCapChars)
+        Assert.Equal(providerOutputCapChars, processResult.StandardError.Length)
+        Assert.True(processResult.StandardErrorTruncated)
+
+    // T019 (US3 / Scenario G, edge case): an SDD-tree intrusion keeps `providerWroteSddTree`
+    // as the primary diagnostic AND surfaces the invocation for consistency.
+    [<Fact>]
+    let ``scaffold SDD-tree intrusion still surfaces the provider invocation`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "writes-into-fsgg.providers.yml"
+        let report = runScaffold (scaffoldRequest root (Some "fixture") [] false false)
+
+        Assert.Contains("scaffold.providerWroteSddTree", diagnosticIds report)
+        Assert.Equal(2, exitCodeForReport report)
+        Assert.True((scaffoldSummary report).ProviderInvocation |> Option.isSome)
+
+    // T020 (US3 / FR-007, SC-006): the exit-code taxonomy and outcome strings are unchanged —
+    // success ⇒ 0, provider defect ⇒ 2, user-input ⇒ 1 — with the additive block present.
+    [<Fact>]
+    let ``scaffold exit-code taxonomy and outcomes are unchanged by the additive block`` () =
+        let okRoot = TestSupport.tempDirectory ()
+        writeRegistry okRoot "ok.providers.yml"
+        let ok = runScaffold (scaffoldRequest okRoot (Some "fixture") [ "productName", "Acme" ] false false)
+        Assert.Equal(0, exitCodeForReport ok)
+        Assert.Equal("providerSucceeded", (scaffoldSummary ok).Outcome)
+
+        let defectRoot = TestSupport.tempDirectory ()
+        writeRegistry defectRoot "fails-midway.providers.yml"
+        let defect = runScaffold (scaffoldRequest defectRoot (Some "fixture") [] false false)
+        Assert.Equal(2, exitCodeForReport defect)
+        Assert.Equal("providerFailed", (scaffoldSummary defect).Outcome)
+
+        let inputRoot = TestSupport.tempDirectory ()
+        writeRegistry inputRoot "ok.providers.yml"
+        let input = runScaffold (scaffoldRequest inputRoot None [] false false)
+        Assert.Equal(1, exitCodeForReport input)

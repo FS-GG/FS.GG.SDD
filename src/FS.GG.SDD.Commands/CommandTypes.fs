@@ -321,6 +321,15 @@ module CommandTypes =
           SourceSnapshotCount: int
           Readiness: string }
 
+    type ProviderInvocationResult =
+        { CommandLine: string
+          ProcessStarted: bool
+          ExitCode: int option
+          StandardOutput: string
+          StandardOutputTruncated: bool
+          StandardError: string
+          StandardErrorTruncated: bool }
+
     type ScaffoldSummary =
         { ProviderName: string option
           ProviderContractVersion: string option
@@ -334,7 +343,8 @@ module CommandTypes =
           RepoInitOutcome: string
           ExecutableScriptCount: int
           ExecutableScriptsSkipped: int
-          NextActionHint: string }
+          NextActionHint: string
+          ProviderInvocation: ProviderInvocationResult option }
 
     type ReconciliationStep =
         { StepId: string
@@ -446,7 +456,12 @@ module CommandTypes =
 
     type ProcessRunResult =
         { Started: bool
-          ExitCode: int }
+          ExitCode: int
+          Command: string
+          StandardOutput: string
+          StandardOutputTruncated: bool
+          StandardError: string
+          StandardErrorTruncated: bool }
 
     type CommandEffectResult =
         { Effect: CommandEffect

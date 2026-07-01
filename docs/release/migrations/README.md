@@ -85,5 +85,22 @@ stream, or exit code changes (FR-008). Per this policy an additive change carrie
 `<version>.md` migration note** (the `release-readiness.json` `migrations[]` array stays
 empty); this paragraph records the change instead.
 
+The `054-surface-provider-output` change is additive: on a provider-defect scaffold
+failure it adds one new optional block, `providerInvocation`, to the scaffold report's
+json/text/rich projections (the provider's invoked command line, captured stdout/stderr,
+and exit code), plus one additive optional field `ProviderInvocation:
+ProviderInvocationResult option` on `ScaffoldSummary`. The block is `null` on success,
+dry-run, and every pre-invocation user-input block, and present only on the three
+provider-defect outcomes (FR-006); `exitCode` is int-or-null so a never-launched provider
+is never confused with a real `0` (FR-003). Each captured stream is bounded to
+`providerOutputCapChars` (65 536) with a truncation flag (FR-005). It introduces **no** new
+persisted schema (`.fsgg/scaffold-provenance.json` stays v1 and gains no captured-output key,
+FR-010) and **no** new versioned cross-repo contract. It breaks no existing public contract:
+every other scaffold field, key order, stream, and outcome string is unchanged, and the
+exit-code taxonomy (defect ⇒ 2, user-input ⇒ 1, success ⇒ 0) is identical to today (FR-007) —
+the block adds diagnostic visibility only. Per this policy an additive change carries **no
+`<version>.md` migration note** (the `release-readiness.json` `migrations[]` array stays
+empty); this paragraph records the change instead.
+
 When a release introduces a breaking change, add its note here as
 `<version>.md` and list it in this index.
