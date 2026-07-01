@@ -1,0 +1,13 @@
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-app
+    source: __FIXTURE__/ok
+    # Coherent-set orchestrator axis (ADR-0008): the minimum coherent fsgg-sdd version
+    # is the nested minimumFsggSdd.version scalar (matches FS.GG.Templates providers/rendering.providers.yml).
+    minimumFsggSdd:
+      version: "0.1.0"
+    parameters:
+      - key: productName
+        required: true

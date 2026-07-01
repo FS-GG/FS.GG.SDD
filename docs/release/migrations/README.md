@@ -54,5 +54,22 @@ policy an additive change carries **no `<version>.md` migration note** (the
 `release-readiness.json` `migrations[]` array stays empty); this paragraph records the
 change instead.
 
+The `052-cli-version-coherence` change is additive: it adds one new optional field,
+`requiredMinimumCliVersion`, to `.fsgg/scaffold-provenance.json` (schema **stays v1**),
+the matching `requiredMinimumCliVersion` field/line to the scaffold report's json/text
+projections, and two new non-blocking `scaffold.*` advisories
+(`scaffold.cliBehindMinimum` info, `scaffold.providerMinimumMalformed` warning). The
+field is **backward and forward compatible** — `tryParse` defaults absent/null to `None`
+for provenance written before it, and readers that ignore unknown keys are unaffected. It
+breaks no existing public contract: every other scaffold field, key order, stream, and
+exit code is unchanged (the new advisories never set `hasBlocking`, so a behind-minimum
+scaffold's outcome and exit code are identical to an up-to-date run, SC-004), and no
+non-`scaffold` command output changes. The provider-registry read gains one optional
+`minimumCliVersion` scalar (value-agnostic; no concrete value in generic SDD). Per this
+policy an additive change carries **no `<version>.md` migration note** (the
+`release-readiness.json` `migrations[]` array stays empty); this paragraph records the
+change instead. The contract change is a **minor** package bump coordinated with the
+registry per epic FS-GG/.github#85 (no handoff `contractVersion` is involved).
+
 When a release introduces a breaking change, add its note here as
 `<version>.md` and list it in this index.

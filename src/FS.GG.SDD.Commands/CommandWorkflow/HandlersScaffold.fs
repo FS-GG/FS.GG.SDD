@@ -116,6 +116,8 @@ module internal HandlersScaffold =
     let notRunSummary providerName providerVersion hint : ScaffoldSummary =
         { ProviderName = providerName
           ProviderContractVersion = providerVersion
+          // No resolved provider on a blocked/not-run path, so no minimum to record.
+          RequiredMinimumCliVersion = None
           Outcome = scaffoldOutcomeValue ProviderNotRun
           SkeletonCreated = false
           ProviderInvoked = false
@@ -233,12 +235,40 @@ module internal HandlersScaffold =
         let forceSegment = if request.Force then " --force" else ""
         $"dotnet new {descriptor.TemplateId} -o .{parameterSegment}{forceSegment}"
 
+    // ----- CLI version coherence (feature 052; pure, no new effect — D11) -----
+
+    /// The required-minimum CLI version to *record* in provenance (E1/D6): the raw
+    /// provider-declared value when it parses; `None` when the provider declares none
+    /// or declares a malformed minimum (never fabricated, malformed not persisted).
+    let resolvedRequiredMinimumCliVersion (descriptor: ProviderDescriptor) : string option =
+        descriptor.MinimumCliVersion
+        |> Option.bind (fun raw -> Fsgg.Version.tryParse raw |> Option.map (fun _ -> raw))
+
+    /// Pure CLI-coherence advisories for a resolved provider (D11). Emits
+    /// `scaffold.cliBehindMinimum` iff the installed CLI is strictly behind a valid
+    /// declared minimum; `scaffold.providerMinimumMalformed` iff a declared minimum is
+    /// unparseable; nothing when the minimum is absent, equal/above, or the installed
+    /// version itself is unparseable (D4/D6/D7). All non-blocking (Info/Warning).
+    let cliCoherenceDiagnostics (descriptor: ProviderDescriptor) (request: CommandRequest) : Diagnostic list =
+        match descriptor.MinimumCliVersion with
+        | None -> []
+        | Some rawMinimum ->
+            match Fsgg.Version.tryParse rawMinimum with
+            | None -> [ scaffoldProviderMinimumMalformed rawMinimum ]
+            | Some _ ->
+                let installed = request.GeneratorVersion.Version
+
+                match Fsgg.Version.compare installed rawMinimum with
+                | Some -1 -> [ scaffoldCliBehindMinimum installed rawMinimum ]
+                | _ -> []
+
     // ----- finalization (stage 3) -----
 
     let provenanceWriteEffect (request: CommandRequest) (descriptor: ProviderDescriptor) outcome (producedPaths: string list) (effective: Map<string, string>) =
         let record: ScaffoldProvenanceRecord =
             { SchemaVersion = 1
               Generator = request.GeneratorVersion
+              RequiredMinimumCliVersion = resolvedRequiredMinimumCliVersion descriptor
               ProviderName = descriptor.Name
               ProviderContractVersion = descriptor.ContractVersion
               TemplateRef = descriptor.TemplateId
@@ -265,9 +295,12 @@ module internal HandlersScaffold =
         let name = descriptor.Name
         let version = descriptor.ContractVersion
 
+        let requiredMinimum = resolvedRequiredMinimumCliVersion descriptor
+
         let terminalSummary outcome producedPaths providerInvoked skeletonCreated hint : ScaffoldSummary =
             { ProviderName = Some name
               ProviderContractVersion = Some version
+              RequiredMinimumCliVersion = requiredMinimum
               Outcome = scaffoldOutcomeValue outcome
               SkeletonCreated = skeletonCreated
               ProviderInvoked = providerInvoked
@@ -285,6 +318,7 @@ module internal HandlersScaffold =
             let summary =
                 { ProviderName = Some name
                   ProviderContractVersion = Some version
+                  RequiredMinimumCliVersion = requiredMinimum
                   Outcome = scaffoldOutcomeValue ProviderNotRun
                   SkeletonCreated = false
                   ProviderInvoked = false
@@ -387,6 +421,7 @@ module internal HandlersScaffold =
         let summary: ScaffoldSummary =
             { ProviderName = Some descriptor.Name
               ProviderContractVersion = Some descriptor.ContractVersion
+              RequiredMinimumCliVersion = resolvedRequiredMinimumCliVersion descriptor
               Outcome = scaffoldOutcomeValue outcome
               SkeletonCreated = true
               ProviderInvoked = true
@@ -446,9 +481,11 @@ module internal HandlersScaffold =
                 // TICK C — init interpreted or skipped: set the terminal summary once.
                 let summary, diagnostics = finalizePostInstantiation model descriptor outcome producedPaths probeProcess effective
 
+                // Feature 052 (US2): merge the non-blocking CLI-coherence advisory on the
+                // success path too, so the advisory appears in every descriptor-resolved outcome.
                 { model with
                     Scaffold = Some summary
-                    Diagnostics = model.Diagnostics @ diagnostics },
+                    Diagnostics = model.Diagnostics @ diagnostics @ cliCoherenceDiagnostics descriptor model.Request },
                 []
 
     // ----- staged driver entry (called from nextLifecycleEffects) -----
@@ -478,10 +515,13 @@ module internal HandlersScaffold =
             else
                 match finalizeScaffold model descriptor effective with
                 | FinalizeTerminal(summary, diagnostics, provenanceEffects) ->
+                    // Feature 052 (US2): merge the non-blocking CLI-coherence advisory on
+                    // every descriptor-resolved terminal path (dry-run, unavailable, failed,
+                    // intrusion) so it appears in all outcomes without blocking.
                     { model with
                         PendingEffects = model.PendingEffects @ provenanceEffects
                         Scaffold = Some summary
-                        Diagnostics = model.Diagnostics @ diagnostics },
+                        Diagnostics = model.Diagnostics @ diagnostics @ cliCoherenceDiagnostics descriptor model.Request },
                     provenanceEffects
                 | FinalizeSuccess(outcome, producedPaths) ->
                     postInstantiationNext model descriptor outcome producedPaths effective

@@ -1,0 +1,14 @@
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-app
+    source: __FIXTURE__/ok
+    # The real coherent-set state today (FS.GG.Templates#43): the axis is declared but
+    # its version is null pending a post-051 fsgg-sdd publish (publish-before-flip). SDD
+    # must degrade to "no minimum / no advisory" until a concrete version is pinned.
+    minimumFsggSdd:
+      version: null
+    parameters:
+      - key: productName
+        required: true

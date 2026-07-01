@@ -301,6 +301,11 @@ module CommandSerialization =
             | Some version -> writer.WriteString("providerContractVersion", version)
             | None -> writer.WriteNull "providerContractVersion"
 
+            // Feature 052 (US1): provider-declared minimum coherent CLI version, string-or-null.
+            match summary.RequiredMinimumCliVersion with
+            | Some minimum -> writer.WriteString("requiredMinimumCliVersion", minimum)
+            | None -> writer.WriteNull "requiredMinimumCliVersion"
+
             writer.WriteString("outcome", summary.Outcome)
             writer.WriteBoolean("skeletonCreated", summary.SkeletonCreated)
             writer.WriteBoolean("providerInvoked", summary.ProviderInvoked)

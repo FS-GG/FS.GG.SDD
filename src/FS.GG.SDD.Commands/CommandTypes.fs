@@ -320,6 +320,7 @@ module CommandTypes =
     type ScaffoldSummary =
         { ProviderName: string option
           ProviderContractVersion: string option
+          RequiredMinimumCliVersion: string option
           Outcome: string
           SkeletonCreated: bool
           ProviderInvoked: bool

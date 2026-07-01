@@ -2,6 +2,7 @@ member Fsgg.Provider+DeclaredCommand.Arguments
 member Fsgg.Provider+DeclaredCommand.Executable
 member Fsgg.Provider+ProviderDescriptor.Build
 member Fsgg.Provider+ProviderDescriptor.ContractVersion
+member Fsgg.Provider+ProviderDescriptor.MinimumCliVersion
 member Fsgg.Provider+ProviderDescriptor.Name
 member Fsgg.Provider+ProviderDescriptor.NameParameter
 member Fsgg.Provider+ProviderDescriptor.Parameters
@@ -154,6 +155,9 @@ member Fsgg.Schemas+SddSchema.Stages
 member Fsgg.Schemas+SddSchema.StaleBehavior
 member Fsgg.Schemas+SddSchema.WorkRoot
 member Fsgg.Schemas+ToolingSchema.SchemaVersion
+member Fsgg.Version+Version.Major
+member Fsgg.Version+Version.Minor
+member Fsgg.Version+Version.Patch
 type Fsgg.ContractVersion
 type Fsgg.Provider
 type Fsgg.Provider+DeclaredCommand
@@ -202,6 +206,8 @@ type Fsgg.Schemas+SchemaOwner+Tags
 type Fsgg.Schemas+SchemaSourceIdentity
 type Fsgg.Schemas+SddSchema
 type Fsgg.Schemas+ToolingSchema
+type Fsgg.Version
+type Fsgg.Version+Version
 val Fsgg.ContractVersion.major
 val Fsgg.ContractVersion.minor
 val Fsgg.ContractVersion.patch
@@ -223,3 +229,5 @@ val Fsgg.Schemas.providersVersion
 val Fsgg.Schemas.scaffoldProvenanceVersion
 val Fsgg.Schemas.sddVersion
 val Fsgg.Schemas.toolingVersion
+val Fsgg.Version.compare
+val Fsgg.Version.tryParse

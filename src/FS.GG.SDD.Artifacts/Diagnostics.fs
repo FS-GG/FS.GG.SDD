@@ -250,6 +250,41 @@ module Diagnostics =
             "Repair or remove the malformed scaffold-provenance file before re-scaffolding or refreshing."
             [ path ]
 
+    // Feature 052: describe how far the installed CLI is behind the minimum. Only
+    // ever called when installed < minimum (compare = Some -1), so the most-significant
+    // differing component's delta is positive. `Fsgg.Version.compare` yields only the
+    // sign, so the "amount behind" is derived from the parsed component records (A1/U1).
+    let private describeCliGap (installed: string) (minimum: string) =
+        let unit (n: int) (name: string) =
+            $"""behind by {n} {name} version{(if n = 1 then "" else "s")}"""
+
+        match Fsgg.Version.tryParse installed, Fsgg.Version.tryParse minimum with
+        | Some i, Some m ->
+            if m.Major <> i.Major then unit (m.Major - i.Major) "major"
+            elif m.Minor <> i.Minor then unit (m.Minor - i.Minor) "minor"
+            else unit (m.Patch - i.Patch) "patch"
+        | _ -> "behind by an unknown amount"
+
+    let scaffoldCliBehindMinimum (installed: string) (minimum: string) =
+        create
+            "scaffold.cliBehindMinimum"
+            DiagnosticInfo
+            None
+            None
+            $"Installed fsgg-sdd {installed} is behind the provider-declared minimum coherent version {minimum} ({describeCliGap installed minimum}). Seeded skills / early-stage guidance from newer CLIs may be missing."
+            "Upgrade the fsgg-sdd CLI, then re-run `fsgg-sdd init` to re-seed the fs-gg-sdd-* skills and .fsgg/early-stage-guidance.md (idempotent, no-clobber). Note: fsgg-sdd refresh does not re-seed."
+            []
+
+    let scaffoldProviderMinimumMalformed (rawMinimum: string) =
+        create
+            "scaffold.providerMinimumMalformed"
+            DiagnosticWarning
+            None
+            None
+            $"Provider-declared minimum coherent fsgg-sdd version `{rawMinimum}` is not a valid major.minor.patch version; the CLI coherence check was skipped and no minimum was recorded."
+            "Fix the `minimumCliVersion` value in the provider registry (`.fsgg/providers.yml`) to a valid major.minor.patch version."
+            []
+
     let scaffoldRepoInitSkippedExistingRepository () =
         create
             "scaffold.repoInitSkippedExistingRepository"

@@ -69,7 +69,15 @@ rather than silent.
   (never interpreted), and always present (`[]` when none). It records the chosen
   starter so a scaffolded product is auditable and reproducible (FR-003). The field is
   **additive optional** (schema stays v1; `tryParse` defaults it to `[]` for documents
-  written before it). It is the
+  written before it). It also records `requiredMinimumCliVersion` — the provider-declared
+  minimum coherent `fsgg-sdd` version — emitted as **string-or-null** immediately after
+  the `generator` object, beside the producing CLI version (`generator.version`), so the
+  CLI input is as auditable as the template pin (feature 052, FR-001/FR-002). It is the
+  raw provider value verbatim when the provider declares a valid minimum, and `null` when
+  the provider declares none **or** declares a malformed one (never fabricated; a malformed
+  minimum additionally surfaces a `scaffold.providerMinimumMalformed` warning). This field
+  is likewise **additive optional** (schema stays v1, **minor** package bump; `tryParse`
+  defaults absent/null to `None`, so records written before it still parse). It is the
   **authority for refresh exclusion** (FR-007 / SC-007): `fsgg-sdd refresh` reads it
   and never regenerates or flags provider-produced runtime files as stale SDD views;
   malformed provenance surfaces `scaffold.provenanceMalformed` and is treated as

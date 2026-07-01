@@ -328,6 +328,11 @@ module CommandTypes =
     type ScaffoldSummary =
         { ProviderName: string option
           ProviderContractVersion: string option
+          /// The provider-declared minimum coherent `fsgg-sdd` CLI version (feature 052,
+          /// E4), recorded beside the producing CLI version for audit. `None` when the
+          /// provider declares none or a malformed minimum. Projected as string-or-null
+          /// in json and as `scaffoldRequiredMinimumCliVersion` in text/rich.
+          RequiredMinimumCliVersion: string option
           Outcome: string
           SkeletonCreated: bool
           ProviderInvoked: bool

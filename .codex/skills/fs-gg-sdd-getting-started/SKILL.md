@@ -66,6 +66,26 @@ provider ships in FS.GG.Rendering.
 `work/`, `readiness/`, `AGENTS.md`, `CLAUDE.md`); scaffold guards this and fails
 if violated.
 
+## CLI version coherence
+
+A scaffolded product is produced by two inputs: the template pin and the `fsgg-sdd`
+CLI that seeds the skeleton (including the 15 `fs-gg-sdd-*` skills and
+`.fsgg/early-stage-guidance.md`). Scaffold records **both** in
+`.fsgg/scaffold-provenance.json`: the producing CLI version (`generator.version`) and
+the provider-declared minimum coherent CLI version (`requiredMinimumCliVersion`,
+string-or-null). When the installed CLI is **behind** that minimum, scaffold emits a
+**non-blocking** `scaffold.cliBehindMinimum` advisory (scaffold still completes, exit
+code unchanged) naming the installed version, the required minimum, and how far behind
+it is.
+
+**Remedy for a behind-minimum CLI:** upgrade `fsgg-sdd`, then re-run **`fsgg-sdd init`**
+in the existing product to re-seed the `fs-gg-sdd-*` skills and
+`.fsgg/early-stage-guidance.md` (idempotent, no-clobber — your edits are preserved).
+**`fsgg-sdd refresh` does not re-seed**; it only brings generated views to currency, so
+it cannot recover the missing seeded skills. A malformed provider `minimumCliVersion`
+surfaces a `scaffold.providerMinimumMalformed` warning and is recorded as `null` (never
+silently ignored).
+
 ## Exit codes
 
 - Malformed user input (unknown provider, unsupported contract version, missing

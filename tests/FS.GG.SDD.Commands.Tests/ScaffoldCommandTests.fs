@@ -253,6 +253,44 @@ module ScaffoldCommandTests =
         Assert.Contains("\"templateRef\": \"fsgg-fixture-app\"", provenance)
         Assert.Contains("\"owner\": \"generatedProduct\"", provenance)
 
+    // Feature 052 US1 scenario 1 (SC-001): provenance records BOTH the producing CLI
+    // version (generator) and the provider-declared required minimum, side by side.
+    [<Fact>]
+    let ``provenance records the producing CLI version and the provider-declared required minimum`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "min-behind.providers.yml"
+        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false) |> ignore
+
+        let provenance = TestSupport.readRelative root ".fsgg/scaffold-provenance.json"
+        // Producing CLI version (generator) is present…
+        Assert.Contains("\"generator\":", provenance)
+        Assert.Contains("\"version\":", provenance)
+        // …alongside the provider-declared required minimum, recorded verbatim.
+        Assert.Contains("\"requiredMinimumCliVersion\": \"0.3.0\"", provenance)
+
+    // Feature 052 US1 scenario 2: no provider minimum ⇒ the field is recorded as null
+    // (absent, not fabricated); the producing CLI version is still recorded.
+    [<Fact>]
+    let ``provenance records requiredMinimumCliVersion as null when the provider declares none`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false) |> ignore
+
+        let provenance = TestSupport.readRelative root ".fsgg/scaffold-provenance.json"
+        Assert.Contains("\"requiredMinimumCliVersion\": null", provenance)
+
+    // Feature 052 US1 (D6): a malformed provider minimum is NOT persisted — recorded
+    // as null (the raw malformed value never lands in provenance).
+    [<Fact>]
+    let ``provenance records requiredMinimumCliVersion as null when the provider minimum is malformed`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "min-malformed.providers.yml"
+        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false) |> ignore
+
+        let provenance = TestSupport.readRelative root ".fsgg/scaffold-provenance.json"
+        Assert.Contains("\"requiredMinimumCliVersion\": null", provenance)
+        Assert.DoesNotContain("not-a-version", provenance)
+
     [<Fact>]
     let ``refresh excludes provider-produced paths and flags malformed provenance`` () =
         let root = TestSupport.tempDirectory ()
