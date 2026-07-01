@@ -131,6 +131,16 @@ module CommandWorkflow =
             // provenance); it does not use the generic write-once guard above.
             if not (allPlannedReadsInterpreted model) then model, []
             else computeScaffoldNext model
+        | Doctor, _ ->
+            // Read-only drift projection (feature 053, US1): resolve the shared drift once
+            // the snapshotted reads are in; emit no mutating effect.
+            if not (allPlannedReadsInterpreted model) then model, []
+            else computeDoctorNext model
+        | Upgrade, _ ->
+            // The reconciliation verb (feature 053, US2–US4): its own staged driver
+            // (resolve drift → per-step Confirm → apply → finalize), re-derived from the log.
+            if not (allPlannedReadsInterpreted model) then model, []
+            else computeUpgradeNext model
         | _ -> model, []
 
     let init (request: CommandRequest) =
@@ -154,6 +164,8 @@ module CommandWorkflow =
               AgentGuidance = None
               Refresh = None
               Scaffold = None
+              Doctor = None
+              Upgrade = None
               GeneratedViews = []
               Report = None }
 

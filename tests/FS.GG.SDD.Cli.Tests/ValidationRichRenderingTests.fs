@@ -205,7 +205,7 @@ module ValidationRichRenderingTests =
     // ----- T009: degradation + parity (INV-2 / C-4) -----
 
     let private interactive: TerminalCapabilities =
-        { IsInteractive = true; ColorEnabled = true; Width = Some 200 }
+        { IsInteractive = true; ColorEnabled = true; Width = Some 200; IsInputInteractive = true }
 
     let private hasEsc (value: string) = value |> Seq.exists (fun c -> int c = 27)
 

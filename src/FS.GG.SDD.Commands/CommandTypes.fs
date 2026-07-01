@@ -21,6 +21,8 @@ module CommandTypes =
         | Agents
         | Refresh
         | Scaffold
+        | Doctor
+        | Upgrade
 
     type OutputFormat =
         | Json
@@ -70,7 +72,9 @@ module CommandTypes =
           Provider: string option
           Parameters: (string * string) list
           Force: bool
-          TemplateUpdate: bool }
+          TemplateUpdate: bool
+          AssumeYes: bool
+          IsInteractive: bool }
 
     type GeneratedViewSource =
         { Path: string
@@ -332,6 +336,36 @@ module CommandTypes =
           ExecutableScriptsSkipped: int
           NextActionHint: string }
 
+    type ReconciliationStep =
+        { StepId: string
+          Kind: string
+          DiffPreview: string
+          Outcome: string
+          TargetPaths: string list }
+
+    type DoctorSummary =
+        { HasProvenance: bool
+          ProviderName: string option
+          InstalledCliVersion: string
+          RequiredMinimumCliVersion: string option
+          CliAxis: string
+          CliBehindBy: string option
+          ExpectedArtifactCount: int
+          MissingArtifactPaths: string list
+          PreviewSteps: ReconciliationStep list
+          IsCoherent: bool }
+
+    type UpgradeSummary =
+        { HasProvenance: bool
+          Mode: string
+          AlreadyCoherent: bool
+          Steps: ReconciliationStep list
+          AppliedStepIds: string list
+          SkippedStepIds: string list
+          FailedStepIds: string list
+          ResidualDrift: bool
+          NextActionHint: string }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -390,6 +424,8 @@ module CommandTypes =
           AgentGuidance: AgentGuidanceSummary option
           Refresh: RefreshSummary option
           Scaffold: ScaffoldSummary option
+          Doctor: DoctorSummary option
+          Upgrade: UpgradeSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -406,6 +442,7 @@ module CommandTypes =
         | EmitStdout of text: string
         | EmitStderr of text: string
         | SetExitCode of code: int
+        | Confirm of stepId: string * prompt: string
 
     type ProcessRunResult =
         { Started: bool
@@ -416,6 +453,7 @@ module CommandTypes =
           Succeeded: bool
           Snapshot: FileSnapshot option
           Process: ProcessRunResult option
+          Confirmed: bool option
           Diagnostic: Diagnostic option }
 
     type CommandModel =
@@ -435,6 +473,8 @@ module CommandTypes =
           AgentGuidance: AgentGuidanceSummary option
           Refresh: RefreshSummary option
           Scaffold: ScaffoldSummary option
+          Doctor: DoctorSummary option
+          Upgrade: UpgradeSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 
@@ -462,6 +502,8 @@ module CommandTypes =
         | Agents -> "agents"
         | Refresh -> "refresh"
         | Scaffold -> "scaffold"
+        | Doctor -> "doctor"
+        | Upgrade -> "upgrade"
 
     let commandStage (command: SddCommand) =
         match command with
@@ -484,6 +526,8 @@ module CommandTypes =
         | "agents" -> Ok Agents
         | "refresh" -> Ok Refresh
         | "scaffold" -> Ok Scaffold
+        | "doctor" -> Ok Doctor
+        | "upgrade" -> Ok Upgrade
         | other -> Error $"Unknown SDD command '{other}'."
 
     let outputFormatValue (format: OutputFormat) =
@@ -556,6 +600,8 @@ module CommandTypes =
         | Agents -> None
         | Refresh -> None
         | Scaffold -> None
+        | Doctor -> None
+        | Upgrade -> None
 
     let effectPath (effect: CommandEffect) =
         match effect with
@@ -567,4 +613,5 @@ module CommandTypes =
         | SetExecutable path -> Some path
         | EmitStdout _
         | EmitStderr _
-        | SetExitCode _ -> None
+        | SetExitCode _
+        | Confirm _ -> None

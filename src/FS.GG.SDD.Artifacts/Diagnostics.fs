@@ -317,6 +317,69 @@ module Diagnostics =
             "Set the executable bit manually (e.g. on a read-only or non-Unix filesystem)."
             ordered
 
+    // Feature 053: `fsgg-sdd doctor` drift advisory. Warning severity so the read-only
+    // report resolves to `succeededWithWarnings` when drift is present, while staying
+    // non-blocking (doctor always exits 0).
+    let doctorDriftDetected () =
+        create
+            "doctor.driftDetected"
+            DiagnosticWarning
+            None
+            None
+            "The scaffold has drifted from its coherent set (CLI behind the declared minimum and/or seeded artifacts missing)."
+            "Run `fsgg-sdd upgrade` to reconcile each step interactively, or `fsgg-sdd upgrade --yes` non-interactively."
+            []
+
+    // Non-interactive `upgrade` without `--yes`: a user-input refusal (exit 1). Never
+    // blocks on a prompt and makes zero writes (FR-012 / SC-004).
+    let upgradeNonInteractiveNoYes () =
+        create
+            "upgrade.nonInteractiveNoYes"
+            DiagnosticError
+            None
+            None
+            "`fsgg-sdd upgrade` needs interactive confirmation, but input is not interactive and `--yes` was not passed; nothing was changed."
+            "Re-run interactively, or pass `--yes` to apply the reconciliation without prompting."
+            []
+
+    // A confirmed CLI self-update process errored: a step defect (exit 2 via
+    // `providerDefectIds`); the reconciliation is reported incomplete (FR-013).
+    let upgradeSelfUpdateFailed (exitCode: int) =
+        create
+            "upgrade.selfUpdateFailed"
+            DiagnosticError
+            None
+            None
+            $"The CLI self-update step failed (`dotnet tool update` exited {exitCode}); residual drift remains."
+            "Update the fsgg-sdd tool manually (e.g. `dotnet tool update`), then re-run `fsgg-sdd doctor` to confirm."
+            [ string exitCode ]
+
+    // A confirmed re-pin/re-seed write failed: a step defect (exit 2); the
+    // reconciliation is reported incomplete (FR-013 / SC-006).
+    let upgradeStepFailed (stepId: string) =
+        create
+            "upgrade.stepFailed"
+            DiagnosticError
+            None
+            None
+            $"Reconciliation step '{stepId}' failed to apply; residual drift remains."
+            "Inspect the failure, correct the environment, and re-run `fsgg-sdd upgrade`."
+            [ stepId ]
+
+    // Partial apply: one or more steps were declined and drift remains (US2-AC4). A
+    // non-blocking warning (exit 0); a subsequent `doctor` still shows the drift.
+    let upgradeResidualDrift (stepIds: string list) =
+        let ordered = stepIds |> List.sort
+
+        create
+            "upgrade.residualDrift"
+            DiagnosticWarning
+            None
+            None
+            "Some reconciliation steps were skipped; the scaffold is not fully coherent."
+            "Re-run `fsgg-sdd upgrade` and confirm the skipped step(s), or `fsgg-sdd doctor` to review the residual drift."
+            ordered
+
     let locationKey location =
         match location with
         | Some loc -> defaultArg loc.Line 0, defaultArg loc.Column 0

@@ -20,6 +20,8 @@ module CommandTypes =
         | Agents
         | Refresh
         | Scaffold
+        | Doctor
+        | Upgrade
 
     type OutputFormat =
         | Json
@@ -72,7 +74,13 @@ module CommandTypes =
           Force: bool
           // Refresh the provider template (`dotnet new update`) before create.
           // Default true; `--no-update` clears it for create-only / offline runs.
-          TemplateUpdate: bool }
+          TemplateUpdate: bool
+          // Remediation inputs (`fsgg-sdd upgrade`); ignored by other commands (E2).
+          // `--yes`: confirm every reconciliation step without prompting (FR-011).
+          AssumeYes: bool
+          // Computed at the edge from `Console.IsInputRedirected` (R7). Lets the pure
+          // core refuse a non-interactive `upgrade` without `--yes` up front (FR-012).
+          IsInteractive: bool }
 
     type GeneratedViewSource =
         { Path: string
@@ -348,6 +356,48 @@ module CommandTypes =
           ExecutableScriptsSkipped: int
           NextActionHint: string }
 
+    /// One confirmable unit of `upgrade` (CLI self-update, template re-pin, or
+    /// artifact re-seed), shared by `DoctorSummary.PreviewSteps` (dry-run preview) and
+    /// `UpgradeSummary.Steps` (apply outcome). Data-model E6.
+    type ReconciliationStep =
+        { StepId: string
+          Kind: string
+          /// Compact before/after preview per step kind (R5): version delta /
+          /// created-path list / changed-line pin preview. Presentation-only fact.
+          DiffPreview: string
+          /// Preview context: `wouldApply` / `noTarget`. Apply context:
+          /// `applied` / `skipped` / `failed` / `noTarget`.
+          Outcome: string
+          /// The consumer paths the step would write (re-seed: missing artifacts;
+          /// re-pin: `.fsgg/providers.yml`; self-update: `[]`). Sorted.
+          TargetPaths: string list }
+
+    /// The read-only drift picture `doctor` emits (spec Key Entity "Drift report",
+    /// data-model E4). `doctor` never blocks → `NoChange`/`SucceededWithWarnings`.
+    type DoctorSummary =
+        { HasProvenance: bool
+          ProviderName: string option
+          InstalledCliVersion: string
+          RequiredMinimumCliVersion: string option
+          CliAxis: string
+          CliBehindBy: string option
+          ExpectedArtifactCount: int
+          MissingArtifactPaths: string list
+          PreviewSteps: ReconciliationStep list
+          IsCoherent: bool }
+
+    /// The outcome of a reconciliation run (data-model E5).
+    type UpgradeSummary =
+        { HasProvenance: bool
+          Mode: string
+          AlreadyCoherent: bool
+          Steps: ReconciliationStep list
+          AppliedStepIds: string list
+          SkippedStepIds: string list
+          FailedStepIds: string list
+          ResidualDrift: bool
+          NextActionHint: string }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -411,6 +461,8 @@ module CommandTypes =
           AgentGuidance: AgentGuidanceSummary option
           Refresh: RefreshSummary option
           Scaffold: ScaffoldSummary option
+          Doctor: DoctorSummary option
+          Upgrade: UpgradeSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -427,6 +479,10 @@ module CommandTypes =
         | EmitStdout of text: string
         | EmitStderr of text: string
         | SetExitCode of code: int
+        /// Requests per-step confirmation for one reconciliation step (R7). Interpreted
+        /// at the edge by a stdin read when `IsInteractive`; the pure `update` re-derives
+        /// the next step from the confirmed results in the interpreted-effect log.
+        | Confirm of stepId: string * prompt: string
 
     /// Captured outcome of a `RunProcess` effect at the edge. `Started = false`
     /// means the process could not be launched (engine/command absent). Process
@@ -440,6 +496,9 @@ module CommandTypes =
           Succeeded: bool
           Snapshot: FileSnapshot option
           Process: ProcessRunResult option
+          /// The confirmation decision for a `Confirm` effect: `Some true` = confirmed,
+          /// `Some false` = declined/dry-run, `None` = not a `Confirm` result (E3).
+          Confirmed: bool option
           Diagnostic: Diagnostic option }
 
     type CommandModel =
@@ -459,6 +518,8 @@ module CommandTypes =
           AgentGuidance: AgentGuidanceSummary option
           Refresh: RefreshSummary option
           Scaffold: ScaffoldSummary option
+          Doctor: DoctorSummary option
+          Upgrade: UpgradeSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 

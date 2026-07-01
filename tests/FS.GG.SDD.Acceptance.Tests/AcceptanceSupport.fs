@@ -117,7 +117,9 @@ module AcceptanceSupport =
           Provider = None
           Parameters = []
           Force = false
-          TemplateUpdate = true }
+          TemplateUpdate = true
+          AssumeYes = false
+          IsInteractive = false }
 
     /// The acceptance's fixed composition request: `--provider rendering --param
     /// lifecycle=sdd`. `rendering` is the author-supplied provider *name* (a generic

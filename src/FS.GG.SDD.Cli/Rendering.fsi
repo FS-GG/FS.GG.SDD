@@ -9,7 +9,11 @@ module Rendering =
     type TerminalCapabilities =
         { IsInteractive: bool
           ColorEnabled: bool
-          Width: int option }
+          Width: int option
+          /// Whether stdin is an interactive terminal (feature 053): drives the
+          /// `upgrade` confirm gate. Distinct from `IsInteractive`, which tracks
+          /// output redirection for rich degradation.
+          IsInputInteractive: bool }
 
     /// Result of choosing and producing a rendering for one report.
     type RichRenderResult =

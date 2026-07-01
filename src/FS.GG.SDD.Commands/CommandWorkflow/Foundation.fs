@@ -570,11 +570,25 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
         [ ReadFile ".fsgg/providers.yml"
           EnumerateDirectory "" ]
 
+    // Feature 053: the reads `doctor` and `upgrade` share (drift-model contract) — the
+    // scaffold provenance (declarative truth for the recorded minimum + provider name),
+    // the live provider registry (the live minimum, which wins), and a presence probe of
+    // every expected seeded artifact (`Drift.expectedArtifactPaths` already includes
+    // `.fsgg/early-stage-guidance.md`). All reads; neither command plans a mutating
+    // effect at this stage (doctor never does; upgrade plans applies only after the
+    // pure driver decides).
+    let remediationReadEffects =
+        [ ReadFile ".fsgg/scaffold-provenance.json"
+          ReadFile ".fsgg/providers.yml" ]
+        @ (Drift.expectedArtifactPaths |> List.map ReadFile)
+
     let workIdDiagnostics (request: CommandRequest) =
         match request.Command, request.WorkId with
         | Init, _ -> []
-        // Scaffold is cross-cutting and operates on --root, not a work item.
-        | Scaffold, _ -> []
+        // Scaffold/doctor/upgrade are cross-cutting and operate on --root, not a work item.
+        | Scaffold, _
+        | Doctor, _
+        | Upgrade, _ -> []
         | _, None -> [ missingWorkId request.Command ]
         | _, Some value ->
             match IdentifiersModule.createWorkId value with
@@ -602,6 +616,8 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
             | Agents, Some workId -> [], agentsReadEffects workId
             | Refresh, Some workId -> [], refreshReadEffects workId
             | Scaffold, _ -> [], scaffoldReadEffects
+            | Doctor, _
+            | Upgrade, _ -> [], remediationReadEffects
             | command, _ -> [ unsupportedCommand command ], []
 
     let effectKey effect =
@@ -617,6 +633,7 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
         | EmitStdout text -> "stdout:" + text
         | EmitStderr text -> "stderr:" + text
         | SetExitCode code -> "exit:" + string code
+        | Confirm(stepId, _) -> "confirm:" + stepId
 
     let readEffectKey path = "read:" + normalizeRelativePath path
 

@@ -71,5 +71,19 @@ policy an additive change carries **no `<version>.md` migration note** (the
 change instead. The contract change is a **minor** package bump coordinated with the
 registry per epic FS-GG/.github#85 (no handoff `contractVersion` is involved).
 
+The `053-upgrade-doctor-remediation` change is additive: it adds two cross-cutting
+commands (`fsgg-sdd doctor`, `fsgg-sdd upgrade`), two new optional `command-report`
+(`--json`) blocks (`doctor`, `upgrade`, both `null` on every other command), one additive
+optional field (`Confirmed: bool option`, default `null`) on each `CommandEffectResult`, and
+a new `Confirm` effect case. It reads the feature-052 declarative minimum and the seeded
+skeleton set; it introduces **no** new persisted schema (`scaffold-provenance.json` stays v1,
+read-only here) and **no** new versioned cross-repo contract. It breaks no existing public
+contract: every existing report block emits an unchanged shape (the two new blocks are
+additive and default `null`), `fsgg-sdd doctor` is strictly read-only (exit 0 whenever it
+reports), and only `fsgg-sdd upgrade` mutates for remediation — no other command's output,
+stream, or exit code changes (FR-008). Per this policy an additive change carries **no
+`<version>.md` migration note** (the `release-readiness.json` `migrations[]` array stays
+empty); this paragraph records the change instead.
+
 When a release introduces a breaking change, add its note here as
 `<version>.md` and list it in this index.

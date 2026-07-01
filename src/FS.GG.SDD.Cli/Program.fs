@@ -56,7 +56,9 @@ let printUnknown commandValue =
           Provider = None
           Parameters = []
           Force = false
-          TemplateUpdate = true }
+          TemplateUpdate = true
+          AssumeYes = false
+          IsInteractive = false }
 
     let model =
         { Request = request
@@ -75,6 +77,8 @@ let printUnknown commandValue =
           AgentGuidance = None
           Refresh = None
           Scaffold = None
+          Doctor = None
+          Upgrade = None
           GeneratedViews = []
           Report = None }
 
@@ -130,7 +134,9 @@ let private helpRequest command format =
       Provider = None
       Parameters = []
       Force = false
-      TemplateUpdate = true }
+      TemplateUpdate = true
+      AssumeYes = false
+      IsInteractive = false }
 
 // §3.5: project a help report through the standard three views to stdout. Help carries no
 // diagnostics and no changes → NoChange → exit 0 (never `unknownCommand`, FR-008/011).
@@ -175,6 +181,7 @@ let run args =
             printCommandHelp (outputFormat rest) command
         | Ok command ->
             let format = outputFormat rest
+            let capabilities = detectCapabilities ()
 
             let request =
                 { Command = command
@@ -189,7 +196,11 @@ let run args =
                   Provider = optionValue "--provider" rest
                   Parameters = parseParams rest
                   Force = hasFlag "--force" rest
-                  TemplateUpdate = not (hasFlag "--no-update" rest) }
+                  TemplateUpdate = not (hasFlag "--no-update" rest)
+                  // Feature 053: `upgrade`'s explicit non-interactive apply flag, and the
+                  // input-interactivity signal that gates the per-step confirm loop (FR-011/FR-012).
+                  AssumeYes = hasFlag "--yes" rest
+                  IsInteractive = capabilities.IsInputInteractive }
 
             let model, effects = init request
 

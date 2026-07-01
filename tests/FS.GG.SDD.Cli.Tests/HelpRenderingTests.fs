@@ -24,7 +24,7 @@ module HelpRenderingTests =
     let private topLevel = helpReport (Commands.request Init ".") (CommandHelp.topLevelHelp generator)
     let private commandHelp = helpReport (Commands.request Verify ".") (CommandHelp.commandHelp Verify)
 
-    let private interactiveColor = { IsInteractive = true; ColorEnabled = true; Width = Some 100 }
+    let private interactiveColor = { IsInteractive = true; ColorEnabled = true; Width = Some 100; IsInputInteractive = true }
     let private nonInteractive = { interactiveColor with IsInteractive = false }
     let private colorDisabled = { interactiveColor with ColorEnabled = false }
 

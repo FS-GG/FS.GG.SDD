@@ -217,6 +217,47 @@ module CommandRendering =
             builder.AppendLine($"scaffoldNextAction: {scaffold.NextActionHint}") |> ignore
         | None -> ()
 
+        match report.Doctor with
+        | Some doctor ->
+            let doctorProvider = defaultArg doctor.ProviderName "(none)"
+            let doctorRequiredMinimum = defaultArg doctor.RequiredMinimumCliVersion "(none)"
+            let doctorBehindBy = defaultArg doctor.CliBehindBy "(none)"
+            builder.AppendLine($"doctorHasProvenance: {doctor.HasProvenance}") |> ignore
+            builder.AppendLine($"doctorProvider: {doctorProvider}") |> ignore
+            builder.AppendLine($"doctorInstalledCli: {doctor.InstalledCliVersion}") |> ignore
+            builder.AppendLine($"doctorRequiredMinimumCli: {doctorRequiredMinimum}") |> ignore
+            builder.AppendLine($"doctorCliAxis: {doctor.CliAxis}") |> ignore
+            builder.AppendLine($"doctorCliBehindBy: {doctorBehindBy}") |> ignore
+            builder.AppendLine($"doctorExpectedArtifacts: {doctor.ExpectedArtifactCount}") |> ignore
+            builder.AppendLine($"doctorMissingArtifacts: {List.length doctor.MissingArtifactPaths}") |> ignore
+            doctor.MissingArtifactPaths
+            |> List.sort
+            |> List.iter (fun path -> builder.AppendLine($"doctorMissingArtifact: {path}") |> ignore)
+            doctor.PreviewSteps
+            |> List.iter (fun step -> builder.AppendLine($"doctorPreviewStep: {step.StepId}={step.Outcome}") |> ignore)
+            builder.AppendLine($"doctorCoherent: {doctor.IsCoherent}") |> ignore
+        | None -> ()
+
+        match report.Upgrade with
+        | Some upgrade ->
+            builder.AppendLine($"upgradeHasProvenance: {upgrade.HasProvenance}") |> ignore
+            builder.AppendLine($"upgradeMode: {upgrade.Mode}") |> ignore
+            builder.AppendLine($"upgradeAlreadyCoherent: {upgrade.AlreadyCoherent}") |> ignore
+            upgrade.Steps
+            |> List.iter (fun step -> builder.AppendLine($"upgradeStep: {step.StepId}={step.Outcome}") |> ignore)
+            upgrade.AppliedStepIds
+            |> List.sort
+            |> List.iter (fun id -> builder.AppendLine($"upgradeApplied: {id}") |> ignore)
+            upgrade.SkippedStepIds
+            |> List.sort
+            |> List.iter (fun id -> builder.AppendLine($"upgradeSkipped: {id}") |> ignore)
+            upgrade.FailedStepIds
+            |> List.sort
+            |> List.iter (fun id -> builder.AppendLine($"upgradeFailed: {id}") |> ignore)
+            builder.AppendLine($"upgradeResidualDrift: {upgrade.ResidualDrift}") |> ignore
+            builder.AppendLine($"upgradeNextAction: {upgrade.NextActionHint}") |> ignore
+        | None -> ()
+
         builder.AppendLine($"generatedViews: {List.length report.GeneratedViews}") |> ignore
         builder.AppendLine($"diagnostics: {List.length report.Diagnostics}") |> ignore
 

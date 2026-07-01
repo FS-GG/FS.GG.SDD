@@ -64,7 +64,9 @@ module ValidationRunner =
           Provider = None
           Parameters = []
           Force = false
-          TemplateUpdate = true }
+          TemplateUpdate = true
+          AssumeYes = false
+          IsInteractive = false }
 
     let runRequest (request: CommandRequest) =
         let model, effects = CW.init request
@@ -154,6 +156,8 @@ module ValidationRunner =
         | Verify -> 70
         | Ship -> 80
         | Scaffold -> 0
+        | Doctor -> 0
+        | Upgrade -> 0
 
     /// Build a disposable project at the requested state by driving the real
     /// CommandWorkflow over a temp dir (matrix-runner C-1). `withEvidence = false`
@@ -447,7 +451,14 @@ module ValidationRunner =
             | Agents -> "agents"
             | Refresh -> "refresh"
             | Scaffold -> "scaffold"
+            | Doctor -> "doctor"
+            | Upgrade -> "upgrade"
 
+        // `scaffold` (and, feature 053, `doctor`/`upgrade`) are deliberately excluded from
+        // determinism-matrix reconciliation: `scaffold`/`upgrade` spawn an external process
+        // (and `upgrade` reads stdin), so they are environment-sensed rather than
+        // byte-deterministic; they are covered by their own semantic suites.
+        // (Legacy note preserved below.)
         // `scaffold` is deliberately excluded from determinism-matrix reconciliation:
         // its real exercise spawns an external `dotnet new` template engine, so it is
         // environment-sensed rather than byte-deterministic. It is covered by the

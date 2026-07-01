@@ -15,6 +15,11 @@ FS.GG.SDD.Artifacts.Config.parseSddLifecyclePolicy
 FS.GG.SDD.Artifacts.Core.standardArtifactContracts
 FS.GG.SDD.Artifacts.Diagnostics.create
 FS.GG.SDD.Artifacts.Diagnostics.deprecatedSchemaVersion
+FS.GG.SDD.Artifacts.Diagnostics.doctorDriftDetected
+FS.GG.SDD.Artifacts.Diagnostics.upgradeNonInteractiveNoYes
+FS.GG.SDD.Artifacts.Diagnostics.upgradeResidualDrift
+FS.GG.SDD.Artifacts.Diagnostics.upgradeSelfUpdateFailed
+FS.GG.SDD.Artifacts.Diagnostics.upgradeStepFailed
 FS.GG.SDD.Artifacts.Diagnostics.duplicateIdentifier
 FS.GG.SDD.Artifacts.Diagnostics.futureSchemaVersion
 FS.GG.SDD.Artifacts.Diagnostics.hasBlocking

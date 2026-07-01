@@ -329,6 +329,67 @@ module CommandSerialization =
             writer.WriteEndObject()
         | None -> writer.WriteNull "scaffold"
 
+    // Feature 053: a `ReconciliationStep` — hand-ordered fields, `targetPaths` sorted.
+    // `diffPreview` is deterministic content (version delta / sorted new-path list), not
+    // the interactive confirm prompt, so it is contract-safe.
+    let writeReconciliationStep (writer: Utf8JsonWriter) (step: ReconciliationStep) =
+        writer.WriteStartObject()
+        writer.WriteString("stepId", step.StepId)
+        writer.WriteString("kind", step.Kind)
+        writer.WriteString("diffPreview", step.DiffPreview)
+        writer.WriteString("outcome", step.Outcome)
+        writeStringList writer Sorted "targetPaths" step.TargetPaths
+        writer.WriteEndObject()
+
+    let writeDoctor (writer: Utf8JsonWriter) (summary: DoctorSummary option) =
+        match summary with
+        | Some summary ->
+            writer.WriteStartObject("doctor")
+            writer.WriteBoolean("hasProvenance", summary.HasProvenance)
+
+            match summary.ProviderName with
+            | Some name -> writer.WriteString("providerName", name)
+            | None -> writer.WriteNull "providerName"
+
+            writer.WriteString("installedCliVersion", summary.InstalledCliVersion)
+
+            match summary.RequiredMinimumCliVersion with
+            | Some minimum -> writer.WriteString("requiredMinimumCliVersion", minimum)
+            | None -> writer.WriteNull "requiredMinimumCliVersion"
+
+            writer.WriteString("cliAxis", summary.CliAxis)
+
+            match summary.CliBehindBy with
+            | Some delta -> writer.WriteString("cliBehindBy", delta)
+            | None -> writer.WriteNull "cliBehindBy"
+
+            writer.WriteNumber("expectedArtifactCount", summary.ExpectedArtifactCount)
+            writeStringList writer Sorted "missingArtifactPaths" summary.MissingArtifactPaths
+            writer.WriteStartArray("previewSteps")
+            summary.PreviewSteps |> List.iter (writeReconciliationStep writer)
+            writer.WriteEndArray()
+            writer.WriteBoolean("isCoherent", summary.IsCoherent)
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "doctor"
+
+    let writeUpgrade (writer: Utf8JsonWriter) (summary: UpgradeSummary option) =
+        match summary with
+        | Some summary ->
+            writer.WriteStartObject("upgrade")
+            writer.WriteBoolean("hasProvenance", summary.HasProvenance)
+            writer.WriteString("mode", summary.Mode)
+            writer.WriteBoolean("alreadyCoherent", summary.AlreadyCoherent)
+            writer.WriteStartArray("steps")
+            summary.Steps |> List.iter (writeReconciliationStep writer)
+            writer.WriteEndArray()
+            writeStringList writer Sorted "appliedStepIds" summary.AppliedStepIds
+            writeStringList writer Sorted "skippedStepIds" summary.SkippedStepIds
+            writeStringList writer Sorted "failedStepIds" summary.FailedStepIds
+            writer.WriteBoolean("residualDrift", summary.ResidualDrift)
+            writer.WriteString("nextActionHint", summary.NextActionHint)
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "upgrade"
+
     let writeGeneratedSource (writer: Utf8JsonWriter) (source: GeneratedViewSource) =
         writer.WriteStartObject()
         writer.WriteString("path", source.Path)
@@ -478,6 +539,8 @@ module CommandSerialization =
         writeAgentGuidance writer report.AgentGuidance
         writeRefresh writer report.Refresh
         writeScaffold writer report.Scaffold
+        writeDoctor writer report.Doctor
+        writeUpgrade writer report.Upgrade
         writer.WriteStartArray("generatedViews")
         report.GeneratedViews |> List.sortBy (fun view -> view.Path) |> List.iter (writeGeneratedView writer)
         writer.WriteEndArray()

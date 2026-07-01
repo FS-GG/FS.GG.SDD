@@ -81,6 +81,21 @@ mismatch emits a stale diagnostic rather than hard-failing.
 - Treating `agent-commands/<target>/skills.md` as authoritative — it is a
   generated projection, not a source of truth.
 
+## Not the remediation verbs
+
+`refresh` regenerates SDD-owned **generated views** from authored sources; it never
+re-seeds skeleton artifacts and never touches the CLI installation. Bringing a
+*scaffolded product* back into coherence with the template pin, framework, and
+`fsgg-sdd` CLI is the job of two separate cross-cutting commands:
+
+- `fsgg-sdd doctor` — a read-only drift report (installed CLI vs required minimum,
+  missing seeded artifacts, a dry-run preview); it never writes and exits 0.
+- `fsgg-sdd upgrade` — the reconciliation verb (CLI self-update, template re-pin,
+  re-seed of missing artifacts), each shown as a diff and confirmed (or `--yes`).
+  It is the only command that mutates the CLI/consumer artifacts for remediation.
+
+See `docs/reference/doctor-upgrade.md`.
+
 ## Related
 
 - [[fs-gg-sdd-lifecycle]] (authored-source vs generated-view), [[fs-gg-sdd-verify]].

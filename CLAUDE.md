@@ -108,6 +108,30 @@ Core boundary:
   `FSGG_SDD_ACCEPTANCE_REGISTRY` is set, stays out of the default offline inner loop,
   and emits a deterministic `composition-acceptance-result` v1 verdict (a declared
   release-catalog exception, not a lifecycle artifact).
+- `fsgg-sdd doctor` and `fsgg-sdd upgrade` are the cross-cutting remediation verbs
+  (not lifecycle stages; `nextLifecycleCommand Doctor = None` / `Upgrade = None`) that
+  reconcile a scaffolded product's drift from its coherent set — the remediation half
+  of ADR-0009. `doctor` is a **strictly read-only** drift report: installed CLI vs the
+  feature-052 declarative required minimum (live descriptor wins over the recorded
+  value), which seeded `fs-gg-sdd-*` skills / `.fsgg/early-stage-guidance.md` are
+  present vs expected, and a dry-run preview of what `upgrade` would change; it makes
+  **zero** writes and exits 0 whenever it reports. `upgrade` is the **only** command
+  permitted to mutate the CLI installation or consumer artifacts for remediation,
+  across up to three steps — CLI self-update (`dotnet tool update` at the `RunProcess`
+  edge, effective on the next invocation), consumer-only template re-pin
+  (`.fsgg/providers.yml`; value-agnostic and usually inert, R6), and no-clobber re-seed
+  of the **missing** seeded artifacts via `init`'s `AgentGuidanceTarget` effects — where
+  each actionable step is shown as a diff and applied only after its own `Confirm` (a new
+  constitutionally-clean MVU effect resolved by a stdin read at the edge; the pure
+  `update` re-derives staging from the interpreted-effect log) or all at once under an
+  explicit `--yes`. A non-interactive run without `--yes` refuses
+  (`upgrade.nonInteractiveNoYes`, exit 1, zero writes, no prompt-hang); a confirmed step
+  that fails to apply exits 2 (`upgrade.selfUpdateFailed`/`upgrade.stepFailed`); a declined
+  step is skipped with residual drift surfaced (exit 0); an incomplete reconciliation is
+  never reported as complete (FR-013). Both add additive `doctor`/`upgrade` `CommandReport`
+  blocks projected json/text/rich, plus an additive `CommandEffectResult.Confirmed` field;
+  no persisted schema changes (provenance stays v1, read-only). See
+  `docs/reference/doctor-upgrade.md`.
 - FS.GG.Governance owns rule evaluation, evidence freshness, routing, profiles,
   and gate enforcement.
 - Integrations between them must be explicit, versioned, and optional until
@@ -140,5 +164,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/052-cli-version-coherence/plan.md
+at specs/053-upgrade-doctor-remediation/plan.md
 <!-- SPECKIT END -->
