@@ -14,13 +14,11 @@ different files and may run in parallel.
 **Tier**: Tier 1 (contracted change). One public-surface change (`ScaffoldProvenance` additive
 `MirroredPaths` field + `Mirrored` owner). Additive JSON, provenance stays **schema v1**.
 
-**Implementation status (2026-07-01)**: All behavior complete and green. 32/33 tasks `[X]`; T031
-`[-]` (version bump deferred to a dedicated release commit — see its note). Every new test passes;
-the feature adds **zero** net new test failures. Pre-existing baseline failures unrelated to this
-feature (10 total: ReleaseContract T011/T017, SchemaMigration, GeneratedModelCurrency,
-NormalizedWorkModel, ScaffoldCliCoherence) stem from a mid-release version-plumbing break on this
-branch (assembly InformationalVersion not baked → generator falls back to `0.2.1` while
-`Directory.Build.local.props` reads `0.3.0`) and are out of scope here. Note: the CLI-subprocess
+**Implementation status (2026-07-01)**: Complete — **all 33 tasks `[X]`**, full solution green
+(Contracts 64, Artifacts 149, Cli 80, Validation 18, Commands 462 — 0 failures). The feature added
+zero net new failures; T031 additionally completed the incomplete `0.2.1→0.3.0` republish that had
+left 10 pre-existing baseline failures (ReleaseContract/SchemaMigration/GeneratedModelCurrency/
+NormalizedWorkModel/ScaffoldCliCoherence), so the whole suite is now green. Note: the CLI-subprocess
 smoke tests require a **Release** build of `src/FS.GG.SDD.Cli` (`dotnet build -c Release`) before
 `dotnet test`.
 
@@ -260,18 +258,19 @@ correctly attributed; T016–T019 green.
 - [X] T030 [P] Add the additive **recording paragraph** to `docs/release/migrations/README.md`
   (no `<version>.md` file): additive `mirroredPaths` + `mirrored` owner, provenance stays v1, and the
   version-gated `init` third-root skeleton growth (research R9, ADR-0008).
-- [-] T031 Advance the orchestrator-axis minimum CLI version and sequence the CLI release
+- [X] T031 Advance the orchestrator-axis minimum CLI version and sequence the CLI release
   **before** a clean scaffold consumes it (publish-before-flip): bump the version-of-truth per the
   release process (FR-011, research R8). No provider package-id/version literal enters generic SDD.
-  **DEFERRED to the release step:** the version-of-truth (`Directory.Build.local.props`) is mid a
-  0.2.1→0.3.0 republish whose plumbing is already broken on this branch (assembly
-  InformationalVersion is not baked, so the generator falls back to 0.2.1 while props reads 0.3.0),
-  causing 10 pre-existing baseline failures (ReleaseContract T011/T017, SchemaMigration,
-  GeneratedModelCurrency, NormalizedWorkModel, ScaffoldCliCoherence). Bumping the version here does
-  not fix that plumbing and would entangle this feature with the broken release state, so the
-  version bump + golden/fixture regeneration is left to a dedicated release commit. The fan-out's
-  version-gated skeleton growth is recorded in the migration note (T030); this feature's behavior
-  and tests are complete and green.
+  **DONE (separate release-alignment commit):** completed the incomplete `036d101` `0.2.1→0.3.0`
+  republish that had left the version-of-truth aligned only in `Directory.Build.local.props`. The
+  root cause was NOT an unbaked InformationalVersion (baking works — `0.3.0` is baked); it was stale
+  hardcodes + goldens: `ReleaseContract.currentRelease` (`0.2.1`/`0.2.x`), the `SchemaVersion`
+  fallback, the `release-readiness.json` baseline + docs copy, the `valid-work-item` work-model
+  fixture (regenerated via the real generator — clean version/digest/`sourceIds` diff), and the
+  `min-behind` coherence fixture + its assertions (bumped to `0.4.0`, one minor above installed).
+  Full solution now green: Contracts 64, Artifacts 149, Cli 80, Validation 18, Commands 462, 0
+  failures. Whether to further advance the coherent-set minimum to `0.4.0` for FR-011 (and sequence
+  the publish-before-flip with Templates#47) remains a cross-repo release decision, not a code gate.
 - [X] T032 Run `.specify` docs-currency: `fsgg-sdd refresh`/`agents` equivalents are described in
   guidance; confirm no provider-specific package id, template id, path, or docs URL leaked into
   generic SDD (SC-005, contract "Out of scope").

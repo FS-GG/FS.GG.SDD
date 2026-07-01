@@ -177,6 +177,7 @@
       "decisions": [
         "DEC-001"
       ],
+      "sourceIds": [],
       "requiredSkills": [
         "fs-gg-sdd-project"
       ],
@@ -204,6 +205,7 @@
         "DEC-001",
         "DEC-002"
       ],
+      "sourceIds": [],
       "requiredSkills": [
         "fs-gg-sdd-project"
       ],
@@ -268,7 +270,7 @@
       "schemaVersion": 1,
       "generator": {
         "id": "FS.GG.SDD.Artifacts",
-        "version": "0.2.1"
+        "version": "0.3.0"
       },
       "sources": [
         {
@@ -322,7 +324,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "8d0957be45372c971e391e374ccec50e73243d7a583423880e261ad29fc9eab2"
+        "value": "160e57f6038c5d0d462e4267a010aaab918040c968f54d2cf6f58f57f718b6e7"
       },
       "currency": "current"
     }
