@@ -98,6 +98,20 @@ module Diagnostics =
     let unknownReference artifact id correction =
         create "unknownReference" DiagnosticError (Some artifact) None $"Reference '{id}' does not resolve." correction [ id ]
 
+    // A declared cross-reference whose value is not a well-formed id of its kind (e.g. a task
+    // dependency `T01` instead of `T001`). Previously such values were silently dropped by the
+    // `Result.toOption` id parsers, so the malformed edge never reached referenceDiagnostics —
+    // a dropped dependency could flip verify readiness (#70/§2.5). Blocking, like unknownReference.
+    let malformedReference artifact (kind: string) (value: string) =
+        create
+            "malformedReference"
+            DiagnosticError
+            (Some artifact)
+            None
+            $"Reference '{value}' is not a well-formed {kind} id."
+            $"Use a canonical {kind} id, or remove the reference."
+            [ value ]
+
     let requirementNotTyped artifact id correction =
         create
             "requirementNotTyped"

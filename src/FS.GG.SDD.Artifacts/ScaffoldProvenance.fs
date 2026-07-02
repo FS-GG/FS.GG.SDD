@@ -123,8 +123,11 @@ module ScaffoldProvenance =
             use document = JsonDocument.Parse text
             let root = document.RootElement
 
+            // One schema-version policy for every artifact (#70/§2.5): gate through the
+            // canonical classifier rather than a Major-only `isSupported` check, so
+            // provenance shares the same accept/reject grammar as every other artifact.
             match jsonInt "schemaVersion" root with
-            | Some version when SchemaVersion.isSupported (SchemaVersion.create version) ->
+            | Some version when not (SchemaVersion.isBlocking (SchemaVersion.classifyRaw (Some(string version)))) ->
                 match tryJsonProperty "generator" root with
                 | Some generatorElement ->
                     let generatorId = jsonString "id" generatorElement

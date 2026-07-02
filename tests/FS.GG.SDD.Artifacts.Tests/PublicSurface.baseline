@@ -24,6 +24,7 @@ FS.GG.SDD.Artifacts.Diagnostics.duplicateIdentifier
 FS.GG.SDD.Artifacts.Diagnostics.futureSchemaVersion
 FS.GG.SDD.Artifacts.Diagnostics.hasBlocking
 FS.GG.SDD.Artifacts.Diagnostics.malformedDigest
+FS.GG.SDD.Artifacts.Diagnostics.malformedReference
 FS.GG.SDD.Artifacts.Diagnostics.malformedSchemaVersion
 FS.GG.SDD.Artifacts.Diagnostics.missingArtifact
 FS.GG.SDD.Artifacts.Diagnostics.missingGeneratedWorkModel

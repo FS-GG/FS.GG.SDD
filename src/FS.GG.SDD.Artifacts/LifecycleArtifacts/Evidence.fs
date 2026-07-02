@@ -181,56 +181,73 @@ module Evidence =
             let workId = Identifiers.createWorkId workIdValue
             let stage = tryScalarAt [ "stage" ] root |> Option.bind (Identifiers.parseStage >> Result.toOption) |> Option.defaultValue LifecycleStage.Evidence
 
-            let evidence =
+            // Each evidence node yields (declaration option, diagnostics). Malformed cross-
+            // references and a whole entry skipped for a malformed id are surfaced as blocking
+            // diagnostics instead of being silently dropped by the parse*Ids helpers (#70/§2.5).
+            let evidenceParse =
                 trySequenceAt [ "evidence" ] root
                 |> Option.map (fun sequence ->
                     sequence.Children
                     |> Seq.mapi (fun index node ->
-                        node
-                        |> tryMapping
-                        |> Option.bind (fun mapping ->
-                            tryScalarAt [ "id" ] mapping
-                            |> Option.bind (Identifiers.createEvidenceId >> Result.toOption)
-                            |> Option.map (fun id ->
-                                let subjectType = tryScalarAt [ "subject"; "type" ] mapping |> Option.defaultValue "task"
-                                let subjectId = tryScalarAt [ "subject"; "id" ] mapping |> Option.defaultValue ""
-                                let taskRefs =
-                                    match subjectType with
-                                    | "task" -> subjectId :: scalarList [ "taskRefs" ] mapping
-                                    | _ -> scalarList [ "taskRefs" ] mapping
-                                    |> parseTaskIds
+                        match node |> tryMapping with
+                        | None -> None, []
+                        | Some mapping ->
+                            match tryScalarAt [ "id" ] mapping with
+                            | None -> None, []
+                            | Some rawId ->
+                                let refDiagnostics =
+                                    [ scalarList [ "taskRefs" ] mapping |> malformedRefs Identifiers.createTaskId |> List.map (Diagnostics.malformedReference artifact "task")
+                                      scalarList [ "requirementRefs" ] mapping |> malformedRefs Identifiers.createRequirementId |> List.map (Diagnostics.malformedReference artifact "requirement")
+                                      scalarList [ "clarificationDecisionRefs" ] mapping |> malformedRefs Identifiers.createDecisionId |> List.map (Diagnostics.malformedReference artifact "decision") ]
+                                    |> List.concat
 
-                                let requirementRefs =
-                                    match subjectType with
-                                    | "requirement" -> subjectId :: scalarList [ "requirementRefs" ] mapping
-                                    | _ -> scalarList [ "requirementRefs" ] mapping
-                                    |> parseRequirementIds
+                                match Identifiers.createEvidenceId rawId with
+                                | Error _ -> None, (Diagnostics.malformedReference artifact "evidence" rawId :: refDiagnostics)
+                                | Ok id ->
+                                    let subjectType = tryScalarAt [ "subject"; "type" ] mapping |> Option.defaultValue "task"
+                                    let subjectId = tryScalarAt [ "subject"; "id" ] mapping |> Option.defaultValue ""
 
-                                { Id = id
-                                  Kind = tryScalarAt [ "kind" ] mapping |> Option.map parseEvidenceKind |> Option.defaultValue Verification
-                                  Subject = { SubjectType = subjectType; Id = subjectId }
-                                  TaskRefs = taskRefs
-                                  RequirementRefs = requirementRefs
-                                  AcceptanceScenarioRefs = scalarList [ "acceptanceScenarioRefs" ] mapping |> parseAcceptanceScenarioIds
-                                  ClarificationDecisionRefs = scalarList [ "clarificationDecisionRefs" ] mapping |> parseDecisionIds
-                                  ChecklistResultRefs = scalarList [ "checklistResultRefs" ] mapping |> parseChecklistResultIds
-                                  PlanDecisionRefs = scalarList [ "planDecisionRefs" ] mapping |> parsePlanDecisionIds
-                                  ObligationRefs = scalarList [ "obligationRefs" ] mapping |> List.distinct |> List.sort
-                                  ArtifactRefs = scalarList [ "artifacts" ] mapping |> parseArtifactRefs
-                                  SourceRefs = parseEvidenceSourceRefs mapping
-                                  Result = tryScalarAt [ "result" ] mapping |> Option.defaultValue "pending"
-                                  Synthetic = boolAt [ "synthetic" ] mapping false
-                                  SyntheticDisclosure = parseSyntheticDisclosure mapping
-                                  Rationale = tryScalarAt [ "rationale" ] mapping
-                                  Owner = tryScalarAt [ "owner" ] mapping
-                                  Scope = tryScalarAt [ "scope" ] mapping
-                                  LaterLifecycleVisibility = tryScalarAt [ "laterLifecycleVisibility" ] mapping
-                                  Notes = scalarList [ "notes" ] mapping
-                                  Source = artifact
-                                  SourceLocation = sourceLocation (index + 1) })))
-                    |> Seq.choose id
+                                    let taskRefs =
+                                        match subjectType with
+                                        | "task" -> subjectId :: scalarList [ "taskRefs" ] mapping
+                                        | _ -> scalarList [ "taskRefs" ] mapping
+                                        |> parseTaskIds
+
+                                    let requirementRefs =
+                                        match subjectType with
+                                        | "requirement" -> subjectId :: scalarList [ "requirementRefs" ] mapping
+                                        | _ -> scalarList [ "requirementRefs" ] mapping
+                                        |> parseRequirementIds
+
+                                    Some
+                                        { Id = id
+                                          Kind = tryScalarAt [ "kind" ] mapping |> Option.map parseEvidenceKind |> Option.defaultValue Verification
+                                          Subject = { SubjectType = subjectType; Id = subjectId }
+                                          TaskRefs = taskRefs
+                                          RequirementRefs = requirementRefs
+                                          AcceptanceScenarioRefs = scalarList [ "acceptanceScenarioRefs" ] mapping |> parseAcceptanceScenarioIds
+                                          ClarificationDecisionRefs = scalarList [ "clarificationDecisionRefs" ] mapping |> parseDecisionIds
+                                          ChecklistResultRefs = scalarList [ "checklistResultRefs" ] mapping |> parseChecklistResultIds
+                                          PlanDecisionRefs = scalarList [ "planDecisionRefs" ] mapping |> parsePlanDecisionIds
+                                          ObligationRefs = scalarList [ "obligationRefs" ] mapping |> List.distinct |> List.sort
+                                          ArtifactRefs = scalarList [ "artifacts" ] mapping |> parseArtifactRefs
+                                          SourceRefs = parseEvidenceSourceRefs mapping
+                                          Result = tryScalarAt [ "result" ] mapping |> Option.defaultValue "pending"
+                                          Synthetic = boolAt [ "synthetic" ] mapping false
+                                          SyntheticDisclosure = parseSyntheticDisclosure mapping
+                                          Rationale = tryScalarAt [ "rationale" ] mapping
+                                          Owner = tryScalarAt [ "owner" ] mapping
+                                          Scope = tryScalarAt [ "scope" ] mapping
+                                          LaterLifecycleVisibility = tryScalarAt [ "laterLifecycleVisibility" ] mapping
+                                          Notes = scalarList [ "notes" ] mapping
+                                          Source = artifact
+                                          SourceLocation = sourceLocation (index + 1) },
+                                    refDiagnostics)
                     |> Seq.toList)
                 |> Option.defaultValue []
+
+            let evidence = evidenceParse |> List.choose fst
+            let referenceDiagnostics = evidenceParse |> List.collect snd
 
             let duplicateDiagnostics =
                 evidence
@@ -261,7 +278,7 @@ module Evidence =
                       SourceSnapshots = parseEvidenceSourceSnapshots root
                       Evidence = evidence |> List.sortBy (fun declaration -> declaration.Id.Value)
                       LifecycleNotes = scalarList [ "lifecycleNotes" ] root
-                      Diagnostics = duplicateDiagnostics @ artifactDiagnostics |> Diagnostics.sort }
+                      Diagnostics = duplicateDiagnostics @ artifactDiagnostics @ referenceDiagnostics |> Diagnostics.sort }
             | _ ->
                 let workIdDiagnostics =
                     match workId with

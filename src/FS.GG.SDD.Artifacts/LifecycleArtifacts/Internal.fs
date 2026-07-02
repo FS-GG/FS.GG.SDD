@@ -258,6 +258,12 @@ module internal Internal =
             else
                 Some(strippedBullet line))
 
+    // The raw values a smart constructor rejects, in declaration order. The parse*Ids helpers
+    // drop these via Result.toOption; callers use this to surface them as malformedReference
+    // diagnostics instead of silently discarding a reference (#70/§2.5).
+    let malformedRefs (create: string -> Result<'a, string>) values =
+        values |> List.filter (fun value -> create value |> Result.isError)
+
     let parseTaskIds values =
         values |> List.choose (Identifiers.createTaskId >> Result.toOption)
 
