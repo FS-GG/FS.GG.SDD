@@ -79,7 +79,6 @@ module TestSupport =
           InputText = None
           OutputFormat = Json
           DryRun = false
-          OverwritePolicy = RefuseUnsafe
           GeneratorVersion = SchemaVersionModule.currentGeneratorVersion()
           Provider = None
           Parameters = []

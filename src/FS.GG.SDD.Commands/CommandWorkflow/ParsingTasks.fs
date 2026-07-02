@@ -604,8 +604,6 @@ tasks:
         | Some existing ->
             if existing.Text.Contains("<!-- fsgg-sdd: unsafe-overwrite -->", StringComparison.OrdinalIgnoreCase) then
                 [ unsafeOverwrite path ], Some existing.Text, None
-            elif existing.Text.Contains("<!-- fsgg-sdd: unsafe-status-change -->", StringComparison.OrdinalIgnoreCase) then
-                [ unsafeTaskStatusChange path "T001" ], Some existing.Text, None
             else
                 match parseTasksForCommand path existing.Text with
                 | Error diagnostics -> diagnostics, Some existing.Text, None
@@ -712,12 +710,6 @@ tasks:
                       if not (String.Equals(facts.FrontMatter.Status, "tasksReady", StringComparison.OrdinalIgnoreCase)) then
                           failedTasksPrerequisite path $"Tasks status '{facts.FrontMatter.Status}' is not tasksReady." [ facts.FrontMatter.Status ] ]
 
-                let staleDiagnostics =
-                    if taskSourceSnapshotStale workId "" "" "" "" facts then
-                        []
-                    else
-                        []
-
                 let taskDiagnostics = taskValidationDiagnostics path specFacts clarificationFacts checklistFacts planFacts evidence facts
 
                 let graphDiagnostics =
@@ -738,7 +730,7 @@ tasks:
                           failedTasksPrerequisite path "Tasks contain blocking findings." blockingFindings ]
 
                 let allDiagnostics =
-                    identityDiagnostics @ diagnostics @ staleDiagnostics @ taskDiagnostics @ graphDiagnostics @ evidenceDiagnostics
+                    identityDiagnostics @ diagnostics @ taskDiagnostics @ graphDiagnostics @ evidenceDiagnostics
                     |> DiagnosticsModule.sort
 
                 allDiagnostics, Some existing.Text, Some(tasksSummary facts), Some facts

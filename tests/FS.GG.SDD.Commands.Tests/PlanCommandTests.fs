@@ -221,16 +221,16 @@ No material ambiguities recorded.
         Assert.Equal(original, TestSupport.readRelative root planPath)
 
     [<Fact>]
-    let ``plan unsafe decision change marker blocks without mutation`` () =
+    let ``plan unsafe overwrite marker blocks without mutation`` () =
         let root = initializedChecklistReadyProject ()
         TestSupport.runPlan root workId title |> ignore
-        let original = TestSupport.readRelative root planPath + "\n<!-- fsgg-sdd: unsafe-decision-change -->\n"
+        let original = TestSupport.readRelative root planPath + "\n<!-- fsgg-sdd: unsafe-overwrite -->\n"
         TestSupport.writeRelative root planPath original
 
         let report = TestSupport.runPlan root workId title
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
-        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "unsafePlanDecisionChange")
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "unsafeOverwrite")
         Assert.Equal(original, TestSupport.readRelative root planPath)
 
     [<Fact>]

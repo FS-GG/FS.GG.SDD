@@ -189,7 +189,3 @@ module CommandWorkflow =
         | BuildReport ->
             let report = CommandReports.buildReport model
             { model with Report = Some report }, ([] : CommandEffect list)
-        | LoadProject
-        | LoadWorkItem
-        | ApplyUserIntent
-        | PlanGeneratedViewRefresh -> model, ([] : CommandEffect list)

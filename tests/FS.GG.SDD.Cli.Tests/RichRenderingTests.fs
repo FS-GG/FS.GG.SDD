@@ -82,7 +82,6 @@ module RichRenderingTests =
           ProjectRoot = "."
           OutputFormat = Rich
           DryRun = true
-          OverwritePolicy = RefuseUnsafe
           Outcome = SucceededWithWarnings
           WorkId = Some "042-rich-sample"
           ChangedArtifacts = [ changedArtifact "work/042-rich-sample/spec.md" ]

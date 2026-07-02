@@ -481,7 +481,7 @@ module internal HandlersVerify =
 
                             let dependencyCount = taskFacts.Tasks |> List.collect (fun task -> task.Dependencies) |> List.length
                             let dependencyDiagnosticIds = set [ "unknownTaskDependency"; "taskDependencyCycle" ]
-                            let statusDiagnosticIds = set [ "unsafeTaskStatusChange"; "skippedTaskMissingRationale" ]
+                            let statusDiagnosticIds = set [ "skippedTaskMissingRationale" ]
                             let dependenciesValid = not (diagnostics |> List.exists (fun diagnostic -> Set.contains diagnostic.Id dependencyDiagnosticIds))
                             let statusesValid = not (diagnostics |> List.exists (fun diagnostic -> Set.contains diagnostic.Id statusDiagnosticIds))
                             let taskFindingIds = taskFacts.Findings |> List.map (fun finding -> finding.FindingId) |> List.sort

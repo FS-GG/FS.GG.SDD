@@ -633,9 +633,6 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
             let renderedArgs = String.concat " " args
             $"run:{command} {renderedArgs}@{normalizeRelativePath workingDir}"
         | SetExecutable path -> "setexec:" + normalizeRelativePath path
-        | EmitStdout text -> "stdout:" + text
-        | EmitStderr text -> "stderr:" + text
-        | SetExitCode code -> "exit:" + string code
         | Confirm(stepId, _) -> "confirm:" + stepId
 
     let readEffectKey path = "read:" + normalizeRelativePath path

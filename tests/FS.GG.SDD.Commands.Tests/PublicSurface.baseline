@@ -110,12 +110,9 @@ FS.GG.SDD.Commands.CommandReports.unknownSpecificationReference
 FS.GG.SDD.Commands.CommandReports.unknownTaskDependency
 FS.GG.SDD.Commands.CommandReports.unknownTaskSourceReference
 FS.GG.SDD.Commands.CommandReports.unresolvedBlockingAmbiguity
-FS.GG.SDD.Commands.CommandReports.unsafeChecklistResultChange
 FS.GG.SDD.Commands.CommandReports.unsafeDecisionChange
 FS.GG.SDD.Commands.CommandReports.unsafeEvidenceUpdate
 FS.GG.SDD.Commands.CommandReports.unsafeOverwrite
-FS.GG.SDD.Commands.CommandReports.unsafePlanDecisionChange
-FS.GG.SDD.Commands.CommandReports.unsafeTaskStatusChange
 FS.GG.SDD.Commands.CommandReports.unsupportedCommand
 FS.GG.SDD.Commands.CommandReports.unsupportedEvidenceResultState
 FS.GG.SDD.Commands.CommandReports.verificationNotReady
@@ -130,7 +127,6 @@ FS.GG.SDD.Commands.CommandTypes.guidanceDispositionValue
 FS.GG.SDD.Commands.CommandTypes.nextLifecycleCommand
 FS.GG.SDD.Commands.CommandTypes.outcomeValue
 FS.GG.SDD.Commands.CommandTypes.outputFormatValue
-FS.GG.SDD.Commands.CommandTypes.overwritePolicyValue
 FS.GG.SDD.Commands.CommandTypes.parseCommand
 FS.GG.SDD.Commands.CommandTypes.refreshDispositionValue
 FS.GG.SDD.Commands.CommandTypes.writeKindValue

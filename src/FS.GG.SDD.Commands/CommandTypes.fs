@@ -29,10 +29,6 @@ module CommandTypes =
         | Text
         | Rich
 
-    type OverwritePolicy =
-        | RefuseUnsafe
-        | AllowGeneratedRefresh
-
     type ArtifactWriteKind =
         | AuthoredSource
         | StructuredSource
@@ -67,7 +63,6 @@ module CommandTypes =
           InputText: string option
           OutputFormat: OutputFormat
           DryRun: bool
-          OverwritePolicy: OverwritePolicy
           GeneratorVersion: GeneratorVersion
           Provider: string option
           Parameters: (string * string) list
@@ -421,7 +416,6 @@ module CommandTypes =
           ProjectRoot: string
           OutputFormat: OutputFormat
           DryRun: bool
-          OverwritePolicy: OverwritePolicy
           Outcome: CommandOutcome
           WorkId: string option
           ChangedArtifacts: ArtifactChange list
@@ -452,9 +446,6 @@ module CommandTypes =
         | WriteFile of path: string * text: string * kind: ArtifactWriteKind
         | RunProcess of command: string * args: string list * workingDir: string
         | SetExecutable of path: string
-        | EmitStdout of text: string
-        | EmitStderr of text: string
-        | SetExitCode of code: int
         | Confirm of stepId: string * prompt: string
 
     type ProcessRunResult =
@@ -497,10 +488,6 @@ module CommandTypes =
           Report: CommandReport option }
 
     type CommandMsg =
-        | LoadProject
-        | LoadWorkItem
-        | ApplyUserIntent
-        | PlanGeneratedViewRefresh
         | EffectInterpreted of CommandEffectResult
         | BuildReport
 
@@ -553,11 +540,6 @@ module CommandTypes =
         | Json -> "json"
         | Text -> "text"
         | Rich -> "rich"
-
-    let overwritePolicyValue (policy: OverwritePolicy) =
-        match policy with
-        | RefuseUnsafe -> "refuseUnsafe"
-        | AllowGeneratedRefresh -> "allowGeneratedRefresh"
 
     let writeKindValue (kind: ArtifactWriteKind) =
         match kind with
@@ -629,7 +611,4 @@ module CommandTypes =
         | WriteFile(path, _, _) -> Some path
         | RunProcess(_, _, workingDir) -> Some workingDir
         | SetExecutable path -> Some path
-        | EmitStdout _
-        | EmitStderr _
-        | SetExitCode _
         | Confirm _ -> None

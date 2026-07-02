@@ -547,7 +547,6 @@ module CommandSerialization =
         writer.WriteStartObject("invocation")
         writer.WriteString("outputFormat", outputFormatValue report.OutputFormat)
         writer.WriteBoolean("dryRun", report.DryRun)
-        writer.WriteString("overwritePolicy", overwritePolicyValue report.OverwritePolicy)
         writer.WriteEndObject()
         writer.WriteString("outcome", outcomeValue report.Outcome)
         writer.WriteStartArray("changedArtifacts")

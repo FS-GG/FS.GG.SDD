@@ -50,7 +50,6 @@ module CommandReports =
     val duplicateChecklistId: path: string -> id: string -> Diagnostic
     val unknownChecklistSourceReference: path: string -> id: string -> Diagnostic
     val staleChecklistResult: path: string -> resultIds: string list -> Diagnostic
-    val unsafeChecklistResultChange: path: string -> id: string -> Diagnostic
     val missingChecklistPrerequisite: path: string -> message: string -> Diagnostic
     val failedChecklistPrerequisite: path: string -> message: string -> relatedIds: string list -> Diagnostic
     val planIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
@@ -58,7 +57,6 @@ module CommandReports =
     val duplicatePlanId: path: string -> id: string -> Diagnostic
     val unknownPlanSourceReference: path: string -> id: string -> Diagnostic
     val stalePlanDecision: path: string -> decisionIds: string list -> Diagnostic
-    val unsafePlanDecisionChange: path: string -> id: string -> Diagnostic
     val missingPlanPrerequisite: path: string -> message: string -> Diagnostic
     val failedPlanPrerequisite: path: string -> message: string -> relatedIds: string list -> Diagnostic
     val tasksIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
@@ -68,7 +66,6 @@ module CommandReports =
     val unknownTaskDependency: path: string -> id: string -> Diagnostic
     val taskDependencyCycle: path: string -> ids: string list -> Diagnostic
     val staleTask: path: string -> taskIds: string list -> Diagnostic
-    val unsafeTaskStatusChange: path: string -> id: string -> Diagnostic
     val doneTaskMissingEvidence: path: string -> ids: string list -> Diagnostic
     val skippedTaskMissingRationale: path: string -> ids: string list -> Diagnostic
     val missingTasksPrerequisite: path: string -> message: string -> Diagnostic

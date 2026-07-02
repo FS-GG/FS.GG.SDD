@@ -391,8 +391,6 @@ Prose status: {status}
         | Some existing ->
             if existing.Text.Contains("<!-- fsgg-sdd: unsafe-overwrite -->", StringComparison.OrdinalIgnoreCase) then
                 [ unsafeOverwrite path ], Some existing.Text, None
-            elif existing.Text.Contains("<!-- fsgg-sdd: unsafe-result-change -->", StringComparison.OrdinalIgnoreCase) then
-                [ unsafeChecklistResultChange path "CR-001" ], Some existing.Text, None
             else
                 match parseChecklistForCommand path existing.Text with
                 | Error diagnostics -> diagnostics, Some existing.Text, None
@@ -902,8 +900,6 @@ No blocking planning findings recorded.
         | Some existing ->
             if existing.Text.Contains("<!-- fsgg-sdd: unsafe-overwrite -->", StringComparison.OrdinalIgnoreCase) then
                 [ unsafeOverwrite path ], Some existing.Text, None
-            elif existing.Text.Contains("<!-- fsgg-sdd: unsafe-decision-change -->", StringComparison.OrdinalIgnoreCase) then
-                [ unsafePlanDecisionChange path "PD-001" ], Some existing.Text, None
             else
                 match parsePlanForCommand path existing.Text with
                 | Error diagnostics -> diagnostics, Some existing.Text, None

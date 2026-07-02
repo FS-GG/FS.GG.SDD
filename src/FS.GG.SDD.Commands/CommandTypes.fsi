@@ -28,10 +28,6 @@ module CommandTypes =
         | Text
         | Rich
 
-    type OverwritePolicy =
-        | RefuseUnsafe
-        | AllowGeneratedRefresh
-
     type ArtifactWriteKind =
         | AuthoredSource
         | StructuredSource
@@ -66,7 +62,6 @@ module CommandTypes =
           InputText: string option
           OutputFormat: OutputFormat
           DryRun: bool
-          OverwritePolicy: OverwritePolicy
           GeneratorVersion: GeneratorVersion
           // Scaffold inputs (`fsgg-sdd scaffold`); ignored by other commands.
           Provider: string option
@@ -480,7 +475,6 @@ module CommandTypes =
           ProjectRoot: string
           OutputFormat: OutputFormat
           DryRun: bool
-          OverwritePolicy: OverwritePolicy
           Outcome: CommandOutcome
           WorkId: string option
           ChangedArtifacts: ArtifactChange list
@@ -511,9 +505,6 @@ module CommandTypes =
         | WriteFile of path: string * text: string * kind: ArtifactWriteKind
         | RunProcess of command: string * args: string list * workingDir: string
         | SetExecutable of path: string
-        | EmitStdout of text: string
-        | EmitStderr of text: string
-        | SetExitCode of code: int
         /// Requests per-step confirmation for one reconciliation step (R7). Interpreted
         /// at the edge by a stdin read when `IsInteractive`; the pure `update` re-derives
         /// the next step from the confirmed results in the interpreted-effect log.
@@ -569,10 +560,6 @@ module CommandTypes =
           Report: CommandReport option }
 
     type CommandMsg =
-        | LoadProject
-        | LoadWorkItem
-        | ApplyUserIntent
-        | PlanGeneratedViewRefresh
         | EffectInterpreted of CommandEffectResult
         | BuildReport
 
@@ -580,7 +567,6 @@ module CommandTypes =
     val commandStage: command: SddCommand -> string
     val parseCommand: value: string -> Result<SddCommand, string>
     val outputFormatValue: format: OutputFormat -> string
-    val overwritePolicyValue: policy: OverwritePolicy -> string
     val writeKindValue: kind: ArtifactWriteKind -> string
     val artifactOperationValue: operation: ArtifactOperation -> string
     val generatedViewCurrencyValue: currency: GeneratedViewCurrency -> string
