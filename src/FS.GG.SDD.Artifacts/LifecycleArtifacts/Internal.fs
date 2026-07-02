@@ -26,12 +26,21 @@ module internal Internal =
     let parseYaml (text: string | null) =
         let stream = YamlStream()
         use reader = new StringReader(Option.ofObj text |> Option.defaultValue "")
-        stream.Load reader
 
-        if stream.Documents.Count = 0 then
+        // A malformed authored document (tab indentation, a duplicate key, bad
+        // syntax) makes YamlDotNet throw YamlException. Every Result-returning
+        // lifecycle parser treats None as an absent/unparseable document and
+        // surfaces a diagnostic (exit 1), which honors the malformed-input ->
+        // diagnostic doctrine instead of crashing through the parser.
+        try
+            stream.Load reader
+
+            if stream.Documents.Count = 0 then
+                None
+            else
+                Some stream.Documents.[0].RootNode
+        with :? YamlDotNet.Core.YamlException ->
             None
-        else
-            Some stream.Documents.[0].RootNode
 
     let tryMapping (node: YamlNode) =
         match node with

@@ -7,6 +7,7 @@
     <Compile Include="TestSupport.fs" />
     <Compile Include="IdentifierTests.fs" />
     <Compile Include="SchemaContractTests.fs" />
+    <Compile Include="AuthoredInputHardeningTests.fs" />
     <Compile Include="SpecificationArtifactTests.fs" />
     <Compile Include="ClarificationArtifactTests.fs" />
     <Compile Include="ChecklistArtifactTests.fs" />

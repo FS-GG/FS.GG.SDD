@@ -8,10 +8,19 @@ module Version =
     // (Registry.fs:73-89); pre-release/build metadata are out of scope. Pure, total,
     // exception-free, BCL-only.
     let tryParse (text: string) : Version option =
+        // NumberStyles.None + invariant culture: reject leading/trailing whitespace
+        // and signs so " 2" and "+3" no longer slip through the default
+        // Int32.TryParse (NumberStyles.Integer, current culture), which accepted
+        // "1. 2.+3" as 1.2.3. This grammar gates provider minimumCliVersion coherence.
+        let tryInt (s: string) =
+            match System.Int32.TryParse(s, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture) with
+            | true, v -> Some v
+            | _ -> None
+
         match text.Split('.') with
         | [| a; b; c |] ->
-            match System.Int32.TryParse a, System.Int32.TryParse b, System.Int32.TryParse c with
-            | (true, major), (true, minor), (true, patch) when major >= 0 && minor >= 0 && patch >= 0 ->
+            match tryInt a, tryInt b, tryInt c with
+            | Some major, Some minor, Some patch when major >= 0 && minor >= 0 && patch >= 0 ->
                 Some { Major = major; Minor = minor; Patch = patch }
             | _ -> None
         | _ -> None
