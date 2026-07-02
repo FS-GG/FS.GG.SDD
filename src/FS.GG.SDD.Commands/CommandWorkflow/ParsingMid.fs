@@ -489,9 +489,10 @@ Prose status: {status}
                       if not (List.isEmpty stale) then
                           failedChecklistPrerequisite path "Checklist contains stale review results." stale
 
-                      let findings =
-                          facts.BlockingFindings
-                          |> List.filter (fun finding -> not (finding.StartsWith("No ", StringComparison.OrdinalIgnoreCase)))
+                      // `BlockingFindings` is already sentinel-free (the parser drops
+                      // no-outstanding disclaimers); filtering `StartsWith "No "` here would
+                      // wrongly re-drop a genuine finding like "No tests cover FR-003".
+                      let findings = facts.BlockingFindings
 
                       if not (List.isEmpty findings) then
                           failedChecklistPrerequisite path "Checklist contains blocking findings." findings ]
@@ -998,9 +999,10 @@ No blocking planning findings recorded.
                       if not (List.isEmpty incomplete) then
                           failedPlanPrerequisite path "Plan contains incomplete decisions." incomplete
 
-                      let findings =
-                          facts.BlockingFindings
-                          |> List.filter (fun finding -> not (finding.StartsWith("No ", StringComparison.OrdinalIgnoreCase)))
+                      // `BlockingFindings` is already sentinel-free (the parser drops
+                      // no-outstanding disclaimers); filtering `StartsWith "No "` here would
+                      // wrongly re-drop a genuine finding like "No tests cover FR-003".
+                      let findings = facts.BlockingFindings
 
                       if not (List.isEmpty findings) then
                           failedPlanPrerequisite path "Plan contains blocking planning findings." findings ]

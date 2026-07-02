@@ -166,7 +166,7 @@ module Checklist =
                 Some
                     { ItemId = itemId
                       Text = cleanAfterId itemId.Value line
-                      Blocking = not (lowered.Contains("advisory"))
+                      Blocking = not (containsWord "advisory" lowered)
                       SourceIds = sourceIdsInLine line |> List.filter ((<>) itemId.Value)
                       SourceLocation = sourceLocation lineNumber }
             | None -> None)
@@ -179,11 +179,12 @@ module Checklist =
                 let itemId = checklistItemIdsInLine line |> List.tryHead
                 let lowered = line.ToLowerInvariant()
                 let status =
-                    if lowered.Contains("accepteddeferral") || lowered.Contains("accepted deferral") then "acceptedDeferral"
-                    elif lowered.Contains("stale") then "stale"
-                    elif lowered.Contains("fail") then "fail"
-                    elif lowered.Contains("advisory") then "advisory"
-                    elif lowered.Contains("pass") then "pass"
+                    if containsWord "accepteddeferral" lowered || containsWord "accepted deferral" lowered then
+                        "acceptedDeferral"
+                    elif containsWord "stale" lowered then "stale"
+                    elif containsWord "fail" lowered then "fail"
+                    elif containsWord "advisory" lowered then "advisory"
+                    elif containsWord "pass" lowered then "pass"
                     else "unknown"
 
                 Some

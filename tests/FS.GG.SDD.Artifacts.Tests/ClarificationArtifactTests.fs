@@ -73,6 +73,51 @@ publicOrToolFacingImpact: true
             Assert.Contains("duplicateIdentifier", ids)
 
     [<Fact>]
+    let ``Clarification question state does not misread (unanswered) as answered`` () =
+        // Regression (#67): substring `Contains("answered")` misclassified an
+        // "(unanswered)" question as answered. Word-boundary matching keeps it open.
+        let text =
+            clarificationText.Replace(
+                "- CQ-001 [AMB:AMB-001] [FR-001] [US-001] [AC-001] blocking answered: Which artifact records decisions?",
+                "- CQ-001 [AMB:AMB-001] [FR-001] [US-001] [AC-001] blocking (unanswered): Which artifact records decisions?"
+            )
+
+        match parseClarificationFacts (snapshot text) with
+        | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
+        | Ok facts ->
+            let question = facts.Questions |> List.exactlyOne
+            Assert.Equal("open", question.State)
+
+    [<Fact>]
+    let ``Clarification question blocking treats nonblocking (no hyphen) as non-blocking`` () =
+        let text =
+            clarificationText.Replace(
+                "blocking answered:",
+                "nonblocking answered:"
+            )
+
+        match parseClarificationFacts (snapshot text) with
+        | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
+        | Ok facts ->
+            let question = facts.Questions |> List.exactlyOne
+            Assert.False(question.Blocking)
+
+    [<Fact>]
+    let ``Clarification answer kind does not misread noted as a note`` () =
+        // Regression (#67): `Contains("note")` matched "noted".
+        let text =
+            clarificationText.Replace(
+                "- CQ-001 [AMB:AMB-001] decision: Clarification decisions live in clarifications.md.",
+                "- CQ-001 [AMB:AMB-001] decision: The owner noted the decision and recorded it."
+            )
+
+        match parseClarificationFacts (snapshot text) with
+        | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
+        | Ok facts ->
+            let answer = facts.Answers |> List.exactlyOne
+            Assert.Equal(DecisionAnswer, answer.Kind)
+
+    [<Fact>]
     let ``Clarification parser diagnoses unsupported schema versions`` () =
         let broken = clarificationText.Replace("schemaVersion: 1", "schemaVersion: 2")
 

@@ -215,12 +215,18 @@ module Plan =
     let planDecisionStatus (line: string) =
         let lowered = line.ToLowerInvariant()
 
-        if lowered.Contains("accepteddeferral") || lowered.Contains("accepted deferral") then "acceptedDeferral"
-        elif lowered.Contains("stale") || lowered.Contains("needs review") then "stale"
-        elif lowered.Contains("incomplete") then "incomplete"
-        elif lowered.Contains("advisory") then "advisory"
-        elif lowered.Contains("complete") || lowered.Contains("planned") then "complete"
-        else "complete"
+        if containsWord "accepteddeferral" lowered || containsWord "accepted deferral" lowered then
+            "acceptedDeferral"
+        elif containsWord "stale" lowered || containsWord "needs review" lowered then
+            "stale"
+        elif containsWord "incomplete" lowered then
+            "incomplete"
+        elif containsWord "advisory" lowered then
+            "advisory"
+        elif containsWord "complete" lowered || containsWord "planned" lowered then
+            "complete"
+        else
+            "complete"
 
     let parsePlanDecisions text =
         sectionLines "Plan Decisions" text
@@ -244,10 +250,10 @@ module Plan =
                 let text = cleanAfterId contractId.Value line
                 let kind =
                     let lowered = text.ToLowerInvariant()
-                    if lowered.Contains("command") then "command"
-                    elif lowered.Contains("report") then "report"
-                    elif lowered.Contains("schema") then "schema"
-                    elif lowered.Contains("generated") then "generatedView"
+                    if containsWord "command" lowered then "command"
+                    elif containsWord "report" lowered then "report"
+                    elif containsWord "schema" lowered then "schema"
+                    elif containsWord "generated" lowered then "generatedView"
                     else "artifact"
 
                 Some
@@ -266,10 +272,10 @@ module Plan =
                 let text = cleanAfterId obligationId.Value line
                 let lowered = text.ToLowerInvariant()
                 let evidenceKind =
-                    if lowered.Contains("cli") || lowered.Contains("smoke") then "smoke"
-                    elif lowered.Contains("fsi") then "fsi"
-                    elif lowered.Contains("semantic") then "semanticTest"
-                    elif lowered.Contains("golden") || lowered.Contains("json") then "golden"
+                    if containsWord "cli" lowered || containsWord "smoke" lowered then "smoke"
+                    elif containsWord "fsi" lowered then "fsi"
+                    elif containsWord "semantic" lowered then "semanticTest"
+                    elif containsWord "golden" lowered || containsWord "json" lowered then "golden"
                     else "test"
 
                 Some
