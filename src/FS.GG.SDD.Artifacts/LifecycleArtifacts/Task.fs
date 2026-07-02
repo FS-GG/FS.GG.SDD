@@ -187,46 +187,64 @@ module Task =
             | Some schema, [] ->
                 let frontMatter = parseTaskFrontMatter artifact snapshot root schema
 
-                let tasks =
+                // Each task node yields (Task option, diagnostics). Malformed cross-references
+                // are surfaced as blocking diagnostics instead of being silently dropped by the
+                // parse*Ids helpers, and a whole entry skipped for a malformed id is diagnosed
+                // rather than vanishing (#70/§2.5).
+                let taskParse =
                     trySequenceAt [ "tasks" ] root
                     |> Option.map (fun sequence ->
                         sequence.Children
                         |> Seq.mapi (fun index node ->
-                            node
-                            |> tryMapping
-                            |> Option.bind (fun mapping ->
-                                tryScalarAt [ "id" ] mapping
-                                |> Option.bind (Identifiers.createTaskId >> Result.toOption)
-                                |> Option.map (fun id ->
-                                    let status = tryScalarAt [ "status" ] mapping |> Option.map parseTaskStatus |> Option.defaultValue Pending
-                                    let skipRationale = tryScalarAt [ "skipRationale" ] mapping
-                                    let status =
-                                        match status, skipRationale with
-                                        | Skipped _, Some rationale -> Skipped rationale
-                                        | _ -> status
+                            match node |> tryMapping with
+                            | None -> None, []
+                            | Some mapping ->
+                                match tryScalarAt [ "id" ] mapping with
+                                | None -> None, []
+                                | Some rawId ->
+                                    let refDiagnostics =
+                                        [ scalarList [ "dependencies" ] mapping |> malformedRefs Identifiers.createTaskId |> List.map (Diagnostics.malformedReference artifact "task dependency")
+                                          scalarList [ "requirements" ] mapping |> malformedRefs Identifiers.createRequirementId |> List.map (Diagnostics.malformedReference artifact "requirement")
+                                          scalarList [ "decisions" ] mapping |> malformedRefs Identifiers.createDecisionId |> List.map (Diagnostics.malformedReference artifact "decision")
+                                          scalarList [ "requiredEvidence" ] mapping |> malformedRefs Identifiers.createEvidenceId |> List.map (Diagnostics.malformedReference artifact "evidence") ]
+                                        |> List.concat
 
-                                    { Id = id
-                                      Title = tryScalarAt [ "title" ] mapping |> Option.defaultValue (Identifiers.taskIdValue id)
-                                      Status = status
-                                      Owner = tryScalarAt [ "owner" ] mapping |> Option.defaultValue "unassigned"
-                                      Dependencies = scalarList [ "dependencies" ] mapping |> parseTaskIds
-                                      Requirements = scalarList [ "requirements" ] mapping |> parseRequirementIds
-                                      Decisions = scalarList [ "decisions" ] mapping |> parseDecisionIds
-                                      SourceIds = scalarList [ "sourceIds" ] mapping |> List.map (fun value -> value.ToUpperInvariant()) |> List.distinct |> List.sort
-                                      RequiredSkills = scalarList [ "requiredSkills" ] mapping
-                                      RequiredEvidence = scalarList [ "requiredEvidence" ] mapping |> parseEvidenceIds
-                                      Source = artifact
-                                      SourceLocation = sourceLocation (index + 1) })))
-                        |> Seq.choose id
+                                    match Identifiers.createTaskId rawId with
+                                    | Error _ -> None, (Diagnostics.malformedReference artifact "task" rawId :: refDiagnostics)
+                                    | Ok id ->
+                                        let status = tryScalarAt [ "status" ] mapping |> Option.map parseTaskStatus |> Option.defaultValue Pending
+                                        let skipRationale = tryScalarAt [ "skipRationale" ] mapping
+                                        let status =
+                                            match status, skipRationale with
+                                            | Skipped _, Some rationale -> Skipped rationale
+                                            | _ -> status
+
+                                        Some
+                                            { Id = id
+                                              Title = tryScalarAt [ "title" ] mapping |> Option.defaultValue (Identifiers.taskIdValue id)
+                                              Status = status
+                                              Owner = tryScalarAt [ "owner" ] mapping |> Option.defaultValue "unassigned"
+                                              Dependencies = scalarList [ "dependencies" ] mapping |> parseTaskIds
+                                              Requirements = scalarList [ "requirements" ] mapping |> parseRequirementIds
+                                              Decisions = scalarList [ "decisions" ] mapping |> parseDecisionIds
+                                              SourceIds = scalarList [ "sourceIds" ] mapping |> List.map (fun value -> value.ToUpperInvariant()) |> List.distinct |> List.sort
+                                              RequiredSkills = scalarList [ "requiredSkills" ] mapping
+                                              RequiredEvidence = scalarList [ "requiredEvidence" ] mapping |> parseEvidenceIds
+                                              Source = artifact
+                                              SourceLocation = sourceLocation (index + 1) },
+                                        refDiagnostics)
                         |> Seq.toList)
                     |> Option.defaultValue []
+
+                let tasks = taskParse |> List.choose fst
+                let referenceDiagnostics = taskParse |> List.collect snd
 
                 let acceptedDeferrals = scalarList [ "acceptedDeferrals" ] root
                 let advisoryNotes = scalarList [ "advisoryNotes" ] root
                 let lifecycleNotes = scalarList [ "lifecycleNotes" ] root
                 let findings = parseTaskFindings root
                 let staleCount = tasks |> List.filter (fun task -> task.Status = TaskStatus.Stale) |> List.length
-                let diagnostics = taskSchemaDiagnostics artifact tasks |> Diagnostics.sort
+                let diagnostics = (taskSchemaDiagnostics artifact tasks @ referenceDiagnostics) |> Diagnostics.sort
 
                 Ok
                     { FrontMatter = frontMatter

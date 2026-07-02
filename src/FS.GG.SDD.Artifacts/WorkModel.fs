@@ -575,8 +575,12 @@ module WorkModel =
             let root = document.RootElement
             let schemaVersion = jmInt "schemaVersion" root
 
+            // One schema-version policy for every artifact (#70/§2.5): route the generated
+            // work model's schemaVersion through the canonical classifier instead of a local
+            // `version >= 1` check that would accept a schemaVersion-2/3 model here while it
+            // blocks everywhere else. Accepts current/deprecated, rejects unsupported/future.
             match schemaVersion with
-            | Some version when version >= 1 ->
+            | Some version when not (SchemaVersion.isBlocking (SchemaVersion.classifyRaw (Some(string version)))) ->
                 let workItem = jmProp "workItem" root
 
                 let stage =

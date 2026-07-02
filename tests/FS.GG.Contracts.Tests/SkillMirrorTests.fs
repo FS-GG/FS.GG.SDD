@@ -47,6 +47,14 @@ module SkillMirrorTests =
         Assert.Equal(digest, sha256 "hello\n")
         Assert.NotEqual<string>(digest, sha256 "hello")
 
+    // Feature 060 / #70: content-identical bodies must hash the same regardless of line
+    // endings, so a CRLF checkout does not spuriously flag skill drift. Agrees with
+    // FS.GG.SDD.Artifacts SchemaVersion.sha256Text, which normalizes CRLF->LF the same way.
+    [<Fact>]
+    let ``sha256 is line-ending insensitive (CRLF equals LF)`` () =
+        Assert.Equal(sha256 "a\nb\nc\n", sha256 "a\r\nb\r\nc\r\n")
+        Assert.Equal(sha256 "# Title\n\nBody line\n", sha256 "# Title\r\n\r\nBody line\r\n")
+
     // ----- mirror -----
 
     [<Fact>]

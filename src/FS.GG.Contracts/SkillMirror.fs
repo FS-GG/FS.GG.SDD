@@ -9,8 +9,13 @@ module SkillMirror =
 
     let providerSourceRoot = ".agents"
 
+    // Normalize CRLF -> LF before hashing so a byte-for-byte-logically-identical skill body
+    // hashes the same regardless of a checkout's line endings. This matches
+    // FS.GG.SDD.Artifacts SchemaVersion.sha256Text, so the 057/058 per-skill sha256 manifest
+    // does not spuriously flag drift on a CRLF checkout of LF-authored content.
     let sha256 (body: string) : string =
-        Encoding.UTF8.GetBytes body
+        (if String.IsNullOrEmpty body then "" else body.Replace("\r\n", "\n"))
+        |> Encoding.UTF8.GetBytes
         |> SHA256.HashData
         |> Array.map (fun b -> b.ToString("x2"))
         |> String.concat ""
