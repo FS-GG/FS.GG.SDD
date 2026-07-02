@@ -40,6 +40,30 @@ module ValidateCommandTests =
         proc.WaitForExit()
         stdout, proc.ExitCode
 
+    /// As `runCli` but also returns captured stderr — for the user-input diagnostic path
+    /// (#68). Reads stdout concurrently so neither pipe can block the child.
+    let private runCliFull (args: string list) =
+        let startInfo = ProcessStartInfo("dotnet")
+        startInfo.ArgumentList.Add cliDll
+        args |> List.iter startInfo.ArgumentList.Add
+        startInfo.RedirectStandardOutput <- true
+        startInfo.RedirectStandardError <- true
+        startInfo.UseShellExecute <- false
+        startInfo.Environment["DOTNET_NOLOGO"] <- "1"
+        startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] <- "1"
+        startInfo.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] <- "1"
+        startInfo.Environment["NO_COLOR"] <- "1"
+
+        use proc =
+            match Process.Start startInfo with
+            | null -> failwith "Failed to start the dotnet process."
+            | started -> started
+
+        let stdoutTask = proc.StandardOutput.ReadToEndAsync()
+        let stderr = proc.StandardError.ReadToEnd()
+        proc.WaitForExit()
+        stdoutTask.GetAwaiter().GetResult(), stderr, proc.ExitCode
+
     // `--matrix compatibility` is the cheapest matrix (no per-state lifecycle builds).
     [<Fact>]
     let ``validate --json emits a schemaVersion 1 report`` () =
@@ -59,6 +83,21 @@ module ValidateCommandTests =
         let stdout, exitCode = runCli [ "validate"; "--matrix"; "compatibility"; "--text" ]
         Assert.Contains("notValidated", stdout)
         Assert.NotEqual(0, exitCode)
+
+    // #68: a bad `--out` path is user input, not a tool defect — it must surface as a stderr
+    // diagnostic + exit 1, never a raw stack trace, while the stdout report contract still emits.
+    [<Fact>]
+    let ``validate --out to a path under a missing directory fails cleanly without a stack trace`` () =
+        let badPath = Path.Combine(Commands.tempDirectory (), "missing-dir", "report.json")
+        let stdout, stderr, exitCode = runCliFull [ "validate"; "--matrix"; "compatibility"; "--json"; "--out"; badPath ]
+
+        Assert.Equal(1, exitCode)
+        Assert.Contains("cannot write --out", stderr)
+        Assert.DoesNotContain("Unhandled exception", stderr)
+        // No stack frame leaked (the raw exception path prints "   at <frame>").
+        Assert.False(stderr.Contains("   at ", StringComparison.Ordinal), "a stack frame leaked to stderr")
+        // The stdout automation contract is emitted regardless of the --out failure.
+        Assert.Contains("\"schemaVersion\": 1", stdout)
 
     // ----- T012: --rich end-to-end (degrades to text when redirected) -----
 

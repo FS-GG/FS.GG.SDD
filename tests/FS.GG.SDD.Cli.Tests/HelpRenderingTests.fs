@@ -67,6 +67,22 @@ module HelpRenderingTests =
         Assert.Equal(renderText topLevel, result.Text)
         Assert.False(result.Text |> Seq.exists (fun c -> c = escChar))
 
+    // #68: capabilities are sensed for the stream a report actually routes to. A redirected
+    // sink (Blocked → stderr under `--rich 2>err.log`) must sense non-interactive with no
+    // width so Rich degrades to zero-ANSI plain text; a live sink stays interactive.
+    [<Fact>]
+    let ``detectCapabilities follows the target sink's redirection`` () =
+        Assert.False((detectCapabilities true).IsInteractive)
+        Assert.Equal(None, (detectCapabilities true).Width)
+        Assert.True((detectCapabilities false).IsInteractive)
+
+    [<Fact>]
+    let ``a report resolves Rich to zero-ANSI plain text when its sink is redirected`` () =
+        let result = resolve Rich (detectCapabilities true) commandHelp
+        Assert.False(result.UsedRichRendering)
+        Assert.Equal(renderText commandHelp, result.Text)
+        Assert.False(result.Text |> Seq.exists (fun c -> c = escChar))
+
     [<Fact>]
     let ``help --rich degrades to zero-ANSI plain text when color disabled`` () =
         let result = resolve Rich colorDisabled topLevel

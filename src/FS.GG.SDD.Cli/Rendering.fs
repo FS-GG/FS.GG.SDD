@@ -28,8 +28,12 @@ module Rendering =
         elif has "--json" then Json
         else Json
 
-    let detectCapabilities () : TerminalCapabilities =
-        let isInteractive = not Console.IsOutputRedirected
+    // Sense the terminal for the stream a report will actually be written to. `outputRedirected`
+    // is that sink's redirection state — `Console.IsOutputRedirected` for stdout-routed reports
+    // and `Console.IsErrorRedirected` for the stderr-routed Blocked path — so `--rich 2>err.log`
+    // degrades to zero-ANSI plain text instead of leaking escapes into the redirected file (#68).
+    let detectCapabilities (outputRedirected: bool) : TerminalCapabilities =
+        let isInteractive = not outputRedirected
 
         // NO_COLOR disables color when present with ANY value (including empty);
         // TERM=dumb also disables color.
@@ -39,7 +43,7 @@ module Rendering =
 
         let width =
             try
-                if Console.IsOutputRedirected then None else Some Console.WindowWidth
+                if outputRedirected then None else Some Console.WindowWidth
             with _ ->
                 None
 

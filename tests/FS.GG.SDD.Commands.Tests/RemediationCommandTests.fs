@@ -399,3 +399,37 @@ module SkillContentDriftTests =
         Assert.Contains(".claude/skills/fs-gg-demo/SKILL.md", summary.SkillDriftPaths)
         Assert.True summary.ResidualDrift
         Assert.Equal(0, exitCode report)
+
+
+/// #68: the interactive `Confirm` prompt is written to **stderr**, never stdout, so a
+/// redirected stdout (`fsgg-sdd upgrade > out.json` from a TTY) keeps the deterministic JSON
+/// report contract uncorrupted. Serialized via the `Console` collection (Console.In/Out/Error
+/// are process-global).
+[<Collection("Console")>]
+module ConfirmPromptTests =
+    open System
+    open FS.GG.SDD.Commands.CommandEffects
+
+    [<Fact>]
+    let ``Synthetic Confirm writes the prompt to stderr and nothing to stdout`` () =
+        let originalIn = Console.In
+        let originalOut = Console.Out
+        let originalError = Console.Error
+        use stdout = new StringWriter()
+        use stderr = new StringWriter()
+
+        try
+            Console.SetIn(new StringReader("y\n"))
+            Console.SetOut stdout
+            Console.SetError stderr
+            let prompt = "Apply this step? [y/N] "
+            // Drive the real `Confirm` edge through the public interpreter.
+            let result = interpret "." false (Confirm("step", prompt))
+
+            Assert.Equal(Some true, result.Confirmed)
+            Assert.Equal("", stdout.ToString())
+            Assert.Contains("Apply this step?", stderr.ToString())
+        finally
+            Console.SetIn originalIn
+            Console.SetOut originalOut
+            Console.SetError originalError
