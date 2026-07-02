@@ -1660,3 +1660,30 @@ module ScaffoldCommandTests =
         writeRegistry inputRoot "ok.providers.yml"
         let input = runScaffold (scaffoldRequest inputRoot None [] false false)
         Assert.Equal(1, exitCodeForReport input)
+
+    // #68: a wedged child (scaffold's `dotnet new`, upgrade's `dotnet tool update`, the git
+    // probe) must be killed at the process-timeout bound and reported as a fail-closed nonzero
+    // exit — never an indefinite hang. In the "Scaffold" collection so the tiny timeout env
+    // override can never race a concurrent real `dotnet new`.
+    [<Fact>]
+    let ``a child exceeding the process-timeout bound is killed and reported as a nonzero exit`` () =
+        if System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform System.Runtime.InteropServices.OSPlatform.Windows then
+            () // POSIX `sleep` is the portable long-runner; the timeout edge itself is OS-agnostic.
+        else
+            let root = TestSupport.tempDirectory ()
+            let original = System.Environment.GetEnvironmentVariable "FSGG_SDD_PROCESS_TIMEOUT_MS"
+
+            try
+                System.Environment.SetEnvironmentVariable("FSGG_SDD_PROCESS_TIMEOUT_MS", "500")
+                let stopwatch = System.Diagnostics.Stopwatch.StartNew()
+                let result = interpret root false (RunProcess("sleep", [ "30" ], ""))
+                stopwatch.Stop()
+
+                // Bounded well within the child's own 30s sleep — killed, not awaited.
+                Assert.True(stopwatch.Elapsed.TotalSeconds < 15.0, $"kill took {stopwatch.Elapsed.TotalSeconds}s")
+                let processResult = result.Process |> Option.defaultWith (fun () -> failwith "expected a process result")
+                Assert.True processResult.Started
+                Assert.NotEqual(0, processResult.ExitCode)
+                Assert.Contains("timed out", processResult.StandardError)
+            finally
+                System.Environment.SetEnvironmentVariable("FSGG_SDD_PROCESS_TIMEOUT_MS", original)

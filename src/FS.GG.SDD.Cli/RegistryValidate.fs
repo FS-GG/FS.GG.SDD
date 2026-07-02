@@ -146,7 +146,8 @@ module RegistryValidate =
         | Json -> serialize report
         | Text -> renderText report
         | Rich ->
-            let capabilities = detectCapabilities ()
+            // Always written to stdout (see the `Console.Out.WriteLine` sink below).
+            let capabilities = detectCapabilities Console.IsOutputRedirected
 
             if capabilities.IsInteractive && capabilities.ColorEnabled then
                 let writer = new StringWriter()

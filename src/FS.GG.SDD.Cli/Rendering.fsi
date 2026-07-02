@@ -24,8 +24,11 @@ module Rendering =
     /// precedence `--rich` > `--text` > `--json` > default (`Json`). Pure.
     val selectFormat: args: string list -> OutputFormat
 
-    /// Detect capabilities from the process environment (impure edge step).
-    val detectCapabilities: unit -> TerminalCapabilities
+    /// Detect capabilities from the process environment for the stream a report will be
+    /// written to (impure edge step). `outputRedirected` is that sink's redirection state
+    /// (`Console.IsOutputRedirected` for stdout-routed reports, `Console.IsErrorRedirected`
+    /// for the stderr-routed Blocked path) so Rich degrades to plain text on redirect.
+    val detectCapabilities: outputRedirected: bool -> TerminalCapabilities
 
     /// Render a report into the given Spectre console. Pure over the report: the
     /// only observable mutation is to the supplied console.

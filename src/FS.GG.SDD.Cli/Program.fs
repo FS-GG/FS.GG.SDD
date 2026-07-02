@@ -103,23 +103,39 @@ let printValidate (rest: string list) =
     // to plain text when non-interactive or color-disabled). Pure projection over
     // the same report; stream routing and exit code are unchanged across formats.
     let format = selectFormat rest
-    let stdoutRendering = (resolveValidation format (detectCapabilities ()) report).Text
+    let stdoutRendering = (resolveValidation format (detectCapabilities Console.IsOutputRedirected) report).Text
 
     // --out persists a deterministic projection only (never rich ANSI): the
-    // canonical JSON for --json/default, else the portable plain text (FR-010).
-    match optionValue "--out" rest with
-    | Some path ->
-        let persisted =
-            match format with
-            | Json -> FS.GG.SDD.Validation.ValidationContracts.serialize report
-            | _ -> FS.GG.SDD.Validation.ValidationContracts.renderText report
+    // canonical JSON for --json/default, else the portable plain text (FR-010). A bad
+    // path (missing directory, unwritable, malformed) is user input, not a tool defect:
+    // it is caught here and surfaced as a stderr diagnostic + exit 1, never a raw stack
+    // trace (#68). The stdout report contract is emitted regardless.
+    let outWriteError =
+        match optionValue "--out" rest with
+        | Some path ->
+            let persisted =
+                match format with
+                | Json -> FS.GG.SDD.Validation.ValidationContracts.serialize report
+                | _ -> FS.GG.SDD.Validation.ValidationContracts.renderText report
 
-        System.IO.File.WriteAllText(path, persisted)
-    | None -> ()
+            try
+                System.IO.File.WriteAllText(path, persisted)
+                None
+            with
+            | :? System.IO.IOException
+            | :? UnauthorizedAccessException
+            | :? System.Security.SecurityException
+            | :? ArgumentException
+            | :? NotSupportedException as ex -> Some(path, ex.Message)
+        | None -> None
 
     Console.Out.WriteLine(stdoutRendering)
 
-    if report.Summary.OverallPassed then 0 else 1
+    match outWriteError with
+    | Some(path, message) ->
+        Console.Error.WriteLine($"fsgg-sdd validate: cannot write --out '{path}': {message}")
+        1
+    | None -> if report.Summary.OverallPassed then 0 else 1
 
 let private helpRequest command format =
     { Command = command
@@ -142,7 +158,7 @@ let private helpRequest command format =
 // diagnostics and no changes → NoChange → exit 0 (never `unknownCommand`, FR-008/011).
 let private emitHelp format (envelopeCommand: SddCommand) (summary: HelpSummary) =
     let report = helpReport (helpRequest envelopeCommand format) summary
-    Console.Out.WriteLine((resolve format (detectCapabilities ()) report).Text)
+    Console.Out.WriteLine((resolve format (detectCapabilities Console.IsOutputRedirected) report).Text)
     exitCodeForReport report
 
 let private printTopLevelHelp format =
@@ -181,7 +197,7 @@ let run args =
             printCommandHelp (outputFormat rest) command
         | Ok command ->
             let format = outputFormat rest
-            let capabilities = detectCapabilities ()
+            let capabilities = detectCapabilities Console.IsOutputRedirected
 
             let request =
                 { Command = command
@@ -226,12 +242,15 @@ let run args =
 
             let report = finalModel.Report |> Option.defaultWith (fun () -> buildReport finalModel)
 
-            // Resolve the effective rendering (Rich degrades to plain text when
-            // non-interactive or color-disabled); stream routing and exit code are
-            // unchanged across formats.
-            let rendered = (resolve format (detectCapabilities ()) report).Text
+            // Resolve the effective rendering against the stream this report actually routes
+            // to — Blocked reports go to stderr, everything else to stdout — so Rich degrades
+            // to plain text when *that* sink is redirected or color-disabled (#68). Stream
+            // routing and exit code are unchanged across formats.
+            let routesToStderr = report.Outcome = Blocked
+            let sinkRedirected = if routesToStderr then Console.IsErrorRedirected else Console.IsOutputRedirected
+            let rendered = (resolve format (detectCapabilities sinkRedirected) report).Text
 
-            if report.Outcome = Blocked then Console.Error.WriteLine(rendered)
+            if routesToStderr then Console.Error.WriteLine(rendered)
             else Console.Out.WriteLine(rendered)
 
             exitCodeForReport report

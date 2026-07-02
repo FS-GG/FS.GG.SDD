@@ -64,16 +64,53 @@ module CommandEffects =
           Diagnostic = Some diagnostic }
 
     // The per-stream retention bound for captured provider stdout/stderr (feature 054,
-    // E4). Content beyond this many characters is drained (deadlock-safe) but not
-    // retained; the stream's truncation flag records that a tail was dropped (FR-005).
+    // E4). Content beyond this many characters is drained (deadlock-safe) but neither
+    // retained nor buffered, so a runaway child cannot exhaust parent memory (#68); the
+    // stream's truncation flag records that a tail was dropped (FR-005).
     let providerOutputCapChars = 65536
 
-    // Bound a fully-decoded stream to the retention cap, flagging truncation (CAP-1).
-    let private boundCapturedStream (raw: string) =
-        if raw.Length > providerOutputCapChars then
-            raw.Substring(0, providerOutputCapChars), true
-        else
-            raw, false
+    // The wall-clock ceiling for a single child process (#68). `dotnet new install/update/
+    // create`, `dotnet tool update`, and the git probe all launch at this edge; without a
+    // bound a wedged child hangs the CLI forever. The default is generous enough for a cold
+    // network restore; `FSGG_SDD_PROCESS_TIMEOUT_MS` overrides it (a test uses a tiny value
+    // to exercise the kill path). A non-positive / unparseable value falls back to the default.
+    let private defaultProcessTimeoutMs = 600_000
+
+    // The synthesized exit code reported when a child is killed on timeout: a nonzero,
+    // fail-closed value (the conventional `timeout(1)` code) so handlers classify a hung
+    // process as a provider/step failure rather than mistaking it for success.
+    let private processTimeoutExitCode = 124
+
+    let processTimeoutMs () =
+        match Int32.TryParse(Environment.GetEnvironmentVariable "FSGG_SDD_PROCESS_TIMEOUT_MS") with
+        | true, ms when ms > 0 -> ms
+        | _ -> defaultProcessTimeoutMs
+
+    // Drain a redirected stream to EOF (so the child never blocks on a full pipe, R1) while
+    // retaining at most the cap in memory (R2/#68): bytes past the cap are counted for the
+    // truncation flag but discarded, not buffered. Reads in bounded chunks; runs as a hot
+    // task so both streams drain concurrently with `WaitForExit`.
+    let private readCappedAsync (reader: TextReader) : System.Threading.Tasks.Task<string * bool> =
+        task {
+            let builder = System.Text.StringBuilder()
+            let buffer = Array.zeroCreate<char> 8192
+            let mutable truncated = false
+            let mutable reading = true
+
+            while reading do
+                let! read = reader.ReadAsync(buffer, 0, buffer.Length)
+
+                if read = 0 then
+                    reading <- false
+                else
+                    let remaining = providerOutputCapChars - builder.Length
+                    if remaining > 0 then
+                        builder.Append(buffer, 0, min read remaining) |> ignore
+                    if read > remaining then
+                        truncated <- true
+
+            return builder.ToString(), truncated
+        }
 
     // Edge interpreter for `RunProcess`: launches a real child process, captures its
     // exit code and (bounded) stdout/stderr, and snapshots the working directory
@@ -125,27 +162,62 @@ module CommandEffects =
                   Confirmed = None
                   Diagnostic = None }
             | proc ->
-                // Read both pipes concurrently so neither can block the child (R1).
-                let stdoutTask = proc.StandardOutput.ReadToEndAsync()
-                let stderrTask = proc.StandardError.ReadToEndAsync()
-                proc.WaitForExit()
-                let stdout, stdoutTruncated = boundCapturedStream (stdoutTask.GetAwaiter().GetResult())
-                let stderr, stderrTruncated = boundCapturedStream (stderrTask.GetAwaiter().GetResult())
+                // Read both pipes concurrently so neither can block the child (R1); retain at
+                // most the cap per stream (R2).
+                let stdoutTask = readCappedAsync proc.StandardOutput
+                let stderrTask = readCappedAsync proc.StandardError
+                let timeoutMs = processTimeoutMs ()
 
-                { Effect = effect
-                  Succeeded = true
-                  Snapshot = directorySnapshot projectRoot workingDir
-                  Process =
-                    Some
-                        { Started = true
-                          ExitCode = proc.ExitCode
-                          Command = commandLine
-                          StandardOutput = stdout
-                          StandardOutputTruncated = stdoutTruncated
-                          StandardError = stderr
-                          StandardErrorTruncated = stderrTruncated }
-                  Confirmed = None
-                  Diagnostic = None }
+                if proc.WaitForExit timeoutMs then
+                    // Exited within the bound: reap the reader tasks and report normally.
+                    let stdout, stdoutTruncated = stdoutTask.GetAwaiter().GetResult()
+                    let stderr, stderrTruncated = stderrTask.GetAwaiter().GetResult()
+
+                    { Effect = effect
+                      Succeeded = true
+                      Snapshot = directorySnapshot projectRoot workingDir
+                      Process =
+                        Some
+                            { Started = true
+                              ExitCode = proc.ExitCode
+                              Command = commandLine
+                              StandardOutput = stdout
+                              StandardOutputTruncated = stdoutTruncated
+                              StandardError = stderr
+                              StandardErrorTruncated = stderrTruncated }
+                      Confirmed = None
+                      Diagnostic = None }
+                else
+                    // Timed out: kill the whole tree, reap, and report a fail-closed nonzero
+                    // exit so the handler classifies it as a provider/step failure (#68) — an
+                    // incomplete run is never mistaken for success. The termination note is
+                    // appended to stderr so the report can explain the failure.
+                    (try proc.Kill true with _ -> ())
+                    proc.WaitForExit()
+                    let stdout, stdoutTruncated = stdoutTask.GetAwaiter().GetResult()
+                    let capturedErr, stderrTruncated = stderrTask.GetAwaiter().GetResult()
+
+                    let timeoutNote =
+                        $"fsgg-sdd: process timed out after {timeoutMs} ms and was terminated: {commandLine}"
+
+                    let stderr =
+                        if String.IsNullOrEmpty capturedErr then timeoutNote
+                        else capturedErr + "\n" + timeoutNote
+
+                    { Effect = effect
+                      Succeeded = true
+                      Snapshot = directorySnapshot projectRoot workingDir
+                      Process =
+                        Some
+                            { Started = true
+                              ExitCode = processTimeoutExitCode
+                              Command = commandLine
+                              StandardOutput = stdout
+                              StandardOutputTruncated = stdoutTruncated
+                              StandardError = stderr
+                              StandardErrorTruncated = stderrTruncated }
+                      Confirmed = None
+                      Diagnostic = None }
         with ex ->
             // The provider engine/command could not be launched: surfaced as
             // scaffold.providerUnavailable by the handler (Started = false). The launch
@@ -173,14 +245,16 @@ module CommandEffects =
     // without emitting `Confirm`), so this stdin read is only reached interactively; EOF/
     // redirected-empty stdin returns null → declined, never a hang. The prompt text is
     // presentation-only and excluded from the deterministic json; the decision
-    // (`Confirmed`) is the contract-relevant fact.
+    // (`Confirmed`) is the contract-relevant fact. The prompt is written to **stderr** (not
+    // stdout) so `fsgg-sdd upgrade > out.json` from a TTY cannot prepend prompt bytes to the
+    // deterministic JSON report on stdout (#68).
     let confirm (dryRun: bool) (effect: CommandEffect) (prompt: string) =
         let decision =
             if dryRun then
                 false
             else
-                Console.Out.Write prompt
-                Console.Out.Flush()
+                Console.Error.Write prompt
+                Console.Error.Flush()
 
                 match (Option.ofObj (Console.In.ReadLine()) |> Option.defaultValue "").Trim().ToLowerInvariant() with
                 | "y"
