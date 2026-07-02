@@ -85,6 +85,42 @@ No blocking findings recorded.
             Assert.Contains("duplicateIdentifier", ids)
 
     [<Fact>]
+    let ``Checklist result status does not misread failsafe as fail`` () =
+        // Regression (#67): substring `Contains("fail")` matched "failsafe".
+        let text =
+            checklistText.Replace(
+                "- CR-001 [CHK:CHK-001] [FR-001] [AC-001] pass: Requirement is testable and has acceptance coverage.",
+                "- CR-001 [CHK:CHK-001] [FR-001] [AC-001] pass: The failsafe mechanism is testable."
+            )
+
+        match parseChecklistFacts (snapshot text) with
+        | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
+        | Ok facts ->
+            let cr001 = facts.Results |> List.find (fun result -> result.ResultId.Value = "CR-001")
+            Assert.Equal("pass", cr001.Status)
+
+    [<Fact>]
+    let ``Checklist retains a genuine finding that begins with No`` () =
+        // Regression (#67): the no-outstanding sentinel filter dropped any "No …"
+        // line, silently discarding a real finding like "No tests cover FR-003".
+        let text =
+            checklistText.Replace(
+                "No blocking findings recorded.",
+                "No tests cover FR-003."
+            )
+
+        match parseChecklistFacts (snapshot text) with
+        | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
+        | Ok facts -> Assert.Contains("No tests cover FR-003.", facts.BlockingFindings)
+
+    [<Fact>]
+    let ``Checklist keeps a no-outstanding disclaimer out of blocking findings`` () =
+        // The canonical sentinel must still be treated as a placeholder, not a finding.
+        match parseChecklistFacts (snapshot checklistText) with
+        | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
+        | Ok facts -> Assert.Empty(facts.BlockingFindings)
+
+    [<Fact>]
     let ``Checklist parser diagnoses unsupported schema versions`` () =
         let broken = checklistText.Replace("schemaVersion: 1", "schemaVersion: 2")
 

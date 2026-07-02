@@ -187,10 +187,10 @@ module Clarification =
                       RelatedRequirementIds = requirementIdsInLine line
                       RelatedStoryIds = storyIdsInLine line
                       RelatedAcceptanceScenarioIds = acceptanceScenarioIdsInLine line
-                      Blocking = not (lowered.Contains("non-blocking"))
+                      Blocking = not (Regex.IsMatch(lowered, @"\bnon-?blocking\b"))
                       State =
-                        if lowered.Contains("answered") then "answered"
-                        elif lowered.Contains("deferred") then "deferred"
+                        if containsWord "answered" lowered then "answered"
+                        elif containsWord "deferred" lowered then "deferred"
                         else "open"
                       SourceLocation = sourceLocation lineNumber }
             | None -> None)
@@ -198,10 +198,14 @@ module Clarification =
     let answerKind (line: string) =
         let lowered = line.ToLowerInvariant()
 
-        if lowered.Contains("accepted deferral") || lowered.Contains("defer") then AcceptedDeferralAnswer
-        elif lowered.Contains("still open") || lowered.Contains("unresolved") then StillOpenAnswer
-        elif lowered.Contains("note") then NoteAnswer
-        else DecisionAnswer
+        if containsWord "accepted deferral" lowered || Regex.IsMatch(lowered, @"\bdefer") then
+            AcceptedDeferralAnswer
+        elif containsWord "still open" lowered || containsWord "unresolved" lowered then
+            StillOpenAnswer
+        elif containsWord "note" lowered then
+            NoteAnswer
+        else
+            DecisionAnswer
 
     let parseClarificationAnswers text =
         sectionLines "Answers" text

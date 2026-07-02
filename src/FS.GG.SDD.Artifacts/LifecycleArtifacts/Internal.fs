@@ -209,6 +209,14 @@ module internal Internal =
         |> Seq.distinctBy (fun id -> string id)
         |> Seq.toList
 
+    /// Case-insensitive whole-word/phrase match that respects word boundaries, so a
+    /// state keyword never matches a longer word that merely contains it: the state
+    /// `answered` must not match `(unanswered)`, `fail` must not match `failsafe`, and
+    /// `note` must not match `noted`. The needle may be a multi-word phrase (e.g.
+    /// `accepted deferral`); embedded spaces/hyphens are matched literally.
+    let containsWord (needle: string) (haystack: string) =
+        Regex.IsMatch(haystack, @"\b" + Regex.Escape needle + @"\b", RegexOptions.IgnoreCase)
+
     let cleanAfterId (idValue: string) (line: string) =
         let index = line.IndexOf(idValue, StringComparison.OrdinalIgnoreCase)
 
@@ -217,28 +225,38 @@ module internal Internal =
         else
             line.Substring(index + idValue.Length).Trim().TrimStart(':', '-', ' ').Trim()
 
-    // A "no-outstanding" sentinel line: after stripping an optional leading bullet marker,
-    // the trimmed text is empty or matches the disclaimer convention used by
-    // `parseNonEmptySectionLines` (case-insensitive `No `) plus an explicit "none" phrasing
-    // (`None`, `None outstanding`). Used to exempt such lines from the "every bullet needs a
-    // stable id" rule under `## Ambiguities` (§3.3).
+    let private strippedBullet (line: string) =
+        line.Trim().TrimStart('-', '*').Trim()
+
+    // A "no-outstanding" disclaimer sentinel: after stripping an optional leading bullet
+    // marker the trimmed text is empty, is the whole word `none` (optionally qualified),
+    // or is a `No …` disclaimer that names a lifecycle-outstanding noun (findings,
+    // ambiguities, clarifications, …). Two disciplines keep genuine bullets from being
+    // mistaken for the placeholder: matching the whole word `none` (not any `None…`
+    // prefix) leaves `Nonexistent flag behavior is unclear` a real bullet, and requiring
+    // a disclaimer noun leaves `No tests cover FR-003` a real, blocking finding rather
+    // than a placeholder. Used to exempt such lines from the "every bullet needs a stable
+    // id" rule under `## Ambiguities` (§3.3) and to drop placeholder findings.
+    let private noOutstandingSentinelRegex =
+        Regex(
+            @"^no\b.*\b(outstanding|remaining|remain|blocking|material|unresolved|open|pending|findings?|ambiguit(?:y|ies)|clarifications?|diagnostics|deferrals?|issues?|items?|concerns?|questions?|blockers?|gaps?|risks?)\b",
+            RegexOptions.IgnoreCase
+        )
+
     let isNoOutstandingSentinel (line: string) =
-        let trimmed = line.Trim().TrimStart('-', '*').Trim()
+        let trimmed = strippedBullet line
 
         String.IsNullOrWhiteSpace trimmed
-        || trimmed.StartsWith("No ", StringComparison.OrdinalIgnoreCase)
-        || trimmed.StartsWith("None", StringComparison.OrdinalIgnoreCase)
+        || Regex.IsMatch(trimmed, @"^none\b", RegexOptions.IgnoreCase)
+        || noOutstandingSentinelRegex.IsMatch trimmed
 
     let parseNonEmptySectionLines heading text =
         sectionLines heading text
         |> List.choose (fun (_, line) ->
-            let trimmed = line.Trim().TrimStart('-', '*').Trim()
-
-            if String.IsNullOrWhiteSpace trimmed
-               || trimmed.StartsWith("No ", StringComparison.OrdinalIgnoreCase) then
+            if isNoOutstandingSentinel line then
                 None
             else
-                Some trimmed)
+                Some(strippedBullet line))
 
     let parseTaskIds values =
         values |> List.choose (Identifiers.createTaskId >> Result.toOption)
