@@ -331,15 +331,6 @@ module CommandEffects =
                           Confirmed = None
                           Diagnostic = None }
             | Confirm(_, prompt) -> confirm dryRun effect prompt
-            | EmitStdout text ->
-                if not dryRun then Console.Out.Write text
-                success effect None
-            | EmitStderr text ->
-                if not dryRun then Console.Error.Write text
-                success effect None
-            | SetExitCode code ->
-                if not dryRun then Environment.ExitCode <- code
-                success effect None
         with ex ->
             let path = CommandTypes.effectPath effect
             failure effect None (toolDefect path ex.Message)

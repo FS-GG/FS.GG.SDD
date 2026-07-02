@@ -59,7 +59,6 @@ module ValidationRunner =
           InputText = None
           OutputFormat = Json
           DryRun = false
-          OverwritePolicy = (if command = Refresh then AllowGeneratedRefresh else RefuseUnsafe)
           GeneratorVersion = generator
           Provider = None
           Parameters = []

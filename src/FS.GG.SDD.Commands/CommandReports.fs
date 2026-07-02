@@ -322,14 +322,6 @@ module CommandReports =
             "Review the stale checklist results against the current specification and clarification sources."
             resultIds
 
-    let unsafeChecklistResultChange path id =
-        errorForRef
-            "unsafeChecklistResultChange"
-            path
-            $"Checklist result '{id}' would be changed by this rerun."
-            "Preserve the existing result and add a new result or mark it stale before changing the review decision."
-            id
-
     let missingChecklistPrerequisite path message =
         errorForPath
             "missingChecklistPrerequisite"
@@ -383,14 +375,6 @@ module CommandReports =
             "One or more plan decisions were recorded against older source snapshots."
             "Review the stale plan decisions before treating the plan as ready for task generation."
             decisionIds
-
-    let unsafePlanDecisionChange path id =
-        errorForRef
-            "unsafePlanDecisionChange"
-            path
-            $"Plan decision '{id}' would be changed by this rerun."
-            "Preserve existing plan decisions and add a new decision id for the replacement path."
-            id
 
     let missingPlanPrerequisite path message =
         errorForPath
@@ -463,14 +447,6 @@ module CommandReports =
             "One or more task entries were recorded against older source snapshots."
             "Review stale tasks and rerun fsgg-sdd tasks after updating their source links."
             taskIds
-
-    let unsafeTaskStatusChange path id =
-        errorForRef
-            "unsafeTaskStatusChange"
-            path
-            $"Task '{id}' has a status change marker that this command will not overwrite."
-            "Preserve existing task state and record replacement work as a new task id."
-            id
 
     let doneTaskMissingEvidence path ids =
         errorDiagnostic
@@ -974,9 +950,6 @@ module CommandReports =
         | EnumerateDirectory _
         | RunProcess _
         | SetExecutable _
-        | EmitStdout _
-        | EmitStderr _
-        | SetExitCode _
         | Confirm _ -> None
 
     let governanceCompatibility : GovernanceCompatibilityFact list =
@@ -1018,8 +991,7 @@ module CommandReports =
              || Set.contains "malformedPlanFrontMatter" ids
              || Set.contains "duplicatePlanId" ids
              || Set.contains "unknownPlanSourceReference" ids
-             || Set.contains "stalePlanDecision" ids
-             || Set.contains "unsafePlanDecisionChange" ids then
+             || Set.contains "stalePlanDecision" ids then
             Some Plan
         else
             None
@@ -1055,7 +1027,6 @@ module CommandReports =
              || Set.contains "unknownTaskSourceReference" ids
              || Set.contains "unknownTaskDependency" ids
              || Set.contains "taskDependencyCycle" ids
-             || Set.contains "unsafeTaskStatusChange" ids
              || Set.contains "doneTaskMissingEvidence" ids
              || Set.contains "skippedTaskMissingRationale" ids
              || Set.contains "missingTasksPrerequisite" ids
@@ -1084,7 +1055,6 @@ module CommandReports =
              || ids |> Set.contains "duplicateTaskId"
              || ids |> Set.contains "unknownTaskDependency"
              || ids |> Set.contains "taskDependencyCycle"
-             || ids |> Set.contains "unsupportedTaskStatus"
              || ids |> Set.contains "evidence.missingRequiredSkill" then
             Some Tasks
         elif ids |> Set.exists (fun id -> id.StartsWith("evidence.", StringComparison.OrdinalIgnoreCase) || id.StartsWith("verify.", StringComparison.OrdinalIgnoreCase)) then
@@ -1477,7 +1447,6 @@ module CommandReports =
           ProjectRoot = "."
           OutputFormat = model.Request.OutputFormat
           DryRun = model.Request.DryRun
-          OverwritePolicy = model.Request.OverwritePolicy
           Outcome = reportOutcome
           WorkId = model.Request.WorkId
           ChangedArtifacts = changes

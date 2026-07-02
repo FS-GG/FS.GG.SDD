@@ -328,16 +328,16 @@ No blocking ambiguity remains.
         Assert.Equal(original, TestSupport.readRelative root checklistPath)
 
     [<Fact>]
-    let ``checklist unsafe result change marker blocks without mutation`` () =
+    let ``checklist unsafe overwrite marker blocks without mutation`` () =
         let root = initializedClarifiedProject ()
         TestSupport.runChecklist root workId title |> ignore
-        let original = TestSupport.readRelative root checklistPath + "\n<!-- fsgg-sdd: unsafe-result-change -->\n"
+        let original = TestSupport.readRelative root checklistPath + "\n<!-- fsgg-sdd: unsafe-overwrite -->\n"
         TestSupport.writeRelative root checklistPath original
 
         let report = TestSupport.runChecklist root workId title
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
-        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "unsafeChecklistResultChange")
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "unsafeOverwrite")
         Assert.Equal(original, TestSupport.readRelative root checklistPath)
 
     [<Fact>]
