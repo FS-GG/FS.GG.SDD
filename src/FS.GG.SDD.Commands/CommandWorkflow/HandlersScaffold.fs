@@ -308,11 +308,13 @@ module internal HandlersScaffold =
               ProviderContractVersion = descriptor.ContractVersion
               TemplateRef = descriptor.TemplateId
               Outcome = scaffoldOutcomeValue outcome
-              ProducedPaths = producedPaths |> List.map (fun path -> { Path = path; Owner = GeneratedProduct })
+              // 057: `Sha256 = None` — the additive per-path digest is not yet computed
+              // (population is ADR-0014 P1); the field is omitted from output while None.
+              ProducedPaths = producedPaths |> List.map (fun path -> { Path = path; Owner = GeneratedProduct; Sha256 = None })
               // 056: the fan-out mirror copies, owner `Mirrored` (never `generatedProduct`).
               // Empty on any non-success terminal path so an incomplete fan-out is never
               // recorded as complete (FR-012).
-              MirroredPaths = mirroredPaths |> List.map (fun path -> { Path = path; Owner = ArtifactOwner.Mirrored })
+              MirroredPaths = mirroredPaths |> List.map (fun path -> { Path = path; Owner = ArtifactOwner.Mirrored; Sha256 = None })
               // `Map.toList` is already ascending by key — the FR-003 effective set
               // (declared defaults overlaid by `--param` overrides) forwarded verbatim.
               EffectiveParameters = Map.toList effective }

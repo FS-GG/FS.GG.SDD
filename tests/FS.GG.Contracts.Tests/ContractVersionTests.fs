@@ -12,8 +12,10 @@ module ContractVersionTests =
     // bump 1.1.1 → 1.2.0 (feature 052: new `Fsgg.Version` module + additive
     // `ProviderDescriptor.MinimumCliVersion` public surface).
     [<Fact>]
-    let ``contract version self-report matches 1_2_0`` () =
-        Assert.Equal("1.2.0", ContractVersion.value)
+    // Feature 057 / ADR-0014: additive minor bump 1.2.0 -> 1.3.0 (new skill-manifest types +
+    // `agentSkillRoots` + additive `ScaffoldProducedPathEntry.Sha256` public surface).
+    let ``contract version self-report matches 1_3_0`` () =
+        Assert.Equal("1.3.0", ContractVersion.value)
         Assert.Equal(1, ContractVersion.major)
-        Assert.Equal(2, ContractVersion.minor)
+        Assert.Equal(3, ContractVersion.minor)
         Assert.Equal(0, ContractVersion.patch)

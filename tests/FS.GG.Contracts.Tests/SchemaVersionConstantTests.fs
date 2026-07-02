@@ -6,9 +6,10 @@ open Xunit
 module SchemaVersionConstantTests =
 
     // SC-001 / quickstart Scenario B: every `.fsgg` schema is represented once.
+    // Feature 057 / ADR-0014: `skill-manifest` joins the set (10 -> 11).
     [<Fact>]
-    let ``entries enumerate exactly the 10 named schemas`` () =
-        Assert.Equal(10, List.length Schemas.entries)
+    let ``entries enumerate exactly the 11 named schemas`` () =
+        Assert.Equal(11, List.length Schemas.entries)
 
         let expected =
             set
@@ -18,6 +19,7 @@ module SchemaVersionConstantTests =
                   "agents"
                   "scaffold-provenance"
                   "governance-handoff"
+                  "skill-manifest"
                   "governance"
                   "policy"
                   "capabilities"
@@ -49,6 +51,8 @@ module SchemaVersionConstantTests =
         Assert.Equal(1, Schemas.governanceHandoffVersion)
         // SOURCE: src/FS.GG.SDD.Artifacts/GovernanceHandoff.fs — GovernanceHandoff.ContractVersion = "1.0.0"
         Assert.Equal("1.0.0", Schemas.governanceHandoffContractVersion)
+        // Feature 057 / ADR-0014: the skill-manifest contract starts at schema version 1.
+        Assert.Equal(1, Schemas.skillManifestVersion)
 
     // spec Assumptions / data-model "Governance-owned" provenance: these are the
     // values the package DECLARES to the Governance published reference — NOT
@@ -66,7 +70,7 @@ module SchemaVersionConstantTests =
         let ownerOf name =
             (Schemas.entries |> List.find (fun e -> e.Name = name)).Owner
 
-        for name in [ "providers"; "project"; "sdd"; "agents"; "scaffold-provenance"; "governance-handoff" ] do
+        for name in [ "providers"; "project"; "sdd"; "agents"; "scaffold-provenance"; "governance-handoff"; "skill-manifest" ] do
             Assert.Equal(Schemas.Sdd, ownerOf name)
 
         for name in [ "governance"; "policy"; "capabilities"; "tooling" ] do
@@ -86,3 +90,24 @@ module SchemaVersionConstantTests =
         Assert.Equal(1, Schemas.scaffoldProvenanceVersion)
         let entry = Schemas.entries |> List.find (fun e -> e.Name = "scaffold-provenance")
         Assert.Equal(Schemas.Sdd, entry.Owner)
+
+    // Feature 057 / ADR-0014 §Decision 5: AGENT_SKILL_ROOTS is the single declared root set.
+    [<Fact>]
+    let ``agentSkillRoots is the declared three-root set`` () =
+        Assert.Equal<string list>([ ".claude"; ".codex"; ".agents" ], Schemas.agentSkillRoots)
+
+    // Feature 057 / ADR-0014 §Decision 1: the manifest expresses id, scope, digest, and a
+    // body source (inline or a resolvable path) for both process and product skills.
+    [<Fact>]
+    let ``SkillManifest expresses process and product skills with a digest and a body source`` () =
+        let manifest: Schemas.SkillManifest =
+            { SchemaVersion = Schemas.skillManifestVersion
+              Skills =
+                [ { Id = "fs-gg-sdd-plan"; Scope = Schemas.Process; Sha256 = "aa"; Body = Some "# plan"; ResolvablePath = None }
+                  { Id = "fs-gg-elmish"; Scope = Schemas.Product; Sha256 = "bb"; Body = None; ResolvablePath = Some "skills/fs-gg-elmish/SKILL.md" } ] }
+
+        Assert.Equal(2, List.length manifest.Skills)
+        Assert.Equal(Schemas.Process, manifest.Skills.[0].Scope)
+        Assert.Equal(Schemas.Product, manifest.Skills.[1].Scope)
+        Assert.Equal(Some "# plan", manifest.Skills.[0].Body)
+        Assert.Equal(Some "skills/fs-gg-elmish/SKILL.md", manifest.Skills.[1].ResolvablePath)

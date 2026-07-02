@@ -131,8 +131,8 @@ providers:
           TemplateRef = "fsgg-fixture-app"
           Outcome = "providerSucceeded"
           ProducedPaths =
-            [ { Path = "src/Product/Program.fs"; Owner = GeneratedProduct }
-              { Path = "src/Product/App.fsproj"; Owner = GeneratedProduct } ]
+            [ { Path = "src/Product/Program.fs"; Owner = GeneratedProduct; Sha256 = None }
+              { Path = "src/Product/App.fsproj"; Owner = GeneratedProduct; Sha256 = None } ]
           MirroredPaths = []
           EffectiveParameters = [ "variant", "alpha"; "productName", "Demo" ] }
 
@@ -268,10 +268,10 @@ providers:
 
     let private mirroredRecord =
         { record with
-            ProducedPaths = [ { Path = ".agents/skills/fs-gg-elmish/SKILL.md"; Owner = GeneratedProduct } ]
+            ProducedPaths = [ { Path = ".agents/skills/fs-gg-elmish/SKILL.md"; Owner = GeneratedProduct; Sha256 = None } ]
             MirroredPaths =
-                [ { Path = ".codex/skills/fs-gg-elmish/SKILL.md"; Owner = Mirrored }
-                  { Path = ".claude/skills/fs-gg-elmish/SKILL.md"; Owner = Mirrored } ] }
+                [ { Path = ".codex/skills/fs-gg-elmish/SKILL.md"; Owner = Mirrored; Sha256 = None }
+                  { Path = ".claude/skills/fs-gg-elmish/SKILL.md"; Owner = Mirrored; Sha256 = None } ] }
 
     [<Fact>]
     let ``serialize then tryParse round-trips mirroredPaths and keeps schemaVersion 1`` () =
@@ -332,3 +332,44 @@ providers:
     let ``tryParse on an unsupported schema yields None`` () =
         let json = (serialize record).Replace("\"schemaVersion\": 1", "\"schemaVersion\": 9")
         Assert.Equal(None, tryParse json)
+
+    // --- 057 (ADR-0014 §Decision 3): additive per-path sha256, schema stays v1 ---
+
+    let private hashedRecord =
+        { record with
+            ProducedPaths =
+                [ { Path = ".agents/skills/fs-gg-elmish/SKILL.md"; Owner = GeneratedProduct; Sha256 = Some "abc123" } ]
+            MirroredPaths =
+                [ { Path = ".claude/skills/fs-gg-elmish/SKILL.md"; Owner = Mirrored; Sha256 = Some "def456" } ] }
+
+    [<Fact>]
+    let ``serialize then tryParse round-trips per-path sha256 and keeps schemaVersion 1`` () =
+        match tryParse (serialize hashedRecord) with
+        | Some parsed ->
+            Assert.Equal(1, parsed.SchemaVersion)
+            Assert.Equal(Some "abc123", (parsed.ProducedPaths |> List.head).Sha256)
+            Assert.Equal(Some "def456", (parsed.MirroredPaths |> List.head).Sha256)
+        | None -> failwith "Expected the hashed record to round-trip."
+
+    [<Fact>]
+    let ``serialize omits sha256 for digest-free paths so 1_0_0 output is byte-identical`` () =
+        // Every path in `record` has Sha256 = None, so no sha256 key may appear.
+        let json = serialize record
+        Assert.DoesNotContain("sha256", json)
+
+    [<Fact>]
+    let ``tryParse defaults sha256 to None when the key is absent`` () =
+        let withoutField =
+            """{
+  "schemaVersion": 1,
+  "generator": { "id": "fsgg-sdd", "version": "0.0.0" },
+  "providerName": "fixture",
+  "providerContractVersion": "1.0.0",
+  "templateRef": "fsgg-fixture-app",
+  "outcome": "providerSucceeded",
+  "producedPaths": [ { "path": "App.fsproj", "owner": "generatedProduct" } ]
+}"""
+
+        match tryParse withoutField with
+        | Some parsed -> Assert.Equal(None, (parsed.ProducedPaths |> List.head).Sha256)
+        | None -> failwith "A v1 document without sha256 must still parse."
