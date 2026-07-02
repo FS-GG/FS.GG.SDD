@@ -10,3 +10,8 @@ module CommandEffects =
 
     val interpret: projectRoot: string -> dryRun: bool -> effect: CommandEffect -> CommandEffectResult
     val interpretAll: projectRoot: string -> dryRun: bool -> effects: CommandEffect list -> CommandEffectResult list
+
+    /// Drive an MVU command to its final report: init, interpret-and-fold effects until idle,
+    /// build and resolve the report. The single run loop shared by the CLI and the validation
+    /// harness (feature 061 / issue #71).
+    val driveToReport: request: CommandRequest -> CommandReport

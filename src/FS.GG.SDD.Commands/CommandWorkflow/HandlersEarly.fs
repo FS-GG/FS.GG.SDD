@@ -47,9 +47,7 @@ module internal HandlersEarly =
                     match charterText with
                     | Some text -> generatedViewPlan model.Request workId (Some text) specText None None None None None commandDiagnostics model
                     | None ->
-                        let path = workModelPath workId
-                        let ids = blockingDiagnosticIds commandDiagnostics
-                        [], blockedWorkModelView path model.Request.GeneratorVersion ids, []
+                        blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
 
                 let specificationEffects =
                     match specText with
@@ -84,9 +82,7 @@ module internal HandlersEarly =
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text
                         generatedViewPlan model.Request workId charterText (Some text) clarificationText None None None None commandDiagnostics model
                     | None ->
-                        let path = workModelPath workId
-                        let ids = blockingDiagnosticIds commandDiagnostics
-                        [], blockedWorkModelView path model.Request.GeneratorVersion ids, []
+                        blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
 
                 let clarificationEffects =
                     match clarificationText with
@@ -123,9 +119,7 @@ module internal HandlersEarly =
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text
                         generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) checklistText None None None commandDiagnostics model
                     | _ ->
-                        let path = workModelPath workId
-                        let ids = blockingDiagnosticIds commandDiagnostics
-                        [], blockedWorkModelView path model.Request.GeneratorVersion ids, []
+                        blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
 
                 let checklistEffects =
                     match checklistText with
@@ -168,9 +162,7 @@ module internal HandlersEarly =
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text
                         generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) planText None None commandDiagnostics model
                     | _ ->
-                        let path = workModelPath workId
-                        let ids = blockingDiagnosticIds commandDiagnostics
-                        [], blockedWorkModelView path model.Request.GeneratorVersion ids, []
+                        blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
 
                 let planEffects =
                     match planText with
@@ -215,9 +207,7 @@ module internal HandlersEarly =
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text
                         generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) taskText None commandDiagnostics model
                     | _ ->
-                        let path = workModelPath workId
-                        let ids = blockingDiagnosticIds commandDiagnostics
-                        [], blockedWorkModelView path model.Request.GeneratorVersion ids, []
+                        blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
 
                 let taskEffects =
                     match taskText with

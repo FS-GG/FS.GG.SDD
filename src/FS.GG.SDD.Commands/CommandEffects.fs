@@ -337,3 +337,33 @@ module CommandEffects =
 
     let interpretAll (projectRoot: string) (dryRun: bool) (effects: CommandEffect list) =
         effects |> List.map (interpret projectRoot dryRun)
+
+    /// Drive an MVU command to its final report: initialize, then interpret produced effects
+    /// and fold their interpreted results back through `update` until no effects remain, build
+    /// the report, and resolve it. This is the single canonical run loop shared by the CLI
+    /// entry point and the validation harness (feature 061 / issue #71) — previously duplicated
+    /// verbatim, where any divergence silently changed validate-vs-CLI behavior.
+    let driveToReport (request: CommandRequest) : CommandReport =
+        let model, effects = CommandWorkflow.init request
+
+        let rec interpretUntilIdle state pendingEffects =
+            match pendingEffects with
+            | [] -> state
+            | current ->
+                let results = interpretAll request.ProjectRoot request.DryRun current
+
+                let nextState, nextEffects =
+                    results
+                    |> List.fold
+                        (fun (currentState, accumulatedEffects) result ->
+                            let updatedState, producedEffects = CommandWorkflow.update (EffectInterpreted result) currentState
+                            updatedState, accumulatedEffects @ producedEffects)
+                        (state, [])
+
+                interpretUntilIdle nextState nextEffects
+
+        let finalModel =
+            interpretUntilIdle model effects
+            |> fun state -> CommandWorkflow.update BuildReport state |> fst
+
+        finalModel.Report |> Option.defaultWith (fun () -> buildReport finalModel)

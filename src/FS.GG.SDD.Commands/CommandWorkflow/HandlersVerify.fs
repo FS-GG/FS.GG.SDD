@@ -248,41 +248,9 @@ module internal HandlersVerify =
 
         let findings = verifyFindings diagnostics
 
-        writer.WriteStartObject()
-        writer.WriteNumber("schemaVersion", 1)
-        writer.WriteString("viewVersion", "1.0")
-        writer.WriteString("workId", workId)
-        writer.WriteString("stage", "verify")
-        writer.WriteString("status", readiness)
-        writer.WriteString("generator", $"{generator.Id}/{generator.Version}")
-        writer.WriteStartArray("sources")
-        sources
-        |> List.sortBy (fun source -> source.Path)
-        |> List.iter (fun source ->
-            writer.WriteStartObject()
-            writer.WriteString("path", source.Path)
-            writer.WriteString("kind", verifySourceKind source.Path)
-            writeDigestObject writer "digest" source.Digest
-            match source.SchemaVersion with
-            | Some version -> writer.WriteNumber("schemaVersion", version)
-            | None -> writer.WriteNull "schemaVersion"
-            match source.SchemaStatus with
-            | Some status -> writer.WriteString("schemaStatus", status)
-            | None -> writer.WriteNull "schemaStatus"
-            writer.WriteEndObject())
-        writer.WriteEndArray()
-        writer.WriteStartObject("lifecycleReadiness")
-        writer.WriteString("status", lifecycleStatus)
-        writer.WriteStartArray("stages")
-        lifecycleStages
-        |> List.sortBy fst
-        |> List.iter (fun (stage, status) ->
-            writer.WriteStartObject()
-            writer.WriteString("stage", stage)
-            writer.WriteString("status", status)
-            writer.WriteEndObject())
-        writer.WriteEndArray()
-        writer.WriteEndObject()
+        writeViewPreamble writer workId "verify" readiness generator
+        writeSourcesArray writer verifySourceKind sources
+        writeLifecycleReadiness writer lifecycleStatus lifecycleStages
         writer.WriteStartObject("taskGraph")
         writer.WriteNumber("taskCount", taskCount)
         writer.WriteNumber("dependencyCount", dependencyCount)
@@ -333,55 +301,17 @@ module internal HandlersVerify =
             writer.WriteString("correction", view.Correction)
             writer.WriteEndObject())
         writer.WriteEndArray()
-        writer.WriteStartArray("generatedViews")
-        generatedViews
-        |> List.sortBy (fun view -> view.Path)
-        |> List.iter (fun view ->
-            writer.WriteStartObject()
-            writer.WriteString("path", view.Path)
-            writer.WriteString("kind", view.Kind)
-            writer.WriteString("currency", generatedViewCurrencyValue view.Currency)
-            writeStringArray writer "diagnosticIds" view.DiagnosticIds
-            writer.WriteEndObject())
-        writer.WriteEndArray()
-        writer.WriteStartArray("findings")
-        findings
-        |> List.iter (fun (id, diagnostic, severity) ->
-            writer.WriteStartObject()
-            writer.WriteString("id", id)
-            writer.WriteString("severity", severity)
-            writer.WriteString("category", severity)
-            writer.WriteString("path", diagnosticPath diagnostic)
-            writeStringArray writer "relatedIds" diagnostic.RelatedIds
-            writer.WriteString("message", diagnostic.Message)
-            writer.WriteString("correction", diagnostic.Correction)
-            writer.WriteEndObject())
-        writer.WriteEndArray()
-        writer.WriteStartArray("governanceCompatibility")
-        analysisBoundaryFacts()
-        |> List.iter (fun fact ->
-            writer.WriteStartObject()
-            writer.WriteString("path", fact.Path)
-            writer.WriteString("relationship", fact.Relationship)
-            writer.WriteBoolean("requiredBySdd", fact.RequiredBySdd)
-            writer.WriteString("state", fact.State)
-            writeStringArray writer "diagnosticIds" fact.DiagnosticIds
-            writer.WriteEndObject())
-        writer.WriteEndArray()
-        writer.WriteStartArray("diagnostics")
-        diagnostics |> DiagnosticsModule.sort |> List.iter (writeAnalysisDiagnosticJson writer)
-        writer.WriteEndArray()
+        writeGeneratedViewsArray writer generatedViews
+        writeReadinessFindings writer findings
+        writeBoundaryFacts writer "governanceCompatibility"
+        writeViewDiagnostics writer diagnostics
         writer.WriteString("readiness", readiness)
-        writer.WriteStartObject("nextAction")
-        if readiness = "verificationReady" then
-            writer.WriteString("actionId", "verify.next.ship")
-            writer.WriteNull("command")
-            writer.WriteString("reason", "Verification readiness is current and ready for ship.")
-        else
-            writer.WriteString("actionId", "correctBlockingDiagnostics")
-            writer.WriteNull("command")
-            writer.WriteString("reason", "Verification found lifecycle diagnostics that must be corrected before ship.")
-        writer.WriteEndObject()
+        writeNextAction
+            writer
+            (readiness = "verificationReady")
+            "verify.next.ship"
+            "Verification readiness is current and ready for ship."
+            "Verification found lifecycle diagnostics that must be corrected before ship."
         writer.WriteEndObject()
         writer.Flush()
         Encoding.UTF8.GetString(stream.ToArray())
@@ -456,9 +386,7 @@ module internal HandlersVerify =
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text
                         generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) evidenceText commandDiagnostics model
                     | _ ->
-                        let path = workModelPath workId
-                        let ids = blockingDiagnosticIds commandDiagnostics
-                        [], blockedWorkModelView path model.Request.GeneratorVersion ids, []
+                        blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
 
                 commandDiagnostics @ generatedDiagnostics,
                 (fun hasBlocking diagnostics ->

@@ -58,9 +58,7 @@ module internal HandlersAnalyze =
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text
                         generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) None commandDiagnostics model
                     | _ ->
-                        let path = workModelPath workId
-                        let ids = blockingDiagnosticIds commandDiagnostics
-                        [], blockedWorkModelView path model.Request.GeneratorVersion ids, []
+                        blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
 
                 commandDiagnostics @ generatedDiagnostics,
                 (fun hasBlocking diagnostics ->

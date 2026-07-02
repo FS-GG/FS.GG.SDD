@@ -260,6 +260,114 @@ module internal ViewGeneration =
           { Path = ".fsgg/capabilities.yml"; Relationship = "optionalGovernanceCapabilities"; RequiredBySdd = false; State = "notEvaluated"; DiagnosticIds = [] }
           { Path = ".fsgg/tooling.yml"; Relationship = "optionalGovernanceTooling"; RequiredBySdd = false; State = "notEvaluated"; DiagnosticIds = [] } ]
 
+    // --- Shared readiness-view writers (feature 061 / issue #71) ---
+    // analysis/verify/ship emit a structurally identical envelope: a common preamble
+    // (schemaVersion..generator), a sources array (differing only by the source-kind
+    // classifier), and shared generatedViews/boundaryFacts/diagnostics/nextAction
+    // sub-writers. Routing all three through these helpers guarantees the views cannot
+    // drift structurally; each helper emits the same token sequence the inline code did,
+    // so the byte-exact JSON contract is preserved.
+
+    let writeViewPreamble (writer: Utf8JsonWriter) (workId: string) (stage: string) (status: string) (generator: GeneratorVersion) =
+        writer.WriteStartObject()
+        writer.WriteNumber("schemaVersion", 1)
+        writer.WriteString("viewVersion", "1.0")
+        writer.WriteString("workId", workId)
+        writer.WriteString("stage", stage)
+        writer.WriteString("status", status)
+        writer.WriteString("generator", $"{generator.Id}/{generator.Version}")
+
+    let writeSourcesArray (writer: Utf8JsonWriter) (sourceKind: string -> string) (sources: GeneratedViewSource list) =
+        writer.WriteStartArray("sources")
+        sources
+        |> List.sortBy (fun source -> source.Path)
+        |> List.iter (fun source ->
+            writer.WriteStartObject()
+            writer.WriteString("path", source.Path)
+            writer.WriteString("kind", sourceKind source.Path)
+            writeDigestObject writer "digest" source.Digest
+            match source.SchemaVersion with
+            | Some version -> writer.WriteNumber("schemaVersion", version)
+            | None -> writer.WriteNull "schemaVersion"
+            match source.SchemaStatus with
+            | Some status -> writer.WriteString("schemaStatus", status)
+            | None -> writer.WriteNull "schemaStatus"
+            writer.WriteEndObject())
+        writer.WriteEndArray()
+
+    let writeLifecycleReadiness (writer: Utf8JsonWriter) (lifecycleStatus: string) (lifecycleStages: (string * string) list) =
+        writer.WriteStartObject("lifecycleReadiness")
+        writer.WriteString("status", lifecycleStatus)
+        writer.WriteStartArray("stages")
+        lifecycleStages
+        |> List.sortBy fst
+        |> List.iter (fun (stage, status) ->
+            writer.WriteStartObject()
+            writer.WriteString("stage", stage)
+            writer.WriteString("status", status)
+            writer.WriteEndObject())
+        writer.WriteEndArray()
+        writer.WriteEndObject()
+
+    let writeGeneratedViewsArray (writer: Utf8JsonWriter) (generatedViews: GeneratedViewState list) =
+        writer.WriteStartArray("generatedViews")
+        generatedViews
+        |> List.sortBy (fun view -> view.Path)
+        |> List.iter (fun view ->
+            writer.WriteStartObject()
+            writer.WriteString("path", view.Path)
+            writer.WriteString("kind", view.Kind)
+            writer.WriteString("currency", generatedViewCurrencyValue view.Currency)
+            writeStringArray writer "diagnosticIds" view.DiagnosticIds
+            writer.WriteEndObject())
+        writer.WriteEndArray()
+
+    let writeBoundaryFacts (writer: Utf8JsonWriter) (key: string) =
+        writer.WriteStartArray(key)
+        analysisBoundaryFacts ()
+        |> List.iter (fun fact ->
+            writer.WriteStartObject()
+            writer.WriteString("path", fact.Path)
+            writer.WriteString("relationship", fact.Relationship)
+            writer.WriteBoolean("requiredBySdd", fact.RequiredBySdd)
+            writer.WriteString("state", fact.State)
+            writeStringArray writer "diagnosticIds" fact.DiagnosticIds
+            writer.WriteEndObject())
+        writer.WriteEndArray()
+
+    let writeViewDiagnostics (writer: Utf8JsonWriter) (diagnostics: Diagnostic list) =
+        writer.WriteStartArray("diagnostics")
+        diagnostics |> DiagnosticsModule.sort |> List.iter (writeAnalysisDiagnosticJson writer)
+        writer.WriteEndArray()
+
+    /// Findings shape shared by verify and ship (severity == category, no state field).
+    let writeReadinessFindings (writer: Utf8JsonWriter) (findings: (string * Diagnostic * string) list) =
+        writer.WriteStartArray("findings")
+        findings
+        |> List.iter (fun (id, diagnostic, severity) ->
+            writer.WriteStartObject()
+            writer.WriteString("id", id)
+            writer.WriteString("severity", severity)
+            writer.WriteString("category", severity)
+            writer.WriteString("path", diagnosticPath diagnostic)
+            writeStringArray writer "relatedIds" diagnostic.RelatedIds
+            writer.WriteString("message", diagnostic.Message)
+            writer.WriteString("correction", diagnostic.Correction)
+            writer.WriteEndObject())
+        writer.WriteEndArray()
+
+    let writeNextAction (writer: Utf8JsonWriter) (isReady: bool) (readyActionId: string) (readyReason: string) (blockedReason: string) =
+        writer.WriteStartObject("nextAction")
+        if isReady then
+            writer.WriteString("actionId", readyActionId)
+            writer.WriteNull("command")
+            writer.WriteString("reason", readyReason)
+        else
+            writer.WriteString("actionId", "correctBlockingDiagnostics")
+            writer.WriteNull("command")
+            writer.WriteString("reason", blockedReason)
+        writer.WriteEndObject()
+
     let analysisJson
         (workId: string)
         (generator: GeneratorVersion)
@@ -274,29 +382,8 @@ module internal ViewGeneration =
 
         let findings = analysisFindings diagnostics
 
-        writer.WriteStartObject()
-        writer.WriteNumber("schemaVersion", 1)
-        writer.WriteString("viewVersion", "1.0")
-        writer.WriteString("workId", workId)
-        writer.WriteString("stage", "analyze")
-        writer.WriteString("status", readiness.Readiness)
-        writer.WriteString("generator", $"{generator.Id}/{generator.Version}")
-        writer.WriteStartArray("sources")
-        sources
-        |> List.sortBy (fun source -> source.Path)
-        |> List.iter (fun source ->
-            writer.WriteStartObject()
-            writer.WriteString("path", source.Path)
-            writer.WriteString("kind", analysisSourceKind source.Path)
-            writeDigestObject writer "digest" source.Digest
-            match source.SchemaVersion with
-            | Some version -> writer.WriteNumber("schemaVersion", version)
-            | None -> writer.WriteNull "schemaVersion"
-            match source.SchemaStatus with
-            | Some status -> writer.WriteString("schemaStatus", status)
-            | None -> writer.WriteNull "schemaStatus"
-            writer.WriteEndObject())
-        writer.WriteEndArray()
+        writeViewPreamble writer workId "analyze" readiness.Readiness generator
+        writeSourcesArray writer analysisSourceKind sources
         writer.WriteStartArray("sourceRelationships")
         relationships
         |> List.mapi (fun index relationship -> sprintf "AR%03d" (index + 1), relationship)
@@ -342,41 +429,15 @@ module internal ViewGeneration =
             writer.WriteString("correction", diagnostic.Correction)
             writer.WriteEndObject())
         writer.WriteEndArray()
-        writer.WriteStartArray("generatedViews")
-        generatedViews
-        |> List.sortBy (fun view -> view.Path)
-        |> List.iter (fun view ->
-            writer.WriteStartObject()
-            writer.WriteString("path", view.Path)
-            writer.WriteString("kind", view.Kind)
-            writer.WriteString("currency", generatedViewCurrencyValue view.Currency)
-            writeStringArray writer "diagnosticIds" view.DiagnosticIds
-            writer.WriteEndObject())
-        writer.WriteEndArray()
-        writer.WriteStartArray("optionalBoundaryFacts")
-        analysisBoundaryFacts()
-        |> List.iter (fun fact ->
-            writer.WriteStartObject()
-            writer.WriteString("path", fact.Path)
-            writer.WriteString("relationship", fact.Relationship)
-            writer.WriteBoolean("requiredBySdd", fact.RequiredBySdd)
-            writer.WriteString("state", fact.State)
-            writeStringArray writer "diagnosticIds" fact.DiagnosticIds
-            writer.WriteEndObject())
-        writer.WriteEndArray()
-        writer.WriteStartArray("diagnostics")
-        diagnostics |> DiagnosticsModule.sort |> List.iter (writeAnalysisDiagnosticJson writer)
-        writer.WriteEndArray()
-        writer.WriteStartObject("nextAction")
-        if readiness.Readiness = "implementationReady" then
-            writer.WriteString("actionId", "analysis.next.implement")
-            writer.WriteNull("command")
-            writer.WriteString("reason", "Lifecycle sources are current and ready for implementation.")
-        else
-            writer.WriteString("actionId", "correctBlockingDiagnostics")
-            writer.WriteNull("command")
-            writer.WriteString("reason", "Analysis found lifecycle diagnostics that must be corrected before implementation.")
-        writer.WriteEndObject()
+        writeGeneratedViewsArray writer generatedViews
+        writeBoundaryFacts writer "optionalBoundaryFacts"
+        writeViewDiagnostics writer diagnostics
+        writeNextAction
+            writer
+            (readiness.Readiness = "implementationReady")
+            "analysis.next.implement"
+            "Lifecycle sources are current and ready for implementation."
+            "Analysis found lifecycle diagnostics that must be corrected before implementation."
         writer.WriteEndObject()
         writer.Flush()
         Encoding.UTF8.GetString(stream.ToArray())
