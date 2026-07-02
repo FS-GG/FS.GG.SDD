@@ -30,17 +30,28 @@ module SchemaVersion =
     let parse (value: string) =
         let value = if String.IsNullOrEmpty value then "" else value.Trim()
         let m = Regex.Match(value, @"^(\d+)(?:\.(\d+))?$")
+        let malformed = Error "Schema version must be an integer or major.minor value."
 
-        if m.Success then
-            let minor =
-                if m.Groups[2].Success then
-                    Some(Int32.Parse m.Groups[2].Value)
-                else
-                    None
+        // The regex constrains each group to digits, so Int32.TryParse only fails
+        // on overflow (e.g. schemaVersion: 99999999999999999999). Int32.Parse threw
+        // OverflowException there instead of classifying the value as malformed.
+        let tryInt (s: string) =
+            match Int32.TryParse(s, Globalization.NumberStyles.None, Globalization.CultureInfo.InvariantCulture) with
+            | true, v -> Some v
+            | _ -> None
 
-            Ok { Major = Int32.Parse m.Groups[1].Value; Minor = minor; Raw = value }
+        if not m.Success then
+            malformed
         else
-            Error "Schema version must be an integer or major.minor value."
+            match tryInt m.Groups[1].Value with
+            | None -> malformed
+            | Some major ->
+                if not m.Groups[2].Success then
+                    Ok { Major = major; Minor = None; Raw = value }
+                else
+                    match tryInt m.Groups[2].Value with
+                    | None -> malformed
+                    | Some minor -> Ok { Major = major; Minor = Some minor; Raw = value }
 
     let isSupported version = version.Major = 1
 

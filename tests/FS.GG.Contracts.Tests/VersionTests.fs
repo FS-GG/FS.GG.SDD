@@ -28,6 +28,20 @@ module VersionTests =
     let ``tryParse rejects non-triples`` (text: string) =
         Assert.Equal(None, Version.tryParse text)
 
+    // NumberStyles.None + invariant culture: the default Int32.TryParse
+    // (NumberStyles.Integer, current culture) accepted embedded whitespace and
+    // leading signs, so "1. 2.+3" parsed as 1.2.3. This grammar gates provider
+    // minimumCliVersion coherence, so the looseness must be rejected.
+    [<Theory>]
+    [<InlineData("1. 2.+3")>] // embedded whitespace and a leading sign
+    [<InlineData("1. 2.3")>] // leading whitespace in a component
+    [<InlineData("+1.2.3")>] // leading sign
+    [<InlineData("1.+2.3")>] // leading sign in a component
+    [<InlineData(" 1.2.3")>] // leading whitespace
+    [<InlineData("1.2.3 ")>] // trailing whitespace
+    let ``tryParse rejects whitespace and signs`` (text: string) =
+        Assert.Equal(None, Version.tryParse text)
+
     // --- compare ---
 
     [<Fact>]
