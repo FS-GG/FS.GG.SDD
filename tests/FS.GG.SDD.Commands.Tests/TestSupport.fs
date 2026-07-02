@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Commands.Tests
 
 open System
+open System.Diagnostics
 open System.IO
 open FS.GG.SDD.Commands.CommandEffects
 open FS.GG.SDD.Commands.CommandReports
@@ -19,6 +20,51 @@ module TestSupport =
             | parent -> findRepoRoot parent
 
     let repoRoot = findRepoRoot (DirectoryInfo AppContext.BaseDirectory)
+
+    /// The configuration these tests were built under — "Release" in CI (gate.yml /
+    /// release.yml build `-c Release`), "Debug" for a local `dotnet test`. Mirrors the
+    /// proven Cli.Tests/ValidateCommandTests detection so the CLI smokes exercise the
+    /// binary that was actually built for this run.
+    let cliConfiguration =
+        if AppContext.BaseDirectory.Replace('\\', '/').Contains("/Release/") then
+            "Release"
+        else
+            "Debug"
+
+    /// The built fsgg-sdd host binary for the current configuration. A ProjectReference
+    /// from the test project guarantees it exists before any smoke runs, so smokes invoke
+    /// the real binary directly rather than `dotnet run --no-build` — which fails when only
+    /// Debug was built, or silently exercises a stale Release binary.
+    let cliDll =
+        Path.Combine(repoRoot, "src", "FS.GG.SDD.Cli", "bin", cliConfiguration, "net10.0", "FS.GG.SDD.Cli.dll")
+
+    /// Invoke the real host CLI directly and capture (exitCode, stdout, stderr). Kills the
+    /// process and fails on timeout so a hung smoke never wedges the suite.
+    let runCliRaw (timeoutMs: int) (args: string list) =
+        let startInfo = ProcessStartInfo("dotnet")
+        startInfo.WorkingDirectory <- repoRoot
+        startInfo.RedirectStandardOutput <- true
+        startInfo.RedirectStandardError <- true
+        startInfo.UseShellExecute <- false
+        startInfo.ArgumentList.Add cliDll
+        args |> List.iter startInfo.ArgumentList.Add
+
+        match Process.Start startInfo with
+        | null -> failwith "Failed to start CLI process."
+        | cliProcess ->
+            use cliProcess = cliProcess
+            let stdout = cliProcess.StandardOutput.ReadToEnd()
+            let stderr = cliProcess.StandardError.ReadToEnd()
+
+            if not (cliProcess.WaitForExit(timeoutMs)) then
+                try
+                    cliProcess.Kill(entireProcessTree = true)
+                with _ ->
+                    ()
+
+                failwith "CLI smoke process timed out."
+
+            cliProcess.ExitCode, stdout, stderr
 
     let tempDirectory () =
         let path = Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + Guid.NewGuid().ToString("N"))

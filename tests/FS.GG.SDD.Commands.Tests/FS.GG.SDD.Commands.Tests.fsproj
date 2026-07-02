@@ -42,6 +42,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The CLI smokes (Verify/Evidence/Ship/Analyze/Refresh/Agents) invoke the real host
+         binary; this reference guarantees it is built before the tests run, so they never
+         depend on a possibly-absent Release binary. -->
+    <ProjectReference Include="../../src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj" />
     <ProjectReference Include="../../src/FS.GG.SDD.Commands/FS.GG.SDD.Commands.fsproj" />
     <ProjectReference Include="../../src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj" />
     <PackageReference Include="FSharp.Core" />

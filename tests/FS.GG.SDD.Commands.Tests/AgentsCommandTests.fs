@@ -1,6 +1,5 @@
 namespace FS.GG.SDD.Commands.Tests
 
-open System.Diagnostics
 open System.IO
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.CommandReports
@@ -243,22 +242,8 @@ module AgentsCommandTests =
     // --- CLI smoke (real host entry point) ---
 
     let runAgentsCli root extraArgs =
-        let startInfo = ProcessStartInfo("dotnet")
-        startInfo.WorkingDirectory <- TestSupport.repoRoot
-        startInfo.RedirectStandardOutput <- true
-        startInfo.RedirectStandardError <- true
-        [ "run"; "--project"; "src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj"; "-c"; "Release"; "--no-build"; "--"; "agents"; "--root"; root; "--work"; workId ]
-        |> List.iter startInfo.ArgumentList.Add
-        extraArgs |> List.iter startInfo.ArgumentList.Add
-
-        match Process.Start startInfo with
-        | null -> failwith "Failed to start CLI process."
-        | cliProcess ->
-            use cliProcess = cliProcess
-            let stdout = cliProcess.StandardOutput.ReadToEnd()
-            let stderr = cliProcess.StandardError.ReadToEnd()
-            cliProcess.WaitForExit(120000) |> ignore
-            cliProcess.ExitCode, stdout, stderr
+        [ "agents"; "--root"; root; "--work"; workId ] @ extraArgs
+        |> TestSupport.runCliRaw 120000
 
     [<Fact>]
     let ``agents CLI smoke generates guidance and exits zero`` () =

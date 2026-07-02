@@ -59,6 +59,11 @@
         "resolved": "13.0.3",
         "contentHash": "HrC5BXdl00IP9zeV+0Z848QWPAoCr9P3bDEZguI+gkLcBKAOxix/tLEAAHC+UvDNPv4a2d18lOReHMOagPa+zQ=="
       },
+      "Spectre.Console.Ansi": {
+        "type": "Transitive",
+        "resolved": "0.57.0",
+        "contentHash": "DGeYljyWAIHSeUAoUGqyzyOqS8WlsHKW+y4zOZ0OO61oqrhx90jHS+XG5Kpq/wWz6ovIs2VL/0CTKpUVa7tdWg=="
+      },
       "xunit.abstractions": {
         "type": "Transitive",
         "resolved": "2.0.3",
@@ -113,12 +118,40 @@
           "YamlDotNet": "[16.3.0, )"
         }
       },
+      "fs.gg.sdd.cli": {
+        "type": "Project",
+        "dependencies": {
+          "FS.GG.Contracts": "[1.4.0, )",
+          "FS.GG.SDD.Artifacts": "[0.5.0, )",
+          "FS.GG.SDD.Commands": "[0.5.0, )",
+          "FS.GG.SDD.Validation": "[0.5.0, )",
+          "FSharp.Core": "[10.1.301, )",
+          "Spectre.Console": "[0.57.0, )"
+        }
+      },
       "fs.gg.sdd.commands": {
         "type": "Project",
         "dependencies": {
           "FS.GG.Contracts": "[1.4.0, )",
           "FS.GG.SDD.Artifacts": "[0.5.0, )",
           "FSharp.Core": "[10.1.301, )"
+        }
+      },
+      "fs.gg.sdd.validation": {
+        "type": "Project",
+        "dependencies": {
+          "FS.GG.SDD.Artifacts": "[0.5.0, )",
+          "FS.GG.SDD.Commands": "[0.5.0, )",
+          "FSharp.Core": "[10.1.301, )"
+        }
+      },
+      "Spectre.Console": {
+        "type": "CentralTransitive",
+        "requested": "[0.57.0, )",
+        "resolved": "0.57.0",
+        "contentHash": "X5+4ZsUYTPlTs5PEoKRlxUuKOa1AkEoAGM34pUeJPjsBdtOnvnaVb31hqewhooomihl1i9fEBid1fz8XxZTacQ==",
+        "dependencies": {
+          "Spectre.Console.Ansi": "0.57.0"
         }
       },
       "YamlDotNet": {

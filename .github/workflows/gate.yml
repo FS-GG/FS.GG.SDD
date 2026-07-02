@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   gate:
-    name: Deterministic gate (locked restore + build)
+    name: Deterministic gate (locked restore + build + test)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -46,6 +46,15 @@ jobs:
       # promoted to errors in Directory.Build.props.
       - name: Build (net10.0)
         run: dotnet build FS.GG.SDD.sln -c Debug --no-restore
+
+      # The bulk of the suite (Artifacts / Commands / Validation / Contracts / Cli, plus the
+      # offline acceptance facts) had no per-PR enforcement — only Contracts.Tests and Cli.Tests
+      # ran, and only on release events. Run the whole solution offline here so a red suite blocks
+      # the PR (review §5.1). --no-build reuses the artifacts built above (same Debug config the
+      # Commands.Tests CLI smokes auto-detect and invoke). The network-gated composition-acceptance
+      # facts self-skip when FSGG_SDD_ACCEPTANCE_REGISTRY is unset, so this stays offline.
+      - name: Test (offline suite)
+        run: dotnet test FS.GG.SDD.sln -c Debug --no-build
 
   build-config-drift:
     name: Shared-build-config drift check

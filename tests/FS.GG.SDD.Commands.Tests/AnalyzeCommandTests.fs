@@ -25,43 +25,13 @@ module AnalyzeCommandTests =
         root
 
     let runAnalyzeCli root extraArgs =
-        let startInfo = ProcessStartInfo("dotnet")
-        startInfo.WorkingDirectory <- TestSupport.repoRoot
-        startInfo.RedirectStandardOutput <- true
-        startInfo.RedirectStandardError <- true
-        startInfo.ArgumentList.Add("run")
-        startInfo.ArgumentList.Add("--project")
-        startInfo.ArgumentList.Add("src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj")
-        startInfo.ArgumentList.Add("-c")
-        startInfo.ArgumentList.Add("Release")
-        startInfo.ArgumentList.Add("--no-build")
-        startInfo.ArgumentList.Add("--")
-        startInfo.ArgumentList.Add("analyze")
-        startInfo.ArgumentList.Add("--root")
-        startInfo.ArgumentList.Add(root)
-        startInfo.ArgumentList.Add("--work")
-        startInfo.ArgumentList.Add(workId)
+        let exitCode, stdout, stderr =
+            [ "analyze"; "--root"; root; "--work"; workId ] @ extraArgs
+            |> TestSupport.runCliRaw 30000
 
-        extraArgs |> List.iter startInfo.ArgumentList.Add
-
-        match Process.Start(startInfo) with
-        | null -> failwith "Failed to start CLI process."
-        | cliProcess ->
-            use cliProcess = cliProcess
-            let stdout = cliProcess.StandardOutput.ReadToEnd()
-            let stderr = cliProcess.StandardError.ReadToEnd()
-
-            if not (cliProcess.WaitForExit(30000)) then
-                try
-                    cliProcess.Kill(entireProcessTree = true)
-                with _ ->
-                    ()
-
-                failwith "CLI smoke process timed out."
-
-            { ExitCode = cliProcess.ExitCode
-              StdOut = stdout
-              StdErr = stderr }
+        { ExitCode = exitCode
+          StdOut = stdout
+          StdErr = stderr }
 
     [<Fact>]
     let ``analyze creates generated analysis view with real filesystem evidence`` () =
