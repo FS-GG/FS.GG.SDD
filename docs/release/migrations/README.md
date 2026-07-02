@@ -125,5 +125,39 @@ declares; publish `0.4.0` before Templates#47 flips to require it, FR-011). Per 
 additive-change policy this carries **no `<version>.md` migration note**
 (`release-readiness.json` `migrations[]` stays empty); this paragraph records the change instead.
 
+The `057-skill-manifest-contract` change is additive: it adds the machine-readable contract
+*shapes* the consolidated skill-mirror consumes (ADR-0014 P0.D0.2, FS-GG/FS.GG.SDD#60) — the
+`SkillManifest`/`SkillManifestEntry`/`SkillScope` types, the `agentSkillRoots` constant
+(`.claude`/`.codex`/`.agents`), and an additive optional per-path `Sha256` on
+`.fsgg/scaffold-provenance.json` (schema **stays v1**). It is **types only** — it implements no
+`mirror`/`verify`, routes no command through a new path, and computes or populates no digest
+during scaffold (that is P1, feature 058). The provenance field is backward and forward
+compatible: the runtime emitter **omits** `sha256` when absent so current output stays
+**byte-identical**, and provenance written before this change still parses. The `FS.GG.Contracts`
+package contract takes an additive **minor** bump (`1.2.0` → `1.3.0`) for the new public surface
+and the `scaffold-provenance` contract a **minor** bump (`1.0.0` → `1.1.0`); the public-surface
+golden baseline is updated additive-only. It breaks no existing public contract: every other
+report field, key order, stream, and exit code is unchanged. Per this policy an additive change
+carries **no `<version>.md` migration note** (`release-readiness.json` `migrations[]` stays
+empty); this paragraph records the change instead.
+
+The `058-materialize-verify-library` change is additive: it collapses the four hand-maintained
+"materialize union → 3 roots" implementations into **one** content-addressed algorithm (ADR-0014
+P1, FS-GG/FS.GG.SDD#61) — a pure `SkillMirror` `mirror`/`verify` library in `FS.GG.Contracts`,
+computed over the single `agentSkillRoots` constant, through which every SDD skill-writing lane
+(seeded fan-out, scaffold provider mirror, refresh re-mirror) now routes, plus content-aware
+`doctor`/`upgrade` drift that asserts every union skill — process (SDD-seeded) **and** product
+(provider) — is present in each root, byte-identical across roots, and matches its canonical
+`sha256` (the check the audit's F2 found missing). The scaffold/refresh skill-file output and
+`mirroredPaths` are **byte-identical to today** (SC-003), `doctor` still makes **zero** writes,
+and no persisted schema changes (`.fsgg/scaffold-provenance.json` stays v1). The `FS.GG.Contracts`
+package contract takes an additive **minor** bump (`1.3.0` → `1.4.0`) for the new public
+`SkillMirror` surface (public-surface golden baseline updated additive-only), and the coherent
+CLI/package version-of-truth advances **`0.4.0` → `0.5.0`**. That version-gated coherent-set bump
+lands in-repo here; cutting and pushing the `0.5.0` release to the org feed and flipping the
+registry orchestrator-axis minimum is the separate release dance (FS-GG/FS.GG.SDD#57), not this
+feature. Per this policy an additive change carries **no `<version>.md` migration note**
+(`release-readiness.json` `migrations[]` stays empty); this paragraph records the change instead.
+
 When a release introduces a breaking change, add its note here as
 `<version>.md` and list it in this index.
