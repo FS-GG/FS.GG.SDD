@@ -108,7 +108,7 @@
       "fs.gg.sdd.artifacts": {
         "type": "Project",
         "dependencies": {
-          "FS.GG.Contracts": "[1.0.0, )",
+          "FS.GG.Contracts": "[1.4.0, )",
           "FSharp.Core": "[10.1.301, )",
           "YamlDotNet": "[16.3.0, )"
         }
