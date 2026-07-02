@@ -78,7 +78,8 @@ module Schemas =
 
     type ScaffoldProducedPathEntry =
         { Path: string
-          Owner: string }
+          Owner: string
+          Sha256: string option }
 
     type ScaffoldProvenanceSchema =
         { SchemaVersion: int
@@ -88,6 +89,21 @@ module Schemas =
           TemplateRef: string
           Outcome: string
           ProducedPaths: ScaffoldProducedPathEntry list }
+
+    type SkillScope =
+        | Process
+        | Product
+
+    type SkillManifestEntry =
+        { Id: string
+          Scope: SkillScope
+          Sha256: string
+          Body: string option
+          ResolvablePath: string option }
+
+    type SkillManifest =
+        { SchemaVersion: int
+          Skills: SkillManifestEntry list }
 
     type GovernanceHandoffEvidenceNode =
         { Id: string
@@ -158,6 +174,9 @@ module Schemas =
     let scaffoldProvenanceVersion = 1
     let governanceHandoffVersion = 1
     let governanceHandoffContractVersion = "1.0.0"
+    // SDD-owned skill-vendoring contract (ADR-0014). The manifest is the producer's
+    // declarative skill set; the root set is a single declared constant.
+    let skillManifestVersion = 1
     // Governance-owned: declared to the Governance published reference, NOT SDD-emitted.
     let governanceVersion = 1
     let policyVersion = 1
@@ -174,7 +193,12 @@ module Schemas =
             SchemaVersion = governanceHandoffVersion
             ContractVersion = Some governanceHandoffContractVersion
             Owner = Sdd }
+          { Name = "skill-manifest"; SchemaVersion = skillManifestVersion; ContractVersion = None; Owner = Sdd }
           { Name = "governance"; SchemaVersion = governanceVersion; ContractVersion = None; Owner = Governance }
           { Name = "policy"; SchemaVersion = policyVersion; ContractVersion = None; Owner = Governance }
           { Name = "capabilities"; SchemaVersion = capabilitiesVersion; ContractVersion = None; Owner = Governance }
           { Name = "tooling"; SchemaVersion = toolingVersion; ContractVersion = None; Owner = Governance } ]
+
+    // The single declared agent-skill root set (ADR-0014 §Decision 5). Bare repo-root
+    // names; consumers append `skills/`. One place to add/rename a runtime root.
+    let agentSkillRoots: string list = [ ".claude"; ".codex"; ".agents" ]

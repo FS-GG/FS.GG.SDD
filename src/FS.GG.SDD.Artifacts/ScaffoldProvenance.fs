@@ -10,7 +10,11 @@ open FS.GG.SDD.Artifacts.SchemaVersion
 module ScaffoldProvenance =
     type ScaffoldProducedPath =
         { Path: string
-          Owner: ArtifactOwner }
+          Owner: ArtifactOwner
+          // Additive (contract 1.1.0, ADR-0014 §Decision 3): the per-skill/per-path
+          // content digest. `None` ⇒ no digest recorded (a 1.0.0 document, or a path
+          // not yet hashed — digest population is P1). Serialized only when `Some`.
+          Sha256: string option }
 
     type ScaffoldProvenanceRecord =
         { SchemaVersion: int
@@ -33,6 +37,20 @@ module ScaffoldProvenance =
         | "rendering" -> ArtifactOwner.Rendering
         | "mirrored" -> ArtifactOwner.Mirrored
         | _ -> ArtifactOwner.GeneratedProduct
+
+    // Additive (contract 1.1.0, ADR-0014): emit `sha256` only when a digest was
+    // recorded, so digest-free provenance (every path today) stays byte-identical to
+    // 1.0.0 output. Blank digests are treated as absent.
+    let private writeSha256 (writer: Utf8JsonWriter) (sha256: string option) =
+        match sha256 with
+        | Some value when not (String.IsNullOrWhiteSpace value) -> writer.WriteString("sha256", value)
+        | _ -> ()
+
+    // Absent, null, or blank `sha256` ⇒ `None` (a 1.0.0 document has no digest).
+    let private readSha256 (element: JsonElement) =
+        match jsonString "sha256" element with
+        | Some value when not (String.IsNullOrWhiteSpace value) -> Some value
+        | _ -> None
 
     let serialize (record: ScaffoldProvenanceRecord) =
         use stream = new MemoryStream()
@@ -64,6 +82,7 @@ module ScaffoldProvenance =
             writer.WriteStartObject()
             writer.WriteString("path", produced.Path)
             writer.WriteString("owner", ownerValue produced.Owner)
+            writeSha256 writer produced.Sha256
             writer.WriteEndObject())
 
         writer.WriteEndArray()
@@ -80,6 +99,7 @@ module ScaffoldProvenance =
             writer.WriteStartObject()
             writer.WriteString("path", mirrored.Path)
             writer.WriteString("owner", ownerValue mirrored.Owner)
+            writeSha256 writer mirrored.Sha256
             writer.WriteEndObject())
 
         writer.WriteEndArray()
@@ -123,7 +143,8 @@ module ScaffoldProvenance =
                                 | Some path when not (String.IsNullOrWhiteSpace path) ->
                                     Some
                                         { Path = path
-                                          Owner = jsonString "owner" element |> Option.map ownerFromValue |> Option.defaultValue ArtifactOwner.GeneratedProduct }
+                                          Owner = jsonString "owner" element |> Option.map ownerFromValue |> Option.defaultValue ArtifactOwner.GeneratedProduct
+                                          Sha256 = readSha256 element }
                                 | _ -> None)
 
                         // 056: additive mirror record. Absent/null ⇒ `[]`, so provenance
@@ -135,7 +156,8 @@ module ScaffoldProvenance =
                                 | Some path when not (String.IsNullOrWhiteSpace path) ->
                                     Some
                                         { Path = path
-                                          Owner = jsonString "owner" element |> Option.map ownerFromValue |> Option.defaultValue ArtifactOwner.Mirrored }
+                                          Owner = jsonString "owner" element |> Option.map ownerFromValue |> Option.defaultValue ArtifactOwner.Mirrored
+                                          Sha256 = readSha256 element }
                                 | _ -> None)
 
                         // Additive optional field (D3): absent ⇒ `[]`, so provenance

@@ -124,6 +124,7 @@ member Fsgg.Schemas+ProvidersSchema.Providers
 member Fsgg.Schemas+ProvidersSchema.SchemaVersion
 member Fsgg.Schemas+ScaffoldProducedPathEntry.Owner
 member Fsgg.Schemas+ScaffoldProducedPathEntry.Path
+member Fsgg.Schemas+ScaffoldProducedPathEntry.Sha256
 member Fsgg.Schemas+ScaffoldProvenanceSchema.Generator
 member Fsgg.Schemas+ScaffoldProvenanceSchema.Outcome
 member Fsgg.Schemas+ScaffoldProvenanceSchema.ProducedPaths
@@ -154,6 +155,16 @@ member Fsgg.Schemas+SddSchema.SchemaVersion
 member Fsgg.Schemas+SddSchema.Stages
 member Fsgg.Schemas+SddSchema.StaleBehavior
 member Fsgg.Schemas+SddSchema.WorkRoot
+member Fsgg.Schemas+SkillManifest.SchemaVersion
+member Fsgg.Schemas+SkillManifest.Skills
+member Fsgg.Schemas+SkillManifestEntry.Body
+member Fsgg.Schemas+SkillManifestEntry.Id
+member Fsgg.Schemas+SkillManifestEntry.ResolvablePath
+member Fsgg.Schemas+SkillManifestEntry.Scope
+member Fsgg.Schemas+SkillManifestEntry.Sha256
+member Fsgg.Schemas+SkillScope.IsProcess
+member Fsgg.Schemas+SkillScope.IsProduct
+member Fsgg.Schemas+SkillScope.Tag
 member Fsgg.Schemas+ToolingSchema.SchemaVersion
 member Fsgg.Version+Version.Major
 member Fsgg.Version+Version.Minor
@@ -205,6 +216,10 @@ type Fsgg.Schemas+SchemaOwner
 type Fsgg.Schemas+SchemaOwner+Tags
 type Fsgg.Schemas+SchemaSourceIdentity
 type Fsgg.Schemas+SddSchema
+type Fsgg.Schemas+SkillManifest
+type Fsgg.Schemas+SkillManifestEntry
+type Fsgg.Schemas+SkillScope
+type Fsgg.Schemas+SkillScope+Tags
 type Fsgg.Schemas+ToolingSchema
 type Fsgg.Version
 type Fsgg.Version+Version
@@ -217,6 +232,7 @@ val Fsgg.Provider.isMalformed
 val Fsgg.Provider.resolveNameParameter
 val Fsgg.Registry.validate
 val Fsgg.Registry.validateDocument
+val Fsgg.Schemas.agentSkillRoots
 val Fsgg.Schemas.agentsVersion
 val Fsgg.Schemas.capabilitiesVersion
 val Fsgg.Schemas.entries
@@ -228,6 +244,7 @@ val Fsgg.Schemas.projectVersion
 val Fsgg.Schemas.providersVersion
 val Fsgg.Schemas.scaffoldProvenanceVersion
 val Fsgg.Schemas.sddVersion
+val Fsgg.Schemas.skillManifestVersion
 val Fsgg.Schemas.toolingVersion
 val Fsgg.Version.compare
 val Fsgg.Version.tryParse

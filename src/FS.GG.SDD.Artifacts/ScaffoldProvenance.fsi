@@ -9,7 +9,11 @@ open FS.GG.SDD.Artifacts.SchemaVersion
 module ScaffoldProvenance =
     type ScaffoldProducedPath =
         { Path: string
-          Owner: ArtifactOwner }
+          Owner: ArtifactOwner
+          /// Additive (contract 1.1.0, ADR-0014): the per-path content digest.
+          /// `None` ⇒ no digest recorded (a 1.0.0 document, or a path not yet
+          /// hashed). Serialized only when `Some`; parse defaults absent to `None`.
+          Sha256: string option }
 
     type ScaffoldProvenanceRecord =
         { SchemaVersion: int

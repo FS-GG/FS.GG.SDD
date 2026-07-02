@@ -101,9 +101,12 @@ module Schemas =
 
     /// One produced path recorded in `.fsgg/scaffold-provenance.json`. `Owner` is
     /// the generic owner token (SDD's `ArtifactOwner` rendered as a string).
+    /// `Sha256` is the additive (contract 1.1.0, ADR-0014) per-path content digest;
+    /// `None` when no digest was recorded — a `1.0.0` document has none.
     type ScaffoldProducedPathEntry =
         { Path: string
-          Owner: string }
+          Owner: string
+          Sha256: string option }
 
     /// `.fsgg/scaffold-provenance.json` — mirror of `ScaffoldProvenanceRecord`.
     type ScaffoldProvenanceSchema =
@@ -114,6 +117,32 @@ module Schemas =
           TemplateRef: string
           Outcome: string
           ProducedPaths: ScaffoldProducedPathEntry list }
+
+    // --- Skill-vendoring contract (ADR-0014, SDD-owned). ---
+
+    /// Whether a skill is an SDD lifecycle *process* skill or a provider *product*
+    /// skill. Producers ship only `Product` skills to a scaffolded product; the
+    /// `Process` skills are SDD-seeded.
+    type SkillScope =
+        | Process
+        | Product
+
+    /// One declared skill in a producer's skill manifest (ADR-0014 §Decision 1).
+    /// `Sha256` is the digest of the canonical body; the body itself is carried
+    /// inline in `Body` or as a resolvable in-package path in `ResolvablePath`
+    /// (exactly one in practice — a P1 library policy, not a shape constraint).
+    type SkillManifestEntry =
+        { Id: string
+          Scope: SkillScope
+          Sha256: string
+          Body: string option
+          ResolvablePath: string option }
+
+    /// A producer's declarative skill manifest — the contract the skill fan-out
+    /// reads instead of directory scans or per-source `template.json` strings.
+    type SkillManifest =
+        { SchemaVersion: int
+          Skills: SkillManifestEntry list }
 
     /// A declared evidence node in the governance-handoff projection.
     type GovernanceHandoffEvidenceNode =
@@ -199,10 +228,16 @@ module Schemas =
     val scaffoldProvenanceVersion: int
     val governanceHandoffVersion: int
     val governanceHandoffContractVersion: string
+    val skillManifestVersion: int
     val governanceVersion: int
     val policyVersion: int
     val capabilitiesVersion: int
     val toolingVersion: int
 
-    /// All 10 named schemas, for the "every schema represented?" check (SC-001).
+    /// The single declared agent-skill root set (`AGENT_SKILL_ROOTS`, ADR-0014
+    /// §Decision 5). Every fan-out/verify derives its targets from this; skills
+    /// live under `<root>/skills/`. Adding a runtime root is a one-line change.
+    val agentSkillRoots: string list
+
+    /// All 11 named schemas, for the "every schema represented?" check (SC-001).
     val entries: SchemaContractEntry list
