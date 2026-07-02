@@ -126,6 +126,7 @@ module internal HandlersUpgrade =
           AppliedStepIds = []
           SkippedStepIds = []
           FailedStepIds = []
+          SkillDriftPaths = drift.SkillDriftPaths
           ResidualDrift = false
           NextActionHint = hint }
 
@@ -154,13 +155,27 @@ module internal HandlersUpgrade =
                 | Some outcome -> { step with Outcome = outcome }
                 | None -> step)
 
+        // 058/ADR-0014 P1: the content drift `upgrade` does NOT repair in this phase — a
+        // present-but-divergent or hash-mismatched copy, and product-skill loss (advisory
+        // first, no clobber). Missing *seeded* copies are excluded ONLY when the `artifactReSeed`
+        // step actually applied (a skipped/failed re-seed leaves them outstanding, so they stay
+        // in the advisory surface).
+        let repairedMissing =
+            if List.contains "artifactReSeed" applied then drift.MissingArtifactPaths else []
+
+        let unrepairedSkillDrift =
+            drift.SkillDriftPaths
+            |> List.filter (fun path -> not (List.contains path repairedMissing))
+
         // FR-013: never report an incomplete reconciliation as complete. A skipped or
         // failed step leaves residual drift; so does a self-update that "applied" (the
-        // running binary is unchanged until the next invocation, R4).
+        // running binary is unchanged until the next invocation, R4); so does un-repaired
+        // content drift (advisory in P1).
         let residualDrift =
             not (List.isEmpty skipped)
             || not (List.isEmpty failed)
             || List.contains "cliSelfUpdate" applied
+            || not (List.isEmpty unrepairedSkillDrift)
 
         let diagnostics =
             if not (List.isEmpty failed) then
@@ -176,6 +191,7 @@ module internal HandlersUpgrade =
         let hint =
             if not (List.isEmpty failed) then "A confirmed step failed; inspect the failure and re-run `fsgg-sdd upgrade`."
             elif not (List.isEmpty skipped) then "Re-run `fsgg-sdd upgrade` and confirm the skipped step(s) to finish reconciling."
+            elif not (List.isEmpty unrepairedSkillDrift) then "Skill content drift detected (advisory); some copies diverge from their canonical body — re-scaffold or restore the canonical skill sources."
             elif residualDrift then "The CLI self-update takes effect on the next invocation; re-run `fsgg-sdd doctor` afterwards to confirm coherence."
             else "Reconciliation complete; run `fsgg-sdd doctor` to confirm coherence."
 
@@ -187,6 +203,7 @@ module internal HandlersUpgrade =
               AppliedStepIds = applied
               SkippedStepIds = skipped
               FailedStepIds = failed
+              SkillDriftPaths = unrepairedSkillDrift
               ResidualDrift = residualDrift
               NextActionHint = hint }
 
@@ -199,16 +216,45 @@ module internal HandlersUpgrade =
         match model.Upgrade with
         | Some _ -> model, []
         | None ->
+
+        // 058/ADR-0014 P1: bring the provider product-skill copies into snapshots (read-only)
+        // before the content-addressed drift is computed — the same provenance-driven gate
+        // `doctor` uses, shared via `HandlersDoctor.skillReadGate`.
+        match skillReadGate model with
+        | Some effects ->
+            if List.isEmpty effects then model, []
+            else { model with PendingEffects = model.PendingEffects @ effects }, effects
+        | None ->
             let request = model.Request
             let drift = computeDrift model
+
+            let actionable = drift.Steps |> List.filter (fun step -> step.Outcome = "wouldApply")
 
             if not drift.HasProvenance then
                 { model with Upgrade = Some(noOpSummary request drift "No scaffold provenance — nothing to reconcile.") }, []
             elif drift.IsCoherent then
                 { model with Upgrade = Some(noOpSummary request drift "Already coherent — nothing to reconcile.") }, []
+            elif List.isEmpty actionable then
+                // 058/ADR-0014 P1: the only drift is advisory content drift (a divergent/
+                // hash-mismatched copy or product-skill loss) with NO applicable step. There is
+                // nothing to confirm or `--yes`, so this is NOT a non-interactive refusal — it is
+                // reported advisory (exit 0, residual), so CI's `upgrade` doesn't dead-end at exit 1.
+                let summary: UpgradeSummary =
+                    { HasProvenance = true
+                      Mode = if request.AssumeYes then "assumeYes" else "interactive"
+                      AlreadyCoherent = false
+                      Steps = drift.Steps
+                      AppliedStepIds = []
+                      SkippedStepIds = []
+                      FailedStepIds = []
+                      SkillDriftPaths = drift.SkillDriftPaths
+                      ResidualDrift = true
+                      NextActionHint = "Skill content drift detected (advisory); some copies diverge from their canonical body — re-scaffold or restore the canonical skill sources." }
+
+                { model with Upgrade = Some summary }, []
             elif not request.AssumeYes && not request.IsInteractive then
-                // FR-012 / SC-004: non-interactive without `--yes` refuses up front — zero
-                // writes, no `Confirm`, no prompt-hang (exit 1).
+                // FR-012 / SC-004: non-interactive without `--yes` refuses up front when there IS
+                // actionable reconciliation — zero writes, no `Confirm`, no prompt-hang (exit 1).
                 let summary: UpgradeSummary =
                     { HasProvenance = true
                       Mode = "refusedNonInteractive"
@@ -217,6 +263,7 @@ module internal HandlersUpgrade =
                       AppliedStepIds = []
                       SkippedStepIds = []
                       FailedStepIds = []
+                      SkillDriftPaths = drift.SkillDriftPaths
                       ResidualDrift = true
                       NextActionHint = "Re-run `fsgg-sdd upgrade` interactively, or pass `--yes` to apply without prompting." }
 
@@ -225,8 +272,6 @@ module internal HandlersUpgrade =
                     Diagnostics = model.Diagnostics @ [ upgradeNonInteractiveNoYes () ] },
                 []
             else
-                let actionable = drift.Steps |> List.filter (fun step -> step.Outcome = "wouldApply")
-
                 let rec walk steps =
                     match steps with
                     | [] -> None

@@ -57,15 +57,14 @@ module internal SeededSkills =
     let seededSkills =
         skillNames |> List.map (fun name -> { Name = name; Body = loadBody name })
 
-    // Each seeded skill expands to three additive WriteFile effects — one per agent
-    // surface (`.claude`, `.codex`, and the 056 neutral `.agents` root) — all carrying
-    // the no-clobber AgentGuidanceTarget write-kind. One canonical body to all three
-    // roots makes them byte-identical by construction (FR-004/FR-006); the sorted
-    // declared list keeps the order deterministic. `init` and `scaffold` both gain the
-    // third root through this single seam.
+    // Each seeded skill expands to one additive WriteFile effect per declared agent-skill
+    // root (058/ADR-0014 §Decision 5: the root set is the single `agentSkillRoots` constant,
+    // not a hardcoded list). All carry the no-clobber AgentGuidanceTarget write-kind; one
+    // canonical body to every root makes them byte-identical by construction (FR-002). The
+    // shared `SkillMirror.mirror` sorts by id and iterates the roots in order, so the emitted
+    // effect stream is deterministic and unchanged. `init` and `scaffold` share this seam.
     let skillEffects =
         seededSkills
-        |> List.collect (fun skill ->
-            [ WriteFile($".claude/skills/{skill.Name}/SKILL.md", skill.Body, AgentGuidanceTarget)
-              WriteFile($".codex/skills/{skill.Name}/SKILL.md", skill.Body, AgentGuidanceTarget)
-              WriteFile($".agents/skills/{skill.Name}/SKILL.md", skill.Body, AgentGuidanceTarget) ])
+        |> List.map (fun skill -> skill.Name, skill.Body)
+        |> Fsgg.SkillMirror.mirror Fsgg.Schemas.agentSkillRoots
+        |> List.map (fun write -> WriteFile(write.Path, write.Body, AgentGuidanceTarget))

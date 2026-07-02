@@ -275,8 +275,10 @@ module internal HandlersScaffold =
     // The provider's produced skills live under the neutral `.agents/skills/` root; the
     // reserved `fs-gg-sdd-*` namespace there is already an intrusion (isSddTree), so a
     // produced path under `.agents/skills/` is a provider co-tenant skill file. SDD copies
-    // each byte-identically into `.claude` and `.codex` (FR-003/FR-005).
-    let private agentsSkillsPrefix = ".agents/skills/"
+    // each byte-identically into every other declared root (FR-003/FR-005). 058/ADR-0014
+    // §Decision 5: destinations derive from the one `agentSkillRoots` constant through the
+    // shared `SkillMirror`, never a hardcoded `.claude`/`.codex` list here.
+    let private agentsSkillsPrefix = Fsgg.SkillMirror.providerSourceRoot + "/skills/"
 
     let providerSkillFiles (producedPaths: string list) =
         producedPaths
@@ -284,10 +286,11 @@ module internal HandlersScaffold =
         |> List.filter (fun p -> p.StartsWith(agentsSkillsPrefix, StringComparison.Ordinal))
         |> List.sort
 
-    // The two byte-identical mirror-target paths for one `.agents/skills/REST` source.
+    // The byte-identical mirror-target paths for one `.agents/skills/REST` source — one per
+    // non-source root, computed by the shared library (`retargetSkillPath` keeps REST verbatim).
     let mirrorTargetsFor (agentsPath: string) =
-        let rest = (normalizeRelativePath agentsPath).Substring(agentsSkillsPrefix.Length)
-        [ ".claude/skills/" + rest; ".codex/skills/" + rest ]
+        Fsgg.SkillMirror.mirrorTargetRoots Fsgg.Schemas.agentSkillRoots
+        |> List.map (fun targetRoot -> Fsgg.SkillMirror.retargetSkillPath targetRoot agentsPath)
 
     // The mirrored-copy path set for a produced-path set — pure, deterministic, sorted.
     // Known before the mirror I/O runs (targets are a function of the produced paths), so
@@ -299,7 +302,7 @@ module internal HandlersScaffold =
 
     // ----- finalization (stage 3) -----
 
-    let provenanceWriteEffect (request: CommandRequest) (descriptor: ProviderDescriptor) outcome (producedPaths: string list) (mirroredPaths: string list) (effective: Map<string, string>) =
+    let provenanceWriteEffect (request: CommandRequest) (descriptor: ProviderDescriptor) outcome (producedPaths: string list) (mirroredPaths: string list) (skillDigests: Map<string, string>) (effective: Map<string, string>) =
         let record: ScaffoldProvenanceRecord =
             { SchemaVersion = 1
               Generator = request.GeneratorVersion
@@ -308,13 +311,14 @@ module internal HandlersScaffold =
               ProviderContractVersion = descriptor.ContractVersion
               TemplateRef = descriptor.TemplateId
               Outcome = scaffoldOutcomeValue outcome
-              // 057: `Sha256 = None` — the additive per-path digest is not yet computed
-              // (population is ADR-0014 P1); the field is omitted from output while None.
-              ProducedPaths = producedPaths |> List.map (fun path -> { Path = path; Owner = GeneratedProduct; Sha256 = None })
+              // 058/ADR-0014 §Decision 3: content-addressed provenance — each produced/mirrored
+              // skill copy carries the `sha256` of its materialized body (`skillDigests`);
+              // non-skill produced paths carry none. The field is omitted from output while None.
+              ProducedPaths = producedPaths |> List.map (fun path -> { Path = path; Owner = GeneratedProduct; Sha256 = Map.tryFind path skillDigests })
               // 056: the fan-out mirror copies, owner `Mirrored` (never `generatedProduct`).
               // Empty on any non-success terminal path so an incomplete fan-out is never
               // recorded as complete (FR-012).
-              MirroredPaths = mirroredPaths |> List.map (fun path -> { Path = path; Owner = ArtifactOwner.Mirrored; Sha256 = None })
+              MirroredPaths = mirroredPaths |> List.map (fun path -> { Path = path; Owner = ArtifactOwner.Mirrored; Sha256 = Map.tryFind path skillDigests })
               // `Map.toList` is already ascending by key — the FR-003 effective set
               // (declared defaults overlaid by `--param` overrides) forwarded verbatim.
               EffectiveParameters = Map.toList effective }
@@ -423,13 +427,13 @@ module internal HandlersScaffold =
                     FinalizeTerminal(
                         terminalSummary ProviderFailed producedPaths true true "Fix the provider; it wrote into SDD-owned trees." (Some(providerInvocationOf processResult)),
                         [ DiagnosticsModule.scaffoldProviderWroteSddTree intrusions ],
-                        provenanceWriteEffect request descriptor ProviderFailed producedPaths [] effective
+                        provenanceWriteEffect request descriptor ProviderFailed producedPaths [] Map.empty effective
                     )
                 elif processResult.ExitCode <> 0 then
                     FinalizeTerminal(
                         terminalSummary ProviderFailed producedPaths true true "Inspect the provider failure, then re-run scaffold." (Some(providerInvocationOf processResult)),
                         [ DiagnosticsModule.scaffoldProviderFailed name processResult.ExitCode ],
-                        provenanceWriteEffect request descriptor ProviderFailed producedPaths [] effective
+                        provenanceWriteEffect request descriptor ProviderFailed producedPaths [] Map.empty effective
                     )
                 elif List.isEmpty producedPaths then
                     FinalizeSuccess(ProviderSucceededEmpty, [])
@@ -530,7 +534,7 @@ module internal HandlersScaffold =
                   NextActionHint = "The skill fan-out could not be completed; resolve the filesystem issue and re-run scaffold."
                   ProviderInvocation = None }
 
-            let provenanceEffects = provenanceWriteEffect model.Request descriptor ProviderFailed producedPaths [] effective
+            let provenanceEffects = provenanceWriteEffect model.Request descriptor ProviderFailed producedPaths [] Map.empty effective
 
             { model with
                 PendingEffects = model.PendingEffects @ provenanceEffects
@@ -595,8 +599,22 @@ module internal HandlersScaffold =
                 |> List.filter (fun path -> path.EndsWith(".sh", StringComparison.Ordinal))
                 |> List.map SetExecutable
 
+            // 058/ADR-0014 §Decision 3: the content-addressed digest of every produced/mirrored
+            // skill copy. The reads are interpreted by this tick, so each provider `.agents`
+            // skill body is in a snapshot; the mirror copies are byte-identical, so they share
+            // the source digest. Non-skill produced paths get no entry (⇒ `Sha256 = None`).
+            let skillDigests =
+                mirrorSources
+                |> List.collect (fun src ->
+                    match snapshot src model with
+                    | Some snap ->
+                        let digest = Fsgg.SkillMirror.sha256 snap.Text
+                        (src, digest) :: (mirrorTargetsFor src |> List.map (fun target -> target, digest))
+                    | None -> [])
+                |> Map.ofList
+
             let effects =
-                provenanceWriteEffect model.Request descriptor outcome producedPaths mirroredPaths effective
+                provenanceWriteEffect model.Request descriptor outcome producedPaths mirroredPaths skillDigests effective
                 @ [ RunProcess("git", [ "rev-parse"; "--is-inside-work-tree" ], "") ]
                 @ scriptEffects
 
