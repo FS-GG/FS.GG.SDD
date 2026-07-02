@@ -6,6 +6,7 @@
   <ItemGroup>
     <Compile Include="TestSupport.fs" />
     <Compile Include="SchemaVersionConstantTests.fs" />
+    <Compile Include="SkillMirrorTests.fs" />
     <Compile Include="ProviderDescriptorTests.fs" />
     <Compile Include="VersionTests.fs" />
     <Compile Include="RegistryValidatorTests.fs" />

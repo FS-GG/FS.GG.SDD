@@ -1,6 +1,8 @@
 namespace FS.GG.SDD.Commands.Internal
 
+open Fsgg
 open Fsgg.Provider
+open Fsgg.Schemas
 open FS.GG.SDD.Artifacts.ScaffoldProvenance
 open FS.GG.SDD.Commands.CommandTypes
 
@@ -37,8 +39,87 @@ module internal Drift =
           CliBehindBy: string option
           ExpectedArtifactCount: int
           MissingArtifactPaths: string list
+          // 058/ADR-0014 §Decision 3: the content-addressed skill-drift surface — the concrete
+          // root/skill paths where a skill in the union (process OR product) is missing from a
+          // root, byte-divergent across roots, or hash-mismatched against its canonical digest.
+          // Sorted, deduped. Non-empty ⇒ not coherent (advisory; `doctor` still exits 0).
+          SkillDriftPaths: string list
           Steps: ReconciliationStep list
           IsCoherent: bool }
+
+    // The content-addressed union `verify` covers: SDD-seeded *process* skills (canonical body =
+    // the embedded seeded body) and provider *product* skills recorded in provenance (canonical
+    // digest = the recorded `sha256`). `skillBodies` is the caller-read body of each skill copy
+    // keyed by its on-disk path; a copy absent from `skillBodies` is treated as missing.
+    /// The provider *product* skills recorded in provenance, as `(id, recordedSha256)` — confined
+    /// to the provider-owned source root's skill copies (`.agents/skills/<id>/SKILL.md`), so a
+    /// product file that merely LOOKS skill-shaped (e.g. `app/docs/skills/x/SKILL.md`) is never
+    /// mistaken for an agent skill. Excludes the SDD-seeded `fs-gg-sdd-*` process namespace. The
+    /// `.agents` canonical is the authoritative id source — every mirror copy derives from it.
+    let productSkillEntries (provenance: ScaffoldProvenanceRecord option) : (string * string) list =
+        match provenance with
+        | None -> []
+        | Some record ->
+            record.ProducedPaths
+            |> List.choose (fun p ->
+                if p.Path.StartsWith(SkillMirror.providerSourceRoot + "/skills/", System.StringComparison.Ordinal) then
+                    SkillMirror.skillIdOfPath p.Path |> Option.map (fun id -> id, Option.defaultValue "" p.Sha256)
+                else
+                    None)
+            |> List.filter (fun (id, _) -> not (id.StartsWith("fs-gg-sdd-", System.StringComparison.Ordinal)))
+            |> List.distinct
+
+    let private expectedSkills (provenance: ScaffoldProvenanceRecord option) : SkillMirror.ExpectedSkill list =
+        // Process (SDD-seeded) skills verify by presence + cross-root byte-identity ONLY — an
+        // empty reference digest skips hash-match. The seeded roots are no-clobber
+        // `AgentGuidanceTarget`, so a consumer's author edit applied consistently to every root is
+        // PRESERVED as coherent (ADR-0011 invariant); only an INCONSISTENT edit (roots disagree)
+        // or a missing copy is drift. Hash-matching against the running binary's embedded body
+        // would instead flag every prior scaffold after any skill-text change across CLI versions.
+        let processSkills =
+            SeededSkills.seededSkills
+            |> List.map (fun skill ->
+                { SkillMirror.ExpectedSkill.Id = skill.Name
+                  SkillMirror.ExpectedSkill.Scope = SkillScope.Process
+                  SkillMirror.ExpectedSkill.Sha256 = "" })
+
+        // Product (provider) skills carry the STABLE seed-time digest recorded in provenance, so
+        // hash-match detects tampering even when all roots were edited identically — without the
+        // cross-version volatility of an embedded reference.
+        let productSkills =
+            productSkillEntries provenance
+            |> List.map (fun (id, digest) ->
+                { SkillMirror.ExpectedSkill.Id = id
+                  SkillMirror.ExpectedSkill.Scope = SkillScope.Product
+                  SkillMirror.ExpectedSkill.Sha256 = digest })
+
+        processSkills @ productSkills
+
+    let private computeSkillDriftPaths (provenance: ScaffoldProvenanceRecord option) (skillBodies: Map<string, string>) : string list =
+        let expected = expectedSkills provenance
+
+        let actual =
+            [ for skill in expected do
+                  for root in agentSkillRoots ->
+                      { SkillMirror.ActualCopy.Root = root
+                        SkillMirror.ActualCopy.Id = skill.Id
+                        SkillMirror.ActualCopy.Body = Map.tryFind (SkillMirror.skillPath root skill.Id) skillBodies } ]
+
+        SkillMirror.verify agentSkillRoots expected actual
+        |> List.collect (fun drift ->
+            // When a reference digest pinpoints the offending root(s) (`HashMismatchRoots`), report
+            // only those. When copies merely disagree with no reference to arbitrate (a divergent
+            // process skill, or a product skill whose digest wasn't recorded), the canonical copy is
+            // unknowable — report every present root so the operator reconciles them.
+            let presentRoots = agentSkillRoots |> List.filter (fun root -> not (List.contains root drift.MissingRoots))
+
+            let divergentRoots =
+                if drift.Divergent && List.isEmpty drift.HashMismatchRoots then presentRoots else []
+
+            let roots = drift.MissingRoots @ drift.HashMismatchRoots @ divergentRoots
+            roots |> List.map (fun root -> SkillMirror.skillPath root drift.Id))
+        |> List.distinct
+        |> List.sort
 
     let private noTargetStep stepId preview : ReconciliationStep =
         { StepId = stepId
@@ -56,6 +137,7 @@ module internal Drift =
         (descriptor: ProviderDescriptor option)
         (installedVersion: string)
         (presentArtifacts: Set<string>)
+        (skillBodies: Map<string, string>)
         : DriftReport =
         match provenance with
         | None ->
@@ -68,6 +150,7 @@ module internal Drift =
               CliBehindBy = None
               ExpectedArtifactCount = expectedArtifactCount
               MissingArtifactPaths = []
+              SkillDriftPaths = []
               Steps = []
               IsCoherent = true }
         | Some record ->
@@ -126,6 +209,11 @@ module internal Drift =
 
             let steps = [ cliStep; rePinStep; reSeedStep ]
 
+            // 058/ADR-0014 §Decision 3: the content-addressed union verify over process +
+            // product skills. Non-empty ⇒ content drift (advisory), which also makes the
+            // scaffold not coherent alongside the CLI-axis / missing-artifact drivers.
+            let skillDriftPaths = computeSkillDriftPaths provenance skillBodies
+
             let hasActionableWork = steps |> List.exists (fun step -> step.Outcome = "wouldApply")
 
             { HasProvenance = true
@@ -136,5 +224,6 @@ module internal Drift =
               CliBehindBy = cliBehindBy
               ExpectedArtifactCount = expectedArtifactCount
               MissingArtifactPaths = missing
+              SkillDriftPaths = skillDriftPaths
               Steps = steps
-              IsCoherent = not hasActionableWork }
+              IsCoherent = not hasActionableWork && List.isEmpty skillDriftPaths }

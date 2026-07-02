@@ -12,7 +12,7 @@ module DriftTests =
     open RemediationSupport
 
     let private drift minimum installed present =
-        Drift.compute (Some(record minimum)) (Some(descriptor minimum)) installed (Set.ofList present)
+        Drift.compute (Some(record minimum)) (Some(descriptor minimum)) installed (Set.ofList present) (skillBodiesFor present)
 
     [<Fact>]
     let ``CLI axis is behind with a delta when installed is below the declared minimum`` () =
@@ -58,7 +58,7 @@ module DriftTests =
 
     [<Fact>]
     let ``no provenance yields HasProvenance false, no steps, coherent-degradation`` () =
-        let report = Drift.compute None None installedVersion Set.empty
+        let report = Drift.compute None None installedVersion Set.empty Map.empty
         Assert.False report.HasProvenance
         Assert.Empty report.Steps
         Assert.True report.IsCoherent
@@ -289,4 +289,113 @@ module UpgradeInteractiveTests =
         Assert.Contains("artifactReSeed", summary.SkippedStepIds)
         Assert.True summary.ResidualDrift
         Assert.Contains("upgrade.residualDrift", diagnosticIds report)
+        Assert.Equal(0, exitCode report)
+
+
+/// 058/ADR-0014 P1 — content-addressed skill drift over process + product skills. The red test
+/// the #61 Done criterion names: `doctor` must detect BOTH content divergence AND provider-skill
+/// loss, invisible before this feature. Real-filesystem fixtures; doctor stays read-only.
+module SkillContentDriftTests =
+    open RemediationSupport
+
+    let private doctor (report: CommandReport) =
+        match report.Doctor with
+        | Some summary -> summary
+        | None -> failwith "expected a doctor summary"
+
+    let private absolute root (path: string) =
+        Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar))
+
+    [<Fact>]
+    let ``a coherent product with process + product skills reports no skill drift`` () =
+        let root = productCoherentFixture ()
+        let summary = doctor (doctorReport root)
+        Assert.Empty summary.SkillDriftPaths
+        Assert.True summary.IsCoherent
+
+    [<Fact>]
+    let ``doctor detects a byte-divergent product skill copy (content divergence)`` () =
+        let root = productCoherentFixture ()
+        // Edit ONE root's copy so it diverges from the others and its recorded digest.
+        TestSupport.writeRelative root ".claude/skills/fs-gg-demo/SKILL.md" "TAMPERED\n"
+
+        let summary = doctor (doctorReport root)
+        Assert.Contains(".claude/skills/fs-gg-demo/SKILL.md", summary.SkillDriftPaths)
+        // The recorded digest pinpoints the offending root — the byte-correct copies are NOT flagged.
+        Assert.DoesNotContain(".codex/skills/fs-gg-demo/SKILL.md", summary.SkillDriftPaths)
+        Assert.DoesNotContain(".agents/skills/fs-gg-demo/SKILL.md", summary.SkillDriftPaths)
+        Assert.False summary.IsCoherent
+        Assert.Contains("doctor.driftDetected", diagnosticIds (doctorReport root))
+
+    [<Fact>]
+    let ``doctor detects a product skill missing from one root (provider-skill loss)`` () =
+        let root = productCoherentFixture ()
+        // Delete the provider skill's copy in one root.
+        File.Delete(absolute root ".codex/skills/fs-gg-demo/SKILL.md")
+
+        let summary = doctor (doctorReport root)
+        Assert.Contains(".codex/skills/fs-gg-demo/SKILL.md", summary.SkillDriftPaths)
+        Assert.False summary.IsCoherent
+
+    [<Fact>]
+    let ``doctor detects a divergent SEEDED process skill copy`` () =
+        let root = productCoherentFixture ()
+        // A process (fs-gg-sdd-*) skill copy edited to diverge from its canonical body.
+        let target = ".claude/skills/fs-gg-sdd-plan/SKILL.md"
+        TestSupport.writeRelative root target "EDITED\n"
+
+        let summary = doctor (doctorReport root)
+        Assert.Contains(target, summary.SkillDriftPaths)
+        Assert.False summary.IsCoherent
+
+    [<Fact>]
+    let ``doctor makes zero writes even when content drift is present`` () =
+        let root = productCoherentFixture ()
+        TestSupport.writeRelative root ".claude/skills/fs-gg-demo/SKILL.md" "TAMPERED\n"
+        let before = treeHash root
+        doctorReport root |> ignore
+        Assert.Equal(before, treeHash root)
+
+    [<Fact>]
+    let ``upgrade --yes re-seeds a missing process copy and reports it no longer residual`` () =
+        let root = productCoherentFixture ()
+        // Delete a SEEDED copy (re-seedable) AND diverge a PRODUCT copy (advisory, not repaired).
+        File.Delete(absolute root ".agents/skills/fs-gg-sdd-plan/SKILL.md")
+        TestSupport.writeRelative root ".claude/skills/fs-gg-demo/SKILL.md" "TAMPERED\n"
+
+        let report = upgradeYes root
+        let summary = report.Upgrade.Value
+        // The re-seed refilled the missing process copy...
+        Assert.True(TestSupport.existsRelative root ".agents/skills/fs-gg-sdd-plan/SKILL.md")
+        Assert.Contains("artifactReSeed", summary.AppliedStepIds)
+        // ...but the divergent product copy is advisory (not clobbered) and stays residual.
+        Assert.Contains(".claude/skills/fs-gg-demo/SKILL.md", summary.SkillDriftPaths)
+        Assert.True summary.ResidualDrift
+        Assert.Equal("TAMPERED\n", TestSupport.readRelative root ".claude/skills/fs-gg-demo/SKILL.md")
+
+    // 058 review Finding 1: a provider product that ships a skill-shaped file OUTSIDE the provider
+    // source root (`.agents/skills/`) must never be treated as an agent skill — else a perfectly
+    // coherent scaffold is falsely reported incoherent with no repair path.
+    [<Fact>]
+    let ``doctor ignores a product file that merely looks skill-shaped`` () =
+        let root = productCoherentFixtureWith [ decoyAppSkillPath ]
+        let summary = doctor (doctorReport root)
+        Assert.Empty summary.SkillDriftPaths
+        Assert.True summary.IsCoherent
+
+    // 058 review Finding 4: when the ONLY drift is advisory content drift (no applicable step),
+    // a non-interactive `upgrade` without `--yes` must NOT dead-end at exit 1 — it reports the
+    // advisory (exit 0, residual). CI runs upgrade non-interactively.
+    [<Fact>]
+    let ``upgrade non-interactive on advisory-only drift reports exit 0 not a refusal`` () =
+        let root = productCoherentFixture ()
+        // A byte-divergent PRODUCT copy — advisory only (no re-seed step covers product skills).
+        TestSupport.writeRelative root ".claude/skills/fs-gg-demo/SKILL.md" "TAMPERED\n"
+
+        let report = upgradeNonInteractive root
+        let summary = report.Upgrade.Value
+        Assert.True(summary.Mode <> "refusedNonInteractive")
+        Assert.DoesNotContain("upgrade.nonInteractiveNoYes", diagnosticIds report)
+        Assert.Contains(".claude/skills/fs-gg-demo/SKILL.md", summary.SkillDriftPaths)
+        Assert.True summary.ResidualDrift
         Assert.Equal(0, exitCode report)

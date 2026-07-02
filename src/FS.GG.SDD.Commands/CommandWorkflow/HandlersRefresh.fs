@@ -26,20 +26,22 @@ module internal HandlersRefresh =
 
     let refreshCanonicalViews = [ "work-model"; "analysis"; "verify"; "ship"; "governance-handoff"; "agent-commands"; "summary" ]
 
-    // 056 skill fan-out re-mirror (FR-009): refresh brings the three-root union to
+    // 056 skill fan-out re-mirror (FR-009): refresh brings the multi-root union to
     // currency independent of the work-model views. The non-reserved provider skills under
-    // `.agents/skills/` (the reserved `fs-gg-sdd-*` namespace is SDD's, seeded separately)
-    // are discovered from the enumerated listing and mirrored byte-identically into
-    // `.claude`/`.codex`. Re-mirror is no-clobber (`AgentGuidanceTarget`), so a deleted copy
-    // is refilled and an author edit is preserved — the same policy as the seeded re-seed.
-    let private agentsSkillsRoot = ".agents/skills"
+    // the provider-owned source root (the reserved `fs-gg-sdd-*` namespace is SDD's, seeded
+    // separately) are discovered from the enumerated listing and mirrored byte-identically
+    // into every other declared root. 058/ADR-0014 §Decision 5: the destination roots derive
+    // from the one `agentSkillRoots` constant through the shared `SkillMirror`, not a hardcoded
+    // `.claude`/`.codex` list. Re-mirror is no-clobber (`AgentGuidanceTarget`), so a deleted
+    // copy is refilled and an author edit is preserved — the same policy as the seeded re-seed.
+    let private agentsSkillsRoot = Fsgg.SkillMirror.providerSourceRoot + "/skills"
 
     let private providerSkillFilesFromListing model =
         (directoryListing agentsSkillsRoot model).Split([| '\n'; '\r' |], StringSplitOptions.RemoveEmptyEntries)
         |> Array.map normalizeRelativePath
         |> Array.filter (fun path ->
-            path.StartsWith(".agents/skills/", StringComparison.Ordinal)
-            && not (path.StartsWith(".agents/skills/fs-gg-sdd-", StringComparison.Ordinal)))
+            path.StartsWith(agentsSkillsRoot + "/", StringComparison.Ordinal)
+            && not (path.StartsWith(Fsgg.SkillMirror.providerSourceRoot + "/skills/fs-gg-sdd-", StringComparison.Ordinal)))
         |> Array.sort
         |> Array.toList
 
@@ -54,14 +56,16 @@ module internal HandlersRefresh =
     /// The re-seed (all three roots, no-clobber) + re-mirror (provider copies into
     /// `.claude`/`.codex`, no-clobber) effects that keep the union current on every refresh.
     let skillFanoutRefreshEffects model =
+        let mirrorTargetRoots = Fsgg.SkillMirror.mirrorTargetRoots Fsgg.Schemas.agentSkillRoots
+
         let reMirror =
             providerSkillFilesFromListing model
             |> List.collect (fun src ->
                 match snapshot src model with
                 | Some snap ->
-                    let rest = src.Substring(".agents/skills/".Length)
-                    [ WriteFile($".claude/skills/{rest}", snap.Text, AgentGuidanceTarget)
-                      WriteFile($".codex/skills/{rest}", snap.Text, AgentGuidanceTarget) ]
+                    mirrorTargetRoots
+                    |> List.map (fun targetRoot ->
+                        WriteFile(Fsgg.SkillMirror.retargetSkillPath targetRoot src, snap.Text, AgentGuidanceTarget))
                 | None -> [])
 
         SeededSkills.skillEffects @ reMirror

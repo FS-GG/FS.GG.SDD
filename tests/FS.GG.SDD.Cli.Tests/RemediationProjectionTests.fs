@@ -25,6 +25,7 @@ module RemediationProjectionTests =
           CliBehindBy = Some "0.2.1 -> 9.9.9"
           ExpectedArtifactCount = 31
           MissingArtifactPaths = [ ".claude/skills/fs-gg-sdd-plan/SKILL.md" ]
+          SkillDriftPaths = []
           PreviewSteps =
             [ step "cliSelfUpdate" "wouldApply" []
               step "templateRePin" "noTarget" []
@@ -39,6 +40,7 @@ module RemediationProjectionTests =
           AppliedStepIds = [ "artifactReSeed" ]
           SkippedStepIds = []
           FailedStepIds = []
+          SkillDriftPaths = []
           ResidualDrift = false
           NextActionHint = "Reconciliation complete; run fsgg-sdd doctor to confirm coherence." }
 

@@ -391,6 +391,7 @@ module CommandSerialization =
 
             writer.WriteNumber("expectedArtifactCount", summary.ExpectedArtifactCount)
             writeStringList writer Sorted "missingArtifactPaths" summary.MissingArtifactPaths
+            writeStringList writer Sorted "skillDriftPaths" summary.SkillDriftPaths
             writer.WriteStartArray("previewSteps")
             summary.PreviewSteps |> List.iter (writeReconciliationStep writer)
             writer.WriteEndArray()
@@ -411,6 +412,7 @@ module CommandSerialization =
             writeStringList writer Sorted "appliedStepIds" summary.AppliedStepIds
             writeStringList writer Sorted "skippedStepIds" summary.SkippedStepIds
             writeStringList writer Sorted "failedStepIds" summary.FailedStepIds
+            writeStringList writer Sorted "skillDriftPaths" summary.SkillDriftPaths
             writer.WriteBoolean("residualDrift", summary.ResidualDrift)
             writer.WriteString("nextActionHint", summary.NextActionHint)
             writer.WriteEndObject()

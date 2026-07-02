@@ -363,6 +363,7 @@ module CommandTypes =
           CliBehindBy: string option
           ExpectedArtifactCount: int
           MissingArtifactPaths: string list
+          SkillDriftPaths: string list
           PreviewSteps: ReconciliationStep list
           IsCoherent: bool }
 
@@ -374,6 +375,7 @@ module CommandTypes =
           AppliedStepIds: string list
           SkippedStepIds: string list
           FailedStepIds: string list
+          SkillDriftPaths: string list
           ResidualDrift: bool
           NextActionHint: string }
 

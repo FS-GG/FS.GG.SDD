@@ -411,6 +411,10 @@ module CommandTypes =
           CliBehindBy: string option
           ExpectedArtifactCount: int
           MissingArtifactPaths: string list
+          /// 058/ADR-0014 §Decision 3: content-addressed skill drift — the concrete
+          /// root/skill paths in the union (process OR product) that are missing from a
+          /// root, byte-divergent across roots, or hash-mismatched. Advisory; sorted.
+          SkillDriftPaths: string list
           PreviewSteps: ReconciliationStep list
           IsCoherent: bool }
 
@@ -423,6 +427,9 @@ module CommandTypes =
           AppliedStepIds: string list
           SkippedStepIds: string list
           FailedStepIds: string list
+          /// 058/ADR-0014 §Decision 3: content-addressed skill drift surfaced at reconcile
+          /// time (advisory in P1 — a present-but-divergent copy is reported, not clobbered).
+          SkillDriftPaths: string list
           ResidualDrift: bool
           NextActionHint: string }
 

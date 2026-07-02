@@ -266,7 +266,7 @@ module ScaffoldCommandTests =
         Assert.Contains("\"generator\":", provenance)
         Assert.Contains("\"version\":", provenance)
         // …alongside the provider-declared required minimum, recorded verbatim.
-        Assert.Contains("\"requiredMinimumCliVersion\": \"0.5.0\"", provenance)
+        Assert.Contains("\"requiredMinimumCliVersion\": \"0.6.0\"", provenance)
 
     // Feature 052 US1 scenario 2: no provider minimum ⇒ the field is recorded as null
     // (absent, not fabricated); the producing CLI version is still recorded.
@@ -738,9 +738,18 @@ module ScaffoldCommandTests =
             let elmishProduced = record.ProducedPaths |> List.find (fun p -> p.Path = ".agents/skills/fs-gg-elmish/SKILL.md")
             Assert.Equal(FS.GG.SDD.Artifacts.ArtifactRef.GeneratedProduct, elmishProduced.Owner)
 
+            // 058/ADR-0014 §Decision 3 / SC-004: the skill copy carries the content digest of its
+            // materialized bytes; the mirror copies share the canonical `.agents` digest.
+            let expectedDigest = Fsgg.SkillMirror.sha256 (System.Text.Encoding.UTF8.GetString(bytesAt root ".agents/skills/fs-gg-elmish/SKILL.md"))
+            Assert.Equal(Some expectedDigest, elmishProduced.Sha256)
+
             Assert.Contains(".claude/skills/fs-gg-elmish/SKILL.md", mirroredPaths)
             Assert.Contains(".codex/skills/fs-gg-elmish/SKILL.md", mirroredPaths)
             Assert.True(record.MirroredPaths |> List.forall (fun p -> p.Owner = FS.GG.SDD.Artifacts.ArtifactRef.Mirrored))
+            // Every mirror copy carries the same content digest as its `.agents` source.
+            Assert.True(record.MirroredPaths |> List.forall (fun p -> p.Sha256 = Some expectedDigest))
+            // A non-skill produced path (app source) carries no digest.
+            Assert.True(record.ProducedPaths |> List.exists (fun p -> not (p.Path.Contains "/skills/") && p.Sha256 = None))
 
             // No seeded fs-gg-sdd-* path is laundered into either array.
             Assert.DoesNotContain(producedPaths, fun (p: string) -> p.Contains "fs-gg-sdd-")
