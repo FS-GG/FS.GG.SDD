@@ -234,41 +234,9 @@ module internal HandlersShip =
             | Some view -> view.EvidenceDispositions |> List.filter (fun disposition -> disposition.State = state) |> List.length
             | None -> 0
 
-        writer.WriteStartObject()
-        writer.WriteNumber("schemaVersion", 1)
-        writer.WriteString("viewVersion", "1.0")
-        writer.WriteString("workId", workId)
-        writer.WriteString("stage", "ship")
-        writer.WriteString("status", readiness)
-        writer.WriteString("generator", $"{generator.Id}/{generator.Version}")
-        writer.WriteStartArray("sources")
-        sources
-        |> List.sortBy (fun source -> source.Path)
-        |> List.iter (fun source ->
-            writer.WriteStartObject()
-            writer.WriteString("path", source.Path)
-            writer.WriteString("kind", verifySourceKind source.Path)
-            writeDigestObject writer "digest" source.Digest
-            match source.SchemaVersion with
-            | Some version -> writer.WriteNumber("schemaVersion", version)
-            | None -> writer.WriteNull "schemaVersion"
-            match source.SchemaStatus with
-            | Some status -> writer.WriteString("schemaStatus", status)
-            | None -> writer.WriteNull "schemaStatus"
-            writer.WriteEndObject())
-        writer.WriteEndArray()
-        writer.WriteStartObject("lifecycleReadiness")
-        writer.WriteString("status", lifecycleStatus)
-        writer.WriteStartArray("stages")
-        lifecycleStages
-        |> List.sortBy fst
-        |> List.iter (fun (stage, status) ->
-            writer.WriteStartObject()
-            writer.WriteString("stage", stage)
-            writer.WriteString("status", status)
-            writer.WriteEndObject())
-        writer.WriteEndArray()
-        writer.WriteEndObject()
+        writeViewPreamble writer workId "ship" readiness generator
+        writeSourcesArray writer verifySourceKind sources
+        writeLifecycleReadiness writer lifecycleStatus lifecycleStages
         writer.WriteStartObject("verificationReadiness")
         writer.WriteString("status", verificationStatus)
         writeStringArray
@@ -301,17 +269,7 @@ module internal HandlersShip =
             writeStringArray writer "diagnosticIds" disposition.DiagnosticIds
             writer.WriteEndObject())
         writer.WriteEndArray()
-        writer.WriteStartArray("generatedViews")
-        generatedViews
-        |> List.sortBy (fun view -> view.Path)
-        |> List.iter (fun view ->
-            writer.WriteStartObject()
-            writer.WriteString("path", view.Path)
-            writer.WriteString("kind", view.Kind)
-            writer.WriteString("currency", generatedViewCurrencyValue view.Currency)
-            writeStringArray writer "diagnosticIds" view.DiagnosticIds
-            writer.WriteEndObject())
-        writer.WriteEndArray()
+        writeGeneratedViewsArray writer generatedViews
         writer.WriteStartObject("disposition")
         writer.WriteString("state", disposition)
         writeStringArray writer "blockingFindingIds" (findings |> List.filter (fun (_, _, severity) -> severity = "blocking") |> List.map (fun (id, _, _) -> id))
@@ -320,44 +278,16 @@ module internal HandlersShip =
         writeStringArray writer "contributingStages" (lifecycleStages |> List.filter (fun (_, status) -> status <> "ready") |> List.map fst)
         writer.WriteString("correction", if disposition = "shipReady" then "" else "Resolve the blocking ship-readiness findings before the protected-boundary handoff.")
         writer.WriteEndObject()
-        writer.WriteStartArray("findings")
-        findings
-        |> List.iter (fun (id, diagnostic, severity) ->
-            writer.WriteStartObject()
-            writer.WriteString("id", id)
-            writer.WriteString("severity", severity)
-            writer.WriteString("category", severity)
-            writer.WriteString("path", diagnosticPath diagnostic)
-            writeStringArray writer "relatedIds" diagnostic.RelatedIds
-            writer.WriteString("message", diagnostic.Message)
-            writer.WriteString("correction", diagnostic.Correction)
-            writer.WriteEndObject())
-        writer.WriteEndArray()
-        writer.WriteStartArray("governanceCompatibility")
-        analysisBoundaryFacts()
-        |> List.iter (fun fact ->
-            writer.WriteStartObject()
-            writer.WriteString("path", fact.Path)
-            writer.WriteString("relationship", fact.Relationship)
-            writer.WriteBoolean("requiredBySdd", fact.RequiredBySdd)
-            writer.WriteString("state", fact.State)
-            writeStringArray writer "diagnosticIds" fact.DiagnosticIds
-            writer.WriteEndObject())
-        writer.WriteEndArray()
-        writer.WriteStartArray("diagnostics")
-        diagnostics |> DiagnosticsModule.sort |> List.iter (writeAnalysisDiagnosticJson writer)
-        writer.WriteEndArray()
+        writeReadinessFindings writer findings
+        writeBoundaryFacts writer "governanceCompatibility"
+        writeViewDiagnostics writer diagnostics
         writer.WriteString("readiness", readiness)
-        writer.WriteStartObject("nextAction")
-        if readiness = "shipReady" then
-            writer.WriteString("actionId", "ship.next.protectedBoundary")
-            writer.WriteNull("command")
-            writer.WriteString("reason", "Ship readiness is current and ready for the protected-boundary handoff.")
-        else
-            writer.WriteString("actionId", "correctBlockingDiagnostics")
-            writer.WriteNull("command")
-            writer.WriteString("reason", "Ship found lifecycle diagnostics that must be corrected before the protected-boundary handoff.")
-        writer.WriteEndObject()
+        writeNextAction
+            writer
+            (readiness = "shipReady")
+            "ship.next.protectedBoundary"
+            "Ship readiness is current and ready for the protected-boundary handoff."
+            "Ship found lifecycle diagnostics that must be corrected before the protected-boundary handoff."
         writer.WriteEndObject()
         writer.Flush()
         Encoding.UTF8.GetString(stream.ToArray())
@@ -406,9 +336,7 @@ module internal HandlersShip =
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text
                         generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) evidenceText commandDiagnostics model
                     | _ ->
-                        let path = workModelPath workId
-                        let ids = blockingDiagnosticIds commandDiagnostics
-                        [], blockedWorkModelView path model.Request.GeneratorVersion ids, []
+                        blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
 
                 commandDiagnostics @ generatedDiagnostics,
                 (fun hasBlocking diagnostics ->

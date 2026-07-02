@@ -32,6 +32,11 @@ module Rendering =
 
     /// Render a report into the given Spectre console. Pure over the report: the
     /// only observable mutation is to the supplied console.
+    /// Build an in-memory Spectre.Console honoring the width cap, with the backing writer its
+    /// output lands in. The shared Ansi/color/width setup for every rich sink (feature 061 /
+    /// issue #71).
+    val createCappedConsole: capabilities: TerminalCapabilities -> IAnsiConsole * System.IO.StringWriter
+
     val renderRichTo: console: IAnsiConsole -> report: CommandReport -> unit
 
     /// Resolve the effective rendering for a requested format + capabilities,

@@ -402,69 +402,36 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
     let shipPath workId = $"readiness/{workId}/ship.json"
     let readinessDirectory workId = $"readiness/{workId}"
 
-    let charterReadEffects workId =
+    /// The read-effect frame the pre-work-model stages (charter → tasks) share: the three
+    /// `.fsgg` config reads, charter + spec, the stage's growing set of `authored` artifact
+    /// reads, then the common tasks/evidence/work-model reads and the `work` enumeration
+    /// (feature 061 / issue #71). The later generators (analyze/evidence/verify/ship/refresh)
+    /// deliberately keep their own lists — their read orders genuinely differ.
+    let private preWorkModelReadEffects workId (authored: CommandEffect list) =
         [ ReadFile ".fsgg/project.yml"
           ReadFile ".fsgg/sdd.yml"
           ReadFile ".fsgg/agents.yml"
           ReadFile(charterPath workId)
-          ReadFile(specPath workId)
-          ReadFile(tasksPath workId)
-          ReadFile(evidencePath workId)
-          ReadFile(workModelPath workId)
-          EnumerateDirectory "work" ]
+          ReadFile(specPath workId) ]
+        @ authored
+        @ [ ReadFile(tasksPath workId)
+            ReadFile(evidencePath workId)
+            ReadFile(workModelPath workId)
+            EnumerateDirectory "work" ]
+
+    let charterReadEffects workId = preWorkModelReadEffects workId []
 
     let clarifyReadEffects workId =
-        [ ReadFile ".fsgg/project.yml"
-          ReadFile ".fsgg/sdd.yml"
-          ReadFile ".fsgg/agents.yml"
-          ReadFile(charterPath workId)
-          ReadFile(specPath workId)
-          ReadFile(clarificationPath workId)
-          ReadFile(tasksPath workId)
-          ReadFile(evidencePath workId)
-          ReadFile(workModelPath workId)
-          EnumerateDirectory "work" ]
+        preWorkModelReadEffects workId [ ReadFile(clarificationPath workId) ]
 
     let checklistReadEffects workId =
-        [ ReadFile ".fsgg/project.yml"
-          ReadFile ".fsgg/sdd.yml"
-          ReadFile ".fsgg/agents.yml"
-          ReadFile(charterPath workId)
-          ReadFile(specPath workId)
-          ReadFile(clarificationPath workId)
-          ReadFile(checklistPath workId)
-          ReadFile(tasksPath workId)
-          ReadFile(evidencePath workId)
-          ReadFile(workModelPath workId)
-          EnumerateDirectory "work" ]
+        preWorkModelReadEffects workId [ ReadFile(clarificationPath workId); ReadFile(checklistPath workId) ]
 
     let planReadEffects workId =
-        [ ReadFile ".fsgg/project.yml"
-          ReadFile ".fsgg/sdd.yml"
-          ReadFile ".fsgg/agents.yml"
-          ReadFile(charterPath workId)
-          ReadFile(specPath workId)
-          ReadFile(clarificationPath workId)
-          ReadFile(checklistPath workId)
-          ReadFile(planPath workId)
-          ReadFile(tasksPath workId)
-          ReadFile(evidencePath workId)
-          ReadFile(workModelPath workId)
-          EnumerateDirectory "work" ]
+        preWorkModelReadEffects workId [ ReadFile(clarificationPath workId); ReadFile(checklistPath workId); ReadFile(planPath workId) ]
 
     let tasksReadEffects workId =
-        [ ReadFile ".fsgg/project.yml"
-          ReadFile ".fsgg/sdd.yml"
-          ReadFile ".fsgg/agents.yml"
-          ReadFile(charterPath workId)
-          ReadFile(specPath workId)
-          ReadFile(clarificationPath workId)
-          ReadFile(checklistPath workId)
-          ReadFile(planPath workId)
-          ReadFile(tasksPath workId)
-          ReadFile(evidencePath workId)
-          ReadFile(workModelPath workId)
-          EnumerateDirectory "work" ]
+        preWorkModelReadEffects workId [ ReadFile(clarificationPath workId); ReadFile(checklistPath workId); ReadFile(planPath workId) ]
 
     let analyzeReadEffects workId =
         [ ReadFile ".fsgg/project.yml"
@@ -770,6 +737,54 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
 
     let blockedWorkModelView (path: string) (generator: GeneratorVersion) (blockingIds: string list) : GeneratedViewState =
         generatedViewState path "workModel" generator [] None GeneratedViewCurrency.Blocked blockingIds
+
+    /// The blocked-work-model generated-view plan `(diagnostics, [view], effects)` a stage
+    /// returns when its prerequisites are missing: no diagnostics and no effects, a single
+    /// blocked work-model view carrying the blocking diagnostic ids. Shared across every
+    /// stage that computes a work model (feature 061 / issue #71).
+    let blockedWorkModelPlan (workId: string) (commandDiagnostics: Diagnostic list) (generator: GeneratorVersion) =
+        let path = workModelPath workId
+        let ids = blockingDiagnosticIds commandDiagnostics
+        [], blockedWorkModelView path generator ids, []
+
+    /// The three front-matter identity checks every authored lifecycle artifact shares —
+    /// supported schemaVersion, work-id match, and expected stage — emitting the same
+    /// message grammar across specification/clarification/checklist/plan/tasks. The
+    /// per-artifact diagnostic constructors differ (a malformed-front-matter, an
+    /// identity-mismatch, and a stage constructor that is sometimes a prerequisite), so
+    /// they are supplied by the caller; artifact-specific source-pointer checks (sourceSpec,
+    /// sourceClarifications, sourceChecklist) are appended at the call site
+    /// (feature 061 / issue #71).
+    let frontMatterIdentityDiagnostics
+        (artifactLabel: string)
+        (expectedStage: LifecycleStage)
+        (expectedStageLabel: string)
+        (schemaDiag: string -> string -> Diagnostic)
+        (mismatchDiag: string -> string -> string -> Diagnostic)
+        (stageDiag: string -> string -> Diagnostic)
+        (path: string)
+        (workId: string)
+        (schemaMajor: int)
+        (frontMatterWorkId: string)
+        (stage: LifecycleStage)
+        : Diagnostic list =
+        [ if schemaMajor <> 1 then
+              schemaDiag path $"{artifactLabel} schemaVersion '{schemaMajor}' is not supported."
+          if not (String.Equals(frontMatterWorkId, workId, StringComparison.OrdinalIgnoreCase)) then
+              mismatchDiag path workId frontMatterWorkId
+          if stage <> expectedStage then
+              stageDiag path $"{artifactLabel} stage '{IdentifiersModule.stageValue stage}' is not '{expectedStageLabel}'." ]
+
+    /// Whether any recorded source-snapshot digest disagrees with the current digest for the
+    /// same path — the shared source-staleness test used by checklist/plan/tasks re-parsing.
+    /// The per-artifact snapshot record types differ, so callers project their snapshots to
+    /// `(path, digest)` pairs (feature 061 / issue #71).
+    let sourceDigestsStale (recorded: (string * string option) list) (current: Map<string, string>) =
+        recorded
+        |> List.exists (fun (path, digest) ->
+            match digest, Map.tryFind path current with
+            | Some recordedDigest, Some actual -> not (String.Equals(recordedDigest, actual, StringComparison.OrdinalIgnoreCase))
+            | _ -> false)
 
     // The pre-work-model stages whose authored artifact already exists for the selected
     // work item, derived only from the enumerated `work` listing (FR-011: best-effort

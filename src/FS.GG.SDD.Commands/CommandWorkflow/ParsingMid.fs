@@ -308,11 +308,7 @@ Prose status: {status}
               clarificationPath existingFacts.FrontMatter.WorkId.Value, (SchemaVersionModule.sha256Text currentClarificationText).Value ]
             |> Map.ofList
 
-        existingFacts.SourceSnapshots
-        |> List.exists (fun snapshot ->
-            match snapshot.Digest, Map.tryFind snapshot.Path current with
-            | Some recorded, Some actual -> not (String.Equals(recorded, actual, StringComparison.OrdinalIgnoreCase))
-            | _ -> false)
+        sourceDigestsStale (existingFacts.SourceSnapshots |> List.map (fun snapshot -> snapshot.Path, snapshot.Digest)) current
 
     let appendChecklistReviews (existingText: string) (reviews: PlannedChecklistReview list) =
         let itemLines = reviews |> List.map renderChecklistItemLine
@@ -396,12 +392,11 @@ Prose status: {status}
                 | Error diagnostics -> diagnostics, Some existing.Text, None
                 | Ok(existingFacts, existingDiagnostics) ->
                     let identityDiagnostics =
-                        [ if existingFacts.FrontMatter.SchemaVersion.Major <> 1 then
-                              malformedChecklistFrontMatter path $"Checklist schemaVersion '{existingFacts.FrontMatter.SchemaVersion.Major}' is not supported."
-                          if not (String.Equals(existingFacts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
-                              checklistIdentityMismatch path workId existingFacts.FrontMatter.WorkId.Value
-                          if existingFacts.FrontMatter.Stage <> LifecycleStage.Checklist then
-                              malformedChecklistFrontMatter path $"Checklist stage '{IdentifiersModule.stageValue existingFacts.FrontMatter.Stage}' is not 'checklist'."
+                        frontMatterIdentityDiagnostics
+                            "Checklist" LifecycleStage.Checklist "checklist"
+                            malformedChecklistFrontMatter checklistIdentityMismatch malformedChecklistFrontMatter
+                            path workId existingFacts.FrontMatter.SchemaVersion.Major existingFacts.FrontMatter.WorkId.Value existingFacts.FrontMatter.Stage
+                            @ [
                           if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
                               malformedChecklistFrontMatter path $"Checklist sourceSpec '{existingFacts.FrontMatter.SourceSpec}' does not match '{specPath workId}'."
                           if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourceClarifications, clarificationPath workId, StringComparison.OrdinalIgnoreCase)) then
@@ -454,12 +449,11 @@ Prose status: {status}
                 mapped, Some existing.Text, None, None
             | Ok(facts, diagnostics) ->
                 let identityDiagnostics =
-                    [ if facts.FrontMatter.SchemaVersion.Major <> 1 then
-                          malformedChecklistFrontMatter path $"Checklist schemaVersion '{facts.FrontMatter.SchemaVersion.Major}' is not supported."
-                      if not (String.Equals(facts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
-                          checklistIdentityMismatch path workId facts.FrontMatter.WorkId.Value
-                      if facts.FrontMatter.Stage <> LifecycleStage.Checklist then
-                          missingChecklistPrerequisite path $"Checklist stage '{IdentifiersModule.stageValue facts.FrontMatter.Stage}' is not 'checklist'."
+                    frontMatterIdentityDiagnostics
+                        "Checklist" LifecycleStage.Checklist "checklist"
+                        malformedChecklistFrontMatter checklistIdentityMismatch missingChecklistPrerequisite
+                        path workId facts.FrontMatter.SchemaVersion.Major facts.FrontMatter.WorkId.Value facts.FrontMatter.Stage
+                        @ [
                       if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
                           malformedChecklistFrontMatter path $"Checklist sourceSpec '{facts.FrontMatter.SourceSpec}' does not match '{specPath workId}'."
                       if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceClarifications, clarificationPath workId, StringComparison.OrdinalIgnoreCase)) then
@@ -844,11 +838,7 @@ No blocking planning findings recorded.
               checklistPath workId, (SchemaVersionModule.sha256Text checklistText).Value ]
             |> Map.ofList
 
-        existingFacts.SourceSnapshots
-        |> List.exists (fun snapshot ->
-            match snapshot.Digest, Map.tryFind snapshot.Path current with
-            | Some recorded, Some actual -> not (String.Equals(recorded, actual, StringComparison.OrdinalIgnoreCase))
-            | _ -> false)
+        sourceDigestsStale (existingFacts.SourceSnapshots |> List.map (fun snapshot -> snapshot.Path, snapshot.Digest)) current
 
     let appendPlanEntries existingText entries =
         existingText
@@ -905,12 +895,11 @@ No blocking planning findings recorded.
                 | Error diagnostics -> diagnostics, Some existing.Text, None
                 | Ok(existingFacts, existingDiagnostics) ->
                     let identityDiagnostics =
-                        [ if existingFacts.FrontMatter.SchemaVersion.Major <> 1 then
-                              malformedPlanFrontMatter path $"Plan schemaVersion '{existingFacts.FrontMatter.SchemaVersion.Major}' is not supported."
-                          if not (String.Equals(existingFacts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
-                              planIdentityMismatch path workId existingFacts.FrontMatter.WorkId.Value
-                          if existingFacts.FrontMatter.Stage <> LifecycleStage.Plan then
-                              malformedPlanFrontMatter path $"Plan stage '{IdentifiersModule.stageValue existingFacts.FrontMatter.Stage}' is not 'plan'."
+                        frontMatterIdentityDiagnostics
+                            "Plan" LifecycleStage.Plan "plan"
+                            malformedPlanFrontMatter planIdentityMismatch malformedPlanFrontMatter
+                            path workId existingFacts.FrontMatter.SchemaVersion.Major existingFacts.FrontMatter.WorkId.Value existingFacts.FrontMatter.Stage
+                            @ [
                           if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
                               malformedPlanFrontMatter path $"Plan sourceSpec '{existingFacts.FrontMatter.SourceSpec}' does not match '{specPath workId}'."
                           if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourceClarifications, clarificationPath workId, StringComparison.OrdinalIgnoreCase)) then
@@ -960,12 +949,11 @@ No blocking planning findings recorded.
                 mapped, Some existing.Text, None, None
             | Ok(facts, diagnostics) ->
                 let identityDiagnostics =
-                    [ if facts.FrontMatter.SchemaVersion.Major <> 1 then
-                          malformedPlanFrontMatter path $"Plan schemaVersion '{facts.FrontMatter.SchemaVersion.Major}' is not supported."
-                      if not (String.Equals(facts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
-                          planIdentityMismatch path workId facts.FrontMatter.WorkId.Value
-                      if facts.FrontMatter.Stage <> LifecycleStage.Plan then
-                          missingPlanPrerequisite path $"Plan stage '{IdentifiersModule.stageValue facts.FrontMatter.Stage}' is not 'plan'."
+                    frontMatterIdentityDiagnostics
+                        "Plan" LifecycleStage.Plan "plan"
+                        malformedPlanFrontMatter planIdentityMismatch missingPlanPrerequisite
+                        path workId facts.FrontMatter.SchemaVersion.Major facts.FrontMatter.WorkId.Value facts.FrontMatter.Stage
+                        @ [
                       if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
                           malformedPlanFrontMatter path $"Plan sourceSpec '{facts.FrontMatter.SourceSpec}' does not match '{specPath workId}'."
                       if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceClarifications, clarificationPath workId, StringComparison.OrdinalIgnoreCase)) then

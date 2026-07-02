@@ -315,11 +315,7 @@ module internal ParsingTasks =
             |> List.map (fun (_, path, digest) -> path, digest)
             |> Map.ofList
 
-        existingFacts.SourceSnapshots
-        |> List.exists (fun snapshot ->
-            match snapshot.Digest, Map.tryFind snapshot.Path current with
-            | Some recorded, Some actual -> not (String.Equals(recorded, actual, StringComparison.OrdinalIgnoreCase))
-            | _ -> false)
+        sourceDigestsStale (existingFacts.SourceSnapshots |> List.map (fun snapshot -> snapshot.Path, snapshot.Digest)) current
 
     let markTasksStale (tasks: WorkTask list) : WorkTask list =
         tasks
@@ -609,12 +605,11 @@ tasks:
                 | Error diagnostics -> diagnostics, Some existing.Text, None
                 | Ok(existingFacts, existingDiagnostics) ->
                     let identityDiagnostics =
-                        [ if existingFacts.FrontMatter.SchemaVersion.Major <> 1 then
-                              malformedTasksArtifact path $"Tasks schemaVersion '{existingFacts.FrontMatter.SchemaVersion.Major}' is not supported."
-                          if not (String.Equals(existingFacts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
-                              tasksIdentityMismatch path workId existingFacts.FrontMatter.WorkId.Value
-                          if existingFacts.FrontMatter.Stage <> LifecycleStage.Tasks then
-                              malformedTasksArtifact path $"Tasks stage '{IdentifiersModule.stageValue existingFacts.FrontMatter.Stage}' is not 'tasks'."
+                        frontMatterIdentityDiagnostics
+                            "Tasks" LifecycleStage.Tasks "tasks"
+                            malformedTasksArtifact tasksIdentityMismatch malformedTasksArtifact
+                            path workId existingFacts.FrontMatter.SchemaVersion.Major existingFacts.FrontMatter.WorkId.Value existingFacts.FrontMatter.Stage
+                            @ [
                           if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
                               malformedTasksArtifact path $"Tasks sourceSpec '{existingFacts.FrontMatter.SourceSpec}' does not match '{specPath workId}'."
                           if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourceClarifications, clarificationPath workId, StringComparison.OrdinalIgnoreCase)) then
@@ -693,12 +688,11 @@ tasks:
             | Error diagnostics -> diagnostics, Some existing.Text, None, None
             | Ok(facts, diagnostics) ->
                 let identityDiagnostics =
-                    [ if facts.FrontMatter.SchemaVersion.Major <> 1 then
-                          malformedTasksArtifact path $"Tasks schemaVersion '{facts.FrontMatter.SchemaVersion.Major}' is not supported."
-                      if not (String.Equals(facts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
-                          tasksIdentityMismatch path workId facts.FrontMatter.WorkId.Value
-                      if facts.FrontMatter.Stage <> LifecycleStage.Tasks then
-                          missingTasksPrerequisite path $"Tasks stage '{IdentifiersModule.stageValue facts.FrontMatter.Stage}' is not 'tasks'."
+                    frontMatterIdentityDiagnostics
+                        "Tasks" LifecycleStage.Tasks "tasks"
+                        malformedTasksArtifact tasksIdentityMismatch missingTasksPrerequisite
+                        path workId facts.FrontMatter.SchemaVersion.Major facts.FrontMatter.WorkId.Value facts.FrontMatter.Stage
+                        @ [
                       if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
                           malformedTasksArtifact path $"Tasks sourceSpec '{facts.FrontMatter.SourceSpec}' does not match '{specPath workId}'."
                       if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceClarifications, clarificationPath workId, StringComparison.OrdinalIgnoreCase)) then

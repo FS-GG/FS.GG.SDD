@@ -150,16 +150,7 @@ module RegistryValidate =
             let capabilities = detectCapabilities Console.IsOutputRedirected
 
             if capabilities.IsInteractive && capabilities.ColorEnabled then
-                let writer = new StringWriter()
-                let settings = AnsiConsoleSettings()
-                settings.Ansi <- AnsiSupport.Yes
-                settings.ColorSystem <- ColorSystemSupport.Standard
-                settings.Out <- new AnsiConsoleOutput(writer)
-                let console = AnsiConsole.Create settings
-
-                match capabilities.Width with
-                | Some width when width > 0 -> console.Profile.Width <- width
-                | _ -> ()
+                let console, writer = createCappedConsole capabilities
 
                 renderRichTo console report
                 writer.ToString()

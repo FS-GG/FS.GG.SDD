@@ -215,29 +215,7 @@ let run args =
                   AssumeYes = hasFlag "--yes" rest
                   IsInteractive = capabilities.IsInputInteractive }
 
-            let model, effects = init request
-
-            let rec interpretUntilIdle state pendingEffects =
-                match pendingEffects with
-                | [] -> state
-                | effects ->
-                    let results = interpretAll request.ProjectRoot request.DryRun effects
-
-                    let nextState, nextEffects =
-                        results
-                        |> List.fold
-                            (fun (currentState, accumulatedEffects) result ->
-                                let updatedState, producedEffects = update (EffectInterpreted result) currentState
-                                updatedState, accumulatedEffects @ producedEffects)
-                            (state, [])
-
-                    interpretUntilIdle nextState nextEffects
-
-            let finalModel =
-                interpretUntilIdle model effects
-                |> fun state -> update BuildReport state |> fst
-
-            let report = finalModel.Report |> Option.defaultWith (fun () -> buildReport finalModel)
+            let report = driveToReport request
 
             // Resolve the effective rendering against the stream this report actually routes
             // to — Blocked reports go to stderr, everything else to stdout — so Rich degrades

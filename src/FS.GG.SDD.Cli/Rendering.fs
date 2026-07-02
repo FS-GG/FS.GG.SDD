@@ -77,6 +77,24 @@ module Rendering =
 
     let esc (value: string) = Markup.Escape value
 
+    /// Build an in-memory Spectre.Console honoring the detected width cap, returning the
+    /// console and the backing writer its output lands in. The single Ansi/color/width setup
+    /// shared by every rich sink (command, validation, registry) so they cannot drift
+    /// (feature 061 / issue #71). Presentation only — excluded from deterministic contracts.
+    let createCappedConsole (capabilities: TerminalCapabilities) : IAnsiConsole * StringWriter =
+        let writer = new StringWriter()
+        let settings = AnsiConsoleSettings()
+        settings.Ansi <- AnsiSupport.Yes
+        settings.ColorSystem <- ColorSystemSupport.Standard
+        settings.Out <- new AnsiConsoleOutput(writer)
+        let console = AnsiConsole.Create settings
+
+        match capabilities.Width with
+        | Some width when width > 0 -> console.Profile.Width <- width
+        | _ -> ()
+
+        console, writer
+
     let renderRichTo (console: IAnsiConsole) (report: CommandReport) : unit =
         // Header: command identity (work item, dry-run) as a rule.
         let workIdText =
@@ -304,16 +322,7 @@ module Rendering =
         | Text -> { Text = FS.GG.SDD.Commands.CommandRendering.renderText report; UsedRichRendering = false }
         | Rich ->
             if capabilities.IsInteractive && capabilities.ColorEnabled then
-                let writer = new StringWriter()
-                let settings = AnsiConsoleSettings()
-                settings.Ansi <- AnsiSupport.Yes
-                settings.ColorSystem <- ColorSystemSupport.Standard
-                settings.Out <- new AnsiConsoleOutput(writer)
-                let console = AnsiConsole.Create settings
-
-                match capabilities.Width with
-                | Some width when width > 0 -> console.Profile.Width <- width
-                | _ -> ()
+                let console, writer = createCappedConsole capabilities
 
                 renderRichTo console report
                 { Text = writer.ToString(); UsedRichRendering = true }
@@ -334,16 +343,7 @@ module Rendering =
         | Text -> { Text = FS.GG.SDD.Validation.ValidationContracts.renderText report; UsedRichRendering = false }
         | Rich ->
             if capabilities.IsInteractive && capabilities.ColorEnabled then
-                let writer = new StringWriter()
-                let settings = AnsiConsoleSettings()
-                settings.Ansi <- AnsiSupport.Yes
-                settings.ColorSystem <- ColorSystemSupport.Standard
-                settings.Out <- new AnsiConsoleOutput(writer)
-                let console = AnsiConsole.Create settings
-
-                match capabilities.Width with
-                | Some width when width > 0 -> console.Profile.Width <- width
-                | _ -> ()
+                let console, writer = createCappedConsole capabilities
 
                 renderValidationRichTo console report
                 { Text = writer.ToString(); UsedRichRendering = true }

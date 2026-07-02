@@ -67,30 +67,7 @@ module ValidationRunner =
           AssumeYes = false
           IsInteractive = false }
 
-    let runRequest (request: CommandRequest) =
-        let model, effects = CW.init request
-
-        let rec interpretUntilIdle state pending =
-            match pending with
-            | [] -> state
-            | current ->
-                let results = interpretAll request.ProjectRoot request.DryRun current
-
-                let nextState, nextEffects =
-                    results
-                    |> List.fold
-                        (fun (currentState, accumulatedEffects) result ->
-                            let updatedState, producedEffects = CW.update (EffectInterpreted result) currentState
-                            updatedState, accumulatedEffects @ producedEffects)
-                        (state, [])
-
-                interpretUntilIdle nextState nextEffects
-
-        let finalModel =
-            interpretUntilIdle model effects
-            |> fun state -> CW.update CommandMsg.BuildReport state |> fst
-
-        finalModel.Report |> Option.defaultWith (fun () -> buildReport finalModel)
+    let runRequest (request: CommandRequest) = driveToReport request
 
     let workRequest command root inputText =
         { baseRequest command root with

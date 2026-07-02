@@ -506,12 +506,10 @@ Prose status: specified
                 unsafe @ mapped |> DiagnosticsModule.sort, Some existing.Text, None
             | Ok(facts, diagnostics) ->
                 let identityDiagnostics =
-                    [ if facts.FrontMatter.SchemaVersion.Major <> 1 then
-                          malformedSpecificationFrontMatter path $"Specification schemaVersion '{facts.FrontMatter.SchemaVersion.Major}' is not supported."
-                      if not (String.Equals(facts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
-                          specificationIdentityMismatch path workId facts.FrontMatter.WorkId.Value
-                      if facts.FrontMatter.Stage <> LifecycleStage.Specify then
-                          malformedSpecificationFrontMatter path $"Specification stage '{IdentifiersModule.stageValue facts.FrontMatter.Stage}' is not 'specify'." ]
+                    frontMatterIdentityDiagnostics
+                        "Specification" LifecycleStage.Specify "specify"
+                        malformedSpecificationFrontMatter specificationIdentityMismatch malformedSpecificationFrontMatter
+                        path workId facts.FrontMatter.SchemaVersion.Major facts.FrontMatter.WorkId.Value facts.FrontMatter.Stage
 
                 let allDiagnostics = unsafe @ identityDiagnostics @ diagnostics |> DiagnosticsModule.sort
                 // Whether the spec's own diagnostics block rewriting its sections — a
@@ -543,12 +541,10 @@ Prose status: specified
                 mapped, Some existing.Text, None, None
             | Ok(facts, diagnostics) ->
                 let identityDiagnostics =
-                    [ if facts.FrontMatter.SchemaVersion.Major <> 1 then
-                          malformedSpecificationFacts path $"Specification schemaVersion '{facts.FrontMatter.SchemaVersion.Major}' is not supported."
-                      if not (String.Equals(facts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
-                          specificationIdentityMismatch path workId facts.FrontMatter.WorkId.Value
-                      if facts.FrontMatter.Stage <> LifecycleStage.Specify then
-                          missingSpecificationPrerequisite path $"Specification stage '{IdentifiersModule.stageValue facts.FrontMatter.Stage}' is not 'specify'." ]
+                    frontMatterIdentityDiagnostics
+                        "Specification" LifecycleStage.Specify "specify"
+                        malformedSpecificationFacts specificationIdentityMismatch missingSpecificationPrerequisite
+                        path workId facts.FrontMatter.SchemaVersion.Major facts.FrontMatter.WorkId.Value facts.FrontMatter.Stage
 
                 let mappedDiagnostics =
                     diagnostics
@@ -1025,12 +1021,11 @@ publicOrToolFacingImpact: true
                 | Error diagnostics -> diagnostics, Some existing.Text, None
                 | Ok(existingFacts, existingDiagnostics) ->
                     let identityDiagnostics =
-                        [ if existingFacts.FrontMatter.SchemaVersion.Major <> 1 then
-                              malformedClarificationFrontMatter path $"Clarification schemaVersion '{existingFacts.FrontMatter.SchemaVersion.Major}' is not supported."
-                          if not (String.Equals(existingFacts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
-                              clarificationIdentityMismatch path workId existingFacts.FrontMatter.WorkId.Value
-                          if existingFacts.FrontMatter.Stage <> LifecycleStage.Clarify then
-                              malformedClarificationFrontMatter path $"Clarification stage '{IdentifiersModule.stageValue existingFacts.FrontMatter.Stage}' is not 'clarify'."
+                        frontMatterIdentityDiagnostics
+                            "Clarification" LifecycleStage.Clarify "clarify"
+                            malformedClarificationFrontMatter clarificationIdentityMismatch malformedClarificationFrontMatter
+                            path workId existingFacts.FrontMatter.SchemaVersion.Major existingFacts.FrontMatter.WorkId.Value existingFacts.FrontMatter.Stage
+                            @ [
                           if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
                               malformedClarificationFrontMatter path $"Clarification sourceSpec '{existingFacts.FrontMatter.SourceSpec}' does not match '{specPath workId}'." ]
 
@@ -1082,12 +1077,11 @@ publicOrToolFacingImpact: true
                 mapped, Some existing.Text, None, None
             | Ok(facts, diagnostics) ->
                 let identityDiagnostics =
-                    [ if facts.FrontMatter.SchemaVersion.Major <> 1 then
-                          malformedClarificationFrontMatter path $"Clarification schemaVersion '{facts.FrontMatter.SchemaVersion.Major}' is not supported."
-                      if not (String.Equals(facts.FrontMatter.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
-                          clarificationIdentityMismatch path workId facts.FrontMatter.WorkId.Value
-                      if facts.FrontMatter.Stage <> LifecycleStage.Clarify then
-                          missingClarificationPrerequisite path $"Clarification stage '{IdentifiersModule.stageValue facts.FrontMatter.Stage}' is not 'clarify'."
+                    frontMatterIdentityDiagnostics
+                        "Clarification" LifecycleStage.Clarify "clarify"
+                        malformedClarificationFrontMatter clarificationIdentityMismatch missingClarificationPrerequisite
+                        path workId facts.FrontMatter.SchemaVersion.Major facts.FrontMatter.WorkId.Value facts.FrontMatter.Stage
+                        @ [
                       if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
                           malformedClarificationFrontMatter path $"Clarification sourceSpec '{facts.FrontMatter.SourceSpec}' does not match '{specPath workId}'." ]
 
