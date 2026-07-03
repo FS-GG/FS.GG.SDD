@@ -20,10 +20,10 @@ module RemediationProjectionTests =
         { interactiveColor with
             IsInteractive = false }
 
-    let private step id outcome targets : ReconciliationStep =
+    let private step (id: ReconciliationStepId) (outcome: ReconciliationOutcome) targets : ReconciliationStep =
         { StepId = id
           Kind = id
-          DiffPreview = $"{id} preview"
+          DiffPreview = $"{reconciliationStepIdValue id} preview"
           Outcome = outcome
           TargetPaths = targets }
 
@@ -38,17 +38,21 @@ module RemediationProjectionTests =
           MissingArtifactPaths = [ ".claude/skills/fs-gg-sdd-plan/SKILL.md" ]
           SkillDriftPaths = []
           PreviewSteps =
-            [ step "cliSelfUpdate" "wouldApply" []
-              step "templateRePin" "noTarget" []
-              step "artifactReSeed" "wouldApply" [ ".claude/skills/fs-gg-sdd-plan/SKILL.md" ] ]
+            [ step ReconciliationStepId.CliSelfUpdate ReconciliationOutcome.WouldApply []
+              step ReconciliationStepId.TemplateRePin ReconciliationOutcome.NoTarget []
+              step
+                  ReconciliationStepId.ArtifactReSeed
+                  ReconciliationOutcome.WouldApply
+                  [ ".claude/skills/fs-gg-sdd-plan/SKILL.md" ] ]
           IsCoherent = false }
 
     let private upgradeSummary: UpgradeSummary =
         { HasProvenance = true
           Mode = "assumeYes"
           AlreadyCoherent = false
-          Steps = [ step "artifactReSeed" "applied" [ ".claude/skills/fs-gg-sdd-plan/SKILL.md" ] ]
-          AppliedStepIds = [ "artifactReSeed" ]
+          Steps =
+            [ step ReconciliationStepId.ArtifactReSeed ReconciliationOutcome.Applied [ ".claude/skills/fs-gg-sdd-plan/SKILL.md" ] ]
+          AppliedStepIds = [ ReconciliationStepId.ArtifactReSeed ]
           SkippedStepIds = []
           FailedStepIds = []
           SkillDriftPaths = []

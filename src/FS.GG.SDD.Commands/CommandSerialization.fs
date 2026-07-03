@@ -364,10 +364,10 @@ module CommandSerialization =
     // the interactive confirm prompt, so it is contract-safe.
     let writeReconciliationStep (writer: Utf8JsonWriter) (step: ReconciliationStep) =
         writer.WriteStartObject()
-        writer.WriteString("stepId", step.StepId)
-        writer.WriteString("kind", step.Kind)
+        writer.WriteString("stepId", reconciliationStepIdValue step.StepId)
+        writer.WriteString("kind", reconciliationStepIdValue step.Kind)
         writer.WriteString("diffPreview", step.DiffPreview)
-        writer.WriteString("outcome", step.Outcome)
+        writer.WriteString("outcome", reconciliationOutcomeValue step.Outcome)
         writeStringList writer Sorted "targetPaths" step.TargetPaths
         writer.WriteEndObject()
 
@@ -413,9 +413,9 @@ module CommandSerialization =
             writer.WriteStartArray("steps")
             summary.Steps |> List.iter (writeReconciliationStep writer)
             writer.WriteEndArray()
-            writeStringList writer Sorted "appliedStepIds" summary.AppliedStepIds
-            writeStringList writer Sorted "skippedStepIds" summary.SkippedStepIds
-            writeStringList writer Sorted "failedStepIds" summary.FailedStepIds
+            writeStringList writer Sorted "appliedStepIds" (summary.AppliedStepIds |> List.map reconciliationStepIdValue)
+            writeStringList writer Sorted "skippedStepIds" (summary.SkippedStepIds |> List.map reconciliationStepIdValue)
+            writeStringList writer Sorted "failedStepIds" (summary.FailedStepIds |> List.map reconciliationStepIdValue)
             writeStringList writer Sorted "skillDriftPaths" summary.SkillDriftPaths
             writer.WriteBoolean("residualDrift", summary.ResidualDrift)
             writer.WriteString("nextActionHint", summary.NextActionHint)

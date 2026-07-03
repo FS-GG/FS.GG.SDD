@@ -47,7 +47,7 @@ module RemediationSupport =
     // its CANONICAL body (not a placeholder), else `verify` reports a hash-mismatch. The canonical
     // seeded body by skill id, and a per-path lookup for a seeded skill copy path.
     let private seededBodyById =
-        SeededSkills.seededSkills |> List.map (fun s -> s.Name, s.Body) |> Map.ofList
+        SeededSkills.seededSkills () |> List.map (fun s -> s.Name, s.Body) |> Map.ofList
 
     let canonicalSkillBody (path: string) : string option =
         Fsgg.SkillMirror.skillIdOfPath path

@@ -296,6 +296,9 @@ module CommandTypes =
         | RefreshedCurrent
         | PartiallyBlocked
         | RefreshBlocked
+        // Feature 068 / US2 (2b): the pre-work-model early-stage disposition, formerly written as a
+        // bare "early-stage" literal bypassing this DU (a latent inconsistency the review flagged).
+        | EarlyStage
 
     type RefreshSummary =
         { WorkId: string
@@ -342,11 +345,28 @@ module CommandTypes =
           NextActionHint: string
           ProviderInvocation: ProviderInvocationResult option }
 
+    // Feature 068 / US2: the closed remediation-step vocabularies, formerly raw strings on
+    // `ReconciliationStep` (a typo compiled). The `…Value` mappings below reproduce the exact
+    // wire spellings, pinned by Remediation* tests + the release-baseline byte-identity suites.
+    [<RequireQualifiedAccess>]
+    type ReconciliationStepId =
+        | CliSelfUpdate
+        | TemplateRePin
+        | ArtifactReSeed
+
+    [<RequireQualifiedAccess>]
+    type ReconciliationOutcome =
+        | WouldApply
+        | Applied
+        | Skipped
+        | Failed
+        | NoTarget
+
     type ReconciliationStep =
-        { StepId: string
-          Kind: string
+        { StepId: ReconciliationStepId
+          Kind: ReconciliationStepId
           DiffPreview: string
-          Outcome: string
+          Outcome: ReconciliationOutcome
           TargetPaths: string list }
 
     type DoctorSummary =
@@ -367,9 +387,9 @@ module CommandTypes =
           Mode: string
           AlreadyCoherent: bool
           Steps: ReconciliationStep list
-          AppliedStepIds: string list
-          SkippedStepIds: string list
-          FailedStepIds: string list
+          AppliedStepIds: ReconciliationStepId list
+          SkippedStepIds: ReconciliationStepId list
+          FailedStepIds: ReconciliationStepId list
           SkillDriftPaths: string list
           ResidualDrift: bool
           NextActionHint: string }
@@ -574,6 +594,21 @@ module CommandTypes =
         | RefreshedCurrent -> "refreshed-current"
         | PartiallyBlocked -> "partially-blocked"
         | RefreshBlocked -> "blocked"
+        | EarlyStage -> "early-stage"
+
+    let reconciliationStepIdValue (stepId: ReconciliationStepId) =
+        match stepId with
+        | ReconciliationStepId.CliSelfUpdate -> "cliSelfUpdate"
+        | ReconciliationStepId.TemplateRePin -> "templateRePin"
+        | ReconciliationStepId.ArtifactReSeed -> "artifactReSeed"
+
+    let reconciliationOutcomeValue (outcome: ReconciliationOutcome) =
+        match outcome with
+        | ReconciliationOutcome.WouldApply -> "wouldApply"
+        | ReconciliationOutcome.Applied -> "applied"
+        | ReconciliationOutcome.Skipped -> "skipped"
+        | ReconciliationOutcome.Failed -> "failed"
+        | ReconciliationOutcome.NoTarget -> "noTarget"
 
     let outcomeValue (outcome: CommandOutcome) =
         match outcome with

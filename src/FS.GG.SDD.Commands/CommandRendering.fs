@@ -433,7 +433,11 @@ module CommandRendering =
             |> List.iter (fun path -> builder.AppendLine($"doctorSkillDrift: {path}") |> ignore)
 
             doctor.PreviewSteps
-            |> List.iter (fun step -> builder.AppendLine($"doctorPreviewStep: {step.StepId}={step.Outcome}") |> ignore)
+            |> List.iter (fun step ->
+                builder.AppendLine(
+                    $"doctorPreviewStep: {reconciliationStepIdValue step.StepId}={reconciliationOutcomeValue step.Outcome}"
+                )
+                |> ignore)
 
             builder.AppendLine($"doctorCoherent: {doctor.IsCoherent}") |> ignore
         | None -> ()
@@ -447,17 +451,24 @@ module CommandRendering =
             |> ignore
 
             upgrade.Steps
-            |> List.iter (fun step -> builder.AppendLine($"upgradeStep: {step.StepId}={step.Outcome}") |> ignore)
+            |> List.iter (fun step ->
+                builder.AppendLine(
+                    $"upgradeStep: {reconciliationStepIdValue step.StepId}={reconciliationOutcomeValue step.Outcome}"
+                )
+                |> ignore)
 
             upgrade.AppliedStepIds
+            |> List.map reconciliationStepIdValue
             |> List.sort
             |> List.iter (fun id -> builder.AppendLine($"upgradeApplied: {id}") |> ignore)
 
             upgrade.SkippedStepIds
+            |> List.map reconciliationStepIdValue
             |> List.sort
             |> List.iter (fun id -> builder.AppendLine($"upgradeSkipped: {id}") |> ignore)
 
             upgrade.FailedStepIds
+            |> List.map reconciliationStepIdValue
             |> List.sort
             |> List.iter (fun id -> builder.AppendLine($"upgradeFailed: {id}") |> ignore)
 

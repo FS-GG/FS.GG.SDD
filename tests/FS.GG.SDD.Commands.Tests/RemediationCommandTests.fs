@@ -57,12 +57,12 @@ module DriftTests =
     let ``a behind scaffold with missing artifacts previews self-update and re-seed as wouldApply`` () =
         let report = drift (Some farAheadMinimum) installedVersion []
 
-        let outcomeOf id =
+        let outcomeOf (id: ReconciliationStepId) =
             report.Steps |> List.find (fun s -> s.StepId = id) |> (fun s -> s.Outcome)
 
-        Assert.Equal("wouldApply", outcomeOf "cliSelfUpdate")
-        Assert.Equal("wouldApply", outcomeOf "artifactReSeed")
-        Assert.Equal("noTarget", outcomeOf "templateRePin")
+        Assert.Equal(ReconciliationOutcome.WouldApply, outcomeOf ReconciliationStepId.CliSelfUpdate)
+        Assert.Equal(ReconciliationOutcome.WouldApply, outcomeOf ReconciliationStepId.ArtifactReSeed)
+        Assert.Equal(ReconciliationOutcome.NoTarget, outcomeOf ReconciliationStepId.TemplateRePin)
         Assert.False report.IsCoherent
 
     [<Fact>]
@@ -100,7 +100,10 @@ module DoctorCommandTests =
         Assert.Equal(Some farAheadMinimum, summary.RequiredMinimumCliVersion)
         Assert.True summary.CliBehindBy.IsSome
         Assert.NotEmpty summary.MissingArtifactPaths
-        Assert.Contains(summary.PreviewSteps, fun s -> s.StepId = "artifactReSeed" && s.Outcome = "wouldApply")
+        Assert.Contains(
+            summary.PreviewSteps,
+            fun s -> s.StepId = ReconciliationStepId.ArtifactReSeed && s.Outcome = ReconciliationOutcome.WouldApply
+        )
         Assert.False summary.IsCoherent
         Assert.Equal(0, exitCode report)
 
@@ -171,7 +174,7 @@ module UpgradeCommandTests =
         let report = upgradeYes root
         let summary = upgrade report
         Assert.Equal("assumeYes", summary.Mode)
-        Assert.Contains("artifactReSeed", summary.AppliedStepIds)
+        Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.AppliedStepIds)
         Assert.False summary.ResidualDrift
         Assert.Equal(0, exitCode report)
 
@@ -221,7 +224,7 @@ module UpgradeCommandTests =
 
         let report = upgradeYes root
         let summary = upgrade report
-        Assert.Contains("artifactReSeed", summary.FailedStepIds)
+        Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.FailedStepIds)
         Assert.True summary.ResidualDrift
         Assert.Equal(2, exitCode report)
 
@@ -239,7 +242,7 @@ module UpgradeCommandTests =
 
         let report = upgradeYes root
         let summary = upgrade report
-        Assert.Contains("artifactReSeed", summary.AppliedStepIds)
+        Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.AppliedStepIds)
         Assert.False summary.ResidualDrift
         Assert.Equal(0, exitCode report)
 
@@ -313,7 +316,7 @@ module UpgradeInteractiveTests =
         let report = upgradeInteractive root "y\n"
         let summary = upgrade report
         Assert.Equal("interactive", summary.Mode)
-        Assert.Contains("artifactReSeed", summary.AppliedStepIds)
+        Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.AppliedStepIds)
         Assert.Equal(0, exitCode report)
 
     [<Fact>]
@@ -321,7 +324,7 @@ module UpgradeInteractiveTests =
         let root = atOrAboveMissingFixture ()
         let report = upgradeInteractive root "n\n"
         let summary = upgrade report
-        Assert.Contains("artifactReSeed", summary.SkippedStepIds)
+        Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.SkippedStepIds)
         Assert.True summary.ResidualDrift
         Assert.Contains("upgrade.residualDrift", diagnosticIds report)
         Assert.Equal(0, exitCode report)
@@ -402,7 +405,7 @@ module SkillContentDriftTests =
         let summary = report.Upgrade.Value
         // The re-seed refilled the missing process copy...
         Assert.True(TestSupport.existsRelative root ".agents/skills/fs-gg-sdd-plan/SKILL.md")
-        Assert.Contains("artifactReSeed", summary.AppliedStepIds)
+        Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.AppliedStepIds)
         // ...but the divergent product copy is advisory (not clobbered) and stays residual.
         Assert.Contains(".claude/skills/fs-gg-demo/SKILL.md", summary.SkillDriftPaths)
         Assert.True summary.ResidualDrift

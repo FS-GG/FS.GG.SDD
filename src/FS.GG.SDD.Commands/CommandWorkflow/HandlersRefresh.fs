@@ -22,6 +22,54 @@ module internal HandlersRefresh =
     module GenerationManifestModule = FS.GG.SDD.Artifacts.GenerationManifest
     module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
 
+    // Feature 068 / US2 (2b): the internal per-view currency classification, formerly raw strings
+    // woven through computeRefreshPlan (the review's worst complexity hotspot). Purely internal
+    // working state — it lives on no DTO (RefreshSummary.PerViewState stays a (string * string)
+    // list), so this adds no .fsi/baseline surface. RequireQualifiedAccess is required because
+    // Blocked/Missing/Stale/Malformed collide with GeneratedViewCurrency's cases.
+    [<RequireQualifiedAccess>]
+    type private ViewCurrencyClass =
+        | Refreshed
+        | AlreadyCurrent
+        | Blocked
+        | NotApplicable
+        | Missing
+        | Malformed
+        | Stale
+        | EarlyStage
+
+    /// Clean = regenerated this run or already up to date.
+    let private viewCurrencyIsClean =
+        function
+        | ViewCurrencyClass.Refreshed
+        | ViewCurrencyClass.AlreadyCurrent -> true
+        | _ -> false
+
+    /// The display word emitted in perViewState / summary.md — the two clean states collapse to
+    /// "current"; the rest pass through as their kebab spelling (byte-identical to the former
+    /// `viewWord`). Formerly the raw strings; the mapping is the wire contract.
+    let private viewCurrencyDisplay =
+        function
+        | ViewCurrencyClass.Refreshed
+        | ViewCurrencyClass.AlreadyCurrent -> "current"
+        | ViewCurrencyClass.Blocked -> "blocked"
+        | ViewCurrencyClass.NotApplicable -> "not-applicable"
+        | ViewCurrencyClass.Missing -> "missing"
+        | ViewCurrencyClass.Malformed -> "malformed"
+        | ViewCurrencyClass.Stale -> "stale"
+        | ViewCurrencyClass.EarlyStage -> "early-stage"
+
+    /// Projection onto the persisted GeneratedViewCurrency DU for the canonical view set
+    /// (byte-identical to the former `currencyOf`).
+    let private viewCurrencyToGenerated =
+        function
+        | ViewCurrencyClass.Refreshed
+        | ViewCurrencyClass.AlreadyCurrent -> GeneratedViewCurrency.Current
+        | ViewCurrencyClass.Stale -> GeneratedViewCurrency.Stale
+        | ViewCurrencyClass.Malformed -> GeneratedViewCurrency.Malformed
+        | ViewCurrencyClass.Missing -> GeneratedViewCurrency.Missing
+        | _ -> GeneratedViewCurrency.Blocked
+
     // --- refresh orchestration (cross-cutting; reuses the per-view generators) ---
 
     let refreshCanonicalViews =
@@ -78,7 +126,7 @@ module internal HandlersRefresh =
                         WriteFile(Fsgg.SkillMirror.retargetSkillPath targetRoot src, snap.Text, AgentGuidanceTarget))
                 | None -> [])
 
-        SeededSkills.skillEffects @ reMirror
+        SeededSkills.skillEffects () @ reMirror
 
     let refreshSummaryMarkdown
         (workId: string)
@@ -244,7 +292,8 @@ module internal HandlersRefresh =
                 let earlyDiag = refreshEarlyStageGuidance (earlyStagePresentStages workId model)
 
                 let perViewState =
-                    refreshCanonicalViews |> List.map (fun view -> view, "early-stage")
+                    refreshCanonicalViews
+                    |> List.map (fun view -> view, viewCurrencyDisplay ViewCurrencyClass.EarlyStage)
 
                 let summary: RefreshSummary =
                     { WorkId = workId
@@ -260,7 +309,7 @@ module internal HandlersRefresh =
                       AdvisoryCount = 1
                       WarningCount = 0
                       BlockingCount = 0
-                      Disposition = "early-stage"
+                      Disposition = refreshDispositionValue RefreshDisposition.EarlyStage
                       PerViewState = perViewState
                       SourceSnapshotCount = 0
                       Readiness = "refreshEarlyStage" }
@@ -321,23 +370,24 @@ module internal HandlersRefresh =
                 // Refreshed | already-current | blocked for the work model.
                 let wmClass =
                     match wmWriteText with
-                    | None -> "blocked"
+                    | None -> ViewCurrencyClass.Blocked
                     | Some text ->
                         match snapshot (workModelPath workId) model with
-                        | Some existing when existing.Text = text -> "already-current"
-                        | _ -> "refreshed"
+                        | Some existing when existing.Text = text -> ViewCurrencyClass.AlreadyCurrent
+                        | _ -> ViewCurrencyClass.Refreshed
 
-                let wmChanged = wmClass = "refreshed"
+                let wmChanged = wmClass = ViewCurrencyClass.Refreshed
 
                 // 2. Regenerate agent guidance from the refreshed work model (declared
                 //    source-of order: the work model feeds agent guidance).
                 let modelForAgents =
                     match wmWriteText with
-                    | Some text when wmClass <> "blocked" -> injectSnapshot (workModelPath workId) text model
+                    | Some text when wmClass <> ViewCurrencyClass.Blocked ->
+                        injectSnapshot (workModelPath workId) text model
                     | _ -> model
 
                 let _agDiag, _, agViews, agEffects =
-                    if wmClass = "blocked" then
+                    if wmClass = ViewCurrencyClass.Blocked then
                         [], None, [], []
                     else
                         computeAgentsPlan modelForAgents
@@ -350,7 +400,7 @@ module internal HandlersRefresh =
                     | None -> false
 
                 let agentBlocked =
-                    wmClass = "blocked"
+                    wmClass = ViewCurrencyClass.Blocked
                     || (agViews
                         |> List.exists (fun view -> view.Currency = GeneratedViewCurrency.Blocked))
 
@@ -358,11 +408,11 @@ module internal HandlersRefresh =
 
                 let agentClass =
                     if not agentApplicable then
-                        "not-applicable"
+                        ViewCurrencyClass.NotApplicable
                     elif agentBlocked then
-                        "blocked"
+                        ViewCurrencyClass.Blocked
                     elif List.isEmpty agentGuidancePaths then
-                        "blocked"
+                        ViewCurrencyClass.Blocked
                     elif
                         agentGuidancePaths
                         |> List.forall (fun path ->
@@ -370,9 +420,9 @@ module internal HandlersRefresh =
                             | Some text -> (snapshot path model |> Option.map (fun snap -> snap.Text)) = Some text
                             | None -> true)
                     then
-                        "already-current"
+                        ViewCurrencyClass.AlreadyCurrent
                     else
-                        "refreshed"
+                        ViewCurrencyClass.Refreshed
 
                 // 3. Evaluate currency of the structured downstream views (analysis,
                 //    verify, ship). These are reported, not destructively regenerated:
@@ -381,13 +431,17 @@ module internal HandlersRefresh =
                 //    changed, they are reported stale and point back to the responsible
                 //    lifecycle command.
                 let downstreamClass path =
-                    if wmClass = "blocked" then
-                        "blocked"
+                    if wmClass = ViewCurrencyClass.Blocked then
+                        ViewCurrencyClass.Blocked
                     else
                         match snapshot path model with
-                        | None -> "missing"
-                        | Some snap when not (parsesAsJson snap.Text) -> "malformed"
-                        | Some _ -> if wmChanged then "stale" else "already-current"
+                        | None -> ViewCurrencyClass.Missing
+                        | Some snap when not (parsesAsJson snap.Text) -> ViewCurrencyClass.Malformed
+                        | Some _ ->
+                            if wmChanged then
+                                ViewCurrencyClass.Stale
+                            else
+                                ViewCurrencyClass.AlreadyCurrent
 
                 let anClass = downstreamClass (analysisPath workId)
                 let veClass = downstreamClass (verifyPath workId)
@@ -401,11 +455,11 @@ module internal HandlersRefresh =
                 let govView, govEffects, govClass =
                     let inheritShip () = None, [], shClass
 
-                    if wmClass = "blocked" then
-                        None, [], "blocked"
+                    if wmClass = ViewCurrencyClass.Blocked then
+                        None, [], ViewCurrencyClass.Blocked
                     else
                         match shClass with
-                        | "already-current" ->
+                        | ViewCurrencyClass.AlreadyCurrent ->
                             let wmText =
                                 wmWriteText |> Option.orElseWith (fun () -> textOf (workModelPath workId))
 
@@ -425,10 +479,10 @@ module internal HandlersRefresh =
                                     let existing = snapshot (governanceHandoffPath workId) model
 
                                     match existing with
-                                    | Some snap when snap.Text = json -> view, [], "already-current"
-                                    | _ -> view, effects, "refreshed"
-                                | None -> None, [], "blocked"
-                            | _ -> None, [], "missing"
+                                    | Some snap when snap.Text = json -> view, [], ViewCurrencyClass.AlreadyCurrent
+                                    | _ -> view, effects, ViewCurrencyClass.Refreshed
+                                | None -> None, [], ViewCurrencyClass.Blocked
+                            | _ -> None, [], ViewCurrencyClass.Missing
                         | _ -> inheritShip ()
 
                 let structuredClasses =
@@ -437,8 +491,7 @@ module internal HandlersRefresh =
                       "verify", veClass
                       "ship", shClass ]
 
-                let isClean state =
-                    state = "refreshed" || state = "already-current"
+                let isClean = viewCurrencyIsClean
 
                 let structuredAllClean =
                     structuredClasses |> List.forall (fun (_, state) -> isClean state)
@@ -452,7 +505,7 @@ module internal HandlersRefresh =
                     |> List.filter (fun path -> Option.isNone (snapshot path model))
 
                 let workModelDiags =
-                    if wmClass = "blocked" then
+                    if wmClass = ViewCurrencyClass.Blocked then
                         match missingAuthored with
                         | missing :: _ -> [ refreshMissingSource (workModelPath workId) missing ]
                         | [] ->
@@ -481,13 +534,13 @@ module internal HandlersRefresh =
                       shipPath workId, shClass ]
                     |> List.collect (fun (viewPath, state) ->
                         match state with
-                        | "blocked" -> [ refreshBlockedUpstreamView viewPath (workModelPath workId) ]
-                        | "stale" -> [ refreshStaleView viewPath [ workModelPath workId ] ]
-                        | "malformed" ->
+                        | ViewCurrencyClass.Blocked -> [ refreshBlockedUpstreamView viewPath (workModelPath workId) ]
+                        | ViewCurrencyClass.Stale -> [ refreshStaleView viewPath [ workModelPath workId ] ]
+                        | ViewCurrencyClass.Malformed ->
                             [ refreshMalformedGeneratedView
                                   viewPath
                                   $"Generated view '{viewPath}' is malformed; re-run the responsible lifecycle command." ]
-                        | "missing" -> [ refreshBlockedUpstreamView viewPath (workModelPath workId) ]
+                        | ViewCurrencyClass.Missing -> [ refreshBlockedUpstreamView viewPath (workModelPath workId) ]
                         | _ -> [])
 
                 let summaryRenderable = structuredAllClean
@@ -536,19 +589,19 @@ module internal HandlersRefresh =
                 let stageText = "refresh"
 
                 let outcomeText =
-                    if structuredAllClean && agentClass <> "blocked" then
+                    if structuredAllClean && agentClass <> ViewCurrencyClass.Blocked then
                         "succeeded"
                     else
                         "succeededWithWarnings"
 
                 let disposition =
-                    if wmClass = "blocked" || structuredNoneClean then
+                    if wmClass = ViewCurrencyClass.Blocked || structuredNoneClean then
                         RefreshBlocked
                     elif
                         structuredAllClean
-                        && (agentClass = "refreshed"
-                            || agentClass = "already-current"
-                            || agentClass = "not-applicable")
+                        && (agentClass = ViewCurrencyClass.Refreshed
+                            || agentClass = ViewCurrencyClass.AlreadyCurrent
+                            || agentClass = ViewCurrencyClass.NotApplicable)
                     then
                         RefreshedCurrent
                     else
@@ -557,24 +610,18 @@ module internal HandlersRefresh =
                 let dispositionValue = refreshDispositionValue disposition
 
                 // currency word per view for the report and summary table
-                let viewWord state =
-                    match state with
-                    | "refreshed"
-                    | "already-current" -> "current"
-                    | other -> other
-
                 let perViewState =
-                    [ "work-model", viewWord wmClass
-                      "analysis", viewWord anClass
-                      "verify", viewWord veClass
-                      "ship", viewWord shClass
-                      "governance-handoff", viewWord govClass
-                      "agent-commands", viewWord agentClass
+                    [ "work-model", viewCurrencyDisplay wmClass
+                      "analysis", viewCurrencyDisplay anClass
+                      "verify", viewCurrencyDisplay veClass
+                      "ship", viewCurrencyDisplay shClass
+                      "governance-handoff", viewCurrencyDisplay govClass
+                      "agent-commands", viewCurrencyDisplay agentClass
                       "summary", (if summaryRenderable then "current" else "blocked") ]
 
                 let summaryClass, summaryEffects, summaryViewState =
                     if not summaryRenderable then
-                        "blocked", [], None
+                        ViewCurrencyClass.Blocked, [], None
                     else
                         let nextActionText =
                             match disposition with
@@ -596,8 +643,8 @@ module internal HandlersRefresh =
 
                         let cls =
                             match snapshot summaryPath model with
-                            | Some existing when existing.Text = text -> "already-current"
-                            | _ -> "refreshed"
+                            | Some existing when existing.Text = text -> ViewCurrencyClass.AlreadyCurrent
+                            | _ -> ViewCurrencyClass.Refreshed
 
                         let effects =
                             [ CreateDirectory(readinessDirectory workId)
@@ -619,9 +666,9 @@ module internal HandlersRefresh =
                     let refreshed, current, blocked, na = buckets
 
                     match state with
-                    | "refreshed" -> viewId :: refreshed, current, blocked, na
-                    | "already-current" -> refreshed, viewId :: current, blocked, na
-                    | "not-applicable" -> refreshed, current, blocked, viewId :: na
+                    | ViewCurrencyClass.Refreshed -> viewId :: refreshed, current, blocked, na
+                    | ViewCurrencyClass.AlreadyCurrent -> refreshed, viewId :: current, blocked, na
+                    | ViewCurrencyClass.NotApplicable -> refreshed, current, blocked, viewId :: na
                     | _ -> refreshed, current, viewId :: blocked, na
 
                 let refreshedViewIds, alreadyCurrentViewIds, blockedViewIds, notApplicableViewIds =
@@ -675,15 +722,6 @@ module internal HandlersRefresh =
                             "refreshReady" }
 
                 // --- canonical generated-view set ---
-                let currencyOf state =
-                    match state with
-                    | "refreshed"
-                    | "already-current" -> GeneratedViewCurrency.Current
-                    | "stale" -> GeneratedViewCurrency.Stale
-                    | "malformed" -> GeneratedViewCurrency.Malformed
-                    | "missing" -> GeneratedViewCurrency.Missing
-                    | _ -> GeneratedViewCurrency.Blocked
-
                 let downstreamView path kind state =
                     { Path = path
                       Kind = kind
@@ -691,12 +729,12 @@ module internal HandlersRefresh =
                       Generator = Some request.GeneratorVersion
                       Sources = []
                       OutputDigest = None
-                      Currency = currencyOf state
+                      Currency = viewCurrencyToGenerated state
                       DiagnosticIds = [] }
 
                 let workModelViewState =
                     { wmView with
-                        Currency = currencyOf wmClass }
+                        Currency = viewCurrencyToGenerated wmClass }
 
                 let agentViewStates =
                     agViews
@@ -705,19 +743,19 @@ module internal HandlersRefresh =
                             match agentGuidanceWriteText view.Path with
                             | Some text ->
                                 if (snapshot view.Path model |> Option.map (fun snap -> snap.Text)) = Some text then
-                                    "already-current"
+                                    ViewCurrencyClass.AlreadyCurrent
                                 else
-                                    "refreshed"
-                            | None -> "blocked"
+                                    ViewCurrencyClass.Refreshed
+                            | None -> ViewCurrencyClass.Blocked
 
                         { view with
-                            Currency = currencyOf state })
+                            Currency = viewCurrencyToGenerated state })
 
                 let governanceHandoffViewState =
                     match govView with
                     | Some view ->
                         { view with
-                            Currency = currencyOf govClass }
+                            Currency = viewCurrencyToGenerated govClass }
                     | None -> downstreamView (governanceHandoffPath workId) "governance-handoff" govClass
 
                 let generatedViews =
