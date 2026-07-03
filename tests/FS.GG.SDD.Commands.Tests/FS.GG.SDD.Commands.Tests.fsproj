@@ -45,7 +45,6 @@
     <Compile Include="SurfaceBaselineTests.fs" />
     <Compile Include="ProcessGlobalEnvGuardTests.fs" />
     <Compile Include="FixtureManifestGuardTests.fs" />
-    <Compile Include="AgentGuidanceParityTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

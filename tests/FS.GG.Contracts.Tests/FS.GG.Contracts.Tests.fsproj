@@ -15,6 +15,7 @@
     <Compile Include="ContractVersionTests.fs" />
     <Compile Include="DependencyClosureTests.fs" />
     <Compile Include="PublicSurfaceTests.fs" />
+    <Compile Include="AgentSurfaceDriftTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

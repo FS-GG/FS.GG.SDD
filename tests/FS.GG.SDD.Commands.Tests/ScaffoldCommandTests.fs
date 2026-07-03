@@ -755,7 +755,7 @@ module ScaffoldCommandTests =
         Assert.Contains("scaffold.providerWroteSddTree", diagnosticIds report)
         Assert.Equal(2, exitCodeForReport report)
         let summary = scaffoldSummary report
-        Assert.NotEqual("providerSucceeded", summary.Outcome)
+        Assert.NotEqual<string>("providerSucceeded", summary.Outcome)
         // The intruded SDD-owned paths are never recorded as app-only product.
         Assert.DoesNotContain("work/leak.txt", summary.ProducedPaths)
         Assert.DoesNotContain("readiness/leak.txt", summary.ProducedPaths)
@@ -775,7 +775,7 @@ module ScaffoldCommandTests =
         Assert.Contains("scaffold.providerWroteSddTree", diagnosticIds report)
         Assert.Equal(2, exitCodeForReport report)
         let summary = scaffoldSummary report
-        Assert.NotEqual("providerSucceeded", summary.Outcome)
+        Assert.NotEqual<string>("providerSucceeded", summary.Outcome)
         // The intruded skill-tree paths are never laundered into provenance as app-only.
         Assert.DoesNotContain(".claude/skills/leak/SKILL.md", summary.ProducedPaths)
         Assert.DoesNotContain(".codex/skills/leak/SKILL.md", summary.ProducedPaths)
@@ -819,7 +819,7 @@ module ScaffoldCommandTests =
         Assert.Contains("scaffold.providerWroteSddTree", diagnosticIds report)
         Assert.Equal(2, exitCodeForReport report)
         let summary = scaffoldSummary report
-        Assert.NotEqual("providerSucceeded", summary.Outcome)
+        Assert.NotEqual<string>("providerSucceeded", summary.Outcome)
         Assert.DoesNotContain(intruded, summary.ProducedPaths)
         Assert.DoesNotContain(intruded, summary.MirroredPaths)
 
@@ -836,7 +836,7 @@ module ScaffoldCommandTests =
         Assert.Contains("scaffold.providerWroteSddTree", diagnosticIds report)
         Assert.Equal(2, exitCodeForReport report)
         let summary = scaffoldSummary report
-        Assert.NotEqual("providerSucceeded", summary.Outcome)
+        Assert.NotEqual<string>("providerSucceeded", summary.Outcome)
         Assert.DoesNotContain(".agents/skills/fs-gg-sdd-custom/SKILL.md", summary.ProducedPaths)
         Assert.DoesNotContain(".agents/skills/fs-gg-sdd-custom/SKILL.md", summary.MirroredPaths)
 
@@ -976,7 +976,7 @@ module ScaffoldCommandTests =
         Assert.Contains("scaffold.mirrorFailed", diagnosticIds report)
         Assert.Equal(2, exitCodeForReport report)
         let summary = scaffoldSummary report
-        Assert.NotEqual("providerSucceeded", summary.Outcome)
+        Assert.NotEqual<string>("providerSucceeded", summary.Outcome)
         Assert.Empty(summary.MirroredPaths)
 
         // Provenance (if written) records NO completed fan-out.

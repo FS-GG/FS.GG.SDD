@@ -425,7 +425,7 @@ module GovernanceHandoffTests =
         TestSupport.writeRelative root shipPath mutated
 
         // the handoff's recorded source digest no longer matches the live source — stale (AC1)
-        Assert.NotEqual($"sha256:{shipJsonDigest root}", handoffShipSourceDigest root)
+        Assert.NotEqual<string>($"sha256:{shipJsonDigest root}", handoffShipSourceDigest root)
 
         // refresh regenerates the handoff against the current source — current again (AC2)
         let report = TestSupport.runRefresh root workId
