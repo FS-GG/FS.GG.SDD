@@ -126,6 +126,11 @@ jobs:
           cache: true
           cache-dependency-path: '**/packages.lock.json'
 
+      # Guard the baseline resolver itself (feature 064 / #91): a wrong baseline yields a
+      # plausible-looking result, not an obvious error (see #90), so pin the selection.
+      - name: Unit-test the baseline resolver
+        run: bash scripts/tests/pick-latest-version.test.sh
+
       - name: ApiCompat vs feed baseline
         env:
           NUGET_FEED_TOKEN: ${{ secrets.GITHUB_TOKEN }}
