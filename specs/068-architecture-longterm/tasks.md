@@ -28,6 +28,29 @@ own guard (T031).
 
 ---
 
+## Delivery status (reconciled 2026-07-03)
+
+This branch **merges two parallel 068 efforts** (same author, two sessions): the
+original `8bf3bb1` (US1 envelope + these lifecycle docs) and a second effort that
+implemented US2/US4/US5/US6. They had **no source-code overlap** and combine
+cleanly; the full suite is green and the readiness JSON stays byte-identical (my
+byte-goldens were captured against the US1 wrapper's output and pass — so they now
+*guard* the shared frame).
+
+| Story | State | Notes |
+|---|---|---|
+| **US1** envelope | ✅ Done | `8bf3bb1` wrapper + byte-goldens (`ReadinessViewGoldenTests`) now guarding it |
+| **US2** DU states | ✅ Done | **Superset** of the plan: `ViewCurrencyClass` (8 cases) + `ReconciliationOutcome` (5) + `ReconciliationStepId` (3), `RefreshDisposition.EarlyStage`; `…Value` maps pinned; +2 lines `PublicSurface.baseline` (bounded additive `.fsi`) |
+| **US6** docs identity | ✅ Done | `AGENTS.md ≡ CLAUDE.md` + `AgentSurfaceDriftTests` (Contracts.Tests) |
+| **US4** Parsing renames | ✅ Done | Final names `EarlyStageAuthoring`/`ChecklistPlanAuthoring`/`TaskGraphAuthoring` (differ from the candidate names below) |
+| **US5** purity | ◑ Partial | SeededSkills legible-failure ✅. `projectIdFromRoot`: the "no ambient cwd" premise was verified **FALSE** (`DirectoryInfo(".").Name` returns the cwd leaf — load-bearing); coupling made explicit + pinned, full edge-removal **deferred** (behavior risk). `RegistryDocument.load` left **out of scope** (public `.fsi` / documented Constitution-V edge) rather than commented. |
+| **US3** de-AutoOpen | ⏭️ Deferred | Spike found ~200-site refactor with pervasive same-named helpers across modules; ambiguous under warnings-as-errors. Its own follow-up PR. |
+
+The per-task checkboxes below retain the original plan; treat this table as the
+authoritative delivered state.
+
+---
+
 ## Phase 1: Setup & baseline capture (Shared)
 
 **Purpose**: Establish the byte-identity gate before any edit, so every later task
