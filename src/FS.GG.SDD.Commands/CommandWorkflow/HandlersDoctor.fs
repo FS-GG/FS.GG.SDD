@@ -5,6 +5,8 @@ open Fsgg.Schemas
 open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Artifacts.ScaffoldProvenance
 open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Commands.Internal.Foundation
+open FS.GG.SDD.Commands.Internal.HandlersScaffold
 
 /// `fsgg-sdd doctor` handler (feature 053, US1). A strictly read-only projection: the
 /// `plan` stage snapshots the provenance, provider registry, and every expected seeded
@@ -13,7 +15,6 @@ open FS.GG.SDD.Commands.CommandTypes
 /// computes the shared pure `Drift` picture (now content-addressed) and builds the
 /// `DoctorSummary`. It emits **no** mutating effect on any path (FR-002 / SC-001), so a
 /// write-audit over a doctor run finds only `ReadFile`/`EnumerateDirectory`.
-[<AutoOpen>]
 module internal HandlersDoctor =
 
     // Shared with HandlersUpgrade (both resolve the same drift inputs from the snapshots).

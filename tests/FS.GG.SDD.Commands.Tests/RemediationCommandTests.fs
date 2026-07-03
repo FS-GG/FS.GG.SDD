@@ -4,6 +4,7 @@ open System.IO
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.Internal
+open FS.GG.SDD.Commands.Internal.Foundation
 open Xunit
 
 /// Pure `Drift` model unit tests (feature 053, T011 / drift-model contract). Constructed

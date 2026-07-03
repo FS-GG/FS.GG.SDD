@@ -2,6 +2,8 @@ namespace FS.GG.SDD.Commands.Internal
 
 open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Commands.Internal.Foundation
+open FS.GG.SDD.Commands.Internal.HandlersDoctor
 
 /// `fsgg-sdd upgrade` handler (feature 053, US2–US4). The reconciliation verb: it re-derives
 /// its next step from the interpreted-effect log each `nextLifecycleEffects` tick (like
@@ -11,7 +13,6 @@ open FS.GG.SDD.Commands.CommandTypes
 /// mutates for remediation (FR-006/FR-008): the CLI self-update `RunProcess`, the no-clobber
 /// re-seed `WriteFile`s (init's `AgentGuidanceTarget` effects for the *missing* paths only,
 /// R8/FR-010), and (value-agnostically inert here, R6) the consumer-only re-pin.
-[<AutoOpen>]
 module internal HandlersUpgrade =
 
     // SDD's own tool package id (not a provider/template/rendering literal). The self-update

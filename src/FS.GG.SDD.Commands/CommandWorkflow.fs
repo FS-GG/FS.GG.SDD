@@ -15,7 +15,17 @@ open FS.GG.SDD.Artifacts.Serialization
 open FS.GG.SDD.Artifacts.WorkModel
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
-open FS.GG.SDD.Commands.Internal
+open FS.GG.SDD.Commands.Internal.Foundation
+open FS.GG.SDD.Commands.Internal.HandlersEarly
+open FS.GG.SDD.Commands.Internal.HandlersAnalyze
+open FS.GG.SDD.Commands.Internal.HandlersEvidence
+open FS.GG.SDD.Commands.Internal.HandlersVerify
+open FS.GG.SDD.Commands.Internal.HandlersShip
+open FS.GG.SDD.Commands.Internal.HandlersAgents
+open FS.GG.SDD.Commands.Internal.HandlersRefresh
+open FS.GG.SDD.Commands.Internal.HandlersScaffold
+open FS.GG.SDD.Commands.Internal.HandlersDoctor
+open FS.GG.SDD.Commands.Internal.HandlersUpgrade
 
 module CommandWorkflow =
     // The per-stage summaries a lifecycle command's plan feeds into the command model.

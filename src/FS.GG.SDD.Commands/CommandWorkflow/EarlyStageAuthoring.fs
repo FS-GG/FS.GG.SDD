@@ -15,8 +15,8 @@ open FS.GG.SDD.Artifacts.Serialization
 open FS.GG.SDD.Artifacts.WorkModel
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Commands.Internal.Foundation
 
-[<AutoOpen>]
 module internal EarlyStageAuthoring =
     module DiagnosticsModule = FS.GG.SDD.Artifacts.Diagnostics
     module IdentifiersModule = FS.GG.SDD.Artifacts.Identifiers

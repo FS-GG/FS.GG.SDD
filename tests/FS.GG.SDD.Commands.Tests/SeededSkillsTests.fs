@@ -7,6 +7,8 @@ open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.CommandWorkflow
 open FS.GG.SDD.Commands.Internal
+open FS.GG.SDD.Commands.Internal.Foundation
+open FS.GG.SDD.Commands.Internal.HandlersScaffold
 open Xunit
 
 /// 051: the seeded fs-gg-sdd-* process skill set — no-clobber (INV-4), determinism
