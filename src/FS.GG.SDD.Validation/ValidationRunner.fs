@@ -370,8 +370,12 @@ module ValidationRunner =
             elif isColorDisabling then
                 // Assert on the snapshot produced with NO_COLOR / TERM=dumb actually set
                 // (feature 067 / FR-009): the output must carry no ANSI and stay byte-identical to
-                // the neutral run — proving the producer ignores the color-disabling env rather
-                // than assuming it via a reused neutral comparison.
+                // the neutral run. Note the enrolled `DeterminismOutputs` are all machine artifacts
+                // (persisted JSON/MD views + the --json report), none of which is a rendered
+                // text/rich projection, so in practice these bytes never depend on the color env
+                // and this cell reproduces `Pass` — it proves env-independence of the *persisted*
+                // surface, not of rendered output. The rendered-output ANSI-degradation guarantee
+                // lives where color can actually appear: the CLI-process test `ValidateCommandTests`.
                 match lookup degraded with
                 | Some degradedBytes when hasAnsi degradedBytes ->
                     Fail(
@@ -531,7 +535,9 @@ module ValidationRunner =
             vars |> List.map (fun (key, _) -> key, Environment.GetEnvironmentVariable key)
 
         try
-            vars |> List.iter (fun (key, value) -> Environment.SetEnvironmentVariable(key, value))
+            vars
+            |> List.iter (fun (key, value) -> Environment.SetEnvironmentVariable(key, value))
+
             action ()
         finally
             originals
@@ -756,7 +762,9 @@ module ValidationRunner =
         // Build shared fixtures only for the matrices that will run.
         let stateRoots =
             if selected lifecycleMatrixName then
-                plan.States |> List.map (fun state -> state, buildState runRoot state) |> Map.ofList
+                plan.States
+                |> List.map (fun state -> state, buildState runRoot state)
+                |> Map.ofList
             else
                 Map.empty
 
@@ -796,8 +804,7 @@ module ValidationRunner =
                 // (feature 067 / FR-009): the ColorDisabled / TermDumb cells assert on THIS output
                 // rather than reusing the neutral one, so a producer that consulted the env would
                 // be caught here instead of the cell running a vacuous neutral comparison.
-                let degraded =
-                    withEnvVars [ "NO_COLOR", "1"; "TERM", "dumb" ] regenerateAndSnapshot
+                let degraded = withEnvVars [ "NO_COLOR", "1"; "TERM", "dumb" ] regenerateAndSnapshot
 
                 neutral, repeat, perturbed, degraded
             else
@@ -823,7 +830,12 @@ module ValidationRunner =
             elif matrixName = lifecycleMatrixName then
                 evaluateLifecycleCell stateRoots runRoot cell.Coordinates
             elif matrixName = determinismMatrixName then
-                evaluateDeterminismCell neutralSnapshot repeatSnapshot perturbedSnapshot degradedSnapshot cell.Coordinates
+                evaluateDeterminismCell
+                    neutralSnapshot
+                    repeatSnapshot
+                    perturbedSnapshot
+                    degradedSnapshot
+                    cell.Coordinates
             else
                 cell.Status
 

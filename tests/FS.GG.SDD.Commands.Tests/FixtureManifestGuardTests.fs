@@ -37,11 +37,16 @@ module FixtureManifestGuardTests =
 
     // FR-004 / SC-002: every remaining lifecycle-command manifest is consumed — its directory name
     // is referenced by an executing (non-guard) test. An orphan makes this fail with its name.
+    // The reference must be the directory name as a **quoted string literal** (how fixtures are
+    // named, e.g. `Path.Combine(..., "lifecycle-commands", "deterministic-report")`), not a bare
+    // substring — so a short/common name (`verify`, `ship`) can't be incidentally "consumed" by
+    // matching unrelated identifier text like `runVerify`.
     [<Fact>]
     let ``no orphaned lifecycle-command fixture manifest`` () =
-        let orphans =
-            manifestDirs ()
-            |> List.filter (fun name -> not (testSources.Contains name))
+        let isReferenced (name: string) =
+            testSources.Contains(sprintf "\"%s\"" name)
+
+        let orphans = manifestDirs () |> List.filter (isReferenced >> not)
 
         Assert.True(
             List.isEmpty orphans,

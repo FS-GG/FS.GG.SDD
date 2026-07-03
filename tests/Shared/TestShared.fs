@@ -68,7 +68,8 @@ module TestShared =
     /// their pid is still alive and their root is left untouched. This is the reliable cleanup path:
     /// under the VSTest host, process-exit handlers cannot finish deleting a large tree, so residue
     /// is instead reclaimed here at the start of the next run (self-healing, never unbounded).
-    /// A 6-hour age fallback catches the rare pid-reuse straggler.
+    /// A root whose pid was reused by an unrelated live process is left in place (a rare, harmless
+    /// leak); the 6-hour age fallback below only applies to roots whose name has no parseable pid.
     /// The owning process id encoded in `fsgg-sdd-tests-<pid>-<guid>`, if parseable.
     let private ownerPid (dir: string) =
         let segments = (Path.GetFileName dir |> nonNull).Split('-')
@@ -124,8 +125,7 @@ module TestShared =
     /// Write text to a root-relative path, creating parent directories. Single definition
     /// (was duplicated ×2 in the test tree).
     let writeRelative (root: string) (path: string) (text: string) =
-        let absolute =
-            Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar))
+        let absolute = Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar))
 
         match Path.GetDirectoryName absolute with
         | null -> ()
@@ -139,7 +139,10 @@ module TestShared =
     /// the Contracts.Tests baseline test carried before — now shared by all five baseline tests.
     module SurfaceBaseline =
         let verify (baselinePath: string) (capture: unit -> string array) =
-            let actual = capture () |> Array.sort
+            // Filter the same way as the committed side so a re-baseline round-trips exactly even if
+            // a capture ever emitted a blank entry (today none do).
+            let actual =
+                capture () |> Array.filter (String.IsNullOrWhiteSpace >> not) |> Array.sort
 
             let committed () =
                 File.ReadAllLines baselinePath
@@ -150,7 +153,10 @@ module TestShared =
             // on an unchanged surface never reorders an existing (possibly non-canonical) baseline
             // — the committed baselines stay byte-identical (feature 067 / FR-006). On a genuine
             // change it rewrites the baseline in canonical sorted order.
-            if Environment.GetEnvironmentVariable "FSGG_UPDATE_BASELINE" = "1" && actual <> committed () then
+            if
+                Environment.GetEnvironmentVariable "FSGG_UPDATE_BASELINE" = "1"
+                && actual <> committed ()
+            then
                 File.WriteAllLines(baselinePath, actual)
 
             Assert.Equal<string array>(committed (), actual)
@@ -171,7 +177,6 @@ module TestShared =
         /// evidence.yml declaring `result: pass` verification for each of `T001..T00count`.
         let passingTaskEvidence count =
             let entries =
-                taskIds count
-                |> List.mapi (fun i taskId -> evidenceEntry (i + 1) taskId)
+                taskIds count |> List.mapi (fun i taskId -> evidenceEntry (i + 1) taskId)
 
             "schemaVersion: 1\nevidence:\n" + String.concat "\n" entries + "\n"
