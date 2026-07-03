@@ -30,17 +30,20 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+          # NuGet restore cache keyed on the committed lockfiles (feature 064): an
+          # unchanged dependency set restores from cache; a real lockfile change busts
+          # it into a fresh cold restore. Speed only — --locked-mode still enforces.
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
 
-      # Locked restore is the single enforcement point. RestoreLockedMode is set in
-      # Directory.Build.props when GITHUB_ACTIONS=true and a lockfile exists; --locked-mode
-      # here forces it explicitly and gives one clear place to point at the regenerate command.
+      # Locked restore is the single enforcement point, now via the shared composite
+      # action (feature 064) so the --locked-mode enforcement and the regenerate hint
+      # live in exactly one place. RestoreLockedMode is also set in Directory.Build.props
+      # when GITHUB_ACTIONS=true and a lockfile exists; this forces it explicitly.
       - name: Restore (locked)
-        run: |
-          set -euo pipefail
-          if ! dotnet restore FS.GG.SDD.sln --locked-mode; then
-            echo "::error::locked restore failed — the resolved graph does not match the committed packages.lock.json (or a version was substituted, NU1603). If this is an intentional dependency change, run: dotnet restore FS.GG.SDD.sln --force-evaluate  and commit the updated packages.lock.json files."
-            exit 1
-          fi
+        uses: ./.github/actions/locked-restore
+        with:
+          target: FS.GG.SDD.sln
 
       # --no-restore: restore already happened above (exactly once). NU1603/NU1608 are
       # promoted to errors in Directory.Build.props.
@@ -117,6 +120,11 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+          # NuGet restore cache keyed on the committed lockfiles (feature 064): an
+          # unchanged dependency set restores from cache; a real lockfile change busts
+          # it into a fresh cold restore. Speed only — --locked-mode still enforces.
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
 
       - name: ApiCompat vs feed baseline
         env:

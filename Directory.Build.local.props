@@ -21,13 +21,34 @@
          CIB, so this does not fail-close a fresh local clone. -->
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     <Nullable>enable</Nullable>
-    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-    <!-- Scoped regression gate (feature 026 / FR-006): once the FS3261 (nullness)
-         count reached zero, promote FS3261 and FS0025 (incomplete match) to build
-         errors so the clean state cannot silently re-accumulate. No other category
-         is promoted; TreatWarningsAsErrors stays false. APPEND to $(WarningsAsErrors)
-         — the canonical Directory.Build.props already promoted NU1603;NU1608, so a
-         plain assignment would drop them. -->
+    <!-- Warning ratchet, widened (feature 064 / board #74, FR-009). Flip the FULL
+         compiler ratchet: every compile-phase F# warning is now a build error, so a
+         new warning class cannot silently re-accumulate (the feature-026 scoped gate
+         below is now subsumed). TWAE does NOT reliably promote restore-phase NU16xx,
+         so the canonical Directory.Build.props still promotes NU1603;NU1608 explicitly
+         and this stays complementary, not conflicting. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Two pre-existing warning classes are exempted (kept as warnings) because
+         clearing them is a large campaign out of this feature's scope (spec 064
+         Assumptions / FR-009 "no warning-fixing campaign"):
+           FS3218 x452 — signature/implementation argument-name mismatch, a byproduct
+                         of the 062/063 .fsi splits (arg names differ from a0/a1/...).
+           FS3262 x4   — nullness (value known non-null passed to an ofObj-style API).
+         Tracked for a follow-up cleanup; any OTHER warning class fails the build.
+         APPEND to $(WarningsNotAsErrors) — the canonical props conditionally exempts
+         the api-gate RS#### codes there, so a plain assignment would drop them. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);FS3218;FS3262</WarningsNotAsErrors>
+    <!-- Keep NuGetAudit advisories (NU1901-NU1904) as WARNINGS under the full ratchet
+         (feature 064). NuGetAudit is on by default in the net10 SDK and audits transitive
+         deps, so a CVE newly published against any package in the restore graph would
+         otherwise flip restore/pack to an error with zero code change — a non-deterministic
+         "green today, red next Tuesday" break on the release path too. Audit stays advisory
+         (visible, non-blocking); promote deliberately later if audit should gate release.
+         APPEND — preserve the FS/RS exemptions accumulated above. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+    <!-- Retained for intent/completeness though subsumed by TWAE=true above: the
+         feature-026 FS3261/FS0025 promotion. Kept so a future TWAE relaxation still
+         floors on these two. APPEND — the canonical already promoted NU1603;NU1608. -->
     <WarningsAsErrors>$(WarningsAsErrors);FS3261;FS0025</WarningsAsErrors>
     <Company>FS.GG</Company>
     <Authors>FS.GG</Authors>

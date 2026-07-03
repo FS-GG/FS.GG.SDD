@@ -136,7 +136,7 @@ that defines the artifact contract and verification plan.
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/013-ship-command/plan.md
+at specs/064-build-ci-hygiene/plan.md
 <!-- SPECKIT END -->
 
 <!-- SKILL:spectre-console START -->
