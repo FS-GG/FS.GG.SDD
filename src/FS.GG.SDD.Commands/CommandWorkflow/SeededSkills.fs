@@ -47,11 +47,12 @@ module internal SeededSkills =
     /// replaces the former static-init `failwithf`, which surfaced as an opaque
     /// `TypeInitializationException` (feature 068 / US3a / FR-009).
     type SeededSkillResourceMissing(logicalName: string) =
-        inherit exn(
-            $"Embedded seeded-skill resource '{logicalName}' is missing from the FS.GG.SDD.Commands "
-            + "assembly — a build/packaging defect (the embedded-resource set drifted from "
-            + "SeededSkills.skillNames), not user input. Rebuild after restoring the resource."
-        )
+        inherit
+            exn(
+                $"Embedded seeded-skill resource '{logicalName}' is missing from the FS.GG.SDD.Commands "
+                + "assembly — a build/packaging defect (the embedded-resource set drifted from "
+                + "SeededSkills.skillNames), not user input. Rebuild after restoring the resource."
+            )
 
         member _.LogicalName = logicalName
 

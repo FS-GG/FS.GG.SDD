@@ -100,10 +100,14 @@ module DoctorCommandTests =
         Assert.Equal(Some farAheadMinimum, summary.RequiredMinimumCliVersion)
         Assert.True summary.CliBehindBy.IsSome
         Assert.NotEmpty summary.MissingArtifactPaths
+
         Assert.Contains(
             summary.PreviewSteps,
-            fun s -> s.StepId = ReconciliationStepId.ArtifactReSeed && s.Outcome = ReconciliationOutcome.WouldApply
+            fun s ->
+                s.StepId = ReconciliationStepId.ArtifactReSeed
+                && s.Outcome = ReconciliationOutcome.WouldApply
         )
+
         Assert.False summary.IsCoherent
         Assert.Equal(0, exitCode report)
 

@@ -10,7 +10,8 @@ open Xunit
 // for the context docs).
 module AgentSurfaceDriftTests =
 
-    let private read name = File.ReadAllText(Path.Combine(TestSupport.repoRoot, name))
+    let private read name =
+        File.ReadAllText(Path.Combine(TestSupport.repoRoot, name))
 
     [<Fact>]
     let ``CLAUDE.md and AGENTS.md are byte-identical`` () =

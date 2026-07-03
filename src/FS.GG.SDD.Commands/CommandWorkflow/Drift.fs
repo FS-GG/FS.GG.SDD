@@ -224,7 +224,8 @@ module internal Drift =
             let skillDriftPaths = computeSkillDriftPaths provenance skillBodies
 
             let hasActionableWork =
-                steps |> List.exists (fun step -> step.Outcome = ReconciliationOutcome.WouldApply)
+                steps
+                |> List.exists (fun step -> step.Outcome = ReconciliationOutcome.WouldApply)
 
             { HasProvenance = true
               ProviderName = Some record.ProviderName

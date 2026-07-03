@@ -85,7 +85,10 @@ module internal HandlersUpgrade =
                     | _ -> result.Succeeded
                 | None -> false)
 
-        if ok then ReconciliationOutcome.Applied else ReconciliationOutcome.Failed
+        if ok then
+            ReconciliationOutcome.Applied
+        else
+            ReconciliationOutcome.Failed
 
     type private StepProgress =
         | Resolved of ReconciliationOutcome
@@ -263,7 +266,8 @@ module internal HandlersUpgrade =
                 let drift = computeDrift model
 
                 let actionable =
-                    drift.Steps |> List.filter (fun step -> step.Outcome = ReconciliationOutcome.WouldApply)
+                    drift.Steps
+                    |> List.filter (fun step -> step.Outcome = ReconciliationOutcome.WouldApply)
 
                 if not drift.HasProvenance then
                     { model with

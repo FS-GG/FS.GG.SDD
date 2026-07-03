@@ -413,8 +413,19 @@ module CommandSerialization =
             writer.WriteStartArray("steps")
             summary.Steps |> List.iter (writeReconciliationStep writer)
             writer.WriteEndArray()
-            writeStringList writer Sorted "appliedStepIds" (summary.AppliedStepIds |> List.map reconciliationStepIdValue)
-            writeStringList writer Sorted "skippedStepIds" (summary.SkippedStepIds |> List.map reconciliationStepIdValue)
+
+            writeStringList
+                writer
+                Sorted
+                "appliedStepIds"
+                (summary.AppliedStepIds |> List.map reconciliationStepIdValue)
+
+            writeStringList
+                writer
+                Sorted
+                "skippedStepIds"
+                (summary.SkippedStepIds |> List.map reconciliationStepIdValue)
+
             writeStringList writer Sorted "failedStepIds" (summary.FailedStepIds |> List.map reconciliationStepIdValue)
             writeStringList writer Sorted "skillDriftPaths" summary.SkillDriftPaths
             writer.WriteBoolean("residualDrift", summary.ResidualDrift)

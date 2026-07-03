@@ -51,7 +51,10 @@ module RemediationProjectionTests =
           Mode = "assumeYes"
           AlreadyCoherent = false
           Steps =
-            [ step ReconciliationStepId.ArtifactReSeed ReconciliationOutcome.Applied [ ".claude/skills/fs-gg-sdd-plan/SKILL.md" ] ]
+            [ step
+                  ReconciliationStepId.ArtifactReSeed
+                  ReconciliationOutcome.Applied
+                  [ ".claude/skills/fs-gg-sdd-plan/SKILL.md" ] ]
           AppliedStepIds = [ ReconciliationStepId.ArtifactReSeed ]
           SkippedStepIds = []
           FailedStepIds = []

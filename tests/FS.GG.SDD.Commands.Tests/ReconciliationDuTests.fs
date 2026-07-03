@@ -24,6 +24,6 @@ module ReconciliationDuTests =
         Assert.Equal("failed", reconciliationOutcomeValue ReconciliationOutcome.Failed)
         Assert.Equal("noTarget", reconciliationOutcomeValue ReconciliationOutcome.NoTarget)
 
-    // The value mappings are total over the closed DUs (FR-006): every case is listed above, and
-    // the `…Value` functions themselves are exhaustive matches (a new case fails to compile until
-    // both the mapping and this pin are extended).
+// The value mappings are total over the closed DUs (FR-006): every case is listed above, and
+// the `…Value` functions themselves are exhaustive matches (a new case fails to compile until
+// both the mapping and this pin are extended).
