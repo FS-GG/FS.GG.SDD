@@ -234,7 +234,7 @@ module internal HandlersAgents =
                                     | ids -> ids |> List.map (agentsUnknownSourceReference workModelP))
 
                             let staleMarkers =
-                                if embedded |> List.exists (fun diagnostic -> diagnostic.Id.IndexOf("stale", StringComparison.OrdinalIgnoreCase) >= 0) then
+                                if embedded |> List.exists signalsStaleView then
                                     [ agentsStaleWorkModel workModelP ]
                                 else
                                     []
@@ -244,7 +244,7 @@ module internal HandlersAgents =
                                 |> List.filter (fun diagnostic ->
                                     diagnostic.Severity = DiagnosticSeverity.DiagnosticError
                                     && not (diagnostic.Id.StartsWith("unknownReference", StringComparison.OrdinalIgnoreCase))
-                                    && diagnostic.Id.IndexOf("stale", StringComparison.OrdinalIgnoreCase) < 0)
+                                    && not (signalsStaleView diagnostic))
 
                             let blockedDiag =
                                 if List.isEmpty otherBlocking then

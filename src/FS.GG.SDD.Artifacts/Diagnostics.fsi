@@ -17,10 +17,26 @@ module Diagnostics =
           Location: SourceLocation option
           Message: string
           Correction: string
-          RelatedIds: string list }
+          RelatedIds: string list
+          // A tool/provider defect (as opposed to malformed user input). When a command
+          // is blocked and any diagnostic carries this bit, the exit code escalates to 2
+          // (the tool-defect class). Set at construction by the defect-producing
+          // constructors via `markToolDefect`; replaces the old hand-maintained
+          // `providerDefectIds` id set. Not serialized (round-tripped diagnostics carry
+          // `false`); the exit-code decision only ever reads freshly-built diagnostics.
+          IsToolDefect: bool }
 
     val severityValue: severity: DiagnosticSeverity -> string
     val severityRank: severity: DiagnosticSeverity -> int
+
+    /// Mark a diagnostic as a tool/provider defect (escalates a blocked command to exit 2).
+    val markToolDefect: diagnostic: Diagnostic -> Diagnostic
+
+    /// The single predicate deciding whether a diagnostic signals a stale generated view.
+    /// Keyed on the id (the only field that survives a work-model round-trip), so it is
+    /// usable on diagnostics read back from a persisted work-model. Replaces the scattered
+    /// `Id.IndexOf("stale")` substring test in the agent-refresh path.
+    val signalsStaleView: diagnostic: Diagnostic -> bool
 
     val create:
         id: string ->
@@ -77,7 +93,8 @@ module Diagnostics =
     // data-model E8). `doctor.driftDetected` is a non-blocking warning (doctor always
     // exits 0). `upgrade.nonInteractiveNoYes` is a user-input refusal (exit 1);
     // `upgrade.selfUpdateFailed` / `upgrade.stepFailed` are step defects escalated to
-    // exit 2 via `providerDefectIds`; `upgrade.residualDrift` is a non-blocking warning.
+    // exit 2 via the typed `IsToolDefect` bit (`markToolDefect`); `upgrade.residualDrift`
+    // is a non-blocking warning.
     val doctorDriftDetected: unit -> Diagnostic
     val upgradeNonInteractiveNoYes: unit -> Diagnostic
     val upgradeSelfUpdateFailed: exitCode: int -> Diagnostic

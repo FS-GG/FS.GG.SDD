@@ -48,7 +48,8 @@ module ValidationRichRenderingTests =
           Location = None
           Message = message
           Correction = "re-run the cell"
-          RelatedIds = [] }
+          RelatedIds = []
+          IsToolDefect = false }
 
     let private cell coordinates status : MatrixCell =
         { Coordinates = coordinates; Status = status }

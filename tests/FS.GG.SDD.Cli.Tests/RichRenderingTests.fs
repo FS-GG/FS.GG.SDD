@@ -42,7 +42,8 @@ module RichRenderingTests =
           Location = None
           Message = message
           Correction = "correction-for-" + id
-          RelatedIds = [] }
+          RelatedIds = []
+          IsToolDefect = false }
 
     let generatedView path currency =
         { Path = path
