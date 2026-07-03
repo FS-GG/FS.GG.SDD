@@ -534,6 +534,41 @@ module internal ViewGeneration =
 
         writer.WriteEndObject()
 
+    let writeReadinessEnvelope
+        (workId: string)
+        (stage: string)
+        (status: string)
+        (generator: GeneratorVersion)
+        (sourceKind: string -> string)
+        (sources: GeneratedViewSource list)
+        (writeBody: Utf8JsonWriter -> unit)
+        : string =
+        // The single frame all three readiness views share: the MemoryStream/Utf8JsonWriter
+        // lifecycle, the opening object + preamble + sources, and the terminal close. Each
+        // view supplies its ordered body, so analysis/verify/ship cannot drift structurally
+        // and every emitted byte is preserved (feature 068 / FR-001..003).
+        use stream = new MemoryStream()
+        use writer = new Utf8JsonWriter(stream, JsonWriterOptions(Indented = true))
+        writeViewPreamble writer workId stage status generator
+        writeSourcesArray writer sourceKind sources
+        writeBody writer
+        writer.WriteEndObject()
+        writer.Flush()
+        Encoding.UTF8.GetString(stream.ToArray())
+
+    /// The identical verify+ship tail: findings, governance boundary facts, view
+    /// diagnostics, and the readiness scalar. Each caller supplies its own nextAction.
+    let writeGovernanceReadinessTail
+        (writer: Utf8JsonWriter)
+        (findings: (string * Diagnostic * string) list)
+        (diagnostics: Diagnostic list)
+        (readiness: string)
+        =
+        writeReadinessFindings writer findings
+        writeBoundaryFacts writer "governanceCompatibility"
+        writeViewDiagnostics writer diagnostics
+        writer.WriteString("readiness", readiness)
+
     let analysisJson
         (workId: string)
         (generator: GeneratorVersion)
@@ -543,79 +578,71 @@ module internal ViewGeneration =
         (diagnostics: Diagnostic list)
         (generatedViews: GeneratedViewState list)
         =
-        use stream = new MemoryStream()
-        use writer = new Utf8JsonWriter(stream, JsonWriterOptions(Indented = true))
-
         let findings = analysisFindings diagnostics
 
-        writeViewPreamble writer workId "analyze" readiness.Readiness generator
-        writeSourcesArray writer analysisSourceKind sources
-        writer.WriteStartArray("sourceRelationships")
+        writeReadinessEnvelope workId "analyze" readiness.Readiness generator analysisSourceKind sources (fun writer ->
+            writer.WriteStartArray("sourceRelationships")
 
-        relationships
-        |> List.mapi (fun index relationship -> sprintf "AR%03d" (index + 1), relationship)
-        |> List.iter (fun (id, relationship) ->
-            writer.WriteStartObject()
-            writer.WriteString("id", id)
-            writer.WriteString("sourcePath", relationship.SourcePath)
-            writer.WriteString("targetPath", relationship.TargetPath)
+            relationships
+            |> List.mapi (fun index relationship -> sprintf "AR%03d" (index + 1), relationship)
+            |> List.iter (fun (id, relationship) ->
+                writer.WriteStartObject()
+                writer.WriteString("id", id)
+                writer.WriteString("sourcePath", relationship.SourcePath)
+                writer.WriteString("targetPath", relationship.TargetPath)
 
-            match relationship.SourceId with
-            | Some value -> writer.WriteString("sourceId", value)
-            | None -> writer.WriteNull "sourceId"
+                match relationship.SourceId with
+                | Some value -> writer.WriteString("sourceId", value)
+                | None -> writer.WriteNull "sourceId"
 
-            match relationship.TargetId with
-            | Some value -> writer.WriteString("targetId", value)
-            | None -> writer.WriteNull "targetId"
+                match relationship.TargetId with
+                | Some value -> writer.WriteString("targetId", value)
+                | None -> writer.WriteNull "targetId"
 
-            writer.WriteString("relationship", relationship.Relationship)
-            writer.WriteString("state", relationship.State)
-            writeStringArray writer "diagnosticIds" relationship.DiagnosticIds
-            writer.WriteEndObject())
+                writer.WriteString("relationship", relationship.Relationship)
+                writer.WriteString("state", relationship.State)
+                writeStringArray writer "diagnosticIds" relationship.DiagnosticIds
+                writer.WriteEndObject())
 
-        writer.WriteEndArray()
-        writer.WriteStartObject("readiness")
-        writer.WriteString("status", readiness.Readiness)
-        writer.WriteNumber("readyCount", readiness.ReadyFindingCount)
-        writer.WriteNumber("advisoryCount", readiness.AdvisoryCount)
-        writer.WriteNumber("warningCount", readiness.WarningCount)
-        writer.WriteNumber("blockingCount", readiness.BlockingCount)
-        writer.WriteNumber("staleSourceCount", readiness.StaleSourceCount)
-        writer.WriteNumber("missingDispositionCount", readiness.MissingDispositionCount)
-        writer.WriteNumber("malformedSourceCount", readiness.MalformedSourceCount)
-        writer.WriteNumber("generatedViewFindingCount", readiness.GeneratedViewFindingCount)
-        writer.WriteNumber("acceptedDeferralCount", readiness.AcceptedDeferralCount)
-        writer.WriteEndObject()
-        writer.WriteStartArray("findings")
+            writer.WriteEndArray()
+            writer.WriteStartObject("readiness")
+            writer.WriteString("status", readiness.Readiness)
+            writer.WriteNumber("readyCount", readiness.ReadyFindingCount)
+            writer.WriteNumber("advisoryCount", readiness.AdvisoryCount)
+            writer.WriteNumber("warningCount", readiness.WarningCount)
+            writer.WriteNumber("blockingCount", readiness.BlockingCount)
+            writer.WriteNumber("staleSourceCount", readiness.StaleSourceCount)
+            writer.WriteNumber("missingDispositionCount", readiness.MissingDispositionCount)
+            writer.WriteNumber("malformedSourceCount", readiness.MalformedSourceCount)
+            writer.WriteNumber("generatedViewFindingCount", readiness.GeneratedViewFindingCount)
+            writer.WriteNumber("acceptedDeferralCount", readiness.AcceptedDeferralCount)
+            writer.WriteEndObject()
+            writer.WriteStartArray("findings")
 
-        findings
-        |> List.iter (fun (id, diagnostic, severity) ->
-            writer.WriteStartObject()
-            writer.WriteString("id", id)
-            writer.WriteString("category", analysisFindingCategory severity)
-            writer.WriteString("severity", severity)
-            writer.WriteString("state", if severity = "ready" then "closed" else "open")
-            writer.WriteString("path", diagnosticPath diagnostic)
-            writeStringArray writer "relatedIds" diagnostic.RelatedIds
-            writer.WriteString("message", diagnostic.Message)
-            writer.WriteString("correction", diagnostic.Correction)
-            writer.WriteEndObject())
+            findings
+            |> List.iter (fun (id, diagnostic, severity) ->
+                writer.WriteStartObject()
+                writer.WriteString("id", id)
+                writer.WriteString("category", analysisFindingCategory severity)
+                writer.WriteString("severity", severity)
+                writer.WriteString("state", if severity = "ready" then "closed" else "open")
+                writer.WriteString("path", diagnosticPath diagnostic)
+                writeStringArray writer "relatedIds" diagnostic.RelatedIds
+                writer.WriteString("message", diagnostic.Message)
+                writer.WriteString("correction", diagnostic.Correction)
+                writer.WriteEndObject())
 
-        writer.WriteEndArray()
-        writeGeneratedViewsArray writer generatedViews
-        writeBoundaryFacts writer "optionalBoundaryFacts"
-        writeViewDiagnostics writer diagnostics
+            writer.WriteEndArray()
+            writeGeneratedViewsArray writer generatedViews
+            writeBoundaryFacts writer "optionalBoundaryFacts"
+            writeViewDiagnostics writer diagnostics
 
-        writeNextAction
-            writer
-            (readiness.Readiness = "implementationReady")
-            "analysis.next.implement"
-            "Lifecycle sources are current and ready for implementation."
-            "Analysis found lifecycle diagnostics that must be corrected before implementation."
-
-        writer.WriteEndObject()
-        writer.Flush()
-        Encoding.UTF8.GetString(stream.ToArray())
+            writeNextAction
+                writer
+                (readiness.Readiness = "implementationReady")
+                "analysis.next.implement"
+                "Lifecycle sources are current and ready for implementation."
+                "Analysis found lifecycle diagnostics that must be corrected before implementation.")
 
     let existingAnalysisDiagnostic workId model =
         let path = analysisPath workId
