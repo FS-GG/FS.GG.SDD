@@ -42,9 +42,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-          # NuGet restore cache keyed on the committed lockfiles (feature 064).
-          cache: true
-          cache-dependency-path: '**/packages.lock.json'
+          # No restore cache: this workflow's restore footprint differs from the gate's, and
+          # setup-dotnet keys the cache only on hashFiles(packages.lock.json)+OS+runtime with
+          # no per-job component, so caching here would share and poison the deterministic
+          # gate's key (#92 / NU1403). A fresh restore is fine here.
 
       - name: Preflight registry source
         id: preflight
