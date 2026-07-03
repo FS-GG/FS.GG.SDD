@@ -59,6 +59,9 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+          # NuGet restore cache keyed on the committed lockfiles (feature 064).
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
 
       # Source of truth is the EVALUATED fsproj <Version> for each line. The release/tag
       # event's tag is a coherence check against BOTH lines, never the source. A
@@ -145,16 +148,16 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+          # NuGet restore cache keyed on the committed lockfiles (feature 064).
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
 
-      # Locked restore, mirroring gate.yml: any dependency-graph drift or silently
-      # substituted version (NU1603) fails here instead of resolving quietly.
+      # Locked restore via the shared composite action (feature 064): any
+      # dependency-graph drift or silently substituted version (NU1603) fails here.
       - name: Restore (locked)
-        run: |
-          set -euo pipefail
-          if ! dotnet restore tests/FS.GG.Contracts.Tests/FS.GG.Contracts.Tests.fsproj --locked-mode; then
-            echo "::error::locked restore failed — the resolved graph does not match the committed packages.lock.json (or a version was substituted, NU1603). If this is an intentional dependency change, run: dotnet restore FS.GG.SDD.sln --force-evaluate  and commit the updated packages.lock.json files."
-            exit 1
-          fi
+        uses: ./.github/actions/locked-restore
+        with:
+          target: tests/FS.GG.Contracts.Tests/FS.GG.Contracts.Tests.fsproj
 
       # The gate (FR-003): publish-contracts `needs` this job, so a red run never reaches the push.
       - name: Test (FS.GG.Contracts)
@@ -173,15 +176,15 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+          # NuGet restore cache keyed on the committed lockfiles (feature 064).
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
 
-      # Locked restore, mirroring the other jobs (same NU1603 / drift error message).
+      # Locked restore via the shared composite action (feature 064).
       - name: Restore (locked)
-        run: |
-          set -euo pipefail
-          if ! dotnet restore tests/FS.GG.SDD.Cli.Tests/FS.GG.SDD.Cli.Tests.fsproj --locked-mode; then
-            echo "::error::locked restore failed — the resolved graph does not match the committed packages.lock.json (or a version was substituted, NU1603). If this is an intentional dependency change, run: dotnet restore FS.GG.SDD.sln --force-evaluate  and commit the updated packages.lock.json files."
-            exit 1
-          fi
+        uses: ./.github/actions/locked-restore
+        with:
+          target: tests/FS.GG.SDD.Cli.Tests/FS.GG.SDD.Cli.Tests.fsproj
 
       # The gate (research Decision 6): publish-cli `needs` this job, so a red run never
       # reaches the push. ValidateCommandTests covers `registry validate` here.
@@ -207,14 +210,14 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+          # NuGet restore cache keyed on the committed lockfiles (feature 064).
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
 
       - name: Restore (locked)
-        run: |
-          set -euo pipefail
-          if ! dotnet restore src/FS.GG.Contracts/FS.GG.Contracts.fsproj --locked-mode; then
-            echo "::error::locked restore failed — the resolved graph does not match the committed packages.lock.json (or a version was substituted, NU1603). If this is an intentional dependency change, run: dotnet restore FS.GG.SDD.sln --force-evaluate  and commit the updated packages.lock.json files."
-            exit 1
-          fi
+        uses: ./.github/actions/locked-restore
+        with:
+          target: src/FS.GG.Contracts/FS.GG.Contracts.fsproj
 
       # Single explicit project ⇒ single-package scope (FR-001). --no-restore reuses the
       # locked restore above. Version comes from the shared resolve-versions job (FR-014 —
@@ -289,14 +292,14 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+          # NuGet restore cache keyed on the committed lockfiles (feature 064).
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
 
       - name: Restore (locked)
-        run: |
-          set -euo pipefail
-          if ! dotnet restore src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj --locked-mode; then
-            echo "::error::locked restore failed — the resolved graph does not match the committed packages.lock.json (or a version was substituted, NU1603). If this is an intentional dependency change, run: dotnet restore FS.GG.SDD.sln --force-evaluate  and commit the updated packages.lock.json files."
-            exit 1
-          fi
+        uses: ./.github/actions/locked-restore
+        with:
+          target: src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj
 
       # The CLI is already PackAsTool/ToolCommandName=fsgg-sdd; `dotnet pack` bundles its full
       # runtime closure (the RegistryDocument YAML loader + YamlDotNet) so the installed tool
@@ -320,6 +323,13 @@ jobs:
             exit 1
           fi
           printf 'Packed: %s\n' "${packages[@]}"
+
+      # Self-containment smoke BEFORE any push (feature 064 / FR-012): pack -> install
+      # from a throwaway local source with NO org feed -> run `fsgg-sdd registry validate`.
+      # Proves the packed tool bundles its full runtime closure; a non-self-contained
+      # pack fails here and blocks the publish rather than shipping a broken tool.
+      - name: Verify the packed tool is self-contained
+        run: bash scripts/verify-cli-tool.sh
 
       # Push only when push==true (a dry run skips this entirely, FR-004). --skip-duplicate
       # makes a re-publish of an existing version an idempotent no-op success (FR-008); any

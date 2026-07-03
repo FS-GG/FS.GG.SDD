@@ -42,6 +42,9 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
+          # NuGet restore cache keyed on the committed lockfiles (feature 064).
+          cache: true
+          cache-dependency-path: '**/packages.lock.json'
 
       - name: Preflight registry source
         id: preflight
