@@ -30,10 +30,11 @@ dotnet build FS.GG.SDD.sln -c Release
 dotnet test  FS.GG.SDD.sln -c Release
 ```
 
-The solution has four library/CLI projects (`Artifacts`, `Commands`, `Validation`,
-`Cli`) and their test projects; each test project carries a `PublicSurface.baseline`
-snapshot that must stay in sync with the public surface (a Tier-1 change updates it).
-The `WarningsAsErrors` ratchet (`Directory.Build.props`) stays at zero.
+The solution has five library/CLI projects (`Contracts`, `Artifacts`, `Commands`,
+`Validation`, `Cli`) and their test projects; each test project carries a
+`PublicSurface.baseline` snapshot that must stay in sync with the public surface (a
+Tier-1 change updates it). The `WarningsAsErrors` ratchet
+(`Directory.Build.local.props`) stays at zero.
 
 ## Current state
 

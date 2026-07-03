@@ -172,5 +172,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/062-split-command-reports/plan.md
+at specs/063-doctor-drift-and-doc-currency/plan.md
 <!-- SPECKIT END -->

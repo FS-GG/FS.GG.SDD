@@ -3,7 +3,8 @@ name: release
 # Producer of the cross-repo auto-update fabric. On a release of FS.GG.SDD (or a pushed
 # v* tag, or a manual dispatch), a single run publishes TWO packages to the org GitHub
 # Packages feed (nuget.pkg.github.com/FS-GG): FS.GG.Contracts (the org-shared contracts
-# line, 1.1.0) and FS.GG.SDD.Cli (the `fsgg-sdd` dotnet tool, the SDD product line, 0.2.0).
+# line) and FS.GG.SDD.Cli (the `fsgg-sdd` dotnet tool, the SDD product line). Versions come
+# from each project's own version properties — this header pins none, to avoid staleness.
 # Both push with --skip-duplicate using the run-scoped GITHUB_TOKEN (packages: write, no
 # PAT), only from the canonical repo.
 #

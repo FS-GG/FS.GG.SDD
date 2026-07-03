@@ -42,7 +42,7 @@ module internal DiagnosticConstructors =
             "unknownCommand"
             None
             $"Unknown SDD command '{value}'."
-            "Use one of: init, charter, specify, clarify, checklist, plan, tasks, analyze, evidence, verify, ship."
+            "Use one of: init, charter, specify, clarify, checklist, plan, tasks, analyze, evidence, verify, ship, agents, refresh, scaffold, doctor, upgrade, validate, registry."
             []
 
     let malformedWorkId (value: string) =
