@@ -7,19 +7,15 @@ open FS.GG.SDD.Commands.CommandEffects
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.CommandWorkflow
+open FS.GG.SDD.TestShared
 
 module TestSupport =
     module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
 
-    let rec findRepoRoot (directory: DirectoryInfo) =
-        if File.Exists(Path.Combine(directory.FullName, "FS.GG.SDD.sln")) then
-            directory.FullName
-        else
-            match directory.Parent with
-            | null -> failwith "Could not locate repository root."
-            | parent -> findRepoRoot parent
-
-    let repoRoot = findRepoRoot (DirectoryInfo AppContext.BaseDirectory)
+    // Shared primitives now live in TestShared (feature 067 / FR-010); these delegate so the many
+    // TestSupport.* call sites (and the Cli/Validation projects that link this file) stay stable.
+    let findRepoRoot = TestShared.findRepoRoot
+    let repoRoot = TestShared.repoRoot
 
     /// The configuration these tests were built under — "Release" in CI (gate.yml /
     /// release.yml build `-c Release`), "Debug" for a local `dotnet test`. Mirrors the
@@ -66,12 +62,7 @@ module TestSupport =
 
             cliProcess.ExitCode, stdout, stderr
 
-    let tempDirectory () =
-        let path =
-            Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + Guid.NewGuid().ToString("N"))
-
-        Directory.CreateDirectory path |> ignore
-        path
+    let tempDirectory = TestShared.tempDirectory
 
     let request (command: SddCommand) (root: string) =
         { Command = command
@@ -92,14 +83,7 @@ module TestSupport =
     let readRelative (root: string) (path: string) =
         File.ReadAllText(Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar)))
 
-    let writeRelative (root: string) (path: string) (text: string) =
-        let absolute = Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar))
-
-        match Path.GetDirectoryName absolute with
-        | null -> ()
-        | directory -> Directory.CreateDirectory directory |> ignore
-
-        File.WriteAllText(absolute, text)
+    let writeRelative = TestShared.writeRelative
 
     let existsRelative (root: string) (path: string) =
         File.Exists(Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar)))
@@ -263,46 +247,9 @@ module TestSupport =
         runChecklist root workId title |> ignore
         runPlan root workId title |> ignore
 
-    let passingTaskEvidence =
-        """schemaVersion: 1
-evidence:
-  - id: EV001
-    kind: verification
-    subject:
-      type: task
-      id: T001
-    result: pass
-  - id: EV002
-    kind: verification
-    subject:
-      type: task
-      id: T002
-    result: pass
-  - id: EV003
-    kind: verification
-    subject:
-      type: task
-      id: T003
-    result: pass
-  - id: EV004
-    kind: verification
-    subject:
-      type: task
-      id: T004
-    result: pass
-  - id: EV005
-    kind: verification
-    subject:
-      type: task
-      id: T005
-    result: pass
-  - id: EV006
-    kind: verification
-    subject:
-      type: task
-      id: T006
-    result: pass
-"""
+    // The T001..T006 evidence ladder is derived once in TestShared (feature 067 / FR-011),
+    // byte-compatible with the former hardcoded literal.
+    let passingTaskEvidence = TestShared.EvidenceLadder.passingTaskEvidence 6
 
     let writePassingTaskEvidenceFor root workId =
         writeRelative root $"work/{workId}/evidence.yml" passingTaskEvidence

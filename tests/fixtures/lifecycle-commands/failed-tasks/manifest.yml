@@ -1,8 +1,0 @@
-schemaVersion: 1
-scenario: failed-tasks
-command: analyze
-workId: 010-analyze-command
-expected:
-  outcome: blocked
-  diagnostics: [failedTasksPrerequisite]
-  correctionCommand: tasks

@@ -172,5 +172,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/065-format-gate/plan.md
+at specs/067-test-infra-hardening/plan.md
 <!-- SPECKIT END -->

@@ -1,7 +1,0 @@
-schemaVersion: 1
-fixture:
-  id: lifecycle-through-analysis
-  workId: 003-native-sdd-lifecycle-commands
-  purpose: Later fixture for charter through analyze lifecycle commands.
-expected:
-  status: pending

@@ -1,8 +1,0 @@
-schemaVersion: 1
-scenario: done-task-missing-evidence
-command: analyze
-workId: 010-analyze-command
-expected:
-  outcome: blocked
-  diagnostics: [doneTaskMissingEvidence]
-  correctionCommand: tasks

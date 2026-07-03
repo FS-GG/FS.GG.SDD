@@ -79,10 +79,11 @@ module ValidationRunner =
     let runWork command root inputText =
         runRequest (workRequest command root inputText)
 
-    let tempDirectory () =
-        let path =
-            Path.Combine(Path.GetTempPath(), "fsgg-sdd-validate-" + Guid.NewGuid().ToString("N"))
-
+    // A fresh temp directory nested under the run root (feature 067 / FR-007). The run root is
+    // created once per `run` and deleted in a `finally`, so the ~350 per-run project copies no
+    // longer leak. `parent` is that run root.
+    let tempDirectory (parent: string) =
+        let path = Path.Combine(parent, Guid.NewGuid().ToString("N"))
         Directory.CreateDirectory path |> ignore
         path
 
@@ -178,16 +179,16 @@ module ValidationRunner =
         if rank >= 100 then
             runWork Ship root None |> ignore
 
-    let buildState state =
-        let root = tempDirectory ()
+    let buildState runRoot state =
+        let root = tempDirectory runRoot
         let withEvidence = state <> "blocked"
         buildProjectAt root (stateRank state) withEvidence
         root
 
     /// A fully-generated project: ship plus the cross-cutting agents/refresh
     /// generators, so every catalogued generated view is produced.
-    let buildFullProject () =
-        let root = tempDirectory ()
+    let buildFullProject runRoot =
+        let root = tempDirectory runRoot
         buildProjectAt root 100 true
         runWork Agents root None |> ignore
         runWork Refresh root None |> ignore
@@ -277,7 +278,7 @@ module ValidationRunner =
     //  cell evaluators
     // ============================================================
 
-    let evaluateLifecycleCell (stateRoots: Map<string, string>) coordinates =
+    let evaluateLifecycleCell (stateRoots: Map<string, string>) runRoot coordinates =
         let commandValue = coord "command" coordinates
         let projection = projectionOfValue (coord "projection" coordinates)
         let state = coord "state" coordinates
@@ -292,7 +293,7 @@ module ValidationRunner =
                 match Map.tryFind state stateRoots with
                 | None -> NotValidated $"state {state} could not be constructed"
                 | Some baseRoot ->
-                    let cellRoot = tempDirectory ()
+                    let cellRoot = tempDirectory runRoot
                     copyDirectory baseRoot cellRoot
 
                     let inputText = if command = Specify then Some specifyIntent else None
@@ -341,6 +342,7 @@ module ValidationRunner =
         (neutral: Map<string, string option>)
         (repeat: Map<string, string option>)
         (perturbed: Map<string, string option>)
+        (degraded: Map<string, string option>)
         coordinates
         =
         let output = coord "output" coordinates
@@ -348,6 +350,10 @@ module ValidationRunner =
 
         let lookup (snapshot: Map<string, string option>) =
             Map.tryFind output snapshot |> Option.flatten
+
+        let isColorDisabling =
+            environment = environmentClassValue ColorDisabled
+            || environment = environmentClassValue TermDumb
 
         match lookup neutral with
         | None -> SkippedWithReason $"output {output} is not produced by the fixture"
@@ -361,6 +367,36 @@ module ValidationRunner =
                         "produced output contains ANSI control codes"
                         "Exclude ANSI styling from the deterministic contract."
                 )
+            elif isColorDisabling then
+                // Assert on the snapshot produced with NO_COLOR / TERM=dumb actually set
+                // (feature 067 / FR-009): the output must carry no ANSI and stay byte-identical to
+                // the neutral run. Note the enrolled `DeterminismOutputs` are all machine artifacts
+                // (persisted JSON/MD views + the --json report), none of which is a rendered
+                // text/rich projection, so in practice these bytes never depend on the color env
+                // and this cell reproduces `Pass` — it proves env-independence of the *persisted*
+                // surface, not of rendered output. The rendered-output ANSI-degradation guarantee
+                // lives where color can actually appear: the CLI-process test `ValidateCommandTests`.
+                match lookup degraded with
+                | Some degradedBytes when hasAnsi degradedBytes ->
+                    Fail(
+                        failure
+                            determinismMatrixName
+                            coordinates
+                            output
+                            "produced output contains ANSI control codes when color is disabled"
+                            "Strip ANSI when NO_COLOR / TERM=dumb is set."
+                    )
+                | Some degradedBytes when degradedBytes = neutralBytes -> Pass
+                | Some _ ->
+                    Fail(
+                        failure
+                            determinismMatrixName
+                            coordinates
+                            output
+                            "output differs when the color-disabling environment is applied"
+                            "Remove color/TTY-environment dependence from the producer."
+                    )
+                | None -> SkippedWithReason $"output {output} is not produced with color disabled"
             elif environment = environmentClassValue PerturbedHostEnvironment then
                 match lookup perturbed with
                 | Some perturbedBytes when perturbedBytes = neutralBytes -> Pass
@@ -491,17 +527,41 @@ module ValidationRunner =
 
     // ---- host perturbation ----
 
+    /// Run `action` with a set of environment variables temporarily overridden, restoring the
+    /// originals afterward. Used to produce output snapshots under a genuinely-applied host
+    /// condition (feature 067 / FR-009) — e.g. the color-disabling `NO_COLOR` / `TERM=dumb`.
+    let withEnvVars (vars: (string * string) list) (action: unit -> 'a) =
+        let originals =
+            vars |> List.map (fun (key, _) -> key, Environment.GetEnvironmentVariable key)
+
+        try
+            vars
+            |> List.iter (fun (key, value) -> Environment.SetEnvironmentVariable(key, value))
+
+            action ()
+        finally
+            originals
+            |> List.iter (fun (key, value) -> Environment.SetEnvironmentVariable(key, value))
+
     let withPerturbedHost (action: unit -> 'a) =
         let originalCulture = Thread.CurrentThread.CurrentCulture
         let originalTz = Environment.GetEnvironmentVariable "TZ"
+        let originalCwd = Directory.GetCurrentDirectory()
+
+        // A genuinely different working directory (feature 067 / FR-009): withPerturbedHost's
+        // contract is to vary locale + time zone + cwd; cwd was previously not varied, so a
+        // cwd-dependent producer would have slipped past the perturbed-host determinism cell.
+        let perturbedCwd = Path.GetTempPath()
 
         try
             Thread.CurrentThread.CurrentCulture <- CultureInfo "de-DE"
             Environment.SetEnvironmentVariable("TZ", "Asia/Kolkata")
+            Directory.SetCurrentDirectory perturbedCwd
             action ()
         finally
             Thread.CurrentThread.CurrentCulture <- originalCulture
             Environment.SetEnvironmentVariable("TZ", originalTz)
+            Directory.SetCurrentDirectory originalCwd
 
     // ============================================================
     //  coverage reconciliation (US2 / FR-012 / INV-7)
@@ -673,7 +733,7 @@ module ValidationRunner =
         divergences
         |> List.exists (fun (name, coords) -> name = matrixName && coords = coordinates)
 
-    let run (options: RunnerOptions) : ValidationReport =
+    let rec run (options: RunnerOptions) : ValidationReport =
         let plan = options.Plan |> Option.defaultValue defaultPlan
         let model, _effects = init plan
 
@@ -682,10 +742,29 @@ module ValidationRunner =
             | Some only -> only = name
             | None -> true
 
+        // One temp root per run; every fixture/cell copy nests under it and the whole tree is
+        // deleted in the `finally` below, so a run leaves no temp residue (feature 067 / FR-007).
+        let runRoot =
+            Path.Combine(Path.GetTempPath(), "fsgg-sdd-validate-run-" + Guid.NewGuid().ToString("N"))
+
+        Directory.CreateDirectory runRoot |> ignore
+
+        try
+            runCore options plan model selected runRoot
+        finally
+            try
+                if Directory.Exists runRoot then
+                    Directory.Delete(runRoot, true)
+            with _ ->
+                ()
+
+    and runCore (options: RunnerOptions) plan model selected runRoot : ValidationReport =
         // Build shared fixtures only for the matrices that will run.
         let stateRoots =
             if selected lifecycleMatrixName then
-                plan.States |> List.map (fun state -> state, buildState state) |> Map.ofList
+                plan.States
+                |> List.map (fun state -> state, buildState runRoot state)
+                |> Map.ofList
             else
                 Map.empty
 
@@ -697,7 +776,7 @@ module ValidationRunner =
                 || selected baselineMatrixName
                 || selected compatibilityMatrixName
             then
-                buildFullProject ()
+                buildFullProject runRoot
             else
                 ""
 
@@ -716,14 +795,20 @@ module ValidationRunner =
             |> List.map (fun output -> output, produceOutput neutralRoot output)
             |> Map.ofList
 
-        let neutralSnapshot, repeatSnapshot, perturbedSnapshot =
+        let neutralSnapshot, repeatSnapshot, perturbedSnapshot, degradedSnapshot =
             if selected determinismMatrixName then
                 let neutral = regenerateAndSnapshot ()
                 let repeat = regenerateAndSnapshot ()
                 let perturbed = withPerturbedHost regenerateAndSnapshot
-                neutral, repeat, perturbed
+                // A snapshot produced with the color-disabling condition genuinely applied
+                // (feature 067 / FR-009): the ColorDisabled / TermDumb cells assert on THIS output
+                // rather than reusing the neutral one, so a producer that consulted the env would
+                // be caught here instead of the cell running a vacuous neutral comparison.
+                let degraded = withEnvVars [ "NO_COLOR", "1"; "TERM", "dumb" ] regenerateAndSnapshot
+
+                neutral, repeat, perturbed, degraded
             else
-                Map.empty, Map.empty, Map.empty
+                Map.empty, Map.empty, Map.empty, Map.empty
 
         let release = currentRelease ()
 
@@ -743,9 +828,14 @@ module ValidationRunner =
             elif not (selected matrixName) then
                 cell.Status
             elif matrixName = lifecycleMatrixName then
-                evaluateLifecycleCell stateRoots cell.Coordinates
+                evaluateLifecycleCell stateRoots runRoot cell.Coordinates
             elif matrixName = determinismMatrixName then
-                evaluateDeterminismCell neutralSnapshot repeatSnapshot perturbedSnapshot cell.Coordinates
+                evaluateDeterminismCell
+                    neutralSnapshot
+                    repeatSnapshot
+                    perturbedSnapshot
+                    degradedSnapshot
+                    cell.Coordinates
             else
                 cell.Status
 

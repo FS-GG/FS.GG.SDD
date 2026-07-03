@@ -3,18 +3,13 @@ namespace FS.GG.SDD.Artifacts.Tests
 open System
 open System.IO
 open FS.GG.SDD.Artifacts
+open FS.GG.SDD.TestShared
 open Xunit
 
 module TestSupport =
-    let rec findRepoRoot (directory: DirectoryInfo) =
-        if File.Exists(Path.Combine(directory.FullName, "FS.GG.SDD.sln")) then
-            directory.FullName
-        else
-            match directory.Parent with
-            | null -> failwith "Could not locate repository root."
-            | parent -> findRepoRoot parent
-
-    let repoRoot = findRepoRoot (DirectoryInfo AppContext.BaseDirectory)
+    // Delegates to the shared primitive (feature 067 / FR-010).
+    let findRepoRoot = TestShared.findRepoRoot
+    let repoRoot = TestShared.repoRoot
 
     let fixtureDirectory name =
         Path.Combine(repoRoot, "tests", "fixtures", "sdd-artifact-model", name)

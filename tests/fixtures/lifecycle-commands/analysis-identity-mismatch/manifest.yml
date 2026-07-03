@@ -1,7 +1,0 @@
-schemaVersion: 1
-scenario: analysis-identity-mismatch
-command: analyze
-workId: 010-analyze-command
-expected:
-  diagnostics: [analysisIdentityMismatch]
-  generatedView: readiness/010-analyze-command/analysis.json

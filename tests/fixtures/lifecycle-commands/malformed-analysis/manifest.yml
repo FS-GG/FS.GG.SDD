@@ -1,7 +1,0 @@
-schemaVersion: 1
-scenario: malformed-analysis
-command: analyze
-workId: 010-analyze-command
-expected:
-  diagnostics: [malformedAnalysisView]
-  generatedView: readiness/010-analyze-command/analysis.json
