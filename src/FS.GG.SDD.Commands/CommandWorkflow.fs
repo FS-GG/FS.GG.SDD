@@ -15,7 +15,6 @@ open FS.GG.SDD.Artifacts.Serialization
 open FS.GG.SDD.Artifacts.WorkModel
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
-open FS.GG.SDD.Commands.Internal
 open FS.GG.SDD.Commands.Internal.Foundation
 open FS.GG.SDD.Commands.Internal.HandlersEarly
 open FS.GG.SDD.Commands.Internal.HandlersAnalyze
