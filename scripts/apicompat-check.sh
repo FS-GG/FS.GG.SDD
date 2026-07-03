@@ -87,10 +87,22 @@ cat > "$cfg" <<EOF
 EOF
 
 # Latest published version of a package id on the feed, or empty if none (NoBaselineYet).
+# The flat-container `versions` array is NOT guaranteed sorted — GitHub Packages returns it
+# newest-first — so pick the max explicitly rather than by position. Prefer the highest STABLE
+# release; `sort -V` ranks a prerelease ABOVE its base version (e.g. 1.4.0-preview > 1.4.0), the
+# opposite of SemVer precedence, so only fall back to the highest prerelease when no stable exists.
 latest_version() {
   local id_lower; id_lower="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
-  curl -fsSL -H "Authorization: Bearer $token" "$FEED_DL/$id_lower/index.json" 2>/dev/null \
-    | grep -oE '"[0-9][^"]*"' | tr -d '"' | tail -1
+  local versions stable
+  versions="$(curl -fsSL -H "Authorization: Bearer $token" "$FEED_DL/$id_lower/index.json" 2>/dev/null \
+    | grep -oE '"[0-9][^"]*"' | tr -d '"')"
+  [ -z "$versions" ] && return
+  stable="$(printf '%s\n' "$versions" | grep -v -e '-' | sort -V | tail -1)"
+  if [ -n "$stable" ]; then
+    printf '%s' "$stable"
+  else
+    printf '%s\n' "$versions" | sort -V | tail -1
+  fi
 }
 
 # A check version strictly greater than the baseline that PRESERVES prerelease-ness (so a package
