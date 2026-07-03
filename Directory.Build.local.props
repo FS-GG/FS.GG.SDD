@@ -38,6 +38,14 @@
          APPEND to $(WarningsNotAsErrors) — the canonical props conditionally exempts
          the api-gate RS#### codes there, so a plain assignment would drop them. -->
     <WarningsNotAsErrors>$(WarningsNotAsErrors);FS3218;FS3262</WarningsNotAsErrors>
+    <!-- Keep NuGetAudit advisories (NU1901-NU1904) as WARNINGS under the full ratchet
+         (feature 064). NuGetAudit is on by default in the net10 SDK and audits transitive
+         deps, so a CVE newly published against any package in the restore graph would
+         otherwise flip restore/pack to an error with zero code change — a non-deterministic
+         "green today, red next Tuesday" break on the release path too. Audit stays advisory
+         (visible, non-blocking); promote deliberately later if audit should gate release.
+         APPEND — preserve the FS/RS exemptions accumulated above. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
     <!-- Retained for intent/completeness though subsumed by TWAE=true above: the
          feature-026 FS3261/FS0025 promotion. Kept so a future TWAE relaxation still
          floors on these two. APPEND — the canonical already promoted NU1603;NU1608. -->
