@@ -1,8 +1,0 @@
-schemaVersion: 1
-scenario: evidence-synthetic-disclosed
-command: evidence
-workId: 011-evidence-command
-expected:
-  syntheticDisclosure: required
-  undisclosedDiagnostic: evidence.undisclosedSyntheticEvidence
-  disclosedSyntheticState: synthetic

@@ -4,6 +4,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="../Shared/TestShared.fs" />
     <Compile Include="TestSupport.fs" />
     <Compile Include="CommandWorkflowTests.fs" />
     <Compile Include="InitCommandTests.fs" />
@@ -39,6 +40,8 @@
     <Compile Include="AuthoringDocsContractTests.fs" />
     <Compile Include="EarlyStageGuidanceContractTests.fs" />
     <Compile Include="SurfaceBaselineTests.fs" />
+    <Compile Include="ProcessGlobalEnvGuardTests.fs" />
+    <Compile Include="FixtureManifestGuardTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

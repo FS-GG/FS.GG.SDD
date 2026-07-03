@@ -1,9 +1,0 @@
-schemaVersion: 1
-scenario: malformed-evidence
-command: evidence
-workId: 011-evidence-command
-expected:
-  outcome: blocked
-  diagnostics:
-    - evidence.malformedEvidenceArtifact
-  writes: []

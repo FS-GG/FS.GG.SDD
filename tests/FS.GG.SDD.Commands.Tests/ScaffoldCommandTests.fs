@@ -9,9 +9,12 @@ open FS.GG.SDD.Commands.CommandWorkflow
 open Xunit
 
 /// Fixture-driven scaffold semantics over a **real** `dotnet new` provider (no mocks):
-/// the in-repo template fixtures drive real process + filesystem I/O. Serialized into
-/// one collection so concurrent `dotnet new install` calls never race.
-[<Collection("Scaffold")>]
+/// the in-repo template fixtures drive real process + filesystem I/O. This module also
+/// mutates process-global `PATH` / `FSGG_SDD_PROCESS_TIMEOUT_MS`, so it joins the
+/// `ProcessGlobalEnv` collection — every class that mutates process-global env OR spawns a
+/// PATH-resolved process shares this collection, so a mutation is never observed by a
+/// concurrent spawner (feature 067 / FR-001). `ProcessGlobalEnvGuardTests` enforces membership.
+[<Collection("ProcessGlobalEnv")>]
 module ScaffoldCommandTests =
     let private fixturesRoot =
         Path.Combine(TestSupport.repoRoot, "tests", "fixtures", "scaffold-provider")

@@ -1,8 +1,0 @@
-schemaVersion: 1
-fixture:
-  id: init-empty-project
-  workId: null
-  purpose: Empty directory can be initialized as an SDD project.
-expected:
-  command: init
-  outcome: succeeded

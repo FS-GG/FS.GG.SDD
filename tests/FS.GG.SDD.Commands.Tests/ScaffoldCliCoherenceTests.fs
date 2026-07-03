@@ -13,7 +13,7 @@ open Xunit
 /// Feature 052 (US2): the non-blocking CLI-coherence advisory, exercised end-to-end
 /// over the real `dotnet new` provider (no mocks). Installed CLI version is the test
 /// build's generator version (0.5.0); fixtures declare minimums above/at/below it.
-[<Collection("Scaffold")>]
+[<Collection("ProcessGlobalEnv")>]
 module ScaffoldCliCoherenceTests =
     let private fixturesRoot =
         Path.Combine(TestSupport.repoRoot, "tests", "fixtures", "scaffold-provider")

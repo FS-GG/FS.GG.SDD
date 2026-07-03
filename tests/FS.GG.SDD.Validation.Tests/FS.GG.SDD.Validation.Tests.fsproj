@@ -6,6 +6,7 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <!-- Reuse the Commands test support (real workflow drivers) without duplicating it. -->
+    <Compile Include="../Shared/TestShared.fs" />
     <Compile Include="../FS.GG.SDD.Commands.Tests/TestSupport.fs" />
     <Compile Include="SurfaceBaselineTests.fs" />
     <Compile Include="LifecycleMatrixTests.fs" />

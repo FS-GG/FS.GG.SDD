@@ -3,6 +3,7 @@ namespace FS.GG.Contracts.Tests
 open System
 open System.IO
 open System.Reflection
+open FS.GG.SDD.TestShared
 open Xunit
 
 module PublicSurfaceTests =
@@ -53,18 +54,10 @@ module PublicSurfaceTests =
 
         Array.concat [ typeNames; moduleMembers; recordMembers ] |> Array.sort
 
-    // Principle III / quickstart Scenario I: the exported surface matches the
-    // deliberate baseline. Set FSGG_UPDATE_BASELINE=1 to re-capture intentionally.
+    // Principle III / quickstart Scenario I: the exported surface matches the deliberate
+    // baseline. Set FSGG_UPDATE_BASELINE=1 to re-capture intentionally. Feature 067 / FR-005:
+    // the update-or-assert logic is now the shared TestShared.SurfaceBaseline.verify used by all
+    // five baseline tests (this was the one test that already carried the switch).
     [<Fact>]
     let ``public surface matches baseline`` () =
-        let actual = capture ()
-
-        if Environment.GetEnvironmentVariable("FSGG_UPDATE_BASELINE") = "1" then
-            File.WriteAllLines(baselinePath, actual)
-
-        let baseline =
-            File.ReadAllLines baselinePath
-            |> Array.filter (String.IsNullOrWhiteSpace >> not)
-            |> Array.sort
-
-        Assert.Equal<string array>(baseline, actual)
+        TestShared.SurfaceBaseline.verify baselinePath capture

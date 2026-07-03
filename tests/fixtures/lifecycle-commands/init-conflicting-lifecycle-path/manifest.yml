@@ -1,8 +1,0 @@
-schemaVersion: 1
-fixture:
-  id: init-conflicting-lifecycle-path
-  workId: null
-  purpose: Init refuses unsafe lifecycle-path overwrites.
-expected:
-  command: init
-  diagnostics: [unsafeOverwrite]

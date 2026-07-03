@@ -18,15 +18,9 @@ open Xunit
 module AcceptanceSupport =
     module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
 
-    let rec findRepoRoot (directory: DirectoryInfo) =
-        if File.Exists(Path.Combine(directory.FullName, "FS.GG.SDD.sln")) then
-            directory.FullName
-        else
-            match directory.Parent with
-            | null -> failwith "Could not locate repository root."
-            | parent -> findRepoRoot parent
-
-    let repoRoot = findRepoRoot (DirectoryInfo AppContext.BaseDirectory)
+    // Delegates to the shared primitives (feature 067 / FR-010).
+    let findRepoRoot = FS.GG.SDD.TestShared.TestShared.findRepoRoot
+    let repoRoot = FS.GG.SDD.TestShared.TestShared.repoRoot
 
     // ---------- T003: env gating + run scaffolding ----------
 
@@ -69,13 +63,9 @@ module AcceptanceSupport =
             | Some path when File.Exists path -> ()
             | _ -> this.Skip <- $"{registryEnvVar} is unset; the composition acceptance is opt-in and network-gated."
 
-    /// A fresh, empty product root for one run (temp dir, sensed — never compared).
-    let newProductRoot () =
-        let path =
-            Path.Combine(Path.GetTempPath(), "fsgg-sdd-acceptance-" + Guid.NewGuid().ToString("N"))
-
-        Directory.CreateDirectory path |> ignore
-        path
+    /// A fresh, empty product root for one run (temp dir, sensed — never compared). Nested under
+    /// the shared per-run temp root so it is swept at process exit (feature 067 / FR-007).
+    let newProductRoot = FS.GG.SDD.TestShared.TestShared.tempDirectory
 
     /// Copy the external registry file into `<root>/.fsgg/providers.yml` verbatim. The
     /// registry is the only channel carrying the real template identity; it is never
@@ -89,14 +79,7 @@ module AcceptanceSupport =
 
         File.Copy(registry, target, true)
 
-    let writeRelative (root: string) (path: string) (text: string) =
-        let absolute = Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar))
-
-        match Path.GetDirectoryName absolute with
-        | null -> ()
-        | directory -> Directory.CreateDirectory directory |> ignore
-
-        File.WriteAllText(absolute, text)
+    let writeRelative = FS.GG.SDD.TestShared.TestShared.writeRelative
 
     let existsRelative (root: string) (path: string) =
         File.Exists(Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar)))

@@ -7,6 +7,9 @@ open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
 open Xunit
 
+// Joins ProcessGlobalEnv: the CLI smoke here spawns a PATH-resolved process, so it must not
+// run while a sibling mutates process-global PATH (feature 067 / FR-001).
+[<Collection("ProcessGlobalEnv")>]
 module ShipCommandTests =
     let workId = "013-ship-command"
     let title = "Ship Command"

@@ -4,6 +4,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="../Shared/TestShared.fs" />
     <Compile Include="AcceptanceSupport.fs" />
     <Compile Include="ProbeResolutionTests.fs" />
     <Compile Include="RegistryResolverTests.fs" />

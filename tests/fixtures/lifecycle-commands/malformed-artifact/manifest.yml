@@ -1,8 +1,0 @@
-schemaVersion: 1
-fixture:
-  id: malformed-artifact
-  workId: 004-charter-command
-  purpose: Charter reports malformed project config and malformed charter front matter before mutation.
-expected:
-  command: charter
-  diagnostics: [malformedProjectConfig, malformedCharterFrontMatter]

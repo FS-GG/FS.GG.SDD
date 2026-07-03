@@ -1,9 +1,9 @@
 namespace FS.GG.SDD.Validation.Tests
 
-open System
 open System.IO
 open System.Reflection
 open FS.GG.SDD.Validation
+open FS.GG.SDD.TestShared
 open Xunit
 
 module SurfaceBaselineTests =
@@ -11,9 +11,9 @@ module SurfaceBaselineTests =
 
     [<Fact>]
     let ``Public validation surface matches baseline`` () =
-        let assembly = typeof<ValidationContracts.ValidationReport>.Assembly
+        let capture () =
+            let assembly = typeof<ValidationContracts.ValidationReport>.Assembly
 
-        let actual =
             assembly.GetTypes()
             |> Array.filter (fun t -> t.Namespace = "FS.GG.SDD.Validation" && t.IsClass && t.IsAbstract && t.IsSealed)
             |> Array.collect (fun t ->
@@ -22,10 +22,8 @@ module SurfaceBaselineTests =
                 |> Array.map (fun method -> $"{t.FullName}.{method.Name}"))
             |> Array.sort
 
-        let baseline =
+        // Feature 067 / FR-005: shared update-or-assert (set FSGG_UPDATE_BASELINE=1 to re-capture).
+        let baselinePath =
             Path.Combine(Commands.repoRoot, "tests", "FS.GG.SDD.Validation.Tests", "PublicSurface.baseline")
-            |> File.ReadAllLines
-            |> Array.filter (String.IsNullOrWhiteSpace >> not)
-            |> Array.sort
 
-        Assert.Equal<string array>(baseline, actual)
+        TestShared.SurfaceBaseline.verify baselinePath capture

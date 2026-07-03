@@ -301,48 +301,8 @@ module TasksCommandTests =
     let ``tasks refreshes generated work model when evidence source is present`` () =
         let root = initializedPlanReadyProject ()
 
-        TestSupport.writeRelative
-            root
-            $"work/{workId}/evidence.yml"
-            """schemaVersion: 1
-evidence:
-  - id: EV001
-    kind: verification
-    subject:
-      type: task
-      id: T001
-    result: pass
-  - id: EV002
-    kind: verification
-    subject:
-      type: task
-      id: T002
-    result: pass
-  - id: EV003
-    kind: verification
-    subject:
-      type: task
-      id: T003
-    result: pass
-  - id: EV004
-    kind: verification
-    subject:
-      type: task
-      id: T004
-    result: pass
-  - id: EV005
-    kind: verification
-    subject:
-      type: task
-      id: T005
-    result: pass
-  - id: EV006
-    kind: verification
-    subject:
-      type: task
-      id: T006
-    result: pass
-"""
+        // The T001..T006 evidence ladder is derived once in TestShared (feature 067 / FR-011).
+        TestSupport.writeRelative root $"work/{workId}/evidence.yml" TestSupport.passingTaskEvidence
 
         let report = TestSupport.runTasks root workId title
 
