@@ -33,6 +33,10 @@ jobs:
           # NuGet restore cache keyed on the committed lockfiles (feature 064): an
           # unchanged dependency set restores from cache; a real lockfile change busts
           # it into a fresh cold restore. Speed only — --locked-mode still enforces.
+          # This full-solution restore is the SOLE cacher of this key: setup-dotnet keys
+          # only on hashFiles(packages.lock.json)+OS+runtime with no per-job component, so
+          # narrow single-project restores elsewhere must NOT cache or they poison this key
+          # with a partial package set → NU1403 here (#92 root cause).
           cache: true
           cache-dependency-path: '**/packages.lock.json'
 
@@ -120,11 +124,11 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-          # NuGet restore cache keyed on the committed lockfiles (feature 064): an
-          # unchanged dependency set restores from cache; a real lockfile change busts
-          # it into a fresh cold restore. Speed only — --locked-mode still enforces.
-          cache: true
-          cache-dependency-path: '**/packages.lock.json'
+          # No restore cache here: this job restores only FS.GG.Contracts (a narrow
+          # footprint). setup-dotnet keys the cache solely on hashFiles(packages.lock.json)
+          # +OS+runtime — no per-job component — so a partial cache saved here shares the
+          # deterministic gate's key and poisons its --locked-mode restore (NU1403, #92).
+          # Only the full-solution restore (deterministic gate) caches.
 
       # Guard the baseline resolver itself (feature 064 / #91): a wrong baseline yields a
       # plausible-looking result, not an obvious error (see #90), so pin the selection.
