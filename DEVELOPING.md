@@ -36,6 +36,32 @@ The solution has five library/CLI projects (`Contracts`, `Artifacts`, `Commands`
 Tier-1 change updates it). The `WarningsAsErrors` ratchet
 (`Directory.Build.local.props`) stays at zero.
 
+## Formatting
+
+F# formatting is enforced by [Fantomas](https://fsprojects.github.io/fantomas/),
+configured entirely by the repo-root `.editorconfig` (Fantomas 6+ has no separate
+config file). CI runs a **non-required** `format` job (`.github/workflows/gate.yml`)
+that fails a mis-formatted PR with an advisory red X; it never blocks the merge.
+
+Use the **same pinned version CI uses (7.0.5)** so your local verdict matches the
+gate. Fantomas is installed to a repo-local path, deliberately **not** into
+`.config/dotnet-tools.json` (that manifest is a managed org file pinned
+byte-identical to `FS-GG/.github`):
+
+```sh
+# Install the pinned formatter (once):
+dotnet tool install fantomas --version 7.0.5 --tool-path ./.fantomas-tool --allow-roll-forward
+
+# Check (what CI runs) — exit 0 when clean, non-zero + a list when not:
+./.fantomas-tool/fantomas --check .
+
+# Fix — reformat in place, then commit the result:
+./.fantomas-tool/fantomas .
+```
+
+`.fantomasignore` scopes both commands to authored source (no `obj/`/`bin/` or
+generated files). `./.fantomas-tool/` is git-ignored — do not commit it.
+
 ## Current state
 
 This repository started scaffold-only. Feature work has since added:

@@ -140,3 +140,43 @@ jobs:
           NUGET_FEED_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NUGET_FEED_USER: ${{ github.actor }}
         run: bash scripts/apicompat-check.sh
+
+  # Format gate (feature 065, US3 of feature 064 / roadmap #85). NON-REQUIRED and
+  # advisory: it runs `fantomas --check` over the authored F# tree so a mis-formatted
+  # PR shows a red X naming the one command that fixes it, but it must NEVER block the
+  # merge. This repo has no branch protection, so a failing job is already non-blocking;
+  # if the org later adopts branch protection, `format` MUST be kept OUT of the
+  # required-checks set (do not add it to any "all checks required" policy) — FR-005.
+  #
+  # Fantomas is installed PINNED (7.0.5) to a repo-local --tool-path, deliberately WITHOUT
+  # touching .config/dotnet-tools.json: that manifest is a managed org file the
+  # build-config-drift gate pins byte-identical to FS-GG/.github dist/dotnet/, so adding
+  # Fantomas there would fail that gate (feature 065 research Decision 2 / FR-003). The
+  # same pinned commands are documented for contributors in DEVELOPING.md so a local
+  # verdict matches CI. No solution restore/build here, so (like api-compatibility-gate)
+  # this job must NOT cache — a partial cache would poison the deterministic gate's key.
+  format:
+    name: Format check (fantomas — advisory, non-required)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      # Pinned install to a repo-local path; --allow-roll-forward lets a tool built for an
+      # earlier net run on the net10 runtime this SDK ships.
+      - name: Install pinned Fantomas (out-of-manifest)
+        run: dotnet tool install fantomas --version 7.0.5 --tool-path ./.fantomas-tool --allow-roll-forward
+
+      # `.fantomasignore` scopes this to authored source (no obj/bin/generated .fs). On a
+      # non-clean tree fantomas exits non-zero; surface the exact fix command as a GH error.
+      - name: Check formatting
+        run: |
+          if ! ./.fantomas-tool/fantomas --check .; then
+            echo "::error::F# formatting drift. Reformat with the pinned formatter, then commit: dotnet tool install fantomas --version 7.0.5 --tool-path ./.fantomas-tool --allow-roll-forward && ./.fantomas-tool/fantomas ."
+            exit 1
+          fi
