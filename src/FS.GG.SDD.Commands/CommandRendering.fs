@@ -259,6 +259,10 @@ module CommandRendering =
             doctor.MissingArtifactPaths
             |> List.sort
             |> List.iter (fun path -> builder.AppendLine($"doctorMissingArtifact: {path}") |> ignore)
+            builder.AppendLine($"doctorSkillDrifts: {List.length doctor.SkillDriftPaths}") |> ignore
+            doctor.SkillDriftPaths
+            |> List.sort
+            |> List.iter (fun path -> builder.AppendLine($"doctorSkillDrift: {path}") |> ignore)
             doctor.PreviewSteps
             |> List.iter (fun step -> builder.AppendLine($"doctorPreviewStep: {step.StepId}={step.Outcome}") |> ignore)
             builder.AppendLine($"doctorCoherent: {doctor.IsCoherent}") |> ignore
@@ -280,6 +284,10 @@ module CommandRendering =
             upgrade.FailedStepIds
             |> List.sort
             |> List.iter (fun id -> builder.AppendLine($"upgradeFailed: {id}") |> ignore)
+            builder.AppendLine($"upgradeSkillDrifts: {List.length upgrade.SkillDriftPaths}") |> ignore
+            upgrade.SkillDriftPaths
+            |> List.sort
+            |> List.iter (fun path -> builder.AppendLine($"upgradeSkillDrift: {path}") |> ignore)
             builder.AppendLine($"upgradeResidualDrift: {upgrade.ResidualDrift}") |> ignore
             builder.AppendLine($"upgradeNextAction: {upgrade.NextActionHint}") |> ignore
         | None -> ()

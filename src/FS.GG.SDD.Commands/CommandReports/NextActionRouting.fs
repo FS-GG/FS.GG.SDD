@@ -100,7 +100,8 @@ module internal NextActionRouting =
                   Reason =
                     "Installed fsgg-sdd is behind the provider-declared minimum. Upgrade the CLI, then re-run `fsgg-sdd init` to re-seed the fs-gg-sdd-* skills and .fsgg/early-stage-guidance.md (idempotent, no-clobber). Note: fsgg-sdd refresh does not re-seed."
                   RequiredArtifacts =
-                    [ ".claude/skills"; ".codex/skills"; ".fsgg/early-stage-guidance.md" ] |> List.sort
+                    // All three seeded-skill roots (056: the neutral .agents/skills too) + early-stage guidance.
+                    [ ".claude/skills"; ".codex/skills"; ".agents/skills"; ".fsgg/early-stage-guidance.md" ] |> List.sort
                   BlockingDiagnosticIds = [] }
         elif
             diagnostics

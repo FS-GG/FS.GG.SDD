@@ -62,6 +62,12 @@ readiness over the task/evidence/test/skill obligations into
 `readiness/<id>/ship.json` and points ship-ready work to the Governance-owned
 protected-boundary handoff.
 
+Cross-cutting commands sit outside the lifecycle chain: `agents` and `refresh`
+regenerate views, `validate` runs the deep conformance matrices, and `doctor` /
+`upgrade` reconcile a scaffolded product's drift from its coherent set — `doctor`
+is a read-only drift report, `upgrade` the interactive/`--yes` remediation. See
+[Doctor & Upgrade](docs/reference/doctor-upgrade.md).
+
 For a command-by-command walkthrough from `fsgg-sdd init` through `fsgg-sdd ship` with
 no Governance installed, see the [Quickstart](docs/quickstart.md).
 

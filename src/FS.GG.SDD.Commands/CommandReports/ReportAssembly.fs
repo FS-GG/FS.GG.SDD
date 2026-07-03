@@ -66,6 +66,9 @@ module internal ReportAssembly =
         { SchemaVersion = 1
           ReportVersion = "1.0.0"
           Command = model.Request.Command
+          // Intentionally the literal "." — decoupled from model.Request.ProjectRoot (which may be
+          // an absolute/temporary path) so the report JSON stays reproducible/deterministic. Do not
+          // echo the request root here (feature 063, FR-007).
           ProjectRoot = "."
           OutputFormat = model.Request.OutputFormat
           DryRun = model.Request.DryRun
