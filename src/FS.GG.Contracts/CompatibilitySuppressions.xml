@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- https://learn.microsoft.com/dotnet/fundamentals/package-validation/diagnostic-ids
+
+     ApiCompat baseline suppressions for the api-compatibility-gate (gate.yml) vs the last
+     PUBLISHED FS.GG.Contracts baseline on the org feed (1.0.1). SDD#87.
+
+     These two CP0002 breaks are REAL and INTENTIONAL: two public records gained a field, which
+     changes their generated constructor arity (an F# record-shape break):
+       - Fsgg.Provider.ProviderDescriptor      + MinimumCliVersion: string option   (feature 052)
+       - Fsgg.Schemas.ScaffoldProducedPathEntry + Sha256: string option              (feature 057)
+     Later restructuring (062/063) kept the surface broken vs 1.0.1. Restoring 1.0.1 compatibility
+     would mean removing shipped fields, so the honest SemVer resolution is a Contracts MAJOR bump
+     (1.x -> 2.0.0) + republish so the baseline advances — a cross-repo release event (registry
+     range + Governance/Templates/Rendering consumers) tracked in SDD#87.
+
+     This file is the INTERIM bridge: it acknowledges the accumulated breaks so the gate reflects a
+     tracked, intentional break instead of flaking red (it currently false-passes only on a feed
+     Indeterminate). REMOVE it once Contracts 2.0.0 is published and the baseline advances to 2.0.0
+     (2.0.x-vs-2.0.0 has no break). Generated via `-p:ApiCompatGenerateSuppressionFile=true`. -->
+<Suppressions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:Fsgg.Provider.ProviderDescriptor.#ctor(System.String,System.String,System.String,System.String,Microsoft.FSharp.Collections.FSharpList{Fsgg.Provider.ProviderParameterSpec},Microsoft.FSharp.Core.FSharpOption{Fsgg.Provider.DeclaredCommand},Microsoft.FSharp.Core.FSharpOption{Fsgg.Provider.DeclaredCommand},Microsoft.FSharp.Core.FSharpOption{Fsgg.Provider.DeclaredCommand},Microsoft.FSharp.Core.FSharpOption{Fsgg.Provider.DeclaredCommand},System.String)</Target>
+    <Left>lib/net10.0/FS.GG.Contracts.dll</Left>
+    <Right>lib/net10.0/FS.GG.Contracts.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:Fsgg.Schemas.ScaffoldProducedPathEntry.#ctor(System.String,System.String)</Target>
+    <Left>lib/net10.0/FS.GG.Contracts.dll</Left>
+    <Right>lib/net10.0/FS.GG.Contracts.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+</Suppressions>
