@@ -84,3 +84,48 @@ module HelpCommandTests =
         Assert.Equal(1, exitCodeForReport report)
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "unknownCommand")
         Assert.True(report.Help.IsNone)
+
+    // Feature 063 (FR-005 / SC-003): the unknownCommand correction must name every command the CLI
+    // accepts — the 16 lifecycle commands plus the CLI-level peers `validate` and `registry`.
+    // This pin fails if a command is added without updating the correction.
+    [<Fact>]
+    let ``unknownCommand correction names every accepted command`` () =
+        let correction = (unknownCommand "frobnicate").Correction
+        let expected =
+            [ "init"; "charter"; "specify"; "clarify"; "checklist"; "plan"; "tasks"; "analyze"
+              "evidence"; "verify"; "ship"; "agents"; "refresh"; "scaffold"; "doctor"; "upgrade"
+              "validate"; "registry" ]
+        for command in expected do
+            Assert.Contains(command, correction)
+
+    // Feature 063 (FR-006 / SC-004): the reseed NextAction (triggered by scaffold.cliBehindMinimum)
+    // must name all three seeded-skill roots, including the 056 neutral .agents/skills.
+    [<Fact>]
+    let ``reseed NextAction lists all three seeded-skill roots`` () =
+        let model =
+            { Request = TestSupport.request Doctor "."
+              PendingEffects = []
+              InterpretedEffects = []
+              Diagnostics = [ FS.GG.SDD.Artifacts.Diagnostics.scaffoldCliBehindMinimum "0.2.1" "9.9.9" ]
+              Specification = None
+              Clarification = None
+              Checklist = None
+              Plan = None
+              Tasks = None
+              Analysis = None
+              Evidence = None
+              Verification = None
+              Ship = None
+              AgentGuidance = None
+              Refresh = None
+              Scaffold = None
+              Doctor = None
+              Upgrade = None
+              GeneratedViews = []
+              Report = None }
+
+        let report = buildReport model
+        let nextAction = Option.get report.NextAction
+        Assert.Equal("reseedSeededSkills", nextAction.ActionId)
+        for root in [ ".claude/skills"; ".codex/skills"; ".agents/skills" ] do
+            Assert.Contains(root, nextAction.RequiredArtifacts)

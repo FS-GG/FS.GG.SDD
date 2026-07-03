@@ -9,6 +9,10 @@
          `fsgg-sdd` command (feature 018 / FR-011). -->
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>fsgg-sdd</ToolCommandName>
+    <!-- Roll forward to the next available major runtime if the exact net10.0 runtime
+         is absent on the installing machine (feature 064 / FR-013), so the global tool
+         stays runnable across host runtime upgrades instead of hard-failing. -->
+    <RollForward>Major</RollForward>
     <!-- nuget.org listing metadata (ADR-0012 §5). License + RepositoryUrl come from
          Directory.Build.local.props; the README + icon are packed here. -->
     <PackageReadmeFile>README.md</PackageReadmeFile>

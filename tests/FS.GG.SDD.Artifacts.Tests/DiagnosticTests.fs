@@ -32,6 +32,40 @@ module DiagnosticTests =
         Assert.Equal("requirementNotTyped", untyped.Id)
 
     [<Fact>]
+    let ``create leaves a diagnostic un-marked and markToolDefect flips the typed bit`` () =
+        let plain = Diagnostics.unknownReference artifact "FR-999" "Declare FR-999 or remove."
+        Assert.False(plain.IsToolDefect)
+
+        let marked = Diagnostics.markToolDefect plain
+        Assert.True(marked.IsToolDefect)
+        // markToolDefect changes only the bit — every other field is preserved.
+        Assert.Equal(plain.Id, marked.Id)
+        Assert.Equal(plain.Message, marked.Message)
+        Assert.Equal<string list>(plain.RelatedIds, marked.RelatedIds)
+
+    [<Fact>]
+    let ``The defect-producing constructors carry IsToolDefect`` () =
+        // The seven ids that escalated via the old providerDefectIds set must now carry the bit.
+        Assert.True((Diagnostics.scaffoldProviderFailed "rendering" 1).IsToolDefect)
+        Assert.True((Diagnostics.scaffoldProviderUnavailable "rendering").IsToolDefect)
+        Assert.True((Diagnostics.scaffoldProviderWroteSddTree [ ".claude/skills/x" ]).IsToolDefect)
+        Assert.True((Diagnostics.scaffoldMirrorFailed [ ".codex/skills/x" ]).IsToolDefect)
+        Assert.True((Diagnostics.upgradeSelfUpdateFailed 1).IsToolDefect)
+        Assert.True((Diagnostics.upgradeStepFailed "cli-self-update").IsToolDefect)
+        // A representative user-input diagnostic stays un-marked (resolves at exit 1).
+        Assert.False((Diagnostics.scaffoldProviderMissing ()).IsToolDefect)
+        Assert.False((Diagnostics.unknownReference artifact "FR-1" "x").IsToolDefect)
+
+    [<Fact>]
+    let ``signalsStaleView is id-derived and independent of exact spelling`` () =
+        // Matches any id containing "stale" (case-insensitive), regardless of spelling —
+        // it operates on round-tripped diagnostics where only the id survives.
+        Assert.True(Diagnostics.signalsStaleView (Diagnostics.staleGeneratedView artifact "Stale." "Regenerate."))
+        Assert.True(Diagnostics.signalsStaleView { Diagnostics.unknownReference artifact "x" "y" with Id = "refresh.STALEView" })
+        // A non-stale id is not misclassified.
+        Assert.False(Diagnostics.signalsStaleView (Diagnostics.unknownReference artifact "FR-1" "x"))
+
+    [<Fact>]
     let ``Diagnostics sort by severity id artifact and location`` () =
         let warning = Diagnostics.proseStructuredMismatch artifact "Mismatch." "Update prose."
         let error = Diagnostics.missingArtifact artifact "Create the task file."

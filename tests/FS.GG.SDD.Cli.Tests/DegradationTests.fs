@@ -101,3 +101,18 @@ module DegradationTests =
             resolve Text interactiveColor report |> ignore
             resolve Rich interactiveColor report |> ignore
             Assert.Equal(code, exitCodeForReport report)
+
+    [<Fact>]
+    let ``exit code escalates to 2 for any tool-defect diagnostic without a registry`` () =
+        // A blocked report whose only diagnostic is a *newly invented* defect id — present in no
+        // hand-maintained list — still exits 2. This is the silent-demotion the old providerDefectIds
+        // set could cause; the typed IsToolDefect bit removes it (feature 062, SC-003).
+        let invented = RichRenderingTests.diag "brand.newDefectNeverRegistered" DiagnosticError "boom" |> markToolDefect
+        Assert.Equal(2, exitCodeForReport { blocked with Diagnostics = [ invented ] })
+
+        // The same id without the bit is a user-input failure → exit 1.
+        let userInput = RichRenderingTests.diag "brand.newDefectNeverRegistered" DiagnosticError "boom"
+        Assert.Equal(1, exitCodeForReport { blocked with Diagnostics = [ userInput ] })
+
+        // A non-blocked outcome ignores the bit entirely → exit 0.
+        Assert.Equal(0, exitCodeForReport { succeeding with Diagnostics = [ invented ] })

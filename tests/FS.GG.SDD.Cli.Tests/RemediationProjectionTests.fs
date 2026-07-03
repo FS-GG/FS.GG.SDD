@@ -103,3 +103,46 @@ module RemediationProjectionTests =
         Assert.False redirected.UsedRichRendering
         Assert.Equal(renderText upgradeReport, redirected.Text)
         Assert.DoesNotContain("[", redirected.Text)
+
+    // Feature 063: skillDriftPaths — the primary 058 content-drift surface — must be visible in
+    // the text and rich projections (it was serialized to JSON but never rendered). JSON unchanged.
+    let private driftedDoctorReport: CommandReport =
+        { doctorReport with
+            Doctor = Some { doctorSummary with SkillDriftPaths = [ ".codex/skills/fs-gg-sdd-plan/SKILL.md"; ".claude/skills/fs-gg-sdd-ship/SKILL.md" ] } }
+
+    let private driftedUpgradeReport: CommandReport =
+        { upgradeReport with
+            Upgrade = Some { upgradeSummary with SkillDriftPaths = [ ".agents/skills/fs-gg-sdd-verify/SKILL.md" ] } }
+
+    [<Fact>]
+    let ``skillDriftPaths appear in doctor text and rich, and JSON stays byte-identical`` () =
+        // Text: full fact lines. Rich: the rich renderer splits `key: value` into table cells, so
+        // assert distinctive value fragments (fs-gg-sdd-ship is unique to the drift set) instead.
+        let text = (resolve Text nonInteractive driftedDoctorReport).Text
+        Assert.Contains("doctorSkillDrifts: 2", text)
+        Assert.Contains("doctorSkillDrift: .codex/skills/fs-gg-sdd-plan/SKILL.md", text)
+        Assert.Contains("doctorSkillDrift: .claude/skills/fs-gg-sdd-ship/SKILL.md", text)
+        let rich = (resolve Rich interactiveColor driftedDoctorReport).Text
+        Assert.Contains("doctorSkillDrifts", rich)
+        Assert.Contains("fs-gg-sdd-ship", rich)
+        // JSON already carried skillDriftPaths; the render fix is projection-only.
+        Assert.Contains("\"skillDriftPaths\"", (resolve Json interactiveColor driftedDoctorReport).Text)
+        let before = serializeReport driftedDoctorReport
+        resolve Rich interactiveColor driftedDoctorReport |> ignore
+        Assert.Equal(before, serializeReport driftedDoctorReport)
+
+    [<Fact>]
+    let ``skillDriftPaths appear in upgrade text and rich`` () =
+        let text = (resolve Text nonInteractive driftedUpgradeReport).Text
+        Assert.Contains("upgradeSkillDrifts: 1", text)
+        Assert.Contains("upgradeSkillDrift: .agents/skills/fs-gg-sdd-verify/SKILL.md", text)
+        let rich = (resolve Rich interactiveColor driftedUpgradeReport).Text
+        Assert.Contains("upgradeSkillDrifts", rich)
+        Assert.Contains("fs-gg-sdd-verify", rich)
+
+    [<Fact>]
+    let ``empty skillDriftPaths emits only the count line`` () =
+        // Parity with missingArtifacts: the count is always emitted, per-path lines only when non-empty.
+        let text = (resolve Text nonInteractive doctorReport).Text
+        Assert.Contains("doctorSkillDrifts: 0", text)
+        Assert.DoesNotContain("doctorSkillDrift:", text)

@@ -1,0 +1,30 @@
+name: Locked restore
+description: >-
+  The single definition of the deterministic locked NuGet restore (feature 064 /
+  board #74). Restores in --locked-mode against the committed packages.lock.json so
+  any dependency-graph drift or a silently substituted version (NU1603) / out-of-range
+  version (NU1608) fails the build instead of resolving quietly. Consolidates the
+  formerly-5x-duplicated inline "Restore (locked)" step so the enforcement, the error
+  text, and the --force-evaluate regenerate hint live in exactly one place.
+
+inputs:
+  target:
+    description: >-
+      The solution or single project file to restore in locked mode. Defaults to the
+      whole solution; the release jobs pass a single .fsproj to preserve their scope.
+    required: false
+    default: FS.GG.SDD.sln
+
+runs:
+  using: composite
+  steps:
+    - name: Restore (locked)
+      shell: bash
+      env:
+        LOCKED_RESTORE_TARGET: ${{ inputs.target }}
+      run: |
+        set -euo pipefail
+        if ! dotnet restore "$LOCKED_RESTORE_TARGET" --locked-mode; then
+          echo "::error::locked restore failed — the resolved graph does not match the committed packages.lock.json (or a version was substituted, NU1603). If this is an intentional dependency change, run: dotnet restore FS.GG.SDD.sln --force-evaluate  and commit the updated packages.lock.json files."
+          exit 1
+        fi

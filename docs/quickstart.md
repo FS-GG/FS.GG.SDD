@@ -103,6 +103,11 @@ Notes:
   points ship-ready work to the **Governance-owned protected-boundary handoff**.
   That handoff is optional and lives outside SDD — SDD never evaluates or enforces
   it.
+- Cross-cutting commands run outside this stage chain: `refresh` and `agents`
+  regenerate views, `validate` runs the deep conformance matrices, and `doctor` /
+  `upgrade` reconcile a scaffolded product's drift — `doctor` is a read-only drift
+  report (always exit 0), `upgrade` the interactive (or `--yes`) remediation. See
+  [Doctor & Upgrade](reference/doctor-upgrade.md).
 
 ### Authoring inputs that gate
 

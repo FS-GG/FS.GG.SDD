@@ -17,7 +17,8 @@ module Diagnostics =
           Location: SourceLocation option
           Message: string
           Correction: string
-          RelatedIds: string list }
+          RelatedIds: string list
+          IsToolDefect: bool }
 
     let severityValue severity =
         match severity with
@@ -38,7 +39,13 @@ module Diagnostics =
           Location = location
           Message = message
           Correction = correction
-          RelatedIds = relatedIds }
+          RelatedIds = relatedIds
+          IsToolDefect = false }
+
+    let markToolDefect (diagnostic: Diagnostic) = { diagnostic with IsToolDefect = true }
+
+    let signalsStaleView (diagnostic: Diagnostic) =
+        diagnostic.Id.IndexOf("stale", System.StringComparison.OrdinalIgnoreCase) >= 0
 
     let missingArtifact artifact correction =
         create
@@ -230,6 +237,7 @@ module Diagnostics =
             $"Provider '{name}' exited {exitCode}."
             "Inspect the provider's captured output in the scaffold report (`providerInvocation.commandLine` / `.standardOutput` / `.standardError`), fix the provider, then re-run scaffold. Any partial output is listed in the produced paths."
             [ name; string exitCode ]
+        |> markToolDefect
 
     let scaffoldProviderUnavailable name =
         create
@@ -240,6 +248,7 @@ module Diagnostics =
             $"Could not run provider '{name}' (`dotnet`/template engine not found)."
             "Install the .NET SDK and the named template, then re-run scaffold. The attempted command line and launch error are in the scaffold report (`providerInvocation.commandLine` / `.standardError`)."
             [ name ]
+        |> markToolDefect
 
     let scaffoldProviderWroteSddTree (paths: string list) =
         let ordered = paths |> List.sort
@@ -253,6 +262,7 @@ module Diagnostics =
             $"Provider wrote into SDD-owned tree(s): {rendered}."
             "Fix the provider so it materializes only into the product target; SDD state was not modified. The provider's captured output is in the scaffold report (`providerInvocation.standardOutput` / `.standardError`)."
             ordered
+        |> markToolDefect
 
     // 056 (FR-012): a `ReadFile`/`WriteFile` fault during the post-instantiation skill
     // fan-out. Finalizes as a non-success scaffold at exit 2 (the tool-defect class), so an
@@ -269,6 +279,7 @@ module Diagnostics =
             $"The skill fan-out could not mirror the union into every agent root (failed path(s): {rendered})."
             "Resolve the filesystem issue (permissions / read-only target), then re-run scaffold; the fan-out was not completed and was not recorded as complete."
             ordered
+        |> markToolDefect
 
     let scaffoldProvenanceMalformed path =
         create
@@ -372,8 +383,8 @@ module Diagnostics =
             "Re-run interactively, or pass `--yes` to apply the reconciliation without prompting."
             []
 
-    // A confirmed CLI self-update process errored: a step defect (exit 2 via
-    // `providerDefectIds`); the reconciliation is reported incomplete (FR-013).
+    // A confirmed CLI self-update process errored: a step defect (exit 2 via the typed
+    // `IsToolDefect` bit); the reconciliation is reported incomplete (FR-013).
     let upgradeSelfUpdateFailed (exitCode: int) =
         create
             "upgrade.selfUpdateFailed"
@@ -383,6 +394,7 @@ module Diagnostics =
             $"The CLI self-update step failed (`dotnet tool update` exited {exitCode}); residual drift remains."
             "Update the fsgg-sdd tool manually (e.g. `dotnet tool update`), then re-run `fsgg-sdd doctor` to confirm."
             [ string exitCode ]
+        |> markToolDefect
 
     // A confirmed re-pin/re-seed write failed: a step defect (exit 2); the
     // reconciliation is reported incomplete (FR-013 / SC-006).
@@ -395,6 +407,7 @@ module Diagnostics =
             $"Reconciliation step '{stepId}' failed to apply; residual drift remains."
             "Inspect the failure, correct the environment, and re-run `fsgg-sdd upgrade`."
             [ stepId ]
+        |> markToolDefect
 
     // Partial apply: one or more steps were declined and drift remains (US2-AC4). A
     // non-blocking warning (exit 0); a subsequent `doctor` still shows the drift.

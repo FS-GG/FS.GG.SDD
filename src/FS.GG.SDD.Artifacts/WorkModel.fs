@@ -562,7 +562,10 @@ module WorkModel =
           Location = None
           Message = jmString "message" element
           Correction = jmString "correction" element
-          RelatedIds = jmStringList "relatedIds" element }
+          RelatedIds = jmStringList "relatedIds" element
+          // Round-tripped diagnostics carry no defect bit — it is not serialized and the
+          // exit-code decision never reads parsed diagnostics (see feature 062 research).
+          IsToolDefect = false }
 
     let parseWorkModel (snapshot: FileSnapshot) : Result<WorkModel, Diagnostic list> =
         let artifact =

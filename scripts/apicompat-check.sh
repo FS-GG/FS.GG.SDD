@@ -86,11 +86,18 @@ cat > "$cfg" <<EOF
 </configuration>
 EOF
 
+# The version-selection is factored into scripts/lib/pick-latest-version.sh so it can be
+# unit-tested without the feed (scripts/tests/pick-latest-version.test.sh, #91).
+# shellcheck source=lib/pick-latest-version.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib/pick-latest-version.sh"
+
 # Latest published version of a package id on the feed, or empty if none (NoBaselineYet).
+# The flat-container `versions` array is NOT guaranteed sorted — GitHub Packages returns it
+# newest-first — so pick_latest_version chooses the max explicitly rather than by position.
 latest_version() {
   local id_lower; id_lower="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
   curl -fsSL -H "Authorization: Bearer $token" "$FEED_DL/$id_lower/index.json" 2>/dev/null \
-    | grep -oE '"[0-9][^"]*"' | tr -d '"' | tail -1
+    | pick_latest_version
 }
 
 # A check version strictly greater than the baseline that PRESERVES prerelease-ness (so a package
