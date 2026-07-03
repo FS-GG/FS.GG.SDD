@@ -19,7 +19,9 @@ module ScaffoldCommandTests =
     /// Resolve a committed registry fixture's `__FIXTURE__` token to the absolute
     /// fixtures directory and install it as the project's `.fsgg/providers.yml`.
     let private writeRegistry root registryFile =
-        let template = File.ReadAllText(Path.Combine(fixturesRoot, "registries", registryFile))
+        let template =
+            File.ReadAllText(Path.Combine(fixturesRoot, "registries", registryFile))
+
         let resolved = template.Replace("__FIXTURE__", fixturesRoot.Replace('\\', '/'))
         TestSupport.writeRelative root ".fsgg/providers.yml" resolved
 
@@ -57,7 +59,8 @@ module ScaffoldCommandTests =
     let private runScaffold request = runScaffoldModel request |> snd
 
     let private scaffoldSummary (report: CommandReport) =
-        report.Scaffold |> Option.defaultWith (fun () -> failwith "Expected a scaffold summary.")
+        report.Scaffold
+        |> Option.defaultWith (fun () -> failwith "Expected a scaffold summary.")
 
     let private diagnosticIds (report: CommandReport) =
         report.Diagnostics |> List.map (fun d -> d.Id)
@@ -69,13 +72,31 @@ module ScaffoldCommandTests =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
         // Dry-run plans every effect without spawning a child or writing files.
-        let model, _ = runScaffoldModel (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false true)
+        let model, _ =
+            runScaffoldModel (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false true)
 
-        let indexOf predicate = model.PendingEffects |> List.tryFindIndex predicate
-        let installIndex = indexOf (function RunProcess("dotnet", args, _) -> List.contains "install" args | _ -> false)
-        let updateIndex = indexOf (function RunProcess("dotnet", args, _) -> List.contains "update" args | _ -> false)
-        let writeIndex = indexOf (function WriteFile(".fsgg/project.yml", _, _) -> true | _ -> false)
-        let createIndex = indexOf (function RunProcess("dotnet", args, _) -> List.contains "-o" args | _ -> false)
+        let indexOf predicate =
+            model.PendingEffects |> List.tryFindIndex predicate
+
+        let installIndex =
+            indexOf (function
+                | RunProcess("dotnet", args, _) -> List.contains "install" args
+                | _ -> false)
+
+        let updateIndex =
+            indexOf (function
+                | RunProcess("dotnet", args, _) -> List.contains "update" args
+                | _ -> false)
+
+        let writeIndex =
+            indexOf (function
+                | WriteFile(".fsgg/project.yml", _, _) -> true
+                | _ -> false)
+
+        let createIndex =
+            indexOf (function
+                | RunProcess("dotnet", args, _) -> List.contains "-o" args
+                | _ -> false)
 
         Assert.True(Option.isSome installIndex, "Expected `dotnet new install` to be planned.")
         Assert.True(Option.isSome updateIndex, "Expected `dotnet new update` to be planned.")
@@ -90,20 +111,44 @@ module ScaffoldCommandTests =
     let ``scaffold --no-update skips the update step but still installs and creates`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
+
         let request =
-            { scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false true with TemplateUpdate = false }
+            { scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false true with
+                TemplateUpdate = false }
+
         let model, _ = runScaffoldModel request
 
-        let has predicate = model.PendingEffects |> List.exists predicate
-        Assert.True(has (function RunProcess("dotnet", args, _) -> List.contains "install" args | _ -> false), "install still planned.")
-        Assert.True(has (function RunProcess("dotnet", args, _) -> List.contains "-o" args | _ -> false), "create still planned.")
-        Assert.False(has (function RunProcess("dotnet", args, _) -> List.contains "update" args | _ -> false), "update must be skipped.")
+        let has predicate =
+            model.PendingEffects |> List.exists predicate
+
+        Assert.True(
+            has (function
+                | RunProcess("dotnet", args, _) -> List.contains "install" args
+                | _ -> false),
+            "install still planned."
+        )
+
+        Assert.True(
+            has (function
+                | RunProcess("dotnet", args, _) -> List.contains "-o" args
+                | _ -> false),
+            "create still planned."
+        )
+
+        Assert.False(
+            has (function
+                | RunProcess("dotnet", args, _) -> List.contains "update" args
+                | _ -> false),
+            "update must be skipped."
+        )
 
     [<Fact>]
     let ``scaffold ok materializes a runnable product under SDD management`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
 
         let summary = scaffoldSummary report
         Assert.Equal("providerSucceeded", summary.Outcome)
@@ -116,14 +161,18 @@ module ScaffoldCommandTests =
         Assert.True(TestSupport.existsRelative root "App.fsproj")
         Assert.True(TestSupport.existsRelative root ".fsgg/scaffold-provenance.json")
         // Produced paths are recorded as externally-owned change entries.
-        let productChange = report.ChangedArtifacts |> List.tryFind (fun c -> c.Path = "Program.fs")
+        let productChange =
+            report.ChangedArtifacts |> List.tryFind (fun c -> c.Path = "Program.fs")
+
         Assert.Equal(Some "generatedProduct", productChange |> Option.map (fun c -> c.Ownership))
 
     [<Fact>]
     let ``scaffold --dry-run plans without spawning, writing, or provenance`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false true)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false true)
 
         let summary = scaffoldSummary report
         Assert.False(summary.ProviderInvoked)
@@ -160,7 +209,10 @@ module ScaffoldCommandTests =
     let ``scaffold unknown provider blocks with providerUnknown`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "does-not-exist") [] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "does-not-exist") [] false false)
+
         Assert.Contains("scaffold.providerUnknown", diagnosticIds report)
         Assert.Equal(1, exitCodeForReport report)
         Assert.False((scaffoldSummary report).ProviderInvoked)
@@ -169,7 +221,10 @@ module ScaffoldCommandTests =
     let ``scaffold unsupported contract version blocks before invocation`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "bad-version.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
         Assert.Contains("scaffold.providerVersionUnsupported", diagnosticIds report)
         Assert.Equal(1, exitCodeForReport report)
         Assert.False((scaffoldSummary report).ProviderInvoked)
@@ -188,7 +243,10 @@ module ScaffoldCommandTests =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
         TestSupport.writeRelative root "existing.txt" "pre-existing product file"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
         Assert.Contains("scaffold.targetCollision", diagnosticIds report)
         Assert.Equal(1, exitCodeForReport report)
 
@@ -229,11 +287,18 @@ module ScaffoldCommandTests =
     let ``repeat scaffold blocks on collision without clobbering provenance`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
-        let first = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
-        Assert.Equal(0, exitCodeForReport first)
-        let provenanceBefore = TestSupport.readRelative root ".fsgg/scaffold-provenance.json"
 
-        let second = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+        let first =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        Assert.Equal(0, exitCodeForReport first)
+
+        let provenanceBefore =
+            TestSupport.readRelative root ".fsgg/scaffold-provenance.json"
+
+        let second =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
         Assert.Contains("scaffold.targetCollision", diagnosticIds second)
         Assert.Equal(1, exitCodeForReport second)
         // The existing provenance is not overwritten by the blocked re-scaffold.
@@ -245,7 +310,9 @@ module ScaffoldCommandTests =
     let ``provenance records provider identity, contract version, and produced owner`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
-        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false) |> ignore
+
+        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+        |> ignore
 
         let provenance = TestSupport.readRelative root ".fsgg/scaffold-provenance.json"
         Assert.Contains("\"providerName\": \"fixture\"", provenance)
@@ -259,7 +326,9 @@ module ScaffoldCommandTests =
     let ``provenance records the producing CLI version and the provider-declared required minimum`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "min-behind.providers.yml"
-        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false) |> ignore
+
+        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+        |> ignore
 
         let provenance = TestSupport.readRelative root ".fsgg/scaffold-provenance.json"
         // Producing CLI version (generator) is present…
@@ -274,7 +343,9 @@ module ScaffoldCommandTests =
     let ``provenance records requiredMinimumCliVersion as null when the provider declares none`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
-        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false) |> ignore
+
+        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+        |> ignore
 
         let provenance = TestSupport.readRelative root ".fsgg/scaffold-provenance.json"
         Assert.Contains("\"requiredMinimumCliVersion\": null", provenance)
@@ -285,7 +356,9 @@ module ScaffoldCommandTests =
     let ``provenance records requiredMinimumCliVersion as null when the provider minimum is malformed`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "min-malformed.providers.yml"
-        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false) |> ignore
+
+        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+        |> ignore
 
         let provenance = TestSupport.readRelative root ".fsgg/scaffold-provenance.json"
         Assert.Contains("\"requiredMinimumCliVersion\": null", provenance)
@@ -295,7 +368,9 @@ module ScaffoldCommandTests =
     let ``refresh excludes provider-produced paths and flags malformed provenance`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
-        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false) |> ignore
+
+        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+        |> ignore
 
         // Provider files never appear in the refresh generated-view ledger (SC-007).
         let workId = "030-scaffold-demo"
@@ -317,7 +392,9 @@ module ScaffoldCommandTests =
     let ``scaffold happy-path JSON is byte-stable and root-free (golden)`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
 
         // Deterministic serialization: byte-identical across repeated emits, with no
         // absolute project root, no clock. (The project id digest derives from the
@@ -335,7 +412,9 @@ module ScaffoldCommandTests =
     let ``scaffold report facts are identical across json and text projections`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
 
         let json = CommandSerialization.serializeReport report
         let text = CommandRendering.renderText report
@@ -378,6 +457,7 @@ module ScaffoldCommandTests =
     let ``scaffold forwards lifecycle=sdd to the provider verbatim`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
+
         runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false)
         |> ignore
 
@@ -389,8 +469,11 @@ module ScaffoldCommandTests =
     let ``scaffold lifecycle run reports providerSucceeded and ProviderInvoked`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
+
         let report =
-            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false)
+            runScaffold (
+                scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false
+            )
 
         let summary = scaffoldSummary report
         Assert.Equal("providerSucceeded", summary.Outcome)
@@ -403,7 +486,9 @@ module ScaffoldCommandTests =
     let ``scaffold forwards exactly the effective overlay set as --key value pairs`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
-        let request = scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false true
+
+        let request =
+            scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false true
 
         // effective = {productName=Acme, lifecycle=sdd}; Map canonicalizes to sorted keys.
         let expected = [ "--lifecycle"; "sdd"; "--productName"; "Acme" ]
@@ -414,8 +499,12 @@ module ScaffoldCommandTests =
     let ``scaffold forwarded create-arg vector is independent of --param order`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
-        let oneOrder = scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false true
-        let otherOrder = scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd"; "productName", "Acme" ] false true
+
+        let oneOrder =
+            scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false true
+
+        let otherOrder =
+            scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd"; "productName", "Acme" ] false true
 
         Assert.Equal<string list>(plannedCreateArgs oneOrder, plannedCreateArgs otherOrder)
 
@@ -429,17 +518,29 @@ module ScaffoldCommandTests =
         // Plan-level: the create-arg vector differs only in the echoed lifecycle value.
         let planRoot = TestSupport.tempDirectory ()
         writeRegistry planRoot "lifecycle.providers.yml"
+
         let sddArgs =
-            plannedCreateArgs (scaffoldRequest planRoot (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false true)
+            plannedCreateArgs (
+                scaffoldRequest planRoot (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false true
+            )
+
         let nonceArgs =
-            plannedCreateArgs (scaffoldRequest planRoot (Some "fixture") [ "productName", "Acme"; "lifecycle", nonce ] false true)
+            plannedCreateArgs (
+                scaffoldRequest planRoot (Some "fixture") [ "productName", "Acme"; "lifecycle", nonce ] false true
+            )
+
         Assert.Equal<string list>(sddArgs |> List.map (fun a -> if a = "sdd" then nonce else a), nonceArgs)
 
         // End-to-end: same outcome, same produced-path set, same provenance owner shape.
         let runShape value =
             let root = TestSupport.tempDirectory ()
             writeRegistry root "lifecycle.providers.yml"
-            let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", value ] false false)
+
+            let report =
+                runScaffold (
+                    scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", value ] false false
+                )
+
             let summary = scaffoldSummary report
             summary.Outcome, (summary.ProducedPaths |> List.sort), TestSupport.readRelative root "scaffold-manifest.txt"
 
@@ -449,7 +550,10 @@ module ScaffoldCommandTests =
         Assert.Equal<string list>(sddPaths, noncePaths)
         Assert.Contains($"lifecycle={nonce}", nonceManifest)
         // Manifests are identical once the echoed lifecycle value is normalized away.
-        Assert.Equal(sddManifest.Replace("lifecycle=sdd", "lifecycle=X"), nonceManifest.Replace($"lifecycle={nonce}", "lifecycle=X"))
+        Assert.Equal(
+            sddManifest.Replace("lifecycle=sdd", "lifecycle=X"),
+            nonceManifest.Replace($"lifecycle={nonce}", "lifecycle=X")
+        )
 
     // ---------- Phase 4 / US2: app-only provenance ----------
 
@@ -467,7 +571,9 @@ module ScaffoldCommandTests =
     /// targets. Lets us assert init byte-identity and cross-run determinism without
     /// the random temp-dir name leaking into the compared bytes.
     let private rootWithLeaf leaf =
-        let dir = Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + System.Guid.NewGuid().ToString("N"), leaf)
+        let dir =
+            Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + System.Guid.NewGuid().ToString("N"), leaf)
+
         Directory.CreateDirectory dir |> ignore
         dir
 
@@ -480,7 +586,12 @@ module ScaffoldCommandTests =
     let ``scaffold provenance records exactly the app-only tree, all generatedProduct`` () =
         let appRoot = TestSupport.tempDirectory ()
         writeRegistry appRoot "lifecycle.providers.yml"
-        let report = runScaffold (scaffoldRequest appRoot (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false)
+
+        let report =
+            runScaffold (
+                scaffoldRequest appRoot (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false
+            )
+
         let summary = scaffoldSummary report
 
         let initRoot = TestSupport.tempDirectory ()
@@ -491,6 +602,7 @@ module ScaffoldCommandTests =
         // scaffold writes, and the `.fsgg/providers.yml` registry the test pre-planted
         // (an author input, not provider output).
         let preexisting = Set.ofList [ provenancePath; ".fsgg/providers.yml" ]
+
         let producedExpected =
             relativeFiles appRoot
             |> List.filter (fun path -> not (Set.contains path skeleton) && not (Set.contains path preexisting))
@@ -501,8 +613,10 @@ module ScaffoldCommandTests =
 
         // Every provenance entry is owned generatedProduct (no other owner appears).
         let provenance = TestSupport.readRelative appRoot provenancePath
+
         let countOf (needle: string) =
             (provenance.Length - provenance.Replace(needle, "").Length) / needle.Length
+
         Assert.Equal(countOf "\"owner\":", countOf "\"owner\": \"generatedProduct\"")
         Assert.Equal(producedExpected.Length, countOf "\"owner\": \"generatedProduct\"")
 
@@ -513,7 +627,12 @@ module ScaffoldCommandTests =
         let leaf = "scaffold-skel"
         let appRoot = rootWithLeaf leaf
         writeRegistry appRoot "lifecycle.providers.yml"
-        let report = runScaffold (scaffoldRequest appRoot (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false)
+
+        let report =
+            runScaffold (
+                scaffoldRequest appRoot (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false
+            )
+
         let produced = (scaffoldSummary report).ProducedPaths |> Set.ofList
 
         let initRoot = rootWithLeaf leaf
@@ -525,8 +644,12 @@ module ScaffoldCommandTests =
 
         // The skeleton scaffold wrote is byte-for-byte the skeleton init writes.
         for path in skeleton do
-            let fromScaffold = File.ReadAllBytes(Path.Combine(appRoot, path.Replace('/', Path.DirectorySeparatorChar)))
-            let fromInit = File.ReadAllBytes(Path.Combine(initRoot, path.Replace('/', Path.DirectorySeparatorChar)))
+            let fromScaffold =
+                File.ReadAllBytes(Path.Combine(appRoot, path.Replace('/', Path.DirectorySeparatorChar)))
+
+            let fromInit =
+                File.ReadAllBytes(Path.Combine(initRoot, path.Replace('/', Path.DirectorySeparatorChar)))
+
             Assert.Equal<byte[]>(fromInit, fromScaffold)
 
     // T017 (P5, P6 / FR-006 / SC-004): two identical runs into clean targets yield
@@ -537,8 +660,16 @@ module ScaffoldCommandTests =
         let runOnce () =
             let root = rootWithLeaf "scaffold-det"
             writeRegistry root "lifecycle.providers.yml"
-            let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false)
-            root, scaffoldSummary report, TestSupport.readRelative root provenancePath, CommandSerialization.serializeReport report
+
+            let report =
+                runScaffold (
+                    scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false
+                )
+
+            root,
+            scaffoldSummary report,
+            TestSupport.readRelative root provenancePath,
+            CommandSerialization.serializeReport report
 
         let firstRoot, firstSummary, firstProvenance, firstJson = runOnce ()
         let _, _, secondProvenance, secondJson = runOnce ()
@@ -558,7 +689,9 @@ module ScaffoldCommandTests =
     let ``refresh excludes the lifecycle scaffold app-only produced paths`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
-        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false) |> ignore
+
+        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false)
+        |> ignore
 
         let workId = "031-lifecycle-demo"
         TestSupport.writeValidWorkSources root workId "Lifecycle demo"
@@ -580,7 +713,8 @@ module ScaffoldCommandTests =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle-required.providers.yml"
         // productName supplied; lifecycle (required by this registry) omitted.
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
 
         Assert.Contains("scaffold.providerParamMissing", diagnosticIds report)
         Assert.Equal(1, exitCodeForReport report)
@@ -593,7 +727,9 @@ module ScaffoldCommandTests =
     let ``scaffold empty product under lifecycle=sdd succeeds with providerEmpty`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle-empty.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
 
         Assert.Contains("scaffold.providerEmpty", diagnosticIds report)
         Assert.Equal(0, exitCodeForReport report)
@@ -609,7 +745,9 @@ module ScaffoldCommandTests =
     let ``scaffold provider writing SDD trees under lifecycle=sdd is a provider defect`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle-intrusion.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
 
         Assert.Contains("scaffold.providerWroteSddTree", diagnosticIds report)
         Assert.Equal(2, exitCodeForReport report)
@@ -627,7 +765,9 @@ module ScaffoldCommandTests =
     let ``scaffold provider writing into the seeded skill trees is a provider defect`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "skills-intrusion.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
 
         Assert.Contains("scaffold.providerWroteSddTree", diagnosticIds report)
         Assert.Equal(2, exitCodeForReport report)
@@ -646,7 +786,9 @@ module ScaffoldCommandTests =
         File.ReadAllBytes(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)))
 
     let private threeRoots (name: string) =
-        [ $".claude/skills/{name}/SKILL.md"; $".codex/skills/{name}/SKILL.md"; $".agents/skills/{name}/SKILL.md" ]
+        [ $".claude/skills/{name}/SKILL.md"
+          $".codex/skills/{name}/SKILL.md"
+          $".agents/skills/{name}/SKILL.md" ]
 
     let private assertByteIdenticalAcrossRoots root name =
         match threeRoots name |> List.map (bytesAt root) with
@@ -661,10 +803,15 @@ module ScaffoldCommandTests =
     [<Theory>]
     [<InlineData("skills-intrusion-claude.providers.yml", ".claude/skills/leak/SKILL.md")>]
     [<InlineData("skills-intrusion-codex.providers.yml", ".codex/skills/leak/SKILL.md")>]
-    let ``scaffold provider writing a whole-root-reserved skill tree is a defect`` (registry: string) (intruded: string) =
+    let ``scaffold provider writing a whole-root-reserved skill tree is a defect``
+        (registry: string)
+        (intruded: string)
+        =
         let root = TestSupport.tempDirectory ()
         writeRegistry root registry
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
 
         Assert.Contains("scaffold.providerWroteSddTree", diagnosticIds report)
         Assert.Equal(2, exitCodeForReport report)
@@ -679,7 +826,9 @@ module ScaffoldCommandTests =
     let ``scaffold provider writing into the reserved namespace under .agents is a defect`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "skills-intrusion-agents.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
 
         Assert.Contains("scaffold.providerWroteSddTree", diagnosticIds report)
         Assert.Equal(2, exitCodeForReport report)
@@ -693,7 +842,9 @@ module ScaffoldCommandTests =
     let ``scaffold provider writing into lifecycle trees remains a defect`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle-intrusion.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
 
         Assert.Contains("scaffold.providerWroteSddTree", diagnosticIds report)
         Assert.Equal(2, exitCodeForReport report)
@@ -704,7 +855,9 @@ module ScaffoldCommandTests =
     let ``scaffold fans out the union to all three roots byte-identically`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "skills-agents-cotenant.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
 
         Assert.DoesNotContain("scaffold.providerWroteSddTree", diagnosticIds report)
         Assert.Equal(0, exitCodeForReport report)
@@ -714,8 +867,10 @@ module ScaffoldCommandTests =
         // present and byte-identical across .claude, .codex, and .agents.
         for name in FS.GG.SDD.Commands.Internal.SeededSkills.skillNames do
             assertByteIdenticalAcrossRoots root name
+
         for path in threeRoots "fs-gg-elmish" do
             Assert.True(TestSupport.existsRelative root path, $"expected {path} to exist")
+
         assertByteIdenticalAcrossRoots root "fs-gg-elmish"
 
     // 056 T017 (US1 / FR-007 / P7): the provider's .agents canonical stays generatedProduct in
@@ -725,9 +880,12 @@ module ScaffoldCommandTests =
     let ``scaffold attributes the fan-out mirror copies to SDD in provenance`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "skills-agents-cotenant.providers.yml"
-        runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false) |> ignore
+
+        runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+        |> ignore
 
         let provenance = TestSupport.readRelative root provenancePath
+
         match FS.GG.SDD.Artifacts.ScaffoldProvenance.tryParse provenance with
         | Some record ->
             Assert.Equal(1, record.SchemaVersion)
@@ -735,21 +893,36 @@ module ScaffoldCommandTests =
             let mirroredPaths = record.MirroredPaths |> List.map (fun p -> p.Path)
 
             Assert.Contains(".agents/skills/fs-gg-elmish/SKILL.md", producedPaths)
-            let elmishProduced = record.ProducedPaths |> List.find (fun p -> p.Path = ".agents/skills/fs-gg-elmish/SKILL.md")
+
+            let elmishProduced =
+                record.ProducedPaths
+                |> List.find (fun p -> p.Path = ".agents/skills/fs-gg-elmish/SKILL.md")
+
             Assert.Equal(FS.GG.SDD.Artifacts.ArtifactRef.GeneratedProduct, elmishProduced.Owner)
 
             // 058/ADR-0014 §Decision 3 / SC-004: the skill copy carries the content digest of its
             // materialized bytes; the mirror copies share the canonical `.agents` digest.
-            let expectedDigest = Fsgg.SkillMirror.sha256 (System.Text.Encoding.UTF8.GetString(bytesAt root ".agents/skills/fs-gg-elmish/SKILL.md"))
+            let expectedDigest =
+                Fsgg.SkillMirror.sha256 (
+                    System.Text.Encoding.UTF8.GetString(bytesAt root ".agents/skills/fs-gg-elmish/SKILL.md")
+                )
+
             Assert.Equal(Some expectedDigest, elmishProduced.Sha256)
 
             Assert.Contains(".claude/skills/fs-gg-elmish/SKILL.md", mirroredPaths)
             Assert.Contains(".codex/skills/fs-gg-elmish/SKILL.md", mirroredPaths)
-            Assert.True(record.MirroredPaths |> List.forall (fun p -> p.Owner = FS.GG.SDD.Artifacts.ArtifactRef.Mirrored))
+
+            Assert.True(
+                record.MirroredPaths
+                |> List.forall (fun p -> p.Owner = FS.GG.SDD.Artifacts.ArtifactRef.Mirrored)
+            )
             // Every mirror copy carries the same content digest as its `.agents` source.
             Assert.True(record.MirroredPaths |> List.forall (fun p -> p.Sha256 = Some expectedDigest))
             // A non-skill produced path (app source) carries no digest.
-            Assert.True(record.ProducedPaths |> List.exists (fun p -> not (p.Path.Contains "/skills/") && p.Sha256 = None))
+            Assert.True(
+                record.ProducedPaths
+                |> List.exists (fun p -> not (p.Path.Contains "/skills/") && p.Sha256 = None)
+            )
 
             // No seeded fs-gg-sdd-* path is laundered into either array.
             Assert.DoesNotContain(producedPaths, fun (p: string) -> p.Contains "fs-gg-sdd-")
@@ -762,14 +935,20 @@ module ScaffoldCommandTests =
     let ``scaffold with a provider that emits no skills mirrors nothing`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false)
+
+        let report =
+            runScaffold (
+                scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false
+            )
 
         Assert.Equal(0, exitCodeForReport report)
         Assert.Empty((scaffoldSummary report).MirroredPaths)
+
         for name in FS.GG.SDD.Commands.Internal.SeededSkills.skillNames do
             assertByteIdenticalAcrossRoots root name
 
         let provenance = TestSupport.readRelative root provenancePath
+
         match FS.GG.SDD.Artifacts.ScaffoldProvenance.tryParse provenance with
         | Some record -> Assert.Empty(record.MirroredPaths)
         | None -> failwith "Expected the scaffold provenance to parse."
@@ -787,7 +966,9 @@ module ScaffoldCommandTests =
         // it, so the mirror WriteFile fails. (.claude/skills/ is isSddOwned, so this pre-plant
         // does not trip the non-empty-target collision guard.)
         TestSupport.writeRelative root ".claude/skills/fs-gg-elmish/SKILL.md" "CONFLICTING AUTHOR CONTENT\n"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
 
         Assert.Contains("scaffold.mirrorFailed", diagnosticIds report)
         Assert.Equal(2, exitCodeForReport report)
@@ -814,7 +995,9 @@ module ScaffoldCommandTests =
         Directory.Exists(Path.Combine(root, ".git"))
 
     let private isExecutable root (relativePath: string) =
-        let mode = File.GetUnixFileMode(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)))
+        let mode =
+            File.GetUnixFileMode(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)))
+
         mode &&& UnixFileMode.UserExecute = UnixFileMode.UserExecute
 
     /// Run real `git` in a directory and return (exitCode, trimmed stdout).
@@ -825,8 +1008,11 @@ module ScaffoldCommandTests =
                 WorkingDirectory = root,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                UseShellExecute = false)
+                UseShellExecute = false
+            )
+
         args |> List.iter info.ArgumentList.Add
+
         match System.Diagnostics.Process.Start info with
         | null -> -1, ""
         | started ->
@@ -844,7 +1030,9 @@ module ScaffoldCommandTests =
     let ``scaffold initializes a git repository at the product root`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
 
         Assert.True(gitDirExists root, "Expected a real .git directory at the product root.")
         Assert.Equal("initialized", (scaffoldSummary report).RepoInitOutcome)
@@ -860,7 +1048,9 @@ module ScaffoldCommandTests =
     let ``scaffold repo captures the skeleton, product, and provenance`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
-        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false) |> ignore
+
+        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+        |> ignore
 
         // The work-tree root is the product root, so the whole scaffolded tree is captured.
         let exit, _ = git root [ "rev-parse"; "--is-inside-work-tree" ]
@@ -914,7 +1104,9 @@ module ScaffoldCommandTests =
     let ``scaffold with no shell scripts reports a zero executable count`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
 
         let summary = scaffoldSummary report
         Assert.DoesNotContain(summary.ProducedPaths, fun p -> p.EndsWith ".sh")
@@ -946,7 +1138,9 @@ module ScaffoldCommandTests =
         let root = TestSupport.tempDirectory ()
         git root [ "init" ] |> ignore
         writeRegistry root "ok.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] true false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] true false)
 
         let summary = scaffoldSummary report
         Assert.Equal("skippedExistingRepository", summary.RepoInitOutcome)
@@ -984,7 +1178,12 @@ module ScaffoldCommandTests =
     /// is host-independent; empty only if no such directory exists (asserted by callers).
     let private pathWithoutGit () =
         let separator = Path.PathSeparator
-        let current = System.Environment.GetEnvironmentVariable "PATH" |> Option.ofObj |> Option.defaultValue ""
+
+        let current =
+            System.Environment.GetEnvironmentVariable "PATH"
+            |> Option.ofObj
+            |> Option.defaultValue ""
+
         current.Split separator
         |> Array.filter (fun dir ->
             dir <> ""
@@ -1003,7 +1202,11 @@ module ScaffoldCommandTests =
         let gitFreePath = pathWithoutGit ()
         Assert.True((gitFreePath <> ""), "Test precondition: a dotnet-only, git-free PATH directory must exist.")
 
-        let original = System.Environment.GetEnvironmentVariable "PATH" |> Option.ofObj |> Option.defaultValue ""
+        let original =
+            System.Environment.GetEnvironmentVariable "PATH"
+            |> Option.ofObj
+            |> Option.defaultValue ""
+
         let report =
             try
                 System.Environment.SetEnvironmentVariable("PATH", gitFreePath)
@@ -1025,7 +1228,9 @@ module ScaffoldCommandTests =
         let root = TestSupport.tempDirectory ()
         git root [ "init" ] |> ignore
         writeRegistry root "ok.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] true false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] true false)
 
         Assert.Equal(0, exitCodeForReport report)
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
@@ -1055,7 +1260,9 @@ module ScaffoldCommandTests =
     let ``scaffold passes no git options to the provider create-arg vector`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "with-script.providers.yml"
-        let createArgs = plannedCreateArgs (scaffoldRequest root (Some "scripted") [] false true)
+
+        let createArgs =
+            plannedCreateArgs (scaffoldRequest root (Some "scripted") [] false true)
 
         for forbidden in [ "--initGit"; "initGit"; "--allow-scripts"; "allow-scripts"; "--allow-script" ] do
             Assert.DoesNotContain(forbidden, createArgs)
@@ -1069,7 +1276,10 @@ module ScaffoldCommandTests =
         let runOnce () =
             let root = rootWithLeaf "scaffold-032-det"
             writeRegistry root "ok.providers.yml"
-            let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+            let report =
+                runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
             TestSupport.readRelative root provenancePath, CommandSerialization.serializeReport report
 
         let firstProvenance, firstJson = runOnce ()
@@ -1134,13 +1344,15 @@ module ScaffoldCommandTests =
     let private provenanceGeneratedProductPaths root : string list =
         let json = TestSupport.readRelative root provenancePath
         use doc = System.Text.Json.JsonDocument.Parse json
+
         let str (element: System.Text.Json.JsonElement) (name: string) =
             match element.GetProperty(name).GetString() with
             | null -> ""
             | value -> value
+
         [ for entry in doc.RootElement.GetProperty("producedPaths").EnumerateArray() do
-            if str entry "owner" = "generatedProduct" then
-                str entry "path" ]
+              if str entry "owner" = "generatedProduct" then
+                  str entry "path" ]
 
     // T008 (US2-AC1 / FR-004): scaffold with lifecycle=sdd delivers the constitution
     // via the reused init skeleton; the report attributes it as the SDD skeleton's
@@ -1149,14 +1361,19 @@ module ScaffoldCommandTests =
     let ``scaffold delivers the constitution via the reused init skeleton`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
+
         let report =
-            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false)
+            runScaffold (
+                scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false
+            )
 
         Assert.True(TestSupport.existsRelative root ".fsgg/constitution.md")
+
         let change =
             report.ChangedArtifacts
             |> List.tryFind (fun c -> c.Path = ".fsgg/constitution.md")
             |> Option.defaultWith (fun () -> failwith "Expected a changed-artifact entry for the constitution.")
+
         Assert.Equal("agentGuidance", change.Kind)
         Assert.Equal("authored", change.Ownership)
         Assert.NotEqual("generatedProduct", change.Ownership)
@@ -1167,6 +1384,7 @@ module ScaffoldCommandTests =
     let ``scaffold provenance excludes the constitution from generatedProduct`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
+
         runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false)
         |> ignore
 
@@ -1179,7 +1397,10 @@ module ScaffoldCommandTests =
     let ``scaffold emits the constitution under a non-sdd lifecycle param`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
-        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "spec-kit" ] false false)
+
+        runScaffold (
+            scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "spec-kit" ] false false
+        )
         |> ignore
 
         Assert.True(TestSupport.existsRelative root ".fsgg/constitution.md")
@@ -1201,7 +1422,11 @@ module ScaffoldCommandTests =
         // relativeFiles. init itself writes no .git, so this is the init skeleton set.
         let establishedSkeleton =
             Set.ofList
-                [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml"; "AGENTS.md"; "CLAUDE.md" ]
+                [ ".fsgg/project.yml"
+                  ".fsgg/sdd.yml"
+                  ".fsgg/agents.yml"
+                  "AGENTS.md"
+                  "CLAUDE.md" ]
 
         // 051/056: the seeded process-skill files (15 declared skills × {.claude,.codex,.agents}).
         let seededSkillPaths =
@@ -1231,12 +1456,14 @@ module ScaffoldCommandTests =
     let private provenanceEffectiveParameters root : (string * string) list =
         let json = TestSupport.readRelative root provenancePath
         use doc = System.Text.Json.JsonDocument.Parse json
+
         let str (element: System.Text.Json.JsonElement) (name: string) =
             match element.GetProperty(name).GetString() with
             | null -> ""
             | value -> value
+
         [ for entry in doc.RootElement.GetProperty("effectiveParameters").EnumerateArray() do
-            str entry "key", str entry "value" ]
+              str entry "key", str entry "value" ]
         |> List.sortBy fst
 
     // T008 (US1 / FR-001 / FR-003 / SC-001): omitting `variant` forwards the declared
@@ -1247,7 +1474,8 @@ module ScaffoldCommandTests =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "default-declaring.providers.yml"
         // productName supplied (required); variant omitted (declared default: alpha).
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
 
         // The provider was invoked with the declared default — the recording manifest echoes it.
         let manifest = TestSupport.readRelative root "scaffold-manifest.txt"
@@ -1256,13 +1484,13 @@ module ScaffoldCommandTests =
 
         // The report summary records the effective set, sorted ascending by key.
         let summary = scaffoldSummary report
-        Assert.Equal<(string * string) list>(
-            [ "productName", "Acme"; "variant", "alpha" ],
-            summary.EffectiveParameters)
+        Assert.Equal<(string * string) list>([ "productName", "Acme"; "variant", "alpha" ], summary.EffectiveParameters)
         // Provenance records the same effective set for audit/reproducibility (FR-003).
         Assert.Equal<(string * string) list>(
             [ "productName", "Acme"; "variant", "alpha" ],
-            provenanceEffectiveParameters root)
+            provenanceEffectiveParameters root
+        )
+
         Assert.Equal(0, exitCodeForReport report)
 
     // T009 (US1 / FR-008): the default-applied run projects effectiveParameters in json (an
@@ -1272,7 +1500,9 @@ module ScaffoldCommandTests =
     let ``scaffold DefaultApplied projects effectiveParameters in json and text`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "default-declaring.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
 
         let json = CommandSerialization.serializeReport report
         // json: the array, sorted, after producedPaths and before repoInitOutcome.
@@ -1291,7 +1521,11 @@ module ScaffoldCommandTests =
         let text = CommandRendering.renderText report
         Assert.Contains("scaffoldEffectiveParam: productName=Acme", text)
         Assert.Contains("scaffoldEffectiveParam: variant=alpha", text)
-        Assert.True((text.IndexOf "scaffoldEffectiveParam: productName=Acme") < (text.IndexOf "scaffoldEffectiveParam: variant=alpha"))
+
+        Assert.True(
+            (text.IndexOf "scaffoldEffectiveParam: productName=Acme") < (text.IndexOf
+                "scaffoldEffectiveParam: variant=alpha")
+        )
 
     // T009 (FR-008): the effectiveParameters field is scaffold-scoped — a non-scaffold
     // command's json carries no effectiveParameters key and no scaffoldEffectiveParam line.
@@ -1332,7 +1566,9 @@ module ScaffoldCommandTests =
     let ``scaffold forwards the declared default verbatim in the create-arg vector`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "default-declaring.providers.yml"
-        let request = scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false true
+
+        let request =
+            scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false true
         // effective = {productName=Acme, variant=alpha}; Map canonicalizes to sorted keys.
         let expected = [ "--productName"; "Acme"; "--variant"; "alpha" ]
         Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs request))
@@ -1361,6 +1597,7 @@ module ScaffoldCommandTests =
     let ``scaffold Override forwards the author value over the declared default`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "default-declaring.providers.yml"
+
         let report =
             runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "variant", "beta" ] false false)
 
@@ -1370,12 +1607,13 @@ module ScaffoldCommandTests =
         Assert.DoesNotContain("variant=alpha", manifest)
 
         let summary = scaffoldSummary report
+        Assert.Equal<(string * string) list>([ "productName", "Acme"; "variant", "beta" ], summary.EffectiveParameters)
+
         Assert.Equal<(string * string) list>(
             [ "productName", "Acme"; "variant", "beta" ],
-            summary.EffectiveParameters)
-        Assert.Equal<(string * string) list>(
-            [ "productName", "Acme"; "variant", "beta" ],
-            provenanceEffectiveParameters root)
+            provenanceEffectiveParameters root
+        )
+
         Assert.Equal(0, exitCodeForReport report)
 
     // T014 (US2 / FR-008): the override run projects the override value (not the default) in
@@ -1384,6 +1622,7 @@ module ScaffoldCommandTests =
     let ``scaffold Override projects the override value in json and text`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "default-declaring.providers.yml"
+
         let report =
             runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "variant", "beta" ] false false)
 
@@ -1406,7 +1645,9 @@ module ScaffoldCommandTests =
     let private runShell (script: string) =
         let root = TestSupport.tempDirectory ()
         let result = interpret root false (RunProcess("/bin/sh", [ "-c"; script ], ""))
-        result.Process |> Option.defaultWith (fun () -> failwith "Expected a process result.")
+
+        result.Process
+        |> Option.defaultWith (fun () -> failwith "Expected a process result.")
 
     // T005 (US1 / R1): the edge now returns the executed command line and the captured,
     // truncation-flagged stdout/stderr (content kept, drain retained) instead of discarding
@@ -1428,7 +1669,10 @@ module ScaffoldCommandTests =
     [<Fact>]
     let ``runProcess edge bounds an oversize stream and flags truncation`` () =
         let oversize = providerOutputCapChars + 4096
-        let processResult = runShell $"head -c {oversize} /dev/zero | tr '\\0' 'x'; printf 'small' >&2"
+
+        let processResult =
+            runShell $"head -c {oversize} /dev/zero | tr '\\0' 'x'; printf 'small' >&2"
+
         Assert.True(processResult.Started)
         Assert.Equal(providerOutputCapChars, processResult.StandardOutput.Length)
         Assert.True(processResult.StandardOutputTruncated)
@@ -1465,6 +1709,7 @@ module ScaffoldCommandTests =
         let doc = System.Text.Json.JsonDocument.Parse json
         let scaffold = doc.RootElement.GetProperty("scaffold")
         let invocation = scaffold.GetProperty("providerInvocation")
+
         match invocation.ValueKind with
         | System.Text.Json.JsonValueKind.Null -> doc, None
         | _ -> doc, Some invocation
@@ -1486,7 +1731,11 @@ module ScaffoldCommandTests =
 
         let doc, invocation = providerInvocationJson report
         use _ = doc
-        let invocation = invocation |> Option.defaultWith (fun () -> failwith "Expected a providerInvocation block.")
+
+        let invocation =
+            invocation
+            |> Option.defaultWith (fun () -> failwith "Expected a providerInvocation block.")
+
         Assert.Contains("dotnet new fsgg-fixture-fail -o .", invocation.GetProperty("commandLine").GetString())
         Assert.True(invocation.GetProperty("processStarted").GetBoolean())
         Assert.Equal(System.Text.Json.JsonValueKind.Number, invocation.GetProperty("exitCode").ValueKind)
@@ -1506,13 +1755,22 @@ module ScaffoldCommandTests =
     let ``scaffold surfaces the dotnet-new invalid-option rejection on stderr_Synthetic`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "rejects-param.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
 
         Assert.Equal(2, exitCodeForReport report)
         let doc, invocation = providerInvocationJson report
         use _ = doc
-        let invocation = invocation |> Option.defaultWith (fun () -> failwith "Expected a providerInvocation block.")
-        let combined = invocation.GetProperty("standardError").GetString() + invocation.GetProperty("standardOutput").GetString()
+
+        let invocation =
+            invocation
+            |> Option.defaultWith (fun () -> failwith "Expected a providerInvocation block.")
+
+        let combined =
+            invocation.GetProperty("standardError").GetString()
+            + invocation.GetProperty("standardOutput").GetString()
+
         Assert.Contains("'--productName' is not a valid option", combined)
 
     // T009a (US1 / Scenario C, R4): a program that cannot start surfaces a real launch
@@ -1524,8 +1782,14 @@ module ScaffoldCommandTests =
     [<Fact>]
     let ``runProcess edge surfaces the launch error when the program cannot start`` () =
         let root = TestSupport.tempDirectory ()
-        let result = interpret root false (RunProcess("/no/such/provider-binary-xyz", [ "new" ], ""))
-        let processResult = result.Process |> Option.defaultWith (fun () -> failwith "Expected a process result.")
+
+        let result =
+            interpret root false (RunProcess("/no/such/provider-binary-xyz", [ "new" ], ""))
+
+        let processResult =
+            result.Process
+            |> Option.defaultWith (fun () -> failwith "Expected a process result.")
+
         Assert.False(processResult.Started)
         Assert.Contains("/no/such/provider-binary-xyz new", processResult.Command)
         Assert.NotEqual("", processResult.StandardError)
@@ -1558,10 +1822,17 @@ module ScaffoldCommandTests =
                           StandardError = "An error occurred trying to start process 'dotnet'."
                           StandardErrorTruncated = false } }
 
-        let report = { baseReport with Scaffold = Some summary }
+        let report =
+            { baseReport with
+                Scaffold = Some summary }
+
         let doc, invocation = providerInvocationJson report
         use _ = doc
-        let invocation = invocation |> Option.defaultWith (fun () -> failwith "Expected a providerInvocation block.")
+
+        let invocation =
+            invocation
+            |> Option.defaultWith (fun () -> failwith "Expected a providerInvocation block.")
+
         Assert.False(invocation.GetProperty("processStarted").GetBoolean())
         Assert.Equal(System.Text.Json.JsonValueKind.Null, invocation.GetProperty("exitCode").ValueKind)
         Assert.Contains("dotnet new fsgg-fixture-app -o .", invocation.GetProperty("commandLine").GetString())
@@ -1577,6 +1848,7 @@ module ScaffoldCommandTests =
 
         let provenance = TestSupport.readRelative root ".fsgg/scaffold-provenance.json"
         Assert.Contains("\"schemaVersion\": 1", provenance)
+
         for forbidden in [ "commandLine"; "standardOutput"; "standardError"; "providerInvocation" ] do
             Assert.DoesNotContain(forbidden, provenance)
 
@@ -1587,7 +1859,10 @@ module ScaffoldCommandTests =
         // (a) success ⇒ null, exit 0, no captured content.
         let okRoot = TestSupport.tempDirectory ()
         writeRegistry okRoot "ok.providers.yml"
-        let okReport = runScaffold (scaffoldRequest okRoot (Some "fixture") [ "productName", "Acme" ] false false)
+
+        let okReport =
+            runScaffold (scaffoldRequest okRoot (Some "fixture") [ "productName", "Acme" ] false false)
+
         Assert.Equal(0, exitCodeForReport okReport)
         Assert.Equal(None, (scaffoldSummary okReport).ProviderInvocation)
         Assert.Contains("\"providerInvocation\": null", CommandSerialization.serializeReport okReport)
@@ -1603,7 +1878,10 @@ module ScaffoldCommandTests =
         // (c) providerUnknown ⇒ exit 1, null invocation (provider never resolved/run).
         let unknownRoot = TestSupport.tempDirectory ()
         writeRegistry unknownRoot "ok.providers.yml"
-        let unknownReport = runScaffold (scaffoldRequest unknownRoot (Some "does-not-exist") [] false false)
+
+        let unknownReport =
+            runScaffold (scaffoldRequest unknownRoot (Some "does-not-exist") [] false false)
+
         Assert.Equal(1, exitCodeForReport unknownReport)
         Assert.Equal(None, (scaffoldSummary unknownReport).ProviderInvocation)
 
@@ -1612,7 +1890,10 @@ module ScaffoldCommandTests =
     let ``scaffold dry-run carries a null providerInvocation`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
-        let report = runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false true)
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false true)
+
         Assert.Equal(None, (scaffoldSummary report).ProviderInvocation)
         Assert.Contains("\"providerInvocation\": null", CommandSerialization.serializeReport report)
 
@@ -1646,13 +1927,19 @@ module ScaffoldCommandTests =
     let ``scaffold exit-code taxonomy and outcomes are unchanged by the additive block`` () =
         let okRoot = TestSupport.tempDirectory ()
         writeRegistry okRoot "ok.providers.yml"
-        let ok = runScaffold (scaffoldRequest okRoot (Some "fixture") [ "productName", "Acme" ] false false)
+
+        let ok =
+            runScaffold (scaffoldRequest okRoot (Some "fixture") [ "productName", "Acme" ] false false)
+
         Assert.Equal(0, exitCodeForReport ok)
         Assert.Equal("providerSucceeded", (scaffoldSummary ok).Outcome)
 
         let defectRoot = TestSupport.tempDirectory ()
         writeRegistry defectRoot "fails-midway.providers.yml"
-        let defect = runScaffold (scaffoldRequest defectRoot (Some "fixture") [] false false)
+
+        let defect =
+            runScaffold (scaffoldRequest defectRoot (Some "fixture") [] false false)
+
         Assert.Equal(2, exitCodeForReport defect)
         Assert.Equal("providerFailed", (scaffoldSummary defect).Outcome)
 
@@ -1667,11 +1954,16 @@ module ScaffoldCommandTests =
     // override can never race a concurrent real `dotnet new`.
     [<Fact>]
     let ``a child exceeding the process-timeout bound is killed and reported as a nonzero exit`` () =
-        if System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform System.Runtime.InteropServices.OSPlatform.Windows then
+        if
+            System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform
+                System.Runtime.InteropServices.OSPlatform.Windows
+        then
             () // POSIX `sleep` is the portable long-runner; the timeout edge itself is OS-agnostic.
         else
             let root = TestSupport.tempDirectory ()
-            let original = System.Environment.GetEnvironmentVariable "FSGG_SDD_PROCESS_TIMEOUT_MS"
+
+            let original =
+                System.Environment.GetEnvironmentVariable "FSGG_SDD_PROCESS_TIMEOUT_MS"
 
             try
                 System.Environment.SetEnvironmentVariable("FSGG_SDD_PROCESS_TIMEOUT_MS", "500")
@@ -1681,7 +1973,11 @@ module ScaffoldCommandTests =
 
                 // Bounded well within the child's own 30s sleep — killed, not awaited.
                 Assert.True(stopwatch.Elapsed.TotalSeconds < 15.0, $"kill took {stopwatch.Elapsed.TotalSeconds}s")
-                let processResult = result.Process |> Option.defaultWith (fun () -> failwith "expected a process result")
+
+                let processResult =
+                    result.Process
+                    |> Option.defaultWith (fun () -> failwith "expected a process result")
+
                 Assert.True processResult.Started
                 Assert.NotEqual(0, processResult.ExitCode)
                 Assert.Contains("timed out", processResult.StandardError)

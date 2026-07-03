@@ -26,7 +26,9 @@ module DeterministicJsonTests =
     let ``NormalizedWorkModel generation emits byte-identical JSON across runs`` () =
         let outputs =
             [ 1..3 ]
-            |> List.map (fun _ -> TestSupport.generationResult "deterministic-ordering" |> fun result -> result.Json)
+            |> List.map (fun _ ->
+                TestSupport.generationResult "deterministic-ordering"
+                |> fun result -> result.Json)
 
         Assert.Equal(outputs.[0], outputs.[1])
         Assert.Equal(outputs.[1], outputs.[2])
@@ -34,7 +36,9 @@ module DeterministicJsonTests =
 
     [<Fact>]
     let ``NormalizedWorkModel JSON keeps documented top-level property order`` () =
-        let json = TestSupport.generationResult "valid-work-item" |> fun result -> result.Json
+        let json =
+            TestSupport.generationResult "valid-work-item" |> fun result -> result.Json
+
         let expectedOrder =
             [ "\"schemaVersion\":"
               "\"modelVersion\":"

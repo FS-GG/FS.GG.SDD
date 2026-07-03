@@ -20,7 +20,7 @@ module AnalyzeCommandTests =
           StdErr: string }
 
     let initializedTasksReadyProject () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeTasksReadyProject root workId title
         root
 
@@ -45,12 +45,21 @@ module AnalyzeCommandTests =
         Assert.True(TestSupport.existsRelative root analysisPath)
         Assert.Contains("\"stage\": \"analyze\"", analysisJson)
         Assert.Contains("\"sourceRelationships\"", analysisJson)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = analysisPath && change.Kind = "generatedView")
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = analysisPath && change.Kind = "generatedView"
+        )
+
         Assert.Contains(report.GeneratedViews, fun view -> view.Path = workModelPath)
         Assert.Contains(report.GeneratedViews, fun view -> view.Path = analysisPath && view.Kind = "analysis")
         Assert.Equal(Some "analysis.next.implement", report.NextAction |> Option.map _.ActionId)
 
-        match parseAnalysisView { Path = analysisPath; Text = analysisJson } with
+        match
+            parseAnalysisView
+                { Path = analysisPath
+                  Text = analysisJson }
+        with
         | Ok view -> Assert.Equal("implementationReady", view.Readiness.Status)
         | Error diagnostics -> failwith $"Generated analysis view did not parse: {diagnostics}."
 
@@ -63,11 +72,15 @@ module AnalyzeCommandTests =
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
         Assert.False(TestSupport.existsRelative root ".fsgg/policy.yml")
         Assert.DoesNotContain(serializeReport report, "route")
-        Assert.Contains(report.GovernanceCompatibility, fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated")
+
+        Assert.Contains(
+            report.GovernanceCompatibility,
+            fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated"
+        )
 
     [<Fact>]
     let ``analyze missing tasks blocks without analysis write`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializePlanReadyProject root workId title
 
         let report = TestSupport.runAnalyze root workId title
@@ -79,6 +92,7 @@ module AnalyzeCommandTests =
     [<Fact>]
     let ``analyze dry run reports generated changes without mutation`` () =
         let root = initializedTasksReadyProject ()
+
         let request =
             { TestSupport.analyzeRequest root workId title with
                 DryRun = true }
@@ -87,7 +101,11 @@ module AnalyzeCommandTests =
 
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
         Assert.False(TestSupport.existsRelative root analysisPath)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = analysisPath && change.SafeWriteDecision = "dryRunOnly")
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = analysisPath && change.SafeWriteDecision = "dryRunOnly"
+        )
 
     [<Fact>]
     let ``analyze preserves authored task source`` () =
@@ -101,6 +119,7 @@ module AnalyzeCommandTests =
     [<Fact>]
     let ``analyze deterministic JSON report is byte stable`` () =
         let root = initializedTasksReadyProject ()
+
         let request =
             { TestSupport.analyzeRequest root workId title with
                 DryRun = true }

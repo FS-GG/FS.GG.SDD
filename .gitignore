@@ -9,5 +9,8 @@ TestResults/
 *.suo
 *.nupkg
 
+# Pinned Fantomas install path (feature 065 format gate; out-of-manifest, ephemeral)
+.fantomas-tool/
+
 # Claude Code agent memory (machine-local)
 .claude/projects/

@@ -11,8 +11,15 @@ open Xunit
 /// `--text`, and `--rich`; `--rich` redirected equals `--text`; and the rich path
 /// changes no JSON byte. Built from a constructed report (no template engine).
 module ScaffoldParityTests =
-    let private interactiveColor = { IsInteractive = true; ColorEnabled = true; Width = Some 100; IsInputInteractive = true }
-    let private nonInteractive = { interactiveColor with IsInteractive = false }
+    let private interactiveColor =
+        { IsInteractive = true
+          ColorEnabled = true
+          Width = Some 100
+          IsInputInteractive = true }
+
+    let private nonInteractive =
+        { interactiveColor with
+            IsInteractive = false }
 
     let private scaffoldSummary: ScaffoldSummary =
         { ProviderName = Some "fixture"
@@ -23,7 +30,9 @@ module ScaffoldParityTests =
           ProviderInvoked = true
           ProducedPathCount = 2
           ProducedPaths = [ "App.fsproj"; "Program.fs"; ".agents/skills/fs-gg-elmish/SKILL.md" ]
-          MirroredPaths = [ ".claude/skills/fs-gg-elmish/SKILL.md"; ".codex/skills/fs-gg-elmish/SKILL.md" ]
+          MirroredPaths =
+            [ ".claude/skills/fs-gg-elmish/SKILL.md"
+              ".codex/skills/fs-gg-elmish/SKILL.md" ]
           EffectiveParameters = [ "productName", "Acme"; "variant", "alpha" ]
           RepoInitOutcome = "initialized"
           ExecutableScriptCount = 0
@@ -68,6 +77,7 @@ module ScaffoldParityTests =
         // Feature 052 US1: the provider-declared required minimum appears in every projection.
         Assert.Contains("\"requiredMinimumCliVersion\": \"0.3.0\"", json)
         Assert.Contains("scaffoldRequiredMinimumCliVersion: 0.3.0", text)
+
         for projection in [ json; text; rich ] do
             Assert.Contains("0.3.0", projection)
 
@@ -177,8 +187,7 @@ module ScaffoldParityTests =
                       WorkId = None
                       Reason =
                         "Installed fsgg-sdd is behind the provider-declared minimum. Upgrade the CLI, then re-run `fsgg-sdd init` to re-seed the fs-gg-sdd-* skills and .fsgg/early-stage-guidance.md (idempotent, no-clobber). Note: fsgg-sdd refresh does not re-seed."
-                      RequiredArtifacts =
-                        [ ".claude/skills"; ".codex/skills"; ".fsgg/early-stage-guidance.md" ]
+                      RequiredArtifacts = [ ".claude/skills"; ".codex/skills"; ".fsgg/early-stage-guidance.md" ]
                       BlockingDiagnosticIds = [] } }
 
     [<Fact>]
@@ -275,6 +284,7 @@ module ScaffoldParityTests =
     [<Fact>]
     let ``scaffold lifecycle produced-path facts are identical across json text and rich`` () =
         let lifecycleProducedPaths = [ "App.fsproj"; "Program.fs"; "scaffold-manifest.txt" ]
+
         let lifecycleReport: CommandReport =
             { report with
                 Scaffold =

@@ -12,7 +12,7 @@ module SpecifyCommandTests =
     let workModelPath = $"readiness/{workId}/work-model.json"
 
     let initializedCharteredProject () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.runCharter root workId title |> ignore
         root
@@ -72,11 +72,25 @@ No material ambiguities recorded.
         Assert.Contains("## User Value", spec)
         Assert.Contains("## Functional Requirements", spec)
         Assert.Contains("- FR-001:", spec)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = specPath && change.Operation = ArtifactOperation.Create)
-        Assert.Contains(report.GeneratedViews, fun view -> view.Path = workModelPath && view.Currency = GeneratedViewCurrency.Missing)
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = specPath && change.Operation = ArtifactOperation.Create
+        )
+
+        Assert.Contains(
+            report.GeneratedViews,
+            fun view -> view.Path = workModelPath && view.Currency = GeneratedViewCurrency.Missing
+        )
+
         Assert.Equal(Some Clarify, report.NextAction |> Option.bind _.Command)
         Assert.Contains(specPath, report.NextAction.Value.RequiredArtifacts)
-        Assert.Equal(Some "FR-001", report.Specification |> Option.bind (fun summary -> summary.RequirementIds |> List.tryHead))
+
+        Assert.Equal(
+            Some "FR-001",
+            report.Specification
+            |> Option.bind (fun summary -> summary.RequirementIds |> List.tryHead)
+        )
 
     [<Fact>]
     let ``specify creation does not require Governance files`` () =
@@ -88,20 +102,31 @@ No material ambiguities recorded.
         Assert.False(TestSupport.existsRelative root ".fsgg/policy.yml")
         Assert.False(TestSupport.existsRelative root ".fsgg/capabilities.yml")
         Assert.False(TestSupport.existsRelative root ".fsgg/tooling.yml")
-        Assert.Contains(report.GovernanceCompatibility, fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated")
+
+        Assert.Contains(
+            report.GovernanceCompatibility,
+            fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated"
+        )
 
     [<Fact>]
     let ``specify rerun preserves authored content`` () =
         let root = initializedCharteredProject ()
         TestSupport.runSpecify root workId title |> ignore
-        let authored = TestSupport.readRelative root specPath + "\nUser-authored prose stays here.\n"
+
+        let authored =
+            TestSupport.readRelative root specPath + "\nUser-authored prose stays here.\n"
+
         TestSupport.writeRelative root specPath authored
 
         let report = TestSupport.runSpecify root workId title
 
         Assert.Equal(CommandOutcome.NoChange, report.Outcome)
         Assert.Equal(authored, TestSupport.readRelative root specPath)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = specPath && change.Operation = ArtifactOperation.NoChange)
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = specPath && change.Operation = ArtifactOperation.NoChange
+        )
 
     // §3.2 (FR-002, SC-002): an edited-but-section-complete spec re-run is never a bare,
     // ambiguous NoChange — the report carries the deterministic statement that specify
@@ -110,9 +135,11 @@ No material ambiguities recorded.
     let ``specify edited rerun reports live-read statement and is never bare NoChange`` () =
         let root = initializedCharteredProject ()
         TestSupport.runSpecify root workId title |> ignore
+
         let edited =
             (TestSupport.readRelative root specPath)
                 .Replace("Prose status: specified", "Prose status: specified\nAuthor added a clarifying sentence.")
+
         TestSupport.writeRelative root specPath edited
 
         let report = TestSupport.runSpecify root workId title
@@ -127,7 +154,11 @@ No material ambiguities recorded.
     [<Fact>]
     let ``specify safely appends missing standard sections`` () =
         let root = initializedCharteredProject ()
-        let partial = (existingSpecification "specify" workId).Replace("## Ambiguities\nNo material ambiguities recorded.\n\n", "")
+
+        let partial =
+            (existingSpecification "specify" workId)
+                .Replace("## Ambiguities\nNo material ambiguities recorded.\n\n", "")
+
         TestSupport.writeRelative root specPath partial
 
         let report = TestSupport.runSpecify root workId title
@@ -136,7 +167,11 @@ No material ambiguities recorded.
         Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
         Assert.Contains("Existing user value remains.", after)
         Assert.Contains("## Ambiguities", after)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = specPath && change.Operation = ArtifactOperation.Update)
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = specPath && change.Operation = ArtifactOperation.Update
+        )
 
     [<Fact>]
     let ``specify identity mismatch blocks before authored write`` () =
@@ -152,7 +187,7 @@ No material ambiguities recorded.
 
     [<Fact>]
     let ``specify missing charter blocks before specification write`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
 
         let report = TestSupport.runSpecify root workId title
@@ -164,7 +199,10 @@ No material ambiguities recorded.
     [<Fact>]
     let ``specify missing intent blocks new specification`` () =
         let root = initializedCharteredProject ()
-        let request = { TestSupport.specifyRequest root workId title with InputText = None }
+
+        let request =
+            { TestSupport.specifyRequest root workId title with
+                InputText = None }
 
         let report = TestSupport.runRequest request
 
@@ -177,15 +215,21 @@ No material ambiguities recorded.
                 diagnostic.Id = "missingSpecificationIntent"
                 && diagnostic.Correction.Contains("value:")
                 && diagnostic.Correction.Contains("scope:")
-                && diagnostic.Correction.Contains("requirement:"))
+                && diagnostic.Correction.Contains("requirement:")
+        )
+
         Assert.False(TestSupport.existsRelative root specPath)
 
     [<Fact>]
     let ``specify malformed and duplicate ids block before authored write`` () =
         let root = initializedCharteredProject ()
+
         let original =
             (existingSpecification "specify" workId)
-                .Replace("- US-001 (P1): Existing story remains.", "- US-001 (P1): Existing story remains.\n- US-001 (P1): Duplicate story.")
+                .Replace(
+                    "- US-001 (P1): Existing story remains.",
+                    "- US-001 (P1): Existing story remains.\n- US-001 (P1): Duplicate story."
+                )
                 .Replace("Stories: US-001; Acceptance: AC-001", "Stories: US-999; Acceptance: AC-999")
 
         TestSupport.writeRelative root specPath original
@@ -200,13 +244,20 @@ No material ambiguities recorded.
     [<Fact>]
     let ``specify dry run reports proposed changes without mutation`` () =
         let root = initializedCharteredProject ()
-        let request = { TestSupport.specifyRequest root workId title with DryRun = true }
+
+        let request =
+            { TestSupport.specifyRequest root workId title with
+                DryRun = true }
 
         let report = TestSupport.runRequest request
 
         Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
         Assert.False(TestSupport.existsRelative root specPath)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = specPath && change.SafeWriteDecision = "dryRunOnly")
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = specPath && change.SafeWriteDecision = "dryRunOnly"
+        )
 
     [<Fact>]
     let ``specify refreshes generated work model when source data is valid`` () =
@@ -217,15 +268,22 @@ No material ambiguities recorded.
 
         Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
         Assert.True(TestSupport.existsRelative root workModelPath)
-        Assert.Contains(report.GeneratedViews, fun view ->
-            view.Path = workModelPath
-            && view.Currency = GeneratedViewCurrency.Current
-            && view.Sources |> List.exists (fun source -> source.Path = specPath))
+
+        Assert.Contains(
+            report.GeneratedViews,
+            fun view ->
+                view.Path = workModelPath
+                && view.Currency = GeneratedViewCurrency.Current
+                && view.Sources |> List.exists (fun source -> source.Path = specPath)
+        )
 
     [<Fact>]
     let ``specify deterministic JSON is byte stable`` () =
         let root = initializedCharteredProject ()
-        let request = { TestSupport.specifyRequest root workId title with DryRun = true }
+
+        let request =
+            { TestSupport.specifyRequest root workId title with
+                DryRun = true }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport

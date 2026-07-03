@@ -11,7 +11,10 @@ module ValidateCommandTests =
     module Commands = FS.GG.SDD.Commands.Tests.TestSupport
 
     let private configuration =
-        if AppContext.BaseDirectory.Replace('\\', '/').Contains("/Release/") then "Release" else "Debug"
+        if AppContext.BaseDirectory.Replace('\\', '/').Contains("/Release/") then
+            "Release"
+        else
+            "Debug"
 
     let private cliDll =
         Path.Combine(Commands.repoRoot, "src", "FS.GG.SDD.Cli", "bin", configuration, "net10.0", "FS.GG.SDD.Cli.dll")
@@ -89,7 +92,9 @@ module ValidateCommandTests =
     [<Fact>]
     let ``validate --out to a path under a missing directory fails cleanly without a stack trace`` () =
         let badPath = Path.Combine(Commands.tempDirectory (), "missing-dir", "report.json")
-        let stdout, stderr, exitCode = runCliFull [ "validate"; "--matrix"; "compatibility"; "--json"; "--out"; badPath ]
+
+        let stdout, stderr, exitCode =
+            runCliFull [ "validate"; "--matrix"; "compatibility"; "--json"; "--out"; badPath ]
 
         Assert.Equal(1, exitCode)
         Assert.Contains("cannot write --out", stderr)
@@ -134,14 +139,18 @@ module ValidateCommandTests =
     let ``validate --rich --out persists deterministic text with zero ANSI`` () =
         // FR-010: --out never receives rich ANSI; it persists the deterministic
         // plain-text projection (equal to --text stdout).
-        let outPath = Path.Combine(Path.GetTempPath(), $"validate-rich-{System.Guid.NewGuid():N}.txt")
+        let outPath =
+            Path.Combine(Path.GetTempPath(), $"validate-rich-{System.Guid.NewGuid():N}.txt")
 
         try
-            let _, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--rich"; "--out"; outPath ]
+            let _, _ =
+                runCli [ "validate"; "--matrix"; "compatibility"; "--rich"; "--out"; outPath ]
+
             let persisted = File.ReadAllText outPath
             let textOut, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--text" ]
             Assert.False(persisted |> Seq.exists (fun c -> int c = 27), "persisted --out contains an ANSI escape")
             // runCli appends a trailing newline to stdout; compare on trimmed content.
             Assert.Equal(textOut.TrimEnd(), persisted.TrimEnd())
         finally
-            if File.Exists outPath then File.Delete outPath
+            if File.Exists outPath then
+                File.Delete outPath

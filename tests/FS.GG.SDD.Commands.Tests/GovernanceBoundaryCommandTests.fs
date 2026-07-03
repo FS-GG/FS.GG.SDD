@@ -9,8 +9,12 @@ open Xunit
 module GovernanceBoundaryCommandTests =
     [<Fact>]
     let ``init reports optional Governance compatibility without enforcement fields`` () =
-        let root = TestSupport.tempDirectory()
-        let request = { TestSupport.request Init root with DryRun = true }
+        let root = TestSupport.tempDirectory ()
+
+        let request =
+            { TestSupport.request Init root with
+                DryRun = true }
+
         let model, effects = init request
 
         let report =
@@ -30,9 +34,12 @@ module GovernanceBoundaryCommandTests =
 
     [<Fact>]
     let ``charter reports optional Governance compatibility without enforcement fields`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
-        let request = { TestSupport.charterRequest root "004-charter-command" "Charter Command" with DryRun = true }
+
+        let request =
+            { TestSupport.charterRequest root "004-charter-command" "Charter Command" with
+                DryRun = true }
 
         let report = TestSupport.runRequest request
         let json = serializeReport report
@@ -47,10 +54,13 @@ module GovernanceBoundaryCommandTests =
 
     [<Fact>]
     let ``specify reports optional Governance compatibility without enforcement fields`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.runCharter root "005-specify-command" "Specify Command" |> ignore
-        let request = { TestSupport.specifyRequest root "005-specify-command" "Specify Command" with DryRun = true }
+
+        let request =
+            { TestSupport.specifyRequest root "005-specify-command" "Specify Command" with
+                DryRun = true }
 
         let report = TestSupport.runRequest request
         let json = serializeReport report
@@ -65,11 +75,18 @@ module GovernanceBoundaryCommandTests =
 
     [<Fact>]
     let ``clarify reports optional Governance compatibility without enforcement fields`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.runCharter root "006-clarify-command" "Clarify Command" |> ignore
-        TestSupport.runRequest { TestSupport.specifyRequest root "006-clarify-command" "Clarify Command" with InputText = Some TestSupport.specifyIntentWithAmbiguity } |> ignore
-        let request = { TestSupport.clarifyRequest root "006-clarify-command" "Clarify Command" with DryRun = true }
+
+        TestSupport.runRequest
+            { TestSupport.specifyRequest root "006-clarify-command" "Clarify Command" with
+                InputText = Some TestSupport.specifyIntentWithAmbiguity }
+        |> ignore
+
+        let request =
+            { TestSupport.clarifyRequest root "006-clarify-command" "Clarify Command" with
+                DryRun = true }
 
         let report = TestSupport.runRequest request
         let json = serializeReport report
@@ -84,12 +101,23 @@ module GovernanceBoundaryCommandTests =
 
     [<Fact>]
     let ``checklist reports optional Governance compatibility without enforcement fields`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
-        TestSupport.runCharter root "007-checklist-command" "Checklist Command" |> ignore
-        TestSupport.runSpecify root "007-checklist-command" "Checklist Command" |> ignore
-        TestSupport.runRequest { TestSupport.clarifyRequest root "007-checklist-command" "Checklist Command" with InputText = None } |> ignore
-        let request = { TestSupport.checklistRequest root "007-checklist-command" "Checklist Command" with DryRun = true }
+
+        TestSupport.runCharter root "007-checklist-command" "Checklist Command"
+        |> ignore
+
+        TestSupport.runSpecify root "007-checklist-command" "Checklist Command"
+        |> ignore
+
+        TestSupport.runRequest
+            { TestSupport.clarifyRequest root "007-checklist-command" "Checklist Command" with
+                InputText = None }
+        |> ignore
+
+        let request =
+            { TestSupport.checklistRequest root "007-checklist-command" "Checklist Command" with
+                DryRun = true }
 
         let report = TestSupport.runRequest request
         let json = serializeReport report
@@ -104,18 +132,30 @@ module GovernanceBoundaryCommandTests =
 
     [<Fact>]
     let ``plan reports optional Governance compatibility without enforcement fields`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.runCharter root "008-plan-command" "Plan Command" |> ignore
         TestSupport.runSpecify root "008-plan-command" "Plan Command" |> ignore
-        TestSupport.runRequest { TestSupport.clarifyRequest root "008-plan-command" "Plan Command" with InputText = None } |> ignore
+
+        TestSupport.runRequest
+            { TestSupport.clarifyRequest root "008-plan-command" "Plan Command" with
+                InputText = None }
+        |> ignore
+
         TestSupport.runChecklist root "008-plan-command" "Plan Command" |> ignore
-        let request = { TestSupport.planRequest root "008-plan-command" "Plan Command" with DryRun = true }
+
+        let request =
+            { TestSupport.planRequest root "008-plan-command" "Plan Command" with
+                DryRun = true }
 
         let report = TestSupport.runRequest request
         let json = serializeReport report
 
-        Assert.Contains(report.GovernanceCompatibility, fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated")
+        Assert.Contains(
+            report.GovernanceCompatibility,
+            fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated"
+        )
+
         Assert.DoesNotContain("\"route\"", json)
         Assert.DoesNotContain("\"profile\"", json)
         Assert.DoesNotContain("\"freshness\"", json)
@@ -125,14 +165,21 @@ module GovernanceBoundaryCommandTests =
 
     [<Fact>]
     let ``tasks reports optional Governance compatibility without enforcement fields`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializePlanReadyProject root "009-tasks-command" "Tasks Command"
-        let request = { TestSupport.tasksRequest root "009-tasks-command" "Tasks Command" with DryRun = true }
+
+        let request =
+            { TestSupport.tasksRequest root "009-tasks-command" "Tasks Command" with
+                DryRun = true }
 
         let report = TestSupport.runRequest request
         let json = serializeReport report
 
-        Assert.Contains(report.GovernanceCompatibility, fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated")
+        Assert.Contains(
+            report.GovernanceCompatibility,
+            fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated"
+        )
+
         Assert.DoesNotContain("\"route\"", json)
         Assert.DoesNotContain("\"profile\"", json)
         Assert.DoesNotContain("\"freshness\"", json)

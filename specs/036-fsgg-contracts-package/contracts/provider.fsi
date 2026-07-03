@@ -37,7 +37,7 @@ module Provider =
           NameParameter: string }
 
     /// The default canonical name parameter when a provider declares none (FR-007).
-    val defaultNameParameter: string            // = "name"
+    val defaultNameParameter: string // = "name"
 
     /// Resolve the canonical name parameter, falling back to `defaultNameParameter`
     /// when the descriptor declares a blank/absent one (FR-007, Scenario 3).

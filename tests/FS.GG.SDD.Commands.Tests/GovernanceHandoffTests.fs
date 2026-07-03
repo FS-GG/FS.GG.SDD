@@ -22,26 +22,32 @@ module GovernanceHandoffTests =
     // ---- shared fixtures ----
 
     let shippedProject () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeVerifiedProject root workId title
         TestSupport.runShip root workId title |> ignore
         root
 
-    let readHandoff root = TestSupport.readRelative root handoffPath
+    let readHandoff root =
+        TestSupport.readRelative root handoffPath
+
     let parse (text: string) = JsonDocument.Parse(text).RootElement
     let prop (name: string) (element: JsonElement) = element.GetProperty name
     let str (name: string) (element: JsonElement) = (element.GetProperty name).GetString()
-    let arr (name: string) (element: JsonElement) = (element.GetProperty name).EnumerateArray() |> Seq.toList
+
+    let arr (name: string) (element: JsonElement) =
+        (element.GetProperty name).EnumerateArray() |> Seq.toList
 
     // ---- projection-level builders (the projection is the unit under test) ----
 
-    let generator = SchemaVersionModule.currentGeneratorVersion()
+    let generator = SchemaVersionModule.currentGeneratorVersion ()
 
     let emptyModel: WorkModel =
         { SchemaVersion = 1
           ModelVersion = "1.0"
           WorkId = workId
-          Project = { Id = "fsgg-sdd"; DefaultWorkRoot = "work" }
+          Project =
+            { Id = "fsgg-sdd"
+              DefaultWorkRoot = "work" }
           Sources = []
           WorkItem =
             { Id = workId
@@ -98,7 +104,10 @@ module GovernanceHandoffTests =
           WarningCount = 0
           BlockingCount = List.length blockingIds
           BlockingDiagnosticIds = blockingIds
-          PerViewState = [ "ship.json", "current"; "verify.json", "current"; "work-model.json", "current" ] }
+          PerViewState =
+            [ "ship.json", "current"
+              "verify.json", "current"
+              "work-model.json", "current" ] }
 
     let cleanReadiness = readinessFacts "shipReady" "verificationReady" []
 
@@ -111,7 +120,7 @@ module GovernanceHandoffTests =
 
     [<Fact>]
     let ``US1 ship emits a versioned governance handoff envelope with sources and digests`` () =
-        let root = shippedProject()
+        let root = shippedProject ()
         Assert.True(TestSupport.existsRelative root handoffPath)
         let doc = parse (readHandoff root)
         Assert.Equal(1, (prop "schemaVersion" doc).GetInt32())
@@ -120,6 +129,7 @@ module GovernanceHandoffTests =
         Assert.Equal(workId, str "workId" doc)
         let sources = arr "sources" doc
         Assert.Equal(3, List.length sources)
+
         sources
         |> List.iter (fun source ->
             Assert.StartsWith("sha256:", str "digest" source)
@@ -127,7 +137,7 @@ module GovernanceHandoffTests =
 
     [<Fact>]
     let ``US1 ship reports the handoff as a generated view of kind governance-handoff`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeVerifiedProject root workId title
         let report = TestSupport.runShip root workId title
 
@@ -142,7 +152,7 @@ module GovernanceHandoffTests =
 
     [<Fact>]
     let ``US1 handoff omits Governance config when no fsgg files are present (SC-002)`` () =
-        let root = shippedProject()
+        let root = shippedProject ()
         let doc = parse (readHandoff root)
         let config = prop "governanceConfig" doc
         Assert.False((prop "policyPresent" config).GetBoolean())
@@ -157,7 +167,7 @@ module GovernanceHandoffTests =
     let ``US1 handoff is byte-identical across two productions over an identical source tree (SC-003)`` () =
         // Same project tree (same project id, same authored sources): re-producing the handoff is
         // byte-stable. (A fresh `init` mints a random project id, so a different tree differs by design.)
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeVerifiedProject root workId title
         TestSupport.runShip root workId title |> ignore
         let first = readHandoff root
@@ -167,17 +177,26 @@ module GovernanceHandoffTests =
 
     [<Fact>]
     let ``US1 ship leaves authored sources byte-identical (SC-007)`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeVerifiedProject root workId title
 
         let authored =
-            [ ".fsgg/project.yml"; ".fsgg/sdd.yml"; ".fsgg/agents.yml"
-              $"work/{workId}/spec.md"; $"work/{workId}/tasks.yml"; $"work/{workId}/evidence.yml" ]
+            [ ".fsgg/project.yml"
+              ".fsgg/sdd.yml"
+              ".fsgg/agents.yml"
+              $"work/{workId}/spec.md"
+              $"work/{workId}/tasks.yml"
+              $"work/{workId}/evidence.yml" ]
             |> List.filter (TestSupport.existsRelative root)
 
-        let before = authored |> List.map (fun path -> path, TestSupport.readRelative root path)
+        let before =
+            authored |> List.map (fun path -> path, TestSupport.readRelative root path)
+
         TestSupport.runShip root workId title |> ignore
-        let after = before |> List.map (fun (path, _) -> path, TestSupport.readRelative root path)
+
+        let after =
+            before |> List.map (fun (path, _) -> path, TestSupport.readRelative root path)
+
         Assert.Equal<(string * string) list>(before, after)
 
     // =====================================================================
@@ -186,7 +205,7 @@ module GovernanceHandoffTests =
 
     [<Fact>]
     let ``US2 shipped handoff carries evidence nodes and directed edges with every endpoint present`` () =
-        let root = shippedProject()
+        let root = shippedProject ()
         let doc = parse (readHandoff root)
         let evidence = prop "evidence" doc
         let nodeIds = arr "nodes" evidence |> List.map (str "id") |> Set.ofList
@@ -238,7 +257,12 @@ module GovernanceHandoffTests =
                       mkEvidence "EVR" "supported" false [ "T001" ] None ] }
 
         let handoff = project model emptyGovernanceConfig cleanReadiness
-        let nodeState id = handoff.Evidence.Nodes |> List.find (fun node -> node.Id = id) |> fun node -> node.State
+
+        let nodeState id =
+            handoff.Evidence.Nodes
+            |> List.find (fun node -> node.Id = id)
+            |> fun node -> node.State
+
         Assert.Equal(Synthetic, nodeState "evidence:EVS")
         Assert.Equal(Real, nodeState "evidence:EVR")
         // the real dependent is NOT downgraded; SDD computes no taint closure
@@ -247,7 +271,14 @@ module GovernanceHandoffTests =
     [<Fact>]
     let ``US2 existing diagnostics and a declared cycle are carried verbatim, not pre-rejected (invariant 7)`` () =
         let conflict =
-            DiagnosticsModule.create "proseStructuredMismatch" DiagnosticWarning None None "prose disagrees with structure" "trust the structured artifact" []
+            DiagnosticsModule.create
+                "proseStructuredMismatch"
+                DiagnosticWarning
+                None
+                None
+                "prose disagrees with structure"
+                "trust the structured artifact"
+                []
 
         let model =
             { emptyModel with
@@ -287,10 +318,16 @@ module GovernanceHandoffTests =
                       mkBoundary "src/Alpha.fs" "governance" "governed" ] }
 
         let handoff = project model emptyGovernanceConfig cleanReadiness
+
         Assert.Equal<string list>(
             [ "src/Alpha.fs"; "src/Zeta.fs" ],
-            handoff.GovernedReferences |> List.map (fun reference -> reference.Path))
-        let alpha = handoff.GovernedReferences |> List.find (fun reference -> reference.Path = "src/Alpha.fs")
+            handoff.GovernedReferences |> List.map (fun reference -> reference.Path)
+        )
+
+        let alpha =
+            handoff.GovernedReferences
+            |> List.find (fun reference -> reference.Path = "src/Alpha.fs")
+
         Assert.Equal("governance", alpha.Owner)
         Assert.Equal("governed", alpha.Relationship)
 
@@ -313,8 +350,17 @@ module GovernanceHandoffTests =
 
     [<Fact>]
     let ``US3 shipped handoff selects no route, profile, gate, or enforcement (SC-005)`` () =
-        let json = readHandoff (shippedProject())
-        for forbidden in [ "autoSynthetic"; "route"; "profile"; "gate"; "enforcement"; "verdict"; "capabilityVerdict"; "matchedGlob" ] do
+        let json = readHandoff (shippedProject ())
+
+        for forbidden in
+            [ "autoSynthetic"
+              "route"
+              "profile"
+              "gate"
+              "enforcement"
+              "verdict"
+              "capabilityVerdict"
+              "matchedGlob" ] do
             Assert.DoesNotContain(forbidden, json)
 
     // =====================================================================
@@ -330,11 +376,20 @@ module GovernanceHandoffTests =
 
     [<Fact>]
     let ``US4 ship-blocked readiness carries blocking ids without refusing or asserting a verdict`` () =
-        let blocked = readinessFacts "needsShipCorrection" "needsVerificationCorrection" [ "evidenceNotSynthetic"; "contractsCurrent" ]
+        let blocked =
+            readinessFacts
+                "needsShipCorrection"
+                "needsVerificationCorrection"
+                [ "evidenceNotSynthetic"; "contractsCurrent" ]
         // the projection is total: it produces a handoff for a blocked work item, it does not refuse
         let handoff = project emptyModel emptyGovernanceConfig blocked
         Assert.Equal("needsShipCorrection", handoff.Readiness.ShipDisposition)
-        Assert.Equal<string list>([ "contractsCurrent"; "evidenceNotSynthetic" ], handoff.Readiness.BlockingDiagnosticIds |> List.sort)
+
+        Assert.Equal<string list>(
+            [ "contractsCurrent"; "evidenceNotSynthetic" ],
+            handoff.Readiness.BlockingDiagnosticIds |> List.sort
+        )
+
         let json = toJson handoff
         // advisory facts only — no pass/fail/enforcement verdict token
         for forbidden in [ "passVerdict"; "failVerdict"; "enforcement"; "\"pass\""; "\"fail\"" ] do
@@ -349,13 +404,14 @@ module GovernanceHandoffTests =
 
     let handoffShipSourceDigest root =
         let doc = parse (readHandoff root)
+
         arr "sources" doc
         |> List.find (fun source -> str "path" source = shipPath)
         |> str "digest"
 
     [<Fact>]
     let ``US5 a modified contributing source makes the handoff stale and refresh restores it (SC-006)`` () =
-        let root = shippedProject()
+        let root = shippedProject ()
         // recorded digest matches the live ship.json at production time
         Assert.Equal($"sha256:{shipJsonDigest root}", handoffShipSourceDigest root)
 
@@ -373,7 +429,7 @@ module GovernanceHandoffTests =
 
     [<Fact>]
     let ``US5 a missing handoff is regenerated by refresh and reported current (AC3)`` () =
-        let root = shippedProject()
+        let root = shippedProject ()
         File.Delete(Path.Combine(root, handoffPath.Replace('/', Path.DirectorySeparatorChar)))
         Assert.False(TestSupport.existsRelative root handoffPath)
 
@@ -383,10 +439,12 @@ module GovernanceHandoffTests =
 
     [<Fact>]
     let ``US5 refresh preserves authored sources byte-identical (SC-007)`` () =
-        let root = shippedProject()
+        let root = shippedProject ()
 
         let authored =
-            [ $"work/{workId}/spec.md"; $"work/{workId}/tasks.yml"; $"work/{workId}/evidence.yml" ]
+            [ $"work/{workId}/spec.md"
+              $"work/{workId}/tasks.yml"
+              $"work/{workId}/evidence.yml" ]
             |> List.filter (TestSupport.existsRelative root)
 
         let before = authored |> List.map (TestSupport.readRelative root)

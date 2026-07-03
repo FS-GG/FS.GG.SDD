@@ -13,11 +13,16 @@ module ChecklistCommandTests =
     let workModelPath = $"readiness/{workId}/work-model.json"
 
     let initializedClarifiedProject () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.runCharter root workId title |> ignore
         TestSupport.runSpecify root workId title |> ignore
-        TestSupport.runRequest { TestSupport.clarifyRequest root workId title with InputText = None } |> ignore
+
+        TestSupport.runRequest
+            { TestSupport.clarifyRequest root workId title with
+                InputText = None }
+        |> ignore
+
         root
 
     let missingCoverageSpec =
@@ -154,7 +159,12 @@ No blocking ambiguity remains.
         Assert.Contains("## Checklist Items", checklist)
         Assert.Contains("CHK-001", checklist)
         Assert.Contains("CR-001", checklist)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = checklistPath && change.Operation = ArtifactOperation.Create)
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = checklistPath && change.Operation = ArtifactOperation.Create
+        )
+
         Assert.Equal(Some Plan, report.NextAction |> Option.bind _.Command)
         Assert.Equal(Some "CHK-001", report.Checklist |> Option.bind (fun summary -> summary.ItemIds |> List.tryHead))
         Assert.Equal(1, report.Checklist.Value.PassedCount)
@@ -169,11 +179,15 @@ No blocking ambiguity remains.
         Assert.False(TestSupport.existsRelative root ".fsgg/policy.yml")
         Assert.False(TestSupport.existsRelative root ".fsgg/capabilities.yml")
         Assert.False(TestSupport.existsRelative root ".fsgg/tooling.yml")
-        Assert.Contains(report.GovernanceCompatibility, fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated")
+
+        Assert.Contains(
+            report.GovernanceCompatibility,
+            fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated"
+        )
 
     [<Fact>]
     let ``checklist missing specification blocks before authored write`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
 
         let report = TestSupport.runChecklist root workId title
@@ -184,7 +198,7 @@ No blocking ambiguity remains.
 
     [<Fact>]
     let ``checklist missing clarification blocks before authored write`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.runCharter root workId title |> ignore
         TestSupport.runSpecify root workId title |> ignore
@@ -197,7 +211,7 @@ No blocking ambiguity remains.
 
     [<Fact>]
     let ``checklist failed requirements quality writes findings and does not advance to plan`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.writeRelative root specPath missingCoverageSpec
         TestSupport.writeRelative root clarificationPath clarifiedNoAmbiguity
@@ -217,28 +231,45 @@ No blocking ambiguity remains.
     let ``checklist rerun preserves authored content and stable results`` () =
         let root = initializedClarifiedProject ()
         TestSupport.runChecklist root workId title |> ignore
-        let authored = TestSupport.readRelative root checklistPath + "\nUser-authored checklist prose stays here.\n"
+
+        let authored =
+            TestSupport.readRelative root checklistPath
+            + "\nUser-authored checklist prose stays here.\n"
+
         TestSupport.writeRelative root checklistPath authored
 
         let report = TestSupport.runChecklist root workId title
 
         Assert.Equal(CommandOutcome.NoChange, report.Outcome)
         Assert.Equal(authored, TestSupport.readRelative root checklistPath)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = checklistPath && change.Operation = ArtifactOperation.NoChange)
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = checklistPath && change.Operation = ArtifactOperation.NoChange
+        )
 
     // §3.1 (FR-001, SC-001): a stale re-run purges every machine-derived result row and
     // re-derives the full set from current sources — no superseded row or stale advisory
     // survives. (Rewritten from the prior append-stale expectation.)
     [<Fact>]
     let ``checklist stale rerun purges superseded rows and re-derives from current sources`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
-        TestSupport.writeRelative root specPath (coverageSpec "- FR-001: The command creates checklist output. (Stories: US-001; Acceptance: AC-001)")
+
+        TestSupport.writeRelative
+            root
+            specPath
+            (coverageSpec "- FR-001: The command creates checklist output. (Stories: US-001; Acceptance: AC-001)")
+
         TestSupport.writeRelative root clarificationPath clarifiedNoAmbiguity
         TestSupport.runChecklist root workId title |> ignore
 
         // Author corrects/extends the source so the verdict set should change.
-        TestSupport.writeRelative root specPath (coverageSpec "- FR-001: The command creates checklist output. (Stories: US-001; Acceptance: AC-001)\n- FR-002: The command links coverage. (Stories: US-001; Acceptance: AC-001)")
+        TestSupport.writeRelative
+            root
+            specPath
+            (coverageSpec
+                "- FR-001: The command creates checklist output. (Stories: US-001; Acceptance: AC-001)\n- FR-002: The command links coverage. (Stories: US-001; Acceptance: AC-001)")
 
         let report = TestSupport.runChecklist root workId title
         let checklist = TestSupport.readRelative root checklistPath
@@ -255,15 +286,24 @@ No blocking ambiguity remains.
     // to pass while the still-failing one remains fail.
     [<Fact>]
     let ``checklist partial fix flips corrected requirement and keeps still-failing fail`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
-        TestSupport.writeRelative root specPath (coverageSpec "- FR-001: First requirement.\n- FR-002: Second requirement.")
+
+        TestSupport.writeRelative
+            root
+            specPath
+            (coverageSpec "- FR-001: First requirement.\n- FR-002: Second requirement.")
+
         TestSupport.writeRelative root clarificationPath clarifiedNoAmbiguity
         let firstReport = TestSupport.runChecklist root workId title
         Assert.Equal(2, firstReport.Checklist.Value.FailedBlockingCount)
 
         // Fix FR-001 only by giving it acceptance coverage.
-        TestSupport.writeRelative root specPath (coverageSpec "- FR-001: First requirement. (Stories: US-001; Acceptance: AC-001)\n- FR-002: Second requirement.")
+        TestSupport.writeRelative
+            root
+            specPath
+            (coverageSpec
+                "- FR-001: First requirement. (Stories: US-001; Acceptance: AC-001)\n- FR-002: Second requirement.")
 
         let report = TestSupport.runChecklist root workId title
         let checklist = TestSupport.readRelative root checklistPath
@@ -286,13 +326,20 @@ No blocking ambiguity remains.
 
         Assert.Equal(CommandOutcome.NoChange, report.Outcome)
         Assert.Equal(firstFile, secondFile)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = checklistPath && change.Operation = ArtifactOperation.NoChange)
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = checklistPath && change.Operation = ArtifactOperation.NoChange
+        )
 
     [<Fact>]
     let ``checklist identity mismatch blocks without mutating existing checklist`` () =
         let root = initializedClarifiedProject ()
         TestSupport.runChecklist root workId title |> ignore
-        let original = (TestSupport.readRelative root checklistPath).Replace($"workId: {workId}", "workId: 999-other-work")
+
+        let original =
+            (TestSupport.readRelative root checklistPath).Replace($"workId: {workId}", "workId: 999-other-work")
+
         TestSupport.writeRelative root checklistPath original
 
         let report = TestSupport.runChecklist root workId title
@@ -305,7 +352,10 @@ No blocking ambiguity remains.
     let ``checklist duplicate id blocks without mutating existing checklist`` () =
         let root = initializedClarifiedProject ()
         TestSupport.runChecklist root workId title |> ignore
-        let original = (TestSupport.readRelative root checklistPath).Replace("- CHK-001", "- CHK-001\n- CHK-001")
+
+        let original =
+            (TestSupport.readRelative root checklistPath).Replace("- CHK-001", "- CHK-001\n- CHK-001")
+
         TestSupport.writeRelative root checklistPath original
 
         let report = TestSupport.runChecklist root workId title
@@ -318,7 +368,10 @@ No blocking ambiguity remains.
     let ``checklist unknown source reference blocks without mutation`` () =
         let root = initializedClarifiedProject ()
         TestSupport.runChecklist root workId title |> ignore
-        let original = (TestSupport.readRelative root checklistPath).Replace("[FR-001]", "[FR-999]")
+
+        let original =
+            (TestSupport.readRelative root checklistPath).Replace("[FR-001]", "[FR-999]")
+
         TestSupport.writeRelative root checklistPath original
 
         let report = TestSupport.runChecklist root workId title
@@ -331,7 +384,11 @@ No blocking ambiguity remains.
     let ``checklist unsafe overwrite marker blocks without mutation`` () =
         let root = initializedClarifiedProject ()
         TestSupport.runChecklist root workId title |> ignore
-        let original = TestSupport.readRelative root checklistPath + "\n<!-- fsgg-sdd: unsafe-overwrite -->\n"
+
+        let original =
+            TestSupport.readRelative root checklistPath
+            + "\n<!-- fsgg-sdd: unsafe-overwrite -->\n"
+
         TestSupport.writeRelative root checklistPath original
 
         let report = TestSupport.runChecklist root workId title
@@ -343,6 +400,7 @@ No blocking ambiguity remains.
     [<Fact>]
     let ``checklist dry run reports proposed changes without mutation`` () =
         let root = initializedClarifiedProject ()
+
         let request =
             { TestSupport.checklistRequest root workId title with
                 DryRun = true }
@@ -351,7 +409,11 @@ No blocking ambiguity remains.
 
         Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
         Assert.False(TestSupport.existsRelative root checklistPath)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = checklistPath && change.SafeWriteDecision = "dryRunOnly")
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = checklistPath && change.SafeWriteDecision = "dryRunOnly"
+        )
 
     [<Fact>]
     let ``checklist refreshes generated work model when source data is valid`` () =
@@ -362,14 +424,19 @@ No blocking ambiguity remains.
 
         Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
         Assert.True(TestSupport.existsRelative root workModelPath)
-        Assert.Contains(report.GeneratedViews, fun view ->
-            view.Path = workModelPath
-            && view.Currency = GeneratedViewCurrency.Current
-            && view.Sources |> List.exists (fun source -> source.Path = checklistPath))
+
+        Assert.Contains(
+            report.GeneratedViews,
+            fun view ->
+                view.Path = workModelPath
+                && view.Currency = GeneratedViewCurrency.Current
+                && view.Sources |> List.exists (fun source -> source.Path = checklistPath)
+        )
 
     [<Fact>]
     let ``checklist deterministic JSON is byte stable`` () =
         let root = initializedClarifiedProject ()
+
         let request =
             { TestSupport.checklistRequest root workId title with
                 DryRun = true }

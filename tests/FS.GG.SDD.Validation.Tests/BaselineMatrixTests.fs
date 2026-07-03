@@ -9,13 +9,15 @@ open Xunit
 /// via ReleaseContract.evaluate; no contract passes by absence (FR-004 / INV-4).
 module BaselineMatrixTests =
     let private baselineOptions =
-        { defaultOptions with OnlyMatrix = Some baselineMatrixName }
+        { defaultOptions with
+            OnlyMatrix = Some baselineMatrixName }
 
     let private baselineMatrix (report: ValidationReport) =
         report.Matrices |> List.find (fun matrix -> matrix.Name = baselineMatrixName)
 
     let private check value cell =
-        cell.Coordinates |> List.exists (fun (dimension, v) -> dimension = "check" && v = value)
+        cell.Coordinates
+        |> List.exists (fun (dimension, v) -> dimension = "check" && v = value)
 
     [<Fact>]
     let ``every catalog contract has a baseline and a conformance cell`` () =

@@ -277,12 +277,7 @@ module internal DiagnosticConstructors =
             ids
 
     let failedRequirementsQuality path message correction relatedIds =
-        warningDiagnostic
-            "failedRequirementsQuality"
-            (Some path)
-            message
-            correction
-            relatedIds
+        warningDiagnostic "failedRequirementsQuality" (Some path) message correction relatedIds
 
     let checklistIdentityMismatch path expectedWorkId actualWorkId =
         errorDiagnostic
@@ -912,10 +907,14 @@ module internal DiagnosticConstructors =
                   BeforeDigest = None
                   AfterDigest = None
                   SafeWriteDecision =
-                    if not result.Succeeded then "refused"
-                    elif request.DryRun && operation <> ArtifactOperation.NoChange then "dryRunOnly"
-                    elif operation = ArtifactOperation.NoChange then "preserveExisting"
-                    else "safe"
+                    if not result.Succeeded then
+                        "refused"
+                    elif request.DryRun && operation <> ArtifactOperation.NoChange then
+                        "dryRunOnly"
+                    elif operation = ArtifactOperation.NoChange then
+                        "preserveExisting"
+                    else
+                        "safe"
                   DiagnosticIds = result.Diagnostic |> Option.map (fun d -> [ d.Id ]) |> Option.defaultValue [] }
         | WriteFile(path, text, kind) ->
             let operation =
@@ -932,7 +931,10 @@ module internal DiagnosticConstructors =
                 |> Option.map (fun snapshot -> SchemaVersionModule.sha256Text snapshot.Text)
 
             let afterDigest =
-                if result.Succeeded then Some(SchemaVersionModule.sha256Text text) else None
+                if result.Succeeded then
+                    Some(SchemaVersionModule.sha256Text text)
+                else
+                    None
 
             Some
                 { Path = path
@@ -942,11 +944,16 @@ module internal DiagnosticConstructors =
                   BeforeDigest = beforeDigest
                   AfterDigest = afterDigest
                   SafeWriteDecision =
-                    if not result.Succeeded then "refused"
-                    elif request.DryRun && operation <> ArtifactOperation.NoChange then "dryRunOnly"
-                    elif operation = ArtifactOperation.NoChange then "preserveExisting"
-                    elif kind = GeneratedView then "refreshGeneratedView"
-                    else "safe"
+                    if not result.Succeeded then
+                        "refused"
+                    elif request.DryRun && operation <> ArtifactOperation.NoChange then
+                        "dryRunOnly"
+                    elif operation = ArtifactOperation.NoChange then
+                        "preserveExisting"
+                    elif kind = GeneratedView then
+                        "refreshGeneratedView"
+                    else
+                        "safe"
                   DiagnosticIds = result.Diagnostic |> Option.map (fun d -> [ d.Id ]) |> Option.defaultValue [] }
         | ReadFile _
         | EnumerateDirectory _
@@ -954,7 +961,7 @@ module internal DiagnosticConstructors =
         | SetExecutable _
         | Confirm _ -> None
 
-    let governanceCompatibility : GovernanceCompatibilityFact list =
+    let governanceCompatibility: GovernanceCompatibilityFact list =
         [ { Path = ".fsgg/policy.yml"
             Relationship = "optionalGovernancePolicy"
             RequiredBySdd = false
@@ -974,26 +981,34 @@ module internal DiagnosticConstructors =
     let planCorrectionCommand (diagnostics: Diagnostic list) =
         let ids = diagnostics |> List.map _.Id |> Set.ofList
 
-        if Set.contains "missingSpecificationPrerequisite" ids
-           || Set.contains "malformedSpecificationFacts" ids
-           || Set.contains "specificationIdentityMismatch" ids then
+        if
+            Set.contains "missingSpecificationPrerequisite" ids
+            || Set.contains "malformedSpecificationFacts" ids
+            || Set.contains "specificationIdentityMismatch" ids
+        then
             Some Specify
-        elif Set.contains "missingClarificationPrerequisite" ids
-             || Set.contains "malformedClarificationFrontMatter" ids
-             || Set.contains "clarificationIdentityMismatch" ids then
+        elif
+            Set.contains "missingClarificationPrerequisite" ids
+            || Set.contains "malformedClarificationFrontMatter" ids
+            || Set.contains "clarificationIdentityMismatch" ids
+        then
             Some Clarify
-        elif Set.contains "missingChecklistPrerequisite" ids
-             || Set.contains "failedChecklistPrerequisite" ids
-             || Set.contains "checklistIdentityMismatch" ids
-             || Set.contains "malformedChecklistFrontMatter" ids
-             || Set.contains "duplicateChecklistId" ids
-             || Set.contains "unknownChecklistSourceReference" ids then
+        elif
+            Set.contains "missingChecklistPrerequisite" ids
+            || Set.contains "failedChecklistPrerequisite" ids
+            || Set.contains "checklistIdentityMismatch" ids
+            || Set.contains "malformedChecklistFrontMatter" ids
+            || Set.contains "duplicateChecklistId" ids
+            || Set.contains "unknownChecklistSourceReference" ids
+        then
             Some Checklist
-        elif Set.contains "planIdentityMismatch" ids
-             || Set.contains "malformedPlanFrontMatter" ids
-             || Set.contains "duplicatePlanId" ids
-             || Set.contains "unknownPlanSourceReference" ids
-             || Set.contains "stalePlanDecision" ids then
+        elif
+            Set.contains "planIdentityMismatch" ids
+            || Set.contains "malformedPlanFrontMatter" ids
+            || Set.contains "duplicatePlanId" ids
+            || Set.contains "unknownPlanSourceReference" ids
+            || Set.contains "stalePlanDecision" ids
+        then
             Some Plan
         else
             None
@@ -1001,44 +1016,56 @@ module internal DiagnosticConstructors =
     let tasksCorrectionCommand (diagnostics: Diagnostic list) =
         let ids = diagnostics |> List.map _.Id |> Set.ofList
 
-        if Set.contains "missingSpecificationPrerequisite" ids
-           || Set.contains "malformedSpecificationFacts" ids
-           || Set.contains "specificationIdentityMismatch" ids then
+        if
+            Set.contains "missingSpecificationPrerequisite" ids
+            || Set.contains "malformedSpecificationFacts" ids
+            || Set.contains "specificationIdentityMismatch" ids
+        then
             Some Specify
-        elif Set.contains "missingClarificationPrerequisite" ids
-             || Set.contains "malformedClarificationFrontMatter" ids
-             || Set.contains "clarificationIdentityMismatch" ids then
+        elif
+            Set.contains "missingClarificationPrerequisite" ids
+            || Set.contains "malformedClarificationFrontMatter" ids
+            || Set.contains "clarificationIdentityMismatch" ids
+        then
             Some Clarify
-        elif Set.contains "missingChecklistPrerequisite" ids
-             || Set.contains "failedChecklistPrerequisite" ids
-             || Set.contains "checklistIdentityMismatch" ids
-             || Set.contains "malformedChecklistFrontMatter" ids
-             || Set.contains "duplicateChecklistId" ids
-             || Set.contains "unknownChecklistSourceReference" ids then
+        elif
+            Set.contains "missingChecklistPrerequisite" ids
+            || Set.contains "failedChecklistPrerequisite" ids
+            || Set.contains "checklistIdentityMismatch" ids
+            || Set.contains "malformedChecklistFrontMatter" ids
+            || Set.contains "duplicateChecklistId" ids
+            || Set.contains "unknownChecklistSourceReference" ids
+        then
             Some Checklist
-        elif Set.contains "missingPlanPrerequisite" ids
-             || Set.contains "failedPlanPrerequisite" ids
-             || Set.contains "planIdentityMismatch" ids
-             || Set.contains "malformedPlanFrontMatter" ids
-             || Set.contains "duplicatePlanId" ids
-             || Set.contains "unknownPlanSourceReference" ids then
+        elif
+            Set.contains "missingPlanPrerequisite" ids
+            || Set.contains "failedPlanPrerequisite" ids
+            || Set.contains "planIdentityMismatch" ids
+            || Set.contains "malformedPlanFrontMatter" ids
+            || Set.contains "duplicatePlanId" ids
+            || Set.contains "unknownPlanSourceReference" ids
+        then
             Some Plan
-        elif Set.contains "tasksIdentityMismatch" ids
-             || Set.contains "malformedTasksArtifact" ids
-             || Set.contains "duplicateTaskId" ids
-             || Set.contains "unknownTaskSourceReference" ids
-             || Set.contains "unknownTaskDependency" ids
-             || Set.contains "taskDependencyCycle" ids
-             || Set.contains "doneTaskMissingEvidence" ids
-             || Set.contains "skippedTaskMissingRationale" ids
-             || Set.contains "missingTasksPrerequisite" ids
-             || Set.contains "failedTasksPrerequisite" ids
-             || Set.contains "missingDisposition" ids then
+        elif
+            Set.contains "tasksIdentityMismatch" ids
+            || Set.contains "malformedTasksArtifact" ids
+            || Set.contains "duplicateTaskId" ids
+            || Set.contains "unknownTaskSourceReference" ids
+            || Set.contains "unknownTaskDependency" ids
+            || Set.contains "taskDependencyCycle" ids
+            || Set.contains "doneTaskMissingEvidence" ids
+            || Set.contains "skippedTaskMissingRationale" ids
+            || Set.contains "missingTasksPrerequisite" ids
+            || Set.contains "failedTasksPrerequisite" ids
+            || Set.contains "missingDisposition" ids
+        then
             Some Tasks
-        elif Set.contains "malformedAnalysisView" ids
-             || Set.contains "analysisIdentityMismatch" ids
-             || Set.contains "blockedGeneratedViewRefresh" ids
-             || Set.contains "malformedGeneratedView" ids then
+        elif
+            Set.contains "malformedAnalysisView" ids
+            || Set.contains "analysisIdentityMismatch" ids
+            || Set.contains "blockedGeneratedViewRefresh" ids
+            || Set.contains "malformedGeneratedView" ids
+        then
             None
         else
             None
@@ -1046,20 +1073,29 @@ module internal DiagnosticConstructors =
     let verifyCorrectionCommand (diagnostics: Diagnostic list) =
         let ids = diagnostics |> List.map _.Id |> Set.ofList
 
-        if ids |> Set.contains "evidence.missingAnalysisPrerequisite"
-           || ids |> Set.contains "evidence.analysisNotReady"
-           || ids |> Set.contains "malformedAnalysisView"
-           || ids |> Set.contains "analysisIdentityMismatch" then
+        if
+            ids |> Set.contains "evidence.missingAnalysisPrerequisite"
+            || ids |> Set.contains "evidence.analysisNotReady"
+            || ids |> Set.contains "malformedAnalysisView"
+            || ids |> Set.contains "analysisIdentityMismatch"
+        then
             Some Analyze
-        elif ids |> Set.contains "missingTasksPrerequisite"
-             || ids |> Set.contains "malformedTasksArtifact"
-             || ids |> Set.contains "tasksIdentityMismatch"
-             || ids |> Set.contains "duplicateTaskId"
-             || ids |> Set.contains "unknownTaskDependency"
-             || ids |> Set.contains "taskDependencyCycle"
-             || ids |> Set.contains "evidence.missingRequiredSkill" then
+        elif
+            ids |> Set.contains "missingTasksPrerequisite"
+            || ids |> Set.contains "malformedTasksArtifact"
+            || ids |> Set.contains "tasksIdentityMismatch"
+            || ids |> Set.contains "duplicateTaskId"
+            || ids |> Set.contains "unknownTaskDependency"
+            || ids |> Set.contains "taskDependencyCycle"
+            || ids |> Set.contains "evidence.missingRequiredSkill"
+        then
             Some Tasks
-        elif ids |> Set.exists (fun id -> id.StartsWith("evidence.", StringComparison.OrdinalIgnoreCase) || id.StartsWith("verify.", StringComparison.OrdinalIgnoreCase)) then
+        elif
+            ids
+            |> Set.exists (fun id ->
+                id.StartsWith("evidence.", StringComparison.OrdinalIgnoreCase)
+                || id.StartsWith("verify.", StringComparison.OrdinalIgnoreCase))
+        then
             Some Evidence
         else
             None
@@ -1067,20 +1103,26 @@ module internal DiagnosticConstructors =
     let shipCorrectionCommand (diagnostics: Diagnostic list) =
         let ids = diagnostics |> List.map _.Id |> Set.ofList
 
-        if ids |> Set.contains "ship.missingVerificationPrerequisite"
-           || ids |> Set.contains "ship.verificationNotReady"
-           || ids |> Set.contains "ship.failedVerification"
-           || ids |> Set.contains "ship.staleVerificationView"
-           || ids |> Set.contains "verify.identityMismatch"
-           || ids |> Set.contains "verify.malformedVerificationView" then
+        if
+            ids |> Set.contains "ship.missingVerificationPrerequisite"
+            || ids |> Set.contains "ship.verificationNotReady"
+            || ids |> Set.contains "ship.failedVerification"
+            || ids |> Set.contains "ship.staleVerificationView"
+            || ids |> Set.contains "verify.identityMismatch"
+            || ids |> Set.contains "verify.malformedVerificationView"
+        then
             Some Verify
-        elif ids |> Set.contains "evidence.missingAnalysisPrerequisite"
-             || ids |> Set.contains "evidence.analysisNotReady"
-             || ids |> Set.contains "malformedAnalysisView"
-             || ids |> Set.contains "analysisIdentityMismatch" then
+        elif
+            ids |> Set.contains "evidence.missingAnalysisPrerequisite"
+            || ids |> Set.contains "evidence.analysisNotReady"
+            || ids |> Set.contains "malformedAnalysisView"
+            || ids |> Set.contains "analysisIdentityMismatch"
+        then
             Some Analyze
-        elif ids |> Set.exists (fun id -> id.StartsWith("evidence.", StringComparison.OrdinalIgnoreCase)) then
+        elif
+            ids
+            |> Set.exists (fun id -> id.StartsWith("evidence.", StringComparison.OrdinalIgnoreCase))
+        then
             Some Evidence
         else
             None
-

@@ -29,6 +29,7 @@ module EarlyStageGuidanceContractTests =
 
         for line in lines do
             let trimmed = line.TrimStart()
+
             if trimmed.StartsWith("```") then
                 match current with
                 | Some collected ->
@@ -36,7 +37,9 @@ module EarlyStageGuidanceContractTests =
                     current <- None
                 | None ->
                     let info = trimmed.Substring(3)
-                    if info.Contains(label) then current <- Some []
+
+                    if info.Contains(label) then
+                        current <- Some []
             else
                 match current with
                 | Some collected -> current <- Some(line :: collected)
@@ -63,6 +66,7 @@ module EarlyStageGuidanceContractTests =
     let ``every pre-work-model stage the guidance names is a real lifecycle stage`` () =
         for stage in [ "charter"; "specify"; "clarify"; "checklist" ] do
             Assert.Contains($"fsgg-sdd {stage}", guidanceDoc)
+
             match parseStage stage with
             | Ok _ -> ()
             | Error message -> failwith $"Guidance names stage '{stage}' but it is not a lifecycle stage: {message}"
@@ -79,7 +83,13 @@ module EarlyStageGuidanceContractTests =
     [<Fact>]
     let ``charter headings equal the live charter standard sections`` () =
         // The charter standard sections are owned by the early-parsing layer.
-        let live = [ "Identity"; "Principles"; "Scope Boundaries"; "Policy Pointers"; "Lifecycle Notes" ]
+        let live =
+            [ "Identity"
+              "Principles"
+              "Scope Boundaries"
+              "Policy Pointers"
+              "Lifecycle Notes" ]
+
         Assert.Equal<string list>(live, headingsFor "charter")
 
     [<Fact>]
@@ -121,10 +131,19 @@ module EarlyStageGuidanceContractTests =
         Assert.NotEmpty allPrefixes
 
         for prefix in allPrefixes do
-            Assert.True(idValidator.ContainsKey prefix, $"Guidance names id prefix '{prefix}' with no live Identifiers constructor.")
+            Assert.True(
+                idValidator.ContainsKey prefix,
+                $"Guidance names id prefix '{prefix}' with no live Identifiers constructor."
+            )
+
             let validate = idValidator[prefix]
             Assert.True(validate $"{prefix}-001", $"Live constructor rejects the documented {prefix}-001 form.")
-            Assert.False(validate $"{prefix}-1", $"Live constructor accepts {prefix}-1 but the guidance documents three-or-more digits.")
+
+            Assert.False(
+                validate $"{prefix}-1",
+                $"Live constructor accepts {prefix}-1 but the guidance documents three-or-more digits."
+            )
+
             Assert.False(validate $"{prefix}-abc", $"Live constructor accepts a non-numeric {prefix}-abc tail.")
 
     // --- 4. Paths resolve ---
@@ -135,9 +154,11 @@ module EarlyStageGuidanceContractTests =
         // above), so that path resolves by construction. The other referenced paths:
         // A real reference doc in the repo.
         Assert.Contains("docs/reference/authoring-contracts.md", guidanceDoc)
+
         Assert.True(
             File.Exists(Path.Combine(TestSupport.repoRoot, "docs", "reference", "authoring-contracts.md")),
-            "Guidance references docs/reference/authoring-contracts.md but it does not exist.")
+            "Guidance references docs/reference/authoring-contracts.md but it does not exist."
+        )
         // The generated-view location, by lifecycle convention.
         Assert.Contains("readiness/<id>/agent-commands/<target>/", guidanceDoc)
 
@@ -145,19 +166,36 @@ module EarlyStageGuidanceContractTests =
 
     [<Fact>]
     let ``the documented accepted coverage line establishes coverage in the live parser`` () =
-        let lines = taggedBlocks "coverage:accepted" guidanceDoc |> List.collect nonBlankLines
+        let lines =
+            taggedBlocks "coverage:accepted" guidanceDoc |> List.collect nonBlankLines
+
         Assert.NotEmpty lines
 
         for line in lines do
             let text =
-                String.concat "\n"
-                    [ "---"; "schemaVersion: 1"; "workId: 001-early-stage-guard"; "stage: specify"; "---"; ""; "## Functional Requirements"; ""; line ]
+                String.concat
+                    "\n"
+                    [ "---"
+                      "schemaVersion: 1"
+                      "workId: 001-early-stage-guard"
+                      "stage: specify"
+                      "---"
+                      ""
+                      "## Functional Requirements"
+                      ""
+                      line ]
 
-            match Specification.parseSpecificationFacts { Path = "work/001-early-stage-guard/spec.md"; Text = text } with
+            match
+                Specification.parseSpecificationFacts
+                    { Path = "work/001-early-stage-guard/spec.md"
+                      Text = text }
+            with
             | Ok facts ->
                 Assert.True(
-                    facts.RequirementReferences |> List.exists (fun reference -> not (List.isEmpty reference.AcceptanceScenarioIds)),
-                    $"Guidance lists this as ACCEPTED coverage but the live parser does not cover it: {line}")
+                    facts.RequirementReferences
+                    |> List.exists (fun reference -> not (List.isEmpty reference.AcceptanceScenarioIds)),
+                    $"Guidance lists this as ACCEPTED coverage but the live parser does not cover it: {line}"
+                )
             | Error diagnostics -> failwith $"Documented coverage line did not parse: {line}\n{diagnostics}"
 
     [<Fact>]
@@ -167,15 +205,24 @@ module EarlyStageGuidanceContractTests =
 
         for block in blocks do
             let text = String.concat "\n" block
-            match Evidence.parseEvidence { Path = "work/001-early-stage-guard/evidence.yml"; Text = text } with
+
+            match
+                Evidence.parseEvidence
+                    { Path = "work/001-early-stage-guard/evidence.yml"
+                      Text = text }
+            with
             | Ok declarations ->
                 Assert.NotEmpty declarations
+
                 Assert.All(
                     declarations,
                     fun declaration ->
                         Assert.True(
-                            declaration.Result.Trim().ToLowerInvariant() = "pass" && not declaration.Synthetic,
-                            $"Guidance marks this declaration SATISFIED but the non-synthetic-pass rule rejects it: {declaration.Id.Value}"))
+                            declaration.Result.Trim().ToLowerInvariant() = "pass"
+                            && not declaration.Synthetic,
+                            $"Guidance marks this declaration SATISFIED but the non-synthetic-pass rule rejects it: {declaration.Id.Value}"
+                        )
+                )
             | Error diagnostics -> failwith $"Documented evidence block did not parse:\n{text}\n{diagnostics}"
 
     // --- Determinism: two init runs seed byte-identical guidance ---
@@ -183,7 +230,9 @@ module EarlyStageGuidanceContractTests =
     [<Fact>]
     let ``two init runs seed byte-identical early-stage guidance`` () =
         let mk () =
-            let dir = Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + Guid.NewGuid().ToString("N"), "es-det")
+            let dir =
+                Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + Guid.NewGuid().ToString("N"), "es-det")
+
             Directory.CreateDirectory dir |> ignore
             TestSupport.initializeProject dir
             File.ReadAllBytes(Path.Combine(dir, ".fsgg", "early-stage-guidance.md"))

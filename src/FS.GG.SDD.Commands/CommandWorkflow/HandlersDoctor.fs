@@ -24,7 +24,9 @@ module internal HandlersDoctor =
 
     let resolveDriftDescriptor model (provenance: ScaffoldProvenanceRecord option) =
         match provenance with
-        | Some record -> resolveDescriptors model |> List.tryFind (fun descriptor -> descriptor.Name = record.ProviderName)
+        | Some record ->
+            resolveDescriptors model
+            |> List.tryFind (fun descriptor -> descriptor.Name = record.ProviderName)
         | None -> None
 
     let presentArtifacts model =
@@ -52,8 +54,12 @@ module internal HandlersDoctor =
     // gate resolves on read *interpretation*, not snapshot presence (else a deleted copy loops).
     let skillReadGate model =
         let reads = productSkillCopyPaths model |> List.map ReadFile
-        let allInterpreted = reads |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
-        let anyPlanned = reads |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
+
+        let allInterpreted =
+            reads |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
+
+        let anyPlanned =
+            reads |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
 
         if List.isEmpty reads || allInterpreted then None
         elif anyPlanned then Some []
@@ -71,7 +77,13 @@ module internal HandlersDoctor =
     let computeDrift model =
         let provenance = resolveProvenance model
         let descriptor = resolveDriftDescriptor model provenance
-        Drift.compute provenance descriptor model.Request.GeneratorVersion.Version (presentArtifacts model) (skillBodies model)
+
+        Drift.compute
+            provenance
+            descriptor
+            model.Request.GeneratorVersion.Version
+            (presentArtifacts model)
+            (skillBodies model)
 
     let doctorSummaryOf (drift: Drift.DriftReport) : DoctorSummary =
         { HasProvenance = drift.HasProvenance
@@ -94,8 +106,12 @@ module internal HandlersDoctor =
             | Some effects ->
                 // Product-skill copies not yet read: emit the provenance-driven reads (read-only)
                 // and let the tick loop interpret them before the content-addressed drift runs.
-                if List.isEmpty effects then model, []
-                else { model with PendingEffects = model.PendingEffects @ effects }, effects
+                if List.isEmpty effects then
+                    model, []
+                else
+                    { model with
+                        PendingEffects = model.PendingEffects @ effects },
+                    effects
             | None ->
                 let drift = computeDrift model
                 let summary = doctorSummaryOf drift
@@ -103,7 +119,10 @@ module internal HandlersDoctor =
                 // Non-blocking drift advisory (doctor always exits 0); only when there is a
                 // scaffold to reconcile and it is not already coherent.
                 let diagnostics =
-                    if drift.HasProvenance && not drift.IsCoherent then [ doctorDriftDetected () ] else []
+                    if drift.HasProvenance && not drift.IsCoherent then
+                        [ doctorDriftDetected () ]
+                    else
+                        []
 
                 { model with
                     Doctor = Some summary

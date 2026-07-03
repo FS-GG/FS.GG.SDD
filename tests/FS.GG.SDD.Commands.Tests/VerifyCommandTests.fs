@@ -23,7 +23,7 @@ module VerifyCommandTests =
           StdErr: string }
 
     let initializedEvidencedProject () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeEvidencedProject root workId title
         root
 
@@ -52,7 +52,12 @@ module VerifyCommandTests =
         Assert.Contains("\"evidenceDispositions\"", verifyJson)
         Assert.Contains("\"testDispositions\"", verifyJson)
         Assert.Contains("\"skillVisibility\"", verifyJson)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = verifyPath && change.Kind = "generatedView")
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = verifyPath && change.Kind = "generatedView"
+        )
+
         Assert.Contains(report.GeneratedViews, fun view -> view.Path = workModelPath)
         Assert.Contains(report.GeneratedViews, fun view -> view.Path = verifyPath && view.Kind = "verification")
         Assert.Equal(Some "verify.next.ship", report.NextAction |> Option.map _.ActionId)
@@ -108,7 +113,11 @@ module VerifyCommandTests =
     let ``verify still flags genuine upstream staleness`` () =
         let root = initializedEvidencedProject ()
         TestSupport.runVerify root workId title |> ignore
-        let edited = (TestSupport.readRelative root specPath) + "\n\nAuthor edited the spec after generation.\n"
+
+        let edited =
+            (TestSupport.readRelative root specPath)
+            + "\n\nAuthor edited the spec after generation.\n"
+
         TestSupport.writeRelative root specPath edited
 
         let report = TestSupport.runVerify root workId title
@@ -119,7 +128,7 @@ module VerifyCommandTests =
 
     [<Fact>]
     let ``verify missing evidence blocks without verification write`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeAnalyzedProject root workId title
         System.IO.File.Delete(System.IO.Path.Combine(root, "work", workId, "evidence.yml"))
 
@@ -131,7 +140,7 @@ module VerifyCommandTests =
 
     [<Fact>]
     let ``verify missing analysis blocks without verification write`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeTasksReadyProject root workId title
 
         let report = TestSupport.runVerify root workId title
@@ -154,7 +163,7 @@ module VerifyCommandTests =
 
     [<Fact>]
     let ``verify outside project blocks`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
 
         let report = TestSupport.runVerify root workId title
 
@@ -179,6 +188,7 @@ module VerifyCommandTests =
     [<Fact>]
     let ``verify dry run reports generated change without mutation`` () =
         let root = initializedEvidencedProject ()
+
         let request =
             { TestSupport.verifyRequest root workId title with
                 DryRun = true }
@@ -187,7 +197,11 @@ module VerifyCommandTests =
 
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
         Assert.False(TestSupport.existsRelative root verifyPath)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = verifyPath && change.SafeWriteDecision = "dryRunOnly")
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = verifyPath && change.SafeWriteDecision = "dryRunOnly"
+        )
 
     [<Fact>]
     let ``verify rerun over unchanged sources reports no change`` () =
@@ -200,7 +214,11 @@ module VerifyCommandTests =
 
         Assert.NotEqual(CommandOutcome.Blocked, rerun.Outcome)
         Assert.Equal(first, second)
-        Assert.Contains(rerun.ChangedArtifacts, fun change -> change.Path = verifyPath && change.Operation = ArtifactOperation.NoChange)
+
+        Assert.Contains(
+            rerun.ChangedArtifacts,
+            fun change -> change.Path = verifyPath && change.Operation = ArtifactOperation.NoChange
+        )
 
     // --- User Story 4: keep verification output traceable ---
 
@@ -214,11 +232,16 @@ module VerifyCommandTests =
         Assert.False(TestSupport.existsRelative root ".fsgg/policy.yml")
         Assert.DoesNotContain(serializeReport report, "route")
         Assert.DoesNotContain(serializeReport report, "\"ship\"")
-        Assert.Contains(report.GovernanceCompatibility, fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated")
+
+        Assert.Contains(
+            report.GovernanceCompatibility,
+            fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated"
+        )
 
     [<Fact>]
     let ``verify deterministic JSON report is byte stable`` () =
         let root = initializedEvidencedProject ()
+
         let request =
             { TestSupport.verifyRequest root workId title with
                 DryRun = true }
@@ -305,16 +328,22 @@ module VerifyCommandTests =
         let projectYml = TestSupport.readRelative root ".fsgg/project.yml"
 
         let declared =
-            projectYml.Replace(
-                "  defaultWorkRoot: work",
-                $"  defaultWorkRoot: work\n  testFramework: {framework}")
+            projectYml.Replace("  defaultWorkRoot: work", $"  defaultWorkRoot: work\n  testFramework: {framework}")
 
         TestSupport.writeRelative root ".fsgg/project.yml" declared
 
     let private obligationTaskId (tasksYml: string) =
         let lines = tasksYml.Split('\n')
-        let titleIndex = lines |> Array.findIndex (fun line -> line.Contains("Record verification evidence"))
-        let idLine = lines.[.. titleIndex] |> Array.rev |> Array.find (fun line -> line.Contains("- id: "))
+
+        let titleIndex =
+            lines
+            |> Array.findIndex (fun line -> line.Contains("Record verification evidence"))
+
+        let idLine =
+            lines.[..titleIndex]
+            |> Array.rev
+            |> Array.find (fun line -> line.Contains("- id: "))
+
         idLine.Substring(idLine.IndexOf("- id: ") + 6).Trim()
 
     // The generated obligation evidence id for task `T00n` is `EV00n` (same index),
@@ -325,19 +354,28 @@ module VerifyCommandTests =
             taskIds
             |> List.map (fun taskId ->
                 let evidenceId = "EV" + taskId.Substring(1)
-                sprintf "  - id: %s\n    kind: verification\n    subject:\n      type: task\n      id: %s\n    result: pass\n" evidenceId taskId)
+
+                sprintf
+                    "  - id: %s\n    kind: verification\n    subject:\n      type: task\n      id: %s\n    result: pass\n"
+                    evidenceId
+                    taskId)
             |> String.concat ""
 
         "schemaVersion: 1\nevidence:\n" + entries
 
     [<Fact>]
     let ``verify re-keys missing required skill to the declared framework`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         declareTestFramework root "expecto"
         TestSupport.runCharter root workId title |> ignore
         TestSupport.runSpecify root workId title |> ignore
-        TestSupport.runRequest { TestSupport.clarifyRequest root workId title with InputText = None } |> ignore
+
+        TestSupport.runRequest
+            { TestSupport.clarifyRequest root workId title with
+                InputText = None }
+        |> ignore
+
         TestSupport.runChecklist root workId title |> ignore
         TestSupport.runPlan root workId title |> ignore
 

@@ -394,9 +394,7 @@ module CommandTypes =
           Argument: string option
           Description: string }
 
-    type HelpCommandEntry =
-        { Name: string
-          Description: string }
+    type HelpCommandEntry = { Name: string; Description: string }
 
     type HelpScope =
         | TopLevel

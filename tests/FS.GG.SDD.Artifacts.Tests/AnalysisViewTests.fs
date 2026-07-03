@@ -86,8 +86,7 @@ module AnalysisViewTests =
 
         match parseAnalysisView snapshot with
         | Ok _ -> failwith "Expected malformed analysis view to fail."
-        | Error diagnostics ->
-            Assert.Contains(diagnostics, fun diagnostic -> diagnostic.Id = "workModelInconsistent")
+        | Error diagnostics -> Assert.Contains(diagnostics, fun diagnostic -> diagnostic.Id = "workModelInconsistent")
 
     // SC-005 / FR-003 / FR-004 totality assertion. The shared parseJsonView skeleton
     // now folds the previously-unreachable (Version = None, Status = Current/Deprecated)

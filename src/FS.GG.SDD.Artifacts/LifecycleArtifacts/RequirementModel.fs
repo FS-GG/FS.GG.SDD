@@ -36,12 +36,19 @@ module RequirementModel =
 
     let parseRequirements (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Spec
-        let text = (if String.IsNullOrEmpty snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
+
+        let text =
+            (if String.IsNullOrEmpty snapshot.Text then
+                 ""
+             else
+                 snapshot.Text)
+                .Replace("\r\n", "\n")
 
         text.Split('\n')
         |> Array.mapi (fun index line -> index + 1, line)
         |> Array.choose (fun (lineNumber, line) ->
-            let m = Regex.Match(line, @"^\s*-\s*(FR-\d{3,})\s*:\s*(.+)$", RegexOptions.IgnoreCase)
+            let m =
+                Regex.Match(line, @"^\s*-\s*(FR-\d{3,})\s*:\s*(.+)$", RegexOptions.IgnoreCase)
 
             if m.Success then
                 match Identifiers.createRequirementId m.Groups.[1].Value with
@@ -68,7 +75,13 @@ module RequirementModel =
 
     let parseMarkdownRequirementMentions (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Spec
-        let text = (if String.IsNullOrEmpty snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
+
+        let text =
+            (if String.IsNullOrEmpty snapshot.Text then
+                 ""
+             else
+                 snapshot.Text)
+                .Replace("\r\n", "\n")
 
         text.Split('\n')
         |> Array.mapi (fun index line -> index + 1, line)
@@ -92,12 +105,19 @@ module RequirementModel =
                 ArtifactKind.Spec
 
         let artifact = sourceArtifact snapshot.Path kind
-        let text = (if String.IsNullOrEmpty snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
+
+        let text =
+            (if String.IsNullOrEmpty snapshot.Text then
+                 ""
+             else
+                 snapshot.Text)
+                .Replace("\r\n", "\n")
 
         text.Split('\n')
         |> Array.mapi (fun index line -> index + 1, line)
         |> Array.choose (fun (lineNumber, line) ->
-            let m = Regex.Match(line, @"^\s*-\s*(DEC-\d{3,})\s*:\s*(.+)$", RegexOptions.IgnoreCase)
+            let m =
+                Regex.Match(line, @"^\s*-\s*(DEC-\d{3,})\s*:\s*(.+)$", RegexOptions.IgnoreCase)
 
             if m.Success then
                 match Identifiers.createDecisionId m.Groups.[1].Value with

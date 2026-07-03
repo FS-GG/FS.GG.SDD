@@ -49,43 +49,70 @@ module ValidationHarness =
         let release = currentRelease ()
 
         { LifecycleCommands =
-            [ Init; Charter; Specify; Clarify; Checklist; Plan; Tasks; Analyze; Evidence; Verify; Ship; Agents; Refresh ]
+            [ Init
+              Charter
+              Specify
+              Clarify
+              Checklist
+              Plan
+              Tasks
+              Analyze
+              Evidence
+              Verify
+              Ship
+              Agents
+              Refresh ]
           Projections = [ Json; Text; Rich ]
-          States = [ "fresh"; "specified"; "planReady"; "tasksReady"; "analyzed"; "evidenced"; "verified"; "shipped"; "blocked" ]
+          States =
+            [ "fresh"
+              "specified"
+              "planReady"
+              "tasksReady"
+              "analyzed"
+              "evidenced"
+              "verified"
+              "shipped"
+              "blocked" ]
           DeterminismOutputs = determinismOutputs
-          Environments = [ ColorDisabled; TermDumb; NonInteractiveRedirected; Interactive; PerturbedHostEnvironment ]
+          Environments =
+            [ ColorDisabled
+              TermDumb
+              NonInteractiveRedirected
+              Interactive
+              PerturbedHostEnvironment ]
           BaselineContracts = release.Catalog |> List.map (fun entry -> entry.Contract)
           CompatibilityEntries = release.Compatibility |> List.map (fun entry -> entry.SddVersionLine) }
 
     let pending = NotValidated "not yet evaluated"
 
     let cell coordinates =
-        { Coordinates = coordinates; Status = pending }
+        { Coordinates = coordinates
+          Status = pending }
 
     let init (plan: MatrixPlan) =
         let lifecycleCells =
             [ for command in plan.LifecycleCommands do
-                for projection in plan.Projections do
-                    for state in plan.States do
-                        cell [ "command", commandName command
-                               "projection", outputFormatValue projection
-                               "state", state ] ]
+                  for projection in plan.Projections do
+                      for state in plan.States do
+                          cell
+                              [ "command", commandName command
+                                "projection", outputFormatValue projection
+                                "state", state ] ]
 
         let determinismCells =
             [ for output in plan.DeterminismOutputs do
-                for environment in plan.Environments do
-                    cell [ "output", output
-                           "environment", environmentClassValue environment ] ]
+                  for environment in plan.Environments do
+                      cell [ "output", output; "environment", environmentClassValue environment ] ]
 
         let baselineCells =
             [ for contract in plan.BaselineContracts do
-                for check in [ "baseline"; "conformance" ] do
-                    cell [ "contract", contract; "check", check ] ]
+                  for check in [ "baseline"; "conformance" ] do
+                      cell [ "contract", contract; "check", check ] ]
 
         let compatibilityCells =
             [ for entry in plan.CompatibilityEntries do
-                for check in [ "handoffContractVersion"; "specKitRange" ] do
-                    cell [ "entry", entry; "check", check ] ]
+                  for check in [ "handoffContractVersion"; "specKitRange" ] do
+                      cell [ "entry", entry; "check", check ] ]
 
         let matrices =
             [ { Name = lifecycleMatrixName
@@ -103,12 +130,12 @@ module ValidationHarness =
 
         let effects =
             [ for command in plan.LifecycleCommands do
-                for projection in plan.Projections do
-                    for state in plan.States do
-                        RunCommandCell(command, projection, state) ]
+                  for projection in plan.Projections do
+                      for state in plan.States do
+                          RunCommandCell(command, projection, state) ]
             @ [ for output in plan.DeterminismOutputs do
-                  for environment in plan.Environments do
-                      ReproduceForEnvironment(output, environment) ]
+                    for environment in plan.Environments do
+                        ReproduceForEnvironment(output, environment) ]
             @ [ EvaluateBaselineConformance; EvaluateCompatibility; ReconcileDeclaredSurface ]
 
         { Matrices = matrices; Report = None }, effects
@@ -124,7 +151,10 @@ module ValidationHarness =
                             Cells =
                                 matrix.Cells
                                 |> List.map (fun current ->
-                                    if current.Coordinates = evaluated.Coordinates then evaluated else current) }
+                                    if current.Coordinates = evaluated.Coordinates then
+                                        evaluated
+                                    else
+                                        current) }
                     else
                         matrix)
 
@@ -135,12 +165,13 @@ module ValidationHarness =
                 model.Matrices
                 |> List.map (fun matrix ->
                     let extras =
-                        findings
-                        |> List.filter (fun (name, _) -> name = matrix.Name)
-                        |> List.map snd
+                        findings |> List.filter (fun (name, _) -> name = matrix.Name) |> List.map snd
 
-                    if List.isEmpty extras then matrix
-                    else { matrix with Cells = matrix.Cells @ extras })
+                    if List.isEmpty extras then
+                        matrix
+                    else
+                        { matrix with
+                            Cells = matrix.Cells @ extras })
 
             { model with Matrices = matrices }, []
 

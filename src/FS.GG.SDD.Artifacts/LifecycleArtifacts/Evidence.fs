@@ -42,9 +42,7 @@ module Evidence =
           Result: string option
           SourceLocation: SourceLocation option }
 
-    type SyntheticDisclosure =
-        { StandsInFor: string
-          Reason: string }
+    type SyntheticDisclosure = { StandsInFor: string; Reason: string }
 
     type EvidenceDeclaration =
         { Id: EvidenceId
@@ -100,7 +98,12 @@ module Evidence =
           Diagnostics: Diagnostic list }
 
     let parseEvidenceKind (value: string) =
-        match if String.IsNullOrEmpty value then "" else value.Trim().ToLowerInvariant() with
+        match
+            if String.IsNullOrEmpty value then
+                ""
+            else
+                value.Trim().ToLowerInvariant()
+        with
         | "implementation" -> Implementation
         | "verification" -> Verification
         | "review" -> Review
@@ -159,16 +162,27 @@ module Evidence =
         |> Option.defaultValue []
 
     let parseSyntheticDisclosure (mapping: YamlMappingNode) =
-        match tryScalarAt [ "syntheticDisclosure"; "standsInFor" ] mapping, tryScalarAt [ "syntheticDisclosure"; "reason" ] mapping with
-        | Some standsInFor, Some reason when not (String.IsNullOrWhiteSpace standsInFor) && not (String.IsNullOrWhiteSpace reason) ->
-            Some { StandsInFor = standsInFor; Reason = reason }
+        match
+            tryScalarAt [ "syntheticDisclosure"; "standsInFor" ] mapping,
+            tryScalarAt [ "syntheticDisclosure"; "reason" ] mapping
+        with
+        | Some standsInFor, Some reason when
+            not (String.IsNullOrWhiteSpace standsInFor)
+            && not (String.IsNullOrWhiteSpace reason)
+            ->
+            Some
+                { StandsInFor = standsInFor
+                  Reason = reason }
         | _ -> None
 
     let workIdFromEvidencePath (path: string) =
         let normalized = normalizePath path
         let parts = normalized.Split([| '/' |], StringSplitOptions.RemoveEmptyEntries)
 
-        if parts.Length >= 3 && parts.[0] = "work" then parts.[1] else "unknown-work"
+        if parts.Length >= 3 && parts.[0] = "work" then
+            parts.[1]
+        else
+            "unknown-work"
 
     let parseEvidenceArtifact (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Evidence
@@ -177,9 +191,17 @@ module Evidence =
         | None -> Error [ Diagnostics.malformedSchemaVersion artifact "Evidence file is empty." ]
         | Some root ->
             let version, versionDiagnostics = schemaVersion artifact root
-            let workIdValue = tryScalarAt [ "workId" ] root |> Option.defaultValue (workIdFromEvidencePath snapshot.Path)
+
+            let workIdValue =
+                tryScalarAt [ "workId" ] root
+                |> Option.defaultValue (workIdFromEvidencePath snapshot.Path)
+
             let workId = Identifiers.createWorkId workIdValue
-            let stage = tryScalarAt [ "stage" ] root |> Option.bind (Identifiers.parseStage >> Result.toOption) |> Option.defaultValue LifecycleStage.Evidence
+
+            let stage =
+                tryScalarAt [ "stage" ] root
+                |> Option.bind (Identifiers.parseStage >> Result.toOption)
+                |> Option.defaultValue LifecycleStage.Evidence
 
             // Each evidence node yields (declaration option, diagnostics). Malformed cross-
             // references and a whole entry skipped for a malformed id are surfaced as blocking
@@ -196,15 +218,24 @@ module Evidence =
                             | None -> None, []
                             | Some rawId ->
                                 let refDiagnostics =
-                                    [ scalarList [ "taskRefs" ] mapping |> malformedRefs Identifiers.createTaskId |> List.map (Diagnostics.malformedReference artifact "task")
-                                      scalarList [ "requirementRefs" ] mapping |> malformedRefs Identifiers.createRequirementId |> List.map (Diagnostics.malformedReference artifact "requirement")
-                                      scalarList [ "clarificationDecisionRefs" ] mapping |> malformedRefs Identifiers.createDecisionId |> List.map (Diagnostics.malformedReference artifact "decision") ]
+                                    [ scalarList [ "taskRefs" ] mapping
+                                      |> malformedRefs Identifiers.createTaskId
+                                      |> List.map (Diagnostics.malformedReference artifact "task")
+                                      scalarList [ "requirementRefs" ] mapping
+                                      |> malformedRefs Identifiers.createRequirementId
+                                      |> List.map (Diagnostics.malformedReference artifact "requirement")
+                                      scalarList [ "clarificationDecisionRefs" ] mapping
+                                      |> malformedRefs Identifiers.createDecisionId
+                                      |> List.map (Diagnostics.malformedReference artifact "decision") ]
                                     |> List.concat
 
                                 match Identifiers.createEvidenceId rawId with
-                                | Error _ -> None, (Diagnostics.malformedReference artifact "evidence" rawId :: refDiagnostics)
+                                | Error _ ->
+                                    None, (Diagnostics.malformedReference artifact "evidence" rawId :: refDiagnostics)
                                 | Ok id ->
-                                    let subjectType = tryScalarAt [ "subject"; "type" ] mapping |> Option.defaultValue "task"
+                                    let subjectType =
+                                        tryScalarAt [ "subject"; "type" ] mapping |> Option.defaultValue "task"
+
                                     let subjectId = tryScalarAt [ "subject"; "id" ] mapping |> Option.defaultValue ""
 
                                     let taskRefs =
@@ -221,15 +252,26 @@ module Evidence =
 
                                     Some
                                         { Id = id
-                                          Kind = tryScalarAt [ "kind" ] mapping |> Option.map parseEvidenceKind |> Option.defaultValue Verification
-                                          Subject = { SubjectType = subjectType; Id = subjectId }
+                                          Kind =
+                                            tryScalarAt [ "kind" ] mapping
+                                            |> Option.map parseEvidenceKind
+                                            |> Option.defaultValue Verification
+                                          Subject =
+                                            { SubjectType = subjectType
+                                              Id = subjectId }
                                           TaskRefs = taskRefs
                                           RequirementRefs = requirementRefs
-                                          AcceptanceScenarioRefs = scalarList [ "acceptanceScenarioRefs" ] mapping |> parseAcceptanceScenarioIds
-                                          ClarificationDecisionRefs = scalarList [ "clarificationDecisionRefs" ] mapping |> parseDecisionIds
-                                          ChecklistResultRefs = scalarList [ "checklistResultRefs" ] mapping |> parseChecklistResultIds
-                                          PlanDecisionRefs = scalarList [ "planDecisionRefs" ] mapping |> parsePlanDecisionIds
-                                          ObligationRefs = scalarList [ "obligationRefs" ] mapping |> List.distinct |> List.sort
+                                          AcceptanceScenarioRefs =
+                                            scalarList [ "acceptanceScenarioRefs" ] mapping
+                                            |> parseAcceptanceScenarioIds
+                                          ClarificationDecisionRefs =
+                                            scalarList [ "clarificationDecisionRefs" ] mapping |> parseDecisionIds
+                                          ChecklistResultRefs =
+                                            scalarList [ "checklistResultRefs" ] mapping |> parseChecklistResultIds
+                                          PlanDecisionRefs =
+                                            scalarList [ "planDecisionRefs" ] mapping |> parsePlanDecisionIds
+                                          ObligationRefs =
+                                            scalarList [ "obligationRefs" ] mapping |> List.distinct |> List.sort
                                           ArtifactRefs = scalarList [ "artifacts" ] mapping |> parseArtifactRefs
                                           SourceRefs = parseEvidenceSourceRefs mapping
                                           Result = tryScalarAt [ "result" ] mapping |> Option.defaultValue "pending"
@@ -238,7 +280,8 @@ module Evidence =
                                           Rationale = tryScalarAt [ "rationale" ] mapping
                                           Owner = tryScalarAt [ "owner" ] mapping
                                           Scope = tryScalarAt [ "scope" ] mapping
-                                          LaterLifecycleVisibility = tryScalarAt [ "laterLifecycleVisibility" ] mapping
+                                          LaterLifecycleVisibility =
+                                            tryScalarAt [ "laterLifecycleVisibility" ] mapping
                                           Notes = scalarList [ "notes" ] mapping
                                           Source = artifact
                                           SourceLocation = sourceLocation (index + 1) },
@@ -254,13 +297,22 @@ module Evidence =
                 |> List.groupBy (fun declaration -> declaration.Id.Value)
                 |> List.choose (fun (id, declarations) ->
                     if List.length declarations > 1 then
-                        Some(Diagnostics.duplicateIdentifier artifact id (declarations |> List.choose (fun declaration -> declaration.SourceLocation)))
+                        Some(
+                            Diagnostics.duplicateIdentifier
+                                artifact
+                                id
+                                (declarations |> List.choose (fun declaration -> declaration.SourceLocation))
+                        )
                     else
                         None)
 
             let artifactDiagnostics =
                 [ if stage <> LifecycleStage.Evidence then
-                      Diagnostics.workModelInconsistent artifact $"Evidence stage '{Identifiers.stageValue stage}' is not 'evidence'." "Set stage: evidence before rerunning." [ Identifiers.stageValue stage ] ]
+                      Diagnostics.workModelInconsistent
+                          artifact
+                          $"Evidence stage '{Identifiers.stageValue stage}' is not 'evidence'."
+                          "Set stage: evidence before rerunning."
+                          [ Identifiers.stageValue stage ] ]
 
             match version, workId, versionDiagnostics with
             | Some schema, Ok workId, [] ->
@@ -269,26 +321,42 @@ module Evidence =
                       WorkId = workId
                       Stage = stage
                       Status = tryScalarAt [ "status" ] root |> Option.defaultValue "draft"
-                      SourceSpec = tryScalarAt [ "sourceSpec" ] root |> Option.defaultValue $"work/{workId.Value}/spec.md"
-                      SourceClarifications = tryScalarAt [ "sourceClarifications" ] root |> Option.defaultValue $"work/{workId.Value}/clarifications.md"
-                      SourceChecklist = tryScalarAt [ "sourceChecklist" ] root |> Option.defaultValue $"work/{workId.Value}/checklist.md"
-                      SourcePlan = tryScalarAt [ "sourcePlan" ] root |> Option.defaultValue $"work/{workId.Value}/plan.md"
-                      SourceTasks = tryScalarAt [ "sourceTasks" ] root |> Option.defaultValue $"work/{workId.Value}/tasks.yml"
-                      SourceAnalysis = tryScalarAt [ "sourceAnalysis" ] root |> Option.defaultValue $"readiness/{workId.Value}/analysis.json"
+                      SourceSpec =
+                        tryScalarAt [ "sourceSpec" ] root
+                        |> Option.defaultValue $"work/{workId.Value}/spec.md"
+                      SourceClarifications =
+                        tryScalarAt [ "sourceClarifications" ] root
+                        |> Option.defaultValue $"work/{workId.Value}/clarifications.md"
+                      SourceChecklist =
+                        tryScalarAt [ "sourceChecklist" ] root
+                        |> Option.defaultValue $"work/{workId.Value}/checklist.md"
+                      SourcePlan =
+                        tryScalarAt [ "sourcePlan" ] root
+                        |> Option.defaultValue $"work/{workId.Value}/plan.md"
+                      SourceTasks =
+                        tryScalarAt [ "sourceTasks" ] root
+                        |> Option.defaultValue $"work/{workId.Value}/tasks.yml"
+                      SourceAnalysis =
+                        tryScalarAt [ "sourceAnalysis" ] root
+                        |> Option.defaultValue $"readiness/{workId.Value}/analysis.json"
                       SourceSnapshots = parseEvidenceSourceSnapshots root
                       Evidence = evidence |> List.sortBy (fun declaration -> declaration.Id.Value)
                       LifecycleNotes = scalarList [ "lifecycleNotes" ] root
-                      Diagnostics = duplicateDiagnostics @ artifactDiagnostics @ referenceDiagnostics |> Diagnostics.sort }
+                      Diagnostics =
+                        duplicateDiagnostics @ artifactDiagnostics @ referenceDiagnostics
+                        |> Diagnostics.sort }
             | _ ->
                 let workIdDiagnostics =
                     match workId with
-                    | Error message -> [ Diagnostics.workModelInconsistent artifact message "Use a valid work id in evidence.yml." [ workIdValue ] ]
+                    | Error message ->
+                        [ Diagnostics.workModelInconsistent
+                              artifact
+                              message
+                              "Use a valid work id in evidence.yml."
+                              [ workIdValue ] ]
                     | Ok _ -> []
 
-                Error
-                    (versionDiagnostics
-                     @ duplicateDiagnostics
-                     @ workIdDiagnostics)
+                Error(versionDiagnostics @ duplicateDiagnostics @ workIdDiagnostics)
 
     let parseEvidence (snapshot: FileSnapshot) =
         parseEvidenceArtifact snapshot |> Result.map (fun artifact -> artifact.Evidence)

@@ -73,23 +73,46 @@ No blocking planning findings recorded.
             Assert.Equal("008-plan-command", facts.FrontMatter.WorkId.Value)
             Assert.Equal(Identifiers.LifecycleStage.Plan, facts.FrontMatter.Stage)
             Assert.Empty(facts.MissingStandardSections)
-            Assert.Equal<string list>([ "PD-001"; "PD-002"; "PD-003" ], facts.Decisions |> List.map (fun decision -> decision.DecisionId.Value))
-            Assert.Equal<string list>([ "PC-001" ], facts.ContractReferences |> List.map (fun reference -> reference.ContractId.Value))
-            Assert.Equal<string list>([ "VO-001" ], facts.VerificationObligations |> List.map (fun obligation -> obligation.ObligationId.Value))
-            Assert.Equal<string list>([ "PM-001" ], facts.MigrationNotes |> List.map (fun note -> note.MigrationId.Value))
-            Assert.Equal<string list>([ "GV-001" ], facts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value))
+
+            Assert.Equal<string list>(
+                [ "PD-001"; "PD-002"; "PD-003" ],
+                facts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
+            )
+
+            Assert.Equal<string list>(
+                [ "PC-001" ],
+                facts.ContractReferences
+                |> List.map (fun reference -> reference.ContractId.Value)
+            )
+
+            Assert.Equal<string list>(
+                [ "VO-001" ],
+                facts.VerificationObligations
+                |> List.map (fun obligation -> obligation.ObligationId.Value)
+            )
+
+            Assert.Equal<string list>(
+                [ "PM-001" ],
+                facts.MigrationNotes |> List.map (fun note -> note.MigrationId.Value)
+            )
+
+            Assert.Equal<string list>(
+                [ "GV-001" ],
+                facts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value)
+            )
+
             Assert.Equal(3, facts.SourceSnapshots.Length)
             Assert.Equal(1, facts.AcceptedDeferrals.Length)
             Assert.Equal(1, facts.StaleDecisionCount)
 
     [<Fact>]
     let ``Plan parser reports duplicate plan ids`` () =
-        let broken = planText.Replace("- PD-001 [FR-001]", "- PD-001 [FR-001]\n- PD-001 [FR-001]")
+        let broken =
+            planText.Replace("- PD-001 [FR-001]", "- PD-001 [FR-001]\n- PD-001 [FR-001]")
 
         match parsePlanFacts (snapshot broken) with
         | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
-        | Ok facts ->
-            Assert.Contains(facts.Diagnostics, fun diagnostic -> diagnostic.Id = "duplicateIdentifier")
+        | Ok facts -> Assert.Contains(facts.Diagnostics, fun diagnostic -> diagnostic.Id = "duplicateIdentifier")
 
     [<Fact>]
     let ``Plan parser diagnoses unsupported schema versions`` () =

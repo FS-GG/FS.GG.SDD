@@ -56,30 +56,45 @@ module Specification =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Spec
 
         match frontMatter snapshot with
-        | None -> Error [ Diagnostics.malformedSchemaVersion artifact "Specification is missing structured front matter." ]
+        | None ->
+            Error [ Diagnostics.malformedSchemaVersion artifact "Specification is missing structured front matter." ]
         | Some(yaml, body) ->
             match parseYaml yaml with
             | None -> Error [ Diagnostics.malformedSchemaVersion artifact "Specification front matter is empty." ]
             | Some root ->
                 let version, versionDiagnostics = schemaVersion artifact root
-                let workId = tryScalarAt [ "workId" ] root |> Option.bind (Identifiers.createWorkId >> Result.toOption)
-                let stage = tryScalarAt [ "stage" ] root |> Option.bind (Identifiers.parseStage >> Result.toOption)
+
+                let workId =
+                    tryScalarAt [ "workId" ] root
+                    |> Option.bind (Identifiers.createWorkId >> Result.toOption)
+
+                let stage =
+                    tryScalarAt [ "stage" ] root
+                    |> Option.bind (Identifiers.parseStage >> Result.toOption)
 
                 match version, workId, stage, versionDiagnostics with
                 | Some schema, Some workId, Some stage, [] ->
-                    Ok
-                        ({ SchemaVersion = schema
-                           WorkId = workId
-                           Title = tryScalarAt [ "title" ] root |> Option.defaultValue (Identifiers.workIdValue workId)
-                           Stage = stage
-                           ChangeTier = tryScalarAt [ "changeTier" ] root |> Option.defaultValue "tier1"
-                           Status = tryScalarAt [ "status" ] root |> Option.defaultValue "draft"
-                           PublicOrToolFacingImpact = boolScalarAt [ "publicOrToolFacingImpact" ] root },
-                         body)
+                    Ok(
+                        { SchemaVersion = schema
+                          WorkId = workId
+                          Title =
+                            tryScalarAt [ "title" ] root
+                            |> Option.defaultValue (Identifiers.workIdValue workId)
+                          Stage = stage
+                          ChangeTier = tryScalarAt [ "changeTier" ] root |> Option.defaultValue "tier1"
+                          Status = tryScalarAt [ "status" ] root |> Option.defaultValue "draft"
+                          PublicOrToolFacingImpact = boolScalarAt [ "publicOrToolFacingImpact" ] root },
+                        body
+                    )
                 | _ ->
-                    Error
-                        (versionDiagnostics
-                         @ [ Diagnostics.workModelInconsistent artifact "Specification front matter is incomplete." "Add schemaVersion, workId, title, stage, changeTier, and status to spec front matter." [] ])
+                    Error(
+                        versionDiagnostics
+                        @ [ Diagnostics.workModelInconsistent
+                                artifact
+                                "Specification front matter is incomplete."
+                                "Add schemaVersion, workId, title, stage, changeTier, and status to spec front matter."
+                                [] ]
+                    )
 
     let missingIdDiagnostics artifact (text: string) =
         // §3.3: a "none outstanding" sentinel under `## Ambiguities` (prose or bullet) is
@@ -88,15 +103,18 @@ module Specification =
         let missing (heading: string) (pattern: string) (relatedId: string) (allowSentinel: bool) =
             sectionLines heading text
             |> List.choose (fun (lineNumber, line) ->
-                if Regex.IsMatch(line, @"^\s*-\s+\S", RegexOptions.IgnoreCase)
-                   && not (Regex.IsMatch(line, pattern, RegexOptions.IgnoreCase))
-                   && not (allowSentinel && isNoOutstandingSentinel line) then
+                if
+                    Regex.IsMatch(line, @"^\s*-\s+\S", RegexOptions.IgnoreCase)
+                    && not (Regex.IsMatch(line, pattern, RegexOptions.IgnoreCase))
+                    && not (allowSentinel && isNoOutstandingSentinel line)
+                then
                     Some(
                         Diagnostics.workModelInconsistent
                             artifact
                             $"Specification list item in '{heading}' is missing a required stable id."
                             $"Add a stable {relatedId} id to the list item before rerunning."
-                            [ relatedId ])
+                            [ relatedId ]
+                    )
                 else
                     None)
 
@@ -110,7 +128,8 @@ module Specification =
         text.Split('\n')
         |> Array.mapi (fun index line -> index + 1, line)
         |> Array.choose (fun (lineNumber, line) ->
-            let m = Regex.Match(line, @"^\s*-\s*(FR-\d{3,})\s*:\s*(.+)$", RegexOptions.IgnoreCase)
+            let m =
+                Regex.Match(line, @"^\s*-\s*(FR-\d{3,})\s*:\s*(.+)$", RegexOptions.IgnoreCase)
 
             if m.Success then
                 match Identifiers.createRequirementId m.Groups.[1].Value with
@@ -125,7 +144,8 @@ module Specification =
                     let acceptanceScenarioIds =
                         Regex.Matches(line, @"\bAC-\d{3,}\b", RegexOptions.IgnoreCase)
                         |> Seq.cast<Match>
-                        |> Seq.choose (fun value -> Identifiers.createAcceptanceScenarioId value.Value |> Result.toOption)
+                        |> Seq.choose (fun value ->
+                            Identifiers.createAcceptanceScenarioId value.Value |> Result.toOption)
                         |> Seq.distinctBy (fun id -> id.Value)
                         |> Seq.toList
 
@@ -146,7 +166,9 @@ module Specification =
         (references: SpecificationRequirementReference list)
         =
         let storyIds = stories |> List.map (fun (id, _) -> id.Value) |> Set.ofList
-        let acceptanceIds = acceptanceScenarios |> List.map (fun (id, _) -> id.Value) |> Set.ofList
+
+        let acceptanceIds =
+            acceptanceScenarios |> List.map (fun (id, _) -> id.Value) |> Set.ofList
 
         references
         |> List.collect (fun reference ->
@@ -155,13 +177,23 @@ module Specification =
                   if Set.contains id.Value storyIds then
                       None
                   else
-                      Some(Diagnostics.unknownReference artifact id.Value "Declare the user story id in the specification or remove the requirement link."))
+                      Some(
+                          Diagnostics.unknownReference
+                              artifact
+                              id.Value
+                              "Declare the user story id in the specification or remove the requirement link."
+                      ))
               reference.AcceptanceScenarioIds
               |> List.choose (fun id ->
                   if Set.contains id.Value acceptanceIds then
                       None
                   else
-                      Some(Diagnostics.unknownReference artifact id.Value "Declare the acceptance scenario id in the specification or remove the requirement link.")) ]
+                      Some(
+                          Diagnostics.unknownReference
+                              artifact
+                              id.Value
+                              "Declare the acceptance scenario id in the specification or remove the requirement link."
+                      )) ]
             |> List.concat)
 
     let parseSpecificationFacts (snapshot: FileSnapshot) =
@@ -170,14 +202,45 @@ module Specification =
         match parseSpecificationFrontMatter snapshot with
         | Error diagnostics -> Error diagnostics
         | Ok(frontMatter, body) ->
-            let text = (if String.IsNullOrEmpty snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
+            let text =
+                (if String.IsNullOrEmpty snapshot.Text then
+                     ""
+                 else
+                     snapshot.Text)
+                    .Replace("\r\n", "\n")
+
             let standardSections = specificationStandardSections ()
-            let missingStandardSections = standardSections |> List.filter (fun heading -> not (hasHeading heading text))
-            let stories = scopedIdLocationsInSections [ "User Stories" ] @"\bUS-\d{3,}\b" Identifiers.createUserStoryId text
-            let requirements = scopedIdLocationsInSections [ "Functional Requirements" ] @"\bFR-\d{3,}\b" Identifiers.createRequirementId text
-            let acceptanceScenarios = scopedIdLocationsInSections [ "Acceptance Scenarios" ] @"\bAC-\d{3,}\b" Identifiers.createAcceptanceScenarioId text
-            let scopeBoundaries = scopedIdLocationsInSections [ "Scope"; "Non-Goals" ] @"\bSB-\d{3,}\b" Identifiers.createScopeBoundaryId text
-            let ambiguities = scopedIdLocationsInSections [ "Ambiguities" ] @"\bAMB-\d{3,}\b" Identifiers.createAmbiguityId text
+
+            let missingStandardSections =
+                standardSections |> List.filter (fun heading -> not (hasHeading heading text))
+
+            let stories =
+                scopedIdLocationsInSections [ "User Stories" ] @"\bUS-\d{3,}\b" Identifiers.createUserStoryId text
+
+            let requirements =
+                scopedIdLocationsInSections
+                    [ "Functional Requirements" ]
+                    @"\bFR-\d{3,}\b"
+                    Identifiers.createRequirementId
+                    text
+
+            let acceptanceScenarios =
+                scopedIdLocationsInSections
+                    [ "Acceptance Scenarios" ]
+                    @"\bAC-\d{3,}\b"
+                    Identifiers.createAcceptanceScenarioId
+                    text
+
+            let scopeBoundaries =
+                scopedIdLocationsInSections
+                    [ "Scope"; "Non-Goals" ]
+                    @"\bSB-\d{3,}\b"
+                    Identifiers.createScopeBoundaryId
+                    text
+
+            let ambiguities =
+                scopedIdLocationsInSections [ "Ambiguities" ] @"\bAMB-\d{3,}\b" Identifiers.createAmbiguityId text
+
             let references = requirementReferences text
 
             let unresolvedAmbiguityCount =
@@ -204,8 +267,16 @@ module Specification =
                   MissingStandardSections = missingStandardSections
                   UserStoryIds = stories |> List.map fst |> List.distinctBy _.Value |> List.sortBy _.Value
                   RequirementIds = requirements |> List.map fst |> List.distinctBy _.Value |> List.sortBy _.Value
-                  AcceptanceScenarioIds = acceptanceScenarios |> List.map fst |> List.distinctBy _.Value |> List.sortBy _.Value
-                  ScopeBoundaryIds = scopeBoundaries |> List.map fst |> List.distinctBy _.Value |> List.sortBy _.Value
+                  AcceptanceScenarioIds =
+                    acceptanceScenarios
+                    |> List.map fst
+                    |> List.distinctBy _.Value
+                    |> List.sortBy _.Value
+                  ScopeBoundaryIds =
+                    scopeBoundaries
+                    |> List.map fst
+                    |> List.distinctBy _.Value
+                    |> List.sortBy _.Value
                   AmbiguityIds = ambiguities |> List.map fst |> List.distinctBy _.Value |> List.sortBy _.Value
                   RequirementReferences = references |> List.sortBy (fun reference -> reference.RequirementId.Value)
                   UnresolvedAmbiguityCount = unresolvedAmbiguityCount

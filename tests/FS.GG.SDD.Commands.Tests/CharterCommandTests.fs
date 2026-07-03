@@ -39,7 +39,7 @@ status: chartered
 
     [<Fact>]
     let ``charter creates authored work charter with real filesystem evidence`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
 
         let report = TestSupport.runCharter root workId title
@@ -53,14 +53,25 @@ status: chartered
         Assert.Contains("## Scope Boundaries", charter)
         Assert.Contains("## Policy Pointers", charter)
         Assert.Contains("## Lifecycle Notes", charter)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = charterPath && change.Operation = ArtifactOperation.Create)
-        Assert.Contains(report.GeneratedViews, fun view -> view.Path = $"readiness/{workId}/work-model.json" && view.Currency = GeneratedViewCurrency.Missing)
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = charterPath && change.Operation = ArtifactOperation.Create
+        )
+
+        Assert.Contains(
+            report.GeneratedViews,
+            fun view ->
+                view.Path = $"readiness/{workId}/work-model.json"
+                && view.Currency = GeneratedViewCurrency.Missing
+        )
+
         Assert.Equal(Some Specify, report.NextAction |> Option.bind _.Command)
         Assert.Contains(charterPath, report.NextAction.Value.RequiredArtifacts)
 
     [<Fact>]
     let ``charter creation does not require Governance files`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
 
         let report = TestSupport.runCharter root workId title
@@ -69,11 +80,15 @@ status: chartered
         Assert.False(TestSupport.existsRelative root ".fsgg/policy.yml")
         Assert.False(TestSupport.existsRelative root ".fsgg/capabilities.yml")
         Assert.False(TestSupport.existsRelative root ".fsgg/tooling.yml")
-        Assert.Contains(report.GovernanceCompatibility, fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated")
+
+        Assert.Contains(
+            report.GovernanceCompatibility,
+            fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated"
+        )
 
     [<Fact>]
     let ``charter rerun preserves authored content`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.writeRelative root charterPath existingCharter
 
@@ -82,12 +97,17 @@ status: chartered
 
         Assert.Equal(CommandOutcome.NoChange, report.Outcome)
         Assert.Equal(existingCharter, after)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = charterPath && change.Operation = ArtifactOperation.NoChange)
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = charterPath && change.Operation = ArtifactOperation.NoChange
+        )
 
     [<Fact>]
     let ``charter safely appends missing standard sections without rewriting prose`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
+
         let partial =
             $"""---
 schemaVersion: 1
@@ -115,13 +135,20 @@ status: chartered
         Assert.Contains("## Scope Boundaries", after)
         Assert.Contains("## Policy Pointers", after)
         Assert.Contains("## Lifecycle Notes", after)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = charterPath && change.Operation = ArtifactOperation.Update)
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = charterPath && change.Operation = ArtifactOperation.Update
+        )
 
     [<Fact>]
     let ``charter identity mismatch blocks before authored write`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
-        let original = existingCharter.Replace($"workId: {workId}", "workId: 999-other-work")
+
+        let original =
+            existingCharter.Replace($"workId: {workId}", "workId: 999-other-work")
+
         TestSupport.writeRelative root charterPath original
 
         let report = TestSupport.runCharter root workId title
@@ -132,7 +159,7 @@ status: chartered
 
     [<Fact>]
     let ``charter malformed front matter blocks before authored write`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         let original = "# Missing front matter\n"
         TestSupport.writeRelative root charterPath original
@@ -145,7 +172,7 @@ status: chartered
 
     [<Fact>]
     let ``charter unsafe overwrite marker blocks before authored write`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         let original = existingCharter + "\n<!-- fsgg-sdd: unsafe-overwrite -->\n"
         TestSupport.writeRelative root charterPath original
@@ -158,7 +185,7 @@ status: chartered
 
     [<Fact>]
     let ``charter outside project reports actionable diagnostic and creates no artifact`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
 
         let report = TestSupport.runCharter root workId title
 
@@ -168,9 +195,12 @@ status: chartered
 
     [<Fact>]
     let ``charter malformed work id reports diagnostic without effects`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
-        let request = { TestSupport.charterRequest root "INVALID WORK ID" title with WorkId = Some "INVALID WORK ID" }
+
+        let request =
+            { TestSupport.charterRequest root "INVALID WORK ID" title with
+                WorkId = Some "INVALID WORK ID" }
 
         let report = TestSupport.runRequest request
 
@@ -179,7 +209,7 @@ status: chartered
 
     [<Fact>]
     let ``charter malformed project config reports diagnostic`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         Directory.CreateDirectory(Path.Combine(root, ".fsgg")) |> ignore
         TestSupport.writeRelative root ".fsgg/project.yml" "schemaVersion: 1\nproject:\n  id: broken\n"
         TestSupport.writeRelative root ".fsgg/sdd.yml" "schemaVersion: 1\nlifecycle:\n  stages: [charter]\n"
@@ -192,7 +222,7 @@ status: chartered
 
     [<Fact>]
     let ``charter duplicate logical work id blocks before selected charter changes`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.writeRelative root "work/other/charter.md" existingCharter
 

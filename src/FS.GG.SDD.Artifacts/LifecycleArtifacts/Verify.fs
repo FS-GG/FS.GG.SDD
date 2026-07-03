@@ -137,13 +137,16 @@ module Verify =
         | _ -> SkillMissing
 
     let taskIdsFromJson name element =
-        jsonStringList name element |> List.choose (Identifiers.createTaskId >> Result.toOption)
+        jsonStringList name element
+        |> List.choose (Identifiers.createTaskId >> Result.toOption)
 
     let evidenceIdsFromJson name element =
-        jsonStringList name element |> List.choose (Identifiers.createEvidenceId >> Result.toOption)
+        jsonStringList name element
+        |> List.choose (Identifiers.createEvidenceId >> Result.toOption)
 
     let requirementIdsFromJson name element =
-        jsonStringList name element |> List.choose (Identifiers.createRequirementId >> Result.toOption)
+        jsonStringList name element
+        |> List.choose (Identifiers.createRequirementId >> Result.toOption)
 
     let parseVerificationEvidenceDisposition (element: JsonElement) : EvidenceDisposition =
         { DispositionId = jsonRequiredString "id" element
@@ -233,7 +236,10 @@ module Verify =
                           Stage = stage
                           Status = jsonString "status" root |> Option.defaultValue "needsVerificationCorrection"
                           Generator = jsonString "generator" root |> Option.defaultValue "fsgg-sdd"
-                          Sources = jsonArray "sources" root |> List.map parseAnalysisSource |> List.sortBy (fun source -> source.Path)
+                          Sources =
+                            jsonArray "sources" root
+                            |> List.map parseAnalysisSource
+                            |> List.sortBy (fun source -> source.Path)
                           LifecycleReadiness = lifecycleReadiness
                           TaskGraph = taskGraph
                           EvidenceDispositions =
@@ -252,12 +258,18 @@ module Verify =
                             jsonArray "generatedViews" root
                             |> List.map parseAnalysisGeneratedView
                             |> List.sortBy (fun view -> view.Path)
-                          Findings = jsonArray "findings" root |> List.map parseVerificationFinding |> List.sortBy (fun finding -> finding.Id)
+                          Findings =
+                            jsonArray "findings" root
+                            |> List.map parseVerificationFinding
+                            |> List.sortBy (fun finding -> finding.Id)
                           OptionalBoundaryFacts =
                             jsonArray "governanceCompatibility" root
                             |> List.map parseAnalysisBoundaryFact
                             |> List.sortBy (fun fact -> fact.Path)
-                          Diagnostics = jsonArray "diagnostics" root |> List.map parseAnalysisDiagnostic |> Diagnostics.sort
+                          Diagnostics =
+                            jsonArray "diagnostics" root
+                            |> List.map parseAnalysisDiagnostic
+                            |> Diagnostics.sort
                           Readiness = jsonString "readiness" root |> Option.defaultValue "needsVerificationCorrection" }
                 | _ ->
                     Error

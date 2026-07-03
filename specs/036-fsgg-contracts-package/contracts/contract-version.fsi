@@ -8,8 +8,8 @@ namespace Fsgg
 module ContractVersion =
 
     /// The published package contract SemVer.
-    val value: string        // = "1.0.0"
+    val value: string // = "1.0.0"
 
-    val major: int           // = 1
-    val minor: int           // = 0
-    val patch: int           // = 0
+    val major: int // = 1
+    val minor: int // = 0
+    val patch: int // = 0

@@ -15,7 +15,9 @@ module ReleaseInstallTests =
     // is synced byte-identically from FS-GG/.github and carries no repo-specific
     // <Version>; it imports this local override last).
     let directoryBuildPropsVersion () =
-        let text = File.ReadAllText(Path.Combine(TestSupport.repoRoot, "Directory.Build.local.props"))
+        let text =
+            File.ReadAllText(Path.Combine(TestSupport.repoRoot, "Directory.Build.local.props"))
+
         (Regex.Match(text, @"<Version>([^<]+)</Version>")).Groups[1].Value.Trim()
 
     [<Fact>]

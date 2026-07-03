@@ -21,7 +21,12 @@ module AgentsCommandTests =
 
     let readManifest root target =
         let path = $"readiness/{workId}/agent-commands/{target}/guidance.json"
-        match parseGeneratedAgentGuidance { Path = path; Text = TestSupport.readRelative root path } with
+
+        match
+            parseGeneratedAgentGuidance
+                { Path = path
+                  Text = TestSupport.readRelative root path }
+        with
         | Ok manifest -> manifest
         | Error diagnostics -> failwith $"Expected a well-formed {target} manifest, got: {diagnostics}"
 
@@ -38,7 +43,8 @@ module AgentsCommandTests =
             for file in [ "guidance.json"; "commands.md"; "skills.md" ] do
                 Assert.True(
                     TestSupport.existsRelative root $"readiness/{workId}/agent-commands/{target}/{file}",
-                    $"Expected generated {target}/{file}.")
+                    $"Expected generated {target}/{file}."
+                )
 
         match report.AgentGuidance with
         | Some summary ->
@@ -111,7 +117,9 @@ module AgentsCommandTests =
         TestSupport.assertAgentGuidanceSummary report "agentGuidanceEarlyStage" "early-stage"
 
         // Best-effort facts derived only from artifacts that exist: charter is present.
-        let early = report.Diagnostics |> List.find (fun d -> d.Id = "agents.earlyStageGuidance")
+        let early =
+            report.Diagnostics |> List.find (fun d -> d.Id = "agents.earlyStageGuidance")
+
         Assert.Contains("charter", early.RelatedIds)
         Assert.DoesNotContain("specify", early.RelatedIds)
 
@@ -149,7 +157,8 @@ module AgentsCommandTests =
             System.Text.RegularExpressions.Regex.Replace(
                 original,
                 "(\"behaviorModelDigest\": \\{\\s*\"algorithm\": \"sha256\",\\s*\"value\": \")[a-f0-9]{64}",
-                "${1}" + System.String('a', 64))
+                "${1}" + System.String('a', 64)
+            )
 
         TestSupport.writeRelative root codexGuidance tampered
 
@@ -180,8 +189,16 @@ module AgentsCommandTests =
     [<Fact>]
     let ``agents preserves authored sources and hand-owned guidance files`` () =
         let root = initializedVerifiedProject ()
-        let preserved = [ "CLAUDE.md"; "AGENTS.md"; ".fsgg/agents.yml"; $"work/{workId}/spec.md"; $"work/{workId}/tasks.yml" ]
-        let before = preserved |> List.map (fun path -> path, TestSupport.readRelative root path)
+
+        let preserved =
+            [ "CLAUDE.md"
+              "AGENTS.md"
+              ".fsgg/agents.yml"
+              $"work/{workId}/spec.md"
+              $"work/{workId}/tasks.yml" ]
+
+        let before =
+            preserved |> List.map (fun path -> path, TestSupport.readRelative root path)
 
         TestSupport.runAgents root workId |> ignore
 
@@ -191,7 +208,11 @@ module AgentsCommandTests =
     [<Fact>]
     let ``agents dry-run writes zero files but reports proposed changes`` () =
         let root = initializedVerifiedProject ()
-        let report = TestSupport.runRequest { TestSupport.agentsRequest root workId with DryRun = true }
+
+        let report =
+            TestSupport.runRequest
+                { TestSupport.agentsRequest root workId with
+                    DryRun = true }
 
         Assert.False(TestSupport.existsRelative root $"{claudeRoot}/guidance.json")
         Assert.False(TestSupport.existsRelative root $"{codexRoot}/guidance.json")

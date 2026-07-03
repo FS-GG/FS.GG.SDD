@@ -17,11 +17,16 @@ module PlanCommandTests =
     let workModelPath = $"readiness/{workId}/work-model.json"
 
     let initializedChecklistReadyProject () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.runCharter root workId title |> ignore
         TestSupport.runSpecify root workId title |> ignore
-        TestSupport.runRequest { TestSupport.clarifyRequest root workId title with InputText = None } |> ignore
+
+        TestSupport.runRequest
+            { TestSupport.clarifyRequest root workId title with
+                InputText = None }
+        |> ignore
+
         TestSupport.runChecklist root workId title |> ignore
         root
 
@@ -83,7 +88,12 @@ No material ambiguities recorded.
         Assert.Contains("VO-001", plan)
         Assert.Contains("PM-001", plan)
         Assert.Contains("GV-001", plan)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = planPath && change.Operation = ArtifactOperation.Create)
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = planPath && change.Operation = ArtifactOperation.Create
+        )
+
         Assert.Equal(Some Tasks, report.NextAction |> Option.bind _.Command)
         TestSupport.assertPlanSummary report 1 1 1
 
@@ -97,11 +107,15 @@ No material ambiguities recorded.
         Assert.False(TestSupport.existsRelative root ".fsgg/policy.yml")
         Assert.False(TestSupport.existsRelative root ".fsgg/capabilities.yml")
         Assert.False(TestSupport.existsRelative root ".fsgg/tooling.yml")
-        Assert.Contains(report.GovernanceCompatibility, fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated")
+
+        Assert.Contains(
+            report.GovernanceCompatibility,
+            fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated"
+        )
 
     [<Fact>]
     let ``plan missing specification blocks before authored write`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
 
         let report = TestSupport.runPlan root workId title
@@ -112,7 +126,7 @@ No material ambiguities recorded.
 
     [<Fact>]
     let ``plan missing clarification blocks before authored write`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.runCharter root workId title |> ignore
         TestSupport.runSpecify root workId title |> ignore
@@ -125,11 +139,15 @@ No material ambiguities recorded.
 
     [<Fact>]
     let ``plan missing checklist blocks before authored write`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.runCharter root workId title |> ignore
         TestSupport.runSpecify root workId title |> ignore
-        TestSupport.runRequest { TestSupport.clarifyRequest root workId title with InputText = None } |> ignore
+
+        TestSupport.runRequest
+            { TestSupport.clarifyRequest root workId title with
+                InputText = None }
+        |> ignore
 
         let report = TestSupport.runPlan root workId title
 
@@ -139,7 +157,7 @@ No material ambiguities recorded.
 
     [<Fact>]
     let ``plan failed checklist blocks before authored write`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.writeRelative root specPath missingCoverageSpec
         TestSupport.writeValidClarification root workId title
@@ -155,20 +173,35 @@ No material ambiguities recorded.
     let ``plan rerun preserves authored content and stable ids`` () =
         let root = initializedChecklistReadyProject ()
         TestSupport.runPlan root workId title |> ignore
-        let authored = TestSupport.readRelative root planPath + "\nUser-authored plan prose stays here.\n"
+
+        let authored =
+            TestSupport.readRelative root planPath
+            + "\nUser-authored plan prose stays here.\n"
+
         TestSupport.writeRelative root planPath authored
 
         let report = TestSupport.runPlan root workId title
 
         Assert.Equal(CommandOutcome.NoChange, report.Outcome)
         Assert.Equal(authored, TestSupport.readRelative root planPath)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = planPath && change.Operation = ArtifactOperation.NoChange)
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = planPath && change.Operation = ArtifactOperation.NoChange
+        )
 
     [<Fact>]
     let ``plan appends safe missing requirement and marks source decisions stale`` () =
         let root = initializedChecklistReadyProject ()
         TestSupport.runPlan root workId title |> ignore
-        let updatedSpec = (TestSupport.readRelative root specPath).Replace("## Ambiguities", "- FR-002: New requirement links to AC-001. (Stories: US-001; Acceptance: AC-001)\n\n## Ambiguities")
+
+        let updatedSpec =
+            (TestSupport.readRelative root specPath)
+                .Replace(
+                    "## Ambiguities",
+                    "- FR-002: New requirement links to AC-001. (Stories: US-001; Acceptance: AC-001)\n\n## Ambiguities"
+                )
+
         TestSupport.writeRelative root specPath updatedSpec
 
         let report = TestSupport.runPlan root workId title
@@ -185,7 +218,10 @@ No material ambiguities recorded.
     let ``plan identity mismatch blocks without mutating existing plan`` () =
         let root = initializedChecklistReadyProject ()
         TestSupport.runPlan root workId title |> ignore
-        let original = (TestSupport.readRelative root planPath).Replace($"workId: {workId}", "workId: 999-other-work")
+
+        let original =
+            (TestSupport.readRelative root planPath).Replace($"workId: {workId}", "workId: 999-other-work")
+
         TestSupport.writeRelative root planPath original
 
         let report = TestSupport.runPlan root workId title
@@ -198,7 +234,10 @@ No material ambiguities recorded.
     let ``plan duplicate id blocks without mutating existing plan`` () =
         let root = initializedChecklistReadyProject ()
         TestSupport.runPlan root workId title |> ignore
-        let original = (TestSupport.readRelative root planPath).Replace("- PD-001", "- PD-001\n- PD-001")
+
+        let original =
+            (TestSupport.readRelative root planPath).Replace("- PD-001", "- PD-001\n- PD-001")
+
         TestSupport.writeRelative root planPath original
 
         let report = TestSupport.runPlan root workId title
@@ -211,7 +250,10 @@ No material ambiguities recorded.
     let ``plan unknown source reference blocks without mutation`` () =
         let root = initializedChecklistReadyProject ()
         TestSupport.runPlan root workId title |> ignore
-        let original = (TestSupport.readRelative root planPath).Replace("[FR-001]", "[FR-999]")
+
+        let original =
+            (TestSupport.readRelative root planPath).Replace("[FR-001]", "[FR-999]")
+
         TestSupport.writeRelative root planPath original
 
         let report = TestSupport.runPlan root workId title
@@ -224,7 +266,11 @@ No material ambiguities recorded.
     let ``plan unsafe overwrite marker blocks without mutation`` () =
         let root = initializedChecklistReadyProject ()
         TestSupport.runPlan root workId title |> ignore
-        let original = TestSupport.readRelative root planPath + "\n<!-- fsgg-sdd: unsafe-overwrite -->\n"
+
+        let original =
+            TestSupport.readRelative root planPath
+            + "\n<!-- fsgg-sdd: unsafe-overwrite -->\n"
+
         TestSupport.writeRelative root planPath original
 
         let report = TestSupport.runPlan root workId title
@@ -236,6 +282,7 @@ No material ambiguities recorded.
     [<Fact>]
     let ``plan dry run reports proposed changes without mutation`` () =
         let root = initializedChecklistReadyProject ()
+
         let request =
             { TestSupport.planRequest root workId title with
                 DryRun = true }
@@ -244,7 +291,11 @@ No material ambiguities recorded.
 
         Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
         Assert.False(TestSupport.existsRelative root planPath)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = planPath && change.SafeWriteDecision = "dryRunOnly")
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = planPath && change.SafeWriteDecision = "dryRunOnly"
+        )
 
     [<Fact>]
     let ``plan refreshes generated work model when source data is valid`` () =
@@ -255,14 +306,19 @@ No material ambiguities recorded.
 
         Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
         Assert.True(TestSupport.existsRelative root workModelPath)
-        Assert.Contains(report.GeneratedViews, fun view ->
-            view.Path = workModelPath
-            && view.Currency = GeneratedViewCurrency.Current
-            && view.Sources |> List.exists (fun source -> source.Path = planPath))
+
+        Assert.Contains(
+            report.GeneratedViews,
+            fun view ->
+                view.Path = workModelPath
+                && view.Currency = GeneratedViewCurrency.Current
+                && view.Sources |> List.exists (fun source -> source.Path = planPath)
+        )
 
     [<Fact>]
     let ``plan deterministic JSON is byte stable`` () =
         let root = initializedChecklistReadyProject ()
+
         let request =
             { TestSupport.planRequest root workId title with
                 DryRun = true }
@@ -295,7 +351,11 @@ No material ambiguities recorded.
         let report = TestSupport.runPlan root workId title
         let json = serializeReport report
 
-        Assert.Contains(report.GovernanceCompatibility, fun fact -> fact.Relationship = "optionalGovernancePolicy" && fact.State = "notEvaluated")
+        Assert.Contains(
+            report.GovernanceCompatibility,
+            fun fact -> fact.Relationship = "optionalGovernancePolicy" && fact.State = "notEvaluated"
+        )
+
         Assert.DoesNotContain("\"route\"", json)
         Assert.DoesNotContain("\"freshness\"", json)
         Assert.DoesNotContain("\"profile\"", json)

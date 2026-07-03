@@ -37,17 +37,25 @@ module RegistryValidate =
             // from content diagnostics (Constitution VIII), never a cascade or a crash.
             { Path = path
               Valid = false
-              Diagnostics = [ { Entry = path; Rule = "MalformedDocument"; Message = error.Message } ] }
+              Diagnostics =
+                [ { Entry = path
+                    Rule = "MalformedDocument"
+                    Message = error.Message } ] }
         | Ok document ->
             match Registry.validateDocument document with
-            | Registry.Valid -> { Path = path; Valid = true; Diagnostics = [] }
+            | Registry.Valid ->
+                { Path = path
+                  Valid = true
+                  Diagnostics = [] }
             | Registry.Invalid diagnostics ->
                 { Path = path
                   Valid = false
                   Diagnostics =
                     diagnostics
                     |> List.map (fun d ->
-                        { Entry = d.Entry; Rule = ruleName d.Rule; Message = d.Message }) }
+                        { Entry = d.Entry
+                          Rule = ruleName d.Rule
+                          Message = d.Message }) }
 
     let exitCode (report: RegistryValidateReport) = if report.Valid then 0 else 1
 
@@ -91,7 +99,8 @@ module RegistryValidate =
                 builder.AppendLine(
                     $"    {{ \"entry\": {quote diagnostic.Entry}, "
                     + $"\"rule\": {quote diagnostic.Rule}, "
-                    + $"\"message\": {quote diagnostic.Message} }}{comma}")
+                    + $"\"message\": {quote diagnostic.Message} }}{comma}"
+                )
                 |> ignore)
 
             builder.AppendLine "  ]" |> ignore
@@ -133,10 +142,7 @@ module RegistryValidate =
             table.AddColumns("rule", "entry", "message") |> ignore
 
             for diagnostic in report.Diagnostics do
-                table.AddRow(
-                    $"[red]{esc diagnostic.Rule}[/]",
-                    esc diagnostic.Entry,
-                    esc diagnostic.Message)
+                table.AddRow($"[red]{esc diagnostic.Rule}[/]", esc diagnostic.Entry, esc diagnostic.Message)
                 |> ignore
 
             console.Write table
@@ -161,7 +167,10 @@ module RegistryValidate =
     let private argError (message: string) : RegistryValidateReport =
         { Path = ""
           Valid = false
-          Diagnostics = [ { Entry = "<args>"; Rule = "MissingField"; Message = message } ] }
+          Diagnostics =
+            [ { Entry = "<args>"
+                Rule = "MissingField"
+                Message = message } ] }
 
     let private usage =
         "Usage: fsgg-sdd registry validate <path> [--json|--text|--rich]"

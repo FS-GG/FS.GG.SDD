@@ -25,9 +25,27 @@ module internal HandlersEarly =
             runHandler model None (fun workId ->
                 let projectDiagnostics = projectDiagnostics model
                 let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
-                let charterDiagnostics, charterText = charterDiagnosticsAndText model.Request workId model
-                let commandDiagnostics = projectDiagnostics @ duplicateDiagnostics @ charterDiagnostics |> DiagnosticsModule.sort
-                let generatedDiagnostics, generatedView, generatedEffects = generatedViewPlan model.Request workId (Some charterText) None None None None None None commandDiagnostics model
+
+                let charterDiagnostics, charterText =
+                    charterDiagnosticsAndText model.Request workId model
+
+                let commandDiagnostics =
+                    projectDiagnostics @ duplicateDiagnostics @ charterDiagnostics
+                    |> DiagnosticsModule.sort
+
+                let generatedDiagnostics, generatedView, generatedEffects =
+                    generatedViewPlan
+                        model.Request
+                        workId
+                        (Some charterText)
+                        None
+                        None
+                        None
+                        None
+                        None
+                        None
+                        commandDiagnostics
+                        model
 
                 commandDiagnostics @ generatedDiagnostics,
                 (fun _ _ -> None, [ generatedView ], charterWriteEffects workId charterText, generatedEffects))
@@ -39,19 +57,42 @@ module internal HandlersEarly =
             runHandler model None (fun workId ->
                 let projectDiagnostics = projectDiagnostics model
                 let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
-                let charterDiagnostics, charterText = charterPrerequisiteDiagnosticsAndText workId model
-                let specificationDiagnostics, specText, specification = specificationDiagnosticsTextAndSummary model.Request workId model
-                let commandDiagnostics = projectDiagnostics @ duplicateDiagnostics @ charterDiagnostics @ specificationDiagnostics |> DiagnosticsModule.sort
+
+                let charterDiagnostics, charterText =
+                    charterPrerequisiteDiagnosticsAndText workId model
+
+                let specificationDiagnostics, specText, specification =
+                    specificationDiagnosticsTextAndSummary model.Request workId model
+
+                let commandDiagnostics =
+                    projectDiagnostics
+                    @ duplicateDiagnostics
+                    @ charterDiagnostics
+                    @ specificationDiagnostics
+                    |> DiagnosticsModule.sort
 
                 let generatedDiagnostics, generatedView, generatedEffects =
                     match charterText with
-                    | Some text -> generatedViewPlan model.Request workId (Some text) specText None None None None None commandDiagnostics model
-                    | None ->
-                        blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
+                    | Some text ->
+                        generatedViewPlan
+                            model.Request
+                            workId
+                            (Some text)
+                            specText
+                            None
+                            None
+                            None
+                            None
+                            None
+                            commandDiagnostics
+                            model
+                    | None -> blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
 
                 let specificationEffects =
                     match specText with
-                    | Some text -> [ CreateDirectory($"work/{workId}"); WriteFile(specPath workId, text, AuthoredSource) ]
+                    | Some text ->
+                        [ CreateDirectory($"work/{workId}")
+                          WriteFile(specPath workId, text, AuthoredSource) ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,
@@ -65,7 +106,12 @@ module internal HandlersEarly =
                 let projectDiagnostics = projectDiagnostics model
                 let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
                 let prereqs = resolvePrerequisites workId model
-                let specificationDiagnostics, specText, specification, specFacts = prereqs.SpecificationDiagnostics, prereqs.SpecificationText, prereqs.Specification, prereqs.SpecificationFacts
+
+                let specificationDiagnostics, specText, specification, specFacts =
+                    prereqs.SpecificationDiagnostics,
+                    prereqs.SpecificationText,
+                    prereqs.Specification,
+                    prereqs.SpecificationFacts
 
                 let clarificationDiagnostics, clarificationText, clarification =
                     match specFacts with
@@ -73,20 +119,36 @@ module internal HandlersEarly =
                     | None -> [], None, None
 
                 let commandDiagnostics =
-                    projectDiagnostics @ duplicateDiagnostics @ specificationDiagnostics @ clarificationDiagnostics
+                    projectDiagnostics
+                    @ duplicateDiagnostics
+                    @ specificationDiagnostics
+                    @ clarificationDiagnostics
                     |> DiagnosticsModule.sort
 
                 let generatedDiagnostics, generatedView, generatedEffects =
                     match specText with
                     | Some text ->
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text
-                        generatedViewPlan model.Request workId charterText (Some text) clarificationText None None None None commandDiagnostics model
-                    | None ->
-                        blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
+
+                        generatedViewPlan
+                            model.Request
+                            workId
+                            charterText
+                            (Some text)
+                            clarificationText
+                            None
+                            None
+                            None
+                            None
+                            commandDiagnostics
+                            model
+                    | None -> blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
 
                 let clarificationEffects =
                     match clarificationText with
-                    | Some text -> [ CreateDirectory($"work/{workId}"); WriteFile(clarificationPath workId, text, AuthoredSource) ]
+                    | Some text ->
+                        [ CreateDirectory($"work/{workId}")
+                          WriteFile(clarificationPath workId, text, AuthoredSource) ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,
@@ -100,34 +162,69 @@ module internal HandlersEarly =
                 let projectDiagnostics = projectDiagnostics model
                 let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
                 let prereqs = resolvePrerequisites workId model
-                let specificationDiagnostics, specText, specification, specFacts = prereqs.SpecificationDiagnostics, prereqs.SpecificationText, prereqs.Specification, prereqs.SpecificationFacts
-                let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = prereqs.ClarificationDiagnostics, prereqs.ClarificationText, prereqs.Clarification, prereqs.ClarificationFacts
+
+                let specificationDiagnostics, specText, specification, specFacts =
+                    prereqs.SpecificationDiagnostics,
+                    prereqs.SpecificationText,
+                    prereqs.Specification,
+                    prereqs.SpecificationFacts
+
+                let clarificationDiagnostics, clarificationText, clarification, clarificationFacts =
+                    prereqs.ClarificationDiagnostics,
+                    prereqs.ClarificationText,
+                    prereqs.Clarification,
+                    prereqs.ClarificationFacts
 
                 let checklistDiagnostics, checklistText, checklist =
                     match specText, clarificationText, specFacts, clarificationFacts with
                     | Some specText, Some clarificationText, Some specFacts, Some clarificationFacts ->
-                        checklistDiagnosticsTextAndSummary model.Request workId specText clarificationText specFacts clarificationFacts model
+                        checklistDiagnosticsTextAndSummary
+                            model.Request
+                            workId
+                            specText
+                            clarificationText
+                            specFacts
+                            clarificationFacts
+                            model
                     | _ -> [], None, None
 
                 let commandDiagnostics =
-                    projectDiagnostics @ duplicateDiagnostics @ specificationDiagnostics @ clarificationDiagnostics @ checklistDiagnostics
+                    projectDiagnostics
+                    @ duplicateDiagnostics
+                    @ specificationDiagnostics
+                    @ clarificationDiagnostics
+                    @ checklistDiagnostics
                     |> DiagnosticsModule.sort
 
                 let generatedDiagnostics, generatedView, generatedEffects =
                     match specText, clarificationText with
                     | Some specText, Some clarificationText ->
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text
-                        generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) checklistText None None None commandDiagnostics model
-                    | _ ->
-                        blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
+
+                        generatedViewPlan
+                            model.Request
+                            workId
+                            charterText
+                            (Some specText)
+                            (Some clarificationText)
+                            checklistText
+                            None
+                            None
+                            None
+                            commandDiagnostics
+                            model
+                    | _ -> blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
 
                 let checklistEffects =
                     match checklistText with
-                    | Some text -> [ CreateDirectory($"work/{workId}"); WriteFile(checklistPath workId, text, AuthoredSource) ]
+                    | Some text ->
+                        [ CreateDirectory($"work/{workId}")
+                          WriteFile(checklistPath workId, text, AuthoredSource) ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,
-                (fun _ _ -> (specification, clarification, checklist), [ generatedView ], checklistEffects, generatedEffects))
+                (fun _ _ ->
+                    (specification, clarification, checklist), [ generatedView ], checklistEffects, generatedEffects))
 
         diagnostics, specification, clarification, checklist, generatedViews, effects
 
@@ -137,14 +234,42 @@ module internal HandlersEarly =
                 let projectDiagnostics = projectDiagnostics model
                 let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
                 let prereqs = resolvePrerequisites workId model
-                let specificationDiagnostics, specText, specification, specFacts = prereqs.SpecificationDiagnostics, prereqs.SpecificationText, prereqs.Specification, prereqs.SpecificationFacts
-                let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = prereqs.ClarificationDiagnostics, prereqs.ClarificationText, prereqs.Clarification, prereqs.ClarificationFacts
-                let checklistDiagnostics, checklistText, checklist, checklistFacts = prereqs.ChecklistDiagnostics, prereqs.ChecklistText, prereqs.Checklist, prereqs.ChecklistFacts
+
+                let specificationDiagnostics, specText, specification, specFacts =
+                    prereqs.SpecificationDiagnostics,
+                    prereqs.SpecificationText,
+                    prereqs.Specification,
+                    prereqs.SpecificationFacts
+
+                let clarificationDiagnostics, clarificationText, clarification, clarificationFacts =
+                    prereqs.ClarificationDiagnostics,
+                    prereqs.ClarificationText,
+                    prereqs.Clarification,
+                    prereqs.ClarificationFacts
+
+                let checklistDiagnostics, checklistText, checklist, checklistFacts =
+                    prereqs.ChecklistDiagnostics, prereqs.ChecklistText, prereqs.Checklist, prereqs.ChecklistFacts
 
                 let planDiagnostics, planText, plan =
-                    match specText, clarificationText, checklistText, specFacts, clarificationFacts, checklistFacts with
-                    | Some specText, Some clarificationText, Some checklistText, Some specFacts, Some clarificationFacts, Some checklistFacts ->
-                        planDiagnosticsTextAndSummary model.Request workId specText clarificationText checklistText specFacts clarificationFacts checklistFacts model
+                    match
+                        specText, clarificationText, checklistText, specFacts, clarificationFacts, checklistFacts
+                    with
+                    | Some specText,
+                      Some clarificationText,
+                      Some checklistText,
+                      Some specFacts,
+                      Some clarificationFacts,
+                      Some checklistFacts ->
+                        planDiagnosticsTextAndSummary
+                            model.Request
+                            workId
+                            specText
+                            clarificationText
+                            checklistText
+                            specFacts
+                            clarificationFacts
+                            checklistFacts
+                            model
                     | _ -> [], None, None
 
                 let commandDiagnostics =
@@ -160,17 +285,31 @@ module internal HandlersEarly =
                     match specText, clarificationText, checklistText with
                     | Some specText, Some clarificationText, Some checklistText ->
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text
-                        generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) planText None None commandDiagnostics model
-                    | _ ->
-                        blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
+
+                        generatedViewPlan
+                            model.Request
+                            workId
+                            charterText
+                            (Some specText)
+                            (Some clarificationText)
+                            (Some checklistText)
+                            planText
+                            None
+                            None
+                            commandDiagnostics
+                            model
+                    | _ -> blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
 
                 let planEffects =
                     match planText with
-                    | Some text -> [ CreateDirectory($"work/{workId}"); WriteFile(planPath workId, text, AuthoredSource) ]
+                    | Some text ->
+                        [ CreateDirectory($"work/{workId}")
+                          WriteFile(planPath workId, text, AuthoredSource) ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,
-                (fun _ _ -> (specification, clarification, checklist, plan), [ generatedView ], planEffects, generatedEffects))
+                (fun _ _ ->
+                    (specification, clarification, checklist, plan), [ generatedView ], planEffects, generatedEffects))
 
         diagnostics, specification, clarification, checklist, plan, generatedViews, effects
 
@@ -180,15 +319,56 @@ module internal HandlersEarly =
                 let projectDiagnostics = projectDiagnostics model
                 let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
                 let prereqs = resolvePrerequisites workId model
-                let specificationDiagnostics, specText, specification, specFacts = prereqs.SpecificationDiagnostics, prereqs.SpecificationText, prereqs.Specification, prereqs.SpecificationFacts
-                let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = prereqs.ClarificationDiagnostics, prereqs.ClarificationText, prereqs.Clarification, prereqs.ClarificationFacts
-                let checklistDiagnostics, checklistText, checklist, checklistFacts = prereqs.ChecklistDiagnostics, prereqs.ChecklistText, prereqs.Checklist, prereqs.ChecklistFacts
-                let planDiagnostics, planText, plan, planFacts = prereqs.PlanDiagnostics, prereqs.PlanText, prereqs.Plan, prereqs.PlanFacts
+
+                let specificationDiagnostics, specText, specification, specFacts =
+                    prereqs.SpecificationDiagnostics,
+                    prereqs.SpecificationText,
+                    prereqs.Specification,
+                    prereqs.SpecificationFacts
+
+                let clarificationDiagnostics, clarificationText, clarification, clarificationFacts =
+                    prereqs.ClarificationDiagnostics,
+                    prereqs.ClarificationText,
+                    prereqs.Clarification,
+                    prereqs.ClarificationFacts
+
+                let checklistDiagnostics, checklistText, checklist, checklistFacts =
+                    prereqs.ChecklistDiagnostics, prereqs.ChecklistText, prereqs.Checklist, prereqs.ChecklistFacts
+
+                let planDiagnostics, planText, plan, planFacts =
+                    prereqs.PlanDiagnostics, prereqs.PlanText, prereqs.Plan, prereqs.PlanFacts
 
                 let taskDiagnostics, taskText, tasks =
-                    match specText, clarificationText, checklistText, planText, specFacts, clarificationFacts, checklistFacts, planFacts with
-                    | Some specText, Some clarificationText, Some checklistText, Some planText, Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts ->
-                        tasksDiagnosticsTextAndSummary model.Request workId specText clarificationText checklistText planText specFacts clarificationFacts checklistFacts planFacts model
+                    match
+                        specText,
+                        clarificationText,
+                        checklistText,
+                        planText,
+                        specFacts,
+                        clarificationFacts,
+                        checklistFacts,
+                        planFacts
+                    with
+                    | Some specText,
+                      Some clarificationText,
+                      Some checklistText,
+                      Some planText,
+                      Some specFacts,
+                      Some clarificationFacts,
+                      Some checklistFacts,
+                      Some planFacts ->
+                        tasksDiagnosticsTextAndSummary
+                            model.Request
+                            workId
+                            specText
+                            clarificationText
+                            checklistText
+                            planText
+                            specFacts
+                            clarificationFacts
+                            checklistFacts
+                            planFacts
+                            model
                     | _ -> [], None, None
 
                 let commandDiagnostics =
@@ -205,17 +385,34 @@ module internal HandlersEarly =
                     match specText, clarificationText, checklistText, planText with
                     | Some specText, Some clarificationText, Some checklistText, Some planText ->
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text
-                        generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) taskText None commandDiagnostics model
-                    | _ ->
-                        blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
+
+                        generatedViewPlan
+                            model.Request
+                            workId
+                            charterText
+                            (Some specText)
+                            (Some clarificationText)
+                            (Some checklistText)
+                            (Some planText)
+                            taskText
+                            None
+                            commandDiagnostics
+                            model
+                    | _ -> blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
 
                 let taskEffects =
                     match taskText with
-                    | Some text -> [ CreateDirectory($"work/{workId}"); WriteFile(tasksPath workId, text, AuthoredSource) ]
+                    | Some text ->
+                        [ CreateDirectory($"work/{workId}")
+                          WriteFile(tasksPath workId, text, AuthoredSource) ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,
-                (fun _ _ -> (specification, clarification, checklist, plan, tasks), [ generatedView ], taskEffects, generatedEffects))
+                (fun _ _ ->
+                    (specification, clarification, checklist, plan, tasks),
+                    [ generatedView ],
+                    taskEffects,
+                    generatedEffects))
 
         diagnostics, specification, clarification, checklist, plan, tasks, generatedViews, effects
 
@@ -225,4 +422,3 @@ module internal HandlersEarly =
             | WriteFile(path, text, GeneratedView) when normalizeRelativePath path = workModelPath workId -> Some text
             | _ -> None)
         |> Option.orElseWith (fun () -> snapshot (workModelPath workId) model |> Option.map _.Text)
-

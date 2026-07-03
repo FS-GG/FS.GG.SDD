@@ -7,7 +7,8 @@ module RegistryValidatorTests =
 
     let private coherent: Registry.RegistryModel =
         { Components =
-            [ { Id = "FS.GG.Contracts"; Version = "1.0.0" }
+            [ { Id = "FS.GG.Contracts"
+                Version = "1.0.0" }
               { Id = "FS.GG.SDD"; Version = "0.2.0" } ]
           Edges =
             [ { Consumer = "FS.GG.SDD"
@@ -28,7 +29,10 @@ module RegistryValidatorTests =
     let ``incoherent model (range excludes declared version) reports IncompatibleVersion naming the edge`` () =
         let model =
             { coherent with
-                Edges = [ { Consumer = "FS.GG.SDD"; Provider = "FS.GG.Contracts"; CompatibleRange = ">=2.0.0" } ] }
+                Edges =
+                    [ { Consumer = "FS.GG.SDD"
+                        Provider = "FS.GG.Contracts"
+                        CompatibleRange = ">=2.0.0" } ] }
 
         match Registry.validate model with
         | Registry.Invalid [ d ] ->
@@ -46,7 +50,13 @@ module RegistryValidatorTests =
 
         match Registry.validate model with
         | Registry.Invalid diagnostics ->
-            let d = diagnostics |> List.find (fun d -> match d.Rule with | Registry.MissingField _ -> true | _ -> false)
+            let d =
+                diagnostics
+                |> List.find (fun d ->
+                    match d.Rule with
+                    | Registry.MissingField _ -> true
+                    | _ -> false)
+
             Assert.Equal(Registry.MissingField "Version", d.Rule)
             Assert.Equal("FS.GG.Contracts", d.Entry)
         | other -> Assert.True(false, $"expected a MissingField diagnostic, got {other}")
@@ -55,7 +65,10 @@ module RegistryValidatorTests =
     let ``edge to an absent component reports UnknownComponent`` () =
         let model =
             { coherent with
-                Edges = [ { Consumer = "FS.GG.SDD"; Provider = "FS.GG.Absent"; CompatibleRange = ">=1.0.0" } ] }
+                Edges =
+                    [ { Consumer = "FS.GG.SDD"
+                        Provider = "FS.GG.Absent"
+                        CompatibleRange = ">=1.0.0" } ] }
 
         Assert.Contains(Registry.UnknownComponent, rulesOf (Registry.validate model))
 
@@ -64,7 +77,8 @@ module RegistryValidatorTests =
         let model =
             { coherent with
                 Components =
-                    [ { Id = "FS.GG.Contracts"; Version = "not-a-version" }
+                    [ { Id = "FS.GG.Contracts"
+                        Version = "not-a-version" }
                       { Id = "FS.GG.SDD"; Version = "0.2.0" } ] }
 
         Assert.Contains(Registry.MalformedVersion, rulesOf (Registry.validate model))
@@ -73,7 +87,10 @@ module RegistryValidatorTests =
     let ``non-SemVer range reports MalformedVersion`` () =
         let model =
             { coherent with
-                Edges = [ { Consumer = "FS.GG.SDD"; Provider = "FS.GG.Contracts"; CompatibleRange = ">=garbage" } ] }
+                Edges =
+                    [ { Consumer = "FS.GG.SDD"
+                        Provider = "FS.GG.Contracts"
+                        CompatibleRange = ">=garbage" } ] }
 
         Assert.Contains(Registry.MalformedVersion, rulesOf (Registry.validate model))
 
@@ -81,7 +98,10 @@ module RegistryValidatorTests =
     let ``blank edge field reports MissingField naming the field`` () =
         let model =
             { coherent with
-                Edges = [ { Consumer = ""; Provider = "FS.GG.Contracts"; CompatibleRange = ">=1.0.0 <2.0.0" } ] }
+                Edges =
+                    [ { Consumer = ""
+                        Provider = "FS.GG.Contracts"
+                        CompatibleRange = ">=1.0.0 <2.0.0" } ] }
 
         match Registry.validate model with
         | Registry.Invalid diagnostics ->

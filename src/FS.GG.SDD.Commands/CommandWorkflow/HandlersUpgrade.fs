@@ -72,7 +72,10 @@ module internal HandlersUpgrade =
         let ok =
             effects
             |> List.forall (fun effect ->
-                match model.InterpretedEffects |> List.tryFind (fun result -> effectKey result.Effect = effectKey effect) with
+                match
+                    model.InterpretedEffects
+                    |> List.tryFind (fun result -> effectKey result.Effect = effectKey effect)
+                with
                 | Some result ->
                     match result.Effect with
                     | RunProcess _ ->
@@ -91,13 +94,21 @@ module internal HandlersUpgrade =
 
     let private applyStage model (request: CommandRequest) (step: ReconciliationStep) =
         let effects = applyEffectsFor request step
-        let allInterpreted = effects |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
-        let anyPlanned = effects |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
 
-        if List.isEmpty effects then Resolved "applied"
-        elif allInterpreted then Resolved(applyOutcome model effects)
-        elif anyPlanned then Awaiting
-        else EmitEffects effects
+        let allInterpreted =
+            effects |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
+
+        let anyPlanned =
+            effects |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
+
+        if List.isEmpty effects then
+            Resolved "applied"
+        elif allInterpreted then
+            Resolved(applyOutcome model effects)
+        elif anyPlanned then
+            Awaiting
+        else
+            EmitEffects effects
 
     let private stepProgress model (request: CommandRequest) (step: ReconciliationStep) =
         if request.AssumeYes then
@@ -108,8 +119,10 @@ module internal HandlersUpgrade =
             | Some true -> applyStage model request step
             | Some false -> Resolved "skipped"
             | None ->
-                if confirmPlanned model step.StepId then Awaiting
-                else EmitEffects [ Confirm(step.StepId, confirmPrompt step) ]
+                if confirmPlanned model step.StepId then
+                    Awaiting
+                else
+                    EmitEffects [ Confirm(step.StepId, confirmPrompt step) ]
 
     let private selfUpdateExitCode model =
         model.InterpretedEffects
@@ -130,7 +143,12 @@ module internal HandlersUpgrade =
           ResidualDrift = false
           NextActionHint = hint }
 
-    let private finalizeApply model (request: CommandRequest) (drift: Drift.DriftReport) (actionable: ReconciliationStep list) =
+    let private finalizeApply
+        model
+        (request: CommandRequest)
+        (drift: Drift.DriftReport)
+        (actionable: ReconciliationStep list)
+        =
         let outcomes =
             actionable
             |> List.map (fun step ->
@@ -141,7 +159,9 @@ module internal HandlersUpgrade =
 
                 step.StepId, outcome)
 
-        let ofOutcome value = outcomes |> List.filter (fun (_, o) -> o = value) |> List.map fst |> List.sort
+        let ofOutcome value =
+            outcomes |> List.filter (fun (_, o) -> o = value) |> List.map fst |> List.sort
+
         let applied = ofOutcome "applied"
         let skipped = ofOutcome "skipped"
         let failed = ofOutcome "failed"
@@ -161,7 +181,10 @@ module internal HandlersUpgrade =
         // step actually applied (a skipped/failed re-seed leaves them outstanding, so they stay
         // in the advisory surface).
         let repairedMissing =
-            if List.contains "artifactReSeed" applied then drift.MissingArtifactPaths else []
+            if List.contains "artifactReSeed" applied then
+                drift.MissingArtifactPaths
+            else
+                []
 
         let unrepairedSkillDrift =
             drift.SkillDriftPaths
@@ -181,19 +204,26 @@ module internal HandlersUpgrade =
             if not (List.isEmpty failed) then
                 failed
                 |> List.map (fun stepId ->
-                    if stepId = "cliSelfUpdate" then upgradeSelfUpdateFailed (selfUpdateExitCode model)
-                    else upgradeStepFailed stepId)
+                    if stepId = "cliSelfUpdate" then
+                        upgradeSelfUpdateFailed (selfUpdateExitCode model)
+                    else
+                        upgradeStepFailed stepId)
             elif not (List.isEmpty skipped) then
                 [ upgradeResidualDrift skipped ]
             else
                 []
 
         let hint =
-            if not (List.isEmpty failed) then "A confirmed step failed; inspect the failure and re-run `fsgg-sdd upgrade`."
-            elif not (List.isEmpty skipped) then "Re-run `fsgg-sdd upgrade` and confirm the skipped step(s) to finish reconciling."
-            elif not (List.isEmpty unrepairedSkillDrift) then "Skill content drift detected (advisory); some copies diverge from their canonical body — re-scaffold or restore the canonical skill sources."
-            elif residualDrift then "The CLI self-update takes effect on the next invocation; re-run `fsgg-sdd doctor` afterwards to confirm coherence."
-            else "Reconciliation complete; run `fsgg-sdd doctor` to confirm coherence."
+            if not (List.isEmpty failed) then
+                "A confirmed step failed; inspect the failure and re-run `fsgg-sdd upgrade`."
+            elif not (List.isEmpty skipped) then
+                "Re-run `fsgg-sdd upgrade` and confirm the skipped step(s) to finish reconciling."
+            elif not (List.isEmpty unrepairedSkillDrift) then
+                "Skill content drift detected (advisory); some copies diverge from their canonical body — re-scaffold or restore the canonical skill sources."
+            elif residualDrift then
+                "The CLI self-update takes effect on the next invocation; re-run `fsgg-sdd doctor` afterwards to confirm coherence."
+            else
+                "Reconciliation complete; run `fsgg-sdd doctor` to confirm coherence."
 
         let summary: UpgradeSummary =
             { HasProvenance = true
@@ -217,71 +247,85 @@ module internal HandlersUpgrade =
         | Some _ -> model, []
         | None ->
 
-        // 058/ADR-0014 P1: bring the provider product-skill copies into snapshots (read-only)
-        // before the content-addressed drift is computed — the same provenance-driven gate
-        // `doctor` uses, shared via `HandlersDoctor.skillReadGate`.
-        match skillReadGate model with
-        | Some effects ->
-            if List.isEmpty effects then model, []
-            else { model with PendingEffects = model.PendingEffects @ effects }, effects
-        | None ->
-            let request = model.Request
-            let drift = computeDrift model
+            // 058/ADR-0014 P1: bring the provider product-skill copies into snapshots (read-only)
+            // before the content-addressed drift is computed — the same provenance-driven gate
+            // `doctor` uses, shared via `HandlersDoctor.skillReadGate`.
+            match skillReadGate model with
+            | Some effects ->
+                if List.isEmpty effects then
+                    model, []
+                else
+                    { model with
+                        PendingEffects = model.PendingEffects @ effects },
+                    effects
+            | None ->
+                let request = model.Request
+                let drift = computeDrift model
 
-            let actionable = drift.Steps |> List.filter (fun step -> step.Outcome = "wouldApply")
+                let actionable =
+                    drift.Steps |> List.filter (fun step -> step.Outcome = "wouldApply")
 
-            if not drift.HasProvenance then
-                { model with Upgrade = Some(noOpSummary request drift "No scaffold provenance — nothing to reconcile.") }, []
-            elif drift.IsCoherent then
-                { model with Upgrade = Some(noOpSummary request drift "Already coherent — nothing to reconcile.") }, []
-            elif List.isEmpty actionable then
-                // 058/ADR-0014 P1: the only drift is advisory content drift (a divergent/
-                // hash-mismatched copy or product-skill loss) with NO applicable step. There is
-                // nothing to confirm or `--yes`, so this is NOT a non-interactive refusal — it is
-                // reported advisory (exit 0, residual), so CI's `upgrade` doesn't dead-end at exit 1.
-                let summary: UpgradeSummary =
-                    { HasProvenance = true
-                      Mode = if request.AssumeYes then "assumeYes" else "interactive"
-                      AlreadyCoherent = false
-                      Steps = drift.Steps
-                      AppliedStepIds = []
-                      SkippedStepIds = []
-                      FailedStepIds = []
-                      SkillDriftPaths = drift.SkillDriftPaths
-                      ResidualDrift = true
-                      NextActionHint = "Skill content drift detected (advisory); some copies diverge from their canonical body — re-scaffold or restore the canonical skill sources." }
+                if not drift.HasProvenance then
+                    { model with
+                        Upgrade = Some(noOpSummary request drift "No scaffold provenance — nothing to reconcile.") },
+                    []
+                elif drift.IsCoherent then
+                    { model with
+                        Upgrade = Some(noOpSummary request drift "Already coherent — nothing to reconcile.") },
+                    []
+                elif List.isEmpty actionable then
+                    // 058/ADR-0014 P1: the only drift is advisory content drift (a divergent/
+                    // hash-mismatched copy or product-skill loss) with NO applicable step. There is
+                    // nothing to confirm or `--yes`, so this is NOT a non-interactive refusal — it is
+                    // reported advisory (exit 0, residual), so CI's `upgrade` doesn't dead-end at exit 1.
+                    let summary: UpgradeSummary =
+                        { HasProvenance = true
+                          Mode = if request.AssumeYes then "assumeYes" else "interactive"
+                          AlreadyCoherent = false
+                          Steps = drift.Steps
+                          AppliedStepIds = []
+                          SkippedStepIds = []
+                          FailedStepIds = []
+                          SkillDriftPaths = drift.SkillDriftPaths
+                          ResidualDrift = true
+                          NextActionHint =
+                            "Skill content drift detected (advisory); some copies diverge from their canonical body — re-scaffold or restore the canonical skill sources." }
 
-                { model with Upgrade = Some summary }, []
-            elif not request.AssumeYes && not request.IsInteractive then
-                // FR-012 / SC-004: non-interactive without `--yes` refuses up front when there IS
-                // actionable reconciliation — zero writes, no `Confirm`, no prompt-hang (exit 1).
-                let summary: UpgradeSummary =
-                    { HasProvenance = true
-                      Mode = "refusedNonInteractive"
-                      AlreadyCoherent = false
-                      Steps = drift.Steps
-                      AppliedStepIds = []
-                      SkippedStepIds = []
-                      FailedStepIds = []
-                      SkillDriftPaths = drift.SkillDriftPaths
-                      ResidualDrift = true
-                      NextActionHint = "Re-run `fsgg-sdd upgrade` interactively, or pass `--yes` to apply without prompting." }
+                    { model with Upgrade = Some summary }, []
+                elif not request.AssumeYes && not request.IsInteractive then
+                    // FR-012 / SC-004: non-interactive without `--yes` refuses up front when there IS
+                    // actionable reconciliation — zero writes, no `Confirm`, no prompt-hang (exit 1).
+                    let summary: UpgradeSummary =
+                        { HasProvenance = true
+                          Mode = "refusedNonInteractive"
+                          AlreadyCoherent = false
+                          Steps = drift.Steps
+                          AppliedStepIds = []
+                          SkippedStepIds = []
+                          FailedStepIds = []
+                          SkillDriftPaths = drift.SkillDriftPaths
+                          ResidualDrift = true
+                          NextActionHint =
+                            "Re-run `fsgg-sdd upgrade` interactively, or pass `--yes` to apply without prompting." }
 
-                { model with
-                    Upgrade = Some summary
-                    Diagnostics = model.Diagnostics @ [ upgradeNonInteractiveNoYes () ] },
-                []
-            else
-                let rec walk steps =
-                    match steps with
-                    | [] -> None
-                    | step :: rest ->
-                        match stepProgress model request step with
-                        | Resolved _ -> walk rest
-                        | EmitEffects effects -> Some(Choice1Of2 effects)
-                        | Awaiting -> Some(Choice2Of2())
+                    { model with
+                        Upgrade = Some summary
+                        Diagnostics = model.Diagnostics @ [ upgradeNonInteractiveNoYes () ] },
+                    []
+                else
+                    let rec walk steps =
+                        match steps with
+                        | [] -> None
+                        | step :: rest ->
+                            match stepProgress model request step with
+                            | Resolved _ -> walk rest
+                            | EmitEffects effects -> Some(Choice1Of2 effects)
+                            | Awaiting -> Some(Choice2Of2())
 
-                match walk actionable with
-                | Some(Choice1Of2 effects) -> { model with PendingEffects = model.PendingEffects @ effects }, effects
-                | Some(Choice2Of2()) -> model, []
-                | None -> finalizeApply model request drift actionable
+                    match walk actionable with
+                    | Some(Choice1Of2 effects) ->
+                        { model with
+                            PendingEffects = model.PendingEffects @ effects },
+                        effects
+                    | Some(Choice2Of2()) -> model, []
+                    | None -> finalizeApply model request drift actionable

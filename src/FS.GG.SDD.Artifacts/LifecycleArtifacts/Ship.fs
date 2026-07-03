@@ -115,7 +115,10 @@ module Ship =
                           Stage = stage
                           Status = jsonString "status" root |> Option.defaultValue "needsShipCorrection"
                           Generator = jsonString "generator" root |> Option.defaultValue "fsgg-sdd"
-                          Sources = jsonArray "sources" root |> List.map parseAnalysisSource |> List.sortBy (fun source -> source.Path)
+                          Sources =
+                            jsonArray "sources" root
+                            |> List.map parseAnalysisSource
+                            |> List.sortBy (fun source -> source.Path)
                           LifecycleReadiness = lifecycleReadiness
                           VerificationReadiness = verificationReadiness
                           Disposition = disposition
@@ -123,12 +126,18 @@ module Ship =
                             jsonArray "generatedViews" root
                             |> List.map parseAnalysisGeneratedView
                             |> List.sortBy (fun view -> view.Path)
-                          Findings = jsonArray "findings" root |> List.map parseShipFinding |> List.sortBy (fun finding -> finding.Id)
+                          Findings =
+                            jsonArray "findings" root
+                            |> List.map parseShipFinding
+                            |> List.sortBy (fun finding -> finding.Id)
                           OptionalBoundaryFacts =
                             jsonArray "governanceCompatibility" root
                             |> List.map parseAnalysisBoundaryFact
                             |> List.sortBy (fun fact -> fact.Path)
-                          Diagnostics = jsonArray "diagnostics" root |> List.map parseAnalysisDiagnostic |> Diagnostics.sort
+                          Diagnostics =
+                            jsonArray "diagnostics" root
+                            |> List.map parseAnalysisDiagnostic
+                            |> Diagnostics.sort
                           Readiness = jsonString "readiness" root |> Option.defaultValue "needsShipCorrection" }
                 | _ ->
                     Error

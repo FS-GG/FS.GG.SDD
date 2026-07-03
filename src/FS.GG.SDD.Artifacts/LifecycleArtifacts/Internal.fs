@@ -77,11 +77,7 @@ module internal Internal =
         let rec loop remaining current =
             match remaining with
             | [] -> Some current
-            | key :: rest ->
-                current
-                |> tryMapping
-                |> Option.bind (tryChild key)
-                |> Option.bind (loop rest)
+            | key :: rest -> current |> tryMapping |> Option.bind (tryChild key) |> Option.bind (loop rest)
 
         loop keys node
 
@@ -133,6 +129,7 @@ module internal Internal =
         | Some value when not (String.IsNullOrWhiteSpace value) -> Ok value
         | _ ->
             let dottedPath = String.concat "." keys
+
             Error
                 [ Diagnostics.workModelInconsistent
                       artifact
@@ -140,14 +137,14 @@ module internal Internal =
                       $"Add '{dottedPath}' to '{artifact.Path}'."
                       [ label ] ]
 
-    let combine errors =
-        errors |> List.collect id
+    let combine errors = errors |> List.collect id
 
     let proseStatus (text: string) =
         Regex.Match(text, @"(?im)^Prose status:\s*(\S+)\s*$")
         |> fun m -> if m.Success then Some m.Groups.[1].Value else None
 
-    let sourceLocation line = Some { Line = Some line; Column = Some 1 }
+    let sourceLocation line =
+        Some { Line = Some line; Column = Some 1 }
 
     let hasHeading (heading: string) (text: string) =
         Regex.IsMatch(text, $"(?m)^##\\s+{Regex.Escape heading}\\s*$")
@@ -225,8 +222,7 @@ module internal Internal =
         else
             line.Substring(index + idValue.Length).Trim().TrimStart(':', '-', ' ').Trim()
 
-    let private strippedBullet (line: string) =
-        line.Trim().TrimStart('-', '*').Trim()
+    let private strippedBullet (line: string) = line.Trim().TrimStart('-', '*').Trim()
 
     // A "no-outstanding" disclaimer sentinel: after stripping an optional leading bullet
     // marker the trimmed text is empty, is the whole word `none` (optionally qualified),
@@ -338,10 +334,12 @@ module internal Internal =
         match element.ValueKind with
         | JsonValueKind.String ->
             let value = Option.ofObj (element.GetString()) |> Option.defaultValue ""
+
             if String.IsNullOrWhiteSpace value then
                 None
             else
                 let parts = value.Split([| ':' |], 2)
+
                 if parts.Length = 2 then
                     SchemaVersion.createSourceDigest parts.[0] parts.[1] |> Result.toOption
                 else
@@ -374,7 +372,8 @@ module internal Internal =
             |> Result.toOption
 
     let parseAcceptanceScenarioIds values =
-        values |> List.choose (Identifiers.createAcceptanceScenarioId >> Result.toOption)
+        values
+        |> List.choose (Identifiers.createAcceptanceScenarioId >> Result.toOption)
 
     let parseChecklistResultIds values =
         values |> List.choose (Identifiers.createChecklistResultId >> Result.toOption)
@@ -407,7 +406,8 @@ module internal Internal =
             | _, SchemaCompatibilityStatus.Malformed
             | None, SchemaCompatibilityStatus.Current
             | None, SchemaCompatibilityStatus.Deprecated ->
-                Error [ Diagnostics.malformedSchemaVersion artifact $"{label} is missing or has malformed schemaVersion." ]
+                Error
+                    [ Diagnostics.malformedSchemaVersion artifact $"{label} is missing or has malformed schemaVersion." ]
             | _, SchemaCompatibilityStatus.Unsupported ->
                 Error [ Diagnostics.unsupportedSchemaVersion artifact (rawVersion |> Option.defaultValue "") ]
             | _, SchemaCompatibilityStatus.Future ->

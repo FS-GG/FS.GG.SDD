@@ -43,7 +43,8 @@ module LifecycleMatrixTests =
             fun cell ->
                 match cell.Status with
                 | NotValidated "not yet evaluated" -> true
-                | _ -> false)
+                | _ -> false
+        )
 
     [<Fact>]
     let ``a clean run has no failing lifecycle cell`` () =
@@ -54,7 +55,8 @@ module LifecycleMatrixTests =
             fun cell ->
                 match cell.Status with
                 | Fail diagnostic -> failwith $"unexpected failure at {cell.Coordinates}: {diagnostic.Message}"
-                | _ -> ())
+                | _ -> ()
+        )
 
     [<Fact>]
     let ``a seeded single-cell divergence fails exactly that cell with a diagnostic`` () =

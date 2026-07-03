@@ -37,11 +37,16 @@ module TasksCommandTests =
     let workModelPath = $"readiness/{workId}/work-model.json"
 
     let initializedPlanReadyProject () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.runCharter root workId title |> ignore
         TestSupport.runSpecify root workId title |> ignore
-        TestSupport.runRequest { TestSupport.clarifyRequest root workId title with InputText = None } |> ignore
+
+        TestSupport.runRequest
+            { TestSupport.clarifyRequest root workId title with
+                InputText = None }
+        |> ignore
+
         TestSupport.runChecklist root workId title |> ignore
         TestSupport.runPlan root workId title |> ignore
         root
@@ -53,19 +58,22 @@ module TasksCommandTests =
         let projectYml = TestSupport.readRelative root ".fsgg/project.yml"
 
         let declared =
-            projectYml.Replace(
-                "  defaultWorkRoot: work",
-                $"  defaultWorkRoot: work\n  testFramework: {framework}")
+            projectYml.Replace("  defaultWorkRoot: work", $"  defaultWorkRoot: work\n  testFramework: {framework}")
 
         TestSupport.writeRelative root ".fsgg/project.yml" declared
 
     let private planReadyProjectDeclaring framework =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         declareTestFramework root framework
         TestSupport.runCharter root workId title |> ignore
         TestSupport.runSpecify root workId title |> ignore
-        TestSupport.runRequest { TestSupport.clarifyRequest root workId title with InputText = None } |> ignore
+
+        TestSupport.runRequest
+            { TestSupport.clarifyRequest root workId title with
+                InputText = None }
+        |> ignore
+
         TestSupport.runChecklist root workId title |> ignore
         TestSupport.runPlan root workId title |> ignore
         root
@@ -149,7 +157,12 @@ module TasksCommandTests =
         Assert.Contains("sourceIds:", tasks)
         Assert.Contains("requiredSkills:", tasks)
         Assert.Contains("requiredEvidence:", tasks)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = tasksPath && change.Operation = ArtifactOperation.Create)
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = tasksPath && change.Operation = ArtifactOperation.Create
+        )
+
         Assert.Equal(Some Analyze, report.NextAction |> Option.bind _.Command)
         Assert.True(report.Tasks.Value.TaskIds.Length >= 5)
         Assert.True(report.Tasks.Value.RequiredEvidenceCount >= report.Tasks.Value.TaskIds.Length)
@@ -164,15 +177,24 @@ module TasksCommandTests =
         Assert.False(TestSupport.existsRelative root ".fsgg/policy.yml")
         Assert.False(TestSupport.existsRelative root ".fsgg/capabilities.yml")
         Assert.False(TestSupport.existsRelative root ".fsgg/tooling.yml")
-        Assert.Contains(report.GovernanceCompatibility, fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated")
+
+        Assert.Contains(
+            report.GovernanceCompatibility,
+            fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated"
+        )
 
     [<Fact>]
     let ``tasks missing plan blocks before authored write`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.runCharter root workId title |> ignore
         TestSupport.runSpecify root workId title |> ignore
-        TestSupport.runRequest { TestSupport.clarifyRequest root workId title with InputText = None } |> ignore
+
+        TestSupport.runRequest
+            { TestSupport.clarifyRequest root workId title with
+                InputText = None }
+        |> ignore
+
         TestSupport.runChecklist root workId title |> ignore
 
         let report = TestSupport.runTasks root workId title
@@ -185,20 +207,34 @@ module TasksCommandTests =
     let ``tasks rerun preserves existing authored task state`` () =
         let root = initializedPlanReadyProject ()
         TestSupport.runTasks root workId title |> ignore
-        let authored = (TestSupport.readRelative root tasksPath).Replace("owner: \"sdd\"", "owner: \"platform\"")
+
+        let authored =
+            (TestSupport.readRelative root tasksPath).Replace("owner: \"sdd\"", "owner: \"platform\"")
+
         TestSupport.writeRelative root tasksPath authored
 
         let report = TestSupport.runTasks root workId title
 
         Assert.Equal(CommandOutcome.NoChange, report.Outcome)
         Assert.Equal(authored, TestSupport.readRelative root tasksPath)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = tasksPath && change.Operation = ArtifactOperation.NoChange)
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = tasksPath && change.Operation = ArtifactOperation.NoChange
+        )
 
     [<Fact>]
     let ``tasks marks existing tasks stale when source snapshots change`` () =
         let root = initializedPlanReadyProject ()
         TestSupport.runTasks root workId title |> ignore
-        let updatedSpec = (TestSupport.readRelative root specPath).Replace("## Ambiguities", "- FR-002: New task source requiring implementation. (Stories: US-001; Acceptance: AC-001)\n\n## Ambiguities")
+
+        let updatedSpec =
+            (TestSupport.readRelative root specPath)
+                .Replace(
+                    "## Ambiguities",
+                    "- FR-002: New task source requiring implementation. (Stories: US-001; Acceptance: AC-001)\n\n## Ambiguities"
+                )
+
         TestSupport.writeRelative root specPath updatedSpec
 
         let report = TestSupport.runTasks root workId title
@@ -215,7 +251,10 @@ module TasksCommandTests =
     let ``tasks dependency cycle blocks without mutation`` () =
         let root = initializedPlanReadyProject ()
         TestSupport.runTasks root workId title |> ignore
-        let original = (TestSupport.readRelative root tasksPath).Replace("dependencies: []", "dependencies: [\"T001\"]")
+
+        let original =
+            (TestSupport.readRelative root tasksPath).Replace("dependencies: []", "dependencies: [\"T001\"]")
+
         TestSupport.writeRelative root tasksPath original
 
         let report = TestSupport.runTasks root workId title
@@ -228,7 +267,10 @@ module TasksCommandTests =
     let ``tasks done without evidence blocks without mutation`` () =
         let root = initializedPlanReadyProject ()
         TestSupport.runTasks root workId title |> ignore
-        let original = (TestSupport.readRelative root tasksPath).Replace("status: pending", "status: done")
+
+        let original =
+            (TestSupport.readRelative root tasksPath).Replace("status: pending", "status: done")
+
         TestSupport.writeRelative root tasksPath original
 
         let report = TestSupport.runTasks root workId title
@@ -240,6 +282,7 @@ module TasksCommandTests =
     [<Fact>]
     let ``tasks dry run reports proposed changes without mutation`` () =
         let root = initializedPlanReadyProject ()
+
         let request =
             { TestSupport.tasksRequest root workId title with
                 DryRun = true }
@@ -248,12 +291,20 @@ module TasksCommandTests =
 
         Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
         Assert.False(TestSupport.existsRelative root tasksPath)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = tasksPath && change.SafeWriteDecision = "dryRunOnly")
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = tasksPath && change.SafeWriteDecision = "dryRunOnly"
+        )
 
     [<Fact>]
     let ``tasks refreshes generated work model when evidence source is present`` () =
         let root = initializedPlanReadyProject ()
-        TestSupport.writeRelative root $"work/{workId}/evidence.yml" """schemaVersion: 1
+
+        TestSupport.writeRelative
+            root
+            $"work/{workId}/evidence.yml"
+            """schemaVersion: 1
 evidence:
   - id: EV001
     kind: verification
@@ -297,14 +348,19 @@ evidence:
 
         Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
         Assert.True(TestSupport.existsRelative root workModelPath)
-        Assert.Contains(report.GeneratedViews, fun view ->
-            view.Path = workModelPath
-            && view.Currency = GeneratedViewCurrency.Current
-            && view.Sources |> List.exists (fun source -> source.Path = tasksPath))
+
+        Assert.Contains(
+            report.GeneratedViews,
+            fun view ->
+                view.Path = workModelPath
+                && view.Currency = GeneratedViewCurrency.Current
+                && view.Sources |> List.exists (fun source -> source.Path = tasksPath)
+        )
 
     [<Fact>]
     let ``tasks deterministic JSON is byte stable`` () =
         let root = initializedPlanReadyProject ()
+
         let request =
             { TestSupport.tasksRequest root workId title with
                 DryRun = true }

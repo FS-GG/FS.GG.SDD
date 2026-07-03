@@ -12,9 +12,7 @@ module Schemas =
           ContractVersion: string option
           Owner: SchemaOwner }
 
-    type GeneratorRef =
-        { Id: string
-          Version: string }
+    type GeneratorRef = { Id: string; Version: string }
 
     type ProviderParameterEntry =
         { Key: string
@@ -184,20 +182,50 @@ module Schemas =
     let toolingVersion = 1
 
     let entries: SchemaContractEntry list =
-        [ { Name = "providers"; SchemaVersion = providersVersion; ContractVersion = None; Owner = Sdd }
-          { Name = "project"; SchemaVersion = projectVersion; ContractVersion = None; Owner = Sdd }
-          { Name = "sdd"; SchemaVersion = sddVersion; ContractVersion = None; Owner = Sdd }
-          { Name = "agents"; SchemaVersion = agentsVersion; ContractVersion = None; Owner = Sdd }
-          { Name = "scaffold-provenance"; SchemaVersion = scaffoldProvenanceVersion; ContractVersion = None; Owner = Sdd }
+        [ { Name = "providers"
+            SchemaVersion = providersVersion
+            ContractVersion = None
+            Owner = Sdd }
+          { Name = "project"
+            SchemaVersion = projectVersion
+            ContractVersion = None
+            Owner = Sdd }
+          { Name = "sdd"
+            SchemaVersion = sddVersion
+            ContractVersion = None
+            Owner = Sdd }
+          { Name = "agents"
+            SchemaVersion = agentsVersion
+            ContractVersion = None
+            Owner = Sdd }
+          { Name = "scaffold-provenance"
+            SchemaVersion = scaffoldProvenanceVersion
+            ContractVersion = None
+            Owner = Sdd }
           { Name = "governance-handoff"
             SchemaVersion = governanceHandoffVersion
             ContractVersion = Some governanceHandoffContractVersion
             Owner = Sdd }
-          { Name = "skill-manifest"; SchemaVersion = skillManifestVersion; ContractVersion = None; Owner = Sdd }
-          { Name = "governance"; SchemaVersion = governanceVersion; ContractVersion = None; Owner = Governance }
-          { Name = "policy"; SchemaVersion = policyVersion; ContractVersion = None; Owner = Governance }
-          { Name = "capabilities"; SchemaVersion = capabilitiesVersion; ContractVersion = None; Owner = Governance }
-          { Name = "tooling"; SchemaVersion = toolingVersion; ContractVersion = None; Owner = Governance } ]
+          { Name = "skill-manifest"
+            SchemaVersion = skillManifestVersion
+            ContractVersion = None
+            Owner = Sdd }
+          { Name = "governance"
+            SchemaVersion = governanceVersion
+            ContractVersion = None
+            Owner = Governance }
+          { Name = "policy"
+            SchemaVersion = policyVersion
+            ContractVersion = None
+            Owner = Governance }
+          { Name = "capabilities"
+            SchemaVersion = capabilitiesVersion
+            ContractVersion = None
+            Owner = Governance }
+          { Name = "tooling"
+            SchemaVersion = toolingVersion
+            ContractVersion = None
+            Owner = Governance } ]
 
     // The single declared agent-skill root set (ADR-0014 §Decision 5). Bare repo-root
     // names; consumers append `skills/`. One place to add/rename a runtime root.

@@ -12,19 +12,21 @@ open FS.GG.SDD.Validation.ValidationHarness
 /// command, `init`/`update`, or effect interpreter references it (FR-008 / US3).
 module ValidationRunner =
     type RunnerOptions =
-        { /// Restrict the run to one declared matrix by name; `None` runs all four.
-          /// The other matrices' cells are still reported `NotValidated` so a partial
-          /// run never reads as a full pass (INV-1 / FR-007).
-          OnlyMatrix: string option
-          /// Override the declared plan. `None` uses the exhaustive `defaultPlan`; a
-          /// focused plan keeps the deterministic sweep cheap for fixtures/tests.
-          Plan: MatrixPlan option
-          /// Harness self-test seam: force the named cells (matrix name + exact
-          /// coordinates) to `Fail` with an actionable diagnostic. Used to prove the
-          /// report isolates a single failing cell while all others pass (US1
-          /// Independent Test). Empty for every real run. Genuine divergence detection
-          /// is exercised by the baseline/coverage matrices over real artifacts.
-          InjectedDivergences: (string * (string * string) list) list }
+        {
+            /// Restrict the run to one declared matrix by name; `None` runs all four.
+            /// The other matrices' cells are still reported `NotValidated` so a partial
+            /// run never reads as a full pass (INV-1 / FR-007).
+            OnlyMatrix: string option
+            /// Override the declared plan. `None` uses the exhaustive `defaultPlan`; a
+            /// focused plan keeps the deterministic sweep cheap for fixtures/tests.
+            Plan: MatrixPlan option
+            /// Harness self-test seam: force the named cells (matrix name + exact
+            /// coordinates) to `Fail` with an actionable diagnostic. Used to prove the
+            /// report isolates a single failing cell while all others pass (US1
+            /// Independent Test). Empty for every real run. Genuine divergence detection
+            /// is exercised by the baseline/coverage matrices over real artifacts.
+            InjectedDivergences: (string * (string * string) list) list
+        }
 
     /// The default options: run all four matrices.
     val defaultOptions: RunnerOptions

@@ -97,36 +97,51 @@ module Clarification =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Clarifications
 
         match frontMatter snapshot with
-        | None -> Error [ Diagnostics.malformedSchemaVersion artifact "Clarification artifact is missing structured front matter." ]
+        | None ->
+            Error
+                [ Diagnostics.malformedSchemaVersion
+                      artifact
+                      "Clarification artifact is missing structured front matter." ]
         | Some(yaml, body) ->
             match parseYaml yaml with
             | None -> Error [ Diagnostics.malformedSchemaVersion artifact "Clarification front matter is empty." ]
             | Some root ->
                 let version, versionDiagnostics = schemaVersion artifact root
-                let workId = tryScalarAt [ "workId" ] root |> Option.bind (Identifiers.createWorkId >> Result.toOption)
-                let stage = tryScalarAt [ "stage" ] root |> Option.bind (Identifiers.parseStage >> Result.toOption)
+
+                let workId =
+                    tryScalarAt [ "workId" ] root
+                    |> Option.bind (Identifiers.createWorkId >> Result.toOption)
+
+                let stage =
+                    tryScalarAt [ "stage" ] root
+                    |> Option.bind (Identifiers.parseStage >> Result.toOption)
+
                 let sourceSpec = tryScalarAt [ "sourceSpec" ] root
 
                 match version, workId, stage, sourceSpec, versionDiagnostics with
                 | Some schema, Some workId, Some stage, Some sourceSpec, [] ->
-                    Ok
-                        ({ SchemaVersion = schema
-                           WorkId = workId
-                           Title = tryScalarAt [ "title" ] root |> Option.defaultValue (Identifiers.workIdValue workId)
-                           Stage = stage
-                           ChangeTier = tryScalarAt [ "changeTier" ] root |> Option.defaultValue "tier1"
-                           Status = tryScalarAt [ "status" ] root |> Option.defaultValue "needsAnswers"
-                           SourceSpec = sourceSpec
-                           PublicOrToolFacingImpact = boolScalarAt [ "publicOrToolFacingImpact" ] root },
-                         body)
+                    Ok(
+                        { SchemaVersion = schema
+                          WorkId = workId
+                          Title =
+                            tryScalarAt [ "title" ] root
+                            |> Option.defaultValue (Identifiers.workIdValue workId)
+                          Stage = stage
+                          ChangeTier = tryScalarAt [ "changeTier" ] root |> Option.defaultValue "tier1"
+                          Status = tryScalarAt [ "status" ] root |> Option.defaultValue "needsAnswers"
+                          SourceSpec = sourceSpec
+                          PublicOrToolFacingImpact = boolScalarAt [ "publicOrToolFacingImpact" ] root },
+                        body
+                    )
                 | _ ->
-                    Error
-                        (versionDiagnostics
-                         @ [ Diagnostics.workModelInconsistent
-                                 artifact
-                                 "Clarification front matter is incomplete."
-                                 "Add schemaVersion, workId, title, stage: clarify, changeTier, status, and sourceSpec to clarifications.md."
-                                 [] ])
+                    Error(
+                        versionDiagnostics
+                        @ [ Diagnostics.workModelInconsistent
+                                artifact
+                                "Clarification front matter is incomplete."
+                                "Add schemaVersion, workId, title, stage: clarify, changeTier, status, and sourceSpec to clarifications.md."
+                                [] ]
+                    )
 
     let questionIdsInLine line =
         Regex.Matches(line, @"\bCQ-\d{3,}\b", RegexOptions.IgnoreCase)
@@ -254,10 +269,14 @@ module Clarification =
                 None
             else
                 let lowered = line.ToLowerInvariant()
+
                 let state =
-                    if lowered.Contains("accepted deferral") || lowered.Contains("deferred") then "acceptedDeferral"
-                    elif lowered.Contains("non-blocking") then "nonBlocking"
-                    else "blocking"
+                    if lowered.Contains("accepted deferral") || lowered.Contains("deferred") then
+                        "acceptedDeferral"
+                    elif lowered.Contains("non-blocking") then
+                        "nonBlocking"
+                    else
+                        "blocking"
 
                 Some
                     { AmbiguityId = ambiguity
@@ -265,8 +284,10 @@ module Clarification =
                       State = state
                       Explanation = line.Trim().TrimStart('-', '*').Trim()
                       RequiredCorrection =
-                        if state = "blocking" then "Provide a concrete decision, accepted deferral, or mark the ambiguity non-blocking."
-                        else "Keep the ambiguity visible to later lifecycle stages."
+                        if state = "blocking" then
+                            "Provide a concrete decision, accepted deferral, or mark the ambiguity non-blocking."
+                        else
+                            "Keep the ambiguity visible to later lifecycle stages."
                       SourceLocation = sourceLocation lineNumber })
 
     let parseClarificationFacts (snapshot: FileSnapshot) =
@@ -275,18 +296,39 @@ module Clarification =
         match parseClarificationFrontMatter snapshot with
         | Error diagnostics -> Error diagnostics
         | Ok(frontMatter, _) ->
-            let text = (if String.IsNullOrEmpty snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
+            let text =
+                (if String.IsNullOrEmpty snapshot.Text then
+                     ""
+                 else
+                     snapshot.Text)
+                    .Replace("\r\n", "\n")
+
             let standardSections = clarificationStandardSections ()
-            let missingStandardSections = standardSections |> List.filter (fun heading -> not (hasHeading heading text))
+
+            let missingStandardSections =
+                standardSections |> List.filter (fun heading -> not (hasHeading heading text))
+
             let questions = parseClarificationQuestions text
             let answers = parseClarificationAnswers text
-            let decisions = parseClarificationDecisionsInSection "Decisions" ConcreteDecision text
-            let deferrals = parseClarificationDecisionsInSection "Accepted Deferrals" AcceptedDeferral text
+
+            let decisions =
+                parseClarificationDecisionsInSection "Decisions" ConcreteDecision text
+
+            let deferrals =
+                parseClarificationDecisionsInSection "Accepted Deferrals" AcceptedDeferral text
+
             let remaining = parseRemainingAmbiguity text
 
             let diagnostics =
-                [ duplicateScopedDiagnostics artifact (fun (id: ClarificationQuestionId) -> id.Value) (questions |> List.map (fun q -> q.QuestionId, q.SourceLocation))
-                  duplicateScopedDiagnostics artifact (fun (id: DecisionId) -> id.Value) ((decisions @ deferrals) |> List.map (fun decision -> decision.DecisionId, decision.SourceLocation))
+                [ duplicateScopedDiagnostics
+                      artifact
+                      (fun (id: ClarificationQuestionId) -> id.Value)
+                      (questions |> List.map (fun q -> q.QuestionId, q.SourceLocation))
+                  duplicateScopedDiagnostics
+                      artifact
+                      (fun (id: DecisionId) -> id.Value)
+                      ((decisions @ deferrals)
+                       |> List.map (fun decision -> decision.DecisionId, decision.SourceLocation))
                   missingStandardSections
                   |> List.map (fun heading ->
                       Diagnostics.workModelInconsistent

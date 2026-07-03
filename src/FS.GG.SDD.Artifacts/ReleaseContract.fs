@@ -114,6 +114,7 @@ module ReleaseContract =
 
     let channelOfVersion (version: string) =
         let value = if String.IsNullOrEmpty version then "" else version.Trim()
+
         let major =
             match value.Split('.') |> Array.tryHead with
             | Some head ->
@@ -150,7 +151,11 @@ module ReleaseContract =
         |> List.map (fun name ->
             { Name = name
               Kind = kind
-              Stability = (if List.contains name stableNames then Stable else AdditiveOptional) })
+              Stability =
+                (if List.contains name stableNames then
+                     Stable
+                 else
+                     AdditiveOptional) })
 
     let jsonInventory stableNames names = inventory JsonField stableNames names
     let markdownInventory names = inventory MarkdownSection [] names
@@ -190,29 +195,93 @@ module ReleaseContract =
                 GovernanceContractVersionRange = Some "1.x" } ]
 
         let workModel =
-            jsonViewEntry "work-model.json" WorkModel AdditiveOptional [ "schemaVersion" ]
-                [ "schemaVersion"; "modelVersion"; "workId"; "project"; "sources"; "workItem"
-                  "requirements"; "decisions"; "tasks"; "evidence"; "generatedViews"; "diagnostics"
+            jsonViewEntry
+                "work-model.json"
+                WorkModel
+                AdditiveOptional
+                [ "schemaVersion" ]
+                [ "schemaVersion"
+                  "modelVersion"
+                  "workId"
+                  "project"
+                  "sources"
+                  "workItem"
+                  "requirements"
+                  "decisions"
+                  "tasks"
+                  "evidence"
+                  "generatedViews"
+                  "diagnostics"
                   "governanceBoundaries" ]
 
         let analysis =
-            jsonViewEntry "analysis.json" Analysis AdditiveOptional [ "schemaVersion" ]
-                [ "schemaVersion"; "viewVersion"; "workId"; "stage"; "status"; "generator"; "sources"
-                  "sourceRelationships"; "readiness"; "findings"; "generatedViews"; "optionalBoundaryFacts"
-                  "diagnostics"; "nextAction" ]
+            jsonViewEntry
+                "analysis.json"
+                Analysis
+                AdditiveOptional
+                [ "schemaVersion" ]
+                [ "schemaVersion"
+                  "viewVersion"
+                  "workId"
+                  "stage"
+                  "status"
+                  "generator"
+                  "sources"
+                  "sourceRelationships"
+                  "readiness"
+                  "findings"
+                  "generatedViews"
+                  "optionalBoundaryFacts"
+                  "diagnostics"
+                  "nextAction" ]
 
         let verify =
-            jsonViewEntry "verify.json" Verify AdditiveOptional [ "schemaVersion" ]
-                [ "schemaVersion"; "viewVersion"; "workId"; "stage"; "status"; "generator"; "sources"
-                  "lifecycleReadiness"; "taskGraph"; "evidenceDispositions"; "testDispositions"
-                  "skillVisibility"; "generatedViews"; "findings"; "governanceCompatibility"; "diagnostics"
-                  "readiness"; "nextAction" ]
+            jsonViewEntry
+                "verify.json"
+                Verify
+                AdditiveOptional
+                [ "schemaVersion" ]
+                [ "schemaVersion"
+                  "viewVersion"
+                  "workId"
+                  "stage"
+                  "status"
+                  "generator"
+                  "sources"
+                  "lifecycleReadiness"
+                  "taskGraph"
+                  "evidenceDispositions"
+                  "testDispositions"
+                  "skillVisibility"
+                  "generatedViews"
+                  "findings"
+                  "governanceCompatibility"
+                  "diagnostics"
+                  "readiness"
+                  "nextAction" ]
 
         let ship =
-            jsonViewEntry "ship.json" Ship AdditiveOptional [ "schemaVersion" ]
-                [ "schemaVersion"; "viewVersion"; "workId"; "stage"; "status"; "generator"; "sources"
-                  "lifecycleReadiness"; "verificationReadiness"; "evidenceDispositions"; "generatedViews"
-                  "disposition"; "findings"; "governanceCompatibility"; "diagnostics"; "readiness"
+            jsonViewEntry
+                "ship.json"
+                Ship
+                AdditiveOptional
+                [ "schemaVersion" ]
+                [ "schemaVersion"
+                  "viewVersion"
+                  "workId"
+                  "stage"
+                  "status"
+                  "generator"
+                  "sources"
+                  "lifecycleReadiness"
+                  "verificationReadiness"
+                  "evidenceDispositions"
+                  "generatedViews"
+                  "disposition"
+                  "findings"
+                  "governanceCompatibility"
+                  "diagnostics"
+                  "readiness"
                   "nextAction" ]
 
         // The governance handoff is the one cross-repo contract: it carries a
@@ -226,9 +295,18 @@ module ReleaseContract =
               Stability = Stable
               Determinism = determinism
               Inventory =
-                jsonInventory [ "schemaVersion"; "contractVersion" ]
-                    [ "schemaVersion"; "contractVersion"; "generatorVersion"; "workId"; "sources"
-                      "evidence"; "governedReferences"; "governanceConfig"; "readiness"; "diagnostics" ]
+                jsonInventory
+                    [ "schemaVersion"; "contractVersion" ]
+                    [ "schemaVersion"
+                      "contractVersion"
+                      "generatorVersion"
+                      "workId"
+                      "sources"
+                      "evidence"
+                      "governedReferences"
+                      "governanceConfig"
+                      "readiness"
+                      "diagnostics" ]
               SourceArtifact = generatedViewSource "readiness/<id>/governance-handoff.json"
               BaselinePresent = true }
 
@@ -236,9 +314,23 @@ module ReleaseContract =
             markdownViewEntry "summary.md" Summary [ "Generated-view currency"; "Diagnostics"; "Next action" ]
 
         let guidance =
-            { jsonViewEntry "agent-commands/<target>/guidance.json" AgentCommands AdditiveOptional [ "schemaVersion" ]
-                [ "schemaVersion"; "viewVersion"; "workId"; "targetId"; "generator"; "generated"; "sources"
-                  "behaviorModelDigest"; "commands"; "skills"; "renderedFiles"; "diagnostics" ] with
+            { jsonViewEntry
+                  "agent-commands/<target>/guidance.json"
+                  AgentCommands
+                  AdditiveOptional
+                  [ "schemaVersion" ]
+                  [ "schemaVersion"
+                    "viewVersion"
+                    "workId"
+                    "targetId"
+                    "generator"
+                    "generated"
+                    "sources"
+                    "behaviorModelDigest"
+                    "commands"
+                    "skills"
+                    "renderedFiles"
+                    "diagnostics" ] with
                 SourceArtifact = generatedViewSource "readiness/<id>/agent-commands/<target>/guidance.json" }
 
         let commandsMd =
@@ -255,18 +347,49 @@ module ReleaseContract =
               Stability = AdditiveOptional
               Determinism = determinism
               Inventory =
-                jsonInventory [ "schemaVersion" ]
-                    [ "schemaVersion"; "reportVersion"; "command"; "context"; "invocation"; "outcome"
-                      "changedArtifacts"; "specification"; "clarification"; "checklist"; "plan"; "tasks"
-                      "analysis"; "evidence"; "verification"; "ship"; "agentGuidance"; "refresh"; "scaffold"
+                jsonInventory
+                    [ "schemaVersion" ]
+                    [ "schemaVersion"
+                      "reportVersion"
+                      "command"
+                      "context"
+                      "invocation"
+                      "outcome"
+                      "changedArtifacts"
+                      "specification"
+                      "clarification"
+                      "checklist"
+                      "plan"
+                      "tasks"
+                      "analysis"
+                      "evidence"
+                      "verification"
+                      "ship"
+                      "agentGuidance"
+                      "refresh"
+                      "scaffold"
                       // Feature 053: additive remediation report blocks.
-                      "doctor"; "upgrade"
-                      "generatedViews"; "diagnostics"; "governanceCompatibility"; "nextAction"; "help" ]
+                      "doctor"
+                      "upgrade"
+                      "generatedViews"
+                      "diagnostics"
+                      "governanceCompatibility"
+                      "nextAction"
+                      "help" ]
               SourceArtifact =
-                (match ArtifactRef.create "src/FS.GG.SDD.Commands/CommandSerialization.fs" (ArtifactRef.Other "commandOutput") Sdd false with
+                (match
+                    ArtifactRef.create
+                        "src/FS.GG.SDD.Commands/CommandSerialization.fs"
+                        (ArtifactRef.Other "commandOutput")
+                        Sdd
+                        false
+                 with
                  | Ok artifact -> artifact
                  | Error message ->
-                     failwithf "release contract source artifact path %s rejected: %s" "src/FS.GG.SDD.Commands/CommandSerialization.fs" message)
+                     failwithf
+                         "release contract source artifact path %s rejected: %s"
+                         "src/FS.GG.SDD.Commands/CommandSerialization.fs"
+                         message)
               BaselinePresent = true }
 
         { SchemaVersion = 1
@@ -274,8 +397,16 @@ module ReleaseContract =
           Identity = identity
           Compatibility = compatibility
           Catalog =
-            [ workModel; analysis; verify; ship; governanceHandoff; summary; guidance; commandsMd
-              skillsMd; commandReport ]
+            [ workModel
+              analysis
+              verify
+              ship
+              governanceHandoff
+              summary
+              guidance
+              commandsMd
+              skillsMd
+              commandReport ]
           // Additive-only release (adds public surface, breaks no existing
           // contract): no migration note (FR-009; classified in T002).
           Migrations = [] }
@@ -316,9 +447,11 @@ module ReleaseContract =
         writer.WriteString("stability", stabilityClassValue entry.Stability)
         writer.WriteString("determinism", entry.Determinism)
         writer.WriteStartArray("inventory")
+
         entry.Inventory
         |> List.sortBy (fun item -> item.Name)
         |> List.iter (writeInventoryItem writer)
+
         writer.WriteEndArray()
         writer.WriteStartObject("sourceArtifact")
         writer.WriteString("path", entry.SourceArtifact.Path)
@@ -345,12 +478,16 @@ module ReleaseContract =
         writer.WriteString("version", release.Identity.Version)
         writer.WriteString("channel", releaseChannelValue release.Identity.Channel)
         writer.WriteStartArray("packageIds")
-        release.Identity.PackageIds |> List.iter (fun id -> writer.WriteStringValue(id: string))
+
+        release.Identity.PackageIds
+        |> List.iter (fun id -> writer.WriteStringValue(id: string))
+
         writer.WriteEndArray()
         writer.WriteString("cliCommandName", release.Identity.CliCommandName)
         writer.WriteEndObject()
 
         writer.WriteStartArray("compatibility")
+
         release.Compatibility
         |> List.sortBy (fun entry -> entry.SddVersionLine)
         |> List.iter (fun entry ->
@@ -359,15 +496,19 @@ module ReleaseContract =
             writer.WriteString("specKitRange", entry.SpecKitRange)
             writeNullableString writer "governanceContractVersionRange" entry.GovernanceContractVersionRange
             writer.WriteEndObject())
+
         writer.WriteEndArray()
 
         writer.WriteStartArray("catalog")
+
         release.Catalog
         |> List.sortBy (fun entry -> entry.Contract)
         |> List.iter (writeEntry writer)
+
         writer.WriteEndArray()
 
         writer.WriteStartArray("migrations")
+
         release.Migrations
         |> List.sortBy (fun note -> note.Version)
         |> List.iter (fun note ->
@@ -375,9 +516,13 @@ module ReleaseContract =
             writer.WriteString("version", note.Version)
             writer.WriteString("path", note.Path)
             writer.WriteStartArray("breakingChanges")
-            note.BreakingChanges |> List.iter (fun change -> writer.WriteStringValue(change: string))
+
+            note.BreakingChanges
+            |> List.iter (fun change -> writer.WriteStringValue(change: string))
+
             writer.WriteEndArray()
             writer.WriteEndObject())
+
         writer.WriteEndArray()
 
         writer.WriteEndObject()
@@ -441,7 +586,10 @@ module ReleaseContract =
             use document = JsonDocument.Parse json
             let root = document.RootElement
             let prop (name: string) (element: JsonElement) = element.GetProperty name
-            let str name element = (prop name element).GetString() |> Option.ofObj |> Option.defaultValue ""
+
+            let str name element =
+                (prop name element).GetString() |> Option.ofObj |> Option.defaultValue ""
+
             let intp name element = (prop name element).GetInt32()
 
             let artifactOf (element: JsonElement) =
@@ -452,8 +600,7 @@ module ReleaseContract =
 
                 match ArtifactRef.create path kind owner required with
                 | Ok artifact -> artifact
-                | Error message ->
-                    failwithf "release contract: parsed-back artifact path %s rejected: %s" path message
+                | Error message -> failwithf "release contract: parsed-back artifact path %s rejected: %s" path message
 
             let generatorElement = prop "generatorVersion" root
 
@@ -488,7 +635,10 @@ module ReleaseContract =
                     let kind =
                         match kindElement.TryGetProperty "generatedView" with
                         | true, view ->
-                            GeneratedViewContract(parseViewKind (view.GetString() |> Option.ofObj |> Option.defaultValue ""), parseFormat (str "format" kindElement))
+                            GeneratedViewContract(
+                                parseViewKind (view.GetString() |> Option.ofObj |> Option.defaultValue ""),
+                                parseFormat (str "format" kindElement)
+                            )
                         | _ -> CommandOutputContract
 
                     let inventory =

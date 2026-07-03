@@ -124,7 +124,13 @@ module CompositionResult =
 
     /// Assemble a result record from the run facts. The verdict is resolved here so the record,
     /// its verdict, and its failure block are always mutually consistent.
-    let makeRecord (outcome: string) (diagnostic: string option) (factDiagnostic: string) (facts: Facts) (sensed: Sensed) =
+    let makeRecord
+        (outcome: string)
+        (diagnostic: string option)
+        (factDiagnostic: string)
+        (facts: Facts)
+        (sensed: Sensed)
+        =
         let verdict = resolveVerdict outcome diagnostic factDiagnostic facts
 
         { SchemaVersion = 1
@@ -177,7 +183,10 @@ module CompositionResult =
         writeNullableString writer "scaffoldDiagnostic" record.ScaffoldDiagnostic
 
         writer.WriteStartObject("facts")
-        orderedFacts record.Facts |> List.iter (fun (name, value) -> writer.WriteBoolean(name, value))
+
+        orderedFacts record.Facts
+        |> List.iter (fun (name, value) -> writer.WriteBoolean(name, value))
+
         writer.WriteEndObject()
 
         match record.Failure with

@@ -89,6 +89,7 @@ module internal HandlersAgents =
         writer.WriteEndArray()
         writeDigestObject writer "behaviorModelDigest" (Some sourceDigest |> Option.map (fun _ -> behaviorDigest))
         writer.WriteStartArray("commands")
+
         commands
         |> List.sortBy (fun command -> command.Id)
         |> List.iter (fun command ->
@@ -99,8 +100,10 @@ module internal HandlersAgents =
             writer.WriteString("purpose", command.Purpose)
             writeStringArray writer "relatedIds" command.RelatedIds
             writer.WriteEndObject())
+
         writer.WriteEndArray()
         writer.WriteStartArray("skills")
+
         skills
         |> List.sortBy (fun skill -> skill.Id)
         |> List.iter (fun skill ->
@@ -110,8 +113,10 @@ module internal HandlersAgents =
             writer.WriteString("capability", skill.Capability)
             writeStringArray writer "relatedIds" skill.RelatedIds
             writer.WriteEndObject())
+
         writer.WriteEndArray()
         writer.WriteStartArray("renderedFiles")
+
         renderedFiles
         |> List.sortBy fst
         |> List.iter (fun (path, kind) ->
@@ -119,6 +124,7 @@ module internal HandlersAgents =
             writer.WriteString("path", path)
             writer.WriteString("kind", kind)
             writer.WriteEndObject())
+
         writer.WriteEndArray()
         writer.WriteStartArray("diagnostics")
         writer.WriteEndArray()
@@ -130,8 +136,13 @@ module internal HandlersAgents =
         let builder = StringBuilder()
         builder.AppendLine($"# Agent commands for {targetId} (generated)") |> ignore
         builder.AppendLine("") |> ignore
-        builder.AppendLine($"Generated from `{workModelPath workId}`. This is a generated projection of the") |> ignore
-        builder.AppendLine("normalized work model, not an authored source of truth. See `guidance.json`.") |> ignore
+
+        builder.AppendLine($"Generated from `{workModelPath workId}`. This is a generated projection of the")
+        |> ignore
+
+        builder.AppendLine("normalized work model, not an authored source of truth. See `guidance.json`.")
+        |> ignore
+
         builder.AppendLine("") |> ignore
 
         commands
@@ -150,8 +161,13 @@ module internal HandlersAgents =
         let builder = StringBuilder()
         builder.AppendLine($"# Agent skills for {targetId} (generated)") |> ignore
         builder.AppendLine("") |> ignore
-        builder.AppendLine($"Generated from `{workModelPath workId}`. This is a generated projection of the") |> ignore
-        builder.AppendLine("normalized work model, not an authored source of truth. See `guidance.json`.") |> ignore
+
+        builder.AppendLine($"Generated from `{workModelPath workId}`. This is a generated projection of the")
+        |> ignore
+
+        builder.AppendLine("normalized work model, not an authored source of truth. See `guidance.json`.")
+        |> ignore
+
         builder.AppendLine("") |> ignore
 
         skills
@@ -174,7 +190,8 @@ module internal HandlersAgents =
     let agentGuidanceFindings (diagnostics: Diagnostic list) =
         diagnostics
         |> DiagnosticsModule.sort
-        |> List.mapi (fun index diagnostic -> sprintf "GF%03d" (index + 1), diagnostic, agentGuidanceFindingSeverity diagnostic)
+        |> List.mapi (fun index diagnostic ->
+            sprintf "GF%03d" (index + 1), diagnostic, agentGuidanceFindingSeverity diagnostic)
 
     let computeAgentsPlan model =
         let summaries, diagnostics, generatedViews, effects =
@@ -189,11 +206,15 @@ module internal HandlersAgents =
                     | None -> []
                     | Some config ->
                         let noTargets =
-                            if List.isEmpty config.Targets then [ agentsNoTargets ".fsgg/agents.yml" ] else []
+                            if List.isEmpty config.Targets then
+                                [ agentsNoTargets ".fsgg/agents.yml" ]
+                            else
+                                []
 
                         let invalidTargets =
                             config.Targets
-                            |> List.filter (fun target -> not (agentRootResolvesWithinProject workId target.GeneratedRoot))
+                            |> List.filter (fun target ->
+                                not (agentRootResolvesWithinProject workId target.GeneratedRoot))
                             |> List.map (fun target -> agentsInvalidGeneratedRoot ".fsgg/agents.yml" target.Id)
 
                         let invalidWorkModel =
@@ -219,7 +240,10 @@ module internal HandlersAgents =
                     | None -> [ agentsEarlyStageGuidance (earlyStagePresentStages workId model) ], None
                     | Some snap ->
                         match WorkModelModule.parseWorkModel snap with
-                        | Error errs -> (errs |> List.map (fun diagnostic -> agentsMalformedWorkModel workModelP diagnostic.Message)), None
+                        | Error errs ->
+                            (errs
+                             |> List.map (fun diagnostic -> agentsMalformedWorkModel workModelP diagnostic.Message)),
+                            None
                         | Ok wm when not (String.Equals(wm.WorkId, workId, StringComparison.OrdinalIgnoreCase)) ->
                             [ agentsWorkModelIdentityMismatch workModelP workId wm.WorkId ], None
                         | Ok wm ->
@@ -227,7 +251,8 @@ module internal HandlersAgents =
 
                             let unknownRefs =
                                 embedded
-                                |> List.filter (fun diagnostic -> diagnostic.Id.StartsWith("unknownReference", StringComparison.OrdinalIgnoreCase))
+                                |> List.filter (fun diagnostic ->
+                                    diagnostic.Id.StartsWith("unknownReference", StringComparison.OrdinalIgnoreCase))
                                 |> List.collect (fun diagnostic ->
                                     match diagnostic.RelatedIds with
                                     | [] -> [ agentsUnknownSourceReference workModelP diagnostic.Id ]
@@ -243,22 +268,41 @@ module internal HandlersAgents =
                                 embedded
                                 |> List.filter (fun diagnostic ->
                                     diagnostic.Severity = DiagnosticSeverity.DiagnosticError
-                                    && not (diagnostic.Id.StartsWith("unknownReference", StringComparison.OrdinalIgnoreCase))
+                                    && not (
+                                        diagnostic.Id.StartsWith(
+                                            "unknownReference",
+                                            StringComparison.OrdinalIgnoreCase
+                                        )
+                                    )
                                     && not (signalsStaleView diagnostic))
 
                             let blockedDiag =
                                 if List.isEmpty otherBlocking then
                                     []
                                 else
-                                    [ agentsBlockedWorkModel workModelP (otherBlocking |> List.map (fun diagnostic -> diagnostic.Id) |> List.distinct |> List.sort) ]
+                                    [ agentsBlockedWorkModel
+                                          workModelP
+                                          (otherBlocking
+                                           |> List.map (fun diagnostic -> diagnostic.Id)
+                                           |> List.distinct
+                                           |> List.sort) ]
 
                             let gateDiags = unknownRefs @ staleMarkers @ blockedDiag
 
-                            if List.isEmpty gateDiags then [], Some wm else gateDiags, None
+                            if List.isEmpty gateDiags then
+                                [], Some wm
+                            else
+                                gateDiags, None
 
-                let workModelText = workModelSnap |> Option.map (fun snap -> snap.Text) |> Option.defaultValue ""
+                let workModelText =
+                    workModelSnap |> Option.map (fun snap -> snap.Text) |> Option.defaultValue ""
+
                 let sourceDigest = SchemaVersionModule.sha256Text workModelText
-                let equivalenceRequired = configOpt |> Option.map (fun config -> config.RequireEquivalentClaudeAndCodexBehavior) |> Option.defaultValue true
+
+                let equivalenceRequired =
+                    configOpt
+                    |> Option.map (fun config -> config.RequireEquivalentClaudeAndCodexBehavior)
+                    |> Option.defaultValue true
 
                 let targetResults =
                     match configOpt, workModelOpt with
@@ -274,7 +318,19 @@ module internal HandlersAgents =
                             let commandsPath = root + "/commands.md"
                             let skillsPath = root + "/skills.md"
                             let renderedFiles = [ commandsPath, "commands"; skillsPath, "skills" ]
-                            let manifestJson = agentGuidanceManifestJson workId target.Id request.GeneratorVersion workModelP sourceDigest behaviorDigest guidanceModel.Commands guidanceModel.Skills renderedFiles
+
+                            let manifestJson =
+                                agentGuidanceManifestJson
+                                    workId
+                                    target.Id
+                                    request.GeneratorVersion
+                                    workModelP
+                                    sourceDigest
+                                    behaviorDigest
+                                    guidanceModel.Commands
+                                    guidanceModel.Skills
+                                    renderedFiles
+
                             let commandsMd = agentCommandsMarkdown workId target.Id guidanceModel.Commands
                             let skillsMd = agentSkillsMarkdown workId target.Id guidanceModel.Skills
 
@@ -284,19 +340,43 @@ module internal HandlersAgents =
                                 | Some existing ->
                                     match parseGeneratedAgentGuidance existing with
                                     | Error errs ->
-                                        let message = errs |> List.tryHead |> Option.map (fun diagnostic -> diagnostic.Message) |> Option.defaultValue "Generated agent guidance is malformed."
-                                        GeneratedViewCurrency.Malformed, [ agentsMalformedGeneratedGuidance guidancePath message ], false
+                                        let message =
+                                            errs
+                                            |> List.tryHead
+                                            |> Option.map (fun diagnostic -> diagnostic.Message)
+                                            |> Option.defaultValue "Generated agent guidance is malformed."
+
+                                        GeneratedViewCurrency.Malformed,
+                                        [ agentsMalformedGeneratedGuidance guidancePath message ],
+                                        false
                                     | Ok manifest ->
-                                        let recordedDigest = manifest.Sources |> List.tryPick (fun source -> source.Digest) |> Option.map (fun digest -> digest.Value)
+                                        let recordedDigest =
+                                            manifest.Sources
+                                            |> List.tryPick (fun source -> source.Digest)
+                                            |> Option.map (fun digest -> digest.Value)
+
                                         let digestMatches = recordedDigest = Some sourceDigest.Value
-                                        let behaviorMatches = String.Equals(manifest.BehaviorModelDigest.Value, behaviorDigest.Value, StringComparison.OrdinalIgnoreCase)
+
+                                        let behaviorMatches =
+                                            String.Equals(
+                                                manifest.BehaviorModelDigest.Value,
+                                                behaviorDigest.Value,
+                                                StringComparison.OrdinalIgnoreCase
+                                            )
+
                                         let divergent = equivalenceRequired && not behaviorMatches
 
                                         if digestMatches && behaviorMatches then
                                             GeneratedViewCurrency.Current, [], false
                                         else
                                             let staleDiag = [ agentsStaleGeneratedGuidance guidancePath target.Id ]
-                                            let divergenceDiag = if divergent then [ agentsBehaviorDivergence guidancePath [ target.Id ] ] else []
+
+                                            let divergenceDiag =
+                                                if divergent then
+                                                    [ agentsBehaviorDivergence guidancePath [ target.Id ] ]
+                                                else
+                                                    []
+
                                             GeneratedViewCurrency.Stale, (staleDiag @ divergenceDiag), divergent
 
                             {| TargetId = target.Id
@@ -312,18 +392,35 @@ module internal HandlersAgents =
                                Divergent = divergent |})
                     | _ -> []
 
-                let targetDiagnostics = targetResults |> List.collect (fun result -> result.Diagnostics)
+                let targetDiagnostics =
+                    targetResults |> List.collect (fun result -> result.Diagnostics)
+
                 let baseDiagnostics = projectDiags @ duplicateDiags @ configDiags @ workModelDiags
 
                 baseDiagnostics @ targetDiagnostics,
                 (fun hasBlocking diagnostics ->
-                    let hasWarning = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticWarning)
+                    let hasWarning =
+                        diagnostics
+                        |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticWarning)
 
                     let divergentTargetIds =
-                        targetResults |> List.filter (fun result -> result.Divergent) |> List.map (fun result -> result.TargetId) |> List.distinct |> List.sort
+                        targetResults
+                        |> List.filter (fun result -> result.Divergent)
+                        |> List.map (fun result -> result.TargetId)
+                        |> List.distinct
+                        |> List.sort
 
-                    let generatedTargetIds = targetResults |> List.map (fun result -> result.TargetId) |> List.distinct |> List.sort
-                    let generatedRoots = targetResults |> List.map (fun result -> result.Root) |> List.distinct |> List.sort
+                    let generatedTargetIds =
+                        targetResults
+                        |> List.map (fun result -> result.TargetId)
+                        |> List.distinct
+                        |> List.sort
+
+                    let generatedRoots =
+                        targetResults
+                        |> List.map (fun result -> result.Root)
+                        |> List.distinct
+                        |> List.sort
 
                     let refusedTargetIds =
                         targetResults
@@ -353,32 +450,68 @@ module internal HandlersAgents =
                                 result.GuidancePath
                                 "agent-commands"
                                 request.GeneratorVersion
-                                [ { Path = workModelP; Digest = Some sourceDigest; SchemaVersion = Some 1; SchemaStatus = Some "current" } ]
+                                [ { Path = workModelP
+                                    Digest = Some sourceDigest
+                                    SchemaVersion = Some 1
+                                    SchemaStatus = Some "current" } ]
                                 None
-                                (if hasBlocking && (result.Currency = GeneratedViewCurrency.Missing || result.Currency = GeneratedViewCurrency.Stale) then GeneratedViewCurrency.Blocked else result.Currency)
+                                (if
+                                     hasBlocking
+                                     && (result.Currency = GeneratedViewCurrency.Missing
+                                         || result.Currency = GeneratedViewCurrency.Stale)
+                                 then
+                                     GeneratedViewCurrency.Blocked
+                                 else
+                                     result.Currency)
                                 (result.Diagnostics |> List.map (fun diagnostic -> diagnostic.Id)))
 
                     let disposition =
-                        if hasBlocking then "blocked"
-                        elif isEarlyStage then "early-stage"
-                        elif targetResults |> List.exists (fun result -> result.Currency = GeneratedViewCurrency.Stale) && request.DryRun then "stale"
-                        elif hasWarning then "advisory"
-                        else "generated-current"
+                        if hasBlocking then
+                            "blocked"
+                        elif isEarlyStage then
+                            "early-stage"
+                        elif
+                            targetResults
+                            |> List.exists (fun result -> result.Currency = GeneratedViewCurrency.Stale)
+                            && request.DryRun
+                        then
+                            "stale"
+                        elif hasWarning then
+                            "advisory"
+                        else
+                            "generated-current"
 
                     let readiness =
                         if hasBlocking then "needsAgentGuidanceCorrection"
                         elif isEarlyStage then "agentGuidanceEarlyStage"
                         else "agentGuidanceReady"
+
                     let findings = agentGuidanceFindings diagnostics
-                    let findingCount severity = findings |> List.filter (fun (_, _, findingSeverity) -> findingSeverity = severity) |> List.length
+
+                    let findingCount severity =
+                        findings
+                        |> List.filter (fun (_, _, findingSeverity) -> findingSeverity = severity)
+                        |> List.length
 
                     let generatedViewStateLabel =
-                        if hasBlocking then "blocked"
-                        elif isEarlyStage then "early-stage"
-                        elif targetResults |> List.exists (fun result -> result.Currency = GeneratedViewCurrency.Stale) then "stale"
-                        elif targetResults |> List.exists (fun result -> result.Currency = GeneratedViewCurrency.Missing) then "missing"
-                        elif List.isEmpty targetResults then "missing"
-                        else "current"
+                        if hasBlocking then
+                            "blocked"
+                        elif isEarlyStage then
+                            "early-stage"
+                        elif
+                            targetResults
+                            |> List.exists (fun result -> result.Currency = GeneratedViewCurrency.Stale)
+                        then
+                            "stale"
+                        elif
+                            targetResults
+                            |> List.exists (fun result -> result.Currency = GeneratedViewCurrency.Missing)
+                        then
+                            "missing"
+                        elif List.isEmpty targetResults then
+                            "missing"
+                        else
+                            "current"
 
                     let summary: AgentGuidanceSummary =
                         { WorkId = workId
@@ -388,7 +521,11 @@ module internal HandlersAgents =
                           GeneratedTargetIds = generatedTargetIds
                           RefusedTargetIds = refusedTargetIds
                           FindingIds = findings |> List.map (fun (id, _, _) -> id) |> List.sort
-                          ReadyFindingCount = if disposition = "generated-current" then List.length generatedTargetIds else 0
+                          ReadyFindingCount =
+                            if disposition = "generated-current" then
+                                List.length generatedTargetIds
+                            else
+                                0
                           AdvisoryCount = findingCount "advisory"
                           WarningCount = findingCount "warning"
                           BlockingCount = findingCount "blocking"
@@ -402,4 +539,3 @@ module internal HandlersAgents =
                     Some summary, generatedViews, effects, []))
 
         diagnostics, summaries, generatedViews, effects
-

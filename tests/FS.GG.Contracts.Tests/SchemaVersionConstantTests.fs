@@ -70,7 +70,14 @@ module SchemaVersionConstantTests =
         let ownerOf name =
             (Schemas.entries |> List.find (fun e -> e.Name = name)).Owner
 
-        for name in [ "providers"; "project"; "sdd"; "agents"; "scaffold-provenance"; "governance-handoff"; "skill-manifest" ] do
+        for name in
+            [ "providers"
+              "project"
+              "sdd"
+              "agents"
+              "scaffold-provenance"
+              "governance-handoff"
+              "skill-manifest" ] do
             Assert.Equal(Schemas.Sdd, ownerOf name)
 
         for name in [ "governance"; "policy"; "capabilities"; "tooling" ] do
@@ -103,8 +110,16 @@ module SchemaVersionConstantTests =
         let manifest: Schemas.SkillManifest =
             { SchemaVersion = Schemas.skillManifestVersion
               Skills =
-                [ { Id = "fs-gg-sdd-plan"; Scope = Schemas.Process; Sha256 = "aa"; Body = Some "# plan"; ResolvablePath = None }
-                  { Id = "fs-gg-elmish"; Scope = Schemas.Product; Sha256 = "bb"; Body = None; ResolvablePath = Some "skills/fs-gg-elmish/SKILL.md" } ] }
+                [ { Id = "fs-gg-sdd-plan"
+                    Scope = Schemas.Process
+                    Sha256 = "aa"
+                    Body = Some "# plan"
+                    ResolvablePath = None }
+                  { Id = "fs-gg-elmish"
+                    Scope = Schemas.Product
+                    Sha256 = "bb"
+                    Body = None
+                    ResolvablePath = Some "skills/fs-gg-elmish/SKILL.md" } ] }
 
         Assert.Equal(2, List.length manifest.Skills)
         Assert.Equal(Schemas.Process, manifest.Skills.[0].Scope)

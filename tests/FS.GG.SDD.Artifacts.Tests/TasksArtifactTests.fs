@@ -110,8 +110,7 @@ tasks:
 
         match parseTaskFacts (snapshot broken) with
         | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
-        | Ok facts ->
-            Assert.Contains(facts.Diagnostics, fun diagnostic -> diagnostic.Id = "workModelInconsistent")
+        | Ok facts -> Assert.Contains(facts.Diagnostics, fun diagnostic -> diagnostic.Id = "workModelInconsistent")
 
     [<Fact>]
     let ``Task parser diagnoses unsupported schema versions`` () =

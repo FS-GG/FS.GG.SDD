@@ -38,9 +38,7 @@ module Evidence =
           Result: string option
           SourceLocation: SourceLocation option }
 
-    type SyntheticDisclosure =
-        { StandsInFor: string
-          Reason: string }
+    type SyntheticDisclosure = { StandsInFor: string; Reason: string }
 
     type EvidenceDeclaration =
         { Id: EvidenceId

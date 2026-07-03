@@ -5,12 +5,17 @@ open Xunit
 
 module DiagnosticTests =
     let artifact =
-        ArtifactRef.create "work/001-sdd-artifact-model/tasks.yml" ArtifactRef.ArtifactKind.Tasks ArtifactRef.ArtifactOwner.Sdd true
+        ArtifactRef.create
+            "work/001-sdd-artifact-model/tasks.yml"
+            ArtifactRef.ArtifactKind.Tasks
+            ArtifactRef.ArtifactOwner.Sdd
+            true
         |> Result.defaultWith failwith
 
     [<Fact>]
     let ``Diagnostic factories create actionable findings`` () =
-        let diagnostic = Diagnostics.unknownReference artifact "FR-999" "Declare FR-999 or remove the reference."
+        let diagnostic =
+            Diagnostics.unknownReference artifact "FR-999" "Declare FR-999 or remove the reference."
 
         Assert.Equal("unknownReference", diagnostic.Id)
         Assert.Equal(Diagnostics.DiagnosticSeverity.DiagnosticError, diagnostic.Severity)
@@ -21,7 +26,10 @@ module DiagnosticTests =
     let ``Normalized work-model diagnostic factories use stable ids and severities`` () =
         let deprecated = Diagnostics.deprecatedSchemaVersion artifact "0"
         let future = Diagnostics.futureSchemaVersion artifact "3"
-        let missing = Diagnostics.missingGeneratedWorkModel artifact "readiness/002-normalized-work-model/work-model.json"
+
+        let missing =
+            Diagnostics.missingGeneratedWorkModel artifact "readiness/002-normalized-work-model/work-model.json"
+
         let untyped = Diagnostics.requirementNotTyped artifact "FR-999" "Declare FR-999."
 
         Assert.Equal("deprecatedSchemaVersion", deprecated.Id)
@@ -33,7 +41,9 @@ module DiagnosticTests =
 
     [<Fact>]
     let ``create leaves a diagnostic un-marked and markToolDefect flips the typed bit`` () =
-        let plain = Diagnostics.unknownReference artifact "FR-999" "Declare FR-999 or remove."
+        let plain =
+            Diagnostics.unknownReference artifact "FR-999" "Declare FR-999 or remove."
+
         Assert.False(plain.IsToolDefect)
 
         let marked = Diagnostics.markToolDefect plain
@@ -61,13 +71,20 @@ module DiagnosticTests =
         // Matches any id containing "stale" (case-insensitive), regardless of spelling —
         // it operates on round-tripped diagnostics where only the id survives.
         Assert.True(Diagnostics.signalsStaleView (Diagnostics.staleGeneratedView artifact "Stale." "Regenerate."))
-        Assert.True(Diagnostics.signalsStaleView { Diagnostics.unknownReference artifact "x" "y" with Id = "refresh.STALEView" })
+
+        Assert.True(
+            Diagnostics.signalsStaleView
+                { Diagnostics.unknownReference artifact "x" "y" with
+                    Id = "refresh.STALEView" }
+        )
         // A non-stale id is not misclassified.
         Assert.False(Diagnostics.signalsStaleView (Diagnostics.unknownReference artifact "FR-1" "x"))
 
     [<Fact>]
     let ``Diagnostics sort by severity id artifact and location`` () =
-        let warning = Diagnostics.proseStructuredMismatch artifact "Mismatch." "Update prose."
+        let warning =
+            Diagnostics.proseStructuredMismatch artifact "Mismatch." "Update prose."
+
         let error = Diagnostics.missingArtifact artifact "Create the task file."
         let sorted = Diagnostics.sort [ warning; error ]
 

@@ -29,7 +29,8 @@ module RegistryDocumentParseTests =
         // repos mapping preserved in declaration order.
         Assert.Equal<string list>(
             [ "sdd"; "rendering"; "governance"; "templates" ],
-            document.Repos |> List.map (fun r -> r.Id))
+            document.Repos |> List.map (fun r -> r.Id)
+        )
         // contracts list preserved in file order (first and last).
         Assert.Equal("scaffold-provider", (List.head document.Contracts).Id)
         Assert.Equal("shared-build-config", (List.last document.Contracts).Id)
@@ -59,7 +60,11 @@ module RegistryDocumentParseTests =
     [<Fact>]
     let ``the 4-segment governance-reference-gate-set 1.2.1.1 is carried and validates clean`` () =
         let document = loadFixture ()
-        let gateSet = document.Contracts |> List.find (fun c -> c.Id = "governance-reference-gate-set")
+
+        let gateSet =
+            document.Contracts
+            |> List.find (fun c -> c.Id = "governance-reference-gate-set")
+
         Assert.Equal("1.2.1.1", gateSet.Version)
         Assert.Equal(Some "1.2.1.1", gateSet.PackageVersion)
         Assert.Equal(Registry.Valid, Registry.validateDocument document)

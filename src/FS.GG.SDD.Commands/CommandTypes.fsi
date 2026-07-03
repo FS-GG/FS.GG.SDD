@@ -333,100 +333,110 @@ module CommandTypes =
     /// only on the three provider-defect outcomes; absent (`None`) on success, dry-run,
     /// and every pre-invocation user-input block (FR-006).
     type ProviderInvocationResult =
-        { /// Fully-resolved invoked command line, program + args as executed (FR-001).
-          CommandLine: string
-          /// Whether the provider process actually started (FR-003 discriminator).
-          ProcessStarted: bool
-          /// The provider exit code; `None` when the process never launched (FR-003) —
-          /// distinct from a real `0`. Projected as int-or-null in json.
-          ExitCode: int option
-          /// Captured standard output, bounded to the per-stream cap (FR-002/005).
-          StandardOutput: string
-          StandardOutputTruncated: bool
-          /// Captured standard error — carries the engine's own rejection text
-          /// (FR-002/005). On a launch failure this holds the launch error (R4).
-          StandardError: string
-          StandardErrorTruncated: bool }
+        {
+            /// Fully-resolved invoked command line, program + args as executed (FR-001).
+            CommandLine: string
+            /// Whether the provider process actually started (FR-003 discriminator).
+            ProcessStarted: bool
+            /// The provider exit code; `None` when the process never launched (FR-003) —
+            /// distinct from a real `0`. Projected as int-or-null in json.
+            ExitCode: int option
+            /// Captured standard output, bounded to the per-stream cap (FR-002/005).
+            StandardOutput: string
+            StandardOutputTruncated: bool
+            /// Captured standard error — carries the engine's own rejection text
+            /// (FR-002/005). On a launch failure this holds the launch error (R4).
+            StandardError: string
+            StandardErrorTruncated: bool
+        }
 
     type ScaffoldSummary =
-        { ProviderName: string option
-          ProviderContractVersion: string option
-          /// The provider-declared minimum coherent `fsgg-sdd` CLI version (feature 052,
-          /// E4), recorded beside the producing CLI version for audit. `None` when the
-          /// provider declares none or a malformed minimum. Projected as string-or-null
-          /// in json and as `scaffoldRequiredMinimumCliVersion` in text/rich.
-          RequiredMinimumCliVersion: string option
-          Outcome: string
-          SkeletonCreated: bool
-          ProviderInvoked: bool
-          ProducedPathCount: int
-          ProducedPaths: string list
-          /// 056: the `.claude`/`.codex` mirror copies of the provider's produced
-          /// `.agents/skills/*` skills that SDD fanned out. Sorted; `[]` when the provider
-          /// produced no skills. Projected after `producedPaths` in json/text/rich.
-          MirroredPaths: string list
-          /// The effective `key → value` parameters forwarded to the provider —
-          /// provider-declared `default`s overlaid by author `--param` overrides
-          /// (author wins). Sorted ascending by key; `[]` when none forwarded
-          /// (FR-003). Projected after `producedPaths` in json/text/rich.
-          EffectiveParameters: (string * string) list
-          RepoInitOutcome: string
-          ExecutableScriptCount: int
-          ExecutableScriptsSkipped: int
-          NextActionHint: string
-          /// Provider-defect diagnostic facts (FR-006 gate): `Some` only on
-          /// `providerFailed` / `providerUnavailable` / `providerWroteSddTree`;
-          /// `None` on success, empty-success, dry-run, and user-input blocks.
-          ProviderInvocation: ProviderInvocationResult option }
+        {
+            ProviderName: string option
+            ProviderContractVersion: string option
+            /// The provider-declared minimum coherent `fsgg-sdd` CLI version (feature 052,
+            /// E4), recorded beside the producing CLI version for audit. `None` when the
+            /// provider declares none or a malformed minimum. Projected as string-or-null
+            /// in json and as `scaffoldRequiredMinimumCliVersion` in text/rich.
+            RequiredMinimumCliVersion: string option
+            Outcome: string
+            SkeletonCreated: bool
+            ProviderInvoked: bool
+            ProducedPathCount: int
+            ProducedPaths: string list
+            /// 056: the `.claude`/`.codex` mirror copies of the provider's produced
+            /// `.agents/skills/*` skills that SDD fanned out. Sorted; `[]` when the provider
+            /// produced no skills. Projected after `producedPaths` in json/text/rich.
+            MirroredPaths: string list
+            /// The effective `key → value` parameters forwarded to the provider —
+            /// provider-declared `default`s overlaid by author `--param` overrides
+            /// (author wins). Sorted ascending by key; `[]` when none forwarded
+            /// (FR-003). Projected after `producedPaths` in json/text/rich.
+            EffectiveParameters: (string * string) list
+            RepoInitOutcome: string
+            ExecutableScriptCount: int
+            ExecutableScriptsSkipped: int
+            NextActionHint: string
+            /// Provider-defect diagnostic facts (FR-006 gate): `Some` only on
+            /// `providerFailed` / `providerUnavailable` / `providerWroteSddTree`;
+            /// `None` on success, empty-success, dry-run, and user-input blocks.
+            ProviderInvocation: ProviderInvocationResult option
+        }
 
     /// One confirmable unit of `upgrade` (CLI self-update, template re-pin, or
     /// artifact re-seed), shared by `DoctorSummary.PreviewSteps` (dry-run preview) and
     /// `UpgradeSummary.Steps` (apply outcome). Data-model E6.
     type ReconciliationStep =
-        { StepId: string
-          Kind: string
-          /// Compact before/after preview per step kind (R5): version delta /
-          /// created-path list / changed-line pin preview. Presentation-only fact.
-          DiffPreview: string
-          /// Preview context: `wouldApply` / `noTarget`. Apply context:
-          /// `applied` / `skipped` / `failed` / `noTarget`.
-          Outcome: string
-          /// The consumer paths the step would write (re-seed: missing artifacts;
-          /// re-pin: `.fsgg/providers.yml`; self-update: `[]`). Sorted.
-          TargetPaths: string list }
+        {
+            StepId: string
+            Kind: string
+            /// Compact before/after preview per step kind (R5): version delta /
+            /// created-path list / changed-line pin preview. Presentation-only fact.
+            DiffPreview: string
+            /// Preview context: `wouldApply` / `noTarget`. Apply context:
+            /// `applied` / `skipped` / `failed` / `noTarget`.
+            Outcome: string
+            /// The consumer paths the step would write (re-seed: missing artifacts;
+            /// re-pin: `.fsgg/providers.yml`; self-update: `[]`). Sorted.
+            TargetPaths: string list
+        }
 
     /// The read-only drift picture `doctor` emits (spec Key Entity "Drift report",
     /// data-model E4). `doctor` never blocks → `NoChange`/`SucceededWithWarnings`.
     type DoctorSummary =
-        { HasProvenance: bool
-          ProviderName: string option
-          InstalledCliVersion: string
-          RequiredMinimumCliVersion: string option
-          CliAxis: string
-          CliBehindBy: string option
-          ExpectedArtifactCount: int
-          MissingArtifactPaths: string list
-          /// 058/ADR-0014 §Decision 3: content-addressed skill drift — the concrete
-          /// root/skill paths in the union (process OR product) that are missing from a
-          /// root, byte-divergent across roots, or hash-mismatched. Advisory; sorted.
-          SkillDriftPaths: string list
-          PreviewSteps: ReconciliationStep list
-          IsCoherent: bool }
+        {
+            HasProvenance: bool
+            ProviderName: string option
+            InstalledCliVersion: string
+            RequiredMinimumCliVersion: string option
+            CliAxis: string
+            CliBehindBy: string option
+            ExpectedArtifactCount: int
+            MissingArtifactPaths: string list
+            /// 058/ADR-0014 §Decision 3: content-addressed skill drift — the concrete
+            /// root/skill paths in the union (process OR product) that are missing from a
+            /// root, byte-divergent across roots, or hash-mismatched. Advisory; sorted.
+            SkillDriftPaths: string list
+            PreviewSteps: ReconciliationStep list
+            IsCoherent: bool
+        }
 
     /// The outcome of a reconciliation run (data-model E5).
     type UpgradeSummary =
-        { HasProvenance: bool
-          Mode: string
-          AlreadyCoherent: bool
-          Steps: ReconciliationStep list
-          AppliedStepIds: string list
-          SkippedStepIds: string list
-          FailedStepIds: string list
-          /// 058/ADR-0014 §Decision 3: content-addressed skill drift surfaced at reconcile
-          /// time (advisory in P1 — a present-but-divergent copy is reported, not clobbered).
-          SkillDriftPaths: string list
-          ResidualDrift: bool
-          NextActionHint: string }
+        {
+            HasProvenance: bool
+            Mode: string
+            AlreadyCoherent: bool
+            Steps: ReconciliationStep list
+            AppliedStepIds: string list
+            SkippedStepIds: string list
+            FailedStepIds: string list
+            /// 058/ADR-0014 §Decision 3: content-addressed skill drift surfaced at reconcile
+            /// time (advisory in P1 — a present-but-divergent copy is reported, not clobbered).
+            SkillDriftPaths: string list
+            ResidualDrift: bool
+            NextActionHint: string
+        }
 
     type GovernanceCompatibilityFact =
         { Path: string
@@ -451,9 +461,7 @@ module CommandTypes =
           Description: string }
 
     /// One command in the top-level help command list.
-    type HelpCommandEntry =
-        { Name: string
-          Description: string }
+    type HelpCommandEntry = { Name: string; Description: string }
 
     /// Whether a help summary describes the top-level CLI or one command.
     type HelpScope =
@@ -515,27 +523,31 @@ module CommandTypes =
     /// and surfaced as `ExitCode = None` in the report (FR-003). Captured stdout/stderr are
     /// carried forward (bounded) so the scaffold report can surface a provider defect.
     type ProcessRunResult =
-        { Started: bool
-          ExitCode: int
-          /// The fully-resolved command line as executed (program + args) — FR-001.
-          Command: string
-          /// Captured stdout/stderr, each bounded to `providerOutputCapChars` with a
-          /// truncation flag (FR-002/005). On a launch failure `StandardError` holds the
-          /// launch exception message (R4).
-          StandardOutput: string
-          StandardOutputTruncated: bool
-          StandardError: string
-          StandardErrorTruncated: bool }
+        {
+            Started: bool
+            ExitCode: int
+            /// The fully-resolved command line as executed (program + args) — FR-001.
+            Command: string
+            /// Captured stdout/stderr, each bounded to `providerOutputCapChars` with a
+            /// truncation flag (FR-002/005). On a launch failure `StandardError` holds the
+            /// launch exception message (R4).
+            StandardOutput: string
+            StandardOutputTruncated: bool
+            StandardError: string
+            StandardErrorTruncated: bool
+        }
 
     type CommandEffectResult =
-        { Effect: CommandEffect
-          Succeeded: bool
-          Snapshot: FileSnapshot option
-          Process: ProcessRunResult option
-          /// The confirmation decision for a `Confirm` effect: `Some true` = confirmed,
-          /// `Some false` = declined/dry-run, `None` = not a `Confirm` result (E3).
-          Confirmed: bool option
-          Diagnostic: Diagnostic option }
+        {
+            Effect: CommandEffect
+            Succeeded: bool
+            Snapshot: FileSnapshot option
+            Process: ProcessRunResult option
+            /// The confirmation decision for a `Confirm` effect: `Some true` = confirmed,
+            /// `Some false` = declined/dry-run, `None` = not a `Confirm` result (E3).
+            Confirmed: bool option
+            Diagnostic: Diagnostic option
+        }
 
     type CommandModel =
         { Request: CommandRequest

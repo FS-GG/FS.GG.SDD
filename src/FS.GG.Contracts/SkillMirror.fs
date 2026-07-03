@@ -14,7 +14,10 @@ module SkillMirror =
     // FS.GG.SDD.Artifacts SchemaVersion.sha256Text, so the 057/058 per-skill sha256 manifest
     // does not spuriously flag drift on a CRLF checkout of LF-authored content.
     let sha256 (body: string) : string =
-        (if String.IsNullOrEmpty body then "" else body.Replace("\r\n", "\n"))
+        (if String.IsNullOrEmpty body then
+             ""
+         else
+             body.Replace("\r\n", "\n"))
         |> Encoding.UTF8.GetBytes
         |> SHA256.HashData
         |> Array.map (fun b -> b.ToString("x2"))
@@ -45,7 +48,9 @@ module SkillMirror =
 
     let mirror (roots: string list) (skills: (string * string) list) : MirrorWrite list =
         [ for (id, body) in skills |> List.sortBy fst do
-              for root in roots -> { Path = skillPath root id; Body = body } ]
+              for root in roots ->
+                  { Path = skillPath root id
+                    Body = body } ]
 
     type ExpectedSkill =
         { Id: string
@@ -74,8 +79,7 @@ module SkillMirror =
         |> List.sortBy (fun skill -> skill.Id)
         |> List.choose (fun skill ->
             let perRoot =
-                roots
-                |> List.map (fun root -> root, Map.tryFind (root, skill.Id) bodyAt)
+                roots |> List.map (fun root -> root, Map.tryFind (root, skill.Id) bodyAt)
 
             let missingRoots =
                 perRoot

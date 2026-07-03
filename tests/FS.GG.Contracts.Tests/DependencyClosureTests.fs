@@ -13,8 +13,7 @@ module DependencyClosureTests =
     [<Fact>]
     let ``package closure contains only FSharp_Core`` () =
         let depsPath =
-            Directory.EnumerateFiles(AppContext.BaseDirectory, "*.deps.json")
-            |> Seq.head
+            Directory.EnumerateFiles(AppContext.BaseDirectory, "*.deps.json") |> Seq.head
 
         use doc = JsonDocument.Parse(File.ReadAllText depsPath)
         let targets = doc.RootElement.GetProperty("targets")

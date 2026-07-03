@@ -76,12 +76,11 @@ lifecycleNotes:
     [<Fact>]
     let ``parseEvidenceArtifact reports duplicate evidence ids as artifact diagnostics`` () =
         let text =
-            validEvidenceYaml
-                .Replace(
-                    "evidence:\n  - id: EV001",
-                    "evidence:\n  - id: EV001\n    kind: verification\n    subject:\n      type: task\n      id: T002\n    result: pass\n  - id: EV001")
+            validEvidenceYaml.Replace(
+                "evidence:\n  - id: EV001",
+                "evidence:\n  - id: EV001\n    kind: verification\n    subject:\n      type: task\n      id: T002\n    result: pass\n  - id: EV001"
+            )
 
         match parseEvidenceArtifact { Path = evidencePath; Text = text } with
-        | Ok artifact ->
-            Assert.Contains(artifact.Diagnostics, fun diagnostic -> diagnostic.Id = "duplicateIdentifier")
+        | Ok artifact -> Assert.Contains(artifact.Diagnostics, fun diagnostic -> diagnostic.Id = "duplicateIdentifier")
         | Error diagnostics -> failwith $"Expected duplicate ids to be artifact diagnostics, got {diagnostics}."

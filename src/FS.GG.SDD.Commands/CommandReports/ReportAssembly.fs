@@ -12,13 +12,24 @@ module internal ReportAssembly =
     module DiagnosticsModule = FS.GG.SDD.Artifacts.Diagnostics
 
     let outcome (diagnostics: Diagnostic list) (changes: ArtifactChange list) =
-        if diagnostics |> List.exists (fun d -> d.Severity = DiagnosticSeverity.DiagnosticError) then
+        if
+            diagnostics
+            |> List.exists (fun d -> d.Severity = DiagnosticSeverity.DiagnosticError)
+        then
             CommandOutcome.Blocked
-        elif diagnostics |> List.exists (fun d -> d.Severity = DiagnosticSeverity.DiagnosticWarning) then
+        elif
+            diagnostics
+            |> List.exists (fun d -> d.Severity = DiagnosticSeverity.DiagnosticWarning)
+        then
             CommandOutcome.SucceededWithWarnings
         elif List.isEmpty changes then
             CommandOutcome.NoChange
-        elif changes |> List.forall (fun change -> change.Operation = ArtifactOperation.NoChange || change.Operation = ArtifactOperation.Preserve) then
+        elif
+            changes
+            |> List.forall (fun change ->
+                change.Operation = ArtifactOperation.NoChange
+                || change.Operation = ArtifactOperation.Preserve)
+        then
             CommandOutcome.NoChange
         else
             CommandOutcome.Succeeded
@@ -32,12 +43,9 @@ module internal ReportAssembly =
 
     let buildReport (model: CommandModel) =
         let effectDiagnostics =
-            model.InterpretedEffects
-            |> List.choose (fun result -> result.Diagnostic)
+            model.InterpretedEffects |> List.choose (fun result -> result.Diagnostic)
 
-        let diagnostics =
-            model.Diagnostics @ effectDiagnostics
-            |> DiagnosticsModule.sort
+        let diagnostics = model.Diagnostics @ effectDiagnostics |> DiagnosticsModule.sort
 
         // Produced provider files are not SDD write effects; they are discovered by
         // the scaffold diff and recorded as externally-owned change entries so the
@@ -58,7 +66,8 @@ module internal ReportAssembly =
             |> Option.defaultValue []
 
         let changes =
-            (model.InterpretedEffects |> List.choose (changeFromEffectResult model.Request)) @ scaffoldChanges
+            (model.InterpretedEffects |> List.choose (changeFromEffectResult model.Request))
+            @ scaffoldChanges
             |> sortChanges
 
         let reportOutcome = outcome diagnostics changes
@@ -92,7 +101,20 @@ module internal ReportAssembly =
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility
-          NextAction = nextAction diagnostics reportOutcome model.Request model.Checklist model.Plan model.Tasks model.Analysis model.Evidence model.Verification model.Ship model.AgentGuidance model.Refresh
+          NextAction =
+            nextAction
+                diagnostics
+                reportOutcome
+                model.Request
+                model.Checklist
+                model.Plan
+                model.Tasks
+                model.Analysis
+                model.Evidence
+                model.Verification
+                model.Ship
+                model.AgentGuidance
+                model.Refresh
           Help = None }
 
     /// §3.5: build the informational help report. Help carries no diagnostics and no changed
@@ -133,7 +155,10 @@ module internal ReportAssembly =
     let exitCodeForReport (report: CommandReport) =
         match report.Outcome with
         | CommandOutcome.Blocked ->
-            if report.Diagnostics |> List.exists (fun d -> d.IsToolDefect) then 2 else 1
+            if report.Diagnostics |> List.exists (fun d -> d.IsToolDefect) then
+                2
+            else
+                1
         | CommandOutcome.Succeeded
         | CommandOutcome.SucceededWithWarnings
         | CommandOutcome.NoChange -> 0

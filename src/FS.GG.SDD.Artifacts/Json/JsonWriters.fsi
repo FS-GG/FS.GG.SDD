@@ -12,17 +12,12 @@ module JsonWriters =
         | SourceOrder
         | Sorted
 
-    val writeStringList:
-        writer: Utf8JsonWriter -> order: StringListOrder -> name: string -> values: string list -> unit
+    val writeStringList: writer: Utf8JsonWriter -> order: StringListOrder -> name: string -> values: string list -> unit
 
-    val writeSourceDigest:
-        writer: Utf8JsonWriter -> name: string -> digest: SourceDigest option -> unit
+    val writeSourceDigest: writer: Utf8JsonWriter -> name: string -> digest: SourceDigest option -> unit
 
-    val writeOutputDigest:
-        writer: Utf8JsonWriter -> name: string -> digest: OutputDigest option -> unit
+    val writeOutputDigest: writer: Utf8JsonWriter -> name: string -> digest: OutputDigest option -> unit
 
-    val writeLocation:
-        writer: Utf8JsonWriter -> name: string -> location: SourceLocation option -> unit
+    val writeLocation: writer: Utf8JsonWriter -> name: string -> location: SourceLocation option -> unit
 
-    val writeDiagnostic:
-        writer: Utf8JsonWriter -> relatedIdsOrder: StringListOrder -> diagnostic: Diagnostic -> unit
+    val writeDiagnostic: writer: Utf8JsonWriter -> relatedIdsOrder: StringListOrder -> diagnostic: Diagnostic -> unit

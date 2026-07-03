@@ -5,9 +5,7 @@ module RegistryDocument =
     /// A load/parse failure: the file could not be read or parsed into the typed
     /// model. Distinct from content diagnostics (Constitution VIII) — surfaced
     /// downstream as a single `MalformedDocument`-class diagnostic, never a crash.
-    type RegistryLoadError =
-        { Path: string
-          Message: string }
+    type RegistryLoadError = { Path: string; Message: string }
 
     /// Parse the on-disk registry YAML into the typed `Fsgg.Registry.RegistryDocument`.
     /// I/O lives here (not in the BCL-only Contracts leaf) — Constitution V. Never

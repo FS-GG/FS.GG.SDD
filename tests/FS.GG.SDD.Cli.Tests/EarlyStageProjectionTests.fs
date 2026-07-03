@@ -53,4 +53,7 @@ module EarlyStageProjectionTests =
         Assert.Contains(outcomeValue report.Outcome, rich)
         Assert.Contains("early-stage", rich)
         // Degrades to zero ANSI when non-interactive/color-disabled.
-        Assert.False(rich |> Seq.exists (fun c -> c = '\u001b'), "Rich output must emit zero ANSI escapes when non-interactive.")
+        Assert.False(
+            rich |> Seq.exists (fun c -> c = '\u001b'),
+            "Rich output must emit zero ANSI escapes when non-interactive."
+        )

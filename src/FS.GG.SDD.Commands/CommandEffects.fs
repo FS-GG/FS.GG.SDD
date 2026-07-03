@@ -19,8 +19,13 @@ module CommandEffects =
 
     let snapshotIfExists (projectRoot: string) (path: string) =
         let absolute = fullPath projectRoot path
+
         if File.Exists absolute then
-            Some({ Path = path; Text = File.ReadAllText absolute } : FileSnapshot)
+            Some(
+                { Path = path
+                  Text = File.ReadAllText absolute }
+                : FileSnapshot
+            )
         else
             None
 
@@ -30,12 +35,11 @@ module CommandEffects =
         if Directory.Exists absolute then
             let entries =
                 Directory.EnumerateFiles(absolute, "*", SearchOption.AllDirectories)
-                |> Seq.map (fun file ->
-                    Path.GetRelativePath(projectRoot, file).Replace('\\', '/'))
+                |> Seq.map (fun file -> Path.GetRelativePath(projectRoot, file).Replace('\\', '/'))
                 |> Seq.sort
                 |> String.concat "\n"
 
-            Some({ Path = path; Text = entries } : FileSnapshot)
+            Some({ Path = path; Text = entries }: FileSnapshot)
         else
             None
 
@@ -104,8 +108,10 @@ module CommandEffects =
                     reading <- false
                 else
                     let remaining = providerOutputCapChars - builder.Length
+
                     if remaining > 0 then
                         builder.Append(buffer, 0, min read remaining) |> ignore
+
                     if read > remaining then
                         truncated <- true
 
@@ -119,7 +125,13 @@ module CommandEffects =
     // fills one pipe while the parent bounds the other cannot deadlock (R1); the retained
     // content is capped per stream (R2) and decoded as UTF-8 with replacement so non-UTF-8
     // / binary bytes cannot throw or corrupt the JSON report (R9).
-    let runProcess (projectRoot: string) (effect: CommandEffect) (command: string) (args: string list) (workingDir: string) =
+    let runProcess
+        (projectRoot: string)
+        (effect: CommandEffect)
+        (command: string)
+        (args: string list)
+        (workingDir: string)
+        =
         let absolute = fullPath projectRoot workingDir
         Directory.CreateDirectory absolute |> ignore
 
@@ -192,7 +204,11 @@ module CommandEffects =
                     // exit so the handler classifies it as a provider/step failure (#68) — an
                     // incomplete run is never mistaken for success. The termination note is
                     // appended to stderr so the report can explain the failure.
-                    (try proc.Kill true with _ -> ())
+                    (try
+                        proc.Kill true
+                     with _ ->
+                         ())
+
                     proc.WaitForExit()
                     let stdout, stdoutTruncated = stdoutTask.GetAwaiter().GetResult()
                     let capturedErr, stderrTruncated = stderrTask.GetAwaiter().GetResult()
@@ -201,8 +217,10 @@ module CommandEffects =
                         $"fsgg-sdd: process timed out after {timeoutMs} ms and was terminated: {commandLine}"
 
                     let stderr =
-                        if String.IsNullOrEmpty capturedErr then timeoutNote
-                        else capturedErr + "\n" + timeoutNote
+                        if String.IsNullOrEmpty capturedErr then
+                            timeoutNote
+                        else
+                            capturedErr + "\n" + timeoutNote
 
                     { Effect = effect
                       Succeeded = true
@@ -281,9 +299,10 @@ module CommandEffects =
                 | None -> success effect None
             | CreateDirectory path ->
                 let absolute = fullPath projectRoot path
+
                 let existing =
                     if Directory.Exists absolute then
-                        Some({ Path = path; Text = "<directory>" } : FileSnapshot)
+                        Some({ Path = path; Text = "<directory>" }: FileSnapshot)
                     else
                         None
 
@@ -304,14 +323,17 @@ module CommandEffects =
                 else
                     failure effect existing (unsafeOverwrite path)
             | RunProcess(command, args, workingDir) ->
-                if dryRun then success effect None
-                else runProcess projectRoot effect command args workingDir
+                if dryRun then
+                    success effect None
+                else
+                    runProcess projectRoot effect command args workingDir
             | SetExecutable path ->
                 if dryRun then
                     success effect None
                 else
                     try
                         let absolute = fullPath projectRoot path
+
                         let executable =
                             File.GetUnixFileMode absolute
                             ||| UnixFileMode.UserExecute
@@ -356,7 +378,9 @@ module CommandEffects =
                     results
                     |> List.fold
                         (fun (currentState, accumulatedEffects) result ->
-                            let updatedState, producedEffects = CommandWorkflow.update (EffectInterpreted result) currentState
+                            let updatedState, producedEffects =
+                                CommandWorkflow.update (EffectInterpreted result) currentState
+
                             updatedState, accumulatedEffects @ producedEffects)
                         (state, [])
 

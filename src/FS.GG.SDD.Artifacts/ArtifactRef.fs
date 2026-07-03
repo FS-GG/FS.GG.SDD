@@ -38,7 +38,11 @@ module ArtifactRef =
           RequiredBySdd: bool }
 
     let normalizePath (path: string) =
-        (if String.IsNullOrEmpty path then "" else path.Trim().Replace('\\', '/')).TrimStart('/')
+        (if String.IsNullOrEmpty path then
+             ""
+         else
+             path.Trim().Replace('\\', '/'))
+            .TrimStart('/')
 
     let create (path: string) kind owner requiredBySdd =
         let path = normalizePath path
@@ -48,7 +52,11 @@ module ArtifactRef =
         elif path.Contains("..") then
             Error "Artifact paths must be repository-relative and stay inside the repository."
         else
-            Ok { Path = path; Kind = kind; Owner = owner; RequiredBySdd = requiredBySdd }
+            Ok
+                { Path = path
+                  Kind = kind
+                  Owner = owner
+                  RequiredBySdd = requiredBySdd }
 
     let ownerValue owner =
         match owner with

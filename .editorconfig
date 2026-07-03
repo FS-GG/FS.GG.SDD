@@ -1,0 +1,32 @@
+# EditorConfig — repo-root. This file is also the Fantomas 6+ configuration
+# (Fantomas reads all of its settings from .editorconfig; there is no
+# fantomas.json). Feature 065 (format gate). Managed org build files are pinned
+# byte-identical to FS-GG/.github and are NOT reconfigured here.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# F# source + signatures. The fsharp_* keys are the Fantomas house style: stock
+# Fantomas defaults, tuned only where the existing deliberate style diverges.
+# Repo conventions detected at adoption: all-LF, 4-space indent, no tabs, lines
+# authored to ~90 cols (p90=91) — max_line_length 120 keeps deliberate lines
+# intact while still wrapping genuinely long ones.
+[*.{fs,fsi}]
+indent_size = 4
+max_line_length = 120
+fsharp_max_line_length = 120
+
+[*.{yml,yaml,json}]
+indent_size = 2
+
+[*.{sh,ps1}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false

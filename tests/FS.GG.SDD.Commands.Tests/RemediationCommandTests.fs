@@ -12,17 +12,26 @@ module DriftTests =
     open RemediationSupport
 
     let private drift minimum installed present =
-        Drift.compute (Some(record minimum)) (Some(descriptor minimum)) installed (Set.ofList present) (skillBodiesFor present)
+        Drift.compute
+            (Some(record minimum))
+            (Some(descriptor minimum))
+            installed
+            (Set.ofList present)
+            (skillBodiesFor present)
 
     [<Fact>]
     let ``CLI axis is behind with a delta when installed is below the declared minimum`` () =
-        let report = drift (Some farAheadMinimum) installedVersion Drift.expectedArtifactPaths
+        let report =
+            drift (Some farAheadMinimum) installedVersion Drift.expectedArtifactPaths
+
         Assert.Equal("behind", report.CliAxis)
         Assert.True(report.CliBehindBy.IsSome)
 
     [<Fact>]
     let ``CLI axis is atOrAbove when installed meets the declared minimum`` () =
-        let report = drift (Some farBehindMinimum) installedVersion Drift.expectedArtifactPaths
+        let report =
+            drift (Some farBehindMinimum) installedVersion Drift.expectedArtifactPaths
+
         Assert.Equal("atOrAbove", report.CliAxis)
         Assert.True(report.CliBehindBy.IsNone)
 
@@ -33,7 +42,9 @@ module DriftTests =
 
     [<Fact>]
     let ``CLI axis is undeterminable when the installed version is unparseable`` () =
-        let report = drift (Some farAheadMinimum) "not-a-version" Drift.expectedArtifactPaths
+        let report =
+            drift (Some farAheadMinimum) "not-a-version" Drift.expectedArtifactPaths
+
         Assert.Equal("undeterminable", report.CliAxis)
 
     [<Fact>]
@@ -45,7 +56,10 @@ module DriftTests =
     [<Fact>]
     let ``a behind scaffold with missing artifacts previews self-update and re-seed as wouldApply`` () =
         let report = drift (Some farAheadMinimum) installedVersion []
-        let outcomeOf id = report.Steps |> List.find (fun s -> s.StepId = id) |> fun s -> s.Outcome
+
+        let outcomeOf id =
+            report.Steps |> List.find (fun s -> s.StepId = id) |> (fun s -> s.Outcome)
+
         Assert.Equal("wouldApply", outcomeOf "cliSelfUpdate")
         Assert.Equal("wouldApply", outcomeOf "artifactReSeed")
         Assert.Equal("noTarget", outcomeOf "templateRePin")
@@ -53,7 +67,9 @@ module DriftTests =
 
     [<Fact>]
     let ``an at-or-above scaffold with all artifacts present is coherent`` () =
-        let report = drift (Some farBehindMinimum) installedVersion Drift.expectedArtifactPaths
+        let report =
+            drift (Some farBehindMinimum) installedVersion Drift.expectedArtifactPaths
+
         Assert.True report.IsCoherent
 
     [<Fact>]
@@ -158,7 +174,12 @@ module UpgradeCommandTests =
         Assert.Contains("artifactReSeed", summary.AppliedStepIds)
         Assert.False summary.ResidualDrift
         Assert.Equal(0, exitCode report)
-        Assert.True (match (doctorReport root).Doctor with Some d -> d.IsCoherent | None -> false)
+
+        Assert.True(
+            match (doctorReport root).Doctor with
+            | Some d -> d.IsCoherent
+            | None -> false
+        )
 
     [<Fact>]
     let ``non-interactive without --yes refuses with zero writes, no hang, exit 1`` () =
@@ -195,7 +216,9 @@ module UpgradeCommandTests =
         let root = makeFixture (Some farBehindMinimum) present true
         // Block the one missing target by placing a directory where its file must be written:
         // the re-seed WriteFile then fails deterministically (real filesystem, no mocks).
-        Directory.CreateDirectory(Path.Combine(root, blocked.Replace('/', Path.DirectorySeparatorChar))) |> ignore
+        Directory.CreateDirectory(Path.Combine(root, blocked.Replace('/', Path.DirectorySeparatorChar)))
+        |> ignore
+
         let report = upgradeYes root
         let summary = upgrade report
         Assert.Contains("artifactReSeed", summary.FailedStepIds)
@@ -209,7 +232,9 @@ module UpgradeCommandTests =
     let ``upgrade re-seeds the missing third .agents root to zero residual drift`` () =
         let root = pre056Fixture ()
         // A present .claude copy (dummy author content) must be preserved (no-clobber).
-        let presentClaude = ".claude/skills/" + List.head SeededSkills.skillNames + "/SKILL.md"
+        let presentClaude =
+            ".claude/skills/" + List.head SeededSkills.skillNames + "/SKILL.md"
+
         let preservedBefore = TestSupport.readRelative root presentClaude
 
         let report = upgradeYes root
@@ -220,11 +245,18 @@ module UpgradeCommandTests =
 
         // The third root is materialized for every seeded skill…
         for name in SeededSkills.skillNames do
-            Assert.True(TestSupport.existsRelative root $".agents/skills/{name}/SKILL.md", $"expected .agents copy of {name}")
+            Assert.True(
+                TestSupport.existsRelative root $".agents/skills/{name}/SKILL.md",
+                $"expected .agents copy of {name}"
+            )
         // …the present copy is untouched…
         Assert.Equal(preservedBefore, TestSupport.readRelative root presentClaude)
         // …and doctor now reports coherence.
-        Assert.True(match (doctorReport root).Doctor with Some d -> d.IsCoherent | None -> false)
+        Assert.True(
+            match (doctorReport root).Doctor with
+            | Some d -> d.IsCoherent
+            | None -> false
+        )
 
     [<Fact>]
     let ``upgrade writes only consumer-owned seeded paths (no governed or registry writes)`` () =
@@ -258,7 +290,10 @@ module UpgradeCommandTests =
         let root = atOrAboveMissingFixture ()
         Assert.True (doctorReport root).Upgrade.IsNone
         // A lifecycle/cross-cutting command never produces an upgrade summary or a doctor one.
-        let initReport = TestSupport.request Init (TestSupport.tempDirectory ()) |> TestSupport.runRequest
+        let initReport =
+            TestSupport.request Init (TestSupport.tempDirectory ())
+            |> TestSupport.runRequest
+
         Assert.True initReport.Upgrade.IsNone
         Assert.True initReport.Doctor.IsNone
 

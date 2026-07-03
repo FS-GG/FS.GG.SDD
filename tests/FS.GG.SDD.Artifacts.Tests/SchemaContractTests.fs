@@ -51,8 +51,11 @@ module SchemaContractTests =
 
     [<Fact>]
     let ``Malformed schema fixture emits malformed and unsupported schema diagnostics`` () =
-        let project = parseProjectConfig (TestSupport.snapshot "malformed-schema-version" ".fsgg/project.yml")
-        let sdd = parseSddLifecyclePolicy (TestSupport.snapshot "malformed-schema-version" ".fsgg/sdd.yml")
+        let project =
+            parseProjectConfig (TestSupport.snapshot "malformed-schema-version" ".fsgg/project.yml")
+
+        let sdd =
+            parseSddLifecyclePolicy (TestSupport.snapshot "malformed-schema-version" ".fsgg/sdd.yml")
 
         let projectIds =
             match project with
@@ -76,7 +79,8 @@ module SchemaContractTests =
         Assert.True(WorkModel.blockingDiagnostics model |> List.length >= 6)
 
     let private projectSnapshot text : FileSnapshot =
-        { Path = ".fsgg/project.yml"; Text = text }
+        { Path = ".fsgg/project.yml"
+          Text = text }
 
     let private parsedTestFramework text =
         match parseProjectConfig (projectSnapshot text) with

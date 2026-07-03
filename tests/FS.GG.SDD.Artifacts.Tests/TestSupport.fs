@@ -29,19 +29,24 @@ module TestSupport =
         let root = fixtureDirectory name
 
         Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
-        |> Seq.map (fun path -> ({ Path = relativePath root path; Text = File.ReadAllText path } : FileSnapshot))
+        |> Seq.map (fun path ->
+            ({ Path = relativePath root path
+               Text = File.ReadAllText path }
+            : FileSnapshot))
         |> Seq.toList
 
     let normalizedSnapshots name =
         let root = normalizedFixtureDirectory name
 
         Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
-        |> Seq.map (fun path -> ({ Path = relativePath root path; Text = File.ReadAllText path } : FileSnapshot))
+        |> Seq.map (fun path ->
+            ({ Path = relativePath root path
+               Text = File.ReadAllText path }
+            : FileSnapshot))
         |> Seq.toList
 
     let snapshot name path =
-        snapshots name
-        |> List.find (fun snapshot -> snapshot.Path = path)
+        snapshots name |> List.find (fun snapshot -> snapshot.Path = path)
 
     let model name =
         Serialization.normalizeSnapshotsToWorkModel (snapshots name) "001-sdd-artifact-model"
@@ -52,7 +57,7 @@ module TestSupport =
     let generationRequest name =
         ({ WorkId = "002-normalized-work-model"
            Snapshots = normalizedSnapshots name
-           GeneratorVersion = SchemaVersion.currentGeneratorVersion()
+           GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
            ExpectedOutputPath = None }
         : WorkModel.WorkModelGenerationRequest)
 
@@ -60,10 +65,15 @@ module TestSupport =
         Serialization.generateWorkModel (generationRequest name)
 
     let currencyDiagnostics name =
-        Serialization.checkGeneratedWorkModelCurrency (normalizedSnapshots name) "002-normalized-work-model" (SchemaVersion.currentGeneratorVersion())
+        Serialization.checkGeneratedWorkModelCurrency
+            (normalizedSnapshots name)
+            "002-normalized-work-model"
+            (SchemaVersion.currentGeneratorVersion ())
 
     let assertDiagnostic id (model: WorkModel.WorkModel) =
-        let seen = String.Join(", ", model.Diagnostics |> List.map (fun diagnostic -> diagnostic.Id))
+        let seen =
+            String.Join(", ", model.Diagnostics |> List.map (fun diagnostic -> diagnostic.Id))
+
         Assert.True(
             model.Diagnostics |> List.exists (fun diagnostic -> diagnostic.Id = id),
             $"Expected diagnostic '{id}' but saw: {seen}"

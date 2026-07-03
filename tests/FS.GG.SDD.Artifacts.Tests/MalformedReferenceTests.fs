@@ -37,7 +37,8 @@ tasks:
 """
 
     let private tasksSnapshot text : FileSnapshot =
-        { Path = "work/060-x/tasks.yml"; Text = text }
+        { Path = "work/060-x/tasks.yml"
+          Text = text }
 
     [<Fact>]
     let ``a malformed task dependency yields a malformedReference diagnostic`` () =
@@ -45,14 +46,16 @@ tasks:
         match parseTaskFacts (tasksSnapshot (tasksYaml "[T01]")) with
         | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
         | Ok facts ->
-            Assert.Contains(facts.Diagnostics, fun d -> d.Id = "malformedReference" && d.RelatedIds |> List.contains "T01")
+            Assert.Contains(
+                facts.Diagnostics,
+                fun d -> d.Id = "malformedReference" && d.RelatedIds |> List.contains "T01"
+            )
 
     [<Fact>]
     let ``well-formed task references produce no malformedReference diagnostic`` () =
         match parseTaskFacts (tasksSnapshot (tasksYaml "[T001]")) with
         | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
-        | Ok facts ->
-            Assert.DoesNotContain(facts.Diagnostics, fun d -> d.Id = "malformedReference")
+        | Ok facts -> Assert.DoesNotContain(facts.Diagnostics, fun d -> d.Id = "malformedReference")
 
     let private evidenceYaml requirementRefs =
         $"""schemaVersion: 1
@@ -84,21 +87,24 @@ evidence:
 """
 
     let private evidenceSnapshot text : FileSnapshot =
-        { Path = "work/060-x/evidence.yml"; Text = text }
+        { Path = "work/060-x/evidence.yml"
+          Text = text }
 
     [<Fact>]
     let ``a malformed evidence requirement ref yields a malformedReference diagnostic`` () =
         match parseEvidenceArtifact (evidenceSnapshot (evidenceYaml "[FR1]")) with
         | Error diagnostics -> failwith $"Evidence should parse: {diagnostics}"
         | Ok facts ->
-            Assert.Contains(facts.Diagnostics, fun d -> d.Id = "malformedReference" && d.RelatedIds |> List.contains "FR1")
+            Assert.Contains(
+                facts.Diagnostics,
+                fun d -> d.Id = "malformedReference" && d.RelatedIds |> List.contains "FR1"
+            )
 
     [<Fact>]
     let ``well-formed evidence references produce no malformedReference diagnostic`` () =
         match parseEvidenceArtifact (evidenceSnapshot (evidenceYaml "[FR-001]")) with
         | Error diagnostics -> failwith $"Evidence should parse: {diagnostics}"
-        | Ok facts ->
-            Assert.DoesNotContain(facts.Diagnostics, fun d -> d.Id = "malformedReference")
+        | Ok facts -> Assert.DoesNotContain(facts.Diagnostics, fun d -> d.Id = "malformedReference")
 
     // ----- US2: one schema-version policy governs generated artifacts too -----
 
@@ -121,13 +127,21 @@ evidence:
 
     [<Fact>]
     let ``parseWorkModel rejects an unsupported schemaVersion via the canonical classifier`` () =
-        match parseWorkModel { Path = "readiness/060-x/work-model.json"; Text = workModelJson 3 } with
+        match
+            parseWorkModel
+                { Path = "readiness/060-x/work-model.json"
+                  Text = workModelJson 3 }
+        with
         | Ok _ -> failwith "schemaVersion 3 should block (it blocks everywhere else)."
         | Error diagnostics -> Assert.NotEmpty diagnostics
 
     [<Fact>]
     let ``parseWorkModel still accepts schemaVersion 1`` () =
-        match parseWorkModel { Path = "readiness/060-x/work-model.json"; Text = workModelJson 1 } with
+        match
+            parseWorkModel
+                { Path = "readiness/060-x/work-model.json"
+                  Text = workModelJson 1 }
+        with
         | Ok model -> Assert.Equal("060-x", model.WorkId)
         | Error diagnostics -> failwith $"schemaVersion 1 should parse: {diagnostics}"
 
@@ -139,13 +153,23 @@ evidence:
           ProviderContractVersion = "1.0.0"
           TemplateRef = "fsgg-fixture-app"
           Outcome = "providerSucceeded"
-          ProducedPaths = [ { Path = "src/Product/Program.fs"; Owner = GeneratedProduct; Sha256 = None } ]
+          ProducedPaths =
+            [ { Path = "src/Product/Program.fs"
+                Owner = GeneratedProduct
+                Sha256 = None } ]
           MirroredPaths = []
           EffectiveParameters = [] }
 
     [<Fact>]
     let ``ScaffoldProvenance.tryParse rejects an unsupported schemaVersion via the canonical classifier`` () =
-        Assert.Equal(None, tryParse (serialize { provenanceRecord with SchemaVersion = 2 }))
+        Assert.Equal(
+            None,
+            tryParse (
+                serialize
+                    { provenanceRecord with
+                        SchemaVersion = 2 }
+            )
+        )
 
     [<Fact>]
     let ``ScaffoldProvenance.tryParse still accepts schemaVersion 1`` () =

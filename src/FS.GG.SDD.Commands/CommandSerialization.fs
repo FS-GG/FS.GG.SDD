@@ -216,9 +216,11 @@ module CommandSerialization =
             writer.WriteNumber("blockingCount", summary.BlockingCount)
             writer.WriteString("disposition", summary.Disposition)
             writer.WriteStartObject("lifecycleStageReadiness")
+
             summary.LifecycleStageReadiness
             |> List.sortBy fst
             |> List.iter (fun (stage, status) -> writer.WriteString(stage, status))
+
             writer.WriteEndObject()
             writer.WriteString("verificationReadiness", summary.VerificationReadiness)
             writer.WriteNumber("evidenceSupportedCount", summary.EvidenceSupportedCount)
@@ -276,12 +278,14 @@ module CommandSerialization =
             writer.WriteNumber("blockingCount", summary.BlockingCount)
             writer.WriteString("disposition", summary.Disposition)
             writer.WriteStartArray("perViewState")
+
             summary.PerViewState
             |> List.iter (fun (view, state) ->
                 writer.WriteStartArray()
                 writer.WriteStringValue(view: string)
                 writer.WriteStringValue(state: string)
                 writer.WriteEndArray())
+
             writer.WriteEndArray()
             writer.WriteNumber("sourceSnapshotCount", summary.SourceSnapshotCount)
             writer.WriteString("readiness", summary.Readiness)
@@ -422,12 +426,15 @@ module CommandSerialization =
         writer.WriteStartObject()
         writer.WriteString("path", source.Path)
         writeSourceDigest writer "digest" source.Digest
+
         match source.SchemaVersion with
         | Some version -> writer.WriteNumber("schemaVersion", version)
         | None -> writer.WriteNull "schemaVersion"
+
         match source.SchemaStatus with
         | Some status -> writer.WriteString("schemaStatus", status)
         | None -> writer.WriteNull "schemaStatus"
+
         writer.WriteEndObject()
 
     let writeGenerator (writer: Utf8JsonWriter) (generator: GeneratorVersion option) =
@@ -443,12 +450,18 @@ module CommandSerialization =
         writer.WriteStartObject()
         writer.WriteString("path", view.Path)
         writer.WriteString("kind", view.Kind)
+
         match view.SchemaVersion with
         | Some version -> writer.WriteNumber("schemaVersion", version)
         | None -> writer.WriteNull "schemaVersion"
+
         writeGenerator writer view.Generator
         writer.WriteStartArray("sources")
-        view.Sources |> List.sortBy (fun source -> source.Path) |> List.iter (writeGeneratedSource writer)
+
+        view.Sources
+        |> List.sortBy (fun source -> source.Path)
+        |> List.iter (writeGeneratedSource writer)
+
         writer.WriteEndArray()
         writeOutputDigest writer "outputDigest" view.OutputDigest
         writer.WriteString("currency", generatedViewCurrencyValue view.Currency)
@@ -469,12 +482,15 @@ module CommandSerialization =
         | Some action ->
             writer.WriteStartObject("nextAction")
             writer.WriteString("actionId", action.ActionId)
+
             match action.Command with
             | Some command -> writer.WriteString("command", commandName command)
             | None -> writer.WriteNull "command"
+
             match action.WorkId with
             | Some workId -> writer.WriteString("workId", workId)
             | None -> writer.WriteNull "workId"
+
             writer.WriteString("reason", action.Reason)
             writeStringList writer Sorted "requiredArtifacts" action.RequiredArtifacts
             writeStringList writer Sorted "blockingDiagnosticIds" action.BlockingDiagnosticIds
@@ -484,9 +500,11 @@ module CommandSerialization =
     let writeHelpFlag (writer: Utf8JsonWriter) (flag: HelpFlag) =
         writer.WriteStartObject()
         writer.WriteString("name", flag.Name)
+
         match flag.Argument with
         | Some argument -> writer.WriteString("argument", argument)
         | None -> writer.WriteNull "argument"
+
         writer.WriteString("description", flag.Description)
         writer.WriteEndObject()
 
@@ -508,12 +526,14 @@ module CommandSerialization =
             writer.WriteString("usage", summary.Usage)
 
             writer.WriteStartArray("commands")
+
             summary.Commands
             |> List.iter (fun entry ->
                 writer.WriteStartObject()
                 writer.WriteString("name", entry.Name)
                 writer.WriteString("description", entry.Description)
                 writer.WriteEndObject())
+
             writer.WriteEndArray()
 
             writer.WriteStartArray("globalFlags")
@@ -540,9 +560,11 @@ module CommandSerialization =
         writer.WriteEndObject()
         writer.WriteStartObject("context")
         writer.WriteString("projectRoot", report.ProjectRoot)
+
         match report.WorkId with
         | Some workId -> writer.WriteString("workId", workId)
         | None -> writer.WriteNull "workId"
+
         writer.WriteEndObject()
         writer.WriteStartObject("invocation")
         writer.WriteString("outputFormat", outputFormatValue report.OutputFormat)
@@ -550,9 +572,11 @@ module CommandSerialization =
         writer.WriteEndObject()
         writer.WriteString("outcome", outcomeValue report.Outcome)
         writer.WriteStartArray("changedArtifacts")
+
         report.ChangedArtifacts
         |> List.sortBy (fun change -> change.Path, artifactOperationValue change.Operation, change.Ownership)
         |> List.iter (writeChange writer)
+
         writer.WriteEndArray()
         writeSpecification writer report.Specification
         writeClarification writer report.Clarification
@@ -569,13 +593,25 @@ module CommandSerialization =
         writeDoctor writer report.Doctor
         writeUpgrade writer report.Upgrade
         writer.WriteStartArray("generatedViews")
-        report.GeneratedViews |> List.sortBy (fun view -> view.Path) |> List.iter (writeGeneratedView writer)
+
+        report.GeneratedViews
+        |> List.sortBy (fun view -> view.Path)
+        |> List.iter (writeGeneratedView writer)
+
         writer.WriteEndArray()
         writer.WriteStartArray("diagnostics")
-        report.Diagnostics |> DiagnosticsModule.sort |> List.iter (writeDiagnostic writer Sorted)
+
+        report.Diagnostics
+        |> DiagnosticsModule.sort
+        |> List.iter (writeDiagnostic writer Sorted)
+
         writer.WriteEndArray()
         writer.WriteStartArray("governanceCompatibility")
-        report.GovernanceCompatibility |> List.sortBy (fun fact -> fact.Path) |> List.iter (writeGovernanceFact writer)
+
+        report.GovernanceCompatibility
+        |> List.sortBy (fun fact -> fact.Path)
+        |> List.iter (writeGovernanceFact writer)
+
         writer.WriteEndArray()
         writeNextAction writer report.NextAction
         writeHelp writer report.Help

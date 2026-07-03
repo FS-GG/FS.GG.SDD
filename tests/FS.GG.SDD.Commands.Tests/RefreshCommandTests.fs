@@ -71,7 +71,9 @@ module RefreshCommandTests =
         let root = shippedProject ()
         let report = TestSupport.runRefresh root workId
 
-        let summaryView = report.GeneratedViews |> List.tryFind (fun v -> v.Path = summaryPath)
+        let summaryView =
+            report.GeneratedViews |> List.tryFind (fun v -> v.Path = summaryPath)
+
         match summaryView with
         | Some view ->
             Assert.Equal("summary", view.Kind)
@@ -116,10 +118,12 @@ module RefreshCommandTests =
         let report = TestSupport.request Init root |> TestSupport.runRequest
 
         Assert.Equal(editedConstitution, TestSupport.readRelative root ".fsgg/constitution.md")
+
         let change =
             report.ChangedArtifacts
             |> List.tryFind (fun c -> c.Path = ".fsgg/constitution.md")
             |> Option.defaultWith (fun () -> failwith "Expected a changed-artifact entry for the constitution.")
+
         Assert.Equal(ArtifactOperation.Refuse, change.Operation)
         Assert.Equal("refused", change.SafeWriteDecision)
 
@@ -138,6 +142,7 @@ module RefreshCommandTests =
 
         Assert.Equal(editedConstitution, TestSupport.readRelative root ".fsgg/constitution.md")
         Assert.DoesNotContain(report.GeneratedViews, fun v -> v.Path = ".fsgg/constitution.md")
+
         match report.Refresh with
         | Some summary ->
             Assert.DoesNotContain(".fsgg/constitution.md", summary.RefreshedViewIds)
@@ -163,6 +168,7 @@ module RefreshCommandTests =
 
         Assert.Equal(edited, TestSupport.readRelative root skillPath)
         Assert.DoesNotContain(report.GeneratedViews, fun v -> v.Path = skillPath)
+
         match report.Refresh with
         | Some summary ->
             Assert.DoesNotContain(skillPath, summary.RefreshedViewIds)
@@ -203,6 +209,7 @@ module RefreshCommandTests =
         // No view regenerated or written (FR-005/006/011).
         Assert.False(TestSupport.existsRelative root summaryPath)
         Assert.False(TestSupport.existsRelative root workModelPath)
+
         match report.Refresh with
         | Some summary -> Assert.Empty summary.RefreshedViewIds
         | None -> failwith "Expected a refresh summary."
@@ -285,10 +292,18 @@ module RefreshCommandTests =
     [<Fact>]
     let ``refresh preserves authored sources and hand-owned guidance files`` () =
         let root = shippedProject ()
+
         let preserved =
-            [ "CLAUDE.md"; "AGENTS.md"; ".fsgg/agents.yml"; ".fsgg/project.yml"
-              $"work/{workId}/spec.md"; $"work/{workId}/tasks.yml"; $"work/{workId}/evidence.yml" ]
-        let before = preserved |> List.map (fun path -> path, TestSupport.readRelative root path)
+            [ "CLAUDE.md"
+              "AGENTS.md"
+              ".fsgg/agents.yml"
+              ".fsgg/project.yml"
+              $"work/{workId}/spec.md"
+              $"work/{workId}/tasks.yml"
+              $"work/{workId}/evidence.yml" ]
+
+        let before =
+            preserved |> List.map (fun path -> path, TestSupport.readRelative root path)
 
         TestSupport.runRefresh root workId |> ignore
 
@@ -298,7 +313,11 @@ module RefreshCommandTests =
     [<Fact>]
     let ``refresh dry-run writes zero files but reports proposed changes`` () =
         let root = shippedProject ()
-        let report = TestSupport.runRequest { TestSupport.refreshRequest root workId with DryRun = true }
+
+        let report =
+            TestSupport.runRequest
+                { TestSupport.refreshRequest root workId with
+                    DryRun = true }
 
         // Views that did not yet exist must not be created by a dry run.
         Assert.False(TestSupport.existsRelative root summaryPath)
@@ -307,7 +326,10 @@ module RefreshCommandTests =
         // Every proposed create/update is reported as a dry-run-only change (no file mutated).
         let mutations =
             report.ChangedArtifacts
-            |> List.filter (fun change -> change.Operation = ArtifactOperation.Create || change.Operation = ArtifactOperation.Update)
+            |> List.filter (fun change ->
+                change.Operation = ArtifactOperation.Create
+                || change.Operation = ArtifactOperation.Update)
+
         Assert.NotEmpty mutations
         Assert.All(mutations, (fun change -> Assert.Equal("dryRunOnly", change.SafeWriteDecision)))
 
@@ -323,8 +345,12 @@ module RefreshCommandTests =
             report.ChangedArtifacts,
             (fun change ->
                 Assert.True(
-                    change.Operation = ArtifactOperation.NoChange || change.Operation = ArtifactOperation.Preserve,
-                    $"Expected no mutation for {change.Path}, got {change.Operation}.")))
+                    change.Operation = ArtifactOperation.NoChange
+                    || change.Operation = ArtifactOperation.Preserve,
+                    $"Expected no mutation for {change.Path}, got {change.Operation}."
+                ))
+        )
+
         TestSupport.assertRefreshDisposition report "refreshed-current"
 
     // --- User Story 5: determinism and traceability ---
@@ -391,24 +417,50 @@ module RefreshCommandTests =
         // Simulate a scaffolded product: a provider co-tenant skill in the neutral root,
         // already mirrored into .claude/.codex.
         let elmishBody = "# fs-gg-elmish\nprovider co-tenant skill\n"
+
         for r in [ ".agents"; ".claude"; ".codex" ] do
             TestSupport.writeRelative root $"{r}/skills/fs-gg-elmish/SKILL.md" elmishBody
 
         // Drift: delete a mirror copy of the provider skill AND a seeded .agents copy.
         let seededName = List.head FS.GG.SDD.Commands.Internal.SeededSkills.skillNames
-        File.Delete(Path.Combine(root, ".claude/skills/fs-gg-elmish/SKILL.md".Replace('/', Path.DirectorySeparatorChar)))
-        File.Delete(Path.Combine(root, $".agents/skills/{seededName}/SKILL.md".Replace('/', Path.DirectorySeparatorChar)))
+
+        File.Delete(
+            Path.Combine(root, ".claude/skills/fs-gg-elmish/SKILL.md".Replace('/', Path.DirectorySeparatorChar))
+        )
+
+        File.Delete(
+            Path.Combine(root, $".agents/skills/{seededName}/SKILL.md".Replace('/', Path.DirectorySeparatorChar))
+        )
 
         TestSupport.runRefresh root workId |> ignore
 
-        let bytesAt (p: string) = File.ReadAllBytes(Path.Combine(root, p.Replace('/', Path.DirectorySeparatorChar)))
+        let bytesAt (p: string) =
+            File.ReadAllBytes(Path.Combine(root, p.Replace('/', Path.DirectorySeparatorChar)))
 
         // The provider skill is re-mirrored byte-identically across all three roots.
         for r in [ ".agents"; ".claude"; ".codex" ] do
-            Assert.True(TestSupport.existsRelative root $"{r}/skills/fs-gg-elmish/SKILL.md", $"expected {r} co-tenant copy")
-        Assert.Equal<byte[]>(bytesAt ".agents/skills/fs-gg-elmish/SKILL.md", bytesAt ".claude/skills/fs-gg-elmish/SKILL.md")
-        Assert.Equal<byte[]>(bytesAt ".agents/skills/fs-gg-elmish/SKILL.md", bytesAt ".codex/skills/fs-gg-elmish/SKILL.md")
+            Assert.True(
+                TestSupport.existsRelative root $"{r}/skills/fs-gg-elmish/SKILL.md",
+                $"expected {r} co-tenant copy"
+            )
+
+        Assert.Equal<byte[]>(
+            bytesAt ".agents/skills/fs-gg-elmish/SKILL.md",
+            bytesAt ".claude/skills/fs-gg-elmish/SKILL.md"
+        )
+
+        Assert.Equal<byte[]>(
+            bytesAt ".agents/skills/fs-gg-elmish/SKILL.md",
+            bytesAt ".codex/skills/fs-gg-elmish/SKILL.md"
+        )
 
         // The deleted seeded .agents copy is refilled and byte-identical to its .claude sibling.
-        Assert.True(TestSupport.existsRelative root $".agents/skills/{seededName}/SKILL.md", "expected the seeded .agents copy refilled")
-        Assert.Equal<byte[]>(bytesAt $".claude/skills/{seededName}/SKILL.md", bytesAt $".agents/skills/{seededName}/SKILL.md")
+        Assert.True(
+            TestSupport.existsRelative root $".agents/skills/{seededName}/SKILL.md",
+            "expected the seeded .agents copy refilled"
+        )
+
+        Assert.Equal<byte[]>(
+            bytesAt $".claude/skills/{seededName}/SKILL.md",
+            bytesAt $".agents/skills/{seededName}/SKILL.md"
+        )

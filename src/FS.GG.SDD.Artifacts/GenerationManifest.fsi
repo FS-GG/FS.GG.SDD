@@ -51,9 +51,20 @@ module GenerationManifest =
     val expectedWorkModelOutputPath: workId: string -> string
     val expectedSummaryOutputPath: workId: string -> string
     val expectedGovernanceHandoffOutputPath: workId: string -> string
+
     val createWorkModelManifest:
-        viewPath: string -> generatorVersion: GeneratorVersion -> sources: SourceIdentity list -> outputDigest: OutputDigest option -> GenerationManifest
+        viewPath: string ->
+        generatorVersion: GeneratorVersion ->
+        sources: SourceIdentity list ->
+        outputDigest: OutputDigest option ->
+            GenerationManifest
+
     val createSummaryManifest:
-        viewPath: string -> generatorVersion: GeneratorVersion -> sources: SourceIdentity list -> outputDigest: OutputDigest option -> GenerationManifest
+        viewPath: string ->
+        generatorVersion: GeneratorVersion ->
+        sources: SourceIdentity list ->
+        outputDigest: OutputDigest option ->
+            GenerationManifest
+
     val isStale: currentSources: SourceIdentity list -> manifest: GenerationManifest -> bool
     val parseWorkModelMetadata: path: string -> json: string -> Result<GeneratedWorkModelMetadata, Diagnostic list>

@@ -52,7 +52,8 @@ module ValidationRichRenderingTests =
           IsToolDefect = false }
 
     let private cell coordinates status : MatrixCell =
-        { Coordinates = coordinates; Status = status }
+        { Coordinates = coordinates
+          Status = status }
 
     let private report (matrices: Matrix list) : ValidationReport =
         { SchemaVersion = 1
@@ -148,8 +149,8 @@ module ValidationRichRenderingTests =
             report
                 [ { lifecycleMatrix with
                       Cells =
-                        [ cell [ "command", "specify"; "projection", "json" ] Pass
-                          cell [ "command", "verify"; "projection", "text" ] Pass ] } ]
+                          [ cell [ "command", "specify"; "projection", "json" ] Pass
+                            cell [ "command", "verify"; "projection", "text" ] Pass ] } ]
 
         let text = render allPass
         Assert.Contains("passed", text)
@@ -206,13 +207,20 @@ module ValidationRichRenderingTests =
     // ----- T009: degradation + parity (INV-2 / C-4) -----
 
     let private interactive: TerminalCapabilities =
-        { IsInteractive = true; ColorEnabled = true; Width = Some 200; IsInputInteractive = true }
+        { IsInteractive = true
+          ColorEnabled = true
+          Width = Some 200
+          IsInputInteractive = true }
 
-    let private hasEsc (value: string) = value |> Seq.exists (fun c -> int c = 27)
+    let private hasEsc (value: string) =
+        value |> Seq.exists (fun c -> int c = 27)
 
     [<Fact>]
     let ``T009 Rich degrades to exact plain text when non-interactive`` () =
-        let caps = { interactive with IsInteractive = false }
+        let caps =
+            { interactive with
+                IsInteractive = false }
+
         let result = resolveValidation Rich caps mixedReport
         Assert.False(result.UsedRichRendering)
         Assert.Equal(renderText mixedReport, result.Text)
@@ -220,7 +228,10 @@ module ValidationRichRenderingTests =
 
     [<Fact>]
     let ``T009 Rich degrades to exact plain text when color disabled`` () =
-        let caps = { interactive with ColorEnabled = false }
+        let caps =
+            { interactive with
+                ColorEnabled = false }
+
         let result = resolveValidation Rich caps mixedReport
         Assert.False(result.UsedRichRendering)
         Assert.Equal(renderText mixedReport, result.Text)

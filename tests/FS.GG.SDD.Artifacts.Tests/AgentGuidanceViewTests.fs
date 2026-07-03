@@ -26,7 +26,11 @@ module AgentGuidanceViewTests =
 }"""
 
     let parsedModel () =
-        match parseWorkModel { Path = "readiness/014-agent-guidance/work-model.json"; Text = workModelJson } with
+        match
+            parseWorkModel
+                { Path = "readiness/014-agent-guidance/work-model.json"
+                  Text = workModelJson }
+        with
         | Ok model -> model
         | Error diagnostics -> failwith $"Expected a parseable work model, got {diagnostics}"
 
@@ -39,7 +43,11 @@ module AgentGuidanceViewTests =
 
     [<Fact>]
     let ``parseWorkModel rejects malformed JSON`` () =
-        match parseWorkModel { Path = "readiness/x/work-model.json"; Text = "{ not json" } with
+        match
+            parseWorkModel
+                { Path = "readiness/x/work-model.json"
+                  Text = "{ not json" }
+        with
         | Ok _ -> failwith "Expected an error for malformed work-model JSON."
         | Error diagnostics -> Assert.NotEmpty diagnostics
 
@@ -60,10 +68,16 @@ module AgentGuidanceViewTests =
     [<Fact>]
     let ``behaviorModelDigest changes when the model changes`` () =
         let baseDigest = behaviorModelDigest (deriveGuidanceModel (parsedModel ()))
-        let mutatedJson = workModelJson.Replace("\"title\": \"First task\"", "\"title\": \"Renamed task\"")
+
+        let mutatedJson =
+            workModelJson.Replace("\"title\": \"First task\"", "\"title\": \"Renamed task\"")
 
         let mutated =
-            match parseWorkModel { Path = "readiness/x/work-model.json"; Text = mutatedJson } with
+            match
+                parseWorkModel
+                    { Path = "readiness/x/work-model.json"
+                      Text = mutatedJson }
+            with
             | Ok model -> model
             | Error diagnostics -> failwith $"{diagnostics}"
 
@@ -89,12 +103,21 @@ module AgentGuidanceViewTests =
 
     [<Fact>]
     let ``parseGeneratedAgentGuidance reads a well-formed manifest`` () =
-        match parseGeneratedAgentGuidance { Path = "readiness/014-agent-guidance/agent-commands/claude/guidance.json"; Text = manifestJson } with
+        match
+            parseGeneratedAgentGuidance
+                { Path = "readiness/014-agent-guidance/agent-commands/claude/guidance.json"
+                  Text = manifestJson }
+        with
         | Ok manifest ->
             Assert.Equal("014-agent-guidance", manifest.WorkId.Value)
             Assert.Equal("claude", manifest.TargetId)
             Assert.True manifest.Generated
-            Assert.Equal("2222222222222222222222222222222222222222222222222222222222222222", manifest.BehaviorModelDigest.Value)
+
+            Assert.Equal(
+                "2222222222222222222222222222222222222222222222222222222222222222",
+                manifest.BehaviorModelDigest.Value
+            )
+
             Assert.Single manifest.Commands |> ignore
             Assert.Single manifest.Skills |> ignore
         | Error diagnostics -> failwith $"Expected a well-formed manifest, got {diagnostics}"
@@ -102,6 +125,7 @@ module AgentGuidanceViewTests =
     [<Fact>]
     let ``parseGeneratedAgentGuidance rejects malformed schema version`` () =
         let bad = manifestJson.Replace("\"schemaVersion\": 1,", "\"schemaVersion\": \"x\",")
+
         match parseGeneratedAgentGuidance { Path = "p"; Text = bad } with
         | Ok _ -> failwith "Expected a malformed-schema error."
         | Error diagnostics -> Assert.NotEmpty diagnostics

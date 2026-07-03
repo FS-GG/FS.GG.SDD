@@ -8,7 +8,8 @@ module Diagnostics =
         | DiagnosticWarning
         | DiagnosticInfo
 
-    type SourceLocation = { Line: int option; Column: int option }
+    type SourceLocation =
+        { Line: int option; Column: int option }
 
     type Diagnostic =
         { Id: string
@@ -57,7 +58,10 @@ module Diagnostics =
     val unknownReference: artifact: ArtifactRef -> id: string -> correction: string -> Diagnostic
     val malformedReference: artifact: ArtifactRef -> kind: string -> value: string -> Diagnostic
     val requirementNotTyped: artifact: ArtifactRef -> id: string -> correction: string -> Diagnostic
-    val workModelInconsistent: artifact: ArtifactRef -> message: string -> correction: string -> relatedIds: string list -> Diagnostic
+
+    val workModelInconsistent:
+        artifact: ArtifactRef -> message: string -> correction: string -> relatedIds: string list -> Diagnostic
+
     val proseStructuredMismatch: artifact: ArtifactRef -> message: string -> correction: string -> Diagnostic
     val staleGeneratedView: artifact: ArtifactRef -> message: string -> correction: string -> Diagnostic
     val missingGeneratedWorkModel: artifact: ArtifactRef -> expectedPath: string -> Diagnostic
@@ -68,7 +72,10 @@ module Diagnostics =
     // `providerWroteSddTree`) carry the tool-defect class consumed at exit 2.
     val scaffoldProviderMissing: unit -> Diagnostic
     val scaffoldProviderUnknown: name: string -> Diagnostic
-    val scaffoldProviderVersionUnsupported: name: string -> declaredVersion: string -> supportedRange: string -> Diagnostic
+
+    val scaffoldProviderVersionUnsupported:
+        name: string -> declaredVersion: string -> supportedRange: string -> Diagnostic
+
     val scaffoldProviderParamMissing: name: string -> missingKeys: string list -> Diagnostic
     val scaffoldTargetCollision: paths: string list -> Diagnostic
     val scaffoldProviderEmpty: name: string -> Diagnostic

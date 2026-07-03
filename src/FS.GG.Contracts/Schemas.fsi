@@ -23,9 +23,7 @@ module Schemas =
     // --- Shared generic mirrors of SDD-specific nested shapes (BCL-only). ---
 
     /// Generic mirror of an SDD `GeneratorVersion` ({ Id; Version }).
-    type GeneratorRef =
-        { Id: string
-          Version: string }
+    type GeneratorRef = { Id: string; Version: string }
 
     /// Generic mirror of an SDD provider `--param` declaration.
     type ProviderParameterEntry =
@@ -205,20 +203,16 @@ module Schemas =
     // deferred to the Governance counterpart item. Not invented field sets.
 
     /// `governance` schema — declared to the Governance published reference.
-    type GovernanceSchema =
-        { SchemaVersion: int }
+    type GovernanceSchema = { SchemaVersion: int }
 
     /// `policy` schema — declared to the Governance published reference.
-    type PolicySchema =
-        { SchemaVersion: int }
+    type PolicySchema = { SchemaVersion: int }
 
     /// `capabilities` schema — declared to the Governance published reference.
-    type CapabilitiesSchema =
-        { SchemaVersion: int }
+    type CapabilitiesSchema = { SchemaVersion: int }
 
     /// `tooling` schema — declared to the Governance published reference.
-    type ToolingSchema =
-        { SchemaVersion: int }
+    type ToolingSchema = { SchemaVersion: int }
 
     // --- Named version constants (FR-005). One authoritative value each. ---
     val providersVersion: int

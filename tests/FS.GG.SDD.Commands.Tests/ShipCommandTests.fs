@@ -24,7 +24,7 @@ module ShipCommandTests =
           StdErr: string }
 
     let initializedVerifiedProject () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeVerifiedProject root workId title
         root
 
@@ -115,7 +115,11 @@ module ShipCommandTests =
     let ``ship still flags genuine upstream staleness`` () =
         let root = initializedVerifiedProject ()
         TestSupport.runShip root workId title |> ignore
-        let edited = (TestSupport.readRelative root specPath) + "\n\nAuthor edited the spec after generation.\n"
+
+        let edited =
+            (TestSupport.readRelative root specPath)
+            + "\n\nAuthor edited the spec after generation.\n"
+
         TestSupport.writeRelative root specPath edited
 
         let report = TestSupport.runShip root workId title
@@ -139,7 +143,10 @@ module ShipCommandTests =
     let ``ship not-verification-ready blocks without ship write`` () =
         let root = initializedVerifiedProject ()
         let verifyJson = TestSupport.readRelative root verifyPath
-        let notReady = verifyJson.Replace("verificationReady", "needsVerificationCorrection")
+
+        let notReady =
+            verifyJson.Replace("verificationReady", "needsVerificationCorrection")
+
         TestSupport.writeRelative root verifyPath notReady
 
         let report = TestSupport.runShip root workId title
@@ -172,7 +179,7 @@ module ShipCommandTests =
 
     [<Fact>]
     let ``ship outside project blocks`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
 
         let report = TestSupport.runShip root workId title
 
@@ -199,6 +206,7 @@ module ShipCommandTests =
     [<Fact>]
     let ``ship dry run reports generated change without mutation`` () =
         let root = initializedVerifiedProject ()
+
         let request =
             { TestSupport.shipRequest root workId title with
                 DryRun = true }
@@ -207,7 +215,11 @@ module ShipCommandTests =
 
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
         Assert.False(TestSupport.existsRelative root shipPath)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = shipPath && change.SafeWriteDecision = "dryRunOnly")
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = shipPath && change.SafeWriteDecision = "dryRunOnly"
+        )
 
     [<Fact>]
     let ``ship rerun over unchanged sources reports no change`` () =
@@ -220,7 +232,11 @@ module ShipCommandTests =
 
         Assert.NotEqual(CommandOutcome.Blocked, rerun.Outcome)
         Assert.Equal(first, second)
-        Assert.Contains(rerun.ChangedArtifacts, fun change -> change.Path = shipPath && change.Operation = ArtifactOperation.NoChange)
+
+        Assert.Contains(
+            rerun.ChangedArtifacts,
+            fun change -> change.Path = shipPath && change.Operation = ArtifactOperation.NoChange
+        )
 
     // --- User Story 4: keep ship output traceable ---
 
@@ -234,11 +250,16 @@ module ShipCommandTests =
         Assert.False(TestSupport.existsRelative root ".fsgg/policy.yml")
         Assert.DoesNotContain(serializeReport report, "\"route\"")
         Assert.DoesNotContain(serializeReport report, "\"freshness\"")
-        Assert.Contains(report.GovernanceCompatibility, fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated")
+
+        Assert.Contains(
+            report.GovernanceCompatibility,
+            fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated"
+        )
 
     [<Fact>]
     let ``ship deterministic JSON report is byte stable`` () =
         let root = initializedVerifiedProject ()
+
         let request =
             { TestSupport.shipRequest root workId title with
                 DryRun = true }

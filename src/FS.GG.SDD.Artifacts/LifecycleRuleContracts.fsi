@@ -18,7 +18,9 @@ module LifecycleRuleContracts =
           FreshnessAware: bool
           EnforceableBySdd: bool }
 
-    type RuleInput = { Artifact: ArtifactRef; Required: bool }
+    type RuleInput =
+        { Artifact: ArtifactRef
+          Required: bool }
 
     type LifecycleRuleContract =
         { SchemaVersion: SchemaVersion

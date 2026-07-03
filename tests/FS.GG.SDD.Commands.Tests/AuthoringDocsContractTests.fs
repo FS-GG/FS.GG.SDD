@@ -21,10 +21,11 @@ module AuthoringDocsContractTests =
         let lines = markdown.Replace("\r\n", "\n").Split('\n')
 
         let mutable blocks = []
-        let mutable current : string list option = None
+        let mutable current: string list option = None
 
         for line in lines do
             let trimmed = line.TrimStart()
+
             if trimmed.StartsWith("```") then
                 match current with
                 | Some collected ->
@@ -34,7 +35,9 @@ module AuthoringDocsContractTests =
                 | None ->
                     // opening fence — capture only when the info string carries our label
                     let info = trimmed.Substring(3)
-                    if info.Contains(label) then current <- Some []
+
+                    if info.Contains(label) then
+                        current <- Some []
             else
                 match current with
                 | Some collected -> current <- Some(line :: collected)
@@ -52,7 +55,8 @@ module AuthoringDocsContractTests =
     /// `requirementReferences`).
     let private coverageReferences (line: string) =
         let text =
-            String.concat "\n"
+            String.concat
+                "\n"
                 [ "---"
                   "schemaVersion: 1"
                   "workId: 001-authoring-contracts-guard"
@@ -63,7 +67,11 @@ module AuthoringDocsContractTests =
                   ""
                   line ]
 
-        match Specification.parseSpecificationFacts { Path = "work/001-authoring-contracts-guard/spec.md"; Text = text } with
+        match
+            Specification.parseSpecificationFacts
+                { Path = "work/001-authoring-contracts-guard/spec.md"
+                  Text = text }
+        with
         | Ok facts -> facts.RequirementReferences
         | Error diagnostics -> failwith $"Documented coverage line did not parse: {line}\n{diagnostics}"
 
@@ -76,30 +84,40 @@ module AuthoringDocsContractTests =
 
     [<Fact>]
     let ``Documented accepted coverage lines establish coverage in the live parser`` () =
-        let lines = taggedBlocks "coverage:accepted" referenceDoc |> List.collect nonBlankLines
+        let lines =
+            taggedBlocks "coverage:accepted" referenceDoc |> List.collect nonBlankLines
+
         Assert.NotEmpty lines
 
         for line in lines do
             Assert.True(
                 establishesCoverage line,
-                $"Doc lists this line as ACCEPTED coverage, but the parser does not cover it: {line}")
+                $"Doc lists this line as ACCEPTED coverage, but the parser does not cover it: {line}"
+            )
 
     [<Fact>]
     let ``Documented rejected coverage lines establish no coverage in the live parser`` () =
-        let lines = taggedBlocks "coverage:rejected" referenceDoc |> List.collect nonBlankLines
+        let lines =
+            taggedBlocks "coverage:rejected" referenceDoc |> List.collect nonBlankLines
+
         Assert.NotEmpty lines
 
         for line in lines do
             Assert.False(
                 establishesCoverage line,
-                $"Doc lists this line as REJECTED coverage, but the parser covered it: {line}")
+                $"Doc lists this line as REJECTED coverage, but the parser covered it: {line}"
+            )
 
     // --- Evidence ------------------------------------------------------------
 
     let private declarations (block: string list) =
         let text = String.concat "\n" block
 
-        match Evidence.parseEvidence { Path = "work/001-authoring-contracts-guard/evidence.yml"; Text = text } with
+        match
+            Evidence.parseEvidence
+                { Path = "work/001-authoring-contracts-guard/evidence.yml"
+                  Text = text }
+        with
         | Ok declarations -> declarations
         | Error diagnostics -> failwith $"Documented evidence block did not parse:\n{text}\n{diagnostics}"
 
@@ -107,7 +125,8 @@ module AuthoringDocsContractTests =
     /// because it is not exposed as a public predicate (it lives in the verify and
     /// evidence disposition ladders; T002 keeps this rule in sync with them).
     let private satisfies (declaration: Evidence.EvidenceDeclaration) =
-        declaration.Result.Trim().ToLowerInvariant() = "pass" && not declaration.Synthetic
+        declaration.Result.Trim().ToLowerInvariant() = "pass"
+        && not declaration.Synthetic
 
     [<Fact>]
     let ``Documented satisfied evidence blocks satisfy under the live parser`` () =
@@ -117,7 +136,15 @@ module AuthoringDocsContractTests =
         for block in blocks do
             let parsed = declarations block
             Assert.NotEmpty parsed
-            Assert.All(parsed, fun declaration -> Assert.True(satisfies declaration, $"Doc marks this declaration SATISFIED, but the non-synthetic-pass rule rejects it: {declaration.Id.Value}"))
+
+            Assert.All(
+                parsed,
+                fun declaration ->
+                    Assert.True(
+                        satisfies declaration,
+                        $"Doc marks this declaration SATISFIED, but the non-synthetic-pass rule rejects it: {declaration.Id.Value}"
+                    )
+            )
 
     [<Fact>]
     let ``Documented unsatisfied evidence blocks do not satisfy under the live parser`` () =
@@ -127,4 +154,12 @@ module AuthoringDocsContractTests =
         for block in blocks do
             let parsed = declarations block
             Assert.NotEmpty parsed
-            Assert.All(parsed, fun declaration -> Assert.False(satisfies declaration, $"Doc marks this declaration UNSATISFIED, but the non-synthetic-pass rule accepts it: {declaration.Id.Value}"))
+
+            Assert.All(
+                parsed,
+                fun declaration ->
+                    Assert.False(
+                        satisfies declaration,
+                        $"Doc marks this declaration UNSATISFIED, but the non-synthetic-pass rule accepts it: {declaration.Id.Value}"
+                    )
+            )

@@ -9,7 +9,7 @@ open Xunit
 module CommandWorkflowTests =
     [<Fact>]
     let ``init plans skeleton effects without touching filesystem`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         let request = TestSupport.request Init root
 
         let model, effects = init request
@@ -18,34 +18,44 @@ module CommandWorkflowTests =
         Assert.Contains(effects, fun effect -> effect = CreateDirectory ".fsgg")
         Assert.Contains(effects, fun effect -> effect = CreateDirectory "work")
         Assert.Contains(effects, fun effect -> effect = CreateDirectory "readiness")
-        Assert.Contains(effects, fun effect ->
-            match effect with
-            | WriteFile(".fsgg/project.yml", _, StructuredSource) -> true
-            | _ -> false)
+
+        Assert.Contains(
+            effects,
+            fun effect ->
+                match effect with
+                | WriteFile(".fsgg/project.yml", _, StructuredSource) -> true
+                | _ -> false
+        )
 
     // T004 (033 US1, plan-level clarity / init-emission.md): initEffects plans the
     // constitution write as an authored agent-guidance target.
     [<Fact>]
     let ``init plans the constitution write as an agent-guidance target`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         let request = TestSupport.request Init root
 
         let model, effects = init request
 
         Assert.Empty(model.Diagnostics)
-        Assert.Contains(effects, fun effect ->
-            match effect with
-            | WriteFile(".fsgg/constitution.md", _, AgentGuidanceTarget) -> true
-            | _ -> false)
+
+        Assert.Contains(
+            effects,
+            fun effect ->
+                match effect with
+                | WriteFile(".fsgg/constitution.md", _, AgentGuidanceTarget) -> true
+                | _ -> false
+        )
 
     [<Fact>]
     let ``unsupported lifecycle command builds blocked report without write effects`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         let request = TestSupport.request Specify root
 
         let model, effects = init request
         let finalModel = update BuildReport model |> fst
-        let report = finalModel.Report |> Option.defaultWith (fun () -> buildReport finalModel)
+
+        let report =
+            finalModel.Report |> Option.defaultWith (fun () -> buildReport finalModel)
 
         Assert.Empty(effects)
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
@@ -53,10 +63,17 @@ module CommandWorkflowTests =
 
     [<Fact>]
     let ``interpreted effects feed report through EffectInterpreted messages`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         let request = TestSupport.request Init root
         let model, effects = init request
-        let first = { Effect = List.head effects; Succeeded = true; Snapshot = None; Process = None; Confirmed = None; Diagnostic = None }
+
+        let first =
+            { Effect = List.head effects
+              Succeeded = true
+              Snapshot = None
+              Process = None
+              Confirmed = None
+              Diagnostic = None }
 
         let updated = update (EffectInterpreted first) model |> fst
         let final = update BuildReport updated |> fst
@@ -66,8 +83,11 @@ module CommandWorkflowTests =
 
     [<Fact>]
     let ``charter plans project and work reads before write effects`` () =
-        let root = TestSupport.tempDirectory()
-        let request = { TestSupport.request Charter root with WorkId = Some "004-charter-command" }
+        let root = TestSupport.tempDirectory ()
+
+        let request =
+            { TestSupport.request Charter root with
+                WorkId = Some "004-charter-command" }
 
         let model, effects = init request
 
@@ -76,16 +96,24 @@ module CommandWorkflowTests =
         Assert.Contains(effects, fun effect -> effect = ReadFile ".fsgg/sdd.yml")
         Assert.Contains(effects, fun effect -> effect = ReadFile ".fsgg/agents.yml")
         Assert.Contains(effects, fun effect -> effect = ReadFile "work/004-charter-command/charter.md")
-        Assert.DoesNotContain(effects, fun effect ->
-            match effect with
-            | WriteFile _ -> true
-            | _ -> false)
+
+        Assert.DoesNotContain(
+            effects,
+            fun effect ->
+                match effect with
+                | WriteFile _ -> true
+                | _ -> false
+        )
 
     [<Fact>]
     let ``charter requests duplicate candidate reads from interpreted directory snapshot`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
-        TestSupport.writeRelative root "work/duplicate/charter.md" """---
+
+        TestSupport.writeRelative
+            root
+            "work/duplicate/charter.md"
+            """---
 schemaVersion: 1
 workId: 004-charter-command
 title: Duplicate
@@ -97,7 +125,10 @@ status: chartered
 # Duplicate Charter
 """
 
-        let request = { TestSupport.charterRequest root "004-charter-command" "Charter Command" with DryRun = true }
+        let request =
+            { TestSupport.charterRequest root "004-charter-command" "Charter Command" with
+                DryRun = true }
+
         let model, effects = init request
 
         let produced =
@@ -113,8 +144,12 @@ status: chartered
 
     [<Fact>]
     let ``charter blocking diagnostics prevent write effects`` () =
-        let root = TestSupport.tempDirectory()
-        let request = { TestSupport.request Charter root with WorkId = Some "004-charter-command" }
+        let root = TestSupport.tempDirectory ()
+
+        let request =
+            { TestSupport.request Charter root with
+                WorkId = Some "004-charter-command" }
+
         let model, effects = init request
 
         let afterReads =
@@ -126,15 +161,22 @@ status: chartered
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "outsideProject")
-        Assert.DoesNotContain(afterReads.PendingEffects, fun effect ->
-            match effect with
-            | WriteFile _ -> true
-            | _ -> false)
+
+        Assert.DoesNotContain(
+            afterReads.PendingEffects,
+            fun effect ->
+                match effect with
+                | WriteFile _ -> true
+                | _ -> false
+        )
 
     [<Fact>]
     let ``specify plans project and work reads before write effects`` () =
-        let root = TestSupport.tempDirectory()
-        let request = { TestSupport.specifyRequest root "005-specify-command" "Specify Command" with DryRun = true }
+        let root = TestSupport.tempDirectory ()
+
+        let request =
+            { TestSupport.specifyRequest root "005-specify-command" "Specify Command" with
+                DryRun = true }
 
         let model, effects = init request
 
@@ -145,16 +187,24 @@ status: chartered
         Assert.Contains(effects, fun effect -> effect = ReadFile "work/005-specify-command/charter.md")
         Assert.Contains(effects, fun effect -> effect = ReadFile "work/005-specify-command/spec.md")
         Assert.Contains(effects, fun effect -> effect = ReadFile "readiness/005-specify-command/work-model.json")
-        Assert.DoesNotContain(effects, fun effect ->
-            match effect with
-            | WriteFile _ -> true
-            | _ -> false)
+
+        Assert.DoesNotContain(
+            effects,
+            fun effect ->
+                match effect with
+                | WriteFile _ -> true
+                | _ -> false
+        )
 
     [<Fact>]
     let ``specify blocking diagnostics prevent write effects`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
-        let request = { TestSupport.specifyRequest root "005-specify-command" "Specify Command" with DryRun = true }
+
+        let request =
+            { TestSupport.specifyRequest root "005-specify-command" "Specify Command" with
+                DryRun = true }
+
         let model, effects = init request
 
         let afterReads =
@@ -166,15 +216,22 @@ status: chartered
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "missingCharterPrerequisite")
-        Assert.DoesNotContain(afterReads.PendingEffects, fun effect ->
-            match effect with
-            | WriteFile _ -> true
-            | _ -> false)
+
+        Assert.DoesNotContain(
+            afterReads.PendingEffects,
+            fun effect ->
+                match effect with
+                | WriteFile _ -> true
+                | _ -> false
+        )
 
     [<Fact>]
     let ``clarify plans project specification clarification task evidence and generated-view reads before writes`` () =
-        let root = TestSupport.tempDirectory()
-        let request = { TestSupport.clarifyRequest root "006-clarify-command" "Clarify Command" with DryRun = true }
+        let root = TestSupport.tempDirectory ()
+
+        let request =
+            { TestSupport.clarifyRequest root "006-clarify-command" "Clarify Command" with
+                DryRun = true }
 
         let model, effects = init request
 
@@ -185,16 +242,24 @@ status: chartered
         Assert.Contains(effects, fun effect -> effect = ReadFile "work/006-clarify-command/tasks.yml")
         Assert.Contains(effects, fun effect -> effect = ReadFile "work/006-clarify-command/evidence.yml")
         Assert.Contains(effects, fun effect -> effect = ReadFile "readiness/006-clarify-command/work-model.json")
-        Assert.DoesNotContain(effects, fun effect ->
-            match effect with
-            | WriteFile _ -> true
-            | _ -> false)
+
+        Assert.DoesNotContain(
+            effects,
+            fun effect ->
+                match effect with
+                | WriteFile _ -> true
+                | _ -> false
+        )
 
     [<Fact>]
     let ``clarify blocking diagnostics prevent write effects`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
-        let request = { TestSupport.clarifyRequest root "006-clarify-command" "Clarify Command" with DryRun = true }
+
+        let request =
+            { TestSupport.clarifyRequest root "006-clarify-command" "Clarify Command" with
+                DryRun = true }
+
         let model, effects = init request
 
         let afterReads =
@@ -206,15 +271,24 @@ status: chartered
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "missingSpecificationPrerequisite")
-        Assert.DoesNotContain(afterReads.PendingEffects, fun effect ->
-            match effect with
-            | WriteFile _ -> true
-            | _ -> false)
+
+        Assert.DoesNotContain(
+            afterReads.PendingEffects,
+            fun effect ->
+                match effect with
+                | WriteFile _ -> true
+                | _ -> false
+        )
 
     [<Fact>]
-    let ``checklist plans project specification clarification checklist task evidence and generated-view reads before writes`` () =
-        let root = TestSupport.tempDirectory()
-        let request = { TestSupport.checklistRequest root "007-checklist-command" "Checklist Command" with DryRun = true }
+    let ``checklist plans project specification clarification checklist task evidence and generated-view reads before writes``
+        ()
+        =
+        let root = TestSupport.tempDirectory ()
+
+        let request =
+            { TestSupport.checklistRequest root "007-checklist-command" "Checklist Command" with
+                DryRun = true }
 
         let model, effects = init request
 
@@ -226,16 +300,24 @@ status: chartered
         Assert.Contains(effects, fun effect -> effect = ReadFile "work/007-checklist-command/tasks.yml")
         Assert.Contains(effects, fun effect -> effect = ReadFile "work/007-checklist-command/evidence.yml")
         Assert.Contains(effects, fun effect -> effect = ReadFile "readiness/007-checklist-command/work-model.json")
-        Assert.DoesNotContain(effects, fun effect ->
-            match effect with
-            | WriteFile _ -> true
-            | _ -> false)
+
+        Assert.DoesNotContain(
+            effects,
+            fun effect ->
+                match effect with
+                | WriteFile _ -> true
+                | _ -> false
+        )
 
     [<Fact>]
     let ``checklist blocking diagnostics prevent write effects`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
-        let request = { TestSupport.checklistRequest root "007-checklist-command" "Checklist Command" with DryRun = true }
+
+        let request =
+            { TestSupport.checklistRequest root "007-checklist-command" "Checklist Command" with
+                DryRun = true }
+
         let model, effects = init request
 
         let afterReads =
@@ -247,15 +329,22 @@ status: chartered
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "missingSpecificationPrerequisite")
-        Assert.DoesNotContain(afterReads.PendingEffects, fun effect ->
-            match effect with
-            | WriteFile _ -> true
-            | _ -> false)
+
+        Assert.DoesNotContain(
+            afterReads.PendingEffects,
+            fun effect ->
+                match effect with
+                | WriteFile _ -> true
+                | _ -> false
+        )
 
     [<Fact>]
     let ``tasks plans project lifecycle sources task evidence and generated-view reads before writes`` () =
-        let root = TestSupport.tempDirectory()
-        let request = { TestSupport.tasksRequest root "009-tasks-command" "Tasks Command" with DryRun = true }
+        let root = TestSupport.tempDirectory ()
+
+        let request =
+            { TestSupport.tasksRequest root "009-tasks-command" "Tasks Command" with
+                DryRun = true }
 
         let model, effects = init request
 
@@ -268,15 +357,22 @@ status: chartered
         Assert.Contains(effects, fun effect -> effect = ReadFile "work/009-tasks-command/tasks.yml")
         Assert.Contains(effects, fun effect -> effect = ReadFile "work/009-tasks-command/evidence.yml")
         Assert.Contains(effects, fun effect -> effect = ReadFile "readiness/009-tasks-command/work-model.json")
-        Assert.DoesNotContain(effects, fun effect ->
-            match effect with
-            | WriteFile _ -> true
-            | _ -> false)
+
+        Assert.DoesNotContain(
+            effects,
+            fun effect ->
+                match effect with
+                | WriteFile _ -> true
+                | _ -> false
+        )
 
     [<Fact>]
     let ``analyze plans lifecycle source and generated-view reads before writes`` () =
-        let root = TestSupport.tempDirectory()
-        let request = { TestSupport.analyzeRequest root "010-analyze-command" "Analyze Command" with DryRun = true }
+        let root = TestSupport.tempDirectory ()
+
+        let request =
+            { TestSupport.analyzeRequest root "010-analyze-command" "Analyze Command" with
+                DryRun = true }
 
         let model, effects = init request
 
@@ -289,15 +385,22 @@ status: chartered
         Assert.Contains(effects, fun effect -> effect = ReadFile "work/010-analyze-command/tasks.yml")
         Assert.Contains(effects, fun effect -> effect = ReadFile "readiness/010-analyze-command/work-model.json")
         Assert.Contains(effects, fun effect -> effect = ReadFile "readiness/010-analyze-command/analysis.json")
-        Assert.DoesNotContain(effects, fun effect ->
-            match effect with
-            | WriteFile _ -> true
-            | _ -> false)
+
+        Assert.DoesNotContain(
+            effects,
+            fun effect ->
+                match effect with
+                | WriteFile _ -> true
+                | _ -> false
+        )
 
     [<Fact>]
     let ``plan requests project prerequisite plan and generated-view reads before writes`` () =
-        let root = TestSupport.tempDirectory()
-        let request = { TestSupport.planRequest root "008-plan-command" "Plan Command" with DryRun = true }
+        let root = TestSupport.tempDirectory ()
+
+        let request =
+            { TestSupport.planRequest root "008-plan-command" "Plan Command" with
+                DryRun = true }
 
         let model, effects = init request
 
@@ -310,16 +413,24 @@ status: chartered
         Assert.Contains(effects, fun effect -> effect = ReadFile "work/008-plan-command/tasks.yml")
         Assert.Contains(effects, fun effect -> effect = ReadFile "work/008-plan-command/evidence.yml")
         Assert.Contains(effects, fun effect -> effect = ReadFile "readiness/008-plan-command/work-model.json")
-        Assert.DoesNotContain(effects, fun effect ->
-            match effect with
-            | WriteFile _ -> true
-            | _ -> false)
+
+        Assert.DoesNotContain(
+            effects,
+            fun effect ->
+                match effect with
+                | WriteFile _ -> true
+                | _ -> false
+        )
 
     [<Fact>]
     let ``plan blocking diagnostics prevent write effects`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
-        let request = { TestSupport.planRequest root "008-plan-command" "Plan Command" with DryRun = true }
+
+        let request =
+            { TestSupport.planRequest root "008-plan-command" "Plan Command" with
+                DryRun = true }
+
         let model, effects = init request
 
         let afterReads =
@@ -331,7 +442,11 @@ status: chartered
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "missingSpecificationPrerequisite")
-        Assert.DoesNotContain(afterReads.PendingEffects, fun effect ->
-            match effect with
-            | WriteFile _ -> true
-            | _ -> false)
+
+        Assert.DoesNotContain(
+            afterReads.PendingEffects,
+            fun effect ->
+                match effect with
+                | WriteFile _ -> true
+                | _ -> false
+        )

@@ -135,7 +135,10 @@ module WorkModel =
             { Path = source.Artifact.Path
               Kind = ArtifactRef.kindValue source.Artifact.Kind
               Owner = ArtifactRef.ownerValue source.Artifact.Owner
-              SchemaVersion = source.SchemaVersion |> Option.map (fun version -> version.Major) |> Option.defaultValue 0
+              SchemaVersion =
+                source.SchemaVersion
+                |> Option.map (fun version -> version.Major)
+                |> Option.defaultValue 0
               RawSchemaVersion = source.RawSchemaVersion
               SchemaStatus = SchemaVersion.statusValue source.SchemaStatus
               SourceDigest = source.Digest })
@@ -149,7 +152,11 @@ module WorkModel =
             | [] -> None
             | first :: _ ->
                 let id = idSelector first
-                let same = values |> List.filter (fun value -> String.Equals(idSelector value, id, StringComparison.OrdinalIgnoreCase))
+
+                let same =
+                    values
+                    |> List.filter (fun value ->
+                        String.Equals(idSelector value, id, StringComparison.OrdinalIgnoreCase))
 
                 if same.Length > 1 then
                     Some(Diagnostics.duplicateIdentifier artifact id (same |> List.choose locationSelector))
@@ -161,10 +168,18 @@ module WorkModel =
           Diagnostics.workModelInconsistent artifact $"Reference '{id}' does not resolve." correction [ id ] ]
 
     let referenceDiagnostics (parsed: ParsedWorkItem) =
-        let requirementIds = parsed.Requirements |> List.map (fun requirement -> requirement.Id.Value) |> Set.ofList
-        let decisionIds = parsed.Decisions |> List.map (fun decision -> decision.Id.Value) |> Set.ofList
+        let requirementIds =
+            parsed.Requirements
+            |> List.map (fun requirement -> requirement.Id.Value)
+            |> Set.ofList
+
+        let decisionIds =
+            parsed.Decisions |> List.map (fun decision -> decision.Id.Value) |> Set.ofList
+
         let taskIds = parsed.Tasks |> List.map (fun task -> task.Id.Value) |> Set.ofList
-        let evidenceIds = parsed.Evidence |> List.map (fun evidence -> evidence.Id.Value) |> Set.ofList
+
+        let evidenceIds =
+            parsed.Evidence |> List.map (fun evidence -> evidence.Id.Value) |> Set.ofList
 
         let taskDiagnostics =
             parsed.Tasks
@@ -173,16 +188,34 @@ module WorkModel =
 
                 [ task.Requirements
                   |> List.collect (fun id ->
-                      if Set.contains id.Value requirementIds then [] else unknown id.Value artifact "Declare the requirement in spec.md or update the task reference.")
+                      if Set.contains id.Value requirementIds then
+                          []
+                      else
+                          unknown id.Value artifact "Declare the requirement in spec.md or update the task reference.")
                   task.Decisions
                   |> List.collect (fun id ->
-                      if Set.contains id.Value decisionIds then [] else unknown id.Value artifact "Declare the decision in plan or clarification artifacts, or update the task reference.")
+                      if Set.contains id.Value decisionIds then
+                          []
+                      else
+                          unknown
+                              id.Value
+                              artifact
+                              "Declare the decision in plan or clarification artifacts, or update the task reference.")
                   task.Dependencies
                   |> List.collect (fun id ->
-                      if Set.contains id.Value taskIds then [] else unknown id.Value artifact "Declare the dependency task or remove the dependency.")
+                      if Set.contains id.Value taskIds then
+                          []
+                      else
+                          unknown id.Value artifact "Declare the dependency task or remove the dependency.")
                   task.RequiredEvidence
                   |> List.collect (fun id ->
-                      if Set.contains id.Value evidenceIds then [] else unknown id.Value artifact "Declare the evidence id in evidence.yml or update requiredEvidence.") ]
+                      if Set.contains id.Value evidenceIds then
+                          []
+                      else
+                          unknown
+                              id.Value
+                              artifact
+                              "Declare the evidence id in evidence.yml or update requiredEvidence.") ]
                 |> List.concat)
 
         let evidenceDiagnostics =
@@ -192,19 +225,26 @@ module WorkModel =
 
                 [ evidence.TaskRefs
                   |> List.collect (fun id ->
-                      if Set.contains id.Value taskIds then [] else unknown id.Value artifact "Declare the task in tasks.yml or update the evidence subject.")
+                      if Set.contains id.Value taskIds then
+                          []
+                      else
+                          unknown id.Value artifact "Declare the task in tasks.yml or update the evidence subject.")
                   evidence.RequirementRefs
                   |> List.collect (fun id ->
-                      if Set.contains id.Value requirementIds then [] else unknown id.Value artifact "Declare the requirement in spec.md or update the evidence reference.") ]
+                      if Set.contains id.Value requirementIds then
+                          []
+                      else
+                          unknown
+                              id.Value
+                              artifact
+                              "Declare the requirement in spec.md or update the evidence reference.") ]
                 |> List.concat)
 
         taskDiagnostics @ evidenceDiagnostics
 
     let cycleDiagnostics (parsed: ParsedWorkItem) =
         let taskArtifact =
-            parsed.Tasks
-            |> List.tryHead
-            |> Option.map (fun task -> task.Source)
+            parsed.Tasks |> List.tryHead |> Option.map (fun task -> task.Source)
 
         let dependencyMap =
             parsed.Tasks
@@ -225,6 +265,7 @@ module WorkModel =
         |> List.tryPick (fst >> visit [])
         |> Option.bind (fun cycle ->
             let cycleText = String.concat " -> " cycle
+
             taskArtifact
             |> Option.map (fun artifact ->
                 Diagnostics.workModelInconsistent
@@ -247,33 +288,45 @@ module WorkModel =
                 let root = document.RootElement
                 let mutable generatedViews = Unchecked.defaultof<JsonElement>
 
-                if root.TryGetProperty("generatedViews", &generatedViews) && generatedViews.ValueKind = JsonValueKind.Array then
+                if
+                    root.TryGetProperty("generatedViews", &generatedViews)
+                    && generatedViews.ValueKind = JsonValueKind.Array
+                then
                     let stale =
                         generatedViews.EnumerateArray()
                         |> Seq.exists (fun view ->
                             let mutable generator = Unchecked.defaultof<JsonElement>
                             let mutable sources = Unchecked.defaultof<JsonElement>
+
                             let generatorStale =
                                 if view.TryGetProperty("generator", &generator) then
                                     let mutable version = Unchecked.defaultof<JsonElement>
+
                                     generator.TryGetProperty("version", &version)
-                                    && version.GetString() <> (SchemaVersion.currentGeneratorVersion()).Version
+                                    && version.GetString() <> (SchemaVersion.currentGeneratorVersion ()).Version
                                 else
                                     false
 
                             let sourceStale =
-                                if view.TryGetProperty("sources", &sources) && sources.ValueKind = JsonValueKind.Array then
+                                if
+                                    view.TryGetProperty("sources", &sources)
+                                    && sources.ValueKind = JsonValueKind.Array
+                                then
                                     sources.EnumerateArray()
                                     |> Seq.exists (fun source ->
                                         let mutable path = Unchecked.defaultof<JsonElement>
                                         let mutable digest = Unchecked.defaultof<JsonElement>
                                         let mutable digestValue = Unchecked.defaultof<JsonElement>
 
-                                        if source.TryGetProperty("path", &path)
-                                           && source.TryGetProperty("digest", &digest)
-                                           && digest.TryGetProperty("value", &digestValue) then
+                                        if
+                                            source.TryGetProperty("path", &path)
+                                            && source.TryGetProperty("digest", &digest)
+                                            && digest.TryGetProperty("value", &digestValue)
+                                        then
                                             match Map.tryFind (path.GetString()) sourceMap with
-                                            | Some current -> current <> (Option.ofObj (digestValue.GetString()) |> Option.defaultValue "")
+                                            | Some current ->
+                                                current
+                                                <> (Option.ofObj (digestValue.GetString()) |> Option.defaultValue "")
                                             | None -> true
                                         else
                                             false)
@@ -284,35 +337,69 @@ module WorkModel =
 
                     if stale then
                         let artifact =
-                            match FS.GG.SDD.Artifacts.ArtifactRef.create snapshot.Path ArtifactKind.GeneratedView ArtifactOwner.Sdd true with
+                            match
+                                FS.GG.SDD.Artifacts.ArtifactRef.create
+                                    snapshot.Path
+                                    ArtifactKind.GeneratedView
+                                    ArtifactOwner.Sdd
+                                    true
+                            with
                             | Ok value -> value
                             | Error message -> invalidArg (nameof snapshot.Path) message
 
-                        Some(Diagnostics.staleGeneratedView artifact "Generated view metadata no longer matches current sources." "Regenerate the view from current source digests and generator version.")
+                        Some(
+                            Diagnostics.staleGeneratedView
+                                artifact
+                                "Generated view metadata no longer matches current sources."
+                                "Regenerate the view from current source digests and generator version."
+                        )
                     else
                         None
                 else
                     None
             with _ ->
                 let artifact =
-                    match FS.GG.SDD.Artifacts.ArtifactRef.create snapshot.Path ArtifactKind.GeneratedView ArtifactOwner.Sdd true with
+                    match
+                        FS.GG.SDD.Artifacts.ArtifactRef.create
+                            snapshot.Path
+                            ArtifactKind.GeneratedView
+                            ArtifactOwner.Sdd
+                            true
+                    with
                     | Ok value -> value
                     | Error message -> invalidArg (nameof snapshot.Path) message
 
-                Some(Diagnostics.staleGeneratedView artifact "Generated view JSON could not be parsed." "Regenerate the view with valid JSON."))
+                Some(
+                    Diagnostics.staleGeneratedView
+                        artifact
+                        "Generated view JSON could not be parsed."
+                        "Regenerate the view with valid JSON."
+                ))
 
     let proseDiagnostics (parsed: ParsedWorkItem) =
         match parsed.Metadata.ProseStatus with
         | Some prose when not (String.Equals(prose, parsed.Metadata.Status, StringComparison.OrdinalIgnoreCase)) ->
             let artifact =
-                match parsed.Sources |> List.tryFind (fun source -> source.Artifact.Kind = ArtifactKind.Spec) with
+                match
+                    parsed.Sources
+                    |> List.tryFind (fun source -> source.Artifact.Kind = ArtifactKind.Spec)
+                with
                 | Some source -> source.Artifact
                 | None ->
-                    match FS.GG.SDD.Artifacts.ArtifactRef.create $"work/{parsed.WorkId.Value}/spec.md" ArtifactKind.Spec ArtifactOwner.Sdd true with
+                    match
+                        FS.GG.SDD.Artifacts.ArtifactRef.create
+                            $"work/{parsed.WorkId.Value}/spec.md"
+                            ArtifactKind.Spec
+                            ArtifactOwner.Sdd
+                            true
+                    with
                     | Ok value -> value
                     | Error message -> invalidArg "spec" message
 
-            [ Diagnostics.proseStructuredMismatch artifact "Markdown prose status disagrees with structured work metadata." "Use structured metadata for executable decisions and update prose to match." ]
+            [ Diagnostics.proseStructuredMismatch
+                  artifact
+                  "Markdown prose status disagrees with structured work metadata."
+                  "Use structured metadata for executable decisions and update prose to match." ]
         | _ -> []
 
     let missingEvidenceDiagnostics (parsed: ParsedWorkItem) =
@@ -330,7 +417,8 @@ module WorkModel =
                         task.Source
                         $"Task {task.Id.Value} is done but has no evidence declaration."
                         "Add evidence.yml verification for the done task or set the task status back to pending."
-                        [ task.Id.Value ])
+                        [ task.Id.Value ]
+                )
             | _ -> None)
 
     let requirementTypingDiagnostics (parsed: ParsedWorkItem) =
@@ -359,33 +447,76 @@ module WorkModel =
 
     let validationDiagnostics (parsed: ParsedWorkItem) =
         let specArtifact =
-            match parsed.Sources |> List.tryFind (fun source -> source.Artifact.Kind = ArtifactKind.Spec) with
+            match
+                parsed.Sources
+                |> List.tryFind (fun source -> source.Artifact.Kind = ArtifactKind.Spec)
+            with
             | Some source -> source.Artifact
             | None ->
-                match FS.GG.SDD.Artifacts.ArtifactRef.create $"work/{parsed.WorkId.Value}/spec.md" ArtifactKind.Spec ArtifactOwner.Sdd true with
+                match
+                    FS.GG.SDD.Artifacts.ArtifactRef.create
+                        $"work/{parsed.WorkId.Value}/spec.md"
+                        ArtifactKind.Spec
+                        ArtifactOwner.Sdd
+                        true
+                with
                 | Ok value -> value
                 | Error message -> invalidArg "spec" message
 
         let taskArtifact =
-            match parsed.Sources |> List.tryFind (fun source -> source.Artifact.Kind = ArtifactKind.Tasks) with
+            match
+                parsed.Sources
+                |> List.tryFind (fun source -> source.Artifact.Kind = ArtifactKind.Tasks)
+            with
             | Some source -> source.Artifact
             | None ->
-                match FS.GG.SDD.Artifacts.ArtifactRef.create $"work/{parsed.WorkId.Value}/tasks.yml" ArtifactKind.Tasks ArtifactOwner.Sdd true with
+                match
+                    FS.GG.SDD.Artifacts.ArtifactRef.create
+                        $"work/{parsed.WorkId.Value}/tasks.yml"
+                        ArtifactKind.Tasks
+                        ArtifactOwner.Sdd
+                        true
+                with
                 | Ok value -> value
                 | Error message -> invalidArg "tasks" message
 
         let evidenceArtifact =
-            match parsed.Sources |> List.tryFind (fun source -> source.Artifact.Kind = ArtifactKind.Evidence) with
+            match
+                parsed.Sources
+                |> List.tryFind (fun source -> source.Artifact.Kind = ArtifactKind.Evidence)
+            with
             | Some source -> source.Artifact
             | None ->
-                match FS.GG.SDD.Artifacts.ArtifactRef.create $"work/{parsed.WorkId.Value}/evidence.yml" ArtifactKind.Evidence ArtifactOwner.Sdd true with
+                match
+                    FS.GG.SDD.Artifacts.ArtifactRef.create
+                        $"work/{parsed.WorkId.Value}/evidence.yml"
+                        ArtifactKind.Evidence
+                        ArtifactOwner.Sdd
+                        true
+                with
                 | Ok value -> value
                 | Error message -> invalidArg "evidence" message
 
-        [ duplicateDiagnostics specArtifact (fun (item: Requirement) -> item.Id.Value) (fun item -> item.SourceLocation) parsed.Requirements
-          duplicateDiagnostics specArtifact (fun (item: Decision) -> item.Id.Value) (fun item -> item.SourceLocation) parsed.Decisions
-          duplicateDiagnostics taskArtifact (fun (item: WorkTask) -> item.Id.Value) (fun item -> item.SourceLocation) parsed.Tasks
-          duplicateDiagnostics evidenceArtifact (fun (item: EvidenceDeclaration) -> item.Id.Value) (fun item -> item.SourceLocation) parsed.Evidence
+        [ duplicateDiagnostics
+              specArtifact
+              (fun (item: Requirement) -> item.Id.Value)
+              (fun item -> item.SourceLocation)
+              parsed.Requirements
+          duplicateDiagnostics
+              specArtifact
+              (fun (item: Decision) -> item.Id.Value)
+              (fun item -> item.SourceLocation)
+              parsed.Decisions
+          duplicateDiagnostics
+              taskArtifact
+              (fun (item: WorkTask) -> item.Id.Value)
+              (fun item -> item.SourceLocation)
+              parsed.Tasks
+          duplicateDiagnostics
+              evidenceArtifact
+              (fun (item: EvidenceDeclaration) -> item.Id.Value)
+              (fun item -> item.SourceLocation)
+              parsed.Evidence
           referenceDiagnostics parsed
           cycleDiagnostics parsed
           proseDiagnostics parsed
@@ -396,20 +527,31 @@ module WorkModel =
         |> List.concat
 
     let generatedViews (parsed: ParsedWorkItem) =
-        let generator = SchemaVersion.currentGeneratorVersion()
+        let generator = SchemaVersion.currentGeneratorVersion ()
 
-        GenerationManifest.createWorkModelManifest (GenerationManifest.expectedWorkModelOutputPath parsed.WorkId.Value) generator parsed.Sources None
+        GenerationManifest.createWorkModelManifest
+            (GenerationManifest.expectedWorkModelOutputPath parsed.WorkId.Value)
+            generator
+            parsed.Sources
+            None
         |> List.singleton
 
     let fromParsedWorkItem (parsed: ParsedWorkItem) =
-        let diagnostics = parsed.Diagnostics @ validationDiagnostics parsed |> Diagnostics.sort
+        let diagnostics =
+            parsed.Diagnostics @ validationDiagnostics parsed |> Diagnostics.sort
 
         { SchemaVersion = 1
           ModelVersion = "1.0.0"
           WorkId = parsed.WorkId.Value
           Project =
-            { Id = parsed.Project |> Option.map (fun project -> project.ProjectId) |> Option.defaultValue "unknown"
-              DefaultWorkRoot = parsed.Project |> Option.map (fun project -> project.DefaultWorkRoot) |> Option.defaultValue "work" }
+            { Id =
+                parsed.Project
+                |> Option.map (fun project -> project.ProjectId)
+                |> Option.defaultValue "unknown"
+              DefaultWorkRoot =
+                parsed.Project
+                |> Option.map (fun project -> project.DefaultWorkRoot)
+                |> Option.defaultValue "work" }
           Sources = sourceEntries parsed
           WorkItem =
             { Id = parsed.WorkId.Value
@@ -422,13 +564,16 @@ module WorkModel =
             |> List.map (fun requirement ->
                 let linkedTaskIds =
                     parsed.Tasks
-                    |> List.filter (fun task -> task.Requirements |> List.exists (fun id -> id.Value = requirement.Id.Value))
+                    |> List.filter (fun task ->
+                        task.Requirements |> List.exists (fun id -> id.Value = requirement.Id.Value))
                     |> List.map (fun task -> task.Id.Value)
                     |> List.sort
 
                 let linkedEvidenceIds =
                     parsed.Evidence
-                    |> List.filter (fun evidence -> evidence.RequirementRefs |> List.exists (fun id -> id.Value = requirement.Id.Value))
+                    |> List.filter (fun evidence ->
+                        evidence.RequirementRefs
+                        |> List.exists (fun id -> id.Value = requirement.Id.Value))
                     |> List.map (fun evidence -> evidence.Id.Value)
                     |> List.sort
 
@@ -482,7 +627,11 @@ module WorkModel =
                   SubjectType = evidence.Subject.SubjectType
                   SubjectId = evidence.Subject.Id
                   TaskRefs = evidence.TaskRefs |> List.map (fun id -> id.Value) |> List.distinct |> List.sort
-                  RequirementRefs = evidence.RequirementRefs |> List.map (fun id -> id.Value) |> List.distinct |> List.sort
+                  RequirementRefs =
+                    evidence.RequirementRefs
+                    |> List.map (fun id -> id.Value)
+                    |> List.distinct
+                    |> List.sort
                   ArtifactRefs = evidence.ArtifactRefs |> List.map (fun artifact -> artifact.Path) |> List.sort
                   Result = evidence.Result
                   Synthetic = evidence.Synthetic
@@ -502,7 +651,8 @@ module WorkModel =
             |> List.sortBy (fun boundary -> boundary.Path) }
 
     let blockingDiagnostics (model: WorkModel) =
-        model.Diagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticError)
+        model.Diagnostics
+        |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticError)
 
     let governanceBoundaryEntries (model: WorkModel) = model.GovernanceBoundaries
 
@@ -525,7 +675,11 @@ module WorkModel =
 
     let jmString name element =
         jmProp name element
-        |> Option.bind (fun value -> if value.ValueKind = JsonValueKind.String then Option.ofObj (value.GetString()) else None)
+        |> Option.bind (fun value ->
+            if value.ValueKind = JsonValueKind.String then
+                Option.ofObj (value.GetString())
+            else
+                None)
         |> Option.defaultValue ""
 
     let jmInt name element =
@@ -546,7 +700,11 @@ module WorkModel =
 
     let jmStringList name element =
         jmArray name element
-        |> List.choose (fun value -> if value.ValueKind = JsonValueKind.String then Option.ofObj (value.GetString()) else None)
+        |> List.choose (fun value ->
+            if value.ValueKind = JsonValueKind.String then
+                Option.ofObj (value.GetString())
+            else
+                None)
         |> List.filter (String.IsNullOrWhiteSpace >> not)
 
     let jmSeverity (value: string) =
@@ -569,7 +727,9 @@ module WorkModel =
 
     let parseWorkModel (snapshot: FileSnapshot) : Result<WorkModel, Diagnostic list> =
         let artifact =
-            match FS.GG.SDD.Artifacts.ArtifactRef.create snapshot.Path ArtifactKind.GeneratedView ArtifactOwner.Sdd true with
+            match
+                FS.GG.SDD.Artifacts.ArtifactRef.create snapshot.Path ArtifactKind.GeneratedView ArtifactOwner.Sdd true
+            with
             | Ok value -> value
             | Error message -> invalidArg (nameof snapshot.Path) message
 
@@ -586,8 +746,7 @@ module WorkModel =
             | Some version when not (SchemaVersion.isBlocking (SchemaVersion.classifyRaw (Some(string version)))) ->
                 let workItem = jmProp "workItem" root
 
-                let stage =
-                    workItem |> Option.map (jmString "stage") |> Option.defaultValue ""
+                let stage = workItem |> Option.map (jmString "stage") |> Option.defaultValue ""
 
                 let workId =
                     match jmString "workId" root with
@@ -608,8 +767,12 @@ module WorkModel =
                           WorkId = workId
                           Project =
                             jmProp "project" root
-                            |> Option.map (fun project -> { Id = jmString "id" project; DefaultWorkRoot = jmString "defaultWorkRoot" project })
-                            |> Option.defaultValue { Id = "unknown"; DefaultWorkRoot = "work" }
+                            |> Option.map (fun project ->
+                                { Id = jmString "id" project
+                                  DefaultWorkRoot = jmString "defaultWorkRoot" project })
+                            |> Option.defaultValue
+                                { Id = "unknown"
+                                  DefaultWorkRoot = "work" }
                           Sources = []
                           WorkItem =
                             workItem
@@ -619,7 +782,12 @@ module WorkModel =
                                   Stage = jmString "stage" item
                                   ChangeTier = jmString "changeTier" item
                                   Status = jmString "status" item })
-                            |> Option.defaultValue { Id = workId; Title = workId; Stage = stage; ChangeTier = "tier1"; Status = "draft" }
+                            |> Option.defaultValue
+                                { Id = workId
+                                  Title = workId
+                                  Stage = stage
+                                  ChangeTier = "tier1"
+                                  Status = "draft" }
                           Requirements =
                             jmArray "requirements" root
                             |> List.map (fun item ->
@@ -627,7 +795,10 @@ module WorkModel =
                                   Title = jmString "title" item
                                   Text = jmString "text" item
                                   AcceptanceCriteria = jmStringList "acceptanceCriteria" item
-                                  Priority = (match jmString "priority" item with "" -> None | value -> Some value)
+                                  Priority =
+                                    (match jmString "priority" item with
+                                     | "" -> None
+                                     | value -> Some value)
                                   Source = jmString "source" item
                                   SourceLocation = None
                                   LinkedTaskIds = jmStringList "linkedTaskIds" item |> List.sort
@@ -670,16 +841,27 @@ module WorkModel =
                                   RequirementRefs = jmStringList "requirementRefs" item |> List.sort
                                   ArtifactRefs = jmStringList "artifactRefs" item |> List.sort
                                   Result = jmString "result" item
-                                  Synthetic = (jmProp "synthetic" item |> Option.exists (fun value -> value.ValueKind = JsonValueKind.True))
-                                  Rationale = (match jmString "rationale" item with "" -> None | value -> Some value)
+                                  Synthetic =
+                                    (jmProp "synthetic" item
+                                     |> Option.exists (fun value -> value.ValueKind = JsonValueKind.True))
+                                  Rationale =
+                                    (match jmString "rationale" item with
+                                     | "" -> None
+                                     | value -> Some value)
                                   Source = jmString "source" item
                                   SourceLocation = None })
                             |> List.sortBy (fun evidence -> evidence.Id)
                           GeneratedViews = []
-                          Diagnostics = jmArray "diagnostics" root |> List.map parseEmbeddedDiagnostic |> Diagnostics.sort
+                          Diagnostics =
+                            jmArray "diagnostics" root
+                            |> List.map parseEmbeddedDiagnostic
+                            |> Diagnostics.sort
                           GovernanceBoundaries = [] }
             | _ ->
-                Error [ Diagnostics.malformedSchemaVersion artifact "Work model is missing or has malformed schemaVersion." ]
+                Error
+                    [ Diagnostics.malformedSchemaVersion
+                          artifact
+                          "Work model is missing or has malformed schemaVersion." ]
         with ex ->
             Error
                 [ Diagnostics.workModelInconsistent
@@ -740,13 +922,23 @@ module WorkModel =
     let behaviorModelDigest (model: NormalizedGuidanceModel) : SourceDigest =
         let commandText =
             model.Commands
-            |> List.map (fun command -> String.concat "|" [ command.Id; command.Title; command.Stage; command.Purpose; String.concat "," command.RelatedIds ])
+            |> List.map (fun command ->
+                String.concat
+                    "|"
+                    [ command.Id
+                      command.Title
+                      command.Stage
+                      command.Purpose
+                      String.concat "," command.RelatedIds ])
             |> String.concat "\n"
 
         let skillText =
             model.Skills
-            |> List.map (fun skill -> String.concat "|" [ skill.Id; skill.Title; skill.Capability; String.concat "," skill.RelatedIds ])
+            |> List.map (fun skill ->
+                String.concat "|" [ skill.Id; skill.Title; skill.Capability; String.concat "," skill.RelatedIds ])
             |> String.concat "\n"
 
-        let canonical = String.concat "\n" [ model.WorkId; model.Stage; "commands"; commandText; "skills"; skillText ]
+        let canonical =
+            String.concat "\n" [ model.WorkId; model.Stage; "commands"; commandText; "skills"; skillText ]
+
         SchemaVersion.sha256Text canonical
