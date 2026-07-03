@@ -86,23 +86,18 @@ cat > "$cfg" <<EOF
 </configuration>
 EOF
 
+# The version-selection is factored into scripts/lib/pick-latest-version.sh so it can be
+# unit-tested without the feed (scripts/tests/pick-latest-version.test.sh, #91).
+# shellcheck source=lib/pick-latest-version.sh
+. "$(dirname "${BASH_SOURCE[0]}")/lib/pick-latest-version.sh"
+
 # Latest published version of a package id on the feed, or empty if none (NoBaselineYet).
 # The flat-container `versions` array is NOT guaranteed sorted — GitHub Packages returns it
-# newest-first — so pick the max explicitly rather than by position. Prefer the highest STABLE
-# release; `sort -V` ranks a prerelease ABOVE its base version (e.g. 1.4.0-preview > 1.4.0), the
-# opposite of SemVer precedence, so only fall back to the highest prerelease when no stable exists.
+# newest-first — so pick_latest_version chooses the max explicitly rather than by position.
 latest_version() {
   local id_lower; id_lower="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
-  local versions stable
-  versions="$(curl -fsSL -H "Authorization: Bearer $token" "$FEED_DL/$id_lower/index.json" 2>/dev/null \
-    | grep -oE '"[0-9][^"]*"' | tr -d '"')"
-  [ -z "$versions" ] && return
-  stable="$(printf '%s\n' "$versions" | grep -v -e '-' | sort -V | tail -1)"
-  if [ -n "$stable" ]; then
-    printf '%s' "$stable"
-  else
-    printf '%s\n' "$versions" | sort -V | tail -1
-  fi
+  curl -fsSL -H "Authorization: Bearer $token" "$FEED_DL/$id_lower/index.json" 2>/dev/null \
+    | pick_latest_version
 }
 
 # A check version strictly greater than the baseline that PRESERVES prerelease-ness (so a package
