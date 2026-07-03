@@ -26,6 +26,7 @@ FS.GG.SDD.Artifacts.Diagnostics.hasBlocking
 FS.GG.SDD.Artifacts.Diagnostics.malformedDigest
 FS.GG.SDD.Artifacts.Diagnostics.malformedReference
 FS.GG.SDD.Artifacts.Diagnostics.malformedSchemaVersion
+FS.GG.SDD.Artifacts.Diagnostics.markToolDefect
 FS.GG.SDD.Artifacts.Diagnostics.missingArtifact
 FS.GG.SDD.Artifacts.Diagnostics.missingGeneratedWorkModel
 FS.GG.SDD.Artifacts.Diagnostics.proseStructuredMismatch
@@ -48,6 +49,7 @@ FS.GG.SDD.Artifacts.Diagnostics.scaffoldScriptsNotMadeExecutable
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldTargetCollision
 FS.GG.SDD.Artifacts.Diagnostics.severityRank
 FS.GG.SDD.Artifacts.Diagnostics.severityValue
+FS.GG.SDD.Artifacts.Diagnostics.signalsStaleView
 FS.GG.SDD.Artifacts.Diagnostics.sort
 FS.GG.SDD.Artifacts.Diagnostics.staleGeneratedView
 FS.GG.SDD.Artifacts.Diagnostics.unknownReference

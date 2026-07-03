@@ -172,5 +172,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/056-orchestrator-skill-fanout/plan.md
+at specs/062-split-command-reports/plan.md
 <!-- SPECKIT END -->
