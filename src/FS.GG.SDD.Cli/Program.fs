@@ -16,8 +16,7 @@ let rec optionValue name args =
     | _ :: rest -> optionValue name rest
     | [] -> None
 
-let hasFlag name args =
-    args |> List.exists ((=) name)
+let hasFlag name args = args |> List.exists ((=) name)
 
 /// Collect every value following a repeatable option (e.g. `--param k=v`).
 let rec collectOptions name args =
@@ -41,7 +40,7 @@ let outputFormat args =
     selectFormat args
 
 let printUnknown commandValue =
-    let generator = SchemaVersionModule.currentGeneratorVersion()
+    let generator = SchemaVersionModule.currentGeneratorVersion ()
 
     let request =
         { Command = Init
@@ -102,7 +101,9 @@ let printValidate (rest: string list) =
     // to plain text when non-interactive or color-disabled). Pure projection over
     // the same report; stream routing and exit code are unchanged across formats.
     let format = selectFormat rest
-    let stdoutRendering = (resolveValidation format (detectCapabilities Console.IsOutputRedirected) report).Text
+
+    let stdoutRendering =
+        (resolveValidation format (detectCapabilities Console.IsOutputRedirected) report).Text
 
     // --out persists a deterministic projection only (never rich ANSI): the
     // canonical JSON for --json/default, else the portable plain text (FR-010). A bad
@@ -144,7 +145,7 @@ let private helpRequest command format =
       InputText = None
       OutputFormat = format
       DryRun = true
-      GeneratorVersion = SchemaVersionModule.currentGeneratorVersion()
+      GeneratorVersion = SchemaVersionModule.currentGeneratorVersion ()
       Provider = None
       Parameters = []
       Force = false
@@ -160,7 +161,7 @@ let private emitHelp format (envelopeCommand: SddCommand) (summary: HelpSummary)
     exitCodeForReport report
 
 let private printTopLevelHelp format =
-    emitHelp format Init (CommandHelp.topLevelHelp (SchemaVersionModule.currentGeneratorVersion()))
+    emitHelp format Init (CommandHelp.topLevelHelp (SchemaVersionModule.currentGeneratorVersion ()))
 
 let private printCommandHelp format command =
     emitHelp format command (CommandHelp.commandHelp command)
@@ -205,7 +206,7 @@ let run args =
                   InputText = optionValue "--input" rest
                   OutputFormat = format
                   DryRun = hasFlag "--dry-run" rest
-                  GeneratorVersion = SchemaVersionModule.currentGeneratorVersion()
+                  GeneratorVersion = SchemaVersionModule.currentGeneratorVersion ()
                   Provider = optionValue "--provider" rest
                   Parameters = parseParams rest
                   Force = hasFlag "--force" rest
@@ -222,14 +223,21 @@ let run args =
             // to plain text when *that* sink is redirected or color-disabled (#68). Stream
             // routing and exit code are unchanged across formats.
             let routesToStderr = report.Outcome = Blocked
-            let sinkRedirected = if routesToStderr then Console.IsErrorRedirected else Console.IsOutputRedirected
+
+            let sinkRedirected =
+                if routesToStderr then
+                    Console.IsErrorRedirected
+                else
+                    Console.IsOutputRedirected
+
             let rendered = (resolve format (detectCapabilities sinkRedirected) report).Text
 
-            if routesToStderr then Console.Error.WriteLine(rendered)
-            else Console.Out.WriteLine(rendered)
+            if routesToStderr then
+                Console.Error.WriteLine(rendered)
+            else
+                Console.Out.WriteLine(rendered)
 
             exitCodeForReport report
 
 [<EntryPoint>]
-let main argv =
-    run (Array.toList argv)
+let main argv = run (Array.toList argv)

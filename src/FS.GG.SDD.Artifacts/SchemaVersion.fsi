@@ -1,7 +1,11 @@
 namespace FS.GG.SDD.Artifacts
 
 module SchemaVersion =
-    type SchemaVersion = { Major: int; Minor: int option; Raw: string }
+    type SchemaVersion =
+        { Major: int
+          Minor: int option
+          Raw: string }
+
     type SourceDigest = { Algorithm: string; Value: string }
     type OutputDigest = { Algorithm: string; Value: string }
     type GeneratorVersion = { Id: string; Version: string }

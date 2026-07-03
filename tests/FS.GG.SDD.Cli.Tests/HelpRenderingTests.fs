@@ -20,13 +20,27 @@ module HelpRenderingTests =
 
     let escChar = char 0x1b
 
-    let private generator = SchemaVersionModule.currentGeneratorVersion()
-    let private topLevel = helpReport (Commands.request Init ".") (CommandHelp.topLevelHelp generator)
-    let private commandHelp = helpReport (Commands.request Verify ".") (CommandHelp.commandHelp Verify)
+    let private generator = SchemaVersionModule.currentGeneratorVersion ()
 
-    let private interactiveColor = { IsInteractive = true; ColorEnabled = true; Width = Some 100; IsInputInteractive = true }
-    let private nonInteractive = { interactiveColor with IsInteractive = false }
-    let private colorDisabled = { interactiveColor with ColorEnabled = false }
+    let private topLevel =
+        helpReport (Commands.request Init ".") (CommandHelp.topLevelHelp generator)
+
+    let private commandHelp =
+        helpReport (Commands.request Verify ".") (CommandHelp.commandHelp Verify)
+
+    let private interactiveColor =
+        { IsInteractive = true
+          ColorEnabled = true
+          Width = Some 100
+          IsInputInteractive = true }
+
+    let private nonInteractive =
+        { interactiveColor with
+            IsInteractive = false }
+
+    let private colorDisabled =
+        { interactiveColor with
+            ColorEnabled = false }
 
     // ----- projections (in-process, deterministic) -----
 
@@ -93,7 +107,10 @@ module HelpRenderingTests =
     // ----- apphost dispatch smokes (real CLI, end-to-end) -----
 
     let private configuration =
-        if AppContext.BaseDirectory.Replace('\\', '/').Contains("/Release/") then "Release" else "Debug"
+        if AppContext.BaseDirectory.Replace('\\', '/').Contains("/Release/") then
+            "Release"
+        else
+            "Debug"
 
     // The native apphost is invoked directly (not via `dotnet <dll>`): the dotnet muxer
     // intercepts a leading `--help`, so only the apphost exercises top-level help honestly.
@@ -116,7 +133,10 @@ module HelpRenderingTests =
         let stdout = proc.StandardOutput.ReadToEnd()
         let stderr = proc.StandardError.ReadToEnd()
         proc.WaitForExit(30000) |> ignore
-        {| ExitCode = proc.ExitCode; StdOut = stdout; StdErr = stderr |}
+
+        {| ExitCode = proc.ExitCode
+           StdOut = stdout
+           StdErr = stderr |}
 
     [<Fact>]
     let ``CLI top-level --help exits 0 with top-level help on stdout`` () =

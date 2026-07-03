@@ -25,17 +25,17 @@ module Schemas =
           Owner: SchemaOwner }
 
     // --- Named version constants (FR-005). One authoritative value each. ---
-    val providersVersion: int                       // = 1
-    val projectVersion: int                          // = 1
-    val sddVersion: int                              // = 1
-    val agentsVersion: int                           // = 1
-    val scaffoldProvenanceVersion: int               // = 1
-    val governanceHandoffVersion: int                // = 1
-    val governanceHandoffContractVersion: string     // = "1.0.0"
-    val governanceVersion: int                       // = 1 (published reference)
-    val policyVersion: int                            // = 1 (published reference)
-    val capabilitiesVersion: int                      // = 1 (published reference)
-    val toolingVersion: int                           // = 1 (published reference)
+    val providersVersion: int // = 1
+    val projectVersion: int // = 1
+    val sddVersion: int // = 1
+    val agentsVersion: int // = 1
+    val scaffoldProvenanceVersion: int // = 1
+    val governanceHandoffVersion: int // = 1
+    val governanceHandoffContractVersion: string // = "1.0.0"
+    val governanceVersion: int // = 1 (published reference)
+    val policyVersion: int // = 1 (published reference)
+    val capabilitiesVersion: int // = 1 (published reference)
+    val toolingVersion: int // = 1 (published reference)
 
     /// All 10 named schemas, for the "every schema represented?" check (SC-001).
     val entries: SchemaContractEntry list
@@ -44,13 +44,13 @@ module Schemas =
     // Shapes are sketched here by name; full field lists mirror the corresponding
     // src/FS.GG.SDD.Artifacts records (project/sdd/agents/providers configs,
     // ScaffoldProvenanceRecord, GovernanceHandoff) and the Governance published refs.
-    type ProvidersSchema            // mirror of `.fsgg/providers.yml` registry shape
-    type ProjectSchema              // mirror of `.fsgg/project.yml`
-    type SddSchema                  // mirror of `.fsgg/sdd.yml`
-    type AgentsSchema               // mirror of `.fsgg/agents.yml`
-    type ScaffoldProvenanceSchema   // mirror of `.fsgg/scaffold-provenance.json`
-    type GovernanceHandoffSchema    // mirror of `governance-handoff.json`
-    type GovernanceSchema           // declared to Governance published reference
-    type PolicySchema               // declared to Governance published reference
-    type CapabilitiesSchema         // declared to Governance published reference
-    type ToolingSchema              // declared to Governance published reference
+    type ProvidersSchema // mirror of `.fsgg/providers.yml` registry shape
+    type ProjectSchema // mirror of `.fsgg/project.yml`
+    type SddSchema // mirror of `.fsgg/sdd.yml`
+    type AgentsSchema // mirror of `.fsgg/agents.yml`
+    type ScaffoldProvenanceSchema // mirror of `.fsgg/scaffold-provenance.json`
+    type GovernanceHandoffSchema // mirror of `governance-handoff.json`
+    type GovernanceSchema // declared to Governance published reference
+    type PolicySchema // declared to Governance published reference
+    type CapabilitiesSchema // declared to Governance published reference
+    type ToolingSchema // declared to Governance published reference

@@ -52,6 +52,7 @@ module internal HandlersScaffold =
     // the paths the SDD skeleton/provenance own (excluded from collision + diff).
     let isSddTree (path: string) =
         let p = normalizeRelativePath path
+
         p.StartsWith(".fsgg/", StringComparison.Ordinal)
         || p.StartsWith("work/", StringComparison.Ordinal)
         || p.StartsWith("readiness/", StringComparison.Ordinal)
@@ -77,14 +78,12 @@ module internal HandlersScaffold =
         |> Array.filter (String.IsNullOrWhiteSpace >> not)
         |> Set.ofArray
 
-    let beforePaths model = parseListing (directoryListing "" model)
+    let beforePaths model =
+        parseListing (directoryListing "" model)
 
     // Pre-existing, non-SDD content the provider would materialize over (FR-010).
     let collisionPaths model =
-        beforePaths model
-        |> Set.filter (isSddOwned >> not)
-        |> Set.toList
-        |> List.sort
+        beforePaths model |> Set.filter (isSddOwned >> not) |> Set.toList |> List.sort
 
     let skeletonFiles request =
         initEffects request
@@ -147,16 +146,28 @@ module internal HandlersScaffold =
                 notRunSummary None None "Pass `--provider <name>`; for the SDD skeleton only, run `fsgg-sdd init`."
             )
         | Some name ->
-            match resolveDescriptors model |> List.tryFind (fun descriptor -> descriptor.Name = name) with
+            match
+                resolveDescriptors model
+                |> List.tryFind (fun descriptor -> descriptor.Name = name)
+            with
             | None ->
                 ScaffoldBlocked(
                     [ DiagnosticsModule.scaffoldProviderUnknown name ],
-                    notRunSummary (Some name) None $"Register '{name}' in `.fsgg/providers.yml` or correct the `--provider` name."
+                    notRunSummary
+                        (Some name)
+                        None
+                        $"Register '{name}' in `.fsgg/providers.yml` or correct the `--provider` name."
                 )
             | Some descriptor when not (isSupportedContract descriptor.ContractVersion) ->
                 ScaffoldBlocked(
-                    [ DiagnosticsModule.scaffoldProviderVersionUnsupported name descriptor.ContractVersion supportedContractRange ],
-                    notRunSummary (Some name) (Some descriptor.ContractVersion) $"Upgrade SDD or the provider to a contract version within {supportedContractRange}."
+                    [ DiagnosticsModule.scaffoldProviderVersionUnsupported
+                          name
+                          descriptor.ContractVersion
+                          supportedContractRange ],
+                    notRunSummary
+                        (Some name)
+                        (Some descriptor.ContractVersion)
+                        $"Upgrade SDD or the provider to a contract version within {supportedContractRange}."
                 )
             | Some descriptor ->
                 let effective = effectiveParameters descriptor request
@@ -165,14 +176,20 @@ module internal HandlersScaffold =
                 | _ :: _ as missing ->
                     ScaffoldBlocked(
                         [ DiagnosticsModule.scaffoldProviderParamMissing name missing ],
-                        notRunSummary (Some name) (Some descriptor.ContractVersion) "Supply the missing parameter(s) with `--param <key>=<value>`."
+                        notRunSummary
+                            (Some name)
+                            (Some descriptor.ContractVersion)
+                            "Supply the missing parameter(s) with `--param <key>=<value>`."
                     )
                 | [] ->
                     match collisionPaths model with
                     | _ :: _ as collisions when not request.Force ->
                         ScaffoldBlocked(
                             [ DiagnosticsModule.scaffoldTargetCollision collisions ],
-                            notRunSummary (Some name) (Some descriptor.ContractVersion) "Re-run with `--force` to materialize into a non-empty target."
+                            notRunSummary
+                                (Some name)
+                                (Some descriptor.ContractVersion)
+                                "Re-run with `--force` to materialize into a non-empty target."
                         )
                     | _ -> ScaffoldProceed(descriptor, effective)
 
@@ -201,8 +218,13 @@ module internal HandlersScaffold =
         | SetExecutable _ -> true
         | _ -> false
 
-    let scaffoldInvocationEffects (request: CommandRequest) (descriptor: ProviderDescriptor) (effective: Map<string, string>) =
-        let installEffect = RunProcess("dotnet", [ "new"; "install"; descriptor.Source ], "")
+    let scaffoldInvocationEffects
+        (request: CommandRequest)
+        (descriptor: ProviderDescriptor)
+        (effective: Map<string, string>)
+        =
+        let installEffect =
+            RunProcess("dotnet", [ "new"; "install"; descriptor.Source ], "")
         // Best-effort: upgrade an already-installed (e.g. NuGet-sourced) template to its
         // latest version before invoking it. A first-time/local install is handled by
         // `installEffect`; `update` is a no-op when packages are already current. Its
@@ -229,10 +251,19 @@ module internal HandlersScaffold =
         // skeleton (reused init effects, unchanged), then the create — so the create's
         // after-snapshot includes the skeleton (which the diff subtracts) and the
         // provider's product.
-        let refreshEffects = if request.TemplateUpdate then [ installEffect; updateEffect ] else [ installEffect ]
+        let refreshEffects =
+            if request.TemplateUpdate then
+                [ installEffect; updateEffect ]
+            else
+                [ installEffect ]
+
         refreshEffects @ initEffects request @ [ RunProcess("dotnet", createArgs, "") ]
 
-    let plannedCreateCommand (descriptor: ProviderDescriptor) (effective: Map<string, string>) (request: CommandRequest) =
+    let plannedCreateCommand
+        (descriptor: ProviderDescriptor)
+        (effective: Map<string, string>)
+        (request: CommandRequest)
+        =
         let parameters =
             effective
             |> Map.toList
@@ -296,13 +327,19 @@ module internal HandlersScaffold =
     // Known before the mirror I/O runs (targets are a function of the produced paths), so
     // provenance/report carry them independent of the read/write results (FR-007).
     let plannedMirroredPaths (producedPaths: string list) =
-        providerSkillFiles producedPaths
-        |> List.collect mirrorTargetsFor
-        |> List.sort
+        providerSkillFiles producedPaths |> List.collect mirrorTargetsFor |> List.sort
 
     // ----- finalization (stage 3) -----
 
-    let provenanceWriteEffect (request: CommandRequest) (descriptor: ProviderDescriptor) outcome (producedPaths: string list) (mirroredPaths: string list) (skillDigests: Map<string, string>) (effective: Map<string, string>) =
+    let provenanceWriteEffect
+        (request: CommandRequest)
+        (descriptor: ProviderDescriptor)
+        outcome
+        (producedPaths: string list)
+        (mirroredPaths: string list)
+        (skillDigests: Map<string, string>)
+        (effective: Map<string, string>)
+        =
         let record: ScaffoldProvenanceRecord =
             { SchemaVersion = 1
               Generator = request.GeneratorVersion
@@ -314,11 +351,21 @@ module internal HandlersScaffold =
               // 058/ADR-0014 §Decision 3: content-addressed provenance — each produced/mirrored
               // skill copy carries the `sha256` of its materialized body (`skillDigests`);
               // non-skill produced paths carry none. The field is omitted from output while None.
-              ProducedPaths = producedPaths |> List.map (fun path -> { Path = path; Owner = GeneratedProduct; Sha256 = Map.tryFind path skillDigests })
+              ProducedPaths =
+                producedPaths
+                |> List.map (fun path ->
+                    { Path = path
+                      Owner = GeneratedProduct
+                      Sha256 = Map.tryFind path skillDigests })
               // 056: the fan-out mirror copies, owner `Mirrored` (never `generatedProduct`).
               // Empty on any non-success terminal path so an incomplete fan-out is never
               // recorded as complete (FR-012).
-              MirroredPaths = mirroredPaths |> List.map (fun path -> { Path = path; Owner = ArtifactOwner.Mirrored; Sha256 = Map.tryFind path skillDigests })
+              MirroredPaths =
+                mirroredPaths
+                |> List.map (fun path ->
+                    { Path = path
+                      Owner = ArtifactOwner.Mirrored
+                      Sha256 = Map.tryFind path skillDigests })
               // `Map.toList` is already ascending by key — the FR-003 effective set
               // (declared defaults overlaid by `--param` overrides) forwarded verbatim.
               EffectiveParameters = Map.toList effective }
@@ -349,13 +396,24 @@ module internal HandlersScaffold =
         let providerInvocationOf (processResult: ProcessRunResult) : ProviderInvocationResult =
             { CommandLine = processResult.Command
               ProcessStarted = processResult.Started
-              ExitCode = if processResult.Started then Some processResult.ExitCode else None
+              ExitCode =
+                if processResult.Started then
+                    Some processResult.ExitCode
+                else
+                    None
               StandardOutput = processResult.StandardOutput
               StandardOutputTruncated = processResult.StandardOutputTruncated
               StandardError = processResult.StandardError
               StandardErrorTruncated = processResult.StandardErrorTruncated }
 
-        let terminalSummary outcome producedPaths providerInvoked skeletonCreated hint providerInvocation : ScaffoldSummary =
+        let terminalSummary
+            outcome
+            producedPaths
+            providerInvoked
+            skeletonCreated
+            hint
+            providerInvocation
+            : ScaffoldSummary =
             { ProviderName = Some name
               ProviderContractVersion = Some version
               RequiredMinimumCliVersion = requiredMinimum
@@ -398,14 +456,23 @@ module internal HandlersScaffold =
 
             FinalizeTerminal(summary, [], [])
         else
-            let createResult = model.InterpretedEffects |> List.tryFind (fun result -> isCreateProcess result.Effect)
+            let createResult =
+                model.InterpretedEffects
+                |> List.tryFind (fun result -> isCreateProcess result.Effect)
+
             let createProcess = createResult |> Option.bind (fun result -> result.Process)
 
             match createProcess with
             | None
             | Some { Started = false } ->
                 FinalizeTerminal(
-                    terminalSummary ProviderFailed [] false true "Install the .NET SDK and the named template, then re-run scaffold." (createProcess |> Option.map providerInvocationOf),
+                    terminalSummary
+                        ProviderFailed
+                        []
+                        false
+                        true
+                        "Install the .NET SDK and the named template, then re-run scaffold."
+                        (createProcess |> Option.map providerInvocationOf),
                     [ DiagnosticsModule.scaffoldProviderUnavailable name ],
                     []
                 )
@@ -421,17 +488,31 @@ module internal HandlersScaffold =
                     |> Set.remove (normalizeRelativePath ScaffoldProvenance.provenancePath)
 
                 let intrusions = produced |> Set.filter isSddTree |> Set.toList |> List.sort
-                let producedPaths = produced |> Set.filter (isSddTree >> not) |> Set.toList |> List.sort
+
+                let producedPaths =
+                    produced |> Set.filter (isSddTree >> not) |> Set.toList |> List.sort
 
                 if not (List.isEmpty intrusions) then
                     FinalizeTerminal(
-                        terminalSummary ProviderFailed producedPaths true true "Fix the provider; it wrote into SDD-owned trees." (Some(providerInvocationOf processResult)),
+                        terminalSummary
+                            ProviderFailed
+                            producedPaths
+                            true
+                            true
+                            "Fix the provider; it wrote into SDD-owned trees."
+                            (Some(providerInvocationOf processResult)),
                         [ DiagnosticsModule.scaffoldProviderWroteSddTree intrusions ],
                         provenanceWriteEffect request descriptor ProviderFailed producedPaths [] Map.empty effective
                     )
                 elif processResult.ExitCode <> 0 then
                     FinalizeTerminal(
-                        terminalSummary ProviderFailed producedPaths true true "Inspect the provider failure, then re-run scaffold." (Some(providerInvocationOf processResult)),
+                        terminalSummary
+                            ProviderFailed
+                            producedPaths
+                            true
+                            true
+                            "Inspect the provider failure, then re-run scaffold."
+                            (Some(providerInvocationOf processResult)),
                         [ DiagnosticsModule.scaffoldProviderFailed name processResult.ExitCode ],
                         provenanceWriteEffect request descriptor ProviderFailed producedPaths [] Map.empty effective
                     )
@@ -446,7 +527,15 @@ module internal HandlersScaffold =
     // effects — the repo-init outcome from the `git rev-parse` probe (exit-code only,
     // Decision 1) and the make-executable counts from the `SetExecutable` results. Every
     // emitted diagnostic is advisory and non-fatal (FR-010).
-    let private finalizePostInstantiation model (descriptor: ProviderDescriptor) outcome (producedPaths: string list) (mirroredPaths: string list) probeProcess (effective: Map<string, string>) =
+    let private finalizePostInstantiation
+        model
+        (descriptor: ProviderDescriptor)
+        outcome
+        (producedPaths: string list)
+        (mirroredPaths: string list)
+        probeProcess
+        (effective: Map<string, string>)
+        =
         let repoInitOutcome, repoInitDiagnostics =
             match probeProcess with
             | Some { Started = false } ->
@@ -456,8 +545,12 @@ module internal HandlersScaffold =
             | Some { Started = true } -> "initialized", []
             | None -> "notApplicable", []
 
-        let execResults = model.InterpretedEffects |> List.filter (fun result -> isSetExecutableEffect result.Effect)
-        let executableCount = execResults |> List.filter (fun result -> result.Succeeded) |> List.length
+        let execResults =
+            model.InterpretedEffects
+            |> List.filter (fun result -> isSetExecutableEffect result.Effect)
+
+        let executableCount =
+            execResults |> List.filter (fun result -> result.Succeeded) |> List.length
 
         let skippedPaths =
             execResults
@@ -469,8 +562,10 @@ module internal HandlersScaffold =
             |> List.sort
 
         let execDiagnostics =
-            if List.isEmpty skippedPaths then []
-            else [ DiagnosticsModule.scaffoldScriptsNotMadeExecutable skippedPaths ]
+            if List.isEmpty skippedPaths then
+                []
+            else
+                [ DiagnosticsModule.scaffoldScriptsNotMadeExecutable skippedPaths ]
 
         let outcomeDiagnostics =
             match outcome with
@@ -506,13 +601,24 @@ module internal HandlersScaffold =
     // gate (TICK MIRROR) before the probe-based TICK A→C: read each provider `.agents/skills/*`
     // skill and fan its exact body out into `.claude`/`.codex` (no-clobber) before anything
     // finalizes, so an incomplete fan-out never reports complete (FR-005/FR-012).
-    let private postInstantiationNext model (descriptor: ProviderDescriptor) outcome (producedPaths: string list) (effective: Map<string, string>) =
+    let private postInstantiationNext
+        model
+        (descriptor: ProviderDescriptor)
+        outcome
+        (producedPaths: string list)
+        (effective: Map<string, string>)
+        =
         // The mirror record is a pure function of the produced paths (known before the I/O).
         let mirroredPaths = plannedMirroredPaths producedPaths
         let mirrorSources = providerSkillFiles producedPaths
         let readEffects = mirrorSources |> List.map ReadFile
-        let readsInterpreted = readEffects |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
-        let readsPlanned = readEffects |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
+
+        let readsInterpreted =
+            readEffects
+            |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
+
+        let readsPlanned =
+            readEffects |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
 
         // TICK MIRROR finalization on a read/write fault: a non-success scaffold at exit 2,
         // provenance recording NO fan-out (FR-012). The scaffold.mirrorFailed id is additive.
@@ -531,15 +637,20 @@ module internal HandlersScaffold =
                   RepoInitOutcome = "notApplicable"
                   ExecutableScriptCount = 0
                   ExecutableScriptsSkipped = 0
-                  NextActionHint = "The skill fan-out could not be completed; resolve the filesystem issue and re-run scaffold."
+                  NextActionHint =
+                    "The skill fan-out could not be completed; resolve the filesystem issue and re-run scaffold."
                   ProviderInvocation = None }
 
-            let provenanceEffects = provenanceWriteEffect model.Request descriptor ProviderFailed producedPaths [] Map.empty effective
+            let provenanceEffects =
+                provenanceWriteEffect model.Request descriptor ProviderFailed producedPaths [] Map.empty effective
 
             { model with
                 PendingEffects = model.PendingEffects @ provenanceEffects
                 Scaffold = Some summary
-                Diagnostics = model.Diagnostics @ [ DiagnosticsModule.scaffoldMirrorFailed failedPaths ] @ cliCoherenceDiagnostics descriptor model.Request },
+                Diagnostics =
+                    model.Diagnostics
+                    @ [ DiagnosticsModule.scaffoldMirrorFailed failedPaths ]
+                    @ cliCoherenceDiagnostics descriptor model.Request },
             provenanceEffects
 
         // Gate: run the MIRROR tick(s) to completion before the probe-based TICK A→C.
@@ -549,12 +660,22 @@ module internal HandlersScaffold =
             if List.isEmpty mirrorSources then
                 None
             elif not readsInterpreted then
-                if readsPlanned then Some(model, [])
-                else Some({ model with PendingEffects = model.PendingEffects @ readEffects }, readEffects)
+                if readsPlanned then
+                    Some(model, [])
+                else
+                    Some(
+                        { model with
+                            PendingEffects = model.PendingEffects @ readEffects },
+                        readEffects
+                    )
             else
                 // Reads interpreted: a missing/unreadable source (snapshot None) is a fault.
                 let bodyOf src = snapshot src model
-                let readFailures = mirrorSources |> List.filter (fun src -> Option.isNone (bodyOf src)) |> List.sort
+
+                let readFailures =
+                    mirrorSources
+                    |> List.filter (fun src -> Option.isNone (bodyOf src))
+                    |> List.sort
 
                 if not (List.isEmpty readFailures) then
                     Some(mirrorFailedFinalize readFailures)
@@ -563,92 +684,146 @@ module internal HandlersScaffold =
                         mirrorSources
                         |> List.collect (fun src ->
                             let body = (bodyOf src |> Option.get).Text
-                            mirrorTargetsFor src |> List.map (fun target -> WriteFile(target, body, AgentGuidanceTarget)))
 
-                    let writesInterpreted = writeEffects |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
-                    let writesPlanned = writeEffects |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
+                            mirrorTargetsFor src
+                            |> List.map (fun target -> WriteFile(target, body, AgentGuidanceTarget)))
+
+                    let writesInterpreted =
+                        writeEffects
+                        |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
+
+                    let writesPlanned =
+                        writeEffects |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
 
                     if not writesInterpreted then
-                        if writesPlanned then Some(model, [])
-                        else Some({ model with PendingEffects = model.PendingEffects @ writeEffects }, writeEffects)
+                        if writesPlanned then
+                            Some(model, [])
+                        else
+                            Some(
+                                { model with
+                                    PendingEffects = model.PendingEffects @ writeEffects },
+                                writeEffects
+                            )
                     else
                         let writeFailures =
                             writeEffects
                             |> List.choose (fun effect ->
-                                match model.InterpretedEffects |> List.tryFind (fun result -> effectKey result.Effect = effectKey effect) with
+                                match
+                                    model.InterpretedEffects
+                                    |> List.tryFind (fun result -> effectKey result.Effect = effectKey effect)
+                                with
                                 | Some result when not result.Succeeded -> effectPath effect
                                 | _ -> None)
                             |> List.sort
 
-                        if not (List.isEmpty writeFailures) then Some(mirrorFailedFinalize writeFailures) else None
+                        if not (List.isEmpty writeFailures) then
+                            Some(mirrorFailedFinalize writeFailures)
+                        else
+                            None
 
         match mirrorGate with
         | Some result -> result
         | None ->
 
-        let probeInterpreted = model.InterpretedEffects |> List.exists (fun result -> isProbeProcess result.Effect)
-        let probePlanned = model.PendingEffects |> List.exists isProbeProcess
-        let initInterpreted = model.InterpretedEffects |> List.exists (fun result -> isInitProcess result.Effect)
-        let initPlanned = model.PendingEffects |> List.exists isInitProcess
-
-        if not (probeInterpreted || probePlanned) then
-            // TICK A — the success path's single provenance write (FR-004, before `git
-            // init`), the work-tree probe, and one SetExecutable per produced `.sh`.
-            let scriptEffects =
-                producedPaths
-                |> List.filter (fun path -> path.EndsWith(".sh", StringComparison.Ordinal))
-                |> List.map SetExecutable
-
-            // 058/ADR-0014 §Decision 3: the content-addressed digest of every produced/mirrored
-            // skill copy. The reads are interpreted by this tick, so each provider `.agents`
-            // skill body is in a snapshot; the mirror copies are byte-identical, so they share
-            // the source digest. Non-skill produced paths get no entry (⇒ `Sha256 = None`).
-            let skillDigests =
-                mirrorSources
-                |> List.collect (fun src ->
-                    match snapshot src model with
-                    | Some snap ->
-                        let digest = Fsgg.SkillMirror.sha256 snap.Text
-                        (src, digest) :: (mirrorTargetsFor src |> List.map (fun target -> target, digest))
-                    | None -> [])
-                |> Map.ofList
-
-            let effects =
-                provenanceWriteEffect model.Request descriptor outcome producedPaths mirroredPaths skillDigests effective
-                @ [ RunProcess("git", [ "rev-parse"; "--is-inside-work-tree" ], "") ]
-                @ scriptEffects
-
-            { model with PendingEffects = model.PendingEffects @ effects }, effects
-        elif not probeInterpreted then
-            // Probe planned, awaiting interpretation.
-            model, []
-        else
-            let probeProcess =
+            let probeInterpreted =
                 model.InterpretedEffects
-                |> List.tryPick (fun result -> if isProbeProcess result.Effect then result.Process else None)
+                |> List.exists (fun result -> isProbeProcess result.Effect)
 
-            let shouldInit =
-                match probeProcess with
-                | Some { Started = true; ExitCode = code } -> code <> 0
-                | _ -> false
+            let probePlanned = model.PendingEffects |> List.exists isProbeProcess
 
-            if shouldInit && not (initInterpreted || initPlanned) then
-                // TICK B — not inside a work tree and git is available: initialize.
-                let effect = RunProcess("git", [ "init" ], "")
-                { model with PendingEffects = model.PendingEffects @ [ effect ] }, [ effect ]
-            elif shouldInit && not initInterpreted then
-                // Init planned, awaiting interpretation.
+            let initInterpreted =
+                model.InterpretedEffects
+                |> List.exists (fun result -> isInitProcess result.Effect)
+
+            let initPlanned = model.PendingEffects |> List.exists isInitProcess
+
+            if not (probeInterpreted || probePlanned) then
+                // TICK A — the success path's single provenance write (FR-004, before `git
+                // init`), the work-tree probe, and one SetExecutable per produced `.sh`.
+                let scriptEffects =
+                    producedPaths
+                    |> List.filter (fun path -> path.EndsWith(".sh", StringComparison.Ordinal))
+                    |> List.map SetExecutable
+
+                // 058/ADR-0014 §Decision 3: the content-addressed digest of every produced/mirrored
+                // skill copy. The reads are interpreted by this tick, so each provider `.agents`
+                // skill body is in a snapshot; the mirror copies are byte-identical, so they share
+                // the source digest. Non-skill produced paths get no entry (⇒ `Sha256 = None`).
+                let skillDigests =
+                    mirrorSources
+                    |> List.collect (fun src ->
+                        match snapshot src model with
+                        | Some snap ->
+                            let digest = Fsgg.SkillMirror.sha256 snap.Text
+
+                            (src, digest)
+                            :: (mirrorTargetsFor src |> List.map (fun target -> target, digest))
+                        | None -> [])
+                    |> Map.ofList
+
+                let effects =
+                    provenanceWriteEffect
+                        model.Request
+                        descriptor
+                        outcome
+                        producedPaths
+                        mirroredPaths
+                        skillDigests
+                        effective
+                    @ [ RunProcess("git", [ "rev-parse"; "--is-inside-work-tree" ], "") ]
+                    @ scriptEffects
+
+                { model with
+                    PendingEffects = model.PendingEffects @ effects },
+                effects
+            elif not probeInterpreted then
+                // Probe planned, awaiting interpretation.
                 model, []
             else
-                // TICK C — init interpreted or skipped: set the terminal summary once.
-                let summary, diagnostics = finalizePostInstantiation model descriptor outcome producedPaths mirroredPaths probeProcess effective
+                let probeProcess =
+                    model.InterpretedEffects
+                    |> List.tryPick (fun result ->
+                        if isProbeProcess result.Effect then
+                            result.Process
+                        else
+                            None)
 
-                // Feature 052 (US2): merge the non-blocking CLI-coherence advisory on the
-                // success path too, so the advisory appears in every descriptor-resolved outcome.
-                { model with
-                    Scaffold = Some summary
-                    Diagnostics = model.Diagnostics @ diagnostics @ cliCoherenceDiagnostics descriptor model.Request },
-                []
+                let shouldInit =
+                    match probeProcess with
+                    | Some { Started = true; ExitCode = code } -> code <> 0
+                    | _ -> false
+
+                if shouldInit && not (initInterpreted || initPlanned) then
+                    // TICK B — not inside a work tree and git is available: initialize.
+                    let effect = RunProcess("git", [ "init" ], "")
+
+                    { model with
+                        PendingEffects = model.PendingEffects @ [ effect ] },
+                    [ effect ]
+                elif shouldInit && not initInterpreted then
+                    // Init planned, awaiting interpretation.
+                    model, []
+                else
+                    // TICK C — init interpreted or skipped: set the terminal summary once.
+                    let summary, diagnostics =
+                        finalizePostInstantiation
+                            model
+                            descriptor
+                            outcome
+                            producedPaths
+                            mirroredPaths
+                            probeProcess
+                            effective
+
+                    // Feature 052 (US2): merge the non-blocking CLI-coherence advisory on the
+                    // success path too, so the advisory appears in every descriptor-resolved outcome.
+                    { model with
+                        Scaffold = Some summary
+                        Diagnostics =
+                            model.Diagnostics
+                            @ diagnostics
+                            @ cliCoherenceDiagnostics descriptor model.Request },
+                    []
 
     // ----- staged driver entry (called from nextLifecycleEffects) -----
 
@@ -663,7 +838,10 @@ module internal HandlersScaffold =
                     Diagnostics = model.Diagnostics @ diagnostics },
                 []
         | ScaffoldProceed(descriptor, effective) ->
-            let createInterpreted = model.InterpretedEffects |> List.exists (fun result -> isCreateProcess result.Effect)
+            let createInterpreted =
+                model.InterpretedEffects
+                |> List.exists (fun result -> isCreateProcess result.Effect)
+
             let createPlanned = model.PendingEffects |> List.exists isCreateProcess
 
             if not createInterpreted then
@@ -671,7 +849,10 @@ module internal HandlersScaffold =
                     model, []
                 else
                     let effects = scaffoldInvocationEffects model.Request descriptor effective
-                    { model with PendingEffects = model.PendingEffects @ effects }, effects
+
+                    { model with
+                        PendingEffects = model.PendingEffects @ effects },
+                    effects
             elif Option.isSome model.Scaffold then
                 model, []
             else
@@ -683,7 +864,10 @@ module internal HandlersScaffold =
                     { model with
                         PendingEffects = model.PendingEffects @ provenanceEffects
                         Scaffold = Some summary
-                        Diagnostics = model.Diagnostics @ diagnostics @ cliCoherenceDiagnostics descriptor model.Request },
+                        Diagnostics =
+                            model.Diagnostics
+                            @ diagnostics
+                            @ cliCoherenceDiagnostics descriptor model.Request },
                     provenanceEffects
                 | FinalizeSuccess(outcome, producedPaths) ->
                     postInstantiationNext model descriptor outcome producedPaths effective

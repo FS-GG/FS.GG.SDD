@@ -109,7 +109,13 @@ module GovernanceHandoff =
 
     let sourceIdentity (path: string) (text: string) : SourceIdentity =
         let artifact =
-            match ArtifactRef.create path (ArtifactRef.ArtifactKind.Other "generatedSource") ArtifactRef.ArtifactOwner.Sdd true with
+            match
+                ArtifactRef.create
+                    path
+                    (ArtifactRef.ArtifactKind.Other "generatedSource")
+                    ArtifactRef.ArtifactOwner.Sdd
+                    true
+            with
             | Ok value -> value
             | Error message -> invalidArg (nameof path) message
 
@@ -135,8 +141,7 @@ module GovernanceHandoff =
         (config: GovernanceConfigPresence)
         (readiness: ReadinessFacts)
         (generator: GeneratorVersion)
-        : GovernanceHandoff
-        =
+        : GovernanceHandoff =
         let tasksById = model.Tasks |> List.map (fun task -> task.Id, task) |> Map.ofList
 
         // Edge derivation (Kernel.Evidence.build shape: dependent rests on dependency).
@@ -149,6 +154,7 @@ module GovernanceHandoff =
                   for dependency in task.Dependencies ->
                       { Dependent = taskPrefix + task.Id
                         Dependency = taskPrefix + dependency }
+
                   for required in task.RequiredEvidence ->
                       { Dependent = taskPrefix + task.Id
                         Dependency = evidencePrefix + required } ]
@@ -156,7 +162,9 @@ module GovernanceHandoff =
             |> List.sortBy (fun edge -> edge.Dependent, edge.Dependency)
 
         let endpointIds =
-            edges |> List.collect (fun edge -> [ edge.Dependent; edge.Dependency ]) |> Set.ofList
+            edges
+            |> List.collect (fun edge -> [ edge.Dependent; edge.Dependency ])
+            |> Set.ofList
 
         // Every declared evidence entry is a node (consumer taint flows over all of them).
         // Rationale is carried only for synthetic/skipped states (data-model), filtering the
@@ -196,7 +204,9 @@ module GovernanceHandoff =
                     |> Option.map (fun task -> taskStateOf task.Status)
                     |> Option.defaultValue Pending
 
-                { Id = id; State = state; Rationale = None })
+                { Id = id
+                  State = state
+                  Rationale = None })
 
         // Evidence referenced by an edge but lacking a declared entry: present-but-pending,
         // so the consumer's build never returns UnknownNode for an SDD-produced handoff.
@@ -204,7 +214,10 @@ module GovernanceHandoff =
             endpointIds
             |> Set.toList
             |> List.filter (fun id -> id.StartsWith evidencePrefix && not (evidenceNodeIds.Contains id))
-            |> List.map (fun id -> { Id = id; State = Pending; Rationale = None })
+            |> List.map (fun id ->
+                { Id = id
+                  State = Pending
+                  Rationale = None })
 
         let nodes =
             evidenceNodes @ taskNodes @ danglingEvidenceNodes
@@ -271,6 +284,7 @@ module GovernanceHandoff =
         writer.WriteString("workId", handoff.WorkId)
 
         writer.WriteStartArray("sources")
+
         handoff.Sources
         |> List.iter (fun source ->
             writer.WriteStartObject()
@@ -282,10 +296,12 @@ module GovernanceHandoff =
             | None -> writer.WriteNull "schemaVersion"
 
             writer.WriteEndObject())
+
         writer.WriteEndArray()
 
         writer.WriteStartObject("evidence")
         writer.WriteStartArray("nodes")
+
         handoff.Evidence.Nodes
         |> List.iter (fun node ->
             writer.WriteStartObject()
@@ -293,18 +309,22 @@ module GovernanceHandoff =
             writer.WriteString("state", declaredEvidenceStateValue node.State)
             writeNullableString writer "rationale" node.Rationale
             writer.WriteEndObject())
+
         writer.WriteEndArray()
         writer.WriteStartArray("dependencies")
+
         handoff.Evidence.Dependencies
         |> List.iter (fun edge ->
             writer.WriteStartObject()
             writer.WriteString("dependent", edge.Dependent)
             writer.WriteString("dependency", edge.Dependency)
             writer.WriteEndObject())
+
         writer.WriteEndArray()
         writer.WriteEndObject()
 
         writer.WriteStartArray("governedReferences")
+
         handoff.GovernedReferences
         |> List.iter (fun reference ->
             writer.WriteStartObject()
@@ -314,6 +334,7 @@ module GovernanceHandoff =
             writeNullableString writer "kind" reference.Kind
             writeNullableString writer "operation" reference.Operation
             writer.WriteEndObject())
+
         writer.WriteEndArray()
 
         writer.WriteStartObject("governanceConfig")
@@ -346,19 +367,25 @@ module GovernanceHandoff =
         writer.WriteNumber("blocking", handoff.Readiness.BlockingCount)
         writer.WriteEndObject()
         writer.WriteStartArray("blockingDiagnosticIds")
-        handoff.Readiness.BlockingDiagnosticIds |> List.iter (fun id -> writer.WriteStringValue(id: string))
+
+        handoff.Readiness.BlockingDiagnosticIds
+        |> List.iter (fun id -> writer.WriteStringValue(id: string))
+
         writer.WriteEndArray()
         writer.WriteStartArray("perViewState")
+
         handoff.Readiness.PerViewState
         |> List.iter (fun (view, state) ->
             writer.WriteStartObject()
             writer.WriteString("view", view)
             writer.WriteString("state", state)
             writer.WriteEndObject())
+
         writer.WriteEndArray()
         writer.WriteEndObject()
 
         writer.WriteStartArray("diagnostics")
+
         handoff.Diagnostics
         |> List.iter (fun diagnostic ->
             writer.WriteStartObject()
@@ -367,9 +394,13 @@ module GovernanceHandoff =
             writer.WriteString("message", diagnostic.Message)
             writer.WriteString("correction", diagnostic.Correction)
             writer.WriteStartArray("relatedIds")
-            diagnostic.RelatedIds |> List.iter (fun id -> writer.WriteStringValue(id: string))
+
+            diagnostic.RelatedIds
+            |> List.iter (fun id -> writer.WriteStringValue(id: string))
+
             writer.WriteEndArray()
             writer.WriteEndObject())
+
         writer.WriteEndArray()
 
         writer.WriteEndObject()

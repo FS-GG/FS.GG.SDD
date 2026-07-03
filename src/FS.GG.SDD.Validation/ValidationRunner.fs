@@ -21,6 +21,7 @@ module ValidationRunner =
     module CW = FS.GG.SDD.Commands.CommandWorkflow
     module CR = FS.GG.SDD.Commands.CommandRendering
     module RC = FS.GG.SDD.Artifacts.ReleaseContract
+
     type RunnerOptions =
         { OnlyMatrix: string option
           Plan: MatrixPlan option
@@ -79,12 +80,15 @@ module ValidationRunner =
         runRequest (workRequest command root inputText)
 
     let tempDirectory () =
-        let path = Path.Combine(Path.GetTempPath(), "fsgg-sdd-validate-" + Guid.NewGuid().ToString("N"))
+        let path =
+            Path.Combine(Path.GetTempPath(), "fsgg-sdd-validate-" + Guid.NewGuid().ToString("N"))
+
         Directory.CreateDirectory path |> ignore
         path
 
     let writeRelative (root: string) (relative: string) (text: string) =
-        let absolute = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar))
+        let absolute =
+            Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar))
 
         match Path.GetDirectoryName absolute with
         | null -> ()
@@ -96,10 +100,16 @@ module ValidationRunner =
         Directory.CreateDirectory destination |> ignore
 
         for file in Directory.GetFiles source do
-            File.Copy(file, Path.Combine(destination, Path.GetFileName file |> Option.ofObj |> Option.defaultValue ""), true)
+            File.Copy(
+                file,
+                Path.Combine(destination, Path.GetFileName file |> Option.ofObj |> Option.defaultValue ""),
+                true
+            )
 
         for directory in Directory.GetDirectories source do
-            copyDirectory directory (Path.Combine(destination, Path.GetFileName directory |> Option.ofObj |> Option.defaultValue ""))
+            copyDirectory
+                directory
+                (Path.Combine(destination, Path.GetFileName directory |> Option.ofObj |> Option.defaultValue ""))
 
     // ---- state ladder ----
 
@@ -152,12 +162,21 @@ module ValidationRunner =
 
         if rank >= 60 then
             runWork Tasks root None |> ignore
-            if withEvidence then writeRelative root $"work/{fixtureWorkId}/evidence.yml" passingTaskEvidence
 
-        if rank >= 70 then runWork Analyze root None |> ignore
-        if rank >= 80 then runWork Evidence root None |> ignore
-        if rank >= 90 then runWork Verify root None |> ignore
-        if rank >= 100 then runWork Ship root None |> ignore
+            if withEvidence then
+                writeRelative root $"work/{fixtureWorkId}/evidence.yml" passingTaskEvidence
+
+        if rank >= 70 then
+            runWork Analyze root None |> ignore
+
+        if rank >= 80 then
+            runWork Evidence root None |> ignore
+
+        if rank >= 90 then
+            runWork Verify root None |> ignore
+
+        if rank >= 100 then
+            runWork Ship root None |> ignore
 
     let buildState state =
         let root = tempDirectory ()
@@ -218,11 +237,20 @@ module ValidationRunner =
 
             match output with
             | "agent-commands/<target>/guidance.json" ->
-                files |> Array.tryFind (fun f -> (normalize f).Contains("/agent-commands/") && (normalize f).EndsWith("/guidance.json"))
+                files
+                |> Array.tryFind (fun f ->
+                    (normalize f).Contains("/agent-commands/")
+                    && (normalize f).EndsWith("/guidance.json"))
             | "agent-commands/<target>/commands.md" ->
-                files |> Array.tryFind (fun f -> (normalize f).Contains("/agent-commands/") && (normalize f).EndsWith("/commands.md"))
+                files
+                |> Array.tryFind (fun f ->
+                    (normalize f).Contains("/agent-commands/")
+                    && (normalize f).EndsWith("/commands.md"))
             | "agent-commands/<target>/skills.md" ->
-                files |> Array.tryFind (fun f -> (normalize f).Contains("/agent-commands/") && (normalize f).EndsWith("/skills.md"))
+                files
+                |> Array.tryFind (fun f ->
+                    (normalize f).Contains("/agent-commands/")
+                    && (normalize f).EndsWith("/skills.md"))
             | other -> matches ("/" + other)
 
     /// Reproduce one catalogued output's bytes from a built project, or `None` when
@@ -255,7 +283,8 @@ module ValidationRunner =
         let state = coord "state" coordinates
 
         match parseCommand commandValue with
-        | Error message -> Fail(failure lifecycleMatrixName coordinates "" message "Add the command to the validation reverse map.")
+        | Error message ->
+            Fail(failure lifecycleMatrixName coordinates "" message "Add the command to the validation reverse map.")
         | Ok command ->
             if stateRank state < commandMinRank command then
                 SkippedWithReason $"{commandValue} is not applicable to a {state} project"
@@ -271,14 +300,37 @@ module ValidationRunner =
                     let rendered = renderProjection projection report
 
                     if String.IsNullOrEmpty rendered then
-                        Fail(failure lifecycleMatrixName coordinates cellRoot "command produced empty output" "Ensure the command renders a non-empty report for this projection.")
+                        Fail(
+                            failure
+                                lifecycleMatrixName
+                                coordinates
+                                cellRoot
+                                "command produced empty output"
+                                "Ensure the command renders a non-empty report for this projection."
+                        )
                     elif hasAnsi rendered then
-                        Fail(failure lifecycleMatrixName coordinates cellRoot "degraded projection emitted ANSI control codes" "Strip ANSI when output is non-interactive/color-disabled.")
+                        Fail(
+                            failure
+                                lifecycleMatrixName
+                                coordinates
+                                cellRoot
+                                "degraded projection emitted ANSI control codes"
+                                "Strip ANSI when output is non-interactive/color-disabled."
+                        )
                     else
                         match projection with
                         | Json ->
-                            if rendered.Contains("\"schemaVersion\"") then Pass
-                            else Fail(failure lifecycleMatrixName coordinates cellRoot "JSON report missing schemaVersion" "Emit a schemaVersion field in the command report.")
+                            if rendered.Contains("\"schemaVersion\"") then
+                                Pass
+                            else
+                                Fail(
+                                    failure
+                                        lifecycleMatrixName
+                                        coordinates
+                                        cellRoot
+                                        "JSON report missing schemaVersion"
+                                        "Emit a schemaVersion field in the command report."
+                                )
                         | _ -> Pass
 
     /// Determinism cells compare snapshots of every catalogued output, all taken
@@ -289,25 +341,51 @@ module ValidationRunner =
         (neutral: Map<string, string option>)
         (repeat: Map<string, string option>)
         (perturbed: Map<string, string option>)
-        coordinates =
+        coordinates
+        =
         let output = coord "output" coordinates
         let environment = coord "environment" coordinates
-        let lookup (snapshot: Map<string, string option>) = Map.tryFind output snapshot |> Option.flatten
+
+        let lookup (snapshot: Map<string, string option>) =
+            Map.tryFind output snapshot |> Option.flatten
 
         match lookup neutral with
         | None -> SkippedWithReason $"output {output} is not produced by the fixture"
         | Some neutralBytes ->
             if hasAnsi neutralBytes then
-                Fail(failure determinismMatrixName coordinates output "produced output contains ANSI control codes" "Exclude ANSI styling from the deterministic contract.")
+                Fail(
+                    failure
+                        determinismMatrixName
+                        coordinates
+                        output
+                        "produced output contains ANSI control codes"
+                        "Exclude ANSI styling from the deterministic contract."
+                )
             elif environment = environmentClassValue PerturbedHostEnvironment then
                 match lookup perturbed with
                 | Some perturbedBytes when perturbedBytes = neutralBytes -> Pass
-                | Some _ -> Fail(failure determinismMatrixName coordinates output "output differs under a perturbed host environment" "Remove locale/time-zone/cwd/ordering dependence from the producer.")
+                | Some _ ->
+                    Fail(
+                        failure
+                            determinismMatrixName
+                            coordinates
+                            output
+                            "output differs under a perturbed host environment"
+                            "Remove locale/time-zone/cwd/ordering dependence from the producer."
+                    )
                 | None -> SkippedWithReason $"output {output} is not produced under the perturbed host"
             else
                 match lookup repeat with
                 | Some repeatBytes when repeatBytes = neutralBytes -> Pass
-                | Some _ -> Fail(failure determinismMatrixName coordinates output "output is not reproduced byte-identically over identical inputs" "Remove ordering/clock/host nondeterminism from the producer.")
+                | Some _ ->
+                    Fail(
+                        failure
+                            determinismMatrixName
+                            coordinates
+                            output
+                            "output is not reproduced byte-identically over identical inputs"
+                            "Remove ordering/clock/host nondeterminism from the producer."
+                    )
                 | None -> SkippedWithReason $"output {output} is not produced on reproduction"
 
     let evaluateBaselineCells (release: ReleaseReadiness) (fullRoot: string) =
@@ -327,7 +405,9 @@ module ValidationRunner =
                           Inventory = topLevelKeys (File.ReadAllText file) }))
 
         let diagnostics = evaluate release produced
-        let producedContracts = produced |> List.map (fun item -> item.Contract) |> Set.ofList
+
+        let producedContracts =
+            produced |> List.map (fun item -> item.Contract) |> Set.ofList
 
         release.Catalog
         |> List.collect (fun entry ->
@@ -335,21 +415,36 @@ module ValidationRunner =
             let conformanceCoordinates = [ "contract", entry.Contract; "check", "conformance" ]
 
             let baselineStatus =
-                if entry.BaselinePresent then Pass
-                else NotValidated $"contract {entry.Contract} has no locking baseline"
+                if entry.BaselinePresent then
+                    Pass
+                else
+                    NotValidated $"contract {entry.Contract} has no locking baseline"
 
             let related =
-                diagnostics |> List.filter (fun diagnostic -> diagnostic.Message.Contains($"'{entry.Contract}'"))
+                diagnostics
+                |> List.filter (fun diagnostic -> diagnostic.Message.Contains($"'{entry.Contract}'"))
 
             let conformanceStatus =
                 match related with
-                | diagnostic :: _ -> Fail(failure baselineMatrixName conformanceCoordinates entry.SourceArtifact.Path diagnostic.Message diagnostic.Correction)
+                | diagnostic :: _ ->
+                    Fail(
+                        failure
+                            baselineMatrixName
+                            conformanceCoordinates
+                            entry.SourceArtifact.Path
+                            diagnostic.Message
+                            diagnostic.Correction
+                    )
                 | [] ->
-                    if Set.contains entry.Contract producedContracts then Pass
-                    else SkippedWithReason $"produced artifact for {entry.Contract} not resolved in fixture"
+                    if Set.contains entry.Contract producedContracts then
+                        Pass
+                    else
+                        SkippedWithReason $"produced artifact for {entry.Contract} not resolved in fixture"
 
-            [ { Coordinates = baselineCoordinates; Status = baselineStatus }
-              { Coordinates = conformanceCoordinates; Status = conformanceStatus } ])
+            [ { Coordinates = baselineCoordinates
+                Status = baselineStatus }
+              { Coordinates = conformanceCoordinates
+                Status = conformanceStatus } ])
 
     let evaluateCompatibilityCells (release: ReleaseReadiness) (fullRoot: string) =
         let handoffContractVersion =
@@ -366,7 +461,9 @@ module ValidationRunner =
 
         release.Compatibility
         |> List.collect (fun entry ->
-            let handoffCoordinates = [ "entry", entry.SddVersionLine; "check", "handoffContractVersion" ]
+            let handoffCoordinates =
+                [ "entry", entry.SddVersionLine; "check", "handoffContractVersion" ]
+
             let specKitCoordinates = [ "entry", entry.SddVersionLine; "check", "specKitRange" ]
 
             // Governance compatibility is an optional integration fact: a present,
@@ -375,7 +472,8 @@ module ValidationRunner =
             let handoffStatus =
                 match entry.GovernanceContractVersionRange, handoffContractVersion with
                 | Some _, Some _ -> Pass
-                | Some _, None -> SkippedWithReason "no governance-handoff produced; compatibility recorded as optional fact"
+                | Some _, None ->
+                    SkippedWithReason "no governance-handoff produced; compatibility recorded as optional fact"
                 | None, _ -> SkippedWithReason "no governance contract range declared; optional integration fact"
 
             // SDD emits no Spec-Kit-version artifact, so this is a well-formedness
@@ -386,8 +484,10 @@ module ValidationRunner =
                 else
                     Pass
 
-            [ { Coordinates = handoffCoordinates; Status = handoffStatus }
-              { Coordinates = specKitCoordinates; Status = specKitStatus } ])
+            [ { Coordinates = handoffCoordinates
+                Status = handoffStatus }
+              { Coordinates = specKitCoordinates
+                Status = specKitStatus } ])
 
     // ---- host perturbation ----
 
@@ -441,7 +541,19 @@ module ValidationRunner =
         // scaffold semantic suite and the cross-repo Rendering proof, not these
         // matrices (mirrors the harness needing no Governance runtime). The exhaustive
         // `token` match above still forces a compile-time decision for any new case.
-        [ Init; Charter; Specify; Clarify; Checklist; Plan; Tasks; Analyze; Evidence; Verify; Ship; Agents; Refresh ]
+        [ Init
+          Charter
+          Specify
+          Clarify
+          Checklist
+          Plan
+          Tasks
+          Analyze
+          Evidence
+          Verify
+          Ship
+          Agents
+          Refresh ]
         |> List.map token
 
     /// Map a produced readiness file to its catalogued generated-view name, or `None`
@@ -480,7 +592,8 @@ module ValidationRunner =
             |> List.map (fun token ->
                 lifecycleMatrixName,
                 { Coordinates = [ "command", token ]
-                  Status = CoverageGap $"command '{token}' is in the real SddCommand surface but no lifecycle cell covers it" })
+                  Status =
+                    CoverageGap $"command '{token}' is in the real SddCommand surface but no lifecycle cell covers it" })
 
         let staleCommands =
             Set.difference declaredCommands realCommands
@@ -488,10 +601,20 @@ module ValidationRunner =
             |> List.map (fun token ->
                 lifecycleMatrixName,
                 { Coordinates = [ "command", token ]
-                  Status = Fail(failure lifecycleMatrixName [ "command", token ] "" "declared command no longer exists in the real SddCommand surface" "Remove the stale command from the validation plan.") })
+                  Status =
+                    Fail(
+                        failure
+                            lifecycleMatrixName
+                            [ "command", token ]
+                            ""
+                            "declared command no longer exists in the real SddCommand surface"
+                            "Remove the stale command from the validation plan."
+                    ) })
 
         let declaredContracts = Set.ofList plan.BaselineContracts
-        let realContracts = release.Catalog |> List.map (fun entry -> entry.Contract) |> Set.ofList
+
+        let realContracts =
+            release.Catalog |> List.map (fun entry -> entry.Contract) |> Set.ofList
 
         let contractGaps =
             Set.difference realContracts declaredContracts
@@ -499,7 +622,8 @@ module ValidationRunner =
             |> List.map (fun contract ->
                 baselineMatrixName,
                 { Coordinates = [ "contract", contract ]
-                  Status = CoverageGap $"catalog contract '{contract}' is in release-readiness but no baseline cell covers it" })
+                  Status =
+                    CoverageGap $"catalog contract '{contract}' is in release-readiness but no baseline cell covers it" })
 
         let staleContracts =
             Set.difference declaredContracts realContracts
@@ -507,7 +631,15 @@ module ValidationRunner =
             |> List.map (fun contract ->
                 baselineMatrixName,
                 { Coordinates = [ "contract", contract ]
-                  Status = Fail(failure baselineMatrixName [ "contract", contract ] "" "declared contract is absent from the release catalog" "Remove the stale contract or restore it to release-readiness.json.") })
+                  Status =
+                    Fail(
+                        failure
+                            baselineMatrixName
+                            [ "contract", contract ]
+                            ""
+                            "declared contract is absent from the release catalog"
+                            "Remove the stale contract or restore it to release-readiness.json."
+                    ) })
 
         let declaredViews = Set.ofList plan.DeterminismOutputs
 
@@ -528,7 +660,8 @@ module ValidationRunner =
                     |> List.map (fun view ->
                         determinismMatrixName,
                         { Coordinates = [ "output", view ]
-                          Status = CoverageGap $"produced view '{view}' is in readiness/ but no determinism cell covers it" })
+                          Status =
+                            CoverageGap $"produced view '{view}' is in readiness/ but no determinism cell covers it" })
 
         commandGaps @ staleCommands @ contractGaps @ staleContracts @ viewGaps
 
@@ -559,7 +692,11 @@ module ValidationRunner =
         // One full project (fixed authored sources) feeds the determinism, baseline,
         // and compatibility matrices.
         let neutralRoot =
-            if selected determinismMatrixName || selected baselineMatrixName || selected compatibilityMatrixName then
+            if
+                selected determinismMatrixName
+                || selected baselineMatrixName
+                || selected compatibilityMatrixName
+            then
                 buildFullProject ()
             else
                 ""
@@ -574,7 +711,10 @@ module ValidationRunner =
             runWork Ship neutralRoot None |> ignore
             runWork Agents neutralRoot None |> ignore
             runWork Refresh neutralRoot None |> ignore
-            plan.DeterminismOutputs |> List.map (fun output -> output, produceOutput neutralRoot output) |> Map.ofList
+
+            plan.DeterminismOutputs
+            |> List.map (fun output -> output, produceOutput neutralRoot output)
+            |> Map.ofList
 
         let neutralSnapshot, repeatSnapshot, perturbedSnapshot =
             if selected determinismMatrixName then
@@ -592,7 +732,14 @@ module ValidationRunner =
         // pass (INV-1 / FR-007 / C-9).
         let evaluateCell matrixName (cell: MatrixCell) =
             if isInjected options.InjectedDivergences matrixName cell.Coordinates then
-                Fail(failure matrixName cell.Coordinates "" "seeded single-cell divergence" "Resolve the seeded regression in this matrix cell.")
+                Fail(
+                    failure
+                        matrixName
+                        cell.Coordinates
+                        ""
+                        "seeded single-cell divergence"
+                        "Resolve the seeded regression in this matrix cell."
+                )
             elif not (selected matrixName) then
                 cell.Status
             elif matrixName = lifecycleMatrixName then
@@ -604,29 +751,43 @@ module ValidationRunner =
 
         // Baseline + compatibility produce their own cell sets (one call each).
         let baselineCells =
-            if selected baselineMatrixName then evaluateBaselineCells release neutralRoot else []
+            if selected baselineMatrixName then
+                evaluateBaselineCells release neutralRoot
+            else
+                []
 
         let compatibilityCells =
-            if selected compatibilityMatrixName then evaluateCompatibilityCells release neutralRoot else []
+            if selected compatibilityMatrixName then
+                evaluateCompatibilityCells release neutralRoot
+            else
+                []
 
         let folded =
             model.Matrices
             |> List.fold
                 (fun state matrix ->
                     let precomputed =
-                        if matrix.Name = baselineMatrixName then Some baselineCells
-                        elif matrix.Name = compatibilityMatrixName then Some compatibilityCells
-                        else None
+                        if matrix.Name = baselineMatrixName then
+                            Some baselineCells
+                        elif matrix.Name = compatibilityMatrixName then
+                            Some compatibilityCells
+                        else
+                            None
 
                     match precomputed with
                     | Some cells when selected matrix.Name ->
                         cells
-                        |> List.fold (fun current evaluated -> update (CellEvaluated(matrix.Name, evaluated)) current |> fst) state
+                        |> List.fold
+                            (fun current evaluated -> update (CellEvaluated(matrix.Name, evaluated)) current |> fst)
+                            state
                     | _ ->
                         matrix.Cells
                         |> List.fold
                             (fun current cell ->
-                                let evaluated = { cell with Status = evaluateCell matrix.Name cell }
+                                let evaluated =
+                                    { cell with
+                                        Status = evaluateCell matrix.Name cell }
+
                                 update (CellEvaluated(matrix.Name, evaluated)) current |> fst)
                             state)
                 model

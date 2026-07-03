@@ -14,8 +14,7 @@ open FS.GG.SDD.Artifacts.Json.JsonWriters
 
 module Serialization =
     let normalizeSnapshotsToWorkModel snapshots workId =
-        loadWorkItemFromSnapshots snapshots workId
-        |> WorkModel.fromParsedWorkItem
+        loadWorkItemFromSnapshots snapshots workId |> WorkModel.fromParsedWorkItem
 
     let writeSource (writer: Utf8JsonWriter) (source: SourceEntry) =
         writer.WriteStartObject()
@@ -23,9 +22,11 @@ module Serialization =
         writer.WriteString("kind", source.Kind)
         writer.WriteString("owner", source.Owner)
         writer.WriteNumber("schemaVersion", source.SchemaVersion)
+
         match source.RawSchemaVersion with
         | Some raw -> writer.WriteString("rawSchemaVersion", raw)
         | None -> writer.WriteNull "rawSchemaVersion"
+
         writer.WriteString("schemaStatus", source.SchemaStatus)
         writeSourceDigest writer "sourceDigest" (Some source.SourceDigest)
         writer.WriteEndObject()
@@ -36,9 +37,11 @@ module Serialization =
         writer.WriteString("title", requirement.Title)
         writer.WriteString("text", requirement.Text)
         writeStringList writer SourceOrder "acceptanceCriteria" requirement.AcceptanceCriteria
+
         match requirement.Priority with
         | Some priority -> writer.WriteString("priority", priority)
         | None -> writer.WriteNull "priority"
+
         writer.WriteString("source", requirement.Source)
         writeLocation writer "sourceLocation" requirement.SourceLocation
         writeStringList writer SourceOrder "linkedTaskIds" requirement.LinkedTaskIds
@@ -82,9 +85,11 @@ module Serialization =
         writeStringList writer SourceOrder "artifactRefs" evidence.ArtifactRefs
         writer.WriteString("result", evidence.Result)
         writer.WriteBoolean("synthetic", evidence.Synthetic)
+
         match evidence.Rationale with
         | Some rationale -> writer.WriteString("rationale", rationale)
         | None -> writer.WriteNull "rationale"
+
         writer.WriteString("source", evidence.Source)
         writeLocation writer "sourceLocation" evidence.SourceLocation
         writer.WriteEndObject()
@@ -93,9 +98,11 @@ module Serialization =
         writer.WriteStartObject()
         writer.WriteString("path", source.Artifact.Path)
         writeSourceDigest writer "digest" (Some source.Digest)
+
         match source.SchemaVersion with
         | Some version -> writer.WriteNumber("schemaVersion", version.Major)
         | None -> writer.WriteNull "schemaVersion"
+
         writer.WriteEndObject()
 
     let writeGeneratedView (writer: Utf8JsonWriter) (view: GenerationManifest) =
@@ -176,7 +183,8 @@ module Serialization =
             json,
             "\"outputDigest\"\\s*:\\s*\\{\\s*\"algorithm\"\\s*:\\s*\"sha256\"\\s*,\\s*\"value\"\\s*:\\s*\"[a-f0-9]{64}\"\\s*\\}",
             "\"outputDigest\": null",
-            RegexOptions.CultureInvariant)
+            RegexOptions.CultureInvariant
+        )
 
     let applyGeneratedView
         (outputPath: string)
@@ -190,7 +198,9 @@ module Serialization =
             model.Sources
             |> List.map (fun source ->
                 let artifact =
-                    match ArtifactRef.create source.Path (ArtifactKind.Other "generatedSource") ArtifactOwner.Sdd true with
+                    match
+                        ArtifactRef.create source.Path (ArtifactKind.Other "generatedSource") ArtifactOwner.Sdd true
+                    with
                     | Ok value -> value
                     | Error message -> invalidArg (nameof source.Path) message
 
@@ -209,15 +219,31 @@ module Serialization =
             GenerationManifest.createWorkModelManifest outputPath generator sources outputDigest
 
         { model with
-            GeneratedViews = [ { manifest with Currency = currency; Diagnostics = diagnostics } ] }
+            GeneratedViews =
+                [ { manifest with
+                      Currency = currency
+                      Diagnostics = diagnostics } ] }
 
     let generateWorkModel request =
         let parsed = loadWorkItemFromSnapshots request.Snapshots request.WorkId
-        let outputPath = request.ExpectedOutputPath |> Option.defaultValue (GenerationManifest.expectedWorkModelOutputPath request.WorkId)
-        let model = parsed |> WorkModel.fromParsedWorkItem |> applyGeneratedView outputPath request.GeneratorVersion None CurrencyCurrent []
+
+        let outputPath =
+            request.ExpectedOutputPath
+            |> Option.defaultValue (GenerationManifest.expectedWorkModelOutputPath request.WorkId)
+
+        let model =
+            parsed
+            |> WorkModel.fromParsedWorkItem
+            |> applyGeneratedView outputPath request.GeneratorVersion None CurrencyCurrent []
+
         let jsonWithoutDigest = serializeWorkModel model
-        let manifestDigest = SchemaVersion.outputSha256Text (canonicalizeOutputDigestForHash jsonWithoutDigest)
-        let modelWithDigest = applyGeneratedView outputPath request.GeneratorVersion (Some manifestDigest) CurrencyCurrent [] model
+
+        let manifestDigest =
+            SchemaVersion.outputSha256Text (canonicalizeOutputDigestForHash jsonWithoutDigest)
+
+        let modelWithDigest =
+            applyGeneratedView outputPath request.GeneratorVersion (Some manifestDigest) CurrencyCurrent [] model
+
         let json = serializeWorkModel modelWithDigest
         let outputDigest = SchemaVersion.outputSha256Text json
 
@@ -241,7 +267,9 @@ module Serialization =
     let sourceStale (currentSources: SourceIdentity list) (generatedSources: SourceIdentity list) =
         let current =
             currentSources
-            |> List.map (fun source -> source.Artifact.Path, (source.Digest.Value, source.SchemaVersion |> Option.map (fun version -> version.Major)))
+            |> List.map (fun source ->
+                source.Artifact.Path,
+                (source.Digest.Value, source.SchemaVersion |> Option.map (fun version -> version.Major)))
             |> Map.ofList
 
         generatedSources
@@ -249,7 +277,8 @@ module Serialization =
             match Map.tryFind source.Artifact.Path current with
             | Some(currentDigest, currentSchema) ->
                 currentDigest <> source.Digest.Value
-                || currentSchema <> (source.SchemaVersion |> Option.map (fun version -> version.Major))
+                || currentSchema
+                   <> (source.SchemaVersion |> Option.map (fun version -> version.Major))
             | None -> true)
 
     let outputDigestStale (snapshot: FileSnapshot) (metadata: GeneratedWorkModelMetadata) =
@@ -267,7 +296,9 @@ module Serialization =
 
         let normalized =
             snapshots
-            |> List.map (fun snapshot -> { snapshot with Path = snapshot.Path.Trim().Replace('\\', '/').TrimStart('/') })
+            |> List.map (fun snapshot ->
+                { snapshot with
+                    Path = snapshot.Path.Trim().Replace('\\', '/').TrimStart('/') })
 
         match normalized |> List.tryFind (fun snapshot -> snapshot.Path = outputPath) with
         | None -> [ Diagnostics.missingGeneratedWorkModel artifact outputPath ]

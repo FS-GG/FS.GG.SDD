@@ -144,7 +144,9 @@ module Rendering =
 
             for view in report.GeneratedViews |> List.sortBy (fun v -> v.Path) do
                 let currency = generatedViewCurrencyValue view.Currency
-                table.AddRow(esc view.Path, $"[{currencyStyle view.Currency}]{esc currency}[/]") |> ignore
+
+                table.AddRow(esc view.Path, $"[{currencyStyle view.Currency}]{esc currency}[/]")
+                |> ignore
 
             console.Write table
 
@@ -156,10 +158,12 @@ module Rendering =
 
             for diagnostic in report.Diagnostics |> List.sortBy (fun d -> severityRank d.Severity) do
                 let severity = severityValue diagnostic.Severity
+
                 table.AddRow(
                     $"[{severityStyle diagnostic.Severity}]{esc severity}[/]",
                     esc diagnostic.Id,
-                    esc diagnostic.Message)
+                    esc diagnostic.Message
+                )
                 |> ignore
 
             console.Write table
@@ -231,7 +235,10 @@ module Rendering =
 
         // Overall verdict: green "passed" vs red "not passed", mirroring the exit rule.
         let verdictStyle, verdictText =
-            if summary.OverallPassed then "green", "passed" else "red", "not passed"
+            if summary.OverallPassed then
+                "green", "passed"
+            else
+                "red", "not passed"
 
         let header = Rule("validation-report")
         header.Justification <- Justify.Left
@@ -242,7 +249,8 @@ module Rendering =
         console.MarkupLine(
             $"Summary: passed={summary.Passed} failed={summary.Failed} "
             + $"skipped={summary.Skipped} coverageGaps={summary.CoverageGaps} "
-            + $"notValidated={summary.NotValidated}")
+            + $"notValidated={summary.NotValidated}"
+        )
 
         let sortedMatrices = report.Matrices |> List.sortBy (fun matrix -> matrix.Name)
 
@@ -257,11 +265,30 @@ module Rendering =
             let countOf predicate =
                 matrix.Cells |> List.filter (fun cell -> predicate cell.Status) |> List.length
 
-            let passed = countOf (function Pass -> true | _ -> false)
-            let failed = countOf (function Fail _ -> true | _ -> false)
-            let skipped = countOf (function SkippedWithReason _ -> true | _ -> false)
-            let gaps = countOf (function CoverageGap _ -> true | _ -> false)
-            let notValidated = countOf (function NotValidated _ -> true | _ -> false)
+            let passed =
+                countOf (function
+                    | Pass -> true
+                    | _ -> false)
+
+            let failed =
+                countOf (function
+                    | Fail _ -> true
+                    | _ -> false)
+
+            let skipped =
+                countOf (function
+                    | SkippedWithReason _ -> true
+                    | _ -> false)
+
+            let gaps =
+                countOf (function
+                    | CoverageGap _ -> true
+                    | _ -> false)
+
+            let notValidated =
+                countOf (function
+                    | NotValidated _ -> true
+                    | _ -> false)
 
             rollup.AddRow(
                 esc matrix.Name,
@@ -269,7 +296,8 @@ module Rendering =
                 string failed,
                 string skipped,
                 string gaps,
-                string notValidated)
+                string notValidated
+            )
             |> ignore
 
         console.Write rollup
@@ -283,7 +311,10 @@ module Rendering =
 
             let nonPassing =
                 matrix.Cells
-                |> List.filter (fun cell -> match cell.Status with Pass -> false | _ -> true)
+                |> List.filter (fun cell ->
+                    match cell.Status with
+                    | Pass -> false
+                    | _ -> true)
                 |> List.sortBy (fun cell -> coordinateText cell.Coordinates)
 
             if nonPassing.IsEmpty then
@@ -293,8 +324,16 @@ module Rendering =
                     let token = cellStatusToken cell.Status
                     let style = cellStatusStyle cell.Status
                     let detail = cellDetail cell.Status
-                    let detailText = if System.String.IsNullOrEmpty detail then "" else $": {esc detail}"
-                    console.MarkupLine($"  ({esc (coordinateText cell.Coordinates)}) [{style}]{esc token}[/]{detailText}")
+
+                    let detailText =
+                        if System.String.IsNullOrEmpty detail then
+                            ""
+                        else
+                            $": {esc detail}"
+
+                    console.MarkupLine(
+                        $"  ({esc (coordinateText cell.Coordinates)}) [{style}]{esc token}[/]{detailText}"
+                    )
 
         // Sensed triage facts are surfaced only when populated (C-6); never required.
         let sensedLines =
@@ -312,24 +351,27 @@ module Rendering =
             let sensedText = String.concat ", " sensedLines
             console.MarkupLine($"[dim]sensed: {esc sensedText}[/]")
 
-    let resolve
-        (format: OutputFormat)
-        (capabilities: TerminalCapabilities)
-        (report: CommandReport)
-        : RichRenderResult =
+    let resolve (format: OutputFormat) (capabilities: TerminalCapabilities) (report: CommandReport) : RichRenderResult =
         match format with
-        | Json -> { Text = serializeReport report; UsedRichRendering = false }
-        | Text -> { Text = FS.GG.SDD.Commands.CommandRendering.renderText report; UsedRichRendering = false }
+        | Json ->
+            { Text = serializeReport report
+              UsedRichRendering = false }
+        | Text ->
+            { Text = FS.GG.SDD.Commands.CommandRendering.renderText report
+              UsedRichRendering = false }
         | Rich ->
             if capabilities.IsInteractive && capabilities.ColorEnabled then
                 let console, writer = createCappedConsole capabilities
 
                 renderRichTo console report
-                { Text = writer.ToString(); UsedRichRendering = true }
+
+                { Text = writer.ToString()
+                  UsedRichRendering = true }
             else
                 // Degrade to the existing plain-text projection: zero ANSI, byte-identical
                 // to `--text` for the same report (C-1, INV-2).
-                { Text = FS.GG.SDD.Commands.CommandRendering.renderText report; UsedRichRendering = false }
+                { Text = FS.GG.SDD.Commands.CommandRendering.renderText report
+                  UsedRichRendering = false }
 
     let resolveValidation
         (format: OutputFormat)
@@ -339,15 +381,22 @@ module Rendering =
         match format with
         // `serialize` is the canonical automation contract; `renderText` is the
         // portable plain-text projection. Both are returned byte-for-byte (INV-1).
-        | Json -> { Text = FS.GG.SDD.Validation.ValidationContracts.serialize report; UsedRichRendering = false }
-        | Text -> { Text = FS.GG.SDD.Validation.ValidationContracts.renderText report; UsedRichRendering = false }
+        | Json ->
+            { Text = FS.GG.SDD.Validation.ValidationContracts.serialize report
+              UsedRichRendering = false }
+        | Text ->
+            { Text = FS.GG.SDD.Validation.ValidationContracts.renderText report
+              UsedRichRendering = false }
         | Rich ->
             if capabilities.IsInteractive && capabilities.ColorEnabled then
                 let console, writer = createCappedConsole capabilities
 
                 renderValidationRichTo console report
-                { Text = writer.ToString(); UsedRichRendering = true }
+
+                { Text = writer.ToString()
+                  UsedRichRendering = true }
             else
                 // Degrade to the exact plain-text projection: zero ANSI, byte-identical
                 // to `--text` for the same report (C-4, INV-2).
-                { Text = FS.GG.SDD.Validation.ValidationContracts.renderText report; UsedRichRendering = false }
+                { Text = FS.GG.SDD.Validation.ValidationContracts.renderText report
+                  UsedRichRendering = false }

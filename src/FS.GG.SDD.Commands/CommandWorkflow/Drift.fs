@@ -63,7 +63,8 @@ module internal Drift =
             record.ProducedPaths
             |> List.choose (fun p ->
                 if p.Path.StartsWith(SkillMirror.providerSourceRoot + "/skills/", System.StringComparison.Ordinal) then
-                    SkillMirror.skillIdOfPath p.Path |> Option.map (fun id -> id, Option.defaultValue "" p.Sha256)
+                    SkillMirror.skillIdOfPath p.Path
+                    |> Option.map (fun id -> id, Option.defaultValue "" p.Sha256)
                 else
                     None)
             |> List.filter (fun (id, _) -> not (id.StartsWith("fs-gg-sdd-", System.StringComparison.Ordinal)))
@@ -95,7 +96,10 @@ module internal Drift =
 
         processSkills @ productSkills
 
-    let private computeSkillDriftPaths (provenance: ScaffoldProvenanceRecord option) (skillBodies: Map<string, string>) : string list =
+    let private computeSkillDriftPaths
+        (provenance: ScaffoldProvenanceRecord option)
+        (skillBodies: Map<string, string>)
+        : string list =
         let expected = expectedSkills provenance
 
         let actual =
@@ -111,10 +115,15 @@ module internal Drift =
             // only those. When copies merely disagree with no reference to arbitrate (a divergent
             // process skill, or a product skill whose digest wasn't recorded), the canonical copy is
             // unknowable — report every present root so the operator reconciles them.
-            let presentRoots = agentSkillRoots |> List.filter (fun root -> not (List.contains root drift.MissingRoots))
+            let presentRoots =
+                agentSkillRoots
+                |> List.filter (fun root -> not (List.contains root drift.MissingRoots))
 
             let divergentRoots =
-                if drift.Divergent && List.isEmpty drift.HashMismatchRoots then presentRoots else []
+                if drift.Divergent && List.isEmpty drift.HashMismatchRoots then
+                    presentRoots
+                else
+                    []
 
             let roots = drift.MissingRoots @ drift.HashMismatchRoots @ divergentRoots
             roots |> List.map (fun root -> SkillMirror.skillPath root drift.Id))
@@ -214,7 +223,8 @@ module internal Drift =
             // scaffold not coherent alongside the CLI-axis / missing-artifact drivers.
             let skillDriftPaths = computeSkillDriftPaths provenance skillBodies
 
-            let hasActionableWork = steps |> List.exists (fun step -> step.Outcome = "wouldApply")
+            let hasActionableWork =
+                steps |> List.exists (fun step -> step.Outcome = "wouldApply")
 
             { HasProvenance = true
               ProviderName = Some record.ProviderName

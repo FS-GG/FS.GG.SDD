@@ -76,12 +76,27 @@ module Guidance =
                           TargetId = targetId
                           Generator = jsonString "generator" root |> Option.defaultValue "fsgg-sdd"
                           Generated = jsonBool "generated" root |> Option.defaultValue true
-                          Sources = jsonArray "sources" root |> List.map parseAnalysisSource |> List.sortBy (fun source -> source.Path)
+                          Sources =
+                            jsonArray "sources" root
+                            |> List.map parseAnalysisSource
+                            |> List.sortBy (fun source -> source.Path)
                           BehaviorModelDigest = behaviorDigest
-                          Commands = jsonArray "commands" root |> List.map parseGuidanceCommandEntry |> List.sortBy (fun command -> command.Id)
-                          Skills = jsonArray "skills" root |> List.map parseGuidanceSkillEntry |> List.sortBy (fun skill -> skill.Id)
-                          RenderedFiles = jsonArray "renderedFiles" root |> List.map parseGuidanceFileRef |> List.sortBy (fun file -> file.Path)
-                          Diagnostics = jsonArray "diagnostics" root |> List.map parseAnalysisDiagnostic |> Diagnostics.sort }
+                          Commands =
+                            jsonArray "commands" root
+                            |> List.map parseGuidanceCommandEntry
+                            |> List.sortBy (fun command -> command.Id)
+                          Skills =
+                            jsonArray "skills" root
+                            |> List.map parseGuidanceSkillEntry
+                            |> List.sortBy (fun skill -> skill.Id)
+                          RenderedFiles =
+                            jsonArray "renderedFiles" root
+                            |> List.map parseGuidanceFileRef
+                            |> List.sortBy (fun file -> file.Path)
+                          Diagnostics =
+                            jsonArray "diagnostics" root
+                            |> List.map parseAnalysisDiagnostic
+                            |> Diagnostics.sort }
                 | _ ->
                     Error
                         [ Diagnostics.workModelInconsistent

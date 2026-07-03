@@ -15,7 +15,10 @@ module ProbeResolutionTests =
     /// and default-run resolution. Generic tooling only — no provider identity.
     let private productWith (relativeProjects: string list) =
         let root = newProductRoot ()
-        relativeProjects |> List.iter (fun path -> writeRelative root path "<Project />")
+
+        relativeProjects
+        |> List.iter (fun path -> writeRelative root path "<Project />")
+
         root
 
     // ---------- US1 (P1): default branch is the normalized dotnet command ----------
@@ -25,16 +28,25 @@ module ProbeResolutionTests =
     [<Fact>]
     let ``resolveBuildCommand None is dotnet build at root`` () =
         let root = newProductRoot ()
+
         Assert.Equal(
-            { Executable = "dotnet"; Arguments = [ "build" ]; WorkingDirectory = root },
-            resolveBuildCommand None root)
+            { Executable = "dotnet"
+              Arguments = [ "build" ]
+              WorkingDirectory = root },
+            resolveBuildCommand None root
+        )
 
     [<Fact>]
     let ``resolveRunCommand None is dotnet run --project discovered at root`` () =
         let root = productWith [ "App.fsproj" ]
+
         Assert.Equal(
-            Some { Executable = "dotnet"; Arguments = [ "run"; "--project"; "App.fsproj" ]; WorkingDirectory = root },
-            resolveRunCommand None root)
+            Some
+                { Executable = "dotnet"
+                  Arguments = [ "run"; "--project"; "App.fsproj" ]
+                  WorkingDirectory = root },
+            resolveRunCommand None root
+        )
 
     // T005 (US1 / FR-008): discovery is deterministic (ordinal-first) and an empty product
     // yields None for both discovery and the default run resolution (so the probe can emit a
@@ -60,18 +72,37 @@ module ProbeResolutionTests =
     [<Fact>]
     let ``resolveBuildCommand declared invokes the declared command never dotnet`` () =
         let root = newProductRoot ()
-        let declared: DeclaredCommand = { Executable = "mybuild"; Arguments = [ "--fast" ] }
+
+        let declared: DeclaredCommand =
+            { Executable = "mybuild"
+              Arguments = [ "--fast" ] }
+
         let resolved = resolveBuildCommand (Some declared) root
-        Assert.Equal({ Executable = "mybuild"; Arguments = [ "--fast" ]; WorkingDirectory = root }, resolved)
+
+        Assert.Equal(
+            { Executable = "mybuild"
+              Arguments = [ "--fast" ]
+              WorkingDirectory = root },
+            resolved
+        )
+
         Assert.NotEqual<string>("dotnet", resolved.Executable)
 
     [<Fact>]
     let ``resolveRunCommand declared is Some of the declared command at root`` () =
         let root = newProductRoot ()
-        let declared: DeclaredCommand = { Executable = "myrun"; Arguments = [ "--headless" ] }
+
+        let declared: DeclaredCommand =
+            { Executable = "myrun"
+              Arguments = [ "--headless" ] }
+
         Assert.Equal(
-            Some { Executable = "myrun"; Arguments = [ "--headless" ]; WorkingDirectory = root },
-            resolveRunCommand (Some declared) root)
+            Some
+                { Executable = "myrun"
+                  Arguments = [ "--headless" ]
+                  WorkingDirectory = root },
+            resolveRunCommand (Some declared) root
+        )
 
     // T012 (US2 / FR-010): a `Some` whose Executable is empty/whitespace falls through to the
     // default for both probes — never an attempt to launch a blank executable.
@@ -80,7 +111,11 @@ module ProbeResolutionTests =
     [<InlineData("   ")>]
     let ``blank declared executable resolves to the default`` (blank: string) =
         let root = productWith [ "App.fsproj" ]
-        let declared: DeclaredCommand = { Executable = blank; Arguments = [ "ignored" ] }
+
+        let declared: DeclaredCommand =
+            { Executable = blank
+              Arguments = [ "ignored" ] }
+
         Assert.Equal(resolveBuildCommand None root, resolveBuildCommand (Some declared) root)
         Assert.Equal(resolveRunCommand None root, resolveRunCommand (Some declared) root)
 
@@ -109,7 +144,11 @@ module ProbeResolutionTests =
     [<Fact>]
     let ``Synthetic missing executable yields a could-not-start ProbeResult`` () =
         let root = newProductRoot ()
-        let declared: DeclaredCommand = { Executable = "fsgg-sdd-nonexistent-binary-xyz"; Arguments = [] }
+
+        let declared: DeclaredCommand =
+            { Executable = "fsgg-sdd-nonexistent-binary-xyz"
+              Arguments = [] }
+
         let result = buildProbe (Some declared) root
         Assert.False(result.Started)
         Assert.Equal(-1, result.ExitCode)
@@ -150,9 +189,12 @@ module ProbeResolutionTests =
 
         let genericTokens = set [ "build"; "run"; "--project"; "App.fsproj" ]
         let allTokens = (build.Arguments @ run.Arguments) |> Set.ofList
+
         Assert.True(
             Set.isSubset allTokens genericTokens,
-            "Default probe arguments must contain only generic tokens; saw: " + string (Set.toList allTokens))
+            "Default probe arguments must contain only generic tokens; saw: "
+            + string (Set.toList allTokens)
+        )
 
     // ---------- Feature 038 (T020): probes honor a synthetic descriptor's declared commands ----------
 
@@ -175,12 +217,21 @@ module ProbeResolutionTests =
     [<Fact>]
     let ``descriptor with no declared build or run resolves to the dotnet defaults`` () =
         let root = productWith [ "App.fsproj" ]
+
         Assert.Equal(
-            { Executable = "dotnet"; Arguments = [ "build" ]; WorkingDirectory = root },
-            resolveBuildCommand syntheticDescriptor.Build root)
+            { Executable = "dotnet"
+              Arguments = [ "build" ]
+              WorkingDirectory = root },
+            resolveBuildCommand syntheticDescriptor.Build root
+        )
+
         Assert.Equal(
-            Some { Executable = "dotnet"; Arguments = [ "run"; "--project"; "App.fsproj" ]; WorkingDirectory = root },
-            resolveRunCommand syntheticDescriptor.Run root)
+            Some
+                { Executable = "dotnet"
+                  Arguments = [ "run"; "--project"; "App.fsproj" ]
+                  WorkingDirectory = root },
+            resolveRunCommand syntheticDescriptor.Run root
+        )
 
     // T020 (SC-005 / FR-010): a descriptor declaring a trivial build command makes `buildProbe`
     // invoke THAT command — proven by its deterministic exit 0 in an empty root, where the `dotnet`
@@ -188,7 +239,11 @@ module ProbeResolutionTests =
     [<Fact>]
     let ``buildProbe honors the descriptor's declared command and starts no dotnet`` () =
         let root = newProductRoot () // empty: a dotnet build here would fail (non-zero)
-        let descriptor = { syntheticDescriptor with Build = Some { Executable = "true"; Arguments = [] } }
+
+        let descriptor =
+            { syntheticDescriptor with
+                Build = Some { Executable = "true"; Arguments = [] } }
+
         let result = buildProbe descriptor.Build root
         Assert.True(result.Started)
         Assert.Equal(0, result.ExitCode) // the trivial command ran, not `dotnet build`
@@ -197,7 +252,11 @@ module ProbeResolutionTests =
     [<Fact>]
     let ``runProbe honors the descriptor's declared command and starts no dotnet`` () =
         let root = newProductRoot () // empty: no runnable project, so the default would not start
-        let descriptor = { syntheticDescriptor with Run = Some { Executable = "true"; Arguments = [] } }
+
+        let descriptor =
+            { syntheticDescriptor with
+                Run = Some { Executable = "true"; Arguments = [] } }
+
         let result = runProbe descriptor.Run root
         Assert.True(result.Started)
         Assert.Equal(0, result.ExitCode) // the trivial command ran, not `dotnet run`

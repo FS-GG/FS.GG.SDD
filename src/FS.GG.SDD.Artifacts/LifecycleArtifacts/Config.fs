@@ -34,7 +34,10 @@ module Config =
           RequireGeneratorVersion: bool
           StaleBehavior: string }
 
-    type AgentGuidanceTarget = { Id: string; GuidancePath: string; GeneratedRoot: string }
+    type AgentGuidanceTarget =
+        { Id: string
+          GuidancePath: string
+          GeneratedRoot: string }
 
     type AgentGuidanceConfig =
         { SchemaVersion: SchemaVersion
@@ -59,7 +62,9 @@ module Config =
 
             let fieldDiagnostics =
                 fields
-                |> List.choose (function Error diagnostics -> Some diagnostics | Ok _ -> None)
+                |> List.choose (function
+                    | Error diagnostics -> Some diagnostics
+                    | Ok _ -> None)
                 |> combine
 
             match version, fields, versionDiagnostics @ fieldDiagnostics with
@@ -85,23 +90,41 @@ module Config =
         | None -> Error [ Diagnostics.malformedSchemaVersion artifact "SDD config is empty." ]
         | Some root ->
             let version, versionDiagnostics = schemaVersion artifact root
-            let stageResults = scalarList [ "lifecycle"; "stages" ] root |> List.map Identifiers.parseStage
+
+            let stageResults =
+                scalarList [ "lifecycle"; "stages" ] root |> List.map Identifiers.parseStage
+
             let stageDiagnostics =
                 stageResults
                 |> List.choose (function
                     | Ok _ -> None
-                    | Error message -> Some(Diagnostics.workModelInconsistent artifact message "Use one of the standard SDD lifecycle stage ids." []))
+                    | Error message ->
+                        Some(
+                            Diagnostics.workModelInconsistent
+                                artifact
+                                message
+                                "Use one of the standard SDD lifecycle stage ids."
+                                []
+                        ))
 
             match version with
             | Some schema when List.isEmpty versionDiagnostics && List.isEmpty stageDiagnostics ->
                 Ok
                     { SchemaVersion = schema
-                      Stages = stageResults |> List.choose (function Ok stage -> Some stage | Error _ -> None)
+                      Stages =
+                        stageResults
+                        |> List.choose (function
+                            | Ok stage -> Some stage
+                            | Error _ -> None)
                       WorkRoot = tryScalarAt [ "artifacts"; "workRoot" ] root |> Option.defaultValue "work"
-                      ReadinessRoot = tryScalarAt [ "artifacts"; "readinessRoot" ] root |> Option.defaultValue "readiness"
+                      ReadinessRoot =
+                        tryScalarAt [ "artifacts"; "readinessRoot" ] root
+                        |> Option.defaultValue "readiness"
                       RequireSourceDigests = boolAt [ "generatedViews"; "requireSourceDigests" ] root true
                       RequireGeneratorVersion = boolAt [ "generatedViews"; "requireGeneratorVersion" ] root true
-                      StaleBehavior = tryScalarAt [ "generatedViews"; "staleBehavior" ] root |> Option.defaultValue "diagnostic" }
+                      StaleBehavior =
+                        tryScalarAt [ "generatedViews"; "staleBehavior" ] root
+                        |> Option.defaultValue "diagnostic" }
             | _ -> Error(versionDiagnostics @ stageDiagnostics)
 
     let parseAgentGuidanceConfig (snapshot: FileSnapshot) =
@@ -120,9 +143,16 @@ module Config =
                         node
                         |> tryMapping
                         |> Option.bind (fun mapping ->
-                            match tryScalarAt [ "id" ] mapping, tryScalarAt [ "guidancePath" ] mapping, tryScalarAt [ "generatedRoot" ] mapping with
+                            match
+                                tryScalarAt [ "id" ] mapping,
+                                tryScalarAt [ "guidancePath" ] mapping,
+                                tryScalarAt [ "generatedRoot" ] mapping
+                            with
                             | Some id, Some guidancePath, Some generatedRoot ->
-                                Some { Id = id; GuidancePath = guidancePath; GeneratedRoot = generatedRoot }
+                                Some
+                                    { Id = id
+                                      GuidancePath = guidancePath
+                                      GeneratedRoot = generatedRoot }
                             | _ -> None))
                     |> Seq.toList)
                 |> Option.defaultValue []
@@ -132,9 +162,12 @@ module Config =
                 Ok
                     { SchemaVersion = schema
                       Targets = targets
-                      WorkModelPath = tryScalarAt [ "sourceModel"; "workModel" ] root |> Option.defaultValue "readiness/{workId}/work-model.json"
+                      WorkModelPath =
+                        tryScalarAt [ "sourceModel"; "workModel" ] root
+                        |> Option.defaultValue "readiness/{workId}/work-model.json"
                       GeneratedGuidanceIsAuthority = boolAt [ "policy"; "generatedGuidanceIsAuthority" ] root false
-                      RequireEquivalentClaudeAndCodexBehavior = boolAt [ "policy"; "requireEquivalentClaudeAndCodexBehavior" ] root true }
+                      RequireEquivalentClaudeAndCodexBehavior =
+                        boolAt [ "policy"; "requireEquivalentClaudeAndCodexBehavior" ] root true }
             | _ -> Error versionDiagnostics
 
     // A declared `build`/`test`/`run`/`verify` command under a provider entry: read the
@@ -217,7 +250,11 @@ module Config =
                                         tryScalarAt [ "minimumFsggSdd"; "version" ] mapping
                                         |> Option.filter (fun raw ->
                                             match raw.Trim() with
-                                            | "" | "null" | "Null" | "NULL" | "~" -> false
+                                            | ""
+                                            | "null"
+                                            | "Null"
+                                            | "NULL"
+                                            | "~" -> false
                                             | _ -> true) }
                             | _ -> None))
                     |> Seq.toList)

@@ -11,7 +11,9 @@ open Xunit
 module RegistryDocumentTests =
 
     let private repo id : Registry.RegistryRepo =
-        { Id = id; Name = "FS.GG." + id; Role = "role-" + id }
+        { Id = id
+          Name = "FS.GG." + id
+          Role = "role-" + id }
 
     let private contract id : Registry.ContractEntry =
         { Id = id
@@ -28,7 +30,10 @@ module RegistryDocumentTests =
         { SchemaVersion = 1
           Repos = [ repo "sdd"; repo "templates"; repo "governance" ]
           Contracts = [ contract "alpha" ]
-          Dependencies = [ { From = "templates"; To = "sdd"; Via = "free text" } ]
+          Dependencies =
+            [ { From = "templates"
+                To = "sdd"
+                Via = "free text" } ]
           Coherence = [ { Id = "c1"; Coherent = true } ] }
 
     let private rules result =
@@ -46,7 +51,11 @@ module RegistryDocumentTests =
     let ``determinism: identical input yields identical diagnostics`` () =
         let broken =
             { baseDoc with
-                Contracts = [ { contract "alpha" with Owner = "nope"; Version = "abc"; Range = Some "??" } ] }
+                Contracts =
+                    [ { contract "alpha" with
+                          Owner = "nope"
+                          Version = "abc"
+                          Range = Some "??" } ] }
 
         Assert.Equal(Registry.validateDocument broken, Registry.validateDocument broken)
 
@@ -54,32 +63,60 @@ module RegistryDocumentTests =
 
     [<Fact>]
     let ``US2: repo-to-repo dependency edge is accepted`` () =
-        let doc = { baseDoc with Dependencies = [ { From = "sdd"; To = "governance"; Via = "via" } ] }
+        let doc =
+            { baseDoc with
+                Dependencies =
+                    [ { From = "sdd"
+                        To = "governance"
+                        Via = "via" } ] }
+
         Assert.Equal(Registry.Valid, Registry.validateDocument doc)
 
     [<Fact>]
     let ``US2: dependency edge to a non-repo id reports UnknownComponent`` () =
-        let doc = { baseDoc with Dependencies = [ { From = "sdd"; To = "nope"; Via = "via" } ] }
+        let doc =
+            { baseDoc with
+                Dependencies =
+                    [ { From = "sdd"
+                        To = "nope"
+                        Via = "via" } ] }
+
         Assert.Contains(Registry.UnknownComponent, rules (Registry.validateDocument doc))
 
     [<Fact>]
     let ``US2: owner 'github' is accepted (repo ids plus github)`` () =
-        let doc = { baseDoc with Contracts = [ { contract "alpha" with Owner = "github" } ] }
+        let doc =
+            { baseDoc with
+                Contracts =
+                    [ { contract "alpha" with
+                          Owner = "github" } ] }
+
         Assert.Equal(Registry.Valid, Registry.validateDocument doc)
 
     [<Fact>]
     let ``US2: consumer that is not a repo id reports UnknownComponent`` () =
-        let doc = { baseDoc with Contracts = [ { contract "alpha" with Consumers = [ "ghost" ] } ] }
+        let doc =
+            { baseDoc with
+                Contracts =
+                    [ { contract "alpha" with
+                          Consumers = [ "ghost" ] } ] }
+
         Assert.Contains(Registry.UnknownComponent, rules (Registry.validateDocument doc))
 
     [<Fact>]
     let ``US2: dropped owner reports MissingField`` () =
-        let doc = { baseDoc with Contracts = [ { contract "alpha" with Owner = "" } ] }
+        let doc =
+            { baseDoc with
+                Contracts = [ { contract "alpha" with Owner = "" } ] }
+
         Assert.Contains(Registry.MissingField "owner", rules (Registry.validateDocument doc))
 
     [<Fact>]
     let ``US2: duplicate contract id reports DuplicateComponent`` () =
-        let doc = { baseDoc with Contracts = [ contract "dup"; contract "dup" ] }
+        let doc =
+            { baseDoc with
+                Contracts = [ contract "dup"; contract "dup" ] }
+
         Assert.Contains(Registry.DuplicateComponent, rules (Registry.validateDocument doc))
 
     // --- US3: version grammar (FR-004 / FR-005 / FR-006 / SC-002) ---
@@ -91,13 +128,17 @@ module RegistryDocumentTests =
                 Contracts =
                     [ { contract "a" with Version = "1" }
                       { contract "b" with Version = "2" }
-                      { contract "c" with Version = "0.1.52-preview.1" } ] }
+                      { contract "c" with
+                          Version = "0.1.52-preview.1" } ] }
 
         Assert.Equal(Registry.Valid, Registry.validateDocument doc)
 
     [<Fact>]
     let ``US3: shorthand range 1.x is accepted`` () =
-        let doc = { baseDoc with Contracts = [ { contract "a" with Range = Some "1.x" } ] }
+        let doc =
+            { baseDoc with
+                Contracts = [ { contract "a" with Range = Some "1.x" } ] }
+
         Assert.Equal(Registry.Valid, Registry.validateDocument doc)
 
     // --- Feature 045: 4-segment versions accepted (FR-001, FR-002); the widening is
@@ -107,13 +148,21 @@ module RegistryDocumentTests =
     let ``US3-045: 4-segment version 1.2.1.1 is accepted on both version and package-version`` () =
         let doc =
             { baseDoc with
-                Contracts = [ { contract "a" with Version = "1.2.1.1"; PackageVersion = Some "1.2.1.1" } ] }
+                Contracts =
+                    [ { contract "a" with
+                          Version = "1.2.1.1"
+                          PackageVersion = Some "1.2.1.1" } ] }
 
         Assert.Equal(Registry.Valid, Registry.validateDocument doc)
 
     [<Fact>]
     let ``US3-045: 4-segment version composes with a prerelease tag (1.2.1.1-preview.1)`` () =
-        let doc = { baseDoc with Contracts = [ { contract "a" with Version = "1.2.1.1-preview.1" } ] }
+        let doc =
+            { baseDoc with
+                Contracts =
+                    [ { contract "a" with
+                          Version = "1.2.1.1-preview.1" } ] }
+
         Assert.Equal(Registry.Valid, Registry.validateDocument doc)
 
     [<Theory>]
@@ -121,10 +170,16 @@ module RegistryDocumentTests =
     [<InlineData("abc")>]
     [<InlineData("1.2.3.4.5")>]
     let ``US3: genuinely malformed version still reports MalformedVersion`` (bad: string) =
-        let doc = { baseDoc with Contracts = [ { contract "a" with Version = bad } ] }
+        let doc =
+            { baseDoc with
+                Contracts = [ { contract "a" with Version = bad } ] }
+
         Assert.Contains(Registry.MalformedVersion, rules (Registry.validateDocument doc))
 
     [<Fact>]
     let ``US3: malformed range still reports MalformedVersion`` () =
-        let doc = { baseDoc with Contracts = [ { contract "a" with Range = Some "??" } ] }
+        let doc =
+            { baseDoc with
+                Contracts = [ { contract "a" with Range = Some "??" } ] }
+
         Assert.Contains(Registry.MalformedVersion, rules (Registry.validateDocument doc))

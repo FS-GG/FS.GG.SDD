@@ -8,6 +8,11 @@ module Serialization =
     val normalizeSnapshotsToWorkModel: snapshots: FileSnapshot list -> workId: string -> WorkModel
     val generateWorkModel: request: WorkModelGenerationRequest -> WorkModelGenerationResult
     val serializeWorkModel: model: WorkModel -> string
+
     val checkGeneratedWorkModelCurrency:
-        snapshots: FileSnapshot list -> workId: string -> generatorVersion: GeneratorVersion -> Diagnostics.Diagnostic list
+        snapshots: FileSnapshot list ->
+        workId: string ->
+        generatorVersion: GeneratorVersion ->
+            Diagnostics.Diagnostic list
+
     val diagnosticIds: model: WorkModel -> string list

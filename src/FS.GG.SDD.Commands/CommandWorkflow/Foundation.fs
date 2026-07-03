@@ -25,11 +25,19 @@ module internal Foundation =
         if String.IsNullOrWhiteSpace path then "." else path.Trim()
 
     let normalizeRelativePath (path: string) =
-        (if String.IsNullOrEmpty path then "" else path.Trim().Replace('\\', '/')).TrimStart('/')
+        (if String.IsNullOrEmpty path then
+             ""
+         else
+             path.Trim().Replace('\\', '/'))
+            .TrimStart('/')
 
     let projectIdFromRoot (root: string) =
         let name = DirectoryInfo(normalizeRoot root).Name
-        if String.IsNullOrWhiteSpace name then "sdd-project" else name.ToLowerInvariant()
+
+        if String.IsNullOrWhiteSpace name then
+            "sdd-project"
+        else
+            name.ToLowerInvariant()
 
     let projectConfigText (projectId: string) =
         $"""schemaVersion: 1
@@ -396,7 +404,10 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
     let planPath workId = $"work/{workId}/plan.md"
     let tasksPath workId = $"work/{workId}/tasks.yml"
     let evidencePath workId = $"work/{workId}/evidence.yml"
-    let workModelPath workId = GenerationManifestModule.expectedWorkModelOutputPath workId
+
+    let workModelPath workId =
+        GenerationManifestModule.expectedWorkModelOutputPath workId
+
     let analysisPath workId = $"readiness/{workId}/analysis.json"
     let verifyPath workId = $"readiness/{workId}/verify.json"
     let shipPath workId = $"readiness/{workId}/ship.json"
@@ -428,10 +439,18 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
         preWorkModelReadEffects workId [ ReadFile(clarificationPath workId); ReadFile(checklistPath workId) ]
 
     let planReadEffects workId =
-        preWorkModelReadEffects workId [ ReadFile(clarificationPath workId); ReadFile(checklistPath workId); ReadFile(planPath workId) ]
+        preWorkModelReadEffects
+            workId
+            [ ReadFile(clarificationPath workId)
+              ReadFile(checklistPath workId)
+              ReadFile(planPath workId) ]
 
     let tasksReadEffects workId =
-        preWorkModelReadEffects workId [ ReadFile(clarificationPath workId); ReadFile(checklistPath workId); ReadFile(planPath workId) ]
+        preWorkModelReadEffects
+            workId
+            [ ReadFile(clarificationPath workId)
+              ReadFile(checklistPath workId)
+              ReadFile(planPath workId) ]
 
     let analyzeReadEffects workId =
         [ ReadFile ".fsgg/project.yml"
@@ -537,8 +556,7 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
     let scaffoldReadEffects =
         // Provider registry + a before-snapshot of the target root (for the produced
         // diff and the non-empty-target collision guard).
-        [ ReadFile ".fsgg/providers.yml"
-          EnumerateDirectory "" ]
+        [ ReadFile ".fsgg/providers.yml"; EnumerateDirectory "" ]
 
     // Feature 053: the reads `doctor` and `upgrade` share (drift-model contract) — the
     // scaffold provenance (declarative truth for the recorded minimum + provider name),
@@ -548,8 +566,7 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
     // effect at this stage (doctor never does; upgrade plans applies only after the
     // pure driver decides).
     let remediationReadEffects =
-        [ ReadFile ".fsgg/scaffold-provenance.json"
-          ReadFile ".fsgg/providers.yml" ]
+        [ ReadFile ".fsgg/scaffold-provenance.json"; ReadFile ".fsgg/providers.yml" ]
         @ (Drift.expectedArtifactPaths |> List.map ReadFile)
 
     let workIdDiagnostics (request: CommandRequest) =
@@ -608,7 +625,8 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
         model.PendingEffects |> List.exists (fun effect -> effectKey effect = key)
 
     let hasInterpreted key model =
-        model.InterpretedEffects |> List.exists (fun result -> effectKey result.Effect = key)
+        model.InterpretedEffects
+        |> List.exists (fun result -> effectKey result.Effect = key)
 
     let hasPlannedWrite model =
         model.PendingEffects
@@ -689,7 +707,9 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
             None
 
     let splitFrontMatter (text: string) =
-        let normalized = (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
+        let normalized =
+            (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
+
         let lines = normalized.Split('\n')
 
         if lines.Length > 0 && lines.[0].Trim() = "---" then
@@ -719,8 +739,7 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
         (outputDigest: OutputDigest option)
         (currency: GeneratedViewCurrency)
         (diagnosticIds: string list)
-        : GeneratedViewState
-        =
+        : GeneratedViewState =
         { Path = path
           Kind = kind
           SchemaVersion = Some 1
@@ -735,7 +754,11 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
         |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
         |> List.map _.Id
 
-    let blockedWorkModelView (path: string) (generator: GeneratorVersion) (blockingIds: string list) : GeneratedViewState =
+    let blockedWorkModelView
+        (path: string)
+        (generator: GeneratorVersion)
+        (blockingIds: string list)
+        : GeneratedViewState =
         generatedViewState path "workModel" generator [] None GeneratedViewCurrency.Blocked blockingIds
 
     /// The blocked-work-model generated-view plan `(diagnostics, [view], effects)` a stage
@@ -773,7 +796,9 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
           if not (String.Equals(frontMatterWorkId, workId, StringComparison.OrdinalIgnoreCase)) then
               mismatchDiag path workId frontMatterWorkId
           if stage <> expectedStage then
-              stageDiag path $"{artifactLabel} stage '{IdentifiersModule.stageValue stage}' is not '{expectedStageLabel}'." ]
+              stageDiag
+                  path
+                  $"{artifactLabel} stage '{IdentifiersModule.stageValue stage}' is not '{expectedStageLabel}'." ]
 
     /// Whether any recorded source-snapshot digest disagrees with the current digest for the
     /// same path — the shared source-staleness test used by checklist/plan/tasks re-parsing.
@@ -783,7 +808,8 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
         recorded
         |> List.exists (fun (path, digest) ->
             match digest, Map.tryFind path current with
-            | Some recordedDigest, Some actual -> not (String.Equals(recordedDigest, actual, StringComparison.OrdinalIgnoreCase))
+            | Some recordedDigest, Some actual ->
+                not (String.Equals(recordedDigest, actual, StringComparison.OrdinalIgnoreCase))
             | _ -> false)
 
     // The pre-work-model stages whose authored artifact already exists for the selected
@@ -794,10 +820,12 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
         let listing = directoryListing "work" model
 
         let present path stage =
-            if listing.Contains(normalizeRelativePath path) then [ stage ] else []
+            if listing.Contains(normalizeRelativePath path) then
+                [ stage ]
+            else
+                []
 
         (present (charterPath workId) "charter")
         @ (present (specPath workId) "specify")
         @ (present (clarificationPath workId) "clarify")
         @ (present (checklistPath workId) "checklist")
-

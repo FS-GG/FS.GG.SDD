@@ -39,11 +39,14 @@ module RegistryResolverTests =
     let private skipUnlessBash () =
         match bashPath with
         | Some _ -> ()
-        | None -> raise (Xunit.Sdk.SkipException.ForSkip "bash is unavailable on this host; the resolver is POSIX shell.")
+        | None ->
+            raise (Xunit.Sdk.SkipException.ForSkip "bash is unavailable on this host; the resolver is POSIX shell.")
 
     /// A fresh, empty `RUNNER_TEMP` for one invocation (temp dir, sensed — never compared).
     let private freshRunnerTemp () =
-        let dir = Path.Combine(Path.GetTempPath(), "fsgg-resolver-" + Guid.NewGuid().ToString("N"))
+        let dir =
+            Path.Combine(Path.GetTempPath(), "fsgg-resolver-" + Guid.NewGuid().ToString("N"))
+
         Directory.CreateDirectory dir |> ignore
         dir
 
@@ -67,13 +70,20 @@ module RegistryResolverTests =
                 WorkingDirectory = AppContext.BaseDirectory,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                UseShellExecute = false)
+                UseShellExecute = false
+            )
 
         info.ArgumentList.Add scriptPath
         args |> List.iter info.ArgumentList.Add
 
-        [ "REGISTRY_PATH_INPUT"; "FSGG_DISPATCH_REGISTRY_CONTENT"; "FSGG_DISPATCH_REGISTRY_SHA256_12"
-          "REGISTRY_SECRET_CONTENT"; "GITHUB_EVENT_NAME"; "RUNNER_TEMP"; "GITHUB_ENV"; "GITHUB_STEP_SUMMARY" ]
+        [ "REGISTRY_PATH_INPUT"
+          "FSGG_DISPATCH_REGISTRY_CONTENT"
+          "FSGG_DISPATCH_REGISTRY_SHA256_12"
+          "REGISTRY_SECRET_CONTENT"
+          "GITHUB_EVENT_NAME"
+          "RUNNER_TEMP"
+          "GITHUB_ENV"
+          "GITHUB_STEP_SUMMARY" ]
         |> List.iter (fun key -> info.Environment.Remove key |> ignore)
 
         env |> List.iter (fun (key, value) -> info.Environment[key] <- value)
@@ -86,7 +96,11 @@ module RegistryResolverTests =
             let stderr = proc.StandardError.ReadToEndAsync()
 
             if not (proc.WaitForExit 30_000) then
-                (try proc.Kill true with _ -> ())
+                (try
+                    proc.Kill true
+                 with _ ->
+                     ())
+
                 failwith "resolver did not exit within 30 s"
 
             { ExitCode = proc.ExitCode
@@ -99,7 +113,10 @@ module RegistryResolverTests =
 
         stdout.Replace("\r\n", "\n").Split('\n')
         |> Array.tryPick (fun line ->
-            if line.StartsWith(prefix, StringComparison.Ordinal) then Some(line.Substring prefix.Length) else None)
+            if line.StartsWith(prefix, StringComparison.Ordinal) then
+                Some(line.Substring prefix.Length)
+            else
+                None)
 
     // ---------- T006 (US1 / FR-002/FR-008): dispatch source, verbatim materialization ----------
 
@@ -165,7 +182,8 @@ module RegistryResolverTests =
         let content = "schemaVersion: 1\n# secret-sourced\n"
 
         // No GITHUB_EVENT_NAME=repository_dispatch and no input ⇒ the scheduled secret path.
-        let run = runResolver [ "REGISTRY_SECRET_CONTENT", content; "RUNNER_TEMP", runnerTemp ] [ "--print-env" ]
+        let run =
+            runResolver [ "REGISTRY_SECRET_CONTENT", content; "RUNNER_TEMP", runnerTemp ] [ "--print-env" ]
 
         Assert.Equal(0, run.ExitCode)
 

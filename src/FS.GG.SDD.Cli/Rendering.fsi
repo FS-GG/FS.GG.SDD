@@ -7,13 +7,15 @@ open FS.GG.SDD.Validation.ValidationContracts
 module Rendering =
     /// Pure detection result for the active output environment.
     type TerminalCapabilities =
-        { IsInteractive: bool
-          ColorEnabled: bool
-          Width: int option
-          /// Whether stdin is an interactive terminal (feature 053): drives the
-          /// `upgrade` confirm gate. Distinct from `IsInteractive`, which tracks
-          /// output redirection for rich degradation.
-          IsInputInteractive: bool }
+        {
+            IsInteractive: bool
+            ColorEnabled: bool
+            Width: int option
+            /// Whether stdin is an interactive terminal (feature 053): drives the
+            /// `upgrade` confirm gate. Distinct from `IsInteractive`, which tracks
+            /// output redirection for rich degradation.
+            IsInputInteractive: bool
+        }
 
     /// Result of choosing and producing a rendering for one report.
     type RichRenderResult =
@@ -41,11 +43,7 @@ module Rendering =
 
     /// Resolve the effective rendering for a requested format + capabilities,
     /// degrading Rich -> plain text when non-interactive or color-disabled.
-    val resolve:
-        format: OutputFormat ->
-        capabilities: TerminalCapabilities ->
-        report: CommandReport ->
-            RichRenderResult
+    val resolve: format: OutputFormat -> capabilities: TerminalCapabilities -> report: CommandReport -> RichRenderResult
 
     /// Render a validation-report into the given Spectre console. Pure over the
     /// report: the only observable mutation is to the supplied console.
@@ -55,7 +53,4 @@ module Rendering =
     /// degrading Rich -> plain text when non-interactive or color-disabled. `Json`
     /// returns the canonical `serialize` JSON; `Text` returns `renderText`.
     val resolveValidation:
-        format: OutputFormat ->
-        capabilities: TerminalCapabilities ->
-        report: ValidationReport ->
-            RichRenderResult
+        format: OutputFormat -> capabilities: TerminalCapabilities -> report: ValidationReport -> RichRenderResult

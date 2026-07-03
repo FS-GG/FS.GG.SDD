@@ -31,11 +31,30 @@ module GovernanceBoundaryTests =
 
     [<Fact>]
     let ``Governance files are optional compatibility boundaries in work model`` () =
-        let boundaries = TestSupport.model "valid-work-item" |> WorkModel.governanceBoundaryEntries
+        let boundaries =
+            TestSupport.model "valid-work-item" |> WorkModel.governanceBoundaryEntries
 
-        Assert.Contains(boundaries, fun boundary -> boundary.Path = ".fsgg/policy.yml" && boundary.Owner = "governance" && not boundary.RequiredBySdd)
-        Assert.Contains(boundaries, fun boundary -> boundary.Path = ".fsgg/capabilities.yml" && boundary.Relationship = "optionalCompatibilityBoundary")
-        Assert.Contains(boundaries, fun boundary -> boundary.Path = ".fsgg/tooling.yml" && boundary.Relationship = "optionalCompatibilityBoundary")
+        Assert.Contains(
+            boundaries,
+            fun boundary ->
+                boundary.Path = ".fsgg/policy.yml"
+                && boundary.Owner = "governance"
+                && not boundary.RequiredBySdd
+        )
+
+        Assert.Contains(
+            boundaries,
+            fun boundary ->
+                boundary.Path = ".fsgg/capabilities.yml"
+                && boundary.Relationship = "optionalCompatibilityBoundary"
+        )
+
+        Assert.Contains(
+            boundaries,
+            fun boundary ->
+                boundary.Path = ".fsgg/tooling.yml"
+                && boundary.Relationship = "optionalCompatibilityBoundary"
+        )
 
     [<Fact>]
     let ``Artifact model project has no FS GG Governance package or project reference`` () =

@@ -5,9 +5,7 @@ namespace Fsgg
 module Registry =
 
     /// A cross-repo component (repo/package) and its declared version.
-    type RegistryComponent =
-        { Id: string
-          Version: string }
+    type RegistryComponent = { Id: string; Version: string }
 
     /// A dependency edge: `Consumer` depends on `Provider`, declaring the range of
     /// provider versions it is compatible with.
@@ -81,9 +79,7 @@ module Registry =
           Via: string }
 
     /// A coherence state entry (`coherence[]`).
-    type CoherenceEntry =
-        { Id: string
-          Coherent: bool }
+    type CoherenceEntry = { Id: string; Coherent: bool }
 
     /// The typed model of the real `registry/dependencies.yml`.
     type RegistryDocument =

@@ -53,7 +53,9 @@ module CommandWorkflow =
 
     let nextLifecycleEffects model =
         match model.Request.Command, model.Request.WorkId with
-        | (Charter | Specify | Clarify | Checklist | Plan | Tasks | Analyze | Evidence | Verify | Ship), Some workId when not (hasPlannedWrite model) ->
+        | (Charter | Specify | Clarify | Checklist | Plan | Tasks | Analyze | Evidence | Verify | Ship), Some workId when
+            not (hasPlannedWrite model)
+            ->
             if not (allPlannedReadsInterpreted model) then
                 model, []
             else
@@ -62,41 +64,185 @@ module CommandWorkflow =
                 match candidateReads with
                 | _ :: _ ->
                     let effects = appendNewEffects candidateReads model
-                    { model with PendingEffects = model.PendingEffects @ effects }, effects
+
+                    { model with
+                        PendingEffects = model.PendingEffects @ effects },
+                    effects
                 | [] ->
                     let stagePlan =
                         match model.Request.Command with
                         | Charter ->
                             let diagnostics, specification, generatedViews, effects = computeCharterPlan model
-                            { emptyStagePlan with Diagnostics = diagnostics; Specification = specification; GeneratedViews = generatedViews; PlannedEffects = effects }
+
+                            { emptyStagePlan with
+                                Diagnostics = diagnostics
+                                Specification = specification
+                                GeneratedViews = generatedViews
+                                PlannedEffects = effects }
                         | Specify ->
                             let diagnostics, specification, generatedViews, effects = computeSpecifyPlan model
-                            { emptyStagePlan with Diagnostics = diagnostics; Specification = specification; GeneratedViews = generatedViews; PlannedEffects = effects }
+
+                            { emptyStagePlan with
+                                Diagnostics = diagnostics
+                                Specification = specification
+                                GeneratedViews = generatedViews
+                                PlannedEffects = effects }
                         | Clarify ->
-                            let diagnostics, specification, clarification, generatedViews, effects = computeClarifyPlan model
-                            { emptyStagePlan with Diagnostics = diagnostics; Specification = specification; Clarification = clarification; GeneratedViews = generatedViews; PlannedEffects = effects }
+                            let diagnostics, specification, clarification, generatedViews, effects =
+                                computeClarifyPlan model
+
+                            { emptyStagePlan with
+                                Diagnostics = diagnostics
+                                Specification = specification
+                                Clarification = clarification
+                                GeneratedViews = generatedViews
+                                PlannedEffects = effects }
                         | Checklist ->
-                            let diagnostics, specification, clarification, checklist, generatedViews, effects = computeChecklistPlan model
-                            { emptyStagePlan with Diagnostics = diagnostics; Specification = specification; Clarification = clarification; Checklist = checklist; GeneratedViews = generatedViews; PlannedEffects = effects }
+                            let diagnostics, specification, clarification, checklist, generatedViews, effects =
+                                computeChecklistPlan model
+
+                            { emptyStagePlan with
+                                Diagnostics = diagnostics
+                                Specification = specification
+                                Clarification = clarification
+                                Checklist = checklist
+                                GeneratedViews = generatedViews
+                                PlannedEffects = effects }
                         | Plan ->
-                            let diagnostics, specification, clarification, checklist, plan, generatedViews, effects = computePlanPlan model
-                            { emptyStagePlan with Diagnostics = diagnostics; Specification = specification; Clarification = clarification; Checklist = checklist; Plan = plan; GeneratedViews = generatedViews; PlannedEffects = effects }
+                            let diagnostics, specification, clarification, checklist, plan, generatedViews, effects =
+                                computePlanPlan model
+
+                            { emptyStagePlan with
+                                Diagnostics = diagnostics
+                                Specification = specification
+                                Clarification = clarification
+                                Checklist = checklist
+                                Plan = plan
+                                GeneratedViews = generatedViews
+                                PlannedEffects = effects }
                         | Tasks ->
-                            let diagnostics, specification, clarification, checklist, plan, tasks, generatedViews, effects = computeTasksPlan model
-                            { emptyStagePlan with Diagnostics = diagnostics; Specification = specification; Clarification = clarification; Checklist = checklist; Plan = plan; Tasks = tasks; GeneratedViews = generatedViews; PlannedEffects = effects }
+                            let (diagnostics,
+                                 specification,
+                                 clarification,
+                                 checklist,
+                                 plan,
+                                 tasks,
+                                 generatedViews,
+                                 effects) =
+                                computeTasksPlan model
+
+                            { emptyStagePlan with
+                                Diagnostics = diagnostics
+                                Specification = specification
+                                Clarification = clarification
+                                Checklist = checklist
+                                Plan = plan
+                                Tasks = tasks
+                                GeneratedViews = generatedViews
+                                PlannedEffects = effects }
                         | Analyze ->
-                            let diagnostics, specification, clarification, checklist, plan, tasks, analysis, generatedViews, effects = computeAnalyzePlan model
-                            { emptyStagePlan with Diagnostics = diagnostics; Specification = specification; Clarification = clarification; Checklist = checklist; Plan = plan; Tasks = tasks; Analysis = analysis; GeneratedViews = generatedViews; PlannedEffects = effects }
+                            let (diagnostics,
+                                 specification,
+                                 clarification,
+                                 checklist,
+                                 plan,
+                                 tasks,
+                                 analysis,
+                                 generatedViews,
+                                 effects) =
+                                computeAnalyzePlan model
+
+                            { emptyStagePlan with
+                                Diagnostics = diagnostics
+                                Specification = specification
+                                Clarification = clarification
+                                Checklist = checklist
+                                Plan = plan
+                                Tasks = tasks
+                                Analysis = analysis
+                                GeneratedViews = generatedViews
+                                PlannedEffects = effects }
                         | Evidence ->
-                            let diagnostics, specification, clarification, checklist, plan, tasks, analysis, evidence, generatedViews, effects = computeEvidencePlan model
-                            { emptyStagePlan with Diagnostics = diagnostics; Specification = specification; Clarification = clarification; Checklist = checklist; Plan = plan; Tasks = tasks; Analysis = analysis; Evidence = evidence; GeneratedViews = generatedViews; PlannedEffects = effects }
+                            let (diagnostics,
+                                 specification,
+                                 clarification,
+                                 checklist,
+                                 plan,
+                                 tasks,
+                                 analysis,
+                                 evidence,
+                                 generatedViews,
+                                 effects) =
+                                computeEvidencePlan model
+
+                            { emptyStagePlan with
+                                Diagnostics = diagnostics
+                                Specification = specification
+                                Clarification = clarification
+                                Checklist = checklist
+                                Plan = plan
+                                Tasks = tasks
+                                Analysis = analysis
+                                Evidence = evidence
+                                GeneratedViews = generatedViews
+                                PlannedEffects = effects }
                         | Verify ->
-                            let diagnostics, specification, clarification, checklist, plan, tasks, analysis, evidence, verification, generatedViews, effects = computeVerifyPlan model
-                            { emptyStagePlan with Diagnostics = diagnostics; Specification = specification; Clarification = clarification; Checklist = checklist; Plan = plan; Tasks = tasks; Analysis = analysis; Evidence = evidence; Verification = verification; GeneratedViews = generatedViews; PlannedEffects = effects }
+                            let (diagnostics,
+                                 specification,
+                                 clarification,
+                                 checklist,
+                                 plan,
+                                 tasks,
+                                 analysis,
+                                 evidence,
+                                 verification,
+                                 generatedViews,
+                                 effects) =
+                                computeVerifyPlan model
+
+                            { emptyStagePlan with
+                                Diagnostics = diagnostics
+                                Specification = specification
+                                Clarification = clarification
+                                Checklist = checklist
+                                Plan = plan
+                                Tasks = tasks
+                                Analysis = analysis
+                                Evidence = evidence
+                                Verification = verification
+                                GeneratedViews = generatedViews
+                                PlannedEffects = effects }
                         | Ship ->
-                            let diagnostics, specification, clarification, checklist, plan, tasks, analysis, evidence, verification, ship, generatedViews, effects = computeShipPlan model
-                            { emptyStagePlan with Diagnostics = diagnostics; Specification = specification; Clarification = clarification; Checklist = checklist; Plan = plan; Tasks = tasks; Analysis = analysis; Evidence = evidence; Verification = verification; Ship = ship; GeneratedViews = generatedViews; PlannedEffects = effects }
-                        | _ -> { emptyStagePlan with Diagnostics = model.Diagnostics }
+                            let (diagnostics,
+                                 specification,
+                                 clarification,
+                                 checklist,
+                                 plan,
+                                 tasks,
+                                 analysis,
+                                 evidence,
+                                 verification,
+                                 ship,
+                                 generatedViews,
+                                 effects) =
+                                computeShipPlan model
+
+                            { emptyStagePlan with
+                                Diagnostics = diagnostics
+                                Specification = specification
+                                Clarification = clarification
+                                Checklist = checklist
+                                Plan = plan
+                                Tasks = tasks
+                                Analysis = analysis
+                                Evidence = evidence
+                                Verification = verification
+                                Ship = ship
+                                GeneratedViews = generatedViews
+                                PlannedEffects = effects }
+                        | _ ->
+                            { emptyStagePlan with
+                                Diagnostics = model.Diagnostics }
 
                     let effects = appendNewEffects stagePlan.PlannedEffects model
 
@@ -121,13 +267,20 @@ module CommandWorkflow =
                 model, []
             else
                 let candidateReads =
-                    appendNewEffects ((duplicateCandidateReadEffects workId model) @ (agentGuidanceCandidateReadEffects workId model)) model
+                    appendNewEffects
+                        ((duplicateCandidateReadEffects workId model)
+                         @ (agentGuidanceCandidateReadEffects workId model))
+                        model
 
                 match candidateReads with
                 | _ :: _ ->
-                    { model with PendingEffects = model.PendingEffects @ candidateReads }, candidateReads
+                    { model with
+                        PendingEffects = model.PendingEffects @ candidateReads },
+                    candidateReads
                 | [] ->
-                    let diagnostics, agentGuidance, generatedViews, plannedEffects = computeAgentsPlan model
+                    let diagnostics, agentGuidance, generatedViews, plannedEffects =
+                        computeAgentsPlan model
+
                     let effects = appendNewEffects plannedEffects model
 
                     let plannedModel =
@@ -152,12 +305,15 @@ module CommandWorkflow =
 
                 match candidateReads with
                 | _ :: _ ->
-                    { model with PendingEffects = model.PendingEffects @ candidateReads }, candidateReads
+                    { model with
+                        PendingEffects = model.PendingEffects @ candidateReads },
+                    candidateReads
                 | [] ->
                     let diagnostics, refresh, generatedViews, plannedEffects = computeRefreshPlan model
                     // 056: re-mirror the union (re-seed all three roots + fan provider skills
                     // into .claude/.codex) to currency on every refresh, no-clobber (FR-009).
-                    let effects = appendNewEffects (plannedEffects @ skillFanoutRefreshEffects model) model
+                    let effects =
+                        appendNewEffects (plannedEffects @ skillFanoutRefreshEffects model) model
 
                     let plannedModel =
                         { model with
@@ -170,25 +326,34 @@ module CommandWorkflow =
         | Scaffold, _ ->
             // Scaffold has its own multi-stage driver (resolve → invoke → diff →
             // provenance); it does not use the generic write-once guard above.
-            if not (allPlannedReadsInterpreted model) then model, []
-            else computeScaffoldNext model
+            if not (allPlannedReadsInterpreted model) then
+                model, []
+            else
+                computeScaffoldNext model
         | Doctor, _ ->
             // Read-only drift projection (feature 053, US1): resolve the shared drift once
             // the snapshotted reads are in; emit no mutating effect.
-            if not (allPlannedReadsInterpreted model) then model, []
-            else computeDoctorNext model
+            if not (allPlannedReadsInterpreted model) then
+                model, []
+            else
+                computeDoctorNext model
         | Upgrade, _ ->
             // The reconciliation verb (feature 053, US2–US4): its own staged driver
             // (resolve drift → per-step Confirm → apply → finalize), re-derived from the log.
-            if not (allPlannedReadsInterpreted model) then model, []
-            else computeUpgradeNext model
+            if not (allPlannedReadsInterpreted model) then
+                model, []
+            else
+                computeUpgradeNext model
         | _ -> model, []
 
     let init (request: CommandRequest) =
-        let request = { request with ProjectRoot = normalizeRoot request.ProjectRoot }
+        let request =
+            { request with
+                ProjectRoot = normalizeRoot request.ProjectRoot }
+
         let diagnostics, effects = plan request
 
-        let model : CommandModel =
+        let model: CommandModel =
             { Request = request
               PendingEffects = effects
               InterpretedEffects = []
@@ -222,4 +387,4 @@ module CommandWorkflow =
             nextLifecycleEffects next
         | BuildReport ->
             let report = CommandReports.buildReport model
-            { model with Report = Some report }, ([] : CommandEffect list)
+            { model with Report = Some report }, ([]: CommandEffect list)

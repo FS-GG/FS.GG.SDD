@@ -122,7 +122,10 @@ module GenerationManifest =
     let tryProperty (name: string) (element: JsonElement) =
         let mutable value = Unchecked.defaultof<JsonElement>
 
-        if element.TryGetProperty(name, &value) then Some value else None
+        if element.TryGetProperty(name, &value) then
+            Some value
+        else
+            None
 
     let stringProperty (name: string) (element: JsonElement) =
         tryProperty name element
@@ -160,8 +163,7 @@ module GenerationManifest =
                 | Ok value -> value
                 | Error _ -> artifact path
 
-            let rawSchema =
-                intProperty "schemaVersion" element |> Option.map string
+            let rawSchema = intProperty "schemaVersion" element |> Option.map string
 
             let compatibility = SchemaVersion.classifyRaw rawSchema
 
@@ -189,9 +191,7 @@ module GenerationManifest =
             use document = JsonDocument.Parse json
             let root = document.RootElement
 
-            let schema =
-                intProperty "schemaVersion" root
-                |> Option.map SchemaVersion.create
+            let schema = intProperty "schemaVersion" root |> Option.map SchemaVersion.create
 
             let modelVersion = stringProperty "modelVersion" root
 
@@ -212,8 +212,7 @@ module GenerationManifest =
                           "Generated work-model JSON does not contain work-model metadata."
                           "Regenerate the view with a generatedViews workModel entry." ]
             | Some view ->
-                let generator =
-                    tryProperty "generator" view |> Option.bind parseGenerator
+                let generator = tryProperty "generator" view |> Option.bind parseGenerator
 
                 let sources =
                     tryProperty "sources" view

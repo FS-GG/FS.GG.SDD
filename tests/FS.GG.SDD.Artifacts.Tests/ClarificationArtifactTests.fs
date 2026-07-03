@@ -54,9 +54,22 @@ publicOrToolFacingImpact: true
             Assert.Equal(Identifiers.LifecycleStage.Clarify, facts.FrontMatter.Stage)
             Assert.Equal("work/006-clarify-command/spec.md", facts.FrontMatter.SourceSpec)
             Assert.Empty(facts.MissingStandardSections)
-            Assert.Equal<string list>([ "CQ-001" ], facts.Questions |> List.map (fun question -> question.QuestionId.Value))
-            Assert.Equal<string list>([ "DEC-001" ], facts.Decisions |> List.map (fun decision -> decision.DecisionId.Value))
-            Assert.Equal<string list>([ "DEC-002" ], facts.AcceptedDeferrals |> List.map (fun decision -> decision.DecisionId.Value))
+
+            Assert.Equal<string list>(
+                [ "CQ-001" ],
+                facts.Questions |> List.map (fun question -> question.QuestionId.Value)
+            )
+
+            Assert.Equal<string list>(
+                [ "DEC-001" ],
+                facts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
+            )
+
+            Assert.Equal<string list>(
+                [ "DEC-002" ],
+                facts.AcceptedDeferrals |> List.map (fun decision -> decision.DecisionId.Value)
+            )
+
             Assert.Equal(1, facts.BlockingAmbiguityCount)
 
     [<Fact>]
@@ -90,11 +103,7 @@ publicOrToolFacingImpact: true
 
     [<Fact>]
     let ``Clarification question blocking treats nonblocking (no hyphen) as non-blocking`` () =
-        let text =
-            clarificationText.Replace(
-                "blocking answered:",
-                "nonblocking answered:"
-            )
+        let text = clarificationText.Replace("blocking answered:", "nonblocking answered:")
 
         match parseClarificationFacts (snapshot text) with
         | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"

@@ -108,40 +108,58 @@ module Plan =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Plan
 
         match frontMatter snapshot with
-        | None -> Error [ Diagnostics.malformedSchemaVersion artifact "Plan artifact is missing structured front matter." ]
+        | None ->
+            Error [ Diagnostics.malformedSchemaVersion artifact "Plan artifact is missing structured front matter." ]
         | Some(yaml, body) ->
             match parseYaml yaml with
             | None -> Error [ Diagnostics.malformedSchemaVersion artifact "Plan front matter is empty." ]
             | Some root ->
                 let version, versionDiagnostics = schemaVersion artifact root
-                let workId = tryScalarAt [ "workId" ] root |> Option.bind (Identifiers.createWorkId >> Result.toOption)
-                let stage = tryScalarAt [ "stage" ] root |> Option.bind (Identifiers.parseStage >> Result.toOption)
+
+                let workId =
+                    tryScalarAt [ "workId" ] root
+                    |> Option.bind (Identifiers.createWorkId >> Result.toOption)
+
+                let stage =
+                    tryScalarAt [ "stage" ] root
+                    |> Option.bind (Identifiers.parseStage >> Result.toOption)
+
                 let sourceSpec = tryScalarAt [ "sourceSpec" ] root
                 let sourceClarifications = tryScalarAt [ "sourceClarifications" ] root
                 let sourceChecklist = tryScalarAt [ "sourceChecklist" ] root
 
                 match version, workId, stage, sourceSpec, sourceClarifications, sourceChecklist, versionDiagnostics with
-                | Some schema, Some workId, Some stage, Some sourceSpec, Some sourceClarifications, Some sourceChecklist, [] ->
-                    Ok
-                        ({ SchemaVersion = schema
-                           WorkId = workId
-                           Title = tryScalarAt [ "title" ] root |> Option.defaultValue (Identifiers.workIdValue workId)
-                           Stage = stage
-                           ChangeTier = tryScalarAt [ "changeTier" ] root |> Option.defaultValue "tier1"
-                           Status = tryScalarAt [ "status" ] root |> Option.defaultValue "planned"
-                           SourceSpec = sourceSpec
-                           SourceClarifications = sourceClarifications
-                           SourceChecklist = sourceChecklist
-                           PublicOrToolFacingImpact = boolScalarAt [ "publicOrToolFacingImpact" ] root },
-                         body)
+                | Some schema,
+                  Some workId,
+                  Some stage,
+                  Some sourceSpec,
+                  Some sourceClarifications,
+                  Some sourceChecklist,
+                  [] ->
+                    Ok(
+                        { SchemaVersion = schema
+                          WorkId = workId
+                          Title =
+                            tryScalarAt [ "title" ] root
+                            |> Option.defaultValue (Identifiers.workIdValue workId)
+                          Stage = stage
+                          ChangeTier = tryScalarAt [ "changeTier" ] root |> Option.defaultValue "tier1"
+                          Status = tryScalarAt [ "status" ] root |> Option.defaultValue "planned"
+                          SourceSpec = sourceSpec
+                          SourceClarifications = sourceClarifications
+                          SourceChecklist = sourceChecklist
+                          PublicOrToolFacingImpact = boolScalarAt [ "publicOrToolFacingImpact" ] root },
+                        body
+                    )
                 | _ ->
-                    Error
-                        (versionDiagnostics
-                         @ [ Diagnostics.workModelInconsistent
-                                 artifact
-                                 "Plan front matter is incomplete."
-                                 "Add schemaVersion, workId, title, stage: plan, changeTier, status, sourceSpec, sourceClarifications, and sourceChecklist to plan.md."
-                                 [] ])
+                    Error(
+                        versionDiagnostics
+                        @ [ Diagnostics.workModelInconsistent
+                                artifact
+                                "Plan front matter is incomplete."
+                                "Add schemaVersion, workId, title, stage: plan, changeTier, status, sourceSpec, sourceClarifications, and sourceChecklist to plan.md."
+                                [] ]
+                    )
 
     let planDecisionIdsInLine line =
         Regex.Matches(line, @"\bPD-\d{3,}\b", RegexOptions.IgnoreCase)
@@ -192,7 +210,8 @@ module Plan =
                 Regex.Match(
                     line,
                     @"^\s*-\s*([A-Za-z][A-Za-z0-9_-]*)\s*:\s*(\S+)(?:\s+sha256:([a-fA-F0-9]{64}))?(?:\s+schemaVersion:(\d+))?",
-                    RegexOptions.IgnoreCase)
+                    RegexOptions.IgnoreCase
+                )
 
             if m.Success then
                 let schema =
@@ -206,7 +225,11 @@ module Plan =
                 Some
                     { Label = m.Groups.[1].Value
                       Path = normalizePath m.Groups.[2].Value
-                      Digest = if m.Groups.[3].Success then Some(m.Groups.[3].Value.ToLowerInvariant()) else None
+                      Digest =
+                        if m.Groups.[3].Success then
+                            Some(m.Groups.[3].Value.ToLowerInvariant())
+                        else
+                            None
                       SchemaVersion = schema
                       SourceLocation = sourceLocation lineNumber }
             else
@@ -215,7 +238,10 @@ module Plan =
     let planDecisionStatus (line: string) =
         let lowered = line.ToLowerInvariant()
 
-        if containsWord "accepteddeferral" lowered || containsWord "accepted deferral" lowered then
+        if
+            containsWord "accepteddeferral" lowered
+            || containsWord "accepted deferral" lowered
+        then
             "acceptedDeferral"
         elif containsWord "stale" lowered || containsWord "needs review" lowered then
             "stale"
@@ -248,8 +274,10 @@ module Plan =
             match planContractReferenceIdsInLine line |> List.tryHead with
             | Some contractId ->
                 let text = cleanAfterId contractId.Value line
+
                 let kind =
                     let lowered = text.ToLowerInvariant()
+
                     if containsWord "command" lowered then "command"
                     elif containsWord "report" lowered then "report"
                     elif containsWord "schema" lowered then "schema"
@@ -271,12 +299,18 @@ module Plan =
             | Some obligationId ->
                 let text = cleanAfterId obligationId.Value line
                 let lowered = text.ToLowerInvariant()
+
                 let evidenceKind =
-                    if containsWord "cli" lowered || containsWord "smoke" lowered then "smoke"
-                    elif containsWord "fsi" lowered then "fsi"
-                    elif containsWord "semantic" lowered then "semanticTest"
-                    elif containsWord "golden" lowered || containsWord "json" lowered then "golden"
-                    else "test"
+                    if containsWord "cli" lowered || containsWord "smoke" lowered then
+                        "smoke"
+                    elif containsWord "fsi" lowered then
+                        "fsi"
+                    elif containsWord "semantic" lowered then
+                        "semanticTest"
+                    elif containsWord "golden" lowered || containsWord "json" lowered then
+                        "golden"
+                    else
+                        "test"
 
                 Some
                     { ObligationId = obligationId
@@ -293,11 +327,16 @@ module Plan =
             | Some migrationId ->
                 let text = cleanAfterId migrationId.Value line
                 let lowered = text.ToLowerInvariant()
+
                 let posture =
-                    if lowered.Contains("diagnoseonly") || lowered.Contains("diagnose-only") then "diagnoseOnly"
-                    elif lowered.Contains("breaking") then "breaking"
-                    elif lowered.Contains("compatible") then "compatible"
-                    else "none"
+                    if lowered.Contains("diagnoseonly") || lowered.Contains("diagnose-only") then
+                        "diagnoseOnly"
+                    elif lowered.Contains("breaking") then
+                        "breaking"
+                    elif lowered.Contains("compatible") then
+                        "compatible"
+                    else
+                        "none"
 
                 Some
                     { MigrationId = migrationId
@@ -314,6 +353,7 @@ module Plan =
             | Some impactId ->
                 let text = cleanAfterId impactId.Value line
                 let lowered = text.ToLowerInvariant()
+
                 let currency =
                     if lowered.Contains("stale") then "staleDiagnostic"
                     elif lowered.Contains("refresh") then "refresh"
@@ -347,9 +387,18 @@ module Plan =
         match parsePlanFrontMatter snapshot with
         | Error diagnostics -> Error diagnostics
         | Ok(frontMatter, _) ->
-            let text = (if String.IsNullOrEmpty snapshot.Text then "" else snapshot.Text).Replace("\r\n", "\n")
+            let text =
+                (if String.IsNullOrEmpty snapshot.Text then
+                     ""
+                 else
+                     snapshot.Text)
+                    .Replace("\r\n", "\n")
+
             let standardSections = planStandardSections ()
-            let missingStandardSections = standardSections |> List.filter (fun heading -> not (hasHeading heading text))
+
+            let missingStandardSections =
+                standardSections |> List.filter (fun heading -> not (hasHeading heading text))
+
             let snapshots = parsePlanSourceSnapshots text
             let decisions = parsePlanDecisions text
             let contracts = parsePlanContractReferences text
@@ -362,11 +411,30 @@ module Plan =
             let lifecycleNotes = parseNonEmptySectionLines "Lifecycle Notes" text
 
             let diagnostics =
-                [ duplicateScopedDiagnostics artifact (fun (id: PlanDecisionId) -> id.Value) (decisions |> List.map (fun decision -> decision.DecisionId, decision.SourceLocation))
-                  duplicateScopedDiagnostics artifact (fun (id: PlanContractReferenceId) -> id.Value) (contracts |> List.map (fun contract -> contract.ContractId, contract.SourceLocation))
-                  duplicateScopedDiagnostics artifact (fun (id: VerificationObligationId) -> id.Value) (obligations |> List.map (fun obligation -> obligation.ObligationId, obligation.SourceLocation))
-                  duplicateScopedDiagnostics artifact (fun (id: PlanMigrationNoteId) -> id.Value) (migrations |> List.map (fun migration -> migration.MigrationId, migration.SourceLocation))
-                  duplicateScopedDiagnostics artifact (fun (id: GeneratedViewImpactId) -> id.Value) (impacts |> List.map (fun impact -> impact.ImpactId, impact.SourceLocation))
+                [ duplicateScopedDiagnostics
+                      artifact
+                      (fun (id: PlanDecisionId) -> id.Value)
+                      (decisions
+                       |> List.map (fun decision -> decision.DecisionId, decision.SourceLocation))
+                  duplicateScopedDiagnostics
+                      artifact
+                      (fun (id: PlanContractReferenceId) -> id.Value)
+                      (contracts
+                       |> List.map (fun contract -> contract.ContractId, contract.SourceLocation))
+                  duplicateScopedDiagnostics
+                      artifact
+                      (fun (id: VerificationObligationId) -> id.Value)
+                      (obligations
+                       |> List.map (fun obligation -> obligation.ObligationId, obligation.SourceLocation))
+                  duplicateScopedDiagnostics
+                      artifact
+                      (fun (id: PlanMigrationNoteId) -> id.Value)
+                      (migrations
+                       |> List.map (fun migration -> migration.MigrationId, migration.SourceLocation))
+                  duplicateScopedDiagnostics
+                      artifact
+                      (fun (id: GeneratedViewImpactId) -> id.Value)
+                      (impacts |> List.map (fun impact -> impact.ImpactId, impact.SourceLocation))
                   missingStandardSections
                   |> List.map (fun heading ->
                       Diagnostics.workModelInconsistent
@@ -391,5 +459,8 @@ module Plan =
                   BlockingFindings = blockingFindings |> List.sort
                   AdvisoryNotes = advisoryNotes |> List.sort
                   LifecycleNotes = lifecycleNotes
-                  StaleDecisionCount = decisions |> List.filter (fun decision -> decision.Status = "stale") |> List.length
+                  StaleDecisionCount =
+                    decisions
+                    |> List.filter (fun decision -> decision.Status = "stale")
+                    |> List.length
                   Diagnostics = diagnostics }

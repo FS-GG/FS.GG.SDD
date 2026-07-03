@@ -40,7 +40,8 @@ module RefreshSummaryViewTests =
 
     [<Fact>]
     let ``createSummaryManifest marks the view generated with the summary kind`` () =
-        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator (sources ()) outputDigest
+        let manifest =
+            createSummaryManifest (expectedSummaryOutputPath workId) generator (sources ()) outputDigest
 
         Assert.Equal(GeneratedViewKind.Summary, manifest.Kind)
         Assert.Equal("summary", viewKindValue manifest.Kind)
@@ -50,7 +51,8 @@ module RefreshSummaryViewTests =
 
     [<Fact>]
     let ``createSummaryManifest records the structured readiness sources and output digest`` () =
-        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator (sources ()) outputDigest
+        let manifest =
+            createSummaryManifest (expectedSummaryOutputPath workId) generator (sources ()) outputDigest
 
         Assert.Equal(4, manifest.Sources.Length)
         Assert.Contains(manifest.Sources, (fun source -> source.Artifact.Path = $"readiness/{workId}/work-model.json"))
@@ -63,13 +65,16 @@ module RefreshSummaryViewTests =
     [<Fact>]
     let ``isStale is false when the summary sources are unchanged`` () =
         let current = sources ()
-        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator current outputDigest
+
+        let manifest =
+            createSummaryManifest (expectedSummaryOutputPath workId) generator current outputDigest
 
         Assert.False(isStale current manifest)
 
     [<Fact>]
     let ``isStale is true when a summary source digest changes`` () =
-        let manifest = createSummaryManifest (expectedSummaryOutputPath workId) generator (sources ()) outputDigest
+        let manifest =
+            createSummaryManifest (expectedSummaryOutputPath workId) generator (sources ()) outputDigest
 
         let changed =
             [ sourceIdentity $"readiness/{workId}/work-model.json" "work-model-bytes-CHANGED"

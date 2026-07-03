@@ -19,7 +19,7 @@ module InitCommandTests =
 
     [<Fact>]
     let ``init creates SDD skeleton with real filesystem evidence`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
 
         let report = runInit root
 
@@ -28,13 +28,18 @@ module InitCommandTests =
         Assert.True(Directory.Exists(Path.Combine(root, "work")))
         Assert.True(Directory.Exists(Path.Combine(root, "readiness")))
         Assert.Contains("schemaVersion: 1", TestSupport.readRelative root ".fsgg/project.yml")
-        Assert.Contains("requireEquivalentClaudeAndCodexBehavior: true", TestSupport.readRelative root ".fsgg/agents.yml")
+
+        Assert.Contains(
+            "requireEquivalentClaudeAndCodexBehavior: true",
+            TestSupport.readRelative root ".fsgg/agents.yml"
+        )
+
         Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = ".fsgg/project.yml")
         Assert.Contains(report.GovernanceCompatibility, fun fact -> fact.Path = ".fsgg/policy.yml")
 
     [<Fact>]
     let ``init preserves unrelated user files with real filesystem evidence`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         let notes = Path.Combine(root, "notes.txt")
         File.WriteAllText(notes, "keep me")
 
@@ -45,7 +50,7 @@ module InitCommandTests =
 
     [<Fact>]
     let ``init refuses unsafe authored overwrite with real filesystem evidence`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         Directory.CreateDirectory(Path.Combine(root, ".fsgg")) |> ignore
         File.WriteAllText(Path.Combine(root, ".fsgg", "project.yml"), "user: content")
 
@@ -60,13 +65,18 @@ module InitCommandTests =
     // The forbidden token set the emitted constitution must avoid (FR-003/SC-006):
     // repo-, provider-, template-, or rendering-specific names; plus docs URLs.
     let private forbiddenTokens =
-        [ "FS.GG.SDD"; "FS.GG.Rendering"; "FS.GG.Governance"; "fsgg-fixture-app"
-          "dotnet new"; "http://"; "https://" ]
+        [ "FS.GG.SDD"
+          "FS.GG.Rendering"
+          "FS.GG.Governance"
+          "fsgg-fixture-app"
+          "dotnet new"
+          "http://"
+          "https://" ]
 
     // T003 (US1-AC1 / FR-001/FR-002): init emits a non-empty, recognizable constitution.
     [<Fact>]
     let ``init emits a populated constitution with real filesystem evidence`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
 
         let report = runInit root
 
@@ -81,7 +91,7 @@ module InitCommandTests =
     // created authored agent-guidance artifact (same surface as CLAUDE.md/AGENTS.md).
     [<Fact>]
     let ``init reports the constitution as a created authored skeleton artifact`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
 
         let report = runInit root
 
@@ -89,6 +99,7 @@ module InitCommandTests =
             report.ChangedArtifacts
             |> List.tryFind (fun c -> c.Path = ".fsgg/constitution.md")
             |> Option.defaultWith (fun () -> failwith "Expected a changed-artifact entry for .fsgg/constitution.md.")
+
         Assert.Equal("agentGuidance", change.Kind)
         Assert.Equal("authored", change.Ownership)
         Assert.Equal(ArtifactOperation.Create, change.Operation)
@@ -97,13 +108,14 @@ module InitCommandTests =
     // and no unfilled [BRACKET] placeholder remains.
     [<Fact>]
     let ``init constitution content is generic and placeholder-free`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
 
         runInit root |> ignore
         let content = TestSupport.readRelative root ".fsgg/constitution.md"
 
         for token in forbiddenTokens do
             Assert.DoesNotContain(token, content)
+
         Assert.DoesNotContain("TODO", content)
         Assert.DoesNotContain("FIXME", content)
         // No unfilled bracket placeholder like [PROJECT_NAME].
@@ -116,7 +128,7 @@ module InitCommandTests =
     // stable-id formats, plus the §1.1 coverage and §1.2 evidence rules.
     [<Fact>]
     let ``init seeds early-stage authoring guidance with real filesystem evidence`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
 
         let report = runInit root
 
@@ -128,7 +140,11 @@ module InitCommandTests =
         for stage in [ "charter"; "specify"; "clarify"; "checklist" ] do
             Assert.Contains($"fsgg-sdd {stage}", content)
         // Required headings (a representative sample per stage).
-        for heading in [ "Identity"; "Functional Requirements"; "Clarification Questions"; "Checklist Items" ] do
+        for heading in
+            [ "Identity"
+              "Functional Requirements"
+              "Clarification Questions"
+              "Checklist Items" ] do
             Assert.Contains(heading, content)
         // Stable-id formats.
         for prefix in [ "FR"; "US"; "AC"; "SB"; "AMB"; "CQ"; "DEC"; "CHK"; "CR" ] do
@@ -143,14 +159,16 @@ module InitCommandTests =
     // initEffects, so the seed reaches the recommended lifecycle=sdd path.
     [<Fact>]
     let ``init reports early-stage guidance as a created authored skeleton artifact`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
 
         let report = runInit root
 
         let change =
             report.ChangedArtifacts
             |> List.tryFind (fun c -> c.Path = ".fsgg/early-stage-guidance.md")
-            |> Option.defaultWith (fun () -> failwith "Expected a changed-artifact entry for .fsgg/early-stage-guidance.md.")
+            |> Option.defaultWith (fun () ->
+                failwith "Expected a changed-artifact entry for .fsgg/early-stage-guidance.md.")
+
         Assert.Equal("agentGuidance", change.Kind)
         Assert.Equal("authored", change.Ownership)
         Assert.Equal(ArtifactOperation.Create, change.Operation)
@@ -160,8 +178,11 @@ module InitCommandTests =
     [<Fact>]
     let ``init early-stage guidance is byte-identical across runs`` () =
         let leaf = "early-det"
+
         let mk () =
-            let dir = Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + System.Guid.NewGuid().ToString("N"), leaf)
+            let dir =
+                Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + System.Guid.NewGuid().ToString("N"), leaf)
+
             Directory.CreateDirectory dir |> ignore
             dir
 
@@ -170,8 +191,12 @@ module InitCommandTests =
         runInit firstRoot |> ignore
         runInit secondRoot |> ignore
 
-        let first = File.ReadAllBytes(Path.Combine(firstRoot, ".fsgg", "early-stage-guidance.md"))
-        let second = File.ReadAllBytes(Path.Combine(secondRoot, ".fsgg", "early-stage-guidance.md"))
+        let first =
+            File.ReadAllBytes(Path.Combine(firstRoot, ".fsgg", "early-stage-guidance.md"))
+
+        let second =
+            File.ReadAllBytes(Path.Combine(secondRoot, ".fsgg", "early-stage-guidance.md"))
+
         Assert.Equal<byte[]>(first, second)
 
     // T017 (US3 AC3 / FR-008): an author-edited early-stage guidance is refused on re-init
@@ -179,19 +204,24 @@ module InitCommandTests =
     // no-op.
     [<Fact>]
     let ``re-init preserves an author-edited early-stage guidance`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         runInit root |> ignore
-        let edited = TestSupport.readRelative root ".fsgg/early-stage-guidance.md" + "\n\nMY NOTE\n"
+
+        let edited =
+            TestSupport.readRelative root ".fsgg/early-stage-guidance.md" + "\n\nMY NOTE\n"
+
         TestSupport.writeRelative root ".fsgg/early-stage-guidance.md" edited
 
         let report = runInit root
 
         Assert.Equal(edited, TestSupport.readRelative root ".fsgg/early-stage-guidance.md")
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "unsafeOverwrite")
+
         let change =
             report.ChangedArtifacts
             |> List.tryFind (fun c -> c.Path = ".fsgg/early-stage-guidance.md")
             |> Option.defaultWith (fun () -> failwith "Expected a changed-artifact entry for the early-stage guidance.")
+
         Assert.Equal(ArtifactOperation.Refuse, change.Operation)
 
     // ---- 051: SDD skeleton seeds the fs-gg-sdd-* process skill set ----
@@ -212,7 +242,11 @@ module InitCommandTests =
             for surface in [ ".claude"; ".codex" ] do
                 let path = $"{surface}/skills/{name}/SKILL.md"
                 Assert.True(TestSupport.existsRelative root path, $"Expected seeded skill file {path}.")
-                Assert.False(System.String.IsNullOrWhiteSpace(TestSupport.readRelative root path), $"Seeded skill file {path} is empty.")
+
+                Assert.False(
+                    System.String.IsNullOrWhiteSpace(TestSupport.readRelative root path),
+                    $"Seeded skill file {path} is empty."
+                )
 
         // The product-internal skill (developing FS.GG.SDD itself) is excluded from seeding.
         Assert.False(TestSupport.existsRelative root ".claude/skills/fs-gg-sdd-project/SKILL.md")
@@ -230,6 +264,7 @@ module InitCommandTests =
             report.ChangedArtifacts
             |> List.tryFind (fun c -> c.Path = ".claude/skills/fs-gg-sdd-charter/SKILL.md")
             |> Option.defaultWith (fun () -> failwith "Expected a changed-artifact entry for a seeded skill.")
+
         Assert.Equal("agentGuidance", change.Kind)
         Assert.Equal("authored", change.Ownership)
         Assert.Equal(ArtifactOperation.Create, change.Operation)
@@ -239,8 +274,11 @@ module InitCommandTests =
     [<Fact>]
     let ``init constitution is byte-identical across runs`` () =
         let leaf = "const-det"
+
         let mk () =
-            let dir = Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + System.Guid.NewGuid().ToString("N"), leaf)
+            let dir =
+                Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + System.Guid.NewGuid().ToString("N"), leaf)
+
             Directory.CreateDirectory dir |> ignore
             dir
 

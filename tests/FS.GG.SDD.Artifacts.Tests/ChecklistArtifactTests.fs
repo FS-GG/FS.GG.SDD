@@ -66,8 +66,17 @@ No blocking findings recorded.
             Assert.Equal(Identifiers.LifecycleStage.Checklist, facts.FrontMatter.Stage)
             Assert.Empty(facts.MissingStandardSections)
             Assert.Equal<string list>([ "CHK-001"; "CHK-002" ], facts.Items |> List.map (fun item -> item.ItemId.Value))
-            Assert.Equal<string list>([ "CR-001"; "CR-002"; "CR-003" ], facts.Results |> List.map (fun result -> result.ResultId.Value))
-            Assert.Equal<string list>([ "CR-003" ], facts.AcceptedDeferrals |> List.map (fun result -> result.ResultId.Value))
+
+            Assert.Equal<string list>(
+                [ "CR-001"; "CR-002"; "CR-003" ],
+                facts.Results |> List.map (fun result -> result.ResultId.Value)
+            )
+
+            Assert.Equal<string list>(
+                [ "CR-003" ],
+                facts.AcceptedDeferrals |> List.map (fun result -> result.ResultId.Value)
+            )
+
             Assert.Equal(2, facts.SourceSnapshots.Length)
             Assert.Equal(1, facts.StaleResultCount)
 
@@ -96,7 +105,9 @@ No blocking findings recorded.
         match parseChecklistFacts (snapshot text) with
         | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
         | Ok facts ->
-            let cr001 = facts.Results |> List.find (fun result -> result.ResultId.Value = "CR-001")
+            let cr001 =
+                facts.Results |> List.find (fun result -> result.ResultId.Value = "CR-001")
+
             Assert.Equal("pass", cr001.Status)
 
     [<Fact>]
@@ -104,10 +115,7 @@ No blocking findings recorded.
         // Regression (#67): the no-outstanding sentinel filter dropped any "No …"
         // line, silently discarding a real finding like "No tests cover FR-003".
         let text =
-            checklistText.Replace(
-                "No blocking findings recorded.",
-                "No tests cover FR-003."
-            )
+            checklistText.Replace("No blocking findings recorded.", "No tests cover FR-003.")
 
         match parseChecklistFacts (snapshot text) with
         | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
@@ -135,5 +143,4 @@ No blocking findings recorded.
 
         match parseChecklistFacts (snapshot broken) with
         | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
-        | Ok facts ->
-            Assert.Contains(facts.Diagnostics, fun diagnostic -> diagnostic.Id = "unknownReference")
+        | Ok facts -> Assert.Contains(facts.Diagnostics, fun diagnostic -> diagnostic.Id = "unknownReference")

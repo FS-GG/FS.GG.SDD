@@ -20,20 +20,22 @@ module Provider =
     /// Extended template-provider descriptor. The first five fields are the exact
     /// current SDD record (additive guarantee, FR-006 Scenario 4); the rest are new.
     type ProviderDescriptor =
-        { Name: string
-          ContractVersion: string
-          TemplateId: string
-          Source: string
-          Parameters: ProviderParameterSpec list
-          Build: DeclaredCommand option
-          Test: DeclaredCommand option
-          Run: DeclaredCommand option
-          Verify: DeclaredCommand option
-          NameParameter: string
-          /// The provider-declared minimum coherent `fsgg-sdd` CLI version
-          /// (feature 052, E2). Optional and value-agnostic: SDD reads it verbatim,
-          /// never embedding a concrete value. `None` when the provider declares none.
-          MinimumCliVersion: string option }
+        {
+            Name: string
+            ContractVersion: string
+            TemplateId: string
+            Source: string
+            Parameters: ProviderParameterSpec list
+            Build: DeclaredCommand option
+            Test: DeclaredCommand option
+            Run: DeclaredCommand option
+            Verify: DeclaredCommand option
+            NameParameter: string
+            /// The provider-declared minimum coherent `fsgg-sdd` CLI version
+            /// (feature 052, E2). Optional and value-agnostic: SDD reads it verbatim,
+            /// never embedding a concrete value. `None` when the provider declares none.
+            MinimumCliVersion: string option
+        }
 
     /// The default canonical name parameter when a provider declares none (FR-007).
     val defaultNameParameter: string

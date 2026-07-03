@@ -48,8 +48,16 @@ module internal ParsingTasks =
           SourcePlan = facts.FrontMatter.SourcePlan
           TaskIds = facts.Tasks |> List.map (fun task -> task.Id.Value) |> List.sort
           DependencyCount = facts.Tasks |> List.sumBy (fun task -> task.Dependencies.Length)
-          RequiredSkillCount = facts.Tasks |> List.collect (fun task -> task.RequiredSkills) |> List.distinct |> List.length
-          RequiredEvidenceCount = facts.Tasks |> List.collect (fun task -> task.RequiredEvidence |> List.map _.Value) |> List.distinct |> List.length
+          RequiredSkillCount =
+            facts.Tasks
+            |> List.collect (fun task -> task.RequiredSkills)
+            |> List.distinct
+            |> List.length
+          RequiredEvidenceCount =
+            facts.Tasks
+            |> List.collect (fun task -> task.RequiredEvidence |> List.map _.Value)
+            |> List.distinct
+            |> List.length
           PendingCount = statusCount ((=) TaskStatus.Pending)
           InProgressCount = statusCount ((=) TaskStatus.InProgress)
           DoneCount = statusCount ((=) TaskStatus.Done)
@@ -62,20 +70,28 @@ module internal ParsingTasks =
             |> List.length
           StaleCount = facts.StaleTaskCount
           AcceptedDeferralCount = facts.AcceptedDeferrals.Length
-          BlockingFindingCount = facts.Findings |> List.filter (fun finding -> finding.Severity.Equals("error", StringComparison.OrdinalIgnoreCase)) |> List.length
+          BlockingFindingCount =
+            facts.Findings
+            |> List.filter (fun finding -> finding.Severity.Equals("error", StringComparison.OrdinalIgnoreCase))
+            |> List.length
           AdvisoryCount = facts.AdvisoryNotes.Length }
 
     let parseTasksForCommand path text : Result<TaskFacts * Diagnostic list, Diagnostic list> =
         let snapshot = { Path = path; Text = text }
 
         match parseTaskFacts snapshot with
-        | Error diagnostics -> Error(diagnostics |> List.map (fun diagnostic -> malformedTasksArtifact path diagnostic.Message))
+        | Error diagnostics ->
+            Error(
+                diagnostics
+                |> List.map (fun diagnostic -> malformedTasksArtifact path diagnostic.Message)
+            )
         | Ok facts ->
             let diagnostics =
                 facts.Diagnostics
                 |> List.map (fun diagnostic ->
                     match diagnostic.Id, diagnostic.RelatedIds with
-                    | "workModelInconsistent", id :: _ when id.StartsWith("T", StringComparison.OrdinalIgnoreCase) -> duplicateTaskId path id
+                    | "workModelInconsistent", id :: _ when id.StartsWith("T", StringComparison.OrdinalIgnoreCase) ->
+                        duplicateTaskId path id
                     | "duplicateIdentifier", id :: _ -> duplicateTaskId path id
                     | _ -> diagnostic)
 
@@ -88,7 +104,7 @@ module internal ParsingTasks =
     let yamlInlineList (values: string list) =
         match values |> List.distinct |> List.sort with
         | [] -> "[]"
-        | values -> values |> List.map yamlString |> String.concat ", " |> fun text -> $"[{text}]"
+        | values -> values |> List.map yamlString |> String.concat ", " |> (fun text -> $"[{text}]")
 
     let taskStatusYaml (status: TaskStatus) =
         match status with
@@ -100,6 +116,7 @@ module internal ParsingTasks =
 
     let taskEvidenceId index =
         let candidate = sprintf "EV%03d" index
+
         match IdentifiersModule.createEvidenceId candidate with
         | Ok id -> id
         | Error message ->
@@ -107,6 +124,7 @@ module internal ParsingTasks =
 
     let taskArtifactRef workId =
         let path = tasksPath workId
+
         match FS.GG.SDD.Artifacts.ArtifactRef.create path ArtifactKind.Tasks ArtifactOwner.Sdd true with
         | Ok artifact -> artifact
         | Error message ->
@@ -114,6 +132,7 @@ module internal ParsingTasks =
 
     let taskId index =
         let candidate = sprintf "T%03d" index
+
         match IdentifiersModule.createTaskId candidate with
         | Ok id -> id
         | Error message ->
@@ -127,7 +146,10 @@ module internal ParsingTasks =
         | _ -> 0
 
     let nextTaskNumber (existing: WorkTask list) =
-        existing |> List.map (fun task -> taskIdNumber task.Id) |> List.fold max 0 |> (+) 1
+        existing
+        |> List.map (fun task -> taskIdNumber task.Id)
+        |> List.fold max 0
+        |> (+) 1
 
     let plannedTask
         (workId: string)
@@ -166,8 +188,11 @@ module internal ParsingTasks =
             |> Option.map (fun facts -> facts.Tasks |> List.collect (fun task -> task.SourceIds) |> Set.ofList)
             |> Option.defaultValue Set.empty
 
-        let existingTasks : WorkTask list =
-            existingFacts |> Option.map (fun (facts: TaskFacts) -> facts.Tasks) |> Option.defaultValue []
+        let existingTasks: WorkTask list =
+            existingFacts
+            |> Option.map (fun (facts: TaskFacts) -> facts.Tasks)
+            |> Option.defaultValue []
+
         let mutable nextId = nextTaskNumber existingTasks
         let mutable evidenceIndex = nextId
 
@@ -183,7 +208,17 @@ module internal ParsingTasks =
             nextId <- nextId + 1
             let evidence = evidenceIndex
             evidenceIndex <- evidenceIndex + 1
-            plannedTask planFacts.FrontMatter.WorkId.Value sourceIds title requirements decisions dependencies skills evidence id
+
+            plannedTask
+                planFacts.FrontMatter.WorkId.Value
+                sourceIds
+                title
+                requirements
+                decisions
+                dependencies
+                skills
+                evidence
+                id
 
         let maybeTask
             (sourceIds: string list)
@@ -199,7 +234,7 @@ module internal ParsingTasks =
             | Some key when Set.contains key existingSources -> None
             | _ -> Some(allocate sourceIds title requirements decisions dependencies skills)
 
-        let requirementTasks : WorkTask list =
+        let requirementTasks: WorkTask list =
             specFacts.RequirementIds
             |> List.choose (fun requirement ->
                 let acceptance =
@@ -217,7 +252,7 @@ module internal ParsingTasks =
                     []
                     [ "fsharp"; "speckit-implement" ])
 
-        let primaryDependency : TaskId list =
+        let primaryDependency: TaskId list =
             existingTasks
             |> List.tryHead
             |> Option.map (fun task -> [ task.Id ])
@@ -280,19 +315,15 @@ module internal ParsingTasks =
                     [ "deterministic-json" ])
 
         let deferralTasks =
-            [ clarificationFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.DecisionId.Value)
-              checklistFacts.AcceptedDeferrals |> List.map (fun result -> result.ResultId.Value)
+            [ clarificationFacts.AcceptedDeferrals
+              |> List.map (fun deferral -> deferral.DecisionId.Value)
+              checklistFacts.AcceptedDeferrals
+              |> List.map (fun result -> result.ResultId.Value)
               planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id) ]
             |> List.concat
             |> List.distinct
             |> List.choose (fun id ->
-                maybeTask
-                    [ id ]
-                    $"Keep accepted deferral {id} visible"
-                    []
-                    []
-                    primaryDependency
-                    [ "traceability" ])
+                maybeTask [ id ] $"Keep accepted deferral {id} visible" [] [] primaryDependency [ "traceability" ])
 
         requirementTasks
         @ planDecisionTasks
@@ -315,7 +346,10 @@ module internal ParsingTasks =
             |> List.map (fun (_, path, digest) -> path, digest)
             |> Map.ofList
 
-        sourceDigestsStale (existingFacts.SourceSnapshots |> List.map (fun snapshot -> snapshot.Path, snapshot.Digest)) current
+        sourceDigestsStale
+            (existingFacts.SourceSnapshots
+             |> List.map (fun snapshot -> snapshot.Path, snapshot.Digest))
+            current
 
     let markTasksStale (tasks: WorkTask list) : WorkTask list =
         tasks
@@ -359,9 +393,14 @@ work:
             | _ -> ""
 
         let dependencyIds = task.Dependencies |> List.map (fun (id: TaskId) -> id.Value)
-        let requirementIds = task.Requirements |> List.map (fun (id: RequirementId) -> id.Value)
+
+        let requirementIds =
+            task.Requirements |> List.map (fun (id: RequirementId) -> id.Value)
+
         let decisionIds = task.Decisions |> List.map (fun (id: DecisionId) -> id.Value)
-        let evidenceIds = task.RequiredEvidence |> List.map (fun (id: EvidenceId) -> id.Value)
+
+        let evidenceIds =
+            task.RequiredEvidence |> List.map (fun (id: EvidenceId) -> id.Value)
 
         $"""  - id: {task.Id.Value}
     title: {yamlString task.Title}
@@ -393,7 +432,11 @@ work:
         match values |> List.distinct |> List.sort with
         | [] -> $"{name}: []"
         | values ->
-            let lines = values |> List.map (fun value -> $"  - {yamlString value}") |> String.concat "\n"
+            let lines =
+                values
+                |> List.map (fun value -> $"  - {yamlString value}")
+                |> String.concat "\n"
+
             $"{name}:\n{lines}"
 
     let tasksArtifactText
@@ -412,7 +455,11 @@ work:
         let taskLines =
             match tasks with
             | [] -> "[]"
-            | tasks -> tasks |> List.sortBy (fun task -> task.Id.Value) |> List.map renderTask |> String.concat "\n"
+            | tasks ->
+                tasks
+                |> List.sortBy (fun task -> task.Id.Value)
+                |> List.map renderTask
+                |> String.concat "\n"
 
         let lifecycle =
             if List.isEmpty lifecycleNotes then
@@ -431,23 +478,39 @@ tasks:
 {renderScalarBlock "lifecycleNotes" lifecycle}
 """
 
-    let knownTaskSourceIds (specFacts: SpecificationFacts) (clarificationFacts: ClarificationFacts) (checklistFacts: ChecklistFacts) (planFacts: PlanFacts) =
+    let knownTaskSourceIds
+        (specFacts: SpecificationFacts)
+        (clarificationFacts: ClarificationFacts)
+        (checklistFacts: ChecklistFacts)
+        (planFacts: PlanFacts)
+        =
         [ specFacts.RequirementIds |> List.map (fun id -> id.Value)
           specFacts.UserStoryIds |> List.map (fun id -> id.Value)
           specFacts.AcceptanceScenarioIds |> List.map (fun id -> id.Value)
           specFacts.ScopeBoundaryIds |> List.map (fun id -> id.Value)
           specFacts.AmbiguityIds |> List.map (fun id -> id.Value)
-          clarificationFacts.Questions |> List.map (fun (question: ClarificationQuestion) -> question.QuestionId.Value)
-          clarificationFacts.Decisions |> List.map (fun (decision: ClarificationDecisionFact) -> decision.DecisionId.Value)
-          clarificationFacts.AcceptedDeferrals |> List.map (fun (decision: ClarificationDecisionFact) -> decision.DecisionId.Value)
-          checklistFacts.Items |> List.map (fun (item: ChecklistItem) -> item.ItemId.Value)
-          checklistFacts.Results |> List.map (fun (result: ChecklistReviewResult) -> result.ResultId.Value)
-          planFacts.Decisions |> List.map (fun (decision: PlanDecision) -> decision.DecisionId.Value)
-          planFacts.ContractReferences |> List.map (fun (reference: PlanContractReference) -> reference.ContractId.Value)
-          planFacts.VerificationObligations |> List.map (fun (obligation: VerificationObligation) -> obligation.ObligationId.Value)
-          planFacts.MigrationNotes |> List.map (fun (migration: PlanMigrationNote) -> migration.MigrationId.Value)
-          planFacts.GeneratedViewImpacts |> List.map (fun (impact: GeneratedViewImpact) -> impact.ImpactId.Value)
-          planFacts.AcceptedDeferrals |> List.map (fun (deferral: AcceptedPlanDeferral) -> deferral.Id) ]
+          clarificationFacts.Questions
+          |> List.map (fun (question: ClarificationQuestion) -> question.QuestionId.Value)
+          clarificationFacts.Decisions
+          |> List.map (fun (decision: ClarificationDecisionFact) -> decision.DecisionId.Value)
+          clarificationFacts.AcceptedDeferrals
+          |> List.map (fun (decision: ClarificationDecisionFact) -> decision.DecisionId.Value)
+          checklistFacts.Items
+          |> List.map (fun (item: ChecklistItem) -> item.ItemId.Value)
+          checklistFacts.Results
+          |> List.map (fun (result: ChecklistReviewResult) -> result.ResultId.Value)
+          planFacts.Decisions
+          |> List.map (fun (decision: PlanDecision) -> decision.DecisionId.Value)
+          planFacts.ContractReferences
+          |> List.map (fun (reference: PlanContractReference) -> reference.ContractId.Value)
+          planFacts.VerificationObligations
+          |> List.map (fun (obligation: VerificationObligation) -> obligation.ObligationId.Value)
+          planFacts.MigrationNotes
+          |> List.map (fun (migration: PlanMigrationNote) -> migration.MigrationId.Value)
+          planFacts.GeneratedViewImpacts
+          |> List.map (fun (impact: GeneratedViewImpact) -> impact.ImpactId.Value)
+          planFacts.AcceptedDeferrals
+          |> List.map (fun (deferral: AcceptedPlanDeferral) -> deferral.Id) ]
         |> List.concat
         |> Set.ofList
 
@@ -482,8 +545,14 @@ tasks:
         (facts: TaskFacts)
         : Diagnostic list =
         let knownTasks = facts.Tasks |> List.map (fun task -> task.Id.Value) |> Set.ofList
-        let knownSources = knownTaskSourceIds specFacts clarificationFacts checklistFacts planFacts
-        let evidenceTaskRefs = evidence |> List.collect (fun evidence -> evidence.TaskRefs |> List.map (fun (id: TaskId) -> id.Value)) |> Set.ofList
+
+        let knownSources =
+            knownTaskSourceIds specFacts clarificationFacts checklistFacts planFacts
+
+        let evidenceTaskRefs =
+            evidence
+            |> List.collect (fun evidence -> evidence.TaskRefs |> List.map (fun (id: TaskId) -> id.Value))
+            |> Set.ofList
 
         let duplicateDiagnostics =
             facts.Diagnostics
@@ -525,7 +594,10 @@ tasks:
             facts.Tasks
             |> List.choose (fun task ->
                 match task.Status with
-                | TaskStatus.Skipped rationale when String.IsNullOrWhiteSpace rationale || rationale = "No rationale provided." -> Some task.Id.Value
+                | TaskStatus.Skipped rationale when
+                    String.IsNullOrWhiteSpace rationale || rationale = "No rationale provided."
+                    ->
+                    Some task.Id.Value
                 | _ -> None)
 
         let doneMissingEvidence =
@@ -540,8 +612,14 @@ tasks:
           unknownDependencies
           selfDependencies
           taskDependencyCycleDiagnostics path facts.Tasks
-          if not (List.isEmpty skippedWithoutRationale) then [ skippedTaskMissingRationale path skippedWithoutRationale ] else []
-          if not (List.isEmpty doneMissingEvidence) then [ doneTaskMissingEvidence path doneMissingEvidence ] else [] ]
+          if not (List.isEmpty skippedWithoutRationale) then
+              [ skippedTaskMissingRationale path skippedWithoutRationale ]
+          else
+              []
+          if not (List.isEmpty doneMissingEvidence) then
+              [ doneTaskMissingEvidence path doneMissingEvidence ]
+          else
+              [] ]
         |> List.concat
         |> DiagnosticsModule.sort
 
@@ -580,23 +658,45 @@ tasks:
 
         match snapshot path model with
         | None ->
-            let tasks = plannedTasks declaredTestFramework specFacts clarificationFacts checklistFacts planFacts None
+            let tasks =
+                plannedTasks declaredTestFramework specFacts clarificationFacts checklistFacts planFacts None
+
             let acceptedDeferrals =
-                [ clarificationFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.DecisionId.Value)
-                  checklistFacts.AcceptedDeferrals |> List.map (fun result -> result.ResultId.Value)
+                [ clarificationFacts.AcceptedDeferrals
+                  |> List.map (fun deferral -> deferral.DecisionId.Value)
+                  checklistFacts.AcceptedDeferrals
+                  |> List.map (fun result -> result.ResultId.Value)
                   planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id) ]
                 |> List.concat
                 |> List.distinct
                 |> List.sort
 
             let advisory = [ "Optional Governance pointers remain compatibility facts only." ]
-            let text = tasksArtifactText request workId specText clarificationText checklistText planText tasks acceptedDeferrals [] advisory []
+
+            let text =
+                tasksArtifactText
+                    request
+                    workId
+                    specText
+                    clarificationText
+                    checklistText
+                    planText
+                    tasks
+                    acceptedDeferrals
+                    []
+                    advisory
+                    []
 
             match parseTasksForCommand path text with
             | Error diagnostics -> diagnostics, Some text, None
             | Ok(facts, diagnostics) ->
-                let validationDiagnostics = taskValidationDiagnostics path specFacts clarificationFacts checklistFacts planFacts evidence facts
-                diagnostics @ validationDiagnostics @ evidenceDiagnostics |> DiagnosticsModule.sort, Some text, Some(tasksSummary facts)
+                let validationDiagnostics =
+                    taskValidationDiagnostics path specFacts clarificationFacts checklistFacts planFacts evidence facts
+
+                diagnostics @ validationDiagnostics @ evidenceDiagnostics
+                |> DiagnosticsModule.sort,
+                Some text,
+                Some(tasksSummary facts)
         | Some existing ->
             if existing.Text.Contains("<!-- fsgg-sdd: unsafe-overwrite -->", StringComparison.OrdinalIgnoreCase) then
                 [ unsafeOverwrite path ], Some existing.Text, None
@@ -606,30 +706,101 @@ tasks:
                 | Ok(existingFacts, existingDiagnostics) ->
                     let identityDiagnostics =
                         frontMatterIdentityDiagnostics
-                            "Tasks" LifecycleStage.Tasks "tasks"
-                            malformedTasksArtifact tasksIdentityMismatch malformedTasksArtifact
-                            path workId existingFacts.FrontMatter.SchemaVersion.Major existingFacts.FrontMatter.WorkId.Value existingFacts.FrontMatter.Stage
-                            @ [
-                          if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
-                              malformedTasksArtifact path $"Tasks sourceSpec '{existingFacts.FrontMatter.SourceSpec}' does not match '{specPath workId}'."
-                          if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourceClarifications, clarificationPath workId, StringComparison.OrdinalIgnoreCase)) then
-                              malformedTasksArtifact path $"Tasks sourceClarifications '{existingFacts.FrontMatter.SourceClarifications}' does not match '{clarificationPath workId}'."
-                          if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourceChecklist, checklistPath workId, StringComparison.OrdinalIgnoreCase)) then
-                              malformedTasksArtifact path $"Tasks sourceChecklist '{existingFacts.FrontMatter.SourceChecklist}' does not match '{checklistPath workId}'."
-                          if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourcePlan, planPath workId, StringComparison.OrdinalIgnoreCase)) then
-                              malformedTasksArtifact path $"Tasks sourcePlan '{existingFacts.FrontMatter.SourcePlan}' does not match '{planPath workId}'." ]
+                            "Tasks"
+                            LifecycleStage.Tasks
+                            "tasks"
+                            malformedTasksArtifact
+                            tasksIdentityMismatch
+                            malformedTasksArtifact
+                            path
+                            workId
+                            existingFacts.FrontMatter.SchemaVersion.Major
+                            existingFacts.FrontMatter.WorkId.Value
+                            existingFacts.FrontMatter.Stage
+                        @ [ if
+                                not (
+                                    String.Equals(
+                                        normalizeRelativePath existingFacts.FrontMatter.SourceSpec,
+                                        specPath workId,
+                                        StringComparison.OrdinalIgnoreCase
+                                    )
+                                )
+                            then
+                                malformedTasksArtifact
+                                    path
+                                    $"Tasks sourceSpec '{existingFacts.FrontMatter.SourceSpec}' does not match '{specPath workId}'."
+                            if
+                                not (
+                                    String.Equals(
+                                        normalizeRelativePath existingFacts.FrontMatter.SourceClarifications,
+                                        clarificationPath workId,
+                                        StringComparison.OrdinalIgnoreCase
+                                    )
+                                )
+                            then
+                                malformedTasksArtifact
+                                    path
+                                    $"Tasks sourceClarifications '{existingFacts.FrontMatter.SourceClarifications}' does not match '{clarificationPath workId}'."
+                            if
+                                not (
+                                    String.Equals(
+                                        normalizeRelativePath existingFacts.FrontMatter.SourceChecklist,
+                                        checklistPath workId,
+                                        StringComparison.OrdinalIgnoreCase
+                                    )
+                                )
+                            then
+                                malformedTasksArtifact
+                                    path
+                                    $"Tasks sourceChecklist '{existingFacts.FrontMatter.SourceChecklist}' does not match '{checklistPath workId}'."
+                            if
+                                not (
+                                    String.Equals(
+                                        normalizeRelativePath existingFacts.FrontMatter.SourcePlan,
+                                        planPath workId,
+                                        StringComparison.OrdinalIgnoreCase
+                                    )
+                                )
+                            then
+                                malformedTasksArtifact
+                                    path
+                                    $"Tasks sourcePlan '{existingFacts.FrontMatter.SourcePlan}' does not match '{planPath workId}'." ]
 
                     let hasBlockingParserDiagnostics =
                         identityDiagnostics @ existingDiagnostics
                         |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
 
                     if hasBlockingParserDiagnostics then
-                        identityDiagnostics @ existingDiagnostics |> DiagnosticsModule.sort, Some existing.Text, Some(tasksSummary existingFacts)
+                        identityDiagnostics @ existingDiagnostics |> DiagnosticsModule.sort,
+                        Some existing.Text,
+                        Some(tasksSummary existingFacts)
                     else
-                        let additions = plannedTasks declaredTestFramework specFacts clarificationFacts checklistFacts planFacts (Some existingFacts)
-                        let stale = taskSourceSnapshotStale workId specText clarificationText checklistText planText existingFacts
-                        let existingTasks = if stale then markTasksStale existingFacts.Tasks else existingFacts.Tasks
+                        let additions =
+                            plannedTasks
+                                declaredTestFramework
+                                specFacts
+                                clarificationFacts
+                                checklistFacts
+                                planFacts
+                                (Some existingFacts)
+
+                        let stale =
+                            taskSourceSnapshotStale
+                                workId
+                                specText
+                                clarificationText
+                                checklistText
+                                planText
+                                existingFacts
+
+                        let existingTasks =
+                            if stale then
+                                markTasksStale existingFacts.Tasks
+                            else
+                                existingFacts.Tasks
+
                         let mergedTasks = existingTasks @ additions
+
                         let staleFindings =
                             if stale then
                                 [ { FindingId = "TF-001"
@@ -660,7 +831,16 @@ tasks:
                         match parseTasksForCommand path text with
                         | Error diagnostics -> diagnostics, Some text, None
                         | Ok(facts, proposedDiagnostics) ->
-                            let validationDiagnostics = taskValidationDiagnostics path specFacts clarificationFacts checklistFacts planFacts evidence facts
+                            let validationDiagnostics =
+                                taskValidationDiagnostics
+                                    path
+                                    specFacts
+                                    clarificationFacts
+                                    checklistFacts
+                                    planFacts
+                                    evidence
+                                    facts
+
                             let staleDiagnostics =
                                 if stale then
                                     [ staleTask path (existingFacts.Tasks |> List.map (fun task -> task.Id.Value)) ]
@@ -677,7 +857,14 @@ tasks:
                             Some text,
                             Some(tasksSummary facts)
 
-    let tasksPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts planFacts model =
+    let tasksPrerequisiteDiagnosticsTextSummaryAndFacts
+        workId
+        specFacts
+        clarificationFacts
+        checklistFacts
+        planFacts
+        model
+        =
         let path = tasksPath workId
         let evidence, evidenceDiagnostics = parseEvidenceForCommand workId model
 
@@ -689,22 +876,81 @@ tasks:
             | Ok(facts, diagnostics) ->
                 let identityDiagnostics =
                     frontMatterIdentityDiagnostics
-                        "Tasks" LifecycleStage.Tasks "tasks"
-                        malformedTasksArtifact tasksIdentityMismatch missingTasksPrerequisite
-                        path workId facts.FrontMatter.SchemaVersion.Major facts.FrontMatter.WorkId.Value facts.FrontMatter.Stage
-                        @ [
-                      if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
-                          malformedTasksArtifact path $"Tasks sourceSpec '{facts.FrontMatter.SourceSpec}' does not match '{specPath workId}'."
-                      if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceClarifications, clarificationPath workId, StringComparison.OrdinalIgnoreCase)) then
-                          malformedTasksArtifact path $"Tasks sourceClarifications '{facts.FrontMatter.SourceClarifications}' does not match '{clarificationPath workId}'."
-                      if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceChecklist, checklistPath workId, StringComparison.OrdinalIgnoreCase)) then
-                          malformedTasksArtifact path $"Tasks sourceChecklist '{facts.FrontMatter.SourceChecklist}' does not match '{checklistPath workId}'."
-                      if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourcePlan, planPath workId, StringComparison.OrdinalIgnoreCase)) then
-                          malformedTasksArtifact path $"Tasks sourcePlan '{facts.FrontMatter.SourcePlan}' does not match '{planPath workId}'."
-                      if not (String.Equals(facts.FrontMatter.Status, "tasksReady", StringComparison.OrdinalIgnoreCase)) then
-                          failedTasksPrerequisite path $"Tasks status '{facts.FrontMatter.Status}' is not tasksReady." [ facts.FrontMatter.Status ] ]
+                        "Tasks"
+                        LifecycleStage.Tasks
+                        "tasks"
+                        malformedTasksArtifact
+                        tasksIdentityMismatch
+                        missingTasksPrerequisite
+                        path
+                        workId
+                        facts.FrontMatter.SchemaVersion.Major
+                        facts.FrontMatter.WorkId.Value
+                        facts.FrontMatter.Stage
+                    @ [ if
+                            not (
+                                String.Equals(
+                                    normalizeRelativePath facts.FrontMatter.SourceSpec,
+                                    specPath workId,
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
+                        then
+                            malformedTasksArtifact
+                                path
+                                $"Tasks sourceSpec '{facts.FrontMatter.SourceSpec}' does not match '{specPath workId}'."
+                        if
+                            not (
+                                String.Equals(
+                                    normalizeRelativePath facts.FrontMatter.SourceClarifications,
+                                    clarificationPath workId,
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
+                        then
+                            malformedTasksArtifact
+                                path
+                                $"Tasks sourceClarifications '{facts.FrontMatter.SourceClarifications}' does not match '{clarificationPath workId}'."
+                        if
+                            not (
+                                String.Equals(
+                                    normalizeRelativePath facts.FrontMatter.SourceChecklist,
+                                    checklistPath workId,
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
+                        then
+                            malformedTasksArtifact
+                                path
+                                $"Tasks sourceChecklist '{facts.FrontMatter.SourceChecklist}' does not match '{checklistPath workId}'."
+                        if
+                            not (
+                                String.Equals(
+                                    normalizeRelativePath facts.FrontMatter.SourcePlan,
+                                    planPath workId,
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
+                        then
+                            malformedTasksArtifact
+                                path
+                                $"Tasks sourcePlan '{facts.FrontMatter.SourcePlan}' does not match '{planPath workId}'."
+                        if
+                            not (
+                                String.Equals(
+                                    facts.FrontMatter.Status,
+                                    "tasksReady",
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
+                        then
+                            failedTasksPrerequisite
+                                path
+                                $"Tasks status '{facts.FrontMatter.Status}' is not tasksReady."
+                                [ facts.FrontMatter.Status ] ]
 
-                let taskDiagnostics = taskValidationDiagnostics path specFacts clarificationFacts checklistFacts planFacts evidence facts
+                let taskDiagnostics =
+                    taskValidationDiagnostics path specFacts clarificationFacts checklistFacts planFacts evidence facts
 
                 let graphDiagnostics =
                     [ let staleIds =
@@ -717,15 +963,19 @@ tasks:
 
                       let blockingFindings =
                           facts.Findings
-                          |> List.filter (fun finding -> finding.Severity.Equals("error", StringComparison.OrdinalIgnoreCase))
+                          |> List.filter (fun finding ->
+                              finding.Severity.Equals("error", StringComparison.OrdinalIgnoreCase))
                           |> List.map (fun finding -> finding.FindingId)
 
                       if not (List.isEmpty blockingFindings) then
                           failedTasksPrerequisite path "Tasks contain blocking findings." blockingFindings ]
 
                 let allDiagnostics =
-                    identityDiagnostics @ diagnostics @ taskDiagnostics @ graphDiagnostics @ evidenceDiagnostics
+                    identityDiagnostics
+                    @ diagnostics
+                    @ taskDiagnostics
+                    @ graphDiagnostics
+                    @ evidenceDiagnostics
                     |> DiagnosticsModule.sort
 
                 allDiagnostics, Some existing.Text, Some(tasksSummary facts), Some facts
-

@@ -6,9 +6,7 @@ open YamlDotNet.RepresentationModel
 
 module RegistryDocument =
 
-    type RegistryLoadError =
-        { Path: string
-          Message: string }
+    type RegistryLoadError = { Path: string; Message: string }
 
     let private err path message : Result<Fsgg.Registry.RegistryDocument, RegistryLoadError> =
         Error { Path = path; Message = message }
@@ -40,7 +38,8 @@ module RegistryDocument =
                 match tryMapping item with
                 | None -> None
                 | Some _ ->
-                    let scalar key = tryScalarAt [ key ] item |> Option.defaultValue ""
+                    let scalar key =
+                        tryScalarAt [ key ] item |> Option.defaultValue ""
 
                     let optScalar key =
                         tryScalarAt [ key ] item |> Option.filter (String.IsNullOrWhiteSpace >> not)

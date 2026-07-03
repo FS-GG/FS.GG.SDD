@@ -21,8 +21,13 @@ module IdentifierTests =
 
     [<Fact>]
     let ``Scoped lifecycle ids are stable and case-insensitive`` () =
-        let requirement = Identifiers.createRequirementId "fr-001" |> Result.defaultWith failwith
-        let question = Identifiers.createClarificationQuestionId "cq-001" |> Result.defaultWith failwith
+        let requirement =
+            Identifiers.createRequirementId "fr-001" |> Result.defaultWith failwith
+
+        let question =
+            Identifiers.createClarificationQuestionId "cq-001"
+            |> Result.defaultWith failwith
+
         let decision = Identifiers.createDecisionId "dec-001" |> Result.defaultWith failwith
         let task = Identifiers.createTaskId "t001" |> Result.defaultWith failwith
         let evidence = Identifiers.createEvidenceId "ev001" |> Result.defaultWith failwith
@@ -36,8 +41,11 @@ module IdentifierTests =
 
     [<Fact>]
     let ``Checklist ids are stable and case-insensitive`` () =
-        let item = Identifiers.createChecklistItemId "chk-001" |> Result.defaultWith failwith
-        let result = Identifiers.createChecklistResultId "cr-001" |> Result.defaultWith failwith
+        let item =
+            Identifiers.createChecklistItemId "chk-001" |> Result.defaultWith failwith
+
+        let result =
+            Identifiers.createChecklistResultId "cr-001" |> Result.defaultWith failwith
 
         Assert.Equal("CHK-001", Identifiers.checklistItemIdValue item)
         Assert.Equal("CR-001", Identifiers.checklistResultIdValue result)
@@ -46,11 +54,22 @@ module IdentifierTests =
 
     [<Fact>]
     let ``Plan ids are stable and case-insensitive`` () =
-        let decision = Identifiers.createPlanDecisionId "pd-001" |> Result.defaultWith failwith
-        let contract = Identifiers.createPlanContractReferenceId "pc-001" |> Result.defaultWith failwith
-        let obligation = Identifiers.createVerificationObligationId "vo-001" |> Result.defaultWith failwith
-        let migration = Identifiers.createPlanMigrationNoteId "pm-001" |> Result.defaultWith failwith
-        let generated = Identifiers.createGeneratedViewImpactId "gv-001" |> Result.defaultWith failwith
+        let decision =
+            Identifiers.createPlanDecisionId "pd-001" |> Result.defaultWith failwith
+
+        let contract =
+            Identifiers.createPlanContractReferenceId "pc-001"
+            |> Result.defaultWith failwith
+
+        let obligation =
+            Identifiers.createVerificationObligationId "vo-001"
+            |> Result.defaultWith failwith
+
+        let migration =
+            Identifiers.createPlanMigrationNoteId "pm-001" |> Result.defaultWith failwith
+
+        let generated =
+            Identifiers.createGeneratedViewImpactId "gv-001" |> Result.defaultWith failwith
 
         Assert.Equal("PD-001", Identifiers.planDecisionIdValue decision)
         Assert.Equal("PC-001", Identifiers.planContractReferenceIdValue contract)

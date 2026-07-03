@@ -11,7 +11,9 @@ module LifecycleRuleContracts =
           FreshnessAware: bool
           EnforceableBySdd: bool }
 
-    type RuleInput = { Artifact: ArtifactRef; Required: bool }
+    type RuleInput =
+        { Artifact: ArtifactRef
+          Required: bool }
 
     type LifecycleRuleContract =
         { SchemaVersion: SchemaVersion
@@ -36,7 +38,9 @@ module LifecycleRuleContracts =
         | Ok value -> value
         | Error message -> invalidArg (nameof path) message
 
-    let input path kind = { Artifact = artifact path kind; Required = true }
+    let input path kind =
+        { Artifact = artifact path kind
+          Required = true }
 
     let contract id stage inputs diagnostics evidence obligations =
         { SchemaVersion = SchemaVersion.create 1
@@ -55,7 +59,10 @@ module LifecycleRuleContracts =
               "requiredSpecSections"
               LifecycleStage.Specify
               [ input "work/{workId}/spec.md" ArtifactKind.Spec ]
-              [ "missingArtifact"; "requirementNotTyped"; "malformedSchemaVersion"; "proseStructuredMismatch" ]
+              [ "missingArtifact"
+                "requirementNotTyped"
+                "malformedSchemaVersion"
+                "proseStructuredMismatch" ]
               [ "specificationFixture" ]
               [ "schemaValidationFixture"; "semanticPublicSurfaceTest" ]
           contract
@@ -69,14 +76,20 @@ module LifecycleRuleContracts =
               "taskGraphShape"
               LifecycleStage.Tasks
               [ input "work/{workId}/tasks.yml" ArtifactKind.Tasks ]
-              [ "duplicateIdentifier"; "unknownReference"; "workModelInconsistent"; "proseStructuredMismatch" ]
+              [ "duplicateIdentifier"
+                "unknownReference"
+                "workModelInconsistent"
+                "proseStructuredMismatch" ]
               [ "taskFixture" ]
               [ "taskGraphFixture" ]
           contract
               "evidenceDeclarations"
               LifecycleStage.Evidence
               [ input "work/{workId}/evidence.yml" ArtifactKind.Evidence ]
-              [ "missingArtifact"; "unknownReference"; "malformedSchemaVersion"; "workModelInconsistent" ]
+              [ "missingArtifact"
+                "unknownReference"
+                "malformedSchemaVersion"
+                "workModelInconsistent" ]
               [ "evidenceFixture" ]
               [ "evidenceDeclarationFixture" ]
           contract
@@ -90,8 +103,12 @@ module LifecycleRuleContracts =
               "testObligations"
               LifecycleStage.Verify
               [ input "work/{workId}/evidence.yml" ArtifactKind.Evidence ]
-              [ "missingArtifact"; "unknownReference"; "workModelInconsistent"; "staleGeneratedView" ]
+              [ "missingArtifact"
+                "unknownReference"
+                "workModelInconsistent"
+                "staleGeneratedView" ]
               [ "testEvidenceFixture" ]
               [ "semanticPublicSurfaceTest"; "fixtureValidation" ] ]
 
-    let contractIds () = initialContracts () |> List.map (fun contract -> contract.Id)
+    let contractIds () =
+        initialContracts () |> List.map (fun contract -> contract.Id)

@@ -25,7 +25,9 @@ module DeterminismMatrixTests =
     // output-only CoverageGap cells for produced views a focused plan omits.
     let private declaredCells (matrix: Matrix) =
         matrix.Cells
-        |> List.filter (fun cell -> cell.Coordinates |> List.exists (fun (dimension, _) -> dimension = "environment"))
+        |> List.filter (fun cell ->
+            cell.Coordinates
+            |> List.exists (fun (dimension, _) -> dimension = "environment"))
 
     [<Fact>]
     let ``every output x environment is a cell and none fails on a clean run`` () =
@@ -38,8 +40,10 @@ module DeterminismMatrixTests =
             declared,
             fun cell ->
                 match cell.Status with
-                | Fail diagnostic -> failwith $"unexpected determinism failure at {cell.Coordinates}: {diagnostic.Message}"
-                | _ -> ())
+                | Fail diagnostic ->
+                    failwith $"unexpected determinism failure at {cell.Coordinates}: {diagnostic.Message}"
+                | _ -> ()
+        )
 
     [<Fact>]
     let ``produced outputs reproduce byte-identically under a perturbed host`` () =
@@ -51,7 +55,8 @@ module DeterminismMatrixTests =
             |> List.filter (fun cell ->
                 cell.Coordinates
                 |> List.exists (fun (dimension, value) ->
-                    dimension = "environment" && value = environmentClassValue PerturbedHostEnvironment))
+                    dimension = "environment"
+                    && value = environmentClassValue PerturbedHostEnvironment))
 
         Assert.NotEmpty perturbedCells
 
@@ -63,4 +68,5 @@ module DeterminismMatrixTests =
                 match cell.Status with
                 | Pass
                 | SkippedWithReason _ -> ()
-                | other -> failwith $"unexpected {other} at {cell.Coordinates}")
+                | other -> failwith $"unexpected {other} at {cell.Coordinates}"
+        )

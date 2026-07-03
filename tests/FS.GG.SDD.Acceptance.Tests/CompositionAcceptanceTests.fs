@@ -22,11 +22,21 @@ module CompositionAcceptanceTests =
     // authored set by the offline drift guard (SeededSkillsTests, T013); here it backs the
     // skeleton-shape conformance and the provenance partition (INV-5/INV-8).
     let private seededSkillNames =
-        [ "fs-gg-sdd-analyze"; "fs-gg-sdd-authoring-contracts"; "fs-gg-sdd-charter"
-          "fs-gg-sdd-checklist"; "fs-gg-sdd-clarify"; "fs-gg-sdd-evidence"
-          "fs-gg-sdd-getting-started"; "fs-gg-sdd-lifecycle"; "fs-gg-sdd-plan"
-          "fs-gg-sdd-refresh-agents"; "fs-gg-sdd-ship"; "fs-gg-sdd-specify"
-          "fs-gg-sdd-tasks"; "fs-gg-sdd-validate"; "fs-gg-sdd-verify" ]
+        [ "fs-gg-sdd-analyze"
+          "fs-gg-sdd-authoring-contracts"
+          "fs-gg-sdd-charter"
+          "fs-gg-sdd-checklist"
+          "fs-gg-sdd-clarify"
+          "fs-gg-sdd-evidence"
+          "fs-gg-sdd-getting-started"
+          "fs-gg-sdd-lifecycle"
+          "fs-gg-sdd-plan"
+          "fs-gg-sdd-refresh-agents"
+          "fs-gg-sdd-ship"
+          "fs-gg-sdd-specify"
+          "fs-gg-sdd-tasks"
+          "fs-gg-sdd-validate"
+          "fs-gg-sdd-verify" ]
 
     let private seededSkillPaths =
         seededSkillNames
@@ -35,19 +45,23 @@ module CompositionAcceptanceTests =
     // The SDD skeleton (reused `init` effects) + the authored constitution + the seeded
     // process skills — never provider output. Used to prove the provenance partition (FR-005).
     let private skeletonPaths =
-        set
-            ([ ".fsgg/project.yml"
-               ".fsgg/sdd.yml"
-               ".fsgg/agents.yml"
-               "AGENTS.md"
-               "CLAUDE.md"
-               ".fsgg/constitution.md" ]
-             @ seededSkillPaths)
+        set (
+            [ ".fsgg/project.yml"
+              ".fsgg/sdd.yml"
+              ".fsgg/agents.yml"
+              "AGENTS.md"
+              "CLAUDE.md"
+              ".fsgg/constitution.md" ]
+            @ seededSkillPaths
+        )
 
-    let private gitDirExists root = Directory.Exists(Path.Combine(root, ".git"))
+    let private gitDirExists root =
+        Directory.Exists(Path.Combine(root, ".git"))
 
     let private isExecutable root (relativePath: string) =
-        let mode = File.GetUnixFileMode(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)))
+        let mode =
+            File.GetUnixFileMode(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)))
+
         mode &&& UnixFileMode.UserExecute = UnixFileMode.UserExecute
 
     let private provenanceRecord root =
@@ -83,12 +97,16 @@ module CompositionAcceptanceTests =
         let facts, factDiagnostic, sensedTemplate =
             if outcome = "providerSucceeded" then
                 let provenance = provenanceRecord root
+
                 let producedPaths =
-                    provenance |> Option.map (fun record -> record.ProducedPaths) |> Option.defaultValue []
+                    provenance
+                    |> Option.map (fun record -> record.ProducedPaths)
+                    |> Option.defaultValue []
 
                 // T011 (FR-002): skeleton + authored constitution present (not provider output).
                 let skeletonPresent =
                     existsRelative root ".fsgg/project.yml" && existsRelative root ".fsgg/sdd.yml"
+
                 let constitutionPresent = existsRelative root ".fsgg/constitution.md"
 
                 // T012 (FR-003): the product builds, then a headless run smoke starts it without
@@ -107,7 +125,9 @@ module CompositionAcceptanceTests =
                     if appBuilds then
                         runProbe declaredRun root
                     else
-                        { Started = false; ExitCode = -1; Diagnostic = "build failed; run probe skipped." }
+                        { Started = false
+                          ExitCode = -1
+                          Diagnostic = "build failed; run probe skipped." }
 
                 let appRuns = run.Started && run.ExitCode = 0
 
@@ -118,18 +138,23 @@ module CompositionAcceptanceTests =
                     |> List.contains summary.RepoInitOutcome
 
                 let producedScripts =
-                    producedPaths |> List.map (fun path -> path.Path) |> List.filter (fun path -> path.EndsWith ".sh")
+                    producedPaths
+                    |> List.map (fun path -> path.Path)
+                    |> List.filter (fun path -> path.EndsWith ".sh")
 
                 let scriptsExecutable =
-                    summary.ExecutableScriptsSkipped = 0 && producedScripts |> List.forall (isExecutable root)
+                    summary.ExecutableScriptsSkipped = 0
+                    && producedScripts |> List.forall (isExecutable root)
 
                 // T016 (FR-005): every provider-produced path is generatedProduct; no
                 // skeleton/constitution path is recorded as generatedProduct.
                 let provenancePartitioned =
                     match provenance with
                     | Some record ->
-                        record.ProducedPaths |> List.forall (fun path -> path.Owner = ArtifactOwner.GeneratedProduct)
-                        && record.ProducedPaths |> List.forall (fun path -> not (Set.contains path.Path skeletonPaths))
+                        record.ProducedPaths
+                        |> List.forall (fun path -> path.Owner = ArtifactOwner.GeneratedProduct)
+                        && record.ProducedPaths
+                           |> List.forall (fun path -> not (Set.contains path.Path skeletonPaths))
                     | None -> false
 
                 // T017 (FR-006): refresh leaves the externally-owned app paths byte-unchanged.
@@ -194,6 +219,7 @@ module CompositionAcceptanceTests =
     [<Fact>]
     let ``the skeleton-shape surface accounts for the 30 seeded skill files`` () =
         Assert.Equal(30, List.length seededSkillPaths)
+
         for path in seededSkillPaths do
             Assert.True(Set.contains path skeletonPaths, $"Skeleton-shape surface is missing {path}.")
 
@@ -253,7 +279,9 @@ module CompositionAcceptanceTests =
         let root = newProductRoot ()
         copyRegistry registry root
 
-        let emptyDir = Path.Combine(Path.GetTempPath(), "fsgg-sdd-nodotnet-" + Guid.NewGuid().ToString("N"))
+        let emptyDir =
+            Path.Combine(Path.GetTempPath(), "fsgg-sdd-nodotnet-" + Guid.NewGuid().ToString("N"))
+
         Directory.CreateDirectory emptyDir |> ignore
         let original = Environment.GetEnvironmentVariable "PATH"
 
@@ -324,11 +352,26 @@ providers:
         let declaredBuild = descriptor |> Option.bind (fun d -> d.Build)
         let declaredRun = descriptor |> Option.bind (fun d -> d.Run)
 
-        Assert.Equal(Some { Executable = "demo-build"; Arguments = [ "--fast" ] }, declaredBuild)
-        Assert.Equal(Some { Executable = "demo-run"; Arguments = [ "--headless" ] }, declaredRun)
+        Assert.Equal(
+            Some
+                { Executable = "demo-build"
+                  Arguments = [ "--fast" ] },
+            declaredBuild
+        )
+
+        Assert.Equal(
+            Some
+                { Executable = "demo-run"
+                  Arguments = [ "--headless" ] },
+            declaredRun
+        )
 
         // A `--provider` naming no registered entry binds to no declared command.
-        Assert.Equal<DeclaredCommand option>(None, resolveProviderDescriptor declaredRoot "absent" |> Option.bind (fun d -> d.Build))
+        Assert.Equal<DeclaredCommand option>(
+            None,
+            resolveProviderDescriptor declaredRoot "absent"
+            |> Option.bind (fun d -> d.Build)
+        )
 
         // A today-shape entry (no declared commands) binds both probes to `None` (the default path).
         let plainRegistry =
@@ -358,7 +401,9 @@ providers:
         // This guard file names the token, so (like ScaffoldGuardTests) it is excluded from its
         // own scan; the meaningful surfaces are the project file and the non-guard sources.
         let scanned =
-            [ "AcceptanceSupport.fs"; "CompositionResult.fs"; "FS.GG.SDD.Acceptance.Tests.fsproj" ]
+            [ "AcceptanceSupport.fs"
+              "CompositionResult.fs"
+              "FS.GG.SDD.Acceptance.Tests.fsproj" ]
             |> List.map (fun name -> Path.Combine(projectDir, name))
             |> List.filter File.Exists
 
@@ -366,12 +411,15 @@ providers:
             scanned
             |> List.filter (fun path ->
                 let text = File.ReadAllText path
+
                 text.Contains(token, StringComparison.OrdinalIgnoreCase)
                 || text.Contains(symbol, StringComparison.Ordinal))
 
         Assert.True(
             List.isEmpty offenders,
-            "Acceptance project must carry no Governance reference: " + String.Join("; ", offenders))
+            "Acceptance project must carry no Governance reference: "
+            + String.Join("; ", offenders)
+        )
 
     // T024 (Polish / SC-005): two real runs with the same inputs and an available provider yield
     // byte-identical result-document bodies once the sensed block is null-normalized.
@@ -437,8 +485,12 @@ providers:
     // diagnostic code is the discriminator (the SC-004 collapse this guards against).
     [<Fact>]
     let ``providerFailed splits into skip and fail by diagnostic`` () =
-        let skip = resolveVerdict "providerFailed" (Some "scaffold.providerUnavailable") "" noFacts
-        let fail = resolveVerdict "providerFailed" (Some "scaffold.providerWroteSddTree") "" noFacts
+        let skip =
+            resolveVerdict "providerFailed" (Some "scaffold.providerUnavailable") "" noFacts
+
+        let fail =
+            resolveVerdict "providerFailed" (Some "scaffold.providerWroteSddTree") "" noFacts
+
         Assert.Equal("skip-unavailable", verdictValue skip)
         Assert.Equal("fail", verdictValue fail)
         Assert.NotEqual<Verdict>(skip, fail)

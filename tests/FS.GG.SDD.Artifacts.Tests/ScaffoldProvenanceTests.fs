@@ -7,7 +7,9 @@ open FS.GG.SDD.Artifacts.ScaffoldProvenance
 open Xunit
 
 module ScaffoldProvenanceTests =
-    let private snapshot text : FileSnapshot = { Path = ".fsgg/providers.yml"; Text = text }
+    let private snapshot text : FileSnapshot =
+        { Path = ".fsgg/providers.yml"
+          Text = text }
 
     let private validRegistry =
         """schemaVersion: 1
@@ -33,7 +35,10 @@ providers:
             Assert.Equal("fsgg-fixture-app", descriptor.TemplateId)
             Assert.Equal("/abs/path/ok", descriptor.Source)
             Assert.Equal(2, descriptor.Parameters.Length)
-            let productName = descriptor.Parameters |> List.find (fun p -> p.Key = "productName")
+
+            let productName =
+                descriptor.Parameters |> List.find (fun p -> p.Key = "productName")
+
             Assert.True(productName.Required)
             Assert.Equal(None, productName.Default)
             let license = descriptor.Parameters |> List.find (fun p -> p.Key = "license")
@@ -131,8 +136,12 @@ providers:
           TemplateRef = "fsgg-fixture-app"
           Outcome = "providerSucceeded"
           ProducedPaths =
-            [ { Path = "src/Product/Program.fs"; Owner = GeneratedProduct; Sha256 = None }
-              { Path = "src/Product/App.fsproj"; Owner = GeneratedProduct; Sha256 = None } ]
+            [ { Path = "src/Product/Program.fs"
+                Owner = GeneratedProduct
+                Sha256 = None }
+              { Path = "src/Product/App.fsproj"
+                Owner = GeneratedProduct
+                Sha256 = None } ]
           MirroredPaths = []
           EffectiveParameters = [ "variant", "alpha"; "productName", "Demo" ] }
 
@@ -144,6 +153,7 @@ providers:
             Assert.Equal(record.ProviderContractVersion, parsed.ProviderContractVersion)
             Assert.Equal(record.TemplateRef, parsed.TemplateRef)
             Assert.Equal(record.Outcome, parsed.Outcome)
+
             Assert.Equal<string list>(
                 [ "src/Product/App.fsproj"; "src/Product/Program.fs" ],
                 parsed.ProducedPaths |> List.map (fun p -> p.Path)
@@ -168,7 +178,8 @@ providers:
             // parsed list is the sorted set (productName before variant).
             Assert.Equal<(string * string) list>(
                 [ "productName", "Demo"; "variant", "alpha" ],
-                parsed.EffectiveParameters)
+                parsed.EffectiveParameters
+            )
         | None -> failwith "Expected provenance to round-trip effectiveParameters."
 
     // T005 (050 D3): a v1 document WITHOUT effectiveParameters parses to [] (backward compat) —
@@ -208,6 +219,7 @@ providers:
     let ``serialize emits an empty effectiveParameters array when none forwarded`` () =
         let json = serialize { record with EffectiveParameters = [] }
         Assert.Contains("\"effectiveParameters\": []", json)
+
         match tryParse json with
         | Some parsed -> Assert.Equal<(string * string) list>([], parsed.EffectiveParameters)
         | None -> failwith "Expected the empty-effective document to round-trip."
@@ -217,7 +229,9 @@ providers:
     // T011: round-trips with a declared minimum (Some) and without (None).
     [<Fact>]
     let ``serialize then tryParse round-trips requiredMinimumCliVersion Some`` () =
-        let withMin = { record with RequiredMinimumCliVersion = Some "0.3.0" }
+        let withMin =
+            { record with
+                RequiredMinimumCliVersion = Some "0.3.0" }
 
         match tryParse (serialize withMin) with
         | Some parsed -> Assert.Equal(Some "0.3.0", parsed.RequiredMinimumCliVersion)
@@ -225,7 +239,11 @@ providers:
 
     [<Fact>]
     let ``serialize emits requiredMinimumCliVersion as null when None`` () =
-        let json = serialize { record with RequiredMinimumCliVersion = None }
+        let json =
+            serialize
+                { record with
+                    RequiredMinimumCliVersion = None }
+
         Assert.Contains("\"requiredMinimumCliVersion\": null", json)
 
         match tryParse json with
@@ -235,14 +253,21 @@ providers:
     // T011: emitted immediately after the generator object, before providerName.
     [<Fact>]
     let ``serialize emits requiredMinimumCliVersion immediately after generator`` () =
-        let json = serialize { record with RequiredMinimumCliVersion = Some "0.3.0" }
+        let json =
+            serialize
+                { record with
+                    RequiredMinimumCliVersion = Some "0.3.0" }
+
         Assert.True(json.IndexOf "\"generator\"" < json.IndexOf "\"requiredMinimumCliVersion\"")
         Assert.True(json.IndexOf "\"requiredMinimumCliVersion\"" < json.IndexOf "\"providerName\"")
 
     // T011: byte-stability across two runs (US1 scenario 3).
     [<Fact>]
     let ``serialize is byte-stable with a declared minimum`` () =
-        let withMin = { record with RequiredMinimumCliVersion = Some "0.3.0" }
+        let withMin =
+            { record with
+                RequiredMinimumCliVersion = Some "0.3.0" }
+
         Assert.Equal(serialize withMin, serialize withMin)
 
     // T011: BACK-COMPAT — a v1 document WITHOUT the field parses with None (existing
@@ -268,10 +293,17 @@ providers:
 
     let private mirroredRecord =
         { record with
-            ProducedPaths = [ { Path = ".agents/skills/fs-gg-elmish/SKILL.md"; Owner = GeneratedProduct; Sha256 = None } ]
+            ProducedPaths =
+                [ { Path = ".agents/skills/fs-gg-elmish/SKILL.md"
+                    Owner = GeneratedProduct
+                    Sha256 = None } ]
             MirroredPaths =
-                [ { Path = ".codex/skills/fs-gg-elmish/SKILL.md"; Owner = Mirrored; Sha256 = None }
-                  { Path = ".claude/skills/fs-gg-elmish/SKILL.md"; Owner = Mirrored; Sha256 = None } ] }
+                [ { Path = ".codex/skills/fs-gg-elmish/SKILL.md"
+                    Owner = Mirrored
+                    Sha256 = None }
+                  { Path = ".claude/skills/fs-gg-elmish/SKILL.md"
+                    Owner = Mirrored
+                    Sha256 = None } ] }
 
     [<Fact>]
     let ``serialize then tryParse round-trips mirroredPaths and keeps schemaVersion 1`` () =
@@ -280,8 +312,11 @@ providers:
             Assert.Equal(1, parsed.SchemaVersion)
             // Sorted ascending by path; owner mirrored preserved.
             Assert.Equal<string list>(
-                [ ".claude/skills/fs-gg-elmish/SKILL.md"; ".codex/skills/fs-gg-elmish/SKILL.md" ],
-                parsed.MirroredPaths |> List.map (fun p -> p.Path))
+                [ ".claude/skills/fs-gg-elmish/SKILL.md"
+                  ".codex/skills/fs-gg-elmish/SKILL.md" ],
+                parsed.MirroredPaths |> List.map (fun p -> p.Path)
+            )
+
             Assert.True(parsed.MirroredPaths |> List.forall (fun p -> p.Owner = Mirrored))
         | None -> failwith "Expected the mirrored record to round-trip."
 
@@ -299,7 +334,13 @@ providers:
     [<Fact>]
     let ``mirrored owner appears only inside mirroredPaths never in producedPaths`` () =
         let json = serialize mirroredRecord
-        let producedSegment = json.Substring(json.IndexOf "\"producedPaths\"", json.IndexOf "\"mirroredPaths\"" - json.IndexOf "\"producedPaths\"")
+
+        let producedSegment =
+            json.Substring(
+                json.IndexOf "\"producedPaths\"",
+                json.IndexOf "\"mirroredPaths\"" - json.IndexOf "\"producedPaths\""
+            )
+
         Assert.DoesNotContain("mirrored", producedSegment)
 
     [<Fact>]
@@ -330,7 +371,9 @@ providers:
 
     [<Fact>]
     let ``tryParse on an unsupported schema yields None`` () =
-        let json = (serialize record).Replace("\"schemaVersion\": 1", "\"schemaVersion\": 9")
+        let json =
+            (serialize record).Replace("\"schemaVersion\": 1", "\"schemaVersion\": 9")
+
         Assert.Equal(None, tryParse json)
 
     // --- 057 (ADR-0014 §Decision 3): additive per-path sha256, schema stays v1 ---
@@ -338,9 +381,13 @@ providers:
     let private hashedRecord =
         { record with
             ProducedPaths =
-                [ { Path = ".agents/skills/fs-gg-elmish/SKILL.md"; Owner = GeneratedProduct; Sha256 = Some "abc123" } ]
+                [ { Path = ".agents/skills/fs-gg-elmish/SKILL.md"
+                    Owner = GeneratedProduct
+                    Sha256 = Some "abc123" } ]
             MirroredPaths =
-                [ { Path = ".claude/skills/fs-gg-elmish/SKILL.md"; Owner = Mirrored; Sha256 = Some "def456" } ] }
+                [ { Path = ".claude/skills/fs-gg-elmish/SKILL.md"
+                    Owner = Mirrored
+                    Sha256 = Some "def456" } ] }
 
     [<Fact>]
     let ``serialize then tryParse round-trips per-path sha256 and keeps schemaVersion 1`` () =

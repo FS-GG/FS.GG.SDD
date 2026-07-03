@@ -9,7 +9,9 @@ open Xunit
 /// extended optional fields — declared `build`/`test`/`run`/`verify` commands and
 /// `nameParameter` — from `.fsgg/providers.yml`, with behavior-preserving defaults.
 module ProviderRegistryParseTests =
-    let private snapshot text : FileSnapshot = { Path = ".fsgg/providers.yml"; Text = text }
+    let private snapshot text : FileSnapshot =
+        { Path = ".fsgg/providers.yml"
+          Text = text }
 
     let private one result =
         match result with
@@ -38,8 +40,21 @@ providers:
 """
 
         let descriptor = one (parseProviderRegistry (snapshot registry))
-        Assert.Equal(Some { Executable = "dotnet"; Arguments = [ "build"; "-c"; "Release" ] }, descriptor.Build)
-        Assert.Equal(Some { Executable = "dotnet"; Arguments = [ "run"; "--no-build" ] }, descriptor.Run)
+
+        Assert.Equal(
+            Some
+                { Executable = "dotnet"
+                  Arguments = [ "build"; "-c"; "Release" ] },
+            descriptor.Build
+        )
+
+        Assert.Equal(
+            Some
+                { Executable = "dotnet"
+                  Arguments = [ "run"; "--no-build" ] },
+            descriptor.Run
+        )
+
         Assert.Equal<DeclaredCommand option>(None, descriptor.Test)
         Assert.Equal<DeclaredCommand option>(None, descriptor.Verify)
         Assert.Equal("projectName", descriptor.NameParameter)
@@ -111,6 +126,9 @@ providers:
         let variant = descriptor.Parameters |> List.find (fun p -> p.Key = "variant")
         Assert.False(variant.Required)
         Assert.Equal(Some "alpha", variant.Default)
-        let productName = descriptor.Parameters |> List.find (fun p -> p.Key = "productName")
+
+        let productName =
+            descriptor.Parameters |> List.find (fun p -> p.Key = "productName")
+
         Assert.True(productName.Required)
         Assert.Equal(None, productName.Default)

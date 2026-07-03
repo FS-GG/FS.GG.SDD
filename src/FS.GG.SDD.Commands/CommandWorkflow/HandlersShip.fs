@@ -46,7 +46,9 @@ module internal HandlersShip =
     /// SDD never parses Governance config semantics (FR-011).
     let governanceConfigPresence model : GovernanceHandoffModule.GovernanceConfigPresence =
         let present path = snapshot path model |> Option.isSome
-        let pointer path = if present path then Some path else None
+
+        let pointer path =
+            if present path then Some path else None
 
         { PolicyPresent = present ".fsgg/policy.yml"
           PolicyPointer = pointer ".fsgg/policy.yml"
@@ -58,7 +60,10 @@ module internal HandlersShip =
     /// Derive the handoff's advisory readiness facts from the SDD-owned ship.json text.
     /// Both ship (emission) and refresh (regeneration) parse the same ship.json, so the
     /// regenerated handoff is byte-identical to the emitted one when sources are unchanged.
-    let parseShipReadinessFacts (shipText: string) (perViewState: (string * string) list) : GovernanceHandoffModule.ReadinessFacts =
+    let parseShipReadinessFacts
+        (shipText: string)
+        (perViewState: (string * string) list)
+        : GovernanceHandoffModule.ReadinessFacts =
         try
             use document = System.Text.Json.JsonDocument.Parse shipText
             let root = document.RootElement
@@ -72,7 +77,8 @@ module internal HandlersShip =
                 match element with
                 | Some e ->
                     match e.TryGetProperty name with
-                    | true, value when value.ValueKind = System.Text.Json.JsonValueKind.String -> value.GetString() |> Option.ofObj |> Option.defaultValue ""
+                    | true, value when value.ValueKind = System.Text.Json.JsonValueKind.String ->
+                        value.GetString() |> Option.ofObj |> Option.defaultValue ""
                     | _ -> ""
                 | None -> ""
 
@@ -116,16 +122,22 @@ module internal HandlersShip =
         (verifyText: string option)
         (shipText: string)
         (config: GovernanceHandoffModule.GovernanceConfigPresence)
-        : GeneratedViewState option * CommandEffect list * string option
-        =
+        : GeneratedViewState option * CommandEffect list * string option =
         match workModelJson with
         | Some wmJson ->
-            match WorkModelModule.parseWorkModel { Path = workModelPath workId; Text = wmJson } with
+            match
+                WorkModelModule.parseWorkModel
+                    { Path = workModelPath workId
+                      Text = wmJson }
+            with
             | Ok workModel ->
                 // The handoff's own three-source currency (identical for ship and a clean refresh).
                 let perViewState =
                     [ "ship.json", "current"
-                      "verify.json", (match verifyText with Some _ -> "current" | None -> "missing")
+                      "verify.json",
+                      (match verifyText with
+                       | Some _ -> "current"
+                       | None -> "missing")
                       "work-model.json", "current" ]
                     |> List.sortBy fst
 
@@ -133,7 +145,8 @@ module internal HandlersShip =
 
                 let handoffSources =
                     [ Some(GovernanceHandoffModule.sourceIdentity (workModelPath workId) wmJson)
-                      verifyText |> Option.map (GovernanceHandoffModule.sourceIdentity (verifyPath workId))
+                      verifyText
+                      |> Option.map (GovernanceHandoffModule.sourceIdentity (verifyPath workId))
                       Some(GovernanceHandoffModule.sourceIdentity (shipPath workId) shipText) ]
                     |> List.choose id
 
@@ -166,7 +179,8 @@ module internal HandlersShip =
     let shipFindings (diagnostics: Diagnostic list) =
         diagnostics
         |> DiagnosticsModule.sort
-        |> List.mapi (fun index diagnostic -> sprintf "SF%03d" (index + 1), diagnostic, verifyFindingSeverity diagnostic)
+        |> List.mapi (fun index diagnostic ->
+            sprintf "SF%03d" (index + 1), diagnostic, verifyFindingSeverity diagnostic)
 
     let existingShipDiagnostic workId model =
         let path = shipPath workId
@@ -190,7 +204,10 @@ module internal HandlersShip =
         | None -> [ missingVerificationPrerequisite path $"Verification prerequisite '{path}' is missing." ], None
         | Some existing ->
             match parseVerificationView existing with
-            | Error diagnostics -> (diagnostics |> List.map (fun diagnostic -> malformedVerificationView path diagnostic.Message)), None
+            | Error diagnostics ->
+                (diagnostics
+                 |> List.map (fun diagnostic -> malformedVerificationView path diagnostic.Message)),
+                None
             | Ok view when not (String.Equals(view.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) ->
                 [ verifyIdentityMismatch path workId view.WorkId.Value ], Some view
             | Ok view ->
@@ -202,12 +219,16 @@ module internal HandlersShip =
 
                 let blockingFindingIds =
                     view.Findings
-                    |> List.filter (fun finding -> String.Equals(finding.Severity, "blocking", StringComparison.OrdinalIgnoreCase))
+                    |> List.filter (fun finding ->
+                        String.Equals(finding.Severity, "blocking", StringComparison.OrdinalIgnoreCase))
                     |> List.map (fun finding -> finding.Id)
                     |> List.sort
 
                 let failed =
-                    if not (List.isEmpty blockingFindingIds) then [ failedVerification path blockingFindingIds ] else []
+                    if not (List.isEmpty blockingFindingIds) then
+                        [ failedVerification path blockingFindingIds ]
+                    else
+                        []
 
                 notReady @ failed, Some view
 
@@ -231,7 +252,10 @@ module internal HandlersShip =
 
         let evidenceCount state =
             match verificationView with
-            | Some view -> view.EvidenceDispositions |> List.filter (fun disposition -> disposition.State = state) |> List.length
+            | Some view ->
+                view.EvidenceDispositions
+                |> List.filter (fun disposition -> disposition.State = state)
+                |> List.length
             | None -> 0
 
         writeViewPreamble writer workId "ship" readiness generator
@@ -239,15 +263,18 @@ module internal HandlersShip =
         writeLifecycleReadiness writer lifecycleStatus lifecycleStages
         writer.WriteStartObject("verificationReadiness")
         writer.WriteString("status", verificationStatus)
+
         writeStringArray
             writer
             "blockingFindingIds"
             (match verificationView with
              | Some view ->
                  view.Findings
-                 |> List.filter (fun finding -> String.Equals(finding.Severity, "blocking", StringComparison.OrdinalIgnoreCase))
+                 |> List.filter (fun finding ->
+                     String.Equals(finding.Severity, "blocking", StringComparison.OrdinalIgnoreCase))
                  |> List.map (fun finding -> finding.Id)
              | None -> [])
+
         writer.WriteNumber("evidenceSupportedCount", evidenceCount EvidenceSupported)
         writer.WriteNumber("evidenceDeferredCount", evidenceCount EvidenceDeferred)
         writer.WriteNumber("evidenceMissingCount", evidenceCount EvidenceMissingDisposition)
@@ -256,6 +283,7 @@ module internal HandlersShip =
         writer.WriteNumber("evidenceInvalidCount", evidenceCount EvidenceInvalid)
         writer.WriteEndObject()
         writer.WriteStartArray("evidenceDispositions")
+
         (match verificationView with
          | Some view -> view.EvidenceDispositions
          | None -> [])
@@ -268,51 +296,113 @@ module internal HandlersShip =
             writer.WriteString("severity", disposition.Severity)
             writeStringArray writer "diagnosticIds" disposition.DiagnosticIds
             writer.WriteEndObject())
+
         writer.WriteEndArray()
         writeGeneratedViewsArray writer generatedViews
         writer.WriteStartObject("disposition")
         writer.WriteString("state", disposition)
-        writeStringArray writer "blockingFindingIds" (findings |> List.filter (fun (_, _, severity) -> severity = "blocking") |> List.map (fun (id, _, _) -> id))
-        writeStringArray writer "warningFindingIds" (findings |> List.filter (fun (_, _, severity) -> severity = "warning") |> List.map (fun (id, _, _) -> id))
-        writeStringArray writer "advisoryFindingIds" (findings |> List.filter (fun (_, _, severity) -> severity = "advisory") |> List.map (fun (id, _, _) -> id))
-        writeStringArray writer "contributingStages" (lifecycleStages |> List.filter (fun (_, status) -> status <> "ready") |> List.map fst)
-        writer.WriteString("correction", if disposition = "shipReady" then "" else "Resolve the blocking ship-readiness findings before the protected-boundary handoff.")
+
+        writeStringArray
+            writer
+            "blockingFindingIds"
+            (findings
+             |> List.filter (fun (_, _, severity) -> severity = "blocking")
+             |> List.map (fun (id, _, _) -> id))
+
+        writeStringArray
+            writer
+            "warningFindingIds"
+            (findings
+             |> List.filter (fun (_, _, severity) -> severity = "warning")
+             |> List.map (fun (id, _, _) -> id))
+
+        writeStringArray
+            writer
+            "advisoryFindingIds"
+            (findings
+             |> List.filter (fun (_, _, severity) -> severity = "advisory")
+             |> List.map (fun (id, _, _) -> id))
+
+        writeStringArray
+            writer
+            "contributingStages"
+            (lifecycleStages
+             |> List.filter (fun (_, status) -> status <> "ready")
+             |> List.map fst)
+
+        writer.WriteString(
+            "correction",
+            if disposition = "shipReady" then
+                ""
+            else
+                "Resolve the blocking ship-readiness findings before the protected-boundary handoff."
+        )
+
         writer.WriteEndObject()
         writeReadinessFindings writer findings
         writeBoundaryFacts writer "governanceCompatibility"
         writeViewDiagnostics writer diagnostics
         writer.WriteString("readiness", readiness)
+
         writeNextAction
             writer
             (readiness = "shipReady")
             "ship.next.protectedBoundary"
             "Ship readiness is current and ready for the protected-boundary handoff."
             "Ship found lifecycle diagnostics that must be corrected before the protected-boundary handoff."
+
         writer.WriteEndObject()
         writer.Flush()
         Encoding.UTF8.GetString(stream.ToArray())
 
     let computeShipPlan model =
-        let (specification, clarification, checklist, plan, tasks, analysis, shipSummaryOpt), diagnostics, generatedViews, effects =
+        let ((specification, clarification, checklist, plan, tasks, analysis, shipSummaryOpt),
+             diagnostics,
+             generatedViews,
+             effects) =
             runHandler model (None, None, None, None, None, None, None) (fun workId ->
                 let projectDiagnostics = projectDiagnostics model
                 let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
                 let prereqs = resolvePrerequisites workId model
-                let specificationDiagnostics, specText, specification, specFacts = prereqs.SpecificationDiagnostics, prereqs.SpecificationText, prereqs.Specification, prereqs.SpecificationFacts
-                let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = prereqs.ClarificationDiagnostics, prereqs.ClarificationText, prereqs.Clarification, prereqs.ClarificationFacts
-                let checklistDiagnostics, checklistText, checklist, checklistFacts = prereqs.ChecklistDiagnostics, prereqs.ChecklistText, prereqs.Checklist, prereqs.ChecklistFacts
-                let planDiagnostics, planText, plan, planFacts = prereqs.PlanDiagnostics, prereqs.PlanText, prereqs.Plan, prereqs.PlanFacts
-                let taskDiagnostics, taskText, tasks, taskFacts = prereqs.TaskDiagnostics, prereqs.TaskText, prereqs.Tasks, prereqs.TaskFacts
 
-                let analysisDiagnostics, analysisText, analysis = analysisPrerequisiteDiagnosticsSummaryAndText workId model
-                let existingEvidenceArtifact, existingEvidenceDiagnostics, evidenceText = parseExistingEvidence workId model
+                let specificationDiagnostics, specText, specification, specFacts =
+                    prereqs.SpecificationDiagnostics,
+                    prereqs.SpecificationText,
+                    prereqs.Specification,
+                    prereqs.SpecificationFacts
+
+                let clarificationDiagnostics, clarificationText, clarification, clarificationFacts =
+                    prereqs.ClarificationDiagnostics,
+                    prereqs.ClarificationText,
+                    prereqs.Clarification,
+                    prereqs.ClarificationFacts
+
+                let checklistDiagnostics, checklistText, checklist, checklistFacts =
+                    prereqs.ChecklistDiagnostics, prereqs.ChecklistText, prereqs.Checklist, prereqs.ChecklistFacts
+
+                let planDiagnostics, planText, plan, planFacts =
+                    prereqs.PlanDiagnostics, prereqs.PlanText, prereqs.Plan, prereqs.PlanFacts
+
+                let taskDiagnostics, taskText, tasks, taskFacts =
+                    prereqs.TaskDiagnostics, prereqs.TaskText, prereqs.Tasks, prereqs.TaskFacts
+
+                let analysisDiagnostics, analysisText, analysis =
+                    analysisPrerequisiteDiagnosticsSummaryAndText workId model
+
+                let existingEvidenceArtifact, existingEvidenceDiagnostics, evidenceText =
+                    parseExistingEvidence workId model
 
                 let evidencePresenceDiagnostics =
                     match existingEvidenceArtifact, snapshot (evidencePath workId) model with
-                    | None, None -> [ missingEvidencePrerequisite (evidencePath workId) $"Evidence prerequisite '{evidencePath workId}' is missing." ]
+                    | None, None ->
+                        [ missingEvidencePrerequisite
+                              (evidencePath workId)
+                              $"Evidence prerequisite '{evidencePath workId}' is missing." ]
                     | _ -> []
 
-                let verificationPrereqDiagnostics, verificationView = shipVerificationPrerequisite workId model
+                let verificationPrereqDiagnostics, verificationView =
+                    shipVerificationPrerequisite workId model
+
                 let shipViewDiagnostics = existingShipDiagnostic workId model |> Option.toList
 
                 let commandDiagnostics =
@@ -334,18 +424,36 @@ module internal HandlersShip =
                     match specText, clarificationText, checklistText, planText, taskText with
                     | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText ->
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text
-                        generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) evidenceText commandDiagnostics model
-                    | _ ->
-                        blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
+
+                        generatedViewPlan
+                            model.Request
+                            workId
+                            charterText
+                            (Some specText)
+                            (Some clarificationText)
+                            (Some checklistText)
+                            (Some planText)
+                            (Some taskText)
+                            evidenceText
+                            commandDiagnostics
+                            model
+                    | _ -> blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
 
                 commandDiagnostics @ generatedDiagnostics,
                 (fun hasBlocking diagnostics ->
                     let readiness = if hasBlocking then "needsShipCorrection" else "shipReady"
 
                     let disposition =
-                        if hasBlocking then "blocked"
-                        elif diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticWarning) then "advisory"
-                        else "shipReady"
+                        if hasBlocking then
+                            "blocked"
+                        elif
+                            diagnostics
+                            |> List.exists (fun diagnostic ->
+                                diagnostic.Severity = DiagnosticSeverity.DiagnosticWarning)
+                        then
+                            "advisory"
+                        else
+                            "shipReady"
 
                     let verificationStatus =
                         verificationView
@@ -354,13 +462,46 @@ module internal HandlersShip =
 
                     let analysisViewState =
                         analysis
-                        |> Option.map (fun _ -> generatedViewState (analysisPath workId) "analysis" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Current [])
-                        |> Option.defaultValue (generatedViewState (analysisPath workId) "analysis" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Missing [])
+                        |> Option.map (fun _ ->
+                            generatedViewState
+                                (analysisPath workId)
+                                "analysis"
+                                model.Request.GeneratorVersion
+                                []
+                                None
+                                GeneratedViewCurrency.Current
+                                [])
+                        |> Option.defaultValue (
+                            generatedViewState
+                                (analysisPath workId)
+                                "analysis"
+                                model.Request.GeneratorVersion
+                                []
+                                None
+                                GeneratedViewCurrency.Missing
+                                []
+                        )
 
                     let verifyViewState =
                         match verificationView with
-                        | Some _ -> generatedViewState (verifyPath workId) "verification" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Current []
-                        | None -> generatedViewState (verifyPath workId) "verification" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Missing []
+                        | Some _ ->
+                            generatedViewState
+                                (verifyPath workId)
+                                "verification"
+                                model.Request.GeneratorVersion
+                                []
+                                None
+                                GeneratedViewCurrency.Current
+                                []
+                        | None ->
+                            generatedViewState
+                                (verifyPath workId)
+                                "verification"
+                                model.Request.GeneratorVersion
+                                []
+                                None
+                                GeneratedViewCurrency.Missing
+                                []
 
                     let stageStatus present = if present then "ready" else "missing"
 
@@ -370,19 +511,49 @@ module internal HandlersShip =
                           "checklist", stageStatus (Option.isSome checklistFacts)
                           "plan", stageStatus (Option.isSome planFacts)
                           "tasks", stageStatus (Option.isSome taskFacts)
-                          "analyze", (match analysis with Some summary -> (if summary.Readiness = "implementationReady" then "ready" else "blocked") | None -> "missing")
+                          "analyze",
+                          (match analysis with
+                           | Some summary ->
+                               (if summary.Readiness = "implementationReady" then
+                                    "ready"
+                                else
+                                    "blocked")
+                           | None -> "missing")
                           "evidence", stageStatus (Option.isSome existingEvidenceArtifact)
-                          "verify", (if verificationStatus = "verificationReady" then "ready" else "blocked") ]
+                          "verify",
+                          (if verificationStatus = "verificationReady" then
+                               "ready"
+                           else
+                               "blocked") ]
 
                     let shipSummaryOpt, shipView, shipHandoffView, shipEffects =
                         match specText, clarificationText, checklistText, planText, taskText, analysisText with
-                        | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText, Some analysisText ->
+                        | Some specText,
+                          Some clarificationText,
+                          Some checklistText,
+                          Some planText,
+                          Some taskText,
+                          Some analysisText ->
                             let workModelJson = workModelJsonFromGeneratedEffects workId workModelEffects model
-                            let baseSources = verifySources workId specText clarificationText checklistText planText taskText (evidenceText |> Option.defaultValue "") (Some analysisText) workModelJson model
+
+                            let baseSources =
+                                verifySources
+                                    workId
+                                    specText
+                                    clarificationText
+                                    checklistText
+                                    planText
+                                    taskText
+                                    (evidenceText |> Option.defaultValue "")
+                                    (Some analysisText)
+                                    workModelJson
+                                    model
 
                             let sources =
                                 baseSources
-                                @ (snapshot (verifyPath workId) model |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text) |> Option.toList)
+                                @ (snapshot (verifyPath workId) model
+                                   |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
+                                   |> Option.toList)
                                 |> List.sortBy (fun source -> source.Path)
 
                             let generatedViewsForShip = [ workModelView; analysisViewState; verifyViewState ]
@@ -402,17 +573,33 @@ module internal HandlersShip =
                                     diagnostics
 
                             let outputDigest = SchemaVersionModule.outputSha256Text text
-                            let view = generatedViewState (shipPath workId) "ship" model.Request.GeneratorVersion sources (Some outputDigest) GeneratedViewCurrency.Current []
+
+                            let view =
+                                generatedViewState
+                                    (shipPath workId)
+                                    "ship"
+                                    model.Request.GeneratorVersion
+                                    sources
+                                    (Some outputDigest)
+                                    GeneratedViewCurrency.Current
+                                    []
 
                             let findings = shipFindings diagnostics
-                            let findingCount severity = findings |> List.filter (fun (_, _, findingSeverity) -> findingSeverity = severity) |> List.length
+
+                            let findingCount severity =
+                                findings
+                                |> List.filter (fun (_, _, findingSeverity) -> findingSeverity = severity)
+                                |> List.length
 
                             let evidenceCount state =
                                 match verificationView with
-                                | Some v -> v.EvidenceDispositions |> List.filter (fun disposition -> disposition.State = state) |> List.length
+                                | Some v ->
+                                    v.EvidenceDispositions
+                                    |> List.filter (fun disposition -> disposition.State = state)
+                                    |> List.length
                                 | None -> 0
 
-                            let summary : ShipSummary =
+                            let summary: ShipSummary =
                                 { WorkId = workId
                                   Stage = "ship"
                                   Status = readiness
@@ -452,17 +639,35 @@ module internal HandlersShip =
                                 if hasBlocking then
                                     []
                                 else
-                                    [ CreateDirectory(readinessDirectory workId); WriteFile(shipPath workId, text, GeneratedView) ]
+                                    [ CreateDirectory(readinessDirectory workId)
+                                      WriteFile(shipPath workId, text, GeneratedView) ]
                                     @ handoffEffects
 
                             Some summary, Some view, handoffView, effects
                         | _ -> None, None, None, []
 
                     let generatedViews =
-                        [ Some workModelView; Some analysisViewState; Some verifyViewState; shipView; shipHandoffView ]
+                        [ Some workModelView
+                          Some analysisViewState
+                          Some verifyViewState
+                          shipView
+                          shipHandoffView ]
                         |> List.choose id
 
-                    (specification, clarification, checklist, plan, tasks, analysis, shipSummaryOpt), generatedViews, workModelEffects, shipEffects))
+                    (specification, clarification, checklist, plan, tasks, analysis, shipSummaryOpt),
+                    generatedViews,
+                    workModelEffects,
+                    shipEffects))
 
-        diagnostics, specification, clarification, checklist, plan, tasks, analysis, None, None, shipSummaryOpt, generatedViews, effects
-
+        diagnostics,
+        specification,
+        clarification,
+        checklist,
+        plan,
+        tasks,
+        analysis,
+        None,
+        None,
+        shipSummaryOpt,
+        generatedViews,
+        effects

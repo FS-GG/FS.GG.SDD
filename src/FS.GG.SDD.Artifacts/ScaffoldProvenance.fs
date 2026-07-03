@@ -137,8 +137,15 @@ module ScaffoldProvenance =
                     let templateRef = jsonString "templateRef" root
                     let outcome = jsonString "outcome" root
 
-                    match generatorId, generatorVersion, providerName, providerContractVersion, templateRef, outcome with
-                    | Some generatorId, Some generatorVersion, Some providerName, Some providerContractVersion, Some templateRef, Some outcome ->
+                    match
+                        generatorId, generatorVersion, providerName, providerContractVersion, templateRef, outcome
+                    with
+                    | Some generatorId,
+                      Some generatorVersion,
+                      Some providerName,
+                      Some providerContractVersion,
+                      Some templateRef,
+                      Some outcome ->
                         let producedPaths =
                             jsonArray "producedPaths" root
                             |> List.choose (fun element ->
@@ -146,7 +153,10 @@ module ScaffoldProvenance =
                                 | Some path when not (String.IsNullOrWhiteSpace path) ->
                                     Some
                                         { Path = path
-                                          Owner = jsonString "owner" element |> Option.map ownerFromValue |> Option.defaultValue ArtifactOwner.GeneratedProduct
+                                          Owner =
+                                            jsonString "owner" element
+                                            |> Option.map ownerFromValue
+                                            |> Option.defaultValue ArtifactOwner.GeneratedProduct
                                           Sha256 = readSha256 element }
                                 | _ -> None)
 
@@ -159,7 +169,10 @@ module ScaffoldProvenance =
                                 | Some path when not (String.IsNullOrWhiteSpace path) ->
                                     Some
                                         { Path = path
-                                          Owner = jsonString "owner" element |> Option.map ownerFromValue |> Option.defaultValue ArtifactOwner.Mirrored
+                                          Owner =
+                                            jsonString "owner" element
+                                            |> Option.map ownerFromValue
+                                            |> Option.defaultValue ArtifactOwner.Mirrored
                                           Sha256 = readSha256 element }
                                 | _ -> None)
 
@@ -179,7 +192,9 @@ module ScaffoldProvenance =
 
                         Some
                             { SchemaVersion = version
-                              Generator = { Id = generatorId; Version = generatorVersion }
+                              Generator =
+                                { Id = generatorId
+                                  Version = generatorVersion }
                               RequiredMinimumCliVersion = requiredMinimumCliVersion
                               ProviderName = providerName
                               ProviderContractVersion = providerContractVersion
@@ -191,4 +206,5 @@ module ScaffoldProvenance =
                     | _ -> None
                 | None -> None
             | _ -> None
-        with _ -> None
+        with _ ->
+            None

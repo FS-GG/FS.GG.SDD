@@ -70,7 +70,9 @@ module Analysis =
         Diagnostics.create
             (jsonRequiredString "id" element)
             (jsonRequiredString "severity" element |> diagnosticSeverityFromJson)
-            (jsonString "artifact" element |> Option.orElseWith (fun () -> jsonString "path" element) |> Option.bind artifactFromJsonPath)
+            (jsonString "artifact" element
+             |> Option.orElseWith (fun () -> jsonString "path" element)
+             |> Option.bind artifactFromJsonPath)
             None
             (jsonRequiredString "message" element)
             (jsonRequiredString "correction" element)
@@ -79,7 +81,9 @@ module Analysis =
     let parseAnalysisSource (element: JsonElement) =
         { Path = normalizePath (jsonRequiredString "path" element)
           Kind = jsonRequiredString "kind" element
-          Digest = jsonDigest "digest" element |> Option.orElseWith (fun () -> jsonDigest "sourceDigest" element)
+          Digest =
+            jsonDigest "digest" element
+            |> Option.orElseWith (fun () -> jsonDigest "sourceDigest" element)
           SchemaVersion = jsonInt "schemaVersion" element
           SchemaStatus = jsonString "schemaStatus" element }
 
@@ -158,7 +162,10 @@ module Analysis =
                               GeneratedViewFindingCount = 0
                               AcceptedDeferralCount = 0 }
 
-                    let diagnostics = jsonArray "diagnostics" root |> List.map parseAnalysisDiagnostic |> Diagnostics.sort
+                    let diagnostics =
+                        jsonArray "diagnostics" root
+                        |> List.map parseAnalysisDiagnostic
+                        |> Diagnostics.sort
 
                     Ok
                         { SchemaVersion = schema
@@ -167,13 +174,19 @@ module Analysis =
                           Stage = stage
                           Status = jsonString "status" root |> Option.defaultValue readiness.Status
                           Generator = jsonString "generator" root |> Option.defaultValue "fsgg-sdd"
-                          Sources = jsonArray "sources" root |> List.map parseAnalysisSource |> List.sortBy (fun source -> source.Path)
+                          Sources =
+                            jsonArray "sources" root
+                            |> List.map parseAnalysisSource
+                            |> List.sortBy (fun source -> source.Path)
                           SourceRelationships =
                             jsonArray "sourceRelationships" root
                             |> List.map parseAnalysisRelationship
                             |> List.sortBy (fun relationship -> relationship.Id)
                           Readiness = readiness
-                          Findings = jsonArray "findings" root |> List.map parseAnalysisFinding |> List.sortBy (fun finding -> finding.Id)
+                          Findings =
+                            jsonArray "findings" root
+                            |> List.map parseAnalysisFinding
+                            |> List.sortBy (fun finding -> finding.Id)
                           GeneratedViews =
                             jsonArray "generatedViews" root
                             |> List.map parseAnalysisGeneratedView

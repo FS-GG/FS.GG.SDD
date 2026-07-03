@@ -32,7 +32,13 @@ module IsolationTests =
     let ``the report encodes no Governance route/profile/freshness/gate/verdict`` () =
         let json = run tinyOptions |> serialize
 
-        for forbidden in [ "\"route\""; "\"profile\""; "\"freshness\""; "\"gate\""; "\"verdict\""; "\"effective\"" ] do
+        for forbidden in
+            [ "\"route\""
+              "\"profile\""
+              "\"freshness\""
+              "\"gate\""
+              "\"verdict\""
+              "\"effective\"" ] do
             Assert.False(json.Contains forbidden, $"report leaked a Governance fact: {forbidden}")
 
     [<Fact>]

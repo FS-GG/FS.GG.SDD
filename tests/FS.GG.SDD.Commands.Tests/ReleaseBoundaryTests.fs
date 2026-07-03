@@ -20,7 +20,15 @@ module ReleaseBoundaryTests =
         // Assert against gate-LOGIC vocabulary, not the word "Governance": the
         // optional contractVersion range and the governance* field names are
         // legitimate declared-compat facts (017) and must NOT false-positive.
-        for forbidden in [ "gate"; "route"; "profile"; "freshness"; "publish"; "provenance"; "verdict"; "enforce" ] do
+        for forbidden in
+            [ "gate"
+              "route"
+              "profile"
+              "freshness"
+              "publish"
+              "provenance"
+              "verdict"
+              "enforce" ] do
             Assert.DoesNotContain(forbidden, json)
 
     [<Fact>]
@@ -28,9 +36,18 @@ module ReleaseBoundaryTests =
         let root = TestSupport.tempDirectory ()
         TestSupport.initializeVerifiedProject root workId title
         TestSupport.runShip root workId title |> ignore
-        let handoff = TestSupport.readRelative root $"readiness/{workId}/governance-handoff.json"
 
-        for forbidden in [ "\"route\""; "\"profile\""; "\"gate\""; "verdict"; "enforcement"; "provenance"; "publishPlan" ] do
+        let handoff =
+            TestSupport.readRelative root $"readiness/{workId}/governance-handoff.json"
+
+        for forbidden in
+            [ "\"route\""
+              "\"profile\""
+              "\"gate\""
+              "verdict"
+              "enforcement"
+              "provenance"
+              "publishPlan" ] do
             Assert.DoesNotContain(forbidden, handoff)
 
     // ===== FR-013 — no scope creep (no new stage, no new view kind) =====
@@ -39,7 +56,13 @@ module ReleaseBoundaryTests =
     let ``T024 the catalog adds no GeneratedViewKind beyond the pre-018 enumerable set`` () =
         let known =
             Set.ofList
-                [ WorkModel; Analysis; GeneratedViewKind.Verify; GeneratedViewKind.Ship; Summary; AgentCommands; GovernanceHandoff ]
+                [ WorkModel
+                  Analysis
+                  GeneratedViewKind.Verify
+                  GeneratedViewKind.Ship
+                  Summary
+                  AgentCommands
+                  GovernanceHandoff ]
 
         for entry in (currentRelease ()).Catalog do
             match entry.Kind with
@@ -52,12 +75,14 @@ module ReleaseBoundaryTests =
         Assert.True(
             (match parseCommand "release" with
              | Error _ -> true
-             | Ok _ -> false))
+             | Ok _ -> false)
+        )
 
         Assert.True(
             (match parseCommand "release-readiness" with
              | Error _ -> true
-             | Ok _ -> false))
+             | Ok _ -> false)
+        )
 
         // the cross-cutting generators remain non-stages (unchanged)
         Assert.Equal(None, nextLifecycleCommand Agents)

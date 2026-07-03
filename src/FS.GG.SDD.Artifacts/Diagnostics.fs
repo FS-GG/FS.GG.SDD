@@ -8,7 +8,8 @@ module Diagnostics =
         | DiagnosticWarning
         | DiagnosticInfo
 
-    type SourceLocation = { Line: int option; Column: int option }
+    type SourceLocation =
+        { Line: int option; Column: int option }
 
     type Diagnostic =
         { Id: string
@@ -58,7 +59,14 @@ module Diagnostics =
             [ artifact.Path ]
 
     let malformedSchemaVersion artifact message =
-        create "malformedSchemaVersion" DiagnosticError (Some artifact) None message "Add schemaVersion: 1 to the structured artifact." []
+        create
+            "malformedSchemaVersion"
+            DiagnosticError
+            (Some artifact)
+            None
+            message
+            "Add schemaVersion: 1 to the structured artifact."
+            []
 
     let deprecatedSchemaVersion artifact value =
         create
@@ -103,7 +111,14 @@ module Diagnostics =
             [ id ]
 
     let unknownReference artifact id correction =
-        create "unknownReference" DiagnosticError (Some artifact) None $"Reference '{id}' does not resolve." correction [ id ]
+        create
+            "unknownReference"
+            DiagnosticError
+            (Some artifact)
+            None
+            $"Reference '{id}' does not resolve."
+            correction
+            [ id ]
 
     // A declared cross-reference whose value is not a well-formed id of its kind (e.g. a task
     // dependency `T01` instead of `T001`). Previously such values were silently dropped by the
@@ -301,9 +316,12 @@ module Diagnostics =
 
         match Fsgg.Version.tryParse installed, Fsgg.Version.tryParse minimum with
         | Some i, Some m ->
-            if m.Major <> i.Major then unit (m.Major - i.Major) "major"
-            elif m.Minor <> i.Minor then unit (m.Minor - i.Minor) "minor"
-            else unit (m.Patch - i.Patch) "patch"
+            if m.Major <> i.Major then
+                unit (m.Major - i.Major) "major"
+            elif m.Minor <> i.Minor then
+                unit (m.Minor - i.Minor) "minor"
+            else
+                unit (m.Patch - i.Patch) "patch"
         | _ -> "behind by an unknown amount"
 
     let scaffoldCliBehindMinimum (installed: string) (minimum: string) =
@@ -440,4 +458,5 @@ module Diagnostics =
             severityRank diagnostic.Severity, diagnostic.Id, path, line, column, diagnostic.Message)
 
     let hasBlocking diagnostics =
-        diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticError)
+        diagnostics
+        |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticError)

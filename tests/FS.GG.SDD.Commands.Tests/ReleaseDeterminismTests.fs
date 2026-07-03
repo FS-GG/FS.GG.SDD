@@ -21,12 +21,20 @@ module ReleaseDeterminismTests =
         let root = TestSupport.tempDirectory ()
         TestSupport.initializeVerifiedProject root workId title
         TestSupport.runShip root workId title |> ignore
-        let firstWorkModel = TestSupport.readRelative root $"readiness/{workId}/work-model.json"
-        let firstHandoff = TestSupport.readRelative root $"readiness/{workId}/governance-handoff.json"
+
+        let firstWorkModel =
+            TestSupport.readRelative root $"readiness/{workId}/work-model.json"
+
+        let firstHandoff =
+            TestSupport.readRelative root $"readiness/{workId}/governance-handoff.json"
 
         TestSupport.runShip root workId title |> ignore
-        let secondWorkModel = TestSupport.readRelative root $"readiness/{workId}/work-model.json"
-        let secondHandoff = TestSupport.readRelative root $"readiness/{workId}/governance-handoff.json"
+
+        let secondWorkModel =
+            TestSupport.readRelative root $"readiness/{workId}/work-model.json"
+
+        let secondHandoff =
+            TestSupport.readRelative root $"readiness/{workId}/governance-handoff.json"
 
         Assert.Equal(firstWorkModel, secondWorkModel)
         Assert.Equal(firstHandoff, secondHandoff)

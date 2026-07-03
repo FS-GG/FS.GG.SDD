@@ -25,7 +25,14 @@ module internal ParsingEarly =
         match splitFrontMatter text with
         | None -> Error(malformedCharterFrontMatter path "Charter is missing YAML front matter.")
         | Some(yaml, _) ->
-            match tryScalar "schemaVersion" yaml, tryScalar "workId" yaml, tryScalar "title" yaml, tryScalar "stage" yaml, tryScalar "changeTier" yaml, tryScalar "status" yaml with
+            match
+                tryScalar "schemaVersion" yaml,
+                tryScalar "workId" yaml,
+                tryScalar "title" yaml,
+                tryScalar "stage" yaml,
+                tryScalar "changeTier" yaml,
+                tryScalar "status" yaml
+            with
             | Some schemaVersion, Some workId, Some title, Some stage, Some changeTier, Some status ->
                 Ok
                     { SchemaVersion = schemaVersion
@@ -39,10 +46,16 @@ module internal ParsingEarly =
     let titleFromWorkId (workId: string) =
         workId.Split('-', StringSplitOptions.RemoveEmptyEntries)
         |> Array.skipWhile (fun part -> part |> Seq.forall Char.IsDigit)
-        |> fun parts -> if Array.isEmpty parts then workId.Split('-', StringSplitOptions.RemoveEmptyEntries) else parts
+        |> fun parts ->
+            if Array.isEmpty parts then
+                workId.Split('-', StringSplitOptions.RemoveEmptyEntries)
+            else
+                parts
         |> Array.map (fun part ->
-            if part.Length = 0 then part
-            else Char.ToUpperInvariant(part.[0]).ToString() + part.Substring(1))
+            if part.Length = 0 then
+                part
+            else
+                Char.ToUpperInvariant(part.[0]).ToString() + part.Substring(1))
         |> String.concat " "
 
     let requestTitle (request: CommandRequest) workId =
@@ -123,23 +136,37 @@ policyPointers:
             | "intent" -> { intent with UserValue = Some value }
             | "scope"
             | "in scope"
-            | "in-scope" -> { intent with Scope = intent.Scope @ [ value ] }
+            | "in-scope" ->
+                { intent with
+                    Scope = intent.Scope @ [ value ] }
             | "non-goal"
             | "non goal"
             | "out of scope"
-            | "out-of-scope" -> { intent with NonGoals = intent.NonGoals @ [ value ] }
+            | "out-of-scope" ->
+                { intent with
+                    NonGoals = intent.NonGoals @ [ value ] }
             | "story"
-            | "user story" -> { intent with Stories = intent.Stories @ [ value ] }
+            | "user story" ->
+                { intent with
+                    Stories = intent.Stories @ [ value ] }
             | "requirement"
             | "functional requirement"
-            | "fr" -> { intent with Requirements = intent.Requirements @ [ value ] }
+            | "fr" ->
+                { intent with
+                    Requirements = intent.Requirements @ [ value ] }
             | "acceptance"
             | "acceptance scenario"
-            | "scenario" -> { intent with AcceptanceScenarios = intent.AcceptanceScenarios @ [ value ] }
+            | "scenario" ->
+                { intent with
+                    AcceptanceScenarios = intent.AcceptanceScenarios @ [ value ] }
             | "ambiguity"
-            | "question" -> { intent with Ambiguities = intent.Ambiguities @ [ value ] }
+            | "question" ->
+                { intent with
+                    Ambiguities = intent.Ambiguities @ [ value ] }
             | "impact"
-            | "public or tool-facing impact" -> { intent with Impact = intent.Impact @ [ value ] }
+            | "public or tool-facing impact" ->
+                { intent with
+                    Impact = intent.Impact @ [ value ] }
             | _ ->
                 match intent.UserValue with
                 | None -> { intent with UserValue = Some value }
@@ -166,9 +193,12 @@ policyPointers:
                 emptySpecificationIntent
 
         let missing =
-            [ if Option.isNone parsed.UserValue then "user value"
-              if List.isEmpty parsed.Scope then "scope"
-              if List.isEmpty parsed.Requirements then "measurable requirement" ]
+            [ if Option.isNone parsed.UserValue then
+                  "user value"
+              if List.isEmpty parsed.Scope then
+                  "scope"
+              if List.isEmpty parsed.Requirements then
+                  "measurable requirement" ]
 
         parsed, missing
 
@@ -176,16 +206,34 @@ policyPointers:
 
     let specificationTemplate request workId intent =
         let title = requestTitle request workId
-        let userValue = intent.UserValue |> Option.defaultValue $"Specify work item {workId}."
-        let scope = if List.isEmpty intent.Scope then [ "Author one chartered SDD work item specification." ] else intent.Scope
+
+        let userValue =
+            intent.UserValue |> Option.defaultValue $"Specify work item {workId}."
+
+        let scope =
+            if List.isEmpty intent.Scope then
+                [ "Author one chartered SDD work item specification." ]
+            else
+                intent.Scope
+
         let nonGoals =
             if List.isEmpty intent.NonGoals then
                 [ "Do not implement later lifecycle commands or Governance enforcement in this specification." ]
             else
                 intent.NonGoals
 
-        let requirements = if List.isEmpty intent.Requirements then [ "Create a specification artifact with stable ids." ] else intent.Requirements
-        let stories = if List.isEmpty intent.Stories then [ $"As a maintainer, I can specify {title} after chartering the work item." ] else intent.Stories
+        let requirements =
+            if List.isEmpty intent.Requirements then
+                [ "Create a specification artifact with stable ids." ]
+            else
+                intent.Requirements
+
+        let stories =
+            if List.isEmpty intent.Stories then
+                [ $"As a maintainer, I can specify {title} after chartering the work item." ]
+            else
+                intent.Stories
+
         let acceptanceScenarios =
             if List.isEmpty intent.AcceptanceScenarios then
                 [ "Given a chartered work item, when specify runs with intent, then spec.md is created with stable ids." ]
@@ -292,26 +340,31 @@ Prose status: specified
         match heading with
         | "Identity" -> $"## Identity\n- Work id: `{workId}`\n- Lifecycle stage: charter\n- Status: chartered\n"
         | "Principles" -> "## Principles\n- Capture the work item's local principles before specification begins.\n"
-        | "Scope Boundaries" -> "## Scope Boundaries\n- Keep SDD lifecycle ownership separate from optional Governance enforcement.\n"
-        | "Policy Pointers" -> "## Policy Pointers\n- SDD policy comes from `.fsgg/sdd.yml` and `.fsgg/agents.yml`.\n- Governance files are optional compatibility pointers and are not evaluated by this command.\n"
+        | "Scope Boundaries" ->
+            "## Scope Boundaries\n- Keep SDD lifecycle ownership separate from optional Governance enforcement.\n"
+        | "Policy Pointers" ->
+            "## Policy Pointers\n- SDD policy comes from `.fsgg/sdd.yml` and `.fsgg/agents.yml`.\n- Governance files are optional compatibility pointers and are not evaluated by this command.\n"
         | "Lifecycle Notes" -> $"## Lifecycle Notes\n- Next lifecycle action: `fsgg-sdd specify --work {workId}`.\n"
         | _ -> $"## {heading}\n"
 
     let ensureStandardSections workId text =
-        let normalized = (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
-        let required = [ "Identity"; "Principles"; "Scope Boundaries"; "Policy Pointers"; "Lifecycle Notes" ]
+        let normalized =
+            (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
+
+        let required =
+            [ "Identity"
+              "Principles"
+              "Scope Boundaries"
+              "Policy Pointers"
+              "Lifecycle Notes" ]
 
         let missing =
-            required
-            |> List.filter (fun heading -> not (hasSection heading normalized))
+            required |> List.filter (fun heading -> not (hasSection heading normalized))
 
         if List.isEmpty missing then
             normalized
         else
-            let suffix =
-                missing
-                |> List.map (sectionText workId)
-                |> String.concat "\n"
+            let suffix = missing |> List.map (sectionText workId) |> String.concat "\n"
 
             let trimmed = normalized.TrimEnd()
             $"{trimmed}\n\n{suffix}"
@@ -330,7 +383,8 @@ Prose status: specified
         | _ -> $"## {heading}\n"
 
     let ensureSpecificationSections text =
-        let normalized = (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
+        let normalized =
+            (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
 
         let missing =
             specificationStandardSections ()
@@ -347,10 +401,14 @@ Prose status: specified
         model.InterpretedEffects
         |> List.choose (fun result ->
             match result.Effect, result.Snapshot with
-            | ReadFile path, Some snapshot
-                when path.EndsWith("/charter.md", StringComparison.OrdinalIgnoreCase)
-                     || path.EndsWith("/spec.md", StringComparison.OrdinalIgnoreCase) ->
-                Some({ snapshot with Path = normalizeRelativePath path })
+            | ReadFile path, Some snapshot when
+                path.EndsWith("/charter.md", StringComparison.OrdinalIgnoreCase)
+                || path.EndsWith("/spec.md", StringComparison.OrdinalIgnoreCase)
+                ->
+                Some(
+                    { snapshot with
+                        Path = normalizeRelativePath path }
+                )
             | _ -> None)
 
     let duplicateWorkIdDiagnostics workId model =
@@ -360,11 +418,13 @@ Prose status: specified
                 None
             elif snapshot.Path.EndsWith("/charter.md", StringComparison.OrdinalIgnoreCase) then
                 match parseCharterFrontMatter snapshot.Path snapshot.Text with
-                | Ok frontMatter when String.Equals(frontMatter.WorkId, workId, StringComparison.OrdinalIgnoreCase) -> Some snapshot.Path
+                | Ok frontMatter when String.Equals(frontMatter.WorkId, workId, StringComparison.OrdinalIgnoreCase) ->
+                    Some snapshot.Path
                 | _ -> None
             elif snapshot.Path.EndsWith("/spec.md", StringComparison.OrdinalIgnoreCase) then
                 match parseWorkItemMetadata snapshot with
-                | Ok metadata when String.Equals(metadata.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase) -> Some snapshot.Path
+                | Ok metadata when String.Equals(metadata.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase) ->
+                    Some snapshot.Path
                 | _ -> None
             else
                 None)
@@ -378,12 +438,15 @@ Prose status: specified
         let agents = snapshot ".fsgg/agents.yml" model
 
         match project, sdd, agents with
-        | None, None, None -> [ outsideProject() ]
+        | None, None, None -> [ outsideProject () ]
         | _ ->
             let missing =
-                [ if Option.isNone project then missingProjectConfig ".fsgg/project.yml"
-                  if Option.isNone sdd then missingSddConfig ".fsgg/sdd.yml"
-                  if Option.isNone agents then missingAgentsConfig ".fsgg/agents.yml" ]
+                [ if Option.isNone project then
+                      missingProjectConfig ".fsgg/project.yml"
+                  if Option.isNone sdd then
+                      missingSddConfig ".fsgg/sdd.yml"
+                  if Option.isNone agents then
+                      missingAgentsConfig ".fsgg/agents.yml" ]
 
             let malformed =
                 [ match project with
@@ -418,12 +481,18 @@ Prose status: specified
             match parseCharterFrontMatter path existing.Text with
             | Error diagnostic -> [ diagnostic ], existing.Text
             | Ok frontMatter when frontMatter.SchemaVersion <> "1" ->
-                [ malformedCharterFrontMatter path $"Charter schemaVersion '{frontMatter.SchemaVersion}' is not supported." ], existing.Text
+                [ malformedCharterFrontMatter
+                      path
+                      $"Charter schemaVersion '{frontMatter.SchemaVersion}' is not supported." ],
+                existing.Text
             | Ok frontMatter when not (String.Equals(frontMatter.WorkId, workId, StringComparison.OrdinalIgnoreCase)) ->
                 [ charterIdentityMismatch path workId frontMatter.WorkId ], existing.Text
             | Ok frontMatter when not (String.Equals(frontMatter.Stage, "charter", StringComparison.OrdinalIgnoreCase)) ->
-                [ malformedCharterFrontMatter path $"Charter stage '{frontMatter.Stage}' is not 'charter'." ], existing.Text
-            | Ok _ when existing.Text.Contains("<!-- fsgg-sdd: unsafe-overwrite -->", StringComparison.OrdinalIgnoreCase) ->
+                [ malformedCharterFrontMatter path $"Charter stage '{frontMatter.Stage}' is not 'charter'." ],
+                existing.Text
+            | Ok _ when
+                existing.Text.Contains("<!-- fsgg-sdd: unsafe-overwrite -->", StringComparison.OrdinalIgnoreCase)
+                ->
                 [ unsafeOverwrite path ], existing.Text
             | Ok _ -> [], ensureStandardSections workId existing.Text
 
@@ -434,13 +503,19 @@ Prose status: specified
         | None -> [ missingCharterPrerequisite path $"Charter prerequisite '{path}' is missing." ], None
         | Some existing ->
             match parseCharterFrontMatter path existing.Text with
-            | Error _ -> [ missingCharterPrerequisite path "Charter prerequisite front matter is malformed." ], Some existing.Text
+            | Error _ ->
+                [ missingCharterPrerequisite path "Charter prerequisite front matter is malformed." ],
+                Some existing.Text
             | Ok frontMatter when frontMatter.SchemaVersion <> "1" ->
-                [ missingCharterPrerequisite path $"Charter schemaVersion '{frontMatter.SchemaVersion}' is not supported." ], Some existing.Text
+                [ missingCharterPrerequisite
+                      path
+                      $"Charter schemaVersion '{frontMatter.SchemaVersion}' is not supported." ],
+                Some existing.Text
             | Ok frontMatter when not (String.Equals(frontMatter.WorkId, workId, StringComparison.OrdinalIgnoreCase)) ->
                 [ charterIdentityMismatch path workId frontMatter.WorkId ], Some existing.Text
             | Ok frontMatter when not (String.Equals(frontMatter.Stage, "charter", StringComparison.OrdinalIgnoreCase)) ->
-                [ missingCharterPrerequisite path $"Charter stage '{frontMatter.Stage}' is not 'charter'." ], Some existing.Text
+                [ missingCharterPrerequisite path $"Charter stage '{frontMatter.Stage}' is not 'charter'." ],
+                Some existing.Text
             | Ok _ -> [], Some existing.Text
 
     let specificationSummary (facts: SpecificationFacts) : SpecificationSummary =
@@ -459,7 +534,8 @@ Prose status: specified
             match diagnostic.Id, diagnostic.RelatedIds with
             | "duplicateIdentifier", id :: _ -> duplicateSpecificationId path id
             | "unknownReference", id :: _ -> unknownSpecificationReference path id
-            | "workModelInconsistent", idFamily :: _ when idFamily.EndsWith("###", StringComparison.Ordinal) -> missingSpecificationId path idFamily
+            | "workModelInconsistent", idFamily :: _ when idFamily.EndsWith("###", StringComparison.Ordinal) ->
+                missingSpecificationId path idFamily
             | _ -> diagnostic)
 
     let parseSpecificationForCommand path text : Result<SpecificationFacts * Diagnostic list, Diagnostic list> =
@@ -488,7 +564,9 @@ Prose status: specified
                 | Ok(facts, diagnostics) -> diagnostics, Some text, Some(specificationSummary facts)
         | Some existing ->
             let unsafe =
-                if existing.Text.Contains("<!-- fsgg-sdd: unsafe-overwrite -->", StringComparison.OrdinalIgnoreCase) then
+                if
+                    existing.Text.Contains("<!-- fsgg-sdd: unsafe-overwrite -->", StringComparison.OrdinalIgnoreCase)
+                then
                     [ unsafeOverwrite path ]
                 else
                     []
@@ -498,7 +576,10 @@ Prose status: specified
                 let mapped =
                     diagnostics
                     |> List.map (fun diagnostic ->
-                        if diagnostic.Id = "workModelInconsistent" || diagnostic.Id = "malformedSchemaVersion" then
+                        if
+                            diagnostic.Id = "workModelInconsistent"
+                            || diagnostic.Id = "malformedSchemaVersion"
+                        then
                             malformedSpecificationFrontMatter path diagnostic.Message
                         else
                             diagnostic)
@@ -507,16 +588,32 @@ Prose status: specified
             | Ok(facts, diagnostics) ->
                 let identityDiagnostics =
                     frontMatterIdentityDiagnostics
-                        "Specification" LifecycleStage.Specify "specify"
-                        malformedSpecificationFrontMatter specificationIdentityMismatch malformedSpecificationFrontMatter
-                        path workId facts.FrontMatter.SchemaVersion.Major facts.FrontMatter.WorkId.Value facts.FrontMatter.Stage
+                        "Specification"
+                        LifecycleStage.Specify
+                        "specify"
+                        malformedSpecificationFrontMatter
+                        specificationIdentityMismatch
+                        malformedSpecificationFrontMatter
+                        path
+                        workId
+                        facts.FrontMatter.SchemaVersion.Major
+                        facts.FrontMatter.WorkId.Value
+                        facts.FrontMatter.Stage
 
-                let allDiagnostics = unsafe @ identityDiagnostics @ diagnostics |> DiagnosticsModule.sort
+                let allDiagnostics =
+                    unsafe @ identityDiagnostics @ diagnostics |> DiagnosticsModule.sort
                 // Whether the spec's own diagnostics block rewriting its sections — a
                 // content decision distinct from the handler effect-gate `hasBlocking`
                 // single-sourced in `runHandler`.
-                let sectionsBlocked = allDiagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-                let text = if sectionsBlocked then existing.Text else ensureSpecificationSections existing.Text
+                let sectionsBlocked =
+                    allDiagnostics
+                    |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+
+                let text =
+                    if sectionsBlocked then
+                        existing.Text
+                    else
+                        ensureSpecificationSections existing.Text
 
                 let summary =
                     match parseSpecificationForCommand path text with
@@ -530,7 +627,10 @@ Prose status: specified
 
         match snapshot path model with
         | None ->
-            [ missingSpecificationPrerequisite path $"Specification prerequisite '{path}' is missing." ], None, None, None
+            [ missingSpecificationPrerequisite path $"Specification prerequisite '{path}' is missing." ],
+            None,
+            None,
+            None
         | Some existing ->
             match parseSpecificationForCommand path existing.Text with
             | Error diagnostics ->
@@ -542,9 +642,17 @@ Prose status: specified
             | Ok(facts, diagnostics) ->
                 let identityDiagnostics =
                     frontMatterIdentityDiagnostics
-                        "Specification" LifecycleStage.Specify "specify"
-                        malformedSpecificationFacts specificationIdentityMismatch missingSpecificationPrerequisite
-                        path workId facts.FrontMatter.SchemaVersion.Major facts.FrontMatter.WorkId.Value facts.FrontMatter.Stage
+                        "Specification"
+                        LifecycleStage.Specify
+                        "specify"
+                        malformedSpecificationFacts
+                        specificationIdentityMismatch
+                        missingSpecificationPrerequisite
+                        path
+                        workId
+                        facts.FrontMatter.SchemaVersion.Major
+                        facts.FrontMatter.WorkId.Value
+                        facts.FrontMatter.Stage
 
                 let mappedDiagnostics =
                     diagnostics
@@ -555,7 +663,9 @@ Prose status: specified
                         | "missingSpecificationId", _ -> diagnostic
                         | _ -> malformedSpecificationFacts path diagnostic.Message)
 
-                let allDiagnostics = identityDiagnostics @ mappedDiagnostics |> DiagnosticsModule.sort
+                let allDiagnostics =
+                    identityDiagnostics @ mappedDiagnostics |> DiagnosticsModule.sort
+
                 allDiagnostics, Some existing.Text, Some(specificationSummary facts), Some facts
 
     let clarificationSectionText workId heading =
@@ -570,7 +680,8 @@ Prose status: specified
         | _ -> $"## {heading}\n"
 
     let ensureClarificationSections workId text =
-        let normalized = (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
+        let normalized =
+            (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
 
         let missing =
             clarificationStandardSections ()
@@ -579,7 +690,9 @@ Prose status: specified
         if List.isEmpty missing then
             normalized
         else
-            let suffix = missing |> List.map (clarificationSectionText workId) |> String.concat "\n"
+            let suffix =
+                missing |> List.map (clarificationSectionText workId) |> String.concat "\n"
+
             let trimmed = normalized.TrimEnd()
             $"{trimmed}\n\n{suffix}"
 
@@ -597,9 +710,12 @@ Prose status: specified
 
     let clarificationSummary (facts: ClarificationFacts) : ClarificationSummary =
         let answeredQuestionIds =
-            [ facts.Answers |> List.choose (fun answer -> answer.QuestionId |> Option.map _.Value)
-              facts.Decisions |> List.collect (fun decision -> decision.SourceQuestionIds |> List.map _.Value)
-              facts.AcceptedDeferrals |> List.collect (fun decision -> decision.SourceQuestionIds |> List.map _.Value) ]
+            [ facts.Answers
+              |> List.choose (fun answer -> answer.QuestionId |> Option.map _.Value)
+              facts.Decisions
+              |> List.collect (fun decision -> decision.SourceQuestionIds |> List.map _.Value)
+              facts.AcceptedDeferrals
+              |> List.collect (fun decision -> decision.SourceQuestionIds |> List.map _.Value) ]
             |> List.concat
             |> List.distinct
             |> List.sort
@@ -608,10 +724,19 @@ Prose status: specified
           Stage = IdentifiersModule.stageValue facts.FrontMatter.Stage
           Status = facts.FrontMatter.Status
           SourceSpec = facts.FrontMatter.SourceSpec
-          QuestionIds = facts.Questions |> List.map (fun question -> question.QuestionId.Value) |> List.sort
+          QuestionIds =
+            facts.Questions
+            |> List.map (fun question -> question.QuestionId.Value)
+            |> List.sort
           AnsweredQuestionIds = answeredQuestionIds
-          DecisionIds = facts.Decisions |> List.map (fun decision -> decision.DecisionId.Value) |> List.sort
-          AcceptedDeferralIds = facts.AcceptedDeferrals |> List.map (fun decision -> decision.DecisionId.Value) |> List.sort
+          DecisionIds =
+            facts.Decisions
+            |> List.map (fun decision -> decision.DecisionId.Value)
+            |> List.sort
+          AcceptedDeferralIds =
+            facts.AcceptedDeferrals
+            |> List.map (fun decision -> decision.DecisionId.Value)
+            |> List.sort
           RemainingAmbiguityCount = facts.RemainingAmbiguity.Length
           BlockingAmbiguityCount = facts.BlockingAmbiguityCount }
 
@@ -669,11 +794,16 @@ Prose status: specified
         else
             line.Trim()
 
-    let knownQuestionIdForAmbiguity (ambiguityIndex: int) (existingQuestions: ClarificationQuestion list) (ambiguityValue: string) =
+    let knownQuestionIdForAmbiguity
+        (ambiguityIndex: int)
+        (existingQuestions: ClarificationQuestion list)
+        (ambiguityValue: string)
+        =
         existingQuestions
         |> List.tryFind (fun question ->
             question.SourceAmbiguityIds
-            |> List.exists (fun ambiguity -> String.Equals(ambiguity.Value, ambiguityValue, StringComparison.OrdinalIgnoreCase)))
+            |> List.exists (fun ambiguity ->
+                String.Equals(ambiguity.Value, ambiguityValue, StringComparison.OrdinalIgnoreCase)))
         |> Option.map (fun question -> question.QuestionId.Value)
         |> Option.defaultValue (scopedId "CQ" (ambiguityIndex + 1))
 
@@ -683,7 +813,8 @@ Prose status: specified
             (facts.Decisions @ facts.AcceptedDeferrals)
             |> List.tryFind (fun decision ->
                 decision.SourceAmbiguityIds
-                |> List.exists (fun ambiguity -> String.Equals(ambiguity.Value, ambiguityValue, StringComparison.OrdinalIgnoreCase)))
+                |> List.exists (fun ambiguity ->
+                    String.Equals(ambiguity.Value, ambiguityValue, StringComparison.OrdinalIgnoreCase)))
             |> Option.map (fun decision -> decision.DecisionId.Value, decision.Text))
 
     let normalizeDecisionText (text: string) =
@@ -700,7 +831,9 @@ Prose status: specified
         let knownAmbiguities = specFacts.AmbiguityIds |> List.map _.Value |> Set.ofList
         let knownRequirements = specFacts.RequirementIds |> List.map _.Value |> Set.ofList
         let knownStories = specFacts.UserStoryIds |> List.map _.Value |> Set.ofList
-        let knownScenarios = specFacts.AcceptanceScenarioIds |> List.map _.Value |> Set.ofList
+
+        let knownScenarios =
+            specFacts.AcceptanceScenarioIds |> List.map _.Value |> Set.ofList
 
         let generatedQuestionIds =
             specFacts.AmbiguityIds
@@ -717,7 +850,11 @@ Prose status: specified
             lines
             |> List.collect (idMatches pattern)
             |> List.distinct
-            |> List.choose (fun id -> if Set.contains id known then None else Some(unknownClarificationReference path id))
+            |> List.choose (fun id ->
+                if Set.contains id known then
+                    None
+                else
+                    Some(unknownClarificationReference path id))
 
         [ check @"\bAMB-\d{3,}\b" knownAmbiguities
           check @"\bFR-\d{3,}\b" knownRequirements
@@ -726,25 +863,43 @@ Prose status: specified
           check @"\bCQ-\d{3,}\b" knownQuestions ]
         |> List.concat
 
-    let plannedClarificationAnswers (path: string) (request: CommandRequest) (specFacts: SpecificationFacts) (existingFacts: ClarificationFacts option) =
+    let plannedClarificationAnswers
+        (path: string)
+        (request: CommandRequest)
+        (specFacts: SpecificationFacts)
+        (existingFacts: ClarificationFacts option)
+        =
         let lines = inputLines request
-        let existingQuestions = existingFacts |> Option.map _.Questions |> Option.defaultValue []
 
-        let unknownReferences = unknownReferenceDiagnostics path specFacts existingQuestions lines
+        let existingQuestions =
+            existingFacts |> Option.map _.Questions |> Option.defaultValue []
+
+        let unknownReferences =
+            unknownReferenceDiagnostics path specFacts existingQuestions lines
 
         let unresolvedAmbiguities =
             specFacts.AmbiguityIds
             |> List.mapi (fun index ambiguity ->
                 let ambiguityValue = ambiguity.Value
-                let existingResolution = existingResolutionTextForAmbiguity existingFacts ambiguityValue
+
+                let existingResolution =
+                    existingResolutionTextForAmbiguity existingFacts ambiguityValue
 
                 let matchingLine =
                     lines
                     |> List.tryFind (fun line ->
                         line.IndexOf(ambiguityValue, StringComparison.OrdinalIgnoreCase) >= 0
-                        || line.IndexOf(knownQuestionIdForAmbiguity index existingQuestions ambiguityValue, StringComparison.OrdinalIgnoreCase) >= 0)
+                        || line.IndexOf(
+                            knownQuestionIdForAmbiguity index existingQuestions ambiguityValue,
+                            StringComparison.OrdinalIgnoreCase
+                           )
+                           >= 0)
                     |> Option.orElseWith (fun () ->
-                        if specFacts.AmbiguityIds.Length = 1 && lines.Length = 1 && List.isEmpty (idMatches @"\b(?:AMB|CQ|FR|US|AC)-\d{3,}\b" lines.Head) then
+                        if
+                            specFacts.AmbiguityIds.Length = 1
+                            && lines.Length = 1
+                            && List.isEmpty (idMatches @"\b(?:AMB|CQ|FR|US|AC)-\d{3,}\b" lines.Head)
+                        then
                             Some lines.Head
                         else
                             None)
@@ -787,8 +942,7 @@ Prose status: specified
                     match existingResolution with
                     | Some(_, existingText) when normalizeDecisionText existingText <> normalizeDecisionText text ->
                         None
-                    | Some _ ->
-                        None
+                    | Some _ -> None
                     | None ->
                         let decisionId =
                             if kind = "stillOpen" then
@@ -798,13 +952,14 @@ Prose status: specified
                                 nextDecision <- nextDecision + 1
                                 Some id
 
-                        Some
-                            ({ AmbiguityId = ambiguityValue
-                               QuestionId = knownQuestionIdForAmbiguity index existingQuestions ambiguityValue
-                               DecisionId = decisionId
-                               Kind = kind
-                               Text = if String.IsNullOrWhiteSpace text then line else text }
-                            : PlannedClarificationAnswer))
+                        Some(
+                            { AmbiguityId = ambiguityValue
+                              QuestionId = knownQuestionIdForAmbiguity index existingQuestions ambiguityValue
+                              DecisionId = decisionId
+                              Kind = kind
+                              Text = if String.IsNullOrWhiteSpace text then line else text }
+                            : PlannedClarificationAnswer
+                        ))
 
         let conflictDiagnostics =
             unresolvedAmbiguities
@@ -812,6 +967,7 @@ Prose status: specified
                 match existingResolution, matchingLine with
                 | Some(decisionId, existingText), Some line ->
                     let text = answerTextForReference ambiguityValue line
+
                     if normalizeDecisionText existingText <> normalizeDecisionText text then
                         Some(unsafeDecisionChange path decisionId)
                     else
@@ -836,8 +992,7 @@ Prose status: specified
         match answer.DecisionId with
         | Some decisionId when answer.Kind = "acceptedDeferral" ->
             Some $"- {decisionId} [{answer.QuestionId}] [AMB:{answer.AmbiguityId}]: {answer.Text}"
-        | Some decisionId ->
-            Some $"- {decisionId} [{answer.QuestionId}] [AMB:{answer.AmbiguityId}]: {answer.Text}"
+        | Some decisionId -> Some $"- {decisionId} [{answer.QuestionId}] [AMB:{answer.AmbiguityId}]: {answer.Text}"
         | None -> None
 
     let renderRemainingLine (answer: PlannedClarificationAnswer) =
@@ -848,12 +1003,21 @@ Prose status: specified
 
     let clarificationTemplate request workId (specFacts: SpecificationFacts) answers =
         let title = requestTitle request workId
-        let status = if answers |> List.exists (fun answer -> answer.Kind = "stillOpen") then "needsAnswers" else "clarified"
+
+        let status =
+            if answers |> List.exists (fun answer -> answer.Kind = "stillOpen") then
+                "needsAnswers"
+            else
+                "clarified"
 
         let questionLines =
             specFacts.AmbiguityIds
             |> List.mapi (fun index ambiguity -> renderQuestionLine (scopedId "CQ" (index + 1)) ambiguity.Value)
-            |> fun lines -> if List.isEmpty lines then [ "No clarification questions recorded." ] else lines
+            |> fun lines ->
+                if List.isEmpty lines then
+                    [ "No clarification questions recorded." ]
+                else
+                    lines
 
         let answerLines =
             if List.isEmpty answers then
@@ -865,18 +1029,30 @@ Prose status: specified
             answers
             |> List.filter (fun answer -> answer.Kind = "decision")
             |> List.choose renderDecisionLine
-            |> fun lines -> if List.isEmpty lines then [ "No concrete decisions recorded." ] else lines
+            |> fun lines ->
+                if List.isEmpty lines then
+                    [ "No concrete decisions recorded." ]
+                else
+                    lines
 
         let deferralLines =
             answers
             |> List.filter (fun answer -> answer.Kind = "acceptedDeferral")
             |> List.choose renderDecisionLine
-            |> fun lines -> if List.isEmpty lines then [ "No accepted deferrals recorded." ] else lines
+            |> fun lines ->
+                if List.isEmpty lines then
+                    [ "No accepted deferrals recorded." ]
+                else
+                    lines
 
         let remainingLines =
             answers
             |> List.choose renderRemainingLine
-            |> fun lines -> if List.isEmpty lines then [ "No blocking ambiguity remains." ] else lines
+            |> fun lines ->
+                if List.isEmpty lines then
+                    [ "No blocking ambiguity remains." ]
+                else
+                    lines
 
         $"""---
 schemaVersion: 1
@@ -917,7 +1093,9 @@ publicOrToolFacingImpact: true
         if List.isEmpty lines then
             text
         else
-            let normalized = (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
+            let normalized =
+                (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
+
             let split = normalized.Split('\n') |> Array.toList
             let headingPattern = $"^##\\s+{Regex.Escape heading}\\s*$"
 
@@ -943,7 +1121,9 @@ publicOrToolFacingImpact: true
     // separators. If the section is absent it is appended. Used to purge and re-derive
     // machine-generated checklist sections on a stale re-run (§3.1).
     let replaceSectionBody heading (bodyLines: string list) (text: string) =
-        let normalized = (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
+        let normalized =
+            (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
+
         let split = normalized.Split('\n') |> Array.toList
         let headingPattern = $"^##\\s+{Regex.Escape heading}\\s*$"
 
@@ -967,7 +1147,8 @@ publicOrToolFacingImpact: true
     let appendClarificationAnswers (existingText: string) (answers: PlannedClarificationAnswer list) =
         let questionLines =
             answers
-            |> List.filter (fun answer -> not (Regex.IsMatch(existingText, $@"\b{Regex.Escape answer.QuestionId}\b", RegexOptions.IgnoreCase)))
+            |> List.filter (fun answer ->
+                not (Regex.IsMatch(existingText, $@"\b{Regex.Escape answer.QuestionId}\b", RegexOptions.IgnoreCase)))
             |> List.map (fun answer -> renderQuestionLine answer.QuestionId answer.AmbiguityId)
 
         let answerLines = answers |> List.map renderAnswerLine
@@ -996,9 +1177,13 @@ publicOrToolFacingImpact: true
 
         match snapshot path model with
         | None ->
-            let answers, answerDiagnostics = plannedClarificationAnswers path request specFacts None
+            let answers, answerDiagnostics =
+                plannedClarificationAnswers path request specFacts None
 
-            if answerDiagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError) then
+            if
+                answerDiagnostics
+                |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+            then
                 answerDiagnostics |> DiagnosticsModule.sort, None, None
             else
                 let text = clarificationTemplate request workId specFacts answers
@@ -1008,7 +1193,10 @@ publicOrToolFacingImpact: true
                 | Ok(facts, diagnostics) ->
                     let unresolved =
                         if facts.BlockingAmbiguityCount > 0 then
-                            [ unresolvedBlockingAmbiguity path (facts.RemainingAmbiguity |> List.choose (fun item -> item.AmbiguityId |> Option.map _.Value)) ]
+                            [ unresolvedBlockingAmbiguity
+                                  path
+                                  (facts.RemainingAmbiguity
+                                   |> List.choose (fun item -> item.AmbiguityId |> Option.map _.Value)) ]
                         else
                             []
 
@@ -1022,12 +1210,29 @@ publicOrToolFacingImpact: true
                 | Ok(existingFacts, existingDiagnostics) ->
                     let identityDiagnostics =
                         frontMatterIdentityDiagnostics
-                            "Clarification" LifecycleStage.Clarify "clarify"
-                            malformedClarificationFrontMatter clarificationIdentityMismatch malformedClarificationFrontMatter
-                            path workId existingFacts.FrontMatter.SchemaVersion.Major existingFacts.FrontMatter.WorkId.Value existingFacts.FrontMatter.Stage
-                            @ [
-                          if not (String.Equals(normalizeRelativePath existingFacts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
-                              malformedClarificationFrontMatter path $"Clarification sourceSpec '{existingFacts.FrontMatter.SourceSpec}' does not match '{specPath workId}'." ]
+                            "Clarification"
+                            LifecycleStage.Clarify
+                            "clarify"
+                            malformedClarificationFrontMatter
+                            clarificationIdentityMismatch
+                            malformedClarificationFrontMatter
+                            path
+                            workId
+                            existingFacts.FrontMatter.SchemaVersion.Major
+                            existingFacts.FrontMatter.WorkId.Value
+                            existingFacts.FrontMatter.Stage
+                        @ [ if
+                                not (
+                                    String.Equals(
+                                        normalizeRelativePath existingFacts.FrontMatter.SourceSpec,
+                                        specPath workId,
+                                        StringComparison.OrdinalIgnoreCase
+                                    )
+                                )
+                            then
+                                malformedClarificationFrontMatter
+                                    path
+                                    $"Clarification sourceSpec '{existingFacts.FrontMatter.SourceSpec}' does not match '{specPath workId}'." ]
 
                     let ensuredText =
                         if List.isEmpty identityDiagnostics then
@@ -1040,7 +1245,8 @@ publicOrToolFacingImpact: true
                         | Ok(facts, _) -> Some facts
                         | Error _ -> Some existingFacts
 
-                    let answers, answerDiagnostics = plannedClarificationAnswers path request specFacts existingFactsForAnswers
+                    let answers, answerDiagnostics =
+                        plannedClarificationAnswers path request specFacts existingFactsForAnswers
 
                     let proposedText =
                         if List.isEmpty identityDiagnostics && List.isEmpty answerDiagnostics then
@@ -1048,12 +1254,13 @@ publicOrToolFacingImpact: true
                         else
                             existing.Text
 
-                    let parsedProposed =
-                        parseClarificationForCommand path proposedText
+                    let parsedProposed = parseClarificationForCommand path proposedText
 
                     match parsedProposed with
                     | Error diagnostics ->
-                        identityDiagnostics @ diagnostics @ answerDiagnostics |> DiagnosticsModule.sort, Some proposedText, None
+                        identityDiagnostics @ diagnostics @ answerDiagnostics |> DiagnosticsModule.sort,
+                        Some proposedText,
+                        None
                     | Ok(facts, proposedDiagnostics) ->
                         let diagnostics =
                             identityDiagnostics @ proposedDiagnostics @ answerDiagnostics
@@ -1066,7 +1273,10 @@ publicOrToolFacingImpact: true
 
         match snapshot path model with
         | None ->
-            [ missingClarificationPrerequisite path $"Clarification prerequisite '{path}' is missing." ], None, None, None
+            [ missingClarificationPrerequisite path $"Clarification prerequisite '{path}' is missing." ],
+            None,
+            None,
+            None
         | Some existing ->
             match parseClarificationForCommand path existing.Text with
             | Error diagnostics ->
@@ -1078,19 +1288,40 @@ publicOrToolFacingImpact: true
             | Ok(facts, diagnostics) ->
                 let identityDiagnostics =
                     frontMatterIdentityDiagnostics
-                        "Clarification" LifecycleStage.Clarify "clarify"
-                        malformedClarificationFrontMatter clarificationIdentityMismatch missingClarificationPrerequisite
-                        path workId facts.FrontMatter.SchemaVersion.Major facts.FrontMatter.WorkId.Value facts.FrontMatter.Stage
-                        @ [
-                      if not (String.Equals(normalizeRelativePath facts.FrontMatter.SourceSpec, specPath workId, StringComparison.OrdinalIgnoreCase)) then
-                          malformedClarificationFrontMatter path $"Clarification sourceSpec '{facts.FrontMatter.SourceSpec}' does not match '{specPath workId}'." ]
+                        "Clarification"
+                        LifecycleStage.Clarify
+                        "clarify"
+                        malformedClarificationFrontMatter
+                        clarificationIdentityMismatch
+                        missingClarificationPrerequisite
+                        path
+                        workId
+                        facts.FrontMatter.SchemaVersion.Major
+                        facts.FrontMatter.WorkId.Value
+                        facts.FrontMatter.Stage
+                    @ [ if
+                            not (
+                                String.Equals(
+                                    normalizeRelativePath facts.FrontMatter.SourceSpec,
+                                    specPath workId,
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                            )
+                        then
+                            malformedClarificationFrontMatter
+                                path
+                                $"Clarification sourceSpec '{facts.FrontMatter.SourceSpec}' does not match '{specPath workId}'." ]
 
                 let blocking =
                     if facts.BlockingAmbiguityCount > 0 then
-                        [ unresolvedBlockingAmbiguity path (facts.RemainingAmbiguity |> List.choose (fun item -> item.AmbiguityId |> Option.map _.Value)) ]
+                        [ unresolvedBlockingAmbiguity
+                              path
+                              (facts.RemainingAmbiguity
+                               |> List.choose (fun item -> item.AmbiguityId |> Option.map _.Value)) ]
                     else
                         []
 
-                let allDiagnostics = identityDiagnostics @ diagnostics @ blocking |> DiagnosticsModule.sort
-                allDiagnostics, Some existing.Text, Some(clarificationSummary facts), Some facts
+                let allDiagnostics =
+                    identityDiagnostics @ diagnostics @ blocking |> DiagnosticsModule.sort
 
+                allDiagnostics, Some existing.Text, Some(clarificationSummary facts), Some facts

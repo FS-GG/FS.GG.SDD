@@ -65,23 +65,49 @@ module internal HandlersVerify =
         | _ -> "ready"
 
     let verifySourceKind (path: string) =
-        if path = ".fsgg/project.yml" then "projectConfig"
-        elif path = ".fsgg/sdd.yml" then "sddConfig"
-        elif path = ".fsgg/agents.yml" then "agentsConfig"
-        elif path.EndsWith("/spec.md", StringComparison.OrdinalIgnoreCase) then "specification"
-        elif path.EndsWith("/clarifications.md", StringComparison.OrdinalIgnoreCase) then "clarification"
-        elif path.EndsWith("/checklist.md", StringComparison.OrdinalIgnoreCase) then "checklist"
-        elif path.EndsWith("/plan.md", StringComparison.OrdinalIgnoreCase) then "plan"
-        elif path.EndsWith("/tasks.yml", StringComparison.OrdinalIgnoreCase) then "tasks"
-        elif path.EndsWith("/evidence.yml", StringComparison.OrdinalIgnoreCase) then "evidence"
-        elif path.EndsWith("/analysis.json", StringComparison.OrdinalIgnoreCase) then "analysis"
-        elif path.EndsWith("/work-model.json", StringComparison.OrdinalIgnoreCase) then "workModel"
-        else "source"
+        if path = ".fsgg/project.yml" then
+            "projectConfig"
+        elif path = ".fsgg/sdd.yml" then
+            "sddConfig"
+        elif path = ".fsgg/agents.yml" then
+            "agentsConfig"
+        elif path.EndsWith("/spec.md", StringComparison.OrdinalIgnoreCase) then
+            "specification"
+        elif path.EndsWith("/clarifications.md", StringComparison.OrdinalIgnoreCase) then
+            "clarification"
+        elif path.EndsWith("/checklist.md", StringComparison.OrdinalIgnoreCase) then
+            "checklist"
+        elif path.EndsWith("/plan.md", StringComparison.OrdinalIgnoreCase) then
+            "plan"
+        elif path.EndsWith("/tasks.yml", StringComparison.OrdinalIgnoreCase) then
+            "tasks"
+        elif path.EndsWith("/evidence.yml", StringComparison.OrdinalIgnoreCase) then
+            "evidence"
+        elif path.EndsWith("/analysis.json", StringComparison.OrdinalIgnoreCase) then
+            "analysis"
+        elif path.EndsWith("/work-model.json", StringComparison.OrdinalIgnoreCase) then
+            "workModel"
+        else
+            "source"
 
-    let verifySources workId specText clarificationText checklistText planText tasksText evidenceText analysisText workModelJson model : GeneratedViewSource list =
-        [ snapshot ".fsgg/project.yml" model |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
-          snapshot ".fsgg/sdd.yml" model |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
-          snapshot ".fsgg/agents.yml" model |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
+    let verifySources
+        workId
+        specText
+        clarificationText
+        checklistText
+        planText
+        tasksText
+        evidenceText
+        analysisText
+        workModelJson
+        model
+        : GeneratedViewSource list =
+        [ snapshot ".fsgg/project.yml" model
+          |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
+          snapshot ".fsgg/sdd.yml" model
+          |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
+          snapshot ".fsgg/agents.yml" model
+          |> Option.map (fun snap -> analysisSourceFromSnapshot snap.Path snap.Text)
           Some(analysisSourceFromSnapshot (specPath workId) specText)
           Some(analysisSourceFromSnapshot (clarificationPath workId) clarificationText)
           Some(analysisSourceFromSnapshot (checklistPath workId) checklistText)
@@ -106,7 +132,8 @@ module internal HandlersVerify =
     let verifyFindings (diagnostics: Diagnostic list) =
         diagnostics
         |> DiagnosticsModule.sort
-        |> List.mapi (fun index diagnostic -> sprintf "VF%03d" (index + 1), diagnostic, verifyFindingSeverity diagnostic)
+        |> List.mapi (fun index diagnostic ->
+            sprintf "VF%03d" (index + 1), diagnostic, verifyFindingSeverity diagnostic)
 
     let verifyEvidenceDispositionViews (drafts: EvidenceDispositionDraft list) =
         drafts
@@ -121,7 +148,11 @@ module internal HandlersVerify =
               SourceIds = []
               Severity = severity
               DiagnosticIds = draft.DiagnosticIds
-              Correction = if severity = "ready" then "" else $"Resolve evidence obligation {draft.ObligationId}." })
+              Correction =
+                if severity = "ready" then
+                    ""
+                else
+                    $"Resolve evidence obligation {draft.ObligationId}." })
         |> List.sortBy (fun view -> view.Id)
 
     let verifyTestDispositionViews (taskFacts: TaskFacts) (artifact: EvidenceArtifact) =
@@ -135,32 +166,56 @@ module internal HandlersVerify =
                 artifact.Evidence
                 |> List.filter (fun declaration ->
                     declaration.Id.Value = obligationId
-                    || declaration.ObligationRefs |> List.exists (fun id -> String.Equals(id, obligationId, StringComparison.OrdinalIgnoreCase)))
+                    || declaration.ObligationRefs
+                       |> List.exists (fun id -> String.Equals(id, obligationId, StringComparison.OrdinalIgnoreCase)))
 
             let state, diagnostics =
                 if List.isEmpty matches then
                     "missing", [ "verify.missingRequiredTest" ]
-                elif matches |> List.exists (fun declaration -> declaration.Synthetic && Option.isNone declaration.SyntheticDisclosure) then
+                elif
+                    matches
+                    |> List.exists (fun declaration ->
+                        declaration.Synthetic && Option.isNone declaration.SyntheticDisclosure)
+                then
                     "invalid", [ "evidence.undisclosedSyntheticEvidence" ]
                 elif
                     matches
                     |> List.exists (fun declaration ->
-                        (declaration.Kind = EvidenceKind.Deferral || normalizedEvidenceResult declaration.Result = "deferred")
+                        (declaration.Kind = EvidenceKind.Deferral
+                         || normalizedEvidenceResult declaration.Result = "deferred")
                         && (Option.isNone declaration.Rationale
                             || Option.isNone declaration.Owner
                             || Option.isNone declaration.Scope
                             || Option.isNone declaration.LaterLifecycleVisibility))
                 then
                     "invalid", [ "evidence.missingDeferralRationale" ]
-                elif matches |> List.exists (fun declaration -> normalizedEvidenceResult declaration.Result = "pass" && declaration.Synthetic) then
+                elif
+                    matches
+                    |> List.exists (fun declaration ->
+                        normalizedEvidenceResult declaration.Result = "pass" && declaration.Synthetic)
+                then
                     "synthetic", []
-                elif matches |> List.exists (fun declaration -> normalizedEvidenceResult declaration.Result = "pass") then
+                elif
+                    matches
+                    |> List.exists (fun declaration -> normalizedEvidenceResult declaration.Result = "pass")
+                then
                     "satisfied", []
-                elif matches |> List.exists (fun declaration -> normalizedEvidenceResult declaration.Result = "deferred" || declaration.Kind = EvidenceKind.Deferral) then
+                elif
+                    matches
+                    |> List.exists (fun declaration ->
+                        normalizedEvidenceResult declaration.Result = "deferred"
+                        || declaration.Kind = EvidenceKind.Deferral)
+                then
                     "deferred", []
-                elif matches |> List.exists (fun declaration -> normalizedEvidenceResult declaration.Result = "stale") then
+                elif
+                    matches
+                    |> List.exists (fun declaration -> normalizedEvidenceResult declaration.Result = "stale")
+                then
                     "stale", [ "verify.staleRequiredTest" ]
-                elif matches |> List.exists (fun declaration -> normalizedEvidenceResult declaration.Result = "advisory") then
+                elif
+                    matches
+                    |> List.exists (fun declaration -> normalizedEvidenceResult declaration.Result = "advisory")
+                then
                     "advisory", []
                 else
                     "missing", [ "verify.missingRequiredTest" ]
@@ -170,12 +225,24 @@ module internal HandlersVerify =
             { Id = "TD-" + obligationId
               ObligationId = obligationId
               State = state
-              EvidenceIds = matches |> List.map (fun declaration -> declaration.Id.Value) |> List.distinct |> List.sort
+              EvidenceIds =
+                matches
+                |> List.map (fun declaration -> declaration.Id.Value)
+                |> List.distinct
+                |> List.sort
               TaskIds = tasks |> List.map (fun task -> task.Id.Value) |> List.distinct |> List.sort
-              RequirementIds = tasks |> List.collect (fun task -> task.Requirements |> List.map _.Value) |> List.distinct |> List.sort
+              RequirementIds =
+                tasks
+                |> List.collect (fun task -> task.Requirements |> List.map _.Value)
+                |> List.distinct
+                |> List.sort
               Severity = severity
               DiagnosticIds = diagnostics
-              Correction = if severity = "ready" then "" else $"Record a verifying test for {obligationId}." })
+              Correction =
+                if severity = "ready" then
+                    ""
+                else
+                    $"Record a verifying test for {obligationId}." })
         |> List.sortBy (fun view -> view.Id)
 
     let verifySkillViews workId (taskFacts: TaskFacts) (evidenceDrafts: EvidenceDispositionDraft list) =
@@ -207,7 +274,11 @@ module internal HandlersVerify =
               SourceArtifactPath = tasksPath workId
               Severity = if visible then "ready" else "blocking"
               DiagnosticIds = if visible then [] else [ "evidence.missingRequiredSkill" ]
-              Correction = if visible then "" else $"Make required skill '{skill}' visible through lifecycle artifacts or supporting evidence." })
+              Correction =
+                if visible then
+                    ""
+                else
+                    $"Make required skill '{skill}' visible through lifecycle artifacts or supporting evidence." })
         |> List.sortBy (fun view -> view.Skill)
 
     let existingVerifyDiagnostic workId model =
@@ -259,6 +330,7 @@ module internal HandlersVerify =
         writeStringArray writer "findingIds" taskFindingIds
         writer.WriteEndObject()
         writer.WriteStartArray("evidenceDispositions")
+
         evidenceViews
         |> List.iter (fun view ->
             writer.WriteStartObject()
@@ -272,8 +344,10 @@ module internal HandlersVerify =
             writeStringArray writer "diagnosticIds" view.DiagnosticIds
             writer.WriteString("correction", view.Correction)
             writer.WriteEndObject())
+
         writer.WriteEndArray()
         writer.WriteStartArray("testDispositions")
+
         testViews
         |> List.iter (fun view ->
             writer.WriteStartObject()
@@ -287,8 +361,10 @@ module internal HandlersVerify =
             writeStringArray writer "diagnosticIds" view.DiagnosticIds
             writer.WriteString("correction", view.Correction)
             writer.WriteEndObject())
+
         writer.WriteEndArray()
         writer.WriteStartArray("skillVisibility")
+
         skillViews
         |> List.iter (fun view ->
             writer.WriteStartObject()
@@ -300,69 +376,170 @@ module internal HandlersVerify =
             writeStringArray writer "diagnosticIds" view.DiagnosticIds
             writer.WriteString("correction", view.Correction)
             writer.WriteEndObject())
+
         writer.WriteEndArray()
         writeGeneratedViewsArray writer generatedViews
         writeReadinessFindings writer findings
         writeBoundaryFacts writer "governanceCompatibility"
         writeViewDiagnostics writer diagnostics
         writer.WriteString("readiness", readiness)
+
         writeNextAction
             writer
             (readiness = "verificationReady")
             "verify.next.ship"
             "Verification readiness is current and ready for ship."
             "Verification found lifecycle diagnostics that must be corrected before ship."
+
         writer.WriteEndObject()
         writer.Flush()
         Encoding.UTF8.GetString(stream.ToArray())
 
     let computeVerifyPlan model =
-        let (specification, clarification, checklist, plan, tasks, analysis, evidenceSummaryOpt, verificationSummary), diagnostics, generatedViews, effects =
+        let ((specification, clarification, checklist, plan, tasks, analysis, evidenceSummaryOpt, verificationSummary),
+             diagnostics,
+             generatedViews,
+             effects) =
             runHandler model (None, None, None, None, None, None, None, None) (fun workId ->
                 let projectDiagnostics = projectDiagnostics model
                 let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
                 let prereqs = resolvePrerequisites workId model
-                let specificationDiagnostics, specText, specification, specFacts = prereqs.SpecificationDiagnostics, prereqs.SpecificationText, prereqs.Specification, prereqs.SpecificationFacts
-                let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = prereqs.ClarificationDiagnostics, prereqs.ClarificationText, prereqs.Clarification, prereqs.ClarificationFacts
-                let checklistDiagnostics, checklistText, checklist, checklistFacts = prereqs.ChecklistDiagnostics, prereqs.ChecklistText, prereqs.Checklist, prereqs.ChecklistFacts
-                let planDiagnostics, planText, plan, planFacts = prereqs.PlanDiagnostics, prereqs.PlanText, prereqs.Plan, prereqs.PlanFacts
-                let taskDiagnostics, taskText, tasks, taskFacts = prereqs.TaskDiagnostics, prereqs.TaskText, prereqs.Tasks, prereqs.TaskFacts
 
-                let analysisDiagnostics, analysisText, analysis = analysisPrerequisiteDiagnosticsSummaryAndText workId model
-                let existingEvidenceArtifact, existingEvidenceDiagnostics, evidenceText = parseExistingEvidence workId model
+                let specificationDiagnostics, specText, specification, specFacts =
+                    prereqs.SpecificationDiagnostics,
+                    prereqs.SpecificationText,
+                    prereqs.Specification,
+                    prereqs.SpecificationFacts
+
+                let clarificationDiagnostics, clarificationText, clarification, clarificationFacts =
+                    prereqs.ClarificationDiagnostics,
+                    prereqs.ClarificationText,
+                    prereqs.Clarification,
+                    prereqs.ClarificationFacts
+
+                let checklistDiagnostics, checklistText, checklist, checklistFacts =
+                    prereqs.ChecklistDiagnostics, prereqs.ChecklistText, prereqs.Checklist, prereqs.ChecklistFacts
+
+                let planDiagnostics, planText, plan, planFacts =
+                    prereqs.PlanDiagnostics, prereqs.PlanText, prereqs.Plan, prereqs.PlanFacts
+
+                let taskDiagnostics, taskText, tasks, taskFacts =
+                    prereqs.TaskDiagnostics, prereqs.TaskText, prereqs.Tasks, prereqs.TaskFacts
+
+                let analysisDiagnostics, analysisText, analysis =
+                    analysisPrerequisiteDiagnosticsSummaryAndText workId model
+
+                let existingEvidenceArtifact, existingEvidenceDiagnostics, evidenceText =
+                    parseExistingEvidence workId model
 
                 let evidencePresenceDiagnostics =
                     match existingEvidenceArtifact, snapshot (evidencePath workId) model with
-                    | None, None -> [ missingEvidencePrerequisite (evidencePath workId) $"Evidence prerequisite '{evidencePath workId}' is missing." ]
+                    | None, None ->
+                        [ missingEvidencePrerequisite
+                              (evidencePath workId)
+                              $"Evidence prerequisite '{evidencePath workId}' is missing." ]
                     | _ -> []
 
                 let verifyViewDiagnostics = existingVerifyDiagnostic workId model |> Option.toList
 
                 let verificationDiagnostics, evidenceSummaryOpt, evidenceViews, testViews, skillViews =
-                    match specFacts, clarificationFacts, checklistFacts, planFacts, taskFacts, specText, clarificationText, checklistText, planText, taskText, analysisText, existingEvidenceArtifact with
-                    | Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts, Some taskFacts, Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText, Some analysisText, Some artifact ->
-                        let currentSnapshots = currentEvidenceSourceSnapshots workId specText clarificationText checklistText planText taskText analysisText
-                        let validationDiagnostics = evidenceValidationDiagnostics workId specFacts clarificationFacts checklistFacts planFacts taskFacts currentSnapshots artifact
+                    match
+                        specFacts,
+                        clarificationFacts,
+                        checklistFacts,
+                        planFacts,
+                        taskFacts,
+                        specText,
+                        clarificationText,
+                        checklistText,
+                        planText,
+                        taskText,
+                        analysisText,
+                        existingEvidenceArtifact
+                    with
+                    | Some specFacts,
+                      Some clarificationFacts,
+                      Some checklistFacts,
+                      Some planFacts,
+                      Some taskFacts,
+                      Some specText,
+                      Some clarificationText,
+                      Some checklistText,
+                      Some planText,
+                      Some taskText,
+                      Some analysisText,
+                      Some artifact ->
+                        let currentSnapshots =
+                            currentEvidenceSourceSnapshots
+                                workId
+                                specText
+                                clarificationText
+                                checklistText
+                                planText
+                                taskText
+                                analysisText
+
+                        let validationDiagnostics =
+                            evidenceValidationDiagnostics
+                                workId
+                                specFacts
+                                clarificationFacts
+                                checklistFacts
+                                planFacts
+                                taskFacts
+                                currentSnapshots
+                                artifact
+
                         let obligations = evidenceObligations taskFacts
                         let dispositions = evidenceDispositions obligations artifact
-                        let dispositionDiagnostics = evidenceDispositionDiagnostics (evidencePath workId) dispositions
+
+                        let dispositionDiagnostics =
+                            evidenceDispositionDiagnostics (evidencePath workId) dispositions
+
                         let evidenceViews = verifyEvidenceDispositionViews dispositions
                         let testViews = verifyTestDispositionViews taskFacts artifact
                         let skillViews = verifySkillViews workId taskFacts dispositions
 
                         let testDiagnostics =
-                            let missing = testViews |> List.filter (fun view -> view.State = "missing") |> List.map _.ObligationId |> List.sort
-                            let stale = testViews |> List.filter (fun view -> view.State = "stale") |> List.map _.ObligationId |> List.sort
+                            let missing =
+                                testViews
+                                |> List.filter (fun view -> view.State = "missing")
+                                |> List.map _.ObligationId
+                                |> List.sort
 
-                            [ if not (List.isEmpty missing) then missingRequiredTest (tasksPath workId) missing
-                              if not (List.isEmpty stale) then staleRequiredTest (tasksPath workId) stale ]
+                            let stale =
+                                testViews
+                                |> List.filter (fun view -> view.State = "stale")
+                                |> List.map _.ObligationId
+                                |> List.sort
+
+                            [ if not (List.isEmpty missing) then
+                                  missingRequiredTest (tasksPath workId) missing
+                              if not (List.isEmpty stale) then
+                                  staleRequiredTest (tasksPath workId) stale ]
 
                         let skillDiagnostics =
-                            let missing = skillViews |> List.filter (fun view -> view.Visibility = "missing") |> List.map _.Skill |> List.sort
-                            if not (List.isEmpty missing) then [ missingRequiredSkill (tasksPath workId) missing ] else []
+                            let missing =
+                                skillViews
+                                |> List.filter (fun view -> view.Visibility = "missing")
+                                |> List.map _.Skill
+                                |> List.sort
+
+                            if not (List.isEmpty missing) then
+                                [ missingRequiredSkill (tasksPath workId) missing ]
+                            else
+                                []
 
                         let summary = evidenceSummary workId artifact dispositions
-                        validationDiagnostics @ dispositionDiagnostics @ testDiagnostics @ skillDiagnostics, Some summary, evidenceViews, testViews, skillViews
+
+                        validationDiagnostics
+                        @ dispositionDiagnostics
+                        @ testDiagnostics
+                        @ skillDiagnostics,
+                        Some summary,
+                        evidenceViews,
+                        testViews,
+                        skillViews
                     | _ -> [], None, [], [], []
 
                 let commandDiagnostics =
@@ -384,41 +561,122 @@ module internal HandlersVerify =
                     match specText, clarificationText, checklistText, planText, taskText with
                     | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText ->
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text
-                        generatedViewPlan model.Request workId charterText (Some specText) (Some clarificationText) (Some checklistText) (Some planText) (Some taskText) evidenceText commandDiagnostics model
-                    | _ ->
-                        blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
+
+                        generatedViewPlan
+                            model.Request
+                            workId
+                            charterText
+                            (Some specText)
+                            (Some clarificationText)
+                            (Some checklistText)
+                            (Some planText)
+                            (Some taskText)
+                            evidenceText
+                            commandDiagnostics
+                            model
+                    | _ -> blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion
 
                 commandDiagnostics @ generatedDiagnostics,
                 (fun hasBlocking diagnostics ->
-                    let readiness = if hasBlocking then "needsVerificationCorrection" else "verificationReady"
+                    let readiness =
+                        if hasBlocking then
+                            "needsVerificationCorrection"
+                        else
+                            "verificationReady"
 
                     let verificationSummary, verifyView, verifyEffects =
-                        match specText, clarificationText, checklistText, planText, taskText, analysisText, taskFacts with
-                        | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText, Some analysisText, Some taskFacts ->
+                        match
+                            specText, clarificationText, checklistText, planText, taskText, analysisText, taskFacts
+                        with
+                        | Some specText,
+                          Some clarificationText,
+                          Some checklistText,
+                          Some planText,
+                          Some taskText,
+                          Some analysisText,
+                          Some taskFacts ->
                             let workModelJson = workModelJsonFromGeneratedEffects workId workModelEffects model
-                            let sources = verifySources workId specText clarificationText checklistText planText taskText (evidenceText |> Option.defaultValue "") (Some analysisText) workModelJson model
+
+                            let sources =
+                                verifySources
+                                    workId
+                                    specText
+                                    clarificationText
+                                    checklistText
+                                    planText
+                                    taskText
+                                    (evidenceText |> Option.defaultValue "")
+                                    (Some analysisText)
+                                    workModelJson
+                                    model
 
                             let lifecycleStages =
                                 [ "specify", (if Option.isSome specFacts then "current" else "missing")
-                                  "clarify", (if Option.isSome clarificationFacts then "current" else "missing")
-                                  "checklist", (if Option.isSome checklistFacts then "current" else "missing")
+                                  "clarify",
+                                  (if Option.isSome clarificationFacts then
+                                       "current"
+                                   else
+                                       "missing")
+                                  "checklist",
+                                  (if Option.isSome checklistFacts then
+                                       "current"
+                                   else
+                                       "missing")
                                   "plan", (if Option.isSome planFacts then "current" else "missing")
                                   "tasks", "current"
-                                  "analyze", (analysis |> Option.map (fun summary -> summary.Readiness) |> Option.defaultValue "missing")
-                                  "evidence", (evidenceSummaryOpt |> Option.map (fun summary -> summary.Readiness) |> Option.defaultValue "missing") ]
+                                  "analyze",
+                                  (analysis
+                                   |> Option.map (fun summary -> summary.Readiness)
+                                   |> Option.defaultValue "missing")
+                                  "evidence",
+                                  (evidenceSummaryOpt
+                                   |> Option.map (fun summary -> summary.Readiness)
+                                   |> Option.defaultValue "missing") ]
 
-                            let dependencyCount = taskFacts.Tasks |> List.collect (fun task -> task.Dependencies) |> List.length
+                            let dependencyCount =
+                                taskFacts.Tasks |> List.collect (fun task -> task.Dependencies) |> List.length
+
                             let dependencyDiagnosticIds = set [ "unknownTaskDependency"; "taskDependencyCycle" ]
                             let statusDiagnosticIds = set [ "skippedTaskMissingRationale" ]
-                            let dependenciesValid = not (diagnostics |> List.exists (fun diagnostic -> Set.contains diagnostic.Id dependencyDiagnosticIds))
-                            let statusesValid = not (diagnostics |> List.exists (fun diagnostic -> Set.contains diagnostic.Id statusDiagnosticIds))
-                            let taskFindingIds = taskFacts.Findings |> List.map (fun finding -> finding.FindingId) |> List.sort
+
+                            let dependenciesValid =
+                                not (
+                                    diagnostics
+                                    |> List.exists (fun diagnostic ->
+                                        Set.contains diagnostic.Id dependencyDiagnosticIds)
+                                )
+
+                            let statusesValid =
+                                not (
+                                    diagnostics
+                                    |> List.exists (fun diagnostic -> Set.contains diagnostic.Id statusDiagnosticIds)
+                                )
+
+                            let taskFindingIds =
+                                taskFacts.Findings |> List.map (fun finding -> finding.FindingId) |> List.sort
 
                             let generatedViewsForVerify =
                                 [ workModelView
                                   analysis
-                                  |> Option.map (fun _ -> generatedViewState (analysisPath workId) "verification" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Current [])
-                                  |> Option.defaultValue (generatedViewState (analysisPath workId) "verification" model.Request.GeneratorVersion [] None GeneratedViewCurrency.Missing []) ]
+                                  |> Option.map (fun _ ->
+                                      generatedViewState
+                                          (analysisPath workId)
+                                          "verification"
+                                          model.Request.GeneratorVersion
+                                          []
+                                          None
+                                          GeneratedViewCurrency.Current
+                                          [])
+                                  |> Option.defaultValue (
+                                      generatedViewState
+                                          (analysisPath workId)
+                                          "verification"
+                                          model.Request.GeneratorVersion
+                                          []
+                                          None
+                                          GeneratedViewCurrency.Missing
+                                          []
+                                  ) ]
 
                             let text =
                                 verifyJson
@@ -427,7 +685,10 @@ module internal HandlersVerify =
                                     readiness
                                     sources
                                     lifecycleStages
-                                    (if hasBlocking then "needsCorrection" else "implementationReady")
+                                    (if hasBlocking then
+                                         "needsCorrection"
+                                     else
+                                         "implementationReady")
                                     taskFacts.Tasks.Length
                                     dependencyCount
                                     dependenciesValid
@@ -440,20 +701,41 @@ module internal HandlersVerify =
                                     diagnostics
 
                             let outputDigest = SchemaVersionModule.outputSha256Text text
-                            let view = generatedViewState (verifyPath workId) "verification" model.Request.GeneratorVersion sources (Some outputDigest) GeneratedViewCurrency.Current []
+
+                            let view =
+                                generatedViewState
+                                    (verifyPath workId)
+                                    "verification"
+                                    model.Request.GeneratorVersion
+                                    sources
+                                    (Some outputDigest)
+                                    GeneratedViewCurrency.Current
+                                    []
 
                             let findings = verifyFindings diagnostics
-                            let findingCount severity = findings |> List.filter (fun (_, _, findingSeverity) -> findingSeverity = severity) |> List.length
-                            let evidenceCount state = evidenceViews |> List.filter (fun view -> view.State = state) |> List.length
-                            let testCount state = testViews |> List.filter (fun view -> view.State = state) |> List.length
 
-                            let summary : VerificationSummary =
+                            let findingCount severity =
+                                findings
+                                |> List.filter (fun (_, _, findingSeverity) -> findingSeverity = severity)
+                                |> List.length
+
+                            let evidenceCount state =
+                                evidenceViews |> List.filter (fun view -> view.State = state) |> List.length
+
+                            let testCount state =
+                                testViews |> List.filter (fun view -> view.State = state) |> List.length
+
+                            let summary: VerificationSummary =
                                 { WorkId = workId
                                   Stage = "verify"
                                   Status = readiness
                                   VerifyPath = verifyPath workId
                                   FindingIds = findings |> List.map (fun (id, _, _) -> id) |> List.sort
-                                  ReadyFindingCount = if readiness = "verificationReady" then evidenceViews.Length + testViews.Length else findingCount "ready"
+                                  ReadyFindingCount =
+                                    if readiness = "verificationReady" then
+                                        evidenceViews.Length + testViews.Length
+                                    else
+                                        findingCount "ready"
                                   AdvisoryCount = findingCount "advisory"
                                   WarningCount = findingCount "warning"
                                   BlockingCount = findingCount "blocking"
@@ -469,8 +751,14 @@ module internal HandlersVerify =
                                   TestMissingCount = testCount "missing"
                                   TestStaleCount = testCount "stale"
                                   TestInvalidCount = testCount "invalid"
-                                  SkillVisibleCount = skillViews |> List.filter (fun view -> view.Visibility = "visible") |> List.length
-                                  SkillMissingCount = skillViews |> List.filter (fun view -> view.Visibility = "missing") |> List.length
+                                  SkillVisibleCount =
+                                    skillViews
+                                    |> List.filter (fun view -> view.Visibility = "visible")
+                                    |> List.length
+                                  SkillMissingCount =
+                                    skillViews
+                                    |> List.filter (fun view -> view.Visibility = "missing")
+                                    |> List.length
                                   SourceSnapshotCount = sources.Length
                                   Readiness = readiness }
 
@@ -478,14 +766,34 @@ module internal HandlersVerify =
                                 if hasBlocking then
                                     []
                                 else
-                                    [ CreateDirectory(readinessDirectory workId); WriteFile(verifyPath workId, text, GeneratedView) ]
+                                    [ CreateDirectory(readinessDirectory workId)
+                                      WriteFile(verifyPath workId, text, GeneratedView) ]
 
                             Some summary, Some view, effects
                         | _ -> None, None, []
 
                     let generatedViews = [ Some workModelView; verifyView ] |> List.choose id
 
-                    (specification, clarification, checklist, plan, tasks, analysis, evidenceSummaryOpt, verificationSummary), generatedViews, workModelEffects, verifyEffects))
+                    (specification,
+                     clarification,
+                     checklist,
+                     plan,
+                     tasks,
+                     analysis,
+                     evidenceSummaryOpt,
+                     verificationSummary),
+                    generatedViews,
+                    workModelEffects,
+                    verifyEffects))
 
-        diagnostics, specification, clarification, checklist, plan, tasks, analysis, evidenceSummaryOpt, verificationSummary, generatedViews, effects
-
+        diagnostics,
+        specification,
+        clarification,
+        checklist,
+        plan,
+        tasks,
+        analysis,
+        evidenceSummaryOpt,
+        verificationSummary,
+        generatedViews,
+        effects

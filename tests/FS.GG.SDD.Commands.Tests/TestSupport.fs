@@ -67,7 +67,9 @@ module TestSupport =
             cliProcess.ExitCode, stdout, stderr
 
     let tempDirectory () =
-        let path = Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + Guid.NewGuid().ToString("N"))
+        let path =
+            Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + Guid.NewGuid().ToString("N"))
+
         Directory.CreateDirectory path |> ignore
         path
 
@@ -79,7 +81,7 @@ module TestSupport =
           InputText = None
           OutputFormat = Json
           DryRun = false
-          GeneratorVersion = SchemaVersionModule.currentGeneratorVersion()
+          GeneratorVersion = SchemaVersionModule.currentGeneratorVersion ()
           Provider = None
           Parameters = []
           Force = false
@@ -122,8 +124,7 @@ module TestSupport =
                 interpretUntilIdle nextState nextEffects
 
         let finalModel =
-            interpretUntilIdle model effects
-            |> fun state -> update BuildReport state |> fst
+            interpretUntilIdle model effects |> fun state -> update BuildReport state |> fst
 
         finalModel.Report |> Option.defaultWith (fun () -> buildReport finalModel)
 
@@ -150,8 +151,7 @@ module TestSupport =
     let runSpecify root workId title =
         specifyRequest root workId title |> runRequest
 
-    let clarifyIntent =
-        "AMB-001: Clarification decisions live in clarifications.md."
+    let clarifyIntent = "AMB-001: Clarification decisions live in clarifications.md."
 
     let specifyIntentWithAmbiguity =
         "value: create a native clarify command\nscope: one specified work item\nrequirement: create a clarification artifact with stable ids\nambiguity: where should durable clarification decisions be recorded?"
@@ -222,13 +222,14 @@ module TestSupport =
         shipRequest root workId title |> runRequest
 
     let agentsRequest root workId =
-        { request Agents root with WorkId = Some workId }
+        { request Agents root with
+            WorkId = Some workId }
 
-    let runAgents root workId =
-        agentsRequest root workId |> runRequest
+    let runAgents root workId = agentsRequest root workId |> runRequest
 
     let refreshRequest root workId =
-        { request Refresh root with WorkId = Some workId }
+        { request Refresh root with
+            WorkId = Some workId }
 
     let runRefresh root workId =
         refreshRequest root workId |> runRequest
@@ -253,7 +254,12 @@ module TestSupport =
         initializeProject root
         runCharter root workId title |> ignore
         runSpecify root workId title |> ignore
-        runRequest { clarifyRequest root workId title with InputText = None } |> ignore
+
+        runRequest
+            { clarifyRequest root workId title with
+                InputText = None }
+        |> ignore
+
         runChecklist root workId title |> ignore
         runPlan root workId title |> ignore
 
@@ -407,22 +413,24 @@ No blocking ambiguity remains.
     let writeExistingChecklist root workId text =
         writeRelative root $"work/{workId}/checklist.md" text
 
-    let dryRunDigest text =
-        SchemaVersionModule.sha256Text text
+    let dryRunDigest text = SchemaVersionModule.sha256Text text
 
     let assertChecklistSummary (report: CommandReport) itemCount resultCount =
         match report.Checklist with
         | Some summary ->
             if summary.ItemIds.Length <> itemCount || summary.ResultIds.Length <> resultCount then
-                failwith $"Expected checklist summary {itemCount}/{resultCount}, got {summary.ItemIds.Length}/{summary.ResultIds.Length}."
+                failwith
+                    $"Expected checklist summary {itemCount}/{resultCount}, got {summary.ItemIds.Length}/{summary.ResultIds.Length}."
         | None -> failwith "Expected checklist summary."
 
     let assertPlanSummary (report: CommandReport) decisionCount contractCount obligationCount =
         match report.Plan with
         | Some summary ->
-            if summary.DecisionIds.Length <> decisionCount
-               || summary.ContractReferenceIds.Length <> contractCount
-               || summary.VerificationObligationIds.Length <> obligationCount then
+            if
+                summary.DecisionIds.Length <> decisionCount
+                || summary.ContractReferenceIds.Length <> contractCount
+                || summary.VerificationObligationIds.Length <> obligationCount
+            then
                 failwith
                     $"Expected plan summary {decisionCount}/{contractCount}/{obligationCount}, got {summary.DecisionIds.Length}/{summary.ContractReferenceIds.Length}/{summary.VerificationObligationIds.Length}."
         | None -> failwith "Expected plan summary."
@@ -430,9 +438,11 @@ No blocking ambiguity remains.
     let assertTasksSummary (report: CommandReport) taskCount dependencyCount requiredEvidenceCount =
         match report.Tasks with
         | Some summary ->
-            if summary.TaskIds.Length <> taskCount
-               || summary.DependencyCount <> dependencyCount
-               || summary.RequiredEvidenceCount <> requiredEvidenceCount then
+            if
+                summary.TaskIds.Length <> taskCount
+                || summary.DependencyCount <> dependencyCount
+                || summary.RequiredEvidenceCount <> requiredEvidenceCount
+            then
                 failwith
                     $"Expected task summary {taskCount}/{dependencyCount}/{requiredEvidenceCount}, got {summary.TaskIds.Length}/{summary.DependencyCount}/{summary.RequiredEvidenceCount}."
         | None -> failwith "Expected tasks summary."
@@ -462,12 +472,14 @@ No blocking ambiguity remains.
         match report.Ship with
         | Some summary ->
             if summary.Readiness <> readiness || summary.Disposition <> disposition then
-                failwith $"Expected ship readiness/disposition {readiness}/{disposition}, got {summary.Readiness}/{summary.Disposition}."
+                failwith
+                    $"Expected ship readiness/disposition {readiness}/{disposition}, got {summary.Readiness}/{summary.Disposition}."
         | None -> failwith "Expected ship summary."
 
     let assertAgentGuidanceSummary (report: CommandReport) readiness disposition =
         match report.AgentGuidance with
         | Some summary ->
             if summary.Readiness <> readiness || summary.Disposition <> disposition then
-                failwith $"Expected agent-guidance readiness/disposition {readiness}/{disposition}, got {summary.Readiness}/{summary.Disposition}."
+                failwith
+                    $"Expected agent-guidance readiness/disposition {readiness}/{disposition}, got {summary.Readiness}/{summary.Disposition}."
         | None -> failwith "Expected agent-guidance summary."

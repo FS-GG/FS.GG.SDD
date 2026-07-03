@@ -134,5 +134,4 @@ module VerificationViewTests =
 
         match parseVerificationView snapshot with
         | Ok _ -> failwith "Expected malformed verification view to fail."
-        | Error diagnostics ->
-            Assert.Contains(diagnostics, fun diagnostic -> diagnostic.Id = "workModelInconsistent")
+        | Error diagnostics -> Assert.Contains(diagnostics, fun diagnostic -> diagnostic.Id = "workModelInconsistent")

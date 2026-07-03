@@ -56,6 +56,7 @@ module ReleaseConformanceTests =
         // actually appear in the produced file (a missing one surfaces as drift).
         let mdProduced contract file =
             let text = read file
+
             { Contract = contract
               Source = refOf ("readiness/<id>/" + contract)
               Inventory = documentedSections contract |> List.filter text.Contains }
@@ -79,15 +80,20 @@ module ReleaseConformanceTests =
         let diagnostics = evaluate release (producedArtifacts root shipReport)
 
         let detail =
-            diagnostics
-            |> List.map (fun d -> $"{d.Id}: {d.Message}")
-            |> String.concat "\n"
+            diagnostics |> List.map (fun d -> $"{d.Id}: {d.Message}") |> String.concat "\n"
 
         Assert.True(List.isEmpty diagnostics, $"Expected produced artifacts to conform, but saw drift:\n{detail}")
 
     [<Fact>]
     let ``T015 the catalog covers exactly the produced public outputs (no gap, no extra)`` () =
         let root, shipReport = producedProject ()
-        let producedContracts = producedArtifacts root shipReport |> List.map (fun p -> p.Contract) |> Set.ofList
-        let cataloguedContracts = release.Catalog |> List.map (fun e -> e.Contract) |> Set.ofList
+
+        let producedContracts =
+            producedArtifacts root shipReport
+            |> List.map (fun p -> p.Contract)
+            |> Set.ofList
+
+        let cataloguedContracts =
+            release.Catalog |> List.map (fun e -> e.Contract) |> Set.ofList
+
         Assert.Equal<Set<string>>(cataloguedContracts, producedContracts)

@@ -13,7 +13,13 @@ module Version =
         // Int32.TryParse (NumberStyles.Integer, current culture), which accepted
         // "1. 2.+3" as 1.2.3. This grammar gates provider minimumCliVersion coherence.
         let tryInt (s: string) =
-            match System.Int32.TryParse(s, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture) with
+            match
+                System.Int32.TryParse(
+                    s,
+                    System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture
+                )
+            with
             | true, v -> Some v
             | _ -> None
 
@@ -21,7 +27,10 @@ module Version =
         | [| a; b; c |] ->
             match tryInt a, tryInt b, tryInt c with
             | Some major, Some minor, Some patch when major >= 0 && minor >= 0 && patch >= 0 ->
-                Some { Major = major; Minor = minor; Patch = patch }
+                Some
+                    { Major = major
+                      Minor = minor
+                      Patch = patch }
             | _ -> None
         | _ -> None
 

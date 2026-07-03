@@ -19,7 +19,7 @@ module EvidenceCommandTests =
           StdErr: string }
 
     let initializedAnalyzedProject () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeAnalyzedProject root workId title
         root
 
@@ -77,7 +77,12 @@ evidence:
         Assert.Contains("status: evidenceReady", evidence)
         Assert.Contains($"sourceAnalysis: {analysisPath}", evidence)
         Assert.Contains("sourceSnapshots:", evidence)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = evidencePath && change.Kind = "authoredSource")
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = evidencePath && change.Kind = "authoredSource"
+        )
+
         Assert.Contains(report.GeneratedViews, fun view -> view.Path = workModelPath)
         Assert.Equal(Some "evidence.next.verify", report.NextAction |> Option.map _.ActionId)
 
@@ -87,7 +92,7 @@ evidence:
 
     [<Fact>]
     let ``evidence missing analysis blocks without authored evidence write`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeTasksReadyProject root workId title
         let before = TestSupport.readRelative root evidencePath
 
@@ -108,12 +113,17 @@ evidence:
         Assert.False(TestSupport.existsRelative root ".fsgg/capabilities.yml")
         Assert.False(TestSupport.existsRelative root ".fsgg/tooling.yml")
         Assert.DoesNotContain(serializeReport report, "route")
-        Assert.Contains(report.GovernanceCompatibility, fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated")
+
+        Assert.Contains(
+            report.GovernanceCompatibility,
+            fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated"
+        )
 
     [<Fact>]
     let ``evidence dry run reports authored update without mutation`` () =
         let root = initializedAnalyzedProject ()
         let before = TestSupport.readRelative root evidencePath
+
         let request =
             { TestSupport.evidenceRequest root workId title with
                 DryRun = true }
@@ -123,12 +133,17 @@ evidence:
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
         TestSupport.assertEvidenceSummary report "evidenceReady"
         Assert.Equal(before, TestSupport.readRelative root evidencePath)
-        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = evidencePath && change.SafeWriteDecision = "dryRunOnly")
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = evidencePath && change.SafeWriteDecision = "dryRunOnly"
+        )
 
     [<Fact>]
     let ``evidence blocks undisclosed synthetic evidence without mutation`` () =
         let root = initializedAnalyzedProject ()
         let before = TestSupport.readRelative root evidencePath
+
         let request =
             { TestSupport.evidenceRequest root workId title with
                 InputText = Some undisclosedSyntheticInput }
@@ -142,6 +157,7 @@ evidence:
     [<Fact>]
     let ``evidence deterministic JSON is byte stable`` () =
         let root = initializedAnalyzedProject ()
+
         let request =
             { TestSupport.evidenceRequest root workId title with
                 DryRun = true }

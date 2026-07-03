@@ -50,7 +50,8 @@ module RemediationSupport =
         SeededSkills.seededSkills |> List.map (fun s -> s.Name, s.Body) |> Map.ofList
 
     let canonicalSkillBody (path: string) : string option =
-        Fsgg.SkillMirror.skillIdOfPath path |> Option.bind (fun id -> Map.tryFind id seededBodyById)
+        Fsgg.SkillMirror.skillIdOfPath path
+        |> Option.bind (fun id -> Map.tryFind id seededBodyById)
 
     /// The `skillBodies` content map (path -> canonical body) for a set of present seeded copies —
     /// the content-addressed input the `Drift.compute` unit tests pass.
@@ -82,16 +83,20 @@ module RemediationSupport =
         makeFixture (Some farBehindMinimum) Drift.expectedArtifactPaths true
 
     /// A behind scaffold: CLI below the minimum AND every seeded artifact missing.
-    let behindMissingFixture () = makeFixture (Some farAheadMinimum) [] true
+    let behindMissingFixture () =
+        makeFixture (Some farAheadMinimum) [] true
 
     /// CLI at/above minimum but every seeded artifact missing (only re-seed is actionable).
-    let atOrAboveMissingFixture () = makeFixture (Some farBehindMinimum) [] true
+    let atOrAboveMissingFixture () =
+        makeFixture (Some farBehindMinimum) [] true
 
     /// Provider declares no minimum; all artifacts present (coherent-by-absence, FR-016).
-    let noMinimumFixture () = makeFixture None Drift.expectedArtifactPaths true
+    let noMinimumFixture () =
+        makeFixture None Drift.expectedArtifactPaths true
 
     /// A bare skeleton with no scaffold provenance (FR-015 degradation).
-    let noProvenanceFixture () = makeFixture (Some farBehindMinimum) [] false
+    let noProvenanceFixture () =
+        makeFixture (Some farBehindMinimum) [] false
 
     /// 056: a pre-056 product — the `.claude`/`.codex` seeded copies present, but the third
     /// `.agents/skills/` root entirely missing (scaffolded by a two-root CLI). CLI at/above
@@ -155,13 +160,17 @@ module RemediationSupport =
 
     let productCoherentFixture () = productCoherentFixtureWith []
 
-    let doctorReport root = TestSupport.request Doctor root |> TestSupport.runRequest
+    let doctorReport root =
+        TestSupport.request Doctor root |> TestSupport.runRequest
 
     let upgradeYes root =
-        { TestSupport.request Upgrade root with AssumeYes = true } |> TestSupport.runRequest
+        { TestSupport.request Upgrade root with
+            AssumeYes = true }
+        |> TestSupport.runRequest
 
     /// Non-interactive, no `--yes`: the fail-closed refusal path.
-    let upgradeNonInteractive root = TestSupport.request Upgrade root |> TestSupport.runRequest
+    let upgradeNonInteractive root =
+        TestSupport.request Upgrade root |> TestSupport.runRequest
 
     /// Drive the interactive confirm loop with synthetic scripted stdin (disclosed in the
     /// test name via the `Synthetic` token). Serialized by the `Console` collection.
@@ -172,7 +181,10 @@ module RemediationSupport =
         try
             Console.SetIn(new StringReader(scriptedStdin))
             Console.SetOut(new StringWriter())
-            { TestSupport.request Upgrade root with IsInteractive = true } |> TestSupport.runRequest
+
+            { TestSupport.request Upgrade root with
+                IsInteractive = true }
+            |> TestSupport.runRequest
         finally
             Console.SetIn originalIn
             Console.SetOut originalOut
@@ -214,4 +226,5 @@ module RemediationSupport =
 
     let exitCode (report: CommandReport) = exitCodeForReport report
 
-    let diagnosticIds (report: CommandReport) = report.Diagnostics |> List.map (fun d -> d.Id)
+    let diagnosticIds (report: CommandReport) =
+        report.Diagnostics |> List.map (fun d -> d.Id)

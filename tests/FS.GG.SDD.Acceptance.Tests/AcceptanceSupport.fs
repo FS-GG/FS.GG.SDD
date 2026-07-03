@@ -35,7 +35,8 @@ module AcceptanceSupport =
 
     /// Dynamically skip the current fact (xUnit v2 dynamic skip): `SkipException.ForSkip`
     /// produces the runner's dynamic-skip token, reported as Skipped — not passed, not failed.
-    let skipTest (reason: string) : 'a = raise (Xunit.Sdk.SkipException.ForSkip reason)
+    let skipTest (reason: string) : 'a =
+        raise (Xunit.Sdk.SkipException.ForSkip reason)
 
     /// The external registry path, when the gating env var is set to a non-empty value.
     let registryPath () =
@@ -70,7 +71,9 @@ module AcceptanceSupport =
 
     /// A fresh, empty product root for one run (temp dir, sensed — never compared).
     let newProductRoot () =
-        let path = Path.Combine(Path.GetTempPath(), "fsgg-sdd-acceptance-" + Guid.NewGuid().ToString("N"))
+        let path =
+            Path.Combine(Path.GetTempPath(), "fsgg-sdd-acceptance-" + Guid.NewGuid().ToString("N"))
+
         Directory.CreateDirectory path |> ignore
         path
 
@@ -156,8 +159,7 @@ module AcceptanceSupport =
                 interpretUntilIdle nextState nextEffects
 
         let finalModel =
-            interpretUntilIdle model effects
-            |> fun state -> update BuildReport state |> fst
+            interpretUntilIdle model effects |> fun state -> update BuildReport state |> fst
 
         finalModel.Report |> Option.defaultWith (fun () -> buildReport finalModel)
 
@@ -166,7 +168,8 @@ module AcceptanceSupport =
 
     /// The scaffold summary, or a failure if the report carried none.
     let scaffoldSummary (report: CommandReport) =
-        report.Scaffold |> Option.defaultWith (fun () -> failwith "Expected a scaffold summary.")
+        report.Scaffold
+        |> Option.defaultWith (fun () -> failwith "Expected a scaffold summary.")
 
     /// All diagnostic ids surfaced on the report.
     let diagnosticIds (report: CommandReport) =
@@ -189,7 +192,8 @@ module AcceptanceSupport =
 
         if existsRelative root registryPath then
             let snapshot: FileSnapshot =
-                { Path = registryPath; Text = readRelative root registryPath }
+                { Path = registryPath
+                  Text = readRelative root registryPath }
 
             Config.parseProviderRegistry snapshot
             |> Result.toOption
@@ -220,7 +224,8 @@ module AcceptanceSupport =
                 WorkingDirectory = workingDir,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
-                UseShellExecute = false)
+                UseShellExecute = false
+            )
 
         args |> List.iter info.ArgumentList.Add
 
@@ -235,7 +240,10 @@ module AcceptanceSupport =
     /// can be exercised at a short bound without waiting out the 300 s production bound.
     let runToCompletion (fileName: string) (args: string list) (workingDir: string) (timeoutMs: int) =
         match startProcess fileName args workingDir with
-        | None -> { Started = false; ExitCode = -1; Diagnostic = $"could not start `{fileName}`." }
+        | None ->
+            { Started = false
+              ExitCode = -1
+              Diagnostic = $"could not start `{fileName}`." }
         | Some started ->
             use proc = started
             let stdout = proc.StandardOutput.ReadToEndAsync()
@@ -248,7 +256,11 @@ module AcceptanceSupport =
                   ExitCode = proc.ExitCode
                   Diagnostic = (if proc.ExitCode = 0 then "" else surfaced) }
             else
-                (try proc.Kill true with _ -> ())
+                (try
+                    proc.Kill true
+                 with _ ->
+                     ())
+
                 { Started = true
                   ExitCode = -1
                   Diagnostic = $"`{fileName}` timed out after {timeoutMs} ms." }
@@ -282,7 +294,10 @@ module AcceptanceSupport =
     let resolveBuildCommand (declared: DeclaredCommand option) (root: string) : ProbeCommand =
         match declaredCommandOrDefault declared root with
         | Some command -> command
-        | None -> { Executable = "dotnet"; Arguments = [ "build" ]; WorkingDirectory = root }
+        | None ->
+            { Executable = "dotnet"
+              Arguments = [ "build" ]
+              WorkingDirectory = root }
 
     /// Resolve the run command (pure): a non-blank declared command wins; otherwise
     /// `dotnet run --project <discovered>` at the product root, or `None` when no runnable
@@ -313,7 +328,10 @@ module AcceptanceSupport =
         let overallMs = 60_000
 
         match startProcess command.Executable command.Arguments command.WorkingDirectory with
-        | None -> { Started = false; ExitCode = -1; Diagnostic = $"could not start `{command.Executable}`." }
+        | None ->
+            { Started = false
+              ExitCode = -1
+              Diagnostic = $"could not start `{command.Executable}`." }
         | Some started ->
             use proc = started
             let stdout = proc.StandardOutput.ReadToEndAsync()
@@ -328,16 +346,26 @@ module AcceptanceSupport =
                   Diagnostic = (if proc.ExitCode = 0 then "" else surfaced) }
             else
                 // Survived the grace window without crashing: it started and is running.
-                (try proc.Kill true with _ -> ())
+                (try
+                    proc.Kill true
+                 with _ ->
+                     ())
+
                 proc.WaitForExit(max 0 (overallMs - graceMs)) |> ignore
-                { Started = true; ExitCode = 0; Diagnostic = "" }
+
+                { Started = true
+                  ExitCode = 0
+                  Diagnostic = "" }
 
     /// The run probe: `declared = None` resolves to `dotnet run --project <discovered>`; no
     /// runnable project discoverable ⇒ a diagnosed not-started ProbeResult (FR-007). Declared
     /// and default share the same bounded edge.
     let runProbe (declared: DeclaredCommand option) (root: string) =
         match resolveRunCommand declared root with
-        | None -> { Started = false; ExitCode = -1; Diagnostic = "no runnable project discovered." }
+        | None ->
+            { Started = false
+              ExitCode = -1
+              Diagnostic = "no runnable project discovered." }
         | Some command -> runWithGrace command
 
     // ---------- refresh probe (in-process MVU over the public command surface) ----------
@@ -384,7 +412,9 @@ evidence: []
 
     /// Run `fsgg-sdd refresh` in-process for `workId` (mirrors `TestSupport.runRefresh`).
     let runRefresh root workId =
-        { request Refresh root with WorkId = Some workId } |> runRequest
+        { request Refresh root with
+            WorkId = Some workId }
+        |> runRequest
 
     // ---------- byte-hash helper for refresh-exclusion comparison ----------
 
@@ -399,6 +429,8 @@ evidence: []
 
     /// A stable digest of a file's bytes, for before/after refresh-exclusion comparison.
     let fileDigest (root: string) (relativePath: string) =
-        let bytes = File.ReadAllBytes(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)))
+        let bytes =
+            File.ReadAllBytes(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)))
+
         use sha = System.Security.Cryptography.SHA256.Create()
         Convert.ToHexString(sha.ComputeHash bytes)

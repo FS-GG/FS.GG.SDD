@@ -27,7 +27,8 @@ module ScaffoldGuardTests =
         |> List.map (fun token -> $"{location}: {token}")
 
     let private scanFiles (tokens: string list) (paths: string list) =
-        paths |> List.collect (fun path -> offenders tokens path (File.ReadAllText path))
+        paths
+        |> List.collect (fun path -> offenders tokens path (File.ReadAllText path))
 
     let private sourceFiles () =
         let srcRoot = Path.Combine(TestSupport.repoRoot, "src")
@@ -57,7 +58,8 @@ module ScaffoldGuardTests =
             Path.Combine(TestSupport.repoRoot, "tests", "FS.GG.SDD.Acceptance.Tests")
 
         if Directory.Exists acceptanceRoot then
-            Directory.EnumerateFiles(acceptanceRoot, "*.fs", SearchOption.AllDirectories) |> Seq.toList
+            Directory.EnumerateFiles(acceptanceRoot, "*.fs", SearchOption.AllDirectories)
+            |> Seq.toList
         else
             []
 
@@ -69,7 +71,8 @@ module ScaffoldGuardTests =
           "src/FS.GG.SDD.Commands/CommandRendering.fs"
           "src/FS.GG.SDD.Commands/CommandReports.fs"
           "src/FS.GG.SDD.Cli/Rendering.fs" ]
-        |> List.map (fun relative -> Path.Combine(TestSupport.repoRoot, relative.Replace('/', Path.DirectorySeparatorChar)))
+        |> List.map (fun relative ->
+            Path.Combine(TestSupport.repoRoot, relative.Replace('/', Path.DirectorySeparatorChar)))
         |> List.filter File.Exists
 
     // ---------- C1 (T020): provider-identifier deny-list ----------
@@ -77,24 +80,44 @@ module ScaffoldGuardTests =
     [<Fact>]
     let ``generic SDD source contains no provider-specific identifiers`` () =
         let found = scanFiles forbiddenTokens (sourceFiles ())
-        Assert.True(List.isEmpty found, "Provider-specific tokens leaked into generic SDD source: " + String.Join("; ", found))
+
+        Assert.True(
+            List.isEmpty found,
+            "Provider-specific tokens leaked into generic SDD source: "
+            + String.Join("; ", found)
+        )
 
     [<Fact>]
     let ``generic scaffold contract tests contain no provider-specific identifiers`` () =
         let found = scanFiles forbiddenTokens (genericContractTestFiles ())
-        Assert.True(List.isEmpty found, "Provider-specific tokens leaked into generic-contract tests: " + String.Join("; ", found))
+
+        Assert.True(
+            List.isEmpty found,
+            "Provider-specific tokens leaked into generic-contract tests: "
+            + String.Join("; ", found)
+        )
 
     [<Fact>]
     let ``composition-acceptance project contains no provider-specific identifiers`` () =
         let found = scanFiles forbiddenTokens (acceptanceProjectFiles ())
-        Assert.True(List.isEmpty found, "Provider-specific tokens leaked into the composition-acceptance project: " + String.Join("; ", found))
+
+        Assert.True(
+            List.isEmpty found,
+            "Provider-specific tokens leaked into the composition-acceptance project: "
+            + String.Join("; ", found)
+        )
 
     // ---------- C2 (T021): scoped lifecycle-value scan ----------
 
     [<Fact>]
     let ``scaffold source path special-cases no lifecycle value`` () =
         let found = scanFiles lifecycleValueTokens (scaffoldSourceFiles ())
-        Assert.True(List.isEmpty found, "Lifecycle-value special-casing leaked into scaffold source: " + String.Join("; ", found))
+
+        Assert.True(
+            List.isEmpty found,
+            "Lifecycle-value special-casing leaked into scaffold source: "
+            + String.Join("; ", found)
+        )
 
     // ---------- C3 (T022): planted-violation proof ----------
 
@@ -109,7 +132,11 @@ module ScaffoldGuardTests =
     [<Fact>]
     let ``leak scan catches and locates a planted lifecycle-value special-case`` () =
         // A synthetic source string that branches on a lifecycle value.
-        let planted = "if author.lifecycle = \"" + "spec" + "-kit\" then useSpecKitTemplate () else useDefault ()"
+        let planted =
+            "if author.lifecycle = \""
+            + "spec"
+            + "-kit\" then useSpecKitTemplate () else useDefault ()"
+
         let found = offenders lifecycleValueTokens "planted-source.fs" planted
         Assert.NotEmpty(found)
         Assert.Contains("planted-source.fs: spec-kit", found)
@@ -134,7 +161,8 @@ module ScaffoldGuardTests =
             Path.Combine(TestSupport.repoRoot, "tests", "fixtures", "scaffold-provider")
 
         if Directory.Exists fixturesRoot then
-            Directory.EnumerateFiles(fixturesRoot, "*.*", SearchOption.AllDirectories) |> Seq.toList
+            Directory.EnumerateFiles(fixturesRoot, "*.*", SearchOption.AllDirectories)
+            |> Seq.toList
         else
             []
 
@@ -143,31 +171,56 @@ module ScaffoldGuardTests =
     /// shape, never matching `templateId: fsgg-fixture-app` or `App.fsproj`.
     let private starterValuePattern =
         System.Text.RegularExpressions.Regex(
-            "(?im)^\\s*(default|variant|profile|starter)\\s*:\\s*(" + "app" + "|" + "ga" + "me)\\s*$")
+            "(?im)^\\s*(default|variant|profile|starter)\\s*:\\s*("
+            + "app"
+            + "|"
+            + "ga"
+            + "me)\\s*$"
+        )
 
     let private starterValueOffenders (location: string) (text: string) =
-        if starterValuePattern.IsMatch text then [ $"{location}: starter-value" ] else []
+        if starterValuePattern.IsMatch text then
+            [ $"{location}: starter-value" ]
+        else
+            []
 
     // ---------- C4 (050 T020): bare starter-value deny-list ----------
 
     [<Fact>]
     let ``generic SDD source contains no provider-specific starter value`` () =
         let found = scanFiles starterValueTokens (sourceFiles ())
-        Assert.True(List.isEmpty found, "Provider-specific starter value leaked into generic SDD source: " + String.Join("; ", found))
+
+        Assert.True(
+            List.isEmpty found,
+            "Provider-specific starter value leaked into generic SDD source: "
+            + String.Join("; ", found)
+        )
 
     [<Fact>]
     let ``generic scaffold contract tests contain no provider-specific starter value`` () =
         let found = scanFiles starterValueTokens (genericContractTestFiles ())
-        Assert.True(List.isEmpty found, "Provider-specific starter value leaked into generic-contract tests: " + String.Join("; ", found))
+
+        Assert.True(
+            List.isEmpty found,
+            "Provider-specific starter value leaked into generic-contract tests: "
+            + String.Join("; ", found)
+        )
 
     [<Fact>]
     let ``SDD-owned scaffold fixtures carry no provider-specific starter value`` () =
         let bareWord = scanFiles starterValueTokens (scaffoldFixtureFiles ())
+
         let asValue =
             scaffoldFixtureFiles ()
             |> List.collect (fun path -> starterValueOffenders path (File.ReadAllText path))
+
         let found = bareWord @ asValue
-        Assert.True(List.isEmpty found, "Provider-specific starter value leaked into SDD-owned scaffold fixtures: " + String.Join("; ", found))
+
+        Assert.True(
+            List.isEmpty found,
+            "Provider-specific starter value leaked into SDD-owned scaffold fixtures: "
+            + String.Join("; ", found)
+        )
 
     // ---------- C5 (050 T020): planted-violation proof for both shapes ----------
 
@@ -179,7 +232,9 @@ module ScaffoldGuardTests =
 
         // A registry declaring a provider-specific default starter (the literal #44 flip,
         // redirected to FS.GG.Templates — out of scope for SDD-owned fixtures).
-        let plantedRegistry = "    parameters:\n      - key: variant\n        default: " + "ga" + "me\n"
+        let plantedRegistry =
+            "    parameters:\n      - key: variant\n        default: " + "ga" + "me\n"
+
         Assert.NotEmpty(starterValueOffenders "planted.providers.yml" plantedRegistry)
         // The pattern does NOT false-positive on a legitimate fixture template id.
         Assert.Empty(starterValueOffenders "ok.providers.yml" "    templateId: fsgg-fixture-app\n")

@@ -75,7 +75,8 @@ module RegistryDelegationTests =
     // only the parse/triple grammar was extracted.
     let private modelWithRange (range: string) : Registry.RegistryModel =
         { Components =
-            [ { Id = "FS.GG.Contracts"; Version = "1.0.0" }
+            [ { Id = "FS.GG.Contracts"
+                Version = "1.0.0" }
               { Id = "FS.GG.SDD"; Version = "0.2.0" } ]
           Edges =
             [ { Consumer = "FS.GG.SDD"

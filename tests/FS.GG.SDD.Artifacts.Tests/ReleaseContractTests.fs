@@ -21,8 +21,12 @@ module ReleaseContractTests =
     // which is now synced byte-identically from FS-GG/.github and carries no
     // <Version>). The canonical file imports this local override last.
     let directoryBuildPropsVersion () =
-        let text = File.ReadAllText(Path.Combine(TestSupport.repoRoot, "Directory.Build.local.props"))
-        let m = System.Text.RegularExpressions.Regex.Match(text, @"<Version>([^<]+)</Version>")
+        let text =
+            File.ReadAllText(Path.Combine(TestSupport.repoRoot, "Directory.Build.local.props"))
+
+        let m =
+            System.Text.RegularExpressions.Regex.Match(text, @"<Version>([^<]+)</Version>")
+
         m.Groups[1].Value.Trim()
 
     // ===== US1 — version identity + compatibility (T011) =====
@@ -56,7 +60,9 @@ module ReleaseContractTests =
         // a null Governance range is valid and must round-trip and not block readiness
         let withoutGovernance =
             { release with
-                Compatibility = [ { entry with GovernanceContractVersionRange = None } ] }
+                Compatibility =
+                    [ { entry with
+                          GovernanceContractVersionRange = None } ] }
 
         match parse (serialize withoutGovernance) with
         | Ok parsed -> Assert.Equal(None, (List.exactlyOne parsed.Compatibility).GovernanceContractVersionRange)
@@ -65,9 +71,11 @@ module ReleaseContractTests =
     [<Fact>]
     let ``T011 cliCommandName and package ids identify all three packages`` () =
         Assert.Equal("fsgg-sdd", release.Identity.CliCommandName)
+
         Assert.Equal<string list>(
             [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ],
-            release.Identity.PackageIds)
+            release.Identity.PackageIds
+        )
 
     // ===== US1 — versioning policy (T012) =====
 
@@ -105,8 +113,10 @@ module ReleaseContractTests =
         // the doc is a projection of catalog[]; every contract must appear by its
         // stable identifying token (structured wins on any disagreement)
         let token (contract: string) =
-            if contract.StartsWith "command-report" then "command-report"
-            else contract.Split('/') |> Array.last
+            if contract.StartsWith "command-report" then
+                "command-report"
+            else
+                contract.Split('/') |> Array.last
 
         for entry in release.Catalog do
             Assert.Contains(token entry.Contract, doc)
@@ -148,6 +158,9 @@ module ReleaseContractTests =
               Path = "docs/release/migrations/1.0.0.md"
               BreakingChanges = [ "froze the work-model.json schema" ] }
 
-        let breakingRelease = { release with Migrations = [ breakingNote ] }
+        let breakingRelease =
+            { release with
+                Migrations = [ breakingNote ] }
+
         Assert.NotEmpty breakingRelease.Migrations
         Assert.All(breakingRelease.Migrations, fun note -> Assert.NotEmpty note.BreakingChanges)

@@ -30,7 +30,10 @@ module Config =
           RequireGeneratorVersion: bool
           StaleBehavior: string }
 
-    type AgentGuidanceTarget = { Id: string; GuidancePath: string; GeneratedRoot: string }
+    type AgentGuidanceTarget =
+        { Id: string
+          GuidancePath: string
+          GeneratedRoot: string }
 
     type AgentGuidanceConfig =
         { SchemaVersion: SchemaVersion

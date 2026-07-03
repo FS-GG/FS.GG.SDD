@@ -10,11 +10,22 @@ open Xunit
 /// fact-identical across `--json`, `--text`, and `--rich`; `--rich` redirected equals
 /// `--text` with zero ANSI; the rich path changes no JSON byte. Constructed reports.
 module RemediationProjectionTests =
-    let private interactiveColor = { IsInteractive = true; ColorEnabled = true; Width = Some 100; IsInputInteractive = true }
-    let private nonInteractive = { interactiveColor with IsInteractive = false }
+    let private interactiveColor =
+        { IsInteractive = true
+          ColorEnabled = true
+          Width = Some 100
+          IsInputInteractive = true }
+
+    let private nonInteractive =
+        { interactiveColor with
+            IsInteractive = false }
 
     let private step id outcome targets : ReconciliationStep =
-        { StepId = id; Kind = id; DiffPreview = $"{id} preview"; Outcome = outcome; TargetPaths = targets }
+        { StepId = id
+          Kind = id
+          DiffPreview = $"{id} preview"
+          Outcome = outcome
+          TargetPaths = targets }
 
     let private doctorSummary: DoctorSummary =
         { HasProvenance = true
@@ -108,11 +119,19 @@ module RemediationProjectionTests =
     // the text and rich projections (it was serialized to JSON but never rendered). JSON unchanged.
     let private driftedDoctorReport: CommandReport =
         { doctorReport with
-            Doctor = Some { doctorSummary with SkillDriftPaths = [ ".codex/skills/fs-gg-sdd-plan/SKILL.md"; ".claude/skills/fs-gg-sdd-ship/SKILL.md" ] } }
+            Doctor =
+                Some
+                    { doctorSummary with
+                        SkillDriftPaths =
+                            [ ".codex/skills/fs-gg-sdd-plan/SKILL.md"
+                              ".claude/skills/fs-gg-sdd-ship/SKILL.md" ] } }
 
     let private driftedUpgradeReport: CommandReport =
         { upgradeReport with
-            Upgrade = Some { upgradeSummary with SkillDriftPaths = [ ".agents/skills/fs-gg-sdd-verify/SKILL.md" ] } }
+            Upgrade =
+                Some
+                    { upgradeSummary with
+                        SkillDriftPaths = [ ".agents/skills/fs-gg-sdd-verify/SKILL.md" ] } }
 
     [<Fact>]
     let ``skillDriftPaths appear in doctor text and rich, and JSON stays byte-identical`` () =

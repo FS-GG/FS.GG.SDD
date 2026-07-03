@@ -8,9 +8,7 @@ namespace Fsgg
 module Registry =
 
     /// A cross-repo component (repo/package) and its declared version.
-    type RegistryComponent =
-        { Id: string
-          Version: string }
+    type RegistryComponent = { Id: string; Version: string }
 
     /// A dependency edge: `Consumer` depends on `Provider`, declaring the range of
     /// provider versions it is compatible with.

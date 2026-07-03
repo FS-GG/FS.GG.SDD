@@ -44,7 +44,10 @@ module CommandReports =
     val unknownClarificationReference: path: string -> id: string -> Diagnostic
     val unsafeDecisionChange: path: string -> id: string -> Diagnostic
     val unresolvedBlockingAmbiguity: path: string -> ids: string list -> Diagnostic
-    val failedRequirementsQuality: path: string -> message: string -> correction: string -> relatedIds: string list -> Diagnostic
+
+    val failedRequirementsQuality:
+        path: string -> message: string -> correction: string -> relatedIds: string list -> Diagnostic
+
     val checklistIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
     val malformedChecklistFrontMatter: path: string -> message: string -> Diagnostic
     val duplicateChecklistId: path: string -> id: string -> Diagnostic

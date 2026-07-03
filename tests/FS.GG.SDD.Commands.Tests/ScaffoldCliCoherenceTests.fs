@@ -19,12 +19,16 @@ module ScaffoldCliCoherenceTests =
         Path.Combine(TestSupport.repoRoot, "tests", "fixtures", "scaffold-provider")
 
     let private writeRegistry root registryFile =
-        let template = File.ReadAllText(Path.Combine(fixturesRoot, "registries", registryFile))
+        let template =
+            File.ReadAllText(Path.Combine(fixturesRoot, "registries", registryFile))
+
         let resolved = template.Replace("__FIXTURE__", fixturesRoot.Replace('\\', '/'))
         TestSupport.writeRelative root ".fsgg/providers.yml" resolved
 
     let private scaffoldRequest root =
-        { TestSupport.request Scaffold root with Provider = Some "fixture"; Parameters = [ "productName", "Acme" ] }
+        { TestSupport.request Scaffold root with
+            Provider = Some "fixture"
+            Parameters = [ "productName", "Acme" ] }
 
     let private runScaffoldModel request =
         let model, effects = init request
@@ -179,7 +183,9 @@ module ScaffoldCliCoherenceTests =
 
         let request =
             { scaffoldRequest root with
-                GeneratorVersion = { Id = "fsgg-sdd"; Version = "not-a-version" } }
+                GeneratorVersion =
+                    { Id = "fsgg-sdd"
+                      Version = "not-a-version" } }
 
         let report = runScaffold request
         // No advisory: compare(unparseable, minimum) = None ⇒ skip (D7).

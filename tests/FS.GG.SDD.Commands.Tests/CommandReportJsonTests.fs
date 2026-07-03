@@ -9,8 +9,13 @@ open Xunit
 
 module CommandReportJsonTests =
     let dryRunReport () =
-        let root = Path.Combine(TestSupport.repoRoot, "tests", "fixtures", "lifecycle-commands", "deterministic-report")
-        let request = { TestSupport.request Init root with DryRun = true }
+        let root =
+            Path.Combine(TestSupport.repoRoot, "tests", "fixtures", "lifecycle-commands", "deterministic-report")
+
+        let request =
+            { TestSupport.request Init root with
+                DryRun = true }
+
         let model, effects = init request
 
         interpretAll root true effects
@@ -20,8 +25,8 @@ module CommandReportJsonTests =
 
     [<Fact>]
     let ``deterministic JSON excludes absolute project root`` () =
-        let first = dryRunReport() |> serializeReport
-        let second = dryRunReport() |> serializeReport
+        let first = dryRunReport () |> serializeReport
+        let second = dryRunReport () |> serializeReport
 
         Assert.Equal(first, second)
         Assert.Contains("\"projectRoot\": \".\"", first)
@@ -30,9 +35,12 @@ module CommandReportJsonTests =
 
     [<Fact>]
     let ``charter deterministic JSON is byte stable`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
-        let request = { TestSupport.charterRequest root "004-charter-command" "Charter Command" with DryRun = true }
+
+        let request =
+            { TestSupport.charterRequest root "004-charter-command" "Charter Command" with
+                DryRun = true }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport
@@ -46,10 +54,13 @@ module CommandReportJsonTests =
 
     [<Fact>]
     let ``specify deterministic JSON includes specification object`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.runCharter root "005-specify-command" "Specify Command" |> ignore
-        let request = { TestSupport.specifyRequest root "005-specify-command" "Specify Command" with DryRun = true }
+
+        let request =
+            { TestSupport.specifyRequest root "005-specify-command" "Specify Command" with
+                DryRun = true }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport
@@ -65,11 +76,18 @@ module CommandReportJsonTests =
 
     [<Fact>]
     let ``clarify deterministic JSON includes clarification object`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.runCharter root "006-clarify-command" "Clarify Command" |> ignore
-        TestSupport.runRequest { TestSupport.specifyRequest root "006-clarify-command" "Clarify Command" with InputText = Some TestSupport.specifyIntentWithAmbiguity } |> ignore
-        let request = { TestSupport.clarifyRequest root "006-clarify-command" "Clarify Command" with DryRun = true }
+
+        TestSupport.runRequest
+            { TestSupport.specifyRequest root "006-clarify-command" "Clarify Command" with
+                InputText = Some TestSupport.specifyIntentWithAmbiguity }
+        |> ignore
+
+        let request =
+            { TestSupport.clarifyRequest root "006-clarify-command" "Clarify Command" with
+                DryRun = true }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport
@@ -85,12 +103,23 @@ module CommandReportJsonTests =
 
     [<Fact>]
     let ``checklist deterministic JSON includes checklist object`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
-        TestSupport.runCharter root "007-checklist-command" "Checklist Command" |> ignore
-        TestSupport.runSpecify root "007-checklist-command" "Checklist Command" |> ignore
-        TestSupport.runRequest { TestSupport.clarifyRequest root "007-checklist-command" "Checklist Command" with InputText = None } |> ignore
-        let request = { TestSupport.checklistRequest root "007-checklist-command" "Checklist Command" with DryRun = true }
+
+        TestSupport.runCharter root "007-checklist-command" "Checklist Command"
+        |> ignore
+
+        TestSupport.runSpecify root "007-checklist-command" "Checklist Command"
+        |> ignore
+
+        TestSupport.runRequest
+            { TestSupport.clarifyRequest root "007-checklist-command" "Checklist Command" with
+                InputText = None }
+        |> ignore
+
+        let request =
+            { TestSupport.checklistRequest root "007-checklist-command" "Checklist Command" with
+                DryRun = true }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport
@@ -106,13 +135,21 @@ module CommandReportJsonTests =
 
     [<Fact>]
     let ``plan deterministic JSON includes plan object`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.runCharter root "008-plan-command" "Plan Command" |> ignore
         TestSupport.runSpecify root "008-plan-command" "Plan Command" |> ignore
-        TestSupport.runRequest { TestSupport.clarifyRequest root "008-plan-command" "Plan Command" with InputText = None } |> ignore
+
+        TestSupport.runRequest
+            { TestSupport.clarifyRequest root "008-plan-command" "Plan Command" with
+                InputText = None }
+        |> ignore
+
         TestSupport.runChecklist root "008-plan-command" "Plan Command" |> ignore
-        let request = { TestSupport.planRequest root "008-plan-command" "Plan Command" with DryRun = true }
+
+        let request =
+            { TestSupport.planRequest root "008-plan-command" "Plan Command" with
+                DryRun = true }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport
@@ -128,9 +165,12 @@ module CommandReportJsonTests =
 
     [<Fact>]
     let ``tasks deterministic JSON includes task graph object`` () =
-        let root = TestSupport.tempDirectory()
+        let root = TestSupport.tempDirectory ()
         TestSupport.initializePlanReadyProject root "009-tasks-command" "Tasks Command"
-        let request = { TestSupport.tasksRequest root "009-tasks-command" "Tasks Command" with DryRun = true }
+
+        let request =
+            { TestSupport.tasksRequest root "009-tasks-command" "Tasks Command" with
+                DryRun = true }
 
         let first = TestSupport.runRequest request |> serializeReport
         let second = TestSupport.runRequest request |> serializeReport

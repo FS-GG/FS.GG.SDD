@@ -50,22 +50,34 @@ module internal Prerequisites =
           TaskFacts: TaskFacts option }
 
     let resolvePrerequisites workId model : PrerequisiteResolution =
-        let specificationDiagnostics, specText, specification, specFacts = specificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
-        let clarificationDiagnostics, clarificationText, clarification, clarificationFacts = clarificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
+        let specificationDiagnostics, specText, specification, specFacts =
+            specificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
+
+        let clarificationDiagnostics, clarificationText, clarification, clarificationFacts =
+            clarificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model
 
         let checklistDiagnostics, checklistText, checklist, checklistFacts =
             match specFacts, clarificationFacts with
-            | Some specFacts, Some clarificationFacts -> checklistPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts model
+            | Some specFacts, Some clarificationFacts ->
+                checklistPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts model
             | _ -> [], None, None, None
 
         let planDiagnostics, planText, plan, planFacts =
             match specFacts, clarificationFacts, checklistFacts with
-            | Some specFacts, Some clarificationFacts, Some checklistFacts -> planPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts model
+            | Some specFacts, Some clarificationFacts, Some checklistFacts ->
+                planPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts model
             | _ -> [], None, None, None
 
         let taskDiagnostics, taskText, tasks, taskFacts =
             match specFacts, clarificationFacts, checklistFacts, planFacts with
-            | Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts -> tasksPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts planFacts model
+            | Some specFacts, Some clarificationFacts, Some checklistFacts, Some planFacts ->
+                tasksPrerequisiteDiagnosticsTextSummaryAndFacts
+                    workId
+                    specFacts
+                    clarificationFacts
+                    checklistFacts
+                    planFacts
+                    model
             | _ -> [], None, None, None
 
         { SpecificationDiagnostics = specificationDiagnostics
@@ -98,14 +110,28 @@ module internal Prerequisites =
     // write effects, and generated-view effects. The continuation lets handlers
     // whose view content depends on hasBlocking (verify/ship readiness, analyze
     // write gating) read it from the single source instead of recomputing it.
-    let runHandler (model: CommandModel) (empty: 'summaries) (body: string -> Diagnostic list * (bool -> Diagnostic list -> 'summaries * GeneratedViewState list * CommandEffect list * CommandEffect list)) =
+    let runHandler
+        (model: CommandModel)
+        (empty: 'summaries)
+        (body:
+            string
+                -> Diagnostic list *
+                (bool
+                    -> Diagnostic list
+                    -> 'summaries * GeneratedViewState list * CommandEffect list * CommandEffect list))
+        =
         match model.Request.WorkId with
         | None -> empty, model.Diagnostics, [], []
         | Some workId ->
             let commandAndGeneratedDiagnostics, resume = body workId
             let diagnostics = commandAndGeneratedDiagnostics |> DiagnosticsModule.sort
-            let hasBlocking = diagnostics |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
-            let summaries, generatedViews, writeEffects, generatedEffects = resume hasBlocking diagnostics
+
+            let hasBlocking =
+                diagnostics
+                |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+
+            let summaries, generatedViews, writeEffects, generatedEffects =
+                resume hasBlocking diagnostics
+
             let effects = if hasBlocking then [] else writeEffects @ generatedEffects
             summaries, diagnostics, generatedViews, effects
-

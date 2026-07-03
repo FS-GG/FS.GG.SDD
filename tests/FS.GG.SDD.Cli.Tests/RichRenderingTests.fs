@@ -182,6 +182,7 @@ module RichRenderingTests =
         let many = [ for i in 1..12 -> diag $"D-{i}" DiagnosticWarning $"message {i}" ]
         let report = { sampleReport with Diagnostics = many }
         let text = render report
+
         for i in 1..12 do
             Assert.Contains($"D-{i}", text)
 
@@ -248,6 +249,7 @@ module RichRenderingTests =
             { sampleReport with
                 Outcome = CommandOutcome.Blocked
                 Diagnostics = [ diag "ERR-BLOCK" DiagnosticError "blocking" ] }
+
         let text = render blocked
         Assert.Contains(outcomeValue CommandOutcome.Blocked, text)
         Assert.Contains("ERR-BLOCK", text)

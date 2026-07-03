@@ -6,7 +6,11 @@ open System.Text
 open System.Text.RegularExpressions
 
 module SchemaVersion =
-    type SchemaVersion = { Major: int; Minor: int option; Raw: string }
+    type SchemaVersion =
+        { Major: int
+          Minor: int option
+          Raw: string }
+
     type SourceDigest = { Algorithm: string; Value: string }
     type OutputDigest = { Algorithm: string; Value: string }
     type GeneratorVersion = { Id: string; Version: string }
@@ -25,7 +29,10 @@ module SchemaVersion =
           SupportedRange: string
           MigrationHint: string option }
 
-    let create major = { Major = major; Minor = None; Raw = string major }
+    let create major =
+        { Major = major
+          Minor = None
+          Raw = string major }
 
     let parse (value: string) =
         let value = if String.IsNullOrEmpty value then "" else value.Trim()
@@ -47,11 +54,18 @@ module SchemaVersion =
             | None -> malformed
             | Some major ->
                 if not m.Groups[2].Success then
-                    Ok { Major = major; Minor = None; Raw = value }
+                    Ok
+                        { Major = major
+                          Minor = None
+                          Raw = value }
                 else
                     match tryInt m.Groups[2].Value with
                     | None -> malformed
-                    | Some minor -> Ok { Major = major; Minor = Some minor; Raw = value }
+                    | Some minor ->
+                        Ok
+                            { Major = major
+                              Minor = Some minor
+                              Raw = value }
 
     let isSupported version = version.Major = 1
 
@@ -80,16 +94,27 @@ module SchemaVersion =
         else
             match parse raw with
             | Error message -> compatibility raw None Malformed (Some message)
-            | Ok version when version.Major = 1 ->
-                compatibility raw (Some version) Current None
+            | Ok version when version.Major = 1 -> compatibility raw (Some version) Current None
             | Ok version when version.Major = 0 ->
                 compatibility raw (Some version) Deprecated (Some "Migrate the artifact to schemaVersion: 1.")
             | Ok version when version.Major = 2 ->
-                compatibility raw (Some version) Unsupported (Some "Run the documented migration to schemaVersion: 1 before normalization.")
+                compatibility
+                    raw
+                    (Some version)
+                    Unsupported
+                    (Some "Run the documented migration to schemaVersion: 1 before normalization.")
             | Ok version when version.Major > 2 ->
-                compatibility raw (Some version) Future (Some "Use a newer FS.GG.SDD.Artifacts generator or downgrade the artifact schema.")
+                compatibility
+                    raw
+                    (Some version)
+                    Future
+                    (Some "Use a newer FS.GG.SDD.Artifacts generator or downgrade the artifact schema.")
             | Ok version ->
-                compatibility raw (Some version) Unsupported (Some "Use schemaVersion: 1 or add a documented migration path.")
+                compatibility
+                    raw
+                    (Some version)
+                    Unsupported
+                    (Some "Use schemaVersion: 1 or add a documented migration path.")
 
     let isCurrent compatibility = compatibility.Status = Current
     let isDeprecated compatibility = compatibility.Status = Deprecated
@@ -106,40 +131,58 @@ module SchemaVersion =
         Regex.IsMatch(value, @"^[a-f0-9]{64}$", RegexOptions.CultureInvariant)
 
     let createSourceDigest (algorithm: string) (value: string) =
-        let algorithm = if String.IsNullOrEmpty algorithm then "" else algorithm.Trim().ToLowerInvariant()
+        let algorithm =
+            if String.IsNullOrEmpty algorithm then
+                ""
+            else
+                algorithm.Trim().ToLowerInvariant()
+
         let value = if String.IsNullOrEmpty value then "" else value.Trim()
 
         if algorithm <> "sha256" then
             Error "Only sha256 source digests are supported."
         elif isSha256 value then
-            Ok ({ Algorithm = algorithm; Value = value } : SourceDigest)
+            Ok({ Algorithm = algorithm; Value = value }: SourceDigest)
         else
             Error "SHA-256 digests must be lowercase hexadecimal."
 
     let createOutputDigest (algorithm: string) (value: string) =
-        let algorithm = if String.IsNullOrEmpty algorithm then "" else algorithm.Trim().ToLowerInvariant()
+        let algorithm =
+            if String.IsNullOrEmpty algorithm then
+                ""
+            else
+                algorithm.Trim().ToLowerInvariant()
+
         let value = if String.IsNullOrEmpty value then "" else value.Trim()
 
         if algorithm <> "sha256" then
             Error "Only sha256 output digests are supported."
         elif isSha256 value then
-            Ok ({ Algorithm = algorithm; Value = value } : OutputDigest)
+            Ok({ Algorithm = algorithm; Value = value }: OutputDigest)
         else
             Error "SHA-256 digests must be lowercase hexadecimal."
 
     let hex bytes =
-        bytes
-        |> Array.map (fun (b: byte) -> b.ToString("x2"))
-        |> String.concat ""
+        bytes |> Array.map (fun (b: byte) -> b.ToString("x2")) |> String.concat ""
 
     let sha256Text (text: string) =
-        let bytes = Encoding.UTF8.GetBytes(if String.IsNullOrEmpty text then "" else text.Replace("\r\n", "\n"))
+        let bytes =
+            Encoding.UTF8.GetBytes(
+                if String.IsNullOrEmpty text then
+                    ""
+                else
+                    text.Replace("\r\n", "\n")
+            )
+
         let digest = SHA256.HashData bytes |> hex
-        ({ Algorithm = "sha256"; Value = digest } : SourceDigest)
+        ({ Algorithm = "sha256"; Value = digest }: SourceDigest)
 
     let outputSha256Text text =
         let digest = sha256Text text
-        ({ Algorithm = digest.Algorithm; Value = digest.Value } : OutputDigest)
+
+        ({ Algorithm = digest.Algorithm
+           Value = digest.Value }
+        : OutputDigest)
 
     let createGeneratorVersion (id: string) (version: string) =
         let id = if String.IsNullOrEmpty id then "" else id.Trim()
@@ -163,7 +206,8 @@ module SchemaVersion =
         let informational =
             assembly.GetCustomAttributes(typeof<System.Reflection.AssemblyInformationalVersionAttribute>, false)
             |> Array.tryHead
-            |> Option.map (fun attr -> (attr :?> System.Reflection.AssemblyInformationalVersionAttribute).InformationalVersion)
+            |> Option.map (fun attr ->
+                (attr :?> System.Reflection.AssemblyInformationalVersionAttribute).InformationalVersion)
 
         match informational with
         | Some value when not (String.IsNullOrWhiteSpace value) ->
@@ -174,7 +218,12 @@ module SchemaVersion =
 
     let currentGeneratorVersion () =
         let version = assemblyGeneratorVersion ()
+
         match createGeneratorVersion "FS.GG.SDD.Artifacts" version with
         | Ok value -> value
         | Error message ->
-            failwithf "currentGeneratorVersion: invariant violated — generator version %s/%s rejected: %s" "FS.GG.SDD.Artifacts" version message
+            failwithf
+                "currentGeneratorVersion: invariant violated — generator version %s/%s rejected: %s"
+                "FS.GG.SDD.Artifacts"
+                version
+                message

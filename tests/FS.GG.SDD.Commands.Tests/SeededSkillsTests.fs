@@ -45,7 +45,9 @@ module SeededSkillsTests =
         seedInto root |> ignore
 
         // Author edit to one Claude skill; delete one Codex skill entirely.
-        let edited = TestSupport.readRelative root (claudePath "fs-gg-sdd-plan") + "\n\nLOCAL EDIT\n"
+        let edited =
+            TestSupport.readRelative root (claudePath "fs-gg-sdd-plan") + "\n\nLOCAL EDIT\n"
+
         TestSupport.writeRelative root (claudePath "fs-gg-sdd-plan") edited
         File.Delete(Path.Combine(root, (codexPath "fs-gg-sdd-tasks").Replace('/', Path.DirectorySeparatorChar)))
 
@@ -59,10 +61,12 @@ module SeededSkillsTests =
         // never silently rewriting it. The refused-artifact entry records Refuse, not write.
         Assert.Equal(edited, TestSupport.readRelative root (claudePath "fs-gg-sdd-plan"))
         Assert.Contains(report.Diagnostics, fun d -> d.Id = "unsafeOverwrite")
+
         let editedChange =
             report.ChangedArtifacts
             |> List.tryFind (fun c -> c.Path = ".claude/skills/fs-gg-sdd-plan/SKILL.md")
             |> Option.defaultWith (fun () -> failwith "Expected a changed-artifact entry for the edited skill.")
+
         Assert.Equal(ArtifactOperation.Refuse, editedChange.Operation)
         // The deleted file is refilled, and an untouched present file is not disturbed.
         Assert.True(TestSupport.existsRelative root (codexPath "fs-gg-sdd-tasks"), "Deleted skill should be refilled.")
@@ -74,7 +78,9 @@ module SeededSkillsTests =
     [<Fact>]
     let ``two seeding runs produce byte-identical, date-free skill files`` () =
         let mk () =
-            let dir = Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + System.Guid.NewGuid().ToString("N"), "seed-det")
+            let dir =
+                Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + System.Guid.NewGuid().ToString("N"), "seed-det")
+
             Directory.CreateDirectory dir |> ignore
             dir
 
@@ -87,8 +93,12 @@ module SeededSkillsTests =
 
         for name in SeededSkills.skillNames do
             for path in [ claudePath name; codexPath name ] do
-                let a = File.ReadAllBytes(Path.Combine(first, path.Replace('/', Path.DirectorySeparatorChar)))
-                let b = File.ReadAllBytes(Path.Combine(second, path.Replace('/', Path.DirectorySeparatorChar)))
+                let a =
+                    File.ReadAllBytes(Path.Combine(first, path.Replace('/', Path.DirectorySeparatorChar)))
+
+                let b =
+                    File.ReadAllBytes(Path.Combine(second, path.Replace('/', Path.DirectorySeparatorChar)))
+
                 Assert.Equal<byte[]>(a, b)
                 Assert.DoesNotMatch(dateOrTime, TestSupport.readRelative first path)
 
@@ -100,8 +110,12 @@ module SeededSkillsTests =
         seedInto root |> ignore
 
         for name in SeededSkills.skillNames do
-            let claude = File.ReadAllBytes(Path.Combine(root, (claudePath name).Replace('/', Path.DirectorySeparatorChar)))
-            let codex = File.ReadAllBytes(Path.Combine(root, (codexPath name).Replace('/', Path.DirectorySeparatorChar)))
+            let claude =
+                File.ReadAllBytes(Path.Combine(root, (claudePath name).Replace('/', Path.DirectorySeparatorChar)))
+
+            let codex =
+                File.ReadAllBytes(Path.Combine(root, (codexPath name).Replace('/', Path.DirectorySeparatorChar)))
+
             Assert.Equal<byte[]>(claude, codex)
 
     // ---------- 056 T006 (P1–P4): the strict isSddTree/isSddOwned truth table ----------
@@ -138,9 +152,11 @@ module SeededSkillsTests =
         let root = TestSupport.tempDirectory ()
         seedInto root |> ignore
 
-        let bytesAt path = File.ReadAllBytes(Path.Combine(root, (path: string).Replace('/', Path.DirectorySeparatorChar)))
+        let bytesAt path =
+            File.ReadAllBytes(Path.Combine(root, (path: string).Replace('/', Path.DirectorySeparatorChar)))
 
         Assert.NotEmpty SeededSkills.skillNames
+
         for name in SeededSkills.skillNames do
             let claude = bytesAt (claudePath name)
             let codex = bytesAt (codexPath name)
@@ -151,7 +167,9 @@ module SeededSkillsTests =
     [<Fact>]
     let ``two init runs produce byte-stable three-root skill trees`` () =
         let mk () =
-            let dir = Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + System.Guid.NewGuid().ToString("N"), "seed-3root")
+            let dir =
+                Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + System.Guid.NewGuid().ToString("N"), "seed-3root")
+
             Directory.CreateDirectory dir |> ignore
             dir
 
@@ -162,8 +180,12 @@ module SeededSkillsTests =
 
         for name in SeededSkills.skillNames do
             for path in [ claudePath name; codexPath name; agentsPath name ] do
-                let a = File.ReadAllBytes(Path.Combine(first, path.Replace('/', Path.DirectorySeparatorChar)))
-                let b = File.ReadAllBytes(Path.Combine(second, path.Replace('/', Path.DirectorySeparatorChar)))
+                let a =
+                    File.ReadAllBytes(Path.Combine(first, path.Replace('/', Path.DirectorySeparatorChar)))
+
+                let b =
+                    File.ReadAllBytes(Path.Combine(second, path.Replace('/', Path.DirectorySeparatorChar)))
+
                 Assert.Equal<byte[]>(a, b)
 
     // ---------- T013 (US3 / INV-7, FR-010/SC-005): membership + embedded drift guard ----------
@@ -177,8 +199,17 @@ module SeededSkillsTests =
     let ``each embedded skill body matches the on-disk Claude and Codex sources`` () =
         for name in SeededSkills.skillNames do
             let embedded = SeededSkills.loadBody name
-            let claudeSource = File.ReadAllText(Path.Combine(TestSupport.repoRoot, (claudePath name).Replace('/', Path.DirectorySeparatorChar)))
-            let codexSource = File.ReadAllText(Path.Combine(TestSupport.repoRoot, (codexPath name).Replace('/', Path.DirectorySeparatorChar)))
+
+            let claudeSource =
+                File.ReadAllText(
+                    Path.Combine(TestSupport.repoRoot, (claudePath name).Replace('/', Path.DirectorySeparatorChar))
+                )
+
+            let codexSource =
+                File.ReadAllText(
+                    Path.Combine(TestSupport.repoRoot, (codexPath name).Replace('/', Path.DirectorySeparatorChar))
+                )
+
             Assert.Equal(claudeSource, embedded)
             Assert.Equal(claudeSource, codexSource)
 
@@ -187,7 +218,10 @@ module SeededSkillsTests =
     [<Fact>]
     let ``the effects scaffold builds reuse the shared seam and include every seeded skill effect`` () =
         let root = TestSupport.tempDirectory ()
-        let request = { TestSupport.request Scaffold root with Provider = Some "fixture" }
+
+        let request =
+            { TestSupport.request Scaffold root with
+                Provider = Some "fixture" }
 
         let descriptor: Fsgg.Provider.ProviderDescriptor =
             { Name = "fixture"
@@ -208,5 +242,6 @@ module SeededSkillsTests =
         // through scaffold via the reused initEffects seam. Fails if scaffold stops reusing
         // initEffects (056: the third `.agents` root grew the count 30 → 45).
         Assert.Equal(45, List.length SeededSkills.skillEffects)
+
         for effect in SeededSkills.skillEffects do
             Assert.Contains(effect, planned)

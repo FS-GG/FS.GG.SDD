@@ -1,0 +1,7 @@
+# Fantomas ignore (feature 065). Keep `fantomas --check .` scoped to authored,
+# tracked F# source — never build output or vendored/generated code.
+**/obj/
+**/bin/
+**/*.AssemblyInfo.fs
+**/*.AssemblyAttributes.fs
+.fantomas-tool/

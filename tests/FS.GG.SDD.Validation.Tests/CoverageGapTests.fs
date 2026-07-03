@@ -67,7 +67,10 @@ module CoverageGapTests =
     let ``a clean full-surface plan reports no coverage gaps`` () =
         // The compatibility matrix is cheapest; the default plan's commands and
         // contracts exactly match the real surface, so reconciliation finds nothing.
-        let report = run { defaultOptions with OnlyMatrix = Some compatibilityMatrixName }
+        let report =
+            run
+                { defaultOptions with
+                    OnlyMatrix = Some compatibilityMatrixName }
 
         let allGaps =
             report.Matrices

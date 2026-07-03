@@ -13,9 +13,19 @@ module DegradationTests =
     /// The ANSI escape (ESC, 0x1B) that must never appear in degraded output.
     let escChar = char 0x1b
 
-    let interactiveColor = { IsInteractive = true; ColorEnabled = true; Width = Some 100; IsInputInteractive = true }
-    let nonInteractive = { interactiveColor with IsInteractive = false }
-    let colorDisabled = { interactiveColor with ColorEnabled = false }
+    let interactiveColor =
+        { IsInteractive = true
+          ColorEnabled = true
+          Width = Some 100
+          IsInputInteractive = true }
+
+    let nonInteractive =
+        { interactiveColor with
+            IsInteractive = false }
+
+    let colorDisabled =
+        { interactiveColor with
+            ColorEnabled = false }
 
     let sample = RichRenderingTests.sampleReport
 
@@ -73,10 +83,18 @@ module DegradationTests =
 
     /// The routing rule that backs Program.fs: Blocked -> stderr, else stdout.
     let streamFor (report: CommandReport) =
-        if report.Outcome = CommandOutcome.Blocked then Stderr else Stdout
+        if report.Outcome = CommandOutcome.Blocked then
+            Stderr
+        else
+            Stdout
 
-    let blocked = { sample with Outcome = CommandOutcome.Blocked }
-    let succeeding = { sample with Outcome = CommandOutcome.Succeeded }
+    let blocked =
+        { sample with
+            Outcome = CommandOutcome.Blocked }
+
+    let succeeding =
+        { sample with
+            Outcome = CommandOutcome.Succeeded }
 
     [<Fact>]
     let ``T016 stream routing is identical across formats`` () =
@@ -107,12 +125,32 @@ module DegradationTests =
         // A blocked report whose only diagnostic is a *newly invented* defect id — present in no
         // hand-maintained list — still exits 2. This is the silent-demotion the old providerDefectIds
         // set could cause; the typed IsToolDefect bit removes it (feature 062, SC-003).
-        let invented = RichRenderingTests.diag "brand.newDefectNeverRegistered" DiagnosticError "boom" |> markToolDefect
-        Assert.Equal(2, exitCodeForReport { blocked with Diagnostics = [ invented ] })
+        let invented =
+            RichRenderingTests.diag "brand.newDefectNeverRegistered" DiagnosticError "boom"
+            |> markToolDefect
+
+        Assert.Equal(
+            2,
+            exitCodeForReport
+                { blocked with
+                    Diagnostics = [ invented ] }
+        )
 
         // The same id without the bit is a user-input failure → exit 1.
-        let userInput = RichRenderingTests.diag "brand.newDefectNeverRegistered" DiagnosticError "boom"
-        Assert.Equal(1, exitCodeForReport { blocked with Diagnostics = [ userInput ] })
+        let userInput =
+            RichRenderingTests.diag "brand.newDefectNeverRegistered" DiagnosticError "boom"
+
+        Assert.Equal(
+            1,
+            exitCodeForReport
+                { blocked with
+                    Diagnostics = [ userInput ] }
+        )
 
         // A non-blocked outcome ignores the bit entirely → exit 0.
-        Assert.Equal(0, exitCodeForReport { succeeding with Diagnostics = [ invented ] })
+        Assert.Equal(
+            0,
+            exitCodeForReport
+                { succeeding with
+                    Diagnostics = [ invented ] }
+        )

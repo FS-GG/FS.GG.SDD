@@ -10,10 +10,23 @@ open Xunit
 module HelpCommandTests =
     module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
 
-    let private generator = SchemaVersionModule.currentGeneratorVersion()
+    let private generator = SchemaVersionModule.currentGeneratorVersion ()
 
     let private allCommands =
-        [ Init; Charter; Specify; Clarify; Checklist; Plan; Tasks; Analyze; Evidence; Verify; Ship; Agents; Refresh; Scaffold ]
+        [ Init
+          Charter
+          Specify
+          Clarify
+          Checklist
+          Plan
+          Tasks
+          Analyze
+          Evidence
+          Verify
+          Ship
+          Agents
+          Refresh
+          Scaffold ]
 
     [<Fact>]
     let ``top-level help is scoped TopLevel and lists every command plus CLI peers`` () =
@@ -21,8 +34,10 @@ module HelpCommandTests =
 
         Assert.Equal(TopLevel, summary.Scope)
         let names = summary.Commands |> List.map (fun entry -> entry.Name)
+
         for command in allCommands do
             Assert.Contains(commandName command, names)
+
         Assert.Contains("version", names)
         Assert.Contains("validate", names)
         Assert.Contains("registry", names)
@@ -91,10 +106,27 @@ module HelpCommandTests =
     [<Fact>]
     let ``unknownCommand correction names every accepted command`` () =
         let correction = (unknownCommand "frobnicate").Correction
+
         let expected =
-            [ "init"; "charter"; "specify"; "clarify"; "checklist"; "plan"; "tasks"; "analyze"
-              "evidence"; "verify"; "ship"; "agents"; "refresh"; "scaffold"; "doctor"; "upgrade"
-              "validate"; "registry" ]
+            [ "init"
+              "charter"
+              "specify"
+              "clarify"
+              "checklist"
+              "plan"
+              "tasks"
+              "analyze"
+              "evidence"
+              "verify"
+              "ship"
+              "agents"
+              "refresh"
+              "scaffold"
+              "doctor"
+              "upgrade"
+              "validate"
+              "registry" ]
+
         for command in expected do
             Assert.Contains(command, correction)
 
@@ -127,5 +159,6 @@ module HelpCommandTests =
         let report = buildReport model
         let nextAction = Option.get report.NextAction
         Assert.Equal("reseedSeededSkills", nextAction.ActionId)
+
         for root in [ ".claude/skills"; ".codex/skills"; ".agents/skills" ] do
             Assert.Contains(root, nextAction.RequiredArtifacts)

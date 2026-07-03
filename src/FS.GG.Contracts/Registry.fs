@@ -2,9 +2,7 @@ namespace Fsgg
 
 module Registry =
 
-    type RegistryComponent =
-        { Id: string
-          Version: string }
+    type RegistryComponent = { Id: string; Version: string }
 
     type DependencyEdge =
         { Consumer: string
@@ -53,9 +51,7 @@ module Registry =
           To: string
           Via: string }
 
-    type CoherenceEntry =
-        { Id: string
-          Coherent: bool }
+    type CoherenceEntry = { Id: string; Coherent: bool }
 
     type RegistryDocument =
         { SchemaVersion: int
@@ -83,9 +79,7 @@ module Registry =
         | c -> c
 
     /// One range comparator: an operator paired with its bound version.
-    type private Comparator =
-        { Op: string
-          Bound: SemVer }
+    type private Comparator = { Op: string; Bound: SemVer }
 
     let private tryParseComparator (token: string) : Comparator option =
         let ops = [ ">="; "<="; ">"; "<"; "=" ]
@@ -228,10 +222,12 @@ module Registry =
     let private bareIntegerRegex = System.Text.RegularExpressions.Regex(@"^\d+$")
 
     /// `range`: permissive comparator/shorthand set (`1.x`, `>=1.0.0 <2.0.0`).
-    let private rangeRegex = System.Text.RegularExpressions.Regex(@"^[\d.xX*\s<>=~^|.-]+$")
+    let private rangeRegex =
+        System.Text.RegularExpressions.Regex(@"^[\d.xX*\s<>=~^|.-]+$")
 
     let private isValidVersion (text: string) =
-        not (isBlank text) && (semVerRegex.IsMatch text || bareIntegerRegex.IsMatch text)
+        not (isBlank text)
+        && (semVerRegex.IsMatch text || bareIntegerRegex.IsMatch text)
 
     let private isValidRange (text: string) =
         not (isBlank text) && rangeRegex.IsMatch text
@@ -288,8 +284,7 @@ module Registry =
             |> List.collect (fun c ->
                 let entry = if isBlank c.Id then "<unnamed contract>" else c.Id
 
-                let duplicate =
-                    not (isBlank c.Id) && Set.contains c.Id seenIds
+                let duplicate = not (isBlank c.Id) && Set.contains c.Id seenIds
 
                 if not (isBlank c.Id) then
                     seenIds <- Set.add c.Id seenIds

@@ -62,7 +62,9 @@ module SkillMirrorTests =
         let writes = mirror roots [ "s", "body" ]
 
         Assert.Equal<string list>(
-            [ ".claude/skills/s/SKILL.md"; ".codex/skills/s/SKILL.md"; ".agents/skills/s/SKILL.md" ],
+            [ ".claude/skills/s/SKILL.md"
+              ".codex/skills/s/SKILL.md"
+              ".agents/skills/s/SKILL.md" ],
             writes |> List.map (fun w -> w.Path)
         )
 
@@ -71,14 +73,17 @@ module SkillMirrorTests =
     [<Fact>]
     let ``mirror sorts skills by id for a deterministic effect order`` () =
         let paths =
-            mirror [ ".claude" ] [ "beta", "b"; "alpha", "a" ]
-            |> List.map (fun w -> w.Path)
+            mirror [ ".claude" ] [ "beta", "b"; "alpha", "a" ] |> List.map (fun w -> w.Path)
 
         Assert.Equal<string list>([ ".claude/skills/alpha/SKILL.md"; ".claude/skills/beta/SKILL.md" ], paths)
 
     // ----- verify -----
 
-    let private expected id sha = { Id = id; Scope = Process; Sha256 = sha }
+    let private expected id sha =
+        { Id = id
+          Scope = Process
+          Sha256 = sha }
+
     let private copy root id body : ActualCopy = { Root = root; Id = id; Body = body }
 
     let private allPresent id body =
@@ -95,7 +100,9 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let actual =
-            [ copy ".claude" "s" (Some body); copy ".codex" "s" (Some body); copy ".agents" "s" None ]
+            [ copy ".claude" "s" (Some body)
+              copy ".codex" "s" (Some body)
+              copy ".agents" "s" None ]
 
         let drift = verify roots [ expected "s" (sha256 body) ] actual
         let d = List.exactlyOne drift
@@ -106,7 +113,9 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let actual =
-            [ copy ".claude" "s" (Some body); copy ".codex" "s" (Some "EDITED\n"); copy ".agents" "s" (Some body) ]
+            [ copy ".claude" "s" (Some body)
+              copy ".codex" "s" (Some "EDITED\n")
+              copy ".agents" "s" (Some body) ]
 
         // No reference digest ⇒ hash-match skipped, but cross-root divergence is still caught.
         let drift = verify roots [ expected "s" "" ] actual
@@ -118,7 +127,9 @@ module SkillMirrorTests =
         let body = "canonical\n"
 
         let actual =
-            [ copy ".claude" "s" (Some body); copy ".codex" "s" (Some body); copy ".agents" "s" (Some "TAMPERED\n") ]
+            [ copy ".claude" "s" (Some body)
+              copy ".codex" "s" (Some body)
+              copy ".agents" "s" (Some "TAMPERED\n") ]
 
         let drift = verify roots [ expected "s" (sha256 body) ] actual
         let d = List.exactlyOne drift

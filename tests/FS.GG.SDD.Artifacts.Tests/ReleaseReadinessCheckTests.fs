@@ -47,7 +47,9 @@ module ReleaseReadinessCheckTests =
 
     [<Fact>]
     let ``T019 a produced output with no catalog entry is reported not-ready`` () =
-        let trimmed = { release with Catalog = release.Catalog |> List.filter (fun e -> e.Contract <> "ship.json") }
+        let trimmed =
+            { release with
+                Catalog = release.Catalog |> List.filter (fun e -> e.Contract <> "ship.json") }
         // ship.json is still produced, but no longer catalogued
         let diagnostics = evaluate trimmed (conformantProduced release)
         Assert.Contains("releaseOutputUndocumented", diagIds diagnostics)
@@ -58,7 +60,11 @@ module ReleaseReadinessCheckTests =
             { release with
                 Catalog =
                     release.Catalog
-                    |> List.map (fun e -> if e.Contract = "verify.json" then { e with BaselinePresent = false } else e) }
+                    |> List.map (fun e ->
+                        if e.Contract = "verify.json" then
+                            { e with BaselinePresent = false }
+                        else
+                            e) }
 
         let diagnostics = evaluate withoutBaseline (conformantProduced withoutBaseline)
         Assert.Contains("releaseBaselineMissing", diagIds diagnostics)
@@ -68,10 +74,15 @@ module ReleaseReadinessCheckTests =
         // an entry whose SourceArtifact.Path is blank cannot be constructed via
         // ArtifactRef.create, so model the gap by checking evaluate's source guard
         // through a catalog whose entry has been blanked via record copy.
-        let emptyRef = { (release.Catalog.Head.SourceArtifact) with Path = "" }
+        let emptyRef =
+            { (release.Catalog.Head.SourceArtifact) with
+                Path = "" }
+
         let blanked =
             { release with
-                Catalog = release.Catalog |> List.mapi (fun i e -> if i = 0 then { e with SourceArtifact = emptyRef } else e) }
+                Catalog =
+                    release.Catalog
+                    |> List.mapi (fun i e -> if i = 0 then { e with SourceArtifact = emptyRef } else e) }
 
         let diagnostics = evaluate blanked (conformantProduced blanked)
         Assert.Contains("releaseSourceMissing", diagIds diagnostics)
@@ -83,7 +94,11 @@ module ReleaseReadinessCheckTests =
         let produced =
             conformantProduced release
             |> List.map (fun p ->
-                if p.Contract = "work-model.json" then { p with Inventory = "surpriseField" :: p.Inventory } else p)
+                if p.Contract = "work-model.json" then
+                    { p with
+                        Inventory = "surpriseField" :: p.Inventory }
+                else
+                    p)
 
         Assert.Contains("releaseFieldUndocumented", diagIds (evaluate release produced))
 
@@ -92,6 +107,10 @@ module ReleaseReadinessCheckTests =
         let produced =
             conformantProduced release
             |> List.map (fun p ->
-                if p.Contract = "work-model.json" then { p with Inventory = p.Inventory |> List.filter ((<>) "tasks") } else p)
+                if p.Contract = "work-model.json" then
+                    { p with
+                        Inventory = p.Inventory |> List.filter ((<>) "tasks") }
+                else
+                    p)
 
         Assert.Contains("releaseFieldAbsent", diagIds (evaluate release produced))

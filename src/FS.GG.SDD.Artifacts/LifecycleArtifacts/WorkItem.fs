@@ -52,9 +52,7 @@ module WorkItem =
                 |> Option.bind (tryScalarAt [ "schemaVersion" ])
             else
                 try
-                    snapshot.Text
-                    |> parseYaml
-                    |> Option.bind (tryScalarAt [ "schemaVersion" ])
+                    snapshot.Text |> parseYaml |> Option.bind (tryScalarAt [ "schemaVersion" ])
                 with _ ->
                     None
 
@@ -89,9 +87,12 @@ module WorkItem =
     let loadWorkItemFromSnapshots (snapshots: FileSnapshot list) workId =
         let normalized =
             snapshots
-            |> List.map (fun snapshot -> { snapshot with Path = normalizePath snapshot.Path })
+            |> List.map (fun snapshot ->
+                { snapshot with
+                    Path = normalizePath snapshot.Path })
 
-        let byPath = normalized |> List.map (fun snapshot -> snapshot.Path, snapshot) |> Map.ofList
+        let byPath =
+            normalized |> List.map (fun snapshot -> snapshot.Path, snapshot) |> Map.ofList
 
         let missingDiagnostics =
             requiredFiles workId
@@ -99,11 +100,14 @@ module WorkItem =
                 if Map.containsKey path byPath then
                     None
                 else
-                    Some(Diagnostics.missingArtifact (sourceArtifact path kind) $"Create '{path}' for work item '{workId}'."))
+                    Some(
+                        Diagnostics.missingArtifact
+                            (sourceArtifact path kind)
+                            $"Create '{path}' for work item '{workId}'."
+                    ))
 
         let parse path parser =
-            Map.tryFind path byPath
-            |> Option.map parser
+            Map.tryFind path byPath |> Option.map parser
 
         let collect result =
             match result with
@@ -111,9 +115,14 @@ module WorkItem =
             | Some(Error diagnostics) -> None, diagnostics
             | None -> None, []
 
-        let project, projectDiagnostics = parse ".fsgg/project.yml" parseProjectConfig |> collect
+        let project, projectDiagnostics =
+            parse ".fsgg/project.yml" parseProjectConfig |> collect
+
         let sdd, sddDiagnostics = parse ".fsgg/sdd.yml" parseSddLifecyclePolicy |> collect
-        let agents, agentDiagnostics = parse ".fsgg/agents.yml" parseAgentGuidanceConfig |> collect
+
+        let agents, agentDiagnostics =
+            parse ".fsgg/agents.yml" parseAgentGuidanceConfig |> collect
+
         let metadata, metadataDiagnostics =
             match parse $"work/{workId}/spec.md" parseWorkItemMetadata with
             | Some(Ok value) -> value, []
@@ -122,11 +131,17 @@ module WorkItem =
 
         let specSnapshot = Map.tryFind $"work/{workId}/spec.md" byPath
         let clarificationSnapshot = Map.tryFind $"work/{workId}/clarifications.md" byPath
-        let requirements = specSnapshot |> Option.map parseRequirements |> Option.defaultValue []
-        let requirementMentions = specSnapshot |> Option.map parseMarkdownRequirementMentions |> Option.defaultValue []
+
+        let requirements =
+            specSnapshot |> Option.map parseRequirements |> Option.defaultValue []
+
+        let requirementMentions =
+            specSnapshot
+            |> Option.map parseMarkdownRequirementMentions
+            |> Option.defaultValue []
+
         let decisions =
-            [ specSnapshot
-              clarificationSnapshot ]
+            [ specSnapshot; clarificationSnapshot ]
             |> List.choose id
             |> List.collect parseDecisions
             |> List.distinctBy (fun decision -> decision.Id.Value)
@@ -148,12 +163,18 @@ module WorkItem =
             requiredFiles workId
             |> List.tryFind (fun (candidate, _) -> candidate = path)
             |> Option.map snd
-            |> Option.defaultValue
-                (if path.EndsWith("/clarifications.md", StringComparison.OrdinalIgnoreCase) then ArtifactKind.Clarifications
-                 elif path.EndsWith("/checklist.md", StringComparison.OrdinalIgnoreCase) then ArtifactKind.Checklist
-                 elif path.EndsWith("/plan.md", StringComparison.OrdinalIgnoreCase) then ArtifactKind.Plan
-                 elif path.Contains("/readiness/") || path.StartsWith("readiness/") then ArtifactKind.GeneratedView
-                 else ArtifactKind.Other "source")
+            |> Option.defaultValue (
+                if path.EndsWith("/clarifications.md", StringComparison.OrdinalIgnoreCase) then
+                    ArtifactKind.Clarifications
+                elif path.EndsWith("/checklist.md", StringComparison.OrdinalIgnoreCase) then
+                    ArtifactKind.Checklist
+                elif path.EndsWith("/plan.md", StringComparison.OrdinalIgnoreCase) then
+                    ArtifactKind.Plan
+                elif path.Contains("/readiness/") || path.StartsWith("readiness/") then
+                    ArtifactKind.GeneratedView
+                else
+                    ArtifactKind.Other "source"
+            )
 
         let sources =
             normalized
@@ -165,7 +186,8 @@ module WorkItem =
 
         let generatedViews =
             normalized
-            |> List.filter (fun snapshot -> snapshot.Path.StartsWith($"readiness/{workId}/", StringComparison.OrdinalIgnoreCase))
+            |> List.filter (fun snapshot ->
+                snapshot.Path.StartsWith($"readiness/{workId}/", StringComparison.OrdinalIgnoreCase))
 
         let governanceBoundaries =
             [ project |> Option.bind (fun project -> project.GovernancePolicyPath)

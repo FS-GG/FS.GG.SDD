@@ -46,12 +46,11 @@ printfn "workId=%s" (Identifiers.workIdValue workId)
 let request =
     ({ WorkId = Identifiers.workIdValue workId
        Snapshots = snapshots
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion()
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
        ExpectedOutputPath = None }
     : WorkModel.WorkModelGenerationRequest)
 
-let result =
-    Serialization.generateWorkModel request
+let result = Serialization.generateWorkModel request
 
 let model = result.Model
 
@@ -78,12 +77,11 @@ let initRequest =
        OutputFormat = Json
        DryRun = false
        OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
     : CommandRequest)
 
 let runCommand request =
-    let commandModel, commandEffects =
-        CommandWorkflow.init request
+    let commandModel, commandEffects = CommandWorkflow.init request
 
     let rec interpretUntilIdle state pending =
         match pending with
@@ -104,8 +102,7 @@ let runCommand request =
     interpretUntilIdle commandModel commandEffects
     |> fun state -> CommandWorkflow.update BuildReport state |> fst
 
-let initFinalModel =
-    runCommand initRequest
+let initFinalModel = runCommand initRequest
 
 let charterRequest =
     ({ Command = Charter
@@ -116,26 +113,26 @@ let charterRequest =
        OutputFormat = Json
        DryRun = false
        OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
     : CommandRequest)
 
-let charterFinalModel =
-    runCommand charterRequest
+let charterFinalModel = runCommand charterRequest
 
 let specifyRequest =
     ({ Command = Specify
        ProjectRoot = commandRoot
        WorkId = Some "009-tasks-command"
        Title = Some "Tasks Command"
-       InputText = Some "value: create a native tasks command\nscope: one planned work item\nrequirement: create a traceable implementation task graph with stable ids"
+       InputText =
+         Some
+             "value: create a native tasks command\nscope: one planned work item\nrequirement: create a traceable implementation task graph with stable ids"
        OutputFormat = Json
        DryRun = false
        OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
     : CommandRequest)
 
-let specifyFinalModel =
-    runCommand specifyRequest
+let specifyFinalModel = runCommand specifyRequest
 
 let clarifyRequest =
     ({ Command = Clarify
@@ -146,11 +143,10 @@ let clarifyRequest =
        OutputFormat = Json
        DryRun = false
        OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
     : CommandRequest)
 
-let clarifyFinalModel =
-    runCommand clarifyRequest
+let clarifyFinalModel = runCommand clarifyRequest
 
 let checklistRequest =
     ({ Command = Checklist
@@ -161,11 +157,10 @@ let checklistRequest =
        OutputFormat = Json
        DryRun = false
        OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
     : CommandRequest)
 
-let checklistFinalModel =
-    runCommand checklistRequest
+let checklistFinalModel = runCommand checklistRequest
 
 let planRequest =
     ({ Command = Plan
@@ -176,11 +171,10 @@ let planRequest =
        OutputFormat = Json
        DryRun = false
        OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
     : CommandRequest)
 
-let planFinalModel =
-    runCommand planRequest
+let planFinalModel = runCommand planRequest
 
 let tasksRequest =
     ({ Command = Tasks
@@ -191,11 +185,10 @@ let tasksRequest =
        OutputFormat = Json
        DryRun = false
        OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
     : CommandRequest)
 
-let commandFinalModel =
-    runCommand tasksRequest
+let commandFinalModel = runCommand tasksRequest
 
 let commandReport =
     commandFinalModel.Report
@@ -213,6 +206,7 @@ expectEqual "parse agents" (Ok Agents) (CommandTypes.parseCommand "agents")
 expectEqual "agents command stage" "agents" (CommandTypes.commandStage Agents)
 expectEqual "next after agents" None (CommandTypes.nextLifecycleCommand Agents)
 expectEqual "guidance disposition value" "generated-current" (CommandTypes.guidanceDispositionValue GeneratedCurrent)
+
 expectEqual
     "agent-guidance diagnostics"
     "agents.behaviorDivergence,agents.malformedWorkModel,agents.missingWorkModel,agents.noTargets,agents.staleGeneratedGuidance"
@@ -224,6 +218,7 @@ expectEqual
      |> List.map _.Id
      |> List.sort
      |> String.concat ",")
+
 expectEqual "next after tasks" (Some Analyze) (CommandTypes.nextLifecycleCommand Tasks)
 expectEqual "next after analyze" (Some Evidence) (CommandTypes.nextLifecycleCommand Analyze)
 expectEqual "next after evidence" (Some Verify) (CommandTypes.nextLifecycleCommand Evidence)
@@ -239,11 +234,10 @@ let analyzeRequest =
        OutputFormat = Json
        DryRun = false
        OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
     : CommandRequest)
 
-let analysisFinalModel =
-    runCommand analyzeRequest
+let analysisFinalModel = runCommand analyzeRequest
 
 let analysisReport =
     analysisFinalModel.Report
@@ -319,10 +313,11 @@ evidence:
 """
 
 let parsedEvidence =
-    LifecycleArtifacts.parseEvidenceArtifact
-        ({ Path = "work/009-tasks-command/evidence.yml"
-           Text = evidenceInput }
-        : LifecycleArtifacts.FileSnapshot)
+    LifecycleArtifacts.parseEvidenceArtifact (
+        { Path = "work/009-tasks-command/evidence.yml"
+          Text = evidenceInput }
+        : LifecycleArtifacts.FileSnapshot
+    )
     |> Result.defaultWith (fun diagnostics -> failwithf "Expected evidence artifact: %A" diagnostics)
 
 let evidenceRequest =
@@ -334,11 +329,10 @@ let evidenceRequest =
        OutputFormat = Json
        DryRun = false
        OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
     : CommandRequest)
 
-let evidenceFinalModel =
-    runCommand evidenceRequest
+let evidenceFinalModel = runCommand evidenceRequest
 
 let evidenceReport =
     evidenceFinalModel.Report
@@ -360,11 +354,10 @@ let verifyRequest =
        OutputFormat = Json
        DryRun = false
        OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
     : CommandRequest)
 
-let verifyFinalModel =
-    runCommand verifyRequest
+let verifyFinalModel = runCommand verifyRequest
 
 let verifyReport =
     verifyFinalModel.Report
@@ -380,7 +373,13 @@ expectEqual "verify next action" (Some "verify.next.ship") (verifyReport.NextAct
 
 printfn "verifyCommand=%s" (CommandTypes.commandName verifyReport.Command)
 printfn "verifyCommandStage=%s" (CommandTypes.commandStage Verify)
-printfn "nextAfterVerify=%s" (CommandTypes.nextLifecycleCommand Verify |> Option.map CommandTypes.commandName |> Option.defaultValue "none")
+
+printfn
+    "nextAfterVerify=%s"
+    (CommandTypes.nextLifecycleCommand Verify
+     |> Option.map CommandTypes.commandName
+     |> Option.defaultValue "none")
+
 printfn "verifyOutcome=%s" (CommandTypes.outcomeValue verifyReport.Outcome)
 printfn "verifyPath=%s" verificationSummary.VerifyPath
 printfn "verifyReadiness=%s" verificationSummary.Readiness
@@ -389,7 +388,17 @@ printfn "verifyEvidenceSupported=%d" verificationSummary.EvidenceSupportedCount
 printfn "verifyTestSatisfied=%d" verificationSummary.TestSatisfiedCount
 printfn "verifySkillVisible=%d" verificationSummary.SkillVisibleCount
 printfn "verifyBlocking=%d" verificationSummary.BlockingCount
-printfn "verifyDiagnostics=%s" ([ missingEvidencePrerequisite "work/009-tasks-command/evidence.yml" "Evidence is required."; malformedVerificationView "readiness/009-tasks-command/verify.json" "Verify JSON is malformed."; verifyIdentityMismatch "readiness/009-tasks-command/verify.json" "009-tasks-command" "other-work"; missingRequiredTest "work/009-tasks-command/tasks.yml" [ "EV001" ]; staleRequiredTest "work/009-tasks-command/tasks.yml" [ "EV001" ] ] |> List.map _.Id |> String.concat ",")
+
+printfn
+    "verifyDiagnostics=%s"
+    ([ missingEvidencePrerequisite "work/009-tasks-command/evidence.yml" "Evidence is required."
+       malformedVerificationView "readiness/009-tasks-command/verify.json" "Verify JSON is malformed."
+       verifyIdentityMismatch "readiness/009-tasks-command/verify.json" "009-tasks-command" "other-work"
+       missingRequiredTest "work/009-tasks-command/tasks.yml" [ "EV001" ]
+       staleRequiredTest "work/009-tasks-command/tasks.yml" [ "EV001" ] ]
+     |> List.map _.Id
+     |> String.concat ",")
+
 printfn "verifyNextAction=%s" (verifyReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
 
 let shipRequest =
@@ -401,11 +410,10 @@ let shipRequest =
        OutputFormat = Json
        DryRun = false
        OverwritePolicy = RefuseUnsafe
-       GeneratorVersion = SchemaVersion.currentGeneratorVersion() }
+       GeneratorVersion = SchemaVersion.currentGeneratorVersion () }
     : CommandRequest)
 
-let shipFinalModel =
-    runCommand shipRequest
+let shipFinalModel = runCommand shipRequest
 
 let shipReport =
     shipFinalModel.Report
@@ -422,32 +430,104 @@ expectEqual "ship next command null" None (shipReport.NextAction |> Option.bind 
 
 printfn "shipCommand=%s" (CommandTypes.commandName shipReport.Command)
 printfn "shipCommandStage=%s" (CommandTypes.commandStage Ship)
-printfn "nextAfterShip=%s" (CommandTypes.nextLifecycleCommand Ship |> Option.map CommandTypes.commandName |> Option.defaultValue "none")
+
+printfn
+    "nextAfterShip=%s"
+    (CommandTypes.nextLifecycleCommand Ship
+     |> Option.map CommandTypes.commandName
+     |> Option.defaultValue "none")
+
 printfn "shipOutcome=%s" (CommandTypes.outcomeValue shipReport.Outcome)
 printfn "shipPath=%s" shipSummary.ShipPath
 printfn "shipReadiness=%s" shipSummary.Readiness
 printfn "shipDisposition=%s" shipSummary.Disposition
 printfn "shipVerificationReadiness=%s" shipSummary.VerificationReadiness
 printfn "shipBlocking=%d" shipSummary.BlockingCount
-printfn "shipDiagnostics=%s" ([ missingVerificationPrerequisite "readiness/009-tasks-command/verify.json" "Verification is required."; verificationNotReady "readiness/009-tasks-command/verify.json" "needsVerificationCorrection"; failedVerification "readiness/009-tasks-command/verify.json" [ "VF001" ]; shipIdentityMismatch "readiness/009-tasks-command/ship.json" "009-tasks-command" "other-work"; malformedShipView "readiness/009-tasks-command/ship.json" "Ship JSON is malformed." ] |> List.map _.Id |> String.concat ",")
+
+printfn
+    "shipDiagnostics=%s"
+    ([ missingVerificationPrerequisite "readiness/009-tasks-command/verify.json" "Verification is required."
+       verificationNotReady "readiness/009-tasks-command/verify.json" "needsVerificationCorrection"
+       failedVerification "readiness/009-tasks-command/verify.json" [ "VF001" ]
+       shipIdentityMismatch "readiness/009-tasks-command/ship.json" "009-tasks-command" "other-work"
+       malformedShipView "readiness/009-tasks-command/ship.json" "Ship JSON is malformed." ]
+     |> List.map _.Id
+     |> String.concat ",")
+
 printfn "shipNextAction=%s" (shipReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
 
 printfn "command=%s" (CommandTypes.commandName commandReport.Command)
 printfn "tasksCommandStage=%s" (CommandTypes.commandStage Tasks)
-printfn "nextAfterTasks=%s" (CommandTypes.nextLifecycleCommand Tasks |> Option.map CommandTypes.commandName |> Option.defaultValue "none")
+
+printfn
+    "nextAfterTasks=%s"
+    (CommandTypes.nextLifecycleCommand Tasks
+     |> Option.map CommandTypes.commandName
+     |> Option.defaultValue "none")
+
 printfn "analyzeCommandStage=%s" (CommandTypes.commandStage Analyze)
-printfn "nextAfterAnalyze=%s" (CommandTypes.nextLifecycleCommand Analyze |> Option.map CommandTypes.commandName |> Option.defaultValue "none")
+
+printfn
+    "nextAfterAnalyze=%s"
+    (CommandTypes.nextLifecycleCommand Analyze
+     |> Option.map CommandTypes.commandName
+     |> Option.defaultValue "none")
+
 printfn "outcome=%s" (CommandTypes.outcomeValue commandReport.Outcome)
 printfn "changedArtifacts=%d" commandReport.ChangedArtifacts.Length
-printfn "tasks=%d" (commandReport.Tasks |> Option.map (fun summary -> summary.TaskIds.Length) |> Option.defaultValue 0)
-printfn "taskDependencies=%d" (commandReport.Tasks |> Option.map (fun summary -> summary.DependencyCount) |> Option.defaultValue 0)
-printfn "taskRequiredSkills=%d" (commandReport.Tasks |> Option.map (fun summary -> summary.RequiredSkillCount) |> Option.defaultValue 0)
-printfn "taskRequiredEvidence=%d" (commandReport.Tasks |> Option.map (fun summary -> summary.RequiredEvidenceCount) |> Option.defaultValue 0)
-printfn "taskBlockingFindings=%d" (commandReport.Tasks |> Option.map (fun summary -> summary.BlockingFindingCount) |> Option.defaultValue 0)
-printfn "taskAdvisory=%d" (commandReport.Tasks |> Option.map (fun summary -> summary.AdvisoryCount) |> Option.defaultValue 0)
+
+printfn
+    "tasks=%d"
+    (commandReport.Tasks
+     |> Option.map (fun summary -> summary.TaskIds.Length)
+     |> Option.defaultValue 0)
+
+printfn
+    "taskDependencies=%d"
+    (commandReport.Tasks
+     |> Option.map (fun summary -> summary.DependencyCount)
+     |> Option.defaultValue 0)
+
+printfn
+    "taskRequiredSkills=%d"
+    (commandReport.Tasks
+     |> Option.map (fun summary -> summary.RequiredSkillCount)
+     |> Option.defaultValue 0)
+
+printfn
+    "taskRequiredEvidence=%d"
+    (commandReport.Tasks
+     |> Option.map (fun summary -> summary.RequiredEvidenceCount)
+     |> Option.defaultValue 0)
+
+printfn
+    "taskBlockingFindings=%d"
+    (commandReport.Tasks
+     |> Option.map (fun summary -> summary.BlockingFindingCount)
+     |> Option.defaultValue 0)
+
+printfn
+    "taskAdvisory=%d"
+    (commandReport.Tasks
+     |> Option.map (fun summary -> summary.AdvisoryCount)
+     |> Option.defaultValue 0)
+
 printfn "generatedViews=%d" commandReport.GeneratedViews.Length
-printfn "blockingDiagnostics=%d" (commandReport.Diagnostics |> List.filter (fun diagnostic -> diagnostic.Severity = Diagnostics.DiagnosticSeverity.DiagnosticError) |> List.length)
-printfn "taskDiagnostics=%s" ([ missingPlanPrerequisite "work/009-tasks-command/plan.md" "Plan is required."; staleTask "work/009-tasks-command/tasks.yml" [ "T001" ]; doneTaskMissingEvidence "work/009-tasks-command/tasks.yml" [ "T001" ] ] |> List.map _.Id |> String.concat ",")
+
+printfn
+    "blockingDiagnostics=%d"
+    (commandReport.Diagnostics
+     |> List.filter (fun diagnostic -> diagnostic.Severity = Diagnostics.DiagnosticSeverity.DiagnosticError)
+     |> List.length)
+
+printfn
+    "taskDiagnostics=%s"
+    ([ missingPlanPrerequisite "work/009-tasks-command/plan.md" "Plan is required."
+       staleTask "work/009-tasks-command/tasks.yml" [ "T001" ]
+       doneTaskMissingEvidence "work/009-tasks-command/tasks.yml" [ "T001" ] ]
+     |> List.map _.Id
+     |> String.concat ",")
+
 printfn "nextAction=%s" (commandReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
 printfn "analysisCommand=%s" (CommandTypes.commandName analysisReport.Command)
 printfn "analysisOutcome=%s" (CommandTypes.outcomeValue analysisReport.Outcome)
@@ -456,11 +536,25 @@ printfn "analysisReadiness=%s" analysisSummary.Readiness
 printfn "analysisSources=%d" analysisSummary.SourceCount
 printfn "analysisRelationships=%d" analysisSummary.SourceRelationshipCount
 printfn "analysisGeneratedViews=%d" analysisReport.GeneratedViews.Length
-printfn "analysisDiagnostics=%s" ([ missingTasksPrerequisite "work/009-tasks-command/tasks.yml" "Tasks are required."; malformedAnalysisView "readiness/009-tasks-command/analysis.json" "Analysis JSON is malformed."; analysisIdentityMismatch "readiness/009-tasks-command/analysis.json" "009-tasks-command" "other-work" ] |> List.map _.Id |> String.concat ",")
+
+printfn
+    "analysisDiagnostics=%s"
+    ([ missingTasksPrerequisite "work/009-tasks-command/tasks.yml" "Tasks are required."
+       malformedAnalysisView "readiness/009-tasks-command/analysis.json" "Analysis JSON is malformed."
+       analysisIdentityMismatch "readiness/009-tasks-command/analysis.json" "009-tasks-command" "other-work" ]
+     |> List.map _.Id
+     |> String.concat ",")
+
 printfn "analysisNextAction=%s" (analysisReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
 printfn "evidenceCommand=%s" (CommandTypes.commandName evidenceReport.Command)
 printfn "evidenceCommandStage=%s" (CommandTypes.commandStage Evidence)
-printfn "nextAfterEvidence=%s" (CommandTypes.nextLifecycleCommand Evidence |> Option.map CommandTypes.commandName |> Option.defaultValue "none")
+
+printfn
+    "nextAfterEvidence=%s"
+    (CommandTypes.nextLifecycleCommand Evidence
+     |> Option.map CommandTypes.commandName
+     |> Option.defaultValue "none")
+
 printfn "evidenceOutcome=%s" (CommandTypes.outcomeValue evidenceReport.Outcome)
 printfn "evidencePath=%s" evidenceSummary.EvidencePath
 printfn "evidenceReadiness=%s" evidenceSummary.Readiness
@@ -472,12 +566,27 @@ printfn "evidenceDeferred=%d" evidenceSummary.DeferredCount
 printfn "evidenceMissing=%d" evidenceSummary.MissingCount
 printfn "evidenceSynthetic=%d" evidenceSummary.SyntheticCount
 printfn "evidenceBlocking=%d" evidenceSummary.BlockingCount
-printfn "evidenceDiagnostics=%s" ([ missingAnalysisPrerequisite "readiness/009-tasks-command/analysis.json" "Analysis is required."; analysisNotReady "readiness/009-tasks-command/analysis.json" "blocked"; malformedEvidenceArtifact "work/009-tasks-command/evidence.yml" "Evidence YAML is malformed."; missingRequiredEvidence "work/009-tasks-command/evidence.yml" [ "EV001" ]; undisclosedSyntheticEvidence "work/009-tasks-command/evidence.yml" [ "EV002" ]; unsafeEvidenceUpdate "work/009-tasks-command/evidence.yml" [ "EV003" ] ] |> List.map _.Id |> String.concat ",")
+
+printfn
+    "evidenceDiagnostics=%s"
+    ([ missingAnalysisPrerequisite "readiness/009-tasks-command/analysis.json" "Analysis is required."
+       analysisNotReady "readiness/009-tasks-command/analysis.json" "blocked"
+       malformedEvidenceArtifact "work/009-tasks-command/evidence.yml" "Evidence YAML is malformed."
+       missingRequiredEvidence "work/009-tasks-command/evidence.yml" [ "EV001" ]
+       undisclosedSyntheticEvidence "work/009-tasks-command/evidence.yml" [ "EV002" ]
+       unsafeEvidenceUpdate "work/009-tasks-command/evidence.yml" [ "EV003" ] ]
+     |> List.map _.Id
+     |> String.concat ",")
+
 printfn "evidenceNextAction=%s" (evidenceReport.NextAction |> Option.map _.ActionId |> Option.defaultValue "none")
 printfn "createdProjectConfig=%b" (File.Exists(Path.Combine(commandRoot, ".fsgg", "project.yml")))
 printfn "createdCharter=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "charter.md")))
 printfn "createdSpecification=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "spec.md")))
-printfn "createdClarification=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "clarifications.md")))
+
+printfn
+    "createdClarification=%b"
+    (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "clarifications.md")))
+
 printfn "createdChecklist=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "checklist.md")))
 printfn "createdPlan=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "plan.md")))
 printfn "createdTasks=%b" (File.Exists(Path.Combine(commandRoot, "work", "009-tasks-command", "tasks.yml")))
@@ -487,17 +596,70 @@ printfn "createdEvidence=%b" (File.Exists(Path.Combine(commandRoot, "work", "009
 // --- 015-refresh-command public surface ---
 printfn "refreshCommandName=%s" (CommandTypes.commandName Refresh)
 printfn "refreshCommandStage=%s" (CommandTypes.commandStage Refresh)
-printfn "refreshParsed=%b" (match CommandTypes.parseCommand "refresh" with Ok Refresh -> true | _ -> false)
-printfn "refreshNextLifecycle=%s" (CommandTypes.nextLifecycleCommand Refresh |> Option.map CommandTypes.commandName |> Option.defaultValue "none")
-printfn "shipNextLifecycle=%s" (CommandTypes.nextLifecycleCommand Ship |> Option.map CommandTypes.commandName |> Option.defaultValue "none")
-printfn "refreshDispositions=%s" ([ RefreshedCurrent; PartiallyBlocked; RefreshBlocked ] |> List.map CommandTypes.refreshDispositionValue |> String.concat ",")
-printfn "refreshDiagnostics=%s" ([ refreshMissingSource "readiness/015-refresh-command/work-model.json" "work/015-refresh-command/spec.md"; refreshMalformedSource "readiness/015-refresh-command/work-model.json" "work/015-refresh-command/spec.md" "malformed"; refreshStaleView "readiness/015-refresh-command/analysis.json" [ "readiness/015-refresh-command/work-model.json" ]; refreshMalformedGeneratedView "readiness/015-refresh-command/work-model.json" "malformed"; refreshBlockedUpstreamView "readiness/015-refresh-command/ship.json" "readiness/015-refresh-command/verify.json"; refreshUnrenderableSummary "readiness/015-refresh-command/summary.md" [ "analysis" ] ] |> List.map _.Id |> String.concat ",")
+
+printfn
+    "refreshParsed=%b"
+    (match CommandTypes.parseCommand "refresh" with
+     | Ok Refresh -> true
+     | _ -> false)
+
+printfn
+    "refreshNextLifecycle=%s"
+    (CommandTypes.nextLifecycleCommand Refresh
+     |> Option.map CommandTypes.commandName
+     |> Option.defaultValue "none")
+
+printfn
+    "shipNextLifecycle=%s"
+    (CommandTypes.nextLifecycleCommand Ship
+     |> Option.map CommandTypes.commandName
+     |> Option.defaultValue "none")
+
+printfn
+    "refreshDispositions=%s"
+    ([ RefreshedCurrent; PartiallyBlocked; RefreshBlocked ]
+     |> List.map CommandTypes.refreshDispositionValue
+     |> String.concat ",")
+
+printfn
+    "refreshDiagnostics=%s"
+    ([ refreshMissingSource "readiness/015-refresh-command/work-model.json" "work/015-refresh-command/spec.md"
+       refreshMalformedSource
+           "readiness/015-refresh-command/work-model.json"
+           "work/015-refresh-command/spec.md"
+           "malformed"
+       refreshStaleView
+           "readiness/015-refresh-command/analysis.json"
+           [ "readiness/015-refresh-command/work-model.json" ]
+       refreshMalformedGeneratedView "readiness/015-refresh-command/work-model.json" "malformed"
+       refreshBlockedUpstreamView "readiness/015-refresh-command/ship.json" "readiness/015-refresh-command/verify.json"
+       refreshUnrenderableSummary "readiness/015-refresh-command/summary.md" [ "analysis" ] ]
+     |> List.map _.Id
+     |> String.concat ",")
+
 printfn "summaryOutputPath=%s" (GenerationManifest.expectedSummaryOutputPath "015-refresh-command")
-let refreshSummarySource : GenerationManifest.SourceIdentity =
-    { Artifact = (match ArtifactRef.create "readiness/015-refresh-command/work-model.json" ArtifactRef.ArtifactKind.GeneratedView ArtifactRef.ArtifactOwner.Sdd true with Ok value -> value | Error message -> failwith message)
+
+let refreshSummarySource: GenerationManifest.SourceIdentity =
+    { Artifact =
+        (match
+            ArtifactRef.create
+                "readiness/015-refresh-command/work-model.json"
+                ArtifactRef.ArtifactKind.GeneratedView
+                ArtifactRef.ArtifactOwner.Sdd
+                true
+         with
+         | Ok value -> value
+         | Error message -> failwith message)
       Digest = SchemaVersion.sha256Text "bytes"
       SchemaVersion = (SchemaVersion.classifyRaw (Some "1")).Version
       SchemaStatus = (SchemaVersion.classifyRaw (Some "1")).Status
       RawSchemaVersion = Some "1" }
-let refreshSummaryManifest = GenerationManifest.createSummaryManifest (GenerationManifest.expectedSummaryOutputPath "015-refresh-command") (SchemaVersion.currentGeneratorVersion()) [ refreshSummarySource ] None
+
+let refreshSummaryManifest =
+    GenerationManifest.createSummaryManifest
+        (GenerationManifest.expectedSummaryOutputPath "015-refresh-command")
+        (SchemaVersion.currentGeneratorVersion ())
+        [ refreshSummarySource ]
+        None
+
 printfn "summaryManifestKind=%s" (GenerationManifest.viewKindValue refreshSummaryManifest.Kind)
