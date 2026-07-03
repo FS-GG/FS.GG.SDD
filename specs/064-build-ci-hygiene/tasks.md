@@ -48,26 +48,37 @@ Every task leaves the build green.
 
 ---
 
-## Phase 2: User Story 1 — hermetic restore (Priority: P1) — DEFERRED to a follow-up PR
+## Phase 2: User Story 1 — hermetic restore (Priority: P1) — LANDED in #74
 
 **Goal**: `nuget.config` makes restore machine-independent; a clean restore leaves
 all 11 lockfiles unmodified; `--locked-mode` succeeds (FR-001..003 / C1).
 
-> **DEFERRED (CI evidence).** Adding `<clear/>` **changes CI's FSharp.Core resolution**:
-> the canonical `FwQFuqOA1+...` hash on `main` comes from a GitHub-runner-**inherited**
-> source that `<clear/>` removes, so CI-with-`<clear/>` resolves a *different* hash and
-> locked-restore fails (verified twice on PR #84). Correctly landing US1 requires
-> regenerating all 11 lockfiles against the post-`<clear/>` resolution **from CI / a clean
-> environment** — which this dev-container cannot do (its baked NuGet cache resolves yet
-> another divergent hash, `excLf2zM/...`). This is exactly the kind of change that needs
-> its own PR with a clean-env lockfile regeneration, so it is deferred (folded into #85).
-> On `main` the deterministic gate is green; reverting `nuget.config` keeps it green here.
+> **RESOLVED (#74) — `<clear/>` alone; lockfiles UNCHANGED.** The deferral's premise
+> was wrong. A cold, cache-free CI restore against the hermetic `nuget.config`
+> (`<clear/>` + `nuget.org` + `fsgg-local`) resolves FSharp.Core `10.1.301` to
+> contentHash `FwQFuqOA1+...` — **exactly `main`'s committed value**. So `FwQF...` is
+> the *authentic* nuget.org content hash, not a contaminated inherited-source value,
+> and no lockfile changes. (Proven by a throwaway CI job that `--force-evaluate`d on a
+> cleared runner and printed `FwQF...`.)
+>
+> The earlier "divergence" was two red herrings: (1) this dev-container's **corrupt
+> local NuGet metadata** re-derives `excLf2zM/...` for the same package even though the
+> downloaded `.nupkg` bytes are authentic — a machine artifact, never CI's value; and
+> (2) the #92/#93 **setup-dotnet cache-poisoning** regression (fixed in #93) produced
+> `NU1403` on the #84 attempts, which was misread as `<clear/>` changing resolution.
+> With #93 fixed, `<clear/>` + the existing `FwQF...` lockfiles restores clean in CI.
+>
+> Package source **mapping** stays dropped (FR-001 amendment): `<clear/>` + explicit
+> `nuget.org`/`fsgg-local` is sufficient. The only change is `nuget.config`.
 
-- [-] T004 [US1] Deferred — `<clear/>` reverted; needs clean-env lockfile regen (see above).
-- [-] T005 [US1] Deferred — lockfiles left at `main`'s canonical values (no change in this PR).
-- [-] T006 [US1] Deferred with T004/T005.
+- [X] T004 [US1] `nuget.config`: `<clear/>` + explicit `nuget.org` + `fsgg-local`.
+- [X] T005 [US1] Lockfiles left at `main`'s canonical `FwQF...` — a cold hermetic CI
+  restore confirms that IS the authentic nuget.org content hash (no regen needed).
+- [X] T006 [US1] Verified in CI: `--locked-mode` restore succeeds against the unchanged
+  lockfiles under the hermetic `nuget.config` (the deterministic gate on this PR).
 
-**Checkpoint**: US1 deferred to #85; the PR carries no dependency-resolution change.
+**Checkpoint**: US1 landed in #74; hermetic restore is machine-independent and
+`--locked-mode`-clean.
 
 ---
 
@@ -174,7 +185,8 @@ tool declares RollForward (FR-011..013 / C5/C6).
   lockfile-independent). Locked-restore is validated by CI (green on `main`, unchanged here).
 - [X] T023 [P] No-drift invariant: `validate --json` → `summary.overallPassed: true`
   (332 passed, 0 failed); `git status` shows **no** `readiness/**`, `*.golden`, or
-  `.fsi` change (FR-014 / SC-007). No `nuget.config`/lockfile change (US1 deferred).
+  `.fsi` change (FR-014 / SC-007). No `nuget.config`/lockfile change in the #84 slice
+  (US1's `nuget.config` change landed separately in #74; no lockfile change was needed).
 - [X] T024 [P] Managed-file drift: `Directory.Build.props`, `Directory.Packages.props`,
   `.config/dotnet-tools.json` `git diff --exit-code` clean (FR-010).
 - [X] T025 quickstart C1–C7 satisfied for the completed slice (C3 belongs to the
@@ -190,7 +202,7 @@ to its own PR. Ready to commit + open PR for the completed slice.
 | Story | Tasks | Status |
 |---|---|---|
 | Anchor | T001–T003 | ✅ done |
-| US1 hermetic restore | T004–T006 | ⏭ DEFERRED to #85 (needs clean-env lockfile regen) |
+| US1 hermetic restore | T004–T006 | ✅ done in #74 (`<clear/>` only; `FwQF` confirmed authentic, lockfiles unchanged) |
 | US2 caching | T007–T010 | ✅ done |
 | US3 format gate | T011–T013 | ⏭ DEFERRED to #85 (77% reformat) |
 | US4 warning ratchet | T014–T015 | ✅ done |
@@ -200,7 +212,10 @@ to its own PR. Ready to commit + open PR for the completed slice.
 **Shipped in this PR**: US2 (caching), US4 (warning ratchet), US5 (composite locked-restore +
 release smoke + RollForward). Verified locally + by CI.
 
-**Deferred to follow-up #85**: US1 (hermetic restore — `<clear/>` changes CI's dependency
-resolution; needs lockfiles regenerated from a clean env) and US3 (format gate — 77% reformat).
+**Landed in #74**: US1 (hermetic restore — `<clear/>` + explicit `nuget.org`/`fsgg-local`;
+lockfiles unchanged because a cold hermetic CI restore confirms `main`'s `FwQF...` FSharp.Core
+hash is the authentic nuget.org value; `--locked-mode` verified clean in CI).
+
+**Deferred to follow-up #85**: US3 (format gate — 77% reformat) and the FS3218 arg-name cleanup.
 
 **Total**: 25 tasks across 7 phases (14 done, 6 deferred, 5 gate/anchor done).
