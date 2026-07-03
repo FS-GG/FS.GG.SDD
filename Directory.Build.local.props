@@ -28,16 +28,16 @@
          so the canonical Directory.Build.props still promotes NU1603;NU1608 explicitly
          and this stays complementary, not conflicting. -->
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <!-- Two pre-existing warning classes are exempted (kept as warnings) because
-         clearing them is a large campaign out of this feature's scope (spec 064
-         Assumptions / FR-009 "no warning-fixing campaign"):
+    <!-- Feature 064 flipped the FULL ratchet but exempted two pre-existing warning
+         classes as deferred debt (spec 064 FR-009 "no warning-fixing campaign"):
            FS3218 x452 — signature/implementation argument-name mismatch, a byproduct
-                         of the 062/063 .fsi splits (arg names differ from a0/a1/...).
+                         of the 062/063 .fsi splits (impl args a0/a1/... vs the .fsi names).
            FS3262 x4   — nullness (value known non-null passed to an ofObj-style API).
-         Tracked for a follow-up cleanup; any OTHER warning class fails the build.
-         APPEND to $(WarningsNotAsErrors) — the canonical props conditionally exempts
-         the api-gate RS#### codes there, so a plain assignment would drop them. -->
-    <WarningsNotAsErrors>$(WarningsNotAsErrors);FS3218;FS3262</WarningsNotAsErrors>
+         Feature 066 (board #85 §2) cleared both — CommandReports.fs arg names realigned
+         to CommandReports.fsi, and the two dead HandlersScaffold.fs ofObj guards removed —
+         and dropped the exemption, so the ratchet now covers them with NO carve-out: a new
+         FS3218 or FS3262 anywhere in the tree fails the build like every other warning. -->
+
     <!-- Keep NuGetAudit advisories (NU1901-NU1904) as WARNINGS under the full ratchet
          (feature 064). NuGetAudit is on by default in the net10 SDK and audits transitive
          deps, so a CVE newly published against any package in the restore graph would

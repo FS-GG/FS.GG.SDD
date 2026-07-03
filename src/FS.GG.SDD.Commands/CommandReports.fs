@@ -7,333 +7,339 @@ open FS.GG.SDD.Commands.Internal
 // units under CommandReports/ - diagnostic construction, next-action routing, and
 // report + exit-code assembly (feature 062). Re-exports only; no logic here.
 module CommandReports =
-    let commandDiagnostic a0 a1 a2 a3 a4 a5 =
-        DiagnosticConstructors.commandDiagnostic a0 a1 a2 a3 a4 a5
+    let commandDiagnostic id severity path message correction relatedIds =
+        DiagnosticConstructors.commandDiagnostic id severity path message correction relatedIds
 
-    let unknownCommand a0 =
-        DiagnosticConstructors.unknownCommand a0
+    let unknownCommand value =
+        DiagnosticConstructors.unknownCommand value
 
-    let malformedWorkId a0 =
-        DiagnosticConstructors.malformedWorkId a0
+    let malformedWorkId value =
+        DiagnosticConstructors.malformedWorkId value
 
-    let missingWorkId a0 = DiagnosticConstructors.missingWorkId a0
+    let missingWorkId command =
+        DiagnosticConstructors.missingWorkId command
 
-    let unsupportedCommand a0 =
-        DiagnosticConstructors.unsupportedCommand a0
+    let unsupportedCommand command =
+        DiagnosticConstructors.unsupportedCommand command
 
     let outsideProject () =
         DiagnosticConstructors.outsideProject ()
 
-    let missingProjectConfig a0 =
-        DiagnosticConstructors.missingProjectConfig a0
+    let missingProjectConfig path =
+        DiagnosticConstructors.missingProjectConfig path
 
-    let malformedProjectConfig a0 =
-        DiagnosticConstructors.malformedProjectConfig a0
+    let malformedProjectConfig path =
+        DiagnosticConstructors.malformedProjectConfig path
 
-    let missingSddConfig a0 =
-        DiagnosticConstructors.missingSddConfig a0
+    let missingSddConfig path =
+        DiagnosticConstructors.missingSddConfig path
 
-    let malformedSddConfig a0 =
-        DiagnosticConstructors.malformedSddConfig a0
+    let malformedSddConfig path =
+        DiagnosticConstructors.malformedSddConfig path
 
-    let missingAgentsConfig a0 =
-        DiagnosticConstructors.missingAgentsConfig a0
+    let missingAgentsConfig path =
+        DiagnosticConstructors.missingAgentsConfig path
 
-    let malformedAgentsConfig a0 =
-        DiagnosticConstructors.malformedAgentsConfig a0
+    let malformedAgentsConfig path =
+        DiagnosticConstructors.malformedAgentsConfig path
 
-    let duplicateWorkId a0 a1 =
-        DiagnosticConstructors.duplicateWorkId a0 a1
+    let duplicateWorkId workId paths =
+        DiagnosticConstructors.duplicateWorkId workId paths
 
-    let missingCharterPrerequisite a0 a1 =
-        DiagnosticConstructors.missingCharterPrerequisite a0 a1
+    let missingCharterPrerequisite path message =
+        DiagnosticConstructors.missingCharterPrerequisite path message
 
-    let charterIdentityMismatch a0 a1 a2 =
-        DiagnosticConstructors.charterIdentityMismatch a0 a1 a2
+    let charterIdentityMismatch path expectedWorkId actualWorkId =
+        DiagnosticConstructors.charterIdentityMismatch path expectedWorkId actualWorkId
 
-    let malformedCharterFrontMatter a0 a1 =
-        DiagnosticConstructors.malformedCharterFrontMatter a0 a1
+    let malformedCharterFrontMatter path message =
+        DiagnosticConstructors.malformedCharterFrontMatter path message
 
-    let missingSpecificationIntent a0 a1 =
-        DiagnosticConstructors.missingSpecificationIntent a0 a1
+    let missingSpecificationIntent path missingFacts =
+        DiagnosticConstructors.missingSpecificationIntent path missingFacts
 
-    let missingSpecificationPrerequisite a0 a1 =
-        DiagnosticConstructors.missingSpecificationPrerequisite a0 a1
+    let missingSpecificationPrerequisite path message =
+        DiagnosticConstructors.missingSpecificationPrerequisite path message
 
-    let specificationIdentityMismatch a0 a1 a2 =
-        DiagnosticConstructors.specificationIdentityMismatch a0 a1 a2
+    let specificationIdentityMismatch path expectedWorkId actualWorkId =
+        DiagnosticConstructors.specificationIdentityMismatch path expectedWorkId actualWorkId
 
-    let malformedSpecificationFrontMatter a0 a1 =
-        DiagnosticConstructors.malformedSpecificationFrontMatter a0 a1
+    let malformedSpecificationFrontMatter path message =
+        DiagnosticConstructors.malformedSpecificationFrontMatter path message
 
-    let malformedSpecificationFacts a0 a1 =
-        DiagnosticConstructors.malformedSpecificationFacts a0 a1
+    let malformedSpecificationFacts path message =
+        DiagnosticConstructors.malformedSpecificationFacts path message
 
-    let duplicateSpecificationId a0 a1 =
-        DiagnosticConstructors.duplicateSpecificationId a0 a1
+    let duplicateSpecificationId path id =
+        DiagnosticConstructors.duplicateSpecificationId path id
 
-    let missingSpecificationId a0 a1 =
-        DiagnosticConstructors.missingSpecificationId a0 a1
+    let missingSpecificationId path idFamily =
+        DiagnosticConstructors.missingSpecificationId path idFamily
 
-    let unknownSpecificationReference a0 a1 =
-        DiagnosticConstructors.unknownSpecificationReference a0 a1
+    let unknownSpecificationReference path id =
+        DiagnosticConstructors.unknownSpecificationReference path id
 
-    let missingClarificationAnswer a0 a1 =
-        DiagnosticConstructors.missingClarificationAnswer a0 a1
+    let missingClarificationAnswer path missingIds =
+        DiagnosticConstructors.missingClarificationAnswer path missingIds
 
-    let missingClarificationPrerequisite a0 a1 =
-        DiagnosticConstructors.missingClarificationPrerequisite a0 a1
+    let missingClarificationPrerequisite path message =
+        DiagnosticConstructors.missingClarificationPrerequisite path message
 
-    let clarificationIdentityMismatch a0 a1 a2 =
-        DiagnosticConstructors.clarificationIdentityMismatch a0 a1 a2
+    let clarificationIdentityMismatch path expectedWorkId actualWorkId =
+        DiagnosticConstructors.clarificationIdentityMismatch path expectedWorkId actualWorkId
 
-    let malformedClarificationFrontMatter a0 a1 =
-        DiagnosticConstructors.malformedClarificationFrontMatter a0 a1
+    let malformedClarificationFrontMatter path message =
+        DiagnosticConstructors.malformedClarificationFrontMatter path message
 
-    let duplicateClarificationId a0 a1 =
-        DiagnosticConstructors.duplicateClarificationId a0 a1
+    let duplicateClarificationId path id =
+        DiagnosticConstructors.duplicateClarificationId path id
 
-    let unknownClarificationReference a0 a1 =
-        DiagnosticConstructors.unknownClarificationReference a0 a1
+    let unknownClarificationReference path id =
+        DiagnosticConstructors.unknownClarificationReference path id
 
-    let unsafeDecisionChange a0 a1 =
-        DiagnosticConstructors.unsafeDecisionChange a0 a1
+    let unsafeDecisionChange path id =
+        DiagnosticConstructors.unsafeDecisionChange path id
 
-    let unresolvedBlockingAmbiguity a0 a1 =
-        DiagnosticConstructors.unresolvedBlockingAmbiguity a0 a1
+    let unresolvedBlockingAmbiguity path ids =
+        DiagnosticConstructors.unresolvedBlockingAmbiguity path ids
 
-    let failedRequirementsQuality a0 a1 a2 a3 =
-        DiagnosticConstructors.failedRequirementsQuality a0 a1 a2 a3
+    let failedRequirementsQuality path message correction relatedIds =
+        DiagnosticConstructors.failedRequirementsQuality path message correction relatedIds
 
-    let checklistIdentityMismatch a0 a1 a2 =
-        DiagnosticConstructors.checklistIdentityMismatch a0 a1 a2
+    let checklistIdentityMismatch path expectedWorkId actualWorkId =
+        DiagnosticConstructors.checklistIdentityMismatch path expectedWorkId actualWorkId
 
-    let malformedChecklistFrontMatter a0 a1 =
-        DiagnosticConstructors.malformedChecklistFrontMatter a0 a1
+    let malformedChecklistFrontMatter path message =
+        DiagnosticConstructors.malformedChecklistFrontMatter path message
 
-    let duplicateChecklistId a0 a1 =
-        DiagnosticConstructors.duplicateChecklistId a0 a1
+    let duplicateChecklistId path id =
+        DiagnosticConstructors.duplicateChecklistId path id
 
-    let unknownChecklistSourceReference a0 a1 =
-        DiagnosticConstructors.unknownChecklistSourceReference a0 a1
+    let unknownChecklistSourceReference path id =
+        DiagnosticConstructors.unknownChecklistSourceReference path id
 
-    let staleChecklistResult a0 a1 =
-        DiagnosticConstructors.staleChecklistResult a0 a1
+    let staleChecklistResult path resultIds =
+        DiagnosticConstructors.staleChecklistResult path resultIds
 
-    let missingChecklistPrerequisite a0 a1 =
-        DiagnosticConstructors.missingChecklistPrerequisite a0 a1
+    let missingChecklistPrerequisite path message =
+        DiagnosticConstructors.missingChecklistPrerequisite path message
 
-    let failedChecklistPrerequisite a0 a1 a2 =
-        DiagnosticConstructors.failedChecklistPrerequisite a0 a1 a2
+    let failedChecklistPrerequisite path message relatedIds =
+        DiagnosticConstructors.failedChecklistPrerequisite path message relatedIds
 
-    let planIdentityMismatch a0 a1 a2 =
-        DiagnosticConstructors.planIdentityMismatch a0 a1 a2
+    let planIdentityMismatch path expectedWorkId actualWorkId =
+        DiagnosticConstructors.planIdentityMismatch path expectedWorkId actualWorkId
 
-    let malformedPlanFrontMatter a0 a1 =
-        DiagnosticConstructors.malformedPlanFrontMatter a0 a1
+    let malformedPlanFrontMatter path message =
+        DiagnosticConstructors.malformedPlanFrontMatter path message
 
-    let duplicatePlanId a0 a1 =
-        DiagnosticConstructors.duplicatePlanId a0 a1
+    let duplicatePlanId path id =
+        DiagnosticConstructors.duplicatePlanId path id
 
-    let unknownPlanSourceReference a0 a1 =
-        DiagnosticConstructors.unknownPlanSourceReference a0 a1
+    let unknownPlanSourceReference path id =
+        DiagnosticConstructors.unknownPlanSourceReference path id
 
-    let stalePlanDecision a0 a1 =
-        DiagnosticConstructors.stalePlanDecision a0 a1
+    let stalePlanDecision path decisionIds =
+        DiagnosticConstructors.stalePlanDecision path decisionIds
 
-    let missingPlanPrerequisite a0 a1 =
-        DiagnosticConstructors.missingPlanPrerequisite a0 a1
+    let missingPlanPrerequisite path message =
+        DiagnosticConstructors.missingPlanPrerequisite path message
 
-    let failedPlanPrerequisite a0 a1 a2 =
-        DiagnosticConstructors.failedPlanPrerequisite a0 a1 a2
+    let failedPlanPrerequisite path message relatedIds =
+        DiagnosticConstructors.failedPlanPrerequisite path message relatedIds
 
-    let tasksIdentityMismatch a0 a1 a2 =
-        DiagnosticConstructors.tasksIdentityMismatch a0 a1 a2
+    let tasksIdentityMismatch path expectedWorkId actualWorkId =
+        DiagnosticConstructors.tasksIdentityMismatch path expectedWorkId actualWorkId
 
-    let malformedTasksArtifact a0 a1 =
-        DiagnosticConstructors.malformedTasksArtifact a0 a1
+    let malformedTasksArtifact path message =
+        DiagnosticConstructors.malformedTasksArtifact path message
 
-    let duplicateTaskId a0 a1 =
-        DiagnosticConstructors.duplicateTaskId a0 a1
+    let duplicateTaskId path id =
+        DiagnosticConstructors.duplicateTaskId path id
 
-    let unknownTaskSourceReference a0 a1 =
-        DiagnosticConstructors.unknownTaskSourceReference a0 a1
+    let unknownTaskSourceReference path id =
+        DiagnosticConstructors.unknownTaskSourceReference path id
 
-    let unknownTaskDependency a0 a1 =
-        DiagnosticConstructors.unknownTaskDependency a0 a1
+    let unknownTaskDependency path id =
+        DiagnosticConstructors.unknownTaskDependency path id
 
-    let taskDependencyCycle a0 a1 =
-        DiagnosticConstructors.taskDependencyCycle a0 a1
+    let taskDependencyCycle path ids =
+        DiagnosticConstructors.taskDependencyCycle path ids
 
-    let staleTask a0 a1 = DiagnosticConstructors.staleTask a0 a1
+    let staleTask path taskIds =
+        DiagnosticConstructors.staleTask path taskIds
 
-    let doneTaskMissingEvidence a0 a1 =
-        DiagnosticConstructors.doneTaskMissingEvidence a0 a1
+    let doneTaskMissingEvidence path ids =
+        DiagnosticConstructors.doneTaskMissingEvidence path ids
 
-    let skippedTaskMissingRationale a0 a1 =
-        DiagnosticConstructors.skippedTaskMissingRationale a0 a1
+    let skippedTaskMissingRationale path ids =
+        DiagnosticConstructors.skippedTaskMissingRationale path ids
 
-    let missingTasksPrerequisite a0 a1 =
-        DiagnosticConstructors.missingTasksPrerequisite a0 a1
+    let missingTasksPrerequisite path message =
+        DiagnosticConstructors.missingTasksPrerequisite path message
 
-    let failedTasksPrerequisite a0 a1 a2 =
-        DiagnosticConstructors.failedTasksPrerequisite a0 a1 a2
+    let failedTasksPrerequisite path message relatedIds =
+        DiagnosticConstructors.failedTasksPrerequisite path message relatedIds
 
-    let analysisIdentityMismatch a0 a1 a2 =
-        DiagnosticConstructors.analysisIdentityMismatch a0 a1 a2
+    let analysisIdentityMismatch path expectedWorkId actualWorkId =
+        DiagnosticConstructors.analysisIdentityMismatch path expectedWorkId actualWorkId
 
-    let malformedAnalysisView a0 a1 =
-        DiagnosticConstructors.malformedAnalysisView a0 a1
+    let malformedAnalysisView path message =
+        DiagnosticConstructors.malformedAnalysisView path message
 
-    let missingAnalysisPrerequisite a0 a1 =
-        DiagnosticConstructors.missingAnalysisPrerequisite a0 a1
+    let missingAnalysisPrerequisite path message =
+        DiagnosticConstructors.missingAnalysisPrerequisite path message
 
-    let analysisNotReady a0 a1 =
-        DiagnosticConstructors.analysisNotReady a0 a1
+    let analysisNotReady path readiness =
+        DiagnosticConstructors.analysisNotReady path readiness
 
-    let evidenceIdentityMismatch a0 a1 a2 =
-        DiagnosticConstructors.evidenceIdentityMismatch a0 a1 a2
+    let evidenceIdentityMismatch path expectedWorkId actualWorkId =
+        DiagnosticConstructors.evidenceIdentityMismatch path expectedWorkId actualWorkId
 
-    let malformedEvidenceArtifact a0 a1 =
-        DiagnosticConstructors.malformedEvidenceArtifact a0 a1
+    let malformedEvidenceArtifact path message =
+        DiagnosticConstructors.malformedEvidenceArtifact path message
 
-    let duplicateEvidenceId a0 a1 =
-        DiagnosticConstructors.duplicateEvidenceId a0 a1
+    let duplicateEvidenceId path id =
+        DiagnosticConstructors.duplicateEvidenceId path id
 
-    let unknownEvidenceReference a0 a1 =
-        DiagnosticConstructors.unknownEvidenceReference a0 a1
+    let unknownEvidenceReference path id =
+        DiagnosticConstructors.unknownEvidenceReference path id
 
-    let missingRequiredEvidence a0 a1 =
-        DiagnosticConstructors.missingRequiredEvidence a0 a1
+    let missingRequiredEvidence path ids =
+        DiagnosticConstructors.missingRequiredEvidence path ids
 
-    let staleEvidence a0 a1 =
-        DiagnosticConstructors.staleEvidence a0 a1
+    let staleEvidence path ids =
+        DiagnosticConstructors.staleEvidence path ids
 
-    let staleEvidenceSource a0 a1 =
-        DiagnosticConstructors.staleEvidenceSource a0 a1
+    let staleEvidenceSource path ids =
+        DiagnosticConstructors.staleEvidenceSource path ids
 
-    let undisclosedSyntheticEvidence a0 a1 =
-        DiagnosticConstructors.undisclosedSyntheticEvidence a0 a1
+    let undisclosedSyntheticEvidence path ids =
+        DiagnosticConstructors.undisclosedSyntheticEvidence path ids
 
-    let missingDeferralRationale a0 a1 =
-        DiagnosticConstructors.missingDeferralRationale a0 a1
+    let missingDeferralRationale path ids =
+        DiagnosticConstructors.missingDeferralRationale path ids
 
-    let missingRequiredSkill a0 a1 =
-        DiagnosticConstructors.missingRequiredSkill a0 a1
+    let missingRequiredSkill path ids =
+        DiagnosticConstructors.missingRequiredSkill path ids
 
-    let unsupportedEvidenceResultState a0 a1 =
-        DiagnosticConstructors.unsupportedEvidenceResultState a0 a1
+    let unsupportedEvidenceResultState path states =
+        DiagnosticConstructors.unsupportedEvidenceResultState path states
 
-    let unsafeEvidenceUpdate a0 a1 =
-        DiagnosticConstructors.unsafeEvidenceUpdate a0 a1
+    let unsafeEvidenceUpdate path ids =
+        DiagnosticConstructors.unsafeEvidenceUpdate path ids
 
-    let missingDisposition a0 a1 =
-        DiagnosticConstructors.missingDisposition a0 a1
+    let missingDisposition path ids =
+        DiagnosticConstructors.missingDisposition path ids
 
-    let unsafeOverwrite a0 =
-        DiagnosticConstructors.unsafeOverwrite a0
+    let unsafeOverwrite path =
+        DiagnosticConstructors.unsafeOverwrite path
 
-    let malformedGeneratedView a0 =
-        DiagnosticConstructors.malformedGeneratedView a0
+    let malformedGeneratedView path =
+        DiagnosticConstructors.malformedGeneratedView path
 
-    let blockedGeneratedViewRefresh a0 a1 =
-        DiagnosticConstructors.blockedGeneratedViewRefresh a0 a1
+    let blockedGeneratedViewRefresh path relatedIds =
+        DiagnosticConstructors.blockedGeneratedViewRefresh path relatedIds
 
-    let missingEvidencePrerequisite a0 a1 =
-        DiagnosticConstructors.missingEvidencePrerequisite a0 a1
+    let missingEvidencePrerequisite path message =
+        DiagnosticConstructors.missingEvidencePrerequisite path message
 
-    let verifyIdentityMismatch a0 a1 a2 =
-        DiagnosticConstructors.verifyIdentityMismatch a0 a1 a2
+    let verifyIdentityMismatch path expectedWorkId actualWorkId =
+        DiagnosticConstructors.verifyIdentityMismatch path expectedWorkId actualWorkId
 
-    let malformedVerificationView a0 a1 =
-        DiagnosticConstructors.malformedVerificationView a0 a1
+    let malformedVerificationView path message =
+        DiagnosticConstructors.malformedVerificationView path message
 
-    let missingRequiredTest a0 a1 =
-        DiagnosticConstructors.missingRequiredTest a0 a1
+    let missingRequiredTest path ids =
+        DiagnosticConstructors.missingRequiredTest path ids
 
-    let staleRequiredTest a0 a1 =
-        DiagnosticConstructors.staleRequiredTest a0 a1
+    let staleRequiredTest path ids =
+        DiagnosticConstructors.staleRequiredTest path ids
 
-    let toolDefect a0 a1 = DiagnosticConstructors.toolDefect a0 a1
+    let toolDefect path message =
+        DiagnosticConstructors.toolDefect path message
 
-    let missingVerificationPrerequisite a0 a1 =
-        DiagnosticConstructors.missingVerificationPrerequisite a0 a1
+    let missingVerificationPrerequisite path message =
+        DiagnosticConstructors.missingVerificationPrerequisite path message
 
-    let verificationNotReady a0 a1 =
-        DiagnosticConstructors.verificationNotReady a0 a1
+    let verificationNotReady path status =
+        DiagnosticConstructors.verificationNotReady path status
 
-    let failedVerification a0 a1 =
-        DiagnosticConstructors.failedVerification a0 a1
+    let failedVerification path ids =
+        DiagnosticConstructors.failedVerification path ids
 
-    let staleVerificationView a0 a1 =
-        DiagnosticConstructors.staleVerificationView a0 a1
+    let staleVerificationView path ids =
+        DiagnosticConstructors.staleVerificationView path ids
 
-    let shipIdentityMismatch a0 a1 a2 =
-        DiagnosticConstructors.shipIdentityMismatch a0 a1 a2
+    let shipIdentityMismatch path expectedWorkId actualWorkId =
+        DiagnosticConstructors.shipIdentityMismatch path expectedWorkId actualWorkId
 
-    let malformedShipView a0 a1 =
-        DiagnosticConstructors.malformedShipView a0 a1
+    let malformedShipView path message =
+        DiagnosticConstructors.malformedShipView path message
 
-    let agentsNoTargets a0 =
-        DiagnosticConstructors.agentsNoTargets a0
+    let agentsNoTargets path =
+        DiagnosticConstructors.agentsNoTargets path
 
-    let agentsInvalidGeneratedRoot a0 a1 =
-        DiagnosticConstructors.agentsInvalidGeneratedRoot a0 a1
+    let agentsInvalidGeneratedRoot path targetId =
+        DiagnosticConstructors.agentsInvalidGeneratedRoot path targetId
 
-    let agentsWorkModelIdentityMismatch a0 a1 a2 =
-        DiagnosticConstructors.agentsWorkModelIdentityMismatch a0 a1 a2
+    let agentsWorkModelIdentityMismatch path expectedWorkId actualWorkId =
+        DiagnosticConstructors.agentsWorkModelIdentityMismatch path expectedWorkId actualWorkId
 
-    let agentsMissingWorkModel a0 =
-        DiagnosticConstructors.agentsMissingWorkModel a0
+    let agentsMissingWorkModel path =
+        DiagnosticConstructors.agentsMissingWorkModel path
 
-    let agentsEarlyStageGuidance a0 =
-        DiagnosticConstructors.agentsEarlyStageGuidance a0
+    let agentsEarlyStageGuidance presentStages =
+        DiagnosticConstructors.agentsEarlyStageGuidance presentStages
 
-    let agentsMalformedWorkModel a0 a1 =
-        DiagnosticConstructors.agentsMalformedWorkModel a0 a1
+    let agentsMalformedWorkModel path message =
+        DiagnosticConstructors.agentsMalformedWorkModel path message
 
-    let agentsStaleWorkModel a0 =
-        DiagnosticConstructors.agentsStaleWorkModel a0
+    let agentsStaleWorkModel path =
+        DiagnosticConstructors.agentsStaleWorkModel path
 
-    let agentsBlockedWorkModel a0 a1 =
-        DiagnosticConstructors.agentsBlockedWorkModel a0 a1
+    let agentsBlockedWorkModel path relatedIds =
+        DiagnosticConstructors.agentsBlockedWorkModel path relatedIds
 
-    let agentsUnknownSourceReference a0 a1 =
-        DiagnosticConstructors.agentsUnknownSourceReference a0 a1
+    let agentsUnknownSourceReference path id =
+        DiagnosticConstructors.agentsUnknownSourceReference path id
 
-    let agentsMalformedGeneratedGuidance a0 a1 =
-        DiagnosticConstructors.agentsMalformedGeneratedGuidance a0 a1
+    let agentsMalformedGeneratedGuidance path message =
+        DiagnosticConstructors.agentsMalformedGeneratedGuidance path message
 
-    let agentsStaleGeneratedGuidance a0 a1 =
-        DiagnosticConstructors.agentsStaleGeneratedGuidance a0 a1
+    let agentsStaleGeneratedGuidance path targetId =
+        DiagnosticConstructors.agentsStaleGeneratedGuidance path targetId
 
-    let agentsBehaviorDivergence a0 a1 =
-        DiagnosticConstructors.agentsBehaviorDivergence a0 a1
+    let agentsBehaviorDivergence path targetIds =
+        DiagnosticConstructors.agentsBehaviorDivergence path targetIds
 
-    let agentsUnsafeGeneratedViewRefresh a0 a1 =
-        DiagnosticConstructors.agentsUnsafeGeneratedViewRefresh a0 a1
+    let agentsUnsafeGeneratedViewRefresh path relatedIds =
+        DiagnosticConstructors.agentsUnsafeGeneratedViewRefresh path relatedIds
 
-    let refreshMissingSource a0 a1 =
-        DiagnosticConstructors.refreshMissingSource a0 a1
+    let refreshMissingSource viewPath sourcePath =
+        DiagnosticConstructors.refreshMissingSource viewPath sourcePath
 
-    let refreshMalformedSource a0 a1 a2 =
-        DiagnosticConstructors.refreshMalformedSource a0 a1 a2
+    let refreshMalformedSource viewPath sourcePath message =
+        DiagnosticConstructors.refreshMalformedSource viewPath sourcePath message
 
-    let refreshStaleView a0 a1 =
-        DiagnosticConstructors.refreshStaleView a0 a1
+    let refreshStaleView viewPath sourcePaths =
+        DiagnosticConstructors.refreshStaleView viewPath sourcePaths
 
-    let refreshMalformedGeneratedView a0 a1 =
-        DiagnosticConstructors.refreshMalformedGeneratedView a0 a1
+    let refreshMalformedGeneratedView viewPath message =
+        DiagnosticConstructors.refreshMalformedGeneratedView viewPath message
 
-    let refreshBlockedUpstreamView a0 a1 =
-        DiagnosticConstructors.refreshBlockedUpstreamView a0 a1
+    let refreshBlockedUpstreamView viewPath upstreamViewPath =
+        DiagnosticConstructors.refreshBlockedUpstreamView viewPath upstreamViewPath
 
-    let refreshEarlyStageGuidance a0 =
-        DiagnosticConstructors.refreshEarlyStageGuidance a0
+    let refreshEarlyStageGuidance presentStages =
+        DiagnosticConstructors.refreshEarlyStageGuidance presentStages
 
-    let refreshUnrenderableSummary a0 a1 =
-        DiagnosticConstructors.refreshUnrenderableSummary a0 a1
+    let refreshUnrenderableSummary summaryPath relatedIds =
+        DiagnosticConstructors.refreshUnrenderableSummary summaryPath relatedIds
 
-    let buildReport a0 = ReportAssembly.buildReport a0
-    let helpReport a0 a1 = ReportAssembly.helpReport a0 a1
-    let exitCodeForReport a0 = ReportAssembly.exitCodeForReport a0
+    let buildReport model = ReportAssembly.buildReport model
+
+    let helpReport request summary =
+        ReportAssembly.helpReport request summary
+
+    let exitCodeForReport report = ReportAssembly.exitCodeForReport report

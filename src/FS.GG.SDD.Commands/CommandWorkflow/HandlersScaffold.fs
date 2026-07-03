@@ -39,7 +39,7 @@ module internal HandlersScaffold =
     let supportedContractRange = ">=1.0.0 <2.0.0"
 
     let contractMajor (version: string) =
-        match (Option.ofObj version |> Option.defaultValue "").Trim().Trim('"').Split('.') with
+        match version.Trim().Trim('"').Split('.') with
         | parts when parts.Length >= 1 ->
             match Int32.TryParse parts.[0] with
             | true, value -> Some value
@@ -73,7 +73,7 @@ module internal HandlersScaffold =
         isSddTree p || p = "AGENTS.md" || p = "CLAUDE.md"
 
     let parseListing (text: string) =
-        (Option.ofObj text |> Option.defaultValue "").Split([| '\n'; '\r' |], StringSplitOptions.RemoveEmptyEntries)
+        text.Split([| '\n'; '\r' |], StringSplitOptions.RemoveEmptyEntries)
         |> Array.map normalizeRelativePath
         |> Array.filter (String.IsNullOrWhiteSpace >> not)
         |> Set.ofArray
