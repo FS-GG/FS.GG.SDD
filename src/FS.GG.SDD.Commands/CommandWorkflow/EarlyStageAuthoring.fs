@@ -17,7 +17,7 @@ open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 
 [<AutoOpen>]
-module internal ParsingEarly =
+module internal EarlyStageAuthoring =
     module DiagnosticsModule = FS.GG.SDD.Artifacts.Diagnostics
     module IdentifiersModule = FS.GG.SDD.Artifacts.Identifiers
 

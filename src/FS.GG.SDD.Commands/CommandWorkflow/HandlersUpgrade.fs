@@ -42,13 +42,13 @@ module internal HandlersUpgrade =
 
     let applyEffectsFor (request: CommandRequest) (step: ReconciliationStep) =
         match step.StepId with
-        | "cliSelfUpdate" -> [ selfUpdateEffect ]
-        | "artifactReSeed" -> reSeedEffects request step.TargetPaths
+        | ReconciliationStepId.CliSelfUpdate -> [ selfUpdateEffect ]
+        | ReconciliationStepId.ArtifactReSeed -> reSeedEffects request step.TargetPaths
         // templateRePin is `noTarget` in this feature (R6) and never actionable.
-        | _ -> []
+        | ReconciliationStepId.TemplateRePin -> []
 
     let private confirmPrompt (step: ReconciliationStep) =
-        $"Apply {step.StepId}?\n{step.DiffPreview}\n[y/N] "
+        $"Apply {reconciliationStepIdValue step.StepId}?\n{step.DiffPreview}\n[y/N] "
 
     // A confirm decision from the interpreted-effect log for one step, or None when the
     // step's Confirm has not been interpreted yet.
@@ -85,10 +85,13 @@ module internal HandlersUpgrade =
                     | _ -> result.Succeeded
                 | None -> false)
 
-        if ok then "applied" else "failed"
+        if ok then
+            ReconciliationOutcome.Applied
+        else
+            ReconciliationOutcome.Failed
 
     type private StepProgress =
-        | Resolved of string
+        | Resolved of ReconciliationOutcome
         | EmitEffects of CommandEffect list
         | Awaiting
 
@@ -102,7 +105,7 @@ module internal HandlersUpgrade =
             effects |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
 
         if List.isEmpty effects then
-            Resolved "applied"
+            Resolved ReconciliationOutcome.Applied
         elif allInterpreted then
             Resolved(applyOutcome model effects)
         elif anyPlanned then
@@ -115,14 +118,14 @@ module internal HandlersUpgrade =
             // `--yes`: apply each step directly — no `Confirm` emitted (FR-011).
             applyStage model request step
         else
-            match confirmDecision model step.StepId with
+            match confirmDecision model (reconciliationStepIdValue step.StepId) with
             | Some true -> applyStage model request step
-            | Some false -> Resolved "skipped"
+            | Some false -> Resolved ReconciliationOutcome.Skipped
             | None ->
-                if confirmPlanned model step.StepId then
+                if confirmPlanned model (reconciliationStepIdValue step.StepId) then
                     Awaiting
                 else
-                    EmitEffects [ Confirm(step.StepId, confirmPrompt step) ]
+                    EmitEffects [ Confirm(reconciliationStepIdValue step.StepId, confirmPrompt step) ]
 
     let private selfUpdateExitCode model =
         model.InterpretedEffects
@@ -155,16 +158,16 @@ module internal HandlersUpgrade =
                 let outcome =
                     match stepProgress model request step with
                     | Resolved value -> value
-                    | _ -> "failed"
+                    | _ -> ReconciliationOutcome.Failed
 
                 step.StepId, outcome)
 
         let ofOutcome value =
             outcomes |> List.filter (fun (_, o) -> o = value) |> List.map fst |> List.sort
 
-        let applied = ofOutcome "applied"
-        let skipped = ofOutcome "skipped"
-        let failed = ofOutcome "failed"
+        let applied = ofOutcome ReconciliationOutcome.Applied
+        let skipped = ofOutcome ReconciliationOutcome.Skipped
+        let failed = ofOutcome ReconciliationOutcome.Failed
 
         let resolvedMap = Map.ofList outcomes
 
@@ -181,7 +184,7 @@ module internal HandlersUpgrade =
         // step actually applied (a skipped/failed re-seed leaves them outstanding, so they stay
         // in the advisory surface).
         let repairedMissing =
-            if List.contains "artifactReSeed" applied then
+            if List.contains ReconciliationStepId.ArtifactReSeed applied then
                 drift.MissingArtifactPaths
             else
                 []
@@ -197,19 +200,19 @@ module internal HandlersUpgrade =
         let residualDrift =
             not (List.isEmpty skipped)
             || not (List.isEmpty failed)
-            || List.contains "cliSelfUpdate" applied
+            || List.contains ReconciliationStepId.CliSelfUpdate applied
             || not (List.isEmpty unrepairedSkillDrift)
 
         let diagnostics =
             if not (List.isEmpty failed) then
                 failed
                 |> List.map (fun stepId ->
-                    if stepId = "cliSelfUpdate" then
+                    if stepId = ReconciliationStepId.CliSelfUpdate then
                         upgradeSelfUpdateFailed (selfUpdateExitCode model)
                     else
-                        upgradeStepFailed stepId)
+                        upgradeStepFailed (reconciliationStepIdValue stepId))
             elif not (List.isEmpty skipped) then
-                [ upgradeResidualDrift skipped ]
+                [ upgradeResidualDrift (skipped |> List.map reconciliationStepIdValue) ]
             else
                 []
 
@@ -263,7 +266,8 @@ module internal HandlersUpgrade =
                 let drift = computeDrift model
 
                 let actionable =
-                    drift.Steps |> List.filter (fun step -> step.Outcome = "wouldApply")
+                    drift.Steps
+                    |> List.filter (fun step -> step.Outcome = ReconciliationOutcome.WouldApply)
 
                 if not drift.HasProvenance then
                     { model with

@@ -302,6 +302,9 @@ module CommandTypes =
         | RefreshedCurrent
         | PartiallyBlocked
         | RefreshBlocked
+        /// Feature 068 / US2 (2b): pre-work-model early-stage disposition (serializes to
+        /// `early-stage`), formerly a bare literal bypassing this DU.
+        | EarlyStage
 
     type RefreshSummary =
         { WorkId: string
@@ -383,19 +386,39 @@ module CommandTypes =
             ProviderInvocation: ProviderInvocationResult option
         }
 
+    /// The closed set of reconciliation step ids / kinds (feature 068 / US2), formerly a raw
+    /// string. Serializes to `cliSelfUpdate` / `templateRePin` / `artifactReSeed` via
+    /// `reconciliationStepIdValue`.
+    [<RequireQualifiedAccess>]
+    type ReconciliationStepId =
+        | CliSelfUpdate
+        | TemplateRePin
+        | ArtifactReSeed
+
+    /// The closed set of reconciliation step outcomes (feature 068 / US2), formerly a raw
+    /// string. Serializes to `wouldApply` / `applied` / `skipped` / `failed` / `noTarget` via
+    /// `reconciliationOutcomeValue`.
+    [<RequireQualifiedAccess>]
+    type ReconciliationOutcome =
+        | WouldApply
+        | Applied
+        | Skipped
+        | Failed
+        | NoTarget
+
     /// One confirmable unit of `upgrade` (CLI self-update, template re-pin, or
     /// artifact re-seed), shared by `DoctorSummary.PreviewSteps` (dry-run preview) and
     /// `UpgradeSummary.Steps` (apply outcome). Data-model E6.
     type ReconciliationStep =
         {
-            StepId: string
-            Kind: string
+            StepId: ReconciliationStepId
+            Kind: ReconciliationStepId
             /// Compact before/after preview per step kind (R5): version delta /
             /// created-path list / changed-line pin preview. Presentation-only fact.
             DiffPreview: string
             /// Preview context: `wouldApply` / `noTarget`. Apply context:
             /// `applied` / `skipped` / `failed` / `noTarget`.
-            Outcome: string
+            Outcome: ReconciliationOutcome
             /// The consumer paths the step would write (re-seed: missing artifacts;
             /// re-pin: `.fsgg/providers.yml`; self-update: `[]`). Sorted.
             TargetPaths: string list
@@ -428,9 +451,9 @@ module CommandTypes =
             Mode: string
             AlreadyCoherent: bool
             Steps: ReconciliationStep list
-            AppliedStepIds: string list
-            SkippedStepIds: string list
-            FailedStepIds: string list
+            AppliedStepIds: ReconciliationStepId list
+            SkippedStepIds: ReconciliationStepId list
+            FailedStepIds: ReconciliationStepId list
             /// 058/ADR-0014 §Decision 3: content-addressed skill drift surfaced at reconcile
             /// time (advisory in P1 — a present-but-divergent copy is reported, not clobbered).
             SkillDriftPaths: string list
@@ -584,6 +607,8 @@ module CommandTypes =
     val generatedViewCurrencyValue: currency: GeneratedViewCurrency -> string
     val guidanceDispositionValue: disposition: GuidanceDisposition -> string
     val refreshDispositionValue: disposition: RefreshDisposition -> string
+    val reconciliationStepIdValue: stepId: ReconciliationStepId -> string
+    val reconciliationOutcomeValue: outcome: ReconciliationOutcome -> string
     val outcomeValue: outcome: CommandOutcome -> string
     val nextLifecycleCommand: command: SddCommand -> SddCommand option
     val effectPath: effect: CommandEffect -> string option

@@ -78,7 +78,7 @@ module internal Drift =
         // or a missing copy is drift. Hash-matching against the running binary's embedded body
         // would instead flag every prior scaffold after any skill-text change across CLI versions.
         let processSkills =
-            SeededSkills.seededSkills
+            SeededSkills.seededSkills ()
             |> List.map (fun skill ->
                 { SkillMirror.ExpectedSkill.Id = skill.Name
                   SkillMirror.ExpectedSkill.Scope = SkillScope.Process
@@ -130,11 +130,11 @@ module internal Drift =
         |> List.distinct
         |> List.sort
 
-    let private noTargetStep stepId preview : ReconciliationStep =
+    let private noTargetStep (stepId: ReconciliationStepId) preview : ReconciliationStep =
         { StepId = stepId
           Kind = stepId
           DiffPreview = preview
-          Outcome = "noTarget"
+          Outcome = ReconciliationOutcome.NoTarget
           TargetPaths = [] }
 
     /// Compute the drift picture from already-snapshotted inputs. `descriptor` is the
@@ -193,27 +193,27 @@ module internal Drift =
 
             let cliStep =
                 if cliAxis = "behind" then
-                    { StepId = "cliSelfUpdate"
-                      Kind = "cliSelfUpdate"
+                    { StepId = ReconciliationStepId.CliSelfUpdate
+                      Kind = ReconciliationStepId.CliSelfUpdate
                       DiffPreview = $"installed {installedVersion} → target ≥{minimumText}"
-                      Outcome = "wouldApply"
+                      Outcome = ReconciliationOutcome.WouldApply
                       TargetPaths = [] }
                 else
-                    noTargetStep "cliSelfUpdate" "no CLI version target"
+                    noTargetStep ReconciliationStepId.CliSelfUpdate "no CLI version target"
 
             // R6: re-pin is value-agnostic and currently a recognized-but-usually-inert
             // step — generic SDD holds no template-version drift signal, so it previews as
             // `noTarget` and embeds no provider/template literal either way.
-            let rePinStep = noTargetStep "templateRePin" "no re-pin target"
+            let rePinStep = noTargetStep ReconciliationStepId.TemplateRePin "no re-pin target"
 
             let reSeedStep =
                 if List.isEmpty missing then
-                    noTargetStep "artifactReSeed" "no missing artifacts"
+                    noTargetStep ReconciliationStepId.ArtifactReSeed "no missing artifacts"
                 else
-                    { StepId = "artifactReSeed"
-                      Kind = "artifactReSeed"
+                    { StepId = ReconciliationStepId.ArtifactReSeed
+                      Kind = ReconciliationStepId.ArtifactReSeed
                       DiffPreview = missing |> List.map (fun path -> $"+ {path} (new)") |> String.concat "\n"
-                      Outcome = "wouldApply"
+                      Outcome = ReconciliationOutcome.WouldApply
                       TargetPaths = missing }
 
             let steps = [ cliStep; rePinStep; reSeedStep ]
@@ -224,7 +224,8 @@ module internal Drift =
             let skillDriftPaths = computeSkillDriftPaths provenance skillBodies
 
             let hasActionableWork =
-                steps |> List.exists (fun step -> step.Outcome = "wouldApply")
+                steps
+                |> List.exists (fun step -> step.Outcome = ReconciliationOutcome.WouldApply)
 
             { HasProvenance = true
               ProviderName = Some record.ProviderName

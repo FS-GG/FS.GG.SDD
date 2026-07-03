@@ -314,86 +314,75 @@ module internal HandlersVerify =
         (generatedViews: GeneratedViewState list)
         (diagnostics: Diagnostic list)
         =
-        use stream = new MemoryStream()
-        use writer = new Utf8JsonWriter(stream, JsonWriterOptions(Indented = true))
-
         let findings = verifyFindings diagnostics
 
-        writeViewPreamble writer workId "verify" readiness generator
-        writeSourcesArray writer verifySourceKind sources
-        writeLifecycleReadiness writer lifecycleStatus lifecycleStages
-        writer.WriteStartObject("taskGraph")
-        writer.WriteNumber("taskCount", taskCount)
-        writer.WriteNumber("dependencyCount", dependencyCount)
-        writer.WriteBoolean("dependenciesValid", dependenciesValid)
-        writer.WriteBoolean("statusesValid", statusesValid)
-        writeStringArray writer "findingIds" taskFindingIds
-        writer.WriteEndObject()
-        writer.WriteStartArray("evidenceDispositions")
+        writeReadinessEnvelope workId "verify" readiness generator verifySourceKind sources (fun writer ->
+            writeLifecycleReadiness writer lifecycleStatus lifecycleStages
+            writer.WriteStartObject("taskGraph")
+            writer.WriteNumber("taskCount", taskCount)
+            writer.WriteNumber("dependencyCount", dependencyCount)
+            writer.WriteBoolean("dependenciesValid", dependenciesValid)
+            writer.WriteBoolean("statusesValid", statusesValid)
+            writeStringArray writer "findingIds" taskFindingIds
+            writer.WriteEndObject()
+            writer.WriteStartArray("evidenceDispositions")
 
-        evidenceViews
-        |> List.iter (fun view ->
-            writer.WriteStartObject()
-            writer.WriteString("id", view.Id)
-            writer.WriteString("obligationId", view.ObligationId)
-            writer.WriteString("state", view.State)
-            writeStringArray writer "evidenceIds" view.EvidenceIds
-            writeStringArray writer "affectedTaskIds" view.TaskIds
-            writeStringArray writer "affectedSourceIds" view.SourceIds
-            writer.WriteString("severity", view.Severity)
-            writeStringArray writer "diagnosticIds" view.DiagnosticIds
-            writer.WriteString("correction", view.Correction)
-            writer.WriteEndObject())
+            evidenceViews
+            |> List.iter (fun view ->
+                writer.WriteStartObject()
+                writer.WriteString("id", view.Id)
+                writer.WriteString("obligationId", view.ObligationId)
+                writer.WriteString("state", view.State)
+                writeStringArray writer "evidenceIds" view.EvidenceIds
+                writeStringArray writer "affectedTaskIds" view.TaskIds
+                writeStringArray writer "affectedSourceIds" view.SourceIds
+                writer.WriteString("severity", view.Severity)
+                writeStringArray writer "diagnosticIds" view.DiagnosticIds
+                writer.WriteString("correction", view.Correction)
+                writer.WriteEndObject())
 
-        writer.WriteEndArray()
-        writer.WriteStartArray("testDispositions")
+            writer.WriteEndArray()
+            writer.WriteStartArray("testDispositions")
 
-        testViews
-        |> List.iter (fun view ->
-            writer.WriteStartObject()
-            writer.WriteString("id", view.Id)
-            writer.WriteString("obligationId", view.ObligationId)
-            writer.WriteString("state", view.State)
-            writeStringArray writer "evidenceIds" view.EvidenceIds
-            writeStringArray writer "affectedTaskIds" view.TaskIds
-            writeStringArray writer "affectedRequirementIds" view.RequirementIds
-            writer.WriteString("severity", view.Severity)
-            writeStringArray writer "diagnosticIds" view.DiagnosticIds
-            writer.WriteString("correction", view.Correction)
-            writer.WriteEndObject())
+            testViews
+            |> List.iter (fun view ->
+                writer.WriteStartObject()
+                writer.WriteString("id", view.Id)
+                writer.WriteString("obligationId", view.ObligationId)
+                writer.WriteString("state", view.State)
+                writeStringArray writer "evidenceIds" view.EvidenceIds
+                writeStringArray writer "affectedTaskIds" view.TaskIds
+                writeStringArray writer "affectedRequirementIds" view.RequirementIds
+                writer.WriteString("severity", view.Severity)
+                writeStringArray writer "diagnosticIds" view.DiagnosticIds
+                writer.WriteString("correction", view.Correction)
+                writer.WriteEndObject())
 
-        writer.WriteEndArray()
-        writer.WriteStartArray("skillVisibility")
+            writer.WriteEndArray()
+            writer.WriteStartArray("skillVisibility")
 
-        skillViews
-        |> List.iter (fun view ->
-            writer.WriteStartObject()
-            writer.WriteString("skill", view.Skill)
-            writeStringArray writer "requiringTaskIds" view.RequiringTaskIds
-            writer.WriteString("visibility", view.Visibility)
-            writer.WriteString("sourceArtifactPath", view.SourceArtifactPath)
-            writer.WriteString("severity", view.Severity)
-            writeStringArray writer "diagnosticIds" view.DiagnosticIds
-            writer.WriteString("correction", view.Correction)
-            writer.WriteEndObject())
+            skillViews
+            |> List.iter (fun view ->
+                writer.WriteStartObject()
+                writer.WriteString("skill", view.Skill)
+                writeStringArray writer "requiringTaskIds" view.RequiringTaskIds
+                writer.WriteString("visibility", view.Visibility)
+                writer.WriteString("sourceArtifactPath", view.SourceArtifactPath)
+                writer.WriteString("severity", view.Severity)
+                writeStringArray writer "diagnosticIds" view.DiagnosticIds
+                writer.WriteString("correction", view.Correction)
+                writer.WriteEndObject())
 
-        writer.WriteEndArray()
-        writeGeneratedViewsArray writer generatedViews
-        writeReadinessFindings writer findings
-        writeBoundaryFacts writer "governanceCompatibility"
-        writeViewDiagnostics writer diagnostics
-        writer.WriteString("readiness", readiness)
+            writer.WriteEndArray()
+            writeGeneratedViewsArray writer generatedViews
+            writeGovernanceReadinessTail writer findings diagnostics readiness
 
-        writeNextAction
-            writer
-            (readiness = "verificationReady")
-            "verify.next.ship"
-            "Verification readiness is current and ready for ship."
-            "Verification found lifecycle diagnostics that must be corrected before ship."
-
-        writer.WriteEndObject()
-        writer.Flush()
-        Encoding.UTF8.GetString(stream.ToArray())
+            writeNextAction
+                writer
+                (readiness = "verificationReady")
+                "verify.next.ship"
+                "Verification readiness is current and ready for ship."
+                "Verification found lifecycle diagnostics that must be corrected before ship.")
 
     let computeVerifyPlan model =
         let ((specification, clarification, checklist, plan, tasks, analysis, evidenceSummaryOpt, verificationSummary),

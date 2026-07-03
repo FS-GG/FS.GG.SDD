@@ -245,9 +245,6 @@ module internal HandlersShip =
         (generatedViews: GeneratedViewState list)
         (diagnostics: Diagnostic list)
         =
-        use stream = new MemoryStream()
-        use writer = new Utf8JsonWriter(stream, JsonWriterOptions(Indented = true))
-
         let findings = shipFindings diagnostics
 
         let evidenceCount state =
@@ -258,102 +255,94 @@ module internal HandlersShip =
                 |> List.length
             | None -> 0
 
-        writeViewPreamble writer workId "ship" readiness generator
-        writeSourcesArray writer verifySourceKind sources
-        writeLifecycleReadiness writer lifecycleStatus lifecycleStages
-        writer.WriteStartObject("verificationReadiness")
-        writer.WriteString("status", verificationStatus)
+        writeReadinessEnvelope workId "ship" readiness generator verifySourceKind sources (fun writer ->
+            writeLifecycleReadiness writer lifecycleStatus lifecycleStages
+            writer.WriteStartObject("verificationReadiness")
+            writer.WriteString("status", verificationStatus)
 
-        writeStringArray
-            writer
-            "blockingFindingIds"
+            writeStringArray
+                writer
+                "blockingFindingIds"
+                (match verificationView with
+                 | Some view ->
+                     view.Findings
+                     |> List.filter (fun finding ->
+                         String.Equals(finding.Severity, "blocking", StringComparison.OrdinalIgnoreCase))
+                     |> List.map (fun finding -> finding.Id)
+                 | None -> [])
+
+            writer.WriteNumber("evidenceSupportedCount", evidenceCount EvidenceSupported)
+            writer.WriteNumber("evidenceDeferredCount", evidenceCount EvidenceDeferred)
+            writer.WriteNumber("evidenceMissingCount", evidenceCount EvidenceMissingDisposition)
+            writer.WriteNumber("evidenceStaleCount", evidenceCount EvidenceStale)
+            writer.WriteNumber("evidenceSyntheticCount", evidenceCount EvidenceSyntheticDisposition)
+            writer.WriteNumber("evidenceInvalidCount", evidenceCount EvidenceInvalid)
+            writer.WriteEndObject()
+            writer.WriteStartArray("evidenceDispositions")
+
             (match verificationView with
-             | Some view ->
-                 view.Findings
-                 |> List.filter (fun finding ->
-                     String.Equals(finding.Severity, "blocking", StringComparison.OrdinalIgnoreCase))
-                 |> List.map (fun finding -> finding.Id)
+             | Some view -> view.EvidenceDispositions
              | None -> [])
+            |> List.sortBy (fun disposition -> disposition.DispositionId)
+            |> List.iter (fun disposition ->
+                writer.WriteStartObject()
+                writer.WriteString("id", disposition.DispositionId)
+                writer.WriteString("obligationId", disposition.ObligationId)
+                writer.WriteString("state", shipEvidenceStateValue disposition.State)
+                writer.WriteString("severity", disposition.Severity)
+                writeStringArray writer "diagnosticIds" disposition.DiagnosticIds
+                writer.WriteEndObject())
 
-        writer.WriteNumber("evidenceSupportedCount", evidenceCount EvidenceSupported)
-        writer.WriteNumber("evidenceDeferredCount", evidenceCount EvidenceDeferred)
-        writer.WriteNumber("evidenceMissingCount", evidenceCount EvidenceMissingDisposition)
-        writer.WriteNumber("evidenceStaleCount", evidenceCount EvidenceStale)
-        writer.WriteNumber("evidenceSyntheticCount", evidenceCount EvidenceSyntheticDisposition)
-        writer.WriteNumber("evidenceInvalidCount", evidenceCount EvidenceInvalid)
-        writer.WriteEndObject()
-        writer.WriteStartArray("evidenceDispositions")
+            writer.WriteEndArray()
+            writeGeneratedViewsArray writer generatedViews
+            writer.WriteStartObject("disposition")
+            writer.WriteString("state", disposition)
 
-        (match verificationView with
-         | Some view -> view.EvidenceDispositions
-         | None -> [])
-        |> List.sortBy (fun disposition -> disposition.DispositionId)
-        |> List.iter (fun disposition ->
-            writer.WriteStartObject()
-            writer.WriteString("id", disposition.DispositionId)
-            writer.WriteString("obligationId", disposition.ObligationId)
-            writer.WriteString("state", shipEvidenceStateValue disposition.State)
-            writer.WriteString("severity", disposition.Severity)
-            writeStringArray writer "diagnosticIds" disposition.DiagnosticIds
-            writer.WriteEndObject())
+            writeStringArray
+                writer
+                "blockingFindingIds"
+                (findings
+                 |> List.filter (fun (_, _, severity) -> severity = "blocking")
+                 |> List.map (fun (id, _, _) -> id))
 
-        writer.WriteEndArray()
-        writeGeneratedViewsArray writer generatedViews
-        writer.WriteStartObject("disposition")
-        writer.WriteString("state", disposition)
+            writeStringArray
+                writer
+                "warningFindingIds"
+                (findings
+                 |> List.filter (fun (_, _, severity) -> severity = "warning")
+                 |> List.map (fun (id, _, _) -> id))
 
-        writeStringArray
-            writer
-            "blockingFindingIds"
-            (findings
-             |> List.filter (fun (_, _, severity) -> severity = "blocking")
-             |> List.map (fun (id, _, _) -> id))
+            writeStringArray
+                writer
+                "advisoryFindingIds"
+                (findings
+                 |> List.filter (fun (_, _, severity) -> severity = "advisory")
+                 |> List.map (fun (id, _, _) -> id))
 
-        writeStringArray
-            writer
-            "warningFindingIds"
-            (findings
-             |> List.filter (fun (_, _, severity) -> severity = "warning")
-             |> List.map (fun (id, _, _) -> id))
+            writeStringArray
+                writer
+                "contributingStages"
+                (lifecycleStages
+                 |> List.filter (fun (_, status) -> status <> "ready")
+                 |> List.map fst)
 
-        writeStringArray
-            writer
-            "advisoryFindingIds"
-            (findings
-             |> List.filter (fun (_, _, severity) -> severity = "advisory")
-             |> List.map (fun (id, _, _) -> id))
+            writer.WriteString(
+                "correction",
+                if disposition = "shipReady" then
+                    ""
+                else
+                    "Resolve the blocking ship-readiness findings before the protected-boundary handoff."
+            )
 
-        writeStringArray
-            writer
-            "contributingStages"
-            (lifecycleStages
-             |> List.filter (fun (_, status) -> status <> "ready")
-             |> List.map fst)
+            writer.WriteEndObject()
+            writeGovernanceReadinessTail writer findings diagnostics readiness
 
-        writer.WriteString(
-            "correction",
-            if disposition = "shipReady" then
-                ""
-            else
-                "Resolve the blocking ship-readiness findings before the protected-boundary handoff."
-        )
-
-        writer.WriteEndObject()
-        writeReadinessFindings writer findings
-        writeBoundaryFacts writer "governanceCompatibility"
-        writeViewDiagnostics writer diagnostics
-        writer.WriteString("readiness", readiness)
-
-        writeNextAction
-            writer
-            (readiness = "shipReady")
-            "ship.next.protectedBoundary"
-            "Ship readiness is current and ready for the protected-boundary handoff."
-            "Ship found lifecycle diagnostics that must be corrected before the protected-boundary handoff."
-
-        writer.WriteEndObject()
-        writer.Flush()
-        Encoding.UTF8.GetString(stream.ToArray())
+            writeNextAction
+                writer
+                (readiness = "shipReady")
+                "ship.next.protectedBoundary"
+                "Ship readiness is current and ready for the protected-boundary handoff."
+                "Ship found lifecycle diagnostics that must be corrected before the protected-boundary handoff.")
 
     let computeShipPlan model =
         let ((specification, clarification, checklist, plan, tasks, analysis, shipSummaryOpt),

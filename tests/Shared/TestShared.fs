@@ -161,6 +161,35 @@ module TestShared =
 
             Assert.Equal<string array>(committed (), actual)
 
+    /// Byte-exact update-or-assert for a whole generated document (e.g. a readiness JSON view),
+    /// where field order and every byte are load-bearing — the whole-document analogue of
+    /// `SurfaceBaseline` (feature 068 / US1 / FR-002-003). `FSGG_UPDATE_BASELINE=1` re-captures the
+    /// committed golden intentionally; otherwise assert the produced document is byte-identical to it.
+    /// Reuses the same regeneration switch as every other baseline so re-pinning is one ritual.
+    module Golden =
+        let verify (goldenPath: string) (produce: unit -> string) =
+            let actual = produce ()
+            let committed () = File.ReadAllText goldenPath
+
+            // Regenerate only on a genuine change so re-running the switch on an unchanged view never
+            // rewrites the committed golden (stays byte-identical, mirroring SurfaceBaseline).
+            if
+                Environment.GetEnvironmentVariable "FSGG_UPDATE_BASELINE" = "1"
+                && (not (File.Exists goldenPath) || actual <> committed ())
+            then
+                match Path.GetDirectoryName goldenPath with
+                | null -> ()
+                | dir -> Directory.CreateDirectory dir |> ignore
+
+                File.WriteAllText(goldenPath, actual)
+
+            Assert.True(
+                File.Exists goldenPath,
+                $"Missing golden {goldenPath}; run the test with FSGG_UPDATE_BASELINE=1 to capture it."
+            )
+
+            Assert.Equal(committed (), actual)
+
     /// The evidence "ladder": task ids `T001..T00n` derived from a range once (feature 067 /
     /// FR-011) instead of being hand-copied, plus the passing-evidence document that satisfies
     /// them. Byte-compatible with the former hardcoded `T001..T006` literal.

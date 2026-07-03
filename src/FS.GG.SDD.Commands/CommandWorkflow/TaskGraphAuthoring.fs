@@ -17,7 +17,7 @@ open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 
 [<AutoOpen>]
-module internal ParsingTasks =
+module internal TaskGraphAuthoring =
     module DiagnosticsModule = FS.GG.SDD.Artifacts.Diagnostics
     module IdentifiersModule = FS.GG.SDD.Artifacts.Identifiers
     module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion

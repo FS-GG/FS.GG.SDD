@@ -408,6 +408,11 @@ module GovernanceHandoffTests =
         arr "sources" doc
         |> List.find (fun source -> str "path" source = shipPath)
         |> str "digest"
+        // `str` (JsonElement.GetString) is `string | null`; a handoff source always carries a
+        // digest, so coerce to non-null (the repo's established pattern) — keeps the digest
+        // comparisons below nullness-clean under whole-project analysis.
+        |> Option.ofObj
+        |> Option.defaultValue ""
 
     [<Fact>]
     let ``US5 a modified contributing source makes the handoff stale and refresh restores it (SC-006)`` () =
@@ -420,7 +425,7 @@ module GovernanceHandoffTests =
         TestSupport.writeRelative root shipPath mutated
 
         // the handoff's recorded source digest no longer matches the live source — stale (AC1)
-        Assert.NotEqual($"sha256:{shipJsonDigest root}", handoffShipSourceDigest root)
+        Assert.NotEqual<string>($"sha256:{shipJsonDigest root}", handoffShipSourceDigest root)
 
         // refresh regenerates the handoff against the current source — current again (AC2)
         let report = TestSupport.runRefresh root workId

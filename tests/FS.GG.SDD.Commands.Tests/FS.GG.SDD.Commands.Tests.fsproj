@@ -18,6 +18,9 @@
     <Compile Include="EvidenceCommandTests.fs" />
     <Compile Include="VerifyCommandTests.fs" />
     <Compile Include="ShipCommandTests.fs" />
+    <Compile Include="ReadinessViewGoldenTests.fs" />
+    <Compile Include="ReconciliationDuTests.fs" />
+    <Compile Include="FoundationTests.fs" />
     <Compile Include="AgentsCommandTests.fs" />
     <Compile Include="RefreshCommandTests.fs" />
     <Compile Include="GeneratedViewCommandTests.fs" />

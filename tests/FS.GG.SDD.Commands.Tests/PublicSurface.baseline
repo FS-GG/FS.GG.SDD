@@ -129,6 +129,8 @@ FS.GG.SDD.Commands.CommandTypes.nextLifecycleCommand
 FS.GG.SDD.Commands.CommandTypes.outcomeValue
 FS.GG.SDD.Commands.CommandTypes.outputFormatValue
 FS.GG.SDD.Commands.CommandTypes.parseCommand
+FS.GG.SDD.Commands.CommandTypes.reconciliationOutcomeValue
+FS.GG.SDD.Commands.CommandTypes.reconciliationStepIdValue
 FS.GG.SDD.Commands.CommandTypes.refreshDispositionValue
 FS.GG.SDD.Commands.CommandTypes.writeKindValue
 FS.GG.SDD.Commands.CommandWorkflow.init
