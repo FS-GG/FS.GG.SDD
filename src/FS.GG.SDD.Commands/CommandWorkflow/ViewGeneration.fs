@@ -15,8 +15,8 @@ open FS.GG.SDD.Artifacts.Serialization
 open FS.GG.SDD.Artifacts.WorkModel
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Commands.Internal.Foundation
 
-[<AutoOpen>]
 module internal ViewGeneration =
     module DiagnosticsModule = FS.GG.SDD.Artifacts.Diagnostics
     module GenerationManifestModule = FS.GG.SDD.Artifacts.GenerationManifest

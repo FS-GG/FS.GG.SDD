@@ -6,6 +6,8 @@ open FS.GG.SDD.Commands.CommandRendering
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.Internal
+open FS.GG.SDD.Commands.Internal.Foundation
+open FS.GG.SDD.Commands.Internal.TaskGraphAuthoring
 open Xunit
 
 module TasksCommandTests =

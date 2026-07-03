@@ -8,6 +8,7 @@ open FS.GG.SDD.Artifacts.Config
 open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Artifacts.ScaffoldProvenance
 open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Commands.Internal.Foundation
 
 /// `fsgg-sdd scaffold` handler. The pure `plan`/`update` boundary produces the
 /// effects (`RunProcess`, skeleton writes, the provenance `WriteFile`); the edge
@@ -18,7 +19,6 @@ open FS.GG.SDD.Commands.CommandTypes
 ///      `dotnet new <templateId>`;
 ///   3. once the create process is interpreted, diff produced paths, guard the SDD
 ///      trees, and plan the deterministic `.fsgg/scaffold-provenance.json` write.
-[<AutoOpen>]
 module internal HandlersScaffold =
     module ConfigModule = FS.GG.SDD.Artifacts.Config
     module DiagnosticsModule = FS.GG.SDD.Artifacts.Diagnostics

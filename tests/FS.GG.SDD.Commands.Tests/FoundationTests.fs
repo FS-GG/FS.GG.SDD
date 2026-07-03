@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Commands.Tests
 
 open FS.GG.SDD.Commands.Internal
+open FS.GG.SDD.Commands.Internal.Foundation
 open Xunit
 
 // Feature 068 / US3b: pin projectIdFromRoot's contract and make its cwd coupling explicit and

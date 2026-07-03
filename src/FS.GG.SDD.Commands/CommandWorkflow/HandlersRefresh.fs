@@ -15,8 +15,12 @@ open FS.GG.SDD.Artifacts.Serialization
 open FS.GG.SDD.Artifacts.WorkModel
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Commands.Internal.Foundation
+open FS.GG.SDD.Commands.Internal.EarlyStageAuthoring
+open FS.GG.SDD.Commands.Internal.ViewGeneration
+open FS.GG.SDD.Commands.Internal.HandlersShip
+open FS.GG.SDD.Commands.Internal.HandlersAgents
 
-[<AutoOpen>]
 module internal HandlersRefresh =
     module DiagnosticsModule = FS.GG.SDD.Artifacts.Diagnostics
     module GenerationManifestModule = FS.GG.SDD.Artifacts.GenerationManifest

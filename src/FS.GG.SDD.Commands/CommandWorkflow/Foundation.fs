@@ -16,7 +16,6 @@ open FS.GG.SDD.Artifacts.WorkModel
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 
-[<AutoOpen>]
 module internal Foundation =
     module GenerationManifestModule = FS.GG.SDD.Artifacts.GenerationManifest
     module IdentifiersModule = FS.GG.SDD.Artifacts.Identifiers

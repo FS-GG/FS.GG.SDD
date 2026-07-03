@@ -15,8 +15,11 @@ open FS.GG.SDD.Artifacts.Serialization
 open FS.GG.SDD.Artifacts.WorkModel
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Commands.Internal.Foundation
+open FS.GG.SDD.Commands.Internal.EarlyStageAuthoring
+open FS.GG.SDD.Commands.Internal.ChecklistPlanAuthoring
+open FS.GG.SDD.Commands.Internal.TaskGraphAuthoring
 
-[<AutoOpen>]
 module internal Prerequisites =
     module DiagnosticsModule = FS.GG.SDD.Artifacts.Diagnostics
 
