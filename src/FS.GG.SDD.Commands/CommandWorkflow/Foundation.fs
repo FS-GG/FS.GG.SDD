@@ -31,6 +31,16 @@ module internal Foundation =
              path.Trim().Replace('\\', '/'))
             .TrimStart('/')
 
+    /// The project id is the lowercased leaf directory name of the work root, falling back to
+    /// `sdd-project` when the root has no nameable leaf. Feature 068 / US3b: the ambient coupling is
+    /// made explicit here — for a RELATIVE root (including the default `.`), `DirectoryInfo(root).Name`
+    /// resolves the leaf against the process working directory, so the id becomes the initializing
+    /// directory's name. That is the one intentional ambient read on this path (it is what makes
+    /// `fsgg-sdd init` in `my-product/` name the project `my-product`). An ABSOLUTE root is fully
+    /// deterministic — the id is derived purely from the argument with no cwd dependence, which is
+    /// how every test/generator drives it. (Relocating the relative-root resolution to the CLI edge
+    /// would fully purify the planner but touches the write-base flow; deferred as disproportionate
+    /// to this LOW item — see specs/068 research §3b.)
     let projectIdFromRoot (root: string) =
         let name = DirectoryInfo(normalizeRoot root).Name
 
@@ -395,7 +405,7 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
         // surfaces through this single seam (reused by scaffold, FR-007). They carry
         // the same AgentGuidanceTarget no-clobber/authored-SDD-owned semantics as the
         // constitution/early-stage guidance above; prior init effects stay byte-identical.
-        @ SeededSkills.skillEffects
+        @ SeededSkills.skillEffects ()
 
     let charterPath workId = $"work/{workId}/charter.md"
     let specPath workId = $"work/{workId}/spec.md"

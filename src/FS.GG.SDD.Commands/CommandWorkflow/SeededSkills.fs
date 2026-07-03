@@ -41,12 +41,26 @@ module internal SeededSkills =
 
     let logicalName (name: string) = "SeededSkill." + name
 
+    /// Raised when a declared seeded skill's embedded resource is absent from the assembly. This
+    /// is a build/packaging defect — the `<EmbeddedResource>` set drifted from `skillNames` — not
+    /// user input (Constitution VIII: distinguish tool defect from user error, fail legibly). It
+    /// replaces the former static-init `failwithf`, which surfaced as an opaque
+    /// `TypeInitializationException` (feature 068 / US3a / FR-009).
+    type SeededSkillResourceMissing(logicalName: string) =
+        inherit exn(
+            $"Embedded seeded-skill resource '{logicalName}' is missing from the FS.GG.SDD.Commands "
+            + "assembly — a build/packaging defect (the embedded-resource set drifted from "
+            + "SeededSkills.skillNames), not user input. Rebuild after restoring the resource."
+        )
+
+        member _.LogicalName = logicalName
+
     let loadBody (name: string) =
         let assembly = Assembly.GetExecutingAssembly()
 
         use stream =
             match assembly.GetManifestResourceStream(logicalName name) with
-            | null -> failwithf "Embedded seeded-skill resource not found: %s" (logicalName name)
+            | null -> raise (SeededSkillResourceMissing(logicalName name))
             | s -> s
 
         use reader = new StreamReader(stream)
@@ -54,7 +68,11 @@ module internal SeededSkills =
 
     type SeededSkill = { Name: string; Body: string }
 
-    let seededSkills =
+    // Non-eager (a function, not a module-level value) so a missing embedded resource surfaces as
+    // the legible SeededSkillResourceMissing at the point of use — inside command execution, where
+    // it is catchable — rather than as an opaque TypeInitializationException at first module touch
+    // (feature 068 / US3a / FR-009).
+    let seededSkills () =
         skillNames |> List.map (fun name -> { Name = name; Body = loadBody name })
 
     // Each seeded skill expands to one additive WriteFile effect per declared agent-skill
@@ -63,8 +81,8 @@ module internal SeededSkills =
     // canonical body to every root makes them byte-identical by construction (FR-002). The
     // shared `SkillMirror.mirror` sorts by id and iterates the roots in order, so the emitted
     // effect stream is deterministic and unchanged. `init` and `scaffold` share this seam.
-    let skillEffects =
-        seededSkills
+    let skillEffects () =
+        seededSkills ()
         |> List.map (fun skill -> skill.Name, skill.Body)
         |> Fsgg.SkillMirror.mirror Fsgg.Schemas.agentSkillRoots
         |> List.map (fun write -> WriteFile(write.Path, write.Body, AgentGuidanceTarget))

@@ -241,7 +241,22 @@ module SeededSkillsTests =
         // Every one of the 45 seeded-skill WriteFile effects (15 skills × 3 roots) flows
         // through scaffold via the reused initEffects seam. Fails if scaffold stops reusing
         // initEffects (056: the third `.agents` root grew the count 30 → 45).
-        Assert.Equal(45, List.length SeededSkills.skillEffects)
+        Assert.Equal(45, List.length (SeededSkills.skillEffects ()))
 
-        for effect in SeededSkills.skillEffects do
+        for effect in SeededSkills.skillEffects () do
             Assert.Contains(effect, planned)
+
+    // Feature 068 / US3a / FR-009: a missing embedded seeded-skill resource surfaces as the
+    // legible domain exception SeededSkillResourceMissing (naming the resource, marking it a
+    // build/packaging defect) rather than an opaque static-init TypeInitializationException. The
+    // load is non-eager, so the failure occurs at the point of use and is catchable here.
+    [<Fact>]
+    let ``a missing embedded seeded-skill resource fails legibly, not as a static-init crash`` () =
+        let ex =
+            Assert.Throws<SeededSkills.SeededSkillResourceMissing>(fun () ->
+                SeededSkills.loadBody "fs-gg-sdd-does-not-exist" |> ignore)
+
+        // The exception names the missing logical resource and frames it as a build/packaging
+        // defect — an actionable, tool-defect-vs-user-input distinction (Constitution VIII).
+        Assert.Contains("SeededSkill.fs-gg-sdd-does-not-exist", ex.Message)
+        Assert.Contains("build/packaging defect", ex.Message)
