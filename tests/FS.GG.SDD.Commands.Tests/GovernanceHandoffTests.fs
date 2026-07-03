@@ -408,6 +408,11 @@ module GovernanceHandoffTests =
         arr "sources" doc
         |> List.find (fun source -> str "path" source = shipPath)
         |> str "digest"
+        // `str` (JsonElement.GetString) is `string | null`; a handoff source always carries a
+        // digest, so coerce to non-null (the repo's established pattern) — keeps the digest
+        // comparisons below nullness-clean under whole-project analysis.
+        |> Option.ofObj
+        |> Option.defaultValue ""
 
     [<Fact>]
     let ``US5 a modified contributing source makes the handoff stale and refresh restores it (SC-006)`` () =

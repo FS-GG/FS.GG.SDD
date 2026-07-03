@@ -19,9 +19,9 @@
     <Compile Include="CommandWorkflow/SeededSkills.fs" />
     <Compile Include="CommandWorkflow/Drift.fs" />
     <Compile Include="CommandWorkflow/Foundation.fs" />
-    <Compile Include="CommandWorkflow/ParsingEarly.fs" />
-    <Compile Include="CommandWorkflow/ParsingMid.fs" />
-    <Compile Include="CommandWorkflow/ParsingTasks.fs" />
+    <Compile Include="CommandWorkflow/EarlyStageAuthoring.fs" />
+    <Compile Include="CommandWorkflow/ChecklistPlanAuthoring.fs" />
+    <Compile Include="CommandWorkflow/TaskGraphAuthoring.fs" />
     <Compile Include="CommandWorkflow/ViewGeneration.fs" />
     <Compile Include="CommandWorkflow/Prerequisites.fs" />
     <Compile Include="CommandWorkflow/HandlersEarly.fs" />
