@@ -19,7 +19,7 @@ module SkillManifestJson =
     // SDD emits no product-scope skills; a Product predicate is a provider concern and
     // never reaches this serializer (the drift guard asserts every emitted entry is
     // Process).
-    let private materializesWhen (_scope: SkillScope) = "always"
+    let private processMaterializesWhen = "always"
 
     let serialize (manifest: SkillManifest) : string =
         use stream = new MemoryStream()
@@ -42,7 +42,7 @@ module SkillManifestJson =
             | Some path -> writer.WriteString("resolvablePath", path)
             | None -> ()
 
-            writer.WriteString("materializes-when", materializesWhen skill.Scope)
+            writer.WriteString("materializes-when", processMaterializesWhen)
             writer.WriteEndObject())
 
         writer.WriteEndArray()

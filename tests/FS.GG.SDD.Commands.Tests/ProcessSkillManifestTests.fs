@@ -18,7 +18,11 @@ module ProcessSkillManifestTests =
     let private committedPath =
         Path.Combine(TestSupport.repoRoot, ".agents", "skills", "skill-manifest.json")
 
-    let private committedText () = File.ReadAllText committedPath
+    // Normalize CRLF → LF so the guard tolerates a `core.autocrlf` checkout of the
+    // LF-authored artifact (matching `Fsgg.SkillMirror.sha256` / feature 070 and the
+    // `registry skill-manifest --check` comparison), rather than spuriously reddening.
+    let private committedText () =
+        File.ReadAllText(committedPath).Replace("\r\n", "\n")
 
     let private committedDoc () = JsonDocument.Parse(committedText ())
 
