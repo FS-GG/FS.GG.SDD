@@ -1,8 +1,0 @@
-{
-  "tool": "fsgg-sdd registry validate",
-  "path": "does-not-exist.yml",
-  "valid": false,
-  "diagnostics": [
-    { "entry": "does-not-exist.yml", "rule": "MalformedDocument", "message": "Registry file not found: 'does-not-exist.yml'." }
-  ]
-}

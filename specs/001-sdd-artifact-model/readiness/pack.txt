@@ -1,5 +1,0 @@
-  Determining projects to restore...
-  All projects are up-to-date for restore.
-  FS.GG.SDD.Artifacts -> /home/developer/projects/FS.GG.SDD/src/FS.GG.SDD.Artifacts/bin/Release/net10.0/FS.GG.SDD.Artifacts.dll
-  The package FS.GG.SDD.Artifacts.0.1.0 is missing a readme. Go to https://aka.ms/nuget/authoring-best-practices/readme to learn why package readmes are important.
-  Successfully created package '/home/developer/projects/FS.GG.SDD/src/FS.GG.SDD.Artifacts/bin/Release/FS.GG.SDD.Artifacts.0.1.0.nupkg'.

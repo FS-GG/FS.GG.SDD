@@ -1,8 +1,0 @@
-Test run for /home/developer/projects/FS.GG.SDD/tests/FS.GG.SDD.Artifacts.Tests/bin/Release/net10.0/FS.GG.SDD.Artifacts.Tests.dll (.NETCoreApp,Version=v10.0)
-Test run for /home/developer/projects/FS.GG.SDD/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll (.NETCoreApp,Version=v10.0)
-A total of 1 test files matched the specified pattern.
-A total of 1 test files matched the specified pattern.
-
-Passed!  - Failed:     0, Passed:    66, Skipped:     0, Total:    66, Duration: 213 ms - FS.GG.SDD.Artifacts.Tests.dll (net10.0)
-
-Passed!  - Failed:     0, Passed:   169, Skipped:     0, Total:   169, Duration: 6 s - FS.GG.SDD.Commands.Tests.dll (net10.0)

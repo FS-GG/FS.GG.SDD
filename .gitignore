@@ -14,3 +14,9 @@ TestResults/
 
 # Claude Code agent memory (machine-local)
 .claude/projects/
+
+# FS.GG.SDD — regenerable per-feature readiness output (ADR-0018).
+# SDD dogfoods via Spec Kit, so its readiness views land at specs/<id>/readiness/.
+# Transient run output: ignore by role, never commit, do not re-include per feature.
+# See docs/reference/artifact-taxonomy.md. (Root readiness/ pinned proofs stay committed.)
+specs/*/readiness/
