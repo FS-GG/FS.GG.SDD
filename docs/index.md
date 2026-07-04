@@ -24,7 +24,7 @@ More:
 - [Decision 0001: separate SDD product](decisions/0001-separate-sdd-product.md)
 - [Imported reference docs](reference/README.md)
 
-This repository is the FS.GG.SDD lifecycle product: `fsgg-sdd` CLI source and tests
+This repository is the FS.GG.SDD lifecycle component: `fsgg-sdd` CLI source and tests
 live under `src/` and `tests/`, and feature specs are authored under `specs/`. New
 work is added through feature specs and plans, not by editing product source
 directly.

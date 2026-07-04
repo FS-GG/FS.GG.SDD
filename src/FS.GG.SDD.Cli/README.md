@@ -2,7 +2,7 @@
 
 Spec-driven development lifecycle tooling for FS.GG. `fsgg-sdd` is a .NET tool that
 takes a product team from an empty directory to a buildable, lifecycle-managed
-product, then through a structured development lifecycle — charter, specification,
+workspace, then through a structured development lifecycle — charter, specification,
 plan, tasks, evidence, verification, and ship — giving humans, agents, CLI automation,
 and optional Governance gates the same machine contract.
 
@@ -15,12 +15,12 @@ machine contract.
 dotnet tool install --global FS.GG.SDD.Cli   # exposes the `fsgg-sdd` command
 ```
 
-## Create a new project
+## Create a new workspace
 
 ```sh
 fsgg-sdd scaffold --root ./MyApp --provider <name> --param productName=MyApp
 
-cd ./MyApp && dotnet build && dotnet run   # the runnable product
+cd ./MyApp && dotnet build && dotnet run   # the runnable app
 fsgg-sdd charter                           # continue the lifecycle
 ```
 

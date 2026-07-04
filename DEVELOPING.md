@@ -1,7 +1,7 @@
 # Developing FS.GG.SDD
 
-This document covers contributing to the **FS.GG.SDD product itself**. To *use* the
-`fsgg-sdd` CLI on your own projects, see the [README](README.md).
+This document covers contributing to the **FS.GG.SDD component itself**. To *use* the
+`fsgg-sdd` CLI on your own workspaces, see the [README](README.md).
 
 ## Process
 
