@@ -120,7 +120,10 @@ Every command projects the same `CommandReport` three ways, precedence
 
 - default / `--json` — the deterministic JSON automation contract. **Agents and
   CI should use this.**
-- `--text` — portable plain-text summary.
+- `--text` — portable plain-text summary. **This is your best diagnostic:** when a
+  stage blocks or reports `noChange` for a reason the JSON `outcome`/`diagnostics`
+  don't spell out, re-run it with `--text` and read the summary counters
+  (`blockingAmbiguities`, `checklistFailedBlocking`, …). See [[fs-gg-sdd-troubleshooting]].
 - `--rich` — human Spectre.Console panels/tables/color; a pure projection that
   changes no JSON byte, stream, or exit code, and degrades to zero-ANSI plain
   text when non-interactive or color is disabled (`NO_COLOR`, `TERM=dumb`).
@@ -206,6 +209,7 @@ below; legacy `speckit-*` commands are not the active process.
 | generators | [[fs-gg-sdd-refresh-agents]] (`refresh`, `agents`) |
 | validation | [[fs-gg-sdd-validate]] |
 | grammar reference | [[fs-gg-sdd-authoring-contracts]] |
+| troubleshooting | [[fs-gg-sdd-troubleshooting]] (a stage blocks and you can't tell why) |
 
 ## Sources
 

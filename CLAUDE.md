@@ -16,10 +16,10 @@ Core boundary:
   `.fsgg/constitution.md` lifecycle constitution and an authored
   `.fsgg/early-stage-guidance.md` early-stage authoring guide — both generic,
   deterministic, and no-clobber on re-run (same policy as `CLAUDE.md`/`AGENTS.md`).
-  The skeleton also seeds the 15 consumer-relevant `fs-gg-sdd-*` process skills (the
-  10 stage skills plus the 5 cross-cutting skills `lifecycle`/`getting-started`/
-  `authoring-contracts`/`refresh-agents`/`validate`; the product-internal
-  `fs-gg-sdd-project` is excluded) into **all three** agent-skill roots
+  The skeleton also seeds the 16 consumer-relevant `fs-gg-sdd-*` process skills (the
+  10 stage skills plus the 6 cross-cutting skills `lifecycle`/`getting-started`/
+  `authoring-contracts`/`refresh-agents`/`validate`/`troubleshooting`; the
+  product-internal `fs-gg-sdd-project` is excluded) into **all three** agent-skill roots
   (`.claude/skills/<name>/SKILL.md`, `.codex/skills/<name>/SKILL.md`, and the 056 neutral
   `.agents/skills/<name>/SKILL.md`), byte-identically, so a scaffolded product's agent —
   Claude, Codex, or a neutral `.agents` runtime — can discover the lifecycle without
