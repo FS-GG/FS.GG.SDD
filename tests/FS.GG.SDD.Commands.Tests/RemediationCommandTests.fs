@@ -277,6 +277,7 @@ module UpgradeCommandTests =
                 || change.Path.StartsWith(".codex/skills/")
                 || change.Path.StartsWith(".agents/skills/")
                 || change.Path = ".fsgg/early-stage-guidance.md"
+                || change.Path = ".gitignore"
 
             Assert.True(allowed, $"upgrade wrote an unexpected path: {change.Path}")
 

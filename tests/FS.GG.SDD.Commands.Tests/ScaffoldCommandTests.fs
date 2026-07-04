@@ -1439,8 +1439,12 @@ module ScaffoldCommandTests =
                   $".codex/skills/{name}/SKILL.md"
                   $".agents/skills/{name}/SKILL.md" ])
 
+        // 073/ADR-0018: the seeded regenerable-output `.gitignore` is an authored skeleton seed too.
         let authoredSeeds =
-            Set.ofList ([ ".fsgg/constitution.md"; ".fsgg/early-stage-guidance.md" ] @ seededSkillPaths)
+            Set.ofList (
+                [ ".fsgg/constitution.md"; ".fsgg/early-stage-guidance.md"; ".gitignore" ]
+                @ seededSkillPaths
+            )
 
         Assert.True(Set.isSubset authoredSeeds currentSkeleton, "Expected the authored skeleton seeds in the init set.")
         Assert.Equal<Set<string>>(establishedSkeleton, Set.difference currentSkeleton authoredSeeds)

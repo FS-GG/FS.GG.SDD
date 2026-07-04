@@ -66,7 +66,9 @@ Cross-cutting commands sit outside the lifecycle chain: `agents` and `refresh`
 regenerate views, `validate` runs the deep conformance matrices, and `doctor` /
 `upgrade` reconcile a scaffolded product's drift from its coherent set — `doctor`
 is a read-only drift report, `upgrade` the interactive/`--yes` remediation. See
-[Doctor & Upgrade](docs/reference/doctor-upgrade.md).
+[Doctor & Upgrade](docs/reference/doctor-upgrade.md). For which lifecycle artifacts
+are durable (commit) versus regenerable (gitignore), see the
+[Artifact Taxonomy](docs/reference/artifact-taxonomy.md).
 
 For a command-by-command walkthrough from `fsgg-sdd init` through `fsgg-sdd ship` with
 no Governance installed, see the [Quickstart](docs/quickstart.md).
