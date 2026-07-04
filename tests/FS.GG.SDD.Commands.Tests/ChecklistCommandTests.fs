@@ -169,6 +169,20 @@ No blocking ambiguity remains.
         Assert.Equal(Some "CHK-001", report.Checklist |> Option.bind (fun summary -> summary.ItemIds |> List.tryHead))
         Assert.Equal(1, report.Checklist.Value.PassedCount)
 
+    // #105 Trap 3 (no `checklisted` intermediate state exists): a clean review auto-writes
+    // `status: checklistReady` directly — there is no manual transition to author. Locked so a
+    // future refactor cannot silently reintroduce an unpromoted intermediate status.
+    [<Fact>]
+    let ``checklist clean review auto-writes status checklistReady`` () =
+        let root = initializedClarifiedProject ()
+
+        let report = TestSupport.runChecklist root workId title
+        let checklist = TestSupport.readRelative root checklistPath
+
+        Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
+        Assert.Contains("status: checklistReady", checklist)
+        Assert.DoesNotContain("status: checklisted", checklist)
+
     [<Fact>]
     let ``checklist creation does not require Governance files`` () =
         let root = initializedClarifiedProject ()
@@ -184,6 +198,34 @@ No blocking ambiguity remains.
             report.GovernanceCompatibility,
             fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated"
         )
+
+    // FR-002: a genuine blocking ambiguity blocks checklist with a correction that names the
+    // recognized `## Remaining Ambiguity` grammar, so the author can self-clear the gate.
+    [<Fact>]
+    let ``checklist blocking ambiguity correction names the remaining-ambiguity grammar`` () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+
+        TestSupport.writeRelative
+            root
+            specPath
+            (coverageSpec "- FR-001: The command creates checklist output. (Stories: US-001; Acceptance: AC-001)")
+
+        let blockingClarification =
+            clarifiedNoAmbiguity.Replace("No blocking ambiguity remains.", "- AMB-001: The scoring rule is unresolved.")
+
+        TestSupport.writeRelative root clarificationPath blockingClarification
+
+        let report = TestSupport.runChecklist root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+        let diagnostic =
+            report.Diagnostics
+            |> List.find (fun diagnostic -> diagnostic.Id = "unresolvedBlockingAmbiguity")
+
+        Assert.Contains("## Remaining Ambiguity", diagnostic.Correction)
+        Assert.Contains("disclaimer", diagnostic.Correction)
 
     [<Fact>]
     let ``checklist missing specification blocks before authored write`` () =

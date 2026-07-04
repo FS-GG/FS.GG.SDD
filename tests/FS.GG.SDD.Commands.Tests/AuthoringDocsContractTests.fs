@@ -163,3 +163,114 @@ module AuthoringDocsContractTests =
                         $"Doc marks this declaration UNSATISFIED, but the non-synthetic-pass rule accepts it: {declaration.Id.Value}"
                     )
             )
+
+    // --- Clarify `## Remaining Ambiguity` empty-section rule (#105 Trap 1) -----
+
+    /// Wrap one documented `## Remaining Ambiguity` bullet in a minimal clarifications
+    /// snapshot and return the live `BlockingAmbiguityCount`.
+    let private remainingAmbiguityBlockingCount (line: string) =
+        let text =
+            String.concat
+                "\n"
+                [ "---"
+                  "schemaVersion: 1"
+                  "workId: 001-authoring-contracts-guard"
+                  "stage: clarify"
+                  "sourceSpec: work/001-authoring-contracts-guard/spec.md"
+                  "---"
+                  ""
+                  "## Remaining Ambiguity"
+                  ""
+                  line ]
+
+        match
+            Clarification.parseClarificationFacts
+                { Path = "work/001-authoring-contracts-guard/clarifications.md"
+                  Text = text }
+        with
+        | Ok facts -> facts.BlockingAmbiguityCount
+        | Error diagnostics -> failwith $"Documented remaining-ambiguity line did not parse: {line}\n{diagnostics}"
+
+    [<Fact>]
+    let ``Documented remaining-ambiguity disclaimers leave zero blocking ambiguities`` () =
+        let lines =
+            taggedBlocks "remaining-ambiguity:disclaimer" referenceDoc
+            |> List.collect nonBlankLines
+
+        Assert.NotEmpty lines
+
+        for line in lines do
+            Assert.True(
+                remainingAmbiguityBlockingCount line = 0,
+                $"Doc lists this as a DISCLAIMER, but the parser counts it as blocking: {line}"
+            )
+
+    [<Fact>]
+    let ``Documented remaining-ambiguity blocking lines count as blocking`` () =
+        let lines =
+            taggedBlocks "remaining-ambiguity:blocking" referenceDoc
+            |> List.collect nonBlankLines
+
+        Assert.NotEmpty lines
+
+        for line in lines do
+            Assert.True(
+                remainingAmbiguityBlockingCount line > 0,
+                $"Doc lists this as BLOCKING, but the parser leaves it non-blocking: {line}"
+            )
+
+    // --- Checklist `## Blocking Findings` empty-section rule (#105 Trap 2) -----
+
+    /// Wrap one documented `## Blocking Findings` bullet in a minimal checklist snapshot
+    /// and return the live parsed blocking findings.
+    let private blockingFindings (line: string) =
+        let text =
+            String.concat
+                "\n"
+                [ "---"
+                  "schemaVersion: 1"
+                  "workId: 001-authoring-contracts-guard"
+                  "stage: checklist"
+                  "sourceSpec: work/001-authoring-contracts-guard/spec.md"
+                  "sourceClarifications: work/001-authoring-contracts-guard/clarifications.md"
+                  "---"
+                  ""
+                  "## Blocking Findings"
+                  ""
+                  line ]
+
+        match
+            Checklist.parseChecklistFacts
+                { Path = "work/001-authoring-contracts-guard/checklist.md"
+                  Text = text }
+        with
+        | Ok facts -> facts.BlockingFindings
+        | Error diagnostics -> failwith $"Documented blocking-findings line did not parse: {line}\n{diagnostics}"
+
+    [<Fact>]
+    let ``Documented blocking-findings disclaimers record no finding`` () =
+        let lines =
+            taggedBlocks "blocking-findings:disclaimer" referenceDoc
+            |> List.collect nonBlankLines
+
+        Assert.NotEmpty lines
+
+        for line in lines do
+            Assert.True(
+                List.isEmpty (blockingFindings line),
+                $"Doc lists this as a DISCLAIMER, but the parser records it as a finding: {line}"
+            )
+
+    [<Fact>]
+    let ``Documented blocking-findings lines record a real finding`` () =
+        let lines =
+            taggedBlocks "blocking-findings:finding" referenceDoc
+            |> List.collect nonBlankLines
+
+        Assert.NotEmpty lines
+
+        for line in lines do
+            Assert.False(
+                List.isEmpty (blockingFindings line),
+                $"Doc lists this as a FINDING, but the parser drops it as a placeholder: {line}"
+            )

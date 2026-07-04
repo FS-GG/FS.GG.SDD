@@ -169,6 +169,29 @@ No material ambiguities recorded.
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "failedChecklistPrerequisite")
         Assert.False(TestSupport.existsRelative root planPath)
 
+    // #105 Trap 3 / FR-003: a non-checklistReady status points the author at re-running
+    // `fsgg-sdd checklist` (which auto-promotes) rather than at hand-editing the status.
+    [<Fact>]
+    let ``plan non-ready checklist status correction names the auto-promotion route`` () =
+        let root = initializedChecklistReadyProject ()
+
+        let tampered =
+            (TestSupport.readRelative root checklistPath).Replace("status: checklistReady", "status: needsCorrection")
+
+        TestSupport.writeRelative root checklistPath tampered
+
+        let report = TestSupport.runPlan root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+        let diagnostic =
+            report.Diagnostics
+            |> List.find (fun diagnostic -> diagnostic.Id = "failedChecklistPrerequisite")
+
+        Assert.Contains("checklistReady", diagnostic.Correction)
+        Assert.Contains("fsgg-sdd checklist", diagnostic.Correction)
+        Assert.Contains("do not hand-edit", diagnostic.Correction)
+
     [<Fact>]
     let ``plan rerun preserves authored content and stable ids`` () =
         let root = initializedChecklistReadyProject ()

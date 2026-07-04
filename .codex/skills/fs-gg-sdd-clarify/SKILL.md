@@ -63,6 +63,13 @@ work/001-two-player-volley/spec.md
   stages and the work model link to; an answer with no decision is not durable.
 - Dropping an ambiguity instead of **deferring** it. Record the deferral; do not
   silently delete the open question.
+- **`## Remaining Ambiguity` empty-section rule.** A bullet under this heading that
+  names an `AMB-###`/`CQ-###` id is read as **still unresolved** and blocks
+  `checklist`/`plan`. To say none remain, write a disclaimer bullet (`- None.`,
+  `- No remaining ambiguities.`) — do **not** re-list the resolved ids
+  (`- None. AMB-001…AMB-005 resolved.` is fine because it starts with `None`, but a
+  bare `- AMB-001 resolved.` counts AMB-001 as blocking). Full grammar:
+  `docs/reference/authoring-contracts.md`.
 
 ## Next
 

@@ -265,7 +265,15 @@ module Clarification =
             let ambiguity = ambiguityIdsInLine line |> List.tryHead
             let question = questionIdsInLine line |> List.tryHead
 
-            if Option.isNone ambiguity && Option.isNone question then
+            // A "no-outstanding" disclaimer (`None. AMB-001…AMB-005 resolved.`, `No remaining
+            // ambiguities; AMB-001 resolved.`) names AMB/CQ ids only to say they are *gone* — it
+            // is not itself an unresolved item. Exempt it exactly as `parseNonEmptySectionLines`
+            // does for `## Blocking Findings`, so such a line contributes 0 to
+            // `BlockingAmbiguityCount`; a genuine `- AMB-001: … unclear.` line is not a disclaimer
+            // and still classifies below (#105 Trap 1).
+            if isNoOutstandingSentinel line then
+                None
+            elif Option.isNone ambiguity && Option.isNone question then
                 None
             else
                 let lowered = line.ToLowerInvariant()
