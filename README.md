@@ -1,11 +1,17 @@
 # FS.GG.SDD
 
 Spec-driven development lifecycle tooling for FS.GG. `fsgg-sdd` is a CLI that takes a
-product team from an empty directory to a buildable, lifecycle-managed product, then
+product team from an empty directory to a buildable, lifecycle-managed workspace, then
 through a structured development lifecycle — charter, specification, plan, tasks,
 evidence, verification, and ship — giving humans, agents, CLI automation, and optional
 Governance gates the same machine contract. Markdown is the authoring surface;
 schema-versioned structured artifacts are the machine contract.
+
+> **Platform vs. workspace.** FS-GG is a **platform** — five repositories (the
+> `fsgg-sdd` lifecycle CLI is one **component** of it). What you scaffold *with* the
+> platform is a **workspace**: a generated repo with a runnable app, the `.fsgg/`
+> lifecycle, skills, and optional governance. See the
+> [vocabulary](https://github.com/FS-GG/.github/blob/main/docs/adr/0020-platform-workspace-component-vocabulary.md).
 
 ## Install
 
@@ -15,16 +21,16 @@ dotnet tool install --global FS.GG.SDD.Cli   # exposes the `fsgg-sdd` command
 
 See the [installation guide](docs/release/installation.md) for versions and feeds.
 
-## Create a new project
+## Create a new workspace
 
 The default way to start is `fsgg-sdd scaffold`: it establishes the SDD lifecycle
 skeleton and invokes an external **template provider** to materialize a runnable
-product, in one command.
+workspace, in one command.
 
 ```sh
 fsgg-sdd scaffold --root ./MyApp --provider <name> --param productName=MyApp
 
-cd ./MyApp && dotnet build && dotnet run   # the runnable product
+cd ./MyApp && dotnet build && dotnet run   # the runnable app
 fsgg-sdd charter                           # continue the lifecycle
 ```
 
@@ -64,7 +70,7 @@ protected-boundary handoff.
 
 Cross-cutting commands sit outside the lifecycle chain: `agents` and `refresh`
 regenerate views, `validate` runs the deep conformance matrices, and `doctor` /
-`upgrade` reconcile a scaffolded product's drift from its coherent set — `doctor`
+`upgrade` reconcile a scaffolded workspace's drift from its coherent set — `doctor`
 is a read-only drift report, `upgrade` the interactive/`--yes` remediation. See
 [Doctor & Upgrade](docs/reference/doctor-upgrade.md). For which lifecycle artifacts
 are durable (commit) versus regenerable (gitignore), see the
@@ -77,7 +83,7 @@ no Governance installed, see the [Quickstart](docs/quickstart.md).
 
 These are not lifecycle stages and never alter the `charter -> ship` ordering:
 
-- **`fsgg-sdd scaffold`** — create a runnable, SDD-managed product from a template
+- **`fsgg-sdd scaffold`** — create a runnable, SDD-managed workspace from a template
   provider (above).
 - **`fsgg-sdd agents`** — generate per-target Claude/Codex command + skill guidance
   from `readiness/<id>/work-model.json`, marked generated and never a second source of

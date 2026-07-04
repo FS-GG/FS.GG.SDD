@@ -1,6 +1,6 @@
 # FS.GG.SDD Agent Context
 
-FS.GG.SDD is the spec-driven development lifecycle product for FS.GG. It is not
+FS.GG.SDD is the spec-driven development lifecycle component for FS.GG. It is not
 the governance rule engine.
 
 Use standard Spec Kit for work in this repo. Product source and tests now exist;
@@ -21,7 +21,7 @@ Core boundary:
   `authoring-contracts`/`refresh-agents`/`validate`/`troubleshooting`; the
   product-internal `fs-gg-sdd-project` is excluded) into **all three** agent-skill roots
   (`.claude/skills/<name>/SKILL.md`, `.codex/skills/<name>/SKILL.md`, and the 056 neutral
-  `.agents/skills/<name>/SKILL.md`), byte-identically, so a scaffolded product's agent —
+  `.agents/skills/<name>/SKILL.md`), byte-identically, so a scaffolded workspace's agent —
   Claude, Codex, or a neutral `.agents` runtime — can discover the lifecycle without
   hand-copying skills (`claude ≡ codex ≡ agents`).
   They are authored, SDD-owned skeleton (the same `AgentGuidanceTarget` no-clobber
@@ -89,7 +89,7 @@ Core boundary:
   `docs/release/schema-reference.md`.
 - `fsgg-sdd scaffold` is a cross-cutting command (not a lifecycle stage;
   `nextLifecycleCommand Scaffold = None`, FR-015) that takes a product author from
-  an empty directory to a buildable, runnable, SDD-managed product in one
+  an empty directory to a buildable, runnable, SDD-managed workspace in one
   invocation. It establishes the SDD skeleton (reusing `init`'s effects, unchanged,
   so `init` stays byte-identical), then invokes an **external template provider**
   selected by `--provider <name>` and resolved from an author-/provider-owned
@@ -116,7 +116,7 @@ Core boundary:
   FS.GG.Rendering repo, demonstrated against the contract without placing any
   Rendering knowledge in generic SDD. After a successful instantiation, scaffold
   itself owns two generic post-instantiation steps — initializing a git repository
-  at the product root (skipped, non-fatally, inside an existing work tree or when
+  at the workspace root (skipped, non-fatally, inside an existing work tree or when
   git is absent) and setting the executable bit on each produced `.sh` script —
   reported in all three projections and never delegated to the provider. The
   real-provider composition acceptance (`tests/FS.GG.SDD.Acceptance.Tests`) is opt-in
@@ -126,7 +126,7 @@ Core boundary:
   release-catalog exception, not a lifecycle artifact).
 - `fsgg-sdd doctor` and `fsgg-sdd upgrade` are the cross-cutting remediation verbs
   (not lifecycle stages; `nextLifecycleCommand Doctor = None` / `Upgrade = None`) that
-  reconcile a scaffolded product's drift from its coherent set — the remediation half
+  reconcile a scaffolded workspace's drift from its coherent set — the remediation half
   of ADR-0009. `doctor` is a **strictly read-only** drift report: installed CLI vs the
   feature-052 declarative required minimum (live descriptor wins over the recorded
   value), which seeded `fs-gg-sdd-*` skills / `.fsgg/early-stage-guidance.md` are

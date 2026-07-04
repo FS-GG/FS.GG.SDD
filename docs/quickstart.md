@@ -3,7 +3,7 @@ title: Quickstart
 category: SDD
 categoryindex: 6
 index: 13
-description: Take a new project from fsgg-sdd init through fsgg-sdd ship for one work item with no Governance gate runtime installed.
+description: Take a new workspace from fsgg-sdd init through fsgg-sdd ship for one work item with no Governance gate runtime installed.
 ---
 
 # Quickstart
@@ -105,7 +105,7 @@ Notes:
   it.
 - Cross-cutting commands run outside this stage chain: `refresh` and `agents`
   regenerate views, `validate` runs the deep conformance matrices, and `doctor` /
-  `upgrade` reconcile a scaffolded product's drift — `doctor` is a read-only drift
+  `upgrade` reconcile a scaffolded workspace's drift — `doctor` is a read-only drift
   report (always exit 0), `upgrade` the interactive (or `--yes`) remediation. See
   [Doctor & Upgrade](reference/doctor-upgrade.md).
 
