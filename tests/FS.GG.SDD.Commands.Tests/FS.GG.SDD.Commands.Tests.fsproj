@@ -39,6 +39,7 @@
     <Compile Include="RemediationSupport.fs" />
     <Compile Include="RemediationCommandTests.fs" />
     <Compile Include="SeededSkillsTests.fs" />
+    <Compile Include="ProcessSkillManifestTests.fs" />
     <Compile Include="HelpCommandTests.fs" />
     <Compile Include="AuthoringDocsContractTests.fs" />
     <Compile Include="EarlyStageGuidanceContractTests.fs" />

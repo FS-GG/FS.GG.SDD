@@ -38,6 +38,14 @@ Core boundary:
   the byte-identical **union** (seeded ∪ provider) out into all three roots, recording the
   `.claude`/`.codex` mirror copies under `mirroredPaths` (owner `mirrored`, schema stays
   v1) in `.fsgg/scaffold-provenance.json`.
+  As the producer of the `fs-gg-sdd-*` process skills, `fsgg-sdd` also emits their
+  `skill-manifest` (schema v1) — the committed, process-only
+  `.agents/skills/skill-manifest.json` enumerating every seeded process skill with
+  `scope: process`, a canonical-body `sha256` (`sha256sum SKILL.md`-equivalent), and the
+  ADR-0017 canonical `materializes-when: always` — regenerated/checked by `fsgg-sdd
+  registry skill-manifest [--write|--check]` and pinned to the seeded set by a drift
+  guard; the org registry (`.github` `registry/skills.yml`) reconciles its process rows
+  from it (ADR-0017).
   `.fsgg/early-stage-guidance.md` covers the pre-work-model stages (`charter`,
   `specify`, `clarify`, `checklist`) — per-stage command, required section
   headings, stable-id formats, and the §1.1/§1.2 authoring contracts — and is a
