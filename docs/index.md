@@ -4,6 +4,7 @@ Start with:
 
 - [Quickstart](quickstart.md)
 - [Authoring Contracts](reference/authoring-contracts.md)
+- [Artifact Taxonomy](reference/artifact-taxonomy.md)
 - [Doctor & Upgrade](reference/doctor-upgrade.md)
 - [Migration from Spec Kit](migration-from-spec-kit.md)
 - [Adopting Governance](adopting-governance.md)

@@ -25,7 +25,10 @@ module internal Drift =
              [ $".claude/skills/{name}/SKILL.md"
                $".codex/skills/{name}/SKILL.md"
                $".agents/skills/{name}/SKILL.md" ]))
-        @ [ ".fsgg/early-stage-guidance.md" ]
+        @ [ ".fsgg/early-stage-guidance.md"
+            // 073/ADR-0018: the seeded regenerable-output `.gitignore` is part of the coherent
+            // skeleton set — `doctor` reports it missing, `upgrade` no-clobber re-seeds it.
+            ".gitignore" ]
         |> List.sort
 
     let expectedArtifactCount = List.length expectedArtifactPaths
