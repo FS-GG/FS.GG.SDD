@@ -75,7 +75,7 @@ An FS.GG product carries the same skills in **three** agent-skill roots —
 Claude, Codex, and neutral runtimes are interchangeable (`claude ≡ codex ≡ agents`).
 `fsgg-sdd` is the **sole mirror authority**:
 
-- `init` seeds the 15 `fs-gg-sdd-*` process skills byte-identically into **all three**
+- `init` seeds the 16 `fs-gg-sdd-*` process skills byte-identically into **all three**
   roots (no-clobber; your edits are preserved).
 - A provider writes its own `fs-gg-*` UI skills **only** into `.agents/skills/`;
   `scaffold` then fans the byte-identical **union** (seeded ∪ provider) out into all
@@ -90,7 +90,7 @@ Claude, Codex, and neutral runtimes are interchangeable (`claude ≡ codex ≡ a
 ## CLI version coherence
 
 A scaffolded product is produced by two inputs: the template pin and the `fsgg-sdd`
-CLI that seeds the skeleton (including the 15 `fs-gg-sdd-*` skills and
+CLI that seeds the skeleton (including the 16 `fs-gg-sdd-*` skills and
 `.fsgg/early-stage-guidance.md`). Scaffold records **both** in
 `.fsgg/scaffold-provenance.json`: the producing CLI version (`generator.version`) and
 the provider-declared minimum coherent CLI version (`requiredMinimumCliVersion`,

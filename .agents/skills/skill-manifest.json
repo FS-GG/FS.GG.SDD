@@ -46,7 +46,7 @@
     {
       "id": "fs-gg-sdd-getting-started",
       "scope": "process",
-      "sha256": "a6ea0b82f711b2a6d7da3717de008011126976569c3eacd7808443ef2bfc533a",
+      "sha256": "498a8881158fbb06495b7fbd1ef02ae07a5f7ddd6252954e7f2c0492b86a03b5",
       "resolvablePath": ".agents/skills/fs-gg-sdd-getting-started/SKILL.md",
       "materializes-when": "always"
     },
