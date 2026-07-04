@@ -1411,8 +1411,8 @@ module ScaffoldCommandTests =
 
     // T009 (FR-006/SC-005): the init skeleton path set grew by EXACTLY the authored
     // skeleton seeds relative to the established (pre-033) skeleton — .fsgg/constitution.md
-    // (033), .fsgg/early-stage-guidance.md (049), and the 30 fs-gg-sdd-* process skill files
-    // (051). Asserted by removing those seeds from the current skeleton set and comparing to
+    // (033), .fsgg/early-stage-guidance.md (049), and the fs-gg-sdd-* process skill files
+    // (051; 071 grew the set to 16). Asserted by removing those seeds from the current skeleton set and comparing to
     // the prior set.
     [<Fact>]
     let ``init skeleton set grew by exactly the constitution`` () =
@@ -1431,7 +1431,7 @@ module ScaffoldCommandTests =
                   "AGENTS.md"
                   "CLAUDE.md" ]
 
-        // 051/056: the seeded process-skill files (15 declared skills × {.claude,.codex,.agents}).
+        // 051/056: the seeded process-skill files (16 declared skills × {.claude,.codex,.agents}).
         let seededSkillPaths =
             FS.GG.SDD.Commands.Internal.SeededSkills.skillNames
             |> List.collect (fun name ->

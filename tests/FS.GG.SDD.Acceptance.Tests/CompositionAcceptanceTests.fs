@@ -17,7 +17,7 @@ open CompositionResult
 /// (FR-009): the real provider identity lives only in the external registry.
 module CompositionAcceptanceTests =
 
-    // The 15 in-scope fs-gg-sdd-* process skills the SDD skeleton seeds on both agent
+    // The 16 in-scope fs-gg-sdd-* process skills the SDD skeleton seeds on both agent
     // surfaces (feature 051, contract §1). The declared set is pinned to the on-disk
     // authored set by the offline drift guard (SeededSkillsTests, T013); here it backs the
     // skeleton-shape conformance and the provenance partition (INV-5/INV-8).
@@ -35,6 +35,7 @@ module CompositionAcceptanceTests =
           "fs-gg-sdd-ship"
           "fs-gg-sdd-specify"
           "fs-gg-sdd-tasks"
+          "fs-gg-sdd-troubleshooting"
           "fs-gg-sdd-validate"
           "fs-gg-sdd-verify" ]
 
@@ -212,13 +213,13 @@ module CompositionAcceptanceTests =
         // Only the generic lifecycle marker is sent; no starter/profile/variant key is named.
         Assert.Equal<(string * string) list>([ "lifecycle", "sdd" ], request.Parameters)
 
-    // 051 T016 (US1 / INV-8): the skeleton-shape conformance surface accounts for the 30
-    // seeded process-skill files (15 skills × 2 surfaces), so the produced skeleton's
-    // declared shape stays authoritative. Offline; the network-gated run additionally
-    // proves none of these paths is recorded as generatedProduct (INV-5, provenancePartitioned).
+    // 051 T016 (US1 / INV-8): the skeleton-shape conformance surface accounts for the 32
+    // seeded process-skill files (16 skills × 2 surfaces; 071 added fs-gg-sdd-troubleshooting),
+    // so the produced skeleton's declared shape stays authoritative. Offline; the network-gated
+    // run additionally proves none of these paths is recorded as generatedProduct (INV-5).
     [<Fact>]
-    let ``the skeleton-shape surface accounts for the 30 seeded skill files`` () =
-        Assert.Equal(30, List.length seededSkillPaths)
+    let ``the skeleton-shape surface accounts for the 32 seeded skill files`` () =
+        Assert.Equal(32, List.length seededSkillPaths)
 
         for path in seededSkillPaths do
             Assert.True(Set.contains path skeletonPaths, $"Skeleton-shape surface is missing {path}.")

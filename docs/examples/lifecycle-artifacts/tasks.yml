@@ -1,0 +1,24 @@
+# A complete, valid `tasks.yml` you can copy-adapt. Validated on every build by the
+# live task parser (ExampleArtifactsContractTests). Each task back-references the
+# requirements/decisions it implements, the skills it needs, and the evidence that
+# will satisfy it (matched in evidence.yml). See [[fs-gg-sdd-tasks]].
+schemaVersion: 1
+tasks:
+  - id: T001
+    title: Implement serve-to-loser rule
+    status: pending
+    owner: codex
+    requirements: [FR-001]
+    decisions: [DEC-001]
+    dependencies: []
+    requiredSkills: [fs-gg-sdd-plan]
+    requiredEvidence: [EV001]
+  - id: T002
+    title: Track rally score without a match-end condition
+    status: pending
+    owner: codex
+    requirements: [FR-002]
+    decisions: [DEC-001, DEC-002]
+    dependencies: [T001]
+    requiredSkills: [fs-gg-sdd-plan]
+    requiredEvidence: [EV002]

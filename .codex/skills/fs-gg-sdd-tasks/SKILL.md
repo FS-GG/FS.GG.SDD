@@ -75,11 +75,18 @@ tasks:
 
 - `analyze` — check cross-artifact readiness, then implement: [[fs-gg-sdd-analyze]].
 
+## Worked example
+
+A complete, valid, copy-adaptable `tasks.yml` (with a matching `clarifications.md`,
+`checklist.md`, and `evidence.yml` for one coherent work item) ships at
+`docs/examples/lifecycle-artifacts/`. Every example there is validated against the
+live parser on each build, so it never drifts from the tool.
+
 ## Related
 
 - [[fs-gg-sdd-evidence]] (the `requiredEvidence` obligations), [[fs-gg-sdd-lifecycle]].
 
 ## Sources
 
-- `docs/quickstart.md`; real fixture
-  `tests/fixtures/sdd-artifact-model/valid-work-item/work/001-sdd-artifact-model/tasks.yml`.
+- `docs/quickstart.md`; the shipped worked example
+  `docs/examples/lifecycle-artifacts/tasks.yml`.

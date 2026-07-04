@@ -240,10 +240,11 @@ module SeededSkillsTests =
 
         let planned = scaffoldInvocationEffects request descriptor Map.empty |> Set.ofList
 
-        // Every one of the 45 seeded-skill WriteFile effects (15 skills × 3 roots) flows
+        // Every one of the 48 seeded-skill WriteFile effects (16 skills × 3 roots) flows
         // through scaffold via the reused initEffects seam. Fails if scaffold stops reusing
-        // initEffects (056: the third `.agents` root grew the count 30 → 45).
-        Assert.Equal(45, List.length (SeededSkills.skillEffects ()))
+        // initEffects (056: the third `.agents` root grew the count 30 → 45; 071 grew the
+        // skill set 15 → 16 with fs-gg-sdd-troubleshooting, 45 → 48).
+        Assert.Equal(48, List.length (SeededSkills.skillEffects ()))
 
         for effect in SeededSkills.skillEffects () do
             Assert.Contains(effect, planned)

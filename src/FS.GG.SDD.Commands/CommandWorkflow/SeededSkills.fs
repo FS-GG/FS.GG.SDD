@@ -18,7 +18,7 @@ open FS.GG.SDD.Commands.CommandTypes
 /// early-stage guidance — no new effect, no new schema (Principle IV/V).
 module internal SeededSkills =
 
-    // The 15 in-scope skills (10 stage + 5 cross-cutting), sorted, excluding the
+    // The 16 in-scope skills (10 stage + 6 cross-cutting), sorted, excluding the
     // product-internal `fs-gg-sdd-project`. This list is the single in-code source of
     // the set; iterating it sorted keeps the emitted effect order deterministic (FR-006).
     let skillNames =
@@ -35,6 +35,7 @@ module internal SeededSkills =
           "fs-gg-sdd-ship"
           "fs-gg-sdd-specify"
           "fs-gg-sdd-tasks"
+          "fs-gg-sdd-troubleshooting"
           "fs-gg-sdd-validate"
           "fs-gg-sdd-verify" ]
         |> List.sort

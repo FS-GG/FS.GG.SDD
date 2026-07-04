@@ -55,6 +55,7 @@
     <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-checklist/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-checklist" />
     <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-plan/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-plan" />
     <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-tasks/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-tasks" />
+    <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-troubleshooting/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-troubleshooting" />
     <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-analyze/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-analyze" />
     <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-evidence/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-evidence" />
     <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-verify/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-verify" />

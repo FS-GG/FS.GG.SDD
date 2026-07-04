@@ -20,6 +20,7 @@
     <Compile Include="AgentGuidanceViewTests.fs" />
     <Compile Include="RefreshSummaryViewTests.fs" />
     <Compile Include="EvidenceArtifactTests.fs" />
+    <Compile Include="ExampleArtifactsContractTests.fs" />
     <Compile Include="WorkModelTests.fs" />
     <Compile Include="NormalizedWorkModelTests.fs" />
     <Compile Include="GeneratedModelCurrencyTests.fs" />

@@ -226,7 +226,7 @@ module InitCommandTests =
 
     // ---- 051: SDD skeleton seeds the fs-gg-sdd-* process skill set ----
 
-    // T005 (US1 / INV-1, INV-8, SC-001): init seeds all 30 skill files (15 declared skills
+    // T005 (US1 / INV-1, INV-8, SC-001): init seeds all 32 skill files (16 declared skills
     // × {.claude,.codex}), each non-empty, and never seeds the product-internal
     // fs-gg-sdd-project skill. Fails before the skill effects are wired into initEffects.
     [<Fact>]
@@ -236,7 +236,7 @@ module InitCommandTests =
         let report = runInit root
 
         Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
-        Assert.Equal(15, List.length FS.GG.SDD.Commands.Internal.SeededSkills.skillNames)
+        Assert.Equal(16, List.length FS.GG.SDD.Commands.Internal.SeededSkills.skillNames)
 
         for name in FS.GG.SDD.Commands.Internal.SeededSkills.skillNames do
             for surface in [ ".claude"; ".codex" ] do

@@ -1,0 +1,25 @@
+# A complete, valid `evidence.yml` you can copy-adapt. Validated on every build by
+# the live evidence parser (ExampleArtifactsContractTests). The satisfaction rule:
+# an obligation is satisfied ONLY by a matching declaration with `result: pass` AND
+# `synthetic: false` — a synthetic pass or a deferral does not satisfy it. See
+# [[fs-gg-sdd-evidence]] and docs/reference/authoring-contracts.md.
+schemaVersion: 1
+evidence:
+  # Satisfies T001: real (non-synthetic) verification that passed.
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    artifacts: [tests/ExampleApp.Tests/ServeRuleTests.fs]
+    result: pass
+    synthetic: false
+  # Satisfies T002.
+  - id: EV002
+    kind: verification
+    subject:
+      type: task
+      id: T002
+    artifacts: [tests/ExampleApp.Tests/RallyScoreTests.fs]
+    result: pass
+    synthetic: false
