@@ -1,7 +1,0 @@
-Review: PASS
-
-The charter command remains inside the FS.GG.SDD ownership boundary.
-
-- SDD-owned behavior: project prerequisite reads, work-id validation, authored charter creation/update, generated work-model state reporting, deterministic command report JSON, text projection, and optional compatibility facts.
-- Governance-owned behavior not implemented: route selection, evidence freshness, profile adjustment, gate selection, audit verdicts, protected-boundary enforcement, and release policy.
-- Evidence: traceable-output-tests.txt and charter-cli-smoke.txt show optional `.fsgg/policy.yml`, `.fsgg/capabilities.yml`, and `.fsgg/tooling.yml` as `notEvaluated` compatibility facts only.
