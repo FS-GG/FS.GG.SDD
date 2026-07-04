@@ -82,6 +82,8 @@ module ArtifactTaxonomyTests =
         // The doc embeds the seed fragment as a fenced block; assert the constant's content
         // appears verbatim so the doc and the seed cannot drift apart.
         let normalizedDoc = taxonomyDoc.Replace("\r\n", "\n")
-        let normalizedSeed = Foundation.gitignoreSeedText.Replace("\r\n", "\n").TrimEnd('\n')
+
+        let normalizedSeed =
+            Foundation.gitignoreSeedText.Replace("\r\n", "\n").TrimEnd('\n')
 
         Assert.Contains(normalizedSeed, normalizedDoc)
