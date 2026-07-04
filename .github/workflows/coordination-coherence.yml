@@ -1,0 +1,25 @@
+# coordination-coherence — thin caller for the shared reusable gate (FS-GG/.github, ADR-0019).
+#
+# This repo is declared a `coordination-kit` receiver in FS-GG/.github registry/repos.yml, so it
+# holds a copy of the coordination kit — the cross-repo-coordination skill
+# (.claude/skills + .agents/skills) and the fsgg-coord client (scripts/fsgg-coord). The reusable
+# gate checks out FS-GG/.github (the canonical kit source) alongside this repo and runs
+# `scripts/coordination-sync --check`, failing CI if this repo's copy drifts from — or is missing
+# against — canonical. A non-receiver would pass trivially; this repo is a receiver, so it is
+# enforced. Kit changes arrive via the auto-sync PR the `coordination-propagate` workflow opens.
+#
+# All mechanics + rationale live in the reusable workflow:
+#   FS-GG/.github .github/workflows/coordination-coherence.yml
+name: coordination-coherence
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  kit:
+    uses: FS-GG/.github/.github/workflows/coordination-coherence.yml@main
