@@ -126,6 +126,31 @@ publicOrToolFacingImpact: true
             let answer = facts.Answers |> List.exactlyOne
             Assert.Equal(DecisionAnswer, answer.Kind)
 
+    /// Swap the single genuine `## Remaining Ambiguity` bullet for an arbitrary body.
+    let private withRemainingAmbiguity (body: string) =
+        clarificationText.Replace("- AMB-002 [CQ-002] blocking: Still needs an answer.", body)
+
+    [<Theory>]
+    // #105 Trap 1: a "no-outstanding" disclaimer that names resolved AMB/CQ ids is not itself
+    // an unresolved item — it must contribute 0 blocking ambiguities, not one-per-id.
+    [<InlineData("- None. AMB-001, AMB-002, AMB-003 resolved above.")>]
+    [<InlineData("- No remaining ambiguities; AMB-001 resolved.")>]
+    [<InlineData("None. AMB-001 resolved.")>]
+    let ``Remaining-ambiguity disclaimer naming resolved ids counts as zero blocking`` (body: string) =
+        match parseClarificationFacts (snapshot (withRemainingAmbiguity body)) with
+        | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
+        | Ok facts -> Assert.Equal(0, facts.BlockingAmbiguityCount)
+
+    [<Theory>]
+    // The disciplined `none`/`No <noun>` distinction keeps genuine unresolved lines blocking:
+    // an explicit ambiguity, and a `No decision yet …` line that names no disclaimer noun.
+    [<InlineData("- AMB-001: The scoring rule is unclear.")>]
+    [<InlineData("- No decision yet on AMB-001.")>]
+    let ``Remaining-ambiguity genuine unresolved line still counts as blocking`` (body: string) =
+        match parseClarificationFacts (snapshot (withRemainingAmbiguity body)) with
+        | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
+        | Ok facts -> Assert.Equal(1, facts.BlockingAmbiguityCount)
+
     [<Fact>]
     let ``Clarification parser diagnoses unsupported schema versions`` () =
         let broken = clarificationText.Replace("schemaVersion: 1", "schemaVersion: 2")

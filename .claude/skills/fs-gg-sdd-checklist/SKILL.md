@@ -85,6 +85,19 @@ work/001-two-player-volley/spec.md
 
 - The three rejected forms above — bold id, missing colon, off-line AC ref.
 - Fewer than three digits in the id (`FR-1`) — needs `FR-###` (3+ digits).
+- **`## Blocking Findings` empty-section rule.** A bullet here blocks `plan` unless
+  it is a disclaimer — a bare `- None.` / `- No blocking findings.` is safe and does
+  **not** block. But a `No …` bullet that names a real gap (`- No tests cover
+  FR-003.`) is a genuine finding and *does* block, by design. Full grammar:
+  `docs/reference/authoring-contracts.md`.
+
+## Reaching `checklistReady`
+
+There is **no manual status transition to author**. A clean `checklist` review
+writes `status: checklistReady` directly; an unclean one writes `needsCorrection`.
+If `plan` reports *"Checklist status '…' is not checklistReady"*, clear the blocking
+findings / stale reviews and **re-run `fsgg-sdd checklist`** — it re-promotes the
+status. Do not hand-edit the status field.
 
 ## Next
 

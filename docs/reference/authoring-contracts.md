@@ -147,6 +147,75 @@ scope: Two-player local volley; no AI opponent, no online play.
 requirement: A rally of 20 consecutive volleys completes without a dropped frame.
 ```
 
+## Empty-section disclaimers (clarify & checklist)
+
+Two lifecycle sections are scanned for outstanding work by **bullet**, so how you
+write "there is nothing left" matters. The rule is the same for both:
+a bullet is a **disclaimer** (contributes nothing) when — after stripping the
+leading `- `/`*` — its text is empty, is the whole word `none` (optionally
+qualified: `None.`, `None — all resolved`), or is a `No …` sentence naming an
+outstanding noun (`findings`, `ambiguities`, `clarifications`, `issues`, …).
+Anything else is a real, outstanding item.
+
+Two disciplines keep genuine bullets from being mistaken for a placeholder: the
+whole word `none` is required (so `Nonexistent flag behavior is unclear` stays a
+real item), and a `No …` disclaimer must name an outstanding noun (so
+`No tests cover FR-003` and `No decision yet on AMB-001` stay real, blocking
+items — they are not placeholders).
+
+### Clarify `## Remaining Ambiguity`
+
+`fsgg-sdd clarify` counts a line under `## Remaining Ambiguity` as a **blocking
+ambiguity** when it carries an `AMB-###`/`CQ-###` id and is neither a disclaimer
+nor marked `deferred`/`non-blocking`. To say none remain, write a disclaimer —
+do **not** re-list the resolved ids as bullets, because a bullet that names an
+`AMB-###` is otherwise read as still-unresolved.
+
+Copyable forms that leave **zero** blocking ambiguities:
+
+```text remaining-ambiguity:disclaimer
+- None. AMB-001, AMB-002, AMB-003 resolved above.
+- No remaining ambiguities; AMB-001 resolved.
+```
+
+Forms that are counted as a **blocking** ambiguity (each blocks `checklist`/`plan`):
+
+```text remaining-ambiguity:blocking
+- AMB-001: The scoring rule is unresolved.
+- No decision yet on AMB-001.
+```
+
+- `- None. AMB-001…` — a `none` disclaimer; the resolved ids it names do not
+  block.
+- `- AMB-001: …` — a real, unresolved ambiguity.
+- `- No decision yet on AMB-001.` — a `No …` line naming no outstanding noun, so
+  it is a genuine open item, not a placeholder.
+
+### Checklist `## Blocking Findings`
+
+`fsgg-sdd checklist` counts a bullet under `## Blocking Findings` as a finding
+that blocks `plan` unless it is a disclaimer. A bare `- None.` is therefore safe.
+
+Copyable forms that record **no** blocking finding:
+
+```text blocking-findings:disclaimer
+- None.
+- No blocking findings.
+```
+
+Forms that record a real blocking finding (each blocks `plan`):
+
+```text blocking-findings:finding
+- No tests cover FR-003.
+- Requirement FR-001 is missing acceptance coverage.
+```
+
+> **Reaching `checklistReady`.** There is no manual status transition to author. A
+> clean `fsgg-sdd checklist` review writes `status: checklistReady` directly (an
+> unclean one writes `needsCorrection`). If `plan` reports *"Checklist status '…'
+> is not checklistReady"*, clear the blocking findings and **re-run
+> `fsgg-sdd checklist`** — it re-promotes the status; do not hand-edit it.
+
 ## Provider default-starter selection
 
 `fsgg-sdd scaffold` selects a product *starter* through a provider-declared scaffold

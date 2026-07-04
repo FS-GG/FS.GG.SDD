@@ -273,7 +273,12 @@ module internal DiagnosticConstructors =
             "unresolvedBlockingAmbiguity"
             (Some path)
             "Blocking ambiguity remains unresolved after clarification planning."
-            "Resolve each blocking ambiguity with a concrete decision or accepted deferral before moving to checklist."
+            // Name the recognized grammar: any AMB-### under `## Remaining Ambiguity` counts as
+            // unresolved unless its line is a `None…`/`No …` disclaimer or is marked
+            // `deferred`/`non-blocking`. Resolve each with a concrete decision or accepted
+            // deferral; to state none remain, write a `None.`/`No remaining ambiguities.`
+            // disclaimer rather than re-listing the resolved AMB ids as bullets.
+            "Resolve each blocking ambiguity with a concrete decision or accepted deferral before moving to checklist. Under '## Remaining Ambiguity', an AMB-### is counted as blocking unless its line is a 'None.'/'No remaining ambiguities.' disclaimer or is marked 'deferred'/'non-blocking'."
             ids
 
     let failedRequirementsQuality path message correction relatedIds =
@@ -330,7 +335,11 @@ module internal DiagnosticConstructors =
             "failedChecklistPrerequisite"
             (Some path)
             message
-            "Correct blocking checklist findings, stale review results, or unresolved deferrals before planning."
+            // A clean `fsgg-sdd checklist` review writes `status: checklistReady` automatically —
+            // there is no manual transition to author and hand-editing the status is not the fix.
+            // Clear the blocking findings / stale reviews / unresolved deferrals, then re-run
+            // `fsgg-sdd checklist` to have it re-promote the status.
+            "Correct blocking checklist findings, stale review results, or unresolved deferrals, then re-run 'fsgg-sdd checklist' — a clean review writes status: checklistReady automatically (do not hand-edit the status)."
             relatedIds
 
     let planIdentityMismatch path expectedWorkId actualWorkId =

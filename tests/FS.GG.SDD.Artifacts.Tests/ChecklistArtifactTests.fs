@@ -128,6 +128,19 @@ No blocking findings recorded.
         | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
         | Ok facts -> Assert.Empty(facts.BlockingFindings)
 
+    [<Theory>]
+    // #105 Trap 2 (already resolved; locked so it cannot silently regress): a bare `- None.`
+    // bullet under `## Blocking Findings` is a placeholder, not a finding, and must not block.
+    [<InlineData("- None.")>]
+    [<InlineData("- None")>]
+    [<InlineData("- No blocking findings.")>]
+    let ``Checklist treats a None bullet under blocking findings as a placeholder`` (bullet: string) =
+        let text = checklistText.Replace("No blocking findings recorded.", bullet)
+
+        match parseChecklistFacts (snapshot text) with
+        | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
+        | Ok facts -> Assert.Empty(facts.BlockingFindings)
+
     [<Fact>]
     let ``Checklist parser diagnoses unsupported schema versions`` () =
         let broken = checklistText.Replace("schemaVersion: 1", "schemaVersion: 2")
