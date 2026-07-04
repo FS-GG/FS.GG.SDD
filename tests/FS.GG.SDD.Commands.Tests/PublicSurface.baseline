@@ -135,3 +135,4 @@ FS.GG.SDD.Commands.CommandTypes.refreshDispositionValue
 FS.GG.SDD.Commands.CommandTypes.writeKindValue
 FS.GG.SDD.Commands.CommandWorkflow.init
 FS.GG.SDD.Commands.CommandWorkflow.update
+FS.GG.SDD.Commands.ProcessSkillManifest.build

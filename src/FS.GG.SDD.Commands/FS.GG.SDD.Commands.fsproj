@@ -17,6 +17,8 @@
     <Compile Include="CommandHelp.fsi" />
     <Compile Include="CommandHelp.fs" />
     <Compile Include="CommandWorkflow/SeededSkills.fs" />
+    <Compile Include="CommandWorkflow/ProcessSkillManifest.fsi" />
+    <Compile Include="CommandWorkflow/ProcessSkillManifest.fs" />
     <Compile Include="CommandWorkflow/Drift.fs" />
     <Compile Include="CommandWorkflow/Foundation.fs" />
     <Compile Include="CommandWorkflow/EarlyStageAuthoring.fs" />

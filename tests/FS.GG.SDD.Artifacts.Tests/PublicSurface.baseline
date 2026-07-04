@@ -16,10 +16,6 @@ FS.GG.SDD.Artifacts.Core.standardArtifactContracts
 FS.GG.SDD.Artifacts.Diagnostics.create
 FS.GG.SDD.Artifacts.Diagnostics.deprecatedSchemaVersion
 FS.GG.SDD.Artifacts.Diagnostics.doctorDriftDetected
-FS.GG.SDD.Artifacts.Diagnostics.upgradeNonInteractiveNoYes
-FS.GG.SDD.Artifacts.Diagnostics.upgradeResidualDrift
-FS.GG.SDD.Artifacts.Diagnostics.upgradeSelfUpdateFailed
-FS.GG.SDD.Artifacts.Diagnostics.upgradeStepFailed
 FS.GG.SDD.Artifacts.Diagnostics.duplicateIdentifier
 FS.GG.SDD.Artifacts.Diagnostics.futureSchemaVersion
 FS.GG.SDD.Artifacts.Diagnostics.hasBlocking
@@ -35,8 +31,8 @@ FS.GG.SDD.Artifacts.Diagnostics.scaffoldCliBehindMinimum
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldMirrorFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProvenanceMalformed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderEmpty
-FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderMinimumMalformed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderFailed
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderMinimumMalformed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderMissing
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderParamMissing
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderUnavailable
@@ -54,6 +50,10 @@ FS.GG.SDD.Artifacts.Diagnostics.sort
 FS.GG.SDD.Artifacts.Diagnostics.staleGeneratedView
 FS.GG.SDD.Artifacts.Diagnostics.unknownReference
 FS.GG.SDD.Artifacts.Diagnostics.unsupportedSchemaVersion
+FS.GG.SDD.Artifacts.Diagnostics.upgradeNonInteractiveNoYes
+FS.GG.SDD.Artifacts.Diagnostics.upgradeResidualDrift
+FS.GG.SDD.Artifacts.Diagnostics.upgradeSelfUpdateFailed
+FS.GG.SDD.Artifacts.Diagnostics.upgradeStepFailed
 FS.GG.SDD.Artifacts.Diagnostics.workModelInconsistent
 FS.GG.SDD.Artifacts.Evidence.parseEvidence
 FS.GG.SDD.Artifacts.Evidence.parseEvidenceArtifact
@@ -152,6 +152,7 @@ FS.GG.SDD.Artifacts.Serialization.generateWorkModel
 FS.GG.SDD.Artifacts.Serialization.normalizeSnapshotsToWorkModel
 FS.GG.SDD.Artifacts.Serialization.serializeWorkModel
 FS.GG.SDD.Artifacts.Ship.parseShipView
+FS.GG.SDD.Artifacts.SkillManifestJson.serialize
 FS.GG.SDD.Artifacts.Specification.parseSpecificationFacts
 FS.GG.SDD.Artifacts.Specification.specificationStandardSections
 FS.GG.SDD.Artifacts.Task.parseTaskFacts

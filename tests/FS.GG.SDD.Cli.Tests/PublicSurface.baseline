@@ -1,3 +1,9 @@
+FS.GG.SDD.Cli.RegistrySkillManifest.run
+FS.GG.SDD.Cli.RegistryValidate.exitCode
+FS.GG.SDD.Cli.RegistryValidate.renderText
+FS.GG.SDD.Cli.RegistryValidate.run
+FS.GG.SDD.Cli.RegistryValidate.serialize
+FS.GG.SDD.Cli.RegistryValidate.validate
 FS.GG.SDD.Cli.Rendering.createCappedConsole
 FS.GG.SDD.Cli.Rendering.detectCapabilities
 FS.GG.SDD.Cli.Rendering.renderRichTo
@@ -5,8 +11,3 @@ FS.GG.SDD.Cli.Rendering.renderValidationRichTo
 FS.GG.SDD.Cli.Rendering.resolve
 FS.GG.SDD.Cli.Rendering.resolveValidation
 FS.GG.SDD.Cli.Rendering.selectFormat
-FS.GG.SDD.Cli.RegistryValidate.exitCode
-FS.GG.SDD.Cli.RegistryValidate.renderText
-FS.GG.SDD.Cli.RegistryValidate.run
-FS.GG.SDD.Cli.RegistryValidate.serialize
-FS.GG.SDD.Cli.RegistryValidate.validate

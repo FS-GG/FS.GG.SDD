@@ -185,6 +185,9 @@ let run args =
     // `parseCommand` so the lifecycle CommandReport/parseCommand contracts stay
     // untouched. Composes the Artifacts YAML load edge + Fsgg.Registry.validateDocument
     // into a deterministic verdict; exit 0 iff Valid (feature 042 / FS.GG.SDD#12).
+    // `registry skill-manifest` (ADR-0017 P2 / FS.GG.SDD#109) emits/checks SDD's process
+    // producer manifest; peer of `registry validate`, also before `parseCommand`.
+    | "registry" :: "skill-manifest" :: rest -> FS.GG.SDD.Cli.RegistrySkillManifest.run rest
     | "registry" :: rest -> FS.GG.SDD.Cli.RegistryValidate.run rest
     | commandValue :: rest ->
         match parseCommand commandValue with
