@@ -56,7 +56,9 @@ let printUnknown commandValue =
           Force = false
           TemplateUpdate = true
           AssumeYes = false
-          IsInteractive = false }
+          IsInteractive = false
+          Artifact = None
+          Explain = false }
 
     let model =
         { Request = request
@@ -77,6 +79,7 @@ let printUnknown commandValue =
           Scaffold = None
           Doctor = None
           Upgrade = None
+          Lint = None
           GeneratedViews = []
           Report = None }
 
@@ -151,7 +154,9 @@ let private helpRequest command format =
       Force = false
       TemplateUpdate = true
       AssumeYes = false
-      IsInteractive = false }
+      IsInteractive = false
+      Artifact = None
+      Explain = false }
 
 // §3.5: project a help report through the standard three views to stdout. Help carries no
 // diagnostics and no changes → NoChange → exit 0 (never `unknownCommand`, FR-008/011).
@@ -217,7 +222,10 @@ let run args =
                   // Feature 053: `upgrade`'s explicit non-interactive apply flag, and the
                   // input-interactivity signal that gates the per-step confirm loop (FR-011/FR-012).
                   AssumeYes = hasFlag "--yes" rest
-                  IsInteractive = capabilities.IsInputInteractive }
+                  IsInteractive = capabilities.IsInputInteractive
+                  // Feature 076: `lint <artifact>` positional (artifact-first) + `<stage> --explain`.
+                  Artifact = rest |> List.tryHead |> Option.filter (fun (a: string) -> not (a.StartsWith "--"))
+                  Explain = hasFlag "--explain" rest }
 
             let report = driveToReport request
 
@@ -240,7 +248,18 @@ let run args =
             else
                 Console.Out.WriteLine(rendered)
 
-            exitCodeForReport report
+            // Feature 076: `lint`/`<stage> --explain` use a bespoke 0/1/2 exit polarity
+            // (clean / defects / unusable input) — the opposite of exitCodeForReport, whose
+            // exit 2 is the tool-defect class. Every other command keeps exitCodeForReport.
+            match report.Command, report.Lint with
+            | Lint, Some lint ->
+                match lint.Outcome with
+                | Clean -> 0
+                | DefectsFound -> 1
+                | UnusableInput -> 2
+            // Lint with no summary (e.g. no `<artifact>` supplied) is unusable input.
+            | Lint, None -> 2
+            | _ -> exitCodeForReport report
 
 [<EntryPoint>]
 let main argv = run (Array.toList argv)

@@ -61,6 +61,14 @@ module internal DiagnosticConstructors =
             "Pass --work <id> for work-item lifecycle commands."
             [ commandName command ]
 
+    let lintMissingArtifact () =
+        errorDiagnostic
+            "lintMissingArtifact"
+            None
+            "Command 'lint' requires an <artifact> path."
+            "Run `fsgg-sdd lint <artifact>` with a path to an authored SDD artifact."
+            []
+
     let unsupportedCommand (command: SddCommand) =
         errorDiagnostic
             "unsupportedLifecycleCommand"

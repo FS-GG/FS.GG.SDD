@@ -90,6 +90,7 @@ module HelpCommandTests =
               Scaffold = None
               Doctor = None
               Upgrade = None
+              Lint = None
               GeneratedViews = []
               Report = None }
 
@@ -153,6 +154,7 @@ module HelpCommandTests =
               Scaffold = None
               Doctor = None
               Upgrade = None
+              Lint = None
               GeneratedViews = []
               Report = None }
 

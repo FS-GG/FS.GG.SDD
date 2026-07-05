@@ -440,6 +440,19 @@ nuget-cache/
     let tasksPath workId = $"work/{workId}/tasks.yml"
     let evidencePath workId = $"work/{workId}/evidence.yml"
 
+    /// The single authored artifact a stage lints under `<stage> --explain` (feature 076).
+    /// `None` for cross-cutting commands that have no primary authored artifact.
+    let stagePrimaryArtifactPath (command: SddCommand) (workId: string) =
+        match command with
+        | Charter -> Some(charterPath workId)
+        | Specify -> Some(specPath workId)
+        | Clarify -> Some(clarificationPath workId)
+        | Checklist -> Some(checklistPath workId)
+        | Plan -> Some(planPath workId)
+        | Tasks -> Some(tasksPath workId)
+        | Evidence -> Some(evidencePath workId)
+        | _ -> None
+
     let workModelPath workId =
         GenerationManifestModule.expectedWorkModelOutputPath workId
 
@@ -607,10 +620,12 @@ nuget-cache/
     let workIdDiagnostics (request: CommandRequest) =
         match request.Command, request.WorkId with
         | Init, _ -> []
-        // Scaffold/doctor/upgrade are cross-cutting and operate on --root, not a work item.
+        // Scaffold/doctor/upgrade/lint are cross-cutting and operate on --root/--artifact,
+        // not a work item.
         | Scaffold, _
         | Doctor, _
-        | Upgrade, _ -> []
+        | Upgrade, _
+        | Lint, _ -> []
         | _, None -> [ missingWorkId request.Command ]
         | _, Some value ->
             match IdentifiersModule.createWorkId value with
@@ -623,6 +638,18 @@ nuget-cache/
         if not (List.isEmpty diagnostics) then
             diagnostics, []
         else
+            // `<stage> --explain` (feature 076): a non-blocking dry run reads ONLY the stage's own
+            // artifact and lints it — never the authoring reads, never a write.
+            match
+                (if request.Explain then
+                     request.WorkId
+                     |> Option.bind (fun workId -> stagePrimaryArtifactPath request.Command workId)
+                 else
+                     None)
+            with
+            | Some path -> [], [ ReadFile path ]
+            | None ->
+
             match request.Command, request.WorkId with
             | Init, _ -> [], initEffects request
             | Charter, Some workId
@@ -640,6 +667,12 @@ nuget-cache/
             | Scaffold, _ -> [], scaffoldReadEffects
             | Doctor, _
             | Upgrade, _ -> [], remediationReadEffects
+            // Lint reads the single `<artifact>` (feature 076); a missing path is a plan-time
+            // user error (nothing for the effect loop to read) surfaced as unusable input.
+            | Lint, _ ->
+                match request.Artifact with
+                | Some path -> [], [ ReadFile path ]
+                | None -> [ lintMissingArtifact () ], []
             | command, _ -> [ unsupportedCommand command ], []
 
     let effectKey effect =

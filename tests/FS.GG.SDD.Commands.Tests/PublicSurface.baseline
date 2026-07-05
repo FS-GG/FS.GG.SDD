@@ -42,6 +42,7 @@ FS.GG.SDD.Commands.CommandReports.failedRequirementsQuality
 FS.GG.SDD.Commands.CommandReports.failedTasksPrerequisite
 FS.GG.SDD.Commands.CommandReports.failedVerification
 FS.GG.SDD.Commands.CommandReports.helpReport
+FS.GG.SDD.Commands.CommandReports.lintMissingArtifact
 FS.GG.SDD.Commands.CommandReports.malformedAgentsConfig
 FS.GG.SDD.Commands.CommandReports.malformedAnalysisView
 FS.GG.SDD.Commands.CommandReports.malformedCharterFrontMatter
@@ -125,6 +126,9 @@ FS.GG.SDD.Commands.CommandTypes.commandStage
 FS.GG.SDD.Commands.CommandTypes.effectPath
 FS.GG.SDD.Commands.CommandTypes.generatedViewCurrencyValue
 FS.GG.SDD.Commands.CommandTypes.guidanceDispositionValue
+FS.GG.SDD.Commands.CommandTypes.lintArtifactKindValue
+FS.GG.SDD.Commands.CommandTypes.lintDefectClassValue
+FS.GG.SDD.Commands.CommandTypes.lintOutcomeValue
 FS.GG.SDD.Commands.CommandTypes.nextLifecycleCommand
 FS.GG.SDD.Commands.CommandTypes.outcomeValue
 FS.GG.SDD.Commands.CommandTypes.outputFormatValue
@@ -135,4 +139,7 @@ FS.GG.SDD.Commands.CommandTypes.refreshDispositionValue
 FS.GG.SDD.Commands.CommandTypes.writeKindValue
 FS.GG.SDD.Commands.CommandWorkflow.init
 FS.GG.SDD.Commands.CommandWorkflow.update
+FS.GG.SDD.Commands.LintEngine.detectKind
+FS.GG.SDD.Commands.LintEngine.grammarPointer
+FS.GG.SDD.Commands.LintEngine.lint
 FS.GG.SDD.Commands.ProcessSkillManifest.build

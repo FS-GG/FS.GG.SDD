@@ -16,6 +16,7 @@ module CommandReports =
     val unknownCommand: value: string -> Diagnostic
     val malformedWorkId: value: string -> Diagnostic
     val missingWorkId: command: SddCommand -> Diagnostic
+    val lintMissingArtifact: unit -> Diagnostic
     val unsupportedCommand: command: SddCommand -> Diagnostic
     val outsideProject: unit -> Diagnostic
     val missingProjectConfig: path: string -> Diagnostic

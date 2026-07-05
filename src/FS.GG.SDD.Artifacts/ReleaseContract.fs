@@ -371,6 +371,8 @@ module ReleaseContract =
                       // Feature 053: additive remediation report blocks.
                       "doctor"
                       "upgrade"
+                      // Feature 076: additive lint / --explain report block.
+                      "lint"
                       "generatedViews"
                       "diagnostics"
                       "governanceCompatibility"

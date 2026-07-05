@@ -26,6 +26,7 @@ open FS.GG.SDD.Commands.Internal.HandlersRefresh
 open FS.GG.SDD.Commands.Internal.HandlersScaffold
 open FS.GG.SDD.Commands.Internal.HandlersDoctor
 open FS.GG.SDD.Commands.Internal.HandlersUpgrade
+open FS.GG.SDD.Commands.Internal.HandlersLint
 
 module CommandWorkflow =
     // The per-stage summaries a lifecycle command's plan feeds into the command model.
@@ -62,6 +63,16 @@ module CommandWorkflow =
           PlannedEffects = [] }
 
     let nextLifecycleEffects model =
+        match model.Request.Explain, model.Request.Command with
+        // `<stage> --explain` (feature 076, US3): once the single artifact read is in, run the
+        // pure LintEngine over the stage's own artifact; advance no state, emit no write.
+        | true, (Charter | Specify | Clarify | Checklist | Plan | Tasks | Evidence) ->
+            if not (allPlannedReadsInterpreted model) then
+                model, []
+            else
+                computeExplainLint model
+        | _ ->
+
         match model.Request.Command, model.Request.WorkId with
         | (Charter | Specify | Clarify | Checklist | Plan | Tasks | Analyze | Evidence | Verify | Ship), Some workId when
             not (hasPlannedWrite model)
@@ -354,6 +365,13 @@ module CommandWorkflow =
                 model, []
             else
                 computeUpgradeNext model
+        | Lint, _ ->
+            // Read-only pre-flight (feature 076, US1): once the single artifact read is in,
+            // run the pure LintEngine and record the summary; emit no mutating effect.
+            if not (allPlannedReadsInterpreted model) then
+                model, []
+            else
+                computeLintNext model
         | _ -> model, []
 
     let init (request: CommandRequest) =
@@ -382,6 +400,7 @@ module CommandWorkflow =
               Scaffold = None
               Doctor = None
               Upgrade = None
+              Lint = None
               GeneratedViews = []
               Report = None }
 

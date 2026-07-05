@@ -198,11 +198,16 @@ in the authoritative `catalog[].inventory` of
 - **`command-report (--json)`** — `agentGuidance`, `analysis`, `changedArtifacts`,
   `checklist`, `clarification`, `command`, `context`, `diagnostics`, `doctor`, `evidence`,
   `generatedViews`, `governanceCompatibility`, `help` *(present on `--help`/`-h`/`help`
-  invocations; `null` otherwise)*, `invocation`, `nextAction`, `outcome`, `plan`,
+  invocations; `null` otherwise)*, `invocation`, `lint`, `nextAction`, `outcome`, `plan`,
   `refresh`, `reportVersion`, `scaffold`, `schemaVersion` *(Stable)*, `ship`,
   `specification`, `tasks`, `upgrade`, `verification`.
   The additive `doctor` field is present on `fsgg-sdd doctor` (`null` otherwise); the
   additive `upgrade` field is present on `fsgg-sdd upgrade` (`null` otherwise) — feature 053.
+  The additive `lint` field is present on `fsgg-sdd lint` / `<stage> --explain` (`null`
+  otherwise) — feature 076; it carries `artifactPath`, `kind`, `outcome`
+  (`clean`/`defectsFound`/`unusableInput`), and `defects[]` (each with `class`, `id`,
+  `severity`, `location`, `message`, `correction`, and a `grammarPointer` for the four
+  grammar classes).
 
 ### Markdown projections (sections)
 
