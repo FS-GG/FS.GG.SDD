@@ -5,8 +5,9 @@ open FS.GG.SDD.Artifacts.Identifiers
 module RequiredKeys =
 
     // The keys below mirror each parser's required-field tuple (the `Some … , [] ->` match
-    // that admits the artifact). They are behaviourally confirmed against the parsers by
-    // RequiredFieldContractTests, so this list cannot silently drift from what the gate enforces.
+    // that admits the artifact). The deferral keys are behaviourally confirmed against the
+    // evidence gate by RequiredFieldContractTests; the front-matter keys are checked against
+    // the authoring-contracts §5 "Gating fields" column so the doc and registry stay in step.
     let requiredDeferralKeys =
         [ "rationale"; "owner"; "scope"; "laterLifecycleVisibility" ]
 
