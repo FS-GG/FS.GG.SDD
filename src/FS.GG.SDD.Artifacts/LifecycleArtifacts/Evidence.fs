@@ -76,6 +76,11 @@ module Evidence =
           LinkedTaskIds: TaskId list
           LinkedRequirementIds: RequirementId list
           LinkedDecisionIds: string list
+          // Feature 077: the originating task's full source-id lineage bag, carried verbatim so
+          // scaffolding can grammar-route it into the declaration's typed ref buckets. Recovers
+          // the plan-decision id (and any FR it traces to) that task.Requirements/task.Decisions
+          // drop for a plan-decision task.
+          LinkedSourceIds: string list
           ExpectedEvidenceKinds: string list
           RequiredSkillOrCapabilityTags: string list
           Blocking: bool

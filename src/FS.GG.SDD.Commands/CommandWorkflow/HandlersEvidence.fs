@@ -206,17 +206,77 @@ module internal HandlersEvidence =
                   LinkedTaskIds = [ task.Id ]
                   LinkedRequirementIds = task.Requirements
                   LinkedDecisionIds = task.Decisions |> List.map _.Value
+                  // Feature 077: carry the task's full source-id lineage so the scaffolded
+                  // declaration can recover the plan-decision (and FR-via-plan) origin that
+                  // task.Requirements/task.Decisions omit for a plan-decision task.
+                  LinkedSourceIds = task.SourceIds
                   ExpectedEvidenceKinds = [ "implementation"; "verification"; "deferral"; "synthetic" ]
                   RequiredSkillOrCapabilityTags = task.RequiredSkills
                   Blocking = true
                   Correction =
                     $"Add evidence {id} for {task.Id.Value} with result: pass and synthetic: false (a synthetic pass does not satisfy it), or an accepted deferral linked to {task.Id.Value}." }))
 
-    let skeletonEvidenceDeclaration workId (obligation: EvidenceObligation) =
+    // Feature 077 (issue #124): route an obligation's origin lineage into the declaration's
+    // `requirementRefs` / `planDecisionRefs` buckets by the shared id grammar
+    // (Identifiers.create*). Scope is deliberately those two buckets — the ids the issue asks
+    // scaffolding to preserve — so a plan-decision obligation recovers its `PD-###` and the
+    // `FR-###` it traces to. Other lineage ids (`AC-`/`DEC-`/`CR-`/`PC-`/`VO-`/`PM-`/`GV-`/…) are
+    // left unrouted: the acceptance/clarification/checklist buckets stay empty on scaffolds (as
+    // before), so scaffolding does not widen the evidence stage's unknown-reference validation
+    // surface beyond the requirement/plan-decision origin the author actually classifies against.
+    // Routing never errors on an unmatched id (Principle VIII); each bucket is de-duplicated and
+    // sorted for deterministic, idempotent output (FR-005 / SC-005).
+    let routeSourceRefs (ids: string list) =
+        let pick create =
+            ids
+            |> List.choose (fun id ->
+                match create id with
+                | Ok typed -> Some typed
+                | Error _ -> None)
+            |> List.distinct
+
+        {| Requirements =
+            pick IdentifiersModule.createRequirementId
+            |> List.sortBy (fun (id: RequirementId) -> id.Value)
+           PlanDecisions =
+            pick IdentifiersModule.createPlanDecisionId
+            |> List.sortBy (fun (id: PlanDecisionId) -> id.Value) |}
+
+    // Feature 077: `evidence --from-tests <path>` pre-maps each newly scaffolded obligation to a
+    // verification-kind source pointing at the proving test path. `None` (or a blank value) ⇒ no
+    // source seeded, so scaffolding output is unchanged aside from the routed refs. The path is a
+    // declared pointer; its on-disk existence/freshness is a verify-stage concern, not evaluated
+    // here (the evidence stage declares; verify validates).
+    let fromTestsSourceRefs (fromTests: string option) : EvidenceSourceReference list =
+        match fromTests |> Option.map (fun path -> path.Trim()) with
+        | Some path when path <> "" ->
+            [ { ReferenceId = None
+                Kind = "verification"
+                Path = Some path
+                Uri = None
+                Digest = None
+                RelatedSourceId = None
+                Result = None
+                SourceLocation = None } ]
+        | _ -> []
+
+    let skeletonEvidenceDeclaration workId (fromTests: string option) (obligation: EvidenceObligation) =
         let evidenceId =
             match IdentifiersModule.createEvidenceId obligation.ObligationId with
             | Ok id -> id
             | Error _ -> taskEvidenceId 1
+
+        // Feature 077: classify the union of every id the obligation carries — its source-id
+        // lineage plus the requirement/decision refs it already holds — so a plan-decision
+        // obligation recovers its PD id and the FR it traces to (both live in SourceIds, while
+        // task.Requirements/task.Decisions are empty for that task). Subsumes the previous
+        // requirement-only derivation; other ref buckets keep their prior (empty) scaffold value.
+        let routed =
+            routeSourceRefs (
+                obligation.LinkedSourceIds
+                @ (obligation.LinkedRequirementIds |> List.map _.Value)
+                @ obligation.LinkedDecisionIds
+            )
 
         let taskRefs = obligation.LinkedTaskIds
 
@@ -233,14 +293,14 @@ module internal HandlersEvidence =
           Kind = EvidenceKind.Missing
           Subject = subject
           TaskRefs = taskRefs
-          RequirementRefs = obligation.LinkedRequirementIds
+          RequirementRefs = routed.Requirements
           AcceptanceScenarioRefs = []
           ClarificationDecisionRefs = []
           ChecklistResultRefs = []
-          PlanDecisionRefs = []
+          PlanDecisionRefs = routed.PlanDecisions
           ObligationRefs = [ obligation.ObligationId ]
           ArtifactRefs = []
-          SourceRefs = []
+          SourceRefs = fromTestsSourceRefs fromTests
           Result = "missing"
           Synthetic = false
           SyntheticDisclosure = None
@@ -267,6 +327,7 @@ module internal HandlersEvidence =
 
     let mergeEvidenceArtifacts
         (workId: string)
+        (fromTests: string option)
         (existing: EvidenceArtifact option)
         (input: EvidenceArtifact option)
         (obligations: EvidenceObligation list)
@@ -331,7 +392,7 @@ module internal HandlersEvidence =
                  obligations
                  |> List.choose (fun obligation ->
                      if obligation.ObligationId.StartsWith("EV", StringComparison.OrdinalIgnoreCase) then
-                         Some(skeletonEvidenceDeclaration workId obligation)
+                         Some(skeletonEvidenceDeclaration workId fromTests obligation)
                      else
                          None)
                LifecycleNotes = [ "Next lifecycle action: verify after evidence is supported or deferred." ]
@@ -808,7 +869,12 @@ sourceAnalysis: {analysisPath workId}
                         let obligations = evidenceObligations taskFacts
 
                         let merged, mergeDiagnostics =
-                            mergeEvidenceArtifacts workId existingArtifact inputArtifact obligations
+                            mergeEvidenceArtifacts
+                                workId
+                                model.Request.FromTests
+                                existingArtifact
+                                inputArtifact
+                                obligations
 
                         let artifact =
                             { merged with

@@ -68,7 +68,8 @@ module ValidationRunner =
           AssumeYes = false
           IsInteractive = false
           Artifact = None
-          Explain = false }
+          Explain = false
+          FromTests = None }
 
     let runRequest (request: CommandRequest) = driveToReport request
 

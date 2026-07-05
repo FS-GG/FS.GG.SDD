@@ -80,7 +80,8 @@ module TestSupport =
           AssumeYes = false
           IsInteractive = false
           Artifact = None
-          Explain = false }
+          Explain = false
+          FromTests = None }
 
     let readRelative (root: string) (path: string) =
         File.ReadAllText(Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar)))
