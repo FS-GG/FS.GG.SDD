@@ -17,7 +17,15 @@ module internal DiagnosticConstructors =
         | Ok artifact -> Some artifact
         | Error _ -> None
 
+    // Feature 078 (#125): append the remediation pointer for the authoring-grammar blocking
+    // diagnostics. `suffixFor` returns "" for every non-covered id, so non-covered corrections stay
+    // byte-identical (FR-008). Every constructor funnels through here, so this is the only wiring.
     let commandDiagnostic id severity path message correction relatedIds =
+        let correction =
+            match RemediationPointers.suffixFor id with
+            | "" -> correction
+            | suffix -> correction + " " + suffix
+
         DiagnosticsModule.create id severity (path |> Option.bind artifactForPath) None message correction relatedIds
 
     let errorDiagnostic id path message correction relatedIds =

@@ -195,9 +195,16 @@ guard test fails until the citing correction (or the heading) is fixed.
 - **FR-008**: Diagnostics **outside** the authoring-grammar set MUST NOT be required to carry
   an example/anchor pointer, and their existing corrections MUST remain unchanged by this
   feature.
-- **FR-009**: The pointer MUST flow, without special-casing, into the `fsgg-sdd lint` /
-  `--explain` output that already surfaces corrections, so the pre-flight and the blocking-run
-  paths present the same remediation guidance.
+- **FR-009**: The pointer MUST be carried in the `--json` automation contract's `correction` value
+  for every covered diagnostic — the default output and the surface agents consume (the TD1 run was
+  agent-driven and read JSON). The `--text` and `--rich` projections are summaries that render
+  diagnostic counters (and, for `--rich`, a severity/id/message table) but **not** per-diagnostic
+  corrections; they are unchanged by this feature. The pointer MUST stay **coherent** with the
+  `fsgg-sdd lint` / `--explain` pre-flight (feature 076), which independently carries its own
+  grammar-section pointer per defect class: both MUST cite the same
+  `docs/reference/authoring-contracts.md` anchors, so the machine-blocking path and the human
+  pre-flight guide to the same grammar. (Lint renders its fix from its own 076 defect model, not
+  from the appended Correction; this feature does not re-plumb lint or the rich table.)
 
 ### Key Entities *(include if data involved)*
 

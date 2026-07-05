@@ -43,8 +43,13 @@ correction is otherwise byte-unchanged. Example (`missingClarificationAnswer`):
 ## Projection invariants (FR-003 / FR-009 / SC-005)
 
 - The pointer is carried only in `Correction`; the diagnostic JSON has no new keys.
-- `--text` and `--rich` render the same `Correction` string (rich adds styling only, no new facts).
-- `fsgg-sdd lint` / `--explain` surface the identical correction (no special-casing).
+- `--json` renders the `Correction` string with the pointer included (the default, and the machine
+  contract). `--text` (counters summary) and `--rich` (counters + a severity/id/message table)
+  do **not** render per-diagnostic corrections, so they are byte-unchanged by this feature.
+- `fsgg-sdd lint` / `--explain` (feature 076) renders its fix + grammar pointer from its **own**
+  defect model, not from the appended Correction. This feature does not re-plumb lint; it keeps the
+  two **coherent** — a covered diagnostic's anchor equals the anchor lint's corresponding defect
+  class cites (same `authoring-contracts.md` section).
 - The only JSON byte deltas versus pre-feature output are the `correction` values of covered
   diagnostics; non-covered diagnostics' JSON is unchanged.
 

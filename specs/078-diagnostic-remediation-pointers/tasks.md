@@ -32,12 +32,12 @@ only in the guard **test**.
 **Purpose**: Establish the module and its signature before any consumer/test references it
 (Constitution Principle I).
 
-- [ ] T001 Add `src/FS.GG.SDD.Commands/CommandReports/RemediationPointers.fsi` declaring the
+- [X] T001 Add `src/FS.GG.SDD.Commands/CommandReports/RemediationPointers.fsi` declaring the
   `internal` surface: the `RemediationPointer` record (`Example: string option`,
   `Anchor: string option`), `val registry: Map<string, RemediationPointer>`, and
   `val suffixFor: id: string -> string`. Doc-comment the invariants from
   `contracts/remediation-pointer.md`.
-- [ ] T002 Add empty-bodied `src/FS.GG.SDD.Commands/CommandReports/RemediationPointers.fs`
+- [X] T002 Add empty-bodied `src/FS.GG.SDD.Commands/CommandReports/RemediationPointers.fs`
   (registry `Map.empty`, `suffixFor _ = ""`) so the project compiles; register **both** files in
   `src/FS.GG.SDD.Commands/FS.GG.SDD.Commands.fsproj` immediately **before**
   `CommandReports/DiagnosticConstructors.fs` (compile order matters in F#).
@@ -51,7 +51,7 @@ only in the guard **test**.
 **Purpose**: Encode FR-006 / US3 as the failing guard that drives the registry contents. Written
 before Phase 3 fills the registry (TDD).
 
-- [ ] T003 [US3] Add `tests/FS.GG.SDD.Commands.Tests/RemediationPointersTests.fs` asserting, over
+- [X] T003 [US3] Add `tests/FS.GG.SDD.Commands.Tests/RemediationPointersTests.fs` asserting, over
   `RemediationPointers.registry`: (a) **coverage** — every entry renders a non-empty `suffixFor`;
   (b) **example resolves** — every `Example` path exists on disk under `TestSupport.repoRoot`;
   (c) **anchor resolves** — every `Anchor` slug is in the GitHub-slug set computed from the live
@@ -59,7 +59,7 @@ before Phase 3 fills the registry (TDD).
   output contains no absolute path / digit-timestamp / machine-dependent text. Include a small
   in-test `slugify` mirroring GitHub's algorithm (lowercase, drop backticks/punctuation except
   `-`, spaces→`-`). Register the file in `FS.GG.SDD.Commands.Tests.fsproj`.
-- [ ] T004 [US3] Add to the same test the **containment** and **non-interference** assertions
+- [X] T004 [US3] Add to the same test the **containment** and **non-interference** assertions
   (contract invariants 5–6): for a representative covered id per stage, the constructed diagnostic's
   `Correction` ends with `suffixFor id`; and for a representative **non-covered** id
   (`outsideProject`, `missingWorkId`, `toolDefect`), the `Correction` contains no
@@ -74,22 +74,22 @@ covered set.
 
 **Purpose**: Deliver the core value — every covered blocking correction gains a resolving pointer.
 
-- [ ] T005 [US1] Confirm the exact GitHub slugs for the two backtick headings in
+- [X] T005 [US1] Confirm the exact GitHub slugs for the two backtick headings in
   `docs/reference/authoring-contracts.md`: `` ## `evidence.yml` declarations `` and
   `` ## `specify --input` intent facts ``. Record the confirmed slugs
   (`evidenceyml-declarations`, `specify---input-intent-facts`) as the constants used in T006; if the
   T003 slugifier disagrees, reconcile the slugifier and the constant together.
-- [ ] T006 [US1] Implement `RemediationPointers.fs`: populate `registry` with the full per-diagnostic
+- [X] T006 [US1] Implement `RemediationPointers.fs`: populate `registry` with the full per-diagnostic
   mapping from `data-model.md` (all rows, all seven stages incl. the `*(agg)*` blocks and the
   `*IdentityMismatch` rows), and implement `suffixFor` per `contracts/remediation-pointer.md`
   (both/one/neither rendering; `""` for unknown ids). Paths are repo-relative POSIX; anchors are the
   full `docs/reference/authoring-contracts.md#<slug>`.
-- [ ] T007 [US1] In `src/FS.GG.SDD.Commands/CommandReports/DiagnosticConstructors.fs`, append
+- [X] T007 [US1] In `src/FS.GG.SDD.Commands/CommandReports/DiagnosticConstructors.fs`, append
   `RemediationPointers.suffixFor <id>` (space-separated) to the `correction` of **each covered
   constructor** listed in `data-model.md`. Do this by threading through the shared
   `errorDiagnostic`/`errorForPath`/`errorForRef` helpers keyed on the id, or per call-site — but
   leave every **non-covered** constructor's correction byte-identical (T004 guards this).
-- [ ] T008 [P] [US1] Add per-stage correction assertions where the stage command tests live
+- [X] T008 [P] [US1] Add per-stage correction assertions where the stage command tests live
   (`ClarifyCommandTests.fs` scenario for `missingClarificationAnswer`, `ChecklistCommandTests.fs`
   for `failedChecklistPrerequisite`, `EvidenceCommandTests.fs` for
   `evidence.undisclosedSyntheticEvidence`, `PlanCommandTests.fs` for `malformedPlanFrontMatter`,
@@ -106,23 +106,23 @@ assertions still fail until Phase 4 lands the three new examples.
 **Purpose**: Give charter/specify/plan an example to cite so every stage's example pointer resolves
 (FR-004/FR-005), and complete the guard's example-existence check.
 
-- [ ] T009 [P] [US2] [T2] Author `docs/examples/lifecycle-artifacts/spec.md`: a complete specify
+- [X] T009 [P] [US2] [T2] Author `docs/examples/lifecycle-artifacts/spec.md`: a complete specify
   artifact — required front matter (`stage: specify`), stable US/FR/AC ids, `#specify --input`-shaped
   intent facts, all required sections — that parses via `Specification.parseSpecificationFacts` with
   **zero blocking diagnostics**. Include the established header comment linking
   `authoring-contracts.md` and `[[fs-gg-sdd-specify]]`.
-- [ ] T010 [P] [US2] [T2] Author `docs/examples/lifecycle-artifacts/plan.md`: a complete plan
+- [X] T010 [P] [US2] [T2] Author `docs/examples/lifecycle-artifacts/plan.md`: a complete plan
   artifact — plan front matter incl. `sourceSpec`/`sourceClarifications`/`sourceChecklist`, valid
   PD/PC/source ids, required sections — parsing via `Plan.parsePlanFacts` with zero blocking
   diagnostics. Header comment linking `authoring-contracts.md` and `[[fs-gg-sdd-plan]]`.
-- [ ] T011 [P] [US2] [T2] Author `docs/examples/lifecycle-artifacts/charter.md`: a complete charter
+- [X] T011 [P] [US2] [T2] Author `docs/examples/lifecycle-artifacts/charter.md`: a complete charter
   — required front matter (`stage: charter`) plus scope/policy sections — validating via the
   Commands charter front-matter parser with zero blocking diagnostics. Header comment linking
   `authoring-contracts.md` and `[[fs-gg-sdd-charter]]`.
-- [ ] T012 [US2] Extend `tests/FS.GG.SDD.Artifacts.Tests/ExampleArtifactsContractTests.fs` with two
+- [X] T012 [US2] Extend `tests/FS.GG.SDD.Artifacts.Tests/ExampleArtifactsContractTests.fs` with two
   cases: `spec.md` parses via `Specification.parseSpecificationFacts` (no blocking diagnostics) and
   `plan.md` via `Plan.parsePlanFacts` (no blocking diagnostics), mirroring the existing four.
-- [ ] T013 [US2] Add `tests/FS.GG.SDD.Commands.Tests/CharterExampleContractTests.fs` validating
+- [X] T013 [US2] Add `tests/FS.GG.SDD.Commands.Tests/CharterExampleContractTests.fs` validating
   `charter.md` through the Commands charter front-matter parser (`EarlyStageAuthoring`), asserting no
   blocking (error-severity) diagnostics. Register in the test project.
 
@@ -136,19 +136,19 @@ guard is fully green (SC-002, SC-003).
 **Purpose**: Re-derive goldens for the intended correction delta, confirm projection/lint parity,
 and prove FR-008 byte-stability.
 
-- [ ] T014 Regenerate/update any JSON or text goldens that embed a **covered** correction (e.g.
+- [X] T014 Regenerate/update any JSON or text goldens that embed a **covered** correction (e.g.
   `tests/FS.GG.SDD.Commands.Tests/goldens/**`, rich/text rendering snapshots) to include the new
   suffix; confirm goldens for **non-covered** diagnostics are byte-unchanged (git diff on them must
   be empty — FR-008 / SC-005).
-- [ ] T015 [P] Confirm projection & lint parity (FR-009): a `--text` and a `--rich` run of a covered
+- [X] T015 [P] Confirm projection & lint parity (FR-009): a `--text` and a `--rich` run of a covered
   block show the same pointer, and `fsgg-sdd lint` on the same artifact surfaces the identical
   correction. Add/extend an assertion in the Cli rich/lint tests if not already covered by T008.
-- [ ] T016 [P] Run the `fsgg-sdd validate` determinism/degradation matrix (or its test) to confirm
+- [X] T016 [P] Run the `fsgg-sdd validate` determinism/degradation matrix (or its test) to confirm
   no ANSI-only/JSON-only fact was introduced and output is byte-stable across runs (FR-007).
-- [ ] T017 [P] [T2] Walk `specs/078-diagnostic-remediation-pointers/quickstart.md` steps 2–5
+- [X] T017 [P] [T2] Walk `specs/078-diagnostic-remediation-pointers/quickstart.md` steps 2–5
   against a scratch work item; confirm the canonical TD1 case (SC-004) and the non-covered case
   (step 5) behave as documented.
-- [ ] T018 [T2] Refresh public-surface/currency guards: `dotnet test` green end-to-end; if the
+- [X] T018 [T2] Refresh public-surface/currency guards: `dotnet test` green end-to-end; if the
   internal module unexpectedly widened a baseline, reconcile
   `tests/FS.GG.Contracts.Tests/PublicSurface.baseline` (expected: no change — module is internal).
 
@@ -185,3 +185,34 @@ covered blocking correction points to a resolving grammar anchor, guarded agains
 three new examples) upgrades the pointers to also cite an example for charter/specify/plan and turns
 the example-existence guard green — deliver it in the same PR to satisfy the "both when both exist"
 rule (clarify Q2) for all seven stages.
+
+## Deviations from plan (recorded during implementation)
+
+All 18 tasks are `[X]`; the following implementation choices differ from the task text and are
+recorded here for honesty (Constitution VI):
+
+- **T001 — no separate `.fsi`.** `RemediationPointers` is a `module internal` with **no** `.fsi`,
+  matching its sibling `DiagnosticConstructors` (also internal, no `.fsi`). Constitution III's
+  `.fsi` requirement is for *public* modules; this module is reached only via
+  `InternalsVisibleTo("FS.GG.SDD.Commands.Tests")`. Simpler and locally consistent (Principle IV).
+- **T007 — single chokepoint.** The suffix is appended once, in the shared `commandDiagnostic`
+  helper every constructor funnels through, keyed on the diagnostic id via `suffixFor` (which
+  returns `""` for non-covered ids). One edit wires all covered corrections and provably leaves
+  non-covered corrections byte-identical (FR-008).
+- **T008 — assertions consolidated.** The per-stage correction assertions live in the
+  `RemediationPointersTests` containment test (a representative covered diagnostic per stage ends
+  with its exact example+anchor pointer) rather than scattered across the command test files, plus a
+  real-CLI US1 exercise captured at `readiness/078-diagnostic-remediation-pointers/us1-cli-evidence.txt`
+  (`specify` → `missingSpecificationIntent` JSON carries the pointer; `outsideProject` stays clean).
+- **Covered set is error-severity only (44 ids).** The four Warning-severity `stale*` diagnostics
+  (`staleChecklistResult`, `stalePlanDecision`, `staleTask`, `verify.staleRequiredTest`) were dropped
+  from the data-model set — the spec scopes the pointer requirement to blocking (error) diagnostics.
+- **T014 — golden update was a no-op.** No stored golden/fixture embeds a covered correction
+  (verified by grep + a green full suite), so no golden needed regenerating; non-covered corrections
+  are byte-identical.
+- **FR-009 refined to match reality.** The pointer surfaces in the `--json` automation contract
+  (the default, and what agents read); `--text`/`--rich` are summaries that do not print
+  per-diagnostic corrections. `fsgg-sdd lint` (076) carries its **own** grammar pointer to the
+  **same** `authoring-contracts.md` anchors (coherence verified: `acceptance-coverage-line`,
+  `clarify-decision-tag-resolution`, `per-stage-front-matter`, `stable-id-declarations`), so this
+  feature does not re-plumb lint. Spec/contract/quickstart were updated accordingly.

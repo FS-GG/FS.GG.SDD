@@ -66,13 +66,11 @@ Anchors resolve against the current `docs/reference/authoring-contracts.md` head
 | `malformedChecklistFrontMatter` | `…/checklist.md` | `#per-stage-front-matter` |
 | `duplicateChecklistId` | `…/checklist.md` | `#stable-id-declarations` |
 | `unknownChecklistSourceReference` | `…/checklist.md` | `#stable-id-declarations` |
-| `staleChecklistResult` | `…/checklist.md` | `#acceptance-coverage-line` |
 | `failedChecklistPrerequisite` *(agg)* | `…/checklist.md` | `#acceptance-coverage-line` |
 | `checklistIdentityMismatch` | `…/checklist.md` | `#per-stage-front-matter` |
 | `malformedPlanFrontMatter` | `…/plan.md` | `#per-stage-front-matter` |
 | `duplicatePlanId` | `…/plan.md` | `#stable-id-declarations` |
 | `unknownPlanSourceReference` | `…/plan.md` | `#stable-id-declarations` |
-| `stalePlanDecision` | `…/plan.md` | `#stable-id-declarations` |
 | `failedPlanPrerequisite` *(agg)* | `…/plan.md` | `#stable-id-declarations` |
 | `planIdentityMismatch` | `…/plan.md` | `#per-stage-front-matter` |
 | `malformedTasksArtifact` | `…/tasks.yml` | `#per-stage-front-matter` |
@@ -80,7 +78,6 @@ Anchors resolve against the current `docs/reference/authoring-contracts.md` head
 | `unknownTaskSourceReference` | `…/tasks.yml` | `#stable-id-declarations` |
 | `unknownTaskDependency` | `…/tasks.yml` | `#stable-id-declarations` |
 | `taskDependencyCycle` | `…/tasks.yml` | `#stable-id-declarations` |
-| `staleTask` | `…/tasks.yml` | `#stable-id-declarations` |
 | `doneTaskMissingEvidence` | `…/tasks.yml` | `#stable-id-declarations` |
 | `skippedTaskMissingRationale` | `…/tasks.yml` | `#stable-id-declarations` |
 | `tasksIdentityMismatch` | `…/tasks.yml` | `#per-stage-front-matter` |
@@ -95,9 +92,11 @@ Anchors resolve against the current `docs/reference/authoring-contracts.md` head
 | `evidence.unsafeUpdate` | `…/evidence.yml` | `#evidenceyml-declarations` |
 | `evidence.identityMismatch` | `…/evidence.yml` | `#per-stage-front-matter` |
 | `verify.missingRequiredTest` *(agg)* | `…/evidence.yml` | `#evidenceyml-declarations` |
-| `verify.staleRequiredTest` | `…/evidence.yml` | `#evidenceyml-declarations` |
 
 **Notes**
+- **Warning-severity `stale*` diagnostics are excluded** (`staleChecklistResult`, `stalePlanDecision`,
+  `staleTask`, `verify.staleRequiredTest`, `evidence.staleEvidence*`): the spec scopes the pointer
+  requirement to **error-severity** blocking diagnostics only. The registry contains 44 error ids.
 - Every row cites **both** an example and an anchor (all seven stages have an example after
   FR-004), so the both-when-both-exist rule (clarify Q2) applies uniformly.
 - The `*IdentityMismatch` rows are retained in-set and pointed at the per-stage front-matter

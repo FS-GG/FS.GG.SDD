@@ -32,14 +32,19 @@ fsgg-sdd clarify --work <id> --json | jq -r '.diagnostics[] | select(.id=="missi
 Expected substring:
 `… See the shipped example docs/examples/lifecycle-artifacts/clarifications.md and the grammar at docs/reference/authoring-contracts.md#clarify-decision-tag-resolution.`
 
-## 3. Same guidance across projections and in lint (FR-009)
+## 3. Coherent with the lint pre-flight (FR-009)
+
+The pointer lives in the `--json` correction (step 2). `--text`/`--rich` are summaries that do not
+print per-diagnostic corrections. The human pre-flight `lint` (076) independently cites the SAME
+grammar anchor:
 
 ```sh
-fsgg-sdd clarify --work <id> --text | grep -F 'authoring-contracts.md#clarify-decision-tag-resolution'
-fsgg-sdd lint work/<id>/clarifications.md --json | jq -r '.diagnostics[].correction' | grep -F 'docs/examples/lifecycle-artifacts/clarifications.md'
+# lint carries its OWN 076 grammar pointer to the SAME anchor (coherence, not the same string):
+fsgg-sdd lint work/<id>/clarifications.md --text | grep -F 'authoring-contracts.md#clarify-decision-tag-resolution'
 ```
 
-Expected: the pointer appears identically in `--text` and in `lint` output.
+Expected: `lint` shows its own defect fix whose grammar pointer cites the identical
+`authoring-contracts.md` anchor the covered diagnostic's `--json` correction cites.
 
 ## 4. Follow the pointer — it resolves (US3)
 
