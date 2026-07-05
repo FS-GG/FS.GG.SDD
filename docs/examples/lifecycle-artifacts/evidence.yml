@@ -3,6 +3,11 @@
 # an obligation is satisfied ONLY by a matching declaration with `result: pass` AND
 # `synthetic: false` — a synthetic pass or a deferral does not satisfy it. See
 # [[fs-gg-sdd-evidence]] and docs/reference/authoring-contracts.md.
+#
+# Auto-scaffolded obligations already carry their originating `requirementRefs` and
+# `planDecisionRefs`, routed from the task's source lineage, so you can classify each
+# obligation without joining back to tasks.yml by title. You may add the other ref
+# fields (clarificationDecisionRefs / acceptanceScenarioRefs / …) by hand, as below.
 schemaVersion: 1
 evidence:
   # Satisfies T001: real (non-synthetic) verification that passed.
@@ -11,6 +16,8 @@ evidence:
     subject:
       type: task
       id: T001
+    requirementRefs: [FR-001]
+    clarificationDecisionRefs: [DEC-001]
     artifacts: [tests/ExampleApp.Tests/ServeRuleTests.fs]
     result: pass
     synthetic: false
@@ -20,6 +27,8 @@ evidence:
     subject:
       type: task
       id: T002
+    requirementRefs: [FR-002]
+    clarificationDecisionRefs: [DEC-001, DEC-002]
     artifacts: [tests/ExampleApp.Tests/RallyScoreTests.fs]
     result: pass
     synthetic: false

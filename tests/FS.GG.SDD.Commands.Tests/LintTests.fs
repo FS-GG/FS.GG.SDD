@@ -203,7 +203,8 @@ module LintTests =
         let request =
             { TestSupport.request command projectRoot with
                 WorkId = Some workId
-                Explain = true }
+                Explain = true
+                FromTests = None }
 
         let model, effects = init request
 

@@ -72,7 +72,10 @@ module CommandTypes =
           AssumeYes: bool
           IsInteractive: bool
           Artifact: string option
-          Explain: bool }
+          Explain: bool
+          // Evidence input (`fsgg-sdd evidence --from-tests <path>`); ignored by other commands
+          // (feature 077). Pre-maps each newly scaffolded obligation to a verification-kind source.
+          FromTests: string option }
 
     type GeneratedViewSource =
         { Path: string

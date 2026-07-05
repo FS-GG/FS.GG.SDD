@@ -14,6 +14,7 @@ the work is done.
 
 ```text
 fsgg-sdd evidence --work <id>
+fsgg-sdd evidence --work <id> --from-tests <path>   # pre-map new obligations to a proving test file
 ```
 
 ## Produces / consumes
@@ -22,6 +23,19 @@ fsgg-sdd evidence --work <id>
 - **You author:** `work/<id>/evidence.yml`.
 - **Tool refreshes:** `readiness/<id>/work-model.json`.
 - **Next:** `verify` ([[fs-gg-sdd-verify]]).
+
+## Auto-scaffolded obligations carry their origin refs
+
+Each scaffolded obligation already records the `requirementRefs` and `planDecisionRefs` it
+descends from — routed from the originating task's source lineage (so a `PD-###` plan-decision
+obligation carries its `PD-###` **and** the `FR-###` it traces to). You can classify each
+obligation honestly from its `evidence.yml` entry alone, with **no join back to `tasks.yml` by
+task title**. (Other ref buckets stay empty on scaffolds; add them by hand if you want.)
+
+`--from-tests <path>` additionally seeds each **newly scaffolded** obligation with a
+verification-kind source pointing at `<path>` (a declared pointer; its existence is checked at
+`verify`). It is inert without the flag. Neither behavior overwrites an obligation you have
+already authored (no-clobber).
 
 ## The satisfaction rule (load-bearing)
 

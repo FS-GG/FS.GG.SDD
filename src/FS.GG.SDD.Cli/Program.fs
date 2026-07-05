@@ -58,7 +58,8 @@ let printUnknown commandValue =
           AssumeYes = false
           IsInteractive = false
           Artifact = None
-          Explain = false }
+          Explain = false
+          FromTests = None }
 
     let model =
         { Request = request
@@ -156,7 +157,8 @@ let private helpRequest command format =
       AssumeYes = false
       IsInteractive = false
       Artifact = None
-      Explain = false }
+      Explain = false
+      FromTests = None }
 
 // §3.5: project a help report through the standard three views to stdout. Help carries no
 // diagnostics and no changes → NoChange → exit 0 (never `unknownCommand`, FR-008/011).
@@ -226,7 +228,10 @@ let run args =
                   // Feature 076: the `lint <artifact>` positional is the first non-flag token
                   // (so `lint --rich spec.md` and `lint spec.md --rich` both resolve), + `--explain`.
                   Artifact = rest |> List.tryFind (fun (a: string) -> not (a.StartsWith "--"))
-                  Explain = hasFlag "--explain" rest }
+                  Explain = hasFlag "--explain" rest
+                  // Feature 077: `evidence --from-tests <path>` pre-maps scaffolded obligations to
+                  // a proving test file.
+                  FromTests = optionValue "--from-tests" rest }
 
             let report = driveToReport request
 

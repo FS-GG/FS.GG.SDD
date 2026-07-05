@@ -81,7 +81,11 @@ module CommandTypes =
           // `Artifact`: the positional path to pre-flight.
           Artifact: string option
           // `Explain`: `<stage> --explain` non-blocking dry-run flag (FR-016); default false.
-          Explain: bool }
+          Explain: bool
+          // Evidence input (`fsgg-sdd evidence --from-tests <path>`); ignored by other commands
+          // (feature 077). Pre-maps each newly scaffolded obligation to a verification-kind source
+          // pointing at this test path. `None` ⇒ inert (output byte-identical aside from refs).
+          FromTests: string option }
 
     type GeneratedViewSource =
         { Path: string
