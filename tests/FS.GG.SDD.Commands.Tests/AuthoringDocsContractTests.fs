@@ -274,3 +274,90 @@ module AuthoringDocsContractTests =
                 List.isEmpty (blockingFindings line),
                 $"Doc lists this as a FINDING, but the parser drops it as a placeholder: {line}"
             )
+
+    // --- Clarify decision-tag resolution + front matter (feature 075) ---------
+
+    /// Each block under these labels is a WHOLE `clarifications.md` file; parse it
+    /// through the live `Clarification.parseClarificationFacts` public entry point.
+    let private parseClarificationBlock (block: string list) =
+        Clarification.parseClarificationFacts
+            { Path = "work/001-authoring-contracts-guard/clarifications.md"
+              Text = String.concat "\n" block }
+
+    let private clarificationBlocks (label: string) =
+        let blocks = taggedBlocks label referenceDoc
+        Assert.NotEmpty blocks
+        blocks
+
+    [<Fact>]
+    let ``Documented resolved decision blocks attach the ambiguity and leave zero blocking`` () =
+        for block in clarificationBlocks "clarify-decision:resolved" do
+            match parseClarificationBlock block with
+            | Ok facts ->
+                Assert.Equal(0, facts.BlockingAmbiguityCount)
+
+                Assert.True(
+                    facts.Decisions
+                    |> List.exists (fun decision -> not (List.isEmpty decision.SourceAmbiguityIds)),
+                    "Doc marks this as a RESOLVED decision, but no `## Decisions` line carries an AMB id"
+                )
+            | Error diagnostics -> failwith $"Documented resolved-decision block did not parse:\n{diagnostics}"
+
+    [<Fact>]
+    let ``Documented deferred decision blocks attach the ambiguity via an accepted deferral`` () =
+        for block in clarificationBlocks "clarify-decision:deferred" do
+            match parseClarificationBlock block with
+            | Ok facts ->
+                Assert.Equal(0, facts.BlockingAmbiguityCount)
+
+                Assert.True(
+                    facts.AcceptedDeferrals
+                    |> List.exists (fun decision -> not (List.isEmpty decision.SourceAmbiguityIds)),
+                    "Doc marks this as an accepted DEFERRAL, but no `## Accepted Deferrals` line carries an AMB id"
+                )
+            | Error diagnostics -> failwith $"Documented deferred-decision block did not parse:\n{diagnostics}"
+
+    [<Fact>]
+    let ``Documented answer-only decision blocks leave the ambiguity blocking`` () =
+        for block in clarificationBlocks "clarify-decision:answer-does-not-resolve" do
+            match parseClarificationBlock block with
+            | Ok facts ->
+                Assert.True(
+                    facts.BlockingAmbiguityCount > 0,
+                    "Doc says an answer alone does NOT resolve, but the parser left zero blocking ambiguities"
+                )
+            | Error diagnostics -> failwith $"Documented answer-only block did not parse:\n{diagnostics}"
+
+    [<Fact>]
+    let ``Documented duplicate decision blocks are flagged as duplicate ids`` () =
+        for block in clarificationBlocks "clarify-dup:rejected" do
+            let diagnostics =
+                match parseClarificationBlock block with
+                | Ok facts -> facts.Diagnostics
+                | Error diagnostics -> diagnostics
+
+            Assert.True(
+                diagnostics
+                |> List.exists (fun diagnostic -> diagnostic.Id = "duplicateIdentifier"),
+                "Doc marks this as a DUPLICATE id, but the parser did not flag `duplicateIdentifier`"
+            )
+
+    [<Fact>]
+    let ``Documented minimal clarify front matter parses without an incomplete error`` () =
+        for block in clarificationBlocks "front-matter:clarify-minimal" do
+            match parseClarificationBlock block with
+            | Ok _ -> ()
+            | Error diagnostics ->
+                failwith $"Doc marks this front matter as MINIMAL/accepted, but the parser rejected it:\n{diagnostics}"
+
+    [<Fact>]
+    let ``Documented clarify front matter missing a gating field is rejected as incomplete`` () =
+        for block in clarificationBlocks "front-matter:clarify-missing-required" do
+            match parseClarificationBlock block with
+            | Ok _ -> failwith "Doc marks this front matter as INCOMPLETE, but the parser accepted it"
+            | Error diagnostics ->
+                Assert.True(
+                    diagnostics
+                    |> List.exists (fun diagnostic -> diagnostic.Id = "workModelInconsistent"),
+                    $"Expected an incomplete-front-matter diagnostic, got:\n{diagnostics}"
+                )
