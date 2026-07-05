@@ -270,7 +270,7 @@
       "schemaVersion": 1,
       "generator": {
         "id": "FS.GG.SDD.Artifacts",
-        "version": "0.6.0"
+        "version": "0.7.0"
       },
       "sources": [
         {
@@ -324,12 +324,24 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "b78866fd919517e57458965932bbf19576b3bee80fc69e83067704c929faf655"
+        "value": "04741e1f76341da06ddf3c11dab4bf46345720009d896f2b0dfdd9bfef3db917"
       },
       "currency": "current"
     }
   ],
-  "diagnostics": [],
+  "diagnostics": [
+    {
+      "id": "staleGeneratedView",
+      "severity": "error",
+      "artifact": "readiness/002-normalized-work-model/work-model.json",
+      "location": null,
+      "message": "Generated view metadata no longer matches current sources.",
+      "correction": "Regenerate the view from current source digests and generator version.",
+      "relatedIds": [
+        "readiness/002-normalized-work-model/work-model.json"
+      ]
+    }
+  ],
   "governanceBoundaries": [
     {
       "path": ".fsgg/capabilities.yml",

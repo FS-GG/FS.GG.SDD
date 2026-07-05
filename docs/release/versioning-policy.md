@@ -19,15 +19,15 @@ The policy basis is [Semantic Versioning](https://semver.org/).
 ## Single version source
 
 All `FS.GG.SDD.*` packages and the `fsgg-sdd` CLI share **one** semantic version,
-sourced from `Directory.Build.props` `<Version>` — currently **`0.6.0`**:
+sourced from `Directory.Build.props` `<Version>` — currently **`0.7.0`**:
 
 - `FS.GG.SDD.Artifacts`
 - `FS.GG.SDD.Commands`
 - `FS.GG.SDD.Cli` (the `fsgg-sdd` CLI)
 
 The generator version (`currentGeneratorVersion`) is reconciled to the same
-number, so `release-readiness.json` carries `identity.version = "0.6.0"` and
-`generatorVersion.version = "0.6.0"`. A consumer can therefore determine the
+number, so `release-readiness.json` carries `identity.version = "0.7.0"` and
+`generatorVersion.version = "0.7.0"`. A consumer can therefore determine the
 release version deterministically from package metadata or
 `release-readiness.json` without reading source. (FR-003)
 
