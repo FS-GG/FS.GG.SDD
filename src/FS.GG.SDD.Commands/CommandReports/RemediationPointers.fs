@@ -73,6 +73,7 @@ module internal RemediationPointers =
           "clarificationIdentityMismatch", at clarifyEx frontMatter
           // checklist
           "malformedChecklistFrontMatter", at checklistEx frontMatter
+          "missingChecklistBackReference", at checklistEx stableIds
           "duplicateChecklistId", at checklistEx stableIds
           "unknownChecklistSourceReference", at checklistEx stableIds
           "failedChecklistPrerequisite", at checklistEx coverageLine

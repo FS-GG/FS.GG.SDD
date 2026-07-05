@@ -62,6 +62,8 @@ module Diagnostics =
     val workModelInconsistent:
         artifact: ArtifactRef -> message: string -> correction: string -> relatedIds: string list -> Diagnostic
 
+    val missingChecklistBackReference: artifact: ArtifactRef -> resultId: string -> Diagnostic
+
     val proseStructuredMismatch: artifact: ArtifactRef -> message: string -> correction: string -> Diagnostic
     val staleGeneratedView: artifact: ArtifactRef -> message: string -> correction: string -> Diagnostic
     val missingGeneratedWorkModel: artifact: ArtifactRef -> expectedPath: string -> Diagnostic

@@ -64,6 +64,7 @@ Id prefixes: `CHK-###` (checklist items), `CR-###` (review results).
 
 ## Example
 
+<!-- fsgg-sdd:example corpus=checklist.md mode=ref -->
 ```markdown
 # Checklist
 

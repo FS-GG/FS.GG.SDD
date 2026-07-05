@@ -50,6 +50,8 @@
     <Compile Include="ArtifactTaxonomyTests.fs" />
     <Compile Include="RemediationPointersTests.fs" />
     <Compile Include="CharterExampleContractTests.fs" />
+    <Compile Include="SkillGateDoctestTests.fs" />
+    <Compile Include="RequiredFieldContractTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

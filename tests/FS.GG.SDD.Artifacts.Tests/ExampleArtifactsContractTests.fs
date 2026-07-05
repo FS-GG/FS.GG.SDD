@@ -68,18 +68,31 @@ module ExampleArtifactsContractTests =
             Assert.NotEmpty facts.Decisions
 
     [<Fact>]
-    let ``Example evidence.yml declarations all satisfy (result pass, non-synthetic)`` () =
+    let ``Example evidence.yml declarations are each a satisfying pass or a well-formed deferral`` () =
         match Evidence.parseEvidence (snapshot "evidence.yml") with
         | Error diagnostics -> failwith $"Example evidence.yml did not parse: {diagnostics}"
         | Ok declarations ->
             Assert.NotEmpty declarations
 
+            // Feature 081 (#142): the corpus now also carries the canonical deferral shape.
+            // Each declaration must be EITHER a satisfying pass (result: pass, non-synthetic)
+            // OR a well-formed deferral carrying all four gate-required fields — so the
+            // copyable evidence example can never teach a deferral the gate would reject.
             Assert.All(
                 declarations,
                 fun declaration ->
+                    let result = declaration.Result.Trim().ToLowerInvariant()
+                    let isSatisfyingPass = result = "pass" && not declaration.Synthetic
+
+                    let isWellFormedDeferral =
+                        (result = "deferred" || declaration.Kind = Evidence.EvidenceKind.Deferral)
+                        && Option.isSome declaration.Rationale
+                        && Option.isSome declaration.Owner
+                        && Option.isSome declaration.Scope
+                        && Option.isSome declaration.LaterLifecycleVisibility
+
                     Assert.True(
-                        declaration.Result.Trim().ToLowerInvariant() = "pass"
-                        && not declaration.Synthetic,
-                        $"Example evidence declaration {declaration.Id.Value} should model a satisfying declaration."
+                        isSatisfyingPass || isWellFormedDeferral,
+                        $"Example evidence declaration {declaration.Id.Value} should model a satisfying pass or a four-field deferral."
                     )
             )

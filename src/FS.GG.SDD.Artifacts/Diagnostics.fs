@@ -147,6 +147,19 @@ module Diagnostics =
     let workModelInconsistent artifact message correction relatedIds =
         create "workModelInconsistent" DiagnosticError (Some artifact) None message correction relatedIds
 
+    // Feature 081 (#144): a checklist review result missing its [CHK:CHK-###] item back-reference
+    // is a body/back-reference defect, NOT a front-matter defect — it gets its own id so the
+    // diagnostic names its real cause instead of misdirecting to front matter.
+    let missingChecklistBackReference artifact resultId =
+        create
+            "missingChecklistBackReference"
+            DiagnosticError
+            (Some artifact)
+            None
+            $"Checklist review result {resultId} is missing its [CHK:CHK-###] item back-reference."
+            "Add [CHK:CHK-###] naming the checklist item this review result covers."
+            [ resultId ]
+
     let proseStructuredMismatch artifact message correction =
         create "proseStructuredMismatch" DiagnosticWarning (Some artifact) None message correction []
 

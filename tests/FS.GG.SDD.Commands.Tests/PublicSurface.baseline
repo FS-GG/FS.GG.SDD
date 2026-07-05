@@ -63,6 +63,7 @@ FS.GG.SDD.Commands.CommandReports.malformedWorkId
 FS.GG.SDD.Commands.CommandReports.missingAgentsConfig
 FS.GG.SDD.Commands.CommandReports.missingAnalysisPrerequisite
 FS.GG.SDD.Commands.CommandReports.missingCharterPrerequisite
+FS.GG.SDD.Commands.CommandReports.missingChecklistBackReference
 FS.GG.SDD.Commands.CommandReports.missingChecklistPrerequisite
 FS.GG.SDD.Commands.CommandReports.missingClarificationAnswer
 FS.GG.SDD.Commands.CommandReports.missingClarificationPrerequisite

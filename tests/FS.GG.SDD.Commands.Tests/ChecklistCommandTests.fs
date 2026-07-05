@@ -492,3 +492,26 @@ No blocking ambiguity remains.
         Assert.Contains("\"name\": \"checklist\"", first)
         Assert.Contains("\"checklist\"", first)
         Assert.DoesNotContain(root, first)
+
+    // Feature 081 (#144): a review result missing its [CHK:CHK-###] back-reference is reported
+    // by its own diagnostic naming that cause — NOT malformedChecklistFrontMatter (the problem
+    // is not front matter at all).
+    [<Fact>]
+    let ``checklist missing back-reference reports missingChecklistBackReference not front matter`` () =
+        let root = initializedClarifiedProject ()
+        TestSupport.runChecklist root workId title |> ignore
+
+        let withBadResult =
+            (TestSupport.readRelative root checklistPath)
+                .Replace(
+                    "## Review Results\n",
+                    "## Review Results\n- CR-909 [FR-001] pass: A result with no back-reference.\n"
+                )
+
+        TestSupport.writeRelative root checklistPath withBadResult
+
+        let report = TestSupport.runChecklist root workId title
+        let ids = report.Diagnostics |> List.map (fun diagnostic -> diagnostic.Id)
+
+        Assert.Contains("missingChecklistBackReference", ids)
+        Assert.DoesNotContain("malformedChecklistFrontMatter", ids)

@@ -93,6 +93,24 @@ No blocking findings recorded.
             let ids = facts.Diagnostics |> List.map _.Id
             Assert.Contains("duplicateIdentifier", ids)
 
+    // Feature 081 (#144): a review result missing its [CHK:CHK-###] back-reference emits its
+    // OWN diagnostic naming that cause — not the reused workModelInconsistent id that the
+    // Commands layer would misreport as malformedChecklistFrontMatter.
+    [<Fact>]
+    let ``Checklist result missing its CHK back-reference emits missingChecklistBackReference`` () =
+        let missingBackRef =
+            checklistText.Replace(
+                "- CR-001 [CHK:CHK-001] [FR-001] [AC-001] pass: Requirement is testable and has acceptance coverage.",
+                "- CR-001 [FR-001] [AC-001] pass: Requirement is testable and has acceptance coverage."
+            )
+
+        match parseChecklistFacts (snapshot missingBackRef) with
+        | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
+        | Ok facts ->
+            let ids = facts.Diagnostics |> List.map _.Id
+            Assert.Contains("missingChecklistBackReference", ids)
+            Assert.DoesNotContain("workModelInconsistent", ids)
+
     [<Fact>]
     let ``Checklist result status does not misread failsafe as fail`` () =
         // Regression (#67): substring `Contains("fail")` matched "failsafe".

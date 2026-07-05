@@ -180,5 +180,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/080-scaffold-name-sanitization/plan.md
+at specs/081-skill-gate-binding/plan.md
 <!-- SPECKIT END -->

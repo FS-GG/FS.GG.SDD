@@ -76,6 +76,8 @@ module internal ChecklistPlanAuthoring =
             match diagnostic.Id, diagnostic.RelatedIds with
             | "duplicateIdentifier", id :: _ -> duplicateChecklistId path id
             | "unknownReference", id :: _ -> unknownChecklistSourceReference path id
+            | "missingChecklistBackReference", id :: _ -> missingChecklistBackReference path id
+            | "missingChecklistBackReference", [] -> missingChecklistBackReference path diagnostic.Message
             | "workModelInconsistent", _ -> malformedChecklistFrontMatter path diagnostic.Message
             | "malformedSchemaVersion", _ -> malformedChecklistFrontMatter path diagnostic.Message
             | "unsupportedSchemaVersion", _ -> malformedChecklistFrontMatter path diagnostic.Message

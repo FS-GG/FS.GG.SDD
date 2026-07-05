@@ -31,6 +31,7 @@ back-references to `requirements` and `decisions`, `dependencies`, `requiredSkil
 (capability tags the implementer must have loaded), and `requiredEvidence` (the
 obligation ids that close the task).
 
+<!-- fsgg-sdd:example corpus=tasks.yml mode=ref -->
 ```yaml
 schemaVersion: 1
 tasks:

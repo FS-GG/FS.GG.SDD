@@ -30,12 +30,13 @@ Prose status: planned
 
 ## Plan Scope
 - Work item 001-example is planned from the current specification, clarification, and checklist facts.
-- Requirement count: 1.
+- Requirement count: 2.
 - Clarification decision count: 1.
-- Checklist result count: 1.
+- Checklist result count: 2.
 
 ## Plan Decisions
-- PD-001 [AC-001] [FR-001] complete: Plan requirement FR-001 through the plan command contract.
+- PD-001 [AC-001] [FR-001] complete: Plan requirement FR-001 (serve-to-loser) through the plan command contract.
+- PD-002 [AC-002] [FR-002] complete: Plan requirement FR-002 (rally scoring, no match-end) through the plan command contract.
 
 ## Contract Impact
 - PC-001 [PD-001] command report: fsgg-sdd plan, work/001-example/plan.md, and command-report JSON are tool-facing and compatibility-preserving.

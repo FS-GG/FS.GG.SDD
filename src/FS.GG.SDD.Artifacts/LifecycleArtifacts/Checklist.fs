@@ -240,13 +240,9 @@ module Checklist =
                         "Declare the checklist item before recording a review result for it."
                 )
             | None ->
-                Some(
-                    Diagnostics.workModelInconsistent
-                        artifact
-                        $"Checklist result {result.ResultId.Value} is missing a CHK-### item reference."
-                        "Add [CHK:CHK-###] to the review result."
-                        [ result.ResultId.Value ]
-                ))
+                // Feature 081 (#144): a missing back-reference is its own diagnostic, not a
+                // front-matter defect (which is what the Commands layer buckets workModelInconsistent as).
+                Some(Diagnostics.missingChecklistBackReference artifact result.ResultId.Value))
 
     let parseChecklistFacts (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Checklist

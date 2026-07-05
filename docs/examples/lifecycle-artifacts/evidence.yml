@@ -8,6 +8,12 @@
 # `planDecisionRefs`, routed from the task's source lineage, so you can classify each
 # obligation without joining back to tasks.yml by title. You may add the other ref
 # fields (clarificationDecisionRefs / acceptanceScenarioRefs / …) by hand, as below.
+#
+# A DEFERRAL (result: deferred, or kind: deferral) is a first-class, accepted outcome —
+# NOT a failure and NOT a synthetic pass. The evidence gate REQUIRES every deferral to
+# carry all four fields — `rationale`, `owner`, `scope`, `laterLifecycleVisibility` —
+# or it blocks with `evidence.missingDeferralRationale`. EV003 below is the canonical
+# deferral shape (matched by SkillGateDoctestTests against the deferral gate rule).
 schemaVersion: 1
 evidence:
   # Satisfies T001: real (non-synthetic) verification that passed.
@@ -32,3 +38,18 @@ evidence:
     artifacts: [tests/ExampleApp.Tests/RallyScoreTests.fs]
     result: pass
     synthetic: false
+  # An accepted DEFERRAL — the match-end/win condition (DEC-002) is out of scope for
+  # this work item. All four deferral fields are present, so the gate accepts it.
+  - id: EV003
+    kind: deferral
+    subject:
+      type: task
+      id: T002
+    requirementRefs: [FR-002]
+    clarificationDecisionRefs: [DEC-002]
+    result: deferred
+    synthetic: false
+    rationale: A match-end/win condition is out of scope for this work item; rally scoring ships without it.
+    owner: codex
+    scope: match-end condition and win detection
+    laterLifecycleVisibility: Re-open as a follow-on work item when match play is specified.

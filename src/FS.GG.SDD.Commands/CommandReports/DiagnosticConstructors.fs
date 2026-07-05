@@ -323,6 +323,16 @@ module internal DiagnosticConstructors =
             message
             "Add schemaVersion, workId, title, stage: checklist, changeTier, status, sourceSpec, and sourceClarifications front matter before rerunning."
 
+    // Feature 081 (#144): a review result (`CR-###`) missing its `[CHK:CHK-###]` back-reference
+    // gets its own diagnostic that names the real cause, split out from the front-matter diagnostic.
+    let missingChecklistBackReference path id =
+        errorForRef
+            "missingChecklistBackReference"
+            path
+            $"Checklist review result '{id}' is missing its [CHK:CHK-###] item back-reference."
+            "Add [CHK:CHK-###] naming the checklist item this review result covers (e.g. `- CR-001 [CHK:CHK-001] pass: …`)."
+            id
+
     let duplicateChecklistId path id =
         errorForRef
             "duplicateChecklistId"
@@ -1031,6 +1041,7 @@ module internal DiagnosticConstructors =
             || Set.contains "failedChecklistPrerequisite" ids
             || Set.contains "checklistIdentityMismatch" ids
             || Set.contains "malformedChecklistFrontMatter" ids
+            || Set.contains "missingChecklistBackReference" ids
             || Set.contains "duplicateChecklistId" ids
             || Set.contains "unknownChecklistSourceReference" ids
         then
@@ -1066,6 +1077,7 @@ module internal DiagnosticConstructors =
             || Set.contains "failedChecklistPrerequisite" ids
             || Set.contains "checklistIdentityMismatch" ids
             || Set.contains "malformedChecklistFrontMatter" ids
+            || Set.contains "missingChecklistBackReference" ids
             || Set.contains "duplicateChecklistId" ids
             || Set.contains "unknownChecklistSourceReference" ids
         then
