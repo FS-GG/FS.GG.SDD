@@ -11,7 +11,7 @@
     {
       "id": "fs-gg-sdd-authoring-contracts",
       "scope": "process",
-      "sha256": "805abfb3f29cca668c9bbd47e1cdf0a15ba76b9559e477b12adbc3b3b76e3dc0",
+      "sha256": "d7dfd4537c6e29018a9044cbee8b42b793b95d02832c330569dcb98ac7bd25e4",
       "resolvablePath": ".agents/skills/fs-gg-sdd-authoring-contracts/SKILL.md",
       "materializes-when": "always"
     },

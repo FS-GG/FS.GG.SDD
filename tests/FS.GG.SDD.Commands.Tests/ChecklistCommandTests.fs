@@ -269,6 +269,45 @@ No blocking ambiguity remains.
         Assert.Equal(Some "correctBlockingDiagnostics", report.NextAction |> Option.map _.ActionId)
         Assert.True(report.Checklist.Value.FailedBlockingCount > 0)
 
+    // Feature 082 (#146, FR-002/FR-003, SC-001/SC-003): on the "not stale" re-run path the
+    // tool must NOT re-ingest its own prior CHK/CR rows as authored input. A tool-injected
+    // verdict that the current sources no longer justify is re-derived away, not preserved.
+    // Here FR-001 is covered (so its derived verdict is `pass`); we tamper the derived result
+    // to a `fail` blocking verdict WITHOUT changing spec/clarify (snapshot still matches → the
+    // not-stale path). Before this feature the tampered row was preserved and re-counted as
+    // blocking; now it is reclaimed by re-derivation.
+    [<Fact>]
+    let ``checklist re-run re-derives machine rows and drops an orphaned blocking verdict`` () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+
+        TestSupport.writeRelative
+            root
+            specPath
+            (coverageSpec "- FR-001: The command creates checklist output. (Stories: US-001; Acceptance: AC-001)")
+
+        TestSupport.writeRelative root clarificationPath clarifiedNoAmbiguity
+        TestSupport.runChecklist root workId title |> ignore
+
+        let tampered =
+            (TestSupport.readRelative root checklistPath)
+                .Replace(
+                    "pass: Requirement FR-001 is testable and linked to acceptance coverage.",
+                    "fail: Requirement FR-001 is missing acceptance coverage."
+                )
+
+        TestSupport.writeRelative root checklistPath tampered
+
+        let report = TestSupport.runChecklist root workId title
+
+        Assert.Equal(0, report.Checklist.Value.FailedBlockingCount)
+        Assert.Equal(1, report.Checklist.Value.PassedCount)
+
+        Assert.DoesNotContain(
+            "fail: Requirement FR-001 is missing acceptance coverage.",
+            TestSupport.readRelative root checklistPath
+        )
+
     [<Fact>]
     let ``checklist rerun preserves authored content and stable results`` () =
         let root = initializedClarifiedProject ()

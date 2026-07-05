@@ -341,26 +341,127 @@ module internal TaskGraphAuthoring =
           "plan", planPath workId, planText ]
         |> List.map (fun (label, path, text) -> label, path, (SchemaVersionModule.sha256Text text).Value)
 
-    let taskSourceSnapshotStale workId specText clarificationText checklistText planText (existingFacts: TaskFacts) =
-        let current =
-            currentTaskSourceDigests workId specText clarificationText checklistText planText
-            |> List.map (fun (_, path, digest) -> path, digest)
-            |> Map.ofList
+    // §082 (#147): merge the re-derived graph with the prior file. `tasks.yml` legitimately
+    // MIXES tool-derived tasks with hand-authored ones (custom titles, requirements/decisions),
+    // so the merge is four-way, keyed on the deterministic task Title (SourceIds are stored
+    // sorted, so the title is the stable identity for a derived task):
+    //   1. Matched (derived title == a prior title): the derived task inherits the prior task's
+    //      authored `status`/`owner`, its stable `T###` id, and its still-LIVE authored
+    //      disposition refs (requirements/decisions/sourceIds unioned with the derived set).
+    //   2. New (derived, no prior match): a fresh id above every prior id (deps remapped, since
+    //      `plannedTasks` embeds fresh ids in `Dependencies`).
+    //   3. Kept authored (prior, no derived match, still carries a LIVE disposition ref): an
+    //      author-written task — preserved verbatim, its refs filtered to live ids.
+    //   4. Dropped (prior, no derived match, no live ref): a genuine orphan whose source is gone.
+    // A retired `Stale` status is never carried (it was a tool signal, not authored state).
+    let mergeAuthoredTaskState (liveIds: Set<string>) (prior: WorkTask list) (derived: WorkTask list) : WorkTask list =
+        let priorByTitle = prior |> List.map (fun task -> task.Title, task) |> Map.ofList
+        let derivedTitles = derived |> List.map (fun task -> task.Title) |> Set.ofList
+        let isLive (value: string) = Set.contains (value.ToUpperInvariant()) liveIds
 
-        sourceDigestsStale
-            (existingFacts.SourceSnapshots
-             |> List.map (fun snapshot -> snapshot.Path, snapshot.Digest))
-            current
+        let mutable nextNew = nextTaskNumber prior
 
-    let markTasksStale (tasks: WorkTask list) : WorkTask list =
-        tasks
-        |> List.map (fun task ->
-            match task.Status with
-            | TaskStatus.Done
-            | TaskStatus.Skipped _ -> task
-            | TaskStatus.Stale -> task
-            | TaskStatus.Pending
-            | TaskStatus.InProgress -> { task with Status = TaskStatus.Stale })
+        let assigned =
+            derived
+            |> List.map (fun task ->
+                let finalId =
+                    match Map.tryFind task.Title priorByTitle with
+                    | Some priorTask -> priorTask.Id
+                    | None ->
+                        let id = taskId nextNew
+                        nextNew <- nextNew + 1
+                        id
+
+                task.Id.Value, finalId, task)
+
+        let remap =
+            assigned |> List.map (fun (freshId, finalId, _) -> freshId, finalId) |> Map.ofList
+
+        let mergedDerived =
+            assigned
+            |> List.map (fun (_, finalId, task) ->
+                let dependencies =
+                    task.Dependencies
+                    |> List.map (fun dep -> Map.tryFind dep.Value remap |> Option.defaultValue dep)
+
+                match Map.tryFind task.Title priorByTitle with
+                | Some priorTask ->
+                    let carriedStatus =
+                        match priorTask.Status with
+                        | TaskStatus.Stale -> task.Status
+                        | authored -> authored
+
+                    let requirements =
+                        task.Requirements
+                        @ (priorTask.Requirements |> List.filter (fun id -> isLive id.Value))
+                        |> List.distinctBy (fun id -> id.Value)
+
+                    let decisions =
+                        task.Decisions
+                        @ (priorTask.Decisions |> List.filter (fun id -> isLive id.Value))
+                        |> List.distinctBy (fun id -> id.Value)
+
+                    let sourceIds =
+                        task.SourceIds @ (priorTask.SourceIds |> List.filter isLive)
+                        |> List.distinct
+                        |> List.sort
+
+                    { task with
+                        Id = finalId
+                        Dependencies = dependencies
+                        Status = carriedStatus
+                        Owner = priorTask.Owner
+                        Requirements = requirements
+                        Decisions = decisions
+                        SourceIds = sourceIds }
+                | None ->
+                    { task with
+                        Id = finalId
+                        Dependencies = dependencies })
+
+        // The dispositions the re-derived graph already covers. An unmatched prior task is kept
+        // only if it UNIQUELY covers a live disposition the derived graph misses (an authored
+        // task the tool can't derive, e.g. a hand-authored `decisions: [DEC-###]`); a task whose
+        // only live refs are already covered by derivation is a redundant orphan and is dropped.
+        let derivedCoverage =
+            mergedDerived
+            |> List.collect (fun task ->
+                (task.Requirements |> List.map (fun id -> id.Value))
+                @ (task.Decisions |> List.map (fun id -> id.Value))
+                @ task.SourceIds)
+            |> List.map (fun value -> value.ToUpperInvariant())
+            |> Set.ofList
+
+        let keptAuthored =
+            prior
+            |> List.filter (fun priorTask -> not (Set.contains priorTask.Title derivedTitles))
+            |> List.choose (fun priorTask ->
+                let requirements = priorTask.Requirements |> List.filter (fun id -> isLive id.Value)
+                let decisions = priorTask.Decisions |> List.filter (fun id -> isLive id.Value)
+                let sourceIds = priorTask.SourceIds |> List.filter isLive
+
+                let coversUnmet =
+                    (requirements |> List.map (fun id -> id.Value))
+                    @ (decisions |> List.map (fun id -> id.Value))
+                    @ sourceIds
+                    |> List.exists (fun value -> not (Set.contains (value.ToUpperInvariant()) derivedCoverage))
+
+                if not coversUnmet then
+                    None
+                else
+                    let carriedStatus =
+                        match priorTask.Status with
+                        | TaskStatus.Stale -> TaskStatus.Pending
+                        | authored -> authored
+
+                    Some
+                        { priorTask with
+                            Requirements = requirements
+                            Decisions = decisions
+                            SourceIds = sourceIds
+                            Status = carriedStatus })
+
+        mergedDerived @ keptAuthored
 
     let taskFrontMatterText request workId =
         let title = requestTitle request workId
@@ -776,58 +877,63 @@ tasks:
                         Some existing.Text,
                         Some(tasksSummary existingFacts)
                     else
-                        let additions =
-                            plannedTasks
-                                declaredTestFramework
-                                specFacts
-                                clarificationFacts
-                                checklistFacts
-                                planFacts
-                                (Some existingFacts)
+                        // §082 (#147): re-derive the full task graph from current sources on
+                        // EVERY run, then merge authored status/owner + the stable T### id from
+                        // the prior file. A newly-added source (e.g. a plan decision disposition)
+                        // therefore appears (SC-002), an orphaned task is dropped, and the run
+                        // never reports stale-and-unchanged (FR-004/FR-005). Derived rows are
+                        // reclaimed — prior tool-injected rows are never re-ingested (FR-002).
+                        let derived =
+                            plannedTasks declaredTestFramework specFacts clarificationFacts checklistFacts planFacts None
 
-                        let stale =
-                            taskSourceSnapshotStale
+                        // The universe of ids the current sources can dispose (mirrors analyze's
+                        // `required` set). A prior authored task or ref is "live" iff it names one
+                        // of these; anything else is a dead orphan and is dropped on re-derive.
+                        let liveIds =
+                            [ specFacts.RequirementIds |> List.map _.Value
+                              specFacts.AcceptanceScenarioIds |> List.map _.Value
+                              clarificationFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
+                              clarificationFacts.AcceptedDeferrals
+                              |> List.map (fun decision -> decision.DecisionId.Value)
+                              checklistFacts.AcceptedDeferrals |> List.map (fun result -> result.ResultId.Value)
+                              planFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
+                              planFacts.ContractReferences |> List.map (fun contract -> contract.ContractId.Value)
+                              planFacts.VerificationObligations
+                              |> List.map (fun obligation -> obligation.ObligationId.Value)
+                              planFacts.MigrationNotes |> List.map (fun migration -> migration.MigrationId.Value)
+                              planFacts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value)
+                              planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id) ]
+                            |> List.concat
+                            |> List.map (fun value -> value.ToUpperInvariant())
+                            |> Set.ofList
+
+                        let mergedTasks = mergeAuthoredTaskState liveIds existingFacts.Tasks derived
+
+                        let acceptedDeferrals =
+                            [ clarificationFacts.AcceptedDeferrals
+                              |> List.map (fun deferral -> deferral.DecisionId.Value)
+                              checklistFacts.AcceptedDeferrals
+                              |> List.map (fun result -> result.ResultId.Value)
+                              planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id) ]
+                            |> List.concat
+                            |> List.distinct
+                            |> List.sort
+
+                        // Findings are re-derived (the create path writes none); this retires the
+                        // carried-forward TF-001 stale finding. Authored file-level notes persist.
+                        let text =
+                            tasksArtifactText
+                                request
                                 workId
                                 specText
                                 clarificationText
                                 checklistText
                                 planText
-                                existingFacts
-
-                        let existingTasks =
-                            if stale then
-                                markTasksStale existingFacts.Tasks
-                            else
-                                existingFacts.Tasks
-
-                        let mergedTasks = existingTasks @ additions
-
-                        let staleFindings =
-                            if stale then
-                                [ { FindingId = "TF-001"
-                                    Severity = "warning"
-                                    Text = "Task source snapshots are stale."
-                                    SourceIds = existingFacts.Tasks |> List.map (fun task -> task.Id.Value) |> List.sort
-                                    SourceLocation = None } ]
-                            else
+                                mergedTasks
+                                acceptedDeferrals
                                 []
-
-                        let text =
-                            if List.isEmpty additions && not stale then
-                                existing.Text
-                            else
-                                tasksArtifactText
-                                    request
-                                    workId
-                                    specText
-                                    clarificationText
-                                    checklistText
-                                    planText
-                                    mergedTasks
-                                    existingFacts.AcceptedDeferrals
-                                    (existingFacts.Findings @ staleFindings)
-                                    existingFacts.AdvisoryNotes
-                                    existingFacts.LifecycleNotes
+                                existingFacts.AdvisoryNotes
+                                existingFacts.LifecycleNotes
 
                         match parseTasksForCommand path text with
                         | Error diagnostics -> diagnostics, Some text, None
@@ -842,17 +948,10 @@ tasks:
                                     evidence
                                     facts
 
-                            let staleDiagnostics =
-                                if stale then
-                                    [ staleTask path (existingFacts.Tasks |> List.map (fun task -> task.Id.Value)) ]
-                                else
-                                    []
-
                             identityDiagnostics
                             @ existingDiagnostics
                             @ proposedDiagnostics
                             @ validationDiagnostics
-                            @ staleDiagnostics
                             @ evidenceDiagnostics
                             |> DiagnosticsModule.sort,
                             Some text,

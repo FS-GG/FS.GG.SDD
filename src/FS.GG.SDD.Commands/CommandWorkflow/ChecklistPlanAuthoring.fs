@@ -113,23 +113,12 @@ module internal ChecklistPlanAuthoring =
         |> List.distinct
         |> List.sort
 
-    let plannedChecklistReviews (specFacts: SpecificationFacts) (clarificationFacts: ClarificationFacts) existingFacts =
-        let existingSourceIds =
-            existingFacts
-            |> Option.map (fun facts -> facts.Items |> List.collect (fun item -> item.SourceIds) |> Set.ofList)
-            |> Option.defaultValue Set.empty
-
-        let existingText =
-            existingFacts
-            |> Option.map (fun facts ->
-                [ facts.Items |> List.map (fun item -> item.ItemId.Value)
-                  facts.Results |> List.map (fun result -> result.ResultId.Value) ]
-                |> List.concat
-                |> String.concat "\n")
-            |> Option.defaultValue ""
-
-        let mutable nextItem = nextScopedIndex "CHK" existingText
-        let mutable nextResult = nextScopedIndex "CR" existingText
+    // §3.1 (082): reviews are always derived fresh from the current sources — the tool never
+    // seeds derivation with prior CHK/CR rows, so there is no `existingFacts` dedup. Every
+    // requirement/deferral gets a re-derived verdict on every run (#146).
+    let plannedChecklistReviews (specFacts: SpecificationFacts) (clarificationFacts: ClarificationFacts) =
+        let mutable nextItem = nextScopedIndex "CHK" ""
+        let mutable nextResult = nextScopedIndex "CR" ""
 
         let allocate sourceIds status text correction blocking =
             let itemId = scopedId "CHK" nextItem
@@ -147,41 +136,33 @@ module internal ChecklistPlanAuthoring =
 
         let requirementReviews =
             specFacts.RequirementIds
-            |> List.choose (fun requirement ->
-                if Set.contains requirement.Value existingSourceIds then
-                    None
-                else
-                    let coverage = requirementCoverage specFacts requirement.Value
-                    let hasCoverage = not (List.isEmpty coverage)
+            |> List.map (fun requirement ->
+                let coverage = requirementCoverage specFacts requirement.Value
+                let hasCoverage = not (List.isEmpty coverage)
 
-                    allocate
-                        (requirement.Value :: coverage)
-                        (if hasCoverage then "pass" else "fail")
-                        (if hasCoverage then
-                             $"Requirement {requirement.Value} is testable and linked to acceptance coverage."
-                         else
-                             $"Requirement {requirement.Value} is missing acceptance coverage.")
-                        (if hasCoverage then
-                             None
-                         else
-                             Some
-                                 $"Add a coverage line for {requirement.Value}: \"- {requirement.Value}: <text> (covers AC-###)\" on a single list item — a bold \"**{requirement.Value}**\" or a colon-less line is not recognized.")
-                        true
-                    |> Some)
+                allocate
+                    (requirement.Value :: coverage)
+                    (if hasCoverage then "pass" else "fail")
+                    (if hasCoverage then
+                         $"Requirement {requirement.Value} is testable and linked to acceptance coverage."
+                     else
+                         $"Requirement {requirement.Value} is missing acceptance coverage.")
+                    (if hasCoverage then
+                         None
+                     else
+                         Some
+                             $"Add a coverage line for {requirement.Value}: \"- {requirement.Value}: <text> (covers AC-###)\" on a single list item — a bold \"**{requirement.Value}**\" or a colon-less line is not recognized.")
+                    true)
 
         let deferralReviews =
             clarificationFacts.AcceptedDeferrals
-            |> List.choose (fun decision ->
-                if Set.contains decision.DecisionId.Value existingSourceIds then
+            |> List.map (fun decision ->
+                allocate
+                    [ decision.DecisionId.Value ]
+                    "acceptedDeferral"
+                    $"Accepted deferral {decision.DecisionId.Value} remains visible to planning."
                     None
-                else
-                    allocate
-                        [ decision.DecisionId.Value ]
-                        "acceptedDeferral"
-                        $"Accepted deferral {decision.DecisionId.Value} remains visible to planning."
-                        None
-                        false
-                    |> Some)
+                    false)
 
         requirementReviews @ deferralReviews
 
@@ -362,52 +343,12 @@ Prose status: {status}
                 else
                     Some(unknownChecklistSourceReference path id))
 
-    let sourceSnapshotStale
-        (currentSpecText: string)
-        (currentClarificationText: string)
-        (existingFacts: ChecklistFacts)
-        =
-        let current =
-            [ specPath existingFacts.FrontMatter.WorkId.Value, (SchemaVersionModule.sha256Text currentSpecText).Value
-              clarificationPath existingFacts.FrontMatter.WorkId.Value,
-              (SchemaVersionModule.sha256Text currentClarificationText).Value ]
-            |> Map.ofList
-
-        sourceDigestsStale
-            (existingFacts.SourceSnapshots
-             |> List.map (fun snapshot -> snapshot.Path, snapshot.Digest))
-            current
-
-    let appendChecklistReviews (existingText: string) (reviews: PlannedChecklistReview list) =
-        let itemLines = reviews |> List.map renderChecklistItemLine
-
-        let resultLines =
-            reviews
-            |> List.filter (fun review -> review.Status <> "acceptedDeferral")
-            |> List.map renderChecklistResultLine
-
-        let deferralLines =
-            reviews
-            |> List.filter (fun review -> review.Status = "acceptedDeferral")
-            |> List.map renderChecklistDeferralLine
-
-        let findingLines =
-            reviews
-            |> List.filter (fun review -> review.Status = "fail")
-            |> List.map renderBlockingFindingLine
-
-        existingText
-        |> appendToSection "Checklist Items" itemLines
-        |> appendToSection "Review Results" resultLines
-        |> appendToSection "Accepted Deferrals" deferralLines
-        |> appendToSection "Blocking Findings" findingLines
-
-    // §3.1: on a stale re-run, purge every machine-derived result row and re-derive the
-    // full set from current sources (no `existingSourceIds` filter), rewriting the
+    // §3.1 (082): re-derive every machine-derived section from current sources, rewriting the
     // `## Source Snapshot` digests. Authored, non-derived sections are preserved by
-    // `ensureChecklistSections` (the caller passes the ensured text). No row reviewed
-    // against the superseded snapshot survives (SC-001).
-    let rederiveStaleChecklist
+    // `ensureChecklistSections` (the caller passes the ensured text). No prior tool-injected
+    // row survives — a verdict exists iff current sources justify it (#146, SC-001). This runs
+    // on every re-run, not only when the source snapshot changed.
+    let rederiveChecklist
         workId
         (specText: string)
         (clarificationText: string)
@@ -470,7 +411,7 @@ Prose status: {status}
         model
         =
         let path = checklistPath workId
-        let baseReviews = plannedChecklistReviews specFacts clarificationFacts None
+        let baseReviews = plannedChecklistReviews specFacts clarificationFacts
 
         match snapshot path model with
         | None ->
@@ -542,22 +483,18 @@ Prose status: {status}
                         blockingParserDiagnostics, Some existing.Text, None
                     else
                         let ensuredText = ensureChecklistSections workId existing.Text
-                        let stale = sourceSnapshotStale specText clarificationText existingFacts
 
-                        // §3.1: a stale re-run purges and re-derives the full row set from
-                        // current sources (no superseded row survives, SC-001); a current
-                        // snapshot preserves rows and re-appends only newly-derived reviews.
-                        let reviews =
-                            if stale then
-                                plannedChecklistReviews specFacts clarificationFacts None
-                            else
-                                plannedChecklistReviews specFacts clarificationFacts (Some existingFacts)
+                        // §3.1 (082, #146): re-derive the machine-derived sections from the
+                        // current sources on EVERY run — never re-ingest prior CHK/CR rows as
+                        // authored input. A verdict exists iff the current sources justify it,
+                        // so an orphaned tool-injected row is reclaimed, not preserved (FR-002,
+                        // FR-003). Authored sections are preserved by `ensureChecklistSections`
+                        // and the Source Snapshot is refreshed; unchanged sources re-derive to
+                        // identical bytes → noChange (FR-008).
+                        let reviews = plannedChecklistReviews specFacts clarificationFacts
 
                         let proposedText =
-                            if stale then
-                                rederiveStaleChecklist workId specText clarificationText reviews ensuredText
-                            else
-                                appendChecklistReviews ensuredText reviews
+                            rederiveChecklist workId specText clarificationText reviews ensuredText
 
                         match parseChecklistForCommand path proposedText with
                         | Error diagnostics -> diagnostics, Some proposedText, None
