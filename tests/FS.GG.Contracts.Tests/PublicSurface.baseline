@@ -2,6 +2,7 @@ member Fsgg.Provider+DeclaredCommand.Arguments
 member Fsgg.Provider+DeclaredCommand.Executable
 member Fsgg.Provider+ProviderDescriptor.Build
 member Fsgg.Provider+ProviderDescriptor.ContractVersion
+member Fsgg.Provider+ProviderDescriptor.IdentifierParameter
 member Fsgg.Provider+ProviderDescriptor.MinimumCliVersion
 member Fsgg.Provider+ProviderDescriptor.Name
 member Fsgg.Provider+ProviderDescriptor.NameParameter

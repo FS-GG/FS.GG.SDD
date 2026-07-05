@@ -236,6 +236,7 @@ module SeededSkillsTests =
               Run = None
               Verify = None
               NameParameter = "name"
+              IdentifierParameter = None
               MinimumCliVersion = None }
 
         let planned = scaffoldInvocationEffects request descriptor Map.empty |> Set.ofList

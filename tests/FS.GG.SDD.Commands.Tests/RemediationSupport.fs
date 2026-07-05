@@ -222,6 +222,7 @@ module RemediationSupport =
           Run = None
           Verify = None
           NameParameter = "name"
+          IdentifierParameter = None
           MinimumCliVersion = minimum }
 
     let exitCode (report: CommandReport) = exitCodeForReport report

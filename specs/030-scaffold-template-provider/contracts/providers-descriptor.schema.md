@@ -18,6 +18,8 @@ providers:
     contractVersion: "1.0.0"        # SDD provider-contract version this provider implements
     templateId: <dotnet new short name / identity>   # opaque to SDD
     source: <nuget package id | local path for `dotnet new install`>  # opaque to SDD
+    nameParameter: <param key carrying the raw product name>   # optional; default "name"
+    identifierParameter: <param key receiving the derived F# identifier>  # optional (feature 080)
     parameters:
       - key: <param name>
         required: true|false
@@ -38,14 +40,22 @@ providers:
 | `providers[].templateId` | string | yes | passed to `dotnet new`; SDD does not interpret it |
 | `providers[].source` | string | yes | NuGet id or local path; how SDD acquires the template (`dotnet new install`) |
 | `providers[].parameters` | list | no | each `{ key, required, default? }`; required-without-value blocks invocation |
+| `providers[].nameParameter` | string | no | the param key carrying the **raw product name** (the derivation *source*); default `name` |
+| `providers[].identifierParameter` | string | no | the param key that receives the SDD-**derived valid-F# identifier** (the derivation *sink*, feature 080); absent ⇒ no derivation |
 
 ## Resolution & precedence
 
 1. `--provider <name>` selects `providers[].name == <name>`. No match → `providerUnknown`.
 2. Effective parameters = descriptor defaults, overlaid by repeated `--param key=value`.
-3. A declared `required` parameter with no resulting value → `providerParamMissing`
+3. When `identifierParameter` is declared and the author did **not** set that key via
+   `--param`, SDD derives a valid F# namespace from the `nameParameter` value (a generic,
+   language-level transform — hyphens/spaces dropped, leading digit and keyword guarded) and
+   forwards it under the `identifierParameter` key. The raw name stays verbatim under
+   `nameParameter`. An author `--param <identifierParameter>=…` override wins. A name with no
+   identifier character at all → `scaffold.nameUnrepresentable` (exit 1, no invocation).
+4. A declared `required` parameter with no resulting value → `providerParamMissing`
    (names the missing keys; SDD never guesses).
-4. `contractVersion` outside SDD's supported range → `providerVersionUnsupported`
+5. `contractVersion` outside SDD's supported range → `providerVersionUnsupported`
    (no invocation).
 
 ## Parsing

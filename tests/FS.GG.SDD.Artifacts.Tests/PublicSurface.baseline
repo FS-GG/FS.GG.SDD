@@ -29,6 +29,7 @@ FS.GG.SDD.Artifacts.Diagnostics.proseStructuredMismatch
 FS.GG.SDD.Artifacts.Diagnostics.requirementNotTyped
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldCliBehindMinimum
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldMirrorFailed
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldNameUnrepresentable
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProvenanceMalformed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderEmpty
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderFailed
@@ -57,6 +58,7 @@ FS.GG.SDD.Artifacts.Diagnostics.upgradeStepFailed
 FS.GG.SDD.Artifacts.Diagnostics.workModelInconsistent
 FS.GG.SDD.Artifacts.Evidence.parseEvidence
 FS.GG.SDD.Artifacts.Evidence.parseEvidenceArtifact
+FS.GG.SDD.Artifacts.FsharpIdentifier.deriveNamespace
 FS.GG.SDD.Artifacts.GenerationManifest.createSummaryManifest
 FS.GG.SDD.Artifacts.GenerationManifest.createWorkModelManifest
 FS.GG.SDD.Artifacts.GenerationManifest.currencyStatusValue

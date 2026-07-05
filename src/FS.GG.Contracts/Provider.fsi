@@ -31,6 +31,12 @@ module Provider =
             Run: DeclaredCommand option
             Verify: DeclaredCommand option
             NameParameter: string
+            /// The forwarded parameter key that receives the SDD-derived valid-F#
+            /// identifier (feature 080, the derivation *sink*). `None` ⇒ scaffold
+            /// performs no derivation and forwards parameters exactly as before
+            /// (backward compatible). Provider-declared and value-agnostic: generic
+            /// SDD reads the key, never a fixed value.
+            IdentifierParameter: string option
             /// The provider-declared minimum coherent `fsgg-sdd` CLI version
             /// (feature 052, E2). Optional and value-agnostic: SDD reads it verbatim,
             /// never embedding a concrete value. `None` when the provider declares none.

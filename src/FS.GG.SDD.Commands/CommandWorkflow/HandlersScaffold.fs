@@ -106,6 +106,35 @@ module internal HandlersScaffold =
         |> List.filter (fun spec -> spec.Required && not (Map.containsKey spec.Key effective))
         |> List.map (fun spec -> spec.Key)
 
+    // Feature 080: derive a valid F# identifier from the raw product name and forward it
+    // under the provider-declared `IdentifierParameter` (the sink), leaving the raw name
+    // (the `NameParameter` source) untouched for string-literal/path/.fsproj contexts.
+    // No sink declared ⇒ no derivation (backward compatible). An author `--param` on the
+    // sink key wins (FR-008). A name with no identifier character blocks (FR-009).
+    let deriveIdentifierParameter
+        (descriptor: ProviderDescriptor)
+        (request: CommandRequest)
+        (effective: Map<string, string>)
+        : Result<Map<string, string>, Diagnostic> =
+        match descriptor.IdentifierParameter with
+        | None -> Ok effective
+        | Some sinkKey when sinkKey = resolveNameParameter descriptor ->
+            // Provider misconfiguration: the sink equals the name key. Deriving here would
+            // silently overwrite the raw name, defeating the whole point (raw name preserved
+            // for string/path contexts). Forward unchanged rather than clobber it.
+            Ok effective
+        | Some sinkKey when request.Parameters |> List.exists (fun (key, _) -> key = sinkKey) ->
+            // Author supplied the sink value explicitly — verbatim, no derivation.
+            Ok effective
+        | Some sinkKey ->
+            match Map.tryFind (resolveNameParameter descriptor) effective with
+            | None -> Ok effective // No name to derive from; forward as-is.
+            | Some rawName ->
+                match FsharpIdentifier.deriveNamespace rawName with
+                | Ok identifier -> Ok(Map.add sinkKey identifier effective)
+                | Error(FsharpIdentifier.Unrepresentable name) ->
+                    Error(DiagnosticsModule.scaffoldNameUnrepresentable name)
+
     let resolveDescriptors model =
         match snapshot ".fsgg/providers.yml" model with
         | Some registrySnapshot ->
@@ -170,28 +199,37 @@ module internal HandlersScaffold =
                         $"Upgrade SDD or the provider to a contract version within {supportedContractRange}."
                 )
             | Some descriptor ->
-                let effective = effectiveParameters descriptor request
-
-                match missingRequiredParameters descriptor effective with
-                | _ :: _ as missing ->
+                match deriveIdentifierParameter descriptor request (effectiveParameters descriptor request) with
+                | Error unrepresentable ->
                     ScaffoldBlocked(
-                        [ DiagnosticsModule.scaffoldProviderParamMissing name missing ],
+                        [ unrepresentable ],
                         notRunSummary
                             (Some name)
                             (Some descriptor.ContractVersion)
-                            "Supply the missing parameter(s) with `--param <key>=<value>`."
+                            "Choose a product name containing at least one letter, digit, or underscore."
                     )
-                | [] ->
-                    match collisionPaths model with
-                    | _ :: _ as collisions when not request.Force ->
+                | Ok effective ->
+
+                    match missingRequiredParameters descriptor effective with
+                    | _ :: _ as missing ->
                         ScaffoldBlocked(
-                            [ DiagnosticsModule.scaffoldTargetCollision collisions ],
+                            [ DiagnosticsModule.scaffoldProviderParamMissing name missing ],
                             notRunSummary
                                 (Some name)
                                 (Some descriptor.ContractVersion)
-                                "Re-run with `--force` to materialize into a non-empty target."
+                                "Supply the missing parameter(s) with `--param <key>=<value>`."
                         )
-                    | _ -> ScaffoldProceed(descriptor, effective)
+                    | [] ->
+                        match collisionPaths model with
+                        | _ :: _ as collisions when not request.Force ->
+                            ScaffoldBlocked(
+                                [ DiagnosticsModule.scaffoldTargetCollision collisions ],
+                                notRunSummary
+                                    (Some name)
+                                    (Some descriptor.ContractVersion)
+                                    "Re-run with `--force` to materialize into a non-empty target."
+                            )
+                        | _ -> ScaffoldProceed(descriptor, effective)
 
     // ----- invocation planning (stage 2) -----
 
