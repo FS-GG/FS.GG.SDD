@@ -292,9 +292,7 @@ evidence:
             |> fun artifact ->
                 artifact.Evidence
                 |> List.map (fun d ->
-                    d.Subject.Id,
-                    d.RequirementRefs |> List.map _.Value,
-                    d.PlanDecisionRefs |> List.map _.Value)
+                    d.Subject.Id, d.RequirementRefs |> List.map _.Value, d.PlanDecisionRefs |> List.map _.Value)
 
         // Two fresh scaffolds from identical inputs route identical, sorted, de-duplicated refs.
         Assert.Equal<(string * string list * string list) list>(refsOf rootA, refsOf rootB)
@@ -307,7 +305,11 @@ evidence:
         let root = initializedAnalyzedProject ()
 
         let declarations () =
-            match parseEvidenceArtifact { Path = evidencePath; Text = TestSupport.readRelative root evidencePath } with
+            match
+                parseEvidenceArtifact
+                    { Path = evidencePath
+                      Text = TestSupport.readRelative root evidencePath }
+            with
             | Ok artifact -> artifact.Evidence
             | Error diagnostics -> failwith $"Evidence did not parse: {diagnostics}."
 

@@ -78,7 +78,10 @@ module CommandHelp =
             [ work
               title
               // Feature 077: pre-map each newly scaffolded obligation to a proving test file.
-              flag "--from-tests" (Some "<path>") "Seed each scaffolded obligation with a verification source pointing at this test path."
+              flag
+                  "--from-tests"
+                  (Some "<path>")
+                  "Seed each scaffolded obligation with a verification source pointing at this test path."
               dryRun ]
         | Checklist
         | Plan

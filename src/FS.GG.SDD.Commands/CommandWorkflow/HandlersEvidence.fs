@@ -235,8 +235,12 @@ module internal HandlersEvidence =
                 | Error _ -> None)
             |> List.distinct
 
-        {| Requirements = pick IdentifiersModule.createRequirementId |> List.sortBy (fun (id: RequirementId) -> id.Value)
-           PlanDecisions = pick IdentifiersModule.createPlanDecisionId |> List.sortBy (fun (id: PlanDecisionId) -> id.Value) |}
+        {| Requirements =
+            pick IdentifiersModule.createRequirementId
+            |> List.sortBy (fun (id: RequirementId) -> id.Value)
+           PlanDecisions =
+            pick IdentifiersModule.createPlanDecisionId
+            |> List.sortBy (fun (id: PlanDecisionId) -> id.Value) |}
 
     // Feature 077: `evidence --from-tests <path>` pre-maps each newly scaffolded obligation to a
     // verification-kind source pointing at the proving test path. `None` (or a blank value) ⇒ no
@@ -865,7 +869,12 @@ sourceAnalysis: {analysisPath workId}
                         let obligations = evidenceObligations taskFacts
 
                         let merged, mergeDiagnostics =
-                            mergeEvidenceArtifacts workId model.Request.FromTests existingArtifact inputArtifact obligations
+                            mergeEvidenceArtifacts
+                                workId
+                                model.Request.FromTests
+                                existingArtifact
+                                inputArtifact
+                                obligations
 
                         let artifact =
                             { merged with
