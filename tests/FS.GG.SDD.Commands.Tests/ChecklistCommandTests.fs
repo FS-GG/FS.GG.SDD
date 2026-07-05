@@ -503,7 +503,10 @@ No blocking ambiguity remains.
 
         let withBadResult =
             (TestSupport.readRelative root checklistPath)
-                .Replace("## Review Results\n", "## Review Results\n- CR-909 [FR-001] pass: A result with no back-reference.\n")
+                .Replace(
+                    "## Review Results\n",
+                    "## Review Results\n- CR-909 [FR-001] pass: A result with no back-reference.\n"
+                )
 
         TestSupport.writeRelative root checklistPath withBadResult
 

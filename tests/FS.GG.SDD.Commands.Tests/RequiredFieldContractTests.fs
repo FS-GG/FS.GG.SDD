@@ -25,7 +25,8 @@ module RequiredFieldContractTests =
         let row =
             text.Replace("\r\n", "\n").Split('\n')
             |> Array.tryFind (fun line -> line.TrimStart().StartsWith("| " + stageLabel + " "))
-            |> Option.defaultWith (fun () -> failwith $"authoring-contracts §5 table has no row for stage '{stageLabel}'.")
+            |> Option.defaultWith (fun () ->
+                failwith $"authoring-contracts §5 table has no row for stage '{stageLabel}'.")
 
         // `| stage | gating fields | defaulted |` → cells: ["", " stage ", " gating ", " defaulted ", ""]
         let cells = row.Split('|')
@@ -129,7 +130,11 @@ module RequiredFieldContractTests =
             + field "scope" "the deferred capability"
             + field "laterLifecycleVisibility" "Re-open later."
 
-        let yaml = "schemaVersion: 1\nevidence:\n" + String.concat "\n" (passes @ [ deferral ]) + "\n"
+        let yaml =
+            "schemaVersion: 1\nevidence:\n"
+            + String.concat "\n" (passes @ [ deferral ])
+            + "\n"
+
         TestSupport.writeRelative root $"work/{workId}/evidence.yml" yaml
         let report = TestSupport.runEvidence root workId title
 

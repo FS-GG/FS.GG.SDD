@@ -21,7 +21,9 @@ open Xunit
 module SkillGateDoctestTests =
 
     let private skillsDir = Path.Combine(TestSupport.repoRoot, ".claude", "skills")
-    let private corpusDir = Path.Combine(TestSupport.repoRoot, "docs", "examples", "lifecycle-artifacts")
+
+    let private corpusDir =
+        Path.Combine(TestSupport.repoRoot, "docs", "examples", "lifecycle-artifacts")
 
     /// The stage skills that document a HAND-AUTHORED gated artifact (FR-004 coverage set).
     /// analyze/verify/ship emit generated readiness views, not an authored artifact you
@@ -52,10 +54,14 @@ module SkillGateDoctestTests =
         raw.Split([| ' '; '\t' |], StringSplitOptions.RemoveEmptyEntries)
         |> Array.fold
             (fun (corpus, mode) (tok: string) ->
-                if tok = "counter" then corpus, "counter"
-                elif tok.StartsWith "corpus=" then Some(tok.Substring 7), mode
-                elif tok.StartsWith "mode=" then corpus, tok.Substring 5
-                else corpus, mode)
+                if tok = "counter" then
+                    corpus, "counter"
+                elif tok.StartsWith "corpus=" then
+                    Some(tok.Substring 7), mode
+                elif tok.StartsWith "mode=" then
+                    corpus, tok.Substring 5
+                else
+                    corpus, mode)
             (None, "contains")
 
     let private markersFor skill =
@@ -117,9 +123,9 @@ module SkillGateDoctestTests =
 
                 match m.Mode with
                 | "ref" -> () // pointer only: the corpus file exists and is parser-validated by
-                              // ExampleArtifactsContractTests; charter/spec/clarifications/tasks are
-                              // additionally gate-run below (evidence is validated by the parser + the
-                              // deferral gate tests, not the charter→analyze chain).
+                // ExampleArtifactsContractTests; charter/spec/clarifications/tasks are
+                // additionally gate-run below (evidence is validated by the parser + the
+                // deferral gate tests, not the charter→analyze chain).
                 | "equals" ->
                     Assert.True(
                         (corpusText = block),
@@ -181,7 +187,9 @@ module SkillGateDoctestTests =
             "  - id: EV006\n    kind: deferral\n    subject:\n      type: task\n      id: T006\n    result: deferred\n    synthetic: false\n    rationale: Out of scope for this work item.\n    owner: codex\n    scope: the deferred capability"
             + visibilityLine
 
-        "schemaVersion: 1\nevidence:\n" + String.concat "\n" (passes @ [ deferral ]) + "\n"
+        "schemaVersion: 1\nevidence:\n"
+        + String.concat "\n" (passes @ [ deferral ])
+        + "\n"
 
     let private runEvidenceWith (evidenceYaml: string) =
         let root = TestSupport.tempDirectory ()
@@ -202,14 +210,14 @@ module SkillGateDoctestTests =
         // or coerced — proving the four-field form is genuinely accepted, not merely un-flagged.
         match report.Evidence with
         | Some summary ->
-            Assert.True(summary.DeferredCount >= 1, $"expected the four-field deferral to count as deferred, got {summary.DeferredCount}.")
+            Assert.True(
+                summary.DeferredCount >= 1,
+                $"expected the four-field deferral to count as deferred, got {summary.DeferredCount}."
+            )
         | None -> failwith "expected an evidence summary."
 
     [<Fact>]
     let ``A deferral missing laterLifecycleVisibility is rejected by the evidence gate`` () =
         let report = runEvidenceWith (ladderWithDeferral false)
 
-        Assert.Contains(
-            "evidence.missingDeferralRationale",
-            errorIds report
-        )
+        Assert.Contains("evidence.missingDeferralRationale", errorIds report)
