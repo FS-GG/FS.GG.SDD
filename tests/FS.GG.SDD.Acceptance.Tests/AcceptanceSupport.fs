@@ -187,6 +187,25 @@ module AcceptanceSupport =
         else
             None
 
+    /// Feature 083 (implements 080 FR-011): a scaffold request that additionally forwards the
+    /// product name on the **provider-declared name parameter**, resolved from the registry
+    /// descriptor copied into `<root>/.fsgg/providers.yml` — never a hardcoded `productName`,
+    /// so generic SDD carries no rendering identity (FR-006). SDD's 080 identifier derivation
+    /// then derives + forwards the valid F# identifier. When no descriptor or name parameter
+    /// resolves, `resolveNameParameter` falls back to the contract default key, so the request
+    /// stays well-formed. Only the generic `lifecycle=sdd` marker and the author-chosen name
+    /// value are added by generic SDD; the key is provider-owned.
+    let namedScaffoldRequest (root: string) (name: string) =
+        let request = scaffoldRequest root
+
+        let nameKey =
+            resolveProviderDescriptor root "rendering"
+            |> Option.map resolveNameParameter
+            |> Option.defaultValue defaultNameParameter
+
+        { request with
+            Parameters = request.Parameters @ [ nameKey, name ] }
+
     // ---------- T005: process-shell probes at the test edge ----------
 
     /// The outcome of a `dotnet`/`git` probe at the test edge: the exit code, whether the
@@ -304,6 +323,14 @@ module AcceptanceSupport =
     let buildProbe (declared: DeclaredCommand option) (root: string) =
         let command = resolveBuildCommand declared root
         runToCompletion command.Executable command.Arguments command.WorkingDirectory 300_000
+
+    /// Feature 083 (080 FR-011): the test probe — run `dotnet test` at the product root through
+    /// the same shared 300 s bounded edge as `buildProbe`. Exit 0 (including an empty-but-green
+    /// run — zero tests) is green; a non-zero exit surfaces the diagnostic; a hang is killed and
+    /// diagnosed rather than left to stall. Distinct from `runProbe` (which is a start-and-grace
+    /// smoke for a long-lived app): `dotnet test` runs to completion with a meaningful exit code.
+    let testProbe (root: string) =
+        runToCompletion "dotnet" [ "test" ] root 300_000
 
     /// A headless, bounded run smoke (research D6, contracts/acceptance-protocol.md §run
     /// probe): launch the resolved run command, require it to either exit 0 within the grace

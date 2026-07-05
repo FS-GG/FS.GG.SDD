@@ -247,6 +247,91 @@ module CompositionAcceptanceTests =
             Assert.Fail
                 $"Composition acceptance failed: %A{reason} (outcome={record.ScaffoldOutcome}, diagnostic=%A{record.ScaffoldDiagnostic})."
 
+    // ---------- feature 083 (implements 080 FR-011 / #150): hyphenated-name guard ----------
+
+    // The Hollow Depths name the report used verbatim: a legal product name that is an ILLEGAL
+    // F# identifier — hyphenated (breaks `namespace`/`module`/`open`) and misspelled
+    // (`Roquelike`, not `Roguelike`). The value is a generic author token; the forwarding KEY is
+    // resolved from the registry descriptor by `namedScaffoldRequest` (never hardcoded), so
+    // generic SDD carries no rendering identity (FR-006).
+    let private hyphenatedName = "Roquelike-DungeonCrawler"
+
+    // 083 T005–T007 (US1 / FR-001..FR-005): the regression guard for the feature-080
+    // name→identifier sanitization end-to-end against the REAL provider. Scaffold forwarding the
+    // hyphenated name on the provider-declared name parameter, then assert the produced product's
+    // `dotnet build` AND `dotnet test` are green. A reverted 080 derivation templates the hyphen
+    // into an identifier context and surfaces `FS0010: Unexpected keyword 'open'` at the build
+    // step, failing this fact (SC-002). An unreachable provider resolves to skip-unavailable —
+    // never a false PASS, never a FAIL of SDD (FR-005). Network-gated; self-skips offline.
+    [<Trait("kind", "composition-acceptance")>]
+    [<RequiresRegistryFact>]
+    let ``hyphenated scaffold name builds and tests green`` () =
+        let registry = requireRegistry ()
+        let root = newProductRoot ()
+        copyRegistry registry root
+
+        let report = namedScaffoldRequest root hyphenatedName |> runRequest
+        let summary = scaffoldSummary report
+        let diagnostic = scaffoldDiagnostic report
+
+        if summary.Outcome = "providerSucceeded" then
+            // Resolve the declared build command exactly as `composeOnce` does; the reference
+            // provider declares none, so this falls through to the `dotnet build` default (038).
+            let declaredBuild =
+                resolveProviderDescriptor root "rendering" |> Option.bind (fun d -> d.Build)
+
+            let build = buildProbe declaredBuild root
+
+            Assert.True(
+                build.ExitCode = 0,
+                $"`dotnet build` failed for a hyphenated scaffold name ({hyphenatedName}) — a hyphen leaked into an F# identifier position. Cause is either the SDD 080 identifier derivation OR a residual raw-name usage in the provider template (an identifier the template did not wire to the derived namespace): {build.Diagnostic}"
+            )
+
+            let test = testProbe root
+
+            Assert.True(
+                test.Started && test.ExitCode = 0,
+                $"`dotnet test` failed for a hyphenated scaffold name ({hyphenatedName}): {test.Diagnostic}"
+            )
+        else
+            // The only acceptable non-success is an unreachable provider mapping to
+            // skip-unavailable (FR-005); any other non-success is a real failure.
+            match resolveVerdict summary.Outcome diagnostic "" noFacts with
+            | SkipUnavailable -> ()
+            | other ->
+                Assert.Fail
+                    $"Expected providerSucceeded or skip-unavailable, got outcome={summary.Outcome} diagnostic=%A{diagnostic} verdict=%A{other}."
+
+    // 083 T008 (US2 / FR-006): OFFLINE proof that the hyphenated-smoke request forwards the name
+    // on the DESCRIPTOR-RESOLVED key (never a hardcoded provider token) plus the generic
+    // `lifecycle=sdd` marker — and nothing else. Over a SYNTHETIC registry whose `nameParameter`
+    // is a neutral key, so a PASS proves the key came from the registry, not from generic SDD.
+    // Locks the provider-neutral request shape the network-gated build+test fact depends on.
+    [<Fact>]
+    let ``the hyphenated smoke request forwards the descriptor-resolved name key`` () =
+        let declaredRegistry =
+            """schemaVersion: 1
+providers:
+  - name: rendering
+    contractVersion: "1.1.0"
+    templateId: demo-template
+    source: __FIXTURE__/ok
+    nameParameter: exampleProductName
+"""
+
+        let root = newProductRoot ()
+        writeRelative root ".fsgg/providers.yml" declaredRegistry
+
+        let request = namedScaffoldRequest root hyphenatedName
+
+        // The generic lifecycle marker first, then the registry-declared name key with the
+        // hyphenated value — and no other parameter. The key is `exampleProductName` because the
+        // synthetic registry declared it, proving generic SDD hardcodes no provider name key.
+        Assert.Equal<(string * string) list>(
+            [ "lifecycle", "sdd"; "exampleProductName", hyphenatedName ],
+            request.Parameters
+        )
+
     // ---------- US3: opt-in, provider-neutral, honest SKIP/FAIL ----------
 
     // T018 (US3 / SC-003): with the registry env unset, the guard SKIPs (xUnit dynamic skip), so
