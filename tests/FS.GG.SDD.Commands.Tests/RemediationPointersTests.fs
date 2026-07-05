@@ -38,7 +38,8 @@ module RemediationPointersTests =
                 None)
         |> Set.ofArray
 
-    let private anchorSlug (anchor: string) = anchor.Substring(anchor.IndexOf('#') + 1)
+    let private anchorSlug (anchor: string) =
+        anchor.Substring(anchor.IndexOf('#') + 1)
 
     // --- Invariant 1: coverage — every covered id renders a non-empty suffix ---
 
@@ -59,7 +60,8 @@ module RemediationPointersTests =
         for KeyValue(id, pointer) in RemediationPointers.registry do
             match pointer.Example with
             | Some relative ->
-                let full = Path.Combine(TestSupport.repoRoot, relative.Replace('/', Path.DirectorySeparatorChar))
+                let full =
+                    Path.Combine(TestSupport.repoRoot, relative.Replace('/', Path.DirectorySeparatorChar))
 
                 Assert.True(File.Exists full, $"covered id '{id}' cites missing example '{relative}'")
             | None -> ()
@@ -98,7 +100,11 @@ module RemediationPointersTests =
             Assert.Equal(suffix, RemediationPointers.suffixFor id) // idempotent
             Assert.DoesNotContain(TestSupport.repoRoot, suffix) // no absolute path
             Assert.DoesNotContain("\\", suffix) // POSIX separators only
-            Assert.False(Seq.exists Char.IsDigit suffix, $"pointer for '{id}' contains a digit (possible timestamp/version)")
+
+            Assert.False(
+                Seq.exists Char.IsDigit suffix,
+                $"pointer for '{id}' contains a digit (possible timestamp/version)"
+            )
 
     // --- Invariant 5: containment — a representative covered diagnostic ends with its suffix ---
 
