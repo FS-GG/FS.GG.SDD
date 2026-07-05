@@ -23,16 +23,24 @@ module RemediationPointersTests =
         |> Seq.toArray
         |> String
 
-    /// The set of anchor slugs the live authoring-contracts.md actually exposes.
+    /// The set of anchor slugs the live authoring-contracts.md actually renders. `#` lines inside
+    /// fenced code blocks are skipped — the doc embeds example artifacts whose `## Decisions` etc.
+    /// are prose, not clickable GitHub anchors, so counting them would let a registry anchor
+    /// "resolve" against a heading that does not exist in the rendered doc.
     let private liveAnchorSlugs () : Set<string> =
         let markdown =
             TestSupport.readRelative TestSupport.repoRoot "docs/reference/authoring-contracts.md"
+
+        let mutable inFence = false
 
         markdown.Replace("\r\n", "\n").Split('\n')
         |> Array.choose (fun line ->
             let trimmed = line.TrimStart()
 
-            if trimmed.StartsWith("#") then
+            if trimmed.StartsWith("```") || trimmed.StartsWith("~~~") then
+                inFence <- not inFence
+                None
+            elif (not inFence) && trimmed.StartsWith("#") then
                 Some(slugify (trimmed.TrimStart('#').Trim()))
             else
                 None)
@@ -97,13 +105,30 @@ module RemediationPointersTests =
     let ``pointer suffixes are deterministic and environment-independent`` () =
         for KeyValue(id, _) in RemediationPointers.registry do
             let suffix = RemediationPointers.suffixFor id
-            Assert.Equal(suffix, RemediationPointers.suffixFor id) // idempotent
             Assert.DoesNotContain(TestSupport.repoRoot, suffix) // no absolute path
             Assert.DoesNotContain("\\", suffix) // POSIX separators only
 
             Assert.False(
                 Seq.exists Char.IsDigit suffix,
                 $"pointer for '{id}' contains a digit (possible timestamp/version)"
+            )
+
+    // --- Registry keys are real diagnostic ids ---
+    // The suffix is appended in the shared `commandDiagnostic` keyed on the diagnostic id string, so
+    // a registry key that is a typo or a renamed/removed id would silently attach a pointer to
+    // nothing (and the self-referential invariant-1 iteration would not catch it). Pin every key to
+    // a quoted id literal in the constructor source so key drift fails the build.
+    [<Fact>]
+    let ``every registry key is a real diagnostic id in DiagnosticConstructors`` () =
+        let constructorSource =
+            TestSupport.readRelative
+                TestSupport.repoRoot
+                "src/FS.GG.SDD.Commands/CommandReports/DiagnosticConstructors.fs"
+
+        for KeyValue(id, _) in RemediationPointers.registry do
+            Assert.True(
+                constructorSource.Contains($"\"{id}\""),
+                $"registry key '{id}' is not emitted as a quoted id literal by any constructor — typo or renamed diagnostic?"
             )
 
     // --- Invariant 5: containment — a representative covered diagnostic ends with its suffix ---

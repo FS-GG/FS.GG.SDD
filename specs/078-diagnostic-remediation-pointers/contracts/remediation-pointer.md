@@ -39,6 +39,10 @@ correction is otherwise byte-unchanged. Example (`missingClarificationAnswer`):
    `Correction` ends with the rendered suffix.
 6. **Non-interference (FR-008)**: for every diagnostic id **not** in the registry, the constructed
    `Correction` is byte-identical to its pre-feature text (no accidental suffix).
+7. **Keys are real ids**: every registry key appears as a quoted id literal in
+   `DiagnosticConstructors.fs`, so a typo or a renamed/removed id (which would silently attach a
+   pointer to nothing) fails the build. Anchor resolution skips fenced code blocks in
+   `authoring-contracts.md`, so a slug that only matches an embedded example heading is not accepted.
 
 ## Projection invariants (FR-003 / FR-009 / SC-005)
 

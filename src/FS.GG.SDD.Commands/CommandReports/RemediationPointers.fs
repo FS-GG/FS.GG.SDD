@@ -91,6 +91,7 @@ module internal RemediationPointers =
           "taskDependencyCycle", at tasksEx stableIds
           "doneTaskMissingEvidence", at tasksEx stableIds
           "skippedTaskMissingRationale", at tasksEx stableIds
+          "failedTasksPrerequisite", at tasksEx stableIds
           "tasksIdentityMismatch", at tasksEx frontMatter
           // evidence
           "evidence.malformedEvidenceArtifact", at evidenceEx evidenceDecl

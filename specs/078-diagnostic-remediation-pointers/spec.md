@@ -164,7 +164,7 @@ guard test fails until the citing correction (or the heading) is fixed.
   declarations/references, duplicate-id, the clarify `[AMB:…]` decision-tag rule, and the
   `evidence.yml` declaration/disclosure/deferral rules). The set **includes grammar-rooted
   aggregate readiness blocks** — those that summarize an underlying grammar failure, such as
-  `failedChecklistPrerequisite` (coverage), `failedPlanPrerequisite`,
+  `failedChecklistPrerequisite` (coverage), `failedPlanPrerequisite`, `failedTasksPrerequisite`,
   `evidence.missingRequiredEvidence`, `evidence.missingRequiredSkill`, and
   `verify.missingRequiredTest` — each pointed at the example + grammar section of the grammar it
   rolls up. This set is the scope over which the pointer requirement and the guard apply.

@@ -80,6 +80,7 @@ Anchors resolve against the current `docs/reference/authoring-contracts.md` head
 | `taskDependencyCycle` | `…/tasks.yml` | `#stable-id-declarations` |
 | `doneTaskMissingEvidence` | `…/tasks.yml` | `#stable-id-declarations` |
 | `skippedTaskMissingRationale` | `…/tasks.yml` | `#stable-id-declarations` |
+| `failedTasksPrerequisite` *(agg)* | `…/tasks.yml` | `#stable-id-declarations` |
 | `tasksIdentityMismatch` | `…/tasks.yml` | `#per-stage-front-matter` |
 | `evidence.malformedEvidenceArtifact` | `…/evidence.yml` | `#evidenceyml-declarations` |
 | `evidence.duplicateEvidenceId` | `…/evidence.yml` | `#evidenceyml-declarations` |
@@ -96,7 +97,7 @@ Anchors resolve against the current `docs/reference/authoring-contracts.md` head
 **Notes**
 - **Warning-severity `stale*` diagnostics are excluded** (`staleChecklistResult`, `stalePlanDecision`,
   `staleTask`, `verify.staleRequiredTest`, `evidence.staleEvidence*`): the spec scopes the pointer
-  requirement to **error-severity** blocking diagnostics only. The registry contains 44 error ids.
+  requirement to **error-severity** blocking diagnostics only. The registry contains 46 error ids.
 - Every row cites **both** an example and an anchor (all seven stages have an example after
   FR-004), so the both-when-both-exist rule (clarify Q2) applies uniformly.
 - The `*IdentityMismatch` rows are retained in-set and pointed at the per-stage front-matter

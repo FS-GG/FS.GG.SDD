@@ -216,3 +216,21 @@ recorded here for honesty (Constitution VI):
   **same** `authoring-contracts.md` anchors (coherence verified: `acceptance-coverage-line`,
   `clarify-decision-tag-resolution`, `per-stage-front-matter`, `stable-id-declarations`), so this
   feature does not re-plumb lint. Spec/contract/quickstart were updated accordingly.
+
+## Post-review hardening (recall-biased code review)
+
+An independent review (correctness + guard-soundness finders) confirmed no live bugs (FR-008
+byte-identity holds; all registry keys match real constructors; `toolDefect` unaffected). Applied:
+
+- **Added `failedTasksPrerequisite`** to the covered set — it is the tasks-stage grammar-rooted
+  aggregate readiness block, structurally identical to the checklist/plan aggregates already
+  included (clarify Q1). Registry is now **46** error-severity ids. (data-model/research/spec
+  reconciled; the excluded Warning-severity `stale*` enumerations were cleaned up too.)
+- **Guard hardened:** (a) `liveAnchorSlugs` now skips fenced code blocks, so a slug that only
+  matches an example heading embedded in `authoring-contracts.md` is no longer accepted; (b) a new
+  test pins every registry key to a quoted id literal in `DiagnosticConstructors.fs`, so a typo or
+  renamed id (which the self-referential coverage check could not catch) fails the build. Dropped
+  the tautological idempotency assertion.
+- **Lint bypass is intended, not a bug.** `LintEngine.missingDecisionTagDefect` builds
+  `unresolvedBlockingAmbiguity` directly and carries its own 076 `GrammarPointer` to the same
+  anchor — this is exactly the coherence FR-009 documents; lint is deliberately not re-plumbed.

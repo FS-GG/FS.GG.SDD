@@ -45,13 +45,14 @@ All Technical-Context unknowns are resolved below. No `NEEDS CLARIFICATION` rema
     `malformedClarificationFrontMatter`, `duplicateClarificationId`, `unknownClarificationReference`,
     `unsafeDecisionChange`, `clarificationIdentityMismatch`
   - **checklist**: `malformedChecklistFrontMatter`, `duplicateChecklistId`,
-    `unknownChecklistSourceReference`, `staleChecklistResult`, `failedChecklistPrerequisite` *(agg)*,
+    `unknownChecklistSourceReference`, `failedChecklistPrerequisite` *(agg)*,
     `checklistIdentityMismatch`
   - **plan**: `malformedPlanFrontMatter`, `duplicatePlanId`, `unknownPlanSourceReference`,
-    `stalePlanDecision`, `failedPlanPrerequisite` *(agg)*, `planIdentityMismatch`
+    `failedPlanPrerequisite` *(agg)*, `planIdentityMismatch`
   - **tasks**: `malformedTasksArtifact`, `duplicateTaskId`, `unknownTaskSourceReference`,
-    `unknownTaskDependency`, `taskDependencyCycle`, `staleTask`, `doneTaskMissingEvidence`,
-    `skippedTaskMissingRationale`, `tasksIdentityMismatch`
+    `unknownTaskDependency`, `taskDependencyCycle`, `doneTaskMissingEvidence`,
+    `skippedTaskMissingRationale`, `failedTasksPrerequisite` *(agg)*, `tasksIdentityMismatch`
+  - (Warning-severity `stale*` blocks are **excluded** — error-severity only.)
   - **evidence**: `evidence.malformedEvidenceArtifact`, `evidence.duplicateEvidenceId`,
     `evidence.unknownReference`, `evidence.missingRequiredEvidence` *(agg)*,
     `evidence.undisclosedSyntheticEvidence`, `evidence.missingDeferralRationale`,
