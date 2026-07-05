@@ -1,0 +1,16 @@
+# Feature 080 fixture: a provider that declares both the derivation *source*
+# (`nameParameter: productName`) and the derivation *sink* (`identifierParameter:
+# rootNamespace`). SDD derives a valid F# namespace from the raw product name and
+# forwards it under `rootNamespace`, leaving `productName` verbatim. Abstract keys
+# only — no provider-specific value (FR-002).
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-identifier
+    source: __FIXTURE__/identifier-declaring
+    nameParameter: productName
+    identifierParameter: rootNamespace
+    parameters:
+      - key: productName
+        required: true

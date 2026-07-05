@@ -77,6 +77,11 @@ module Diagnostics =
         name: string -> declaredVersion: string -> supportedRange: string -> Diagnostic
 
     val scaffoldProviderParamMissing: name: string -> missingKeys: string list -> Diagnostic
+
+    /// The product name reduces to no valid F# identifier (feature 080, FR-009).
+    /// User-input class → exit 1; blocks before provider invocation.
+    val scaffoldNameUnrepresentable: name: string -> Diagnostic
+
     val scaffoldTargetCollision: paths: string list -> Diagnostic
     val scaffoldProviderEmpty: name: string -> Diagnostic
     val scaffoldProviderFailed: name: string -> exitCode: int -> Diagnostic

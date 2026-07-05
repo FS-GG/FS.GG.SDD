@@ -236,6 +236,12 @@ module Config =
                                       NameParameter =
                                         tryScalarAt [ "nameParameter" ] mapping
                                         |> Option.defaultValue defaultNameParameter
+                                      // Optional derivation sink (feature 080). Absent or
+                                      // blank/whitespace ⇒ None ⇒ scaffold derives nothing.
+                                      // Does NOT affect entry-drop (the four required scalars).
+                                      IdentifierParameter =
+                                        tryScalarAt [ "identifierParameter" ] mapping
+                                        |> Option.filter (fun raw -> raw.Trim() <> "")
                                       // Optional, value-agnostic (feature 052 E2). The coherent-set
                                       // orchestrator axis (ADR-0008, epic FS-GG/.github#85) is
                                       // declared by Templates as a nested `minimumFsggSdd:` mapping

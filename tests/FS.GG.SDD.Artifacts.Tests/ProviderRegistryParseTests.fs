@@ -132,3 +132,56 @@ providers:
 
         Assert.True(productName.Required)
         Assert.Equal(None, productName.Default)
+
+    // Feature 080 (FR-004/FR-005): the optional `identifierParameter` derivation sink parses
+    // to `Some` when declared and `None` when absent or blank/whitespace.
+    [<Fact>]
+    let ``parseProviderRegistry reads a declared identifierParameter`` () =
+        let registry =
+            """schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-app
+    source: /abs/path/ok
+    nameParameter: productName
+    identifierParameter: rootNamespace
+"""
+
+        let descriptor = one (parseProviderRegistry (snapshot registry))
+        Assert.Equal(Some "rootNamespace", descriptor.IdentifierParameter)
+
+    [<Fact>]
+    let ``parseProviderRegistry leaves identifierParameter None when absent or blank`` () =
+        let absent =
+            one (
+                parseProviderRegistry (
+                    snapshot
+                        """schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-app
+    source: /abs/path/ok
+"""
+                )
+            )
+
+        Assert.Equal<string option>(None, absent.IdentifierParameter)
+
+        let blank =
+            one (
+                parseProviderRegistry (
+                    snapshot (
+                        "schemaVersion: 1\n"
+                        + "providers:\n"
+                        + "  - name: fixture\n"
+                        + "    contractVersion: \"1.0.0\"\n"
+                        + "    templateId: fsgg-fixture-app\n"
+                        + "    source: /abs/path/ok\n"
+                        + "    identifierParameter: \"   \"\n"
+                    )
+                )
+            )
+
+        Assert.Equal<string option>(None, blank.IdentifierParameter)

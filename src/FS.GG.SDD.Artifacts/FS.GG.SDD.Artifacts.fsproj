@@ -13,6 +13,8 @@
     <Compile Include="SchemaVersion.fs" />
     <Compile Include="ArtifactRef.fsi" />
     <Compile Include="ArtifactRef.fs" />
+    <Compile Include="FsharpIdentifier.fsi" />
+    <Compile Include="FsharpIdentifier.fs" />
     <Compile Include="Diagnostics.fsi" />
     <Compile Include="Diagnostics.fs" />
     <Compile Include="Json/JsonWriters.fsi" />

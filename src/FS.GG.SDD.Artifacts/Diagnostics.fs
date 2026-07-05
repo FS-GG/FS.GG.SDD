@@ -221,6 +221,16 @@ module Diagnostics =
             "Supply each missing parameter with `--param <key>=<value>`."
             (name :: keys)
 
+    let scaffoldNameUnrepresentable (name: string) =
+        create
+            "scaffold.nameUnrepresentable"
+            DiagnosticError
+            (scaffoldRef ".fsgg/providers.yml")
+            None
+            $"Product name '{name}' contains no character valid in an F# identifier, so no namespace can be derived."
+            "Choose a product name containing at least one letter, digit, or underscore."
+            [ name ]
+
     let scaffoldTargetCollision (paths: string list) =
         let ordered = paths |> List.sort
 

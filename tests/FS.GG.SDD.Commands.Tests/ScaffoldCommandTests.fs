@@ -1990,3 +1990,130 @@ module ScaffoldCommandTests =
                 Assert.Contains("timed out", processResult.StandardError)
             finally
                 System.Environment.SetEnvironmentVariable("FSGG_SDD_PROCESS_TIMEOUT_MS", original)
+
+    // ---------- Feature 080 / US1,US2,US4: name → valid F# identifier ----------
+
+    // T012 (US1 / FR-005): with a provider declaring `identifierParameter`, a hyphenated
+    // product name forwards BOTH the raw `--productName Roquelike-DungeonCrawler` (verbatim)
+    // and the SDD-derived `--rootNamespace RoquelikeDungeonCrawler`.
+    [<Fact>]
+    let ``scaffold derives and forwards the identifier parameter alongside the raw name`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "identifier-declaring.providers.yml"
+
+        let request =
+            scaffoldRequest root (Some "fixture") [ "productName", "Roquelike-DungeonCrawler" ] false true
+
+        // Map canonicalizes to sorted keys: productName then rootNamespace.
+        let expected =
+            [ "--productName"
+              "Roquelike-DungeonCrawler"
+              "--rootNamespace"
+              "RoquelikeDungeonCrawler" ]
+
+        Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs request))
+
+    // T012 (US1 / FR-003): a product name already valid as a namespace forwards the identifier
+    // unchanged (derivation is a no-op).
+    [<Fact>]
+    let ``scaffold forwards an already-valid name unchanged as the identifier`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "identifier-declaring.providers.yml"
+
+        let request =
+            scaffoldRequest root (Some "fixture") [ "productName", "Acme.Foo" ] false true
+
+        let expected = [ "--productName"; "Acme.Foo"; "--rootNamespace"; "Acme.Foo" ]
+        Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs request))
+
+    // T014 (US2 / FR-006 / FR-007): a real run keeps the raw name verbatim in string contexts
+    // (the produced Program.fs string literal + manifest), puts the derived valid identifier in
+    // the namespace context, and records BOTH in provenance — schema unchanged.
+    [<Fact>]
+    let ``scaffold real run preserves the raw name and uses the derived namespace`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "identifier-declaring.providers.yml"
+
+        let report =
+            runScaffold (
+                scaffoldRequest root (Some "fixture") [ "productName", "Roquelike-DungeonCrawler" ] false false
+            )
+
+        Assert.Equal("providerSucceeded", (scaffoldSummary report).Outcome)
+
+        // Identifier context: the produced namespace is the derived, valid form.
+        let program = TestSupport.readRelative root "Program.fs"
+        Assert.Contains("namespace RoquelikeDungeonCrawler", program)
+        // String context: the raw hyphenated name is preserved verbatim.
+        Assert.Contains("printfn \"Roquelike-DungeonCrawler\"", program)
+
+        let manifest = TestSupport.readRelative root "scaffold-manifest.txt"
+        Assert.Contains("productName=Roquelike-DungeonCrawler", manifest)
+        Assert.Contains("rootNamespace=RoquelikeDungeonCrawler", manifest)
+
+        // Both values recorded effective (sorted by key), raw name byte-identical.
+        Assert.Equal<(string * string) list>(
+            [ "productName", "Roquelike-DungeonCrawler"
+              "rootNamespace", "RoquelikeDungeonCrawler" ],
+            provenanceEffectiveParameters root
+        )
+
+    // T015 (US2 / FR-007): the recorded provenance schema stays v1 (additive rows only).
+    [<Fact>]
+    let ``scaffold identifier derivation keeps provenance schema at 1`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "identifier-declaring.providers.yml"
+
+        runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Roquelike-DungeonCrawler" ] false false)
+        |> ignore
+
+        let json = TestSupport.readRelative root provenancePath
+        use doc = System.Text.Json.JsonDocument.Parse json
+        Assert.Equal(1, doc.RootElement.GetProperty("schemaVersion").GetInt32())
+
+    // T016 (US4 / FR-008): an author `--param rootNamespace=...` override wins — SDD does not
+    // derive over an explicitly supplied sink value.
+    [<Fact>]
+    let ``scaffold lets an author identifier override win over derivation`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "identifier-declaring.providers.yml"
+
+        let request =
+            scaffoldRequest
+                root
+                (Some "fixture")
+                [ "productName", "Roquelike-DungeonCrawler"; "rootNamespace", "Explicit" ]
+                false
+                true
+
+        let expected =
+            [ "--productName"; "Roquelike-DungeonCrawler"; "--rootNamespace"; "Explicit" ]
+
+        Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs request))
+
+    // T016 (US4 / FR-009): a name with no identifier character blocks with
+    // scaffold.nameUnrepresentable at exit 1, before any provider invocation.
+    [<Fact>]
+    let ``scaffold blocks an unrepresentable name before invoking the provider`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "identifier-declaring.providers.yml"
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "---" ] false false)
+
+        Assert.Contains("scaffold.nameUnrepresentable", diagnosticIds report)
+        Assert.Equal(1, exitCodeForReport report)
+        Assert.False((scaffoldSummary report).ProviderInvoked)
+
+    // Feature 080 backward compat: a provider that declares NO identifierParameter forwards
+    // exactly as before — no derived param injected.
+    [<Fact>]
+    let ``scaffold without an identifier parameter forwards only the raw name`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "lifecycle.providers.yml"
+
+        let request =
+            scaffoldRequest root (Some "fixture") [ "productName", "Roquelike-DungeonCrawler" ] false true
+
+        let expected = [ "--productName"; "Roquelike-DungeonCrawler" ]
+        Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs request))

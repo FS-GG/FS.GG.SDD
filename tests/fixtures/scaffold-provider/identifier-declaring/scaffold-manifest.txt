@@ -1,0 +1,2 @@
+productName=PRODUCT_NAME
+rootNamespace=ROOT_NAMESPACE

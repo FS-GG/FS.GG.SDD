@@ -16,6 +16,7 @@ module ProviderDescriptorTests =
           Run = None
           Verify = None
           NameParameter = "name"
+          IdentifierParameter = None
           MinimumCliVersion = None }
 
     // SC-003 / Scenario D: a descriptor with no command fields exposes them absent,

@@ -22,6 +22,7 @@ module Provider =
           Run: DeclaredCommand option
           Verify: DeclaredCommand option
           NameParameter: string
+          IdentifierParameter: string option
           MinimumCliVersion: string option }
 
     let defaultNameParameter = "name"
