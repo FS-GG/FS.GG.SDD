@@ -18,7 +18,10 @@ module FsharpIdentifierTests =
     [<InlineData("foo.bar-baz", "foo.barbaz")>] // per-segment sanitization
     [<InlineData("3Crawler", "_3Crawler")>] // leading digit guarded
     [<InlineData("type", "type_")>] // reserved keyword guarded
+    [<InlineData("mod", "mod_")>] // hard reserved word `mod` guarded (would be FS0010 unescaped)
+    [<InlineData("const", "const_")>] // hard reserved word `const` guarded
     [<InlineData("Acme..Foo", "Acme.Foo")>] // empty interior segment collapsed
+    [<InlineData("Acme._", "Acme")>] // lone-underscore segment (F# wildcard) collapsed, not emitted
     let ``deriveNamespace produces the golden identifier`` (input: string) (expected: string) =
         Assert.Equal(Ok expected, deriveNamespace input)
 
@@ -26,6 +29,8 @@ module FsharpIdentifierTests =
     [<InlineData("---")>] // no identifier character
     [<InlineData("")>] // empty
     [<InlineData(".")>] // only a separator
+    [<InlineData("_")>] // lone underscore is the wildcard, not an identifier — whole name unrepresentable
+    [<InlineData("_._")>] // every segment collapses to nothing
     let ``deriveNamespace reports an unrepresentable name`` (input: string) =
         Assert.Equal(Error(Unrepresentable input), deriveNamespace input)
 

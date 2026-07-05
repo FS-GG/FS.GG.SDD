@@ -14,10 +14,9 @@ Additive change to the existing org-shared descriptor. Existing fields unchanged
 **Validation / rules**:
 - `IdentifierParameter` parsed from optional `identifierParameter:` scalar in `providers.yml`
   (missing ⇒ `None`). A blank/whitespace value is treated as `None`.
-- A descriptor may declare `IdentifierParameter` equal to `NameParameter` — discouraged, but if
-  it does, derivation would overwrite the raw name; the parse layer records it verbatim and the
-  handler applies precedence (D4). (No cross-field rejection in v1; documented as a provider
-  authoring caveat.)
+- A descriptor may declare `IdentifierParameter` equal to `NameParameter` — a misconfiguration.
+  The handler **skips derivation** in that case (forwarding the raw name unchanged) rather than
+  silently overwriting the raw name, which would defeat the raw-name-preservation guarantee.
 
 ### DerivationError (new — `FS.GG.SDD.Artifacts/FsharpIdentifier`)
 

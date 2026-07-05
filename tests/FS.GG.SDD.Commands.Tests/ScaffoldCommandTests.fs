@@ -2105,6 +2105,20 @@ module ScaffoldCommandTests =
         Assert.Equal(1, exitCodeForReport report)
         Assert.False((scaffoldSummary report).ProviderInvoked)
 
+    // Feature 080 (misconfiguration guard): a provider that declares the sink equal to the
+    // name key must NOT have the raw name silently overwritten by the derived identifier.
+    [<Fact>]
+    let ``scaffold does not overwrite the raw name when the sink equals the name key`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "identifier-equals-name.providers.yml"
+
+        let request =
+            scaffoldRequest root (Some "fixture") [ "productName", "Roquelike-DungeonCrawler" ] false true
+
+        // Only the raw name is forwarded, verbatim — no derivation overwrites it.
+        let expected = [ "--productName"; "Roquelike-DungeonCrawler" ]
+        Assert.Equal<string list>(expected, forwardedParamArgs (plannedCreateArgs request))
+
     // Feature 080 backward compat: a provider that declares NO identifierParameter forwards
     // exactly as before — no derived param injected.
     [<Fact>]

@@ -1,0 +1,14 @@
+# Feature 080 misconfiguration fixture: a provider that (wrongly) declares the
+# derivation sink equal to the name source. Deriving would overwrite the raw name,
+# so SDD skips derivation and forwards the name verbatim.
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-identifier
+    source: __FIXTURE__/identifier-declaring
+    nameParameter: productName
+    identifierParameter: productName
+    parameters:
+      - key: productName
+        required: true

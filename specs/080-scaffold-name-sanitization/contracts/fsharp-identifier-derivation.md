@@ -40,6 +40,9 @@ module FsharpIdentifier =
 | `foo.bar-baz` | `Ok "foo.barbaz"` | per-segment; second segment sanitized |
 | `3Crawler` | `Ok "_3Crawler"` | leading digit guarded |
 | `type` | `Ok "type_"` | reserved-keyword segment guarded |
+| `mod` / `const` | `Ok "mod_"` / `Ok "const_"` | hard reserved words guarded (unescaped ⇒ FS0010) |
+| `Acme._` | `Ok "Acme"` | lone-underscore segment (F# wildcard) collapsed, never emitted |
+| `_` | `Error (Unrepresentable "_")` | lone underscore is the wildcard, not an identifier |
 | `Acme..Foo` | `Ok "Acme.Foo"` | empty middle segment — **collapsed** (resolved; pinned by the golden test) |
 | `---` | `Error (Unrepresentable "---")` | no identifier character |
 | `""` | `Error (Unrepresentable "")` | empty |

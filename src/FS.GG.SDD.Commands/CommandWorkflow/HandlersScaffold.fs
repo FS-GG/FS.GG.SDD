@@ -118,6 +118,11 @@ module internal HandlersScaffold =
         : Result<Map<string, string>, Diagnostic> =
         match descriptor.IdentifierParameter with
         | None -> Ok effective
+        | Some sinkKey when sinkKey = resolveNameParameter descriptor ->
+            // Provider misconfiguration: the sink equals the name key. Deriving here would
+            // silently overwrite the raw name, defeating the whole point (raw name preserved
+            // for string/path contexts). Forward unchanged rather than clobber it.
+            Ok effective
         | Some sinkKey when request.Parameters |> List.exists (fun (key, _) -> key = sinkKey) ->
             // Author supplied the sink value explicitly — verbatim, no derivation.
             Ok effective

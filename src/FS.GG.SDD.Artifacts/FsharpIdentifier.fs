@@ -4,9 +4,11 @@ module FsharpIdentifier =
 
     type DerivationError = Unrepresentable of name: string
 
-    // F# reserved keywords. A derived segment equal to one of these is suffixed with
-    // `_` so it remains usable in a `namespace`/`module` position. Kept intentionally
-    // as an explicit, language-level literal (Principle IV — no clever machinery).
+    // F# keywords (and the hard reserved words `const`/`mod`, which the compiler rejects
+    // as identifiers — FS0010, unlike the merely-warned reserved-for-future words). A
+    // derived segment equal to one of these is suffixed with `_` so it stays usable in a
+    // `namespace`/`module` position. Kept as an explicit, language-level literal
+    // (Principle IV — no clever machinery).
     let private keywords =
         set
             [ "abstract"
@@ -16,6 +18,7 @@ module FsharpIdentifier =
               "base"
               "begin"
               "class"
+              "const"
               "default"
               "delegate"
               "do"
@@ -44,6 +47,7 @@ module FsharpIdentifier =
               "let"
               "match"
               "member"
+              "mod"
               "module"
               "mutable"
               "namespace"
@@ -84,8 +88,10 @@ module FsharpIdentifier =
     let private deriveSegment (segment: string) =
         let filtered = segment |> String.filter isIdentifierChar
 
-        if filtered = "" then
-            // Empty after filtering ⇒ collapsed (contributes no segment).
+        // A usable segment needs at least one letter or digit. An empty or all-underscore
+        // filter is collapsed (contributes no segment) — this also rejects a lone `_`,
+        // which F# treats as the wildcard, not a valid namespace/module identifier.
+        if not (filtered |> String.exists System.Char.IsLetterOrDigit) then
             None
         else
             // First char may not be a digit; keywords are made safe with a suffix.
