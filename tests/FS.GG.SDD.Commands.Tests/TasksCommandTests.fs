@@ -225,8 +225,11 @@ module TasksCommandTests =
             fun change -> change.Path = tasksPath && change.Operation = ArtifactOperation.NoChange
         )
 
+    // Feature 082 (#147, FR-004/FR-005, SC-002): a re-run after an upstream source change
+    // re-derives the graph IN PLACE — the new source's task appears and the run never reports
+    // stale-and-unchanged. (Replaces the prior stale-relabel expectation.)
     [<Fact>]
-    let ``tasks marks existing tasks stale when source snapshots change`` () =
+    let ``tasks re-run re-derives the graph when a source adds a new task`` () =
         let root = initializedPlanReadyProject ()
         TestSupport.runTasks root workId title |> ignore
 
@@ -242,28 +245,117 @@ module TasksCommandTests =
         let report = TestSupport.runTasks root workId title
         let tasks = TestSupport.readRelative root tasksPath
 
-        Assert.Equal(CommandOutcome.SucceededWithWarnings, report.Outcome)
-        Assert.Contains("status: stale", tasks)
-        Assert.Contains("FR-002", tasks)
-        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "staleTask")
-        Assert.Equal(Some "tasks.correctStaleTasks", report.NextAction |> Option.map _.ActionId)
-        Assert.True(report.Tasks.Value.StaleCount > 0)
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains("Implement requirement FR-002", tasks)
+        Assert.DoesNotContain("status: stale", tasks)
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "staleTask")
+        Assert.Equal(0, report.Tasks.Value.StaleCount)
 
+    // Feature 082 (#147, FR-007, SC-004): authored per-task `owner` survives a re-derive
+    // triggered by a source change — the merge carries it onto the re-derived task by title.
     [<Fact>]
-    let ``tasks dependency cycle blocks without mutation`` () =
+    let ``tasks re-run preserves authored owner across a re-derive`` () =
         let root = initializedPlanReadyProject ()
         TestSupport.runTasks root workId title |> ignore
 
-        let original =
-            (TestSupport.readRelative root tasksPath).Replace("dependencies: []", "dependencies: [\"T001\"]")
+        let authored =
+            (TestSupport.readRelative root tasksPath).Replace("owner: \"sdd\"", "owner: \"platform\"")
 
-        TestSupport.writeRelative root tasksPath original
+        TestSupport.writeRelative root tasksPath authored
+
+        let updatedSpec =
+            (TestSupport.readRelative root specPath)
+                .Replace(
+                    "## Ambiguities",
+                    "- FR-002: Second requirement. (Stories: US-001; Acceptance: AC-001)\n\n## Ambiguities"
+                )
+
+        TestSupport.writeRelative root specPath updatedSpec
 
         let report = TestSupport.runTasks root workId title
+        let tasks = TestSupport.readRelative root tasksPath
 
-        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
-        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "taskDependencyCycle")
-        Assert.Equal(original, TestSupport.readRelative root tasksPath)
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains("Implement requirement FR-002", tasks)
+        Assert.Contains("owner: \"platform\"", tasks)
+        Assert.DoesNotContain("status: stale", tasks)
+
+    // Feature 082 (#147, research Decision 3): a task whose source no longer exists is DROPPED
+    // on re-derive (not relabeled stale and carried forward).
+    [<Fact>]
+    let ``tasks re-run drops a task whose source no longer exists`` () =
+        let root = initializedPlanReadyProject ()
+        let original = TestSupport.readRelative root specPath
+
+        let withSecond =
+            original.Replace(
+                "## Ambiguities",
+                "- FR-002: Second requirement. (Stories: US-001; Acceptance: AC-001)\n\n## Ambiguities"
+            )
+
+        TestSupport.writeRelative root specPath withSecond
+        TestSupport.runTasks root workId title |> ignore
+        Assert.Contains("Implement requirement FR-002", TestSupport.readRelative root tasksPath)
+
+        // Remove FR-002 from the source and re-run.
+        TestSupport.writeRelative root specPath original
+
+        let report = TestSupport.runTasks root workId title
+        let tasks = TestSupport.readRelative root tasksPath
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.DoesNotContain("Implement requirement FR-002", tasks)
+        Assert.DoesNotContain("status: stale", tasks)
+
+    // Feature 082 (review fix): a task's evidence-obligation id (EV###) mirrors its stable
+    // T### id, so a title-matched task keeps its EV### across a re-derive that reorders
+    // derivation — an existing `evidence.yml` keyed to that EV### stays linked. Guards against
+    // re-deriving EV ids position-first (which shifted them when a source was added ahead).
+    [<Fact>]
+    let ``tasks re-run keeps each task's evidence id coupled to its stable id`` () =
+        let root = initializedPlanReadyProject ()
+        TestSupport.runTasks root workId title |> ignore
+
+        let updatedSpec =
+            (TestSupport.readRelative root specPath)
+                .Replace(
+                    "## Ambiguities",
+                    "- FR-002: Second requirement. (Stories: US-001; Acceptance: AC-001)\n\n## Ambiguities"
+                )
+
+        TestSupport.writeRelative root specPath updatedSpec
+        TestSupport.runTasks root workId title |> ignore
+
+        let tasks = TestSupport.readRelative root tasksPath
+
+        let numbers pattern =
+            [ for m in System.Text.RegularExpressions.Regex.Matches(tasks, pattern) -> m.Groups.[1].Value ]
+            |> List.sort
+
+        let idNumbers = numbers @"id: T0*(\d+)"
+        let evidenceNumbers = numbers @"requiredEvidence: \[""EV0*(\d+)""\]"
+
+        Assert.NotEmpty idNumbers
+        Assert.Equal<string list>(idNumbers, evidenceNumbers)
+
+    // Feature 082 (reclaim decision, research Q3): dependencies are tool-derived, so a
+    // hand-injected dependency cycle is re-derived away (reclaimed), not persisted or blocked.
+    // Genuine tool-derived cycles are still caught by validation on the re-derived graph.
+    [<Fact>]
+    let ``tasks re-run reclaims a hand-injected dependency cycle`` () =
+        let root = initializedPlanReadyProject ()
+        TestSupport.runTasks root workId title |> ignore
+        let original = TestSupport.readRelative root tasksPath
+
+        let tampered = original.Replace("dependencies: []", "dependencies: [\"T001\"]")
+        TestSupport.writeRelative root tasksPath tampered
+
+        let report = TestSupport.runTasks root workId title
+        let tasks = TestSupport.readRelative root tasksPath
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "taskDependencyCycle")
+        Assert.Equal(original, tasks)
 
     [<Fact>]
     let ``tasks done without evidence blocks without mutation`` () =

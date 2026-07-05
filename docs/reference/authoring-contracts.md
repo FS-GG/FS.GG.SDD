@@ -464,3 +464,39 @@ required value still surfaces `scaffold.providerParamMissing`. A blank/whitespac
 canonical rendering registry (with its real default starter) is owned by FS.GG.Templates
 and consumed only through the versioned provider contract and the network-gated
 composition-acceptance — generic SDD carries no provider-specific starter value.
+
+## Regeneration semantics (re-running `checklist` and `tasks`)
+
+`checklist.md` and `tasks.yml` are **generated gate artifacts** you also author against.
+Re-running their stage regenerates the tool-owned content from the current sources and
+preserves your authored content — it never re-ingests its own prior output as input
+(feature 082 / FR-002).
+
+- **Tool-owned content is re-derived every run, never re-ingested.** `checklist`
+  recomputes its `Checklist Items` / `Review Results` / `Accepted Deferrals` /
+  `Blocking Findings` rows (and refreshes `Source Snapshot`) from the current spec/clarify
+  facts on every run — so a `CHK-###` blocking row clears as soon as the source no longer
+  justifies it (e.g. once the FR is covered in `spec.md`), with no file to delete. `tasks`
+  re-derives the whole task graph, so a newly-added plan decision disposition appears
+  immediately instead of the run reporting the graph "stale" and leaving it unchanged.
+- **Authored content is preserved.** `checklist`'s authored sections (`Advisory Notes`,
+  `Lifecycle Notes`, the `Source Specification`/`Source Clarifications` mirrors) are left
+  untouched. In `tasks.yml`, a task's advanced `status` (`inProgress`/`done`/`skipped`),
+  its `owner`, and any **hand-added disposition refs** you wrote (`requirements` /
+  `decisions` / `sourceIds`, e.g. `decisions: [DEC-001]` to record a decision's
+  disposition) are carried onto the re-derived task, and a wholly hand-authored task is
+  kept when it uniquely covers a live disposition the derivation cannot. Authored refs and
+  tasks whose sources are gone — or already covered by derivation — are dropped, so nothing
+  stale accumulates.
+- **Coverage lives in `spec.md`.** The `(covers AC-###)` declaration a checklist verdict
+  reads is the `spec.md` requirement-reference line (see *Acceptance coverage line* above),
+  **not** a line in `checklist.md`. Fix a "missing acceptance coverage" verdict there.
+- **Hand-edited generated rows are reclaimed.** Tool-owned rows are not an authoring
+  surface: if you edit one by hand (e.g. inject a task dependency), the next run overwrites
+  it with the derived value.
+- **Idempotence.** With unchanged sources and no authored edits, a re-run is byte-identical
+  and reports `noChange`. (A file produced by an older CLI may be canonicalized once on the
+  first re-run, then stabilizes.)
+- **The only re-run that blocks** is the `<!-- fsgg-sdd: unsafe-overwrite -->` opt-out,
+  whose `unsafeOverwrite` diagnostic names the exact file to delete and command to re-run —
+  no supported recovery ever requires guessing an `rm`.

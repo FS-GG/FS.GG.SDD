@@ -137,6 +137,27 @@ strict scans exist so coverage and evidence are facts a tool can trust, not pros
 a reader has to interpret. The strictness is the feature; these few forms are the
 price.
 
+## Regeneration semantics (re-running `checklist`/`tasks`)
+
+`checklist.md` and `tasks.yml` are generated gate artifacts you also author against.
+Re-running the stage **re-derives the tool-owned content from current sources and never
+re-ingests its own prior output** (feature 082):
+
+- Tool-owned rows are recomputed every run — a `CHK-###` blocking row clears once the
+  source covers the FR (coverage lives in `spec.md`, not `checklist.md`); `tasks`
+  re-derives the graph so a new plan decision disposition appears instead of the run
+  reporting "stale" and doing nothing.
+- Authored content is preserved: `checklist`'s `Advisory`/`Lifecycle Notes`, and in
+  `tasks.yml` a task's `status`, `owner`, and hand-added **live** disposition refs
+  (`requirements`/`decisions`/`sourceIds`, e.g. `decisions: [DEC-001]`) — plus a wholly
+  hand-authored task that uniquely covers a live disposition. Stale refs/tasks (sources
+  gone, or already derived) are dropped.
+- Hand-edited generated rows are reclaimed (overwritten). Unchanged sources → byte-identical
+  `noChange`. The only re-run that blocks is the `<!-- fsgg-sdd: unsafe-overwrite -->`
+  opt-out, whose diagnostic names the file and command — never guess an `rm`.
+
+See `docs/reference/authoring-contracts.md` → *Regeneration semantics*.
+
 ## Related
 
 - [[fs-gg-sdd-checklist]], [[fs-gg-sdd-evidence]], [[fs-gg-sdd-specify]],

@@ -1,1 +1,3 @@
-{"feature_directory":"specs/081-skill-gate-binding"}
+{
+  "feature_directory": "specs/082-idempotent-gate-artifacts"
+}
