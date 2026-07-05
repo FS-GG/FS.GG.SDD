@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Include="CommandTypes.fsi" />
     <Compile Include="CommandTypes.fs" />
+    <Compile Include="CommandReports/RemediationPointers.fs" />
     <Compile Include="CommandReports/DiagnosticConstructors.fs" />
     <Compile Include="CommandReports/NextActionRouting.fs" />
     <Compile Include="CommandReports/ReportAssembly.fs" />

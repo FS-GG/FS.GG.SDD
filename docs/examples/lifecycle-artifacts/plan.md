@@ -1,0 +1,62 @@
+---
+schemaVersion: 1
+workId: 001-example
+title: Example Work Item
+stage: plan
+changeTier: tier1
+status: planned
+sourceSpec: work/001-example/spec.md
+sourceClarifications: work/001-example/clarifications.md
+sourceChecklist: work/001-example/checklist.md
+publicOrToolFacingImpact: true
+---
+
+# Example Work Item Plan
+
+<!--
+A complete, valid `plan.md` you can copy-adapt. Validated on every build by the live
+plan parser (ExampleArtifactsContractTests via Plan.parsePlanFacts). `status: planned`
+and the Source Snapshot digests are written by `fsgg-sdd plan`; do not hand-edit them.
+See the per-stage front-matter and stable-id grammars in
+docs/reference/authoring-contracts.md and [[fs-gg-sdd-plan]].
+-->
+
+Prose status: planned
+
+## Source Snapshot
+- spec: work/001-example/spec.md sha256:3f93e82de3159bc6632c37498087330755f2128a7f0d0c79b9ed0dc8054d14a9 schemaVersion:1
+- clarifications: work/001-example/clarifications.md sha256:20c188a4bda353438db431fcca556e73aa75fcd9486afebd004b647c2d8a55f2 schemaVersion:1
+- checklist: work/001-example/checklist.md sha256:d3f847abd920a16028b07def9993da1ede27d392d225410f68e2354bd00a66fb schemaVersion:1
+
+## Plan Scope
+- Work item 001-example is planned from the current specification, clarification, and checklist facts.
+- Requirement count: 1.
+- Clarification decision count: 1.
+- Checklist result count: 1.
+
+## Plan Decisions
+- PD-001 [AC-001] [FR-001] complete: Plan requirement FR-001 through the plan command contract.
+
+## Contract Impact
+- PC-001 [PD-001] command report: fsgg-sdd plan, work/001-example/plan.md, and command-report JSON are tool-facing and compatibility-preserving.
+
+## Verification Obligations
+- VO-001 [PD-001] [PC-001] semanticTest: Run focused command tests, FSI/prelude evidence, and CLI smoke evidence before task generation.
+
+## Migration Posture
+- PM-001 [PC-001] diagnoseOnly: Plan schemaVersion 1 is accepted; unsupported plan schemas diagnose before write.
+
+## Generated View Impact
+- GV-001 [PD-001] workModel: readiness/001-example/work-model.json refreshes from current plan sources or reports staleGeneratedView.
+
+## Accepted Deferrals
+No accepted plan deferrals recorded.
+
+## Planning Findings
+No blocking planning findings recorded.
+
+## Advisory Notes
+- Optional Governance pointers remain compatibility facts only.
+
+## Lifecycle Notes
+- Next lifecycle action: `fsgg-sdd tasks --work 001-example`.

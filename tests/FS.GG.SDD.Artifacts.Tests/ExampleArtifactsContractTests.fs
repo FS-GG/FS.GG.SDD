@@ -52,6 +52,22 @@ module ExampleArtifactsContractTests =
             Assert.NotEmpty facts.Tasks
 
     [<Fact>]
+    let ``Example spec.md parses with no blocking diagnostics and declares stable requirement ids`` () =
+        match Specification.parseSpecificationFacts (snapshot "spec.md") with
+        | Error diagnostics -> failwith $"Example spec.md did not parse: {diagnostics}"
+        | Ok facts ->
+            Assert.Empty(blocking facts.Diagnostics)
+            Assert.NotEmpty facts.RequirementIds
+
+    [<Fact>]
+    let ``Example plan.md parses with no blocking diagnostics and records plan decisions`` () =
+        match Plan.parsePlanFacts (snapshot "plan.md") with
+        | Error diagnostics -> failwith $"Example plan.md did not parse: {diagnostics}"
+        | Ok facts ->
+            Assert.Empty(blocking facts.Diagnostics)
+            Assert.NotEmpty facts.Decisions
+
+    [<Fact>]
     let ``Example evidence.yml declarations all satisfy (result pass, non-synthetic)`` () =
         match Evidence.parseEvidence (snapshot "evidence.yml") with
         | Error diagnostics -> failwith $"Example evidence.yml did not parse: {diagnostics}"
