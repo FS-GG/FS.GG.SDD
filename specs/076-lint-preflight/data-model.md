@@ -27,12 +27,19 @@ The classification attached to each surfaced diagnostic, driving the grammar poi
 
 | Case | Source diagnostic id(s) | Grammar anchor (D7) |
 |---|---|---|
-| `CoverageLine` | `failedRequirementsQuality` | `authoring-contracts.md#acceptance-coverage-line` |
-| `MissingDecisionTag` | `missingClarificationAnswer`, `unresolvedBlockingAmbiguity` | `#clarify-decision-tag-resolution` |
-| `FrontMatter` | `malformed*FrontMatter` | `#per-stage-front-matter` |
-| `DuplicateId` | `duplicate*Id` | `#per-stage-front-matter` (id-declaration rules) / relevant section |
+| `CoverageLine` | `workModelInconsistent` — a Functional-Requirements / Acceptance-Scenarios list item missing its stable `FR-###`/`AC-###` id (`Specification.missingIdDiagnostics`, single-artifact; research D4) | `authoring-contracts.md#acceptance-coverage-line` |
+| `MissingDecisionTag` | synthesized from `ClarificationFacts.BlockingAmbiguityCount > 0` (id `unresolvedBlockingAmbiguity`) | `#clarify-decision-tag-resolution` |
+| `FrontMatter` | `workModelInconsistent` — "…front matter is incomplete" (per-stage gating fields) | `#per-stage-front-matter` |
+| `DuplicateId` | `duplicateIdentifier` | `#stable-id-declarations` |
 | `Parse` | parser hard-fail (FR-015) | (none — parse-level) |
 | `Unresolvable` | kind not detectable (FR-002) | (none — usage) |
+
+> **Note (resolved review finding).** The four classes are keyed off the **parser-level**
+> generic diagnostic ids (`workModelInconsistent` / `duplicateIdentifier`) plus the clarify
+> blocking-ambiguity count — *not* the command-layer `failedRequirementsQuality` (which is
+> cross-artifact and out of lint's single-artifact scope, research D4). `CoverageLine` is scoped
+> to the Functional-Requirements / Acceptance-Scenarios sections, where the missing-stable-id
+> defect *is* the coverage-line grammar; missing ids in other sections are not surfaced.
 
 - All classes except `Parse`/`Unresolvable` carry a resolvable pointer (SC-003: 100% of reportable
   grammar defects). `Parse`/`Unresolvable` are structural, not grammar defects.

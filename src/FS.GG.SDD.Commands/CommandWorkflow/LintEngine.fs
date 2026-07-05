@@ -21,15 +21,22 @@ module LintEngine =
         | CoverageLine -> pointer "acceptance-coverage-line" (Some "coverage:accepted")
         | MissingDecisionTag -> pointer "clarify-decision-tag-resolution" (Some "clarify-decision:resolved")
         | FrontMatter -> pointer "per-stage-front-matter" None
-        | DuplicateId -> pointer "per-stage-front-matter" None
+        | DuplicateId -> pointer "stable-id-declarations" None
         | Parse
         | Unresolvable -> None
 
     // ---- kind detection (FR-002 / research D5) ----
 
+    // The leading `---`-delimited YAML front-matter block, or "" when there is none. Bounding the
+    // `stage:` scan to this block keeps a fenced example (or prose) line beginning `stage:` in the
+    // body from being mistaken for the artifact's own stage.
+    let private frontMatterBlock (text: string) =
+        let m = Regex.Match(text, @"\A﻿?---\s*\n(.*?)\n---\s*(\n|$)", RegexOptions.Singleline)
+        if m.Success then m.Groups.[1].Value else ""
+
     let private stageFromFrontMatter (text: string) =
-        // Scan the leading `---` front-matter block for a `stage:` scalar.
-        let m = Regex.Match(text, @"(?im)^\s*stage:\s*([a-z][a-z0-9-]*)\s*$")
+        // Scan only the leading `---` front-matter block for a `stage:` scalar.
+        let m = Regex.Match(frontMatterBlock text, @"(?im)^\s*stage:\s*([a-z][a-z0-9-]*)\s*$")
 
         if m.Success then
             match m.Groups.[1].Value.Trim().ToLowerInvariant() with
@@ -80,9 +87,20 @@ module LintEngine =
         | "workModelInconsistent" ->
             let msg = diagnostic.Message.ToLowerInvariant()
 
-            if msg.Contains "front matter is incomplete" then Some FrontMatter
-            elif msg.Contains "missing a required stable id" then Some CoverageLine
-            else None
+            if msg.Contains "front matter is incomplete" then
+                Some FrontMatter
+            // A Functional-Requirements / Acceptance-Scenarios list item missing its stable
+            // FR-###/AC-### id IS the coverage-line grammar defect (the FR bullet that should
+            // carry its id + acceptance coverage). Missing ids in other sections (user stories,
+            // ambiguities) are a different stable-id concern, outside the four load-bearing
+            // grammar classes, so lint does not surface them.
+            elif
+                msg.Contains "missing a required stable id"
+                && (msg.Contains "functional requirements" || msg.Contains "acceptance")
+            then
+                Some CoverageLine
+            else
+                None
         | _ -> None
 
     // Route to the live parser; `Ok` surfaces the parser's `facts.Diagnostics`, `Error`

@@ -35,6 +35,13 @@ module internal NextActionRouting =
         (agentGuidance: AgentGuidanceSummary option)
         (refresh: RefreshSummary option)
         =
+        // Feature 076: `fsgg-sdd lint` and `<stage> --explain` are read-only pre-flights that
+        // advance no lifecycle state — they never emit a NextAction (the lint defects are the
+        // output, not a blocked lifecycle step).
+        if request.Command = Lint || request.Explain then
+            None
+        else
+
         let blocking =
             diagnostics
             |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)

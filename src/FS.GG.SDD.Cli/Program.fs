@@ -223,8 +223,9 @@ let run args =
                   // input-interactivity signal that gates the per-step confirm loop (FR-011/FR-012).
                   AssumeYes = hasFlag "--yes" rest
                   IsInteractive = capabilities.IsInputInteractive
-                  // Feature 076: `lint <artifact>` positional (artifact-first) + `<stage> --explain`.
-                  Artifact = rest |> List.tryHead |> Option.filter (fun (a: string) -> not (a.StartsWith "--"))
+                  // Feature 076: the `lint <artifact>` positional is the first non-flag token
+                  // (so `lint --rich spec.md` and `lint spec.md --rich` both resolve), + `--explain`.
+                  Artifact = rest |> List.tryFind (fun (a: string) -> not (a.StartsWith "--"))
                   Explain = hasFlag "--explain" rest }
 
             let report = driveToReport request
@@ -232,8 +233,11 @@ let run args =
             // Resolve the effective rendering against the stream this report actually routes
             // to — Blocked reports go to stderr, everything else to stdout — so Rich degrades
             // to plain text when *that* sink is redirected or color-disabled (#68). Stream
-            // routing and exit code are unchanged across formats.
-            let routesToStderr = report.Outcome = Blocked
+            // routing and exit code are unchanged across formats. Lint / `<stage> --explain`
+            // reports (feature 076) are a successful read-only result even when they report
+            // defects, so they always route to stdout — the `--json` contract must not land on
+            // stderr just because the artifact has defects.
+            let routesToStderr = report.Outcome = Blocked && Option.isNone report.Lint
 
             let sinkRedirected =
                 if routesToStderr then
@@ -248,16 +252,17 @@ let run args =
             else
                 Console.Out.WriteLine(rendered)
 
-            // Feature 076: `lint`/`<stage> --explain` use a bespoke 0/1/2 exit polarity
-            // (clean / defects / unusable input) — the opposite of exitCodeForReport, whose
-            // exit 2 is the tool-defect class. Every other command keeps exitCodeForReport.
+            // Feature 076: any report carrying a lint summary — `fsgg-sdd lint` OR
+            // `<stage> --explain` — uses the bespoke 0/1/2 exit polarity (clean / defects /
+            // unusable input), the opposite of exitCodeForReport (whose exit 2 is the
+            // tool-defect class). Every other command keeps exitCodeForReport.
             match report.Command, report.Lint with
-            | Lint, Some lint ->
+            | _, Some lint ->
                 match lint.Outcome with
                 | Clean -> 0
                 | DefectsFound -> 1
                 | UnusableInput -> 2
-            // Lint with no summary (e.g. no `<artifact>` supplied) is unusable input.
+            // `lint` with no summary (e.g. no `<artifact>` supplied) is unusable input.
             | Lint, None -> 2
             | _ -> exitCodeForReport report
 

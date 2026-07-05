@@ -483,6 +483,32 @@ module CommandRendering =
             builder.AppendLine($"upgradeNextAction: {upgrade.NextActionHint}") |> ignore
         | None -> ()
 
+        // Feature 076: the lint block — the facts that live only in the structured summary
+        // (artifact kind, outcome, and each defect's class + grammar pointer) so `--text`/`--rich`
+        // carry the same facts as `--json` (FR-010).
+        match report.Lint with
+        | Some lint ->
+            builder.AppendLine($"lintArtifact: {lint.ArtifactPath}") |> ignore
+            builder.AppendLine($"lintKind: {lintArtifactKindValue lint.Kind}") |> ignore
+            builder.AppendLine($"lintOutcome: {lintOutcomeValue lint.Outcome}") |> ignore
+            builder.AppendLine($"lintDefects: {List.length lint.Defects}") |> ignore
+
+            lint.Defects
+            |> List.iter (fun defect ->
+                let pointer =
+                    match defect.GrammarPointer with
+                    | Some p -> $" -> {p.Doc}#{p.Anchor}"
+                    | None -> ""
+
+                builder.AppendLine(
+                    $"lintDefect: {lintDefectClassValue defect.Class} [{defect.Diagnostic.Id}] {defect.Diagnostic.Message}{pointer}"
+                )
+                |> ignore
+
+                if not (System.String.IsNullOrWhiteSpace defect.Diagnostic.Correction) then
+                    builder.AppendLine($"lintFix: {defect.Diagnostic.Correction}") |> ignore)
+        | None -> ()
+
         builder.AppendLine($"generatedViews: {List.length report.GeneratedViews}")
         |> ignore
 

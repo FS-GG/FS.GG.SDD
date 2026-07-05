@@ -52,8 +52,8 @@ Pure lookup `LintDefectClass -> GrammarPointer`, resolving into the feature-046 
 |---|---|---|
 | `CoverageLine` | `acceptance-coverage-line` | `coverage:accepted` |
 | `MissingDecisionTag` | `clarify-decision-tag-resolution` | `clarify-decision:resolved` |
-| `FrontMatter` | `per-stage-front-matter` | `front-matter:<stage>` |
-| `DuplicateId` | `per-stage-front-matter` | (none — id-declaration rule) |
+| `FrontMatter` | `per-stage-front-matter` | (none) |
+| `DuplicateId` | `stable-id-declarations` | (none — id-declaration rule) |
 
 **Drift guard** (`LintGrammarPointerTests`): every `anchor` MUST match an existing heading in
 `docs/reference/authoring-contracts.md`, and every non-null `exampleTag` MUST match a tagged fenced

@@ -36,6 +36,7 @@ FS.GG.SDD.Commands.CommandReports.duplicateTaskId
 FS.GG.SDD.Commands.CommandReports.duplicateWorkId
 FS.GG.SDD.Commands.CommandReports.evidenceIdentityMismatch
 FS.GG.SDD.Commands.CommandReports.exitCodeForReport
+FS.GG.SDD.Commands.CommandReports.explainUnsupported
 FS.GG.SDD.Commands.CommandReports.failedChecklistPrerequisite
 FS.GG.SDD.Commands.CommandReports.failedPlanPrerequisite
 FS.GG.SDD.Commands.CommandReports.failedRequirementsQuality

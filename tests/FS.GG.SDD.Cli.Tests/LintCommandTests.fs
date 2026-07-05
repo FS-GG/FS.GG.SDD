@@ -20,11 +20,12 @@ module LintCommandTests =
     let private cliDll =
         Path.Combine(Commands.repoRoot, "src", "FS.GG.SDD.Cli", "bin", configuration, "net10.0", "FS.GG.SDD.Cli.dll")
 
-    let private runCli (args: string list) =
+    // Runs in a temp working dir so the `analyze --explain` no-mutation check can't touch the repo.
+    let private runCliIn (workDir: string) (args: string list) =
         let startInfo = ProcessStartInfo("dotnet")
         startInfo.ArgumentList.Add cliDll
         args |> List.iter startInfo.ArgumentList.Add
-        startInfo.WorkingDirectory <- Commands.repoRoot
+        startInfo.WorkingDirectory <- workDir
         startInfo.RedirectStandardOutput <- true
         startInfo.RedirectStandardError <- true
         startInfo.UseShellExecute <- false
@@ -40,7 +41,12 @@ module LintCommandTests =
         let stdout = proc.StandardOutput.ReadToEnd()
         let stderr = proc.StandardError.ReadToEnd()
         proc.WaitForExit()
-        stdout + stderr, proc.ExitCode
+        stdout, stderr, proc.ExitCode
+
+    // The default runner works out of the repo root and returns combined output + exit code.
+    let private runCli (args: string list) =
+        let stdout, stderr, code = runCliIn Commands.repoRoot args
+        stdout + stderr, code
 
     let private fixture name = $"tests/fixtures/lint/broken-all/{name}"
     let private example name = $"docs/examples/lifecycle-artifacts/{name}"
@@ -82,7 +88,51 @@ module LintCommandTests =
         Assert.Contains("grammarPointer", stdout)
 
     [<Fact>]
-    let ``FR-010 text projection renders`` () =
+    let ``FR-010 text projection carries the lint facts (kind, outcome, pointer)`` () =
         let stdout, code = runCli [ "lint"; fixture "checklist.md"; "--text" ]
         Assert.Equal(1, code)
-        Assert.Contains("lint", stdout)
+        Assert.Contains("lintOutcome: defectsFound", stdout)
+        Assert.Contains("lintKind: checklist", stdout)
+        Assert.Contains("lintDefect: duplicateId", stdout)
+
+    // ---- Regression: review findings on PR #134 ----
+
+    // A defect-bearing lint is a successful read-only result; its --json must land on STDOUT,
+    // not stderr, so `lint --json > file` captures the report.
+    [<Fact>]
+    let ``lint --json with defects writes the report to stdout`` () =
+        let stdout, _stderr, code = runCliIn Commands.repoRoot [ "lint"; fixture "checklist.md"; "--json" ]
+        Assert.Equal(1, code)
+        Assert.Contains("\"lint\"", stdout)
+        Assert.Contains("duplicateId", stdout)
+
+    // The artifact positional resolves even when a flag precedes it.
+    [<Fact>]
+    let ``lint resolves the artifact when a flag precedes it`` () =
+        let _, code = runCli [ "lint"; "--text"; fixture "checklist.md" ]
+        Assert.Equal(1, code)
+
+    // `<stage> --explain` shares the 0/1/2 mapping: a missing stage artifact is unusable -> 2.
+    [<Fact>]
+    let ``stage --explain on a missing artifact exits 2`` () =
+        let tmp = Commands.tempDirectory ()
+        let _, _, code = runCliIn tmp [ "clarify"; "--explain"; "--work"; "x"; "--root"; tmp ]
+        Assert.Equal(2, code)
+
+    // `<stage> --explain` with defects is a non-blocking dry run: NextAction is none.
+    [<Fact>]
+    let ``stage --explain with defects reports no NextAction`` () =
+        let tmp = Commands.tempDirectory ()
+        let broken = File.ReadAllText(Path.Combine(Commands.repoRoot, fixture "clarifications.md"))
+        Commands.writeRelative tmp "work/x/clarifications.md" broken
+        let stdout, _stderr, code = runCliIn tmp [ "clarify"; "--explain"; "--work"; "x"; "--root"; tmp; "--json" ]
+        Assert.Equal(1, code)
+        Assert.Contains("\"nextAction\": null", stdout)
+
+    // `--explain` on a command with no primary artifact must NOT run (and mutate) the stage.
+    [<Fact>]
+    let ``analyze --explain is rejected and writes no readiness artifact`` () =
+        let tmp = Commands.tempDirectory ()
+        let _, _, code = runCliIn tmp [ "analyze"; "--explain"; "--work"; "x"; "--root"; tmp ]
+        Assert.NotEqual(0, code)
+        Assert.False(Directory.Exists(Path.Combine(tmp, "readiness")))
