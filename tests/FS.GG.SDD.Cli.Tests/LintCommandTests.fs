@@ -48,8 +48,11 @@ module LintCommandTests =
         let stdout, stderr, code = runCliIn Commands.repoRoot args
         stdout + stderr, code
 
-    let private fixture name = $"tests/fixtures/lint/broken-all/{name}"
-    let private example name = $"docs/examples/lifecycle-artifacts/{name}"
+    let private fixture name =
+        $"tests/fixtures/lint/broken-all/{name}"
+
+    let private example name =
+        $"docs/examples/lifecycle-artifacts/{name}"
 
     // ---- SC-006: 0 clean / 1 defects / 2 unusable input ----
 
@@ -101,7 +104,9 @@ module LintCommandTests =
     // not stderr, so `lint --json > file` captures the report.
     [<Fact>]
     let ``lint --json with defects writes the report to stdout`` () =
-        let stdout, _stderr, code = runCliIn Commands.repoRoot [ "lint"; fixture "checklist.md"; "--json" ]
+        let stdout, _stderr, code =
+            runCliIn Commands.repoRoot [ "lint"; fixture "checklist.md"; "--json" ]
+
         Assert.Equal(1, code)
         Assert.Contains("\"lint\"", stdout)
         Assert.Contains("duplicateId", stdout)
@@ -116,16 +121,25 @@ module LintCommandTests =
     [<Fact>]
     let ``stage --explain on a missing artifact exits 2`` () =
         let tmp = Commands.tempDirectory ()
-        let _, _, code = runCliIn tmp [ "clarify"; "--explain"; "--work"; "x"; "--root"; tmp ]
+
+        let _, _, code =
+            runCliIn tmp [ "clarify"; "--explain"; "--work"; "x"; "--root"; tmp ]
+
         Assert.Equal(2, code)
 
     // `<stage> --explain` with defects is a non-blocking dry run: NextAction is none.
     [<Fact>]
     let ``stage --explain with defects reports no NextAction`` () =
         let tmp = Commands.tempDirectory ()
-        let broken = File.ReadAllText(Path.Combine(Commands.repoRoot, fixture "clarifications.md"))
+
+        let broken =
+            File.ReadAllText(Path.Combine(Commands.repoRoot, fixture "clarifications.md"))
+
         Commands.writeRelative tmp "work/x/clarifications.md" broken
-        let stdout, _stderr, code = runCliIn tmp [ "clarify"; "--explain"; "--work"; "x"; "--root"; tmp; "--json" ]
+
+        let stdout, _stderr, code =
+            runCliIn tmp [ "clarify"; "--explain"; "--work"; "x"; "--root"; tmp; "--json" ]
+
         Assert.Equal(1, code)
         Assert.Contains("\"nextAction\": null", stdout)
 
@@ -133,6 +147,9 @@ module LintCommandTests =
     [<Fact>]
     let ``analyze --explain is rejected and writes no readiness artifact`` () =
         let tmp = Commands.tempDirectory ()
-        let _, _, code = runCliIn tmp [ "analyze"; "--explain"; "--work"; "x"; "--root"; tmp ]
+
+        let _, _, code =
+            runCliIn tmp [ "analyze"; "--explain"; "--work"; "x"; "--root"; tmp ]
+
         Assert.NotEqual(0, code)
         Assert.False(Directory.Exists(Path.Combine(tmp, "readiness")))

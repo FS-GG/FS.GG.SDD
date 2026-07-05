@@ -637,16 +637,20 @@ nuget-cache/
 
         if not (List.isEmpty diagnostics) then
             diagnostics, []
-        else
+        else if
             // `<stage> --explain` (feature 076): a non-blocking dry run reads ONLY the stage's own
             // artifact and lints it — never the authoring reads, never a write. `--explain` on a
             // command with no primary authored artifact (analyze/verify/ship, and the cross-cutting
             // verbs) is rejected here so the normal — mutating — stage path never runs.
-            if request.Explain then
-                match request.WorkId |> Option.bind (fun workId -> stagePrimaryArtifactPath request.Command workId) with
-                | Some path -> [], [ ReadFile path ]
-                | None -> [ explainUnsupported request.Command ], []
-            else
+            request.Explain
+        then
+            match
+                request.WorkId
+                |> Option.bind (fun workId -> stagePrimaryArtifactPath request.Command workId)
+            with
+            | Some path -> [], [ ReadFile path ]
+            | None -> [ explainUnsupported request.Command ], []
+        else
 
             match request.Command, request.WorkId with
             | Init, _ -> [], initEffects request

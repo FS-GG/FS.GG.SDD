@@ -14,7 +14,8 @@ module internal HandlersLint =
 
     // An unusable-input result (FR-011: exit 2) — a missing/unreadable/unsupplied artifact.
     let private unusable (path: string) (message: string) (correction: string) : LintSummary =
-        let diag = create "lintUnusableInput" DiagnosticError None None message correction []
+        let diag =
+            create "lintUnusableInput" DiagnosticError None None message correction []
 
         { ArtifactPath = path
           Kind = LintArtifactKind.Unrecognized

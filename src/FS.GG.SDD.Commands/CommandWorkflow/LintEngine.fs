@@ -31,12 +31,15 @@ module LintEngine =
     // `stage:` scan to this block keeps a fenced example (or prose) line beginning `stage:` in the
     // body from being mistaken for the artifact's own stage.
     let private frontMatterBlock (text: string) =
-        let m = Regex.Match(text, @"\A﻿?---\s*\n(.*?)\n---\s*(\n|$)", RegexOptions.Singleline)
+        let m =
+            Regex.Match(text, @"\A﻿?---\s*\n(.*?)\n---\s*(\n|$)", RegexOptions.Singleline)
+
         if m.Success then m.Groups.[1].Value else ""
 
     let private stageFromFrontMatter (text: string) =
         // Scan only the leading `---` front-matter block for a `stage:` scalar.
-        let m = Regex.Match(frontMatterBlock text, @"(?im)^\s*stage:\s*([a-z][a-z0-9-]*)\s*$")
+        let m =
+            Regex.Match(frontMatterBlock text, @"(?im)^\s*stage:\s*([a-z][a-z0-9-]*)\s*$")
 
         if m.Success then
             match m.Groups.[1].Value.Trim().ToLowerInvariant() with
@@ -56,14 +59,22 @@ module LintEngine =
     let private kindFromFileName (path: string) =
         let name = (path.Replace('\\', '/').Split('/') |> Array.last).ToLowerInvariant()
 
-        if name.EndsWith "clarifications.md" then Some LintArtifactKind.Clarification
-        elif name.EndsWith "checklist.md" then Some LintArtifactKind.Checklist
-        elif name.EndsWith "charter.md" then Some LintArtifactKind.Charter
-        elif name.EndsWith "plan.md" then Some LintArtifactKind.Plan
-        elif name.EndsWith "spec.md" || name.EndsWith "specification.md" then Some LintArtifactKind.Specification
-        elif name.EndsWith "tasks.yml" || name.EndsWith "tasks.yaml" then Some LintArtifactKind.Tasks
-        elif name.EndsWith "evidence.yml" || name.EndsWith "evidence.yaml" then Some LintArtifactKind.Evidence
-        else None
+        if name.EndsWith "clarifications.md" then
+            Some LintArtifactKind.Clarification
+        elif name.EndsWith "checklist.md" then
+            Some LintArtifactKind.Checklist
+        elif name.EndsWith "charter.md" then
+            Some LintArtifactKind.Charter
+        elif name.EndsWith "plan.md" then
+            Some LintArtifactKind.Plan
+        elif name.EndsWith "spec.md" || name.EndsWith "specification.md" then
+            Some LintArtifactKind.Specification
+        elif name.EndsWith "tasks.yml" || name.EndsWith "tasks.yaml" then
+            Some LintArtifactKind.Tasks
+        elif name.EndsWith "evidence.yml" || name.EndsWith "evidence.yaml" then
+            Some LintArtifactKind.Evidence
+        else
+            None
 
     let detectKind (snapshot: Core.FileSnapshot) : LintArtifactKind =
         // Front-matter `stage:` is the authoritative signal the stages themselves key on;
@@ -106,7 +117,10 @@ module LintEngine =
     // Route to the live parser; `Ok` surfaces the parser's `facts.Diagnostics`, `Error`
     // surfaces the hard-failure list. The second element is the single-artifact blocking
     // ambiguity count (clarify only) from which a MissingDecisionTag defect is synthesized.
-    let private parserDiagnostics (kind: LintArtifactKind) (snapshot: Core.FileSnapshot) : Diagnostic list * bool * int =
+    let private parserDiagnostics
+        (kind: LintArtifactKind)
+        (snapshot: Core.FileSnapshot)
+        : Diagnostic list * bool * int =
         let ofResult result =
             match result with
             | Ok diags -> diags, false
@@ -158,8 +172,17 @@ module LintEngine =
 
     let private sortKey (defect: LintDefect) =
         let loc = defect.Diagnostic.Location
-        let line = loc |> Option.bind (fun l -> l.Line) |> Option.defaultValue System.Int32.MaxValue
-        let col = loc |> Option.bind (fun l -> l.Column) |> Option.defaultValue System.Int32.MaxValue
+
+        let line =
+            loc
+            |> Option.bind (fun l -> l.Line)
+            |> Option.defaultValue System.Int32.MaxValue
+
+        let col =
+            loc
+            |> Option.bind (fun l -> l.Column)
+            |> Option.defaultValue System.Int32.MaxValue
+
         line, col, defect.Diagnostic.Id
 
     let private toDefect (cls: LintDefectClass) (diagnostic: Diagnostic) =

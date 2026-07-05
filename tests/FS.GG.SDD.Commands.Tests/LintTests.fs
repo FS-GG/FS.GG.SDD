@@ -48,8 +48,11 @@ module LintTests =
         let model = driveLint (Some relativePath)
         model, (model.Report |> Option.defaultWith (fun () -> buildReport model)).Lint
 
-    let private fixture name = $"tests/fixtures/lint/broken-all/{name}"
-    let private example name = $"docs/examples/lifecycle-artifacts/{name}"
+    let private fixture name =
+        $"tests/fixtures/lint/broken-all/{name}"
+
+    let private example name =
+        $"docs/examples/lifecycle-artifacts/{name}"
 
     // ---- SC-001: each defect class is caught (4/4) ----
 
@@ -63,8 +66,7 @@ module LintTests =
         let summary = Option.get lint
         Assert.Equal(DefectsFound, summary.Outcome)
 
-        let classes =
-            summary.Defects |> List.map (fun d -> lintDefectClassValue d.Class)
+        let classes = summary.Defects |> List.map (fun d -> lintDefectClassValue d.Class)
 
         Assert.Contains(expectedClass, classes)
 
@@ -96,7 +98,8 @@ module LintTests =
 
     [<Fact>]
     let ``SC-003 every grammar-class defect carries a fix hint and grammar pointer`` () =
-        let grammarClasses = set [ CoverageLine; MissingDecisionTag; FrontMatter; DuplicateId ]
+        let grammarClasses =
+            set [ CoverageLine; MissingDecisionTag; FrontMatter; DuplicateId ]
 
         let defects =
             [ "checklist.md"; "checklist-frontmatter.md"; "clarifications.md"; "spec.md" ]
@@ -163,7 +166,13 @@ module LintTests =
 
         Assert.Empty mutating
         // and at least the artifact read happened
-        Assert.Contains(model.InterpretedEffects, (fun r -> match r.Effect with | ReadFile _ -> true | _ -> false))
+        Assert.Contains(
+            model.InterpretedEffects,
+            (fun r ->
+                match r.Effect with
+                | ReadFile _ -> true
+                | _ -> false)
+        )
 
     // ---- FR-015: unusable input (missing / unrecognized) ----
 
@@ -223,7 +232,10 @@ module LintTests =
         TestSupport.writeRelative tmp "work/x/clarifications.md" broken
 
         let model = driveExplain Clarify "x" tmp
-        let summary = (model.Report |> Option.defaultWith (fun () -> buildReport model)).Lint |> Option.get
+
+        let summary =
+            (model.Report |> Option.defaultWith (fun () -> buildReport model)).Lint
+            |> Option.get
 
         Assert.Equal(DefectsFound, summary.Outcome)
         Assert.Contains("missingDecisionTag", summary.Defects |> List.map (fun d -> lintDefectClassValue d.Class))
@@ -246,5 +258,9 @@ module LintTests =
         TestSupport.writeRelative tmp "work/x/checklist.md" clean
 
         let model = driveExplain Checklist "x" tmp
-        let summary = (model.Report |> Option.defaultWith (fun () -> buildReport model)).Lint |> Option.get
+
+        let summary =
+            (model.Report |> Option.defaultWith (fun () -> buildReport model)).Lint
+            |> Option.get
+
         Assert.Equal(Clean, summary.Outcome)
