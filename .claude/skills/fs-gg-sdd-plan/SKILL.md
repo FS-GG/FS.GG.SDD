@@ -45,6 +45,7 @@ stay unchanged.
 
 ## Example skeleton
 
+<!-- fsgg-sdd:example corpus=plan.md mode=ref -->
 ```markdown
 # Plan
 

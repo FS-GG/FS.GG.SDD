@@ -41,6 +41,7 @@ facts instead: `workId`, `stage`, `changeTier`, `status`.
 
 ## Example
 
+<!-- fsgg-sdd:example corpus=charter.md mode=ref -->
 ```markdown
 ---
 workId: 001-two-player-volley

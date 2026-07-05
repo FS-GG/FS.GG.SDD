@@ -65,6 +65,7 @@ accepted deferral as its own uniquely-id'd `DEC-###`, declared once, under
 
 ## Example
 
+<!-- fsgg-sdd:example corpus=clarifications.md mode=ref -->
 ```markdown
 ---
 schemaVersion: 1

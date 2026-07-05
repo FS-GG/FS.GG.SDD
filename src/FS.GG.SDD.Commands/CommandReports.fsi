@@ -52,6 +52,7 @@ module CommandReports =
 
     val checklistIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic
     val malformedChecklistFrontMatter: path: string -> message: string -> Diagnostic
+    val missingChecklistBackReference: path: string -> id: string -> Diagnostic
     val duplicateChecklistId: path: string -> id: string -> Diagnostic
     val unknownChecklistSourceReference: path: string -> id: string -> Diagnostic
     val staleChecklistResult: path: string -> resultIds: string list -> Diagnostic

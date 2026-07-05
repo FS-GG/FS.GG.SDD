@@ -75,6 +75,7 @@ that is the honest, first-class outcome. A run that ends *N real pass / M deferr
 
 ## Example: a declaration that SATISFIES
 
+<!-- fsgg-sdd:example corpus=evidence.yml mode=ref -->
 ```yaml
 schemaVersion: 1
 evidence:
@@ -86,6 +87,38 @@ evidence:
     artifacts: [tests/Product.Tests/InputMapTests.fs]
     result: pass
     synthetic: false
+```
+
+## Example: an accepted DEFERRAL (all four fields are REQUIRED)
+
+A deferral (`result: deferred`, or `kind: deferral`) is a first-class, accepted
+outcome — not a failure. The evidence gate **requires every deferral to carry all
+four fields**, or it blocks with `evidence.missingDeferralRationale`:
+
+- **`rationale`** — why this obligation is deferred rather than met now.
+- **`owner`** — who owns the deferred work.
+- **`scope`** — what, precisely, is deferred.
+- **`laterLifecycleVisibility`** — how/when the deferral resurfaces downstream.
+
+This is the canonical deferral shape (a verbatim fragment of
+`docs/examples/lifecycle-artifacts/evidence.yml`, run through the evidence gate by
+the skill↔gate doctest):
+
+<!-- fsgg-sdd:example corpus=evidence.yml mode=contains -->
+```yaml
+  - id: EV003
+    kind: deferral
+    subject:
+      type: task
+      id: T002
+    requirementRefs: [FR-002]
+    clarificationDecisionRefs: [DEC-002]
+    result: deferred
+    synthetic: false
+    rationale: A match-end/win condition is out of scope for this work item; rally scoring ships without it.
+    owner: codex
+    scope: match-end condition and win detection
+    laterLifecycleVisibility: Re-open as a follow-on work item when match play is specified.
 ```
 
 ## Example: declarations that DO NOT satisfy

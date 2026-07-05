@@ -24,6 +24,7 @@ FS.GG.SDD.Artifacts.Diagnostics.malformedReference
 FS.GG.SDD.Artifacts.Diagnostics.malformedSchemaVersion
 FS.GG.SDD.Artifacts.Diagnostics.markToolDefect
 FS.GG.SDD.Artifacts.Diagnostics.missingArtifact
+FS.GG.SDD.Artifacts.Diagnostics.missingChecklistBackReference
 FS.GG.SDD.Artifacts.Diagnostics.missingGeneratedWorkModel
 FS.GG.SDD.Artifacts.Diagnostics.proseStructuredMismatch
 FS.GG.SDD.Artifacts.Diagnostics.requirementNotTyped
@@ -130,6 +131,7 @@ FS.GG.SDD.Artifacts.ReleaseContract.parse
 FS.GG.SDD.Artifacts.ReleaseContract.releaseChannelValue
 FS.GG.SDD.Artifacts.ReleaseContract.serialize
 FS.GG.SDD.Artifacts.ReleaseContract.stabilityClassValue
+FS.GG.SDD.Artifacts.RequiredKeys.requiredFrontMatterKeys
 FS.GG.SDD.Artifacts.RequirementModel.parseDecisions
 FS.GG.SDD.Artifacts.RequirementModel.parseRequirements
 FS.GG.SDD.Artifacts.ScaffoldProvenance.serialize

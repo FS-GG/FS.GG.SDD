@@ -118,6 +118,9 @@ module CommandReports =
     let malformedChecklistFrontMatter path message =
         DiagnosticConstructors.malformedChecklistFrontMatter path message
 
+    let missingChecklistBackReference path id =
+        DiagnosticConstructors.missingChecklistBackReference path id
+
     let duplicateChecklistId path id =
         DiagnosticConstructors.duplicateChecklistId path id
 

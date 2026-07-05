@@ -11,6 +11,8 @@
     <Compile Include="Identifiers.fs" />
     <Compile Include="SchemaVersion.fsi" />
     <Compile Include="SchemaVersion.fs" />
+    <Compile Include="RequiredKeys.fsi" />
+    <Compile Include="RequiredKeys.fs" />
     <Compile Include="ArtifactRef.fsi" />
     <Compile Include="ArtifactRef.fs" />
     <Compile Include="FsharpIdentifier.fsi" />

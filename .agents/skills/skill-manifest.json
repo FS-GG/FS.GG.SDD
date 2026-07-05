@@ -18,28 +18,28 @@
     {
       "id": "fs-gg-sdd-charter",
       "scope": "process",
-      "sha256": "9f06660b25e76e3d5216b9e0e6dde0e44e4a2a37a8b5f55b3f5e8f0692c9336d",
+      "sha256": "9855bd3c7d1422d331213fe0a7e59c7454e1cc1080cf0ef6bd25379da2e40b24",
       "resolvablePath": ".agents/skills/fs-gg-sdd-charter/SKILL.md",
       "materializes-when": "always"
     },
     {
       "id": "fs-gg-sdd-checklist",
       "scope": "process",
-      "sha256": "3965baf4d1d045abecec7081610e669938e67087e0f794b6835fac03e917dd91",
+      "sha256": "63aa9c23681d61e572b850b1ad502e01ee8cd6b552dc3d3a783028a81d5fc736",
       "resolvablePath": ".agents/skills/fs-gg-sdd-checklist/SKILL.md",
       "materializes-when": "always"
     },
     {
       "id": "fs-gg-sdd-clarify",
       "scope": "process",
-      "sha256": "2998a2e1617957a1d1790f88a2f14c18f7da5b86f3c146655c5cc73462fe7a9b",
+      "sha256": "09d2ed9726307cd7ec745edf2fc7a9bd4f6c1486c62d954080ab534c0c5a4238",
       "resolvablePath": ".agents/skills/fs-gg-sdd-clarify/SKILL.md",
       "materializes-when": "always"
     },
     {
       "id": "fs-gg-sdd-evidence",
       "scope": "process",
-      "sha256": "a89b8d686694915482a5bd077df5e7bd1f1b6110f99d102ca74c5f51b81b8679",
+      "sha256": "9294560c5a5cf74c9ec3b190206d20602af650d8e393493632ef7a1d08945aac",
       "resolvablePath": ".agents/skills/fs-gg-sdd-evidence/SKILL.md",
       "materializes-when": "always"
     },
@@ -60,7 +60,7 @@
     {
       "id": "fs-gg-sdd-plan",
       "scope": "process",
-      "sha256": "c3a04c98b463e12880f00631e336728059d6638684a021fb502afc7c2a90edca",
+      "sha256": "9371800252c6bd0a4c4c763b37cb521f77289bfd490248c16ed3eb7781685053",
       "resolvablePath": ".agents/skills/fs-gg-sdd-plan/SKILL.md",
       "materializes-when": "always"
     },
@@ -81,14 +81,14 @@
     {
       "id": "fs-gg-sdd-specify",
       "scope": "process",
-      "sha256": "fa655f0b7cff473dc1616a25646aec0860b5f5b8ea92edd3495ad34ce6dc54ac",
+      "sha256": "55c65444da945788b247e38fcd1fc39540d5e3b1cc9a833365bc6f21b138454e",
       "resolvablePath": ".agents/skills/fs-gg-sdd-specify/SKILL.md",
       "materializes-when": "always"
     },
     {
       "id": "fs-gg-sdd-tasks",
       "scope": "process",
-      "sha256": "97f7a8d25c5fb8aded1a873dee8315de779ad89eca4bfbd26aebd8ad3e1b7a64",
+      "sha256": "5dad7efaa8da30560c852c8568528d6d401170f87b6453a36e0f9ffe77372692",
       "resolvablePath": ".agents/skills/fs-gg-sdd-tasks/SKILL.md",
       "materializes-when": "always"
     },

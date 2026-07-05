@@ -53,26 +53,27 @@ requirements), `SB-###` (scope boundaries), `AMB-###` (ambiguities).
 ## Example: a functional-requirements block
 
 Write requirements with MUST language and stable ids — these are the ids
-`checklist`, `tasks`, and `evidence` will reference:
+`checklist`, `tasks`, and `evidence` will reference. Each `FR-###` is a **non-bold**
+`- FR-###:` list item that carries its acceptance reference on the **same physical
+line** as `(covers AC-###)`. A bold `**FR-###**`, a colon-less line, or an acceptance
+ref on its own line is *counted but not covered* — `checklist` will report it as
+uncovered. This block is the same coverage grammar the `checklist` gate accepts (run
+verbatim through the gate by the skill↔gate doctest against `docs/examples/lifecycle-artifacts/spec.md`):
 
+<!-- fsgg-sdd:example corpus=spec.md mode=contains -->
 ```markdown
-### Functional Requirements
+## Acceptance Scenarios
+- AC-001 [US-001] [FR-001]: Given a rally has just ended, when the next serve occurs, then the ball serves toward the player who lost the prior rally.
+- AC-002 [US-001] [FR-002]: Given an ongoing match, when a point is scored, then the rally score updates and play continues without requiring a match-end condition.
 
-- **FR-001**: The system MUST move the left paddle up/down on W/S key events.
-- **FR-002**: The system MUST serve the ball toward the player who lost the prior
-  rally.
-
-### Acceptance Scenarios
-
-- **AC-001**: Given a running volley, when the left player holds W, the left paddle
-  rises at a constant rate until release.
-- **AC-002**: Given a point just scored by the right player, when the next serve
-  begins, the ball travels toward the left player.
+## Functional Requirements
+- FR-001: The system MUST serve the ball toward the player who lost the prior rally. (covers AC-001)
+- FR-002: The system MUST record the rally score for each point without requiring a match-end condition. (covers AC-002)
 ```
 
-> The `FR-###` ids here are referenced by the **checklist coverage line** later
-> (`- FR-001: … (covers AC-002)`). Keep the numbering stable from here on — see
-> [[fs-gg-sdd-checklist]] and [[fs-gg-sdd-authoring-contracts]].
+> The `FR-###` ids here are referenced by the **checklist coverage line** later.
+> Keep the numbering stable from here on — see [[fs-gg-sdd-checklist]] and
+> [[fs-gg-sdd-authoring-contracts]].
 
 ## Pitfalls
 
