@@ -216,6 +216,191 @@ Forms that record a real blocking finding (each blocks `plan`):
 > is not checklistReady"*, clear the blocking findings and **re-run
 > `fsgg-sdd checklist`** — it re-promotes the status; do not hand-edit it.
 
+## Clarify decision-tag resolution
+
+`fsgg-sdd clarify` resolves an ambiguity carried from the spec only when its
+`AMB-###` id appears on a **`DEC-###` line** under `## Decisions` **or**
+`## Accepted Deferrals`, **and** that ambiguity is not left as a blocking bullet
+under `## Remaining Ambiguity`. Both halves matter: the decision line is what
+attaches the resolution; the `## Remaining Ambiguity` section is what the tool
+counts for blocking (see the empty-section rule above).
+
+The tool writes — and you should author — the canonical tagged form
+`[AMB:AMB-###]` on the decision line. The bracket-with-prefix is a **convention**,
+not a parser requirement: id extraction scans the raw line for a bare `AMB-###`
+token, so `[AMB:AMB-001]`, `[AMB-001]`, and a bare `AMB-001` are all equivalent.
+Use `[AMB:AMB-001]` — it is unambiguous and matches every generated artifact.
+
+A concrete decision that **resolves** its ambiguity (parses with zero blocking
+ambiguities, and the decision carries the AMB id):
+
+```markdown clarify-decision:resolved
+---
+schemaVersion: 1
+workId: 001-authoring-contracts-guard
+stage: clarify
+sourceSpec: work/001-authoring-contracts-guard/spec.md
+---
+
+## Source Specification
+- work/001-authoring-contracts-guard/spec.md
+
+## Decisions
+- **DEC-001** [CQ-001] [AMB:AMB-001] [FR-001] [AC-001]: The serve targets the prior-rally loser.
+
+## Remaining Ambiguity
+- None. AMB-001 resolved above.
+```
+
+An **accepted deferral** resolves the ambiguity too — recorded, not dropped — as
+its own uniquely-id'd `DEC-###` under `## Accepted Deferrals`:
+
+```markdown clarify-decision:deferred
+---
+schemaVersion: 1
+workId: 001-authoring-contracts-guard
+stage: clarify
+sourceSpec: work/001-authoring-contracts-guard/spec.md
+---
+
+## Source Specification
+- work/001-authoring-contracts-guard/spec.md
+
+## Accepted Deferrals
+- **DEC-002** [CQ-002] [AMB:AMB-002]: A match-end/win condition is deferred to a later work item — recorded, not dropped.
+
+## Remaining Ambiguity
+- None. AMB-002 accepted as a deferral above.
+```
+
+**An answer alone does not resolve.** Keying the answer under `## Answers` by its
+`CQ-###`/`AMB-###` id produces an answer fact, but resolution is carried by the
+decision **tag**, not the answer. The file below answers the question yet leaves
+`AMB-001` listed under `## Remaining Ambiguity` with no tagged decision, so the
+ambiguity stays blocking:
+
+```markdown clarify-decision:answer-does-not-resolve
+---
+schemaVersion: 1
+workId: 001-authoring-contracts-guard
+stage: clarify
+sourceSpec: work/001-authoring-contracts-guard/spec.md
+---
+
+## Source Specification
+- work/001-authoring-contracts-guard/spec.md
+
+## Answers
+- CQ-001 → the serve goes to the player who lost the prior rally (resolves AMB-001).
+
+## Remaining Ambiguity
+- AMB-001: Serve target after a point is unresolved.
+```
+
+**Declare each `DEC-###` id exactly once.** Any line under `## Decisions` or
+`## Accepted Deferrals` whose leading id is a `DEC-###` is a **declaration**; the
+two sections are pooled, so declaring the same id in both raises
+`duplicateClarificationId` (surfaced at the artifact layer as `duplicateIdentifier`).
+Mentioning a `DEC-###` elsewhere — in `## Answers`, `## Remaining Ambiguity`, or
+`## Lifecycle Notes` — is a safe **reference**. This file declares `DEC-002` twice
+and is rejected:
+
+```markdown clarify-dup:rejected
+---
+schemaVersion: 1
+workId: 001-authoring-contracts-guard
+stage: clarify
+sourceSpec: work/001-authoring-contracts-guard/spec.md
+---
+
+## Source Specification
+- work/001-authoring-contracts-guard/spec.md
+
+## Decisions
+- **DEC-002** [CQ-002] [AMB:AMB-002]: A match-end condition is deferred.
+
+## Accepted Deferrals
+- **DEC-002** [CQ-002] [AMB:AMB-002]: A match-end condition is deferred — recorded, not dropped.
+
+## Remaining Ambiguity
+- None. AMB-002 resolved above.
+```
+
+## Per-stage front matter
+
+Every authored lifecycle artifact opens with a YAML `---` front-matter block (the
+`tasks.yml`/`evidence.yml` artifacts carry the same scalars as a whole-document
+header). A stage blocks with an *incomplete/malformed front matter* diagnostic
+only when a field it actually **gates on** is absent. Other fields the templates
+include are **defaulted** by the parser — their absence never blocks, though
+authoring them keeps the artifact self-describing.
+
+| Stage | Artifact | Gating fields (absence → blocked) | Defaulted (present in template, not gating) |
+|---|---|---|---|
+| charter | `charter.md` | `schemaVersion, workId, title, stage, changeTier, status` | — (charter is strict) |
+| specify | `spec.md` | `schemaVersion, workId, stage` | `title`, `changeTier`→`tier1`, `status`→`draft`, `publicOrToolFacingImpact` |
+| clarify | `clarifications.md` | `schemaVersion, workId, stage, sourceSpec` | `title`, `changeTier`, `status`→`needsAnswers`, `publicOrToolFacingImpact` |
+| checklist | `checklist.md` | `schemaVersion, workId, stage, sourceSpec, sourceClarifications` | `title`, `changeTier`, `status`→`needsReview`, … |
+| plan | `plan.md` | `schemaVersion, workId, stage, sourceSpec, sourceClarifications, sourceChecklist` | `title`, `changeTier`, `status`→`planned`, … |
+| tasks | `tasks.yml` | `schemaVersion` (workId derivable from path) | `stage`→`Tasks`, `status`→`tasksReady`, source paths |
+| evidence | `evidence.yml` | `schemaVersion`, a valid `workId` | `status`→`draft`, source paths |
+
+Value rules the parser enforces:
+
+- **`stage`** is the only closed vocabulary — one of `charter`, `specify`,
+  `clarify`, `checklist`, `plan`, `tasks`, `analyze`, `implement`, `evidence`,
+  `verify`, `ship`. Any other token fails to parse.
+- **`schemaVersion`** major must be `1`.
+- **`changeTier`** and **`status`** are **free strings** — the parser does not
+  validate them against a fixed set (`tier1`/`tier2` and the status words above are
+  conventions and defaults, not enforced vocabularies). Do not expect a
+  "bad tier"/"bad status" rejection; there is none.
+
+A minimal `clarify` front matter — only the four gating fields, `title`/`changeTier`/
+`status` omitted — parses cleanly:
+
+```markdown front-matter:clarify-minimal
+---
+schemaVersion: 1
+workId: 001-authoring-contracts-guard
+stage: clarify
+sourceSpec: work/001-authoring-contracts-guard/spec.md
+---
+
+## Source Specification
+- work/001-authoring-contracts-guard/spec.md
+
+## Remaining Ambiguity
+- None.
+```
+
+Drop a gating field — here `sourceSpec` — and the same stage blocks as incomplete:
+
+```markdown front-matter:clarify-missing-required
+---
+schemaVersion: 1
+workId: 001-authoring-contracts-guard
+stage: clarify
+---
+
+## Source Specification
+- work/001-authoring-contracts-guard/spec.md
+
+## Remaining Ambiguity
+- None.
+```
+
+### Source Snapshot digests are optional — and not a clarify concept
+
+`clarifications.md` has **no** `## Source Snapshot` section and no `sha256:` field.
+Source Snapshot lines (with an optional `sha256:`) belong to `checklist`/`plan`,
+and the `tasks`/`evidence` artifacts carry an optional `sources[].digest`. Where a
+digest is accepted it is **optional**, captured only when it is exactly 64 hex
+characters, and used solely for **staleness detection** — a non-conforming
+placeholder is silently ignored, never a blocking error, and a real digest is
+never required to author a stage. The tool writes real digests; you are not
+obligated to.
+
 ## Provider default-starter selection
 
 `fsgg-sdd scaffold` selects a product *starter* through a provider-declared scaffold

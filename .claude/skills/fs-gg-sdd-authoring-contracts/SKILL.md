@@ -1,18 +1,21 @@
 ---
 name: fs-gg-sdd-authoring-contracts
-description: Reference for the three load-bearing FS.GG SDD authoring grammars that silently block a stage if mis-formatted — the FR→AC checklist coverage line, the evidence.yml kind/result/synthetic satisfaction rule, and the specify --input intent facts. Use when a checklist/evidence/specify stage blocks unexpectedly.
+description: Reference for the load-bearing FS.GG SDD authoring grammars that silently block a stage if mis-formatted — the FR→AC checklist coverage line, the evidence.yml kind/result/synthetic satisfaction rule, the specify --input intent facts, the clarify [AMB:AMB-###] decision-tag resolution rule, and the per-stage front-matter required-field sets. Use when a checklist/evidence/specify/clarify stage blocks unexpectedly or a front-matter block reports "incomplete".
 ---
 
 # Authoring Contracts (the gating grammars)
 
-Three SDD inputs are **load-bearing**: a small grammar decides whether the tool
+Several SDD inputs are **load-bearing**: a small grammar decides whether the tool
 accepts what you authored, and a subtly wrong form produces a blocking gate. This
 skill is the quick reference; the durable, drift-guarded source is
 `docs/reference/authoring-contracts.md` (every example below is run through the
 **live parser** on each build by `AuthoringDocsContractTests`, so it cannot drift).
 
-If a stage blocks and you "know" the content is right, it is almost always one of
-these three grammars.
+The three body grammars — the checklist **coverage line** (§1), the `evidence.yml`
+**satisfaction rule** (§2), and the `specify --input` **intent facts** (§3) — plus
+two cross-cutting ones: the **clarify decision-tag** resolution (§4) and the
+**per-stage front matter** required-field sets (§5). If a stage blocks and you
+"know" the content is right, it is almost always one of these.
 
 ## 1. Checklist coverage line (used by `checklist`)
 
@@ -83,6 +86,49 @@ requirement: A rally of 20 consecutive volleys completes without a dropped frame
 ```
 
 See [[fs-gg-sdd-specify]].
+
+## 4. Clarify decision-tag resolution (used by `clarify`)
+
+A carried `AMB-###` ambiguity is resolved only when **both** hold:
+
+- its id sits on a `DEC-###` line under `## Decisions` **or** `## Accepted
+  Deferrals` — authored as the canonical tagged form `[AMB:AMB-001]` (the bracket
+  is a convention; the parser needs only the bare `AMB-001` token on the line);
+- it is **not** left as a blocking bullet under `## Remaining Ambiguity` (write a
+  `None.`/disclaimer there).
+
+An **answer** under `## Answers` does **not** resolve — resolution is the decision
+**tag**, not the answer. And each `DEC-###` may be **declared once**: a line whose
+leading id is a `DEC-###` under `## Decisions` or `## Accepted Deferrals` is a
+declaration, the two sections are pooled, and a second declaration raises
+`duplicateClarificationId`. See [[fs-gg-sdd-clarify]].
+
+## 5. Per-stage front matter (used by every authored stage)
+
+Each stage blocks with an *incomplete/malformed front matter* diagnostic only when
+a field it **gates on** is absent; other template fields are **defaulted**.
+
+| Stage | Gating fields | Defaulted (not gating) |
+|---|---|---|
+| charter | `schemaVersion, workId, title, stage, changeTier, status` | — (strict) |
+| specify | `schemaVersion, workId, stage` | `title`, `changeTier`→`tier1`, `status`→`draft` |
+| clarify | `schemaVersion, workId, stage, sourceSpec` | `title`, `changeTier`, `status`→`needsAnswers` |
+| checklist | `schemaVersion, workId, stage, sourceSpec, sourceClarifications` | `title`, `changeTier`, `status`→`needsReview` |
+| plan | `schemaVersion, workId, stage, sourceSpec, sourceClarifications, sourceChecklist` | `title`, `changeTier`, `status`→`planned` |
+| tasks (`tasks.yml`) | `schemaVersion` (workId derivable) | `stage`→`Tasks`, `status`→`tasksReady` |
+| evidence (`evidence.yml`) | `schemaVersion`, valid `workId` | `status`→`draft` |
+
+- `stage` is the only **closed** vocabulary: `charter · specify · clarify ·
+  checklist · plan · tasks · analyze · implement · evidence · verify · ship`.
+  `schemaVersion` major must be `1`.
+- `changeTier` and `status` are **free strings** — the parser does not validate them
+  (`tier1`/`tier2` and the status words are conventions/defaults, not an enforced
+  vocabulary); expect no "bad tier"/"bad status" rejection.
+- **`Source Snapshot`/`sha256` is not a clarify concept.** It belongs to
+  `checklist`/`plan` (and `tasks`/`evidence` `sources[].digest`); the digest is
+  **optional**, format-checked (64 hex) only when present, used only for staleness
+  detection — a placeholder is silently ignored and a real digest is never required
+  to author.
 
 ## Why these are strict
 
