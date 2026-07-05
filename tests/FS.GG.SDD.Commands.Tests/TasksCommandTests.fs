@@ -307,6 +307,37 @@ module TasksCommandTests =
         Assert.DoesNotContain("Implement requirement FR-002", tasks)
         Assert.DoesNotContain("status: stale", tasks)
 
+    // Feature 082 (review fix): a task's evidence-obligation id (EV###) mirrors its stable
+    // T### id, so a title-matched task keeps its EV### across a re-derive that reorders
+    // derivation — an existing `evidence.yml` keyed to that EV### stays linked. Guards against
+    // re-deriving EV ids position-first (which shifted them when a source was added ahead).
+    [<Fact>]
+    let ``tasks re-run keeps each task's evidence id coupled to its stable id`` () =
+        let root = initializedPlanReadyProject ()
+        TestSupport.runTasks root workId title |> ignore
+
+        let updatedSpec =
+            (TestSupport.readRelative root specPath)
+                .Replace(
+                    "## Ambiguities",
+                    "- FR-002: Second requirement. (Stories: US-001; Acceptance: AC-001)\n\n## Ambiguities"
+                )
+
+        TestSupport.writeRelative root specPath updatedSpec
+        TestSupport.runTasks root workId title |> ignore
+
+        let tasks = TestSupport.readRelative root tasksPath
+
+        let numbers pattern =
+            [ for m in System.Text.RegularExpressions.Regex.Matches(tasks, pattern) -> m.Groups.[1].Value ]
+            |> List.sort
+
+        let idNumbers = numbers @"id: T0*(\d+)"
+        let evidenceNumbers = numbers @"requiredEvidence: \[""EV0*(\d+)""\]"
+
+        Assert.NotEmpty idNumbers
+        Assert.Equal<string list>(idNumbers, evidenceNumbers)
+
     // Feature 082 (reclaim decision, research Q3): dependencies are tool-derived, so a
     // hand-injected dependency cycle is re-derived away (reclaimed), not persisted or blocked.
     // Genuine tool-derived cycles are still caught by validation on the re-derived graph.

@@ -357,34 +357,46 @@ module internal TaskGraphAuthoring =
     let mergeAuthoredTaskState (liveIds: Set<string>) (prior: WorkTask list) (derived: WorkTask list) : WorkTask list =
         let priorByTitle = prior |> List.map (fun task -> task.Title, task) |> Map.ofList
         let derivedTitles = derived |> List.map (fun task -> task.Title) |> Set.ofList
-        let isLive (value: string) = Set.contains (value.ToUpperInvariant()) liveIds
+
+        let isLive (value: string) =
+            Set.contains (value.ToUpperInvariant()) liveIds
 
         let mutable nextNew = nextTaskNumber prior
+        let mutable claimed = Set.empty
 
+        // Assign each derived task its final id, claiming each prior id at most once so two
+        // derived tasks that share a Title (e.g. a duplicated plan decision) can never both
+        // inherit the same `T###`. Record the matched prior (if any) for the merge below.
         let assigned =
             derived
             |> List.map (fun task ->
-                let finalId =
-                    match Map.tryFind task.Title priorByTitle with
-                    | Some priorTask -> priorTask.Id
-                    | None ->
-                        let id = taskId nextNew
-                        nextNew <- nextNew + 1
-                        id
-
-                task.Id.Value, finalId, task)
+                match Map.tryFind task.Title priorByTitle with
+                | Some priorTask when not (Set.contains priorTask.Id.Value claimed) ->
+                    claimed <- Set.add priorTask.Id.Value claimed
+                    task.Id.Value, priorTask.Id, Some priorTask, task
+                | _ ->
+                    let id = taskId nextNew
+                    nextNew <- nextNew + 1
+                    task.Id.Value, id, None, task)
 
         let remap =
-            assigned |> List.map (fun (freshId, finalId, _) -> freshId, finalId) |> Map.ofList
+            assigned
+            |> List.map (fun (freshId, finalId, _, _) -> freshId, finalId)
+            |> Map.ofList
 
         let mergedDerived =
             assigned
-            |> List.map (fun (_, finalId, task) ->
+            |> List.map (fun (_, finalId, matchedPrior, task) ->
                 let dependencies =
                     task.Dependencies
                     |> List.map (fun dep -> Map.tryFind dep.Value remap |> Option.defaultValue dep)
 
-                match Map.tryFind task.Title priorByTitle with
+                // Evidence obligations mirror the id (EV### tracks T###), so bind them to the
+                // FINAL id — a matched task keeps its prior EV### alongside its prior T###, and a
+                // new task's EV### is as unique as its id (no shift when derivation order changes).
+                let requiredEvidence = [ taskEvidenceId (taskIdNumber finalId) ]
+
+                match matchedPrior with
                 | Some priorTask ->
                     let carriedStatus =
                         match priorTask.Status with
@@ -409,6 +421,7 @@ module internal TaskGraphAuthoring =
                     { task with
                         Id = finalId
                         Dependencies = dependencies
+                        RequiredEvidence = requiredEvidence
                         Status = carriedStatus
                         Owner = priorTask.Owner
                         Requirements = requirements
@@ -417,7 +430,8 @@ module internal TaskGraphAuthoring =
                 | None ->
                     { task with
                         Id = finalId
-                        Dependencies = dependencies })
+                        Dependencies = dependencies
+                        RequiredEvidence = requiredEvidence })
 
         // The dispositions the re-derived graph already covers. An unmatched prior task is kept
         // only if it UNIQUELY covers a live disposition the derived graph misses (an authored
@@ -461,7 +475,19 @@ module internal TaskGraphAuthoring =
                             SourceIds = sourceIds
                             Status = carriedStatus })
 
-        mergedDerived @ keptAuthored
+        let merged = mergedDerived @ keptAuthored
+
+        // Prune any dependency that points at a task the merge dropped — a kept authored task
+        // may still reference a now-orphaned prior task, and a dangling ref would fail the task
+        // graph's `unknownTaskDependency` validation on an otherwise-clean re-run.
+        let survivingIds = merged |> List.map (fun task -> task.Id.Value) |> Set.ofList
+
+        merged
+        |> List.map (fun task ->
+            { task with
+                Dependencies =
+                    task.Dependencies
+                    |> List.filter (fun dep -> Set.contains dep.Value survivingIds) })
 
     let taskFrontMatterText request workId =
         let title = requestTitle request workId
@@ -884,7 +910,13 @@ tasks:
                         // never reports stale-and-unchanged (FR-004/FR-005). Derived rows are
                         // reclaimed — prior tool-injected rows are never re-ingested (FR-002).
                         let derived =
-                            plannedTasks declaredTestFramework specFacts clarificationFacts checklistFacts planFacts None
+                            plannedTasks
+                                declaredTestFramework
+                                specFacts
+                                clarificationFacts
+                                checklistFacts
+                                planFacts
+                                None
 
                         // The universe of ids the current sources can dispose (mirrors analyze's
                         // `required` set). A prior authored task or ref is "live" iff it names one
@@ -892,15 +924,19 @@ tasks:
                         let liveIds =
                             [ specFacts.RequirementIds |> List.map _.Value
                               specFacts.AcceptanceScenarioIds |> List.map _.Value
-                              clarificationFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
+                              clarificationFacts.Decisions
+                              |> List.map (fun decision -> decision.DecisionId.Value)
                               clarificationFacts.AcceptedDeferrals
                               |> List.map (fun decision -> decision.DecisionId.Value)
-                              checklistFacts.AcceptedDeferrals |> List.map (fun result -> result.ResultId.Value)
+                              checklistFacts.AcceptedDeferrals
+                              |> List.map (fun result -> result.ResultId.Value)
                               planFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
-                              planFacts.ContractReferences |> List.map (fun contract -> contract.ContractId.Value)
+                              planFacts.ContractReferences
+                              |> List.map (fun contract -> contract.ContractId.Value)
                               planFacts.VerificationObligations
                               |> List.map (fun obligation -> obligation.ObligationId.Value)
-                              planFacts.MigrationNotes |> List.map (fun migration -> migration.MigrationId.Value)
+                              planFacts.MigrationNotes
+                              |> List.map (fun migration -> migration.MigrationId.Value)
                               planFacts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value)
                               planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id) ]
                             |> List.concat
