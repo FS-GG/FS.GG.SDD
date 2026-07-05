@@ -18,11 +18,22 @@ module RequiredFieldContractTests =
     let private authoringContracts root =
         skillText root "fs-gg-sdd-authoring-contracts"
 
-    /// The §5 "Gating fields" table row for a stage (the single line naming that stage).
-    let private tableRow (text: string) (stageLabel: string) =
-        text.Replace("\r\n", "\n").Split('\n')
-        |> Array.tryFind (fun line -> line.TrimStart().StartsWith("| " + stageLabel + " "))
-        |> Option.defaultWith (fun () -> failwith $"authoring-contracts §5 table has no row for stage '{stageLabel}'.")
+    /// The §5 table's **Gating fields** cell for a stage — the SECOND markdown column only, so a
+    /// field documented merely in the third "Defaulted (not gating)" column is NOT accepted as
+    /// gating (the load-bearing distinction this check exists to protect).
+    let private gatingCell (text: string) (stageLabel: string) =
+        let row =
+            text.Replace("\r\n", "\n").Split('\n')
+            |> Array.tryFind (fun line -> line.TrimStart().StartsWith("| " + stageLabel + " "))
+            |> Option.defaultWith (fun () -> failwith $"authoring-contracts §5 table has no row for stage '{stageLabel}'.")
+
+        // `| stage | gating fields | defaulted |` → cells: ["", " stage ", " gating ", " defaulted ", ""]
+        let cells = row.Split('|')
+
+        if cells.Length < 3 then
+            failwith $"authoring-contracts §5 table row '{stageLabel}' is malformed: {row}"
+
+        cells.[2]
 
     // #142: the evidence skill documents every gate-required deferral field, in both roots.
     [<Theory>]
@@ -66,21 +77,20 @@ module RequiredFieldContractTests =
               "plan", Plan ]
 
         for label, stage in stages do
-            let row = tableRow text label
+            let cell = gatingCell text label
 
             for key in RequiredKeys.requiredFrontMatterKeys stage do
                 Assert.True(
-                    row.Contains key,
-                    $"authoring-contracts §5 table row '{label}' omits the gate-required field '{key}'."
+                    cell.Contains key,
+                    $"authoring-contracts §5 table row '{label}' does not list the gate-required field '{key}' in its Gating fields column."
                 )
 
-    // The evidence skill's deferral field list also appears in the §5 evidence guidance surface.
+    // Every registry deferral key is documented in the skill as a backtick-wrapped field, in
+    // registry order (catches a missing or reordered field; not an extra-field check).
     [<Theory>]
     [<InlineData(".claude")>]
     [<InlineData(".codex")>]
-    let ``The evidence skill deferral fields stay a coherent set with the registry`` (root: string) =
-        // Guard the reverse direction too: the four fields the skill lists are exactly the
-        // registry set (no extra field the gate does not require, no missing one).
+    let ``The evidence skill documents the deferral fields as backtick-wrapped, in registry order`` (root: string) =
         let text = skillText root "fs-gg-sdd-evidence"
 
         let documentedInOrder =

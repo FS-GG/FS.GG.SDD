@@ -107,8 +107,19 @@ module SkillGateDoctestTests =
                 let corpusText = normalize (File.ReadAllText corpusPath)
                 let block = normalize m.Block
 
+                // A text-binding marker must actually carry text — an empty block would make
+                // `contains`/`equals` vacuously pass (every string contains "").
+                if m.Mode = "contains" || m.Mode = "equals" then
+                    Assert.False(
+                        System.String.IsNullOrWhiteSpace block,
+                        $"{m.Skill}: {m.Mode} example marker has an empty fenced block (would bind nothing)."
+                    )
+
                 match m.Mode with
-                | "ref" -> () // pointer only; the gate-run test below proves the corpus file
+                | "ref" -> () // pointer only: the corpus file exists and is parser-validated by
+                              // ExampleArtifactsContractTests; charter/spec/clarifications/tasks are
+                              // additionally gate-run below (evidence is validated by the parser + the
+                              // deferral gate tests, not the charter→analyze chain).
                 | "equals" ->
                     Assert.True(
                         (corpusText = block),
@@ -184,10 +195,15 @@ module SkillGateDoctestTests =
     let ``A four-field deferral is accepted by the evidence gate`` () =
         let report = runEvidenceWith (ladderWithDeferral true)
 
-        Assert.DoesNotContain(
-            "evidence.missingDeferralRationale",
-            errorIds report
-        )
+        // No deferral-rationale block…
+        Assert.DoesNotContain("evidence.missingDeferralRationale", errorIds report)
+
+        // …and the deferral is actually recorded as an ACCEPTED deferral, not silently dropped
+        // or coerced — proving the four-field form is genuinely accepted, not merely un-flagged.
+        match report.Evidence with
+        | Some summary ->
+            Assert.True(summary.DeferredCount >= 1, $"expected the four-field deferral to count as deferred, got {summary.DeferredCount}.")
+        | None -> failwith "expected an evidence summary."
 
     [<Fact>]
     let ``A deferral missing laterLifecycleVisibility is rejected by the evidence gate`` () =

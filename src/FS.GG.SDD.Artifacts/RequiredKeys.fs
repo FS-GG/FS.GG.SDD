@@ -21,10 +21,11 @@ module RequiredKeys =
         | Clarify -> identity @ [ "sourceSpec" ]
         | Checklist -> identity @ [ "sourceSpec"; "sourceClarifications" ]
         | Plan -> identity @ [ "sourceSpec"; "sourceClarifications"; "sourceChecklist" ]
-        // tasks.yml gates only on the schema version (workId is derivable from the path);
-        // evidence.yml additionally gates on a valid workId. Body obligations aren't front matter.
+        // tasks.yml and evidence.yml gate only on the schema version — workId is derived from
+        // the file path (its absence as a key does not block), so it is not a required key here.
+        // Body obligations are carried in the document body, not front matter.
         | Tasks -> [ "schemaVersion" ]
-        | Evidence -> [ "schemaVersion"; "workId" ]
+        | Evidence -> [ "schemaVersion" ]
         // analyze/verify/ship/implement do not author a front-matter artifact (generated
         // readiness views or a non-artifact stage), so they require no authored keys.
         | Analyze
