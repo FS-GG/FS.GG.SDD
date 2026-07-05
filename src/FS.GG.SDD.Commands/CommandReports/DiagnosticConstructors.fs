@@ -61,6 +61,22 @@ module internal DiagnosticConstructors =
             "Pass --work <id> for work-item lifecycle commands."
             [ commandName command ]
 
+    let lintMissingArtifact () =
+        errorDiagnostic
+            "lintMissingArtifact"
+            None
+            "Command 'lint' requires an <artifact> path."
+            "Run `fsgg-sdd lint <artifact>` with a path to an authored SDD artifact."
+            []
+
+    let explainUnsupported (command: SddCommand) =
+        errorDiagnostic
+            "explainUnsupported"
+            None
+            $"`--explain` is not supported for '{commandName command}'."
+            "Use `--explain` on an authoring stage (charter/specify/clarify/checklist/plan/tasks/evidence), or run `fsgg-sdd lint <artifact>`."
+            [ commandName command ]
+
     let unsupportedCommand (command: SddCommand) =
         errorDiagnostic
             "unsupportedLifecycleCommand"

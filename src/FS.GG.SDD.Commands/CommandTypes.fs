@@ -23,6 +23,7 @@ module CommandTypes =
         | Scaffold
         | Doctor
         | Upgrade
+        | Lint
 
     type OutputFormat =
         | Json
@@ -69,7 +70,9 @@ module CommandTypes =
           Force: bool
           TemplateUpdate: bool
           AssumeYes: bool
-          IsInteractive: bool }
+          IsInteractive: bool
+          Artifact: string option
+          Explain: bool }
 
     type GeneratedViewSource =
         { Path: string
@@ -401,6 +404,46 @@ module CommandTypes =
           State: string
           DiagnosticIds: string list }
 
+    [<RequireQualifiedAccess>]
+    type LintArtifactKind =
+        | Charter
+        | Specification
+        | Clarification
+        | Checklist
+        | Plan
+        | Tasks
+        | Evidence
+        | Unrecognized
+
+    type LintDefectClass =
+        | CoverageLine
+        | MissingDecisionTag
+        | FrontMatter
+        | DuplicateId
+        | Parse
+        | Unresolvable
+
+    type LintOutcome =
+        | Clean
+        | DefectsFound
+        | UnusableInput
+
+    type GrammarPointer =
+        { Doc: string
+          Anchor: string
+          ExampleTag: string option }
+
+    type LintDefect =
+        { Class: LintDefectClass
+          Diagnostic: Diagnostic
+          GrammarPointer: GrammarPointer option }
+
+    type LintSummary =
+        { ArtifactPath: string
+          Kind: LintArtifactKind
+          Defects: LintDefect list
+          Outcome: LintOutcome }
+
     type NextAction =
         { ActionId: string
           Command: SddCommand option
@@ -451,6 +494,7 @@ module CommandTypes =
           Scaffold: ScaffoldSummary option
           Doctor: DoctorSummary option
           Upgrade: UpgradeSummary option
+          Lint: LintSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -502,6 +546,7 @@ module CommandTypes =
           Scaffold: ScaffoldSummary option
           Doctor: DoctorSummary option
           Upgrade: UpgradeSummary option
+          Lint: LintSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 
@@ -527,6 +572,7 @@ module CommandTypes =
         | Scaffold -> "scaffold"
         | Doctor -> "doctor"
         | Upgrade -> "upgrade"
+        | Lint -> "lint"
 
     let commandStage (command: SddCommand) =
         match command with
@@ -551,6 +597,7 @@ module CommandTypes =
         | "scaffold" -> Ok Scaffold
         | "doctor" -> Ok Doctor
         | "upgrade" -> Ok Upgrade
+        | "lint" -> Ok Lint
         | other -> Error $"Unknown SDD command '{other}'."
 
     let outputFormatValue (format: OutputFormat) =
@@ -617,6 +664,32 @@ module CommandTypes =
         | CommandOutcome.Blocked -> "blocked"
         | CommandOutcome.NoChange -> "noChange"
 
+    let lintArtifactKindValue (kind: LintArtifactKind) =
+        match kind with
+        | LintArtifactKind.Charter -> "charter"
+        | LintArtifactKind.Specification -> "specification"
+        | LintArtifactKind.Clarification -> "clarification"
+        | LintArtifactKind.Checklist -> "checklist"
+        | LintArtifactKind.Plan -> "plan"
+        | LintArtifactKind.Tasks -> "tasks"
+        | LintArtifactKind.Evidence -> "evidence"
+        | LintArtifactKind.Unrecognized -> "unrecognized"
+
+    let lintOutcomeValue (outcome: LintOutcome) =
+        match outcome with
+        | Clean -> "clean"
+        | DefectsFound -> "defectsFound"
+        | UnusableInput -> "unusableInput"
+
+    let lintDefectClassValue (cls: LintDefectClass) =
+        match cls with
+        | CoverageLine -> "coverageLine"
+        | MissingDecisionTag -> "missingDecisionTag"
+        | FrontMatter -> "frontMatter"
+        | DuplicateId -> "duplicateId"
+        | Parse -> "parse"
+        | Unresolvable -> "unresolvable"
+
     let nextLifecycleCommand (command: SddCommand) =
         match command with
         | Init -> Some Charter
@@ -635,6 +708,7 @@ module CommandTypes =
         | Scaffold -> None
         | Doctor -> None
         | Upgrade -> None
+        | Lint -> None
 
     let effectPath (effect: CommandEffect) =
         match effect with

@@ -100,6 +100,7 @@ module RichRenderingTests =
           Scaffold = None
           Doctor = None
           Upgrade = None
+          Lint = None
           GeneratedViews =
             [ generatedView "readiness/042-rich-sample/work-model.json" GeneratedViewCurrency.Current
               generatedView "readiness/042-rich-sample/analysis.json" GeneratedViewCurrency.Stale ]

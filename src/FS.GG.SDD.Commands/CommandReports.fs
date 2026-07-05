@@ -19,6 +19,12 @@ module CommandReports =
     let missingWorkId command =
         DiagnosticConstructors.missingWorkId command
 
+    let lintMissingArtifact () =
+        DiagnosticConstructors.lintMissingArtifact ()
+
+    let explainUnsupported command =
+        DiagnosticConstructors.explainUnsupported command
+
     let unsupportedCommand command =
         DiagnosticConstructors.unsupportedCommand command
 

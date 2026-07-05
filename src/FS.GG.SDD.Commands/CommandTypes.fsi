@@ -22,6 +22,7 @@ module CommandTypes =
         | Scaffold
         | Doctor
         | Upgrade
+        | Lint
 
     type OutputFormat =
         | Json
@@ -75,7 +76,12 @@ module CommandTypes =
           AssumeYes: bool
           // Computed at the edge from `Console.IsInputRedirected` (R7). Lets the pure
           // core refuse a non-interactive `upgrade` without `--yes` up front (FR-012).
-          IsInteractive: bool }
+          IsInteractive: bool
+          // Lint inputs (`fsgg-sdd lint <artifact>`); ignored by other commands (feature 076).
+          // `Artifact`: the positional path to pre-flight.
+          Artifact: string option
+          // `Explain`: `<stage> --explain` non-blocking dry-run flag (FR-016); default false.
+          Explain: bool }
 
     type GeneratedViewSource =
         { Path: string
@@ -468,6 +474,65 @@ module CommandTypes =
           State: string
           DiagnosticIds: string list }
 
+    /// The authored-artifact kind `lint`/`--explain` auto-detects and routes on
+    /// (feature 076, FR-002). `Unrecognized` means the kind could not be determined
+    /// (missing/unreadable/unknown) → the unusable-input outcome (exit 2). Qualified
+    /// access keeps its cases from shadowing the like-named `SddCommand` cases; the
+    /// `Lint`-prefixed name avoids colliding with `Artifacts.ArtifactRef.ArtifactKind`.
+    [<RequireQualifiedAccess>]
+    type LintArtifactKind =
+        | Charter
+        | Specification
+        | Clarification
+        | Checklist
+        | Plan
+        | Tasks
+        | Evidence
+        | Unrecognized
+
+    /// Classification attached to each surfaced lint defect, driving the grammar
+    /// pointer (FR-007). The four grammar classes always carry a pointer; `Parse`
+    /// (unparseable artifact) and `Unresolvable` (undetectable kind) do not.
+    type LintDefectClass =
+        | CoverageLine
+        | MissingDecisionTag
+        | FrontMatter
+        | DuplicateId
+        | Parse
+        | Unresolvable
+
+    /// The pass/fail outcome of one lint run, driving the bespoke exit mapping
+    /// (FR-011): `Clean` → 0, `DefectsFound` → 1, `UnusableInput` → 2.
+    type LintOutcome =
+        | Clean
+        | DefectsFound
+        | UnusableInput
+
+    /// A stable pointer from a defect to the grammar of record
+    /// (`docs/reference/authoring-contracts.md`) — the anchor is drift-guarded to
+    /// resolve to a real heading; `ExampleTag` names a tagged fenced example when one
+    /// exists (FR-007b).
+    type GrammarPointer =
+        { Doc: string
+          Anchor: string
+          ExampleTag: string option }
+
+    /// One reported lint defect: the reused parser `Diagnostic` plus its lint
+    /// classification and (for grammar classes) a grammar pointer. Every defect is an
+    /// `Error` (FR-017).
+    type LintDefect =
+        { Class: LintDefectClass
+          Diagnostic: Diagnostic
+          GrammarPointer: GrammarPointer option }
+
+    /// The read-only pre-flight picture `lint`/`<stage> --explain` emits (feature 076).
+    /// `Defects = []` ⇔ `Outcome = Clean`. Writes nothing; not a lifecycle stage.
+    type LintSummary =
+        { ArtifactPath: string
+          Kind: LintArtifactKind
+          Defects: LintDefect list
+          Outcome: LintOutcome }
+
     type NextAction =
         { ActionId: string
           Command: SddCommand option
@@ -523,6 +588,7 @@ module CommandTypes =
           Scaffold: ScaffoldSummary option
           Doctor: DoctorSummary option
           Upgrade: UpgradeSummary option
+          Lint: LintSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -591,6 +657,7 @@ module CommandTypes =
           Scaffold: ScaffoldSummary option
           Doctor: DoctorSummary option
           Upgrade: UpgradeSummary option
+          Lint: LintSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 
@@ -612,3 +679,13 @@ module CommandTypes =
     val outcomeValue: outcome: CommandOutcome -> string
     val nextLifecycleCommand: command: SddCommand -> SddCommand option
     val effectPath: effect: CommandEffect -> string option
+
+    /// The canonical lowercase name of a lint artifact kind (feature 076), used in the
+    /// lint report JSON/text projections and diagnostics.
+    val lintArtifactKindValue: kind: LintArtifactKind -> string
+
+    /// The canonical lowercase name of a lint outcome (`clean`/`defectsFound`/`unusableInput`).
+    val lintOutcomeValue: outcome: LintOutcome -> string
+
+    /// The canonical lowercase name of a lint defect class.
+    val lintDefectClassValue: cls: LintDefectClass -> string

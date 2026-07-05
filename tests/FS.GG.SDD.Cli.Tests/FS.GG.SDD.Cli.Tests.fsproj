@@ -17,6 +17,7 @@
     <Compile Include="SurfaceBaselineTests.fs" />
     <Compile Include="ValidationRichRenderingTests.fs" />
     <Compile Include="ValidateCommandTests.fs" />
+    <Compile Include="LintCommandTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

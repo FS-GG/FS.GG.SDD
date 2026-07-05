@@ -98,6 +98,7 @@ module internal ReportAssembly =
           Scaffold = model.Scaffold
           Doctor = model.Doctor
           Upgrade = model.Upgrade
+          Lint = model.Lint
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility
@@ -140,6 +141,7 @@ module internal ReportAssembly =
               Scaffold = None
               Doctor = None
               Upgrade = None
+              Lint = None
               GeneratedViews = []
               Report = None }
 

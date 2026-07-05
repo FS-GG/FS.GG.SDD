@@ -38,6 +38,12 @@ Then fix the authored source (not the generated view) and re-run.
 
 ## When the counter looks fine but the stage still blocks
 
+- **Pre-flight the artifact first: `fsgg-sdd lint <artifact>`** (or `<stage>
+  --explain`). It statically reports the load-bearing grammar defects — a
+  mis-formatted coverage line, a missing `[AMB:AMB-###]` decision tag, incomplete
+  per-stage front matter, or a duplicate id — each with a fix hint and a pointer to
+  the grammar of record, *before* the stage blocks. Read-only; exit `0` clean / `1`
+  defects / `2` unusable input. See `docs/reference/lint.md`.
 - The block is almost always a **silently mis-formatted authored input** — a
   load-bearing grammar accepted the file but read it differently than you meant.
   Check the exact accepted/rejected forms in [[fs-gg-sdd-authoring-contracts]]

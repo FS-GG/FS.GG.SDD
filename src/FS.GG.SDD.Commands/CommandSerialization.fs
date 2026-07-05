@@ -433,6 +433,58 @@ module CommandSerialization =
             writer.WriteEndObject()
         | None -> writer.WriteNull "upgrade"
 
+    let private writeLintDefect (writer: Utf8JsonWriter) (defect: LintDefect) =
+        writer.WriteStartObject()
+        writer.WriteString("class", lintDefectClassValue defect.Class)
+        writer.WriteString("id", defect.Diagnostic.Id)
+        writer.WriteString("severity", severityValue defect.Diagnostic.Severity)
+
+        match defect.Diagnostic.Location with
+        | Some loc ->
+            writer.WriteStartObject("location")
+
+            match loc.Line with
+            | Some line -> writer.WriteNumber("line", line)
+            | None -> writer.WriteNull "line"
+
+            match loc.Column with
+            | Some col -> writer.WriteNumber("column", col)
+            | None -> writer.WriteNull "column"
+
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "location"
+
+        writer.WriteString("message", defect.Diagnostic.Message)
+        writer.WriteString("correction", defect.Diagnostic.Correction)
+
+        match defect.GrammarPointer with
+        | Some pointer ->
+            writer.WriteStartObject("grammarPointer")
+            writer.WriteString("doc", pointer.Doc)
+            writer.WriteString("anchor", pointer.Anchor)
+
+            match pointer.ExampleTag with
+            | Some tag -> writer.WriteString("exampleTag", tag)
+            | None -> writer.WriteNull "exampleTag"
+
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "grammarPointer"
+
+        writer.WriteEndObject()
+
+    let writeLint (writer: Utf8JsonWriter) (summary: LintSummary option) =
+        match summary with
+        | Some summary ->
+            writer.WriteStartObject("lint")
+            writer.WriteString("artifactPath", summary.ArtifactPath)
+            writer.WriteString("kind", lintArtifactKindValue summary.Kind)
+            writer.WriteString("outcome", lintOutcomeValue summary.Outcome)
+            writer.WriteStartArray("defects")
+            summary.Defects |> List.iter (writeLintDefect writer)
+            writer.WriteEndArray()
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "lint"
+
     let writeGeneratedSource (writer: Utf8JsonWriter) (source: GeneratedViewSource) =
         writer.WriteStartObject()
         writer.WriteString("path", source.Path)
@@ -603,6 +655,7 @@ module CommandSerialization =
         writeScaffold writer report.Scaffold
         writeDoctor writer report.Doctor
         writeUpgrade writer report.Upgrade
+        writeLint writer report.Lint
         writer.WriteStartArray("generatedViews")
 
         report.GeneratedViews

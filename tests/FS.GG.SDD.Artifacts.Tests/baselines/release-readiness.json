@@ -324,6 +324,11 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "lint",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "nextAction",
           "kind": "jsonField",
           "stability": "additiveOptional"

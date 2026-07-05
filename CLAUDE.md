@@ -180,5 +180,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/075-clarify-grammar-docs/plan.md
+at specs/076-lint-preflight/plan.md
 <!-- SPECKIT END -->

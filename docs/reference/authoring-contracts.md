@@ -216,6 +216,22 @@ Forms that record a real blocking finding (each blocks `plan`):
 > is not checklistReady"*, clear the blocking findings and **re-run
 > `fsgg-sdd checklist`** — it re-promotes the status; do not hand-edit it.
 
+## Stable id declarations
+
+Every stable id (`FR-###`, `AC-###`, `US-###`, `AMB-###`, `CQ-###`, `DEC-###`,
+`CHK-###`, `PD-###`, `T-###`, `EV-###`, work id, …) is **declared once** — at the
+bullet that introduces it. Declaring the same id twice in one artifact is a
+`duplicate…Id` block (the generic parser id is `duplicateIdentifier`, remapped per
+stage to `duplicateSpecificationId` / `duplicateClarificationId` /
+`duplicateChecklistId` / `duplicatePlanId` / `duplicateTaskId` / `duplicateEvidenceId` /
+`duplicateWorkId`). Referencing an already-declared id **inside another bullet's prose**
+is fine and is *not* a re-declaration — but note the clarify trap below, where a
+`DEC-###` id mentioned inside *Accepted Deferrals* prose was historically miscounted;
+the rule is one declaration site per id, references are unlimited.
+
+`fsgg-sdd lint <artifact>` reports a duplicate declaration as a `duplicateId` defect
+and points here.
+
 ## Clarify decision-tag resolution
 
 `fsgg-sdd clarify` resolves an ambiguity carried from the spec only when its

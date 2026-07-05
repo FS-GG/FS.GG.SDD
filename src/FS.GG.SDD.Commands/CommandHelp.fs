@@ -92,6 +92,8 @@ module CommandHelp =
         | Doctor -> []
         | Upgrade ->
             [ flag "--yes" None "Apply the reconciliation without prompting (explicit non-interactive apply)." ]
+        | Lint ->
+            [ flag "--explain" None "Run the same pre-flight checks against the stage's own artifact (non-blocking)." ]
 
     let topLevelHelp (generator: GeneratorVersion) =
         { Scope = TopLevel
