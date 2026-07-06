@@ -52,6 +52,7 @@
     <Compile Include="CharterExampleContractTests.fs" />
     <Compile Include="SkillGateDoctestTests.fs" />
     <Compile Include="RequiredFieldContractTests.fs" />
+    <Compile Include="LifecycleStatusTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -432,13 +432,15 @@ nuget-cache/
         // constitution/early-stage guidance above; prior init effects stay byte-identical.
         @ SeededSkills.skillEffects ()
 
-    let charterPath workId = $"work/{workId}/charter.md"
-    let specPath workId = $"work/{workId}/spec.md"
-    let clarificationPath workId = $"work/{workId}/clarifications.md"
-    let checklistPath workId = $"work/{workId}/checklist.md"
-    let planPath workId = $"work/{workId}/plan.md"
-    let tasksPath workId = $"work/{workId}/tasks.yml"
-    let evidencePath workId = $"work/{workId}/evidence.yml"
+    // Feature 084: single-source the stage artifact paths in LifecycleSensing (compiled earlier),
+    // so the paths SENSED for the footer are byte-identical to the paths these commands READ.
+    let charterPath = LifecycleSensing.charterPath
+    let specPath = LifecycleSensing.specPath
+    let clarificationPath = LifecycleSensing.clarificationPath
+    let checklistPath = LifecycleSensing.checklistPath
+    let planPath = LifecycleSensing.planPath
+    let tasksPath = LifecycleSensing.tasksPath
+    let evidencePath = LifecycleSensing.evidencePath
 
     /// The single authored artifact a stage lints under `<stage> --explain` (feature 076).
     /// `None` for cross-cutting commands that have no primary authored artifact.
@@ -456,9 +458,9 @@ nuget-cache/
     let workModelPath workId =
         GenerationManifestModule.expectedWorkModelOutputPath workId
 
-    let analysisPath workId = $"readiness/{workId}/analysis.json"
-    let verifyPath workId = $"readiness/{workId}/verify.json"
-    let shipPath workId = $"readiness/{workId}/ship.json"
+    let analysisPath = LifecycleSensing.analysisPath
+    let verifyPath = LifecycleSensing.verifyPath
+    let shipPath = LifecycleSensing.shipPath
     let readinessDirectory workId = $"readiness/{workId}"
 
     /// The read-effect frame the pre-work-model stages (charter → tasks) share: the three
@@ -632,6 +634,24 @@ nuget-cache/
             | Ok _ -> []
             | Error _ -> [ malformedWorkId value ]
 
+    // Feature 084: append the lifecycle-status sensing effects (recursive `work/`+`readiness/`
+    // directory enumerations — see LifecycleSensing) to a command's planned effects, skipping any
+    // enumeration the command already plans (dedup by effect key). Directory listings carry no file
+    // content, so this lets buildReport sense every stage for the footer without feeding a stage's
+    // content into the content-driven readiness/work-model generators.
+    let appendLifecycleSensing (workId: string) (effects: CommandEffect list) =
+        let keyOf effect =
+            match effect with
+            | ReadFile path -> "read:" + path
+            | EnumerateDirectory path -> "enum:" + path
+            | _ -> "other"
+
+        let existing = effects |> List.map keyOf |> Set.ofList
+
+        effects
+        @ (LifecycleSensing.lifecycleSensingEffects workId
+           |> List.filter (fun effect -> not (Set.contains (keyOf effect) existing)))
+
     let plan (request: CommandRequest) =
         let diagnostics = workIdDiagnostics request
 
@@ -644,6 +664,11 @@ nuget-cache/
             // verbs) is rejected here so the normal — mutating — stage path never runs.
             request.Explain
         then
+            // Feature 084 known limitation: this minimal dry run intentionally does NOT append the
+            // lifecycle sensing enumerations (the contract above is "reads ONLY the stage's own
+            // artifact"), so the footer on a `--explain` run shows every stage `pending`. Accepted:
+            // `--explain` is a lint dry-run, not a lifecycle step. Tracked for a follow-up that
+            // suppresses the footer on the explain surface rather than adding reads.
             match
                 request.WorkId
                 |> Option.bind (fun workId -> stagePrimaryArtifactPath request.Command workId)
@@ -652,30 +677,38 @@ nuget-cache/
             | None -> [ explainUnsupported request.Command ], []
         else
 
-            match request.Command, request.WorkId with
-            | Init, _ -> [], initEffects request
-            | Charter, Some workId
-            | Specify, Some workId -> [], charterReadEffects workId
-            | Clarify, Some workId -> [], clarifyReadEffects workId
-            | Checklist, Some workId -> [], checklistReadEffects workId
-            | Plan, Some workId -> [], planReadEffects workId
-            | Tasks, Some workId -> [], tasksReadEffects workId
-            | Analyze, Some workId -> [], analyzeReadEffects workId
-            | Evidence, Some workId -> [], evidenceReadEffects workId
-            | Verify, Some workId -> [], verifyReadEffects workId
-            | Ship, Some workId -> [], shipReadEffects workId
-            | Agents, Some workId -> [], agentsReadEffects workId
-            | Refresh, Some workId -> [], refreshReadEffects workId
-            | Scaffold, _ -> [], scaffoldReadEffects
-            | Doctor, _
-            | Upgrade, _ -> [], remediationReadEffects
-            // Lint reads the single `<artifact>` (feature 076); a missing path is a plan-time
-            // user error (nothing for the effect loop to read) surfaced as unusable input.
-            | Lint, _ ->
-                match request.Artifact with
-                | Some path -> [], [ ReadFile path ]
-                | None -> [ lintMissingArtifact () ], []
-            | command, _ -> [ unsupportedCommand command ], []
+            let planned =
+                match request.Command, request.WorkId with
+                | Init, _ -> [], initEffects request
+                | Charter, Some workId
+                | Specify, Some workId -> [], charterReadEffects workId
+                | Clarify, Some workId -> [], clarifyReadEffects workId
+                | Checklist, Some workId -> [], checklistReadEffects workId
+                | Plan, Some workId -> [], planReadEffects workId
+                | Tasks, Some workId -> [], tasksReadEffects workId
+                | Analyze, Some workId -> [], analyzeReadEffects workId
+                | Evidence, Some workId -> [], evidenceReadEffects workId
+                | Verify, Some workId -> [], verifyReadEffects workId
+                | Ship, Some workId -> [], shipReadEffects workId
+                | Agents, Some workId -> [], agentsReadEffects workId
+                | Refresh, Some workId -> [], refreshReadEffects workId
+                | Scaffold, _ -> [], scaffoldReadEffects
+                | Doctor, _
+                | Upgrade, _ -> [], remediationReadEffects
+                // Lint reads the single `<artifact>` (feature 076); a missing path is a plan-time
+                // user error (nothing for the effect loop to read) surfaced as unusable input.
+                | Lint, _ ->
+                    match request.Artifact with
+                    | Some path -> [], [ ReadFile path ]
+                    | None -> [ lintMissingArtifact () ], []
+                | command, _ -> [ unsupportedCommand command ], []
+
+            // Feature 084: append lifecycle-status sensing reads (deduped) so the report footer
+            // reflects every stage's on-disk state, when a work id resolves and the plan is clean.
+            match request.WorkId, planned with
+            | Some workId, (plannedDiagnostics, effects) when List.isEmpty plannedDiagnostics ->
+                plannedDiagnostics, appendLifecycleSensing workId effects
+            | _ -> planned
 
     let effectKey effect =
         match effect with

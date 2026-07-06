@@ -9,6 +9,7 @@
   <ItemGroup>
     <Compile Include="CommandTypes.fsi" />
     <Compile Include="CommandTypes.fs" />
+    <Compile Include="CommandReports/LifecycleSensing.fs" />
     <Compile Include="CommandReports/RemediationPointers.fs" />
     <Compile Include="CommandReports/DiagnosticConstructors.fs" />
     <Compile Include="CommandReports/NextActionRouting.fs" />
@@ -46,6 +47,8 @@
     <Compile Include="CommandEffects.fs" />
     <Compile Include="CommandSerialization.fsi" />
     <Compile Include="CommandSerialization.fs" />
+    <Compile Include="CommandReports/LifecycleFooter.fsi" />
+    <Compile Include="CommandReports/LifecycleFooter.fs" />
     <Compile Include="CommandRendering.fsi" />
     <Compile Include="CommandRendering.fs" />
   </ItemGroup>

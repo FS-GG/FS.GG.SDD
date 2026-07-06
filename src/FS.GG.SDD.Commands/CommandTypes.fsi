@@ -568,6 +568,34 @@ module CommandTypes =
           GlobalFlags: HelpFlag list
           CommandFlags: HelpFlag list }
 
+    /// Feature 084: the sensed state of one lifecycle stage in the status footer.
+    [<RequireQualifiedAccess>]
+    type StageState =
+        | Done
+        | Current
+        | Next
+        | Pending
+        | Blocked
+
+    /// Feature 084: one stage's position and sensed state in the lifecycle rail.
+    type StageEntry =
+        { Command: SddCommand
+          Ordinal: int
+          State: StageState }
+
+    /// Feature 084: the standardized lifecycle-status fact carried on every command report
+    /// and rendered as the final footer in all three projections. Additive; the failure
+    /// explanation/options are NOT stored here — they are projected at render time from the
+    /// report's existing `Diagnostics`/`NextAction` (FR-017).
+    type LifecycleStatus =
+        { WorkId: string option
+          Stages: StageEntry list
+          CurrentOrdinal: int option
+          TotalStages: int
+          Outcome: CommandOutcome
+          NextCommand: SddCommand option
+          IsLifecycleStage: bool }
+
     type CommandReport =
         { SchemaVersion: int
           ReportVersion: string
@@ -597,7 +625,8 @@ module CommandTypes =
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
           NextAction: NextAction option
-          Help: HelpSummary option }
+          Help: HelpSummary option
+          LifecycleStatus: LifecycleStatus }
 
     type CommandEffect =
         | ReadFile of path: string
@@ -681,6 +710,11 @@ module CommandTypes =
     val reconciliationStepIdValue: stepId: ReconciliationStepId -> string
     val reconciliationOutcomeValue: outcome: ReconciliationOutcome -> string
     val outcomeValue: outcome: CommandOutcome -> string
+
+    /// Feature 084: the canonical lifecycle stage-state token (`done`/`current`/`next`/`pending`/
+    /// `blocked`), shared by the JSON serializer and the footer projections.
+    val stageStateName: state: StageState -> string
+
     val nextLifecycleCommand: command: SddCommand -> SddCommand option
     val effectPath: effect: CommandEffect -> string option
 

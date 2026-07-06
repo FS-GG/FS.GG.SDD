@@ -22,6 +22,10 @@ module Rendering =
         { Text: string
           UsedRichRendering: bool }
 
+    /// Feature 084: the presentation-only Spectre style for a lifecycle stage state in the rich
+    /// footer. Each of the five states maps to a distinct style; `Blocked` carries the emphasis.
+    val stageStateStyle: state: StageState -> string
+
     /// Resolve the requested output format from CLI arguments, applying the
     /// precedence `--rich` > `--text` > `--json` > default (`Json`). Pure.
     val selectFormat: args: string list -> OutputFormat

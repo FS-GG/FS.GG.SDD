@@ -542,4 +542,10 @@ module CommandRendering =
             help.CommandFlags |> List.iter (renderFlag "commandFlag")
         | None -> ()
 
+        // Feature 084: the lifecycle-status footer is the final element of the output. Skipped for
+        // the help discoverability surface (not a lifecycle step; it already drops nextAction).
+        if Option.isNone report.Help then
+            for line in LifecycleFooter.plainLines report do
+                builder.AppendLine(line) |> ignore
+
         builder.ToString()
