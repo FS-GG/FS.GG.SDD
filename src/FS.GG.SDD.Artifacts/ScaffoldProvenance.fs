@@ -30,6 +30,30 @@ module ScaffoldProvenance =
 
     let provenancePath = ".fsgg/scaffold-provenance.json"
 
+    // Feature 085: the provider-less dev-repo shape. `init` writes a provenance document with
+    // this outcome and empty provider/template fields (no scaffold provider ran), so the whole
+    // doctor/upgrade reconciliation model engages on a hand-`init`'d repo instead of hitting the
+    // `HasProvenance = false` "nothing to reconcile" hole. The record stays schema v1 — empty
+    // strings + a new outcome value are expressible without any structural change.
+    let devRepoOutcome = "devRepoInit"
+
+    let isDevRepo (record: ScaffoldProvenanceRecord) = record.Outcome = devRepoOutcome
+
+    let devRepoRecord
+        (generator: GeneratorVersion)
+        (producedPaths: ScaffoldProducedPath list)
+        : ScaffoldProvenanceRecord =
+        { SchemaVersion = 1
+          Generator = generator
+          RequiredMinimumCliVersion = None
+          ProviderName = ""
+          ProviderContractVersion = ""
+          TemplateRef = ""
+          Outcome = devRepoOutcome
+          ProducedPaths = producedPaths
+          MirroredPaths = []
+          EffectiveParameters = [] }
+
     let ownerFromValue (value: string) =
         match value with
         | "sdd" -> ArtifactOwner.Sdd

@@ -231,7 +231,12 @@ module internal Drift =
                 |> List.exists (fun step -> step.Outcome = ReconciliationOutcome.WouldApply)
 
             { HasProvenance = true
-              ProviderName = Some record.ProviderName
+              // 085: a dev-repo document carries no provider — report `None` rather than the
+              // empty provider field, so doctor/upgrade read as "tracked, provider-less" (a
+              // dev-repo) instead of naming an empty provider. Everything else — the seeded
+              // artifact axis, the `noTarget` re-pin, the coherent-by-absence CLI axis — is the
+              // shared path, so a dev-repo reconciles its seeded skeleton like any scaffold.
+              ProviderName = (if isDevRepo record then None else Some record.ProviderName)
               InstalledCliVersion = installedVersion
               RequiredMinimumCliVersion = validMinimum
               CliAxis = cliAxis
