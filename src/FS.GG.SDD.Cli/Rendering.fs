@@ -75,6 +75,16 @@ module Rendering =
         | GeneratedViewCurrency.Malformed -> "red"
         | GeneratedViewCurrency.Blocked -> "red"
 
+    // Feature 084: semantic colour per lifecycle stage state (presentation only). Each state is a
+    // distinct style; the blocked state carries the emphasis. Excluded from golden contracts.
+    let stageStateStyle (state: StageState) =
+        match state with
+        | StageState.Done -> "green"
+        | StageState.Current -> "bold cyan"
+        | StageState.Next -> "yellow"
+        | StageState.Pending -> "dim"
+        | StageState.Blocked -> "bold red"
+
     let esc (value: string) = Markup.Escape value
 
     /// Build an in-memory Spectre.Console honoring the detected width cap, returning the
@@ -113,9 +123,17 @@ module Rendering =
         // Canonical per-stage facts, presented as a details table. Built from the
         // same plain-text projection so the rich view represents every text fact
         // and invents none (INV-5 / C-3).
+        // Feature 084: the lifecycle-status footer lines are rendered as a dedicated coloured
+        // panel below, so exclude them from this generic details-table scrape (no double render).
+        let footerLines =
+            if Option.isNone report.Help then
+                FS.GG.SDD.Commands.LifecycleFooter.plainLines report |> Set.ofList
+            else
+                Set.empty
+
         let detailLines =
             (FS.GG.SDD.Commands.CommandRendering.renderText report).Replace("\r\n", "\n").Split('\n')
-            |> Array.filter (fun line -> line.Contains ": ")
+            |> Array.filter (fun line -> line.Contains ": " && not (Set.contains line footerLines))
 
         if detailLines.Length > 0 then
             let table = Table()
@@ -193,6 +211,35 @@ module Rendering =
             for artifact in action.RequiredArtifacts do
                 console.MarkupLine($"  requires: {esc artifact}")
         | None -> console.MarkupLine("[dim]Next action: none[/]")
+
+        // Feature 084: colour-coded lifecycle-status footer — the final element (skipped for the
+        // help discoverability surface). Presentation only: same facts as the text footer, coloured
+        // per stage state; degrades to the plain text footer when the rich path is not selected.
+        if Option.isNone report.Help then
+            let footer = FS.GG.SDD.Commands.LifecycleFooter.view report
+
+            let rail =
+                footer.Cells
+                |> List.map (fun cell -> $"[{stageStateStyle cell.State}]{esc cell.Label}[/]")
+                |> String.concat "  "
+
+            let lines = System.Collections.Generic.List<string>()
+            lines.Add rail
+            lines.Add ""
+            lines.Add(esc footer.Summary)
+
+            if not (List.isEmpty footer.Blocked) then
+                for blockedLine in footer.Blocked do
+                    lines.Add($"[bold red]{esc blockedLine}[/]")
+            else
+                match footer.Next with
+                | Some next -> lines.Add(esc $"next: {next}")
+                | None -> ()
+
+            let panel = Panel(Markup(String.concat "\n" lines))
+            panel.Header <- PanelHeader("SDD Lifecycle")
+            panel.Border <- BoxBorder.Rounded
+            console.Write panel
 
     // ----- validation-report rich projection (pure over the report) -----
 

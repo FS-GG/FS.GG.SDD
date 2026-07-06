@@ -324,6 +324,11 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "lifecycleStatus",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "lint",
           "kind": "jsonField",
           "stability": "additiveOptional"

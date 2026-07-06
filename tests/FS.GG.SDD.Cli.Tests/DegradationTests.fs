@@ -75,6 +75,33 @@ module DegradationTests =
         let text = RichRenderingTests.render sample
         Assert.False((text).Contains escChar)
 
+    // ----- Feature 084: lifecycle-status footer degradation + colour (T016 / T016b) -----
+
+    [<Fact>]
+    let ``084 T016 the lifecycle footer degrades with the report: present, zero ANSI, byte-identical`` () =
+        let result = resolve Rich nonInteractive sample
+        Assert.False(result.UsedRichRendering)
+        // The footer is present in the degraded output …
+        Assert.Contains("lifecycle: ", result.Text)
+        Assert.Contains("stages: ", result.Text)
+        // … carries zero ANSI, and is byte-identical to the plain-text projection (FR-009/SC-003).
+        Assert.False((result.Text).Contains escChar)
+        Assert.Equal(renderText sample, result.Text)
+
+    [<Fact>]
+    let ``084 T016b each stage state maps to a distinct colour, blocked emphasized`` () =
+        let styles =
+            [ StageState.Done
+              StageState.Current
+              StageState.Next
+              StageState.Pending
+              StageState.Blocked ]
+            |> List.map stageStateStyle
+
+        Assert.Equal(5, styles |> List.distinct |> List.length) // all five distinct (SC-008)
+        Assert.True(styles |> List.forall (fun style -> style <> ""))
+        Assert.Contains("red", stageStateStyle StageState.Blocked) // blocked/failed emphasis
+
     // ----- Stream/exit parity (T016): routing depends only on Outcome, never format. -----
 
     type Stream =

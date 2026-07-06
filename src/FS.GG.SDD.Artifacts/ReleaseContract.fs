@@ -377,7 +377,9 @@ module ReleaseContract =
                       "diagnostics"
                       "governanceCompatibility"
                       "nextAction"
-                      "help" ]
+                      "help"
+                      // Feature 084: additive standardized lifecycle-status footer fact.
+                      "lifecycleStatus" ]
               SourceArtifact =
                 (match
                     ArtifactRef.create

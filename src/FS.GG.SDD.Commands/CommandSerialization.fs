@@ -610,6 +610,42 @@ module CommandSerialization =
             writer.WriteEndObject()
         | None -> writer.WriteNull "help"
 
+    // Feature 084: the additive `lifecycleStatus` object — the authoritative footer fact. The
+    // stage-state token comes from the single canonical map (CommandTypes.stageStateName).
+    let stageStateValue = stageStateName
+
+    let writeLifecycleStatus (writer: Utf8JsonWriter) (status: LifecycleStatus) =
+        writer.WriteStartObject("lifecycleStatus")
+
+        match status.WorkId with
+        | Some workId -> writer.WriteString("workId", workId)
+        | None -> writer.WriteNull "workId"
+
+        writer.WriteBoolean("isLifecycleStage", status.IsLifecycleStage)
+
+        match status.CurrentOrdinal with
+        | Some ordinal -> writer.WriteNumber("currentOrdinal", ordinal)
+        | None -> writer.WriteNull "currentOrdinal"
+
+        writer.WriteNumber("totalStages", status.TotalStages)
+        writer.WriteString("outcome", outcomeValue status.Outcome)
+
+        match status.NextCommand with
+        | Some command -> writer.WriteString("nextCommand", commandName command)
+        | None -> writer.WriteNull "nextCommand"
+
+        writer.WriteStartArray("stages")
+
+        for entry in status.Stages do
+            writer.WriteStartObject()
+            writer.WriteString("command", commandName entry.Command)
+            writer.WriteNumber("ordinal", entry.Ordinal)
+            writer.WriteString("state", stageStateValue entry.State)
+            writer.WriteEndObject()
+
+        writer.WriteEndArray()
+        writer.WriteEndObject()
+
     let serializeReport (report: CommandReport) =
         use stream = new MemoryStream()
         use writer = new Utf8JsonWriter(stream, JsonWriterOptions(Indented = true))
@@ -679,6 +715,8 @@ module CommandSerialization =
         writer.WriteEndArray()
         writeNextAction writer report.NextAction
         writeHelp writer report.Help
+        // Feature 084: the lifecycle-status fact is the final field — the footer is last.
+        writeLifecycleStatus writer report.LifecycleStatus
         writer.WriteEndObject()
         writer.Flush()
         Encoding.UTF8.GetString(stream.ToArray())

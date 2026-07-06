@@ -73,7 +73,9 @@ module internal ReportAssembly =
         let reportOutcome = outcome diagnostics changes
 
         { SchemaVersion = 1
-          ReportVersion = "1.0.0"
+          // Feature 084: additive `lifecycleStatus` field. `schemaVersion` stays Stable (1) per the
+          // command-report AdditiveOptional policy; the semantic reportVersion moves one minor.
+          ReportVersion = "1.1.0"
           Command = model.Request.Command
           // Intentionally the literal "." — decoupled from model.Request.ProjectRoot (which may be
           // an absolute/temporary path) so the report JSON stays reproducible/deterministic. Do not
@@ -116,7 +118,14 @@ module internal ReportAssembly =
                 model.Ship
                 model.AgentGuidance
                 model.Refresh
-          Help = None }
+          Help = None
+          // Feature 084: sensed from the interpreted stage-artifact reads; pure fold, no I/O here.
+          LifecycleStatus =
+            LifecycleSensing.deriveFromEffects
+                model.Request.Command
+                model.Request.WorkId
+                reportOutcome
+                model.InterpretedEffects }
 
     /// §3.5: build the informational help report. Help carries no diagnostics and no changed
     /// artifacts → `NoChange` → exit 0, routed to stdout. `Help` is populated; `NextAction`

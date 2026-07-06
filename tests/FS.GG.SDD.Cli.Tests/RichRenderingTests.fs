@@ -75,6 +75,31 @@ module RichRenderingTests =
           AmbiguityIds = [ "AMB-001" ]
           UnresolvedAmbiguityCount = 1 }
 
+    /// Feature 084: a representative lifecycle-status for the Specify sample (ordinal 2, current).
+    let stageEntry command ordinal state : StageEntry =
+        { Command = command
+          Ordinal = ordinal
+          State = state }
+
+    let sampleLifecycleStatus: LifecycleStatus =
+        { WorkId = Some "042-rich-sample"
+          Stages =
+            [ stageEntry Charter 1 StageState.Done
+              stageEntry Specify 2 StageState.Current
+              stageEntry Clarify 3 StageState.Next
+              stageEntry Checklist 4 StageState.Pending
+              stageEntry Plan 5 StageState.Pending
+              stageEntry Tasks 6 StageState.Pending
+              stageEntry Analyze 7 StageState.Pending
+              stageEntry Evidence 8 StageState.Pending
+              stageEntry Verify 9 StageState.Pending
+              stageEntry Ship 10 StageState.Pending ]
+          CurrentOrdinal = Some 2
+          TotalStages = 10
+          Outcome = SucceededWithWarnings
+          NextCommand = Some Clarify
+          IsLifecycleStage = true }
+
     /// Specify command, populated stage + every report section.
     let sampleReport: CommandReport =
         { SchemaVersion = 1
@@ -122,7 +147,8 @@ module RichRenderingTests =
                   Reason = "resolve the remaining ambiguity"
                   RequiredArtifacts = [ "work/042-rich-sample/clarifications.md" ]
                   BlockingDiagnosticIds = [] }
-          Help = None }
+          Help = None
+          LifecycleStatus = sampleLifecycleStatus }
 
     [<Fact>]
     let ``T010 rich projection represents every populated report section`` () =

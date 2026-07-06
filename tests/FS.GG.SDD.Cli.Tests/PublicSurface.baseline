@@ -11,3 +11,4 @@ FS.GG.SDD.Cli.Rendering.renderValidationRichTo
 FS.GG.SDD.Cli.Rendering.resolve
 FS.GG.SDD.Cli.Rendering.resolveValidation
 FS.GG.SDD.Cli.Rendering.selectFormat
+FS.GG.SDD.Cli.Rendering.stageStateStyle

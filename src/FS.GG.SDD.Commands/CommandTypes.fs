@@ -473,6 +473,29 @@ module CommandTypes =
           GlobalFlags: HelpFlag list
           CommandFlags: HelpFlag list }
 
+    // Feature 084: lifecycle-status footer types (see CommandTypes.fsi for docs).
+    [<RequireQualifiedAccess>]
+    type StageState =
+        | Done
+        | Current
+        | Next
+        | Pending
+        | Blocked
+
+    type StageEntry =
+        { Command: SddCommand
+          Ordinal: int
+          State: StageState }
+
+    type LifecycleStatus =
+        { WorkId: string option
+          Stages: StageEntry list
+          CurrentOrdinal: int option
+          TotalStages: int
+          Outcome: CommandOutcome
+          NextCommand: SddCommand option
+          IsLifecycleStage: bool }
+
     type CommandReport =
         { SchemaVersion: int
           ReportVersion: string
@@ -502,7 +525,8 @@ module CommandTypes =
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
           NextAction: NextAction option
-          Help: HelpSummary option }
+          Help: HelpSummary option
+          LifecycleStatus: LifecycleStatus }
 
     type CommandEffect =
         | ReadFile of path: string
@@ -666,6 +690,16 @@ module CommandTypes =
         | CommandOutcome.SucceededWithWarnings -> "succeededWithWarnings"
         | CommandOutcome.Blocked -> "blocked"
         | CommandOutcome.NoChange -> "noChange"
+
+    // Feature 084: the single canonical StageState -> token map, shared by the JSON serializer and
+    // the text/rich footer projections so the `state` string cannot diverge between them.
+    let stageStateName (state: StageState) =
+        match state with
+        | StageState.Done -> "done"
+        | StageState.Current -> "current"
+        | StageState.Next -> "next"
+        | StageState.Pending -> "pending"
+        | StageState.Blocked -> "blocked"
 
     let lintArtifactKindValue (kind: LintArtifactKind) =
         match kind with

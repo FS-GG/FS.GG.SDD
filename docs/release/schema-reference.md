@@ -198,8 +198,8 @@ in the authoritative `catalog[].inventory` of
 - **`command-report (--json)`** — `agentGuidance`, `analysis`, `changedArtifacts`,
   `checklist`, `clarification`, `command`, `context`, `diagnostics`, `doctor`, `evidence`,
   `generatedViews`, `governanceCompatibility`, `help` *(present on `--help`/`-h`/`help`
-  invocations; `null` otherwise)*, `invocation`, `lint`, `nextAction`, `outcome`, `plan`,
-  `refresh`, `reportVersion`, `scaffold`, `schemaVersion` *(Stable)*, `ship`,
+  invocations; `null` otherwise)*, `invocation`, `lifecycleStatus`, `lint`, `nextAction`,
+  `outcome`, `plan`, `refresh`, `reportVersion`, `scaffold`, `schemaVersion` *(Stable)*, `ship`,
   `specification`, `tasks`, `upgrade`, `verification`.
   The additive `doctor` field is present on `fsgg-sdd doctor` (`null` otherwise); the
   additive `upgrade` field is present on `fsgg-sdd upgrade` (`null` otherwise) — feature 053.
@@ -208,6 +208,14 @@ in the authoritative `catalog[].inventory` of
   (`clean`/`defectsFound`/`unusableInput`), and `defects[]` (each with `class`, `id`,
   `severity`, `location`, `message`, `correction`, and a `grammarPointer` for the four
   grammar classes).
+  The additive `lifecycleStatus` field is present on **every** command's report — feature 084;
+  it is the standardized lifecycle-status footer's authoritative fact, carrying `workId`,
+  `isLifecycleStage`, `currentOrdinal`, `totalStages`, `outcome`, `nextCommand`, and `stages[]`
+  (each with `command`, `ordinal`, and `state` ∈ `done`/`current`/`next`/`pending`/`blocked`).
+  Its per-stage state is sensed from artifact presence under `work/<id>`/`readiness/<id>`. This
+  is the change that moved `reportVersion` to `1.1.0` (a semantic minor); `schemaVersion` stays
+  `1` (Stable) per the additive-optional policy. The failure explanation/options rendered on a
+  blocked outcome are projected from the existing `diagnostics`/`nextAction` — not new fields.
 
 ### Markdown projections (sections)
 
