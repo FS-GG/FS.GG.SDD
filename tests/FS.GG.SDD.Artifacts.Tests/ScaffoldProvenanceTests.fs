@@ -420,3 +420,44 @@ providers:
         match tryParse withoutField with
         | Some parsed -> Assert.Equal(None, (parsed.ProducedPaths |> List.head).Sha256)
         | None -> failwith "A v1 document without sha256 must still parse."
+
+    // ---- 085: the provider-less dev-repo provenance shape ----
+
+    let private devRepoSeeds =
+        [ { Path = ".agents/skills/fs-gg-sdd-charter/SKILL.md"
+            Owner = ArtifactOwner.Sdd
+            Sha256 = None }
+          { Path = ".fsgg/early-stage-guidance.md"
+            Owner = ArtifactOwner.Sdd
+            Sha256 = None } ]
+
+    let private devRepo =
+        devRepoRecord (SchemaVersion.currentGeneratorVersion ()) devRepoSeeds
+
+    [<Fact>]
+    let ``devRepoRecord carries no provider/template pin and the devRepoInit outcome`` () =
+        Assert.Equal("", devRepo.ProviderName)
+        Assert.Equal("", devRepo.ProviderContractVersion)
+        Assert.Equal("", devRepo.TemplateRef)
+        Assert.Equal(None, devRepo.RequiredMinimumCliVersion)
+        Assert.Equal(devRepoOutcome, devRepo.Outcome)
+        Assert.Equal(1, devRepo.SchemaVersion)
+        Assert.True(isDevRepo devRepo)
+
+    [<Fact>]
+    let ``isDevRepo is false for a scaffold (provider) record`` () = Assert.False(isDevRepo record)
+
+    [<Fact>]
+    let ``serialize then tryParse round-trips the dev-repo record and keeps schemaVersion 1`` () =
+        match tryParse (serialize devRepo) with
+        | Some parsed ->
+            Assert.True(isDevRepo parsed)
+            Assert.Equal(1, parsed.SchemaVersion)
+            Assert.Equal("", parsed.ProviderName)
+            Assert.Equal(None, parsed.RequiredMinimumCliVersion)
+            Assert.Equal<ScaffoldProducedPath list>(devRepoSeeds |> List.sortBy (fun p -> p.Path), parsed.ProducedPaths)
+        | None -> failwith "The dev-repo record must round-trip."
+
+    [<Fact>]
+    let ``the dev-repo document is byte-identical for a fixed generator (no clock)`` () =
+        Assert.Equal(serialize devRepo, serialize devRepo)

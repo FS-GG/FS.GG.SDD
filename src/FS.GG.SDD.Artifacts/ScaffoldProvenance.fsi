@@ -51,6 +51,24 @@ module ScaffoldProvenance =
     /// The canonical project-relative path of the provenance artifact.
     val provenancePath: string
 
+    /// The `outcome` marker for a provider-less **dev-repo** provenance document written
+    /// by `fsgg-sdd init` (feature 085): no provider/template pin, the seeded SDD skeleton
+    /// as `producedPaths` (owner `Sdd`). Distinguishes a dev-repo from a scaffolded product
+    /// without a schema bump — the record stays schema v1, so existing readers parse it and
+    /// `doctor`/`upgrade` engage instead of the "no provenance — nothing to reconcile" hole.
+    val devRepoOutcome: string
+
+    /// True when the record is a dev-repo document (`Outcome = devRepoOutcome`): produced by
+    /// `init`, not `scaffold`, so it carries no provider/template pin (empty provider fields).
+    val isDevRepo: record: ScaffoldProvenanceRecord -> bool
+
+    /// Build the canonical dev-repo provenance record: empty provider/contract/template, no
+    /// required minimum, `devRepoOutcome`, the given `producedPaths` (the seeded skeleton,
+    /// owner `Sdd`), and empty mirrored/effective sets. Deterministic — no clock/randomness,
+    /// so `init` stays byte-identical for a given CLI version (FR-007).
+    val devRepoRecord:
+        generator: GeneratorVersion -> producedPaths: ScaffoldProducedPath list -> ScaffoldProvenanceRecord
+
     /// Deterministic JSON (canonical key order, `producedPaths` sorted by path,
     /// no clock/absolute-path/ANSI) per the scaffold-provenance schema contract.
     val serialize: record: ScaffoldProvenanceRecord -> string
