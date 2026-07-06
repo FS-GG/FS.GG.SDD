@@ -411,6 +411,33 @@ TestResults/
 nuget-cache/
 """
 
+    // Feature 085: the dev-repo provenance document `init` writes. Provider-less shape —
+    // no provider/template pin — with the coherent seeded skeleton as its `producedPaths`
+    // (owner `Sdd`, the one canonical set `Drift`/`doctor`/`upgrade` reconcile against).
+    // `Sha256 = None` keeps the seeded-skeleton entries digest-free (process skills verify by
+    // cross-root byte-identity, not a recorded hash). Deterministic: the only variable input
+    // is the recorded CLI version, so `init` stays byte-identical for a given generator.
+    let private devRepoProvenance (request: CommandRequest) =
+        let producedPaths =
+            Drift.expectedArtifactPaths
+            |> List.map (fun path ->
+                { ScaffoldProvenance.Path = path
+                  ScaffoldProvenance.Owner = ArtifactOwner.Sdd
+                  ScaffoldProvenance.Sha256 = None })
+
+        ScaffoldProvenance.devRepoRecord request.GeneratorVersion producedPaths
+
+    // The provenance write belongs to the `init` COMMAND only — NOT to `initEffects`, which
+    // `scaffold` (skeleton seed) and `upgrade` (no-clobber re-seed) reuse: scaffold records its
+    // own provider provenance, and the dev-repo anchor must not leak into either. It is the
+    // reconciliation anchor itself, so it is deliberately absent from `Drift.expectedArtifactPaths`.
+    let initProvenanceEffect (request: CommandRequest) =
+        WriteFile(
+            ScaffoldProvenance.provenancePath,
+            ScaffoldProvenance.serialize (devRepoProvenance request),
+            StructuredSource
+        )
+
     let initEffects (request: CommandRequest) =
         let projectId = projectIdFromRoot request.ProjectRoot
 
@@ -679,7 +706,7 @@ nuget-cache/
 
             let planned =
                 match request.Command, request.WorkId with
-                | Init, _ -> [], initEffects request
+                | Init, _ -> [], initEffects request @ [ initProvenanceEffect request ]
                 | Charter, Some workId
                 | Specify, Some workId -> [], charterReadEffects workId
                 | Clarify, Some workId -> [], clarifyReadEffects workId

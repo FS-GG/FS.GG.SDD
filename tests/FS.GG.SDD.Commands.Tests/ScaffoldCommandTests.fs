@@ -640,7 +640,10 @@ module ScaffoldCommandTests =
 
         let initRoot = rootWithLeaf leaf
         TestSupport.initializeProject initRoot
-        let skeleton = relativeFiles initRoot
+        // 085: exclude `.fsgg/scaffold-provenance.json` from the byte-identical comparison — init
+        // writes a provider-less *dev-repo* provenance while scaffold writes its *provider*
+        // provenance, so the anchor is intentionally different. The seeded skeleton is identical.
+        let skeleton = relativeFiles initRoot |> List.filter (fun p -> p <> provenancePath)
 
         // No produced app path collides with the SDD skeleton.
         Assert.Empty(Set.intersect produced (Set.ofList skeleton))
@@ -1440,9 +1443,13 @@ module ScaffoldCommandTests =
                   $".agents/skills/{name}/SKILL.md" ])
 
         // 073/ADR-0018: the seeded regenerable-output `.gitignore` is an authored skeleton seed too.
+        // 085: `init` also writes the dev-repo `.fsgg/scaffold-provenance.json` anchor.
         let authoredSeeds =
             Set.ofList (
-                [ ".fsgg/constitution.md"; ".fsgg/early-stage-guidance.md"; ".gitignore" ]
+                [ ".fsgg/constitution.md"
+                  ".fsgg/early-stage-guidance.md"
+                  ".gitignore"
+                  provenancePath ]
                 @ seededSkillPaths
             )
 

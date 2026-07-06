@@ -1,10 +1,12 @@
 namespace FS.GG.SDD.Commands.Tests
 
 open System.IO
+open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.CommandEffects
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.CommandWorkflow
+open FS.GG.SDD.Commands.Internal
 open Xunit
 
 module InitCommandTests =
@@ -36,6 +38,55 @@ module InitCommandTests =
 
         Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = ".fsgg/project.yml")
         Assert.Contains(report.GovernanceCompatibility, fun fact -> fact.Path = ".fsgg/policy.yml")
+
+    // ---- 085: init writes a provider-less dev-repo provenance anchor ----
+
+    [<Fact>]
+    let ``init writes a dev-repo scaffold-provenance anchor over the seeded skeleton`` () =
+        let root = TestSupport.tempDirectory ()
+        let report = runInit root
+
+        Assert.Contains(report.ChangedArtifacts, fun change -> change.Path = ScaffoldProvenance.provenancePath)
+
+        match ScaffoldProvenance.tryParse (TestSupport.readRelative root ScaffoldProvenance.provenancePath) with
+        | Some record ->
+            Assert.True(ScaffoldProvenance.isDevRepo record)
+            Assert.Equal("", record.ProviderName)
+            Assert.Equal("", record.TemplateRef)
+            Assert.Equal(None, record.RequiredMinimumCliVersion)
+            // The produced set is exactly the coherent seeded skeleton, all owner `sdd`.
+            Assert.Equal<string list>(Drift.expectedArtifactPaths, record.ProducedPaths |> List.map (fun p -> p.Path))
+
+            Assert.True(
+                record.ProducedPaths
+                |> List.forall (fun p -> p.Owner = ArtifactRef.ArtifactOwner.Sdd)
+            )
+        | None -> failwith "init must write a parseable dev-repo provenance document."
+
+    // T085 determinism (FR-007): two init runs at the same CLI version write byte-identical
+    // provenance — no clock, no absolute path, sorted producedPaths.
+    [<Fact>]
+    let ``init dev-repo provenance is byte-identical across runs`` () =
+        let leaf = "prov-det"
+
+        let mk () =
+            let dir =
+                Path.Combine(Path.GetTempPath(), "fsgg-sdd-" + System.Guid.NewGuid().ToString("N"), leaf)
+
+            Directory.CreateDirectory dir |> ignore
+            dir
+
+        let firstRoot = mk ()
+        let secondRoot = mk ()
+        runInit firstRoot |> ignore
+        runInit secondRoot |> ignore
+
+        let rel =
+            ScaffoldProvenance.provenancePath.Replace('/', Path.DirectorySeparatorChar)
+
+        let first = File.ReadAllBytes(Path.Combine(firstRoot, rel))
+        let second = File.ReadAllBytes(Path.Combine(secondRoot, rel))
+        Assert.Equal<byte[]>(first, second)
 
     [<Fact>]
     let ``init preserves unrelated user files with real filesystem evidence`` () =

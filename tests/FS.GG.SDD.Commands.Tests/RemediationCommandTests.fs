@@ -1,6 +1,8 @@
 namespace FS.GG.SDD.Commands.Tests
 
 open System.IO
+open FS.GG.SDD.Artifacts.ArtifactRef
+open FS.GG.SDD.Artifacts.ScaffoldProvenance
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.Internal
@@ -79,6 +81,62 @@ module DriftTests =
         Assert.False report.HasProvenance
         Assert.Empty report.Steps
         Assert.True report.IsCoherent
+
+    // ---- 085: the provider-less dev-repo record engages reconciliation ----
+
+    let private devRepoRecordOf () =
+        let seeds =
+            Drift.expectedArtifactPaths
+            |> List.map (fun path ->
+                { Path = path
+                  Owner = ArtifactOwner.Sdd
+                  Sha256 = None })
+
+        devRepoRecord (FS.GG.SDD.Artifacts.SchemaVersion.currentGeneratorVersion ()) seeds
+
+    let private rePinOutcome (report: Drift.DriftReport) =
+        report.Steps
+        |> List.find (fun s -> s.StepId = ReconciliationStepId.TemplateRePin)
+        |> fun s -> s.Outcome
+
+    [<Fact>]
+    let ``a dev-repo record engages doctor with no provider and a coherent skeleton`` () =
+        let report =
+            Drift.compute
+                (Some(devRepoRecordOf ()))
+                None
+                installedVersion
+                (Set.ofList Drift.expectedArtifactPaths)
+                (skillBodiesFor Drift.expectedArtifactPaths)
+
+        // Not the "no provenance — nothing to reconcile" hole: doctor/upgrade engage...
+        Assert.True report.HasProvenance
+        // ...but there is no provider (empty pin → reported as None, not an empty string)...
+        Assert.Equal(None, report.ProviderName)
+        // ...the CLI axis is coherent-by-absence (a dev-repo declares no minimum)...
+        Assert.Equal("coherentByAbsence", report.CliAxis)
+        // ...the template re-pin has no target (no provider descriptor)...
+        Assert.Equal(ReconciliationOutcome.NoTarget, rePinOutcome report)
+        // ...and a fully-seeded dev-repo is coherent.
+        Assert.True report.IsCoherent
+
+    [<Fact>]
+    let ``a dev-repo with a missing seed re-seeds without inventing a provider`` () =
+        let present = Drift.expectedArtifactPaths |> List.skip 1
+
+        let report =
+            Drift.compute (Some(devRepoRecordOf ())) None installedVersion (Set.ofList present) (skillBodiesFor present)
+
+        Assert.True report.HasProvenance
+        Assert.Equal(None, report.ProviderName)
+        Assert.False report.IsCoherent
+        Assert.NotEmpty report.MissingArtifactPaths
+
+        let reSeed =
+            report.Steps
+            |> List.find (fun s -> s.StepId = ReconciliationStepId.ArtifactReSeed)
+
+        Assert.Equal(ReconciliationOutcome.WouldApply, reSeed.Outcome)
 
 
 /// `doctor` command tests (T015–T017). Real-filesystem fixtures; doctor is a read-only
