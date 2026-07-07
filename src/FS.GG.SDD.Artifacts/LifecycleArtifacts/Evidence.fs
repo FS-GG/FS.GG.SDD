@@ -282,11 +282,15 @@ module Evidence =
                                           Result = tryScalarAt [ "result" ] mapping |> Option.defaultValue "pending"
                                           Synthetic = boolAt [ "synthetic" ] mapping false
                                           SyntheticDisclosure = parseSyntheticDisclosure mapping
-                                          Rationale = tryScalarAt [ "rationale" ] mapping
-                                          Owner = tryScalarAt [ "owner" ] mapping
-                                          Scope = tryScalarAt [ "scope" ] mapping
+                                          // Optional scalars are written as bare `null` when
+                                          // absent (HandlersEvidence.renderOptionalScalar); read a
+                                          // plain-null token back as `None` so re-serialize stays
+                                          // idempotent instead of rewriting `null` → `"null"`.
+                                          Rationale = tryScalarNonNullAt [ "rationale" ] mapping
+                                          Owner = tryScalarNonNullAt [ "owner" ] mapping
+                                          Scope = tryScalarNonNullAt [ "scope" ] mapping
                                           LaterLifecycleVisibility =
-                                            tryScalarAt [ "laterLifecycleVisibility" ] mapping
+                                            tryScalarNonNullAt [ "laterLifecycleVisibility" ] mapping
                                           Notes = scalarList [ "notes" ] mapping
                                           Source = artifact
                                           SourceLocation = sourceLocation (index + 1) },
