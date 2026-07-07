@@ -29,7 +29,18 @@ module SurfaceProjectionTests =
           DriftedSourcePaths = [ "src/Pkg/Changed.fsi" ]
           OrphanBaselinePaths = [ "docs/api-surface/Pkg/Stale.fsi" ]
           UpdatedBaselinePaths = []
-          IsCoherent = false }
+          IsCoherent = false
+          // Feature 087: the drifted `src/Pkg/Changed.fsi` classified breaking (a member changed).
+          Classification =
+            { Verdict = "breaking"
+              RecommendedBump = "major"
+              Entries =
+                [ { Path = "src/Pkg/Changed.fsi"
+                    Classification = "breaking"
+                    RecommendedBump = "major"
+                    AddedMembers = [ "val changed: int -> string" ]
+                    RemovedOrChangedMembers = [ "val changed: int -> int" ]
+                    UnparseableFallback = false } ] } }
 
     let private report: CommandReport =
         { RichRenderingTests.sampleReport with
@@ -65,3 +76,28 @@ module SurfaceProjectionTests =
         Assert.False redirected.UsedRichRendering
         Assert.Equal(renderText report, redirected.Text)
         Assert.DoesNotContain("[38;", redirected.Text)
+
+    // Feature 087 (SC-005): the classification facts appear in every projection with an identical
+    // fact set; the redirected rich output stays zero-ANSI plain text.
+    [<Fact>]
+    let ``surface classification facts appear in every projection`` () =
+        let json = (resolve Json interactiveColor report).Text
+        let text = (resolve Text nonInteractive report).Text
+        let rich = (resolve Rich nonInteractive report).Text
+
+        for projection in [ json; text; rich ] do
+            Assert.Contains("breaking", projection)
+            Assert.Contains("major", projection)
+
+        Assert.Contains("\"verdict\": \"breaking\"", json)
+        Assert.Contains("\"recommendedBump\": \"major\"", json)
+        Assert.Contains("\"classification\": \"breaking\"", json)
+        Assert.Contains("surfaceClassificationVerdict: breaking", text)
+        Assert.Contains("surfaceClassificationBump: major", text)
+        Assert.Contains("surfaceClassified: src/Pkg/Changed.fsi=breaking (major)", text)
+
+    // Feature 087 (SC-008): the default projection is byte-identical across repeated renders (the
+    // classification entries/member lists are deterministically sorted).
+    [<Fact>]
+    let ``surface classification json is deterministic across renders`` () =
+        Assert.Equal(serializeReport report, serializeReport report)

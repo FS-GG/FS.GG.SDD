@@ -15,6 +15,96 @@ open FS.GG.SDD.Commands.Internal.Foundation
 /// `doctor`'s skill-read gate) and then computes the pure drift picture / write set.
 module internal HandlersSurface =
 
+    /// Feature 087 (FS-GG/.github ADR-0025): the pure additive-vs-breaking classification of a
+    /// drifted `.fsi`. Compares the *member tokens* parsed from the two signature texts — comments,
+    /// blank lines, and ordering are stripped, so only real declaration changes register. No parser,
+    /// no reflection: the `.fsi` text is the source of truth (consistent with feature 086).
+    module private SurfaceClassify =
+
+        // Remove `(* … *)` block comments (simple, non-nested) so a comment cannot masquerade as a
+        // member token. Line (`//`/`///`) comments are stripped per line in `memberTokens`.
+        let private stripBlockComments (text: string) =
+            let sb = System.Text.StringBuilder(text.Length)
+            let mutable i = 0
+            let mutable inBlock = false
+
+            while i < text.Length do
+                if inBlock then
+                    if i + 1 < text.Length && text.[i] = '*' && text.[i + 1] = ')' then
+                        inBlock <- false
+                        i <- i + 2
+                    else
+                        i <- i + 1
+                elif i + 1 < text.Length && text.[i] = '(' && text.[i + 1] = '*' then
+                    inBlock <- true
+                    i <- i + 2
+                else
+                    sb.Append text.[i] |> ignore
+                    i <- i + 1
+
+            sb.ToString()
+
+        // The set of member tokens declared in a signature text: comment-stripped, blank-dropped,
+        // whitespace-collapsed, one token per significant line. A `Set` makes ordering and duplicate
+        // formatting irrelevant, which is exactly the additive/breaking/cosmetic contract.
+        let memberTokens (text: string) : Set<string> =
+            (stripBlockComments text).Split([| '\n'; '\r' |])
+            |> Array.map (fun line ->
+                let commentAt = line.IndexOf "//"
+                let code = if commentAt >= 0 then line.Substring(0, commentAt) else line
+                Text.RegularExpressions.Regex.Replace(code.Trim(), @"\s+", " "))
+            |> Array.filter (fun token -> token <> "")
+            |> Set.ofArray
+
+        let private bumpFor classification =
+            match classification with
+            | "breaking" -> "major"
+            | "additive" -> "minor"
+            | _ -> "none"
+
+        // Classify one drifted pair (called only when the two texts already differ byte-for-byte).
+        // A prior member gone ⇒ breaking; only additions ⇒ additive; equal member sets ⇒ cosmetic.
+        // A non-empty source that yields no member token is unparseable ⇒ breaking (FR-011).
+        let classifyPair (path: string) (baselineText: string) (sourceText: string) : ClassifiedEntry =
+            let baselineTokens = memberTokens baselineText
+            let sourceTokens = memberTokens sourceText
+            let removedOrChanged = Set.difference baselineTokens sourceTokens |> Set.toList
+            let added = Set.difference sourceTokens baselineTokens |> Set.toList
+            let unparseable = (not (String.IsNullOrWhiteSpace sourceText)) && Set.isEmpty sourceTokens
+
+            let classification =
+                if unparseable || not (List.isEmpty removedOrChanged) then "breaking"
+                elif not (List.isEmpty added) then "additive"
+                else "cosmetic"
+
+            { Path = path
+              Classification = classification
+              RecommendedBump = bumpFor classification
+              AddedMembers = added |> List.sort
+              RemovedOrChangedMembers = removedOrChanged |> List.sort
+              UnparseableFallback = unparseable }
+
+        let private severity classification =
+            match classification with
+            | "breaking" -> 3
+            | "additive" -> 2
+            | "cosmetic" -> 1
+            | _ -> 0
+
+        // Roll the per-file entries up to the most-severe run verdict + its recommended bump.
+        let rollup (entries: ClassifiedEntry list) : SurfaceClassification =
+            let sorted = entries |> List.sortBy (fun entry -> entry.Path)
+
+            let verdict =
+                if List.isEmpty sorted then
+                    "none"
+                else
+                    sorted |> List.map (fun entry -> entry.Classification) |> List.maxBy severity
+
+            { Verdict = verdict
+              RecommendedBump = bumpFor verdict
+              Entries = sorted }
+
     // A candidate authored signature: ends with `.fsi`, and not inside a build-output tree
     // (`obj`/`bin`), which can hold compiler-generated signatures that are not the public surface.
     let private isAuthoredSignature (path: string) =
@@ -140,6 +230,18 @@ module internal HandlersSurface =
             else
                 []
 
+        // Feature 087: classify only the drifted set (baseline present and byte-differing). A
+        // `missing-baseline` file is a *new* surface (fresh registration), and `matched`/`orphan`
+        // have no delta — none of those are classified. Advisory: no diagnostic, no exit change.
+        let classification =
+            classified
+            |> List.choose (fun (source, _, sourceText, baselineText) ->
+                match sourceText, baselineText with
+                | Some sourceBody, Some baselineBody when sourceBody <> baselineBody ->
+                    Some(SurfaceClassify.classifyPair source baselineBody sourceBody)
+                | _ -> None)
+            |> SurfaceClassify.rollup
+
         let summary =
             { SourceRoot = normalizeRelativePath sourceRoot
               BaselineRoot = normalizeRelativePath baselineRoot
@@ -149,7 +251,8 @@ module internal HandlersSurface =
               DriftedSourcePaths = drifted
               OrphanBaselinePaths = orphans
               UpdatedBaselinePaths = updated
-              IsCoherent = List.isEmpty missing && List.isEmpty drifted }
+              IsCoherent = List.isEmpty missing && List.isEmpty drifted
+              Classification = classification }
 
         summary, writes
 

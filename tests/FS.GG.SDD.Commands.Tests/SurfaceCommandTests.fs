@@ -179,3 +179,110 @@ module SurfaceCommandTests =
         Assert.Equal(1, summary.CheckedCount)
         Assert.True summary.IsCoherent
         Assert.Equal(0, exitCodeForReport report)
+
+    // ---- Feature 087: additive-vs-breaking classification of the drifted set -----------
+
+    // A two-member signature; `extra` is present only when `withExtra`, `ret` types the first `val`.
+    let private signature2 ret withExtra =
+        let extra = if withExtra then "    val extra: unit -> unit\n" else ""
+        $"namespace Foo\nmodule Bar =\n    val baz: int -> {ret}\n{extra}"
+
+    let private classificationOf (report: CommandReport) = (summaryOf report).Classification
+
+    let private entryFor path (report: CommandReport) =
+        (classificationOf report).Entries
+        |> List.tryFind (fun e -> e.Path = path)
+        |> Option.defaultWith (fun () -> failwithf "expected a classification entry for %s" path)
+
+    [<Fact>]
+    let ``a drifted baseline that only adds a member is classified additive (minor), still exits 1`` () =
+        let root = coherentFixture ()
+        // Baseline stays one-member; source gains a second member ⇒ additive.
+        writeRelative root "src/Foo/Bar.fsi" (signature2 "int" true)
+        let report = surfaceReport false root
+        let entry = entryFor "src/Foo/Bar.fsi" report
+        Assert.Equal("additive", entry.Classification)
+        Assert.Equal("minor", entry.RecommendedBump)
+        Assert.Empty entry.RemovedOrChangedMembers
+        Assert.NotEmpty entry.AddedMembers
+        Assert.Equal("additive", (classificationOf report).Verdict)
+        Assert.Equal("minor", (classificationOf report).RecommendedBump)
+        Assert.Equal(1, exitCodeForReport report) // classification never changes the exit code
+
+    [<Fact>]
+    let ``a drifted baseline that removes a member is classified breaking (major)`` () =
+        let root = tempDirectory ()
+        // Baseline has two members; source drops one ⇒ breaking.
+        writeRelative root "docs/api-surface/Foo/Bar.fsi" (signature2 "int" true)
+        writeRelative root "src/Foo/Bar.fsi" (signature2 "int" false)
+        let report = surfaceReport false root
+        let entry = entryFor "src/Foo/Bar.fsi" report
+        Assert.Equal("breaking", entry.Classification)
+        Assert.Equal("major", entry.RecommendedBump)
+        Assert.NotEmpty entry.RemovedOrChangedMembers
+        Assert.Equal(1, exitCodeForReport report)
+
+    [<Fact>]
+    let ``a drifted baseline whose member signature changed is classified breaking`` () =
+        let root = coherentFixture ()
+        writeRelative root "src/Foo/Bar.fsi" (signature "string") // baseline is `int`
+        let report = surfaceReport false root
+        Assert.Equal("breaking", (entryFor "src/Foo/Bar.fsi" report).Classification)
+        Assert.Equal(1, exitCodeForReport report)
+
+    [<Fact>]
+    let ``the run verdict is the most severe of a mixed additive+breaking run (breaking wins)`` () =
+        let root = tempDirectory ()
+        // Bar: additive (source gains a member). Qux: breaking (source drops a member).
+        writeRelative root "docs/api-surface/Foo/Bar.fsi" (signature2 "int" false)
+        writeRelative root "src/Foo/Bar.fsi" (signature2 "int" true)
+        writeRelative root "docs/api-surface/Foo/Qux.fsi" (signature2 "int" true)
+        writeRelative root "src/Foo/Qux.fsi" (signature2 "int" false)
+        let report = surfaceReport false root
+        Assert.Equal("additive", (entryFor "src/Foo/Bar.fsi" report).Classification)
+        Assert.Equal("breaking", (entryFor "src/Foo/Qux.fsi" report).Classification)
+        Assert.Equal("breaking", (classificationOf report).Verdict)
+        Assert.Equal("major", (classificationOf report).RecommendedBump)
+
+    [<Fact>]
+    let ``a missing baseline (new surface) carries no classification and does not inflate the verdict`` () =
+        let root = coherentFixture ()
+        writeRelative root "src/Foo/Extra.fsi" (signature "unit") // no baseline ⇒ new surface
+        let report = surfaceReport false root
+        let classification = classificationOf report
+        // The only "drift" is a missing baseline; no shipped-surface mutation ⇒ verdict none.
+        Assert.Empty classification.Entries
+        Assert.Equal("none", classification.Verdict)
+        Assert.Equal("none", classification.RecommendedBump)
+        Assert.Equal(1, exitCodeForReport report) // still drift (missing baseline)
+
+    [<Fact>]
+    let ``a matched tree has no classification and a none verdict`` () =
+        let report = surfaceReport false (coherentFixture ())
+        Assert.Empty (classificationOf report).Entries
+        Assert.Equal("none", (classificationOf report).Verdict)
+        Assert.Equal(0, exitCodeForReport report)
+
+    [<Fact>]
+    let ``a formatting-only drift is classified cosmetic (no bump), still exits 1`` () =
+        let root = coherentFixture ()
+        // Same single member, but reordered whitespace + an added comment ⇒ member set unchanged.
+        writeRelative root "src/Foo/Bar.fsi" "namespace Foo\nmodule Bar =\n    // a note\n    val baz:  int -> int\n"
+        let report = surfaceReport false root
+        let entry = entryFor "src/Foo/Bar.fsi" report
+        Assert.Equal("cosmetic", entry.Classification)
+        Assert.Equal("none", entry.RecommendedBump)
+        Assert.Empty entry.AddedMembers
+        Assert.Empty entry.RemovedOrChangedMembers
+        Assert.Equal(1, exitCodeForReport report) // still byte-level drift
+
+    [<Fact>]
+    let ``an unparseable drifted source falls back to breaking`` () =
+        let root = coherentFixture ()
+        // Non-empty source that yields no member token (comment-only) ⇒ conservative breaking.
+        writeRelative root "src/Foo/Bar.fsi" "// intentionally unreadable\n// no declarations here\n"
+        let report = surfaceReport false root
+        let entry = entryFor "src/Foo/Bar.fsi" report
+        Assert.Equal("breaking", entry.Classification)
+        Assert.True entry.UnparseableFallback
+        Assert.Equal(1, exitCodeForReport report)
