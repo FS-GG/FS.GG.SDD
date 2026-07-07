@@ -148,6 +148,21 @@ Core boundary:
   blocks projected json/text/rich, plus an additive `CommandEffectResult.Confirmed` field;
   no persisted schema changes (provenance stays v1, read-only). See
   `docs/reference/doctor-upgrade.md`.
+- `fsgg-sdd surface` is a cross-cutting API-surface baseline verb (not a lifecycle stage;
+  `nextLifecycleCommand Surface = None`, feature 086) that enforces the workspace surface
+  convention: every authored `src/**/*.fsi` signature has a byte-identical committed baseline
+  under `docs/api-surface/` at the mirrored `<Pkg>/<Name>.fsi` path. `--check` (default) is
+  **read-only** — it enumerates the source `.fsi`, compares each against its baseline byte-for-byte,
+  and blocks with a `surface.drift` `DiagnosticError` (exit 1) on any missing or differing baseline,
+  exiting 0 when coherent. `--update` refreshes the baselines from the authored signatures (writing
+  only what changed, exit 0). Orphan baselines (a committed baseline with no source) are advisory
+  (`surface.orphanBaseline` warning, never auto-removed). The source of truth is the `.fsi` **text**
+  (copy/diff, no assembly reflection); the `<Pkg>` segment is derived structurally, so generic SDD
+  embeds no provider/package literal, and the roots are convention-default (`src/`,
+  `docs/api-surface/`) with `--param sourceRoot=…`/`--param baselineRoot=…` overrides. It adds an
+  additive `surface` `CommandReport` block (json/text/rich) and no persisted schema change. This is
+  a **workspace** gate — the SDD component repo itself uses hand-authored `.fsi` + the internal
+  reflection `PublicSurface.baseline` test, a separate mechanism `surface` does not replace.
 - FS.GG.Governance owns rule evaluation, evidence freshness, routing, profiles,
   and gate enforcement.
 - Integrations between them must be explicit, versioned, and optional until

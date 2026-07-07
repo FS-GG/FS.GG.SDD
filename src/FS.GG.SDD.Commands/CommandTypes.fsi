@@ -23,6 +23,7 @@ module CommandTypes =
         | Doctor
         | Upgrade
         | Lint
+        | Surface
 
     type OutputFormat =
         | Json
@@ -85,7 +86,11 @@ module CommandTypes =
           // Evidence input (`fsgg-sdd evidence --from-tests <path>`); ignored by other commands
           // (feature 077). Pre-maps each newly scaffolded obligation to a verification-kind source
           // pointing at this test path. `None` ⇒ inert (output byte-identical aside from refs).
-          FromTests: string option }
+          FromTests: string option
+          // Surface input (`fsgg-sdd surface --update`); ignored by other commands (feature 086).
+          // `true` ⇒ refresh the `docs/api-surface/**` baselines from the authored `.fsi`
+          // signatures; `false` (default, or `--check`) ⇒ read-only drift check.
+          SurfaceUpdate: bool }
 
     type GeneratedViewSource =
         { Path: string
@@ -471,6 +476,33 @@ module CommandTypes =
             NextActionHint: string
         }
 
+    /// The read-only (or, under `--update`, reconciling) API-surface picture `surface` emits
+    /// (feature 086). Each authored `src/**/*.fsi` signature has a byte-identical committed
+    /// baseline under `docs/api-surface/`; drift is a missing or byte-differing baseline.
+    /// `--check` blocks on drift (exit 1); `--update` refreshes the baselines (exit 0). Orphan
+    /// baselines (no source) are advisory and never auto-removed.
+    type SurfaceSummary =
+        {
+            SourceRoot: string
+            BaselineRoot: string
+            /// `check` (read-only, blocks on drift) or `update` (refresh baselines).
+            Mode: string
+            /// Count of authored `.fsi` signatures discovered under the source root.
+            CheckedCount: int
+            /// Baseline paths absent for a discovered source signature. Sorted.
+            MissingBaselinePaths: string list
+            /// Source signature paths whose baseline exists but differs byte-for-byte. Sorted.
+            DriftedSourcePaths: string list
+            /// Baseline `.fsi` files with no corresponding source signature. Advisory (never
+            /// deleted); sorted.
+            OrphanBaselinePaths: string list
+            /// Baseline paths written this run (`--update` only). Sorted; `[]` under `--check`.
+            UpdatedBaselinePaths: string list
+            /// True when every discovered source signature had a matching baseline at the start
+            /// of the run (no missing, no drift). Orphans do not affect coherence.
+            IsCoherent: bool
+        }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -621,6 +653,7 @@ module CommandTypes =
           Doctor: DoctorSummary option
           Upgrade: UpgradeSummary option
           Lint: LintSummary option
+          Surface: SurfaceSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -691,6 +724,7 @@ module CommandTypes =
           Doctor: DoctorSummary option
           Upgrade: UpgradeSummary option
           Lint: LintSummary option
+          Surface: SurfaceSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 

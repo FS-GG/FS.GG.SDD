@@ -373,6 +373,8 @@ module ReleaseContract =
                       "upgrade"
                       // Feature 076: additive lint / --explain report block.
                       "lint"
+                      // Feature 086: additive API-surface drift report block.
+                      "surface"
                       "generatedViews"
                       "diagnostics"
                       "governanceCompatibility"

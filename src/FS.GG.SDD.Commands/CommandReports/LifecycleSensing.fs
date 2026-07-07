@@ -57,7 +57,8 @@ module internal LifecycleSensing =
         | Scaffold
         | Doctor
         | Upgrade
-        | Lint -> false
+        | Lint
+        | Surface -> false
 
     /// The sensing effects: recursive enumerations of `work/` and `readiness/`. Deliberately NOT
     /// per-file `ReadFile`s — the readiness/work-model generators read artifact *content* via

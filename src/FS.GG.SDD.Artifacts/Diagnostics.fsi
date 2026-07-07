@@ -115,5 +115,13 @@ module Diagnostics =
     val upgradeStepFailed: stepId: string -> Diagnostic
     val upgradeResidualDrift: stepIds: string list -> Diagnostic
 
+    /// Feature 086: one or more committed `.fsi` surface baselines are missing or byte-differing
+    /// from the authored source signature. `DiagnosticError` — `fsgg-sdd surface --check` exits 1.
+    val surfaceDrift: missingCount: int -> driftedCount: int -> paths: string list -> Diagnostic
+
+    /// Feature 086: committed baselines with no corresponding source `.fsi`. `DiagnosticWarning`
+    /// (advisory, exit 0) — never auto-removed in this version.
+    val surfaceOrphanBaseline: paths: string list -> Diagnostic
+
     val sort: diagnostics: Diagnostic list -> Diagnostic list
     val hasBlocking: diagnostics: Diagnostic list -> bool

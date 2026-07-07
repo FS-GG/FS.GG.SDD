@@ -464,6 +464,32 @@ module Diagnostics =
             "Re-run `fsgg-sdd upgrade` and confirm the skipped step(s), or `fsgg-sdd doctor` to review the residual drift."
             ordered
 
+    // Feature 086: a committed `.fsi` surface baseline is missing or has drifted from its authored
+    // source signature. A `DiagnosticError` so `fsgg-sdd surface --check` exits 1 and fails CI;
+    // `--update` never emits it (it reconciles instead). RelatedIds carry the offending paths.
+    let surfaceDrift (missingCount: int) (driftedCount: int) (paths: string list) =
+        create
+            "surface.drift"
+            DiagnosticError
+            None
+            None
+            $"API-surface baselines have drifted: {missingCount} missing, {driftedCount} differing from the authored `.fsi`."
+            "Run `fsgg-sdd surface --update` to refresh the `docs/api-surface/**` baselines, then commit."
+            (paths |> List.sort)
+
+    // Feature 086: a baseline `.fsi` under the baseline root has no corresponding authored source
+    // signature. Advisory (`DiagnosticWarning`, exit 0) in both modes — this version has no delete
+    // effect, so removing a stale baseline stays a manual author action. RelatedIds carry the paths.
+    let surfaceOrphanBaseline (paths: string list) =
+        create
+            "surface.orphanBaseline"
+            DiagnosticWarning
+            None
+            None
+            $"{List.length paths} committed API-surface baseline(s) have no corresponding source `.fsi`."
+            "Remove the stale baseline file(s) under the baseline root if the source was intentionally deleted."
+            (paths |> List.sort)
+
     let locationKey location =
         match location with
         | Some loc -> defaultArg loc.Line 0, defaultArg loc.Column 0

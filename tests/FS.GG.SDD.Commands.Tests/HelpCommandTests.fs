@@ -91,6 +91,7 @@ module HelpCommandTests =
               Doctor = None
               Upgrade = None
               Lint = None
+              Surface = None
               GeneratedViews = []
               Report = None }
 
@@ -155,6 +156,7 @@ module HelpCommandTests =
               Doctor = None
               Upgrade = None
               Lint = None
+              Surface = None
               GeneratedViews = []
               Report = None }
 

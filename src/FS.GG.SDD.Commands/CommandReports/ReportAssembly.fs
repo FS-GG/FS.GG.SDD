@@ -73,9 +73,10 @@ module internal ReportAssembly =
         let reportOutcome = outcome diagnostics changes
 
         { SchemaVersion = 1
-          // Feature 084: additive `lifecycleStatus` field. `schemaVersion` stays Stable (1) per the
-          // command-report AdditiveOptional policy; the semantic reportVersion moves one minor.
-          ReportVersion = "1.1.0"
+          // Additive optional command blocks bump the semantic reportVersion one minor while
+          // `schemaVersion` stays Stable (1): 1.1.0 added `lifecycleStatus` (feature 084); 1.2.0
+          // adds `surface` (feature 086).
+          ReportVersion = "1.2.0"
           Command = model.Request.Command
           // Intentionally the literal "." — decoupled from model.Request.ProjectRoot (which may be
           // an absolute/temporary path) so the report JSON stays reproducible/deterministic. Do not
@@ -101,6 +102,7 @@ module internal ReportAssembly =
           Doctor = model.Doctor
           Upgrade = model.Upgrade
           Lint = model.Lint
+          Surface = model.Surface
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility
@@ -151,6 +153,7 @@ module internal ReportAssembly =
               Doctor = None
               Upgrade = None
               Lint = None
+              Surface = None
               GeneratedViews = []
               Report = None }
 

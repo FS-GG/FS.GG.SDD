@@ -403,6 +403,24 @@ module CommandSerialization =
             writer.WriteEndObject()
         | None -> writer.WriteNull "doctor"
 
+    // Feature 086: the deterministic `surface` block (sorted path lists) — the automation contract
+    // for `fsgg-sdd surface --check/--update`.
+    let writeSurface (writer: Utf8JsonWriter) (summary: SurfaceSummary option) =
+        match summary with
+        | Some summary ->
+            writer.WriteStartObject("surface")
+            writer.WriteString("sourceRoot", summary.SourceRoot)
+            writer.WriteString("baselineRoot", summary.BaselineRoot)
+            writer.WriteString("mode", summary.Mode)
+            writer.WriteNumber("checkedCount", summary.CheckedCount)
+            writeStringList writer Sorted "missingBaselinePaths" summary.MissingBaselinePaths
+            writeStringList writer Sorted "driftedSourcePaths" summary.DriftedSourcePaths
+            writeStringList writer Sorted "orphanBaselinePaths" summary.OrphanBaselinePaths
+            writeStringList writer Sorted "updatedBaselinePaths" summary.UpdatedBaselinePaths
+            writer.WriteBoolean("isCoherent", summary.IsCoherent)
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "surface"
+
     let writeUpgrade (writer: Utf8JsonWriter) (summary: UpgradeSummary option) =
         match summary with
         | Some summary ->
@@ -692,6 +710,7 @@ module CommandSerialization =
         writeDoctor writer report.Doctor
         writeUpgrade writer report.Upgrade
         writeLint writer report.Lint
+        writeSurface writer report.Surface
         writer.WriteStartArray("generatedViews")
 
         report.GeneratedViews
