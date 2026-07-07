@@ -440,6 +440,80 @@ module TasksCommandTests =
         Assert.Contains("taskRequiredEvidence:", text)
         Assert.Contains("nextAction: nextLifecycleCommand", text)
 
+    // #162: a RESOLVED clarify decision (`## Decisions` → `- DEC-###: …`) must be routed to a
+    // disposing task by the tasks generator. Previously only accepted *deferrals* got a task, so
+    // a real decision was stranded and `analyze` blocked two stages later with `missingDisposition`
+    // — exactly when clarify had done its job. The decision is carried in the typed `decisions:`
+    // field of a dedicated task.
+    let private clarificationsPath = $"work/{workId}/clarifications.md"
+
+    let private injectResolvedDecision root =
+        let clarifications = TestSupport.readRelative root clarificationsPath
+
+        let withDecision =
+            clarifications.Replace(
+                "## Accepted Deferrals",
+                "- DEC-001: Record clarification decisions in clarifications.md.\n\n## Accepted Deferrals"
+            )
+
+        TestSupport.writeRelative root clarificationsPath withDecision
+
+    [<Fact>]
+    let ``tasks routes a resolved clarify decision to a disposing task`` () =
+        let root = initializedPlanReadyProject ()
+        injectResolvedDecision root
+
+        let report = TestSupport.runTasks root workId title
+        let tasks = TestSupport.readRelative root tasksPath
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains("Implement clarification decision DEC-001", tasks)
+        Assert.Contains("decisions: [\"DEC-001\"]", tasks)
+
+    // The end-to-end regression: with the decision now disposed at `tasks`, `analyze` no longer
+    // backtracks through three green stages to block on `missingDisposition` (#162).
+    [<Fact>]
+    let ``analyze no longer strands a resolved clarify decision`` () =
+        let root = initializedPlanReadyProject ()
+        injectResolvedDecision root
+
+        TestSupport.runTasks root workId title |> ignore
+        TestSupport.writePassingTaskEvidenceFor root workId
+
+        let report = TestSupport.runAnalyze root workId title
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "missingDisposition")
+
+    // #162 Part 2: the disposition-completeness check now fires at the stage that BUILDS the graph.
+    // A required id the generator cannot derive a task for (here an acceptance scenario referenced
+    // by no requirement) blocks `tasks` with `missingDisposition` naming the id — instead of
+    // silently passing tasks and blocking `analyze` a stage later.
+    [<Fact>]
+    let ``tasks fails fast on a required disposition it cannot derive`` () =
+        let root = initializedPlanReadyProject ()
+
+        let withOrphanScenario =
+            (TestSupport.readRelative root specPath)
+                .Replace(
+                    "## Acceptance Scenarios\n",
+                    "## Acceptance Scenarios\n- AC-777: Scenario referenced by no requirement.\n"
+                )
+
+        TestSupport.writeRelative root specPath withOrphanScenario
+
+        let report = TestSupport.runTasks root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+        Assert.Contains(
+            report.Diagnostics,
+            fun diagnostic ->
+                diagnostic.Id = "missingDisposition" && diagnostic.RelatedIds |> List.contains "AC-777"
+        )
+
+        Assert.False(TestSupport.existsRelative root tasksPath)
+
     [<Fact>]
     let ``tasks create and rerun complete under local harness budget`` () =
         let root = initializedPlanReadyProject ()
