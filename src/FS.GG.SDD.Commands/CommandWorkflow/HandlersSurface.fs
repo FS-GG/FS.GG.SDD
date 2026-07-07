@@ -51,7 +51,13 @@ module internal HandlersSurface =
             (stripBlockComments text).Split([| '\n'; '\r' |])
             |> Array.map (fun line ->
                 let commentAt = line.IndexOf "//"
-                let code = if commentAt >= 0 then line.Substring(0, commentAt) else line
+
+                let code =
+                    if commentAt >= 0 then
+                        line.Substring(0, commentAt)
+                    else
+                        line
+
                 Text.RegularExpressions.Regex.Replace(code.Trim(), @"\s+", " "))
             |> Array.filter (fun token -> token <> "")
             |> Set.ofArray
@@ -70,12 +76,17 @@ module internal HandlersSurface =
             let sourceTokens = memberTokens sourceText
             let removedOrChanged = Set.difference baselineTokens sourceTokens |> Set.toList
             let added = Set.difference sourceTokens baselineTokens |> Set.toList
-            let unparseable = (not (String.IsNullOrWhiteSpace sourceText)) && Set.isEmpty sourceTokens
+
+            let unparseable =
+                (not (String.IsNullOrWhiteSpace sourceText)) && Set.isEmpty sourceTokens
 
             let classification =
-                if unparseable || not (List.isEmpty removedOrChanged) then "breaking"
-                elif not (List.isEmpty added) then "additive"
-                else "cosmetic"
+                if unparseable || not (List.isEmpty removedOrChanged) then
+                    "breaking"
+                elif not (List.isEmpty added) then
+                    "additive"
+                else
+                    "cosmetic"
 
             { Path = path
               Classification = classification

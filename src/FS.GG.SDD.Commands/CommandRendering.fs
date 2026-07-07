@@ -480,8 +480,12 @@ module CommandRendering =
             // Feature 087: the additive-vs-breaking classification (rich auto-derives its rows from
             // these `key: value` lines, so no bespoke rich block is needed).
             let classification = surface.Classification
-            builder.AppendLine($"surfaceClassificationVerdict: {classification.Verdict}") |> ignore
-            builder.AppendLine($"surfaceClassificationBump: {classification.RecommendedBump}") |> ignore
+
+            builder.AppendLine($"surfaceClassificationVerdict: {classification.Verdict}")
+            |> ignore
+
+            builder.AppendLine($"surfaceClassificationBump: {classification.RecommendedBump}")
+            |> ignore
 
             builder.AppendLine($"surfaceClassified: {List.length classification.Entries}")
             |> ignore
@@ -489,9 +493,7 @@ module CommandRendering =
             classification.Entries
             |> List.sortBy (fun entry -> entry.Path)
             |> List.iter (fun entry ->
-                builder.AppendLine(
-                    $"surfaceClassified: {entry.Path}={entry.Classification} ({entry.RecommendedBump})"
-                )
+                builder.AppendLine($"surfaceClassified: {entry.Path}={entry.Classification} ({entry.RecommendedBump})")
                 |> ignore)
         | None -> ()
 
