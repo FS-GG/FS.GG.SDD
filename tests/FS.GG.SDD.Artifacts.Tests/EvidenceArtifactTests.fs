@@ -74,6 +74,38 @@ lifecycleNotes:
         | Error diagnostics -> failwith $"Expected evidence artifact to parse, got {diagnostics}."
 
     [<Fact>]
+    let ``parseEvidenceArtifact reads a bare null optional scalar as None`` () =
+        // A bare `null` is the *absence* of a value, so it must round-trip back to None —
+        // otherwise a re-run rewrites `null` → the quoted string `"null"` (issue #161).
+        match
+            parseEvidenceArtifact
+                { Path = evidencePath
+                  Text = validEvidenceYaml }
+        with
+        | Ok artifact ->
+            let declaration = Assert.Single(artifact.Evidence)
+            Assert.Equal(None, declaration.Rationale)
+            Assert.Equal(None, declaration.Owner)
+            Assert.Equal(None, declaration.Scope)
+            Assert.Equal(None, declaration.LaterLifecycleVisibility)
+        | Error diagnostics -> failwith $"Expected evidence artifact to parse, got {diagnostics}."
+
+    [<Fact>]
+    let ``parseEvidenceArtifact keeps a quoted "null" optional scalar as the literal string`` () =
+        // A *quoted* "null" is a real string value, not absence — it must survive as Some "null".
+        let text =
+            validEvidenceYaml
+                .Replace("rationale: null", "rationale: \"null\"")
+                .Replace("owner: null", "owner: \"null\"")
+
+        match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+        | Ok artifact ->
+            let declaration = Assert.Single(artifact.Evidence)
+            Assert.Equal(Some "null", declaration.Rationale)
+            Assert.Equal(Some "null", declaration.Owner)
+        | Error diagnostics -> failwith $"Expected evidence artifact to parse, got {diagnostics}."
+
+    [<Fact>]
     let ``parseEvidenceArtifact reports duplicate evidence ids as artifact diagnostics`` () =
         let text =
             validEvidenceYaml.Replace(

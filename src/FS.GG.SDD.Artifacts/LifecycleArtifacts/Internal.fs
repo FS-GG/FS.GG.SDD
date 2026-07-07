@@ -73,6 +73,38 @@ module internal Internal =
             |> Option.bind (tryChild key)
             |> Option.bind (tryScalarAt rest)
 
+    // A plain (unquoted) scalar whose text is a YAML 1.1 null token — `null`,
+    // `Null`, `NULL`, `~`, or empty — is the *absence* of a value, not the literal
+    // string "null". YamlDotNet's RepresentationModel does not resolve null tags,
+    // so it hands back a plain YamlScalarNode with Value = "null"; without this
+    // check `tryScalar` reads a bare `null` back as `Some "null"`, which an optional
+    // field then re-serializes as the quoted string `"null"` (a corrupting, non-
+    // idempotent round-trip). A *quoted* `"null"` keeps DoubleQuoted/SingleQuoted
+    // style and stays a real string. Used for optional scalar fields that a writer
+    // emits as bare `null` when absent.
+    let private isPlainNullScalar (scalar: YamlScalarNode) =
+        scalar.Style = YamlDotNet.Core.ScalarStyle.Plain
+        && (match (Option.ofObj scalar.Value |> Option.defaultValue "").Trim() with
+            | ""
+            | "~"
+            | "null"
+            | "Null"
+            | "NULL" -> true
+            | _ -> false)
+
+    let rec tryScalarNonNullAt keys (node: YamlNode) =
+        match keys with
+        | [] ->
+            match node with
+            | :? YamlScalarNode as scalar when not (isPlainNullScalar scalar) ->
+                Some(Option.ofObj scalar.Value |> Option.defaultValue "")
+            | _ -> None
+        | key :: rest ->
+            node
+            |> tryMapping
+            |> Option.bind (tryChild key)
+            |> Option.bind (tryScalarNonNullAt rest)
+
     let tryNodeAt keys node =
         let rec loop remaining current =
             match remaining with

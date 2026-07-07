@@ -325,6 +325,24 @@ evidence:
         TestSupport.runEvidence root workId title |> ignore
         Assert.Empty(planRefsForT002 ())
 
+    [<Fact>]
+    let ``evidence re-run is byte-idempotent — bare null optional scalars are not rewritten to "null"`` () =
+        // Issue #161: re-running evidence parsed a bare `null` optional scalar back as the string
+        // "null" and re-serialized it quoted, producing spurious diff on unchanged content. The
+        // round-trip must be idempotent: serialize(parse(x)) == x.
+        let root = initializedAnalyzedProject ()
+        TestSupport.runEvidence root workId title |> ignore
+        let first = TestSupport.readRelative root evidencePath
+        TestSupport.runEvidence root workId title |> ignore
+        let second = TestSupport.readRelative root evidencePath
+
+        Assert.Equal(first, second)
+        Assert.Contains("rationale: null", second)
+        Assert.DoesNotContain("rationale: \"null\"", second)
+        Assert.DoesNotContain("owner: \"null\"", second)
+        Assert.DoesNotContain("scope: \"null\"", second)
+        Assert.DoesNotContain("laterLifecycleVisibility: \"null\"", second)
+
     // Feature 077 / US2: `evidence --from-tests <path>` pre-maps each newly scaffolded obligation
     // to a verification-kind source pointing at the proving test file. Additive and inert when
     // absent; the path is a declared pointer (existence/freshness is a verify-stage concern).
