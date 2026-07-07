@@ -260,6 +260,23 @@ module internal TaskGraphAuthoring =
             |> Option.orElseWith (fun () -> requirementTasks |> List.tryHead |> Option.map (fun task -> [ task.Id ]))
             |> Option.defaultValue []
 
+        // Every RESOLVED clarify decision must be disposed by a task (analyze's `required`
+        // set demands it). Deferrals get their own task below; a resolved DEC-### previously
+        // got none, so `analyze` blocked two stages downstream with `missingDisposition`
+        // exactly when `clarify` did its job (#162). Route each to its own disposing task,
+        // carrying the id in the typed `decisions:` field and `sourceIds` (mirrors how a
+        // requirement task carries its RequirementId in both).
+        let clarificationDecisionTasks =
+            clarificationFacts.Decisions
+            |> List.choose (fun decision ->
+                maybeTask
+                    [ decision.DecisionId.Value ]
+                    $"Implement clarification decision {decision.DecisionId.Value}"
+                    []
+                    [ decision.DecisionId ]
+                    primaryDependency
+                    [ "fsharp"; "speckit-implement" ])
+
         let planDecisionTasks =
             planFacts.Decisions
             |> List.choose (fun decision ->
@@ -327,6 +344,7 @@ module internal TaskGraphAuthoring =
                 maybeTask [ id ] $"Keep accepted deferral {id} visible" [] [] primaryDependency [ "traceability" ])
 
         requirementTasks
+        @ clarificationDecisionTasks
         @ planDecisionTasks
         @ contractTasks
         @ obligationTasks
@@ -663,6 +681,64 @@ tasks:
         |> List.distinct
         |> List.map (taskDependencyCycle path)
 
+    // The single universe of lifecycle-fact ids the current sources require a task to
+    // dispose. `analyze`'s completeness check, the `tasks` re-derive `liveIds` filter, and
+    // the `tasks`-stage fail-fast disposition check ALL read from this one list so the two
+    // formerly-duplicated copies can never drift apart again (the drift that let a resolved
+    // clarify decision be `required` by analyze yet never derived by tasks — #162).
+    let requiredDispositionIds
+        (specFacts: SpecificationFacts)
+        (clarificationFacts: ClarificationFacts)
+        (checklistFacts: ChecklistFacts)
+        (planFacts: PlanFacts)
+        : string list =
+        [ specFacts.RequirementIds |> List.map _.Value
+          specFacts.AcceptanceScenarioIds |> List.map _.Value
+          clarificationFacts.Decisions
+          |> List.map (fun decision -> decision.DecisionId.Value)
+          clarificationFacts.AcceptedDeferrals
+          |> List.map (fun decision -> decision.DecisionId.Value)
+          checklistFacts.AcceptedDeferrals
+          |> List.map (fun result -> result.ResultId.Value)
+          planFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
+          planFacts.ContractReferences
+          |> List.map (fun contract -> contract.ContractId.Value)
+          planFacts.VerificationObligations
+          |> List.map (fun obligation -> obligation.ObligationId.Value)
+          planFacts.MigrationNotes
+          |> List.map (fun migration -> migration.MigrationId.Value)
+          planFacts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value)
+          planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id) ]
+        |> List.concat
+
+    // Every id a task graph currently disposes: a task's sourceIds, its typed
+    // requirement/decision refs, plus file-level accepted deferrals. Upper-cased for the
+    // case-insensitive membership test against `requiredDispositionIds`.
+    let allTaskDispositionIds (facts: TaskFacts) =
+        [ facts.Tasks |> List.collect (fun task -> task.SourceIds)
+          facts.Tasks |> List.collect (fun task -> task.Requirements |> List.map _.Value)
+          facts.Tasks |> List.collect (fun task -> task.Decisions |> List.map _.Value)
+          facts.AcceptedDeferrals ]
+        |> List.concat
+        |> List.map (fun value -> value.ToUpperInvariant())
+        |> Set.ofList
+
+    // Required dispositions the task graph does NOT cover (sorted, distinct). Empty means the
+    // graph is disposition-complete. Shared by the `tasks` fail-fast check and `analyze`.
+    let missingDispositionIds
+        (specFacts: SpecificationFacts)
+        (clarificationFacts: ClarificationFacts)
+        (checklistFacts: ChecklistFacts)
+        (planFacts: PlanFacts)
+        (facts: TaskFacts)
+        : string list =
+        let dispositions = allTaskDispositionIds facts
+
+        requiredDispositionIds specFacts clarificationFacts checklistFacts planFacts
+        |> List.distinct
+        |> List.sort
+        |> List.filter (fun id -> not (Set.contains (id.ToUpperInvariant()) dispositions))
+
     let taskValidationDiagnostics
         (path: string)
         (specFacts: SpecificationFacts)
@@ -735,11 +811,21 @@ tasks:
                 | TaskStatus.Done when not (Set.contains task.Id.Value evidenceTaskRefs) -> Some task.Id.Value
                 | _ -> None)
 
+        // Fail fast HERE, at the stage that builds the graph, not two stages later at
+        // `analyze` (#162). The generator now derives a task for every required id, so a
+        // freshly re-derived graph never trips this; it fires only when an authored edit to
+        // tasks.yml drops a live disposition — and the diagnostic points at the concrete fix.
+        let missingDispositions =
+            match missingDispositionIds specFacts clarificationFacts checklistFacts planFacts facts with
+            | [] -> []
+            | missing -> [ missingDisposition path missing ]
+
         [ duplicateDiagnostics
           unknownSources
           unknownDependencies
           selfDependencies
           taskDependencyCycleDiagnostics path facts.Tasks
+          missingDispositions
           if not (List.isEmpty skippedWithoutRationale) then
               [ skippedTaskMissingRationale path skippedWithoutRationale ]
           else
@@ -918,28 +1004,12 @@ tasks:
                                 planFacts
                                 None
 
-                        // The universe of ids the current sources can dispose (mirrors analyze's
-                        // `required` set). A prior authored task or ref is "live" iff it names one
-                        // of these; anything else is a dead orphan and is dropped on re-derive.
+                        // The universe of ids the current sources can dispose (the ONE shared
+                        // `requiredDispositionIds` list analyze's completeness check also reads).
+                        // A prior authored task or ref is "live" iff it names one of these;
+                        // anything else is a dead orphan and is dropped on re-derive.
                         let liveIds =
-                            [ specFacts.RequirementIds |> List.map _.Value
-                              specFacts.AcceptanceScenarioIds |> List.map _.Value
-                              clarificationFacts.Decisions
-                              |> List.map (fun decision -> decision.DecisionId.Value)
-                              clarificationFacts.AcceptedDeferrals
-                              |> List.map (fun decision -> decision.DecisionId.Value)
-                              checklistFacts.AcceptedDeferrals
-                              |> List.map (fun result -> result.ResultId.Value)
-                              planFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
-                              planFacts.ContractReferences
-                              |> List.map (fun contract -> contract.ContractId.Value)
-                              planFacts.VerificationObligations
-                              |> List.map (fun obligation -> obligation.ObligationId.Value)
-                              planFacts.MigrationNotes
-                              |> List.map (fun migration -> migration.MigrationId.Value)
-                              planFacts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value)
-                              planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id) ]
-                            |> List.concat
+                            requiredDispositionIds specFacts clarificationFacts checklistFacts planFacts
                             |> List.map (fun value -> value.ToUpperInvariant())
                             |> Set.ofList
 

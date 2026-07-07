@@ -24,15 +24,10 @@ module internal ViewGeneration =
     module SerializationModule = FS.GG.SDD.Artifacts.Serialization
     module WorkModelModule = FS.GG.SDD.Artifacts.WorkModel
 
-    let allTaskDispositionIds (facts: TaskFacts) =
-        [ facts.Tasks |> List.collect (fun task -> task.SourceIds)
-          facts.Tasks |> List.collect (fun task -> task.Requirements |> List.map _.Value)
-          facts.Tasks |> List.collect (fun task -> task.Decisions |> List.map _.Value)
-          facts.AcceptedDeferrals ]
-        |> List.concat
-        |> List.map (fun value -> value.ToUpperInvariant())
-        |> Set.ofList
-
+    // The disposition-completeness check is shared with the `tasks` stage — see
+    // `TaskGraphAuthoring.missingDispositionIds` (the single `required` universe). `tasks`
+    // now fails fast on a gap, so `analyze` normally sees none; this stays as the
+    // downstream backstop and to render `missing` disposition relationships (#162).
     let missingDispositionDiagnostics
         workId
         (specFacts: SpecificationFacts)
@@ -41,38 +36,11 @@ module internal ViewGeneration =
         (planFacts: PlanFacts)
         (taskFacts: TaskFacts)
         =
-        let dispositions = allTaskDispositionIds taskFacts
-
-        let required =
-            [ specFacts.RequirementIds |> List.map _.Value
-              specFacts.AcceptanceScenarioIds |> List.map _.Value
-              clarificationFacts.Decisions
-              |> List.map (fun decision -> decision.DecisionId.Value)
-              clarificationFacts.AcceptedDeferrals
-              |> List.map (fun decision -> decision.DecisionId.Value)
-              checklistFacts.AcceptedDeferrals
-              |> List.map (fun result -> result.ResultId.Value)
-              planFacts.Decisions |> List.map (fun decision -> decision.DecisionId.Value)
-              planFacts.ContractReferences
-              |> List.map (fun contract -> contract.ContractId.Value)
-              planFacts.VerificationObligations
-              |> List.map (fun obligation -> obligation.ObligationId.Value)
-              planFacts.MigrationNotes
-              |> List.map (fun migration -> migration.MigrationId.Value)
-              planFacts.GeneratedViewImpacts |> List.map (fun impact -> impact.ImpactId.Value)
-              planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id) ]
-            |> List.concat
-            |> List.distinct
-            |> List.sort
-
-        let missing =
-            required
-            |> List.filter (fun id -> not (Set.contains (id.ToUpperInvariant()) dispositions))
-
-        if List.isEmpty missing then
-            []
-        else
-            [ missingDisposition (tasksPath workId) missing ]
+        match
+            TaskGraphAuthoring.missingDispositionIds specFacts clarificationFacts checklistFacts planFacts taskFacts
+        with
+        | [] -> []
+        | missing -> [ missingDisposition (tasksPath workId) missing ]
 
     type AnalysisRelationshipDraft =
         { SourcePath: string
@@ -108,7 +76,7 @@ module internal ViewGeneration =
         (planFacts: PlanFacts)
         (taskFacts: TaskFacts)
         =
-        let taskDispositionIds = allTaskDispositionIds taskFacts
+        let taskDispositionIds = TaskGraphAuthoring.allTaskDispositionIds taskFacts
 
         let dispositionRelationships (sourcePath: string) (relationshipName: string) (ids: string list) =
             ids
