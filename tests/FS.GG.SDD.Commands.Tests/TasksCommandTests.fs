@@ -509,7 +509,8 @@ module TasksCommandTests =
         Assert.Contains(
             report.Diagnostics,
             fun diagnostic ->
-                diagnostic.Id = "missingDisposition" && diagnostic.RelatedIds |> List.contains "AC-777"
+                diagnostic.Id = "missingDisposition"
+                && diagnostic.RelatedIds |> List.contains "AC-777"
         )
 
         Assert.False(TestSupport.existsRelative root tasksPath)
