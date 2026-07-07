@@ -15,6 +15,7 @@
     <Compile Include="SurfaceProjectionTests.fs" />
     <Compile Include="DegradationTests.fs" />
     <Compile Include="FormatSelectionTests.fs" />
+    <Compile Include="ForceColorTests.fs" />
     <Compile Include="SurfaceBaselineTests.fs" />
     <Compile Include="ValidationRichRenderingTests.fs" />
     <Compile Include="ValidateCommandTests.fs" />

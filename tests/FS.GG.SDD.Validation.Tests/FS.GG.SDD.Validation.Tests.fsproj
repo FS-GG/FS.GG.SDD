@@ -13,6 +13,7 @@
     <Compile Include="DeterminismMatrixTests.fs" />
     <Compile Include="BaselineMatrixTests.fs" />
     <Compile Include="ReportDeterminismTests.fs" />
+    <Compile Include="ValidationMarkdownTests.fs" />
     <Compile Include="CoverageGapTests.fs" />
     <Compile Include="IsolationTests.fs" />
   </ItemGroup>

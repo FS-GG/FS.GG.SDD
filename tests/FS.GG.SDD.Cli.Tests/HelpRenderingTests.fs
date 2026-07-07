@@ -86,13 +86,14 @@ module HelpRenderingTests =
     // width so Rich degrades to zero-ANSI plain text; a live sink stays interactive.
     [<Fact>]
     let ``detectCapabilities follows the target sink's redirection`` () =
-        Assert.False((detectCapabilities true).IsInteractive)
-        Assert.Equal(None, (detectCapabilities true).Width)
-        Assert.True((detectCapabilities false).IsInteractive)
+        // force-color off: sink redirection alone drives interactivity.
+        Assert.False((detectCapabilities false true).IsInteractive)
+        Assert.Equal(None, (detectCapabilities false true).Width)
+        Assert.True((detectCapabilities false false).IsInteractive)
 
     [<Fact>]
     let ``a report resolves Rich to zero-ANSI plain text when its sink is redirected`` () =
-        let result = resolve Rich (detectCapabilities true) commandHelp
+        let result = resolve Rich (detectCapabilities false true) commandHelp
         Assert.False(result.UsedRichRendering)
         Assert.Equal(renderText commandHelp, result.Text)
         Assert.False(result.Text |> Seq.exists (fun c -> c = escChar))

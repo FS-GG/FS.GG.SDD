@@ -181,6 +181,20 @@ CLI output formats:
   text with zero ANSI whenever output is non-interactive/redirected or color is
   disabled (`NO_COLOR` present, or `TERM=dumb`). Rich output is presentation only
   and is excluded from deterministic/golden contracts.
+- Force-color override (feature 088 / FS.GG.SDD#172): `FORCE_COLOR` (boolean-ish —
+  unset/empty/`0` do not force, any other value forces) or the `--force-color` flag
+  re-enable rich ANSI over a redirected/non-interactive sink or `TERM=dumb`, so the
+  human `--rich` report survives an agent harness or captured pipe. `NO_COLOR` is an
+  unconditional override and always wins: precedence is
+  `NO_COLOR` > force-color > capability sensing. Force-color acts on the single shared
+  color/TTY gate, so it applies uniformly to every `--rich`-capable command and changes
+  only whether ANSI is emitted — never the JSON/text/markdown bytes, exit code, or routing.
+- `fsgg-sdd validate` additionally offers `--markdown` — a deterministic, ANSI-free
+  Markdown "report card" projection of the `validation-report` (verdict, the five summary
+  counts, a per-matrix rollup, and each non-passing cell), so agents and logs get a
+  first-class human artifact without a terminal. It is `validate`-only, byte-identical
+  across runs, persisted by `--out`, and slots into the validate precedence
+  `--rich` > `--markdown` > `--text` > `--json` > default.
 
 When working here:
 
@@ -195,5 +209,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/084-lifecycle-status-footer/plan.md
+at specs/088-validate-force-color/plan.md
 <!-- SPECKIT END -->

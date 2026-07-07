@@ -30,11 +30,29 @@ module Rendering =
     /// precedence `--rich` > `--text` > `--json` > default (`Json`). Pure.
     val selectFormat: args: string list -> OutputFormat
 
+    /// A `validate`-local projection selection (feature 088 / FS.GG.SDD#172). The
+    /// Markdown report card is validate-only, so it stays out of the shared
+    /// `OutputFormat`; `Standard` wraps one of the three shared projections.
+    type ValidationFormat =
+        | Standard of OutputFormat
+        | MarkdownCard
+
+    /// Resolve the `validate` projection with precedence
+    /// `--rich` > `--markdown` > `--text` > `--json` > default (`Standard Json`). Pure.
+    val selectValidationFormat: args: string list -> ValidationFormat
+
+    /// Whether a force-color request is present — the `FORCE_COLOR` environment variable
+    /// (boolean-ish: unset / empty / "0" do not force, any other value forces) OR the
+    /// `--force-color` flag. Bypasses TTY/`TERM=dumb` sensing but never `NO_COLOR` (#172).
+    val forceColorRequested: args: string list -> bool
+
     /// Detect capabilities from the process environment for the stream a report will be
     /// written to (impure edge step). `outputRedirected` is that sink's redirection state
     /// (`Console.IsOutputRedirected` for stdout-routed reports, `Console.IsErrorRedirected`
     /// for the stderr-routed Blocked path) so Rich degrades to plain text on redirect.
-    val detectCapabilities: outputRedirected: bool -> TerminalCapabilities
+    /// `forceColor` re-enables rich ANSI over a redirected sink or `TERM=dumb`, but never
+    /// over `NO_COLOR`: precedence is `NO_COLOR` > force-color > capability sensing (#172).
+    val detectCapabilities: forceColor: bool -> outputRedirected: bool -> TerminalCapabilities
 
     /// Render a report into the given Spectre console. Pure over the report: the
     /// only observable mutation is to the supplied console.

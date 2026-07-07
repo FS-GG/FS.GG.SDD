@@ -154,3 +154,80 @@ module ValidateCommandTests =
         finally
             if File.Exists outPath then
                 File.Delete outPath
+
+    // ----- Feature 088 / FS.GG.SDD#172: Markdown report card + force-color -----
+
+    /// As `runCli` but forces color and does NOT set NO_COLOR — for the force-color path.
+    let private runCliForced (args: string list) =
+        let startInfo = ProcessStartInfo("dotnet")
+        startInfo.ArgumentList.Add cliDll
+        args |> List.iter startInfo.ArgumentList.Add
+        startInfo.RedirectStandardOutput <- true
+        startInfo.RedirectStandardError <- true
+        startInfo.UseShellExecute <- false
+        startInfo.Environment["DOTNET_NOLOGO"] <- "1"
+        startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] <- "1"
+        startInfo.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] <- "1"
+        startInfo.Environment["FORCE_COLOR"] <- "1"
+        startInfo.Environment.Remove "NO_COLOR" |> ignore
+
+        use proc =
+            match Process.Start startInfo with
+            | null -> failwith "Failed to start the dotnet process."
+            | started -> started
+
+        let stdout = proc.StandardOutput.ReadToEnd()
+        proc.StandardError.ReadToEnd() |> ignore
+        proc.WaitForExit()
+        stdout, proc.ExitCode
+
+    [<Fact>]
+    let ``validate --markdown emits a capture-safe report card with zero ANSI`` () =
+        let stdout, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--markdown" ]
+        Assert.Contains("# Validation Report", stdout)
+        Assert.Contains("**Verdict:**", stdout)
+        Assert.Contains("| passed | failed | skipped | coverageGaps | notValidated |", stdout)
+        Assert.False(stdout |> Seq.exists (fun c -> int c = 27), "markdown output contains an ANSI escape")
+
+    [<Fact>]
+    let ``validate --markdown is byte-identical across runs`` () =
+        let first, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--markdown" ]
+        let second, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--markdown" ]
+        Assert.Equal(first, second)
+
+    [<Fact>]
+    let ``validate --markdown --out persists the card and exits on verdict only`` () =
+        let outPath =
+            Path.Combine(Path.GetTempPath(), $"validate-md-{System.Guid.NewGuid():N}.md")
+
+        try
+            let stdout, exitCode =
+                runCli [ "validate"; "--matrix"; "compatibility"; "--markdown"; "--out"; outPath ]
+
+            let persisted = File.ReadAllText outPath
+            Assert.Contains("# Validation Report", persisted)
+            Assert.Equal(stdout.TrimEnd(), persisted.TrimEnd())
+            // Partial (single-matrix) run never reads as a full pass — exit reflects the verdict.
+            Assert.NotEqual(0, exitCode)
+        finally
+            if File.Exists outPath then
+                File.Delete outPath
+
+    [<Fact>]
+    let ``validate exit code is identical across --markdown and --json`` () =
+        let _, jsonExit = runCli [ "validate"; "--matrix"; "compatibility"; "--json" ]
+        let _, mdExit = runCli [ "validate"; "--matrix"; "compatibility"; "--markdown" ]
+        Assert.Equal(jsonExit, mdExit)
+
+    [<Fact>]
+    let ``FORCE_COLOR re-enables rich ANSI on a redirected stdout`` () =
+        // Captured (piped) stdout is not a TTY, so --rich normally degrades; FORCE_COLOR
+        // bypasses the sensing and emits real ANSI (the core #172 remedy).
+        let forced, _ = runCliForced [ "validate"; "--matrix"; "compatibility"; "--rich" ]
+        Assert.True(forced |> Seq.exists (fun c -> int c = 27), "forced --rich output carries no ANSI")
+
+    [<Fact>]
+    let ``force-color leaves the --json bytes unchanged`` () =
+        let plain, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--json" ]
+        let forced, _ = runCliForced [ "validate"; "--matrix"; "compatibility"; "--json" ]
+        Assert.Equal(plain.TrimEnd(), forced.TrimEnd())
