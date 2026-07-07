@@ -59,7 +59,8 @@ let printUnknown commandValue =
           IsInteractive = false
           Artifact = None
           Explain = false
-          FromTests = None }
+          FromTests = None
+          SurfaceUpdate = false }
 
     let model =
         { Request = request
@@ -81,6 +82,7 @@ let printUnknown commandValue =
           Doctor = None
           Upgrade = None
           Lint = None
+          Surface = None
           GeneratedViews = []
           Report = None }
 
@@ -158,7 +160,8 @@ let private helpRequest command format =
       IsInteractive = false
       Artifact = None
       Explain = false
-      FromTests = None }
+      FromTests = None
+      SurfaceUpdate = false }
 
 // §3.5: project a help report through the standard three views to stdout. Help carries no
 // diagnostics and no changes → NoChange → exit 0 (never `unknownCommand`, FR-008/011).
@@ -231,7 +234,10 @@ let run args =
                   Explain = hasFlag "--explain" rest
                   // Feature 077: `evidence --from-tests <path>` pre-maps scaffolded obligations to
                   // a proving test file.
-                  FromTests = optionValue "--from-tests" rest }
+                  FromTests = optionValue "--from-tests" rest
+                  // Feature 086: `surface --update` refreshes the docs/api-surface baselines;
+                  // default (or `--check`) is the read-only drift check.
+                  SurfaceUpdate = hasFlag "--update" rest }
 
             let report = driveToReport request
 

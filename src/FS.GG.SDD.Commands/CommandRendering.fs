@@ -442,6 +442,42 @@ module CommandRendering =
             builder.AppendLine($"doctorCoherent: {doctor.IsCoherent}") |> ignore
         | None -> ()
 
+        // Feature 086: `surface` — one `key: value` line per fact; `--rich` derives its table from
+        // these lines, so no bespoke rich block is needed.
+        match report.Surface with
+        | Some surface ->
+            builder.AppendLine($"surfaceMode: {surface.Mode}") |> ignore
+            builder.AppendLine($"surfaceSourceRoot: {surface.SourceRoot}") |> ignore
+            builder.AppendLine($"surfaceBaselineRoot: {surface.BaselineRoot}") |> ignore
+            builder.AppendLine($"surfaceChecked: {surface.CheckedCount}") |> ignore
+
+            builder.AppendLine($"surfaceMissingBaselines: {List.length surface.MissingBaselinePaths}")
+            |> ignore
+
+            surface.MissingBaselinePaths
+            |> List.iter (fun path -> builder.AppendLine($"surfaceMissingBaseline: {path}") |> ignore)
+
+            builder.AppendLine($"surfaceDrifted: {List.length surface.DriftedSourcePaths}")
+            |> ignore
+
+            surface.DriftedSourcePaths
+            |> List.iter (fun path -> builder.AppendLine($"surfaceDrifted: {path}") |> ignore)
+
+            builder.AppendLine($"surfaceOrphans: {List.length surface.OrphanBaselinePaths}")
+            |> ignore
+
+            surface.OrphanBaselinePaths
+            |> List.iter (fun path -> builder.AppendLine($"surfaceOrphan: {path}") |> ignore)
+
+            builder.AppendLine($"surfaceUpdated: {List.length surface.UpdatedBaselinePaths}")
+            |> ignore
+
+            surface.UpdatedBaselinePaths
+            |> List.iter (fun path -> builder.AppendLine($"surfaceUpdated: {path}") |> ignore)
+
+            builder.AppendLine($"surfaceCoherent: {surface.IsCoherent}") |> ignore
+        | None -> ()
+
         match report.Upgrade with
         | Some upgrade ->
             builder.AppendLine($"upgradeHasProvenance: {upgrade.HasProvenance}") |> ignore

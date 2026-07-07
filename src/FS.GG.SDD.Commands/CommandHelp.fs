@@ -52,6 +52,8 @@ module CommandHelp =
             Description = "Report how a scaffolded product has drifted from its coherent set (read-only)." }
           { Name = "upgrade"
             Description = "Reconcile a behind scaffold across confirmable per-step diffs." }
+          { Name = "surface"
+            Description = "Check or refresh the committed docs/api-surface .fsi baselines (read-only by default)." }
           { Name = "version"
             Description = "Print the CLI/generator version." }
           { Name = "validate"
@@ -102,6 +104,15 @@ module CommandHelp =
             [ flag "--yes" None "Apply the reconciliation without prompting (explicit non-interactive apply)." ]
         | Lint ->
             [ flag "--explain" None "Run the same pre-flight checks against the stage's own artifact (non-blocking)." ]
+        // surface: `--check` (default, read-only, exit 1 on drift) or `--update` (refresh baselines);
+        // roots default to src/ and docs/api-surface/ and are overridable via --param.
+        | Surface ->
+            [ flag "--check" None "Report API-surface baseline drift; read-only, exits 1 on drift (default)."
+              flag
+                  "--update"
+                  None
+                  "Refresh the docs/api-surface .fsi baselines from the authored signatures (takes precedence)."
+              flag "--param" (Some "<key=value>") "Root override: sourceRoot=<dir> / baselineRoot=<dir>." ]
 
     let topLevelHelp (generator: GeneratorVersion) =
         { Scope = TopLevel

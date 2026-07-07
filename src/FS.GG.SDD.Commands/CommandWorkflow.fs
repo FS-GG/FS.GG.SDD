@@ -27,6 +27,7 @@ open FS.GG.SDD.Commands.Internal.HandlersScaffold
 open FS.GG.SDD.Commands.Internal.HandlersDoctor
 open FS.GG.SDD.Commands.Internal.HandlersUpgrade
 open FS.GG.SDD.Commands.Internal.HandlersLint
+open FS.GG.SDD.Commands.Internal.HandlersSurface
 
 module CommandWorkflow =
     // The per-stage summaries a lifecycle command's plan feeds into the command model.
@@ -372,6 +373,14 @@ module CommandWorkflow =
                     model, []
                 else
                     computeLintNext model
+            | Surface, _ ->
+                // API-surface baseline drift (feature 086): once the enumerated roots and the gated
+                // per-file bodies are in, compute the drift picture; `--update` also emits the
+                // baseline write effects, `--check` emits none.
+                if not (allPlannedReadsInterpreted model) then
+                    model, []
+                else
+                    computeSurfaceNext model
             | _ -> model, []
 
     let init (request: CommandRequest) =
@@ -401,6 +410,7 @@ module CommandWorkflow =
               Doctor = None
               Upgrade = None
               Lint = None
+              Surface = None
               GeneratedViews = []
               Report = None }
 

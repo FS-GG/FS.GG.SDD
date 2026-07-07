@@ -646,15 +646,39 @@ nuget-cache/
         [ ReadFile ".fsgg/scaffold-provenance.json"; ReadFile ".fsgg/providers.yml" ]
         @ (Drift.expectedArtifactPaths |> List.map ReadFile)
 
+    // Feature 086: `surface` roots — convention defaults with optional `--param` overrides. The
+    // `<Pkg>/<Name>.fsi` mirroring between the two roots is fixed regardless of the roots chosen.
+    let surfaceParam (key: string) (fallback: string) (request: CommandRequest) =
+        request.Parameters
+        |> List.tryPick (fun (k, v) ->
+            if k = key && not (String.IsNullOrWhiteSpace v) then
+                Some(v.Trim())
+            else
+                None)
+        |> Option.defaultValue fallback
+
+    let surfaceSourceRoot request = surfaceParam "sourceRoot" "src" request
+
+    let surfaceBaselineRoot request =
+        surfaceParam "baselineRoot" "docs/api-surface" request
+
+    // The first-wave reads for `surface`: enumerate the source and baseline roots so the handler
+    // can discover the authored `.fsi` set and the committed baselines (their bodies are read in a
+    // provenance-style second wave, mirroring `doctor`'s skill-read gate).
+    let surfaceReadEffects (request: CommandRequest) =
+        [ EnumerateDirectory(surfaceSourceRoot request)
+          EnumerateDirectory(surfaceBaselineRoot request) ]
+
     let workIdDiagnostics (request: CommandRequest) =
         match request.Command, request.WorkId with
         | Init, _ -> []
-        // Scaffold/doctor/upgrade/lint are cross-cutting and operate on --root/--artifact,
+        // Scaffold/doctor/upgrade/lint/surface are cross-cutting and operate on --root/--artifact,
         // not a work item.
         | Scaffold, _
         | Doctor, _
         | Upgrade, _
-        | Lint, _ -> []
+        | Lint, _
+        | Surface, _ -> []
         | _, None -> [ missingWorkId request.Command ]
         | _, Some value ->
             match IdentifiersModule.createWorkId value with
@@ -722,6 +746,9 @@ nuget-cache/
                 | Scaffold, _ -> [], scaffoldReadEffects
                 | Doctor, _
                 | Upgrade, _ -> [], remediationReadEffects
+                // Feature 086: enumerate the source + baseline roots; the handler gates the
+                // per-file body reads and computes the surface drift.
+                | Surface, _ -> [], surfaceReadEffects request
                 // Lint reads the single `<artifact>` (feature 076); a missing path is a plan-time
                 // user error (nothing for the effect loop to read) surfaced as unusable input.
                 | Lint, _ ->

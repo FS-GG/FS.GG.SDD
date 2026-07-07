@@ -53,6 +53,7 @@
     <Compile Include="SkillGateDoctestTests.fs" />
     <Compile Include="RequiredFieldContractTests.fs" />
     <Compile Include="LifecycleStatusTests.fs" />
+    <Compile Include="SurfaceCommandTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

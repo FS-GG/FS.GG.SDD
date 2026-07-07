@@ -69,7 +69,8 @@ module ValidationRunner =
           IsInteractive = false
           Artifact = None
           Explain = false
-          FromTests = None }
+          FromTests = None
+          SurfaceUpdate = false }
 
     let runRequest (request: CommandRequest) = driveToReport request
 
@@ -149,6 +150,7 @@ module ValidationRunner =
         | Doctor -> 0
         | Upgrade -> 0
         | Lint -> 0
+        | Surface -> 0
 
     /// Build a disposable project at the requested state by driving the real
     /// CommandWorkflow over a temp dir (matrix-runner C-1). `withEvidence = false`
@@ -594,6 +596,7 @@ module ValidationRunner =
             | Doctor -> "doctor"
             | Upgrade -> "upgrade"
             | Lint -> "lint"
+            | Surface -> "surface"
 
         // `scaffold` (and, feature 053, `doctor`/`upgrade`) are deliberately excluded from
         // determinism-matrix reconciliation: `scaffold`/`upgrade` spawn an external process
@@ -621,6 +624,9 @@ module ValidationRunner =
           Refresh ]
         // `lint`/`<stage> --explain` are excluded here like scaffold/doctor/upgrade: lint requires
         // an `<artifact>` argument and is covered by its own read-only semantic suite (feature 076).
+        // `surface` (feature 086) is likewise excluded — a cross-cutting API-surface baseline verb
+        // covered by its own semantic suite (its enumerate/read/write over a workspace tree is not a
+        // determinism-matrix stage).
         |> List.map token
 
     /// Map a produced readiness file to its catalogued generated-view name, or `None`

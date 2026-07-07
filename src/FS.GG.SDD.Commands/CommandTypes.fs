@@ -24,6 +24,7 @@ module CommandTypes =
         | Doctor
         | Upgrade
         | Lint
+        | Surface
 
     type OutputFormat =
         | Json
@@ -75,7 +76,10 @@ module CommandTypes =
           Explain: bool
           // Evidence input (`fsgg-sdd evidence --from-tests <path>`); ignored by other commands
           // (feature 077). Pre-maps each newly scaffolded obligation to a verification-kind source.
-          FromTests: string option }
+          FromTests: string option
+          // Feature 086: `fsgg-sdd surface --update` refreshes the `docs/api-surface/**` baselines
+          // from the authored `.fsi` signatures; default false (read-only `--check`).
+          SurfaceUpdate: bool }
 
     type GeneratedViewSource =
         { Path: string
@@ -400,6 +404,18 @@ module CommandTypes =
           ResidualDrift: bool
           NextActionHint: string }
 
+    // Feature 086: the API-surface drift picture `surface` emits. See CommandTypes.fsi for docs.
+    type SurfaceSummary =
+        { SourceRoot: string
+          BaselineRoot: string
+          Mode: string
+          CheckedCount: int
+          MissingBaselinePaths: string list
+          DriftedSourcePaths: string list
+          OrphanBaselinePaths: string list
+          UpdatedBaselinePaths: string list
+          IsCoherent: bool }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -521,6 +537,7 @@ module CommandTypes =
           Doctor: DoctorSummary option
           Upgrade: UpgradeSummary option
           Lint: LintSummary option
+          Surface: SurfaceSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -574,6 +591,7 @@ module CommandTypes =
           Doctor: DoctorSummary option
           Upgrade: UpgradeSummary option
           Lint: LintSummary option
+          Surface: SurfaceSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 
@@ -600,6 +618,7 @@ module CommandTypes =
         | Doctor -> "doctor"
         | Upgrade -> "upgrade"
         | Lint -> "lint"
+        | Surface -> "surface"
 
     let commandStage (command: SddCommand) =
         match command with
@@ -625,6 +644,7 @@ module CommandTypes =
         | "doctor" -> Ok Doctor
         | "upgrade" -> Ok Upgrade
         | "lint" -> Ok Lint
+        | "surface" -> Ok Surface
         | other -> Error $"Unknown SDD command '{other}'."
 
     let outputFormatValue (format: OutputFormat) =
@@ -746,6 +766,7 @@ module CommandTypes =
         | Doctor -> None
         | Upgrade -> None
         | Lint -> None
+        | Surface -> None
 
     let effectPath (effect: CommandEffect) =
         match effect with

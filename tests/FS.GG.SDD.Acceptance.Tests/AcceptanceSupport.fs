@@ -107,7 +107,8 @@ module AcceptanceSupport =
           IsInteractive = false
           Artifact = None
           Explain = false
-          FromTests = None }
+          FromTests = None
+          SurfaceUpdate = false }
 
     /// The acceptance's fixed composition request: `--provider rendering --param
     /// lifecycle=sdd`. `rendering` is the author-supplied provider *name* (a generic

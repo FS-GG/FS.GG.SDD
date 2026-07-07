@@ -200,7 +200,7 @@ in the authoritative `catalog[].inventory` of
   `generatedViews`, `governanceCompatibility`, `help` *(present on `--help`/`-h`/`help`
   invocations; `null` otherwise)*, `invocation`, `lifecycleStatus`, `lint`, `nextAction`,
   `outcome`, `plan`, `refresh`, `reportVersion`, `scaffold`, `schemaVersion` *(Stable)*, `ship`,
-  `specification`, `tasks`, `upgrade`, `verification`.
+  `specification`, `surface`, `tasks`, `upgrade`, `verification`.
   The additive `doctor` field is present on `fsgg-sdd doctor` (`null` otherwise); the
   additive `upgrade` field is present on `fsgg-sdd upgrade` (`null` otherwise) — feature 053.
   The additive `lint` field is present on `fsgg-sdd lint` / `<stage> --explain` (`null`
@@ -208,6 +208,10 @@ in the authoritative `catalog[].inventory` of
   (`clean`/`defectsFound`/`unusableInput`), and `defects[]` (each with `class`, `id`,
   `severity`, `location`, `message`, `correction`, and a `grammarPointer` for the four
   grammar classes).
+  The additive `surface` field is present on `fsgg-sdd surface` (`null` otherwise) — feature 086;
+  it carries `sourceRoot`, `baselineRoot`, `mode` (`check`/`update`), `checkedCount`,
+  `missingBaselinePaths[]`, `driftedSourcePaths[]`, `orphanBaselinePaths[]`,
+  `updatedBaselinePaths[]`, and `isCoherent`.
   The additive `lifecycleStatus` field is present on **every** command's report — feature 084;
   it is the standardized lifecycle-status footer's authoritative fact, carrying `workId`,
   `isLifecycleStage`, `currentOrdinal`, `totalStages`, `outcome`, `nextCommand`, and `stages[]`
