@@ -266,7 +266,8 @@ let run args =
                 else
                     Console.IsOutputRedirected
 
-            let rendered = (resolve format (detectCapabilities forceColor sinkRedirected) report).Text
+            let rendered =
+                (resolve format (detectCapabilities forceColor sinkRedirected) report).Text
 
             if routesToStderr then
                 Console.Error.WriteLine(rendered)
