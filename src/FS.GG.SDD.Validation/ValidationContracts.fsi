@@ -100,5 +100,13 @@ module ValidationContracts =
     /// Portable plain-text projection of the same report (no ANSI).
     val renderText: report: ValidationReport -> string
 
+    /// Deterministic, ANSI-free Markdown "report card" projection of the same report
+    /// (feature 088 / FS.GG.SDD#172): a heading, the verdict, a summary table of the
+    /// five counts, a per-matrix rollup table, and every non-passing cell as a bullet
+    /// (passing cells summarized). Fact-parity with the rich projection; carries no
+    /// sensed / wall-clock / width data, so it is byte-identical across runs and safe to
+    /// capture into a log or file.
+    val renderMarkdown: report: ValidationReport -> string
+
     /// Parse the canonical JSON back into a `ValidationReport` (round-trip).
     val parse: json: string -> Result<ValidationReport, string>

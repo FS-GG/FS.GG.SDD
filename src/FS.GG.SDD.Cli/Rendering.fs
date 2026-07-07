@@ -28,19 +28,54 @@ module Rendering =
         elif has "--json" then Json
         else Json
 
+    // The `validate`-local projection selection (#172). The Markdown report card is
+    // validate-only, so it stays out of the shared `OutputFormat`; `Standard` wraps one of
+    // the three shared projections.
+    type ValidationFormat =
+        | Standard of OutputFormat
+        | MarkdownCard
+
+    let selectValidationFormat (args: string list) : ValidationFormat =
+        let has flag = List.contains flag args
+        // Precedence: --rich > --markdown > --text > --json > default (Standard Json).
+        if has "--rich" then Standard Rich
+        elif has "--markdown" then MarkdownCard
+        elif has "--text" then Standard Text
+        elif has "--json" then Standard Json
+        else Standard Json
+
+    // FORCE_COLOR is boolean-ish (supports-color / chalk convention): unset, empty, or the
+    // literal "0" do NOT force; any other value forces. NO_COLOR keeps its own "present with
+    // any value disables" semantics and always wins over force-color (#172).
+    let private forceColorEnv () =
+        match Environment.GetEnvironmentVariable "FORCE_COLOR" with
+        | null
+        | ""
+        | "0" -> false
+        | _ -> true
+
+    // A force-color request from the environment (FORCE_COLOR) or the `--force-color` flag.
+    let forceColorRequested (args: string list) : bool =
+        forceColorEnv () || List.contains "--force-color" args
+
     // Sense the terminal for the stream a report will actually be written to. `outputRedirected`
     // is that sink's redirection state — `Console.IsOutputRedirected` for stdout-routed reports
     // and `Console.IsErrorRedirected` for the stderr-routed Blocked path — so `--rich 2>err.log`
     // degrades to zero-ANSI plain text instead of leaking escapes into the redirected file (#68).
-    let detectCapabilities (outputRedirected: bool) : TerminalCapabilities =
-        let isInteractive = not outputRedirected
-
+    // `forceColor` (FORCE_COLOR / --force-color) re-enables rich ANSI over a redirected sink or
+    // `TERM=dumb`, but never over `NO_COLOR`: precedence is NO_COLOR > force-color > sensing (#172).
+    let detectCapabilities (forceColor: bool) (outputRedirected: bool) : TerminalCapabilities =
         // NO_COLOR disables color when present with ANY value (including empty);
-        // TERM=dumb also disables color.
+        // TERM=dumb also disables color. Force-color overrides the redirect gate and
+        // TERM=dumb, but NO_COLOR is an unconditional override.
         let noColorPresent = Environment.GetEnvironmentVariable "NO_COLOR" |> isNull |> not
         let dumbTerminal = Environment.GetEnvironmentVariable "TERM" = "dumb"
-        let colorEnabled = not noColorPresent && not dumbTerminal
 
+        let isInteractive = (not outputRedirected) || forceColor
+        let colorEnabled = not noColorPresent && (not dumbTerminal || forceColor)
+
+        // Width uses the RAW redirect state so `Console.WindowWidth` is never read on a
+        // redirected pipe, even when force-color renders rich into it.
         let width =
             try
                 if outputRedirected then None else Some Console.WindowWidth

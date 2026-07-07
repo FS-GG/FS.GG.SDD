@@ -75,6 +75,42 @@ module DegradationTests =
         let text = RichRenderingTests.render sample
         Assert.False((text).Contains escChar)
 
+    // ----- Feature 088: force-color re-enables rich through the shared gate (SC-006) -----
+
+    // Env vars are process-global; serialize and restore around each mutation.
+    let private envLock = obj ()
+
+    let private withEnv (pairs: (string * string option) list) (f: unit -> unit) =
+        lock envLock (fun () ->
+            let saved =
+                pairs
+                |> List.map (fun (name, _) -> name, Option.ofObj (System.Environment.GetEnvironmentVariable name))
+
+            try
+                for name, value in pairs do
+                    System.Environment.SetEnvironmentVariable(name, Option.toObj value)
+
+                f ()
+            finally
+                for name, value in saved do
+                    System.Environment.SetEnvironmentVariable(name, Option.toObj value))
+
+    [<Fact>]
+    let ``088 force-color renders a command report richly on a redirected sink (uniform gate)`` () =
+        // The whole point of #172: a redirected (non-TTY) sink normally degrades, but a
+        // force-color signal re-enables rich ANSI. This exercises the SAME shared gate every
+        // --rich command uses (resolve), not validate's, proving the override is uniform (SC-006).
+        withEnv [ "NO_COLOR", None; "TERM", Some "xterm" ] (fun () ->
+            let forced = detectCapabilities true true // forceColor=true, redirected=true
+            let result = resolve Rich forced sample
+            Assert.True(result.UsedRichRendering)
+            // And NO_COLOR still wins even with force: back to zero-ANSI plain text.
+            System.Environment.SetEnvironmentVariable("NO_COLOR", "1")
+            let degraded = resolve Rich (detectCapabilities true true) sample
+            Assert.False(degraded.UsedRichRendering)
+            Assert.Equal(renderText sample, degraded.Text)
+            Assert.False((degraded.Text).Contains escChar))
+
     // ----- Feature 084: lifecycle-status footer degradation + colour (T016 / T016b) -----
 
     [<Fact>]

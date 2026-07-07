@@ -103,26 +103,35 @@ let printValidate (rest: string list) =
     let report = FS.GG.SDD.Validation.ValidationRunner.run options
 
     // Resolve the stdout rendering: --json (default) is the automation contract,
-    // --text the portable plain text, and --rich the Spectre projection (degrading
-    // to plain text when non-interactive or color-disabled). Pure projection over
+    // --text the portable plain text, --markdown the deterministic capture-safe report
+    // card (#172), and --rich the Spectre projection (degrading to plain text when
+    // non-interactive or color-disabled unless force-color is set). Pure projection over
     // the same report; stream routing and exit code are unchanged across formats.
-    let format = selectFormat rest
+    // Precedence: --rich > --markdown > --text > --json > default.
+    let format = selectValidationFormat rest
 
     let stdoutRendering =
-        (resolveValidation format (detectCapabilities Console.IsOutputRedirected) report).Text
+        match format with
+        | MarkdownCard -> FS.GG.SDD.Validation.ValidationContracts.renderMarkdown report
+        | Standard standardFormat ->
+            let capabilities =
+                detectCapabilities (forceColorRequested rest) Console.IsOutputRedirected
 
-    // --out persists a deterministic projection only (never rich ANSI): the
-    // canonical JSON for --json/default, else the portable plain text (FR-010). A bad
-    // path (missing directory, unwritable, malformed) is user input, not a tool defect:
-    // it is caught here and surfaced as a stderr diagnostic + exit 1, never a raw stack
-    // trace (#68). The stdout report contract is emitted regardless.
+            (resolveValidation standardFormat capabilities report).Text
+
+    // --out persists a deterministic projection only (never rich ANSI): the canonical JSON
+    // for --json/default, the Markdown card for --markdown, else the portable plain text
+    // (FR-010 / FR-012). A bad path (missing directory, unwritable, malformed) is user
+    // input, not a tool defect: it is caught here and surfaced as a stderr diagnostic +
+    // exit 1, never a raw stack trace (#68). The stdout report contract is emitted regardless.
     let outWriteError =
         match optionValue "--out" rest with
         | Some path ->
             let persisted =
                 match format with
-                | Json -> FS.GG.SDD.Validation.ValidationContracts.serialize report
-                | _ -> FS.GG.SDD.Validation.ValidationContracts.renderText report
+                | Standard Json -> FS.GG.SDD.Validation.ValidationContracts.serialize report
+                | MarkdownCard -> FS.GG.SDD.Validation.ValidationContracts.renderMarkdown report
+                | Standard _ -> FS.GG.SDD.Validation.ValidationContracts.renderText report
 
             try
                 System.IO.File.WriteAllText(path, persisted)
@@ -165,16 +174,16 @@ let private helpRequest command format =
 
 // §3.5: project a help report through the standard three views to stdout. Help carries no
 // diagnostics and no changes → NoChange → exit 0 (never `unknownCommand`, FR-008/011).
-let private emitHelp format (envelopeCommand: SddCommand) (summary: HelpSummary) =
+let private emitHelp format forceColor (envelopeCommand: SddCommand) (summary: HelpSummary) =
     let report = helpReport (helpRequest envelopeCommand format) summary
-    Console.Out.WriteLine((resolve format (detectCapabilities Console.IsOutputRedirected) report).Text)
+    Console.Out.WriteLine((resolve format (detectCapabilities forceColor Console.IsOutputRedirected) report).Text)
     exitCodeForReport report
 
-let private printTopLevelHelp format =
-    emitHelp format Init (CommandHelp.topLevelHelp (SchemaVersionModule.currentGeneratorVersion ()))
+let private printTopLevelHelp format forceColor =
+    emitHelp format forceColor Init (CommandHelp.topLevelHelp (SchemaVersionModule.currentGeneratorVersion ()))
 
-let private printCommandHelp format command =
-    emitHelp format command (CommandHelp.commandHelp command)
+let private printCommandHelp format forceColor command =
+    emitHelp format forceColor command (CommandHelp.commandHelp command)
 
 let printVersion () =
     // Single reconciled version source (Directory.Build.props <Version>), surfaced
@@ -189,7 +198,7 @@ let run args =
     | ("--version" | "-v" | "version") :: _ -> printVersion ()
     // §3.5: top-level help (no command) — dispatched as a peer of `--version`/`validate`,
     // before `parseCommand`, so it never falls through to `printUnknown` (FR-008).
-    | ("--help" | "-h" | "help") :: rest -> printTopLevelHelp (outputFormat rest)
+    | ("--help" | "-h" | "help") :: rest -> printTopLevelHelp (outputFormat rest) (forceColorRequested rest)
     | "validate" :: rest -> printValidate rest
     // CLI-level cross-cutting command (peer of `validate`), dispatched before
     // `parseCommand` so the lifecycle CommandReport/parseCommand contracts stay
@@ -206,10 +215,11 @@ let run args =
         | Error _ -> printUnknown commandValue
         | Ok command when hasFlag "--help" rest || hasFlag "-h" rest ->
             // §3.5: `<known> --help` / `-h` → that command's help (FR-009).
-            printCommandHelp (outputFormat rest) command
+            printCommandHelp (outputFormat rest) (forceColorRequested rest) command
         | Ok command ->
             let format = outputFormat rest
-            let capabilities = detectCapabilities Console.IsOutputRedirected
+            let forceColor = forceColorRequested rest
+            let capabilities = detectCapabilities forceColor Console.IsOutputRedirected
 
             let request =
                 { Command = command
@@ -256,7 +266,7 @@ let run args =
                 else
                     Console.IsOutputRedirected
 
-            let rendered = (resolve format (detectCapabilities sinkRedirected) report).Text
+            let rendered = (resolve format (detectCapabilities forceColor sinkRedirected) report).Text
 
             if routesToStderr then
                 Console.Error.WriteLine(rendered)

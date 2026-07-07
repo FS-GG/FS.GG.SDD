@@ -147,13 +147,15 @@ module RegistryValidate =
 
             console.Write table
 
-    let private render (format: OutputFormat) (report: RegistryValidateReport) : string =
+    let private render (forceColor: bool) (format: OutputFormat) (report: RegistryValidateReport) : string =
         match format with
         | Json -> serialize report
         | Text -> renderText report
         | Rich ->
             // Always written to stdout (see the `Console.Out.WriteLine` sink below).
-            let capabilities = detectCapabilities Console.IsOutputRedirected
+            // `forceColor` (FORCE_COLOR / --force-color) re-enables rich ANSI over a
+            // redirected sink, uniformly with every other command (#172).
+            let capabilities = detectCapabilities forceColor Console.IsOutputRedirected
 
             if capabilities.IsInteractive && capabilities.ColorEnabled then
                 let console, writer = createCappedConsole capabilities
@@ -189,5 +191,5 @@ module RegistryValidate =
 
         // The verdict JSON is the automation contract — always to stdout; the exit code
         // carries pass/fail for a CI `--exit-code`-style gate (matches the Python stand-in).
-        Console.Out.WriteLine(render format report)
+        Console.Out.WriteLine(render (forceColorRequested args) format report)
         exitCode report

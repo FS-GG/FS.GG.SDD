@@ -52,3 +52,25 @@ module FormatSelectionTests =
         let defaultJson = resolve (selectFormat []) caps sample
         Assert.Equal(defaultJson.Text, explicitJson.Text)
         Assert.Equal(serializeReport sample, explicitJson.Text)
+
+    // ----- Feature 088: the validate-local 4-way selector (#172) -----
+
+    [<Fact>]
+    let ``selectValidationFormat maps each single flag`` () =
+        Assert.Equal(Standard Json, selectValidationFormat [ "--json" ])
+        Assert.Equal(Standard Text, selectValidationFormat [ "--text" ])
+        Assert.Equal(Standard Rich, selectValidationFormat [ "--rich" ])
+        Assert.Equal(MarkdownCard, selectValidationFormat [ "--markdown" ])
+
+    [<Fact>]
+    let ``selectValidationFormat defaults to Standard Json with no flag`` () =
+        Assert.Equal(Standard Json, selectValidationFormat [])
+        Assert.Equal(Standard Json, selectValidationFormat [ "--matrix"; "compatibility" ])
+
+    [<Fact>]
+    let ``selectValidationFormat precedence is rich over markdown over text over json`` () =
+        // --rich beats --markdown.
+        Assert.Equal(Standard Rich, selectValidationFormat [ "--markdown"; "--rich" ])
+        // --markdown beats --text and --json.
+        Assert.Equal(MarkdownCard, selectValidationFormat [ "--markdown"; "--text"; "--json" ])
+        Assert.Equal(MarkdownCard, selectValidationFormat [ "--json"; "--markdown" ])
