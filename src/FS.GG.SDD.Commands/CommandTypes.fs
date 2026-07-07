@@ -404,6 +404,21 @@ module CommandTypes =
           ResidualDrift: bool
           NextActionHint: string }
 
+    // Feature 087: one classified drifted `.fsi`. See CommandTypes.fsi for docs.
+    type ClassifiedEntry =
+        { Path: string
+          Classification: string
+          RecommendedBump: string
+          AddedMembers: string list
+          RemovedOrChangedMembers: string list
+          UnparseableFallback: bool }
+
+    // Feature 087: the run-level additive-vs-breaking classification. See CommandTypes.fsi for docs.
+    type SurfaceClassification =
+        { Verdict: string
+          RecommendedBump: string
+          Entries: ClassifiedEntry list }
+
     // Feature 086: the API-surface drift picture `surface` emits. See CommandTypes.fsi for docs.
     type SurfaceSummary =
         { SourceRoot: string
@@ -414,7 +429,8 @@ module CommandTypes =
           DriftedSourcePaths: string list
           OrphanBaselinePaths: string list
           UpdatedBaselinePaths: string list
-          IsCoherent: bool }
+          IsCoherent: bool
+          Classification: SurfaceClassification }
 
     type GovernanceCompatibilityFact =
         { Path: string

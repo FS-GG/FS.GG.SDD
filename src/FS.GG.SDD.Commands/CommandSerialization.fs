@@ -418,6 +418,29 @@ module CommandSerialization =
             writeStringList writer Sorted "orphanBaselinePaths" summary.OrphanBaselinePaths
             writeStringList writer Sorted "updatedBaselinePaths" summary.UpdatedBaselinePaths
             writer.WriteBoolean("isCoherent", summary.IsCoherent)
+
+            // Feature 087: the additive-vs-breaking classification of the drifted set. Always
+            // written (verdict/bump `none`, empty entries when nothing drifted) so the automation
+            // contract has a stable shape; entries and member lists sorted → deterministic.
+            let classification = summary.Classification
+            writer.WriteStartObject("classification")
+            writer.WriteString("verdict", classification.Verdict)
+            writer.WriteString("recommendedBump", classification.RecommendedBump)
+            writer.WriteStartArray("entries")
+
+            for entry in classification.Entries |> List.sortBy (fun e -> e.Path) do
+                writer.WriteStartObject()
+                writer.WriteString("path", entry.Path)
+                writer.WriteString("classification", entry.Classification)
+                writer.WriteString("recommendedBump", entry.RecommendedBump)
+                writeStringList writer Sorted "addedMembers" entry.AddedMembers
+                writeStringList writer Sorted "removedOrChangedMembers" entry.RemovedOrChangedMembers
+                writer.WriteBoolean("unparseableFallback", entry.UnparseableFallback)
+                writer.WriteEndObject()
+
+            writer.WriteEndArray()
+            writer.WriteEndObject()
+
             writer.WriteEndObject()
         | None -> writer.WriteNull "surface"
 

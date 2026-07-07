@@ -212,6 +212,13 @@ in the authoritative `catalog[].inventory` of
   it carries `sourceRoot`, `baselineRoot`, `mode` (`check`/`update`), `checkedCount`,
   `missingBaselinePaths[]`, `driftedSourcePaths[]`, `orphanBaselinePaths[]`,
   `updatedBaselinePaths[]`, and `isCoherent`.
+  Feature 087 adds the additive `surface.classification` object (always present): `verdict`
+  (`additive`/`breaking`/`cosmetic`/`none`), `recommendedBump` (`major`/`minor`/`none`), and
+  `entries[]` — one per **drifted** file (a `missing-baseline` file is a *new* surface, not
+  classified), each with `path`, `classification`, `recommendedBump`, `addedMembers[]`,
+  `removedOrChangedMembers[]`, and `unparseableFallback`. It is advisory (ADR-0025): it changes no
+  exit code and adds no diagnostic. This additive-optional field moved `reportVersion` to `1.3.0`
+  (a semantic minor); `schemaVersion` stays `1`.
   The additive `lifecycleStatus` field is present on **every** command's report — feature 084;
   it is the standardized lifecycle-status footer's authoritative fact, carrying `workId`,
   `isLifecycleStage`, `currentOrdinal`, `totalStages`, `outcome`, `nextCommand`, and `stages[]`

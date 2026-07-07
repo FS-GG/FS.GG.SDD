@@ -476,6 +476,25 @@ module CommandRendering =
             |> List.iter (fun path -> builder.AppendLine($"surfaceUpdated: {path}") |> ignore)
 
             builder.AppendLine($"surfaceCoherent: {surface.IsCoherent}") |> ignore
+
+            // Feature 087: the additive-vs-breaking classification (rich auto-derives its rows from
+            // these `key: value` lines, so no bespoke rich block is needed).
+            let classification = surface.Classification
+
+            builder.AppendLine($"surfaceClassificationVerdict: {classification.Verdict}")
+            |> ignore
+
+            builder.AppendLine($"surfaceClassificationBump: {classification.RecommendedBump}")
+            |> ignore
+
+            builder.AppendLine($"surfaceClassified: {List.length classification.Entries}")
+            |> ignore
+
+            classification.Entries
+            |> List.sortBy (fun entry -> entry.Path)
+            |> List.iter (fun entry ->
+                builder.AppendLine($"surfaceClassified: {entry.Path}={entry.Classification} ({entry.RecommendedBump})")
+                |> ignore)
         | None -> ()
 
         match report.Upgrade with

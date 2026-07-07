@@ -476,6 +476,41 @@ module CommandTypes =
             NextActionHint: string
         }
 
+    /// One classified drifted `.fsi` (feature 087). Only `drifted` files (a committed baseline
+    /// that exists and differs byte-for-byte) are classified — a `missing-baseline` file is a
+    /// *new* surface (fresh registration), and `matched`/`orphan` have no delta.
+    type ClassifiedEntry =
+        {
+            /// The drifted **source**-relative `.fsi` path (e.g. `src/Foo/Bar.fsi`).
+            Path: string
+            /// `additive` | `breaking` | `cosmetic`.
+            Classification: string
+            /// Per-file recommended coherent-set bump: `major` | `minor` | `none`.
+            RecommendedBump: string
+            /// Member tokens present in the source but absent in the baseline. Sorted.
+            AddedMembers: string list
+            /// Member tokens present in the baseline but absent in the source (removed, renamed,
+            /// or signature-changed). Sorted.
+            RemovedOrChangedMembers: string list
+            /// True when the source yielded no member tokens and was conservatively classified
+            /// `breaking` so the operator inspects it (FR-011).
+            UnparseableFallback: bool
+        }
+
+    /// The run-level additive-vs-breaking classification of the drifted set (feature 087,
+    /// FS-GG/.github ADR-0025). Advisory-but-loud: it maps to a recommended coherent-set bump but
+    /// emits no diagnostic and changes no exit code — a drifted tree still exits 1 under `--check`
+    /// exactly as in feature 086.
+    type SurfaceClassification =
+        {
+            /// Most-severe entry: `breaking` | `additive` | `cosmetic` | `none` (none ⇔ no drift).
+            Verdict: string
+            /// Mapped from the verdict: breaking→`major`, additive→`minor`, cosmetic/none→`none`.
+            RecommendedBump: string
+            /// One entry per drifted file, sorted by `Path`; empty when nothing drifted.
+            Entries: ClassifiedEntry list
+        }
+
     /// The read-only (or, under `--update`, reconciling) API-surface picture `surface` emits
     /// (feature 086). Each authored `src/**/*.fsi` signature has a byte-identical committed
     /// baseline under `docs/api-surface/`; drift is a missing or byte-differing baseline.
@@ -501,6 +536,10 @@ module CommandTypes =
             /// True when every discovered source signature had a matching baseline at the start
             /// of the run (no missing, no drift). Orphans do not affect coherence.
             IsCoherent: bool
+            /// Feature 087: the additive-vs-breaking classification of the drifted set. Always
+            /// present; `none`/`none`/`[]` when nothing drifted. Advisory — never changes the
+            /// exit code.
+            Classification: SurfaceClassification
         }
 
     type GovernanceCompatibilityFact =
