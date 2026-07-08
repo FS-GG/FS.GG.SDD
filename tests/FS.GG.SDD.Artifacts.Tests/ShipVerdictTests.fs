@@ -67,10 +67,16 @@ module ShipVerdictTests =
 }}"""
 
     let private twoSources =
-        (source "readiness/092/verify.json" aDigest) + "," + (source "readiness/092/work-model.json" bDigest)
+        (source "readiness/092/verify.json" aDigest)
+        + ","
+        + (source "readiness/092/work-model.json" bDigest)
 
     let private parse text =
-        match Ship.parseShipView { Path = "readiness/092/ship.json"; Text = text } with
+        match
+            Ship.parseShipView
+                { Path = "readiness/092/ship.json"
+                  Text = text }
+        with
         | Ok view -> view
         | Error diagnostics -> failwithf "expected a parseable ship.json, got %A" diagnostics
 
@@ -229,7 +235,8 @@ module ShipVerdictTests =
         // `Utf8JsonWriter(Indented = true)` renders `[]` inline but expands a non-empty array over
         // its own bracket lines, so the growth is 2 + n, not n. Pinned exactly, because "<= 20 lines"
         // is a contract claim and this is the shape that exceeds it.
-        let lines (ids: string) = (jsonOf (shipJsonWith twoSources ids)).Split('\n').Length
+        let lines (ids: string) =
+            (jsonOf (shipJsonWith twoSources ids)).Split('\n').Length
 
         Assert.Equal(20, lines "")
         Assert.Equal(22, lines "\"SF001\"")
@@ -260,7 +267,8 @@ module ShipVerdictTests =
 
     [<Fact>]
     let ``the blocking finding ids survive the projection into json`` () =
-        use doc = JsonDocument.Parse(jsonOf (shipJsonWith twoSources "\"SF002\", \"SF001\""))
+        use doc =
+            JsonDocument.Parse(jsonOf (shipJsonWith twoSources "\"SF002\", \"SF001\""))
 
         let ids =
             (doc.RootElement.GetProperty "disposition").GetProperty("blockingFindingIds").EnumerateArray()

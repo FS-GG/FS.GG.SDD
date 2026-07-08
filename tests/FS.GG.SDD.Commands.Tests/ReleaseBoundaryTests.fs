@@ -49,7 +49,8 @@ module ReleaseBoundaryTests =
         // Guard the guard: eliding the SDD-owned names must not blind the scan. A Governance
         // verdict token anywhere else in the contract still trips it.
         let poisoned =
-            (serialize (currentRelease ())).ToLowerInvariant() + "\"governanceverdict\": \"pass\""
+            (serialize (currentRelease ())).ToLowerInvariant()
+            + "\"governanceverdict\": \"pass\""
             |> elideSddOwnedNames
 
         Assert.Contains("verdict", poisoned)

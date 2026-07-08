@@ -67,8 +67,7 @@ module ReleaseContractTests =
         | Error message -> failwith $"parse failed: {message}"
         | Ok parsed ->
             for entry in parsed.Catalog do
-                let original =
-                    release.Catalog |> List.find (fun e -> e.Contract = entry.Contract)
+                let original = release.Catalog |> List.find (fun e -> e.Contract = entry.Contract)
 
                 Assert.Equal(original.DurableGenerated, entry.DurableGenerated)
 

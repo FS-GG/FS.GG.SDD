@@ -127,10 +127,7 @@ module ArtifactTaxonomyTests =
 
     [<Fact>]
     let ``the ship verdict is the only durable-generated readiness view`` () =
-        Assert.Equal<Set<string>>(
-            Set.ofList [ "readiness/<id>/ship-verdict.json" ],
-            catalogGeneratedViewPaths true
-        )
+        Assert.Equal<Set<string>>(Set.ofList [ "readiness/<id>/ship-verdict.json" ], catalogGeneratedViewPaths true)
 
     [<Fact>]
     let ``init seeds a no-clobber .gitignore equal to the seed constant`` () =

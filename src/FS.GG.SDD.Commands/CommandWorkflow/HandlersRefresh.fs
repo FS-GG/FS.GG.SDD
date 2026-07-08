@@ -618,8 +618,7 @@ module internal HandlersRefresh =
 
                         [ refreshUnrenderableSummary summaryPath related ]
 
-                let refreshDiags =
-                    workModelDiags @ downstreamDiags @ verdictDiags @ summaryDiags
+                let refreshDiags = workModelDiags @ downstreamDiags @ verdictDiags @ summaryDiags
 
                 let allDiags =
                     (baseDiags @ refreshDiags)

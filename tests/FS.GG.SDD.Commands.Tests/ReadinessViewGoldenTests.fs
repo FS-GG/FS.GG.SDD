@@ -77,9 +77,7 @@ module ReadinessViewGoldenTests =
         TestSupport.runShip root workId title |> ignore
 
         let verdict =
-            (TestSupport.readRelative root $"readiness/{workId}/ship-verdict.json")
-                .Replace("\r\n", "\n")
-                .TrimEnd('\n')
+            (TestSupport.readRelative root $"readiness/{workId}/ship-verdict.json").Replace("\r\n", "\n").TrimEnd('\n')
 
         let lineCount = verdict.Split('\n').Length
         Assert.True(lineCount <= 20, $"ship-verdict.json grew to {lineCount} lines:\n{verdict}")

@@ -122,7 +122,11 @@ module ShipViewTests =
         match
             parseShipView
                 { Path = "readiness/013-ship-command/ship.json"
-                  Text = validShipJson.Replace("\"blockingFindingIds\": [],\n    \"warningFindingIds\"", "\"warningFindingIds\"") }
+                  Text =
+                    validShipJson.Replace(
+                        "\"blockingFindingIds\": [],\n    \"warningFindingIds\"",
+                        "\"warningFindingIds\""
+                    ) }
         with
         | Ok view -> Assert.Empty view.DispositionBlockingFindingIds
         | Error diagnostics -> failwith $"Expected a valid ship view, got {diagnostics}."

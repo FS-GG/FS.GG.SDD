@@ -31,23 +31,25 @@ module Ship =
           EvidenceInvalidCount: int }
 
     type ShipView =
-        { SchemaVersion: SchemaVersion
-          ViewVersion: string
-          WorkId: WorkId
-          Stage: LifecycleStage
-          Status: string
-          Generator: string
-          Sources: AnalysisSourceRecord list
-          LifecycleReadiness: ShipLifecycleStageReadiness list
-          VerificationReadiness: ShipVerificationReadinessSummary
-          Disposition: string
-          /// `disposition.blockingFindingIds`, sorted. Feature 092: the compact ship verdict
-          /// carries these, so the parse no longer flattens `disposition` to its state alone.
-          DispositionBlockingFindingIds: string list
-          GeneratedViews: AnalysisGeneratedViewRecord list
-          Findings: ShipReadinessFinding list
-          OptionalBoundaryFacts: AnalysisOptionalBoundaryFact list
-          Diagnostics: Diagnostic list
-          Readiness: string }
+        {
+            SchemaVersion: SchemaVersion
+            ViewVersion: string
+            WorkId: WorkId
+            Stage: LifecycleStage
+            Status: string
+            Generator: string
+            Sources: AnalysisSourceRecord list
+            LifecycleReadiness: ShipLifecycleStageReadiness list
+            VerificationReadiness: ShipVerificationReadinessSummary
+            Disposition: string
+            /// `disposition.blockingFindingIds`, sorted. Feature 092: the compact ship verdict
+            /// carries these, so the parse no longer flattens `disposition` to its state alone.
+            DispositionBlockingFindingIds: string list
+            GeneratedViews: AnalysisGeneratedViewRecord list
+            Findings: ShipReadinessFinding list
+            OptionalBoundaryFacts: AnalysisOptionalBoundaryFact list
+            Diagnostics: Diagnostic list
+            Readiness: string
+        }
 
     val parseShipView: snapshot: FileSnapshot -> Result<ShipView, Diagnostic list>

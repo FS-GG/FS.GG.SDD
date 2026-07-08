@@ -53,17 +53,19 @@ module ReleaseContract =
           GovernanceContractVersionRange: string option }
 
     type SchemaReferenceEntry =
-        { Contract: string
-          Kind: ContractKind
-          SchemaVersion: int
-          ContractVersion: string option
-          Stability: StabilityClass
-          Determinism: string
-          Inventory: InventoryItem list
-          SourceArtifact: ArtifactRef
-          BaselinePresent: bool
-          /// Feature 092 / ADR-0026: `true` for a committed *durable generated* artifact.
-          DurableGenerated: bool }
+        {
+            Contract: string
+            Kind: ContractKind
+            SchemaVersion: int
+            ContractVersion: string option
+            Stability: StabilityClass
+            Determinism: string
+            Inventory: InventoryItem list
+            SourceArtifact: ArtifactRef
+            BaselinePresent: bool
+            /// Feature 092 / ADR-0026: `true` for a committed *durable generated* artifact.
+            DurableGenerated: bool
+        }
 
     type MigrationNoteRef =
         { Version: string
@@ -295,20 +297,20 @@ module ReleaseContract =
         // it is not a cross-repo contract, so it carries no contractVersion.
         let shipVerdict =
             { jsonViewEntry
-                "ship-verdict.json"
-                ShipVerdict
-                AdditiveOptional
-                [ "schemaVersion" ]
-                [ "schemaVersion"
-                  "viewVersion"
-                  "workId"
-                  "stage"
-                  "status"
-                  "generator"
-                  "sourcesDigest"
-                  "verificationReadiness"
-                  "disposition"
-                  "readiness" ] with
+                  "ship-verdict.json"
+                  ShipVerdict
+                  AdditiveOptional
+                  [ "schemaVersion" ]
+                  [ "schemaVersion"
+                    "viewVersion"
+                    "workId"
+                    "stage"
+                    "status"
+                    "generator"
+                    "sourcesDigest"
+                    "verificationReadiness"
+                    "disposition"
+                    "readiness" ] with
                 DurableGenerated = true }
 
         // The governance handoff is the one cross-repo contract: it carries a

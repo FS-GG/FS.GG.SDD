@@ -49,8 +49,10 @@ module GitignoreNegationTests =
 
     let private write root (relative: string) (text: string) =
         let full = Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar))
+
         Directory.CreateDirectory(Path.GetDirectoryName full |> Option.ofObj |> Option.defaultValue root)
         |> ignore
+
         File.WriteAllText(full, text)
 
     /// Every file a real `readiness/<id>/` holds: the six top-level views plus one agent target.
@@ -92,10 +94,7 @@ module GitignoreNegationTests =
         TestSupport.initializeProject root // seeds the no-clobber .gitignore
         materializeReadinessTree root "readiness/" "003-demo"
 
-        Assert.Equal<Set<string>>(
-            Set.ofList [ "readiness/003-demo/ship-verdict.json" ],
-            stagedUnder root "readiness/"
-        )
+        Assert.Equal<Set<string>>(Set.ofList [ "readiness/003-demo/ship-verdict.json" ], stagedUnder root "readiness/")
 
     [<Fact>]
     let ``the pre-092 directory rule makes the negation inert - staging nothing`` () =
@@ -186,9 +185,7 @@ module GitignoreNegationTests =
         // FR-010: the two adoptions are one decision. Landing the seed without this one would
         // ship an artifact SDD does not itself commit.
         let lines =
-            (TestSupport.readRelative TestSupport.repoRoot ".gitignore")
-                .Replace("\r\n", "\n")
-                .Split('\n')
+            (TestSupport.readRelative TestSupport.repoRoot ".gitignore").Replace("\r\n", "\n").Split('\n')
             |> Array.map (fun l -> l.Trim())
 
         Assert.Contains("specs/*/readiness/*/*", lines)
