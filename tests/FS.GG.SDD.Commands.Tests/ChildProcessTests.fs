@@ -65,8 +65,10 @@ module ChildProcessTests =
     let ``a hung child with a full stderr pipe is killed at its bound, not waited on forever`` () =
         let elapsed = Stopwatch.StartNew()
 
+        // A *distinct* exception type, so a `sh` that never started cannot satisfy this assertion.
         let ex =
-            Assert.Throws<Exception>(fun () -> TestShared.ChildProcess.runBounded 1_500 (stderrFlood true) |> ignore)
+            Assert.Throws<TestShared.ChildProcess.ChildProcessTimeout>(fun () ->
+                TestShared.ChildProcess.runBounded 1_500 (stderrFlood true) |> ignore)
 
         elapsed.Stop()
 
@@ -79,8 +81,47 @@ module ChildProcessTests =
             $"expected the bound to fire promptly; took {elapsed.ElapsedMilliseconds} ms"
         )
 
-    // A child that cannot be started is a `None`, not an exception — the shape `git` branches on.
+    // `WaitForExit(int)` returns at CHILD exit, not at pipe EOF. A grandchild that inherited the
+    // write end keeps both readers pending, so reaping them unbounded would relocate the hang from
+    // before the wait to after it. The drain is bounded too; this pins that.
+    [<Fact>]
+    let ``a grandchild still holding the pipes cannot hang the reap after the child exits`` () =
+        // The direct `sh` exits immediately; the backgrounded `sleep` inherits stdout/stderr and
+        // outlives it, so the reads never reach EOF. SYNTHETIC stand-in for a build server or any
+        // daemon a real child leaves behind holding its inherited handles.
+        let info = ProcessStartInfo "sh"
+        info.ArgumentList.Add "-c"
+        info.ArgumentList.Add "sleep 20 & exit 0"
+
+        let elapsed = Stopwatch.StartNew()
+
+        let ex =
+            Assert.Throws<TestShared.ChildProcess.ChildProcessTimeout>(fun () ->
+                TestShared.ChildProcess.runBounded 1_000 info |> ignore)
+
+        elapsed.Stop()
+
+        Assert.Contains("pipes were still held", ex.Message)
+
+        Assert.True(
+            elapsed.ElapsedMilliseconds < 20_000L,
+            $"the reap must be bounded, not wait out the grandchild; took {elapsed.ElapsedMilliseconds} ms"
+        )
+
+    // A child that cannot be started is a `None` — `Process.Start` *throws* for a missing
+    // executable rather than returning null, so that shape has to be folded in, not left to escape.
     [<Fact>]
     let ``an unstartable child yields None rather than throwing`` () =
         let missing = ProcessStartInfo "fsgg-sdd-no-such-executable-212"
         Assert.True((TestShared.ChildProcess.tryRunBounded 5_000 missing).IsNone)
+
+    // ...but `runBounded` — and therefore `git` — turns that `None` into a loud failure. A silent
+    // `-1, ""` would let the ADR-0026 gitignore-negation proofs pass without git ever running.
+    [<Fact>]
+    let ``runBounded turns an unstartable child into a loud failure`` () =
+        let missing = ProcessStartInfo "fsgg-sdd-no-such-executable-212"
+
+        let ex =
+            Assert.Throws<Exception>(fun () -> TestShared.ChildProcess.runBounded 5_000 missing |> ignore)
+
+        Assert.Contains("Failed to start", ex.Message)
