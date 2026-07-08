@@ -145,6 +145,9 @@ alone: the report stops making two false claims.
 6. **Given** a work item whose `analysis.json` or `verify.json` is valid JSON but not a valid
    analysis/verify view, **When** `fsgg-sdd refresh` runs, **Then** its currency is `current`,
    exactly as before — only `ship.json` gains schema validation.
+7. **Given** a work item whose `ship.json` is valid JSON but not a valid ship view, **When**
+   `fsgg-sdd refresh` runs, **Then** the refresh summary lists `ship` in `blockedViewIds` and **not**
+   in `alreadyCurrentViewIds` — the same correction, told through the second field that carried it.
 
 ---
 
@@ -233,6 +236,8 @@ establishing site. No runtime assertion is possible for unreachable code.
   JSON only; their reported currency MUST be unchanged for every input.
 - **FR-003**: When `ship.json` is well-formed JSON but does not parse as a ship view, `refresh` MUST
   report `ship` currency as `malformed`.
+- **FR-003a**: In that state, `refresh` MUST list `ship` in the summary's `blockedViewIds` and MUST
+  NOT list it in `alreadyCurrentViewIds` — the bucket projection and the `currency` word must agree.
 - **FR-004**: In that state, `refresh` MUST report `ship-verdict` currency as `blocked`, and MUST NOT
   report it as `malformed`.
 - **FR-005**: In that state, `refresh` MUST emit `refresh.malformedGeneratedView` against `ship.json`
