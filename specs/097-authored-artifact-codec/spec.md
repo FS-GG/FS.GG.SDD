@@ -1,6 +1,6 @@
 # Feature Specification: Authored-Artifact Codec and Round-Trip Property
 
-**Feature Branch**: `096-authored-artifact-codec`
+**Feature Branch**: `097-authored-artifact-codec`
 
 **Created**: 2026-07-08
 

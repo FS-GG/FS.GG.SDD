@@ -2,7 +2,7 @@
 
 **Branch**: `item/201-sdd-epic-gap-a-authored-artifact-round-t` | **Date**: 2026-07-08 | **Spec**: [spec.md](./spec.md)
 
-**Input**: Feature specification from `/specs/096-authored-artifact-codec/spec.md`
+**Input**: Feature specification from `/specs/097-authored-artifact-codec/spec.md`
 
 **Tracks**: FS.GG.SDD#201 (Gap A) · Umbrella: **ADR-0002** (`docs/decisions/0002-retire-defect-classes-via-structural-invariants.md`), invariant 1 · Closes #180, #181, #182
 
@@ -112,7 +112,7 @@ mechanism FR-005/FR-007 require and is justified in research R5.
 ### Documentation (this feature)
 
 ```text
-specs/096-authored-artifact-codec/
+specs/097-authored-artifact-codec/
 ├── plan.md              # This file
 ├── research.md          # Phase 0 — R1–R7 verified findings
 ├── data-model.md        # Phase 1 — the codec type + authored/tool-owned field partition

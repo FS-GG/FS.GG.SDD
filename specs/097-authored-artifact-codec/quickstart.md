@@ -1,6 +1,6 @@
 # Quickstart: verifying the authored-artifact codec
 
-How to prove feature 096 works end-to-end. Assumes the source refactor (Phase 2,
+How to prove feature 097 works end-to-end. Assumes the source refactor (Phase 2,
 Blocked by #189) has landed. Each scenario maps to a spec user story and a
 closed issue.
 

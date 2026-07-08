@@ -1,6 +1,6 @@
 # Tasks: Authored-Artifact Codec and Round-Trip Property
 
-**Input**: `specs/096-authored-artifact-codec/` (spec.md, plan.md, research.md, data-model.md, contracts/artifact-codec.md, quickstart.md)
+**Input**: `specs/097-authored-artifact-codec/` (spec.md, plan.md, research.md, data-model.md, contracts/artifact-codec.md, quickstart.md)
 
 **Tier**: 1 (the #180 gate now fires — behavior change + migration note; new test-only FsCheck dependency).
 

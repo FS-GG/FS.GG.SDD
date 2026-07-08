@@ -62,7 +62,7 @@ at the seam that generates the family, not per-instance.
    parsed field set and the emitted field set cannot diverge. Add an
    FsCheck round-trip property `render(parse(x)) = x` per artifact. Reads that
    gate on `Option.isNone` must use the null-aware reader. This makes the
-   #180/#181/#182 class unrepresentable and is delivered first, as feature 096.
+   #180/#181/#182 class unrepresentable and is delivered first, as feature 097.
 
 2. **The serialized report shape is pinned at full depth, and version literals
    are tied to it (Gap B).** Add a golden of the emitted JSON key set at full
@@ -113,7 +113,7 @@ unfiled findings and reference this decision.
 - The four gaps become the tracked unit of work. A fix is "done" when the
   invariant is in place at the generating seam and a test makes the class
   unrepresentable — not when a single instance stops reproducing.
-- Feature 096 (the authored-artifact codec) is the one place a subsystem-level
+- Feature 097 (the authored-artifact codec) is the one place a subsystem-level
   rewrite is justified; it replaces the hand-written serialization layer for
   authored artifacts while leaving the generated-view serializers, the MVU
   core, and the CLI host untouched.
