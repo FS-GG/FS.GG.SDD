@@ -132,8 +132,7 @@ module CommandTypes =
           StoryIds: string list
           RequirementIds: string list
           AcceptanceScenarioIds: string list
-          AmbiguityIds: string list
-          UnresolvedAmbiguityCount: int }
+          AmbiguityIds: string list }
 
     type ClarificationSummary =
         { WorkId: string

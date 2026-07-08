@@ -72,8 +72,7 @@ module RichRenderingTests =
           StoryIds = [ "US1"; "US2" ]
           RequirementIds = [ "FR-001"; "FR-002"; "FR-003" ]
           AcceptanceScenarioIds = [ "AS-001" ]
-          AmbiguityIds = [ "AMB-001" ]
-          UnresolvedAmbiguityCount = 1 }
+          AmbiguityIds = [ "AMB-001" ] }
 
     /// Feature 084: a representative lifecycle-status for the Specify sample (ordinal 2, current).
     let stageEntry command ordinal state : StageEntry =

@@ -589,8 +589,7 @@ Prose status: specified
           StoryIds = facts.UserStoryIds |> List.map _.Value |> List.sort
           RequirementIds = facts.RequirementIds |> List.map _.Value |> List.sort
           AcceptanceScenarioIds = facts.AcceptanceScenarioIds |> List.map _.Value |> List.sort
-          AmbiguityIds = facts.AmbiguityIds |> List.map _.Value |> List.sort
-          UnresolvedAmbiguityCount = facts.UnresolvedAmbiguityCount }
+          AmbiguityIds = facts.AmbiguityIds |> List.map _.Value |> List.sort }
 
     let mapSpecificationDiagnostics (path: string) (diagnostics: Diagnostic list) : Diagnostic list =
         diagnostics

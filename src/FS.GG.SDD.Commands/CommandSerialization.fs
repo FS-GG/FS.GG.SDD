@@ -34,7 +34,6 @@ module CommandSerialization =
             writeStringList writer Sorted "requirementIds" summary.RequirementIds
             writeStringList writer Sorted "acceptanceScenarioIds" summary.AcceptanceScenarioIds
             writeStringList writer Sorted "ambiguityIds" summary.AmbiguityIds
-            writer.WriteNumber("unresolvedAmbiguityCount", summary.UnresolvedAmbiguityCount)
             writer.WriteEndObject()
         | None -> writer.WriteNull "specification"
 

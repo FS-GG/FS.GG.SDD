@@ -67,7 +67,11 @@ module TextProjectionTests =
         Assert.Contains("command: specify", text)
         Assert.Contains($"outcome: {outcomeValue report.Outcome}", text)
         Assert.Contains($"specificationRequirements: {List.length specification.RequirementIds}", text)
-        Assert.Contains($"unresolvedAmbiguities: {specification.UnresolvedAmbiguityCount}", text)
+        // Feature 093 / FS.GG.SDD#164: `unresolvedAmbiguities` was a spec.md-body regex that never
+        // read clarifications.md, so it could never be zeroed by resolving anything. It reported 4
+        // while the two counters that actually gate both read 0. Removed rather than recomputed --
+        // `remainingAmbiguities` already carries that meaning correctly.
+        Assert.DoesNotContain("unresolvedAmbiguities", text)
 
     [<Fact>]
     let ``clarify text projection includes clarification counts from report`` () =

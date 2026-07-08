@@ -71,6 +71,10 @@ module CommandReportJsonTests =
         Assert.Contains("\"name\": \"specify\"", first)
         Assert.Contains("\"specification\"", first)
         Assert.Contains("\"requirementIds\"", first)
+        // Feature 093 / FS.GG.SDD#164. Safe to remove: `ReleaseContract.fs`'s jsonInventory freezes
+        // only the TOP-LEVEL report keys (`specification` among them), never the counters nested
+        // inside, and no Governance-boundary artifact carries an ambiguity count.
+        Assert.DoesNotContain("unresolvedAmbiguityCount", first)
         Assert.DoesNotContain(root, first)
         Assert.DoesNotContain("timestamp", first)
 

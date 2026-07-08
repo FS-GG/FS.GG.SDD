@@ -646,3 +646,46 @@ module ClarifyCommandTests =
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
         Assert.True(TestSupport.existsRelative root clarificationPath)
         Assert.Contains($"title: {specTitle}", TestSupport.readRelative root clarificationPath)
+
+    // ---------------------------------------------------------------------------------------------
+    // Feature 093 / FS.GG.SDD#164 (FS.GG.Game feedback §WD4). The reported symptom: with every
+    // ambiguity resolved, `unresolvedAmbiguities: 4` sat next to `remaining/blocking = 0`, and an
+    // author could not tell which one gated. The root cause was structural — the counter was a regex
+    // over `spec.md`'s own body and never read `clarifications.md`, so no `clarify` run could move it.
+    // ---------------------------------------------------------------------------------------------
+
+    [<Fact>]
+    let ``no ambiguity counter contradicts the gate once everything is resolved`` () =
+        let root = initializedSpecifiedProject ()
+
+        // The first run authors the artifact (no prior facts to summarize); the second reads it back.
+        TestSupport.runClarify root workId title |> ignore
+        let report = TestSupport.runClarify root workId title
+
+        let clarification = report.Clarification.Value
+
+        // The one declared ambiguity is answered, so the two counters that actually gate read 0.
+        Assert.Equal(0, clarification.RemainingAmbiguityCount)
+        Assert.Equal(0, clarification.BlockingAmbiguityCount)
+
+        // And no third counter disagrees, in any projection. Before this feature the specify-stage
+        // summary reported `unresolvedAmbiguities: 1` right here.
+        Assert.DoesNotContain("unresolvedAmbiguities", FS.GG.SDD.Commands.CommandRendering.renderText report)
+        Assert.DoesNotContain("unresolvedAmbiguityCount", serializeReport report)
+
+    /// FR-003: the two counters that *do* gate keep their values. Two ambiguities, neither answered →
+    /// both remaining, both blocking, and the run is blocked.
+    ///
+    /// The counts only exist from the second run onward: the first has no prior artifact to summarize.
+    /// (The `unresolvedBlockingAmbiguity` diagnostic these counts drive fires at the *checklist* stage,
+    /// not here — it is already pinned by `clarify then checklist` above and by `ChecklistCommandTests`.)
+    [<Fact>]
+    let ``the ambiguity counts that gate are unchanged by the counter removal`` () =
+        let root = initializedSpecifiedProjectWithTwoAmbiguities ()
+
+        runClarifyWith None root |> ignore
+        let rerun = runClarifyWith None root
+
+        Assert.Equal(CommandOutcome.Blocked, rerun.Outcome)
+        Assert.Equal(2, rerun.Clarification.Value.RemainingAmbiguityCount)
+        Assert.Equal(2, rerun.Clarification.Value.BlockingAmbiguityCount)

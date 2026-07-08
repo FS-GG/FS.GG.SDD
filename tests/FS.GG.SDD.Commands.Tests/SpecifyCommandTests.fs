@@ -450,8 +450,9 @@ No material ambiguities recorded.
 
     /// Every id scanner in the artifact layer matches case-INSENSITIVELY. A case-sensitive
     /// `neutralizeIds` let a lowercase `amb-001` in the author's user value survive into the seeded
-    /// US-001/AC-001 lines, where the specification parser counted it as a real ambiguity reference:
-    /// `unresolvedAmbiguityCount` rose while `## Ambiguities` still said none were recorded.
+    /// US-001/AC-001 lines, where the specification parser counted it as a real ambiguity reference.
+    /// (The counter that exposed this, `unresolvedAmbiguityCount`, was itself removed in feature 093
+    /// — it never read clarifications.md — but the neutralization it caught is still load-bearing.)
     [<Fact>]
     let ``specify seed neutralizes lowercase id-shaped tokens too`` () =
         let root = initializedCharteredProject ()
