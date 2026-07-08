@@ -98,30 +98,21 @@ module RequirementModel =
             |> Seq.toArray)
         |> Array.toList
 
-    /// Every id of one family the line names, deduplicated and sorted by value. `create` rejects a token
-    /// the regex matched but that is not a well-formed id, so a malformed ref is simply not a ref — the
-    /// same rule the clarification parser uses.
-    let private idsInLine
-        (pattern: string)
-        (create: string -> Result<'id, _>)
-        (value: 'id -> string)
-        (line: string)
-        : 'id list =
-        Regex.Matches(line, pattern, RegexOptions.IgnoreCase)
-        |> Seq.cast<Match>
-        |> Seq.choose (fun m -> create m.Value |> Result.toOption)
-        |> Seq.distinctBy value
-        |> Seq.sortBy value
-        |> Seq.toList
+    /// Every id of one family the line names, deduplicated (by `Internal.idsInLine`) and then sorted, so
+    /// the author's phrasing order cannot move the bytes these refs reach — a decision's requirement refs
+    /// are emitted into a task's `requirements:` list (#164). `create` rejects a token the regex matched
+    /// but that is not a well-formed id, so a malformed ref is simply not a ref.
+    let private sortedRefsInLine pattern create (value: 'id -> string) line : 'id list =
+        idsInLine pattern create line |> List.sortBy value
 
     let private requirementRefsInLine =
-        idsInLine @"\bFR-\d{3,}\b" Identifiers.createRequirementId (fun id -> id.Value)
+        sortedRefsInLine @"\bFR-\d{3,}\b" Identifiers.createRequirementId (fun id -> id.Value)
 
     let private storyRefsInLine =
-        idsInLine @"\bUS-\d{3,}\b" Identifiers.createUserStoryId (fun id -> id.Value)
+        sortedRefsInLine @"\bUS-\d{3,}\b" Identifiers.createUserStoryId (fun id -> id.Value)
 
     let private acceptanceRefsInLine =
-        idsInLine @"\bAC-\d{3,}\b" Identifiers.createAcceptanceScenarioId (fun id -> id.Value)
+        sortedRefsInLine @"\bAC-\d{3,}\b" Identifiers.createAcceptanceScenarioId (fun id -> id.Value)
 
     let parseDecisions (snapshot: FileSnapshot) =
         let kind =

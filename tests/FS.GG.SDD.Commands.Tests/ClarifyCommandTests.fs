@@ -716,3 +716,46 @@ module ClarifyCommandTests =
         // and that skeleton echoes the author's own `--input` verbatim — bad ref included, because it
         // is the text they must now correct. Blocking is the contract; a sanitized seed is not.
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+    // ---------------------------------------------------------------------------------------------
+    // Feature 093: inheriting the spec's title (above) put a YAML-*decoded* value into an unquoted
+    // `title:` slot. A spec whose front matter legally reads `title: "Plan: upstream snapshot"` then
+    // emitted `title: Plan: upstream snapshot` — not a scalar — and clarify blocked on the file it had
+    // just written, reporting "Clarification front matter is empty." A leading `#` was worse: it parsed
+    // as a comment and the title vanished while the command reported success.
+    // ---------------------------------------------------------------------------------------------
+
+    let private specWithTitle (rawTitleLine: string) root =
+        let spec = TestSupport.readRelative root specPath
+        TestSupport.writeRelative root specPath (spec.Replace($"title: {specTitle}", rawTitleLine))
+        root
+
+    [<Theory>]
+    // A colon would end the scalar; a leading `#` would start a comment; a quote would unbalance it.
+    [<InlineData("title: \"Plan: upstream snapshot\"", "Plan: upstream snapshot")>]
+    [<InlineData("title: \"#1 priority\"", "#1 priority")>]
+    [<InlineData("title: \"Trailing colon:\"", "Trailing colon:")>]
+    let ``an inherited spec title that needs quoting round-trips`` (rawTitleLine: string) (decoded: string) =
+        let root = initializedWithSpecTitle () |> specWithTitle rawTitleLine
+
+        let report = runClarifyWithoutTitle root
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+
+        // The tool must be able to re-read what it wrote: a second run parses the artifact and reports
+        // no change rather than blocking on malformed front matter.
+        let rerun = runClarifyWithoutTitle root
+        Assert.NotEqual(CommandOutcome.Blocked, rerun.Outcome)
+
+        let clarifications = TestSupport.readRelative root clarificationPath
+        Assert.Contains($"# {decoded} Clarifications", clarifications)
+
+    /// A title that needs no quoting keeps its exact bytes — the fix must not churn every artifact.
+    [<Fact>]
+    let ``a plain inherited title is still emitted unquoted`` () =
+        let root = initializedWithSpecTitle ()
+
+        runClarifyWithoutTitle root |> ignore
+
+        Assert.Contains($"title: {specTitle}", TestSupport.readRelative root clarificationPath)
+        Assert.DoesNotContain($"title: \"{specTitle}\"", TestSupport.readRelative root clarificationPath)

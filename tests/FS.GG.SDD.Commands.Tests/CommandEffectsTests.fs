@@ -2,6 +2,7 @@ namespace FS.GG.SDD.Commands.Tests
 
 open System.IO
 open System.Runtime.InteropServices
+open System.Text.RegularExpressions
 open FS.GG.SDD.Commands
 open FS.GG.SDD.Commands.CommandTypes
 open Xunit
@@ -62,18 +63,27 @@ module CommandEffectsTests =
         Assert.Equal("new", File.ReadAllText(absolute root))
         Assert.Empty(residue root)
 
-    /// `canOverwrite` returns true for identical content, so the bytes *are* re-committed — the
-    /// `ArtifactOperation.NoChange` classification lives in report assembly, not here. This pins the
-    /// observable outcome (destination unchanged, nothing left over), not a write-skip we do not do.
+    /// An identical-content write does not touch the file at all.
+    ///
+    /// This is not cosmetic. `writeFileAtomic` renames a fresh inode over the destination, so a no-op
+    /// re-commit would still unlink the old one — replacing a symlink with a regular file, detaching
+    /// hardlinks, and churning inode-tracking watchers on every unchanged `refresh`. The truncating write
+    /// it replaced had no such side effect. Asserted via the write timestamp, which stands in for "the
+    /// destination was never opened".
     [<Fact>]
-    let ``an identical-content write leaves the destination unchanged`` () =
+    let ``an identical-content write does not touch the destination`` () =
         let root = TestSupport.tempDirectory ()
         seed root "same"
+
+        let before = File.GetLastWriteTimeUtc(absolute root)
+        File.SetLastWriteTimeUtc(absolute root, before.AddDays -1.0)
+        let stamped = File.GetLastWriteTimeUtc(absolute root)
 
         let result = interpret root (WriteFile(relative, "same", AuthoredSource))
 
         Assert.True result.Succeeded
         Assert.Equal("same", File.ReadAllText(absolute root))
+        Assert.Equal(stamped, File.GetLastWriteTimeUtc(absolute root))
         Assert.Empty(residue root)
 
     [<Fact>]
@@ -102,6 +112,29 @@ module CommandEffectsTests =
         match result.Diagnostic with
         | Some diagnostic -> Assert.Equal("unsafeOverwrite", diagnostic.Id)
         | None -> failwith "expected an unsafeOverwrite diagnostic"
+
+    /// The rename replaces the destination's inode, so the temp's mode (umask-derived, typically `0644`)
+    /// would become the artifact's mode unless it is carried across. `File.WriteAllText` preserved the
+    /// mode for free by writing through the existing inode; the atomic path must do it deliberately.
+    ///
+    /// Both directions matter: an executable script must keep its exec bit, and a deliberately
+    /// mode-restricted artifact must not silently become world-readable.
+    [<Theory>]
+    [<InlineData(0o755)>]
+    [<InlineData(0o600)>]
+    let ``an overwrite preserves the destination's file mode`` (mode: int) =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let root = TestSupport.tempDirectory ()
+            seed root "before"
+            File.SetUnixFileMode(absolute root, enum<UnixFileMode> mode)
+
+            let result = interpret root (WriteFile(relative, "after", AuthoredSource))
+
+            Assert.True result.Succeeded
+            Assert.Equal("after", File.ReadAllText(absolute root))
+            Assert.Equal(enum<UnixFileMode> mode, File.GetUnixFileMode(absolute root))
 
     /// The property that protects the author. Make the *directory* unwritable so the temp file cannot
     /// be created; the destination's prior bytes must survive intact and nothing may be left behind.
@@ -140,19 +173,23 @@ module CommandEffectsTests =
                     UnixFileMode.UserRead ||| UnixFileMode.UserWrite ||| UnixFileMode.UserExecute
                 )
 
-    /// Structural (FR-005/FR-006/FR-008): the interpreter must commit through a dot-prefixed sibling
-    /// temp and an atomic rename — never a direct truncating write to the destination. Asserted against
-    /// the source text, because "the bug is gone" is a property of the code, not of any single run: a
-    /// future edit that reintroduces `File.WriteAllText(absolute, …)` would pass every behavioral test
-    /// above and silently restore the torn-read window.
+    /// Structural regression guard (FR-005/FR-006): no `WriteFile` path may truncate the destination
+    /// directly. "The bug is gone" is a property of the code, not of any single run — a future edit that
+    /// reintroduces `File.WriteAllText(absolute, …)` would pass every behavioral test above and silently
+    /// restore the torn-read window, because a single-threaded test cannot observe the gap.
+    ///
+    /// Deliberately spelling-tolerant: it matches the *shape* of a direct write to `absolute`, not the
+    /// exact typography of the current implementation. Pinning source-text verbatim would turn a
+    /// reformat or a local rename into a red test with a misleading message.
+    ///
+    /// The temp-sibling *behavior* — same directory, no residue — is proven by the tests above, not here.
     [<Fact>]
-    let ``the WriteFile interpreter commits through a temp sibling, not a direct truncate`` () =
+    let ``no WriteFile path truncates the destination directly`` () =
         let source =
             TestSupport.readRelative TestSupport.repoRoot "src/FS.GG.SDD.Commands/CommandEffects.fs"
 
-        Assert.Contains("writeFileAtomic absolute text", source)
-        Assert.Contains("File.Move(temp, absolute, true)", source)
-        // The temp is a dot-prefixed sibling: same directory ⇒ same volume ⇒ the rename is atomic,
-        // and the leading `.` keeps it out of the `readiness/**` / `work/**` globs in the crash window.
-        Assert.Contains("$\".{Path.GetFileName absolute}.{Guid.NewGuid():N}.tmp\"", source)
-        Assert.DoesNotContain("File.WriteAllText(absolute, text)", source)
+        Assert.False(
+            Regex.IsMatch(source, @"File\.WriteAllText\s*\(\s*absolute\b"),
+            "CommandEffects.fs writes directly to the destination path; commit through a temp sibling "
+            + "and an atomic rename instead (FS.GG.SDD#164)."
+        )

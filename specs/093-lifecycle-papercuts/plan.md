@@ -16,12 +16,17 @@ reports, resolving FS-GG/FS.GG.SDD#164. Each is independently testable; none dep
 3. **Ambiguity counters** — `unresolvedAmbiguityCount` is a `spec.md`-body regex that never reads
    `clarifications.md`, so it cannot be zeroed by resolving anything. Removed from the model and the
    report. (US3, FR-002..004)
-4. **Decision refs** — a `DEC-###`'s `FR`/`US`/`AC` refs are dropped on four independent paths, one of
-   which is that the three `Related*Ids` fields have **zero read sites** in `src/`. Threaded through to
-   `work-model.json` and the task graph; the unread copies deleted. (US4, FR-011..015)
-5. **Task refs** — `sourceIds` and `decisions` are a generated bucket and an authored typed field, and
-   four consumers disagree about which is canonical. Typed fields win; `SourceIds` becomes a derived
-   union; the emitter writes only the residual. (US5, FR-016..022)
+4. **Decision refs** — the three `Related*Ids` fields have **zero read sites** in `src/`, and
+   `RequirementModel.parseDecisions` (the parser that feeds `work-model.json`) carried no ref fields at
+   all. The refs now reach `work-model.json` as additive `requirementRefs`/`storyRefs`/`acceptanceRefs`;
+   all six unread fields are deleted. FR-012 and FR-014 were withdrawn after review — a prose mention is
+   not a structured reference. (US4, FR-011/FR-013/FR-015)
+5. ~~**Task refs** — `sourceIds` and `decisions` are a generated bucket and an authored typed field.~~
+   **DEFERRED after review.** Deriving the union at the parser silently subjects the typed ref fields to
+   `taskValidationDiagnostics.unknownSources`, turning an untouched workspace red with no `schemaVersion`
+   signal, and widens the re-generation merge's `existingSources`/`derivedCoverage`. The blindness is real
+   (`evidence` reads only `SourceIds`); the fix belongs at that consumer, not at the parser. See the
+   Post-Review Amendment in [spec.md](./spec.md). (US5, FR-016..022 — not implemented)
 
 **Change tier: Tier 1.** Artifact-layout change to the authored `tasks.yml` surface, additive keys on
 `work-model.json`'s `DecisionEntry`, and a `CommandReport` counter removal. Six `.fsi` files change, so

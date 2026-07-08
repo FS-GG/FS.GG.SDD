@@ -95,7 +95,7 @@
     {
       "id": "fs-gg-sdd-troubleshooting",
       "scope": "process",
-      "sha256": "96eb7eafe8f7f6127e4364ff54064c59f9c3a47627f59fa2dfe7622352c9bbd8",
+      "sha256": "e1d92bc789903d8c7c3920a8d56cc5e15c242f211a7b549858137c9431aac1cf",
       "resolvablePath": ".agents/skills/fs-gg-sdd-troubleshooting/SKILL.md",
       "materializes-when": "always"
     },

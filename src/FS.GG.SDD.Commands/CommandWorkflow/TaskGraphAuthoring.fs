@@ -269,13 +269,18 @@ module internal TaskGraphAuthoring =
         let clarificationDecisionTasks =
             clarificationFacts.Decisions
             |> List.choose (fun decision ->
-                // A decision that settles requirements says so on its own line; thread those refs into
-                // the task it derives rather than dropping them (#164, FR-014). This is also the read
-                // site that keeps `RelatedRequirementIds` from being a parsed-but-never-read field.
+                // Deliberately no requirement refs (#164). Threading the decision line's FR ids in here
+                // was tried and reverted: `requirementIdsInLine` scans the whole line, prose included, so
+                // `DEC-001: supersedes the old FR-099 behaviour` put FR-099 into the task's `requirements:`,
+                // whence `Task.fs` unions it into `SourceIds` and `unknownTaskSourceReference` blocks
+                // `tasks` on output the tool just generated — telling the author to fix tasks.yml, a file
+                // it regenerates. A prose mention is not a structured reference. The decision's refs reach
+                // traceability through `work-model.json`'s `requirementRefs`/`storyRefs`/`acceptanceRefs`
+                // instead, which is what "thread all refs through traceability" asked for.
                 maybeTask
                     [ decision.DecisionId.Value ]
                     $"Implement clarification decision {decision.DecisionId.Value}"
-                    decision.RelatedRequirementIds
+                    []
                     [ decision.DecisionId ]
                     primaryDependency
                     [ "fsharp"; "speckit-implement" ])
@@ -548,26 +553,6 @@ work:
 
         let decisionIds = task.Decisions |> List.map (fun (id: DecisionId) -> id.Value)
 
-        // `SourceIds` is the derived union of the authored `sourceIds:` and the typed fields (#164), so
-        // re-emitting all of it would restate `requirements:`/`decisions:` on every line and recreate
-        // the two-fields-one-fact confusion this feature removes. Write only the residual — ids the
-        // typed fields cannot express, such as a scope boundary `SB-002` — and omit the key entirely
-        // when there is none, matching the shape the shipped example documents.
-        //
-        // Idempotent: `residual` is a pure function of the parsed model, and re-parsing a residual-only
-        // file re-derives the same union, so `emit -> parse -> emit` is a fixpoint after one step.
-        let residualSourceIds =
-            let typed = (requirementIds @ decisionIds) |> List.map _.ToUpperInvariant() |> Set.ofList
-
-            task.SourceIds
-            |> List.filter (fun id -> not (Set.contains (id.ToUpperInvariant()) typed))
-
-        let sourceIdsLine =
-            if List.isEmpty residualSourceIds then
-                ""
-            else
-                $"\n    sourceIds: {residualSourceIds |> yamlInlineList}"
-
         let evidenceIds =
             task.RequiredEvidence |> List.map (fun (id: EvidenceId) -> id.Value)
 
@@ -577,7 +562,8 @@ work:
     owner: {yamlString task.Owner}
     dependencies: {dependencyIds |> yamlInlineList}
     requirements: {requirementIds |> yamlInlineList}
-    decisions: {decisionIds |> yamlInlineList}{sourceIdsLine}
+    decisions: {decisionIds |> yamlInlineList}
+    sourceIds: {task.SourceIds |> yamlInlineList}
     requiredSkills: {task.RequiredSkills |> yamlInlineList}
     requiredEvidence: {evidenceIds |> yamlInlineList}{skip}"""
 

@@ -51,35 +51,6 @@ module ExampleArtifactsContractTests =
             Assert.Empty(blocking facts.Diagnostics)
             Assert.NotEmpty facts.Tasks
 
-    /// Feature 093 / FS.GG.SDD#164, FR-021. The shipped example authors the typed `requirements:` and
-    /// `decisions:` fields and **no `sourceIds:` at all**. `evidence` and `verify` read only a task's
-    /// `SourceIds`, so before the derivation landed, every task in the documented authoring shape was
-    /// invisible to both — the tool's own worked example contradicted two of its stages.
-    ///
-    /// This asserts the property those stages depend on, at the parser: the derived `SourceIds` carries
-    /// the typed refs. It is the guard that keeps the example and the consumers from diverging again.
-    [<Fact>]
-    let ``Example tasks.yml authors no sourceIds yet every task derives its typed refs`` () =
-        // Comment lines explain what `sourceIds` *is*; only the YAML body must be free of the key.
-        let body =
-            File.ReadAllLines(Path.Combine(examplesDir, "tasks.yml"))
-            |> Array.filter (fun line -> not (line.TrimStart().StartsWith "#"))
-            |> String.concat "\n"
-
-        Assert.DoesNotContain("sourceIds:", body)
-
-        match Task.parseTaskFacts (snapshot "tasks.yml") with
-        | Error diagnostics -> failwith $"Example tasks.yml did not parse: {diagnostics}"
-        | Ok facts ->
-            for task in facts.Tasks do
-                let typed =
-                    (task.Requirements |> List.map _.Value) @ (task.Decisions |> List.map _.Value)
-
-                Assert.NotEmpty typed
-
-                for id in typed do
-                    Assert.Contains(id, task.SourceIds)
-
     [<Fact>]
     let ``Example spec.md parses with no blocking diagnostics and declares stable requirement ids`` () =
         match Specification.parseSpecificationFacts (snapshot "spec.md") with

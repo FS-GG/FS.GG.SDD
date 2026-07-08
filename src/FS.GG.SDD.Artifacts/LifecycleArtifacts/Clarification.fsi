@@ -52,16 +52,15 @@ module Clarification =
           Rationale: string option
           SourceQuestionIds: ClarificationQuestionId list
           SourceAmbiguityIds: AmbiguityId list
-          /// Every `FR-###` the decision line names. Read by `clarificationDecisionTasks` to seed the
-          /// derived task's `requirements:` (#164). The sibling story/acceptance refs travel on
-          /// `RequirementModel.Decision` instead, where the work model actually reads them.
-          RelatedRequirementIds: RequirementId list
           SourceLocation: SourceLocation option }
 
     type RemainingAmbiguity =
-        { /// Every `AMB-###` the line names. A single remaining-ambiguity line may name several
-          /// (#164); before feature 093 only the first survived `List.tryHead`.
-          AmbiguityIds: AmbiguityId list
+        { /// The ambiguity the line is *about* — its first `AMB-###`, the line's ANCHOR. Deliberately
+          /// not every id the line names: a line may mention others in its prose ("AMB-001 blocked on
+          /// the AMB-002 decision"), and `retireResolvedRemaining` deletes a line by its anchor. Widening
+          /// this to a list would report a merely-mentioned, already-decided ambiguity as an unresolved
+          /// blocker, and would falsify `remainingLineAnchor`. One subject per line.
+          AmbiguityId: AmbiguityId option
           QuestionId: ClarificationQuestionId option
           State: string
           Explanation: string

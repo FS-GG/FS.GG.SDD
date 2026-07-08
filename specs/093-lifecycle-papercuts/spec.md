@@ -103,16 +103,26 @@ Constitution §I and §III. No `schemaVersion` bump is proposed (see Clarificati
   that agrees with them adds no information; one that disagrees is the bug. `SpecificationFacts`
   keeps the field only if a non-report consumer needs it — and none does (see FR-002).
 
-- Q: Is removing a `CommandReport` JSON key a breaking change for Governance? → A: **No — removal is
-  safe, and this was verified rather than assumed.** Three checks, all negative:
-  (a) `ReleaseContract.fs`'s `jsonInventory` freezes only the **top-level** report keys
-  (`schemaVersion`, `reportVersion`, `command`, `context`, `invocation`, `outcome`,
-  `changedArtifacts`, `specification`, `clarification`, …). `specification` is frozen as a key; the
-  counters *nested inside it* are not enumerated, so `unresolvedAmbiguityCount` is not part of the
-  frozen surface. (b) `grep -rn "ambiguit" src/FS.GG.SDD.Artifacts/ReleaseContract.fs docs/release/`
-  returns nothing. (c) `GovernanceHandoff.fs` never mentions ambiguity, so the one artifact that
-  crosses the Governance boundary does not carry the counter. **FR-002 therefore resolves to removal**,
-  and `ReleaseConformanceTests` is the regression guard that keeps that true.
+- Q: Is removing a `CommandReport` JSON key a breaking change? → A: **Two different questions, and the
+  first draft of this spec conflated them.**
+
+  *Will any drift guard catch it?* No. `ReleaseContract.fs`'s `jsonInventory` freezes only the
+  **top-level** report keys (`specification` is frozen as a key; the counters nested inside it are not
+  enumerated); `grep -rn "ambiguit" src/FS.GG.SDD.Artifacts/ReleaseContract.fs docs/release/` returns
+  nothing; and `GovernanceHandoff.fs` — the one artifact crossing the Governance boundary — never
+  mentions ambiguity. Nothing blocks the removal, and no Governance consumer breaks.
+
+  *Is it Breaking under the versioning policy?* **Yes.** `docs/release/versioning-policy.md` defines a
+  public contract as "any public schema, generated-view shape, command-output (`--json`) contract, or
+  CLI surface", and classes "Remove/rename/retype a public field" as **Breaking**, major bump, migration
+  note **required**. `unresolvedAmbiguityCount` is a field of the `--json` contract. Drift-guard silence
+  is not policy exemption.
+
+  **FR-002 still resolves to removal** — a counter that structurally cannot be correct is worse than
+  absent — but the change **carries a migration-note obligation at the next version bump**. That note
+  lives in `docs/release/migrations/<version>.md`, which is inside FS.GG.SDD#177's declared ADR-0021
+  touch-set and is keyed to a release this PR does not cut, so it is filed as a follow-up rather than
+  written here.
 
 - Q: Should the atomic write be `File.Replace` or temp + `File.Move(overwrite: true)`? → A: **Temp
   sibling + `File.Move(source, dest, overwrite = true)`.** `File.Replace` requires the destination to
@@ -267,7 +277,7 @@ refs and the derived task's refs include them.
 
 ---
 
-### User Story 5 - A task's references have one meaning (Priority: P3)
+### User Story 5 - A task's references have one meaning (Priority: P3) — **DEFERRED, not implemented**
 
 An author hand-writes a task in the shape the shipped example documents — `requirements: [FR-001]`,
 `decisions: [DEC-001]`, no `sourceIds:` — and `evidence` and `verify` see its references.
@@ -368,19 +378,25 @@ that `evidence` and `verify` resolve those tasks' obligations.
 - **FR-011**: A `DEC-###` line's every `FR-###`, `US-###`, and `AC-###` reference MUST reach the work
   model, deduplicated and sorted. `RequirementModel.parseDecisions` MUST populate the refs it
   currently discards.
-- **FR-012**: `parseRemainingAmbiguity` MUST record every `AMB-###` a line names, not only the first.
+- ~~**FR-012**: `parseRemainingAmbiguity` MUST record every `AMB-###` a line names.~~ **Withdrawn.** The
+  first id is the line's *anchor*, not an accident — see the Post-Review Amendment. A test now pins the
+  anchor doctrine instead.
 - **FR-013**: A `clarify --input` line naming a well-formed but undeclared id (e.g. `FR-999` against a
   spec declaring `FR-001..FR-008`) MUST block with a diagnostic naming the offending id. **This already
   holds** via `unknownReferenceDiagnostics`; this feature adds a regression test pinning it for a
   *multi-ref decision line* specifically (the case the issue reported), and MUST NOT weaken it when
   FR-011 threads the extra refs through.
-- **FR-014**: `clarificationDecisionTasks` MUST pass the decision's `RelatedRequirementIds` through to
-  the derived task rather than `[]`. This is also the read site that discharges FR-015.
+- ~~**FR-014**: `clarificationDecisionTasks` MUST pass the decision's `RelatedRequirementIds` through to
+  the derived task.~~ **Withdrawn** — it makes `tasks` block on its own output when a decision's prose
+  mentions any FR-shaped token. See the Post-Review Amendment. FR-015 is instead discharged by *deleting*
+  the field, which then has no reader.
 - **FR-015**: `ClarificationQuestion`'s and `ClarificationDecisionFact`'s `RelatedRequirementIds`,
   `RelatedStoryIds`, and `RelatedAcceptanceScenarioIds` MUST either be consumed or be removed. A field
-  that is parsed, stored, exposed in `.fsi`, and never read MUST NOT survive this feature.
+  that is parsed, stored, exposed in `.fsi`, and never read MUST NOT survive this feature. **Resolved by
+  removal**, all six — with FR-014 withdrawn there is no honest reader, and the decision's refs reach the
+  work model on `RequirementModel.Decision` (FR-011) instead.
 
-**Task refs (US5)**
+**Task refs (US5) — DEFERRED. FR-016..FR-022 are not implemented; see the Post-Review Amendment.**
 
 - **FR-016**: `WorkTask.SourceIds` MUST be derived on parse as the sorted, deduplicated union of the
   authored `sourceIds:` list, the `requirements:` list, and the `decisions:` list.
@@ -445,26 +461,26 @@ that `evidence` and `verify` resolve those tasks' obligations.
 - **SC-004**: For a work item whose four declared ambiguities are all resolved, the `clarify` report
   contains **no** counter with a nonzero value naming ambiguities, across all three projections.
 - **SC-005**: A `DEC-003` line naming `FR-007`, `FR-001`, and `AC-005` yields exactly
-  `["AC-005"; "FR-001"; "FR-007"]` on the `work-model.json` decision entry, and the derived task's
-  `requirements:` is `[FR-001, FR-007]`. A `Remaining Ambiguity` line naming two AMB ids records both.
+  `["FR-001"; "FR-007"]` / `["AC-005"]` on the `work-model.json` decision entry. *(The derived-task and
+  remaining-ambiguity halves are withdrawn with FR-014/FR-012.)*
 - **SC-006**: A `clarify --input` decision line naming `FR-007`, `FR-001`, and `FR-999` against a spec
   declaring `FR-001..FR-008` blocks with `unknownClarificationReference` naming `FR-999`, and writes
   nothing — the multi-ref threading of FR-011 does not smuggle an undeclared ref past the existing gate.
-- **SC-007**: `grep -r "RelatedRequirementIds" src/` returns either read sites or nothing — never
-  only definitions and assignments (FR-015).
-- **SC-008**: The shipped `docs/examples/lifecycle-artifacts/tasks.yml`, unmodified in its `sourceIds`
+- **SC-007**: `grep -r "RelatedRequirementIds\|RelatedStoryIds\|RelatedAcceptanceScenarioIds" src/` returns
+  nothing (FR-015 — resolved by removal).
+- **SC-008** *(deferred with US5)*: The shipped `docs/examples/lifecycle-artifacts/tasks.yml`, unmodified in its `sourceIds`
   absence, parses to tasks whose `SourceIds` equal their typed refs, and `evidence` + `verify` resolve
   their obligations. Asserted by extending `ExampleArtifactsContractTests`.
-- **SC-009**: `fsgg-sdd tasks` run twice over a normalized `tasks.yml` produces byte-identical output,
+- **SC-009** *(deferred with US5)*: `fsgg-sdd tasks` run twice over a normalized `tasks.yml` produces byte-identical output,
   and the emitted file contains no `sourceIds:` line that restates the typed fields.
-- **SC-010**: Every previously committed `tests/fixtures/**/tasks.yml` parses to a `SourceIds` that is
+- **SC-010** *(deferred with US5)*: Every previously committed `tests/fixtures/**/tasks.yml` parses to a `SourceIds` that is
   a superset of its pre-change value, and to an identical `allTaskDispositionIds` set (FR-022).
 - **SC-011**: `dotnet test` is green with no `PublicSurface.baseline` drift beyond the `.fsi` changes
   this feature declares. (`fsgg-sdd surface --check` is **not** a gate in this repo: `surface` enforces the
   `docs/api-surface/**` convention in a *scaffolded workspace*, and the SDD component repo has no such
   tree — it uses the internal reflection `PublicSurface.baseline` test instead, which `surface` explicitly
   does not replace. Running it here reports 53 pre-existing missing baselines on `main` too.)
-- **SC-012**: `readiness/**` goldens change only as FR-024 permits: digest-only where no semantics
+- **SC-012** *(deferred with US5)*: `readiness/**` goldens change only as FR-024 permits: digest-only where no semantics
   moved; a reviewed content diff for `relatedIds` and the `tasks.yml` normalization.
 
 ## Assumptions
@@ -475,8 +491,11 @@ that `evidence` and `verify` resolve those tasks' obligations.
   `File.Replace` builds on, without `File.Replace`'s must-already-exist precondition.
 - No FS-GG consumer reads `unresolvedAmbiguityCount` from a `CommandReport`. Verified against
   `ReleaseContract.fs`'s frozen top-level inventory, `docs/release/`, and `GovernanceHandoff.fs` — all
-  three are silent on ambiguity counters (see Clarifications). `ReleaseConformanceTests` is the
-  standing guard.
+  three are silent on ambiguity counters (see Clarifications). Two per-feature contract docs did declare
+  it (`specs/005-specify-command/contracts/specify-report-json.md`,
+  `specs/007-checklist-command/contracts/checklist-report-json.md`); nothing pins them, and both are
+  corrected here. Removal remains **Breaking** under the versioning policy and owes a migration note at
+  the next bump.
 - The `tasks.yml` reader's acceptance of an absent `sourceIds:` key is intentional and load-bearing —
   the shipped example depends on it and is validated on every build.
 - The 2026-07-07 FS.GG.Game (§WD3, §WD4) and FS.GG.Audio (§3.7, §3.9) feedback reports are the
@@ -488,6 +507,52 @@ that `evidence` and `verify` resolve those tasks' obligations.
   (`fsgg-coord overlap FS.GG.SDD#164 FS.GG.SDD#177` → `DISJOINT`). The one shared file outside both
   declarations is `.specify/feature.json`, which every feature branch rewrites; its one-line conflict
   is resolved by taking the merging branch's value.
+
+
+## Post-Review Amendment (2026-07-08)
+
+An adversarial review of the implemented branch found three defects that the passing test suite did
+not — two of which *my own tests had enshrined as intended behavior*. Each was reproduced against the
+real CLI before acting. The feature was cut accordingly.
+
+**Withdrawn — FR-012 (every `AMB-###` on a Remaining Ambiguity line).** The `List.tryHead` in
+`parseRemainingAmbiguity` is not a drop; it is the line's **anchor**, documented twice in code:
+*"A line may legitimately mention other ids in its prose ('blocked on the AMB-002 decision'); only the
+anchor identifies the line's subject"* and *"Match the line's SUBJECT, never any id it merely mentions —
+otherwise an operator's 'AMB-001 blocked on the AMB-002 decision' is deleted the moment AMB-002 is
+answered."* Widening it made `unresolvedBlockingAmbiguity` report a merely-mentioned, already-decided
+ambiguity as an unresolved blocker, and falsified `remainingLineAnchor`'s contract. The Audio §3.7
+feedback concerned *decision tags*; generalizing it to remaining-ambiguity lines was my error.
+
+**Withdrawn — FR-014 (decision refs → the derived task's `requirements:`).** `requirementIdsInLine`
+scans the whole decision line, prose included. Reproduced: a spec declaring only `FR-001`, plus
+`- DEC-001: Adopt caching. This supersedes the old FR-099 behaviour.`, makes `fsgg-sdd tasks` **block on
+output it generated itself** — `unknownTaskSourceReference FR-099`, with fix text *"remove the stale task
+link"* pointing at `tasks.yml`, a file the tool regenerates. The author's only remedy is rewording
+historical prose. This is the same mistake as FR-012: **a prose mention is not a structured reference.**
+
+**Deferred — US5 / FR-016..FR-022 (derived `sourceIds`).** The blindness is real: `evidence` reads only
+`task.SourceIds`, while the shipped example authors only typed refs. But deriving the union *at the
+parser* silently subjects `requirements:`/`decisions:` to `taskValidationDiagnostics.unknownSources`, a
+gate they never faced — an untouched workspace whose hand-authored `requirements: [FR-007]` names an id
+since dropped from `spec.md` goes from green to exit 1 with no `schemaVersion` signal. It also widens
+`existingSources` (derivation suppression) and `derivedCoverage` (prior-task orphan deletion) in the
+re-generation merge; I attempted to reproduce the orphan deletion and could **not** (an AC ref rescued
+the task), so that one is plausible, not confirmed. The fix belongs at the blind consumers, not at the
+parser. Tracked as a follow-up.
+
+**Kept from US4.** FR-011 threads a decision's `FR`/`US`/`AC` refs onto `RequirementModel.Decision` and
+out to `work-model.json` as `requirementRefs`/`storyRefs`/`acceptanceRefs`. That *is* "thread all refs
+through traceability", and it is inert: additive keys on a generated view, read by no gate. FR-015 is
+fully discharged — all six parsed-but-never-read clarification fields are deleted, along with the three
+scanners that existed only to populate them. FR-013 needed no code (the `--input` gate already existed).
+
+**Found while fixing.** Three further defects, all introduced by this feature and all now fixed with
+discriminating tests: the atomic rename silently reset every artifact's file mode (a `0600` artifact
+became world-readable; a `chmod +x` script lost its bit); an identical-content write still replaced the
+destination inode; and `titleFromSpec` piped a YAML-*decoded* title into an unquoted `title:` slot, so a
+spec legally titled `"Plan: upstream snapshot"` blocked `clarify` permanently and `"#1 priority"` silently
+became a comment.
 
 ## Dependencies
 

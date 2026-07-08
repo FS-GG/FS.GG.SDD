@@ -56,11 +56,10 @@ module Clarification =
           Rationale: string option
           SourceQuestionIds: ClarificationQuestionId list
           SourceAmbiguityIds: AmbiguityId list
-          RelatedRequirementIds: RequirementId list
           SourceLocation: SourceLocation option }
 
     type RemainingAmbiguity =
-        { AmbiguityIds: AmbiguityId list
+        { AmbiguityId: AmbiguityId option
           QuestionId: ClarificationQuestionId option
           State: string
           Explanation: string
@@ -152,21 +151,10 @@ module Clarification =
         |> Seq.distinctBy (fun id -> id.Value)
         |> Seq.toList
 
-    /// Sorted, not line-ordered: these refs now reach a task's emitted `requirements:` list (#164), so
-    /// `DEC-003 settles FR-007 and FR-001` and `DEC-003 settles FR-001 and FR-007` must produce the same
-    /// `tasks.yml` bytes.
-    let requirementIdsInLine line =
-        Regex.Matches(line, @"\bFR-\d{3,}\b", RegexOptions.IgnoreCase)
-        |> Seq.cast<Match>
-        |> Seq.choose (fun m -> Identifiers.createRequirementId m.Value |> Result.toOption)
-        |> Seq.distinctBy (fun id -> id.Value)
-        |> Seq.sortBy (fun id -> id.Value)
-        |> Seq.toList
-
-    // `storyIdsInLine` / `acceptanceScenarioIdsInLine` lived here to populate `RelatedStoryIds` and
-    // `RelatedAcceptanceScenarioIds` — two fields nothing ever read. Feature 093 removed the fields, so
-    // the scanners went with them; a decision's US/AC refs now travel on `RequirementModel.Decision`,
-    // where the work model actually reads them (#164).
+    // `requirementIdsInLine` / `storyIdsInLine` / `acceptanceScenarioIdsInLine` lived here to populate
+    // `RelatedRequirementIds` / `RelatedStoryIds` / `RelatedAcceptanceScenarioIds` — three fields nothing
+    // ever read. Feature 093 removed the fields, so the scanners went with them. A decision's FR/US/AC
+    // refs now travel on `RequirementModel.Decision`, where `work-model.json` actually reads them (#164).
 
     let decisionIdsInLine line =
         Regex.Matches(line, @"\bDEC-\d{3,}\b", RegexOptions.IgnoreCase)
@@ -240,16 +228,17 @@ module Clarification =
                       Rationale = None
                       SourceQuestionIds = questionIdsInLine line
                       SourceAmbiguityIds = ambiguityIdsInLine line
-                      RelatedRequirementIds = requirementIdsInLine line
                       SourceLocation = sourceLocation lineNumber }
             | None -> None)
 
     let parseRemainingAmbiguity text =
         sectionLines "Remaining Ambiguity" text
         |> List.choose (fun (lineNumber, line) ->
-            // Every AMB the line names, not just the first (#164). `RemainingAmbiguityCount` and
-            // `BlockingAmbiguityCount` count *lines*, not ids, so neither moves.
-            let ambiguities = ambiguityIdsInLine line
+            // The line's ANCHOR — its subject — not every id it names. `remainingLineAnchor` retires a
+            // line by this same first id, and a line may legitimately mention others in its prose
+            // ("AMB-001 blocked on the AMB-002 decision"). Reporting a mentioned id as an unresolved
+            // blocker, or retiring the line when that id is answered, both destroy a still-blocking item.
+            let ambiguity = ambiguityIdsInLine line |> List.tryHead
             let question = questionIdsInLine line |> List.tryHead
 
             // A "no-outstanding" disclaimer (`None. AMB-001…AMB-005 resolved.`, `No remaining
@@ -260,7 +249,7 @@ module Clarification =
             // and still classifies below (#105 Trap 1).
             if isNoOutstandingSentinel line then
                 None
-            elif List.isEmpty ambiguities && Option.isNone question then
+            elif Option.isNone ambiguity && Option.isNone question then
                 None
             else
                 let lowered = line.ToLowerInvariant()
@@ -274,7 +263,7 @@ module Clarification =
                         "blocking"
 
                 Some
-                    { AmbiguityIds = ambiguities
+                    { AmbiguityId = ambiguity
                       QuestionId = question
                       State = state
                       Explanation = line.Trim().TrimStart('-', '*').Trim()

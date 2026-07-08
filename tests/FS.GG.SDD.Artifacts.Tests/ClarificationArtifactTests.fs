@@ -197,44 +197,21 @@ publicOrToolFacingImpact: true
     // paths. These pin two of them at the artifact layer.
     // ---------------------------------------------------------------------------------------------
 
-    /// FR-012. `parseRemainingAmbiguity` did `ambiguityIdsInLine line |> List.tryHead`, so a line
-    /// naming two ambiguities recorded only the first. The *counts* are per line and must not move.
+    /// A Remaining Ambiguity line has ONE subject — its first `AMB-###`, the anchor. Other ids in the
+    /// prose are mentions, not subjects. Feature 093 briefly widened this to "every id the line names",
+    /// which looked like the same class of drop as the decision refs but is not: `remainingLineAnchor`
+    /// retires a line by that first id, so a mention must never be reported as an unresolved blocker
+    /// (`AMB-001 blocked on the AMB-002 decision` would name the already-answered AMB-002 as blocking),
+    /// and must never retire the line when it is answered. The `tryHead` is the contract, not a bug.
     [<Fact>]
-    let ``a remaining-ambiguity line naming two ambiguities records both`` () =
-        let body = "- AMB-002 and AMB-004 [CQ-002] blocking: Both still need an answer."
+    let ``a remaining-ambiguity line is anchored on its first ambiguity, not every id it mentions`` () =
+        let body = "- AMB-002 [CQ-002] blocking: still blocked on the AMB-004 decision."
 
         match parseClarificationFacts (snapshot (withRemainingAmbiguity body)) with
         | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
         | Ok facts ->
             let remaining = Assert.Single facts.RemainingAmbiguity
 
-            Assert.Equal<string list>(
-                [ "AMB-002"; "AMB-004" ],
-                remaining.AmbiguityIds |> List.map _.Value
-            )
-
-            // One *line* remains, and it is blocking. The counts are per line, not per id
-            // (`RemainingAmbiguityCount = RemainingAmbiguity.Length`), so widening must not move them.
+            Assert.Equal(Some "AMB-002", remaining.AmbiguityId |> Option.map _.Value)
             Assert.Equal(1, facts.RemainingAmbiguity.Length)
             Assert.Equal(1, facts.BlockingAmbiguityCount)
-
-    /// FR-011 at the clarification layer: the decision's requirement refs survive the parse. (Their
-    /// journey to `work-model.json` runs through `RequirementModel.parseDecisions` — see WorkModelTests.)
-    [<Fact>]
-    let ``a decision line's requirement refs are parsed`` () =
-        let text =
-            clarificationText.Replace(
-                "- DEC-001 [CQ-001] [AMB:AMB-001] [FR-001] [US-001] [AC-001]: Clarification decisions live in clarifications.md.",
-                "- DEC-001 [CQ-001] [AMB:AMB-001]: Settles FR-007, FR-001 and AC-005 at once."
-            )
-
-        match parseClarificationFacts (snapshot text) with
-        | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
-        | Ok facts ->
-            let decision = Assert.Single facts.Decisions
-
-            // Sorted, not line-ordered: these refs reach the derived task's emitted `requirements:`.
-            Assert.Equal<string list>(
-                [ "FR-001"; "FR-007" ],
-                decision.RelatedRequirementIds |> List.map _.Value
-            )

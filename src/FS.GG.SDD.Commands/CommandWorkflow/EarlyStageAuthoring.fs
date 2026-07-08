@@ -61,6 +61,34 @@ module internal EarlyStageAuthoring =
     let private nonBlank (value: string) =
         if String.IsNullOrWhiteSpace value then None else Some(value.Trim())
 
+    /// A front-matter scalar that survives its own re-parse.
+    ///
+    /// `titleFromSpec` feeds a YAML-*decoded* title into an unquoted `title:` slot, so a spec whose front
+    /// matter legally reads `title: "Plan: upstream snapshot"` would emit `title: Plan: upstream snapshot`
+    /// — not a YAML scalar — and `clarify` would block on the file it had just written, reporting the
+    /// unhelpful "Clarification front matter is empty." A leading `#` is worse: it parses as a comment,
+    /// silently yielding an empty title.
+    ///
+    /// Quote only when the plain form would not round-trip, so the common `title: Ambient audio bed` keeps
+    /// its exact bytes and no committed artifact churns.
+    let yamlFrontMatterScalar (value: string) =
+        // An allowlist, not a blocklist: YAML's plain-scalar rules are subtle enough that enumerating the
+        // unsafe cases invites exactly the miss this guards against (a *trailing* `:` ends the scalar just
+        // as `: ` does mid-string). Anything outside the boring alphanumeric-with-punctuation set is quoted.
+        let isSafeChar c =
+            Char.IsLetterOrDigit c || "-_. ()/'".Contains(c: char)
+
+        let plainIsSafe =
+            not (String.IsNullOrEmpty value)
+            && value = value.Trim()
+            && Char.IsLetterOrDigit value.[0]
+            && value |> Seq.forall isSafeChar
+
+        if plainIsSafe then
+            value
+        else
+            "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\""
+
     let requestTitle (request: CommandRequest) workId =
         request.Title
         |> Option.bind nonBlank
@@ -82,7 +110,7 @@ module internal EarlyStageAuthoring =
         $"""---
 schemaVersion: 1
 workId: {workId}
-title: {title}
+title: {yamlFrontMatterScalar title}
 stage: charter
 changeTier: tier1
 status: chartered
@@ -358,7 +386,7 @@ policyPointers:
         $"""---
 schemaVersion: 1
 workId: {workId}
-title: {title}
+title: {yamlFrontMatterScalar title}
 stage: specify
 changeTier: tier1
 status: specified
@@ -1183,7 +1211,7 @@ Prose status: specified
         $"""---
 schemaVersion: 1
 workId: {workId}
-title: {title}
+title: {yamlFrontMatterScalar title}
 stage: clarify
 changeTier: tier1
 status: {status}
@@ -1557,7 +1585,7 @@ publicOrToolFacingImpact: true
                             [ unresolvedBlockingAmbiguity
                                   path
                                   (facts.RemainingAmbiguity
-                                   |> List.collect (fun item -> item.AmbiguityIds |> List.map _.Value)) ]
+                                   |> List.choose (fun item -> item.AmbiguityId |> Option.map _.Value)) ]
                         else
                             []
 
@@ -1688,7 +1716,7 @@ publicOrToolFacingImpact: true
                         [ unresolvedBlockingAmbiguity
                               path
                               (facts.RemainingAmbiguity
-                               |> List.collect (fun item -> item.AmbiguityIds |> List.map _.Value)) ]
+                               |> List.choose (fun item -> item.AmbiguityId |> Option.map _.Value)) ]
                     else
                         []
 

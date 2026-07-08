@@ -98,38 +98,3 @@ module WorkModelTests =
         Assert.Contains("\"requirementRefs\"", json)
         Assert.Contains("\"storyRefs\"", json)
         Assert.Contains("\"acceptanceRefs\"", json)
-
-    // ---------------------------------------------------------------------------------------------
-    // Feature 093 / FS.GG.SDD#164, FR-020. `deriveGuidanceModel` computed
-    // `relatedIds = task.Requirements @ task.Decisions`, the exact mirror image of `evidence`/`verify`
-    // reading only `SourceIds`. An id reachable *only* through an explicit `sourceIds:` entry — a scope
-    // boundary, say — never reached the agent guidance derived from that task.
-    // ---------------------------------------------------------------------------------------------
-
-    /// The shipped fixture authors no `sourceIds:`, so patch one in: a scope boundary is exactly the kind
-    /// of reference the typed `requirements:`/`decisions:` fields cannot express.
-    [<Fact>]
-    let ``guidance relatedIds include an id reachable only through sourceIds`` () =
-        let model = TestSupport.model "valid-work-item"
-
-        let patched =
-            { model with
-                Tasks =
-                    model.Tasks
-                    |> List.map (fun task ->
-                        if task.Id = "T001" then
-                            { task with SourceIds = ("SB-002" :: task.SourceIds) |> List.sort }
-                        else
-                            task) }
-
-        let guidance = WorkModel.deriveGuidanceModel patched
-
-        let command = guidance.Commands |> List.find (fun entry -> entry.Id = "T001")
-
-        Assert.Contains("SB-002", command.RelatedIds)
-        // And it reaches the human-facing purpose line the agent actually reads.
-        Assert.Contains("SB-002", command.Purpose)
-
-        // The typed refs are still there — this widens, it does not replace.
-        Assert.Contains("FR-001", command.RelatedIds)
-        Assert.Contains("DEC-001", command.RelatedIds)

@@ -33,16 +33,36 @@ module CommandEffects =
     /// the destination's prior bytes intact and no residue. The leading `.` keeps it out of the
     /// `readiness/**` and `work/**` globs even inside the crash window, and the GUID never reaches any
     /// report, digest, or artifact — determinism contracts observe committed bytes only.
+    ///
+    /// The rename *replaces the destination's inode*, so without care the temp's mode (whatever the
+    /// process umask yields, typically `0644`) would silently become the artifact's mode — where
+    /// `File.WriteAllText` used to preserve it by writing through the existing inode. That regresses in
+    /// both directions: a `chmod +x` script loses its exec bit, and a deliberately `0600` artifact
+    /// becomes world-readable. So carry the destination's mode onto the temp before the rename.
+    ///
+    /// Two inode-identity consequences remain, both accepted: a symlink at `absolute` is *replaced*
+    /// rather than written through, and a hardlink elsewhere stops tracking the file. No SDD artifact
+    /// path is a symlink or a hardlink.
     let private writeFileAtomic (absolute: string) (text: string) =
         let directory = parentDirectory absolute
         let temp = Path.Combine(directory, $".{Path.GetFileName absolute}.{Guid.NewGuid():N}.tmp")
 
         try
             File.WriteAllText(temp, text)
+
+            if not (OperatingSystem.IsWindows()) && File.Exists absolute then
+                File.SetUnixFileMode(temp, File.GetUnixFileMode absolute)
+
             File.Move(temp, absolute, true)
         finally
-            if File.Exists temp then
+            // `File.Delete` is a no-op on a missing path, and a successful `File.Move` has already
+            // unlinked the temp. Swallow a cleanup failure so it cannot replace the in-flight write
+            // exception — the caller's `toolDefect` must report why the *write* failed, not why the
+            // cleanup did.
+            try
                 File.Delete temp
+            with _ ->
+                ()
 
     let snapshotIfExists (projectRoot: string) (path: string) =
         let absolute = fullPath projectRoot path
@@ -340,8 +360,20 @@ module CommandEffects =
             | WriteFile(path, text, kind) ->
                 let existing = snapshotIfExists projectRoot path
 
+                // The bytes are already on disk. Skip the commit entirely rather than re-committing
+                // identical content: `writeFileAtomic` renames a fresh inode over the destination, so a
+                // no-op write would still unlink the old inode — replacing a symlink with a regular file,
+                // detaching hardlinks, and churning every inode-tracking watcher on an unchanged
+                // `refresh`. The truncating write it replaced had no such side effect, so this keeps a
+                // no-op run genuinely no-op. `ArtifactOperation.NoChange` is unchanged: it is derived from
+                // `existing` at report assembly and never depended on the write happening.
+                let unchanged =
+                    match existing with
+                    | Some snapshot -> snapshot.Text = text
+                    | None -> false
+
                 if canOverwrite kind existing text then
-                    if not dryRun then
+                    if not dryRun && not unchanged then
                         let absolute = fullPath projectRoot path
                         Directory.CreateDirectory(parentDirectory absolute) |> ignore
                         writeFileAtomic absolute text
