@@ -199,6 +199,11 @@ No signature change (`CommandEffects.fsi` exports only `interpret`/`interpretAll
 `snapshotIfExists`, `canOverwrite`, `dryRun`, and the `NoChange`/`unsafeOverwrite` paths are untouched
 (FR-009, FR-010).
 
+Note what `NoChange` is *not*: `canOverwrite` returns `true` for an identical-content write, so the
+bytes are re-committed. `ArtifactOperation.NoChange` classifies the **report**, not the write. Adding a
+write-skip would be a behavior change and is out of scope — this delta changes only *how* the commit is
+performed, never *whether*.
+
 ## D7 — The clarify title (no type change)
 
 `clarificationTemplate` resolves `explicit --title → specFacts.FrontMatter.Title → humanized workId`.

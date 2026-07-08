@@ -8,6 +8,7 @@
     <Compile Include="TestSupport.fs" />
     <Compile Include="LintTests.fs" />
     <Compile Include="CommandWorkflowTests.fs" />
+    <Compile Include="CommandEffectsTests.fs" />
     <Compile Include="InitCommandTests.fs" />
     <Compile Include="CharterCommandTests.fs" />
     <Compile Include="SpecifyCommandTests.fs" />

@@ -214,7 +214,7 @@ bytes intact and no residue* — directly assertable, deterministic. Plus a stru
 | FR-005/006 | no `File.WriteAllText` on a destination path | `CommandEffectsTests` (structural) |
 | FR-007 | fault-injected commit: prior bytes intact, no `.tmp` residue, `DiagnosticError` surfaces | `CommandEffectsTests` |
 | FR-008 | temp is a sibling, dot-prefixed, matches no lifecycle glob | `CommandEffectsTests` |
-| FR-009 | identical content ⇒ `NoChange`, no write; `unsafeOverwrite` unchanged | `CommandEffectsTests`, `SurfaceCommandTests` |
+| FR-009 | identical content ⇒ `NoChange` classification, destination bytes unchanged; `unsafeOverwrite` still refuses and leaves no residue | `CommandEffectsTests`, `SurfaceCommandTests` |
 | FR-010 | `dryRun` writes nothing, temp included | `CommandEffectsTests` |
 | FR-011 | `DEC-003` naming `FR-007`,`FR-001`,`AC-005` → all three on the work model, sorted | `WorkModelTests`, `ClarificationArtifactTests` |
 | FR-012 | a line naming two AMB ids records both | `ClarificationArtifactTests` |

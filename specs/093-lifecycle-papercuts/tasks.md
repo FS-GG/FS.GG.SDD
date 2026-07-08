@@ -29,9 +29,10 @@ Independent of every other phase. One source change, one new test file.
 
 - [ ] **T004** Create `tests/FS.GG.SDD.Commands.Tests/CommandEffectsTests.fs` and add its compile entry
   to `FS.GG.SDD.Commands.Tests.fsproj` **before** `TestSupport.fs`'s consumers (F# compile order).
-  Tests: create-new; overwrite-existing; identical content ⇒ `NoChange` + untouched mtime; `dryRun`
-  writes nothing; fault injection (destination made unwritable) ⇒ prior bytes intact, no `.tmp` residue,
-  `DiagnosticError` surfaces; temp name is dot-prefixed and a sibling.
+  Tests: create-new; overwrite-existing; identical content ⇒ destination bytes unchanged; `dryRun`
+  writes nothing; `unsafeOverwrite` refuses and leaves no residue; fault injection (parent directory made
+  unwritable) ⇒ prior bytes intact, no `.tmp` residue, `toolDefect` diagnostic surfaces; no successful or
+  failed write leaves a temp sibling.
 - [ ] **T005** `CommandEffects.fs`: add `writeFileAtomic` (private, `try/finally`, temp sibling
   `.{name}.{guid:N}.tmp`, `File.Move(temp, absolute, overwrite = true)`), and call it from the
   `WriteFile` case in place of `File.WriteAllText`. `snapshotIfExists`/`canOverwrite`/`dryRun` untouched.

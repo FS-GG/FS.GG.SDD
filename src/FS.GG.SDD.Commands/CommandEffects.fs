@@ -17,6 +17,33 @@ module CommandEffects =
         | "" -> "."
         | parent -> parent
 
+    /// Commit `text` to `absolute` so that no reader ever observes a partial write.
+    ///
+    /// `File.WriteAllText` opens with `FileMode.Create`: the destination is truncated to zero and then
+    /// refilled. Anything reading in between — an agent harness, a file watcher, a second `fsgg-sdd`
+    /// process — sees a prefix. That is how a `spec.md` was briefly observable holding only its
+    /// boilerplate `FR-001` placeholder (FS.GG.SDD#164, FS.GG.Audio feedback §3.9).
+    ///
+    /// Instead: fill a sibling temp file, then rename it over the destination. A *sibling* shares the
+    /// destination's volume, which is exactly what makes the rename atomic (`rename(2)` /
+    /// `MoveFileEx(MOVEFILE_REPLACE_EXISTING)`). `File.Replace` would also be atomic but requires the
+    /// destination to already exist, and `WriteFile` must create-or-replace uniformly.
+    ///
+    /// The temp never survives the call: `finally` removes it on any failure, so a crashed write leaves
+    /// the destination's prior bytes intact and no residue. The leading `.` keeps it out of the
+    /// `readiness/**` and `work/**` globs even inside the crash window, and the GUID never reaches any
+    /// report, digest, or artifact — determinism contracts observe committed bytes only.
+    let private writeFileAtomic (absolute: string) (text: string) =
+        let directory = parentDirectory absolute
+        let temp = Path.Combine(directory, $".{Path.GetFileName absolute}.{Guid.NewGuid():N}.tmp")
+
+        try
+            File.WriteAllText(temp, text)
+            File.Move(temp, absolute, true)
+        finally
+            if File.Exists temp then
+                File.Delete temp
+
     let snapshotIfExists (projectRoot: string) (path: string) =
         let absolute = fullPath projectRoot path
 
@@ -317,7 +344,7 @@ module CommandEffects =
                     if not dryRun then
                         let absolute = fullPath projectRoot path
                         Directory.CreateDirectory(parentDirectory absolute) |> ignore
-                        File.WriteAllText(absolute, text)
+                        writeFileAtomic absolute text
 
                     success effect existing
                 else

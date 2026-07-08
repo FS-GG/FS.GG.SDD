@@ -201,9 +201,13 @@ remains. Assert the same for the success path via content equality.
 3. **Given** a `WriteFile` to a path that does not yet exist, **When** the effect is interpreted,
    **Then** the file is created with the full content (`File.Replace` semantics are not required).
 4. **Given** a `WriteFile` whose content equals the file's current content, **When** the effect is
-   interpreted, **Then** `ArtifactOperation.NoChange` is recorded and the file's mtime is unchanged.
+   interpreted, **Then** `ArtifactOperation.NoChange` is recorded and the destination's bytes are
+   unchanged. (The bytes are still rewritten — `NoChange` classifies the *report*, not the write.)
 5. **Given** `dryRun = true`, **When** the effect is interpreted, **Then** no file — temp or
    destination — is created or modified.
+6. **Given** a no-clobber artifact kind whose destination already differs, **When** the effect is
+   interpreted, **Then** it fails with `unsafeOverwrite`, the destination is untouched, and no temp
+   sibling remains.
 
 ---
 
@@ -353,7 +357,10 @@ that `evidence` and `verify` resolve those tasks' obligations.
   same-volume rename) and MUST NOT be mistaken for a lifecycle artifact by any glob (`readiness/**`,
   `work/**`, `docs/api-surface/**`).
 - **FR-009**: `canOverwrite`, `snapshotIfExists`, and the `ArtifactOperation.NoChange` determination
-  MUST be unchanged. An identical-content `WriteFile` MUST still be a no-op that writes nothing.
+  MUST be unchanged. An identical-content `WriteFile` still commits (today `canOverwrite` returns `true`
+  and the bytes are rewritten; `NoChange` is a *report* classification, not a write-skip) and MUST still
+  classify as `ArtifactOperation.NoChange`. Introducing a write-skip is **out of scope** — it is a
+  behavior change, not an atomicity fix.
 - **FR-010**: `dryRun = true` MUST perform no filesystem write of any kind, temp included.
 
 **Decision refs (US4)**
