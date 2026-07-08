@@ -896,12 +896,16 @@ module internal DiagnosticConstructors =
             "Regenerate agent guidance so the generated view matches the current work model."
             [ targetId ]
 
+    // Advisory, not a gate. A recorded digest cannot distinguish "rendered from an older work model"
+    // from "edited out of band": an interrupted `agents` run leaves exactly the state a tampered file
+    // does. Blocking here refused to regenerate the very view whose regeneration is the remedy, and
+    // never self-healed (FS.GG.SDD#197). Regeneration resolves every one of those states.
     let agentsBehaviorDivergence path targetIds =
-        errorDiagnostic
+        warningDiagnostic
             "agents.behaviorDivergence"
             (Some path)
-            "Configured agent targets would describe divergent workflow behavior for the same lifecycle model."
-            "Regenerate the divergent target guidance from the shared normalized work model so Claude and Codex behavior matches."
+            "Configured agent targets record different workflow behavior digests for the same lifecycle model, so at least one target's guidance was not rendered from the current normalized work model."
+            "Regenerate agent guidance so every target is rendered from the current normalized work model."
             targetIds
 
     let agentsUnsafeGeneratedViewRefresh path relatedIds =
