@@ -684,9 +684,12 @@ module internal HandlersRefresh =
                     //
                     // A `Stale` source means the ordinary edit-then-refresh (or fresh-clone-then-edit)
                     // path, whose remediation is the plain `re-run ship` — identical to the case where
-                    // the verdict is present, which emits `refreshStaleView` (a warning) just below.
+                    // the verdict is present, which emits `refreshStaleView` (a warning) in the arm above.
                     // Emitting `blockedUpstreamView` (an error) here made two states that differ only in
                     // whether a file exists report different severities for the same underlying fact.
+                    //
+                    // The diagnostic hangs on the verdict's own row and names `ship.json` as the source to
+                    // re-run; `downstreamDiags` above already carries `ship.json`'s own `staleView` row.
                     //
                     // Any other source class (missing / malformed / blocked) means refresh genuinely
                     // cannot assess the verdict against an upstream it cannot read: still an error.

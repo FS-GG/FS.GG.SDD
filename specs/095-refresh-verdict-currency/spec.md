@@ -87,8 +87,11 @@ resolves by reusing the existing `refresh.staleView`.
   What is wrong is the *diagnostic*: `refresh.blockedUpstreamView` (error) claims the verdict "cannot
   be refreshed until upstream is current", but the remediation is the plain `re-run ship`, identical
   to the present-verdict case. So `currency` stays `missing`, and the `(Stale, None)` state emits
-  `refresh.staleView` (warning) against `ship.json`, matching the `(Stale, Some _)` case. The
-  `Missing`-with-a-non-`Stale`-source states keep `refresh.blockedUpstreamView`.
+  `refresh.staleView` (warning) on the **verdict's own row**, naming `ship.json` as the source to re-run —
+  exactly matching the `(Stale, Some _)` case. (It hangs on the verdict's row, not on `ship.json`'s:
+  `downstreamDiags` already emits `ship.json`'s own `staleView`, so a second one there would duplicate
+  that row while leaving the verdict's row silent.) The `Missing`-with-a-non-`Stale`-source states keep
+  `refresh.blockedUpstreamView`.
 
 - **Q (AMB-004): C is unreachable and harmless. Remove it, or keep it for totality?** → A: **Keep the
   arm, remove the ambiguity.** F# requires the match to be total and the compiler cannot prove
