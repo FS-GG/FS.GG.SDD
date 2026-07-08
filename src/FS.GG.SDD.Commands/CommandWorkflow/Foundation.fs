@@ -681,15 +681,22 @@ nuget-cache/
     let versionAxisProperty request =
         surfaceParam "versionAxisProperty" "Version" request
 
-    // FR-017: the axis must live inside the workspace root. No such guard exists for
-    // `sourceRoot`/`baselineRoot` today (research R7); this introduces one for the param this
-    // feature adds, and deliberately does not retrofit the other two.
+    // Every `surface` path param must live inside the workspace root. Introduced by feature 094
+    // (FR-017) for the `versionAxisFile` it adds; lifted onto the two pre-existing roots by
+    // FS-GG/FS.GG.SDD#185, which is what `research R7` deferred.
     //
     // ⚠ The check MUST run on the RAW param, never on `normalizeRelativePath path`. Normalization
     // ends in `.TrimStart('/')`, which strips the leading slash *before* `IsPathRooted` could see
     // it — so a normalize-then-test predicate would let `/etc/passwd` through as `etc/passwd`.
     // The effect carries the raw string anyway, and `CommandEffects.fullPath` calls
     // `Path.Combine(projectRoot, raw)`, which returns the second argument verbatim when rooted.
+    //
+    // ⚠ This is a LEXICAL guard over the param string, not a filesystem containment proof. A symlink
+    // under the root still resolves wherever it points (`fullPath` calls `Path.GetFullPath`, which
+    // does not resolve links), so `--param baselineRoot=<symlink-to-outside>` writes outside. What is
+    // enforced here is "no param NAMES a path outside the root". Containing the effect *edge* is the
+    // one-containment-primitive work in FS-GG/FS.GG.SDD#203 (ADR-0002); do not read this predicate as
+    // having already done it.
     let escapesRoot (raw: string) =
         let trimmed = raw.Trim().Replace('\\', '/')
 
@@ -697,9 +704,25 @@ nuget-cache/
         || Path.IsPathRooted trimmed // on the RAW string, before any TrimStart('/')
         || (trimmed.Split('/') |> Array.contains "..")
 
+    // FS-GG/FS.GG.SDD#185: the two `surface` roots, checked before a single effect is planned. One
+    // diagnostic per offending param (both are named when both escape), ordered by param name so the
+    // report is deterministic.
+    //
+    // The two roots differ from `versionAxisFile`, which degrades silently to `undeterminable`
+    // (FR-017): an unresolvable *version axis* leaves `surface`'s own job — the drift check — intact,
+    // whereas an escaping *root* is the job. So this blocks rather than degrades.
+    let surfaceRootEscapeDiagnostics (request: CommandRequest) =
+        [ "baselineRoot", surfaceBaselineRoot request
+          "sourceRoot", surfaceSourceRoot request ]
+        |> List.filter (snd >> escapesRoot)
+        |> List.map (fun (param, value) -> surfaceRootEscape param value)
+
     // The first-wave reads for `surface`: enumerate the source and baseline roots so the handler
     // can discover the authored `.fsi` set and the committed baselines (their bodies are read in a
     // provenance-style second wave, mirroring `doctor`'s skill-read gate).
+    //
+    // Callers must plan these only when `surfaceRootEscapeDiagnostics` is empty — an escaping root
+    // plans nothing at all. `plan` enforces that; this function assumes it.
     let surfaceReadEffects (request: CommandRequest) =
         [ EnumerateDirectory(surfaceSourceRoot request)
           EnumerateDirectory(surfaceBaselineRoot request)
@@ -789,7 +812,13 @@ nuget-cache/
                 | Upgrade, _ -> [], remediationReadEffects
                 // Feature 086: enumerate the source + baseline roots; the handler gates the
                 // per-file body reads and computes the surface drift.
-                | Surface, _ -> [], surfaceReadEffects request
+                // FS-GG/FS.GG.SDD#185: an escaping root is a plan-time user error (same shape as
+                // `lintMissingArtifact` below) — refuse the whole plan rather than plan an effect
+                // that resolves outside the workspace root.
+                | Surface, _ ->
+                    match surfaceRootEscapeDiagnostics request with
+                    | [] -> [], surfaceReadEffects request
+                    | escapes -> escapes, []
                 // Lint reads the single `<artifact>` (feature 076); a missing path is a plan-time
                 // user error (nothing for the effect loop to read) surfaced as unusable input.
                 | Lint, _ ->

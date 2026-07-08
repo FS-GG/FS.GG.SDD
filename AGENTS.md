@@ -159,7 +159,14 @@ Core boundary:
   (`surface.orphanBaseline` warning, never auto-removed). The source of truth is the `.fsi` **text**
   (copy/diff, no assembly reflection); the `<Pkg>` segment is derived structurally, so generic SDD
   embeds no provider/package literal, and the roots are convention-default (`src/`,
-  `docs/api-surface/`) with `--param sourceRoot=…`/`--param baselineRoot=…` overrides. It adds an
+  `docs/api-surface/`) with `--param sourceRoot=…`/`--param baselineRoot=…` overrides. Both roots must be
+  **lexically contained**: a root that is absolute or carries a `..` segment blocks with
+  `surface.rootEscape` (`DiagnosticError`, exit 1) and plans **no effect at all** — no read, no
+  enumerate, and under `--update` no write (FS.GG.SDD#185). Containment is decided on the **raw**
+  `--param`, never the normalized one, because normalization strips a leading `/`. It is a *lexical*
+  guard, not a filesystem one: a symlink under the root still resolves wherever it points, so the
+  invariant is "no `--param` names a path outside the root", not "no effect can ever leave the root"
+  (the effect-edge containment primitive is FS.GG.SDD#203 / ADR-0002). It adds an
   additive `surface` `CommandReport` block (json/text/rich) and no persisted schema change. This is
   a **workspace** gate — the SDD component repo itself uses hand-authored `.fsi` + the internal
   reflection `PublicSurface.baseline` test, a separate mechanism `surface` does not replace.

@@ -490,6 +490,26 @@ module Diagnostics =
             "Remove the stale baseline file(s) under the baseline root if the source was intentionally deleted."
             (paths |> List.sort)
 
+    // FS-GG/FS.GG.SDD#185: a `surface` root `--param` resolves outside the workspace root — an
+    // absolute path, or one with a `..` segment. `DiagnosticError` (exit 1): `surface` documents both
+    // roots as workspace-contained, `--check` as strictly read-only, and `--update` as writing only
+    // under the baseline root. Blocking is the only way those statements are true. Planning is
+    // refused wholesale — no read, no enumerate, no write — so nothing outside the root is ever
+    // opened. One diagnostic per offending param, so both are named when both escape.
+    //
+    // ⚠ `value` is the RAW param, never `normalizeRelativePath value`: normalization ends in
+    // `.TrimStart('/')`, which would render `/etc/passwd` as the innocuous `etc/passwd` in the very
+    // message meant to name the escape.
+    let surfaceRootEscape (param: string) (value: string) =
+        create
+            "surface.rootEscape"
+            DiagnosticError
+            None
+            None
+            $"`--param {param}={value}` resolves outside the workspace root. `surface` reads and writes only within the root it was given."
+            $"Point `{param}` at a path inside the workspace root — no leading `/` and no `..` segment."
+            []
+
     // Feature 094 (FS-GG/.github ADR-0025 reconcile step 3a): a classified shipped-surface mutation
     // implies a coherent-set version bump. `DiagnosticWarning`, never blocking (FR-008/FR-013): SDD
     // reads the *declared* axis, not the previously *published* version, so it cannot prove the bump

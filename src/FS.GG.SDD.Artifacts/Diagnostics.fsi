@@ -123,6 +123,12 @@ module Diagnostics =
     /// (advisory, exit 0) — never auto-removed in this version.
     val surfaceOrphanBaseline: paths: string list -> Diagnostic
 
+    /// FS-GG/FS.GG.SDD#185: a `surface` root `--param` (`sourceRoot`/`baselineRoot`) resolves outside
+    /// the workspace root — it is absolute, or carries a `..` segment. `DiagnosticError` —
+    /// `fsgg-sdd surface` exits 1 and plans no effect of any kind against the escaping root.
+    /// `value` is the raw param, never the normalized one (normalization would hide a leading `/`).
+    val surfaceRootEscape: param: string -> value: string -> Diagnostic
+
     /// Feature 094 (FS-GG/.github ADR-0025 reconcile step 3a): a classified shipped-surface mutation
     /// implies a coherent-set version bump on the workspace's version axis. `DiagnosticWarning` —
     /// advisory, never changes the exit code (FR-008/FR-013), because SDD cannot see the previously

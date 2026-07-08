@@ -365,6 +365,13 @@ module internal HandlersSurface =
 
         summary, writes
 
+    // FS-GG/FS.GG.SDD#185: containment is enforced at ONE place — `Foundation.plan` refuses every
+    // effect for an escaping root and records the blocking `surface.rootEscape` diagnostic. With no
+    // effect planned, the tick loop never interprets anything, so this function is never entered on
+    // the escape path and `model.Surface` stays `None` (the diagnostic is the whole report). No
+    // second guard is added here: a handler-side check would be unreachable dead code (proven — a
+    // `failwith` in that arm leaves every escape test green), and duplicating the decision would
+    // invite the two copies to drift.
     let computeSurfaceNext model =
         match model.Surface with
         | Some _ -> model, []
