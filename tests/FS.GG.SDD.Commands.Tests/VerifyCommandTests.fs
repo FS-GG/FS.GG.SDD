@@ -409,3 +409,77 @@ module VerifyCommandTests =
         Assert.Contains("\"skill\": \"expecto\"", clearedJson)
         Assert.DoesNotContain("evidence.missingRequiredSkill", clearedJson)
         Assert.DoesNotContain("xunit", clearedJson)
+
+    // --- Feature 096 (issue #189): affectedSourceIds is derived, not hard-coded ---
+    //
+    // `VerifyEvidenceDispositionView.SourceIds` shipped as the literal `[]`, so `verify.json`'s
+    // `affectedSourceIds` was unconditionally empty — for a task with eleven `sourceIds` exactly as
+    // much as for a task with none. The committed golden asserted `"affectedSourceIds": []` at every
+    // occurrence, so the gap could not fail a test. These assert the field against the authored
+    // `tasks.yml` (a second, independent representation), not against the generated view's own bytes.
+
+    /// The lineage of a task: the union of the three reference fields it may carry. `sourceIds` is
+    /// the only field able to express AC-/CR-/GV-/PC-/PD-/PM-/SB-/VO- ids.
+    let private taskLineage (task: WorkTask) =
+        (task.SourceIds
+         @ (task.Requirements |> List.map _.Value)
+         @ (task.Decisions |> List.map _.Value))
+        |> List.distinct
+        |> List.sort
+
+    let private authoredTasks root =
+        let text = TestSupport.readRelative root tasksPath
+
+        match Task.parseTasks { Path = tasksPath; Text = text } with
+        | Ok tasks -> tasks
+        | Error diagnostics -> failwith $"Generated tasks.yml did not parse: {diagnostics}."
+
+    let private parsedVerifyView root =
+        let text = TestSupport.readRelative root verifyPath
+
+        match parseVerificationView { Path = verifyPath; Text = text } with
+        | Ok view -> view
+        | Error diagnostics -> failwith $"Generated verification view did not parse: {diagnostics}."
+
+    [<Fact>]
+    let ``verify derives affectedSourceIds from the linked tasks' reference lineage`` () =
+        let root = initializedEvidencedProject ()
+        TestSupport.runVerify root workId title |> ignore
+
+        let tasksById =
+            authoredTasks root |> List.map (fun task -> task.Id.Value, task) |> Map.ofList
+
+        for disposition in (parsedVerifyView root).EvidenceDispositions do
+            // FR-002 / AC-004, AC-005: the distinct, sorted union over every linked task.
+            let expected =
+                disposition.AffectedTaskIds
+                |> List.choose (fun taskId -> Map.tryFind taskId.Value tasksById)
+                |> List.collect taskLineage
+                |> List.distinct
+                |> List.sort
+
+            Assert.Equal<string list>(expected, disposition.AffectedSourceIds)
+
+    [<Fact>]
+    let ``verify reports a non-empty affectedSourceIds for a task that carries references`` () =
+        // SC-002. Guards the assertion above from passing vacuously: before feature 096 every
+        // `affectedSourceIds` was `[]`, and comparing `[]` to `[]` for every disposition is green.
+        let root = initializedEvidencedProject ()
+        TestSupport.runVerify root workId title |> ignore
+
+        let dispositions = (parsedVerifyView root).EvidenceDispositions
+        Assert.NotEmpty dispositions
+
+        Assert.Contains(dispositions, fun disposition -> not (List.isEmpty disposition.AffectedSourceIds))
+
+    [<Fact>]
+    let ``verify affectedSourceIds is deterministic across runs`` () =
+        // FR-008: identical sources produce identical bytes. Checked by a second invocation rather
+        // than assumed from `List.sort`.
+        let root = initializedEvidencedProject ()
+        TestSupport.runVerify root workId title |> ignore
+        let first = TestSupport.readRelative root verifyPath
+        TestSupport.runVerify root workId title |> ignore
+        let second = TestSupport.readRelative root verifyPath
+
+        Assert.Equal(first, second)

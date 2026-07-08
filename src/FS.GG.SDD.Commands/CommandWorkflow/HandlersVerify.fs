@@ -141,7 +141,37 @@ module internal HandlersVerify =
         |> List.mapi (fun index diagnostic ->
             sprintf "VF%03d" (index + 1), diagnostic, verifyFindingSeverity diagnostic)
 
-    let verifyEvidenceDispositionViews (drafts: EvidenceDispositionDraft list) =
+    // Feature 096 (issue #189): `affectedSourceIds` shipped as a hard-coded `[]`, so it carried no
+    // information for any obligation. An evidence obligation is built per task per `requiredEvidence`
+    // entry (`evidenceObligations taskFacts`, which sets `LinkedTaskIds = [ task.Id ]`), so today
+    // `draft.TaskIds` is a singleton and the sources an obligation affects are the reference lineage
+    // of that one task — the union of its three reference fields. The fold over `TaskIds` below is
+    // written for the list, not the singleton, so a future many-tasks-per-obligation shape needs no
+    // change here. `sourceIds` is the only field able to express an id with no typed counterpart
+    // (AC-/CR-/GV-/PC-/PD-/PM-/SB-/VO-).
+    //
+    // The union lives here at the consumer, NOT in Task.fs's parser: `WorkTask.SourceIds` is what
+    // `taskValidationDiagnostics.unknownSources` gates on, so unioning at parse would retroactively
+    // subject `requirements:`/`decisions:` to a validation they have never faced, turning an untouched,
+    // green `tasks.yml` red with no schemaVersion signal. `WorkModel.deriveGuidanceModel` unions the
+    // same three fields for the same reason. This mirrors `verifyTestDispositionViews` below, which
+    // already resolves its `RequirementIds` through `taskFacts`.
+    let verifyEvidenceDispositionViews (taskFacts: TaskFacts) (drafts: EvidenceDispositionDraft list) =
+        let tasksById =
+            taskFacts.Tasks |> List.map (fun task -> task.Id.Value, task) |> Map.ofList
+
+        // A draft naming a task absent from `taskFacts` is not currently reachable (drafts are built
+        // from those same facts), but degrade to skipping it rather than throwing — Principle VIII.
+        let affectedSourceIds (taskIds: string list) =
+            taskIds
+            |> List.choose (fun taskId -> Map.tryFind taskId tasksById)
+            |> List.collect (fun task ->
+                task.SourceIds
+                @ (task.Requirements |> List.map _.Value)
+                @ (task.Decisions |> List.map _.Value))
+            |> List.distinct
+            |> List.sort
+
         drafts
         |> List.map (fun draft ->
             let severity = dispositionSeverity draft.State
@@ -151,7 +181,7 @@ module internal HandlersVerify =
               State = draft.State
               EvidenceIds = draft.EvidenceIds
               TaskIds = draft.TaskIds
-              SourceIds = []
+              SourceIds = affectedSourceIds draft.TaskIds
               Severity = severity
               DiagnosticIds = draft.DiagnosticIds
               Correction =
@@ -491,7 +521,7 @@ module internal HandlersVerify =
                         let dispositionDiagnostics =
                             evidenceDispositionDiagnostics (evidencePath workId) dispositions
 
-                        let evidenceViews = verifyEvidenceDispositionViews dispositions
+                        let evidenceViews = verifyEvidenceDispositionViews taskFacts dispositions
                         let testViews = verifyTestDispositionViews taskFacts artifact
                         let skillViews = verifySkillViews workId taskFacts dispositions
 

@@ -271,12 +271,20 @@ module internal TaskGraphAuthoring =
             |> List.choose (fun decision ->
                 // Deliberately no requirement refs (#164). Threading the decision line's FR ids in here
                 // was tried and reverted: `requirementIdsInLine` scans the whole line, prose included, so
-                // `DEC-001: supersedes the old FR-099 behaviour` put FR-099 into the task's `requirements:`,
-                // whence `Task.fs` unions it into `SourceIds` and `unknownTaskSourceReference` blocks
-                // `tasks` on output the tool just generated — telling the author to fix tasks.yml, a file
-                // it regenerates. A prose mention is not a structured reference. The decision's refs reach
-                // traceability through `work-model.json`'s `requirementRefs`/`storyRefs`/`acceptanceRefs`
-                // instead, which is what "thread all refs through traceability" asked for.
+                // `DEC-001: supersedes the old FR-099 behaviour` put FR-099 into the task's `requirements:`.
+                // At the time, `Task.fs` also unioned `requirements:` into `SourceIds`, so
+                // `unknownTaskSourceReference` blocked `tasks` on output the tool had just generated —
+                // telling the author to fix tasks.yml, a file it regenerates.
+                //
+                // Feature 096 (issue #189): that parser union has since been reverted. `Task.fs:277` reads
+                // `sourceIds` verbatim, so `unknownSources` gates the authored `sourceIds:` alone and a
+                // prose-scraped FR in `requirements:` no longer blocks. The conclusion is unchanged and the
+                // stakes are higher: a prose mention is not a structured reference, and consumers now union
+                // all three reference fields (`WorkModel.deriveGuidanceModel`,
+                // `HandlersVerify.verifyEvidenceDispositionViews`), so a scraped FR-099 would leak into the
+                // generated agent guidance and into `verify.json`'s `affectedSourceIds`. The decision's refs
+                // reach traceability through `work-model.json`'s `requirementRefs`/`storyRefs`/
+                // `acceptanceRefs` instead, which is what "thread all refs through traceability" asked for.
                 maybeTask
                     [ decision.DecisionId.Value ]
                     $"Implement clarification decision {decision.DecisionId.Value}"

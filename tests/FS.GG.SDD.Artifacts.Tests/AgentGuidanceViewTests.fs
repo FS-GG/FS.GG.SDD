@@ -58,6 +58,73 @@ module AgentGuidanceViewTests =
         Assert.Equal<string list>([ "fs-gg-sdd-project" ], guidance.Skills |> List.map (fun skill -> skill.Id))
         Assert.Equal("014-agent-guidance", guidance.WorkId)
 
+    // Feature 096 (issue #189): `relatedIds` is the union of a task's three reference fields, not
+    // just the two typed ones. `sourceIds` is the only way to express an id with no typed field
+    // (SB-/PD-/VO-/AC-/CR-/GV-/PC-/PM-), so a task's scope boundary must survive into the guidance
+    // the agent acts on. The union lives here, at the consumer — never at the parser, where it
+    // would subject `requirements:`/`decisions:` to `unknownSources` validation (see
+    // TaskGraphAuthoring.taskValidationDiagnostics) and turn an untouched green tasks.yml red.
+    let private unionWorkModelJson =
+        """{
+  "schemaVersion": 1,
+  "modelVersion": "1.0.0",
+  "workId": "096-union",
+  "project": { "id": "demo", "defaultWorkRoot": "work" },
+  "sources": [],
+  "workItem": { "id": "096-union", "title": "Union", "stage": "tasks", "changeTier": "tier1", "status": "draft" },
+  "requirements": [ { "id": "FR-001", "title": "First", "text": "x", "acceptanceCriteria": [], "priority": null, "source": "work/096-union/spec.md", "linkedTaskIds": ["T001"], "linkedEvidenceIds": [] } ],
+  "decisions": [ { "id": "DEC-001", "title": "D", "decision": "d", "source": "work/096-union/plan.md", "linkedTaskIds": ["T001"] } ],
+  "tasks": [
+    { "id": "T001", "title": "Boundary task", "status": "pending", "owner": "codex", "dependencies": [], "requirements": ["FR-001"], "decisions": ["DEC-001"], "sourceIds": ["SB-002"], "requiredSkills": ["fs-gg-sdd-project"], "requiredEvidence": [], "source": "work/096-union/tasks.yml" },
+    { "id": "T002", "title": "Typed-only task", "status": "pending", "owner": "codex", "dependencies": [], "requirements": ["FR-001"], "decisions": [], "sourceIds": [], "requiredSkills": ["fs-gg-sdd-project"], "requiredEvidence": [], "source": "work/096-union/tasks.yml" },
+    { "id": "T003", "title": "Duplicated ref task", "status": "pending", "owner": "codex", "dependencies": [], "requirements": [], "decisions": ["DEC-001"], "sourceIds": ["DEC-001", "VO-001"], "requiredSkills": ["fs-gg-sdd-project"], "requiredEvidence": [], "source": "work/096-union/tasks.yml" },
+    { "id": "T004", "title": "No refs at all", "status": "pending", "owner": "codex", "dependencies": [], "requirements": [], "decisions": [], "sourceIds": [], "requiredSkills": ["fs-gg-sdd-project"], "requiredEvidence": [], "source": "work/096-union/tasks.yml" }
+  ],
+  "evidence": [],
+  "generatedViews": [],
+  "diagnostics": [],
+  "governanceBoundaries": []
+}"""
+
+    let private unionModel () =
+        match
+            parseWorkModel
+                { Path = "readiness/096-union/work-model.json"
+                  Text = unionWorkModelJson }
+        with
+        | Ok model -> model
+        | Error diagnostics -> failwith $"Expected a parseable work model, got {diagnostics}"
+
+    let private relatedIdsOf taskId (guidance: NormalizedGuidanceModel) =
+        guidance.Commands
+        |> List.find (fun command -> command.Id = taskId)
+        |> fun command -> command.RelatedIds
+
+    [<Fact>]
+    let ``deriveGuidanceModel carries a sourceIds-only scope boundary into relatedIds`` () =
+        // AC-001. Before feature 095 this returned ["DEC-001"; "FR-001"] — SB-002 was dropped.
+        let guidance = deriveGuidanceModel (unionModel ())
+        Assert.Equal<string list>([ "DEC-001"; "FR-001"; "SB-002" ], guidance |> relatedIdsOf "T001")
+
+    [<Fact>]
+    let ``deriveGuidanceModel adds nothing to a task with only typed references`` () =
+        // AC-002: the union is a widening, never a rewrite. No existing guidance loses or gains an id.
+        let guidance = deriveGuidanceModel (unionModel ())
+        Assert.Equal<string list>([ "FR-001" ], guidance |> relatedIdsOf "T002")
+
+    [<Fact>]
+    let ``deriveGuidanceModel emits an id once when decisions and sourceIds both name it`` () =
+        // AC-003. `clarificationDecisionTasks` writes the same DEC-### into both fields by
+        // construction, so the union must dedupe; the result stays sorted.
+        let guidance = deriveGuidanceModel (unionModel ())
+        Assert.Equal<string list>([ "DEC-001"; "VO-001" ], guidance |> relatedIdsOf "T003")
+
+    [<Fact>]
+    let ``deriveGuidanceModel yields no relatedIds for a task with no references`` () =
+        // AC-002 boundary: an empty union is empty, and `purpose` degrades without a coverage clause.
+        let guidance = deriveGuidanceModel (unionModel ())
+        Assert.Equal<string list>([], guidance |> relatedIdsOf "T004")
+
     [<Fact>]
     let ``deriveGuidanceModel is identical for the same model (target equivalence by construction)`` () =
         let model = parsedModel ()

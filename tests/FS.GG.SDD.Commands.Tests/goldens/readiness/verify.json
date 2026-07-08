@@ -168,7 +168,10 @@
       "affectedTaskIds": [
         "T001"
       ],
-      "affectedSourceIds": [],
+      "affectedSourceIds": [
+        "AC-001",
+        "FR-001"
+      ],
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -183,7 +186,11 @@
       "affectedTaskIds": [
         "T002"
       ],
-      "affectedSourceIds": [],
+      "affectedSourceIds": [
+        "AC-001",
+        "FR-001",
+        "PD-001"
+      ],
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -198,7 +205,10 @@
       "affectedTaskIds": [
         "T003"
       ],
-      "affectedSourceIds": [],
+      "affectedSourceIds": [
+        "PC-001",
+        "PD-001"
+      ],
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -213,7 +223,11 @@
       "affectedTaskIds": [
         "T004"
       ],
-      "affectedSourceIds": [],
+      "affectedSourceIds": [
+        "PC-001",
+        "PD-001",
+        "VO-001"
+      ],
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -228,7 +242,10 @@
       "affectedTaskIds": [
         "T005"
       ],
-      "affectedSourceIds": [],
+      "affectedSourceIds": [
+        "PC-001",
+        "PM-001"
+      ],
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -243,7 +260,10 @@
       "affectedTaskIds": [
         "T006"
       ],
-      "affectedSourceIds": [],
+      "affectedSourceIds": [
+        "GV-001",
+        "PD-001"
+      ],
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""

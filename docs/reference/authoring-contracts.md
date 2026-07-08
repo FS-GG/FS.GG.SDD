@@ -488,15 +488,38 @@ preserves your authored content — it never re-ingests its own prior output as 
   kept when it uniquely covers a live disposition the derivation cannot. Authored refs and
   tasks whose sources are gone — or already covered by derivation — are dropped, so nothing
   stale accumulates.
-- **A task's refs: `requirements`/`decisions` are authored, `sourceIds` is derived.** Write the
+- **A task's refs: all three fields are authored, and the parser reads each verbatim.** Write the
   typed fields. They carry the FR/DEC distinction `analyze`'s disposition relationships rely on,
-  and they are what a human reads. `sourceIds` is the *untyped superset* the tool derives on parse
-  as `sourceIds ∪ requirements ∪ decisions`, and it is what `evidence` and `verify` read — so a
-  task authored with typed refs alone is fully visible to both. You write `sourceIds:` by hand only
-  for a reference the typed fields cannot express: a scope boundary `SB-###`, a plan decision
-  `PD-###`, a verification obligation `VO-###`. The generator emits exactly that residual and omits
-  the key when there is none, so it never restates what `requirements:`/`decisions:` already say.
-  An explicit entry you write is always kept — the derivation only ever adds.
+  and they are what a human reads. You write `sourceIds:` by hand for a reference the typed fields
+  cannot express: an acceptance scenario `AC-###`, a checklist result `CR-###`, a generated-view
+  impact `GV-###`, a plan contract reference `PC-###`, a plan decision `PD-###`, a plan migration
+  note `PM-###`, a scope boundary `SB-###`, a verification obligation `VO-###`. (Names per
+  `Identifiers.create*`; the checklist *item* is `CHK-###`.)
+
+  **`sourceIds` is not a derived superset.** `tasks.yml`'s parser stores each of the three fields
+  exactly as authored; it unions nothing. Each *consumer* unions the three as it needs them —
+  `analyze`'s disposition set, `evidence`'s scaffolded ref buckets, `verify`'s `affectedSourceIds`,
+  and the generated agent guidance's `relatedIds` all read
+  `sourceIds ∪ requirements ∪ decisions`. The union deliberately lives at the consumer and **not**
+  at the parser. Each field already answers to its *own* gate, against its *own* set of known ids:
+
+  | field | gate | where |
+  |---|---|---|
+  | `sourceIds:` | `unknownTaskSourceReference` | the `tasks` stage (`taskValidationDiagnostics`) |
+  | `requirements:` / `decisions:` | `unknownReference` + `workModelInconsistent` | work-model generation (`WorkModel.referenceDiagnostics`) |
+
+  Unioning on parse would fold the typed fields into `sourceIds` and so subject them to the *tasks*
+  gate **as well** — a second validation, against a different known-id set, that they have never
+  faced. That turns an untouched, previously-green `tasks.yml` red with no `schemaVersion` change to
+  explain it. It was tried and reverted once; do not re-derive it.
+
+  The generator **does** restate ids across fields, and always writes the `sourceIds:` key. A
+  derived requirement task carries `requirements: [FR-001]` *and* `sourceIds: [AC-001, FR-001]`
+  (`TaskGraphAuthoring.requirementTasks` passes `requirement :: acceptance` as the source ids);
+  a derived clarification-decision task carries the same `DEC-###` in both `decisions:` and
+  `sourceIds:`. The consumer-side unions dedupe, so the restatement is invisible downstream —
+  but do not read a task's `sourceIds:` as "only the ids the typed fields cannot express."
+  An explicit entry you write is always kept; the derivation only ever adds.
 - **Coverage lives in `spec.md`.** The `(covers AC-###)` declaration a checklist verdict
   reads is the `spec.md` requirement-reference line (see *Acceptance coverage line* above),
   **not** a line in `checklist.md`. Fix a "missing acceptance coverage" verdict there.
