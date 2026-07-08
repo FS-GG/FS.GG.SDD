@@ -508,9 +508,12 @@ module internal HandlersRefresh =
                 //    is `Blocked` (upstream), never `Missing`.
                 let verdictOnDisk = snapshot (shipVerdictPath workId) model
 
+                // Each reported class must be true *of the verdict*, not merely inherited from ship:
+                // the verdict is the one readiness view a reader sees in git, so a wrong word here is
+                // a wrong fact about a committed artifact.
                 let verdictView, verdictEffects, verdictClass =
-                    match shClass with
-                    | ViewCurrencyClass.AlreadyCurrent ->
+                    match shClass, verdictOnDisk with
+                    | ViewCurrencyClass.AlreadyCurrent, _ ->
                         match textOf (shipPath workId) with
                         | Some shipText ->
                             let view, effects, jsonOpt =
@@ -523,8 +526,17 @@ module internal HandlersRefresh =
                                 | _ -> view, effects, ViewCurrencyClass.Refreshed
                             | None -> None, [], ViewCurrencyClass.Malformed
                         | None -> None, [], ViewCurrencyClass.Missing
-                    | _ when Option.isSome verdictOnDisk -> None, [], ViewCurrencyClass.Blocked
-                    | _ -> None, [], shClass
+                    // Present, and its source moved under it: the committed verdict no longer matches
+                    // the authored inputs. That is `Stale` — the same word `ship` gets — and the
+                    // remediation is the same: re-run `ship`. Reporting `Blocked` here would say
+                    // "refresh could not proceed" about the ordinary edit-then-refresh path.
+                    | ViewCurrencyClass.Stale, Some _ -> None, [], ViewCurrencyClass.Stale
+                    // Present, but the source cannot be read or trusted: refresh cannot tell whether
+                    // the committed verdict is current.
+                    | _, Some _ -> None, [], ViewCurrencyClass.Blocked
+                    // Absent. Whatever ails the source, the fact about the verdict is that it is
+                    // missing — this is also the fresh-clone-without-a-verdict state.
+                    | _, None -> None, [], ViewCurrencyClass.Missing
 
                 let structuredClasses =
                     [ "work-model", wmClass

@@ -126,6 +126,26 @@ module RefreshCommandTests =
         Assert.Equal("blocked", TestSupport.refreshViewState report "ship-verdict")
 
     [<Fact>]
+    let ``an edited source makes the committed verdict stale, not blocked`` () =
+        // The ordinary path: edit an authored source, then refresh. `ship.json` goes stale, so the
+        // committed verdict no longer matches its inputs. It must report the SAME word as its source
+        // ("stale" — re-run ship); "blocked" would claim refresh could not proceed at all.
+        let root = shippedProject ()
+        let original = TestSupport.readRelative root shipVerdictPath
+
+        let spec =
+            Path.Combine(root, $"work/{workId}/spec.md".Replace('/', Path.DirectorySeparatorChar))
+
+        File.AppendAllText(spec, "\n\n## Appended by the test\n\nA new authored paragraph.\n")
+
+        let report = TestSupport.runRefresh root workId
+
+        Assert.Equal("stale", TestSupport.refreshViewState report "ship")
+        Assert.Equal("stale", TestSupport.refreshViewState report "ship-verdict")
+        // never rewritten from a stale source
+        Assert.Equal(original, TestSupport.readRelative root shipVerdictPath)
+
+    [<Fact>]
     let ``refresh does not write a verdict when both ship json and the verdict are missing`` () =
         let root = shippedProject ()
         File.Delete(Path.Combine(root, shipPath.Replace('/', Path.DirectorySeparatorChar)))
