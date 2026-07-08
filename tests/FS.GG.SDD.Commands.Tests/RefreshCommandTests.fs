@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Commands.Tests
 
 open System.IO
+open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandRendering
@@ -36,6 +37,165 @@ module RefreshCommandTests =
         TestSupport.runAgents root workId |> ignore
         TestSupport.runRefresh root workId |> ignore
         root
+
+    // --- Feature 095 (FS.GG.SDD#188): the currency state matrix ---
+    //
+    // The 10 cells of specs/095-refresh-verdict-currency/contracts/refresh-currency-matrix.md,
+    // as executable fixtures. `ship.json` x `ship-verdict.json`.
+
+    /// The five states of `ship.json`. S3 is the defect's home: valid JSON that is not a valid
+    /// ship view, which `parsesAsJson` (weaker than `parseShipView`) waved through as "current".
+    type ShipState =
+        | S1_Absent
+        | S2_InvalidJson
+        | S3_ValidJsonInvalidView
+        | S4_StaleValidView
+        | S5_CurrentValidView
+
+    let private absolute root (relative: string) =
+        Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar))
+
+    /// Build a work item in the requested cell. `verdictPresent = false` deletes the committed verdict.
+    let private cell shipState verdictPresent =
+        let root = shippedProject ()
+
+        match shipState with
+        | S1_Absent -> File.Delete(absolute root shipPath)
+        | S2_InvalidJson -> File.WriteAllText(absolute root shipPath, "{ not json")
+        | S3_ValidJsonInvalidView -> File.WriteAllText(absolute root shipPath, "{ \"schemaVersion\": 99 }")
+        | S4_StaleValidView ->
+            // Leave ship.json a valid ship view; move an authored source under it so `wmChanged`.
+            File.AppendAllText(absolute root $"work/{workId}/spec.md", "\n\n## Appended by the matrix\n")
+        | S5_CurrentValidView -> ()
+
+        if not verdictPresent then
+            File.Delete(absolute root shipVerdictPath)
+
+        root
+
+    /// The three facts the matrix pins per cell: the two currency words and the exit code.
+    let private observe root =
+        let report = TestSupport.runRefresh root workId
+
+        TestSupport.refreshViewState report "ship",
+        TestSupport.refreshViewState report "ship-verdict",
+        exitCodeForReport report
+
+    let private matrixCells =
+        [ 1, S1_Absent, true
+          2, S1_Absent, false
+          3, S2_InvalidJson, true
+          4, S2_InvalidJson, false
+          5, S3_ValidJsonInvalidView, true
+          6, S3_ValidJsonInvalidView, false
+          7, S4_StaleValidView, true
+          8, S4_StaleValidView, false
+          9, S5_CurrentValidView, true
+          10, S5_CurrentValidView, false ]
+
+    [<Fact>]
+    let ``the exit code is invariant across the whole currency matrix`` () =
+        // FR-007 / SC-004. THIS TEST IS GREEN BEFORE AND AFTER feature 095 — it is a regression lock,
+        // not a red-green test. The expected values were captured from the unmodified handler (T002)
+        // before any source edit; they are not derived from the new logic.
+        //
+        // Why it matters: feature 095 re-words two `generatedViews[].currency` values, and the obvious
+        // fear is that a stricter `ship.json` validator starts failing runs that used to pass. It does
+        // not. `verdictClass` already participates in `structuredClasses`, so cells 5 and 6 were ALREADY
+        // non-clean and ALREADY emitted the `refresh.unrenderableSummary` error. The run always failed;
+        // it just blamed the wrong file. If this test ever reddens, that reasoning is unsound and the
+        // change is a behavior change, not a re-attribution.
+        let expected = [ 1; 1; 1; 1; 1; 1; 1; 1; 0; 0 ]
+
+        let actual =
+            matrixCells
+            |> List.map (fun (_, shipState, verdictPresent) ->
+                let _, _, code = observe (cell shipState verdictPresent)
+                code)
+
+        Assert.Equal<int list>(expected, actual)
+
+    [<Fact>]
+    let ``every currency word in the matrix is true of the artifact it names`` () =
+        // SC-001, the whole feature. Cells 5 and 6 are the defect: `ship: current` about a file that
+        // does not parse as a ship view, and `ship-verdict: malformed` about a file that is perfectly
+        // well-formed -- in cell 6, about a file that does not even exist.
+        let expected =
+            [ 1, "missing", "blocked" // ship absent (fresh clone), verdict survives
+              2, "missing", "missing"
+              3, "malformed", "blocked" // not JSON at all
+              4, "malformed", "missing"
+              5, "malformed", "blocked" // WAS: ship=current, verdict=malformed
+              6, "malformed", "missing" // WAS: ship=current, verdict=malformed (verdict is ABSENT)
+              7, "stale", "stale"
+              8, "stale", "missing"
+              9, "current", "current"
+              10, "current", "current" ]
+
+        let actual =
+            matrixCells
+            |> List.map (fun (n, shipState, verdictPresent) ->
+                let ship, verdict, _ = observe (cell shipState verdictPresent)
+                n, ship, verdict)
+
+        Assert.Equal<(int * string * string) list>(expected, actual)
+
+    [<Fact>]
+    let ``a stale ship json reports the same severity whether or not the verdict is present`` () =
+        // FR-009 / SC-005, matrix cells 7 vs 8. The state is identical -- the source moved, re-run
+        // `ship` -- and so is the remediation. Before feature 095 the absent-verdict case raised
+        // `refresh.blockedUpstreamView` (ERROR), claiming the verdict "cannot be refreshed until
+        // upstream is current", about the ordinary fresh-clone-then-edit path. The present-verdict
+        // case emitted `refresh.staleView` (warning) for the same thing.
+        //
+        // No test covered the absent-verdict cell. That is exactly why the asymmetry survived review.
+        let verdictDiagnosticOf root =
+            let report = TestSupport.runRefresh root workId
+
+            report.Diagnostics
+            |> List.filter (fun d ->
+                d.Artifact
+                |> Option.map (fun a -> a.Path = shipVerdictPath)
+                |> Option.defaultValue false)
+            |> List.map (fun d -> d.Id, d.Severity)
+
+        let present = verdictDiagnosticOf (cell S4_StaleValidView true)
+        let absent = verdictDiagnosticOf (cell S4_StaleValidView false)
+
+        Assert.Equal<(string * DiagnosticSeverity) list>(
+            [ "refresh.staleView", DiagnosticSeverity.DiagnosticWarning ],
+            present
+        )
+
+        Assert.Equal<(string * DiagnosticSeverity) list>(
+            [ "refresh.staleView", DiagnosticSeverity.DiagnosticWarning ],
+            absent
+        )
+
+        // FR-010: the currency word still describes the ARTIFACT, and the artifact is absent.
+        let _, verdictWord, _ = observe (cell S4_StaleValidView false)
+        Assert.Equal("missing", verdictWord)
+
+    [<Fact>]
+    let ``an absent verdict over a non-stale source still blocks with an error`` () =
+        // FR-011, matrix cells 2/4/6. The guardrail on the fix above: the severity correction is scoped
+        // to a STALE source. When the source is missing, unreadable, or unparseable, the verdict really
+        // is blocked on an upstream it cannot assess, and that stays an error.
+        let verdictDiagnosticOf root =
+            let report = TestSupport.runRefresh root workId
+
+            report.Diagnostics
+            |> List.filter (fun d ->
+                d.Artifact
+                |> Option.map (fun a -> a.Path = shipVerdictPath)
+                |> Option.defaultValue false)
+            |> List.map (fun d -> d.Id, d.Severity)
+
+        for shipState in [ S1_Absent; S2_InvalidJson; S3_ValidJsonInvalidView ] do
+            Assert.Equal<(string * DiagnosticSeverity) list>(
+                [ "refresh.blockedUpstreamView", DiagnosticSeverity.DiagnosticError ],
+                verdictDiagnosticOf (cell shipState false)
+            )
 
     // --- Feature 092 (ADR-0026): refresh re-projects the committed verdict ---
 
@@ -87,10 +247,16 @@ module RefreshCommandTests =
 
     [<Fact>]
     let ``a ship json that is valid json but not a ship view blocks the verdict with a diagnostic`` () =
-        // The hole a naive implementation leaves: `shClass` is computed from `parsesAsJson`, which is
-        // weaker than `parseShipView`. A future-schema ship.json is "already current" to refresh but
-        // cannot be projected. Without a diagnostic, refresh exits 0 reporting "refreshed-current"
-        // while the COMMITTED verdict silently keeps a stale answer.
+        // Matrix cell 5. Feature 092 shipped this state knowingly, guarding only that SOME diagnostic
+        // fired; it asserted `ship: current` and `ship-verdict: malformed`. Both were false, and this
+        // test asserted them. Feature 095 (FS.GG.SDD#188) closes the hole:
+        //
+        //   `shClass` is now computed from `parseShipView`, not `parsesAsJson`. A future-schema
+        //   ship.json is MALFORMED, not "already current" -- so `ship: current` stops lying, and the
+        //   well-formed COMMITTED verdict stops being called corrupt. The verdict is `blocked`: present,
+        //   but its source cannot be trusted, so refresh cannot tell whether it is current.
+        //
+        // The single `malformedGeneratedView` now names ship.json -- the file that needs repair.
         let root = shippedProject ()
         let original = TestSupport.readRelative root shipVerdictPath
 
@@ -101,15 +267,27 @@ module RefreshCommandTests =
 
         let report = TestSupport.runRefresh root workId
 
-        Assert.Equal(original, TestSupport.readRelative root shipVerdictPath) // never rewritten
-        Assert.Equal("current", TestSupport.refreshViewState report "ship") // ship still looks current
-        Assert.Equal("malformed", TestSupport.refreshViewState report "ship-verdict")
+        Assert.Equal(original, TestSupport.readRelative root shipVerdictPath) // FR-006: never rewritten
+        Assert.Equal("malformed", TestSupport.refreshViewState report "ship") // FR-003
+        Assert.Equal("blocked", TestSupport.refreshViewState report "ship-verdict") // FR-004
         Assert.NotEmpty report.Diagnostics
+
+        // FR-005: `malformed` is attributed to ship.json, and to nothing else.
+        let malformedPaths =
+            report.Diagnostics
+            |> List.filter (fun d -> d.Id = "refresh.malformedGeneratedView")
+            |> List.choose (fun d -> d.Artifact |> Option.map (fun a -> a.Path))
+
+        Assert.Equal<string list>([ shipPath ], malformedPaths)
 
         match report.Refresh with
         | Some summary ->
             Assert.Contains("ship-verdict", summary.BlockedViewIds)
             Assert.DoesNotContain("ship-verdict", summary.AlreadyCurrentViewIds)
+            // FR-003a: the bucket projection must tell the same story as the currency word. `ship`
+            // sitting in `alreadyCurrentViewIds` was the same lie told through a second field.
+            Assert.Contains("ship", summary.BlockedViewIds)
+            Assert.DoesNotContain("ship", summary.AlreadyCurrentViewIds)
         | None -> failwith "Expected refresh summary."
 
     [<Fact>]
