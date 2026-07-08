@@ -2,6 +2,13 @@
 # live task parser (ExampleArtifactsContractTests). Each task back-references the
 # requirements/decisions it implements, the skills it needs, and the evidence that
 # will satisfy it (matched in evidence.yml). See [[fs-gg-sdd-tasks]].
+#
+# Note the shape below: `requirements:` and `decisions:` are the AUTHORED, typed reference
+# surface, and there is no `sourceIds:` line. `sourceIds` is the untyped superset the tool
+# DERIVES on parse (`sourceIds ∪ requirements ∪ decisions`); it is what `evidence` and
+# `verify` read, so a task authored this way is fully visible to both. Write `sourceIds:`
+# by hand only for a reference the typed fields cannot express — a scope boundary `SB-###`,
+# a plan decision `PD-###`, a verification obligation `VO-###`.
 schemaVersion: 1
 tasks:
   - id: T001

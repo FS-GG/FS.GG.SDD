@@ -548,6 +548,26 @@ work:
 
         let decisionIds = task.Decisions |> List.map (fun (id: DecisionId) -> id.Value)
 
+        // `SourceIds` is the derived union of the authored `sourceIds:` and the typed fields (#164), so
+        // re-emitting all of it would restate `requirements:`/`decisions:` on every line and recreate
+        // the two-fields-one-fact confusion this feature removes. Write only the residual — ids the
+        // typed fields cannot express, such as a scope boundary `SB-002` — and omit the key entirely
+        // when there is none, matching the shape the shipped example documents.
+        //
+        // Idempotent: `residual` is a pure function of the parsed model, and re-parsing a residual-only
+        // file re-derives the same union, so `emit -> parse -> emit` is a fixpoint after one step.
+        let residualSourceIds =
+            let typed = (requirementIds @ decisionIds) |> List.map _.ToUpperInvariant() |> Set.ofList
+
+            task.SourceIds
+            |> List.filter (fun id -> not (Set.contains (id.ToUpperInvariant()) typed))
+
+        let sourceIdsLine =
+            if List.isEmpty residualSourceIds then
+                ""
+            else
+                $"\n    sourceIds: {residualSourceIds |> yamlInlineList}"
+
         let evidenceIds =
             task.RequiredEvidence |> List.map (fun (id: EvidenceId) -> id.Value)
 
@@ -557,8 +577,7 @@ work:
     owner: {yamlString task.Owner}
     dependencies: {dependencyIds |> yamlInlineList}
     requirements: {requirementIds |> yamlInlineList}
-    decisions: {decisionIds |> yamlInlineList}
-    sourceIds: {task.SourceIds |> yamlInlineList}
+    decisions: {decisionIds |> yamlInlineList}{sourceIdsLine}
     requiredSkills: {task.RequiredSkills |> yamlInlineList}
     requiredEvidence: {evidenceIds |> yamlInlineList}{skip}"""
 

@@ -148,9 +148,16 @@ let residualSourceIds (task: WorkTask) =
     task.SourceIds |> List.filter (fun id -> not (Set.contains (id.ToUpperInvariant()) typed))
 ```
 
-`clarificationDecisionTasks` stops passing the `DEC-###` as a `sourceId` (it is already the `decision`),
-and passes `decision.RelatedRequirementIds` as `requirements` instead of `[]` (FR-014, and the read
-site that discharges FR-015 for D4).
+`clarificationDecisionTasks` passes `decision.RelatedRequirementIds` as `requirements` instead of `[]`
+(FR-014, and the read site that discharges FR-015 for D4).
+
+It does **not** stop passing the `DEC-###` as a `sourceId`, though the first draft of this plan said it
+should. `maybeTask`'s `sourceIds` argument doubles as the re-generation dedupe key
+(`key = sourceIds |> List.tryHead`, tested against `existingSources`); with `[]` the key is `None`, the
+dedupe never fires, and every `tasks` re-run appends a duplicate decision task. The id therefore stays in
+the in-memory `SourceIds` — where it is both the identity key and what `evidence`/`verify` read — and the
+*emitter* drops it from the YAML because `decisions:` already recovers it. FR-019 is a property of the
+emitted bytes, and the residual emitter is what delivers it.
 
 `WorkModel.deriveGuidanceModel:879`: `relatedIds = task.Requirements @ task.Decisions` →
 `relatedIds = task.SourceIds` (already the sorted, distinct superset).

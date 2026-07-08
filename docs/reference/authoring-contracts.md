@@ -488,6 +488,15 @@ preserves your authored content — it never re-ingests its own prior output as 
   kept when it uniquely covers a live disposition the derivation cannot. Authored refs and
   tasks whose sources are gone — or already covered by derivation — are dropped, so nothing
   stale accumulates.
+- **A task's refs: `requirements`/`decisions` are authored, `sourceIds` is derived.** Write the
+  typed fields. They carry the FR/DEC distinction `analyze`'s disposition relationships rely on,
+  and they are what a human reads. `sourceIds` is the *untyped superset* the tool derives on parse
+  as `sourceIds ∪ requirements ∪ decisions`, and it is what `evidence` and `verify` read — so a
+  task authored with typed refs alone is fully visible to both. You write `sourceIds:` by hand only
+  for a reference the typed fields cannot express: a scope boundary `SB-###`, a plan decision
+  `PD-###`, a verification obligation `VO-###`. The generator emits exactly that residual and omits
+  the key when there is none, so it never restates what `requirements:`/`decisions:` already say.
+  An explicit entry you write is always kept — the derivation only ever adds.
 - **Coverage lives in `spec.md`.** The `(covers AC-###)` declaration a checklist verdict
   reads is the `spec.md` requirement-reference line (see *Acceptance coverage line* above),
   **not** a line in `checklist.md`. Fix a "missing acceptance coverage" verdict there.

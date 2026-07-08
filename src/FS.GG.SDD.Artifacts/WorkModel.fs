@@ -885,7 +885,12 @@ module WorkModel =
         let commands =
             model.Tasks
             |> List.map (fun task ->
-                let relatedIds = (task.Requirements @ task.Decisions) |> List.distinct |> List.sort
+                // `SourceIds` is the derived, sorted, distinct union of the authored `sourceIds:` and
+                // the typed `requirements:`/`decisions:` (#164). Reading only the typed fields — as this
+                // did — was the mirror image of `evidence`/`verify` reading only `SourceIds`: an id
+                // reachable solely through an explicit `sourceIds:` entry (a scope boundary, say) never
+                // reached the agent guidance derived from this task.
+                let relatedIds = task.SourceIds
 
                 let purpose =
                     match relatedIds with

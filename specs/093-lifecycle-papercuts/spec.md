@@ -388,8 +388,13 @@ that `evidence` and `verify` resolve those tasks' obligations.
   be retained in the union, never discarded. `schemaVersion` MUST remain `1`.
 - **FR-018**: The `tasks.yml` emitter MUST NOT write a `sourceIds:` line that only restates the typed
   `requirements:`/`decisions:` fields. Two consecutive `tasks` runs MUST be byte-identical.
-- **FR-019**: `clarificationDecisionTasks` MUST NOT write the same `DEC-###` into both `sourceIds` and
-  `decisions`.
+- **FR-019**: The emitted `tasks.yml` MUST NOT carry the same `DEC-###` in both `sourceIds:` and
+  `decisions:`. Satisfied by FR-018's residual emitter, **not** by changing what
+  `clarificationDecisionTasks` passes in memory: `maybeTask`'s first argument doubles as the re-gen
+  dedupe key (`key = sourceIds |> List.tryHead`, matched against `existingSources`), so dropping the
+  `DEC-###` there would duplicate the task on every re-run. The id stays in the in-memory `SourceIds`
+  — where it is the identity key and what `evidence`/`verify` read — and is omitted from the YAML
+  because `decisions:` recovers it on re-parse.
 - **FR-020**: `WorkModel.deriveGuidanceModel` MUST compute `relatedIds` from the derived `SourceIds`,
   so an id reachable only via `sourceIds` appears in generated agent guidance.
 - **FR-021**: `HandlersEvidence` and `HandlersVerify` MUST resolve obligations for a task authored in
@@ -455,7 +460,10 @@ that `evidence` and `verify` resolve those tasks' obligations.
 - **SC-010**: Every previously committed `tests/fixtures/**/tasks.yml` parses to a `SourceIds` that is
   a superset of its pre-change value, and to an identical `allTaskDispositionIds` set (FR-022).
 - **SC-011**: `dotnet test` is green with no `PublicSurface.baseline` drift beyond the `.fsi` changes
-  this feature declares, and `fsgg-sdd surface --check` exits 0.
+  this feature declares. (`fsgg-sdd surface --check` is **not** a gate in this repo: `surface` enforces the
+  `docs/api-surface/**` convention in a *scaffolded workspace*, and the SDD component repo has no such
+  tree — it uses the internal reflection `PublicSurface.baseline` test instead, which `surface` explicitly
+  does not replace. Running it here reports 53 pre-existing missing baselines on `main` too.)
 - **SC-012**: `readiness/**` goldens change only as FR-024 permits: digest-only where no semantics
   moved; a reviewed content diff for `relatedIds` and the `tasks.yml` normalization.
 

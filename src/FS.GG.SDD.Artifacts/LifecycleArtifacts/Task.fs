@@ -262,6 +262,34 @@ module Task =
                                             | Skipped _, Some rationale -> Skipped rationale
                                             | _ -> status
 
+                                        let requirements =
+                                            scalarList [ "requirements" ] mapping |> parseRequirementIds
+
+                                        let decisions =
+                                            scalarList [ "decisions" ] mapping |> parseDecisionIds
+
+                                        // `sourceIds` is DERIVED, not authored (#164). `requirements:`
+                                        // and `decisions:` are the typed authoring surface — the
+                                        // shipped example uses them and omits `sourceIds:` entirely —
+                                        // while `sourceIds` is the untyped superset that `evidence` and
+                                        // `verify` read. Unioning here is what lets those two stages
+                                        // see a task authored in the documented shape.
+                                        //
+                                        // Only well-formed refs join the union (the `parse*Ids` above
+                                        // drop malformed ones, which `malformedRefs` has already
+                                        // diagnosed). An explicit `sourceIds:` entry — a scope boundary
+                                        // `SB-002`, say — is kept, never discarded. So this is a strict
+                                        // widening: every existing tasks.yml parses, and `schemaVersion`
+                                        // stays 1.
+                                        let sourceIds =
+                                            [ scalarList [ "sourceIds" ] mapping
+                                              requirements |> List.map _.Value
+                                              decisions |> List.map _.Value ]
+                                            |> List.concat
+                                            |> List.map (fun value -> value.ToUpperInvariant())
+                                            |> List.distinct
+                                            |> List.sort
+
                                         Some
                                             { Id = id
                                               Title =
@@ -271,14 +299,9 @@ module Task =
                                               Owner =
                                                 tryScalarAt [ "owner" ] mapping |> Option.defaultValue "unassigned"
                                               Dependencies = scalarList [ "dependencies" ] mapping |> parseTaskIds
-                                              Requirements =
-                                                scalarList [ "requirements" ] mapping |> parseRequirementIds
-                                              Decisions = scalarList [ "decisions" ] mapping |> parseDecisionIds
-                                              SourceIds =
-                                                scalarList [ "sourceIds" ] mapping
-                                                |> List.map (fun value -> value.ToUpperInvariant())
-                                                |> List.distinct
-                                                |> List.sort
+                                              Requirements = requirements
+                                              Decisions = decisions
+                                              SourceIds = sourceIds
                                               RequiredSkills = scalarList [ "requiredSkills" ] mapping
                                               RequiredEvidence =
                                                 scalarList [ "requiredEvidence" ] mapping |> parseEvidenceIds

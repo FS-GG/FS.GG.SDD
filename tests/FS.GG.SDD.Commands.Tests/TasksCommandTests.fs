@@ -565,59 +565,72 @@ module TasksCommandTests =
     // ---------------------------------------------------------------------------------------------
     // Feature 093 / FS.GG.SDD#164 (FS.GG.Audio feedback §3.7). `clarificationDecisionTasks` passed
     // `requirements = []` to every decision-derived task, discarding the `RelatedRequirementIds` the
-    // parser had already collected. A decision that settles FR-007 and FR-001 produced a task that
-    // referenced neither.
+    // parser had already collected. A decision that settled FR-001 produced a task referencing nothing.
     // ---------------------------------------------------------------------------------------------
 
-    let private injectMultiRefDecision root =
+    let private injectDecision (line: string) root =
         let clarifications = TestSupport.readRelative root clarificationsPath
 
-        let withDecision =
-            clarifications.Replace(
-                "## Accepted Deferrals",
-                "- DEC-001: Settles FR-002 and FR-001 by recording decisions in clarifications.md.\n\n## Accepted Deferrals"
-            )
+        TestSupport.writeRelative
+            root
+            clarificationsPath
+            (clarifications.Replace("## Accepted Deferrals", $"{line}\n\n## Accepted Deferrals"))
 
-        TestSupport.writeRelative root clarificationsPath withDecision
         acceptUpstream root
 
-    /// FR-014. The refs reach the derived task, sorted, not `[]`.
+    /// FR-014. The decision's requirement ref reaches its derived task rather than being dropped.
     [<Fact>]
     let ``a decision's requirement refs reach its derived task`` () =
         let root = initializedPlanReadyProject ()
-        injectMultiRefDecision root
+        root |> injectDecision "- DEC-001: Settles FR-001 by recording decisions in clarifications.md."
+
+        let report = TestSupport.runTasks root workId title
+        let tasks = TestSupport.readRelative root tasksPath
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains("Implement clarification decision DEC-001", tasks)
+        Assert.Contains("requirements: [\"FR-001\"]", tasks)
+        Assert.Contains("decisions: [\"DEC-001\"]", tasks)
+
+    /// FR-019. The `DEC-001` is carried by the typed `decisions:` field, so the emitter must not also
+    /// restate it in `sourceIds:`. It stays in the in-memory derived `SourceIds` (where it is both the
+    /// re-gen dedupe key and what `evidence`/`verify` read) and is re-derived on the next parse.
+    [<Fact>]
+    let ``the emitted task does not restate its typed refs in sourceIds`` () =
+        let root = initializedPlanReadyProject ()
+        root |> injectDecision "- DEC-001: Settles FR-001 by recording decisions in clarifications.md."
 
         TestSupport.runTasks root workId title |> ignore
         let tasks = TestSupport.readRelative root tasksPath
 
-        Assert.Contains("Implement clarification decision DEC-001", tasks)
-        Assert.Contains("requirements: [\"FR-001\", \"FR-002\"]", tasks)
-        Assert.Contains("decisions: [\"DEC-001\"]", tasks)
+        Assert.DoesNotContain("sourceIds: [\"DEC-001\"]", tasks)
+        Assert.DoesNotContain("sourceIds: [\"FR-001\"]", tasks)
 
-    /// The refs are sorted, so the author's phrasing order does not move the emitted `requirements:`.
-    ///
-    /// Compares that one line rather than the whole file: `tasks.yml` embeds a `digest:` of
-    /// `clarifications.md`, which necessarily differs when the decision's prose differs.
+    /// FR-018. Two consecutive `tasks` runs over a normalized `tasks.yml` are byte-identical: the
+    /// residual is a pure function of the parsed model, and re-parsing re-derives the same union.
     [<Fact>]
-    let ``a decision's requirement refs are emitted in sorted order regardless of phrasing`` () =
-        let requirementsLine (decisionLine: string) =
-            let root = initializedPlanReadyProject ()
-            let clarifications = TestSupport.readRelative root clarificationsPath
+    let ``tasks re-run over a residual-emitted file is byte-identical`` () =
+        let root = initializedPlanReadyProject ()
+        root |> injectDecision "- DEC-001: Settles FR-001 by recording decisions in clarifications.md."
 
-            TestSupport.writeRelative
-                root
-                clarificationsPath
-                (clarifications.Replace("## Accepted Deferrals", $"{decisionLine}\n\n## Accepted Deferrals"))
+        TestSupport.runTasks root workId title |> ignore
+        let first = TestSupport.readRelative root tasksPath
 
-            acceptUpstream root
-            TestSupport.runTasks root workId title |> ignore
+        TestSupport.runTasks root workId title |> ignore
+        let second = TestSupport.readRelative root tasksPath
 
-            (TestSupport.readRelative root tasksPath).Replace("\r\n", "\n").Split('\n')
-            |> Array.filter (fun line -> line.Contains "requirements:" && line.Contains "FR-")
-            |> Array.toList
+        Assert.Equal(first, second)
 
-        let ascending = requirementsLine "- DEC-001: Settles FR-001 and FR-002."
-        let descending = requirementsLine "- DEC-001: Settles FR-002 and FR-001."
+    /// A safety net that only exists now that a decision's refs actually reach the task graph: a
+    /// decision hand-authored into `clarifications.md` (bypassing `clarify --input`'s own
+    /// `unknownClarificationReference` gate) that names an undeclared `FR-999` no longer slips through
+    /// with `requirements = []`. It is caught before `tasks.yml` is written.
+    [<Fact>]
+    let ``a decision naming an undeclared requirement blocks tasks`` () =
+        let root = initializedPlanReadyProject ()
+        root |> injectDecision "- DEC-001: Settles FR-999, which no specification declares."
 
-        Assert.Contains("requirements: [\"FR-001\", \"FR-002\"]", ascending |> String.concat "\n")
-        Assert.Equal<string list>(ascending, descending)
+        let report = TestSupport.runTasks root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.False(TestSupport.existsRelative root tasksPath)

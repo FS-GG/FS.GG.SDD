@@ -112,8 +112,9 @@ Widest blast radius. Last, so the four smaller fixes are already proven.
 - [ ] **T020** `Task.fs` parse (`:276-279`): `SourceIds` = sorted, deduplicated, upper-cased union of the
   authored `sourceIds:` list, `requirements`, and `decisions` (D5).
 - [ ] **T021** `TaskGraphAuthoring.fs`: emitter writes the **residual** `sourceIds:` only (ids not
-  recoverable from the typed fields), omitting the key when empty; `clarificationDecisionTasks` stops
-  passing the `DEC-###` as a `sourceId` (FR-019).
+  recoverable from the typed fields), omitting the key when empty. This alone delivers FR-019 — do **not**
+  change what `clarificationDecisionTasks` passes as `sourceIds`, because `maybeTask` reuses that argument
+  as the re-gen dedupe key and `[]` would duplicate the task on every re-run.
 - [ ] **T022** `WorkModel.fs:879`: `relatedIds = task.SourceIds` (already the sorted, distinct superset).
 - [ ] **T023** Verify FR-021 needs no change at `HandlersEvidence.fs:212` / `HandlersVerify.fs:37,154,344`
   — they read `SourceIds`, which now contains the typed refs. Assert, do not edit.
@@ -133,7 +134,9 @@ Widest blast radius. Last, so the four smaller fixes are already proven.
   (FR-018). **Do not accept an unreviewed golden diff.**
 - [ ] **T027** Re-capture `PublicSurface.baseline` for `Commands` and `Cli` if and only if the six
   declared `.fsi` changes moved them (`FSGG_UPDATE_BASELINE=1`). Confirm nothing else moved.
-- [ ] **T028** `dotnet run --project src/FS.GG.SDD.Cli -- surface --check` exits 0.
+- [ ] **T028** ~~`surface --check` exits 0~~ — **not applicable.** `surface` gates a scaffolded
+  workspace's `docs/api-surface/**`; this repo has none and uses the internal reflection
+  `PublicSurface.baseline` test (CLAUDE.md). It reports the same 53 missing baselines on `main`.
 - [ ] **T029** Full `dotnet test` green. `git diff --stat` reviewed against the declared `Paths:`
   touch-set — nothing outside it (ADR-0021).
 

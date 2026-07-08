@@ -230,8 +230,13 @@ bytes intact and no residue* — directly assertable, deterministic. Plus a stru
 | FR-024 | golden diff reviewed: digest-only, except `relatedIds` + `tasks.yml` normalization | PR review |
 | FR-025 | docs stay pinned | `AuthoringDocsContractTests`, `ExampleArtifactsContractTests` |
 
-Plus: `dotnet test` green, `fsgg-sdd surface --check` exit 0, `PublicSurface.baseline` moves only where
-the six declared `.fsi` changes require.
+Plus: `dotnet test` green, and `PublicSurface.baseline` moves only where the six declared `.fsi` changes
+require (in the event: nowhere — the removed helpers were unexported).
+
+`fsgg-sdd surface --check` is **not** run as a gate here. `surface` enforces the `docs/api-surface/**`
+convention in a *scaffolded workspace*; this repo has no such tree and uses the internal reflection
+`PublicSurface.baseline` test instead (CLAUDE.md). Invoking it against the component repo reports 53
+missing baselines on `main` as well.
 
 ## Agent-facing behavior
 
