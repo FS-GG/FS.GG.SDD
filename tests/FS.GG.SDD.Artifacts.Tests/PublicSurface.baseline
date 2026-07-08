@@ -1,4 +1,11 @@
 FS.GG.SDD.Artifacts.Analysis.parseAnalysisView
+FS.GG.SDD.Artifacts.ArtifactCodec.decode
+FS.GG.SDD.Artifacts.ArtifactCodec.inlineList
+FS.GG.SDD.Artifacts.ArtifactCodec.keys
+FS.GG.SDD.Artifacts.ArtifactCodec.optionalScalar
+FS.GG.SDD.Artifacts.ArtifactCodec.render
+FS.GG.SDD.Artifacts.ArtifactCodec.requiredScalar
+FS.GG.SDD.Artifacts.ArtifactCodec.scalarBlock
 FS.GG.SDD.Artifacts.ArtifactRef.create
 FS.GG.SDD.Artifacts.ArtifactRef.kindValue
 FS.GG.SDD.Artifacts.ArtifactRef.optionalGovernanceBoundary
