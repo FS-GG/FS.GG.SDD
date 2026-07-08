@@ -52,6 +52,35 @@ module internal NextActionRouting =
             if not (List.isEmpty blocking) then
                 let ids = blocking |> Set.ofList
 
+                if ids |> Set.contains "stalePlanSnapshot" then
+                    // Feature 090 (#163), FR-010. A stale plan snapshot has one recovery, and it is
+                    // the same one from `plan`, `tasks`, and `analyze` — so this is deliberately not
+                    // gated on `request.Command`, and it precedes the generic
+                    // `correctBlockingDiagnostics` fallback below (which would otherwise swallow it,
+                    // `stalePlanSnapshot` being an error). RequiredArtifacts names the changed
+                    // sources — the diagnostic's RelatedIds — alongside the plan itself, because
+                    // reviewing them against the recorded decisions is exactly what
+                    // `--accept-upstream` asserts the operator has done.
+                    let changedSources =
+                        diagnostics
+                        |> List.tryFind (fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
+                        |> Option.map (fun diagnostic -> diagnostic.RelatedIds)
+                        |> Option.defaultValue []
+
+                    Some
+                        { ActionId = "plan.acceptUpstream"
+                          Command = Some Plan
+                          WorkId = request.WorkId
+                          Reason =
+                            "The plan's recorded source snapshot is stale. Review the recorded plan decisions against the changed sources, then re-run fsgg-sdd plan --accept-upstream."
+                          RequiredArtifacts =
+                            (plan
+                             |> Option.map (fun summary -> [ $"work/{summary.WorkId}/plan.md" ])
+                             |> Option.defaultValue [])
+                            @ changedSources
+                          BlockingDiagnosticIds = [ "stalePlanSnapshot" ] }
+                else
+
                 let correctionCommand =
                     match request.Command with
                     | Plan -> planCorrectionCommand diagnostics

@@ -151,6 +151,12 @@ module CommandReports =
     let stalePlanDecision path decisionIds =
         DiagnosticConstructors.stalePlanDecision path decisionIds
 
+    let stalePlanSnapshot path changedPaths =
+        DiagnosticConstructors.stalePlanSnapshot path changedPaths
+
+    let planAuthoringWindow path snapshottedSources =
+        DiagnosticConstructors.planAuthoringWindow path snapshottedSources
+
     let missingPlanPrerequisite path message =
         DiagnosticConstructors.missingPlanPrerequisite path message
 

@@ -13,7 +13,10 @@ Classification: `AuthoredSource` (unchanged, FR-015).
 | `## Plan Decisions` | operator **+ `plan` injecting a synthesized `PD-###` stale line** | operator only |
 | `## Plan Scope`, `## Contract Impact`, `## Verification Obligations`, `## Migration Posture`, `## Generated View Impact`, `## Accepted Deferrals`, `## Planning Findings`, `## Advisory Notes` | operator (+ `appendPlanEntries` derived rows) | unchanged |
 
-The invariant this feature establishes: **`plan` writes exactly one region of `plan.md` — its own `## Source Snapshot` — and only under an explicit operator gesture.**
+The invariant this feature establishes: **`plan` never alters or removes an existing line of
+`plan.md`, and never synthesizes a `PD-###` decision.** It *rewrites* exactly one region — its own
+`## Source Snapshot` — and only under an explicit operator gesture. It may still *append* derived
+rows for genuinely-new upstream ids, which it has always done and which is not the defect.
 
 ## Entity: Source Snapshot entry
 
@@ -74,7 +77,7 @@ Remains as a `DiagnosticWarning` constructor and remains reachable for a plan wh
 | yes | no | no | `NoChange` | none | 0 |
 | yes | no | yes | `NoChange` | none (identical bytes) | 0 |
 | yes | yes | no | `Blocked` (`stalePlanSnapshot`) | **none** — effect gate | 1 |
-| yes | yes | yes | `Succeeded` | `## Source Snapshot` body only | 0 |
+| yes | yes | yes | `Succeeded` | `## Source Snapshot` body rewritten; derived rows for new upstream ids appended (pre-existing behavior) | 0 |
 | yes | any | yes, **+ unrelated blocking diagnostic** | `Blocked` | **none** — effect gate | 1 |
 
 The last row is FR-006: `--accept-upstream` suppresses one diagnostic, it does not force a write. The effect gate enforces it without special-casing.

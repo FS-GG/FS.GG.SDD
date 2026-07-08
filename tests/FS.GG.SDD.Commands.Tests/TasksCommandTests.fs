@@ -35,8 +35,21 @@ module TasksCommandTests =
     let workId = "009-tasks-command"
     let title = "Tasks Command"
     let specPath = $"work/{workId}/spec.md"
+    let planPath = $"work/{workId}/plan.md"
     let tasksPath = $"work/{workId}/tasks.yml"
     let workModelPath = $"readiness/{workId}/work-model.json"
+
+    /// Feature 090 (#163). Editing an upstream source after `plan` has run invalidates the plan's
+    /// recorded `## Source Snapshot`, so `tasks` and `analyze` now block with `stalePlanSnapshot`
+    /// until the operator re-baselines the plan (FR-008 / SC-004: no stale plan reaches task
+    /// generation). Tests below that mutate a source mid-lifecycle therefore perform the same
+    /// one-command re-baseline a real operator would. Before 090 they silently generated a task
+    /// graph from a plan that no longer matched its sources.
+    let private acceptUpstream root =
+        TestSupport.runRequest
+            { TestSupport.planRequest root workId title with
+                AcceptUpstream = true }
+        |> ignore
 
     let initializedPlanReadyProject () =
         let root = TestSupport.tempDirectory ()
@@ -241,6 +254,7 @@ module TasksCommandTests =
                 )
 
         TestSupport.writeRelative root specPath updatedSpec
+        acceptUpstream root
 
         let report = TestSupport.runTasks root workId title
         let tasks = TestSupport.readRelative root tasksPath
@@ -271,6 +285,7 @@ module TasksCommandTests =
                 )
 
         TestSupport.writeRelative root specPath updatedSpec
+        acceptUpstream root
 
         let report = TestSupport.runTasks root workId title
         let tasks = TestSupport.readRelative root tasksPath
@@ -294,11 +309,24 @@ module TasksCommandTests =
             )
 
         TestSupport.writeRelative root specPath withSecond
+        acceptUpstream root
         TestSupport.runTasks root workId title |> ignore
         Assert.Contains("Implement requirement FR-002", TestSupport.readRelative root tasksPath)
 
         // Remove FR-002 from the source and re-run.
         TestSupport.writeRelative root specPath original
+
+        // 090 (#163): deleting a requirement leaves the plan carrying derived rows that reference
+        // it, so `plan` blocks on `unknownPlanSourceReference` until the operator prunes them —
+        // pre-existing plan behavior, now reached because `tasks` no longer runs against a plan
+        // whose snapshot is stale. Prune, then re-baseline, exactly as an operator would.
+        let prunedPlan =
+            (TestSupport.readRelative root planPath).Replace("\r\n", "\n").Split('\n')
+            |> Array.filter (fun line -> not (line.Contains "FR-002"))
+            |> String.concat "\n"
+
+        TestSupport.writeRelative root planPath prunedPlan
+        acceptUpstream root
 
         let report = TestSupport.runTasks root workId title
         let tasks = TestSupport.readRelative root tasksPath
@@ -457,6 +485,8 @@ module TasksCommandTests =
             )
 
         TestSupport.writeRelative root clarificationsPath withDecision
+        // 090 (#163): the clarify edit moved the plan's recorded snapshot; re-baseline before tasks.
+        acceptUpstream root
 
     [<Fact>]
     let ``tasks routes a resolved clarify decision to a disposing task`` () =

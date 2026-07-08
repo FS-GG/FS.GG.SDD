@@ -90,7 +90,14 @@ module CommandTypes =
           // Surface input (`fsgg-sdd surface --update`); ignored by other commands (feature 086).
           // `true` ⇒ refresh the `docs/api-surface/**` baselines from the authored `.fsi`
           // signatures; `false` (default, or `--check`) ⇒ read-only drift check.
-          SurfaceUpdate: bool }
+          SurfaceUpdate: bool
+          // Plan input (`fsgg-sdd plan --accept-upstream`); ignored by other commands (feature 090).
+          // `true` ⇒ re-baseline the plan's `## Source Snapshot` digests against the current
+          // spec/clarifications/checklist, rewriting that section body and nothing else. `false`
+          // (default) ⇒ a plan whose recorded digests moved blocks with `stalePlanSnapshot` and
+          // writes zero bytes. Never honored by `tasks`/`analyze`: accepting the upstream is the
+          // operator's gesture at `plan`, not an implicit downstream one (FR-008).
+          AcceptUpstream: bool }
 
     type GeneratedViewSource =
         { Path: string

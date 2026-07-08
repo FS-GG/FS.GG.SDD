@@ -407,6 +407,9 @@ module internal DiagnosticConstructors =
             "Reference a known FR, US, AC, SB, AMB, CQ, DEC, CHK, CR, PD, PC, VO, PM, or GV id, or remove the stale plan link."
             id
 
+    // Feature 090: retained for the *authored* case only — a plan whose `## Plan Decisions` prose
+    // carries an operator-written `stale:` marker (FR-009). `plan` no longer emits this on digest
+    // drift, and no longer writes such a line into the authored plan; see `stalePlanSnapshot`.
     let stalePlanDecision path decisionIds =
         warningDiagnostic
             "stalePlanDecision"
@@ -414,6 +417,38 @@ module internal DiagnosticConstructors =
             "One or more plan decisions were recorded against older source snapshots."
             "Review the stale plan decisions before treating the plan as ready for task generation."
             decisionIds
+
+    // Feature 090 (#163). The plan's recorded source digests no longer match the sources they name.
+    // An ERROR, not a warning: `runHandler`'s effect gate discards every write effect when any
+    // diagnostic is a DiagnosticError, which is exactly how `plan` keeps its hands off the authored
+    // `plan.md` (FR-001/FR-003). The prior `stalePlanDecision` warning let the mutated text through.
+    // Deliberately NOT `markToolDefect` — a stale upstream is workspace state, not a tool defect, so
+    // the blocked exit stays 1. `changedPaths` arrive ordinally sorted (FR-002/FR-014) and become
+    // `RelatedIds`; the `--accept-upstream` remediation is appended by `RemediationPointers`.
+    let stalePlanSnapshot path (changedPaths: string list) =
+        let sources =
+            if List.length changedPaths = 1 then "source" else "sources"
+
+        errorDiagnostic
+            "stalePlanSnapshot"
+            (Some path)
+            $"Plan snapshot is stale: {List.length changedPaths} {sources} changed since the plan was recorded."
+            "Review the recorded plan decisions against the changed sources, then re-run with --accept-upstream."
+            changedPaths
+
+    // Feature 090 (#163), FR-011. Advancing to `plan` freezes the spec/clarify/checklist authoring
+    // window: the plan records their digests, and a later upstream edit needs an explicit
+    // re-baseline. Nothing said so before — operators discovered it by tripping over it. A
+    // DiagnosticInfo, so `ReportAssembly.outcome` (which inspects only Error and Warning) leaves the
+    // outcome, exit code, and changedArtifacts untouched. It adds a fact, not an outcome.
+    let planAuthoringWindow path (snapshottedSources: string list) =
+        commandDiagnostic
+            "planAuthoringWindow"
+            DiagnosticSeverity.DiagnosticInfo
+            (Some path)
+            "Plan snapshotted its sources; later edits to them require a re-baseline."
+            "Re-run fsgg-sdd plan --accept-upstream after editing the specification, clarifications, or checklist."
+            snapshottedSources
 
     let missingPlanPrerequisite path message =
         errorForPath

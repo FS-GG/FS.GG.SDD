@@ -213,10 +213,16 @@ No material ambiguities recorded.
             fun change -> change.Path = planPath && change.Operation = ArtifactOperation.NoChange
         )
 
-    [<Fact>]
-    let ``plan appends safe missing requirement and marks source decisions stale`` () =
+    // ---------------------------------------------------------------------------------------
+    // Feature 090 (#163): plan owns its `## Source Snapshot` and never writes authored prose.
+    // ---------------------------------------------------------------------------------------
+
+    /// Drive a work item to a planned state, then edit `spec.md` so the plan's recorded digests
+    /// go stale. Returns (root, the exact `plan.md` bytes before the stale re-run).
+    let private plannedThenSpecEdited () =
         let root = initializedChecklistReadyProject ()
         TestSupport.runPlan root workId title |> ignore
+        let before = TestSupport.readRelative root planPath
 
         let updatedSpec =
             (TestSupport.readRelative root specPath)
@@ -226,16 +232,282 @@ No material ambiguities recorded.
                 )
 
         TestSupport.writeRelative root specPath updatedSpec
+        root, before
+
+    let private acceptUpstream root =
+        TestSupport.runRequest
+            { TestSupport.planRequest root workId title with
+                AcceptUpstream = true }
+
+    /// C2 / FR-001..FR-003 / SC-002. The regression this feature exists to prevent. Before the
+    /// change this run exited 0, appended a synthesized `PD-### … stale:` line to the operator's
+    /// `## Plan Decisions`, and left the digests stale.
+    [<Fact>]
+    let ``stale upstream blocks plan and leaves plan.md byte-identical`` () =
+        let root, before = plannedThenSpecEdited ()
 
         let report = TestSupport.runPlan root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Equal(before, TestSupport.readRelative root planPath)
+        Assert.Empty(report.ChangedArtifacts)
+
+        let stale =
+            report.Diagnostics
+            |> List.filter (fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
+
+        Assert.Single(stale) |> ignore
+        Assert.Equal<string list>([ specPath ], stale.Head.RelatedIds)
+        Assert.Equal(Some "plan.acceptUpstream", report.NextAction |> Option.map _.ActionId)
+
+    /// C14 / FR-001. The tool never authors a `PD-###` line, on any path.
+    [<Fact>]
+    let ``stale plan re-run never appends a synthesized stale decision`` () =
+        let root, _ = plannedThenSpecEdited ()
+
+        TestSupport.runPlan root workId title |> ignore
+        Assert.DoesNotContain("stale:", TestSupport.readRelative root planPath)
+
+        acceptUpstream root |> ignore
+        Assert.DoesNotContain("stale:", TestSupport.readRelative root planPath)
+
+    /// C3 / FR-004 / SC-002. `--accept-upstream` refreshes the snapshot, appends the derived rows
+    /// `plan` has always appended for genuinely-new upstream ids, and alters no pre-existing line.
+    [<Fact>]
+    let ``accept-upstream refreshes the snapshot without altering authored lines`` () =
+        let root, before = plannedThenSpecEdited ()
+
+        let report = acceptUpstream root
+        let after = TestSupport.readRelative root planPath
+
+        Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
+        Assert.NotEqual<string>(before, after)
+        Assert.Contains("FR-002", after) // the derived append; pre-existing behavior, not the defect
+
+        // Every line of the pre-run plan that was NOT a Source Snapshot digest row survives verbatim.
+        let snapshotRow (line: string) = line.Contains "sha256"
+
+        let survivors =
+            before.Replace("\r\n", "\n").Split('\n')
+            |> Array.filter (fun line -> not (snapshotRow line))
+
+        let afterLines = after.Replace("\r\n", "\n").Split('\n') |> Set.ofArray
+
+        for line in survivors do
+            Assert.True(afterLines.Contains line, $"accept-upstream altered or removed authored line: {line}")
+
+        // and the snapshot really did move
+        Assert.NotEqual<string list>(
+            before.Replace("\r\n", "\n").Split('\n') |> Array.filter snapshotRow |> Array.toList,
+            after.Replace("\r\n", "\n").Split('\n') |> Array.filter snapshotRow |> Array.toList
+        )
+
+    /// C4 / FR-005. The flag is a no-op on a plan whose snapshot is already current.
+    [<Fact>]
+    let ``accept-upstream on a current snapshot is a no-op`` () =
+        let root = initializedChecklistReadyProject ()
+        TestSupport.runPlan root workId title |> ignore
+        let before = TestSupport.readRelative root planPath
+
+        let report = acceptUpstream root
+
+        Assert.Equal(CommandOutcome.NoChange, report.Outcome)
+        Assert.Equal(before, TestSupport.readRelative root planPath)
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
+
+    /// C5 / FR-007. Creation is not a stale path; the flag is inert there.
+    [<Fact>]
+    let ``accept-upstream on the creation path matches a bare plan`` () =
+        let bare = initializedChecklistReadyProject ()
+        let bareReport = TestSupport.runPlan bare workId title
+
+        let accepted = initializedChecklistReadyProject ()
+        let acceptedReport = acceptUpstream accepted
+
+        Assert.Equal(bareReport.Outcome, acceptedReport.Outcome)
+        Assert.Equal(TestSupport.readRelative bare planPath, TestSupport.readRelative accepted planPath)
+
+    /// C6 / FR-006. `--accept-upstream` accepts the upstream; it does not force a write.
+    [<Fact>]
+    let ``accept-upstream does not override an unrelated blocking diagnostic`` () =
+        let root, _ = plannedThenSpecEdited ()
+
+        let corrupted =
+            (TestSupport.readRelative root planPath)
+                .Replace($"sourceSpec: {specPath}", "sourceSpec: work/other/spec.md")
+
+        TestSupport.writeRelative root planPath corrupted
+
+        let report = acceptUpstream root
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Equal(corrupted, TestSupport.readRelative root planPath)
+        Assert.Empty(report.ChangedArtifacts)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "malformedPlanFrontMatter")
+
+    /// C7 / FR-002 / FR-014. All changed sources are named, ordinally sorted.
+    [<Fact>]
+    let ``stalePlanSnapshot names every changed source in ordinal order`` () =
+        let root, _ = plannedThenSpecEdited ()
+
+        TestSupport.writeRelative
+            root
+            clarificationPath
+            (TestSupport.readRelative root clarificationPath + "\n<!-- touched -->\n")
+
+        let report = TestSupport.runPlan root workId title
+
+        let stale =
+            report.Diagnostics
+            |> List.find (fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
+
+        Assert.Equal<string list>([ clarificationPath; specPath ], stale.RelatedIds)
+        Assert.Equal<string list>(List.sortWith (fun a b -> String.CompareOrdinal(a, b)) stale.RelatedIds, stale.RelatedIds)
+
+    /// C8 / C9 / FR-008. Downstream stages detect the drift from the digests, not from a marker
+    /// `plan` used to inject into the operator's prose.
+    [<Fact>]
+    let ``tasks and analyze block on a stale plan snapshot`` () =
+        let root, _ = plannedThenSpecEdited ()
+
+        for report in [ TestSupport.runTasks root workId title; TestSupport.runAnalyze root workId title ] do
+            Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+            Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
+            Assert.Equal(Some "plan.acceptUpstream", report.NextAction |> Option.map _.ActionId)
+
+    /// C10 / FR-008. Accepting the upstream is the operator's gesture at `plan`, never an implicit
+    /// downstream one.
+    [<Fact>]
+    let ``accept-upstream is not honored by tasks`` () =
+        let root, _ = plannedThenSpecEdited ()
+
+        let report =
+            TestSupport.runRequest
+                { TestSupport.tasksRequest root workId title with
+                    AcceptUpstream = true }
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
+
+    /// C11 / FR-016. An absent recorded digest is not evidence of change: an old plan must not
+    /// become blocked on upgrade.
+    [<Fact>]
+    let ``a snapshot entry without a digest is not stale`` () =
+        let root = initializedChecklistReadyProject ()
+        TestSupport.runPlan root workId title |> ignore
+
+        // Strip the digest from the spec's snapshot row, then move the spec.
         let plan = TestSupport.readRelative root planPath
 
-        Assert.Equal(CommandOutcome.SucceededWithWarnings, report.Outcome)
-        Assert.Contains("FR-002", plan)
-        Assert.Contains("stale:", plan)
-        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "stalePlanDecision")
-        Assert.Equal(Some "plan.correctStaleDecisions", report.NextAction |> Option.map _.ActionId)
-        Assert.True(report.Plan.Value.StaleDecisionCount > 0)
+        let digestless =
+            plan.Replace("\r\n", "\n").Split('\n')
+            |> Array.map (fun line ->
+                if line.Contains specPath && line.Contains "sha256" then
+                    $"- {specPath}"
+                else
+                    line)
+            |> String.concat "\n"
+
+        TestSupport.writeRelative root planPath digestless
+
+        TestSupport.writeRelative
+            root
+            specPath
+            ((TestSupport.readRelative root specPath).Replace("## Ambiguities", "<!-- moved -->\n\n## Ambiguities"))
+
+        let report = TestSupport.runPlan root workId title
+
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
+
+    /// C13 / FR-009. The safety net for *authored* staleness survives: `plan` warns, `tasks` blocks.
+    [<Fact>]
+    let ``an operator-authored stale decision still warns at plan and blocks at tasks`` () =
+        let root = initializedChecklistReadyProject ()
+        TestSupport.runPlan root workId title |> ignore
+
+        let authored =
+            (TestSupport.readRelative root planPath)
+                .Replace("## Contract Impact", "- PD-900 stale: I need to revisit this.\n\n## Contract Impact")
+
+        TestSupport.writeRelative root planPath authored
+
+        let planReport = TestSupport.runPlan root workId title
+        Assert.Contains(planReport.Diagnostics, fun diagnostic -> diagnostic.Id = "stalePlanDecision")
+
+        let tasksReport = TestSupport.runTasks root workId title
+        Assert.Equal(CommandOutcome.Blocked, tasksReport.Outcome)
+
+        Assert.Contains(
+            tasksReport.Diagnostics,
+            fun diagnostic ->
+                diagnostic.Id = "failedPlanPrerequisite"
+                && diagnostic.Message = "Plan contains stale decisions."
+        )
+
+    /// T011. The bool predicate and the changed-path projection can never disagree.
+    [<Fact>]
+    let ``changed source paths agree with the staleness predicate`` () =
+        let root, _ = plannedThenSpecEdited ()
+
+        // stale: non-empty changed set, predicate true
+        let staleReport = TestSupport.runPlan root workId title
+
+        Assert.Contains(staleReport.Diagnostics, fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
+
+        // accepted: empty changed set, predicate false
+        acceptUpstream root |> ignore
+        let currentReport = TestSupport.runPlan root workId title
+
+        Assert.DoesNotContain(currentReport.Diagnostics, fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
+        Assert.NotEqual(CommandOutcome.Blocked, currentReport.Outcome)
+
+    /// FR-011 / US4. The authoring-window advisory is emitted exactly once on a successful plan
+    /// (creation and coherent re-run), names the three snapshotted sources, and adds a fact — not
+    /// an outcome. It must never appear on the blocked path, where the plan snapshotted nothing.
+    [<Fact>]
+    let ``plan announces the authoring window without changing the outcome`` () =
+        let root = initializedChecklistReadyProject ()
+
+        let created = TestSupport.runPlan root workId title
+        let advisories =
+            created.Diagnostics
+            |> List.filter (fun diagnostic -> diagnostic.Id = "planAuthoringWindow")
+
+        Assert.Single(advisories) |> ignore
+        Assert.Equal(FS.GG.SDD.Artifacts.Diagnostics.DiagnosticInfo, advisories.Head.Severity)
+        Assert.Equal<string list>([ specPath; clarificationPath; checklistPath ], advisories.Head.RelatedIds)
+
+        // adds a fact, not an outcome: creation still Succeeded, a coherent re-run still NoChange
+        Assert.Equal(CommandOutcome.Succeeded, created.Outcome)
+        let rerun = TestSupport.runPlan root workId title
+        Assert.Equal(CommandOutcome.NoChange, rerun.Outcome)
+        // every listed artifact is NoChange — the advisory wrote nothing
+        Assert.All(rerun.ChangedArtifacts, fun change -> Assert.Equal(ArtifactOperation.NoChange, change.Operation))
+        Assert.Contains(rerun.Diagnostics, fun diagnostic -> diagnostic.Id = "planAuthoringWindow")
+
+        // never on the blocked path
+        let blocked, _ = plannedThenSpecEdited ()
+        let blockedReport = TestSupport.runPlan blocked workId title
+        Assert.Equal(CommandOutcome.Blocked, blockedReport.Outcome)
+        Assert.DoesNotContain(blockedReport.Diagnostics, fun diagnostic -> diagnostic.Id = "planAuthoringWindow")
+
+    /// FR-014 / SC-005. Both new paths are byte-deterministic: identical inputs, identical report.
+    /// The blocked path writes nothing, so re-running it feeds the same input twice. The
+    /// `--accept-upstream` path *does* mutate, so determinism is checked across two independently
+    /// constructed fixtures rather than by re-running against the file it just rewrote.
+    [<Fact>]
+    let ``blocked and accept-upstream paths are deterministic`` () =
+        let blockedA, _ = plannedThenSpecEdited ()
+        let first = TestSupport.runPlan blockedA workId title |> serializeReport
+        let second = TestSupport.runPlan blockedA workId title |> serializeReport
+        Assert.Equal(first, second)
+
+        let acceptA, _ = plannedThenSpecEdited ()
+        let acceptB, _ = plannedThenSpecEdited ()
+        Assert.Equal(acceptUpstream acceptA |> serializeReport, acceptUpstream acceptB |> serializeReport)
+
+        // and re-accepting an already-current plan is an idempotent no-op (FR-005)
+        Assert.Equal(CommandOutcome.NoChange, (acceptUpstream acceptA).Outcome)
 
     [<Fact>]
     let ``plan identity mismatch blocks without mutating existing plan`` () =

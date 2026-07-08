@@ -45,7 +45,7 @@ Unchanged: `schemaVersion: 1`, `reportVersion: "1.3.0"`. No new report block.
 |---|---|---|---|
 | C1 | plan exists, snapshot current | `plan` | `noChange`, exit 0, no `stalePlanSnapshot` |
 | C2 | plan exists, `spec.md` edited | `plan` | `blocked`, exit 1, `stalePlanSnapshot` with `relatedIds = ["work/<id>/spec.md"]`, `changedArtifacts: 0`, `plan.md` byte-identical |
-| C3 | as C2 | `plan --accept-upstream` | `succeeded`, exit 0, `changedArtifacts: 1`, only `## Source Snapshot` body differs |
+| C3 | as C2 | `plan --accept-upstream` | `succeeded`, exit 0, `changedArtifacts: 1`, `## Source Snapshot` body refreshed, no synthesized `stale:` line, no pre-existing line altered |
 | C4 | plan exists, snapshot current | `plan --accept-upstream` | `noChange`, exit 0, no flag-related diagnostic |
 | C5 | no plan | `plan` / `plan --accept-upstream` | identical results; snapshot created fresh |
 | C6 | as C2, plus a malformed front matter | `plan --accept-upstream` | `blocked`, exit 1, the front-matter error; **no** snapshot rewrite, zero writes |
@@ -62,10 +62,21 @@ Unchanged: `schemaVersion: 1`, `reportVersion: "1.3.0"`. No new report block.
 
 For every `plan` invocation against an existing `plan.md`:
 
-> the only region of the file that may differ after the run is the body of `## Source Snapshot`,
-> and it may differ only when `--accept-upstream` was passed.
+> **No line of `plan.md` is ever altered or removed by `plan`, and no `PD-###` line is ever
+> synthesized by `plan`.** The `## Source Snapshot` body may be *rewritten* only under
+> `--accept-upstream`. Rows may be *appended* to derived sections only for genuinely-new upstream
+> ids — the pre-existing `plannedPlanEntries`/`appendPlanEntries` behavior, which diffs against the
+> plan's existing facts.
+
+On the blocked path the file is byte-identical: `runHandler`'s effect gate discards the write.
 
 Pinned by a byte-level test that diffs the pre- and post-run file by section.
+
+> **Note.** An earlier draft of this contract said "only `## Source Snapshot` may differ." That was
+> wrong: `plan` has always appended derived rows for new upstream ids (the existing test
+> `plan appends safe missing requirement …` asserts `FR-002` reaching `plan.md`). That append is
+> intended behavior and is **not** the defect. The defect is the *synthesized* `PD-### … stale:`
+> line, which is a diagnostic disguised as an operator decision.
 
 ## Retired behavior
 
