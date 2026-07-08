@@ -32,6 +32,32 @@ word plus `refresh.malformedGeneratedView` already carry the operator-facing mes
 matches how `parsesAsJson`'s `false` is handled today. Threading the inner diagnostics up is a
 strictly larger report change and is not required by any FR.
 
+**What adopting the oracle actually commits us to** (found while implementing; not in #188). Adopting
+`parseShipView` means adopting `parseJsonView`'s **schema-compatibility policy** verbatim
+(`LifecycleArtifacts/Internal.fs:434-446` × `SchemaVersion.classifyRaw:89-107`):
+
+| `schemaVersion` | `classifyRaw` status | `parseJsonView` | new `ship` currency |
+|---|---|---|---|
+| major 1 | `Current` | `build` → `Ok` | `current` |
+| major 0 | **`Deprecated`** | **`build` → `Ok`** | **`current`** |
+| major 2 | `Unsupported` | `Error` | `malformed` |
+| major > 2 | `Future` | `Error` | `malformed` |
+| absent / unparseable | `Malformed` | `Error` | `malformed` |
+| valid version, bad `workId`/`stage` | — | `Error` | `malformed` |
+
+The stricter oracle therefore does **not** start rejecting every non-current schema — only the ones the
+artifact layer already refuses to read. A *deprecated but supported* `ship.json` keeps reporting
+`current`, which is the correct outcome (`refresh` can still project a verdict from it) and the one a
+careless "if schemaVersion ≠ 1 then malformed" implementation would get wrong. **FR-016** and a
+dedicated test pin it, so a later tightening of `parseJsonView` cannot silently reclassify a working
+workspace's `ship.json` as malformed.
+
+The word `malformed` is slightly imprecise for the `Unsupported`/`Future` rows (they are
+*schema-incompatible*, not syntactically broken), but `ViewCurrencyClass` has no `Incompatible` case,
+`refreshMalformedSource`'s own message already reads "malformed or schema-incompatible", and #188
+explicitly prescribes this word ("so `shClass` itself becomes `Malformed`"). Introducing a new case is
+the far larger change tracked by FS.GG.SDD#183.
+
 ---
 
 ## R2 — `downstreamClass` is local; the fix cannot leak out of the declared touch-set
@@ -110,6 +136,53 @@ in both projections rather than only the one #188 happened to name.
 `"ship-verdict"` was already in `BlockedViewIds` (`Malformed` falls into the `| _ ->` catch-all at
 `:747`) and stays there as `Blocked` — which is why `RefreshCommandTests.fs:111` passes both before
 and after, and why this second-order change went unnoticed in review.
+
+---
+
+## R3b — `governance-handoff` inherits `Malformed` from its source (found by the real-CLI smoke)
+
+**Finding**: not in #188, not in this feature's plan, and **caught only by driving the real binary**
+(T018). With `shClass` corrected to `Malformed`, the JSON report read:
+
+```
+GV kind=ship                currency=malformed      ← correct
+GV kind=ship-verdict        currency=blocked        ← correct (the fix)
+GV kind=governance-handoff  currency=malformed      ← FALSE. Its bytes are fine.
+```
+
+`govClass` comes from `inheritShip () = None, [], shClass` (`:495`), which propagates `shClass`
+verbatim. Before this feature, cell 5's `shClass` was `AlreadyCurrent`, so the handoff took the
+`AlreadyCurrent` branch, `governanceHandoffEmission` failed to project, and `:516` returned `Blocked` —
+the right word. Correcting `shClass` to `Malformed` therefore *moved the handoff from `blocked` to
+`malformed`*: **this feature introduced, one artifact over, exactly the false attribution it exists to
+remove.**
+
+The same latent bug already existed for a non-JSON `ship.json` (matrix cells 3/4), where `shClass` was
+`Malformed` even before feature 095, so the handoff has been reported `malformed` there all along.
+
+**Decision (FR-017)**: `inheritShip` maps `Malformed → Blocked`. Every other class (`Stale`, `Missing`,
+`Blocked`) is inherited unchanged, because each is true of the handoff as well as of its source.
+`Malformed` is the sole class that is a statement about *a file's own bytes*, and the handoff's bytes
+are not the ones that failed to parse. `Blocked` — "cannot be refreshed until upstream `ship.json` is
+current" — is precisely true. Fixing cells 3/4 as a consequence is correct and non-negotiable: it would
+be incoherent to fix the verdict's false `malformed` and leave the handoff's in the same report.
+
+**The generalised invariant, now pinned by a test**: in any one `refresh` report, `malformed` names **at
+most one artifact** — the one whose bytes do not parse. Everything downstream is `blocked` on it. The
+CLI smoke asserts the *whole set* of `malformed` rows equals `["ship"]`, not merely that
+`ship-verdict` is absent from it. Asserting only the artifact #188 named would have shipped this bug.
+
+**Method note.** The in-process tests (36 of them) were all green when this was broken. `refreshViewState`
+reads `refresh.perViewState`, and no test asserted `governance-handoff` in a malformed-source state. The
+defect was visible only in the real CLI's `generatedViews[]` array — which is also where a consumer
+would have read it. Constitution VI's preference for real evidence over transitive coverage earned its
+keep here.
+
+**Second method note.** The real-CLI smoke also corrected two contract errors in this spec's own
+documents, both invented rather than verified: a `Blocked` report routes to **stderr**, not stdout
+(`Cli/Program.fs:91`); and `generatedViews[]` entries are keyed by **`kind`**, not by a `viewId` field
+that does not exist (`CommandSerialization.fs:553-573`). `quickstart.md`'s `jq` recipes and
+`contracts/refresh-currency-matrix.md` were corrected against the observed bytes.
 
 ---
 

@@ -7,6 +7,12 @@ The contract `fsgg-sdd refresh` exposes here is its **JSON report**: `generatedV
 code. This document states that contract for every cell of the state space, **before** and **after**
 this feature. It is the source for SC-001 and the regression table test (SC-004).
 
+> **Reading the report** (verified against the real binary, not assumed):
+> `generatedViews[]` entries are keyed by **`kind`** — there is no `viewId` field
+> (`CommandSerialization.fs:553-573`). The `viewId` naming exists on `refresh.perViewState`, which
+> carries the same currency words as `[viewId, state]` pairs. And a **`Blocked` report is written to
+> stderr**, not stdout (`Cli/Program.fs:91`), so every non-clean cell below needs `2>&1` to pipe.
+
 ## State space
 
 `{ship.json} × {ship-verdict.json}` = 5 × 2 = **10 cells**. All cells assume `wmClass ≠ Blocked`
@@ -71,6 +77,31 @@ currency word `missing` stays (the verdict *is* absent, FR-010); only the diagno
 
 Cells 2, 4, and 6 keep `blockedUpstreamView` (error) on an absent verdict, because their sources really
 are unreadable (FR-011). The severity correction is scoped to a *stale* source alone.
+
+## `governance-handoff`: the one class it must not inherit (FR-017)
+
+`govClass` is `inheritShip ()` for every non-`AlreadyCurrent` source (`HandlersRefresh.fs:495`), which
+propagated `shClass` verbatim. Correcting `shClass` in cells 5/6 therefore moved the handoff from
+`blocked` to `malformed` — reintroducing, one artifact over, the exact false attribution this feature
+removes from `ship-verdict`. Cells 3/4 (non-JSON `ship.json`) had `shClass = Malformed` even before
+this feature, so their handoff has been reported `malformed` all along.
+
+`inheritShip` now maps **`Malformed → Blocked`**. Every other class (`Stale`, `Missing`, `Blocked`) is
+inherited unchanged, because each is true of the handoff as well as of its source. `Malformed` alone is
+a statement about *a file's own bytes*.
+
+| # | `ship.json` | `governance-handoff` currency<br>before → after |
+|---|---|---|
+| 3, 4 | S2 invalid JSON | **`malformed` → `blocked`** (pre-existing falsehood, corrected) |
+| 5, 6 | S3 valid JSON, bad view | `blocked` → `blocked` (**held**; a naive fix regresses this to `malformed`) |
+| 1, 2 | S1 absent | `missing` → `missing` |
+| 7, 8 | S4 stale | `stale` → `stale` |
+| 9, 10 | S5 current | `current` → `current` |
+
+**The generalised invariant**: in any one `refresh` report, `malformed` names **at most one artifact** —
+the one whose bytes do not parse. Every dependent view is `blocked` on it. The CLI smoke asserts the
+whole set of `malformed` rows equals `["ship"]`; asserting only that `ship-verdict` is absent from it
+would have shipped the handoff bug.
 
 ## Invariants (SC-001 … SC-005)
 

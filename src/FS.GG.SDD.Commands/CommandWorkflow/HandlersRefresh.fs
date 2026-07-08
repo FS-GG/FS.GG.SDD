@@ -25,6 +25,7 @@ module internal HandlersRefresh =
     module DiagnosticsModule = FS.GG.SDD.Artifacts.Diagnostics
     module GenerationManifestModule = FS.GG.SDD.Artifacts.GenerationManifest
     module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
+    module ShipModule = FS.GG.SDD.Artifacts.Ship
 
     // Feature 068 / US2 (2b): the internal per-view currency classification, formerly raw strings
     // woven through computeRefreshPlan (the review's worst complexity hotspot). Purely internal
@@ -354,6 +355,28 @@ module internal HandlersRefresh =
                     with _ ->
                         false
 
+                // Feature 095 (FS.GG.SDD#188): `downstreamClass` validates each structured downstream
+                // view with one of these. They share a shape so the validator can be a parameter rather
+                // than a branch on the artifact's identity — which keeps "analysis and verify are
+                // unchanged" (FR-002) a call-site fact instead of a runtime accident.
+                let parsesAsJsonSnap (snap: FileSnapshot) = parsesAsJson snap.Text
+
+                /// STRICTLY STRONGER than `parsesAsJsonSnap`: a non-JSON body fails inside
+                /// `parseJsonView` before any field is read, so this subsumes the weaker check rather
+                /// than supplementing it. Syntax is not the contract — `ship.json`'s contract is a
+                /// schema, and a future `schemaVersion` / bad `workId` / unparseable `stage` is
+                /// malformed *as a ship view* however well-formed its JSON. `parseShipView` takes the
+                /// `FileSnapshot` we already hold, so this costs no re-read.
+                ///
+                /// This adopts the artifact layer's schema-compatibility policy VERBATIM — it does not
+                /// invent one. `parseJsonView` builds the view for `Current` *and* `Deprecated` status,
+                /// so a deprecated-but-supported `ship.json` still reports `current` (FR-016, and a test
+                /// pins it). Only what the artifact layer already refuses to read — `Unsupported`,
+                /// `Future`, a missing/unparseable `schemaVersion`, or a structurally invalid view —
+                /// becomes `Malformed` here.
+                let parsesAsShipView (snap: FileSnapshot) =
+                    ShipModule.parseShipView snap |> Result.isOk
+
                 // 1. Regenerate the normalized work model from its current declared sources.
                 //    Reusing the same generator the lifecycle uses keeps output byte-identical.
                 let wmDiags, wmView, wmEffects =
@@ -435,30 +458,55 @@ module internal HandlersRefresh =
                 //    evidence freshness they were verified against. If the work model
                 //    changed, they are reported stale and point back to the responsible
                 //    lifecycle command.
-                let downstreamClass path =
+                //    `isValid` is per-artifact (feature 095): each view is validated against ITS OWN
+                //    contract, so the `Malformed` word lands on the artifact that is actually malformed.
+                //    Note the validator never runs when the work model is blocked — the short-circuit
+                //    below precedes it.
+                let downstreamClass (isValid: FileSnapshot -> bool) path =
                     if wmClass = ViewCurrencyClass.Blocked then
                         ViewCurrencyClass.Blocked
                     else
                         match snapshot path model with
                         | None -> ViewCurrencyClass.Missing
-                        | Some snap when not (parsesAsJson snap.Text) -> ViewCurrencyClass.Malformed
+                        | Some snap when not (isValid snap) -> ViewCurrencyClass.Malformed
                         | Some _ ->
                             if wmChanged then
                                 ViewCurrencyClass.Stale
                             else
                                 ViewCurrencyClass.AlreadyCurrent
 
-                let anClass = downstreamClass (analysisPath workId)
-                let veClass = downstreamClass (verifyPath workId)
-                let shClass = downstreamClass (shipPath workId)
+                // analysis/verify keep the weaker JSON-syntax gate: each would need its own oracle,
+                // its own state matrix, and its own regression sweep (feature 095, spec §Out of Scope).
+                let anClass = downstreamClass parsesAsJsonSnap (analysisPath workId)
+                let veClass = downstreamClass parsesAsJsonSnap (verifyPath workId)
+
+                // `ship.json` is validated as a SHIP VIEW. Before feature 095 this was `parsesAsJson`,
+                // so a valid-JSON/invalid-view source read as `AlreadyCurrent` — reporting `ship: current`
+                // about a file that does not parse, and then stamping `Malformed` on the well-formed
+                // COMMITTED verdict when the projection below inevitably failed. Both facts inverted.
+                let shClass = downstreamClass parsesAsShipView (shipPath workId)
 
                 // Governance handoff currency. The handoff is a pure projection over the work
                 // model + verify/ship, so refresh CAN faithfully regenerate it — but only when its
                 // ship source is itself current (regenerating against a stale ship would mix
-                // versions). When ship is stale/missing/malformed/blocked, the handoff inherits
-                // that state; when ship is clean, the handoff is re-projected and restored.
+                // versions). When ship is stale/missing/blocked, the handoff inherits that state;
+                // when ship is clean, the handoff is re-projected and restored.
+                //
+                // Feature 095 (FR-017): `Malformed` is the one class the handoff must NOT inherit.
+                // `Malformed` is a statement about a file's own bytes, and the handoff's bytes are fine —
+                // it is its SOURCE that will not parse. The handoff is therefore `Blocked`: "cannot be
+                // refreshed until upstream `ship.json` is current", which is exactly true. This is the
+                // same false-attribution that FR-004 removes from `ship-verdict`, one artifact over; it
+                // would be incoherent to fix the verdict and leave the handoff lying in the same report.
                 let govView, govEffects, govClass =
-                    let inheritShip () = None, [], shClass
+                    let inheritShip () =
+                        let inherited =
+                            if shClass = ViewCurrencyClass.Malformed then
+                                ViewCurrencyClass.Blocked
+                            else
+                                shClass
+
+                        None, [], inherited
 
                     if wmClass = ViewCurrencyClass.Blocked then
                         None, [], ViewCurrencyClass.Blocked
@@ -496,16 +544,19 @@ module internal HandlersRefresh =
                 // against a stale ship would commit a verdict for inputs that no longer exist.
                 // Unlike the handoff it needs no work model, so it depends on shClass alone.
                 //
-                // Two asymmetries with the handoff, both because the verdict is DURABLE:
-                //  * `shClass` is computed from `parsesAsJson`, which is weaker than `parseShipView`.
-                //    A `ship.json` that is valid JSON but not a valid ship view (future schemaVersion,
-                //    bad workId/stage) yields `AlreadyCurrent` here and a failed projection. That is a
-                //    MALFORMED source, not a silent no-op: report it, or refresh exits 0 saying
-                //    "refreshed-current" while the committed verdict silently keeps a stale answer.
-                //  * `ship.json` is gitignored and the verdict is committed, so a fresh clone has the
-                //    verdict WITHOUT its source. Inheriting `Missing` there would report the one
-                //    artifact that survived the clone as absent. A present-but-unrefreshable verdict
-                //    is `Blocked` (upstream), never `Missing`.
+                // One asymmetry with the handoff, because the verdict is DURABLE: `ship.json` is
+                // gitignored and the verdict is committed, so a fresh clone has the verdict WITHOUT its
+                // source. Inheriting `Missing` there would report the one artifact that survived the
+                // clone as absent. A present-but-unrefreshable verdict is `Blocked` (upstream), never
+                // `Missing`.
+                //
+                // Feature 095 (FS.GG.SDD#188) removed a second asymmetry. `shClass` used to come from
+                // `parsesAsJson`, weaker than `parseShipView`: a valid-JSON/invalid-view `ship.json`
+                // reached the `AlreadyCurrent` arm below, failed to project, and was reported as a
+                // MALFORMED VERDICT — a false fact about a well-formed committed artifact, alongside a
+                // `ship: current` that was equally false. `shClass` now uses `parsesAsShipView`, so such
+                // a source is `Malformed` at its own row and the verdict falls through to `Blocked`:
+                // present, but its source cannot be trusted, so refresh cannot assess it.
                 let verdictOnDisk = snapshot (shipVerdictPath workId) model
 
                 // Each reported class must be true *of the verdict*, not merely inherited from ship:
@@ -524,7 +575,19 @@ module internal HandlersRefresh =
                                 match verdictOnDisk with
                                 | Some snap when snap.Text = json -> view, [], ViewCurrencyClass.AlreadyCurrent
                                 | _ -> view, effects, ViewCurrencyClass.Refreshed
+                            // UNREACHABLE since feature 095, retained for match totality. Reaching this
+                            // arm requires `shClass = AlreadyCurrent`, which now implies `parseShipView`
+                            // returned `Ok` (see `parsesAsShipView` above). `shipVerdictEmission` derives
+                            // `jsonOpt` from that same oracle over the same text (HandlersShip.fs:205),
+                            // so it cannot be `None` here. This was the line that stamped `Malformed` on
+                            // the well-formed committed verdict; the fix is that no input reaches it.
                             | None -> None, [], ViewCurrencyClass.Malformed
+                        // UNREACHABLE, retained for match totality (F# cannot prove the implication).
+                        // `shClass = AlreadyCurrent` is produced only by `downstreamClass`'s `Some snap`
+                        // branch, so `snapshot (shipPath workId) model` returned `Some`. `textOf` maps
+                        // over that same `snapshot`/`model`, so it cannot be `None`. Since feature 095
+                        // the arm is doubly unreachable: `AlreadyCurrent` additionally implies the
+                        // snapshot parsed as a ship view.
                         | None -> None, [], ViewCurrencyClass.Missing
                     // Present, and its source moved under it: the committed verdict no longer matches
                     // the authored inputs. That is `Stale` — the same word `ship` gets — and the
@@ -599,22 +662,37 @@ module internal HandlersRefresh =
                         | ViewCurrencyClass.Missing -> [ refreshBlockedUpstreamView viewPath (workModelPath workId) ]
                         | _ -> [])
 
-                // The verdict's upstream is `ship.json`, not the work model, and its `Malformed`
-                // means the *source* did not parse as a ship view — `shClass` only checks that the
-                // source is well-formed JSON. Without this row a committed artifact that refresh
-                // cannot bring to currency carries no diagnostic and the run reports success
-                // (feature 092).
+                // The verdict's upstream is `ship.json`, not the work model. Without this row a committed
+                // artifact that refresh cannot bring to currency would carry no diagnostic and the run
+                // would report success (feature 092).
                 let verdictDiags =
                     let verdictPath = shipVerdictPath workId
 
                     match verdictClass with
+                    // UNREACHABLE since feature 095 (see the `verdictClass` match): a source that fails
+                    // ship-view parsing now lands the verdict on `Blocked`, and `malformed` is reported
+                    // against `ship.json` itself by `downstreamDiags` above. Retained for totality.
                     | ViewCurrencyClass.Malformed ->
                         [ refreshMalformedGeneratedView
                               verdictPath
                               $"Source '{shipPath workId}' did not parse as a ship view, so '{verdictPath}' could not be re-projected; re-run `fsgg-sdd ship`." ]
-                    | ViewCurrencyClass.Blocked
-                    | ViewCurrencyClass.Missing -> [ refreshBlockedUpstreamView verdictPath (shipPath workId) ]
+                    | ViewCurrencyClass.Blocked -> [ refreshBlockedUpstreamView verdictPath (shipPath workId) ]
                     | ViewCurrencyClass.Stale -> [ refreshStaleView verdictPath [ shipPath workId ] ]
+                    // Feature 095 (FS.GG.SDD#188): an absent verdict is `Missing` whatever ails its
+                    // source — the currency word describes the ARTIFACT, and the artifact is absent. But
+                    // "absent" alone does not choose a SEVERITY, so this row consults the source's class.
+                    //
+                    // A `Stale` source means the ordinary edit-then-refresh (or fresh-clone-then-edit)
+                    // path, whose remediation is the plain `re-run ship` — identical to the case where
+                    // the verdict is present, which emits `refreshStaleView` (a warning) just below.
+                    // Emitting `blockedUpstreamView` (an error) here made two states that differ only in
+                    // whether a file exists report different severities for the same underlying fact.
+                    //
+                    // Any other source class (missing / malformed / blocked) means refresh genuinely
+                    // cannot assess the verdict against an upstream it cannot read: still an error.
+                    | ViewCurrencyClass.Missing when shClass = ViewCurrencyClass.Stale ->
+                        [ refreshStaleView verdictPath [ shipPath workId ] ]
+                    | ViewCurrencyClass.Missing -> [ refreshBlockedUpstreamView verdictPath (shipPath workId) ]
                     | _ -> []
 
                 let summaryRenderable = structuredAllClean

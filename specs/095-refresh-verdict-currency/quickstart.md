@@ -44,21 +44,30 @@ Set up a shipped work item:
 ```sh
 FSGG=./src/FS.GG.SDD.Cli/bin/Debug/net10.0/fsgg-sdd     # or `dotnet run --project src/FS.GG.SDD.Cli --`
 W=095-demo
-$FSGG init && $FSGG charter --id "$W" --title "Demo" && ... && $FSGG ship --id "$W"
+$FSGG init && $FSGG charter --work "$W" --title "Demo" && ... && $FSGG ship --work "$W"
 
 SHIP=readiness/$W/ship.json
 VERDICT=readiness/$W/ship-verdict.json
 ```
 
-Read the two facts under test with `jq`:
+Read the two facts under test with `jq`. **Two things to get right**, both verified against the real
+binary rather than assumed:
+
+- A **`Blocked` report routes to stderr**, not stdout (`Cli/Program.fs:91`). Every scenario below is a
+  blocked run, so redirect `2>&1` or you will `jq` an empty string.
+- `generatedViews[]` entries are keyed by **`kind`**; there is no `viewId` field
+  (`CommandSerialization.fs:553`). The `viewId` naming *does* exist, but on `refresh.perViewState`.
 
 ```sh
+# `2>&1` is load-bearing: a blocked refresh writes its report to stderr.
+report() { $FSGG refresh --root . --work "$W" 2>&1; }
+
 currency() {
-  $FSGG refresh --id "$W" --json \
-    | jq -r '.generatedViews[] | select(.viewId=="ship" or .viewId=="ship-verdict")
-             | "\(.viewId): \(.currency)"'
+  report | jq -r '.generatedViews[] | select(.kind=="ship" or .kind=="ship-verdict"
+                                             or .kind=="governance-handoff")
+                  | "\(.kind): \(.currency)"'
 }
-diags() { $FSGG refresh --id "$W" --json | jq -r '.diagnostics[] | "\(.severity) \(.id) \(.path)"'; }
+diags() { report | jq -r '.diagnostics[] | "\(.severity) \(.id) \(.artifact.path)"'; }
 ```
 
 ### Scenario A — the headline defect (matrix cell 5)
@@ -71,8 +80,16 @@ currency
 
 | | Output |
 |---|---|
-| **Before** | `ship: current` · `ship-verdict: malformed` |
-| **After** | `ship: malformed` · `ship-verdict: blocked` |
+| **Before** | `ship: current` · `ship-verdict: malformed` · `governance-handoff: blocked` |
+| **After** | `ship: malformed` · `ship-verdict: blocked` · `governance-handoff: blocked` |
+
+**`malformed` must name exactly one artifact** (FR-017) — the one whose bytes do not parse:
+
+```sh
+report | jq -r '[.generatedViews[] | select(.currency=="malformed") | .kind]'
+# => ["ship"]   (a naive fix yields ["ship","governance-handoff"] — the handoff inherits its
+#                source's class, so `Malformed` must be mapped to `Blocked` on the way through)
+```
 
 Confirm the committed artifact was never touched and is not what was called malformed:
 
@@ -85,7 +102,7 @@ diags     # after: the sole `malformedGeneratedView` names ship.json, not ship-v
 And the bucket projection of the same fact (FR-003a):
 
 ```sh
-$FSGG refresh --id "$W" --json | jq '.refresh | {alreadyCurrentViewIds, blockedViewIds}'
+report | jq '.refresh | {alreadyCurrentViewIds, blockedViewIds}'
 # before: "ship" in alreadyCurrentViewIds   after: "ship" in blockedViewIds
 ```
 
@@ -95,11 +112,11 @@ run always failed; it just blamed the wrong file.
 ### Scenario B — the severity asymmetry (matrix cells 7 vs 8)
 
 ```sh
-$FSGG ship --id "$W"                                      # restore a good ship.json + verdict
+$FSGG ship --work "$W"                                      # restore a good ship.json + verdict
 printf '\n## Appended\n' >> work/$W/spec.md               # make the source stale
 
 rm "$VERDICT" && diags | grep ship-verdict                # cell 8: verdict ABSENT
-$FSGG ship --id "$W" && printf '\n## Again\n' >> work/$W/spec.md
+$FSGG ship --work "$W" && printf '\n## Again\n' >> work/$W/spec.md
 diags | grep ship-verdict                                 # cell 7: verdict PRESENT
 ```
 
@@ -117,15 +134,21 @@ Same underlying state, same remediation (`re-run ship`), now the same severity. 
 # Cell 3: not JSON at all -> ship malformed, as before. The stronger oracle subsumes the weaker.
 echo '{ not json' > "$SHIP" && currency          # ship: malformed · ship-verdict: blocked
 
-# Cells 9-10: a valid ship view is byte-identical to pre-change behavior (FR-008)
-$FSGG ship --id "$W" && $FSGG refresh --id "$W" --json > /tmp/a.json
-$FSGG refresh --id "$W" --json > /tmp/b.json
+# Cells 9-10: a valid ship view is byte-identical to pre-change behavior (FR-008). These runs are
+# NOT blocked, so the report lands on stdout -- no `2>&1` here.
+$FSGG ship --work "$W" && $FSGG refresh --root . --work "$W" > /tmp/a.json
+$FSGG refresh --root . --work "$W" > /tmp/b.json
 diff /tmp/a.json /tmp/b.json && echo "deterministic across runs (SC-007)"
 
 # FR-002: analysis/verify keep the weaker gate on purpose (deliberately out of scope)
 echo '{ "schemaVersion": 99 }' > readiness/$W/analysis.json
-$FSGG refresh --id "$W" --json | jq -r '.generatedViews[] | select(.viewId=="analysis") | .currency'
+report | jq -r '.generatedViews[] | select(.kind=="analysis") | .currency'
 # -> "current"  (unchanged; a known weakness, spec §Out of Scope)
+
+# FR-016: a DEPRECATED but supported schemaVersion still parses -> still current. Adopting
+# `parseShipView` adopts the artifact layer's compatibility policy; it does not invent a stricter one.
+$FSGG ship --work "$W" && sed -i 's/"schemaVersion": 1/"schemaVersion": 0/' "$SHIP"
+report | jq -r '.generatedViews[] | select(.kind=="ship") | .currency'    # -> "current"
 ```
 
 ### Scenario D — the dead branch (FR-013)

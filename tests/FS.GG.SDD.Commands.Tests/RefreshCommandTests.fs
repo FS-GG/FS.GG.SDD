@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Commands.Tests
 
 open System.IO
+open System.Text.Json
 open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandSerialization
@@ -116,6 +117,36 @@ module RefreshCommandTests =
         Assert.Equal<int list>(expected, actual)
 
     [<Fact>]
+    let ``governance-handoff never inherits malformed from its source`` () =
+        // FR-017. `govClass` is `inheritShip ()` for every non-AlreadyCurrent source, which propagated
+        // `shClass` verbatim. Correcting `shClass` in cells 5/6 moved the handoff from `blocked` to
+        // `malformed` -- reintroducing, one artifact over, the false attribution this feature removes
+        // from `ship-verdict`. Cells 3/4 carried the same falsehood before this feature ever ran.
+        //
+        // `Malformed` is the ONE class the handoff must not inherit: it is a statement about a file's
+        // own bytes, and the handoff's bytes are fine. `Stale`/`Missing`/`Blocked` are all true of the
+        // handoff as well as of its source, so they pass through.
+        let expected =
+            [ 1, "missing" // ship absent
+              2, "missing"
+              3, "blocked" // ship not JSON            -- was "malformed" (pre-existing falsehood)
+              4, "blocked"
+              5, "blocked" // ship valid JSON, bad view -- a naive fix regresses this to "malformed"
+              6, "blocked"
+              7, "stale" // ship stale
+              8, "stale"
+              9, "current"
+              10, "current" ]
+
+        let actual =
+            matrixCells
+            |> List.map (fun (n, shipState, verdictPresent) ->
+                let report = TestSupport.runRefresh (cell shipState verdictPresent) workId
+                n, TestSupport.refreshViewState report "governance-handoff")
+
+        Assert.Equal<(int * string) list>(expected, actual)
+
+    [<Fact>]
     let ``every currency word in the matrix is true of the artifact it names`` () =
         // SC-001, the whole feature. Cells 5 and 6 are the defect: `ship: current` about a file that
         // does not parse as a ship view, and `ship-verdict: malformed` about a file that is perfectly
@@ -192,10 +223,57 @@ module RefreshCommandTests =
             |> List.map (fun d -> d.Id, d.Severity)
 
         for shipState in [ S1_Absent; S2_InvalidJson; S3_ValidJsonInvalidView ] do
+            let root = cell shipState false
+
             Assert.Equal<(string * DiagnosticSeverity) list>(
                 [ "refresh.blockedUpstreamView", DiagnosticSeverity.DiagnosticError ],
-                verdictDiagnosticOf (cell shipState false)
+                verdictDiagnosticOf root
             )
+
+            // FR-006: refresh plans no WriteFile for the verdict from a source it cannot trust. Asserted
+            // on the filesystem rather than the effect list — the observable fact, not the intent.
+            Assert.False(
+                TestSupport.existsRelative root shipVerdictPath,
+                $"refresh must not synthesise a verdict from a {shipState} ship.json."
+            )
+
+    [<Fact>]
+    let ``a deprecated but supported ship json schema stays current`` () =
+        // FR-016. Adopting `parseShipView` adopts the artifact layer's compatibility policy EXACTLY.
+        // `parseJsonView` builds the view for both `Current` and `Deprecated` status
+        // (LifecycleArtifacts/Internal.fs), and `classifyRaw` calls major-0 `Deprecated`. So the stricter
+        // oracle must NOT start calling every non-current schema malformed -- only the ones the artifact
+        // layer already refuses to read (Unsupported / Future / missing / structurally broken).
+        //
+        // Without this test, a later tightening of `parseJsonView` would silently reclassify a working
+        // workspace's ship.json as `malformed` and no one would notice until a consumer's CI went red.
+        let root = shippedProject ()
+        let shipFile = absolute root shipPath
+
+        let deprecated =
+            File.ReadAllText(shipFile).Replace("\"schemaVersion\": 1", "\"schemaVersion\": 0")
+
+        Assert.Contains("\"schemaVersion\": 0", deprecated) // the fixture actually mutated
+        File.WriteAllText(shipFile, deprecated)
+
+        let report = TestSupport.runRefresh root workId
+
+        Assert.Equal("current", TestSupport.refreshViewState report "ship")
+
+    [<Fact>]
+    let ``the stronger ship-view oracle does not leak onto analysis or verify`` () =
+        // FR-002. `downstreamClass` takes its validator as a PARAMETER precisely so that "analysis and
+        // verify are unchanged" is a call-site fact, not a runtime accident. They keep the weaker
+        // `parsesAsJson` gate: each would need its own oracle, state matrix, and regression sweep
+        // (spec §Out of Scope). This test pins that scope -- if someone later widens `downstreamClass`
+        // to schema-validate everything, this goes red and the decision gets made deliberately.
+        for view, path in [ "analysis", analysisPath; "verify", verifyPath ] do
+            let root = shippedProject ()
+            File.WriteAllText(absolute root path, "{ \"schemaVersion\": 99 }")
+
+            let report = TestSupport.runRefresh root workId
+
+            Assert.Equal("current", TestSupport.refreshViewState report view)
 
     // --- Feature 092 (ADR-0026): refresh re-projects the committed verdict ---
 
@@ -708,6 +786,50 @@ module RefreshCommandTests =
         let exitCode, _, _ = runRefreshCli root [ "--dry-run" ]
         Assert.Equal(0, exitCode)
         Assert.False(TestSupport.existsRelative root summaryPath)
+
+    [<Fact>]
+    let ``refresh CLI smoke names ship json as the malformed artifact`` () =
+        // Feature 095 through the REAL host binary -- the JSON an operator or CI job actually reads.
+        // Matrix cell 5, quickstart Scenario A. The in-process tests assert the CommandReport; this
+        // asserts the bytes on stdout, which is the surface the contract is stated in.
+        let root = shippedProject ()
+        File.WriteAllText(absolute root shipPath, "{ \"schemaVersion\": 99 }")
+
+        let exitCode, stdout, stderr = runRefreshCli root []
+
+        // The exit code did not move (FR-007): the run always failed, it just blamed the wrong file.
+        Assert.Equal(1, exitCode)
+
+        // A `Blocked` report routes to stderr, not stdout (Cli/Program.fs). Unchanged by feature 095,
+        // and asserted here so the stream routing stays part of what this smoke pins (FR-015).
+        Assert.Equal("", stdout.Trim())
+
+        use document = JsonDocument.Parse stderr
+
+        // `generatedViews[]` is keyed by `kind`, not by a `viewId` field.
+        let currencyOf kind =
+            document.RootElement.GetProperty("generatedViews").EnumerateArray()
+            |> Seq.find (fun view -> view.GetProperty("kind").GetString() = kind)
+            |> fun view -> view.GetProperty("currency").GetString()
+
+        Assert.Equal("malformed", currencyOf "ship") // FR-003: was "current"
+        Assert.Equal("blocked", currencyOf "ship-verdict") // FR-004: was "malformed"
+
+        // FR-017. `malformed` must name exactly ONE artifact in this report -- ship.json, whose bytes
+        // really do not parse. Every other view is `blocked` on it. Asserting the whole set (rather than
+        // ship-verdict alone) is what caught `governance-handoff` inheriting `malformed` from its source.
+        let malformedKinds =
+            document.RootElement.GetProperty("generatedViews").EnumerateArray()
+            |> Seq.filter (fun view -> view.GetProperty("currency").GetString() = "malformed")
+            |> Seq.map (fun view -> string (view.GetProperty("kind").GetString()))
+            |> List.ofSeq
+
+        Assert.Equal<string list>([ "ship" ], malformedKinds)
+        Assert.Equal("blocked", currencyOf "governance-handoff")
+
+        // The committed verdict is untouched, and demonstrably well-formed -- it was never malformed.
+        use _ = JsonDocument.Parse(TestSupport.readRelative root shipVerdictPath)
+        ()
 
     // --- 056 US3 (T023 / FR-009 / P8): refresh re-mirrors the three-root union ---
 

@@ -79,6 +79,28 @@ addition — the `AlreadyCurrentViewIds`/`BlockedViewIds` bucket move (research 
 new complexity: it is a consequence of `classifyToBucket`'s existing `| _ ->` arm, requiring zero code
 beyond the `shClass` correction. No new gate is implicated.
 
+### Post-implementation re-check
+
+**Still PASS**, with two FRs added *during* implementation because the evidence demanded them:
+
+- **FR-016** (deprecated schema stays `current`) — adopting `parseShipView` adopts `parseJsonView`'s
+  compatibility policy verbatim. Discovered by reading `classifyRaw`; pinned by a test so a later
+  tightening cannot silently reclassify a working workspace.
+- **FR-017** (`governance-handoff` never inherits `malformed`) — discovered by **Principle VI in
+  action**. Thirty-six in-process tests were green while the real CLI reported
+  `governance-handoff: malformed` about a well-formed file: the fix had reintroduced its own defect one
+  artifact over, via `inheritShip`'s verbatim propagation of `shClass`. Real process evidence beat
+  transitive coverage, exactly as the constitution says it should.
+
+Both *strengthen* Principle VIII (malformed input is distinguished from a sound artifact) and neither
+adds complexity: FR-017 is a three-line `Malformed → Blocked` map on an existing closure. Tier stays 1;
+still no `.fsi`, no schema version, no new diagnostic id.
+
+**Scope note.** FR-017 also corrects matrix cells 3/4, where `governance-handoff` was reported
+`malformed` *before* this feature. That is a pre-existing falsehood of the same class, in the same
+report, one line from the code being changed. Fixing the verdict's false `malformed` while leaving the
+handoff's in the same output would be incoherent.
+
 ## Project Structure
 
 ### Documentation (this feature)
@@ -106,6 +128,7 @@ src/FS.GG.SDD.Commands/
 │                                 #   :350  parsesAsJson        — kept, rewrapped for FileSnapshot
 │                                 #   :438  downstreamClass     — gains an `isValid` parameter
 │                                 #   :451-453 call sites       — ship gets parsesAsShipView
+│                                 #   :495  inheritShip         — maps Malformed → Blocked (FR-017)
 │                                 #   :514-539 verdictClass     — :527 becomes unreachable
 │                                 #   :528  dead branch         — gains the invariant comment (FR-013)
 │                                 #   :607-618 verdictDiags     — Missing arm splits on shClass

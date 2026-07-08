@@ -45,12 +45,12 @@ Constitution III are not triggered.
 
 ## Phase 1: Setup
 
-- [ ] **T001** Build the worktree green at baseline: `dotnet build` from
+- [X] **T001** Build the worktree green at baseline: `dotnet build` from
   `/home/developer/projects/FS.GG.SDD-188`. If `NU1403` fires on `FSharp.Core`, run
   `dotnet restore --force-evaluate` then `git checkout -- '**/packages.lock.json'` to revert the lock
   churn. Confirms the branch starts from a clean `39fa3e5`.
 
-- [ ] **T002** Capture the **pre-change** exit code and JSON report for each of the 10 matrix cells in
+- [X] **T002** Capture the **pre-change** exit code and JSON report for each of the 10 matrix cells in
   [contracts/refresh-currency-matrix.md](./contracts/refresh-currency-matrix.md), into
   `/tmp/claude-1000/.../scratchpad/095-baseline/`. These become the expected values for T005's
   invariance table (SC-004) and the evidence for FR-007. **Do not skip**: FR-007 is the claim most
@@ -63,7 +63,7 @@ Constitution III are not triggered.
 Semantic tests through the observable contract, before the `.fs` body hardens. All three tasks edit the
 same file, so they are **not** `[P]` with respect to each other; sequence them T003 → T004 → T005.
 
-- [ ] **T003** [US1] Correct the characterization test
+- [X] **T003** [US1] Correct the characterization test
   ``a ship json that is valid json but not a ship view blocks the verdict with a diagnostic``
   at `tests/FS.GG.SDD.Commands.Tests/RefreshCommandTests.fs:88-113` to assert the **true** facts
   (matrix cell 5):
@@ -76,7 +76,7 @@ same file, so they are **not** `[P]` with respect to each other; sequence them T
   Keep `Assert.Equal(original, … shipVerdictPath)` (FR-006) and the existing `BlockedViewIds` assertion
   (they pass before and after). **This test must go RED.**
 
-- [ ] **T004** [US2] Add the missing test for matrix cell 8 — the state whose absence let the asymmetry
+- [X] **T004** [US2] Add the missing test for matrix cell 8 — the state whose absence let the asymmetry
   survive review (research R5). In `RefreshCommandTests.fs`, on a `shippedProject ()`: delete
   `ship-verdict.json`, append to `work/<id>/spec.md` to make the source stale, run `refresh`, and assert
   - `ship-verdict` currency is `missing` (FR-010), and
@@ -84,7 +84,7 @@ same file, so they are **not** `[P]` with respect to each other; sequence them T
     `refresh.blockedUpstreamView`.
   Assert against the diagnostic **id and severity**, not the message text. **This test must go RED.**
 
-- [ ] **T005** Add the exit-code invariance table test over all 10 matrix cells (SC-004, FR-007). Drive
+- [X] **T005** Add the exit-code invariance table test over all 10 matrix cells (SC-004, FR-007). Drive
   each `{ship.json} × {ship-verdict.json}` state, assert the exit code equals T002's captured baseline.
   **This test must be GREEN before and after** the source change — it is a regression lock, not a
   red-green test. If it is red before T006, the invariance claim in research R3 is wrong and the plan
@@ -98,17 +98,17 @@ same file, so they are **not** `[P]` with respect to each other; sequence them T
 **Independent test**: T003 goes green; matrix cells 5 and 6 report `ship: malformed` /
 `ship-verdict: blocked`/`missing`.
 
-- [ ] **T006** [US1] In `HandlersRefresh.fs`, lift the JSON predicate to the validator shape. Keep
+- [X] **T006** [US1] In `HandlersRefresh.fs`, lift the JSON predicate to the validator shape. Keep
   `parsesAsJson : string -> bool` (`:350`) and add a thin `parsesAsJsonSnap : FileSnapshot -> bool`
   (= `fun snap -> parsesAsJson snap.Text`), so both validators share one signature.
 
-- [ ] **T007** [US1] Add `parsesAsShipView : FileSnapshot -> bool`
+- [X] **T007** [US1] Add `parsesAsShipView : FileSnapshot -> bool`
   (= `ShipModule.parseShipView >> Result.isOk`) next to it. `parseShipView` accepts a `FileSnapshot`
   directly (`Ship.fsi:55`), so pass the snapshot verbatim — no re-read, no reconstruction (research R1).
   Note in a comment that it is strictly stronger than `parsesAsJsonSnap` (non-JSON fails inside
   `parseJsonView`), which is what makes US1-AS4 hold without a second check.
 
-- [ ] **T008** [US1] Change `downstreamClass` (`:438`) to take the validator as its first parameter —
+- [X] **T008** [US1] Change `downstreamClass` (`:438`) to take the validator as its first parameter —
   `downstreamClass (isValid: FileSnapshot -> bool) path` — and replace the hardcoded
   `not (parsesAsJson snap.Text)` at `:444` with `not (isValid snap)`. Update the three call sites
   (`:451-453`):
@@ -118,7 +118,7 @@ same file, so they are **not** `[P]` with respect to each other; sequence them T
   Do **not** branch on `path = shipPath workId` inside the helper — rejected in research R2; it makes
   FR-002 a runtime accident instead of a call-site fact.
 
-- [ ] **T009** [US1] Verify the consequences rather than assuming them. Run T003 and T005.
+- [X] **T009** [US1] Verify the consequences rather than assuming them. Run T003 and T005.
   - T003 green ⇒ FR-003, FR-003a, FR-004, FR-005.
   - T005 still green ⇒ FR-007 / SC-004 (exit codes did not move).
   - Assert the planned effect list contains **no** `WriteFile` for `ship-verdict.json` in cells 5 and 6
@@ -126,7 +126,7 @@ same file, so they are **not** `[P]` with respect to each other; sequence them T
   If T005 goes red here, **stop**: research R3's `structuredClasses`-membership argument is unsound and
   the feature is a behavior change, not a re-attribution. Escalate rather than adjusting the test.
 
-- [ ] **T010** [US1] Confirm `:527`'s `| None -> … Malformed` is now unreachable (the
+- [X] **T010** [US1] Confirm `:527`'s `| None -> … Malformed` is now unreachable (the
   `(AlreadyCurrent, _)` arm is entered only when `parseShipView` returned `Ok`, and
   `shipVerdictEmission` re-derives from the same oracle at `HandlersShip.fs:205`). **Retain the arm**
   for match totality; add a comment saying so and why. Do not delete it — F# cannot prove the
@@ -141,7 +141,7 @@ same file, so they are **not** `[P]` with respect to each other; sequence them T
 **Goal**: a stale `ship.json` reports the same severity whether or not the verdict is present.
 **Independent test**: T004 goes green; matrix cells 7 and 8 emit equal severities.
 
-- [ ] **T011** [US2] In `verdictDiags` (`:607-618`), split the `Missing` arm on the **source's** class:
+- [X] **T011** [US2] In `verdictDiags` (`:607-618`), split the `Missing` arm on the **source's** class:
   - `shClass = Stale` → `refreshStaleView verdictPath [ shipPath workId ]` (warning, FR-009)
   - otherwise → `refreshBlockedUpstreamView verdictPath (shipPath workId)` (error, FR-011)
   Leave the `Blocked`, `Stale`, and `Malformed` arms alone (FR-012). Reuse the existing constructors —
@@ -149,7 +149,7 @@ same file, so they are **not** `[P]` with respect to each other; sequence them T
   Comment why the verdict's diagnostic must consult its source's class while its *currency word* must
   not (FR-010): "the verdict is absent" does not by itself choose a severity.
 
-- [ ] **T012** [US2] Run T004 (green) and re-run the cells 2/4/6 assertions: an absent verdict over a
+- [X] **T012** [US2] Run T004 (green) and re-run the cells 2/4/6 assertions: an absent verdict over a
   **non-stale** source must still emit `refresh.blockedUpstreamView` (error). FR-011 is the guardrail
   that keeps T011 from over-reaching into the genuinely-blocked states.
 
@@ -159,7 +159,7 @@ same file, so they are **not** `[P]` with respect to each other; sequence them T
 
 ## Phase 5: User Story 3 (P3) — a reader can tell a dead branch from a live one
 
-- [ ] **T013** [US3] Comment the unreachable `| None -> … Missing` arm at `:528` (FR-013). State the
+- [X] **T013** [US3] Comment the unreachable `| None -> … Missing` arm at `:528` (FR-013). State the
   invariant (`shClass = AlreadyCurrent` ⇒ `snapshot (shipPath workId) model = Some` ⇒ `textOf` cannot be
   `None`), name the establishing line (`:445`, `downstreamClass`'s `Some snap` branch), and record that
   after T008 the arm is *doubly* unreachable. Retain for match totality. **No behavior change; verified
@@ -169,28 +169,44 @@ same file, so they are **not** `[P]` with respect to each other; sequence them T
 
 ## Phase 6: Polish & verification
 
-- [ ] **T014** [P] Full sweep: `dotnet test`. All green.
+- [X] **T014** [P] Full sweep: `dotnet test`. All green.
 
-- [ ] **T015** [P] Regression evidence (research R5) — confirm these four tests were **not edited** and
+- [X] **T015** [P] Regression evidence (research R5) — confirm these four tests were **not edited** and
   still pass, `git diff` clean on their line ranges:
   `refresh does not rewrite the verdict from a malformed ship json` (`:74`),
   `a fresh clone …` (`:116`),
   `an edited source makes the committed verdict stale, not blocked` (`:129`),
   `refresh does not write a verdict when both ship json and the verdict are missing` (`:149`).
 
-- [ ] **T016** [P] FR-008 / SC-007: `refresh` twice against a valid, unchanged work item — byte-identical
+- [X] **T016** [P] FR-008 / SC-007: `refresh` twice against a valid, unchanged work item — byte-identical
   reports. Confirm no golden under `tests/FS.GG.SDD.Commands.Tests/goldens/readiness` moved
   (`git status`), which also keeps this branch's touch-set disjoint from the in-flight FS.GG.SDD#164.
 
-- [ ] **T017** [P] FR-002 guardrail: an `analysis.json` in state S3 (valid JSON, invalid view) still
+- [X] **T017** [P] FR-002 guardrail: an `analysis.json` in state S3 (valid JSON, invalid view) still
   reports `current`. Proves the stronger oracle did not leak beyond `ship.json`
   (quickstart Scenario C).
 
-- [ ] **T018** Walk [quickstart.md](./quickstart.md) Scenarios A–D by hand against a real fixture,
-  observing actual CLI output. Constitution VI prefers real filesystem/process evidence over
-  transitive coverage; the CLI is the surface the operator actually reads.
+- [X] **T017a** [P] FR-016 guardrail (added during implementation): a `ship.json` with a *deprecated but
+  supported* `schemaVersion` (major 0) still reports `current`. Adopting `parseShipView` adopts the
+  artifact layer's compatibility policy verbatim — it must not invent a stricter one. Without this, a
+  later tightening of `parseJsonView` silently reclassifies a working workspace's `ship.json`.
 
-- [ ] **T019** `git diff --stat` touches exactly `HandlersRefresh.fs` and `RefreshCommandTests.fs`
+- [X] **T018** Drive the **real host binary** (not the in-process report) for matrix cell 5 and assert
+  the emitted JSON. Constitution VI prefers real process evidence over transitive coverage; the CLI is
+  the surface the operator and CI actually read.
+  **This task earned its keep.** It found three things 36 green in-process tests did not:
+  1. **FR-017** — `governance-handoff` inherited `Malformed` from `shClass`, so the fix reintroduced the
+     feature's own defect one artifact over. Fixed by mapping `Malformed → Blocked` in `inheritShip`.
+  2. A `Blocked` report routes to **stderr**, not stdout (`Cli/Program.fs:91`).
+  3. `generatedViews[]` entries are keyed by **`kind`**; there is no `viewId` field. `spec.md`,
+     `quickstart.md`, and `contracts/` had all asserted a field name that does not exist.
+
+- [X] **T018a** [US1] Implement FR-017: `inheritShip` maps `Malformed → Blocked`; every other class
+  passes through unchanged. Pin with (a) a 10-cell `governance-handoff` matrix test and (b) a CLI-smoke
+  assertion that the **whole set** of `malformed` rows equals `["ship"]` — asserting only that
+  `ship-verdict` is absent from it would have shipped the handoff bug.
+
+- [X] **T019** `git diff --stat` touches exactly `HandlersRefresh.fs` and `RefreshCommandTests.fs`
   (plus `specs/095-*`). Any other path means the touch-set widened and ADR-0021 requires re-running
   `scripts/fsgg-coord overlap FS.GG.SDD#188 FS.GG.SDD#164` and `… #171` before proceeding.
 

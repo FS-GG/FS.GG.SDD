@@ -148,6 +148,9 @@ alone: the report stops making two false claims.
 7. **Given** a work item whose `ship.json` is valid JSON but not a valid ship view, **When**
    `fsgg-sdd refresh` runs, **Then** the refresh summary lists `ship` in `blockedViewIds` and **not**
    in `alreadyCurrentViewIds` — the same correction, told through the second field that carried it.
+8. **Given** any work item, **When** `fsgg-sdd refresh` runs, **Then** at most one `generatedViews[]`
+   row reports `currency: malformed`, and it is the artifact whose own bytes do not parse. In
+   particular `governance-handoff` reports `blocked`, never `malformed`, when `ship.json` is malformed.
 
 ---
 
@@ -223,6 +226,14 @@ establishing site. No runtime assertion is possible for unreachable code.
 - **A future `schemaVersion` that `parseShipView` accepts.** Out of this feature's reach: whatever
   `parseShipView` accepts is, by definition, a valid ship view. This feature adopts `parseShipView`
   as the oracle; it does not redefine it.
+- **A *deprecated* (older, still supported) `schemaVersion`.** `parseJsonView`
+  (`LifecycleArtifacts/Internal.fs:434-436`) builds the view for both `Current` **and** `Deprecated`
+  status, so such a `ship.json` parses `Ok` and keeps reporting `current`. Only `Unsupported` (too
+  old), `Future` (too new), a missing/malformed `schemaVersion`, and structural failures produce
+  `Error` — and therefore `malformed`. Adopting `parseShipView` wholesale means adopting exactly this
+  policy: the stricter oracle does **not** start rejecting every non-current schema, only the ones the
+  artifact layer already refuses to read. FR-016 pins the deprecated case so a later tightening of
+  `parseJsonView` cannot silently reclassify a working workspace's `ship.json` as malformed.
 
 ## Requirements *(mandatory)*
 
@@ -271,6 +282,15 @@ establishing site. No runtime assertion is possible for unreachable code.
   `work-model.json`, and the release baseline are untouched on disk.
 - **FR-015**: The `--json`, `--text`, and `--rich` projections MUST continue to report the same facts
   as each other; `--rich` MUST add and drop no facts and change no JSON byte.
+- **FR-016**: `refresh` MUST report `ship: current` for a `ship.json` whose `schemaVersion` is
+  *deprecated but supported*. Adopting `parseShipView` adopts the artifact layer's existing
+  compatibility policy exactly — it MUST NOT reclassify as `malformed` any schema the artifact layer
+  is still willing to read.
+- **FR-017**: When `ship.json` is `malformed`, `refresh` MUST report `governance-handoff` currency as
+  `blocked`, not `malformed`. The handoff must not inherit `Malformed` from its source: `malformed` is
+  a statement about a file's own bytes, and the handoff's bytes are well-formed. In any single
+  `refresh` report, **`malformed` MUST name at most one artifact — the one whose bytes do not parse.**
+  Every dependent view is `blocked` on it.
 
 ### Key Entities
 
