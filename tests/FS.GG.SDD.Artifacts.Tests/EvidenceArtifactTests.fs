@@ -7,6 +7,11 @@ open Xunit
 module EvidenceArtifactTests =
     let evidencePath = "work/011-evidence-command/evidence.yml"
 
+    // DELIBERATELY VERBOSE (feature 091). This fixture keeps the explicit
+    // `syntheticDisclosure/rationale/owner/scope/laterLifecycleVisibility: null` lines that the
+    // writer no longer emits, because it exercises the *reader's* backward compatibility with
+    // files written by an older CLI or authored by hand (FR-005). Do not "helpfully" slim it —
+    // `slimEvidenceYaml` below is the writer-shaped counterpart, and the two are asserted equal.
     let validEvidenceYaml =
         """schemaVersion: 1
 workId: 011-evidence-command
@@ -52,6 +57,22 @@ evidence:
 lifecycleNotes:
   - Next lifecycle action: verify.
 """
+
+    /// The same document in the shape feature 091's writer emits: the five always-null optional
+    /// keys are omitted rather than written as `null`. Byte-for-byte identical to
+    /// `validEvidenceYaml` apart from those five lines.
+    let slimEvidenceYaml =
+        validEvidenceYaml
+            .Replace("    syntheticDisclosure: null\n", "")
+            .Replace("    rationale: null\n", "")
+            .Replace("    owner: null\n", "")
+            .Replace("    scope: null\n", "")
+            .Replace("    laterLifecycleVisibility: null\n", "")
+
+    let private declarationsOf label text =
+        match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+        | Ok artifact -> artifact.Evidence
+        | Error diagnostics -> failwith $"Expected the {label} evidence artifact to parse, got {diagnostics}."
 
     [<Fact>]
     let ``parseEvidenceArtifact reads schema version 1 shape`` () =
@@ -104,6 +125,38 @@ lifecycleNotes:
             Assert.Equal(Some "null", declaration.Rationale)
             Assert.Equal(Some "null", declaration.Owner)
         | Error diagnostics -> failwith $"Expected evidence artifact to parse, got {diagnostics}."
+
+    [<Fact>]
+    let ``parseEvidenceArtifact reads an omitted optional key identically to an explicit null`` () =
+        // Feature 091 / FR-005 / SC-003. The writer stops emitting the five always-null optional
+        // keys. That is only a *serialization* change — not a schema change — because the reader
+        // already collapses "key absent" (tryChild -> None) and "key present, plain null"
+        // (isPlainNullScalar -> None) to the same value. This test is the load-bearing proof, and
+        // it passes against the UNMODIFIED reader: if it ever fails, omission is a breaking change
+        // and schemaVersion must be bumped.
+        let verbose = declarationsOf "verbose" validEvidenceYaml
+        let slim = declarationsOf "slim" slimEvidenceYaml
+
+        // Guard the fixture itself: the two texts must actually differ by exactly the five lines.
+        Assert.Equal(5, validEvidenceYaml.Split('\n').Length - slimEvidenceYaml.Split('\n').Length)
+        Assert.DoesNotContain("rationale:", slimEvidenceYaml)
+        Assert.DoesNotContain("syntheticDisclosure:", slimEvidenceYaml)
+
+        Assert.Equal<EvidenceDeclaration list>(verbose, slim)
+
+    [<Fact>]
+    let ``parseEvidenceArtifact reads every plain null token and an omitted key as None`` () =
+        // FR-005 / FR-006 boundary, pinned against the unmodified reader: `null`, `Null`, `NULL`,
+        // `~`, an empty value, and an absent key are all *absence*. Only a quoted "null" is a value.
+        let rationaleOf text =
+            (declarationsOf "variant" text |> List.exactlyOne).Rationale
+
+        for token in [ "null"; "Null"; "NULL"; "~"; "" ] do
+            let text = validEvidenceYaml.Replace("rationale: null", $"rationale: {token}")
+            Assert.Equal(None, rationaleOf text)
+
+        Assert.Equal(None, rationaleOf slimEvidenceYaml)
+        Assert.Equal(Some "null", rationaleOf (validEvidenceYaml.Replace("rationale: null", "rationale: \"null\"")))
 
     [<Fact>]
     let ``parseEvidenceArtifact reports duplicate evidence ids as artifact diagnostics`` () =
