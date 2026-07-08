@@ -900,8 +900,8 @@ module internal DiagnosticConstructors =
         errorDiagnostic
             "agents.behaviorDivergence"
             (Some path)
-            "Configured agent targets would describe divergent workflow behavior for the same lifecycle model."
-            "Regenerate the divergent target guidance from the shared normalized work model so Claude and Codex behavior matches."
+            "Configured agent targets record different workflow behavior for the same lifecycle model, so at least one generated guidance manifest was modified outside the generator."
+            "Delete the listed targets' agent-commands directory so the guidance is regenerated from the shared normalized work model, then re-run this command."
             targetIds
 
     let agentsUnsafeGeneratedViewRefresh path relatedIds =

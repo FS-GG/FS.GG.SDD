@@ -173,6 +173,110 @@ module AgentsCommandTests =
         | Some summary -> Assert.Contains("codex", summary.DivergentTargetIds)
         | None -> failwith "Expected agent-guidance summary."
 
+    // --- Regression: FS.GG.SDD#197 — staleness is not divergence ---
+    //
+    // Both targets are rendered from one NormalizedGuidanceModel, so they cannot diverge from each
+    // other by construction. The guard used to compare each target's recorded digest against the
+    // recomputed one — i.e. staleness — and block, refusing the regeneration its own remediation
+    // demanded. The tests below pin the two conditions apart. `agents blocks divergent existing
+    // guidance…` above tampers ONE target and so passed under either reading; it never covered the
+    // ordinary "sources changed, both targets equally stale, regenerate" path that these do.
+
+    /// Stale both targets the way an ordinary authored edit does: retitle a task, rebuild the model.
+    let private retitleTaskAndRebuildWorkModel root =
+        let tasksPath = $"work/{workId}/tasks.yml"
+        let tasks = TestSupport.readRelative root tasksPath
+
+        let retitled =
+            tasks.Replace("title: \"Implement requirement FR-001\"", "title: \"Implement the FR-001 requirement\"")
+
+        Assert.True(
+            tasks <> retitled,
+            "Fixture drift: the generated tasks.yml no longer contains the FR-001 task title."
+        )
+
+        TestSupport.writeRelative root tasksPath retitled
+        TestSupport.runVerify root workId title |> ignore
+
+    let private behaviorDigestOf root target =
+        (readManifest root target).BehaviorModelDigest.Value
+
+    [<Fact>]
+    let ``agents regenerates equally stale guidance on both targets instead of blocking`` () =
+        let root = initializedVerifiedProject ()
+        TestSupport.runAgents root workId |> ignore
+        let staleClaude = behaviorDigestOf root "claude"
+        let staleCodex = behaviorDigestOf root "codex"
+
+        retitleTaskAndRebuildWorkModel root
+        let report = TestSupport.runAgents root workId
+
+        // Staleness regenerates. It does not block, and it is not divergence.
+        Assert.Equal(CommandOutcome.SucceededWithWarnings, report.Outcome)
+        Assert.DoesNotContain(report.Diagnostics, (fun d -> d.Id = "agents.behaviorDivergence"))
+        Assert.Contains(report.Diagnostics, (fun d -> d.Id = "agents.staleGeneratedGuidance"))
+
+        match report.AgentGuidance with
+        | Some summary -> Assert.Empty summary.DivergentTargetIds
+        | None -> failwith "Expected agent-guidance summary."
+
+        // Both targets were actually rewritten, and still agree with each other.
+        let freshClaude = behaviorDigestOf root "claude"
+        let freshCodex = behaviorDigestOf root "codex"
+        Assert.NotEqual<string>(staleClaude, freshClaude)
+        Assert.NotEqual<string>(staleCodex, freshCodex)
+        Assert.Equal<string>(freshClaude, freshCodex)
+
+    [<Fact>]
+    let ``agents converges to no change after regenerating stale guidance`` () =
+        let root = initializedVerifiedProject ()
+        TestSupport.runAgents root workId |> ignore
+        retitleTaskAndRebuildWorkModel root
+        TestSupport.runAgents root workId |> ignore
+
+        // The old guard never self-healed: a second run blocked exactly like the first.
+        let report = TestSupport.runAgents root workId
+        Assert.Equal(CommandOutcome.NoChange, report.Outcome)
+        TestSupport.assertAgentGuidanceSummary report "agentGuidanceReady" "generated-current"
+
+    [<Fact>]
+    let ``refresh regenerates stale agent guidance rather than silently preserving it`` () =
+        let root = initializedVerifiedProject ()
+        TestSupport.runAgents root workId |> ignore
+        let stale = behaviorDigestOf root "claude"
+
+        retitleTaskAndRebuildWorkModel root
+        TestSupport.runRefresh root workId |> ignore
+
+        // On main, refresh reported `succeeded` while leaving this digest untouched.
+        Assert.NotEqual<string>(stale, behaviorDigestOf root "claude")
+
+    [<Fact>]
+    let ``agents reports divergence once, without a redundant staleness warning`` () =
+        let root = initializedVerifiedProject ()
+        TestSupport.runAgents root workId |> ignore
+
+        let codexGuidance = $"{codexRoot}/guidance.json"
+
+        let tampered =
+            System.Text.RegularExpressions.Regex.Replace(
+                TestSupport.readRelative root codexGuidance,
+                "(\"behaviorModelDigest\": \\{\\s*\"algorithm\": \"sha256\",\\s*\"value\": \")[a-f0-9]{64}",
+                "${1}" + System.String('a', 64)
+            )
+
+        TestSupport.writeRelative root codexGuidance tampered
+
+        let report = TestSupport.runAgents root workId
+
+        let divergence =
+            report.Diagnostics |> List.filter (fun d -> d.Id = "agents.behaviorDivergence")
+
+        // One condition, one diagnostic — previously 2x divergence + 2x staleness for one cause.
+        Assert.Single divergence |> ignore
+        Assert.DoesNotContain(report.Diagnostics, (fun d -> d.Id = "agents.staleGeneratedGuidance"))
+        Assert.Equal<string list>([ "codex" ], divergence.Head.RelatedIds)
+
     [<Fact>]
     let ``agents refuses malformed existing guidance manifest`` () =
         let root = initializedVerifiedProject ()
@@ -283,3 +387,15 @@ module AgentsCommandTests =
         let exitCode, stdout, _ = runAgentsCli root [ "--text" ]
         Assert.Equal(0, exitCode)
         Assert.Contains("agentsDisposition: generated-current", stdout)
+
+    // FS.GG.SDD#197: the in-process report and the serialized CLI contract are different surfaces.
+    // On main this exited 1 and wrote nothing after an ordinary authored edit.
+    [<Fact>]
+    let ``agents CLI smoke regenerates stale guidance and exits zero`` () =
+        let root = initializedVerifiedProject ()
+        runAgentsCli root [] |> ignore
+        retitleTaskAndRebuildWorkModel root
+
+        let exitCode, stdout, _ = runAgentsCli root []
+        Assert.Equal(0, exitCode)
+        Assert.DoesNotContain("agents.behaviorDivergence", stdout)

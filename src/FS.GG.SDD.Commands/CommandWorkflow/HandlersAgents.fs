@@ -337,9 +337,15 @@ module internal HandlersAgents =
                             let commandsMd = agentCommandsMarkdown workId target.Id guidanceModel.Commands
                             let skillsMd = agentSkillsMarkdown workId target.Id guidanceModel.Skills
 
-                            let currency, targetDiags, divergent =
+                            // Currency is a per-target fact: does this target's own recorded digest still
+                            // match the digest recomputed from the current work model? Divergence is a
+                            // CROSS-target fact and cannot be decided here — it is resolved once all
+                            // targets are known (see `divergentTargetIds` below). Conflating the two made
+                            // `agents` block on ordinary staleness and refuse the very regeneration its
+                            // remediation demanded (FS.GG.SDD#197).
+                            let currency, targetDiags, recordedBehaviorDigest =
                                 match snapshot guidancePath model with
-                                | None -> GeneratedViewCurrency.Missing, [], false
+                                | None -> GeneratedViewCurrency.Missing, [], None
                                 | Some existing ->
                                     match parseGeneratedAgentGuidance existing with
                                     | Error errs ->
@@ -351,7 +357,7 @@ module internal HandlersAgents =
 
                                         GeneratedViewCurrency.Malformed,
                                         [ agentsMalformedGeneratedGuidance guidancePath message ],
-                                        false
+                                        None
                                     | Ok manifest ->
                                         let recordedDigest =
                                             manifest.Sources
@@ -367,20 +373,12 @@ module internal HandlersAgents =
                                                 StringComparison.OrdinalIgnoreCase
                                             )
 
-                                        let divergent = equivalenceRequired && not behaviorMatches
+                                        let recorded = Some manifest.BehaviorModelDigest.Value
 
                                         if digestMatches && behaviorMatches then
-                                            GeneratedViewCurrency.Current, [], false
+                                            GeneratedViewCurrency.Current, [], recorded
                                         else
-                                            let staleDiag = [ agentsStaleGeneratedGuidance guidancePath target.Id ]
-
-                                            let divergenceDiag =
-                                                if divergent then
-                                                    [ agentsBehaviorDivergence guidancePath [ target.Id ] ]
-                                                else
-                                                    []
-
-                                            GeneratedViewCurrency.Stale, (staleDiag @ divergenceDiag), divergent
+                                            GeneratedViewCurrency.Stale, [], recorded
 
                             {| TargetId = target.Id
                                Root = root
@@ -392,11 +390,53 @@ module internal HandlersAgents =
                                SkillsMd = skillsMd
                                Currency = currency
                                Diagnostics = targetDiags
-                               Divergent = divergent |})
+                               RecordedBehaviorDigest = recordedBehaviorDigest |})
                     | _ -> []
 
+                // Both targets are rendered from one `NormalizedGuidanceModel` and stamped with one
+                // recomputed `behaviorDigest`, so they are equivalent by construction. Targets can only
+                // disagree with EACH OTHER if a generated `guidance.json` was edited or corrupted out of
+                // band. That — not staleness — is what `agents.behaviorDivergence` names.
+                let recordedBehaviorDigests =
+                    targetResults
+                    |> List.choose (fun result -> result.RecordedBehaviorDigest)
+                    |> List.map (fun digest -> digest.ToLowerInvariant())
+                    |> List.distinct
+
+                let staleTargets =
+                    targetResults
+                    |> List.filter (fun result -> result.Currency = GeneratedViewCurrency.Stale)
+
+                let divergentTargetIds =
+                    if equivalenceRequired && List.length recordedBehaviorDigests > 1 then
+                        staleTargets
+                        |> List.map (fun result -> result.TargetId)
+                        |> List.distinct
+                        |> List.sort
+                    else
+                        []
+
+                let divergent = not (List.isEmpty divergentTargetIds)
+
+                // One condition, one diagnostic. When targets genuinely diverge the run blocks and writes
+                // nothing, so the per-target staleness warnings would only restate the same fact.
+                let currencyDiagnostics =
+                    if divergent then
+                        let divergencePath =
+                            staleTargets
+                            |> List.sortBy (fun result -> result.TargetId)
+                            |> List.tryHead
+                            |> Option.map (fun result -> result.GuidancePath)
+                            |> Option.defaultValue workModelP
+
+                        [ agentsBehaviorDivergence divergencePath divergentTargetIds ]
+                    else
+                        staleTargets
+                        |> List.map (fun result -> agentsStaleGeneratedGuidance result.GuidancePath result.TargetId)
+
                 let targetDiagnostics =
-                    targetResults |> List.collect (fun result -> result.Diagnostics)
+                    (targetResults |> List.collect (fun result -> result.Diagnostics))
+                    @ currencyDiagnostics
 
                 let baseDiagnostics = projectDiags @ duplicateDiags @ configDiags @ workModelDiags
 
@@ -405,13 +445,6 @@ module internal HandlersAgents =
                     let hasWarning =
                         diagnostics
                         |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticWarning)
-
-                    let divergentTargetIds =
-                        targetResults
-                        |> List.filter (fun result -> result.Divergent)
-                        |> List.map (fun result -> result.TargetId)
-                        |> List.distinct
-                        |> List.sort
 
                     let generatedTargetIds =
                         targetResults
