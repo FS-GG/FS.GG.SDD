@@ -43,6 +43,9 @@ module WorkModel =
         { Id: string
           Title: string
           Decision: string
+          RequirementRefs: string list
+          StoryRefs: string list
+          AcceptanceRefs: string list
           Source: string
           SourceLocation: SourceLocation option
           LinkedTaskIds: string list }
@@ -599,6 +602,9 @@ module WorkModel =
                 { Id = decision.Id.Value
                   Title = decision.Title
                   Decision = decision.Decision
+                  RequirementRefs = decision.RequirementRefs |> List.map _.Value
+                  StoryRefs = decision.StoryRefs |> List.map _.Value
+                  AcceptanceRefs = decision.AcceptanceRefs |> List.map _.Value
                   Source = decision.Source.Path
                   SourceLocation = decision.SourceLocation
                   LinkedTaskIds = linkedTaskIds })
@@ -810,6 +816,9 @@ module WorkModel =
                                 { Id = jmString "id" item
                                   Title = jmString "title" item
                                   Decision = jmString "decision" item
+                                  RequirementRefs = jmStringList "requirementRefs" item |> List.sort
+                                  StoryRefs = jmStringList "storyRefs" item |> List.sort
+                                  AcceptanceRefs = jmStringList "acceptanceRefs" item |> List.sort
                                   Source = jmString "source" item
                                   SourceLocation = None
                                   LinkedTaskIds = jmStringList "linkedTaskIds" item |> List.sort })

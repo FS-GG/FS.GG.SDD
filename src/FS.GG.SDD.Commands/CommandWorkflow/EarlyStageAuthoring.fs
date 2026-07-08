@@ -1557,7 +1557,7 @@ publicOrToolFacingImpact: true
                             [ unresolvedBlockingAmbiguity
                                   path
                                   (facts.RemainingAmbiguity
-                                   |> List.choose (fun item -> item.AmbiguityId |> Option.map _.Value)) ]
+                                   |> List.collect (fun item -> item.AmbiguityIds |> List.map _.Value)) ]
                         else
                             []
 
@@ -1688,7 +1688,7 @@ publicOrToolFacingImpact: true
                         [ unresolvedBlockingAmbiguity
                               path
                               (facts.RemainingAmbiguity
-                               |> List.choose (fun item -> item.AmbiguityId |> Option.map _.Value)) ]
+                               |> List.collect (fun item -> item.AmbiguityIds |> List.map _.Value)) ]
                     else
                         []
 

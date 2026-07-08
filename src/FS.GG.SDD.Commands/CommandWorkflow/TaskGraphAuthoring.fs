@@ -269,10 +269,13 @@ module internal TaskGraphAuthoring =
         let clarificationDecisionTasks =
             clarificationFacts.Decisions
             |> List.choose (fun decision ->
+                // A decision that settles requirements says so on its own line; thread those refs into
+                // the task it derives rather than dropping them (#164, FR-014). This is also the read
+                // site that keeps `RelatedRequirementIds` from being a parsed-but-never-read field.
                 maybeTask
                     [ decision.DecisionId.Value ]
                     $"Implement clarification decision {decision.DecisionId.Value}"
-                    []
+                    decision.RelatedRequirementIds
                     [ decision.DecisionId ]
                     primaryDependency
                     [ "fsharp"; "speckit-implement" ])

@@ -689,3 +689,30 @@ module ClarifyCommandTests =
         Assert.Equal(CommandOutcome.Blocked, rerun.Outcome)
         Assert.Equal(2, rerun.Clarification.Value.RemainingAmbiguityCount)
         Assert.Equal(2, rerun.Clarification.Value.BlockingAmbiguityCount)
+
+    /// FR-013. The undeclared-reference gate predates this feature (`unknownReferenceDiagnostics`
+    /// resolves every AMB/CQ/FR/US/AC id in the `--input` lines against the spec's declared sets).
+    /// Feature 093 threads a decision's *extra* refs through to the work model and the task graph —
+    /// this pins that the threading cannot smuggle an undeclared ref past the gate.
+    [<Fact>]
+    let ``a multi-ref decision naming an undeclared requirement still blocks`` () =
+        let root = initializedSpecifiedProject ()
+
+        let report =
+            runClarifyWith
+                (Some "AMB-001: Settles FR-001 and FR-999 together.")
+                root
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+        let diagnostic =
+            report.Diagnostics
+            |> List.find (fun diagnostic -> diagnostic.Id = "unknownClarificationReference")
+
+        Assert.Contains("FR-999", diagnostic.Message)
+
+        // The declared sibling ref does not rescue the line: `FR-001` resolves, `FR-999` does not, and
+        // one unresolved ref is enough to block. Feature 089 still seeds a skeleton on a blocked run,
+        // and that skeleton echoes the author's own `--input` verbatim — bad ref included, because it
+        // is the text they must now correct. Blocking is the contract; a sanitized seed is not.
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)

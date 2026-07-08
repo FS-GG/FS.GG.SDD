@@ -33,9 +33,6 @@ module Clarification =
         { QuestionId: ClarificationQuestionId
           Prompt: string
           SourceAmbiguityIds: AmbiguityId list
-          RelatedRequirementIds: RequirementId list
-          RelatedStoryIds: UserStoryId list
-          RelatedAcceptanceScenarioIds: AcceptanceScenarioId list
           Blocking: bool
           State: string
           SourceLocation: SourceLocation option }
@@ -55,13 +52,16 @@ module Clarification =
           Rationale: string option
           SourceQuestionIds: ClarificationQuestionId list
           SourceAmbiguityIds: AmbiguityId list
+          /// Every `FR-###` the decision line names. Read by `clarificationDecisionTasks` to seed the
+          /// derived task's `requirements:` (#164). The sibling story/acceptance refs travel on
+          /// `RequirementModel.Decision` instead, where the work model actually reads them.
           RelatedRequirementIds: RequirementId list
-          RelatedStoryIds: UserStoryId list
-          RelatedAcceptanceScenarioIds: AcceptanceScenarioId list
           SourceLocation: SourceLocation option }
 
     type RemainingAmbiguity =
-        { AmbiguityId: AmbiguityId option
+        { /// Every `AMB-###` the line names. A single remaining-ambiguity line may name several
+          /// (#164); before feature 093 only the first survived `List.tryHead`.
+          AmbiguityIds: AmbiguityId list
           QuestionId: ClarificationQuestionId option
           State: string
           Explanation: string

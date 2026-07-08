@@ -561,3 +561,63 @@ module TasksCommandTests =
         Assert.NotEqual(CommandOutcome.Blocked, rerunReport.Outcome)
         Assert.True(createWatch.Elapsed < TimeSpan.FromSeconds 2.0, $"Create took {createWatch.Elapsed}.")
         Assert.True(rerunWatch.Elapsed < TimeSpan.FromSeconds 2.0, $"Rerun took {rerunWatch.Elapsed}.")
+
+    // ---------------------------------------------------------------------------------------------
+    // Feature 093 / FS.GG.SDD#164 (FS.GG.Audio feedback §3.7). `clarificationDecisionTasks` passed
+    // `requirements = []` to every decision-derived task, discarding the `RelatedRequirementIds` the
+    // parser had already collected. A decision that settles FR-007 and FR-001 produced a task that
+    // referenced neither.
+    // ---------------------------------------------------------------------------------------------
+
+    let private injectMultiRefDecision root =
+        let clarifications = TestSupport.readRelative root clarificationsPath
+
+        let withDecision =
+            clarifications.Replace(
+                "## Accepted Deferrals",
+                "- DEC-001: Settles FR-002 and FR-001 by recording decisions in clarifications.md.\n\n## Accepted Deferrals"
+            )
+
+        TestSupport.writeRelative root clarificationsPath withDecision
+        acceptUpstream root
+
+    /// FR-014. The refs reach the derived task, sorted, not `[]`.
+    [<Fact>]
+    let ``a decision's requirement refs reach its derived task`` () =
+        let root = initializedPlanReadyProject ()
+        injectMultiRefDecision root
+
+        TestSupport.runTasks root workId title |> ignore
+        let tasks = TestSupport.readRelative root tasksPath
+
+        Assert.Contains("Implement clarification decision DEC-001", tasks)
+        Assert.Contains("requirements: [\"FR-001\", \"FR-002\"]", tasks)
+        Assert.Contains("decisions: [\"DEC-001\"]", tasks)
+
+    /// The refs are sorted, so the author's phrasing order does not move the emitted `requirements:`.
+    ///
+    /// Compares that one line rather than the whole file: `tasks.yml` embeds a `digest:` of
+    /// `clarifications.md`, which necessarily differs when the decision's prose differs.
+    [<Fact>]
+    let ``a decision's requirement refs are emitted in sorted order regardless of phrasing`` () =
+        let requirementsLine (decisionLine: string) =
+            let root = initializedPlanReadyProject ()
+            let clarifications = TestSupport.readRelative root clarificationsPath
+
+            TestSupport.writeRelative
+                root
+                clarificationsPath
+                (clarifications.Replace("## Accepted Deferrals", $"{decisionLine}\n\n## Accepted Deferrals"))
+
+            acceptUpstream root
+            TestSupport.runTasks root workId title |> ignore
+
+            (TestSupport.readRelative root tasksPath).Replace("\r\n", "\n").Split('\n')
+            |> Array.filter (fun line -> line.Contains "requirements:" && line.Contains "FR-")
+            |> Array.toList
+
+        let ascending = requirementsLine "- DEC-001: Settles FR-001 and FR-002."
+        let descending = requirementsLine "- DEC-001: Settles FR-002 and FR-001."
+
+        Assert.Contains("requirements: [\"FR-001\", \"FR-002\"]", ascending |> String.concat "\n")
+        Assert.Equal<string list>(ascending, descending)

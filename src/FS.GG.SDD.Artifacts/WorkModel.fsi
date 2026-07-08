@@ -39,6 +39,9 @@ module WorkModel =
         { Id: string
           Title: string
           Decision: string
+          RequirementRefs: string list
+          StoryRefs: string list
+          AcceptanceRefs: string list
           Source: string
           SourceLocation: SourceLocation option
           LinkedTaskIds: string list }

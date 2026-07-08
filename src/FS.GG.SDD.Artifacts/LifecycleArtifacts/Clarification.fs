@@ -37,9 +37,6 @@ module Clarification =
         { QuestionId: ClarificationQuestionId
           Prompt: string
           SourceAmbiguityIds: AmbiguityId list
-          RelatedRequirementIds: RequirementId list
-          RelatedStoryIds: UserStoryId list
-          RelatedAcceptanceScenarioIds: AcceptanceScenarioId list
           Blocking: bool
           State: string
           SourceLocation: SourceLocation option }
@@ -60,12 +57,10 @@ module Clarification =
           SourceQuestionIds: ClarificationQuestionId list
           SourceAmbiguityIds: AmbiguityId list
           RelatedRequirementIds: RequirementId list
-          RelatedStoryIds: UserStoryId list
-          RelatedAcceptanceScenarioIds: AcceptanceScenarioId list
           SourceLocation: SourceLocation option }
 
     type RemainingAmbiguity =
-        { AmbiguityId: AmbiguityId option
+        { AmbiguityIds: AmbiguityId list
           QuestionId: ClarificationQuestionId option
           State: string
           Explanation: string
@@ -157,26 +152,21 @@ module Clarification =
         |> Seq.distinctBy (fun id -> id.Value)
         |> Seq.toList
 
+    /// Sorted, not line-ordered: these refs now reach a task's emitted `requirements:` list (#164), so
+    /// `DEC-003 settles FR-007 and FR-001` and `DEC-003 settles FR-001 and FR-007` must produce the same
+    /// `tasks.yml` bytes.
     let requirementIdsInLine line =
         Regex.Matches(line, @"\bFR-\d{3,}\b", RegexOptions.IgnoreCase)
         |> Seq.cast<Match>
         |> Seq.choose (fun m -> Identifiers.createRequirementId m.Value |> Result.toOption)
         |> Seq.distinctBy (fun id -> id.Value)
+        |> Seq.sortBy (fun id -> id.Value)
         |> Seq.toList
 
-    let storyIdsInLine line =
-        Regex.Matches(line, @"\bUS-\d{3,}\b", RegexOptions.IgnoreCase)
-        |> Seq.cast<Match>
-        |> Seq.choose (fun m -> Identifiers.createUserStoryId m.Value |> Result.toOption)
-        |> Seq.distinctBy (fun id -> id.Value)
-        |> Seq.toList
-
-    let acceptanceScenarioIdsInLine line =
-        Regex.Matches(line, @"\bAC-\d{3,}\b", RegexOptions.IgnoreCase)
-        |> Seq.cast<Match>
-        |> Seq.choose (fun m -> Identifiers.createAcceptanceScenarioId m.Value |> Result.toOption)
-        |> Seq.distinctBy (fun id -> id.Value)
-        |> Seq.toList
+    // `storyIdsInLine` / `acceptanceScenarioIdsInLine` lived here to populate `RelatedStoryIds` and
+    // `RelatedAcceptanceScenarioIds` — two fields nothing ever read. Feature 093 removed the fields, so
+    // the scanners went with them; a decision's US/AC refs now travel on `RequirementModel.Decision`,
+    // where the work model actually reads them (#164).
 
     let decisionIdsInLine line =
         Regex.Matches(line, @"\bDEC-\d{3,}\b", RegexOptions.IgnoreCase)
@@ -199,9 +189,6 @@ module Clarification =
                     { QuestionId = questionId
                       Prompt = cleanAfterId questionId.Value line
                       SourceAmbiguityIds = ambiguityIdsInLine line
-                      RelatedRequirementIds = requirementIdsInLine line
-                      RelatedStoryIds = storyIdsInLine line
-                      RelatedAcceptanceScenarioIds = acceptanceScenarioIdsInLine line
                       Blocking = not (Regex.IsMatch(lowered, @"\bnon-?blocking\b"))
                       State =
                         if containsWord "answered" lowered then "answered"
@@ -254,15 +241,15 @@ module Clarification =
                       SourceQuestionIds = questionIdsInLine line
                       SourceAmbiguityIds = ambiguityIdsInLine line
                       RelatedRequirementIds = requirementIdsInLine line
-                      RelatedStoryIds = storyIdsInLine line
-                      RelatedAcceptanceScenarioIds = acceptanceScenarioIdsInLine line
                       SourceLocation = sourceLocation lineNumber }
             | None -> None)
 
     let parseRemainingAmbiguity text =
         sectionLines "Remaining Ambiguity" text
         |> List.choose (fun (lineNumber, line) ->
-            let ambiguity = ambiguityIdsInLine line |> List.tryHead
+            // Every AMB the line names, not just the first (#164). `RemainingAmbiguityCount` and
+            // `BlockingAmbiguityCount` count *lines*, not ids, so neither moves.
+            let ambiguities = ambiguityIdsInLine line
             let question = questionIdsInLine line |> List.tryHead
 
             // A "no-outstanding" disclaimer (`None. AMB-001…AMB-005 resolved.`, `No remaining
@@ -273,7 +260,7 @@ module Clarification =
             // and still classifies below (#105 Trap 1).
             if isNoOutstandingSentinel line then
                 None
-            elif Option.isNone ambiguity && Option.isNone question then
+            elif List.isEmpty ambiguities && Option.isNone question then
                 None
             else
                 let lowered = line.ToLowerInvariant()
@@ -287,7 +274,7 @@ module Clarification =
                         "blocking"
 
                 Some
-                    { AmbiguityId = ambiguity
+                    { AmbiguityIds = ambiguities
                       QuestionId = question
                       State = state
                       Explanation = line.Trim().TrimStart('-', '*').Trim()
