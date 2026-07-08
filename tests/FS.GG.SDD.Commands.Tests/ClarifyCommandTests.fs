@@ -563,3 +563,86 @@ module ClarifyCommandTests =
         TestSupport.runClarify root workId title |> ignore
 
         Assert.Contains("status: needsAnswers", TestSupport.readRelative root clarificationPath)
+
+    // ---------------------------------------------------------------------------------------------
+    // Feature 093 / FS.GG.SDD#164: the clarify skeleton took its title from *this invocation's*
+    // `--title`, falling back to the humanized work id — never from the `spec.md` its own
+    // `sourceSpec:` line points at. Feature 089's blocked-seed path newly exposed it in exactly the
+    // situation where an author has no reason to pass `--title`.
+    // ---------------------------------------------------------------------------------------------
+
+    /// A work item whose spec title differs from both the humanized work id and any `--title`.
+    let private specTitle = "Ambient Audio Bed"
+
+    let private initializedWithSpecTitle () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root workId specTitle |> ignore
+
+        let specifyRequest =
+            { TestSupport.specifyRequest root workId specTitle with
+                InputText = Some TestSupport.specifyIntentWithAmbiguity }
+
+        TestSupport.runRequest specifyRequest |> ignore
+        root
+
+    let private runClarifyWithoutTitle root =
+        { TestSupport.clarifyRequest root workId specTitle with
+            Title = None }
+        |> TestSupport.runRequest
+
+    [<Fact>]
+    let ``clarify skeleton inherits the spec title when no --title is passed`` () =
+        let root = initializedWithSpecTitle ()
+
+        runClarifyWithoutTitle root |> ignore
+
+        let clarifications = TestSupport.readRelative root clarificationPath
+
+        Assert.Contains($"title: {specTitle}", clarifications)
+        Assert.Contains($"# {specTitle} Clarifications", clarifications)
+        // The pre-fix value: `titleFromWorkId "006-clarify-command"` = "Clarify Command".
+        Assert.DoesNotContain("title: Clarify Command", clarifications)
+
+    [<Fact>]
+    let ``clarify --title still wins over the spec title`` () =
+        let root = initializedWithSpecTitle ()
+
+        { TestSupport.clarifyRequest root workId specTitle with
+            Title = Some "Override" }
+        |> TestSupport.runRequest
+        |> ignore
+
+        let clarifications = TestSupport.readRelative root clarificationPath
+
+        Assert.Contains("title: Override", clarifications)
+        Assert.DoesNotContain($"title: {specTitle}", clarifications)
+
+    [<Fact>]
+    let ``clarify falls back to the humanized work id when the spec title is blank`` () =
+        let root = initializedWithSpecTitle ()
+
+        let blanked =
+            (TestSupport.readRelative root specPath).Replace($"title: {specTitle}", "title:   ")
+
+        TestSupport.writeRelative root specPath blanked
+
+        runClarifyWithoutTitle root |> ignore
+
+        Assert.Contains("title: Clarify Command", TestSupport.readRelative root clarificationPath)
+
+    /// The 089 blocked-seed path: unresolved blocking ambiguities, so `clarify` blocks — but it still
+    /// seeds the skeleton, and the skeleton must carry the spec's title.
+    [<Fact>]
+    let ``the blocked clarify seed carries the spec title`` () =
+        let root = initializedWithSpecTitle ()
+
+        let report =
+            { TestSupport.clarifyRequest root workId specTitle with
+                Title = None
+                InputText = None }
+            |> TestSupport.runRequest
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.True(TestSupport.existsRelative root clarificationPath)
+        Assert.Contains($"title: {specTitle}", TestSupport.readRelative root clarificationPath)

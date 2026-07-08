@@ -58,10 +58,22 @@ module internal EarlyStageAuthoring =
                 Char.ToUpperInvariant(part.[0]).ToString() + part.Substring(1))
         |> String.concat " "
 
+    let private nonBlank (value: string) =
+        if String.IsNullOrWhiteSpace value then None else Some(value.Trim())
+
     let requestTitle (request: CommandRequest) workId =
         request.Title
-        |> Option.filter (String.IsNullOrWhiteSpace >> not)
-        |> Option.map _.Trim()
+        |> Option.bind nonBlank
+        |> Option.defaultValue (titleFromWorkId workId)
+
+    /// Title for an artifact derived from an existing specification: the author's explicit `--title`,
+    /// else the specification's own front-matter title, else the humanized work id. The middle rung is
+    /// what keeps a derived artifact's `title:` agreeing with the `spec.md` its `sourceSpec:` points at
+    /// (#164) — the work id is a last resort, not a default.
+    let titleFromSpec (request: CommandRequest) (specFacts: SpecificationFacts) workId =
+        request.Title
+        |> Option.bind nonBlank
+        |> Option.orElseWith (fun () -> nonBlank specFacts.FrontMatter.Title)
         |> Option.defaultValue (titleFromWorkId workId)
 
     let charterTemplate request workId =
@@ -1105,7 +1117,12 @@ Prose status: specified
             $"- {ambiguityValue} [{questionId}] blocking: Unanswered. Resolve source ambiguity {ambiguityValue} before checklist."
 
     let clarificationTemplate request workId (specFacts: SpecificationFacts) answers =
-        let title = requestTitle request workId
+        // The clarifications file is *about* a specific spec — its own `sourceSpec:` line says so —
+        // so it inherits that spec's title rather than re-deriving one from the work id (#164). An
+        // explicit `--title` still wins; a blank spec title still falls back to the humanized id.
+        // Feature 089's blocked-seed path made this load-bearing: it emits a skeleton on a run where
+        // the author has no reason to pass `--title` at all.
+        let title = titleFromSpec request specFacts workId
 
         // Derived from the declared ambiguities that carry no resolution — NOT from the presence
         // of a `stillOpen` answer (089 §WD5). With zero answers the old rule produced
