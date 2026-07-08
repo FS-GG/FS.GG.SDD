@@ -9,6 +9,7 @@ open FS.GG.SDD.Commands.CommandEffects
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.CommandWorkflow
+open FS.GG.SDD.TestShared
 open Xunit
 
 /// Shared, network-gated harness for the real-provider composition acceptance. It carries
@@ -224,53 +225,47 @@ module AcceptanceSupport =
           Arguments: string list
           WorkingDirectory: string }
 
-    let private startProcess (fileName: string) (args: string list) (workingDir: string) =
-        let info =
-            ProcessStartInfo(
-                FileName = fileName,
-                WorkingDirectory = workingDir,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false
-            )
-
+    /// The `ProcessStartInfo` for one probe. Redirection and `UseShellExecute` are forced by
+    /// `TestShared.ChildProcess` (a caller cannot opt out of the concurrent drain), so they are
+    /// not restated here.
+    let private probeStartInfo (fileName: string) (args: string list) (workingDir: string) =
+        let info = ProcessStartInfo(FileName = fileName, WorkingDirectory = workingDir)
         args |> List.iter info.ArgumentList.Add
+        info
 
-        try
-            Process.Start info |> Option.ofObj
-        with _ ->
-            None
+    /// A probe that exited within its bound: green on exit 0, otherwise the surfaced output.
+    let private completedProbe (completion: TestShared.ChildProcess.Completion) =
+        let surfaced = (completion.StandardError + completion.StandardOutput).Trim()
+
+        { Started = true
+          ExitCode = completion.ExitCode
+          Diagnostic = (if completion.ExitCode = 0 then "" else surfaced) }
 
     /// Run a process to completion under `timeoutMs`; a hung process is killed and reported
     /// as a non-zero, timed-out probe (so it fails rather than hangs). This is the shared
     /// bounded edge `buildProbe` routes through; it is exposed so the timeout-kill diagnostic
     /// can be exercised at a short bound without waiting out the 300 s production bound.
+    ///
+    /// FS.GG.SDD#217: the spawn, the concurrent drain, and the *reap* all belong to
+    /// `TestShared.ChildProcess`. The reap is the part this file used to get wrong — it read
+    /// `stdout.Result` unbounded after `WaitForExit(int)` returned, and `WaitForExit(int)`
+    /// returns at child exit, not at pipe EOF. `dotnet build`/`dotnet test` are exactly the
+    /// workload that leaves an MSBuild node-reuse daemon or `VBCSCompiler` holding the
+    /// inherited write end, so the bound was satisfiable and the reap still hung forever.
+    /// Both timeout shapes fold into the established timed-out probe (`Started`, `-1`), each
+    /// carrying its own message rather than one invented string for two different events.
     let runToCompletion (fileName: string) (args: string list) (workingDir: string) (timeoutMs: int) =
-        match startProcess fileName args workingDir with
-        | None ->
-            { Started = false
-              ExitCode = -1
-              Diagnostic = $"could not start `{fileName}`." }
-        | Some started ->
-            use proc = started
-            let stdout = proc.StandardOutput.ReadToEndAsync()
-            let stderr = proc.StandardError.ReadToEndAsync()
-
-            if proc.WaitForExit timeoutMs then
-                let surfaced = (stderr.Result + stdout.Result).Trim()
-
-                { Started = true
-                  ExitCode = proc.ExitCode
-                  Diagnostic = (if proc.ExitCode = 0 then "" else surfaced) }
-            else
-                (try
-                    proc.Kill true
-                 with _ ->
-                     ())
-
-                { Started = true
+        try
+            match TestShared.ChildProcess.tryRunBounded timeoutMs (probeStartInfo fileName args workingDir) with
+            | None ->
+                { Started = false
                   ExitCode = -1
-                  Diagnostic = $"`{fileName}` timed out after {timeoutMs} ms." }
+                  Diagnostic = $"could not start `{fileName}`." }
+            | Some completion -> completedProbe completion
+        with :? TestShared.ChildProcess.ChildProcessTimeout as timeout ->
+            { Started = true
+              ExitCode = -1
+              Diagnostic = timeout.Message }
 
     // ---------- feature 035: declared-or-default probe-command resolution ----------
 
@@ -337,40 +332,38 @@ module AcceptanceSupport =
     /// A headless, bounded run smoke (research D6, contracts/acceptance-protocol.md §run
     /// probe): launch the resolved run command, require it to either exit 0 within the grace
     /// window or survive the grace window without a non-zero exit (it started and did not
-    /// crash), then terminate it. Overall cap 60 s so a hung app fails rather than hangs.
+    /// crash), then terminate it.
+    ///
+    /// This probe *inverts* `runBounded`'s verdict: outliving the bound is the healthy answer
+    /// for a long-lived app, and `ChildProcess` has already killed the tree and reaped it by the
+    /// time the exception lands. The two timeout reasons must therefore be told apart — a child
+    /// that exited but left a grandchild holding its pipes is NOT a running app, and its exit
+    /// code was never observed, so it can never be reported green (FS.GG.SDD#217).
     let private runWithGrace (command: ProbeCommand) =
         let graceMs = 10_000
-        let overallMs = 60_000
 
-        match startProcess command.Executable command.Arguments command.WorkingDirectory with
-        | None ->
-            { Started = false
-              ExitCode = -1
-              Diagnostic = $"could not start `{command.Executable}`." }
-        | Some started ->
-            use proc = started
-            let stdout = proc.StandardOutput.ReadToEndAsync()
-            let stderr = proc.StandardError.ReadToEndAsync()
+        let startInfo =
+            probeStartInfo command.Executable command.Arguments command.WorkingDirectory
 
-            if proc.WaitForExit graceMs then
-                // Exited within the grace window: pass iff it exited cleanly.
-                let surfaced = (stderr.Result + stdout.Result).Trim()
-
-                { Started = true
-                  ExitCode = proc.ExitCode
-                  Diagnostic = (if proc.ExitCode = 0 then "" else surfaced) }
-            else
-                // Survived the grace window without crashing: it started and is running.
-                (try
-                    proc.Kill true
-                 with _ ->
-                     ())
-
-                proc.WaitForExit(max 0 (overallMs - graceMs)) |> ignore
-
+        try
+            match TestShared.ChildProcess.tryRunBounded graceMs startInfo with
+            | None ->
+                { Started = false
+                  ExitCode = -1
+                  Diagnostic = $"could not start `{command.Executable}`." }
+            // Exited within the grace window: pass iff it exited cleanly.
+            | Some completion -> completedProbe completion
+        with :? TestShared.ChildProcess.ChildProcessTimeout as timeout ->
+            match timeout.Reason with
+            // Survived the grace window without crashing: it started and is running.
+            | TestShared.ChildProcess.ChildOutlivedBound ->
                 { Started = true
                   ExitCode = 0
                   Diagnostic = "" }
+            | TestShared.ChildProcess.PipesHeldAfterExit ->
+                { Started = true
+                  ExitCode = -1
+                  Diagnostic = timeout.Message }
 
     /// The run probe: `declared = None` resolves to `dotnet run --project <discovered>`; no
     /// runnable project discoverable ⇒ a diagnosed not-started ProbeResult (FR-007). Declared

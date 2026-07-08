@@ -7,9 +7,7 @@ open Xunit
 
 /// FS.GG.SDD#212 — the deadlock these tests exist to make unrepresentable.
 ///
-/// `TestShared.ChildProcess` is the one place the Commands and Cli test assemblies spawn a child.
-/// (`FS.GG.SDD.Acceptance.Tests` still hand-rolls its own spawn; it already drains concurrently, so
-/// it never had *this* bug, but it should migrate — see #217.) Before this module
+/// `TestShared.ChildProcess` is the one place a test spawns a child. Before this module
 /// existed, every call site drained the child's two pipes *sequentially* (`StandardOutput.ReadToEnd()`
 /// and only then `StandardError.ReadToEnd()`). That wedges whenever the child's stderr exceeds the OS pipe buffer
 /// (64 KiB on Linux): the child blocks in `write(2)` and never exits, so the parent's stdout read

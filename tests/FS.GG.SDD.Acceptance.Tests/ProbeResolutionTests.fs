@@ -173,6 +173,54 @@ module ProbeResolutionTests =
         Assert.Equal(-1, result.ExitCode)
         Assert.Contains("timed out", result.Diagnostic)
 
+    // ---------- FS.GG.SDD#217: the *reap* is bounded, and never silently green ----------
+
+    /// A child that exits immediately while a backgrounded grandchild inherits — and keeps open —
+    /// its stdout/stderr write ends. `WaitForExit(int)` returns at child exit, not at pipe EOF, so
+    /// reading the captured streams unbounded would block on the grandchild for its whole lifetime.
+    /// SYNTHETIC: `sh` + `sleep` stand in for the MSBuild node-reuse daemon / `VBCSCompiler` that a
+    /// real `dotnet build` or `dotnet run` leaves holding inherited handles.
+    let private childExitsGrandchildHoldsPipes = [ "-c"; "sleep 30 & exit 0" ]
+
+    // Before #217 this hung forever: the bound was satisfied (the child exited), and the *reap* —
+    // `stdout.Result` — then waited out the grandchild. It must fail at the drain grace instead.
+    [<Fact>]
+    let ``runToCompletion is bounded when a grandchild still holds the pipes after the child exits`` () =
+        let root = newProductRoot ()
+        let elapsed = System.Diagnostics.Stopwatch.StartNew()
+
+        let result = runToCompletion "sh" childExitsGrandchildHoldsPipes root 30_000
+
+        elapsed.Stop()
+
+        Assert.True(result.Started)
+        Assert.Equal(-1, result.ExitCode)
+        Assert.Contains("pipes were still held", result.Diagnostic)
+
+        // Generous: the point is "bounded at all" — the grandchild sleeps 30 s, and the child
+        // satisfied the 30 s bound instantly, so any finite number here proves the property.
+        Assert.True(
+            elapsed.ElapsedMilliseconds < 25_000L,
+            $"the reap must be bounded, not wait out the grandchild; took {elapsed.ElapsedMilliseconds} ms"
+        )
+
+    // The run probe *inverts* the bound: outliving the grace window is its healthy answer. That
+    // inversion must not swallow the held-pipes case — there the app is already gone and its exit
+    // code was never observed, so calling it a running app would report a crashed scaffold green.
+    [<Fact>]
+    let ``runProbe does not report a child that exited holding pipes as a healthy running app`` () =
+        let root = newProductRoot ()
+
+        let declared: DeclaredCommand =
+            { Executable = "sh"
+              Arguments = childExitsGrandchildHoldsPipes }
+
+        let result = runProbe (Some declared) root
+
+        Assert.True(result.Started)
+        Assert.NotEqual(0, result.ExitCode)
+        Assert.Contains("pipes were still held", result.Diagnostic)
+
     // ---------- US3 (P3): the defaults reference only generic tooling ----------
 
     // T017 (US3 / FR-009 / SC-003): the default ProbeCommand tokens are exactly the generic set
