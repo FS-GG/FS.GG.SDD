@@ -36,6 +36,46 @@ The solution has five library/CLI projects (`Contracts`, `Artifacts`, `Commands`
 Tier-1 change updates it). The `WarningsAsErrors` ratchet
 (`Directory.Build.local.props`) stays at zero.
 
+### Testing tiers
+
+A whole-solution `dotnet test` takes minutes, which is too slow for a casual inner loop.
+The cost is **concentrated, not diffuse**: `Commands.Tests` is ~74% of the wall clock,
+because ~12 of its files spawn real `dotnet`/CLI subprocesses (scaffold, init, the
+CLI-raw smokes). The pure layer most edits touch runs in about a second.
+
+[`scripts/test.sh`](scripts/test.sh) runs a **tier** matched to what you changed:
+
+| Tier | Command | Adds | Tests | Wall | Run it when |
+|---|---|---|---|---|---|
+| **fast** | `scripts/test.sh fast` | Contracts, Artifacts | 354 | ~3s | every save — parser, work model, codec, serialization work |
+| **component** | `scripts/test.sh component` | + Validation, Cli | 510 | ~30s | before pushing a CLI, report-projection, or validation change |
+| **full** | `scripts/test.sh` | + Commands, Acceptance | 1,288 | ~2m20s | before push, and whenever you touched `Commands` |
+
+`Commands.Tests` alone is ~101s of that ~139s.
+
+The fast tier's ~3s is almost entirely test-host startup — the 354 assertions themselves
+execute in ~320ms. Add `--no-build` to reuse existing binaries, and `-- <args>` to forward
+to `dotnet test` (e.g. `scripts/test.sh fast -- --filter 'FullyQualifiedName~Codec'`).
+`scripts/test.sh --help` prints the same table.
+
+**Tiering removes no CI coverage.** The per-PR gate (`.github/workflows/gate.yml`) still
+runs the full suite and is still required, so a `Commands`-layer regression is caught at
+PR CI even if you only ran the fast tier locally. The tiers speed the *local* loop; the
+gate remains the backstop.
+
+The script loops the six test projects rather than running `dotnet test FS.GG.SDD.sln`.
+That covers exactly the same tests (those six *are* the solution's test projects), avoids
+the resource exhaustion a solution-wide run hits when every test host starts at once
+(`Failed to create CoreCLR, HRESULT: 0x80070008`, or a 90s protocol-negotiation timeout —
+both misread as a red suite), and prints a per-project timing table so the cost stays
+visible. `Acceptance.Tests` is network-gated and self-skips unless
+`FSGG_SDD_ACCEPTANCE_REGISTRY` is set, so even `full` stays offline by default.
+
+> **If a run stops producing output, it may be hung rather than slow.** The CLI-smoke helper
+> `runCliRaw` can deadlock against a chatty stderr ([#212](https://github.com/FS-GG/FS.GG.SDD/issues/212)),
+> and its own timeout cannot fire. Check with `ps -o pcpu -p <pid>` — 0% CPU means wedged, not
+> working. Wrapping a long run in `timeout -k 10 900 …` keeps a wedge from eating the session.
+
 ## Formatting
 
 F# formatting is enforced by [Fantomas](https://fsprojects.github.io/fantomas/),
