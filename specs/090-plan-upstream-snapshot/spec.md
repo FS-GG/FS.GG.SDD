@@ -101,7 +101,7 @@ Nothing today tells an operator that running `plan` freezes the spec/clarify/che
 - **The snapshot records a path the current run does not compute a digest for**, or vice versa (a snapshot section hand-edited to add a fourth source). The comparison is over the recorded entries; an unrecognized recorded path with a digest that cannot be matched to a current source is not reported as stale by this feature.
 - **Two sources change at once.** The diagnostic names all changed sources, sorted deterministically — not just the first one found.
 - **`--accept-upstream` on a plan that cannot be parsed.** The malformed-front-matter error blocks first; nothing is rewritten.
-- **`--accept-upstream` passed to a command other than `plan`.** The flag is `plan`-only; on any other command it is an unknown flag and must be rejected exactly as any other unknown flag is today.
+- **`--accept-upstream` passed to a command other than `plan`.** The flag is `plan`-only and inert elsewhere. `fsgg-sdd` has no unknown-flag rejection today; adding one is out of scope (see FR-012).
 - **A plan whose `## Source Snapshot` section is missing entirely.** `ensurePlanSections` inserts the heading; an empty snapshot has no recorded entries, therefore nothing is stale, therefore a bare `plan` does not block. `--accept-upstream` populates it.
 
 ## Requirements *(mandatory)*
@@ -119,7 +119,7 @@ Nothing today tells an operator that running `plan` freezes the spec/clarify/che
 - **FR-009**: The pre-existing `failedPlanPrerequisite: "Plan contains stale decisions."` diagnostic MUST be retained for plans whose `## Plan Decisions` contain an operator-authored `stale:` line.
 - **FR-010**: Every `stalePlanSnapshot` diagnostic MUST carry a remediation pointing at `fsgg-sdd plan --accept-upstream`, surfaced through the existing next-action routing.
 - **FR-011**: A successful `fsgg-sdd plan` MUST emit exactly one non-blocking advisory stating which sources it has snapshotted and that later edits to them require `fsgg-sdd plan --accept-upstream`. The advisory MUST NOT change the exit code, the outcome, or `changedArtifacts`.
-- **FR-012**: `--accept-upstream` MUST be listed in `fsgg-sdd plan`'s help output, and MUST be rejected as an unknown flag on every other command.
+- **FR-012**: `--accept-upstream` MUST be listed in `fsgg-sdd plan`'s help output. It is read only by `plan`; on every other command it is inert, exactly as `--update`, `--from-tests`, and `--force` are inert outside the commands that read them. (`fsgg-sdd` has no unknown-flag rejection layer — `hasFlag`/`optionValue` scan the argument list per command — and introducing one is a Tier 1 change across every command, out of scope here.)
 - **FR-013**: All three report projections (`--json` default, `--text`, `--rich`) MUST carry the new diagnostic and advisory. The JSON projection remains the contract; text and rich add and drop no facts.
 - **FR-014**: Output MUST remain byte-deterministic across runs for identical inputs, on the blocking path and the `--accept-upstream` path alike.
 - **FR-015**: No versioned cross-repo contract changes. `plan.md` remains `AuthoredSource`; no persisted schema version is bumped; `registry/dependencies.yml` is untouched.
