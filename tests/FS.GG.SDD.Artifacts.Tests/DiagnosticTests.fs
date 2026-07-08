@@ -128,3 +128,26 @@ module DiagnosticTests =
         Assert.Contains("--param versionAxisFile", diagnostic.Correction)
         Assert.Contains("--param versionAxisProperty", diagnostic.Correction)
         Assert.Contains("undeterminable", diagnostic.Message)
+
+    // FS-GG/FS.GG.SDD#185: `surface.rootEscape` is blocking (exit 1), and a plain user-input error —
+    // never a tool defect (exit 2). The operator supplied the param; SDD is not at fault.
+    [<Fact>]
+    let ``surfaceRootEscape is a blocking user-input error`` () =
+        let diagnostic = Diagnostics.surfaceRootEscape "baselineRoot" "../OUTSIDE"
+
+        Assert.Equal("surface.rootEscape", diagnostic.Id)
+        Assert.Equal(Diagnostics.DiagnosticError, diagnostic.Severity)
+        Assert.False diagnostic.IsToolDefect
+        Assert.True(Diagnostics.hasBlocking [ diagnostic ])
+
+    /// The message must quote the RAW param. `normalizeRelativePath` ends in `.TrimStart('/')`, so a
+    /// diagnostic built from the normalized value would report `/etc/passwd` as `etc/passwd` — an
+    /// innocuous-looking relative path — in the very sentence meant to name the escape.
+    [<Fact>]
+    let ``surfaceRootEscape names the offending param and quotes the raw value`` () =
+        let absolute = Diagnostics.surfaceRootEscape "sourceRoot" "/etc/passwd"
+        Assert.Contains("--param sourceRoot=/etc/passwd", absolute.Message)
+        Assert.Contains("sourceRoot", absolute.Correction)
+
+        let parent = Diagnostics.surfaceRootEscape "baselineRoot" "../OUTSIDE"
+        Assert.Contains("--param baselineRoot=../OUTSIDE", parent.Message)

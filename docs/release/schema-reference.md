@@ -219,7 +219,10 @@ in the authoritative `catalog[].inventory` of
   The additive `surface` field is present on `fsgg-sdd surface` (`null` otherwise) — feature 086;
   it carries `sourceRoot`, `baselineRoot`, `mode` (`check`/`update`), `checkedCount`,
   `missingBaselinePaths[]`, `driftedSourcePaths[]`, `orphanBaselinePaths[]`,
-  `updatedBaselinePaths[]`, and `isCoherent`.
+  `updatedBaselinePaths[]`, and `isCoherent`. One exception (FS.GG.SDD#185): when a `--param
+  sourceRoot`/`baselineRoot` resolves outside the workspace root — an absolute path or one with a
+  `..` segment — the command plans no effect, blocks with a `surface.rootEscape` `DiagnosticError`
+  (`outcome: blocked`, exit 1), and emits `surface: null` even though the command is `surface`.
   Feature 087 adds the additive `surface.classification` object (always present): `verdict`
   (`additive`/`breaking`/`cosmetic`/`none`), `recommendedBump` (`major`/`minor`/`none`), and
   `entries[]` — one per **drifted** file (a `missing-baseline` file is a *new* surface, not

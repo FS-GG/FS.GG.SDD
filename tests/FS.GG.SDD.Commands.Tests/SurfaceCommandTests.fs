@@ -747,3 +747,123 @@ module SurfaceCommandTests =
                 | ReadFile path -> path.Contains "passwd"
                 | _ -> false
         )
+
+    // ---- Root containment: `sourceRoot`/`baselineRoot` may not escape the workspace ----------
+    //
+    // FS-GG/FS.GG.SDD#185. `surface` documents two roots that stay inside the workspace root, and
+    // enforced neither. `escapesRoot` (feature 094, FR-017) is lifted here onto the two pre-existing
+    // roots: an escaping root plans NO effect of any kind and blocks with `surface.rootEscape`.
+    //
+    // Each vector is asserted on the **planned effect set**, not on the report alone: a guard that
+    // suppressed the summary while still planning the read would pass a report-only assertion and
+    // still open the file.
+
+    let private surfaceWith update parameters root =
+        { request Surface root with
+            SurfaceUpdate = update
+            Parameters = parameters }
+
+    let private rootEscapes (report: CommandReport) =
+        report.Diagnostics |> List.filter (fun d -> d.Id = "surface.rootEscape")
+
+    // Both modes, both params, both vectors. Asserting `allPlannedEffects` is *empty* is strictly
+    // stronger than checking no effect path contains the value: it rejects EVERY planned effect —
+    // read, enumerate, and (under `--update`) write — so a guard that suppressed the summary while
+    // still planning any effect fails here. The `--update` rows also carry forced drift, so a
+    // regression that restored planning would certainly plan a write and redden this test.
+    //
+    // The `/etc` × `baselineRoot` row is the asymmetric one: `baselinePathFor` normalizes its
+    // argument, so `TrimStart('/')` already contained the *write* — but never the enumerate/read.
+    // Only a raw-param guard closes both, which is what "no effect at all" proves.
+    [<Theory>]
+    [<InlineData(false, "sourceRoot", "../OUTSIDE")>]
+    [<InlineData(false, "sourceRoot", "/etc")>]
+    [<InlineData(false, "baselineRoot", "../OUTSIDE")>]
+    [<InlineData(false, "baselineRoot", "/etc")>]
+    [<InlineData(true, "baselineRoot", "../OUTSIDE")>]
+    [<InlineData(true, "baselineRoot", "/etc")>]
+    [<InlineData(true, "sourceRoot", "../OUTSIDE")>]
+    let ``an escaping root blocks, names the param, and plans no effect`` (update: bool) (key: string) (value: string) =
+        let root = coherentFixture ()
+        writeRelative root "docs/api-surface/Foo/Bar.fsi" (signature "string") // force drift, so `--update` would plan a write
+        let escaping = surfaceWith update [ key, value ] root
+        let report = runRequest escaping
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Equal(1, exitCodeForReport report)
+
+        // A user-input error (exit 1), never a tool defect (exit 2).
+        Assert.DoesNotContain(report.Diagnostics, fun d -> d.IsToolDefect)
+
+        let escapes = rootEscapes report
+        Assert.Single escapes |> ignore
+        Assert.Contains(key, escapes.Head.Message)
+        Assert.Contains(value, escapes.Head.Message)
+
+        // No summary is invented for a workspace the command refused to look at.
+        Assert.True(Option.isNone report.Surface, "an escaping root must not produce a surface summary")
+
+        // The load-bearing half: nothing is planned at all — no read, no enumerate, no write.
+        Assert.Empty(allPlannedEffects escaping)
+
+    /// The report-level guard is not the containment proof — the filesystem is. `--update` with an
+    /// escaping baseline root must leave the parent of the workspace untouched.
+    ///
+    /// The workspace is nested one level inside its own private parent: the shared per-run temp root
+    /// is written to concurrently by every other test, so snapshotting it would be a race, not an
+    /// assertion. `../OUTSIDE` from here lands in `parent`, which only this test owns.
+    [<Fact>]
+    let ``update — an escaping baselineRoot writes nothing outside the workspace root`` () =
+        let parent = tempDirectory ()
+        let root = Path.Combine(parent, "ws")
+        Directory.CreateDirectory root |> ignore
+        writeRelative root "src/Foo/Bar.fsi" (signature "int")
+        writeRelative root "docs/api-surface/Foo/Bar.fsi" (signature "string") // force drift
+
+        let snapshotOf dir =
+            Directory.GetFiles(dir, "*", SearchOption.AllDirectories)
+            |> Array.map (fun f -> f, File.ReadAllText f)
+            |> Array.sortBy fst
+
+        let before = snapshotOf parent
+        surfaceWith true [ "baselineRoot", "../OUTSIDE" ] root |> runRequest |> ignore
+        Assert.Equal<(string * string) array>(before, snapshotOf parent)
+        Assert.False(Directory.Exists(Path.Combine(parent, "OUTSIDE")))
+
+    /// Both roots escaping ⇒ one diagnostic per offending param — and the report is still a clean
+    /// block (exit 1, no summary), not just a pair of messages.
+    [<Fact>]
+    let ``both roots escaping name both params and block`` () =
+        let root = coherentFixture ()
+
+        let escaping =
+            surfaceWith false [ "sourceRoot", "/etc"; "baselineRoot", "../OUTSIDE" ] root
+
+        let report = runRequest escaping
+
+        let escapes = rootEscapes report
+        Assert.Equal(2, List.length escapes)
+        Assert.Contains(escapes, fun d -> d.Message.Contains "sourceRoot")
+        Assert.Contains(escapes, fun d -> d.Message.Contains "baselineRoot")
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Equal(1, exitCodeForReport report)
+        Assert.True(Option.isNone report.Surface)
+        Assert.Empty(allPlannedEffects escaping)
+
+    /// The guard is not overbroad: contained overrides still work exactly as before.
+    [<Fact>]
+    let ``a contained root override is unaffected by the guard`` () =
+        let root = tempDirectory ()
+        writeRelative root "lib/Foo/Bar.fsi" (signature "int")
+        writeRelative root "surface/Foo/Bar.fsi" (signature "int")
+
+        let report =
+            surfaceWith false [ "sourceRoot", "lib"; "baselineRoot", "surface" ] root
+            |> runRequest
+
+        Assert.Empty(rootEscapes report)
+        let summary = summaryOf report
+        Assert.Equal(1, summary.CheckedCount)
+        Assert.True summary.IsCoherent
+        Assert.Equal(0, exitCodeForReport report)
