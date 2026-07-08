@@ -86,58 +86,58 @@ module internal NextActionRouting =
                           BlockingDiagnosticIds = blocking }
                 else
 
-                let correctionCommand =
-                    match request.Command with
-                    | Plan -> planCorrectionCommand diagnostics
-                    | Tasks -> tasksCorrectionCommand diagnostics
-                    | Analyze -> tasksCorrectionCommand diagnostics
-                    | Verify -> verifyCorrectionCommand diagnostics
-                    | Ship -> shipCorrectionCommand diagnostics
-                    | Agents ->
-                        if
-                            ids |> Set.contains "agents.missingWorkModel"
-                            || ids |> Set.contains "agents.staleWorkModel"
-                            || ids |> Set.contains "agents.malformedWorkModel"
-                            || ids |> Set.contains "agents.blockedWorkModel"
-                        then
-                            Some Verify
-                        else
-                            None
-                    | Evidence ->
-                        if
-                            ids |> Set.contains "evidence.missingAnalysisPrerequisite"
-                            || ids |> Set.contains "evidence.analysisNotReady"
-                            || ids |> Set.contains "malformedAnalysisView"
-                            || ids |> Set.contains "analysisIdentityMismatch"
-                        then
-                            Some Analyze
-                        elif
-                            ids |> Set.contains "missingTasksPrerequisite"
-                            || ids |> Set.contains "malformedTasksArtifact"
-                            || ids |> Set.contains "tasksIdentityMismatch"
-                            || ids |> Set.contains "evidence.missingRequiredSkill"
-                        then
-                            Some Tasks
-                        elif
-                            ids
-                            |> Set.exists (fun id -> id.StartsWith("evidence.", StringComparison.OrdinalIgnoreCase))
-                        then
-                            Some Evidence
-                        else
-                            None
-                    | Refresh -> None
-                    // Feature 053: a blocked `upgrade` (a failed step, or the non-interactive
-                    // refusal) points back at `upgrade` (re-run interactively / with `--yes`).
-                    | Upgrade -> Some Upgrade
-                    | _ -> None
+                    let correctionCommand =
+                        match request.Command with
+                        | Plan -> planCorrectionCommand diagnostics
+                        | Tasks -> tasksCorrectionCommand diagnostics
+                        | Analyze -> tasksCorrectionCommand diagnostics
+                        | Verify -> verifyCorrectionCommand diagnostics
+                        | Ship -> shipCorrectionCommand diagnostics
+                        | Agents ->
+                            if
+                                ids |> Set.contains "agents.missingWorkModel"
+                                || ids |> Set.contains "agents.staleWorkModel"
+                                || ids |> Set.contains "agents.malformedWorkModel"
+                                || ids |> Set.contains "agents.blockedWorkModel"
+                            then
+                                Some Verify
+                            else
+                                None
+                        | Evidence ->
+                            if
+                                ids |> Set.contains "evidence.missingAnalysisPrerequisite"
+                                || ids |> Set.contains "evidence.analysisNotReady"
+                                || ids |> Set.contains "malformedAnalysisView"
+                                || ids |> Set.contains "analysisIdentityMismatch"
+                            then
+                                Some Analyze
+                            elif
+                                ids |> Set.contains "missingTasksPrerequisite"
+                                || ids |> Set.contains "malformedTasksArtifact"
+                                || ids |> Set.contains "tasksIdentityMismatch"
+                                || ids |> Set.contains "evidence.missingRequiredSkill"
+                            then
+                                Some Tasks
+                            elif
+                                ids
+                                |> Set.exists (fun id -> id.StartsWith("evidence.", StringComparison.OrdinalIgnoreCase))
+                            then
+                                Some Evidence
+                            else
+                                None
+                        | Refresh -> None
+                        // Feature 053: a blocked `upgrade` (a failed step, or the non-interactive
+                        // refusal) points back at `upgrade` (re-run interactively / with `--yes`).
+                        | Upgrade -> Some Upgrade
+                        | _ -> None
 
-                Some
-                    { ActionId = "correctBlockingDiagnostics"
-                      Command = correctionCommand
-                      WorkId = request.WorkId
-                      Reason = "The command is blocked by diagnostics."
-                      RequiredArtifacts = []
-                      BlockingDiagnosticIds = blocking }
+                    Some
+                        { ActionId = "correctBlockingDiagnostics"
+                          Command = correctionCommand
+                          WorkId = request.WorkId
+                          Reason = "The command is blocked by diagnostics."
+                          RequiredArtifacts = []
+                          BlockingDiagnosticIds = blocking }
             elif
                 diagnostics
                 |> List.exists (fun diagnostic -> diagnostic.Id = "scaffold.cliBehindMinimum")

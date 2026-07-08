@@ -298,8 +298,12 @@ No material ambiguities recorded.
 
         // and the snapshot really did move
         Assert.NotEqual<string list>(
-            before.Replace("\r\n", "\n").Split('\n') |> Array.filter snapshotRow |> Array.toList,
-            after.Replace("\r\n", "\n").Split('\n') |> Array.filter snapshotRow |> Array.toList
+            before.Replace("\r\n", "\n").Split('\n')
+            |> Array.filter snapshotRow
+            |> Array.toList,
+            after.Replace("\r\n", "\n").Split('\n')
+            |> Array.filter snapshotRow
+            |> Array.toList
         )
 
     /// C4 / FR-005. The flag is a no-op on a plan whose snapshot is already current.
@@ -362,7 +366,11 @@ No material ambiguities recorded.
             |> List.find (fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
 
         Assert.Equal<string list>([ clarificationPath; specPath ], stale.RelatedIds)
-        Assert.Equal<string list>(List.sortWith (fun a b -> String.CompareOrdinal(a, b)) stale.RelatedIds, stale.RelatedIds)
+
+        Assert.Equal<string list>(
+            List.sortWith (fun a b -> String.CompareOrdinal(a, b)) stale.RelatedIds,
+            stale.RelatedIds
+        )
 
     /// C8 / C9 / FR-008. Downstream stages detect the drift from the digests, not from a marker
     /// `plan` used to inject into the operator's prose.
@@ -370,7 +378,9 @@ No material ambiguities recorded.
     let ``tasks and analyze block on a stale plan snapshot`` () =
         let root, _ = plannedThenSpecEdited ()
 
-        for report in [ TestSupport.runTasks root workId title; TestSupport.runAnalyze root workId title ] do
+        for report in
+            [ TestSupport.runTasks root workId title
+              TestSupport.runAnalyze root workId title ] do
             Assert.Equal(CommandOutcome.Blocked, report.Outcome)
             Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
             Assert.Equal(Some "plan.acceptUpstream", report.NextAction |> Option.map _.ActionId)
@@ -436,7 +446,9 @@ No material ambiguities recorded.
         TestSupport.runPlan root workId title |> ignore
 
         let emptied =
-            let lines = (TestSupport.readRelative root planPath).Replace("\r\n", "\n").Split('\n')
+            let lines =
+                (TestSupport.readRelative root planPath).Replace("\r\n", "\n").Split('\n')
+
             let mutable inSnapshot = false
 
             [ for line in lines do
@@ -539,6 +551,7 @@ No material ambiguities recorded.
         let root = initializedChecklistReadyProject ()
 
         let created = TestSupport.runPlan root workId title
+
         let advisories =
             created.Diagnostics
             |> List.filter (fun diagnostic -> diagnostic.Id = "planAuthoringWindow")

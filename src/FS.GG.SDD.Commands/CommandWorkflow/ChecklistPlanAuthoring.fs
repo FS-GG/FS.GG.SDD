@@ -1077,7 +1077,8 @@ No blocking planning findings recorded.
     // `missing…Prerequisite` diagnostics already report; `stalePlanSnapshot` must not mask them).
     // `changedPlanSourcePaths <> [] ⟺ planSourceSnapshotStale` is pinned by a test.
     let changedPlanSourcePaths workId specText clarificationText checklistText (existingFacts: PlanFacts) =
-        let current = currentPlanSourceDigests workId specText clarificationText checklistText
+        let current =
+            currentPlanSourceDigests workId specText clarificationText checklistText
 
         existingFacts.SourceSnapshots
         |> List.choose (fun snapshot ->
@@ -1093,7 +1094,9 @@ No blocking planning findings recorded.
     // not this function's business, and `plan` has no other tool-writable region.
     let refreshPlanSnapshot workId specText clarificationText checklistText (text: string) =
         text
-        |> replaceSectionBody "Source Snapshot" (sourceSnapshotLines workId specText clarificationText checklistText None)
+        |> replaceSectionBody
+            "Source Snapshot"
+            (sourceSnapshotLines workId specText clarificationText checklistText None)
 
     let appendPlanEntries existingText entries =
         existingText
@@ -1241,84 +1244,89 @@ No blocking planning findings recorded.
                         blockingParserDiagnostics, Some existing.Text, Some(planSummary existingFacts)
                     else
 
-                    // Derive the bool from the path list rather than computing both: they must never
-                    // disagree, and computing them separately hashed all three sources twice.
-                    let changed =
-                        changedPlanSourcePaths workId specText clarificationText checklistText existingFacts
+                        // Derive the bool from the path list rather than computing both: they must never
+                        // disagree, and computing them separately hashed all three sources twice.
+                        let changed =
+                            changedPlanSourcePaths workId specText clarificationText checklistText existingFacts
 
-                    let stale = not (List.isEmpty changed)
+                        let stale = not (List.isEmpty changed)
 
-                    if stale && not request.AcceptUpstream then
-                        // Feature 090 (#163), FR-002/FR-003. The recorded snapshot no longer matches
-                        // its sources. Return `existing.Text` *verbatim* — not an entries-appended or
-                        // snapshot-refreshed variant — so that even if a caller ignored the effect
-                        // gate, the bytes would be identical. `runHandler` discards the write anyway
-                        // because `stalePlanSnapshot` is a DiagnosticError. The operator reviews the
-                        // recorded decisions against the changed sources, then re-runs with
-                        // `--accept-upstream`; nothing is written into the authored plan to say so.
-                        (blockingParserDiagnostics @ [ stalePlanSnapshot path changed ])
-                        |> DiagnosticsModule.sort,
-                        Some existing.Text,
-                        Some(planSummary existingFacts)
-                    else
-
-                    let ensuredText = ensurePlanSections workId existing.Text
-
-                    let entries =
-                        plannedPlanEntries workId specFacts clarificationFacts checklistFacts (Some existingFacts)
-
-                    let withEntries = appendPlanEntries ensuredText entries
-
-                    // FR-004. Rewrite the plan's own `## Source Snapshot` body — and nothing else —
-                    // whenever the operator asks for it with `--accept-upstream`.
-                    //
-                    // Gating this on `stale` instead would leave the snapshot unrecoverable once it
-                    // is empty: `changedPlanSourcePaths` folds over the *recorded* rows, so a plan
-                    // with no recorded digests is never "stale", so the refresh never runs, so it
-                    // stays empty — permanently disabling FR-008/SC-004 for that plan. An operator
-                    // who deleted the rows to escape a block (or hand-authored a plan without them)
-                    // could never re-establish the baseline, and `--accept-upstream` would report
-                    // `noChange` while silently doing nothing.
-                    //
-                    // Writing whenever the flag is passed also keeps FR-005 intact: the rendered
-                    // lines are a pure function of the current sources, so on an already-current
-                    // snapshot the bytes are identical and the run still reports `noChange`.
-                    let proposedText =
-                        if request.AcceptUpstream then
-                            refreshPlanSnapshot workId specText clarificationText checklistText withEntries
+                        if stale && not request.AcceptUpstream then
+                            // Feature 090 (#163), FR-002/FR-003. The recorded snapshot no longer matches
+                            // its sources. Return `existing.Text` *verbatim* — not an entries-appended or
+                            // snapshot-refreshed variant — so that even if a caller ignored the effect
+                            // gate, the bytes would be identical. `runHandler` discards the write anyway
+                            // because `stalePlanSnapshot` is a DiagnosticError. The operator reviews the
+                            // recorded decisions against the changed sources, then re-runs with
+                            // `--accept-upstream`; nothing is written into the authored plan to say so.
+                            (blockingParserDiagnostics @ [ stalePlanSnapshot path changed ])
+                            |> DiagnosticsModule.sort,
+                            Some existing.Text,
+                            Some(planSummary existingFacts)
                         else
-                            withEntries
 
-                    match parsePlanForCommand path proposedText with
-                    | Error diagnostics -> diagnostics, Some proposedText, None
-                    | Ok(proposedFacts, proposedDiagnostics) ->
-                        // FR-009. `stalePlanDecision` no longer reports digest drift — that is now
-                        // `stalePlanSnapshot`. It reports the *authored* case: an operator-written
-                        // `stale:` marker in `## Plan Decisions`, which `tasks` blocks on. Warning
-                        // severity, so `plan` still advances; `tasks` is where it becomes fatal.
-                        let authoredStaleDecisions =
-                            proposedFacts.Decisions
-                            |> List.filter (fun decision -> decision.Status = "stale")
-                            |> List.map (fun decision -> decision.DecisionId.Value)
+                            let ensuredText = ensurePlanSections workId existing.Text
 
-                        let staleDiagnostics =
-                            if List.isEmpty authoredStaleDecisions then
-                                []
-                            else
-                                [ stalePlanDecision path authoredStaleDecisions ]
+                            let entries =
+                                plannedPlanEntries
+                                    workId
+                                    specFacts
+                                    clarificationFacts
+                                    checklistFacts
+                                    (Some existingFacts)
 
-                        let unknownDiagnostics =
-                            unknownPlanReferences path specFacts clarificationFacts checklistFacts proposedFacts
+                            let withEntries = appendPlanEntries ensuredText entries
 
-                        let rerun =
-                            blockingParserDiagnostics
-                            @ proposedDiagnostics
-                            @ unknownDiagnostics
-                            @ staleDiagnostics
+                            // FR-004. Rewrite the plan's own `## Source Snapshot` body — and nothing else —
+                            // whenever the operator asks for it with `--accept-upstream`.
+                            //
+                            // Gating this on `stale` instead would leave the snapshot unrecoverable once it
+                            // is empty: `changedPlanSourcePaths` folds over the *recorded* rows, so a plan
+                            // with no recorded digests is never "stale", so the refresh never runs, so it
+                            // stays empty — permanently disabling FR-008/SC-004 for that plan. An operator
+                            // who deleted the rows to escape a block (or hand-authored a plan without them)
+                            // could never re-establish the baseline, and `--accept-upstream` would report
+                            // `noChange` while silently doing nothing.
+                            //
+                            // Writing whenever the flag is passed also keeps FR-005 intact: the rendered
+                            // lines are a pure function of the current sources, so on an already-current
+                            // snapshot the bytes are identical and the run still reports `noChange`.
+                            let proposedText =
+                                if request.AcceptUpstream then
+                                    refreshPlanSnapshot workId specText clarificationText checklistText withEntries
+                                else
+                                    withEntries
 
-                        rerun @ authoringWindowIfSucceeded rerun |> DiagnosticsModule.sort,
-                        Some proposedText,
-                        Some(planSummary proposedFacts)
+                            match parsePlanForCommand path proposedText with
+                            | Error diagnostics -> diagnostics, Some proposedText, None
+                            | Ok(proposedFacts, proposedDiagnostics) ->
+                                // FR-009. `stalePlanDecision` no longer reports digest drift — that is now
+                                // `stalePlanSnapshot`. It reports the *authored* case: an operator-written
+                                // `stale:` marker in `## Plan Decisions`, which `tasks` blocks on. Warning
+                                // severity, so `plan` still advances; `tasks` is where it becomes fatal.
+                                let authoredStaleDecisions =
+                                    proposedFacts.Decisions
+                                    |> List.filter (fun decision -> decision.Status = "stale")
+                                    |> List.map (fun decision -> decision.DecisionId.Value)
+
+                                let staleDiagnostics =
+                                    if List.isEmpty authoredStaleDecisions then
+                                        []
+                                    else
+                                        [ stalePlanDecision path authoredStaleDecisions ]
+
+                                let unknownDiagnostics =
+                                    unknownPlanReferences path specFacts clarificationFacts checklistFacts proposedFacts
+
+                                let rerun =
+                                    blockingParserDiagnostics
+                                    @ proposedDiagnostics
+                                    @ unknownDiagnostics
+                                    @ staleDiagnostics
+
+                                rerun @ authoringWindowIfSucceeded rerun |> DiagnosticsModule.sort,
+                                Some proposedText,
+                                Some(planSummary proposedFacts)
 
     let planPrerequisiteDiagnosticsTextSummaryAndFacts workId specFacts clarificationFacts checklistFacts model =
         let path = planPath workId
@@ -1450,7 +1458,8 @@ No blocking planning findings recorded.
                         | Analyze -> true
                         | _ -> false
 
-                    let textAt pathOf = snapshot (pathOf workId) model |> Option.map _.Text
+                    let textAt pathOf =
+                        snapshot (pathOf workId) model |> Option.map _.Text
 
                     if not derivesFromPlan then
                         []
