@@ -132,11 +132,22 @@ module Evidence =
                 node
                 |> tryMapping
                 |> Option.map (fun mapping ->
+                    // `digest`/`schemaVersion` are `option` because absence is meaningful:
+                    // an absent digest means "not snapshotted", not "the empty digest".
+                    // Read null-aware (FS.GG.SDD#182) so a bare-null token is absence rather
+                    // than `Some "null"`, and blank-aware so an empty value — plain (`digest:`)
+                    // or quoted (`digest: ''`), which `isPlainNullScalar` deliberately does not
+                    // treat as null — is absence too. Either read as `Some ""` would make
+                    // `evidenceSourceSnapshotStale` compare "" against the real digest as a
+                    // permanent, unfixable mismatch, and would re-render as a trailing-whitespace
+                    // `digest: ` line. Unlike `rationale`, an empty digest is never a real value.
                     { Label = tryScalarAt [ "label" ] mapping |> Option.defaultValue ""
                       Path = tryScalarAt [ "path" ] mapping |> Option.defaultValue ""
-                      Digest = tryScalarAt [ "digest" ] mapping
+                      Digest =
+                        tryScalarNonNullAt [ "digest" ] mapping
+                        |> Option.filter (String.IsNullOrWhiteSpace >> not)
                       SchemaVersion =
-                        tryScalarAt [ "schemaVersion" ] mapping
+                        tryScalarNonNullAt [ "schemaVersion" ] mapping
                         |> Option.bind (fun value ->
                             match Int32.TryParse value with
                             | true, parsed -> Some parsed

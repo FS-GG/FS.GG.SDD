@@ -158,6 +158,49 @@ lifecycleNotes:
         Assert.Equal(None, rationaleOf slimEvidenceYaml)
         Assert.Equal(Some "null", rationaleOf (validEvidenceYaml.Replace("rationale: null", "rationale: \"null\"")))
 
+    let private singleSnapshotOf text =
+        match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+        | Ok artifact -> Assert.Single(artifact.SourceSnapshots)
+        | Error diagnostics -> failwith $"Expected evidence artifact to parse, got {diagnostics}."
+
+    [<Fact>]
+    let ``parseEvidenceArtifact reads an absent snapshot digest as None, never Some ""`` () =
+        // FS.GG.SDD#182. Snapshot `digest` is `string option` because absence is meaningful:
+        // "not snapshotted" is not "the empty digest". Read null-unaware, `digest: ` yields
+        // Some "", and `evidenceSourceSnapshotStale` compares Some "" against the real digest
+        // as a mismatch — a permanent, unfixable `evidence.staleEvidenceSource` on every run.
+        // Plain null tokens and a plain empty value: absence, via `tryScalarNonNullAt`.
+        for token in [ "null"; "Null"; "NULL"; "~"; "" ] do
+            let text = validEvidenceYaml.Replace("digest: 0123456789abcdef", $"digest: {token}")
+            Assert.Equal(None, (singleSnapshotOf text).Digest)
+
+        // `isPlainNullScalar` deliberately only nulls *Plain* scalars, so a QUOTED empty digest
+        // still reaches the reader as `Some ""`. An empty string is never a real digest — unlike
+        // an empty `rationale` — so the blank filter collapses these to absence too. Without it
+        // `digest: ''` is a permanent `evidence.staleEvidenceSource` that no re-run can clear,
+        // and re-rendering it emits the trailing-whitespace `digest: ` line FR-004 forbids.
+        for token in [ "''"; "\"\""; "\"   \"" ] do
+            let text = validEvidenceYaml.Replace("digest: 0123456789abcdef", $"digest: {token}")
+            Assert.Equal(None, (singleSnapshotOf text).Digest)
+
+        // Symmetry with the declaration optionals: a *quoted* "null" is still a real value.
+        let quoted =
+            validEvidenceYaml.Replace("digest: 0123456789abcdef", "digest: \"null\"")
+
+        Assert.Equal(Some "null", (singleSnapshotOf quoted).Digest)
+
+    [<Fact>]
+    let ``parseEvidenceArtifact reads an absent snapshot schemaVersion as None, never an invented 1`` () =
+        // FS.GG.SDD#182, the reader half of the "absence is not a value" pair. `SchemaVersion`
+        // is `int option` precisely so a source that declared none stays undeclared.
+        for token in [ "null"; "Null"; "NULL"; "~"; "" ] do
+            let text =
+                validEvidenceYaml.Replace("schemaVersion: 1\nevidence:", $"schemaVersion: {token}\nevidence:")
+
+            Assert.Equal(None, (singleSnapshotOf text).SchemaVersion)
+
+        Assert.Equal(Some 1, (singleSnapshotOf validEvidenceYaml).SchemaVersion)
+
     [<Fact>]
     let ``parseEvidenceArtifact reports duplicate evidence ids as artifact diagnostics`` () =
         let text =
