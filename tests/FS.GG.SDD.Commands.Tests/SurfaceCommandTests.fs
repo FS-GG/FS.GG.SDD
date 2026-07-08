@@ -542,9 +542,15 @@ module SurfaceCommandTests =
                 effects
                 |> List.filter (fun effect -> (Foundation.effectKey effect).EndsWith "Directory.Build.props")
 
-            Assert.All(axisEffects, fun effect -> Assert.True((match effect with
-                                                               | ReadFile _ -> true
-                                                               | _ -> false)))
+            Assert.All(
+                axisEffects,
+                fun effect ->
+                    Assert.True(
+                        (match effect with
+                         | ReadFile _ -> true
+                         | _ -> false)
+                    )
+            )
 
             // And the tree still holds the authored axis text, byte for byte.
             Assert.Equal(propsWith "Version" "0.8.0", readRelative root "Directory.Build.props")

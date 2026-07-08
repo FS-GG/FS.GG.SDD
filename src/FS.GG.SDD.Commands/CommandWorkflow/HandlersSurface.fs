@@ -166,7 +166,12 @@ module internal HandlersSurface =
         /// Fold the axis snapshot and the run verdict into the prompt. `RequiredBump` is a total
         /// function of the classification alone, so it lands in *every* axis state (FR-006, I1) —
         /// an unresolvable axis still tells the operator what the mutation costs.
-        let prompt (axisFile: string) (axisProperty: string) (axisSnapshot: string option) (classification: SurfaceClassification) =
+        let prompt
+            (axisFile: string)
+            (axisProperty: string)
+            (axisSnapshot: string option)
+            (classification: SurfaceClassification)
+            =
             let requiredBump = classification.RecommendedBump
 
             // `resolved` requires both a readable property and a parseable triple. The two `None`
@@ -416,10 +421,6 @@ module internal HandlersSurface =
 
                 { model with
                     Surface = Some summary
-                    Diagnostics =
-                        model.Diagnostics
-                        @ driftDiagnostics
-                        @ orphanDiagnostics
-                        @ versionDiagnostics
+                    Diagnostics = model.Diagnostics @ driftDiagnostics @ orphanDiagnostics @ versionDiagnostics
                     PendingEffects = model.PendingEffects @ writes },
                 writes
