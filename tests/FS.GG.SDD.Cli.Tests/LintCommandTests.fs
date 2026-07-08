@@ -3,6 +3,7 @@ namespace FS.GG.SDD.Cli.Tests
 open System
 open System.Diagnostics
 open System.IO
+open FS.GG.SDD.TestShared
 open Xunit
 
 /// CLI smoke for `fsgg-sdd lint` (feature 076). Invokes the real host binary so the
@@ -26,22 +27,12 @@ module LintCommandTests =
         startInfo.ArgumentList.Add cliDll
         args |> List.iter startInfo.ArgumentList.Add
         startInfo.WorkingDirectory <- workDir
-        startInfo.RedirectStandardOutput <- true
-        startInfo.RedirectStandardError <- true
-        startInfo.UseShellExecute <- false
         startInfo.Environment["DOTNET_NOLOGO"] <- "1"
         startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] <- "1"
         startInfo.Environment["NO_COLOR"] <- "1"
 
-        use proc =
-            match Process.Start startInfo with
-            | null -> failwith "Failed to start the dotnet process."
-            | started -> started
-
-        let stdout = proc.StandardOutput.ReadToEnd()
-        let stderr = proc.StandardError.ReadToEnd()
-        proc.WaitForExit()
-        stdout, stderr, proc.ExitCode
+        let completion = TestShared.ChildProcess.runBounded 60_000 startInfo
+        completion.StandardOutput, completion.StandardError, completion.ExitCode
 
     // The default runner works out of the repo root and returns combined output + exit code.
     let private runCli (args: string list) =

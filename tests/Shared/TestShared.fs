@@ -1,7 +1,9 @@
 namespace FS.GG.SDD.TestShared
 
 open System
+open System.Diagnostics
 open System.IO
+open System.Threading.Tasks
 open Xunit
 
 /// Feature 067 (FR-005 / FR-007 / FR-010 / FR-011): the single home for cross-project test
@@ -132,6 +134,140 @@ module TestShared =
         | directory -> Directory.CreateDirectory directory |> ignore
 
         File.WriteAllText(absolute, text)
+
+    /// The single bounded, deadlock-free way for a test to run a child process (FS.GG.SDD#212).
+    ///
+    /// A child's stdout and stderr are two independent OS pipes with a small kernel buffer (64 KiB
+    /// on Linux). Draining them *sequentially* — `StandardOutput.ReadToEnd()` and only then
+    /// `StandardError.ReadToEnd()` — deadlocks whenever the child's stderr exceeds that buffer: the
+    /// child blocks in `write(2)` on stderr and can never exit, so the parent's stdout read never
+    /// sees EOF and never reaches the stderr read. Worse, any `WaitForExit(timeoutMs)` placed after
+    /// the reads is then *unreachable*, so the timeout that was supposed to bound the hang is dead
+    /// code and the test run wedges forever (observed: an 18-minute hang on a blocked `fsgg-sdd
+    /// refresh`, whose Blocked report puts ~38 KiB on stderr and nothing on stdout).
+    ///
+    /// So this module owns the invariant rather than restating it per call site: both pipes are
+    /// redirected here, drained *concurrently*, and the wait is always bounded. A child that
+    /// outlives `timeoutMs` is killed (whole tree) and reported as a failure, not a hang.
+    module ChildProcess =
+
+        /// A child that ran to completion within its bound.
+        type Completion =
+            { ExitCode: int
+              StandardOutput: string
+              StandardError: string }
+
+        /// A child that outlived its bound — either it never exited, or it exited but something it
+        /// spawned still holds the pipes open. A distinct type from the plain `exn` a failed *start*
+        /// raises, so a test asserting the bound cannot be satisfied by a child that never ran.
+        type ChildProcessTimeout(message: string) =
+            inherit exn(message)
+
+        /// Grace period for draining the pipes once the child has exited, and for reaping a child we
+        /// just signalled. Deliberately a small *constant* rather than "whatever is left of
+        /// `timeoutMs`": once the child is gone the drain is instantaneous (the reads are already at
+        /// EOF), so the only thing this bounds is a surviving grandchild holding the write end. A
+        /// remaining-budget bound would silently make the worst-case wall clock `2 × timeoutMs`,
+        /// i.e. the number a call site writes would stop being the number enforced. Worst case here
+        /// is `timeoutMs + drainGraceMs`.
+        let private drainGraceMs = 5_000
+
+        /// Start the child, folding both failure shapes into `Error`: a missing executable *throws*
+        /// (`Win32Exception`) rather than returning null, and a misconfigured `ProcessStartInfo`
+        /// throws `InvalidOperationException`. The reason is preserved — "no such file" and "exec
+        /// bit stripped" are different bugs and a triager needs to tell them apart.
+        let private tryStart (startInfo: ProcessStartInfo) : Result<Process, exn> =
+            try
+                match Process.Start startInfo with
+                | null -> Error(exn "Process.Start returned null.")
+                | proc -> Ok proc
+            with ex ->
+                Error ex
+
+        /// Run `startInfo`'s child to completion under `timeoutMs`, capturing both streams.
+        /// `Error` only when the child could not be *started*; a child that cannot be bounded raises
+        /// `ChildProcessTimeout`. Redirection is forced on here so a caller cannot opt out of the
+        /// concurrent drain that makes the bound reachable.
+        let private runCore (timeoutMs: int) (startInfo: ProcessStartInfo) : Result<Completion, exn> =
+            startInfo.RedirectStandardOutput <- true
+            startInfo.RedirectStandardError <- true
+            startInfo.UseShellExecute <- false
+
+            match tryStart startInfo with
+            | Error ex -> Error ex
+            | Ok started ->
+                use proc = started
+
+                let commandLine =
+                    String.concat " " (startInfo.FileName :: List.ofSeq startInfo.ArgumentList)
+
+                // Both readers are in flight BEFORE the wait, so neither pipe can back up and
+                // stall the child. This is what keeps `WaitForExit timeoutMs` reachable.
+                let stdout = proc.StandardOutput.ReadToEndAsync()
+                let stderr = proc.StandardError.ReadToEndAsync()
+
+                if not (proc.WaitForExit timeoutMs) then
+                    // Best-effort: a tree we cannot fully kill (a descendant already reparented, or
+                    // one that raced us) throws, and there is nothing further to do about it.
+                    try
+                        proc.Kill(entireProcessTree = true)
+                    with _ ->
+                        ()
+
+                    // `Kill` only signals. Reap, so the child cannot outlive the test that spawned it.
+                    proc.WaitForExit drainGraceMs |> ignore
+
+                    raise (ChildProcessTimeout $"Child process timed out after {timeoutMs} ms: {commandLine}")
+
+                // `WaitForExit(int)` returns when the CHILD exits — not when the pipes reach EOF, and
+                // unlike the parameterless overload it does not flush the async readers. A grandchild
+                // that inherited the write end therefore keeps both reads pending, so an *unbounded*
+                // reap here would silently relocate the very hang this module exists to prevent.
+                //
+                // We cannot kill that grandchild: the child is already gone, so `Kill(entireProcessTree)`
+                // has no tree to walk and the orphan has been reparented away from us. All we can
+                // honestly do is refuse to wait for it, abandon the readers, and say so.
+                if not (Task.WhenAll(stdout, stderr).Wait drainGraceMs) then
+                    raise (
+                        ChildProcessTimeout(
+                            $"Child process exited but its output pipes were still held {drainGraceMs} ms later "
+                            + $"(an orphaned grandchild inherited them): {commandLine}"
+                        )
+                    )
+
+                Ok
+                    { ExitCode = proc.ExitCode
+                      StandardOutput = stdout.Result
+                      StandardError = stderr.Result }
+
+        /// Run a child under `timeoutMs`. `None` when it could not be started — the shape a caller
+        /// that wants to *probe* for an executable needs.
+        let tryRunBounded (timeoutMs: int) (startInfo: ProcessStartInfo) : Completion option =
+            runCore timeoutMs startInfo |> Result.toOption
+
+        /// As `tryRunBounded`, but a child that cannot be started is a test failure rather than a
+        /// value to branch on — the shape nearly every call site wants. The launch failure's reason
+        /// is carried through, not flattened.
+        let runBounded (timeoutMs: int) (startInfo: ProcessStartInfo) : Completion =
+            match runCore timeoutMs startInfo with
+            | Ok completion -> completion
+            | Error ex -> raise (exn ($"Failed to start `{startInfo.FileName}`: {ex.Message}", ex))
+
+        /// Run real `git` in a directory and return (exitCode, trimmed stdout). Was duplicated
+        /// verbatim (and deadlock-prone) in ScaffoldCommandTests and GitignoreNegationTests.
+        ///
+        /// An unstartable `git` is a hard failure, not the old `-1, ""`. Callers read the exit code
+        /// to decide truth (`check-ignore -q` → is it ignored; `rev-parse --is-inside-work-tree` →
+        /// are we in a work tree), and each treats non-zero as a *meaningful answer*. Handing them a
+        /// synthetic `-1` when git is merely absent would let the load-bearing ADR-0026 negation
+        /// proofs pass green without git ever having run. (The old `| null ->` branch never fired:
+        /// a missing executable throws.)
+        let git (root: string) (args: string list) =
+            let info = ProcessStartInfo(FileName = "git", WorkingDirectory = root)
+            args |> List.iter info.ArgumentList.Add
+
+            let completion = runBounded 60_000 info
+            completion.ExitCode, completion.StandardOutput.Trim()
 
     /// Unified public-surface baseline verification (feature 067 / FR-005). Set
     /// `FSGG_UPDATE_BASELINE=1` to re-capture intentionally; otherwise assert the captured surface

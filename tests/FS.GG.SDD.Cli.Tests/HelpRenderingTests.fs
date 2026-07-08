@@ -9,6 +9,7 @@ open FS.GG.SDD.Commands.CommandRendering
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Cli.Rendering
+open FS.GG.SDD.TestShared
 open Xunit
 
 // §3.5 (FR-008–011, SC-005/006): the help report projects three ways (json/text/rich); rich
@@ -121,23 +122,13 @@ module HelpRenderingTests =
     let private runHost (env: (string * string) list) (args: string list) =
         let startInfo = ProcessStartInfo(apphost)
         args |> List.iter startInfo.ArgumentList.Add
-        startInfo.RedirectStandardOutput <- true
-        startInfo.RedirectStandardError <- true
-        startInfo.UseShellExecute <- false
         env |> List.iter (fun (key, value) -> startInfo.Environment[key] <- value)
 
-        use proc =
-            match Process.Start startInfo with
-            | null -> failwith "Failed to start the apphost."
-            | started -> started
+        let completion = TestShared.ChildProcess.runBounded 60_000 startInfo
 
-        let stdout = proc.StandardOutput.ReadToEnd()
-        let stderr = proc.StandardError.ReadToEnd()
-        proc.WaitForExit(30000) |> ignore
-
-        {| ExitCode = proc.ExitCode
-           StdOut = stdout
-           StdErr = stderr |}
+        {| ExitCode = completion.ExitCode
+           StdOut = completion.StandardOutput
+           StdErr = completion.StandardError |}
 
     [<Fact>]
     let ``CLI top-level --help exits 0 with top-level help on stdout`` () =
