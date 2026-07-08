@@ -678,13 +678,19 @@ module internal HandlersEvidence =
           Readiness = readiness }
 
     let renderEvidenceSourceSnapshot (snapshot: EvidenceSourceSnapshot) =
-        let digest = snapshot.Digest |> Option.defaultValue ""
-        let schema = snapshot.SchemaVersion |> Option.map string |> Option.defaultValue "1"
+        // Absence is absence (FS.GG.SDD#182): an unset digest omits its line rather than
+        // emitting a trailing-whitespace `digest: `, and an unset schemaVersion omits its
+        // line rather than inventing `1` for a source that declared none. Same
+        // omit-when-`None` convention as `renderOptionalScalar` below.
+        let optionalFields =
+            [ snapshot.Digest |> Option.map (fun digest -> $"    digest: {digest}")
+              snapshot.SchemaVersion
+              |> Option.map (fun schema -> $"    schemaVersion: {schema}") ]
+            |> List.choose (Option.map (fun line -> "\n" + line))
+            |> String.concat ""
 
         $"""  - label: {snapshot.Label}
-    path: {snapshot.Path}
-    digest: {digest}
-    schemaVersion: {schema}"""
+    path: {snapshot.Path}{optionalFields}"""
 
     let renderEvidenceSourceRefs (refs: EvidenceSourceReference list) =
         match refs with

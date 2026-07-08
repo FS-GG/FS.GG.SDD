@@ -4,6 +4,7 @@ open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.CommandRendering
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Commands.Internal
 open Xunit
 
 // Joins ProcessGlobalEnv: the CLI smoke here spawns a PATH-resolved process, so it must not
@@ -627,3 +628,88 @@ evidence:
 
         Assert.Equal(0, result.ExitCode)
         Assert.Contains("tests/FS.GG.SDD.Foo.Tests", TestSupport.readRelative root evidencePath)
+
+    // FS.GG.SDD#182. `renderEvidenceSourceSnapshot`'s absent-optional branches are unreachable
+    // from the command path — the sole caller overwrites `SourceSnapshots` with freshly computed
+    // snapshots whose Digest/SchemaVersion are always `Some`. They become live the moment any
+    // path re-renders a *parsed* artifact's snapshots (e.g. a no-clobber merge preserving an
+    // author's block). These tests pin the convention against that day, directly on the renderer.
+
+    let private snapshotOf digest schemaVersion : EvidenceSourceSnapshot =
+        { Label = "tasks"
+          Path = $"work/{workId}/tasks.yml"
+          Digest = digest
+          SchemaVersion = schemaVersion
+          SourceLocation = None }
+
+    [<Fact>]
+    let ``renderEvidenceSourceSnapshot omits an absent digest and schemaVersion`` () =
+        // Absence is absence: never `digest: ` (a trailing-whitespace line, violating the FR-004
+        // invariant above) and never a fabricated `schemaVersion: 1` for a source that declared none.
+        let rendered = HandlersEvidence.renderEvidenceSourceSnapshot (snapshotOf None None)
+
+        Assert.Equal($"  - label: tasks\n    path: work/{workId}/tasks.yml", rendered)
+        Assert.DoesNotContain("digest", rendered)
+        Assert.DoesNotContain("schemaVersion", rendered)
+
+        let offenders =
+            rendered.Split('\n')
+            |> Array.filter (fun line -> line = "" || line.TrimEnd() <> line)
+
+        Assert.Empty(offenders)
+
+    [<Fact>]
+    let ``renderEvidenceSourceSnapshot omits each absent optional independently`` () =
+        let digestOnly =
+            HandlersEvidence.renderEvidenceSourceSnapshot (snapshotOf (Some "0123456789abcdef") None)
+
+        Assert.Contains("\n    digest: 0123456789abcdef", digestOnly)
+        Assert.DoesNotContain("schemaVersion", digestOnly)
+
+        let schemaOnly =
+            HandlersEvidence.renderEvidenceSourceSnapshot (snapshotOf None (Some 1))
+
+        Assert.DoesNotContain("digest", schemaOnly)
+        Assert.Contains("\n    schemaVersion: 1", schemaOnly)
+
+    [<Fact>]
+    let ``renderEvidenceSourceSnapshot emits both optionals when present (live path bytes unchanged)`` () =
+        // The reachable path always supplies both, so this pins that #182 changed no emitted byte.
+        let rendered =
+            HandlersEvidence.renderEvidenceSourceSnapshot (snapshotOf (Some "0123456789abcdef") (Some 1))
+
+        Assert.Equal(
+            $"  - label: tasks\n    path: work/{workId}/tasks.yml\n    digest: 0123456789abcdef\n    schemaVersion: 1",
+            rendered
+        )
+
+    [<Fact>]
+    let ``an absent snapshot digest survives render then parse as None`` () =
+        // The structural guarantee the two halves of #182 buy together: a snapshot with no digest
+        // renders to a document that parses back to `Digest = None` — not `Some ""`, which
+        // `evidenceSourceSnapshotStale` would compare against the real digest as a mismatch,
+        // producing a permanent, unfixable `evidence.staleEvidenceSource` on every run.
+        let root = initializedAnalyzedProject ()
+        TestSupport.runEvidence root workId title |> ignore
+        let original = TestSupport.readRelative root evidencePath
+
+        // Splice a digest-less snapshot block into the real, freshly generated document.
+        let header = "sourceSnapshots:\n"
+        let headerAt = original.IndexOf(header)
+        let blockEnd = original.IndexOf("\nevidence:")
+        Assert.True(headerAt >= 0, "fixture: no sourceSnapshots block in the generated evidence.yml")
+        let blockStart = headerAt + header.Length
+        Assert.True(blockEnd > blockStart, "fixture: sourceSnapshots block is not followed by evidence:")
+
+        let strippedBlock =
+            HandlersEvidence.renderEvidenceSourceSnapshot (snapshotOf None None)
+
+        let spliced =
+            original.Substring(0, blockStart) + strippedBlock + original.Substring(blockEnd)
+
+        match parseEvidenceArtifact { Path = evidencePath; Text = spliced } with
+        | Error diagnostics -> failwith $"Digest-less evidence artifact did not parse: {diagnostics}."
+        | Ok artifact ->
+            let snapshot = Assert.Single(artifact.SourceSnapshots)
+            Assert.Equal(None, snapshot.Digest)
+            Assert.Equal(None, snapshot.SchemaVersion)
