@@ -422,6 +422,16 @@ module CommandTypes =
           RecommendedBump: string
           Entries: ClassifiedEntry list }
 
+    // Feature 094: the coherent-set version obligation a classified mutation implies. See
+    // CommandTypes.fsi for docs.
+    type VersionBumpPrompt =
+        { AxisFile: string
+          AxisProperty: string
+          AxisState: string
+          CurrentVersion: string option
+          RequiredBump: string
+          SuggestedVersion: string option }
+
     // Feature 086: the API-surface drift picture `surface` emits. See CommandTypes.fsi for docs.
     type SurfaceSummary =
         { SourceRoot: string
@@ -433,7 +443,8 @@ module CommandTypes =
           OrphanBaselinePaths: string list
           UpdatedBaselinePaths: string list
           IsCoherent: bool
-          Classification: SurfaceClassification }
+          Classification: SurfaceClassification
+          VersionBump: VersionBumpPrompt }
 
     type GovernanceCompatibilityFact =
         { Path: string

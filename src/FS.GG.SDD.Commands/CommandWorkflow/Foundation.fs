@@ -673,12 +673,42 @@ nuget-cache/
     let surfaceBaselineRoot request =
         surfaceParam "baselineRoot" "docs/api-surface" request
 
+    // Feature 094: the coherent-set version axis, workspace-declared. Generic SDD embeds no concrete
+    // axis name (FR-003) — `Version` is the MSBuild convention default, not a product's axis.
+    let versionAxisFile request =
+        surfaceParam "versionAxisFile" "Directory.Build.props" request
+
+    let versionAxisProperty request =
+        surfaceParam "versionAxisProperty" "Version" request
+
+    // FR-017: the axis must live inside the workspace root. No such guard exists for
+    // `sourceRoot`/`baselineRoot` today (research R7); this introduces one for the param this
+    // feature adds, and deliberately does not retrofit the other two.
+    //
+    // ⚠ The check MUST run on the RAW param, never on `normalizeRelativePath path`. Normalization
+    // ends in `.TrimStart('/')`, which strips the leading slash *before* `IsPathRooted` could see
+    // it — so a normalize-then-test predicate would let `/etc/passwd` through as `etc/passwd`.
+    // The effect carries the raw string anyway, and `CommandEffects.fullPath` calls
+    // `Path.Combine(projectRoot, raw)`, which returns the second argument verbatim when rooted.
+    let escapesRoot (raw: string) =
+        let trimmed = raw.Trim().Replace('\\', '/')
+
+        String.IsNullOrWhiteSpace trimmed
+        || Path.IsPathRooted trimmed // on the RAW string, before any TrimStart('/')
+        || (trimmed.Split('/') |> Array.contains "..")
+
     // The first-wave reads for `surface`: enumerate the source and baseline roots so the handler
     // can discover the authored `.fsi` set and the committed baselines (their bodies are read in a
     // provenance-style second wave, mirroring `doctor`'s skill-read gate).
     let surfaceReadEffects (request: CommandRequest) =
         [ EnumerateDirectory(surfaceSourceRoot request)
-          EnumerateDirectory(surfaceBaselineRoot request) ]
+          EnumerateDirectory(surfaceBaselineRoot request)
+          // Feature 094: the version axis. A missing file interprets to `Snapshot = None`
+          // (research R2, characterized in SurfaceCommandTests) — that *is* the `undeterminable`
+          // state, so no `Exists` probe is needed. An escaping path plans no read at all (FR-017):
+          // nothing outside the workspace root is ever opened.
+          if not (escapesRoot (versionAxisFile request)) then
+              ReadFile(versionAxisFile request) ]
 
     let workIdDiagnostics (request: CommandRequest) =
         match request.Command, request.WorkId with

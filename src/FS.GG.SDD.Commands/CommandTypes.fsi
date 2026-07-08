@@ -517,6 +517,33 @@ module CommandTypes =
             Entries: ClassifiedEntry list
         }
 
+    /// Feature 094 (FS-GG/.github ADR-0025 reconcile step 3a): the coherent-set version obligation
+    /// implied by a classified shipped-surface mutation. Advisory — it emits a
+    /// `surface.versionBumpRequired` warning and never changes the exit code. SDD cannot see the
+    /// previously *published* version (that lives in the feed and the `.github` registry pin), so
+    /// this states facts and an implication, never an accusation: the bump may already be applied
+    /// in the change under review.
+    type VersionBumpPrompt =
+        {
+            /// The workspace-relative file the axis was read from. `--param versionAxisFile`,
+            /// default `Directory.Build.props`. Echoed even when unresolved, so the operator can
+            /// see what was looked for.
+            AxisFile: string
+            /// The MSBuild property element name. `--param versionAxisProperty`, default `Version`.
+            /// Generic SDD embeds no concrete axis name (FR-003).
+            AxisProperty: string
+            /// `resolved` | `undeterminable` | `unparseable`.
+            AxisState: string
+            /// The axis value, present only when `AxisState = "resolved"`.
+            CurrentVersion: string option
+            /// `major` | `minor` | `none`, mirroring the run verdict's `RecommendedBump`. Depends
+            /// only on the classification, so it is reported in every axis state.
+            RequiredBump: string
+            /// `CurrentVersion` with `RequiredBump` applied. `None` whenever `CurrentVersion` is
+            /// `None`; equal to `CurrentVersion` when `RequiredBump = "none"`.
+            SuggestedVersion: string option
+        }
+
     /// The read-only (or, under `--update`, reconciling) API-surface picture `surface` emits
     /// (feature 086). Each authored `src/**/*.fsi` signature has a byte-identical committed
     /// baseline under `docs/api-surface/`; drift is a missing or byte-differing baseline.
@@ -546,6 +573,10 @@ module CommandTypes =
             /// present; `none`/`none`/`[]` when nothing drifted. Advisory — never changes the
             /// exit code.
             Classification: SurfaceClassification
+            /// Feature 094: the coherent-set version obligation the classification implies. Always
+            /// present (never `option`, so the automation contract keeps a stable shape); inert
+            /// (`RequiredBump = "none"`, no warning) when nothing drifted.
+            VersionBump: VersionBumpPrompt
         }
 
     type GovernanceCompatibilityFact =

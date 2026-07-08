@@ -129,6 +129,11 @@ module ReleaseContract =
 
         if major = 0 then PreRelease else StableRelease
 
+    // Feature 094 / FR-015. Not to be unified with `HandlersSurface.SurfaceClassify.bumpFor`, which
+    // maps the *surface-mutation* verdicts (breaking→major, additive→minor, cosmetic/none→**none**).
+    // Here `Clarifying` implies a **patch**; there a cosmetic `.fsi` reformat implies **no release**.
+    // The two mappings agree on breaking/additive and diverge on the third case by design, so
+    // collapsing them is a behavior change, not a refactor (spec 094 AMB-005, research R5).
     let bumpRule changeClass =
         match changeClass with
         | Breaking -> "major"

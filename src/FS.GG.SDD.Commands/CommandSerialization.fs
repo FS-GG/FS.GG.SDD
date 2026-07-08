@@ -440,6 +440,27 @@ module CommandSerialization =
             writer.WriteEndArray()
             writer.WriteEndObject()
 
+            // Feature 094: the coherent-set version obligation the classification implies. Always
+            // written with a stable key set; the two optional scalars are explicit `null` when the
+            // axis is unresolved rather than omitted, so consumers see a fixed shape (FR-007).
+            let versionBump = summary.VersionBump
+            writer.WriteStartObject("versionBump")
+            writer.WriteString("axisFile", versionBump.AxisFile)
+            writer.WriteString("axisProperty", versionBump.AxisProperty)
+            writer.WriteString("axisState", versionBump.AxisState)
+
+            match versionBump.CurrentVersion with
+            | Some current -> writer.WriteString("currentVersion", current)
+            | None -> writer.WriteNull "currentVersion"
+
+            writer.WriteString("requiredBump", versionBump.RequiredBump)
+
+            match versionBump.SuggestedVersion with
+            | Some suggested -> writer.WriteString("suggestedVersion", suggested)
+            | None -> writer.WriteNull "suggestedVersion"
+
+            writer.WriteEndObject()
+
             writer.WriteEndObject()
         | None -> writer.WriteNull "surface"
 

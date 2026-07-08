@@ -492,6 +492,28 @@ module CommandRendering =
             |> List.iter (fun entry ->
                 builder.AppendLine($"surfaceClassified: {entry.Path}={entry.Classification} ({entry.RecommendedBump})")
                 |> ignore)
+
+            // Feature 094: the coherent-set version obligation. Flat scalars, always emitted (never
+            // conditionally, so the projection is a fixed shape), with `(none)` standing in for an
+            // unresolved optional — which is why rich needs no bespoke block: it auto-derives its
+            // rows from these `key: value` lines.
+            let versionBump = surface.VersionBump
+            let unresolved = "(none)"
+            let currentVersion = defaultArg versionBump.CurrentVersion unresolved
+            let suggestedVersion = defaultArg versionBump.SuggestedVersion unresolved
+
+            builder.AppendLine($"surfaceVersionAxis: {versionBump.AxisFile}:{versionBump.AxisProperty}")
+            |> ignore
+
+            builder.AppendLine($"surfaceVersionAxisState: {versionBump.AxisState}")
+            |> ignore
+
+            builder.AppendLine($"surfaceVersionCurrent: {currentVersion}") |> ignore
+
+            builder.AppendLine($"surfaceVersionRequiredBump: {versionBump.RequiredBump}")
+            |> ignore
+
+            builder.AppendLine($"surfaceVersionSuggested: {suggestedVersion}") |> ignore
         | None -> ()
 
         match report.Upgrade with

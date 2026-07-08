@@ -52,6 +52,7 @@ FS.GG.SDD.Artifacts.Diagnostics.sort
 FS.GG.SDD.Artifacts.Diagnostics.staleGeneratedView
 FS.GG.SDD.Artifacts.Diagnostics.surfaceDrift
 FS.GG.SDD.Artifacts.Diagnostics.surfaceOrphanBaseline
+FS.GG.SDD.Artifacts.Diagnostics.surfaceVersionBumpRequired
 FS.GG.SDD.Artifacts.Diagnostics.unknownReference
 FS.GG.SDD.Artifacts.Diagnostics.unsupportedSchemaVersion
 FS.GG.SDD.Artifacts.Diagnostics.upgradeNonInteractiveNoYes

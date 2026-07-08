@@ -72,7 +72,8 @@ alongside `bumpFor` — **not** promoted into `Fsgg.Version`, which would widen 
 - **I4**: the `surface.versionBumpRequired` warning is emitted ⟺ `RequiredBump ∈ {major, minor}`.
   Independent of `AxisState` — an unresolvable axis still warns, and names the `--param` that would
   resolve it (FR-008, FR-010, SC-007).
-- **I5**: no planned effect targets `AxisFile` (FR-012). Asserted on the effect set, not on mtimes.
+- **I5**: no planned **mutating** effect targets `AxisFile`, and the only effect that targets it at all
+  is the `ReadFile` the prompt is derived from (FR-012). Asserted on the effect set, not on mtimes.
 
 ## `SurfaceSummary` (extended, additive)
 

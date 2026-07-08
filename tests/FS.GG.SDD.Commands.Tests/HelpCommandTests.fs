@@ -166,3 +166,21 @@ module HelpCommandTests =
 
         for root in [ ".claude/skills"; ".codex/skills"; ".agents/skills" ] do
             Assert.Contains(root, nextAction.RequiredArtifacts)
+
+    // Feature 094 (V23 / FR-016): `surface --help` documents the two version-axis `--param` keys and
+    // their convention defaults, so the axis is discoverable without reading the source.
+    [<Fact>]
+    let ``surface help documents the version axis param keys and their defaults`` () =
+        let summary = CommandHelp.commandHelp Surface
+
+        let rendered =
+            summary.CommandFlags
+            |> List.map (fun entry ->
+                let argument = defaultArg entry.Argument ""
+                $"{entry.Name} {argument} {entry.Description}")
+            |> String.concat "\n"
+
+        Assert.Contains("versionAxisFile", rendered)
+        Assert.Contains("Directory.Build.props", rendered)
+        Assert.Contains("versionAxisProperty", rendered)
+        Assert.Contains("default Version", rendered)

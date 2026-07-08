@@ -127,7 +127,7 @@ docs/release/schema-reference.md # the versionBump block, prose (what 087 did)
 
 | Candidate | Ruled out by |
 |---|---|
-| `ReleaseContract.fs` / `.fsi` | R5 — `bumpRule` and `bumpFor` are not duplicates; unifying is a behavior change (AMB-005). *Also removes a file collision with #177.* |
+| `ReleaseContract.fsi` | R5 — `bumpRule` and `bumpFor` are not duplicates; unifying is a behavior change (AMB-005). No surface change; `ReleaseContract.fs` receives a cross-referencing **comment only** (T021). *Also removes a file collision with #177.* |
 | `docs/release/release-readiness.json` + its test baseline | R9 — the `inventory` list names only top-level report blocks; this nests inside `surface`. |
 | `src/FS.GG.SDD.Cli/Program.fs` | R3 — `--param` is already parsed generically for every command. |
 | `src/FS.GG.SDD.Cli/Rendering.fs` / `.fsi` | R6 — rich auto-derives from the text `key: value` lines. |

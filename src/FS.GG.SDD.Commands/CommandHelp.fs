@@ -114,14 +114,23 @@ module CommandHelp =
         | Lint ->
             [ flag "--explain" None "Run the same pre-flight checks against the stage's own artifact (non-blocking)." ]
         // surface: `--check` (default, read-only, exit 1 on drift) or `--update` (refresh baselines);
-        // roots default to src/ and docs/api-surface/ and are overridable via --param.
+        // roots default to src/ and docs/api-surface/ and are overridable via --param. Feature 094
+        // adds the version axis the bump prompt reads (never writes) — also --param, also defaulted.
         | Surface ->
             [ flag "--check" None "Report API-surface baseline drift; read-only, exits 1 on drift (default)."
               flag
                   "--update"
                   None
                   "Refresh the docs/api-surface .fsi baselines from the authored signatures (takes precedence)."
-              flag "--param" (Some "<key=value>") "Root override: sourceRoot=<dir> / baselineRoot=<dir>." ]
+              flag "--param" (Some "<key=value>") "Root override: sourceRoot=<dir> / baselineRoot=<dir>."
+              flag
+                  "--param"
+                  (Some "versionAxisFile=<file>")
+                  "File the coherent-set version axis is read from (default Directory.Build.props); never written."
+              flag
+                  "--param"
+                  (Some "versionAxisProperty=<name>")
+                  "MSBuild property holding the coherent-set version (default Version)." ]
 
     let topLevelHelp (generator: GeneratorVersion) =
         { Scope = TopLevel

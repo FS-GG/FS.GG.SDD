@@ -90,3 +90,41 @@ module DiagnosticTests =
 
         Assert.Equal("missingArtifact", sorted.Head.Id)
         Assert.True(Diagnostics.hasBlocking sorted)
+
+    // Feature 094 (V22): the `surface.versionBumpRequired` id/severity contract. It is advisory —
+    // a warning, never a tool defect — because SDD cannot see the previously *published* version
+    // and so cannot prove the bump was not already applied in the change under review (FR-008/013).
+    [<Fact>]
+    let ``surfaceVersionBumpRequired is an advisory warning, never blocking`` () =
+        let diagnostic =
+            Diagnostics.surfaceVersionBumpRequired
+                "breaking"
+                "Directory.Build.props"
+                "Version"
+                "resolved"
+                (Some "0.8.0")
+                "major"
+                (Some "1.0.0")
+
+        Assert.Equal("surface.versionBumpRequired", diagnostic.Id)
+        Assert.Equal(Diagnostics.DiagnosticWarning, diagnostic.Severity)
+        Assert.False diagnostic.IsToolDefect
+        Assert.False(Diagnostics.hasBlocking [ diagnostic ])
+
+    // FR-010: with an unresolved axis the remediation names both `--param` overrides — the
+    // diagnostic cannot tell a missing file from a missing property, so it offers both.
+    [<Fact>]
+    let ``surfaceVersionBumpRequired names both param overrides when the axis is unresolved`` () =
+        let diagnostic =
+            Diagnostics.surfaceVersionBumpRequired
+                "additive"
+                "Directory.Build.props"
+                "Version"
+                "undeterminable"
+                None
+                "minor"
+                None
+
+        Assert.Contains("--param versionAxisFile", diagnostic.Correction)
+        Assert.Contains("--param versionAxisProperty", diagnostic.Correction)
+        Assert.Contains("undeterminable", diagnostic.Message)
