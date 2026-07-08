@@ -72,8 +72,9 @@ module RefreshCommandTests =
 
     [<Fact>]
     let ``refresh does not rewrite the verdict from a malformed ship json`` () =
-        // FR-006 second half: the verdict inherits ship's currency class. Re-projecting against a
-        // broken ship.json would commit a verdict for inputs that never produced it.
+        // FR-006 second half: re-projecting against a broken ship.json would commit a verdict for
+        // inputs that never produced it. The verdict is present but unrefreshable -> blocked, and
+        // the run must not report itself current.
         let root = shippedProject ()
         let original = TestSupport.readRelative root shipVerdictPath
         File.WriteAllText(Path.Combine(root, shipPath.Replace('/', Path.DirectorySeparatorChar)), "{ not json")
@@ -81,11 +82,51 @@ module RefreshCommandTests =
         let report = TestSupport.runRefresh root workId
 
         Assert.Equal(original, TestSupport.readRelative root shipVerdictPath)
-        Assert.NotEqual<string>("current", TestSupport.refreshViewState report "ship-verdict")
-        Assert.Equal(TestSupport.refreshViewState report "ship", TestSupport.refreshViewState report "ship-verdict")
+        Assert.Equal("blocked", TestSupport.refreshViewState report "ship-verdict")
+        Assert.NotEmpty report.Diagnostics
 
     [<Fact>]
-    let ``refresh does not write a verdict when ship json is missing`` () =
+    let ``a ship json that is valid json but not a ship view blocks the verdict with a diagnostic`` () =
+        // The hole a naive implementation leaves: `shClass` is computed from `parsesAsJson`, which is
+        // weaker than `parseShipView`. A future-schema ship.json is "already current" to refresh but
+        // cannot be projected. Without a diagnostic, refresh exits 0 reporting "refreshed-current"
+        // while the COMMITTED verdict silently keeps a stale answer.
+        let root = shippedProject ()
+        let original = TestSupport.readRelative root shipVerdictPath
+
+        File.WriteAllText(
+            Path.Combine(root, shipPath.Replace('/', Path.DirectorySeparatorChar)),
+            "{ \"schemaVersion\": 99 }"
+        )
+
+        let report = TestSupport.runRefresh root workId
+
+        Assert.Equal(original, TestSupport.readRelative root shipVerdictPath) // never rewritten
+        Assert.Equal("current", TestSupport.refreshViewState report "ship") // ship still looks current
+        Assert.Equal("malformed", TestSupport.refreshViewState report "ship-verdict")
+        Assert.NotEmpty report.Diagnostics
+
+        match report.Refresh with
+        | Some summary ->
+            Assert.Contains("ship-verdict", summary.BlockedViewIds)
+            Assert.DoesNotContain("ship-verdict", summary.AlreadyCurrentViewIds)
+        | None -> failwith "Expected refresh summary."
+
+    [<Fact>]
+    let ``a fresh clone - committed verdict, gitignored ship json - never reports the verdict missing`` () =
+        // The state ADR-0026 exists for. `ship.json` is gitignored; `ship-verdict.json` is committed.
+        // Reporting the one artifact that survived the clone as "missing" would be a false fact.
+        let root = shippedProject ()
+        File.Delete(Path.Combine(root, shipPath.Replace('/', Path.DirectorySeparatorChar)))
+
+        let report = TestSupport.runRefresh root workId
+
+        Assert.True(TestSupport.existsRelative root shipVerdictPath)
+        Assert.Equal("missing", TestSupport.refreshViewState report "ship")
+        Assert.Equal("blocked", TestSupport.refreshViewState report "ship-verdict")
+
+    [<Fact>]
+    let ``refresh does not write a verdict when both ship json and the verdict are missing`` () =
         let root = shippedProject ()
         File.Delete(Path.Combine(root, shipPath.Replace('/', Path.DirectorySeparatorChar)))
         File.Delete(Path.Combine(root, shipVerdictPath.Replace('/', Path.DirectorySeparatorChar)))
@@ -93,7 +134,7 @@ module RefreshCommandTests =
         let report = TestSupport.runRefresh root workId
 
         Assert.False(TestSupport.existsRelative root shipVerdictPath)
-        Assert.Equal(TestSupport.refreshViewState report "ship", TestSupport.refreshViewState report "ship-verdict")
+        Assert.Equal("missing", TestSupport.refreshViewState report "ship-verdict")
 
     // --- User Story 1: orchestrated refresh of the structured views ---
 

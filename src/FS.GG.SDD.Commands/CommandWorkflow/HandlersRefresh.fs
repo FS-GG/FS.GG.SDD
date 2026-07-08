@@ -495,6 +495,19 @@ module internal HandlersRefresh =
                 // regenerate it — but only when its ship source is itself current. Re-projecting
                 // against a stale ship would commit a verdict for inputs that no longer exist.
                 // Unlike the handoff it needs no work model, so it depends on shClass alone.
+                //
+                // Two asymmetries with the handoff, both because the verdict is DURABLE:
+                //  * `shClass` is computed from `parsesAsJson`, which is weaker than `parseShipView`.
+                //    A `ship.json` that is valid JSON but not a valid ship view (future schemaVersion,
+                //    bad workId/stage) yields `AlreadyCurrent` here and a failed projection. That is a
+                //    MALFORMED source, not a silent no-op: report it, or refresh exits 0 saying
+                //    "refreshed-current" while the committed verdict silently keeps a stale answer.
+                //  * `ship.json` is gitignored and the verdict is committed, so a fresh clone has the
+                //    verdict WITHOUT its source. Inheriting `Missing` there would report the one
+                //    artifact that survived the clone as absent. A present-but-unrefreshable verdict
+                //    is `Blocked` (upstream), never `Missing`.
+                let verdictOnDisk = snapshot (shipVerdictPath workId) model
+
                 let verdictView, verdictEffects, verdictClass =
                     match shClass with
                     | ViewCurrencyClass.AlreadyCurrent ->
@@ -505,18 +518,22 @@ module internal HandlersRefresh =
 
                             match jsonOpt with
                             | Some json ->
-                                match snapshot (shipVerdictPath workId) model with
+                                match verdictOnDisk with
                                 | Some snap when snap.Text = json -> view, [], ViewCurrencyClass.AlreadyCurrent
                                 | _ -> view, effects, ViewCurrencyClass.Refreshed
-                            | None -> None, [], ViewCurrencyClass.Blocked
+                            | None -> None, [], ViewCurrencyClass.Malformed
                         | None -> None, [], ViewCurrencyClass.Missing
+                    | _ when Option.isSome verdictOnDisk -> None, [], ViewCurrencyClass.Blocked
                     | _ -> None, [], shClass
 
                 let structuredClasses =
                     [ "work-model", wmClass
                       "analysis", anClass
                       "verify", veClass
-                      "ship", shClass ]
+                      "ship", shClass
+                      // The verdict joins the structured set: it is committed, so a refresh that
+                      // cannot bring it to currency must not report "refreshed-current".
+                      "ship-verdict", verdictClass ]
 
                 let isClean = viewCurrencyIsClean
 
@@ -570,6 +587,24 @@ module internal HandlersRefresh =
                         | ViewCurrencyClass.Missing -> [ refreshBlockedUpstreamView viewPath (workModelPath workId) ]
                         | _ -> [])
 
+                // The verdict's upstream is `ship.json`, not the work model, and its `Malformed`
+                // means the *source* did not parse as a ship view — `shClass` only checks that the
+                // source is well-formed JSON. Without this row a committed artifact that refresh
+                // cannot bring to currency carries no diagnostic and the run reports success
+                // (feature 092).
+                let verdictDiags =
+                    let verdictPath = shipVerdictPath workId
+
+                    match verdictClass with
+                    | ViewCurrencyClass.Malformed ->
+                        [ refreshMalformedGeneratedView
+                              verdictPath
+                              $"Source '{shipPath workId}' did not parse as a ship view, so '{verdictPath}' could not be re-projected; re-run `fsgg-sdd ship`." ]
+                    | ViewCurrencyClass.Blocked
+                    | ViewCurrencyClass.Missing -> [ refreshBlockedUpstreamView verdictPath (shipPath workId) ]
+                    | ViewCurrencyClass.Stale -> [ refreshStaleView verdictPath [ shipPath workId ] ]
+                    | _ -> []
+
                 let summaryRenderable = structuredAllClean
 
                 let summaryDiags =
@@ -583,7 +618,8 @@ module internal HandlersRefresh =
 
                         [ refreshUnrenderableSummary summaryPath related ]
 
-                let refreshDiags = workModelDiags @ downstreamDiags @ summaryDiags
+                let refreshDiags =
+                    workModelDiags @ downstreamDiags @ verdictDiags @ summaryDiags
 
                 let allDiags =
                     (baseDiags @ refreshDiags)
