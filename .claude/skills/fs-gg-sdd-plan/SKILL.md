@@ -15,7 +15,14 @@ names the surface you will declare.
 
 ```text
 fsgg-sdd plan --work <id>
+fsgg-sdd plan --work <id> --accept-upstream   # re-baseline after an upstream edit
 ```
+
+`plan` records the digests of `spec.md`/`clarifications.md`/`checklist.md` in its own
+`## Source Snapshot`. Editing any of them afterwards makes the plan stale: a bare re-run
+then **blocks** with `stalePlanSnapshot` and writes nothing (it never edits your prose).
+Review the recorded `PD-###` decisions against the change, then re-run with
+`--accept-upstream` to re-baseline the snapshot. See [[fs-gg-sdd-troubleshooting]].
 
 ## Produces / consumes
 

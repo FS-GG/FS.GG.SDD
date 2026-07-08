@@ -60,7 +60,7 @@
     {
       "id": "fs-gg-sdd-plan",
       "scope": "process",
-      "sha256": "9371800252c6bd0a4c4c763b37cb521f77289bfd490248c16ed3eb7781685053",
+      "sha256": "a0c201136634403a7cefb79e05195a467d878361070c70aea406b99936ac7695",
       "resolvablePath": ".agents/skills/fs-gg-sdd-plan/SKILL.md",
       "materializes-when": "always"
     },
@@ -95,7 +95,7 @@
     {
       "id": "fs-gg-sdd-troubleshooting",
       "scope": "process",
-      "sha256": "e2418e32e7299365853815e03c49d9468dba36b3180d0f262bef5c69c160f6b2",
+      "sha256": "96eb7eafe8f7f6127e4364ff54064c59f9c3a47627f59fa2dfe7622352c9bbd8",
       "resolvablePath": ".agents/skills/fs-gg-sdd-troubleshooting/SKILL.md",
       "materializes-when": "always"
     },

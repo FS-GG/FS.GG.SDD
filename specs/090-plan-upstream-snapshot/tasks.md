@@ -220,3 +220,62 @@ CLI — not unit tests alone (vertical-slice rule).
 **US1 + US2** (T001–T017). US1 alone stops the corruption but leaves the operator hand-editing three
 digests to escape a *blocked* command rather than a *warned* one — the spec says so explicitly. US3
 closes the skip-`plan` hole and should ship in the same PR. US4 is preventive and droppable.
+
+
+---
+
+## Phase 8: Review fixes (from `/code-review high`, 8 finder angles)
+
+The review found six real defects in the first implementation. All fixed, each with a regression test.
+
+- [X] T032 **`--accept-upstream` could not establish a snapshot.** The rewrite was gated on `stale`,
+  but `changedPlanSourcePaths` folds over the *recorded* rows — an empty `## Source Snapshot` is never
+  "stale", so the refresh never ran and the section stayed empty forever, permanently disabling
+  FR-008/SC-004 for that plan while `--accept-upstream` reported `noChange`. Now the rewrite runs
+  whenever the flag is passed; FR-005 still holds because the rendered lines are a pure function of the
+  current sources. Verified against the real CLI (0 → 3 digests; guard fires again). Spec FR-004 amended.
+- [X] T033 **`evidence`/`verify`/`ship` were bricked.** `resolvePrerequisites` is shared and five
+  handlers fold `PlanDiagnostics` — not the two research R2 claimed. A spec typo blocked the whole back
+  half of the lifecycle, withholding `verify.json`/`ship.json` and routing the operator to re-run `plan`
+  at ship time. Emission scoped to `Tasks`/`Analyze` (the stages that *derive* from the plan). Spec
+  FR-008 amended; contract cell C16 added.
+- [X] T034 **`nextAction.blockingDiagnosticIds` under-reported.** The `plan.acceptUpstream` branch
+  hardcoded `[ "stalePlanSnapshot" ]` while the generic fallback reports the full set — an agent driving
+  off it would loop once per hidden co-occurring blocker. Now `blocking`. Contract cell C17.
+- [X] T035 **The FR-011 advisory fired on blocked runs**, including a blocked *creation* where no
+  `plan.md` is written — asserting a snapshot that does not exist. Now gated on the accompanying
+  diagnostics being non-blocking. Contract cell C18.
+- [X] T036 **`stalePlanSnapshot` classified as `blocking` in the analysis view**, not `staleSource`
+  (`ViewGeneration.analysisFindingSeverity` had an arm for the retired `stalePlanDecision` but none for
+  its replacement), so `analysis.json` reported `staleSourceCount: 0` and `needsCorrection`. New FR-017.
+- [X] T037 **The C11 (FR-016) test passed vacuously.** It rewrote the row as `- work/<id>/spec.md`,
+  which `parsePlanSourceSnapshots` cannot parse, so it exercised the empty-list path rather than the
+  `Digest = None` arm. Fixed to `- spec: work/<id>/spec.md`, with an assertion that the row survives parsing.
+- [X] T038 **Cleanup.** `stale` is now derived from `changedPlanSourcePaths` (one binding) instead of
+  computed independently — the two can no longer disagree, and the three sources are hashed once instead
+  of twice. Corrected the `DiagnosticConstructors` comment that wrongly claimed `RemediationPointers`
+  appends the `--accept-upstream` suffix (it does not; the registry excludes sequencing blocks).
+- [X] T039 **Agent surfaces (reverses the T030 skip).** `fs-gg-sdd-troubleshooting`'s `staleResultCount`
+  row told agents to "re-run the stage so results re-derive" — now actively wrong for `plan`, which
+  blocks. Split the row and added a `stalePlanSnapshot` row pointing at `--accept-upstream`; documented
+  the flag in `fs-gg-sdd-plan`. Both edited byte-identically in `.claude` and `.codex`, and
+  `.agents/skills/skill-manifest.json` regenerated (`registry skill-manifest --write`; exactly two
+  sha256 rows moved, `--check` clean).
+
+### Known follow-ups (not fixed here — out of touch-set or out of scope)
+
+- `Foundation.sourceDigestsStale` should be generalized to return the changed paths, with the bool
+  derived from it, so `changedPlanSourcePaths` needs no parallel predicate. `Foundation.fs` is shared
+  with the checklist path; a separate change.
+- `planPrerequisiteDiagnosticsTextSummaryAndFacts` re-reads the three upstream texts from `model`
+  instead of taking them as parameters. Threading them through requires editing `Prerequisites.fs`,
+  which **FS.GG.SDD#174 owns**. Deferred rather than merged across the overlap.
+- `PlanSummary.StaleDecisionCount` (`planStaleDecisions` in `--text`) now reads 0 for digest drift,
+  since only an authored `stale:` line sets it. A `stalePlanSnapshot`-aware summary counter would make
+  the `--text` triage path complete. Additive; own issue.
+- `NextAction` has no argument field, so `plan.acceptUpstream` reports `command: plan` and an agent that
+  mechanically re-runs it without the flag will not progress. Same shape as the existing `upgrade`
+  (`--yes`) action; fixing it is a report-schema change.
+- Recorded snapshot paths are matched ordinally against `work/<id>/…`; a hand-authored `./work/…` or
+  case-differing row silently reads as "not stale". The front-matter identity checks nearby use
+  `OrdinalIgnoreCase`. Worth reconciling.

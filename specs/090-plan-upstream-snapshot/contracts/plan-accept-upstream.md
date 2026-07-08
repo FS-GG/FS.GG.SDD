@@ -57,6 +57,10 @@ Unchanged: `schemaVersion: 1`, `reportVersion: "1.3.0"`. No new report block.
 | C12 | recorded snapshot names a now-missing source | `plan` | the existing `missing…Prerequisite` error; **no** `stalePlanSnapshot` |
 | C13 | plan whose `## Plan Decisions` carries an operator-authored `stale:` line | `tasks` | the pre-existing `failedPlanPrerequisite: "Plan contains stale decisions."` still blocks (FR-009) |
 | C14 | any `plan` run on an existing plan | — | no `PD-###` line is ever appended (FR-001) |
+| C15 | plan whose `## Source Snapshot` body is empty | `plan --accept-upstream` | digests established; the drift guard works again afterwards (FR-004/FR-016) |
+| C16 | plan snapshot stale | `evidence` / `verify` / `ship` | **no** `stalePlanSnapshot`; they block only on their own prerequisites (FR-008) |
+| C17 | plan snapshot stale **and** an unrelated blocker | `tasks` | `nextAction.blockingDiagnosticIds` names **every** blocking id, not just `stalePlanSnapshot` (FR-010) |
+| C18 | blocked `plan` **creation** (no plan.md written) | `plan` | no `planAuthoringWindow` advisory (FR-011) |
 
 ## Invariant (SC-002)
 

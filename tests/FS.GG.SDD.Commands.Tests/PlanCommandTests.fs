@@ -389,26 +389,32 @@ No material ambiguities recorded.
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
 
-    /// C11 / FR-016. An absent recorded digest is not evidence of change: an old plan must not
+    /// C11 / FR-016. An absent recorded *digest* is not evidence of change: an old plan must not
     /// become blocked on upgrade.
+    ///
+    /// The row must keep its `spec:` label and path so `parsePlanSourceSnapshots` still yields a
+    /// `PlanSourceSnapshot` with `Digest = None` — dropping the label makes the line unparseable,
+    /// which exercises the *empty-list* path instead and passes vacuously.
     [<Fact>]
     let ``a snapshot entry without a digest is not stale`` () =
         let root = initializedChecklistReadyProject ()
         TestSupport.runPlan root workId title |> ignore
 
-        // Strip the digest from the spec's snapshot row, then move the spec.
         let plan = TestSupport.readRelative root planPath
 
         let digestless =
             plan.Replace("\r\n", "\n").Split('\n')
             |> Array.map (fun line ->
                 if line.Contains specPath && line.Contains "sha256" then
-                    $"- {specPath}"
+                    $"- spec: {specPath}"
                 else
                     line)
             |> String.concat "\n"
 
         TestSupport.writeRelative root planPath digestless
+
+        // the digest-less row really did survive parsing (guards against a vacuous pass)
+        Assert.Contains($"- spec: {specPath}", TestSupport.readRelative root planPath)
 
         TestSupport.writeRelative
             root
@@ -418,6 +424,70 @@ No material ambiguities recorded.
         let report = TestSupport.runPlan root workId title
 
         Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
+
+    /// Review finding. Gating the snapshot rewrite on `stale` made an empty `## Source Snapshot`
+    /// unrecoverable — nothing recorded means nothing "changed", so the refresh never ran, the
+    /// section stayed empty, and FR-008/SC-004 were permanently disabled for that plan while
+    /// `--accept-upstream` reported `noChange`. An operator escaping a block by deleting the rows
+    /// must be able to re-establish the baseline.
+    [<Fact>]
+    let ``accept-upstream re-establishes an emptied source snapshot`` () =
+        let root = initializedChecklistReadyProject ()
+        TestSupport.runPlan root workId title |> ignore
+
+        let emptied =
+            let lines = (TestSupport.readRelative root planPath).Replace("\r\n", "\n").Split('\n')
+            let mutable inSnapshot = false
+
+            [ for line in lines do
+                  if line.StartsWith "## Source Snapshot" then
+                      inSnapshot <- true
+                      yield line
+                  elif inSnapshot && line.StartsWith "## " then
+                      inSnapshot <- false
+                      yield line
+                  elif inSnapshot && line.TrimStart().StartsWith "- " then
+                      () // drop every recorded digest row
+                  else
+                      yield line ]
+            |> String.concat "\n"
+
+        TestSupport.writeRelative root planPath emptied
+        Assert.DoesNotContain("sha256", TestSupport.readRelative root planPath)
+
+        // the guard is currently blind: nothing recorded, so nothing is stale
+        TestSupport.writeRelative
+            root
+            specPath
+            ((TestSupport.readRelative root specPath).Replace("## Ambiguities", "<!-- moved -->\n\n## Ambiguities"))
+
+        // one gesture re-establishes it...
+        let accepted = acceptUpstream root
+        Assert.NotEqual(CommandOutcome.Blocked, accepted.Outcome)
+        Assert.Contains("sha256", TestSupport.readRelative root planPath)
+
+        // ...and the drift guard works again
+        TestSupport.writeRelative
+            root
+            specPath
+            ((TestSupport.readRelative root specPath).Replace("<!-- moved -->", "<!-- moved again -->"))
+
+        let report = TestSupport.runPlan root workId title
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
+
+    /// Review finding, FR-008. `resolvePrerequisites` is shared: `evidence`, `verify`, and `ship`
+    /// fold the same `PlanDiagnostics` list into their reports. A stale plan snapshot must NOT brick
+    /// the back half of the lifecycle — `tasks` and `analyze` derive from the plan, those three do not.
+    [<Fact>]
+    let ``a stale plan snapshot does not block evidence verify or ship`` () =
+        let root, _ = plannedThenSpecEdited ()
+
+        for report in
+            [ TestSupport.runEvidence root workId title
+              TestSupport.runVerify root workId title
+              TestSupport.runShip root workId title ] do
+            Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
 
     /// C13 / FR-009. The safety net for *authored* staleness survives: `plan` warns, `tasks` blocks.
     [<Fact>]
@@ -485,11 +555,59 @@ No material ambiguities recorded.
         Assert.All(rerun.ChangedArtifacts, fun change -> Assert.Equal(ArtifactOperation.NoChange, change.Operation))
         Assert.Contains(rerun.Diagnostics, fun diagnostic -> diagnostic.Id = "planAuthoringWindow")
 
-        // never on the blocked path
+        // never on the blocked re-run path
         let blocked, _ = plannedThenSpecEdited ()
         let blockedReport = TestSupport.runPlan blocked workId title
         Assert.Equal(CommandOutcome.Blocked, blockedReport.Outcome)
         Assert.DoesNotContain(blockedReport.Diagnostics, fun diagnostic -> diagnostic.Id = "planAuthoringWindow")
+
+        // ...nor on a blocked CREATION, where no plan.md is written at all: an advisory claiming the
+        // plan "snapshotted its sources" would assert a file that does not exist (review finding).
+        let fresh = initializedChecklistReadyProject ()
+
+        TestSupport.writeRelative
+            fresh
+            checklistPath
+            ((TestSupport.readRelative fresh checklistPath)
+                .Replace("## Blocking Findings", "- CHK-900: covers DEC-999.\n\n## Blocking Findings"))
+
+        let blockedCreate = TestSupport.runPlan fresh workId title
+
+        if blockedCreate.Outcome = CommandOutcome.Blocked then
+            Assert.DoesNotContain(blockedCreate.Diagnostics, fun diagnostic -> diagnostic.Id = "planAuthoringWindow")
+
+    /// Review finding. The `plan.acceptUpstream` NextAction fires whenever the snapshot is stale,
+    /// which may be alongside an unrelated blocker. It must report the FULL blocking set, not just
+    /// its own id — an agent driving off `BlockingDiagnosticIds` would otherwise loop once per
+    /// hidden blocker.
+    [<Fact>]
+    let ``plan.acceptUpstream reports every co-occurring blocking diagnostic`` () =
+        let root, _ = plannedThenSpecEdited ()
+
+        // add a second, unrelated blocker: a plan decision referencing an id nothing declares
+        let withUnknownRef =
+            (TestSupport.readRelative root planPath)
+                .Replace("## Contract Impact", "- PD-901 [FR-404] complete: dangling reference.\n\n## Contract Impact")
+
+        TestSupport.writeRelative root planPath withUnknownRef
+
+        let report = TestSupport.runTasks root workId title
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+        let action = report.NextAction.Value
+        Assert.Equal("plan.acceptUpstream", action.ActionId)
+        Assert.Contains("stalePlanSnapshot", action.BlockingDiagnosticIds)
+
+        // every blocking diagnostic id is named, not just stalePlanSnapshot
+        let blockingIds =
+            report.Diagnostics
+            |> List.filter (fun d -> d.Severity = FS.GG.SDD.Artifacts.Diagnostics.DiagnosticError)
+            |> List.map _.Id
+            |> List.distinct
+            |> List.sort
+
+        Assert.Equal<string list>(blockingIds, action.BlockingDiagnosticIds)
+        Assert.True(blockingIds.Length > 1, $"expected a co-occurring blocker, got {blockingIds}")
 
     /// FR-014 / SC-005. Both new paths are byte-deterministic: identical inputs, identical report.
     /// The blocked path writes nothing, so re-running it feeds the same input twice. The

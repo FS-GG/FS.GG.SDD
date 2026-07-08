@@ -78,7 +78,12 @@ module internal NextActionRouting =
                              |> Option.map (fun summary -> [ $"work/{summary.WorkId}/plan.md" ])
                              |> Option.defaultValue [])
                             @ changedSources
-                          BlockingDiagnosticIds = [ "stalePlanSnapshot" ] }
+                          // `blocking`, not `[ "stalePlanSnapshot" ]`: this branch fires whenever the
+                          // snapshot is stale, which may be *alongside* an unrelated blocker. Naming
+                          // only the snapshot would drop the co-occurring ids from the JSON contract
+                          // that agents drive off, sending them round the loop once per hidden
+                          // blocker. The generic fallback below reports the full set; so do we.
+                          BlockingDiagnosticIds = blocking }
                 else
 
                 let correctionCommand =

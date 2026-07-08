@@ -424,15 +424,22 @@ module internal DiagnosticConstructors =
     // `plan.md` (FR-001/FR-003). The prior `stalePlanDecision` warning let the mutated text through.
     // Deliberately NOT `markToolDefect` — a stale upstream is workspace state, not a tool defect, so
     // the blocked exit stays 1. `changedPaths` arrive ordinally sorted (FR-002/FR-014) and become
-    // `RelatedIds`; the `--accept-upstream` remediation is appended by `RemediationPointers`.
+    // `RelatedIds`.
+    //
+    // The `--accept-upstream` remediation lives in the `Correction` string below, NOT in
+    // `RemediationPointers`: that registry is the authoring-grammar docs index (its header states it
+    // "Excludes pure sequencing/config/tool-defect blocks"), and a stale snapshot is a sequencing
+    // block with no grammar section to cite. The `plan.acceptUpstream` NextAction carries the
+    // machine-readable half. Do not move this sentence out of `Correction` expecting the registry to
+    // re-add it — `suffixFor` returns "" for unregistered ids.
     let stalePlanSnapshot path (changedPaths: string list) =
-        let sources =
-            if List.length changedPaths = 1 then "source" else "sources"
+        let count = List.length changedPaths
+        let sources = if count = 1 then "source" else "sources"
 
         errorDiagnostic
             "stalePlanSnapshot"
             (Some path)
-            $"Plan snapshot is stale: {List.length changedPaths} {sources} changed since the plan was recorded."
+            $"Plan snapshot is stale: {count} {sources} changed since the plan was recorded."
             "Review the recorded plan decisions against the changed sources, then re-run with --accept-upstream."
             changedPaths
 
