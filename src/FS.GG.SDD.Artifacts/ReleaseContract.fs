@@ -445,19 +445,27 @@ module ReleaseContract =
               commandsMd
               skillsMd
               commandReport ]
-          // 0.9.0 is the first BREAKING release since 0.8.0: feature 093 (#164)
-          // removed `specification.unresolvedAmbiguityCount` from the `--json`
-          // command-report contract. Under the pre-1.0 `0.x` carve-out a breaking
-          // change MAY land on a minor bump, but the migration note stays
-          // mandatory (FR-009 / FR-010; `migrationNoteRequired Breaking = true`).
+          // 0.9.0 is the first BREAKING release since 0.8.0. Three changes qualify under
+          // `versioning-policy.md` ("remove a public field" AND "change an exit-code
+          // contract" are both Breaking). Under the pre-1.0 `0.x` carve-out they land on a
+          // minor bump, but the migration note stays mandatory (FR-009 / FR-010;
+          // `migrationNoteRequired Breaking = true`). Enumerate EVERY breaking change: a
+          // note that under-reports is the failure mode the note exists to prevent.
           Migrations =
             [ { Version = "0.9.0"
                 Path = "docs/release/migrations/0.9.0.md"
-                // Backtick-free on purpose: the default JavaScriptEncoder escapes
-                // U+0060 (as it already escapes '>' in specKitRange), which would put
-                // ` noise in a committed machine artifact.
+                // Two constraints on this text, both enforced by tests:
+                //  1. Backtick-free: the default JavaScriptEncoder escapes U+0060 (as it
+                //     already escapes '>' in specKitRange), which would put ` noise in a
+                //     committed machine artifact.
+                //  2. No Governance gate-logic vocabulary (ReleaseBoundaryTests T024 bans
+                //     "gate"/"route"/"profile"/"freshness"/"publish"/"provenance"/"verdict"/
+                //     "enforce"). SDD reports blocking readiness; it never gates. Say
+                //     "blocks"/"blocking", never "gates"/"gating".
                 BreakingChanges =
-                  [ "removed the specification.unresolvedAmbiguityCount field from the --json command-report contract (text key unresolvedAmbiguities); the gating counter is clarification.remainingAmbiguityCount, which lives on a different report block" ] } ] }
+                  [ "removed the specification.unresolvedAmbiguityCount field from the --json command-report contract (text key unresolvedAmbiguities); it blocked nothing -- the blocking counter is clarification.blockingAmbiguityCount, on a different report block"
+                    "the tasks stage can now exit 1 with the blocking missingDisposition diagnostic, which was not reachable from tasks in 0.8.0 (fix 162); re-run fsgg-sdd tasks to re-derive the graph, or restore the dropped disposition"
+                    "the plan stage can now exit 1 with the blocking stalePlanSnapshot diagnostic when an upstream source changed after planning (feature 090); re-run fsgg-sdd plan --accept-upstream after reviewing the recorded decisions" ] } ] }
 
     // ---- canonical serialization ----
 
