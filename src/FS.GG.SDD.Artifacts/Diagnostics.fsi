@@ -140,5 +140,8 @@ module Diagnostics =
         suggestedVersion: string option ->
             Diagnostic
 
+    /// The canonical diagnostic ordering — and the set seam. Structurally identical diagnostics
+    /// are collapsed to one (#193): a diagnostic with both a prereq producer and a downstream
+    /// backstop producer would otherwise appear twice, indistinguishable in every projection.
     val sort: diagnostics: Diagnostic list -> Diagnostic list
     val hasBlocking: diagnostics: Diagnostic list -> bool

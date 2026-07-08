@@ -91,6 +91,33 @@ module DiagnosticTests =
         Assert.Equal("missingArtifact", sorted.Head.Id)
         Assert.True(Diagnostics.hasBlocking sorted)
 
+    // #193: `sort` is the set seam. Any diagnostic with both a prereq producer and a downstream
+    // backstop producer (e.g. `missingDisposition`) reaches the seam twice, byte-identical.
+    [<Fact>]
+    let ``Diagnostics sort collapses structurally identical duplicates`` () =
+        let error = Diagnostics.missingArtifact artifact "Create the task file."
+
+        let warning =
+            Diagnostics.proseStructuredMismatch artifact "Mismatch." "Update prose."
+
+        let sorted = Diagnostics.sort [ error; warning; error; error ]
+
+        Assert.Equal<string list>([ "missingArtifact"; "proseStructuredMismatch" ], sorted |> List.map _.Id)
+
+    // #193: dedupe is full structural equality, never a key projection. `IsToolDefect` is not
+    // serialized, but it escalates a blocked command's exit code to 2 — collapsing two diagnostics
+    // that differ only there would make the exit code depend on which copy survived.
+    [<Fact>]
+    let ``Diagnostics sort keeps diagnostics that differ only by tool-defect bit`` () =
+        let plain = Diagnostics.missingArtifact artifact "Create the task file."
+        let defect = plain |> Diagnostics.markToolDefect
+
+        let sorted = Diagnostics.sort [ plain; defect ]
+
+        Assert.Equal(2, List.length sorted)
+        Assert.Contains(sorted, fun diagnostic -> diagnostic.IsToolDefect)
+        Assert.Contains(sorted, fun diagnostic -> not diagnostic.IsToolDefect)
+
     // Feature 094 (V22): the `surface.versionBumpRequired` id/severity contract. It is advisory —
     // a warning, never a tool defect — because SDD cannot see the previously *published* version
     // and so cannot prove the bump was not already applied in the change under review (FR-008/013).
