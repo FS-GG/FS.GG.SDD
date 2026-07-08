@@ -48,6 +48,7 @@
     <Compile Include="ProcessGlobalEnvGuardTests.fs" />
     <Compile Include="FixtureManifestGuardTests.fs" />
     <Compile Include="ArtifactTaxonomyTests.fs" />
+    <Compile Include="GitignoreNegationTests.fs" />
     <Compile Include="RemediationPointersTests.fs" />
     <Compile Include="CharterExampleContractTests.fs" />
     <Compile Include="SkillGateDoctestTests.fs" />

@@ -10,6 +10,9 @@ module GenerationManifest =
         | Analysis
         | Verify
         | Ship
+        /// Feature 092 / ADR-0026: the compact, committed merge-boundary verdict — the one
+        /// *durable generated* lifecycle view.
+        | ShipVerdict
         | Summary
         | AgentCommands
         | GovernanceHandoff
@@ -51,6 +54,7 @@ module GenerationManifest =
     val expectedWorkModelOutputPath: workId: string -> string
     val expectedSummaryOutputPath: workId: string -> string
     val expectedGovernanceHandoffOutputPath: workId: string -> string
+    val expectedShipVerdictOutputPath: workId: string -> string
 
     val createWorkModelManifest:
         viewPath: string ->

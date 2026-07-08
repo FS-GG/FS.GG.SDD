@@ -81,6 +81,7 @@ module internal HandlersRefresh =
           "analysis"
           "verify"
           "ship"
+          "ship-verdict"
           "governance-handoff"
           "agent-commands"
           "summary" ]
@@ -489,6 +490,28 @@ module internal HandlersRefresh =
                             | _ -> None, [], ViewCurrencyClass.Missing
                         | _ -> inheritShip ()
 
+                // Ship verdict currency (feature 092 / ADR-0026). Same shape and same gate as the
+                // handoff above: a pure projection over ship.json, so refresh CAN faithfully
+                // regenerate it — but only when its ship source is itself current. Re-projecting
+                // against a stale ship would commit a verdict for inputs that no longer exist.
+                // Unlike the handoff it needs no work model, so it depends on shClass alone.
+                let verdictView, verdictEffects, verdictClass =
+                    match shClass with
+                    | ViewCurrencyClass.AlreadyCurrent ->
+                        match textOf (shipPath workId) with
+                        | Some shipText ->
+                            let view, effects, jsonOpt =
+                                shipVerdictEmission workId request.GeneratorVersion shipText
+
+                            match jsonOpt with
+                            | Some json ->
+                                match snapshot (shipVerdictPath workId) model with
+                                | Some snap when snap.Text = json -> view, [], ViewCurrencyClass.AlreadyCurrent
+                                | _ -> view, effects, ViewCurrencyClass.Refreshed
+                            | None -> None, [], ViewCurrencyClass.Blocked
+                        | None -> None, [], ViewCurrencyClass.Missing
+                    | _ -> None, [], shClass
+
                 let structuredClasses =
                     [ "work-model", wmClass
                       "analysis", anClass
@@ -619,6 +642,7 @@ module internal HandlersRefresh =
                       "analysis", viewCurrencyDisplay anClass
                       "verify", viewCurrencyDisplay veClass
                       "ship", viewCurrencyDisplay shClass
+                      "ship-verdict", viewCurrencyDisplay verdictClass
                       "governance-handoff", viewCurrencyDisplay govClass
                       "agent-commands", viewCurrencyDisplay agentClass
                       "summary", (if summaryRenderable then "current" else "blocked") ]
@@ -680,6 +704,7 @@ module internal HandlersRefresh =
                       "analysis", anClass
                       "verify", veClass
                       "ship", shClass
+                      "ship-verdict", verdictClass
                       "governance-handoff", govClass
                       "agent-commands", agentClass
                       "summary", summaryClass ]
@@ -762,11 +787,19 @@ module internal HandlersRefresh =
                             Currency = viewCurrencyToGenerated govClass }
                     | None -> downstreamView (governanceHandoffPath workId) "governance-handoff" govClass
 
+                let shipVerdictViewState =
+                    match verdictView with
+                    | Some view ->
+                        { view with
+                            Currency = viewCurrencyToGenerated verdictClass }
+                    | None -> downstreamView (shipVerdictPath workId) "ship-verdict" verdictClass
+
                 let generatedViews =
                     [ workModelViewState
                       downstreamView (analysisPath workId) "analysis" anClass
                       downstreamView (verifyPath workId) "verification" veClass
                       downstreamView (shipPath workId) "ship" shClass
+                      shipVerdictViewState
                       governanceHandoffViewState ]
                     @ agentViewStates
                     @ (summaryViewState |> Option.toList)
@@ -784,7 +817,8 @@ module internal HandlersRefresh =
                         (Set.empty, [])
                     |> snd
 
-                let effects = dedupEffects (wmEffects @ agEffects @ govEffects @ summaryEffects)
+                let effects =
+                    dedupEffects (wmEffects @ agEffects @ verdictEffects @ govEffects @ summaryEffects)
 
                 // wmDiags are the reused generator's own staleness heuristics about the
                 // prior on-disk work model; refresh reports its own per-view diagnostics

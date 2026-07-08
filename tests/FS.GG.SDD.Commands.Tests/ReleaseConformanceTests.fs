@@ -65,6 +65,7 @@ module ReleaseConformanceTests =
           jsonProduced "analysis.json" "analysis.json"
           jsonProduced "verify.json" "verify.json"
           jsonProduced "ship.json" "ship.json"
+          jsonProduced "ship-verdict.json" "ship-verdict.json"
           jsonProduced "governance-handoff.json" "governance-handoff.json"
           mdProduced "summary.md" "summary.md"
           jsonProduced "agent-commands/<target>/guidance.json" "agent-commands/claude/guidance.json"

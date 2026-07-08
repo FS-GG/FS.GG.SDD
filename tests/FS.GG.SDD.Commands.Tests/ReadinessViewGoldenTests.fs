@@ -57,6 +57,33 @@ module ReadinessViewGoldenTests =
             TestSupport.runShip root workId title |> ignore
             TestSupport.readRelative root $"readiness/{workId}/ship.json")
 
+    // Feature 092 / ADR-0026: the durable-generated merge-boundary verdict. This is the one
+    // readiness view that gets *committed*, so a byte-golden is not merely a refactor net — it pins
+    // the exact bytes that land in every consumer's git history.
+    [<Fact>]
+    let ``ship-verdict.json matches committed golden`` () =
+        TestShared.Golden.verify (goldenPath "ship-verdict.json") (fun () ->
+            let root = stableRoot ()
+            TestSupport.initializeVerifiedProject root workId title
+            TestSupport.runShip root workId title |> ignore
+            TestSupport.readRelative root $"readiness/{workId}/ship-verdict.json")
+
+    // FR-004: the compaction is the point. A ship-ready verdict is exactly 20 lines against
+    // ship.json's 279 — assert it here, where the golden makes a regression obvious.
+    [<Fact>]
+    let ``ship-verdict.json is at most 20 lines for a ship-ready item`` () =
+        let root = stableRoot ()
+        TestSupport.initializeVerifiedProject root workId title
+        TestSupport.runShip root workId title |> ignore
+
+        let verdict =
+            (TestSupport.readRelative root $"readiness/{workId}/ship-verdict.json")
+                .Replace("\r\n", "\n")
+                .TrimEnd('\n')
+
+        let lineCount = verdict.Split('\n').Length
+        Assert.True(lineCount <= 20, $"ship-verdict.json grew to {lineCount} lines:\n{verdict}")
+
     // Feature 068 / US2 sub-cluster 2b safety net: refresh's summary.md renders the perViewState
     // table and refreshDisposition — exactly the currency-string output the ViewCurrencyClass /
     // RefreshDisposition.EarlyStage DU refactor could perturb. Pinning it byte-exact guards the

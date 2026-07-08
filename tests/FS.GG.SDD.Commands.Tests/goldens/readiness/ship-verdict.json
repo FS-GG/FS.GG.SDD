@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "viewVersion": "1.0",
+  "workId": "068-readiness-golden",
+  "stage": "ship",
+  "status": "shipReady",
+  "generator": "FS.GG.SDD.Artifacts/0.8.0",
+  "sourcesDigest": {
+    "algorithm": "sha256",
+    "value": "78a32b33a4bb370f169ad4a44307d7f4c0fafc7741bea0d5a82f1a1d5ad5b117"
+  },
+  "verificationReadiness": {
+    "status": "verificationReady"
+  },
+  "disposition": {
+    "state": "shipReady",
+    "blockingFindingIds": []
+  },
+  "readiness": "shipReady"
+}

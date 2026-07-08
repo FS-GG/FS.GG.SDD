@@ -18,6 +18,7 @@ module RefreshCommandTests =
     let analysisPath = $"readiness/{workId}/analysis.json"
     let verifyPath = $"readiness/{workId}/verify.json"
     let shipPath = $"readiness/{workId}/ship.json"
+    let shipVerdictPath = $"readiness/{workId}/ship-verdict.json"
     let claudeGuidance = $"readiness/{workId}/agent-commands/claude/guidance.json"
 
     // A project whose structured SDD-owned views (work-model, analysis, verify, ship)
@@ -35,6 +36,64 @@ module RefreshCommandTests =
         TestSupport.runAgents root workId |> ignore
         TestSupport.runRefresh root workId |> ignore
         root
+
+    // --- Feature 092 (ADR-0026): refresh re-projects the committed verdict ---
+
+    [<Fact>]
+    let ``refresh leaves an unchanged verdict byte-identical and already-current`` () =
+        // FR-006/FR-007: ship and refresh call one shared pure projection, so the bytes agree by
+        // construction. If they ever diverge, the committed artifact churns on every refresh.
+        let root = shippedProject ()
+        let afterShip = TestSupport.readRelative root shipVerdictPath
+
+        let report = TestSupport.runRefresh root workId
+
+        Assert.Equal(afterShip, TestSupport.readRelative root shipVerdictPath)
+        Assert.Equal("current", TestSupport.refreshViewState report "ship-verdict")
+
+        match report.Refresh with
+        | Some summary -> Assert.Contains("ship-verdict", summary.AlreadyCurrentViewIds)
+        | None -> failwith "Expected refresh summary."
+
+    [<Fact>]
+    let ``refresh restores a deleted verdict from a current ship json`` () =
+        let root = shippedProject ()
+        let expected = TestSupport.readRelative root shipVerdictPath
+        File.Delete(Path.Combine(root, shipVerdictPath.Replace('/', Path.DirectorySeparatorChar)))
+
+        let report = TestSupport.runRefresh root workId
+
+        Assert.True(TestSupport.existsRelative root shipVerdictPath)
+        Assert.Equal(expected, TestSupport.readRelative root shipVerdictPath)
+
+        match report.Refresh with
+        | Some summary -> Assert.Contains("ship-verdict", summary.RefreshedViewIds)
+        | None -> failwith "Expected refresh summary."
+
+    [<Fact>]
+    let ``refresh does not rewrite the verdict from a malformed ship json`` () =
+        // FR-006 second half: the verdict inherits ship's currency class. Re-projecting against a
+        // broken ship.json would commit a verdict for inputs that never produced it.
+        let root = shippedProject ()
+        let original = TestSupport.readRelative root shipVerdictPath
+        File.WriteAllText(Path.Combine(root, shipPath.Replace('/', Path.DirectorySeparatorChar)), "{ not json")
+
+        let report = TestSupport.runRefresh root workId
+
+        Assert.Equal(original, TestSupport.readRelative root shipVerdictPath)
+        Assert.NotEqual<string>("current", TestSupport.refreshViewState report "ship-verdict")
+        Assert.Equal(TestSupport.refreshViewState report "ship", TestSupport.refreshViewState report "ship-verdict")
+
+    [<Fact>]
+    let ``refresh does not write a verdict when ship json is missing`` () =
+        let root = shippedProject ()
+        File.Delete(Path.Combine(root, shipPath.Replace('/', Path.DirectorySeparatorChar)))
+        File.Delete(Path.Combine(root, shipVerdictPath.Replace('/', Path.DirectorySeparatorChar)))
+
+        let report = TestSupport.runRefresh root workId
+
+        Assert.False(TestSupport.existsRelative root shipVerdictPath)
+        Assert.Equal(TestSupport.refreshViewState report "ship", TestSupport.refreshViewState report "ship-verdict")
 
     // --- User Story 1: orchestrated refresh of the structured views ---
 

@@ -19,4 +19,11 @@ TestResults/
 # SDD dogfoods via Spec Kit, so its readiness views land at specs/<id>/readiness/.
 # Transient run output: ignore by role, never commit, do not re-include per feature.
 # See docs/reference/artifact-taxonomy.md. (Root readiness/ pinned proofs stay committed.)
-specs/*/readiness/
+#
+# Exception: the compact merge-boundary verdict is durable-generated (ADR-0026) and IS
+# committed. Excluding the directory *contents* (`*/*`) rather than the directory is
+# load-bearing: git never descends into an excluded directory, so the negation would
+# otherwise be silently inert. Nested agent-commands/<target>/ stays ignored — `*/*`
+# matches that directory itself.
+specs/*/readiness/*/*
+!specs/*/readiness/*/ship-verdict.json

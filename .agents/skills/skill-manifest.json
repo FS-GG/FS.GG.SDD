@@ -74,7 +74,7 @@
     {
       "id": "fs-gg-sdd-ship",
       "scope": "process",
-      "sha256": "45e67e5dbef7e0a1fe7006774a3c4b5cf66d19a8d37d41a2077fd91d103e067c",
+      "sha256": "c98e3e86701945bd90fdb3033ee991ad4e39e9b9699b081a438bb166099807bb",
       "resolvablePath": ".agents/skills/fs-gg-sdd-ship/SKILL.md",
       "materializes-when": "always"
     },

@@ -45,6 +45,7 @@ module Ship =
           LifecycleReadiness: ShipLifecycleStageReadiness list
           VerificationReadiness: ShipVerificationReadinessSummary
           Disposition: string
+          DispositionBlockingFindingIds: string list
           GeneratedViews: AnalysisGeneratedViewRecord list
           Findings: ShipReadinessFinding list
           OptionalBoundaryFacts: AnalysisOptionalBoundaryFact list
@@ -103,10 +104,20 @@ module Ship =
                               EvidenceSyntheticCount = 0
                               EvidenceInvalidCount = 0 }
 
+                    let dispositionElement = tryJsonProperty "disposition" root
+
                     let disposition =
-                        tryJsonProperty "disposition" root
+                        dispositionElement
                         |> Option.bind (fun element -> jsonString "state" element)
                         |> Option.defaultValue "blocked"
+
+                    // Feature 092: the compact verdict projects `disposition.blockingFindingIds`,
+                    // which this parse previously discarded. Sorted for determinism.
+                    let dispositionBlockingFindingIds =
+                        dispositionElement
+                        |> Option.map (jsonStringList "blockingFindingIds")
+                        |> Option.defaultValue []
+                        |> List.sort
 
                     Ok
                         { SchemaVersion = schema
@@ -122,6 +133,7 @@ module Ship =
                           LifecycleReadiness = lifecycleReadiness
                           VerificationReadiness = verificationReadiness
                           Disposition = disposition
+                          DispositionBlockingFindingIds = dispositionBlockingFindingIds
                           GeneratedViews =
                             jsonArray "generatedViews" root
                             |> List.map parseAnalysisGeneratedView

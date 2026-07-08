@@ -66,6 +66,7 @@ FS.GG.SDD.Artifacts.GenerationManifest.createSummaryManifest
 FS.GG.SDD.Artifacts.GenerationManifest.createWorkModelManifest
 FS.GG.SDD.Artifacts.GenerationManifest.currencyStatusValue
 FS.GG.SDD.Artifacts.GenerationManifest.expectedGovernanceHandoffOutputPath
+FS.GG.SDD.Artifacts.GenerationManifest.expectedShipVerdictOutputPath
 FS.GG.SDD.Artifacts.GenerationManifest.expectedSummaryOutputPath
 FS.GG.SDD.Artifacts.GenerationManifest.expectedWorkModelOutputPath
 FS.GG.SDD.Artifacts.GenerationManifest.isStale
@@ -160,6 +161,9 @@ FS.GG.SDD.Artifacts.Serialization.generateWorkModel
 FS.GG.SDD.Artifacts.Serialization.normalizeSnapshotsToWorkModel
 FS.GG.SDD.Artifacts.Serialization.serializeWorkModel
 FS.GG.SDD.Artifacts.Ship.parseShipView
+FS.GG.SDD.Artifacts.ShipVerdict.fromShipView
+FS.GG.SDD.Artifacts.ShipVerdict.sourcesDigest
+FS.GG.SDD.Artifacts.ShipVerdict.toJson
 FS.GG.SDD.Artifacts.SkillManifestJson.serialize
 FS.GG.SDD.Artifacts.Specification.parseSpecificationFacts
 FS.GG.SDD.Artifacts.Specification.specificationStandardSections

@@ -58,8 +58,9 @@ byte-identical output; an unchanged `refresh` produces no git diff.
 
 ## Size
 
-At most **20 lines** when `disposition.blockingFindingIds` is empty (the exact rendered size), plus
-exactly one line per blocking finding id. Compare `ship.json`: 279 lines, ~59% inventory.
+At most **20 lines** when `disposition.blockingFindingIds` is empty (the exact rendered size).
+A non-empty list expands into an indented array, giving exactly `21 + n` lines for `n` ≥ 1 blocking
+finding ids. Compare `ship.json`: 279 lines, ~59% inventory.
 
 ## Example (ship-ready)
 

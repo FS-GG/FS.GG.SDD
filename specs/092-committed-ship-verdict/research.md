@@ -193,8 +193,9 @@ projection that preserves order:
 }
 ```
 
-A non-empty `blockingFindingIds` costs one line per id. A **diagnostically** blocked run is
-unaffected: `HandlersShip` writes `ship.json` only when `not hasBlocking`, so the verdict inherits
+A non-empty `blockingFindingIds` does **not** cost one line per id — the writer expands the array
+over its own bracket lines, giving `21 + n` lines for `n ≥ 1` (measured: 22/23/24 for one/two/three
+ids). A **diagnostically** blocked run is unaffected: `HandlersShip` writes `ship.json` only when `not hasBlocking`, so the verdict inherits
 that gate and is never emitted (FR-005).
 
 ## D10 — `validate` detects an unenumerated view as a coverage gap (so FR-017 is enforced, not decorative)

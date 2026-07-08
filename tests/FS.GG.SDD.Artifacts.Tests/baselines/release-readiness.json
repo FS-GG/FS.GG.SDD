@@ -45,7 +45,8 @@
         "owner": "sdd",
         "requiredBySdd": false
       },
-      "baselinePresent": true
+      "baselinePresent": true,
+      "durableGenerated": false
     },
     {
       "contract": "agent-commands/\u003Ctarget\u003E/guidance.json",
@@ -125,7 +126,8 @@
         "owner": "sdd",
         "requiredBySdd": false
       },
-      "baselinePresent": true
+      "baselinePresent": true,
+      "durableGenerated": false
     },
     {
       "contract": "agent-commands/\u003Ctarget\u003E/skills.md",
@@ -150,7 +152,8 @@
         "owner": "sdd",
         "requiredBySdd": false
       },
-      "baselinePresent": true
+      "baselinePresent": true,
+      "durableGenerated": false
     },
     {
       "contract": "analysis.json",
@@ -240,7 +243,8 @@
         "owner": "sdd",
         "requiredBySdd": false
       },
-      "baselinePresent": true
+      "baselinePresent": true,
+      "durableGenerated": false
     },
     {
       "contract": "command-report (--json)",
@@ -405,7 +409,8 @@
         "owner": "sdd",
         "requiredBySdd": false
       },
-      "baselinePresent": true
+      "baselinePresent": true,
+      "durableGenerated": false
     },
     {
       "contract": "governance-handoff.json",
@@ -475,7 +480,79 @@
         "owner": "sdd",
         "requiredBySdd": false
       },
-      "baselinePresent": true
+      "baselinePresent": true,
+      "durableGenerated": false
+    },
+    {
+      "contract": "ship-verdict.json",
+      "kind": {
+        "generatedView": "shipVerdict",
+        "format": "json"
+      },
+      "schemaVersion": 1,
+      "contractVersion": null,
+      "stability": "additiveOptional",
+      "determinism": "byte-stable; canonical key order; no clock/path/ANSI",
+      "inventory": [
+        {
+          "name": "disposition",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generator",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "schemaVersion",
+          "kind": "jsonField",
+          "stability": "stable"
+        },
+        {
+          "name": "sourcesDigest",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "stage",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "verificationReadiness",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "viewVersion",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "workId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        }
+      ],
+      "sourceArtifact": {
+        "path": "readiness/\u003Cid\u003E/ship-verdict.json",
+        "kind": "generatedView",
+        "owner": "sdd",
+        "requiredBySdd": false
+      },
+      "baselinePresent": true,
+      "durableGenerated": true
     },
     {
       "contract": "ship.json",
@@ -580,7 +657,8 @@
         "owner": "sdd",
         "requiredBySdd": false
       },
-      "baselinePresent": true
+      "baselinePresent": true,
+      "durableGenerated": false
     },
     {
       "contract": "summary.md",
@@ -615,7 +693,8 @@
         "owner": "sdd",
         "requiredBySdd": false
       },
-      "baselinePresent": true
+      "baselinePresent": true,
+      "durableGenerated": false
     },
     {
       "contract": "verify.json",
@@ -725,7 +804,8 @@
         "owner": "sdd",
         "requiredBySdd": false
       },
-      "baselinePresent": true
+      "baselinePresent": true,
+      "durableGenerated": false
     },
     {
       "contract": "work-model.json",
@@ -810,7 +890,8 @@
         "owner": "sdd",
         "requiredBySdd": false
       },
-      "baselinePresent": true
+      "baselinePresent": true,
+      "durableGenerated": false
     }
   ],
   "migrations": []
