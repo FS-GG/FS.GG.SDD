@@ -377,7 +377,8 @@ evidence:
         TestSupport.runEvidence root workId title |> ignore
 
         let replacement =
-            (sprintf "    %s\n" syntheticLine) + (injectedLines |> List.map (sprintf "%s\n") |> String.concat "")
+            (sprintf "    %s\n" syntheticLine)
+            + (injectedLines |> List.map (sprintf "%s\n") |> String.concat "")
 
         TestSupport.readRelative root evidencePath
         |> replaceFirst "    synthetic: false\n" replacement
@@ -515,7 +516,10 @@ evidence:
         TestSupport.readRelative root evidencePath
         |> replaceFirst "    kind: verification\n" "    kind: deferral\n"
         |> replaceFirst "    result: pass\n" "    result: deferred\n"
-        |> replaceFirst "    synthetic: false\n" ("    synthetic: false\n" + (injected |> List.map (sprintf "%s\n") |> String.concat ""))
+        |> replaceFirst
+            "    synthetic: false\n"
+            ("    synthetic: false\n"
+             + (injected |> List.map (sprintf "%s\n") |> String.concat ""))
         |> TestSupport.writeRelative root evidencePath
 
         let report = TestSupport.runEvidence root workId title
