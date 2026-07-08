@@ -70,7 +70,7 @@ description: "Task list for 091 — slim the evidence declaration shape (omit al
 - [X] T010 [P] [US2] In `EvidenceCommandTests.fs`, add a test that authors populated `rationale`, `owner`, `scope`, and `laterLifecycleVisibility`, re-runs `evidence`, and asserts all four scalar values are re-emitted unchanged (FR-003).
 - [X] T011 [P] [US2] In `EvidenceCommandTests.fs`, add a test that authors `rationale: "null"` (quoted) and asserts that after a re-run the emitted text still contains the quoted `rationale: "null"` — neither omitted nor unquoted (FR-006, the 161 boundary). This is the assertion the current 161 test only makes negatively.
 - [X] T012 [US2] ~~Add a test that a declaration with `synthetic: true` and no `syntheticDisclosure` key still raises the synthetic-without-disclosure diagnostic (FR-009).~~ **Not written — already covered.** The pre-existing `evidence blocks undisclosed synthetic evidence without mutation` feeds `undisclosedSyntheticInput`, which carries no `syntheticDisclosure` key at all; the gate tests `Option.isNone declaration.SyntheticDisclosure` on the parsed model. A duplicate would have been green-from-birth and proved nothing. Replaced by a comment in `EvidenceCommandTests.fs` pointing at the existing test.
-- [X] T012a [US2] **(added after adversarial review)** The same review noted that four of the five omitted fields are *gate-required* for deferrals (`RequiredKeys.requiredDeferralKeys`, `evidence.missingDeferralRationale`) — the one shape where omission could plausibly bite, and one the plan never analysed. Pin both directions in `EvidenceCommandTests.fs` (FR-010): a fully-populated `kind: deferral` declaration re-emits all four fields verbatim, and an under-specified one **blocks with `changedArtifacts: []`** so the writer is never reached. See research.md R3a.
+- [X] T012a [US2] **(added after adversarial review)** The same review noted that four of the five omitted fields are *gate-required* for deferrals (`RequiredKeys.requiredDeferralKeys`, `evidence.missingDeferralRationale`) — the one shape where omission could plausibly bite, and one the plan never analysed. FR-010's **blocking** half turned out to be already covered, better, by the pre-existing registry-derived `RequiredFieldContractTests.Omitting any required deferral field blocks the evidence gate` (a `[<Theory>]` over all four fields that omits each key *entirely*) — a first attempt duplicated it with a single hardcoded case and was **deleted**. Only the **positive** path needed a test: `evidence round-trips a populated deferral declaration through the slim writer`. See research.md R3a.
 
 **Checkpoint**: Authored content round-trips. Story 1 is now safe to ship.
 
@@ -172,3 +172,44 @@ Constitution VI demands red-then-green for behaviour-changing code. Stated hones
   four gate-required fields are among the five being omitted. Caught by an adversarial cross-artifact
   review after implementation, not by the plan. The answer turned out to be safe (the gate blocks
   before the write) — but the plan got there by luck, and research.md R3a now records the reasoning.
+
+## What the code review changed
+
+A high-effort multi-angle review of the diff produced four in-scope corrections and three
+pre-existing defects, all in files this feature touches. The corrections:
+
+1. **Simplified the splice.** `List.choose id |> function [] -> "" | lines -> "\n" + concat` became
+   `List.choose (Option.map (fun l -> "\n" + l)) |> String.concat ""` — the same convention
+   `renderEvidenceSourceRefs` already uses 40 lines up, with no empty-list special case.
+2. **Deleted a redundant, weaker test** (see T012a).
+3. **Renamed the #161 test.** `evidence re-run is byte-idempotent — bare null optional scalars are not
+   rewritten to "null"` became `evidence re-run over a scaffolded file is byte-idempotent`. Post-091
+   the scaffolded file has no bare-null token, so `isPlainNullScalar` is never reached on that path:
+   the old name promised coverage the test no longer provided, and reverting `tryScalarNonNullAt` to
+   `tryScalarAt` would have left it green. The real #161 guard is the normalize test plus the reader
+   tests, and the test now says so.
+4. **Anchored the key assertions** to `"\n    <key>:"`. Unanchored `"scope:"` / `"owner:"` would also
+   match a task title or note value — and `tasks.yml` already carries an `owner:` key, so that string
+   is in the ambient vocabulary. Also corrected a **reversed-argument** `Assert.DoesNotContain(serializeReport report, "route")`
+   in this file: xUnit's `(string, string)` overload is `(expectedSubstring, actualString)`, so it was
+   asserting that the 5-character string `"route"` does not contain the entire JSON report — vacuously
+   true. The "no Governance leakage" guard had never fired. It passes once corrected.
+
+The three pre-existing defects were **filed, not smuggled in**:
+
+- **FS.GG.SDD#180** (high) — `parseSyntheticDisclosure` reads the nested `standsInFor`/`reason` with
+  the null-unaware `tryScalarAt`, so `standsInFor: null` parses to `Some "null"`, **defeating the
+  undisclosed-synthetic gate** and reproducing the #161 quoting corruption one level down. Verified
+  against the real parser. Fixing it changes gate behaviour and needs its own spec. The `Evidence.fs`
+  comment this feature added was corrected so it no longer claims the absent≡null equivalence extends
+  to the nested scalars.
+- **FS.GG.SDD#181** (medium) — `renderEvidenceSourceRefs` writes 4 of the 6 fields the parser reads,
+  so a re-run **silently deletes** authored `id`/`digest`/`relatedSourceId` from `sourceRefs`.
+- **FS.GG.SDD#182** (low) — `renderEvidenceSourceSnapshot` still writes `Option.defaultValue ""` /
+  `Option.defaultValue "1"` for absent optionals: an empty `digest:` line (trailing whitespace, and a
+  permanent stale-source warning) and an *invented* `schemaVersion: 1`. Dead code today; see R5a.
+
+A **migration note is not owed.** `docs/release/migrations/README.md` binds the obligation to "any
+Breaking change to a public schema, generated-view shape, command-output (`--json`) contract, or CLI
+surface," and states that an additive-only release "**MUST NOT** carry a migration note." `evidence.yml`
+is an authored source artifact, its `schemaVersion` is unmoved, and consumers need zero adaptation.

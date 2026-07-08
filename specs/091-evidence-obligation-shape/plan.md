@@ -256,7 +256,8 @@ byte-identical (FR-007). Files written by an older CLI, and files hand-authored 
 | FR-007 | Two `evidence` runs produce byte-identical output (adapted #161 test) | `EvidenceCommandTests` |
 | FR-008 | `evidence` report/diagnostics/exit code unchanged | existing `EvidenceCommandTests` suite |
 | FR-009 | Synthetic-without-disclosure diagnostic still fires with the key omitted | **pre-existing** `evidence blocks undisclosed synthetic evidence without mutation` |
-| FR-010 | A populated deferral round-trips all four gate-required fields; an under-specified one blocks with no write | `evidence writes every gate-required field of a deferral declaration`, `evidence blocks an under-specified deferral before the writer can omit its fields` |
+| FR-010 (blocking half) | An under-specified deferral blocks | **pre-existing, registry-derived** `RequiredFieldContractTests.Omitting any required deferral field blocks the evidence gate` — a `[<Theory>]` over all four fields that omits the key *entirely* |
+| FR-010 (write half) | A populated deferral round-trips all four fields | `evidence round-trips a populated deferral declaration through the slim writer` |
 
 **Red-before-green, stated precisely.** Constitution VI requires behaviour-changing code to carry
 tests that fail before and pass after. That holds for the tests covering FR-001/002/003/006/007

@@ -113,9 +113,12 @@ implemented. It is a real objection and the honest resolution is a bound, not a 
 2. **The gate blocks *before* the write.** A deferral missing any of the four resolves to
    `CommandOutcome.Blocked` with `changedArtifacts: []` — verified on the real CLI. So
    `renderEvidenceDeclaration` is never reached for an under-specified deferral, and the writer can
-   never emit one. Both directions are now pinned by tests
-   (`evidence writes every gate-required field of a deferral declaration` and
-   `evidence blocks an under-specified deferral before the writer can omit its fields`).
+   never emit one. **This half was already pinned before feature 091 existed:**
+   `RequiredFieldContractTests.Omitting any required deferral field blocks the evidence gate` is a
+   `[<Theory>]` derived from `RequiredKeys.requiredDeferralKeys` that builds the deferral by omitting
+   each key *entirely* — so it has always been proving that an absent key reads as `None` and the gate
+   fires. That is independent corroboration of R1 from a test written for another purpose. Only the
+   *positive* path (a populated deferral survives the slim writer) needed a new test.
 3. **The residual cost is real but small and signposted.** A *non-deferral* scaffolded declaration no
    longer displays the four key names as hints for the day an author converts it to a deferral. When
    that day comes, the blocking diagnostic names all four fields explicitly and
@@ -179,6 +182,42 @@ That diff is the migration. It is:
 **Alternative considered**: leave existing files alone and only slim newly scaffolded ones.
 Rejected — the writer has no notion of "file I previously wrote," the re-render path is the same
 code, and two coexisting shapes in one repo is worse than one clean diff.
+
+## R5a — Two writer inconsistencies this feature deliberately does NOT fix
+
+Surfaced by the code review of this change. Recorded so they are scoped out on purpose rather than
+missed, and tracked as follow-ups.
+
+`renderEvidenceSourceSnapshot` (one function above the change) still writes absent optionals as
+*empty values* rather than omitting them:
+
+```fsharp
+let digest = snapshot.Digest |> Option.defaultValue ""            // emits `    digest: ` — trailing space
+let schema = snapshot.SchemaVersion |> Option.map string |> Option.defaultValue "1"   // invents a version
+```
+
+Both encode the opposite convention from the one this feature establishes for declaration optionals.
+The `digest` branch would emit a trailing-whitespace line, violating this feature's own FR-004
+invariant; and because snapshots are read with `tryScalarAt` (not `tryScalarNonNullAt`), an empty
+digest round-trips as `Some ""`, which `evidenceSourceSnapshotStale` then reports as a permanent,
+unfixable staleness warning. The `schemaVersion` default is worse in kind: it *asserts* `1` for a
+source that declared none — the exact "absence is not a value" error this feature exists to correct.
+
+**Neither is reachable today.** The sole caller overwrites `SourceSnapshots` with freshly computed
+snapshots whose `Digest` is always `Some _`, so both `Option.defaultValue` branches are dead. Fixing
+them would change no emitted byte, would widen this feature's touch-set into unrelated code, and
+would need its own tests. Out of scope; filed as a follow-up.
+
+## R5b — `specs/011-evidence-command/contracts/evidence-artifact.md` still shows `rationale: null`
+
+That file is feature 011's frozen record of what 011 shipped, not a live contract. The *live* docs —
+`docs/reference/authoring-contracts.md` and `docs/examples/lifecycle-artifacts/evidence.yml` — already
+show the slim shape and agree with the new writer (the example's `EV003` is a fully populated
+deferral). No test reads the 011 contract file.
+
+Rewriting a historical spec to match today's code would falsify the record of what 011 delivered. It
+is left alone deliberately. This is the one place the constitution's "Tier 1 requires docs" obligation
+touches nothing: the docs that describe current behaviour were already correct.
 
 ## R6 — Why is `--satisfy` not in this feature?
 

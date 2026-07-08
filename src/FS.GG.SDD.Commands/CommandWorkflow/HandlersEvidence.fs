@@ -738,20 +738,19 @@ module internal HandlersEvidence =
         let planRefs = declaration.PlanDecisionRefs |> List.map _.Value
         let artifactRefs = declaration.ArtifactRefs |> List.map _.Path
 
-        // The five optional fields, in their established emission order. Present ones are spliced
-        // in as a block between `synthetic:` and `notes:`; when every one is absent the block
-        // contributes zero characters, so `notes:` follows `synthetic:` directly and no blank line
-        // is left behind. The leading newline belongs to the block, not to the template.
+        // The five optional fields, in their established emission order, spliced between
+        // `synthetic:` and `notes:`. Each present field carries its own leading newline — the same
+        // convention `renderEvidenceSourceRefs` uses for `path`/`uri`/`result` — so the all-absent
+        // case concatenates to "" with no empty-list special case, `notes:` follows `synthetic:`
+        // directly, and no blank line is left behind.
         let optionalFields =
             [ renderSyntheticDisclosure declaration.SyntheticDisclosure
               renderOptionalScalar "rationale" declaration.Rationale
               renderOptionalScalar "owner" declaration.Owner
               renderOptionalScalar "scope" declaration.Scope
               renderOptionalScalar "laterLifecycleVisibility" declaration.LaterLifecycleVisibility ]
-            |> List.choose id
-            |> function
-                | [] -> ""
-                | lines -> "\n" + String.concat "\n" lines
+            |> List.choose (Option.map (fun line -> "\n" + line))
+            |> String.concat ""
 
         $"""  - id: {declaration.Id.Value}
     kind: {evidenceKindSourceValue declaration.Kind}

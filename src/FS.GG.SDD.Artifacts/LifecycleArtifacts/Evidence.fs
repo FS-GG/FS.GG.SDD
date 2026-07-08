@@ -282,16 +282,24 @@ module Evidence =
                                           Result = tryScalarAt [ "result" ] mapping |> Option.defaultValue "pending"
                                           Synthetic = boolAt [ "synthetic" ] mapping false
                                           SyntheticDisclosure = parseSyntheticDisclosure mapping
-                                          // An absent optional scalar and a bare `null` are the same
-                                          // absence. Since feature 091 the writer omits the key
-                                          // (HandlersEvidence.renderOptionalScalar); older files and
-                                          // hand-authored ones still carry `null`, so a plain-null
-                                          // token must read back as `None` too — otherwise a re-run
-                                          // rewrites `null` → the quoted string `"null"` (#161) and
-                                          // the round-trip stops being idempotent. A *quoted* "null"
-                                          // is a real string and survives (isPlainNullScalar checks
-                                          // ScalarStyle.Plain). This equivalence is what makes 091's
-                                          // omission a serialization change, not a schema change.
+                                          // For THESE four scalars an absent key and a bare `null`
+                                          // are the same absence. Since feature 091 the writer omits
+                                          // the key (HandlersEvidence.renderOptionalScalar); older
+                                          // files and hand-authored ones still carry `null`, so a
+                                          // plain-null token must read back as `None` too — otherwise
+                                          // a re-run rewrites `null` → the quoted string `"null"`
+                                          // (#161) and the round-trip stops being idempotent. A
+                                          // *quoted* "null" is a real string and survives
+                                          // (isPlainNullScalar checks ScalarStyle.Plain). That
+                                          // equivalence is what makes 091's omission a serialization
+                                          // change rather than a schema change.
+                                          //
+                                          // It does NOT extend to `syntheticDisclosure`'s nested
+                                          // `standsInFor`/`reason`, which `parseSyntheticDisclosure`
+                                          // still reads with the null-unaware `tryScalarAt`: a bare
+                                          // `standsInFor: null` parses to `Some "null"`, defeating the
+                                          // undisclosed-synthetic gate. Pre-existing, not introduced
+                                          // and not fixed here — see FS.GG.SDD#180.
                                           Rationale = tryScalarNonNullAt [ "rationale" ] mapping
                                           Owner = tryScalarNonNullAt [ "owner" ] mapping
                                           Scope = tryScalarNonNullAt [ "scope" ] mapping

@@ -57,9 +57,17 @@ Ordering among **present** optionals is unchanged: `syntheticDisclosure`, `ratio
 The first four rows collapse to the same `None`. That equivalence — already relied on by feature
 161 — is what makes omission a serialization change rather than a schema change.
 
-`syntheticDisclosure` follows the same shape one level down: `parseSyntheticDisclosure` requires
-both `standsInFor` and `reason` to resolve to non-whitespace scalars, so an absent mapping and a
-`null` mapping both yield `None`.
+`syntheticDisclosure` follows the same shape **for the mapping itself**: `parseSyntheticDisclosure`
+requires both `standsInFor` and `reason` to resolve to non-whitespace scalars, so an absent mapping
+and a `syntheticDisclosure: null` mapping both yield `None` (in the `null` case `tryMapping` fails, so
+the children never resolve).
+
+⚠️ It does **not** extend to the *nested* scalars. `parseSyntheticDisclosure` reads them with the
+null-unaware `tryScalarAt`, so a bare `standsInFor: null` parses to `Some "null"` — defeating the
+undisclosed-synthetic gate and re-rendering as a quoted `"null"`. That is a pre-existing defect,
+neither introduced nor fixed by this feature, filed as **FS.GG.SDD#180**. It does not affect anything
+here: this feature only ever omits the `syntheticDisclosure` key when the parsed value is `None`, and
+`None` is reached identically whether the mapping was absent or `null`.
 
 ## Round-trip invariants
 
