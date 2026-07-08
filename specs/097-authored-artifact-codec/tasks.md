@@ -37,10 +37,12 @@
 
 ## Phase 2: Foundational — the codec (Principle I: `.fsi` before `.fs`; BLOCKS all stories)
 
-- [ ] T012 Author `src/FS.GG.SDD.Artifacts/LifecycleArtifacts/ArtifactCodec.fsi` per `contracts/artifact-codec.md`: `FieldCodec<'M>`, `optionalScalar` (null-aware read / omit-when-`None` write), `requiredScalar`, `inlineList`, `scalarBlock`, `parse` (fold), `render` (map). Declare before the `.fs`.
-- [ ] T013 [P] Tests-first for the codec primitives — `tests/FS.GG.SDD.Artifacts.Tests/ArtifactCodecTests.fs`: C-2 omission (a `None` optional writes no line), C-3 null-as-absence (`null`/`Null`/`NULL`/`~`/empty → `None`; quoted `"null"` → `Some "null"`), C-4 determinism (render order = list order). MUST fail (no `.fs` yet).
-- [ ] T014 Implement `ArtifactCodec.fs` against the `.fsi`, backing `optionalScalar` on `Internal.isPlainNullScalar` (`Internal.fs:85-93`). T013 goes green. No reflection/SRTP in `src/` (Principle IV, C-5).
-- [ ] T015 [P] Register the new file in `src/FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj` compile order (before `Evidence.fs`/`Task.fs`). Update `PublicSurface.baseline` if the Artifacts public surface changed.
+> **Built ahead of #189 (option B, 2026-07-08).** This phase is new files + additive `.fsproj`/baseline edits — genuinely disjoint from #189 — so it landed early to de-risk the abstraction. Phases 3+ (the parser/emitter refactor) still wait on #189. FsCheck (T010) is **not** needed here: the Phase-2 tests are plain xUnit facts; FsCheck arrives with the artifact round-trip properties in Phase 6.
+
+- [X] T012 Authored `src/FS.GG.SDD.Artifacts/LifecycleArtifacts/ArtifactCodec.fsi` — opaque `FieldCodec<'M>` (keeps YamlDotNet out of the public surface), `optionalScalar`/`requiredScalar`/`inlineList`/`scalarBlock`, `keys`, `render`, `decode`. `.fsi` before `.fs`.
+- [X] T013 [P] `tests/FS.GG.SDD.Artifacts.Tests/ArtifactCodecTests.fs` — 12 facts over a toy model: full round-trip, omission (C-2), null-as-absence incl. quoted-`"null"` distinction (C-3, the #180 case), determinism/order (C-4), missing-required Error, `keys` order, and the FR-007 record↔codec coupling mechanism (reflection, test-only). All green.
+- [X] T014 Implemented `ArtifactCodec.fs` — `render` maps writers, `decode` folds readers over one shared `fields` list; `optionalScalar` reads via `tryScalarNonNullAt` (reuses `Internal.isPlainNullScalar`), writes omit-when-`None`; minimal round-trip-safe scalar quoter (a `"null"` string is quoted so it can't be misread as absence). No reflection/SRTP in `src/` (C-5).
+- [X] T015 [P] Registered `ArtifactCodec.fsi`/`.fs` after `Internal.fs` in `FS.GG.SDD.Artifacts.fsproj` and `ArtifactCodecTests.fs` in the test `.fsproj`; regenerated `tests/FS.GG.SDD.Artifacts.Tests/PublicSurface.baseline` (+7 functions; the opaque `FieldCodec` record is correctly absent). Full solution builds 0/0; all 267 Artifacts tests green.
 
 ---
 

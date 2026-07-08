@@ -24,6 +24,8 @@
     <Compile Include="GenerationManifest.fsi" />
     <Compile Include="GenerationManifest.fs" />
     <Compile Include="LifecycleArtifacts/Internal.fs" />
+    <Compile Include="LifecycleArtifacts/ArtifactCodec.fsi" />
+    <Compile Include="LifecycleArtifacts/ArtifactCodec.fs" />
     <Compile Include="LifecycleArtifacts/Core.fsi" />
     <Compile Include="LifecycleArtifacts/Core.fs" />
     <Compile Include="LifecycleArtifacts/RegistryDocument.fsi" />
