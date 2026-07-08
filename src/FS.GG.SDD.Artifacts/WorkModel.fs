@@ -885,7 +885,19 @@ module WorkModel =
         let commands =
             model.Tasks
             |> List.map (fun task ->
-                let relatedIds = (task.Requirements @ task.Decisions) |> List.distinct |> List.sort
+                // Feature 096 (issue #189): union all three reference fields. `sourceIds` is the only
+                // way to express an id with no typed field (SB-/PD-/VO-/AC-/CR-/GV-/PC-/PM-), so
+                // omitting it silently dropped an author's scope boundary before the agent ever saw
+                // it. The union belongs here at the consumer, NOT in Task.fs's parser: `SourceIds` is
+                // what `taskValidationDiagnostics.unknownSources` gates on, so unioning at parse would
+                // retroactively validate `requirements:`/`decisions:` and turn an untouched, green
+                // `tasks.yml` red with no schemaVersion signal. `HandlersVerify` unions the same three
+                // fields for the same reason. Distinct+sort keeps the derivation deterministic and
+                // collapses the DEC-### that `clarificationDecisionTasks` writes into two fields.
+                let relatedIds =
+                    (task.Requirements @ task.Decisions @ task.SourceIds)
+                    |> List.distinct
+                    |> List.sort
 
                 let purpose =
                     match relatedIds with

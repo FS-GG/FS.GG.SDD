@@ -209,6 +209,14 @@ module internal HandlersEvidence =
                   // Feature 077: carry the task's full source-id lineage so the scaffolded
                   // declaration can recover the plan-decision (and FR-via-plan) origin that
                   // task.Requirements/task.Decisions omit for a plan-decision task.
+                  //
+                  // Feature 096 (issue #189): do NOT "fix" this to
+                  // `task.SourceIds ∪ requirements ∪ decisions`. It has been proposed twice and is a
+                  // no-op both times: `LinkedSourceIds` has exactly one consumer — `routeSourceRefs`
+                  // below — and that call site already unions this field with `LinkedRequirementIds`
+                  // and `LinkedDecisionIds`. Widening here would change no emitted byte. The blind
+                  // consumers were `WorkModel.deriveGuidanceModel` and `HandlersVerify`, both fixed
+                  // at their own seams; `evidence` was never blind.
                   LinkedSourceIds = task.SourceIds
                   ExpectedEvidenceKinds = [ "implementation"; "verification"; "deferral"; "synthetic" ]
                   RequiredSkillOrCapabilityTags = task.RequiredSkills
