@@ -56,6 +56,11 @@ module ExampleLifecycleContractTests =
 
     /// Fails with the offending diagnostic ids rather than a bare boolean, so a regression
     /// names its own cause (`missingDisposition`, `stalePlanSnapshot`, ...).
+    ///
+    /// Asserting on the diagnostics rather than on `report.Outcome` is deliberate, and it is the
+    /// stronger check: `ReportAssembly.outcome` returns `Blocked` exactly when a `DiagnosticError`
+    /// is present, so an `Outcome` assertion would be a restatement of this one — while a stage
+    /// that emitted an error and still reported success (cf. #191) would slip past it.
     let private assertStagePasses stage (report: CommandReport) =
         match blockingDiagnostics report with
         | [] -> ()
@@ -68,8 +73,6 @@ module ExampleLifecycleContractTests =
                 |> String.concat "; "
 
             failwith $"Shipped example blocks `fsgg-sdd {stage}`: {ids}"
-
-        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
 
     [<Fact>]
     let ``Shipped example passes the lifecycle it demonstrates: analyze -> evidence -> verify -> ship`` () =

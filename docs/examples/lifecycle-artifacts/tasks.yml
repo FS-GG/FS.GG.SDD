@@ -7,14 +7,18 @@
 # Note the shape below. `requirements:` and `decisions:` are the AUTHORED, typed reference
 # surface. `sourceIds:` is a SEPARATE authored list: the parser does NOT derive it and does
 # NOT union the typed fields into it (see "NOT derived (#164)" in Task.fs). The union lives
-# at the consumer — the disposition check shared by `tasks` and `analyze` tests
-# `sourceIds ∪ requirements ∪ decisions`.
+# at the consumer — the disposition check shared by `tasks` and `analyze` tests each task's
+# `sourceIds ∪ requirements ∪ decisions`, plus this file's top-level `acceptedDeferrals:`.
 #
-# So every id the lifecycle requires a disposition for must appear in one of the three. Ids
-# with no typed field can ONLY be written by hand into `sourceIds:` — an acceptance scenario
-# `AC-###`, a plan decision `PD-###`, a contract impact `PC-###`, a verification obligation
-# `VO-###`, a migration note `PM-###`, a generated-view impact `GV-###`, an accepted checklist
-# deferral `CR-###`, a scope boundary `SB-###`. That is what the `sourceIds:` lines below do.
+# Every id that REQUIRES a disposition must land in one of those four. Only two of them have a
+# typed field: `FR-###` (requirements) and `DEC-###` (decisions). The rest — `AC-###`, the
+# accepted checklist deferral `CR-###`, and the plan's `PD-###`, `PC-###`, `VO-###`, `PM-###`,
+# `GV-###` — have no typed field, so they can ONLY be written by hand into `sourceIds:`.
+# That is what the `sourceIds:` lines below do.
+#
+# `sourceIds:` also ACCEPTS ids that are never *required* to be disposed, for traceability:
+# `US-###`, `SB-###`, `CQ-###`, `AMB-###`, `CHK-###`. An id unknown to the upstream artifacts
+# is rejected (`unknownTaskSourceReference`).
 schemaVersion: 1
 tasks:
   - id: T001
