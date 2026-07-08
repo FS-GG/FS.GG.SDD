@@ -408,6 +408,9 @@ module internal HandlersEvidence =
             : EvidenceArtifact),
             []
 
+    /// `artifact` must be the artifact as **recorded** (parsed from disk / merged), never one whose
+    /// `SourceSnapshots` have been re-stamped to `currentSnapshots` — the staleEvidenceSource check
+    /// reads `artifact.SourceSnapshots` as the recorded side of the comparison.
     let evidenceValidationDiagnostics
         workId
         (specFacts: SpecificationFacts)
@@ -902,6 +905,12 @@ sourceAnalysis: {analysisPath workId}
                                 inputArtifact
                                 obligations
 
+                        // `artifact` re-stamps the snapshots to the sources as they are now; it is what
+                        // gets written back. Validation must see `merged` — the artifact as recorded on
+                        // disk — because `evidenceSourceSnapshotStale` compares the recorded digests
+                        // against `currentSnapshots`. Passing `artifact` compares `currentSnapshots`
+                        // against itself and the staleEvidenceSource branch is dead (#216). The two
+                        // differ only in `SourceSnapshots`, so every other check is unaffected.
                         let artifact =
                             { merged with
                                 SourceSnapshots = currentSnapshots }
@@ -915,7 +924,7 @@ sourceAnalysis: {analysisPath workId}
                                 planFacts
                                 taskFacts
                                 currentSnapshots
-                                artifact
+                                merged
 
                         let dispositions = evidenceDispositions obligations artifact
 
