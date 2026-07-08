@@ -145,5 +145,9 @@ Adding a public `val` to `FS.GG.SDD.Artifacts` changes
 reflection baseline captures — records and fields are not, which is why 087 touched no baseline).
 Re-capture with `FSGG_UPDATE_BASELINE=1`.
 
-`RemediationPointersTests` gates **blocking** diagnostics only; a warning needs no remediation pointer.
-To be confirmed at implementation time by reading `RemediationSupport.fs` rather than assumed.
+**No remediation pointer is required.** `RemediationPointersTests` never enumerates the diagnostic
+catalog — every invariant iterates `RemediationPointers.registry`, a hand-curated authoring-grammar
+subset that excludes even the blocking `surface.drift`. A new diagnostic of any severity cannot break
+it. Adding `surface.versionBumpRequired` to that registry would *fail* the suite, because
+`RemediationPointersTests.fs:122-132` requires every key to appear in `DiagnosticConstructors.fs` while
+`surface.*` ids live in `Artifacts/Diagnostics.fs`. See tasks.md T040.
