@@ -103,7 +103,7 @@ module ReleaseContractTests =
     [<Fact>]
     let ``T011 the compatibility entry carries a Spec Kit range and tolerates a null Governance range`` () =
         let entry = List.exactlyOne release.Compatibility
-        Assert.Equal("0.8.x", entry.SddVersionLine)
+        Assert.Equal("0.9.x", entry.SddVersionLine)
         Assert.False(String.IsNullOrWhiteSpace entry.SpecKitRange)
 
         // a null Governance range is valid and must round-trip and not block readiness
@@ -192,10 +192,31 @@ module ReleaseContractTests =
     // ===== US4 — migration-note obligation for this release (T023) =====
 
     [<Fact>]
-    let ``T023 this additive release carries no migration note`` () =
-        // 0.2.0 adds public surface but breaks no existing contract: additive ⇒ no note.
+    let ``T023 this breaking release carries the obliged migration note`` () =
+        // An additive release still carries no note — the policy is unchanged.
         Assert.False(migrationNoteRequired Additive)
-        Assert.Empty release.Migrations
+
+        // 0.9.0 removes `specification.unresolvedAmbiguityCount` from the `--json`
+        // command-report contract (feature 093 / #164) — Breaking ⇒ a note is owed
+        // (FS-GG/FS.GG.SDD#190). Pre-1.0 it rides a minor bump; the note is not optional.
+        Assert.True(migrationNoteRequired Breaking)
+
+        let note = List.exactlyOne release.Migrations
+
+        // the note is *for this release*: a note whose version drifts from identity
+        // would advertise a migration that this artifact does not describe.
+        Assert.Equal(release.Identity.Version, note.Version)
+        Assert.Equal($"docs/release/migrations/{release.Identity.Version}.md", note.Path)
+        Assert.NotEmpty note.BreakingChanges
+
+        // the referenced note must actually exist — the obligation is a file, not a claim.
+        Assert.True(
+            File.Exists(Path.Combine(TestSupport.repoRoot, note.Path)),
+            $"migration note {note.Path} is referenced by release-readiness.json but absent from disk"
+        )
+
+        // and it must name the field it removed, so a consumer can grep for it.
+        Assert.Contains(note.BreakingChanges, fun change -> change.Contains "unresolvedAmbiguityCount")
 
     [<Fact>]
     let ``T023 a breaking release is obliged to carry a migration note`` () =

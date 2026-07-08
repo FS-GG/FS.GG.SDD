@@ -31,11 +31,19 @@ Use [TEMPLATE.md](TEMPLATE.md) as the starting point for a new note.
 
 ## Index of published notes
 
-**None.**
+| Version | Note | Breaking change |
+|---|---|---|
+| `0.9.0` | [`0.9.0.md`](0.9.0.md) | Removed `specification.unresolvedAmbiguityCount` from the `--json` command-report contract. The gating counter is `clarification.remainingAmbiguityCount` — a **different** report block, so this is a cross-block move, not a rename. |
 
-The current `0.2.0` release is **additive-only** and therefore intentionally
-carries no migration note. This is consistent with the policy: the `migrations[]`
-array in [`release-readiness.json`](../release-readiness.json) is empty.
+The current `0.9.0` release is **breaking** and therefore carries the note above.
+The `migrations[]` array in [`release-readiness.json`](../release-readiness.json)
+lists it, and a test asserts the referenced file exists — the obligation is a
+file, not a claim. Under the `0.x` carve-out the change rides a **minor** bump;
+the note is still mandatory.
+
+Releases `0.2.0` through `0.8.0` were additive-only and intentionally carry no
+note. The paragraphs below record each of those additive changes; they are the
+per-change classification record, not migration notes.
 
 The `030-scaffold-template-provider` change is additive: it adds the cross-cutting
 `fsgg-sdd scaffold` command, the new `command-report` `scaffold` field, and the new

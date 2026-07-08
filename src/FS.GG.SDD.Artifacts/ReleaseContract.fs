@@ -190,13 +190,13 @@ module ReleaseContract =
 
     let currentRelease () : ReleaseReadiness =
         let identity =
-            { Version = "0.8.0"
-              Channel = channelOfVersion "0.8.0"
+            { Version = "0.9.0"
+              Channel = channelOfVersion "0.9.0"
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "0.8.x"
+            [ { SddVersionLine = "0.9.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "1.x" } ]
 
@@ -445,9 +445,19 @@ module ReleaseContract =
               commandsMd
               skillsMd
               commandReport ]
-          // Additive-only release (adds public surface, breaks no existing
-          // contract): no migration note (FR-009; classified in T002).
-          Migrations = [] }
+          // 0.9.0 is the first BREAKING release since 0.8.0: feature 093 (#164)
+          // removed `specification.unresolvedAmbiguityCount` from the `--json`
+          // command-report contract. Under the pre-1.0 `0.x` carve-out a breaking
+          // change MAY land on a minor bump, but the migration note stays
+          // mandatory (FR-009 / FR-010; `migrationNoteRequired Breaking = true`).
+          Migrations =
+            [ { Version = "0.9.0"
+                Path = "docs/release/migrations/0.9.0.md"
+                // Backtick-free on purpose: the default JavaScriptEncoder escapes
+                // U+0060 (as it already escapes '>' in specKitRange), which would put
+                // ` noise in a committed machine artifact.
+                BreakingChanges =
+                  [ "removed the specification.unresolvedAmbiguityCount field from the --json command-report contract (text key unresolvedAmbiguities); the gating counter is clarification.remainingAmbiguityCount, which lives on a different report block" ] } ] }
 
     // ---- canonical serialization ----
 
