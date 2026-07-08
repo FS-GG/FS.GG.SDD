@@ -9,6 +9,12 @@ open Xunit
 /// parser on each build. If an example ever contradicts the tool — a mistyped id,
 /// a broken coverage line, an unsatisfiable evidence block — this fails, so the
 /// copy-adaptable references can never rot.
+///
+/// PARSING IS NOT ENOUGH (#192). These tests reach only the FS.GG.SDD.Artifacts layer, so a
+/// stage gate — `missingDisposition`, `stalePlanSnapshot` — is invisible here: both live in
+/// FS.GG.SDD.Commands. The example once parsed cleanly while `fsgg-sdd analyze` blocked on it.
+/// The complementary guard that drives the example through the real lifecycle stages is
+/// ExampleLifecycleContractTests, in FS.GG.SDD.Commands.Tests. Keep both.
 module ExampleArtifactsContractTests =
 
     let private examplesDir =

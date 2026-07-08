@@ -24,9 +24,9 @@ docs/reference/authoring-contracts.md and [[fs-gg-sdd-plan]].
 Prose status: planned
 
 ## Source Snapshot
-- spec: work/001-example/spec.md sha256:3f93e82de3159bc6632c37498087330755f2128a7f0d0c79b9ed0dc8054d14a9 schemaVersion:1
-- clarifications: work/001-example/clarifications.md sha256:20c188a4bda353438db431fcca556e73aa75fcd9486afebd004b647c2d8a55f2 schemaVersion:1
-- checklist: work/001-example/checklist.md sha256:d3f847abd920a16028b07def9993da1ede27d392d225410f68e2354bd00a66fb schemaVersion:1
+- spec: work/001-example/spec.md sha256:780f0fe89e3ef54473c37ac69c3225ee4765474ad9991f641ecb8908a6924300 schemaVersion:1
+- clarifications: work/001-example/clarifications.md sha256:c4a046356d2826d3b006ee63fe10207f715211d66681c08cfbb5cf642539fa53 schemaVersion:1
+- checklist: work/001-example/checklist.md sha256:7ccd0cebf69a72e5e7215d830908f7cb61c8fda6c62a20c57bb5794a026dca25 schemaVersion:1
 
 ## Plan Scope
 - Work item 001-example is planned from the current specification, clarification, and checklist facts.
