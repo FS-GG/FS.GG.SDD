@@ -157,11 +157,27 @@ module TestShared =
               StandardOutput: string
               StandardError: string }
 
+        /// Why a bounded run gave up. These are different events, and a caller can need to tell
+        /// them apart: a *run smoke* (launch an app, require it to survive a grace window) reads
+        /// `ChildOutlivedBound` as the healthy answer, whereas `PipesHeldAfterExit` means the
+        /// child is already gone and its exit code was never observed — never a success.
+        type TimeoutReason =
+            /// The child never exited within `timeoutMs`. It was killed (whole tree) and reaped.
+            | ChildOutlivedBound
+            /// The child exited, but an orphaned grandchild still held its output pipes when the
+            /// drain grace elapsed, so the captured streams — and the exit code they belong to —
+            /// are untrustworthy and were abandoned.
+            | PipesHeldAfterExit
+
         /// A child that outlived its bound — either it never exited, or it exited but something it
         /// spawned still holds the pipes open. A distinct type from the plain `exn` a failed *start*
         /// raises, so a test asserting the bound cannot be satisfied by a child that never ran.
-        type ChildProcessTimeout(message: string) =
+        type ChildProcessTimeout(reason: TimeoutReason, message: string) =
             inherit exn(message)
+
+            /// Which bound fired. Callers that treat "still running" as success must branch on this
+            /// rather than on `Message`, so a held-pipes abandonment is never read as a clean run.
+            member _.Reason = reason
 
         /// Grace period for draining the pipes once the child has exited, and for reaping a child we
         /// just signalled. Deliberately a small *constant* rather than "whatever is left of
@@ -217,7 +233,12 @@ module TestShared =
                     // `Kill` only signals. Reap, so the child cannot outlive the test that spawned it.
                     proc.WaitForExit drainGraceMs |> ignore
 
-                    raise (ChildProcessTimeout $"Child process timed out after {timeoutMs} ms: {commandLine}")
+                    raise (
+                        ChildProcessTimeout(
+                            ChildOutlivedBound,
+                            $"Child process timed out after {timeoutMs} ms: {commandLine}"
+                        )
+                    )
 
                 // `WaitForExit(int)` returns when the CHILD exits — not when the pipes reach EOF, and
                 // unlike the parameterless overload it does not flush the async readers. A grandchild
@@ -230,6 +251,7 @@ module TestShared =
                 if not (Task.WhenAll(stdout, stderr).Wait drainGraceMs) then
                     raise (
                         ChildProcessTimeout(
+                            PipesHeldAfterExit,
                             $"Child process exited but its output pipes were still held {drainGraceMs} ms later "
                             + $"(an orphaned grandchild inherited them): {commandLine}"
                         )

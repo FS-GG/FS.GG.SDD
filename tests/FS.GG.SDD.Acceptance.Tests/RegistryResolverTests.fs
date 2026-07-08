@@ -5,6 +5,7 @@ open System.Diagnostics
 open System.IO
 open System.Security.Cryptography
 open System.Text
+open FS.GG.SDD.TestShared
 open Xunit
 
 /// Offline, deterministic process-edge coverage for the registry-source resolver
@@ -16,11 +17,12 @@ open Xunit
 /// (plan.md Target Platform). It carries NO rendering identity (FR-003 / SC-003).
 module RegistryResolverTests =
 
-    /// Captured stdout/stderr/exit of one resolver invocation. The resolver prints its
-    /// resolved path to stdout on success and `::error::` diagnostics to stderr on a
-    /// fail-closed exit; both are asserted regardless of exit code — a fuller capture than
-    /// `AcceptanceSupport.runToCompletion`, which folds output into a diagnostic only on a
-    /// non-zero exit. Still the real process edge (real bash, real temp files).
+    /// Captured stdout/stderr/exit of one resolver invocation — `TestShared.ChildProcess.Completion`
+    /// under this module's own names. The resolver prints its resolved path to stdout on success
+    /// and `::error::` diagnostics to stderr on a fail-closed exit; both are asserted regardless of
+    /// exit code — a fuller capture than `AcceptanceSupport.runToCompletion`, which folds output
+    /// into a diagnostic only on a non-zero exit. Still the real process edge (real bash, real
+    /// temp files).
     type ResolverRun =
         { ExitCode: int
           Stdout: string
@@ -61,17 +63,15 @@ module RegistryResolverTests =
     /// child inherits the parent env (PATH etc.), then the resolver-specific keys are cleared
     /// and the provided overrides applied — so no stale parent value leaks and this (parallel)
     /// test process's own globals are never mutated.
+    ///
+    /// Spawns through the shared bounded edge (FS.GG.SDD#217). Redirection and `UseShellExecute`
+    /// are forced by `TestShared.ChildProcess`; an unstartable `bash` and a resolver that outlives
+    /// its 30 s bound both raise there, which is what the hand-rolled `failwith`s here did.
     let private runResolver (env: (string * string) list) (args: string list) : ResolverRun =
         let bash = bashPath |> Option.defaultWith (fun () -> failwith "bash is required")
 
         let info =
-            ProcessStartInfo(
-                FileName = bash,
-                WorkingDirectory = AppContext.BaseDirectory,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false
-            )
+            ProcessStartInfo(FileName = bash, WorkingDirectory = AppContext.BaseDirectory)
 
         info.ArgumentList.Add scriptPath
         args |> List.iter info.ArgumentList.Add
@@ -88,24 +88,11 @@ module RegistryResolverTests =
 
         env |> List.iter (fun (key, value) -> info.Environment[key] <- value)
 
-        match Process.Start info |> Option.ofObj with
-        | None -> failwith "could not start bash for the resolver"
-        | Some started ->
-            use proc = started
-            let stdout = proc.StandardOutput.ReadToEndAsync()
-            let stderr = proc.StandardError.ReadToEndAsync()
+        let completion = TestShared.ChildProcess.runBounded 30_000 info
 
-            if not (proc.WaitForExit 30_000) then
-                (try
-                    proc.Kill true
-                 with _ ->
-                     ())
-
-                failwith "resolver did not exit within 30 s"
-
-            { ExitCode = proc.ExitCode
-              Stdout = stdout.Result
-              Stderr = stderr.Result }
+        { ExitCode = completion.ExitCode
+          Stdout = completion.StandardOutput
+          Stderr = completion.StandardError }
 
     /// The `FSGG_SDD_ACCEPTANCE_REGISTRY=<path>` value from `--print-env` stdout, if present.
     let private exportedPath (stdout: string) =
