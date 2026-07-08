@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "generatorVersion": {
     "id": "FS.GG.SDD.Artifacts",
-    "version": "0.8.0"
+    "version": "0.9.0"
   },
   "identity": {
-    "version": "0.8.0",
+    "version": "0.9.0",
     "channel": "preRelease",
     "packageIds": [
       "FS.GG.SDD.Artifacts",
@@ -16,7 +16,7 @@
   },
   "compatibility": [
     {
-      "sddVersionLine": "0.8.x",
+      "sddVersionLine": "0.9.x",
       "specKitRange": "\u003E=0.8.5",
       "governanceContractVersionRange": "1.x"
     }
@@ -894,5 +894,15 @@
       "durableGenerated": false
     }
   ],
-  "migrations": []
+  "migrations": [
+    {
+      "version": "0.9.0",
+      "path": "docs/release/migrations/0.9.0.md",
+      "breakingChanges": [
+        "removed the specification.unresolvedAmbiguityCount field from the --json command-report contract (text key unresolvedAmbiguities); it blocked nothing -- the blocking counter is clarification.blockingAmbiguityCount, on a different report block",
+        "the tasks stage can now exit 1 with the blocking missingDisposition diagnostic, which was not reachable from tasks in 0.8.0 (fix 162); re-run fsgg-sdd tasks to re-derive the graph, or restore the dropped disposition",
+        "the plan stage can now exit 1 with the blocking stalePlanSnapshot diagnostic when an upstream source changed after planning (feature 090); re-run fsgg-sdd plan --accept-upstream after reviewing the recorded decisions"
+      ]
+    }
+  ]
 }

@@ -12,7 +12,7 @@ open Xunit
 
 /// Feature 052 (US2): the non-blocking CLI-coherence advisory, exercised end-to-end
 /// over the real `dotnet new` provider (no mocks). Installed CLI version is the test
-/// build's generator version (0.8.0); fixtures declare minimums above/at/below it.
+/// build's generator version (0.9.0); fixtures declare minimums above/at/below it.
 [<Collection("ProcessGlobalEnv")>]
 module ScaffoldCliCoherenceTests =
     let private fixturesRoot =
@@ -60,8 +60,11 @@ module ScaffoldCliCoherenceTests =
     let private cliBehind (report: CommandReport) =
         report.Diagnostics |> List.filter (fun d -> d.Id = "scaffold.cliBehindMinimum")
 
-    // US2 scenario 1 (SC-002): installed 0.8.0 < declared 0.9.0 ⇒ exactly one
+    // US2 scenario 1 (SC-002): installed 0.9.0 < declared 0.10.0 ⇒ exactly one
     // scaffold.cliBehindMinimum (info) naming installed, minimum, and the gap.
+    // The minimum tracks the installed version by exactly one minor, so the "behind by
+    // 1 minor version" assertion keeps testing the gap arithmetic and not a constant.
+    // 0.10.0 > 0.9.0 numerically (components are ints, not strings) — see Fsgg.Version.
     [<Fact>]
     let ``behind minimum emits exactly one cliBehindMinimum advisory naming installed minimum and gap`` () =
         let root = TestSupport.tempDirectory ()
@@ -71,8 +74,8 @@ module ScaffoldCliCoherenceTests =
         match cliBehind report with
         | [ diagnostic ] ->
             Assert.Equal("info", severityValue diagnostic.Severity)
-            Assert.Contains("0.8.0", diagnostic.Message)
             Assert.Contains("0.9.0", diagnostic.Message)
+            Assert.Contains("0.10.0", diagnostic.Message)
             Assert.Contains("behind by 1 minor version", diagnostic.Message)
         | other -> Assert.True(false, $"expected exactly one cliBehindMinimum, got {List.length other}")
 
@@ -192,7 +195,7 @@ module ScaffoldCliCoherenceTests =
         Assert.Empty(cliBehind report)
 
         // Provenance records the producing CLI version honestly (the unparseable value as-is),
-        // and does NOT persist the malformed *minimum* — it is a valid minimum here (0.9.0),
+        // and does NOT persist the malformed *minimum* — it is a valid minimum here (0.10.0),
         // but the comparison was skipped because the *installed* side was unparseable.
         let provenance = TestSupport.readRelative root ".fsgg/scaffold-provenance.json"
         Assert.Contains("\"version\": \"not-a-version\"", provenance)
