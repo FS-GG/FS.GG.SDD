@@ -30,8 +30,7 @@ module ArtifactCodec =
         && Char.IsLetterOrDigit v.[0]
         && v.[v.Length - 1] <> ' '
         && v
-           |> Seq.forall (fun c ->
-               Char.IsLetterOrDigit c || c = ' ' || c = '.' || c = '_' || c = '/' || c = '-')
+           |> Seq.forall (fun c -> Char.IsLetterOrDigit c || c = ' ' || c = '.' || c = '_' || c = '/' || c = '-')
 
     let private yamlScalar (v: string) =
         if isSafePlain v then
@@ -77,7 +76,8 @@ module ArtifactCodec =
                     Some(key + ":\n" + String.concat "\n" lines) }
 
     // --- fold (decode) / map (render) over the one shared field list ---
-    let keys (fields: FieldCodec<'M> list) = fields |> List.map (fun field -> field.Key)
+    let keys (fields: FieldCodec<'M> list) =
+        fields |> List.map (fun field -> field.Key)
 
     let private parseMapping (fields: FieldCodec<'M> list) (seed: 'M) (mapping: YamlMappingNode) : Result<'M, string> =
         (Ok seed, fields)

@@ -24,8 +24,7 @@ module ArtifactCodec =
     /// A `string option` field. Reads null-aware (bare null token -> `None`;
     /// quoted `"null"` -> `Some "null"`); writes `key: value`, or omits the line
     /// when `None`.
-    val optionalScalar:
-        key: string -> get: ('M -> string option) -> set: (string option -> 'M -> 'M) -> FieldCodec<'M>
+    val optionalScalar: key: string -> get: ('M -> string option) -> set: (string option -> 'M -> 'M) -> FieldCodec<'M>
 
     /// A required `string` field. Reads the key (Error if absent); always writes.
     val requiredScalar: key: string -> get: ('M -> string) -> set: (string -> 'M -> 'M) -> FieldCodec<'M>

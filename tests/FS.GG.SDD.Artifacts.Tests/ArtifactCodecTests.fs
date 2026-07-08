@@ -23,7 +23,11 @@ module ArtifactCodecTests =
           ArtifactCodec.inlineList "tags" (fun m -> m.Tags) (fun v m -> { m with Tags = v })
           ArtifactCodec.scalarBlock "steps" (fun m -> m.Steps) (fun v m -> { m with Steps = v }) ]
 
-    let private seed = { Name = ""; Note = None; Tags = []; Steps = [] }
+    let private seed =
+        { Name = ""
+          Note = None
+          Tags = []
+          Steps = [] }
 
     let private roundtrip (m: Toy) =
         match ArtifactCodec.decode fields seed (ArtifactCodec.render fields m) with
@@ -43,7 +47,12 @@ module ArtifactCodecTests =
     [<Fact>]
     let ``omits an absent optional and an empty list`` () =
         let text =
-            ArtifactCodec.render fields { Name = "demo"; Note = None; Tags = []; Steps = [] }
+            ArtifactCodec.render
+                fields
+                { Name = "demo"
+                  Note = None
+                  Tags = []
+                  Steps = [] }
 
         Assert.Equal("name: demo", text) // only the required field, nothing else
         Assert.DoesNotContain("note", text)
@@ -74,7 +83,11 @@ module ArtifactCodecTests =
         | Error e -> failwith e
 
         // render: Some "null" is quoted so it cannot be misread as absence on the way back
-        let m = { seed with Name = "demo"; Note = Some "null" }
+        let m =
+            { seed with
+                Name = "demo"
+                Note = Some "null" }
+
         Assert.Contains("\"null\"", ArtifactCodec.render fields m)
         Assert.Equal<Toy>(m, roundtrip m)
 
@@ -90,7 +103,12 @@ module ArtifactCodecTests =
         Assert.Equal(a, ArtifactCodec.render fields m)
 
         let idx (k: string) = a.IndexOf(k)
-        Assert.True(idx "name:" < idx "note:" && idx "note:" < idx "tags:" && idx "tags:" < idx "steps:")
+
+        Assert.True(
+            idx "name:" < idx "note:"
+            && idx "note:" < idx "tags:"
+            && idx "tags:" < idx "steps:"
+        )
 
     [<Fact>]
     let ``a missing required field is an error`` () =
@@ -112,6 +130,8 @@ module ArtifactCodecTests =
             |> Set.ofArray
 
         let codecKeys =
-            ArtifactCodec.keys fields |> List.map (fun k -> k.ToLowerInvariant()) |> Set.ofList
+            ArtifactCodec.keys fields
+            |> List.map (fun k -> k.ToLowerInvariant())
+            |> Set.ofList
 
         Assert.Equal<Set<string>>(recordFields, codecKeys)
