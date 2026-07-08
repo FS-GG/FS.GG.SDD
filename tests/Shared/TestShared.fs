@@ -163,33 +163,40 @@ module TestShared =
         type ChildProcessTimeout(message: string) =
             inherit exn(message)
 
-        /// Grace period for draining the pipes once the child has exited. Normally instantaneous —
-        /// the last writer closed, so both reads are already at EOF — it only bites when a surviving
-        /// grandchild inherited the write end (see `tryRunBounded`). Also bounds the post-kill reap.
+        /// Grace period for draining the pipes once the child has exited, and for reaping a child we
+        /// just signalled. Deliberately a small *constant* rather than "whatever is left of
+        /// `timeoutMs`": once the child is gone the drain is instantaneous (the reads are already at
+        /// EOF), so the only thing this bounds is a surviving grandchild holding the write end. A
+        /// remaining-budget bound would silently make the worst-case wall clock `2 × timeoutMs`,
+        /// i.e. the number a call site writes would stop being the number enforced. Worst case here
+        /// is `timeoutMs + drainGraceMs`.
         let private drainGraceMs = 5_000
 
-        /// Start `startInfo` and run it to completion under `timeoutMs`, capturing both streams.
-        /// `None` when the child could not be started; raises `ChildProcessTimeout` when it could
-        /// not be bounded. Redirection is forced on here so a caller cannot opt out of the
+        /// Start the child, folding both failure shapes into `Error`: a missing executable *throws*
+        /// (`Win32Exception`) rather than returning null, and a misconfigured `ProcessStartInfo`
+        /// throws `InvalidOperationException`. The reason is preserved — "no such file" and "exec
+        /// bit stripped" are different bugs and a triager needs to tell them apart.
+        let private tryStart (startInfo: ProcessStartInfo) : Result<Process, exn> =
+            try
+                match Process.Start startInfo with
+                | null -> Error(exn "Process.Start returned null.")
+                | proc -> Ok proc
+            with ex ->
+                Error ex
+
+        /// Run `startInfo`'s child to completion under `timeoutMs`, capturing both streams.
+        /// `Error` only when the child could not be *started*; a child that cannot be bounded raises
+        /// `ChildProcessTimeout`. Redirection is forced on here so a caller cannot opt out of the
         /// concurrent drain that makes the bound reachable.
-        let tryRunBounded (timeoutMs: int) (startInfo: ProcessStartInfo) : Completion option =
+        let private runCore (timeoutMs: int) (startInfo: ProcessStartInfo) : Result<Completion, exn> =
             startInfo.RedirectStandardOutput <- true
             startInfo.RedirectStandardError <- true
             startInfo.UseShellExecute <- false
 
-            // A missing executable *throws* (Win32Exception) rather than returning null, so both
-            // failure shapes have to be folded into `None` — matching `AcceptanceSupport`.
-            let started =
-                try
-                    Process.Start startInfo |> Option.ofObj
-                with _ ->
-                    None
-
-            match started with
-            | None -> None
-            | Some started ->
+            match tryStart startInfo with
+            | Error ex -> Error ex
+            | Ok started ->
                 use proc = started
-                let elapsed = Stopwatch.StartNew()
 
                 let commandLine =
                     String.concat " " (startInfo.FileName :: List.ofSeq startInfo.ArgumentList)
@@ -199,17 +206,15 @@ module TestShared =
                 let stdout = proc.StandardOutput.ReadToEndAsync()
                 let stderr = proc.StandardError.ReadToEndAsync()
 
-                // Best-effort: a tree we cannot fully kill (a descendant already reparented, or one
-                // that raced us) throws, and there is nothing further to do about it.
-                let killTree () =
+                if not (proc.WaitForExit timeoutMs) then
+                    // Best-effort: a tree we cannot fully kill (a descendant already reparented, or
+                    // one that raced us) throws, and there is nothing further to do about it.
                     try
                         proc.Kill(entireProcessTree = true)
                     with _ ->
                         ()
 
-                if not (proc.WaitForExit timeoutMs) then
-                    killTree ()
-                    // Reap what we just signalled, so the child cannot outlive the test that spawned it.
+                    // `Kill` only signals. Reap, so the child cannot outlive the test that spawned it.
                     proc.WaitForExit drainGraceMs |> ignore
 
                     raise (ChildProcessTimeout $"Child process timed out after {timeoutMs} ms: {commandLine}")
@@ -218,30 +223,35 @@ module TestShared =
                 // unlike the parameterless overload it does not flush the async readers. A grandchild
                 // that inherited the write end therefore keeps both reads pending, so an *unbounded*
                 // reap here would silently relocate the very hang this module exists to prevent.
-                // Bound it too, and kill whatever still holds the pipes.
-                let drainMs = max drainGraceMs (timeoutMs - int elapsed.ElapsedMilliseconds)
-
-                if not (Task.WhenAll(stdout, stderr).Wait drainMs) then
-                    killTree ()
-
+                //
+                // We cannot kill that grandchild: the child is already gone, so `Kill(entireProcessTree)`
+                // has no tree to walk and the orphan has been reparented away from us. All we can
+                // honestly do is refuse to wait for it, abandon the readers, and say so.
+                if not (Task.WhenAll(stdout, stderr).Wait drainGraceMs) then
                     raise (
                         ChildProcessTimeout(
-                            $"Child process exited but its output pipes were still held {drainMs} ms later "
-                            + $"(a surviving grandchild inherited them): {commandLine}"
+                            $"Child process exited but its output pipes were still held {drainGraceMs} ms later "
+                            + $"(an orphaned grandchild inherited them): {commandLine}"
                         )
                     )
 
-                Some
+                Ok
                     { ExitCode = proc.ExitCode
                       StandardOutput = stdout.Result
                       StandardError = stderr.Result }
 
+        /// Run a child under `timeoutMs`. `None` when it could not be started — the shape a caller
+        /// that wants to *probe* for an executable needs.
+        let tryRunBounded (timeoutMs: int) (startInfo: ProcessStartInfo) : Completion option =
+            runCore timeoutMs startInfo |> Result.toOption
+
         /// As `tryRunBounded`, but a child that cannot be started is a test failure rather than a
-        /// value to branch on — the shape nearly every call site wants.
+        /// value to branch on — the shape nearly every call site wants. The launch failure's reason
+        /// is carried through, not flattened.
         let runBounded (timeoutMs: int) (startInfo: ProcessStartInfo) : Completion =
-            match tryRunBounded timeoutMs startInfo with
-            | Some completion -> completion
-            | None -> failwithf "Failed to start `%s`." startInfo.FileName
+            match runCore timeoutMs startInfo with
+            | Ok completion -> completion
+            | Error ex -> raise (exn ($"Failed to start `{startInfo.FileName}`: {ex.Message}", ex))
 
         /// Run real `git` in a directory and return (exitCode, trimmed stdout). Was duplicated
         /// verbatim (and deadlock-prone) in ScaffoldCommandTests and GitignoreNegationTests.

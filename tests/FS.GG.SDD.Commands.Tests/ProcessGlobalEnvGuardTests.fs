@@ -22,12 +22,15 @@ module ProcessGlobalEnvGuardTests =
     /// `runScaffold`/`scaffoldRequest` cover the interpreter spawn path (`interpretAll` of a
     /// non-dry-run `Scaffold` request → real `dotnet new`), which carries none of the lower-level
     /// markers — the reason `ScaffoldCliCoherenceTests` needs the collection.
-    /// `ChildProcess.` is the shared bounded spawn primitive (FS.GG.SDD#212); it now owns the
-    /// `Process.Start` that used to sit — and be detected — in each spawning module.
+    /// `ChildProcess`/`runBounded` are the shared bounded spawn primitive (FS.GG.SDD#212), which now
+    /// owns the `Process.Start` that used to sit — and be detected — in each spawning module.
+    /// `Process.Start` was unavoidable (you could not spawn without writing it); a module-qualified
+    /// call can be aliased away, so match the entry points too, not just the qualified path.
     let private spawnOrMutateMarkers =
         [ "runCliRaw"
           "Process.Start"
-          "ChildProcess."
+          "ChildProcess"
+          "runBounded"
           "Environment.SetEnvironmentVariable"
           "runScaffold"
           "scaffoldRequest" ]
