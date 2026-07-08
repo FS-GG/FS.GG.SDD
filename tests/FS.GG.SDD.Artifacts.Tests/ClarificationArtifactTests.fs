@@ -159,3 +159,34 @@ publicOrToolFacingImpact: true
         | Ok _ -> failwith "Unsupported schema version should block parsing."
         | Error diagnostics ->
             Assert.Contains(diagnostics, fun diagnostic -> diagnostic.Id = "unsupportedSchemaVersion")
+
+    // ---------------------------------------------------------------------------------------
+    // Feature 089 (FR-021, contract K9). The blocked-clarify skeleton renders a *generated*
+    // explanation under `## Remaining Ambiguity`, and that prose is machine input: the classifier
+    // scans it for `accepted deferral`/`defer` and `non-blocking`. The first implementation wrote
+    // the obviously-helpful "Unanswered — provide a concrete decision, an accepted deferral, or an
+    // explicit still-open note.", which classified as an ACCEPTED DEFERRAL — so the skeleton parsed
+    // with zero blocking ambiguities and `checklist` passed with every ambiguity unanswered.
+    //
+    // Pin both directions: the shipped sentence blocks, and the tempting one does not.
+    // ---------------------------------------------------------------------------------------
+
+    [<Fact>]
+    let ``Seeded skeleton remaining-ambiguity line counts as blocking`` () =
+        let seeded =
+            "- AMB-001 [CQ-001] blocking: Unanswered. Resolve source ambiguity AMB-001 before checklist."
+
+        match parseClarificationFacts (snapshot (withRemainingAmbiguity seeded)) with
+        | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
+        | Ok facts -> Assert.Equal(1, facts.BlockingAmbiguityCount)
+
+    [<Theory>]
+    // Regression guard: any generated explanation that NAMES a resolution stops blocking. These are
+    // the shapes 089 must never reintroduce into the seeded skeleton.
+    [<InlineData("- AMB-001 [CQ-001] blocking: Unanswered — provide a concrete decision, an accepted deferral, or an explicit still-open note.")>]
+    [<InlineData("- AMB-001 [CQ-001] blocking: Unanswered; record a deferred decision if needed.")>]
+    [<InlineData("- AMB-001 [CQ-001] blocking: Unanswered, or mark it non-blocking.")>]
+    let ``Remaining-ambiguity line naming a resolution stops blocking`` (body: string) =
+        match parseClarificationFacts (snapshot (withRemainingAmbiguity body)) with
+        | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
+        | Ok facts -> Assert.Equal(0, facts.BlockingAmbiguityCount)

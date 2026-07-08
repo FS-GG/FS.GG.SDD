@@ -294,3 +294,193 @@ No material ambiguities recorded.
         Assert.Contains("\"name\": \"specify\"", first)
         Assert.Contains("\"specification\"", first)
         Assert.DoesNotContain(root, first)
+
+    // ---------------------------------------------------------------------------------------
+    // Feature 089 §WD7 (FS-GG/FS.GG.SDD#174): the seeded story and acceptance scenario.
+    //
+    // Before 089, an invocation supplying no story seeded two sentences about the SDD process
+    // ("As a maintainer, I can specify X after chartering the work item." / "Given a chartered
+    // work item, when specify runs with intent, then spec.md is created with stable ids."), which
+    // the author deleted wholesale. They now read as the feature, derived from the author's own
+    // `value:` fact. The ids and every cross-reference are deliberately unchanged.
+    // ---------------------------------------------------------------------------------------
+
+    let private specifyWithIntentAndTitle intent specifyTitle root =
+        let request =
+            { TestSupport.specifyRequest root workId title with
+                Title = Some specifyTitle
+                InputText = Some intent }
+
+        TestSupport.runRequest request |> ignore
+        TestSupport.readRelative root specPath
+
+    let private specifyWithIntent intent root =
+        specifyWithIntentAndTitle intent title root
+
+    /// SC-007. The prohibition is on the *seed's own* boilerplate, not on author-supplied text the
+    /// seed interpolates: a work item legitimately titled "Specify Command" puts "specify" in its
+    /// own acceptance scenario, and a user value may say anything. So the process-vocabulary check
+    /// runs against a neutral title and a neutral user value; the old meta-seed phrases are banned
+    /// unconditionally.
+    let private seedProcessVocabulary =
+        [ "charter"; "specify"; "spec.md"; "stable ids" ]
+
+    let private oldMetaSeedPhrases =
+        [ "after chartering the work item"; "when specify runs with intent" ]
+
+    let private storyLine (spec: string) =
+        spec.Split('\n') |> Array.find (fun line -> line.StartsWith("- US-001"))
+
+    let private acceptanceLine (spec: string) =
+        spec.Split('\n') |> Array.find (fun line -> line.StartsWith("- AC-001"))
+
+    [<Fact>]
+    let ``specify seeds a feature-shaped story derived from the user value`` () =
+        let root = initializedCharteredProject ()
+
+        let spec =
+            specifyWithIntent
+                "value: Let a player keep a highlight of their match\nscope: one chartered work item\nrequirement: the export plays back in a standard media player"
+                root
+
+        let story = storyLine spec
+
+        // FR-001: the `As a <user>, I can <capability>` shape, capability from the user value.
+        Assert.Equal("- US-001 (P1): As a user, I can let a player keep a highlight of their match.", story)
+
+        // FR-002: the old meta seed is gone, unconditionally.
+        for phrase in oldMetaSeedPhrases do
+            Assert.DoesNotContain(phrase, spec.ToLowerInvariant())
+
+    [<Fact>]
+    let ``specify seed carries no SDD process vocabulary of its own`` () =
+        let root = initializedCharteredProject ()
+
+        // Neutral title and neutral user value: anything left is the seed's own phrasing (SC-007).
+        let spec =
+            specifyWithIntentAndTitle
+                "value: Let a player keep a highlight of their match\nscope: one work item\nrequirement: the export plays back"
+                "Highlight Export"
+                root
+
+        let seeded = (storyLine spec + " " + acceptanceLine spec).ToLowerInvariant()
+
+        for term in seedProcessVocabulary do
+            Assert.DoesNotContain(term, seeded)
+
+    [<Fact>]
+    let ``specify seeds a feature-shaped acceptance scenario carrying its references`` () =
+        let root = initializedCharteredProject ()
+
+        let spec =
+            specifyWithIntent
+                "value: Let a player keep a highlight of their match\nscope: one chartered work item\nrequirement: the export plays back in a standard media player"
+                root
+
+        // FR-003/FR-004: Given/When/Then about the feature, still tagged [US-001] [FR-001].
+        // The title interpolates verbatim — here the fixture's own "Specify Command".
+        Assert.Equal(
+            "- AC-001 [US-001] [FR-001]: Given Specify Command is available, when the user exercises it, then they can let a player keep a highlight of their match.",
+            acceptanceLine spec
+        )
+
+    [<Fact>]
+    let ``specify seed preserves the ids and cross-references the lifecycle depends on`` () =
+        let root = initializedCharteredProject ()
+        let spec = specifyWithIntent TestSupport.specifyIntent root
+
+        // FR-004: `checklist` coverage and the plan/tasks back-references key off exactly these.
+        Assert.StartsWith("- US-001 (P1): ", storyLine spec)
+        Assert.StartsWith("- AC-001 [US-001] [FR-001]: ", acceptanceLine spec)
+        Assert.Contains("(Stories: US-001; Acceptance: AC-001)", spec)
+
+    [<Fact>]
+    let ``specify uses the author story and acceptance verbatim when supplied`` () =
+        let root = initializedCharteredProject ()
+
+        let spec =
+            specifyWithIntent
+                (TestSupport.specifyIntent
+                 + "\nstory: As an operator, I can roll back a bad deploy\nacceptance: Given a bad deploy, when I roll back, then the prior version serves traffic")
+                root
+
+        // FR-005: no seed substituted.
+        Assert.Equal("- US-001 (P1): As an operator, I can roll back a bad deploy", storyLine spec)
+
+        Assert.Equal(
+            "- AC-001 [US-001] [FR-001]: Given a bad deploy, when I roll back, then the prior version serves traffic",
+            acceptanceLine spec
+        )
+
+    [<Fact>]
+    let ``specify seed neutralizes id-shaped tokens in author text`` () =
+        let root = initializedCharteredProject ()
+
+        let spec =
+            specifyWithIntent
+                "value: Supersede FR-002 with a shareable export\nscope: one chartered work item\nrequirement: the export plays back"
+                root
+
+        let story = storyLine spec
+
+        // FR-017: the author's "FR-002" must not become a cross-reference inside the US-001 line.
+        Assert.Contains("FR 002", story)
+        Assert.DoesNotContain("FR-002", story)
+
+    [<Fact>]
+    let ``specify seed leaves an acronym-initial user value uncapitalized`` () =
+        let root = initializedCharteredProject ()
+
+        let spec =
+            specifyWithIntent
+                "value: MP4 export keeps a highlight.\nscope: one chartered work item\nrequirement: the export plays back"
+                root
+
+        // S3: only an ordinary Capitalized word is decapitalized. S4: the trailing period is not doubled.
+        Assert.Equal("- US-001 (P1): As a user, I can MP4 export keeps a highlight.", storyLine spec)
+
+    [<Fact>]
+    let ``specify is deterministic across repeated runs`` () =
+        let root = initializedCharteredProject ()
+        let first = specifyWithIntent TestSupport.specifyIntent root
+        let second = specifyWithIntent TestSupport.specifyIntent root
+
+        // FR-015 / SC-010.
+        Assert.Equal(first, second)
+
+    /// Every id scanner in the artifact layer matches case-INSENSITIVELY. A case-sensitive
+    /// `neutralizeIds` let a lowercase `amb-001` in the author's user value survive into the seeded
+    /// US-001/AC-001 lines, where the specification parser counted it as a real ambiguity reference:
+    /// `unresolvedAmbiguityCount` rose while `## Ambiguities` still said none were recorded.
+    [<Fact>]
+    let ``specify seed neutralizes lowercase id-shaped tokens too`` () =
+        let root = initializedCharteredProject ()
+
+        let spec =
+            specifyWithIntent
+                "value: Let a reviewer close amb-001 tickets\nscope: one chartered work item\nrequirement: the export plays back"
+                root
+
+        let story = storyLine spec
+        let acceptance = acceptanceLine spec
+
+        Assert.Contains("amb 001", story)
+        Assert.DoesNotContain("amb-001", story)
+        Assert.DoesNotContain("amb-001", acceptance)
+
+    /// Neutralization must run BEFORE decapitalization: decapitalizing first turns `Amb-001` into
+    /// `amb-001`, which only a case-insensitive rewrite would still catch.
+    [<Fact>]
+    let ``specify seed neutralizes a capitalized id-shaped token at the start of the user value`` () =
+        let root = initializedCharteredProject ()
+
+        let spec =
+            specifyWithIntent
+                "value: Amb-001 must be resolved before export\nscope: one chartered work item\nrequirement: the export plays back"
+                root
+
+        let story = storyLine spec
+
+        Assert.DoesNotContain("Amb-001", story)
+        Assert.DoesNotContain("amb-001", story)
+        Assert.Contains("amb 001", story)

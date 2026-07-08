@@ -41,7 +41,7 @@
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "3ab55c22a05d8e20f88536e30e958ce9f783ac88e978e70d0bd27ceb548180d7"
+        "value": "462f2493de6b37ec896bc92c0374120f583c61208def1241f8440ee49776d9d1"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -51,7 +51,7 @@
       "kind": "checklist",
       "digest": {
         "algorithm": "sha256",
-        "value": "17673468b69cf9097f820ff7edc284502a741cdbbce89e1082c5a4815f7b4225"
+        "value": "3c5b5f41feed6d37bf164f11c60ae912ef0dd1b06cf910ba09c80caca3eeac79"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -71,7 +71,7 @@
       "kind": "plan",
       "digest": {
         "algorithm": "sha256",
-        "value": "c05144f6555271ab25b14d9b03eda0d9856288f27b9bebfbe34df62783c30c8c"
+        "value": "e6b87f145635843cad65158c202d208b23dc3606904313de78524b6a42970336"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -81,7 +81,7 @@
       "kind": "specification",
       "digest": {
         "algorithm": "sha256",
-        "value": "752693c73098ed10ca211ee890dd02a782f19a9be784b6294775d41a9bd045e8"
+        "value": "9181f6ded8f26df9d848187d53b36272d59bbb1928145601663371f5c03963a7"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -91,7 +91,7 @@
       "kind": "tasks",
       "digest": {
         "algorithm": "sha256",
-        "value": "e2ef95fddec418b8d13fb8f422bd5124b2f14d7c4afba15610a0482092154b55"
+        "value": "a691b64f243473d7065cfef0e8d88f685095b5efffffcefcece6d82f25978b13"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
