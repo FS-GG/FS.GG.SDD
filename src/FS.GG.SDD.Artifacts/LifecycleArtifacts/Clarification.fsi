@@ -33,9 +33,6 @@ module Clarification =
         { QuestionId: ClarificationQuestionId
           Prompt: string
           SourceAmbiguityIds: AmbiguityId list
-          RelatedRequirementIds: RequirementId list
-          RelatedStoryIds: UserStoryId list
-          RelatedAcceptanceScenarioIds: AcceptanceScenarioId list
           Blocking: bool
           State: string
           SourceLocation: SourceLocation option }
@@ -55,13 +52,15 @@ module Clarification =
           Rationale: string option
           SourceQuestionIds: ClarificationQuestionId list
           SourceAmbiguityIds: AmbiguityId list
-          RelatedRequirementIds: RequirementId list
-          RelatedStoryIds: UserStoryId list
-          RelatedAcceptanceScenarioIds: AcceptanceScenarioId list
           SourceLocation: SourceLocation option }
 
     type RemainingAmbiguity =
-        { AmbiguityId: AmbiguityId option
+        { /// The ambiguity the line is *about* — its first `AMB-###`, the line's ANCHOR. Deliberately
+          /// not every id the line names: a line may mention others in its prose ("AMB-001 blocked on
+          /// the AMB-002 decision"), and `retireResolvedRemaining` deletes a line by its anchor. Widening
+          /// this to a list would report a merely-mentioned, already-decided ambiguity as an unresolved
+          /// blocker, and would falsify `remainingLineAnchor`. One subject per line.
+          AmbiguityId: AmbiguityId option
           QuestionId: ClarificationQuestionId option
           State: string
           Explanation: string

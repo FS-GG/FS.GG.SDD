@@ -55,8 +55,7 @@ result; text output is a projection from the same report object.
     "acceptanceScenarioIds": [
       "AC-001"
     ],
-    "ambiguityIds": [],
-    "unresolvedAmbiguityCount": 0
+    "ambiguityIds": []
   },
   "clarification": {
     "workId": "007-checklist-command",

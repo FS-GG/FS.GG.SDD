@@ -53,6 +53,9 @@ module Serialization =
         writer.WriteString("id", decision.Id)
         writer.WriteString("title", decision.Title)
         writer.WriteString("decision", decision.Decision)
+        writeStringList writer SourceOrder "requirementRefs" decision.RequirementRefs
+        writeStringList writer SourceOrder "storyRefs" decision.StoryRefs
+        writeStringList writer SourceOrder "acceptanceRefs" decision.AcceptanceRefs
         writer.WriteString("source", decision.Source)
         writeLocation writer "sourceLocation" decision.SourceLocation
         writeStringList writer SourceOrder "linkedTaskIds" decision.LinkedTaskIds

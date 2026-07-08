@@ -58,10 +58,50 @@ module internal EarlyStageAuthoring =
                 Char.ToUpperInvariant(part.[0]).ToString() + part.Substring(1))
         |> String.concat " "
 
+    let private nonBlank (value: string) =
+        if String.IsNullOrWhiteSpace value then None else Some(value.Trim())
+
+    /// A front-matter scalar that survives its own re-parse.
+    ///
+    /// `titleFromSpec` feeds a YAML-*decoded* title into an unquoted `title:` slot, so a spec whose front
+    /// matter legally reads `title: "Plan: upstream snapshot"` would emit `title: Plan: upstream snapshot`
+    /// — not a YAML scalar — and `clarify` would block on the file it had just written, reporting the
+    /// unhelpful "Clarification front matter is empty." A leading `#` is worse: it parses as a comment,
+    /// silently yielding an empty title.
+    ///
+    /// Quote only when the plain form would not round-trip, so the common `title: Ambient audio bed` keeps
+    /// its exact bytes and no committed artifact churns.
+    let yamlFrontMatterScalar (value: string) =
+        // An allowlist, not a blocklist: YAML's plain-scalar rules are subtle enough that enumerating the
+        // unsafe cases invites exactly the miss this guards against (a *trailing* `:` ends the scalar just
+        // as `: ` does mid-string). Anything outside the boring alphanumeric-with-punctuation set is quoted.
+        let isSafeChar c =
+            Char.IsLetterOrDigit c || "-_. ()/'".Contains(c: char)
+
+        let plainIsSafe =
+            not (String.IsNullOrEmpty value)
+            && value = value.Trim()
+            && Char.IsLetterOrDigit value.[0]
+            && value |> Seq.forall isSafeChar
+
+        if plainIsSafe then
+            value
+        else
+            "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\""
+
     let requestTitle (request: CommandRequest) workId =
         request.Title
-        |> Option.filter (String.IsNullOrWhiteSpace >> not)
-        |> Option.map _.Trim()
+        |> Option.bind nonBlank
+        |> Option.defaultValue (titleFromWorkId workId)
+
+    /// Title for an artifact derived from an existing specification: the author's explicit `--title`,
+    /// else the specification's own front-matter title, else the humanized work id. The middle rung is
+    /// what keeps a derived artifact's `title:` agreeing with the `spec.md` its `sourceSpec:` points at
+    /// (#164) — the work id is a last resort, not a default.
+    let titleFromSpec (request: CommandRequest) (specFacts: SpecificationFacts) workId =
+        request.Title
+        |> Option.bind nonBlank
+        |> Option.orElseWith (fun () -> nonBlank specFacts.FrontMatter.Title)
         |> Option.defaultValue (titleFromWorkId workId)
 
     let charterTemplate request workId =
@@ -70,7 +110,7 @@ module internal EarlyStageAuthoring =
         $"""---
 schemaVersion: 1
 workId: {workId}
-title: {title}
+title: {yamlFrontMatterScalar title}
 stage: charter
 changeTier: tier1
 status: chartered
@@ -346,7 +386,7 @@ policyPointers:
         $"""---
 schemaVersion: 1
 workId: {workId}
-title: {title}
+title: {yamlFrontMatterScalar title}
 stage: specify
 changeTier: tier1
 status: specified
@@ -577,8 +617,7 @@ Prose status: specified
           StoryIds = facts.UserStoryIds |> List.map _.Value |> List.sort
           RequirementIds = facts.RequirementIds |> List.map _.Value |> List.sort
           AcceptanceScenarioIds = facts.AcceptanceScenarioIds |> List.map _.Value |> List.sort
-          AmbiguityIds = facts.AmbiguityIds |> List.map _.Value |> List.sort
-          UnresolvedAmbiguityCount = facts.UnresolvedAmbiguityCount }
+          AmbiguityIds = facts.AmbiguityIds |> List.map _.Value |> List.sort }
 
     let mapSpecificationDiagnostics (path: string) (diagnostics: Diagnostic list) : Diagnostic list =
         diagnostics
@@ -1105,7 +1144,12 @@ Prose status: specified
             $"- {ambiguityValue} [{questionId}] blocking: Unanswered. Resolve source ambiguity {ambiguityValue} before checklist."
 
     let clarificationTemplate request workId (specFacts: SpecificationFacts) answers =
-        let title = requestTitle request workId
+        // The clarifications file is *about* a specific spec — its own `sourceSpec:` line says so —
+        // so it inherits that spec's title rather than re-deriving one from the work id (#164). An
+        // explicit `--title` still wins; a blank spec title still falls back to the humanized id.
+        // Feature 089's blocked-seed path made this load-bearing: it emits a skeleton on a run where
+        // the author has no reason to pass `--title` at all.
+        let title = titleFromSpec request specFacts workId
 
         // Derived from the declared ambiguities that carry no resolution — NOT from the presence
         // of a `stillOpen` answer (089 §WD5). With zero answers the old rule produced
@@ -1167,7 +1211,7 @@ Prose status: specified
         $"""---
 schemaVersion: 1
 workId: {workId}
-title: {title}
+title: {yamlFrontMatterScalar title}
 stage: clarify
 changeTier: tier1
 status: {status}

@@ -190,3 +190,28 @@ publicOrToolFacingImpact: true
         match parseClarificationFacts (snapshot (withRemainingAmbiguity body)) with
         | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
         | Ok facts -> Assert.Equal(0, facts.BlockingAmbiguityCount)
+
+    // ---------------------------------------------------------------------------------------------
+    // Feature 093 / FS.GG.SDD#164 (FS.GG.Audio feedback §3.7). A `DEC-###` line naming several refs
+    // had all but the first silently dropped. The reported symptom was one bug; it was four, on three
+    // paths. These pin two of them at the artifact layer.
+    // ---------------------------------------------------------------------------------------------
+
+    /// A Remaining Ambiguity line has ONE subject — its first `AMB-###`, the anchor. Other ids in the
+    /// prose are mentions, not subjects. Feature 093 briefly widened this to "every id the line names",
+    /// which looked like the same class of drop as the decision refs but is not: `remainingLineAnchor`
+    /// retires a line by that first id, so a mention must never be reported as an unresolved blocker
+    /// (`AMB-001 blocked on the AMB-002 decision` would name the already-answered AMB-002 as blocking),
+    /// and must never retire the line when it is answered. The `tryHead` is the contract, not a bug.
+    [<Fact>]
+    let ``a remaining-ambiguity line is anchored on its first ambiguity, not every id it mentions`` () =
+        let body = "- AMB-002 [CQ-002] blocking: still blocked on the AMB-004 decision."
+
+        match parseClarificationFacts (snapshot (withRemainingAmbiguity body)) with
+        | Error diagnostics -> failwith $"Unexpected diagnostics: {diagnostics}"
+        | Ok facts ->
+            let remaining = Assert.Single facts.RemainingAmbiguity
+
+            Assert.Equal(Some "AMB-002", remaining.AmbiguityId |> Option.map _.Value)
+            Assert.Equal(1, facts.RemainingAmbiguity.Length)
+            Assert.Equal(1, facts.BlockingAmbiguityCount)

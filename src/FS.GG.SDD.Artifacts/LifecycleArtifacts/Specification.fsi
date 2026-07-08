@@ -34,7 +34,6 @@ module Specification =
           ScopeBoundaryIds: ScopeBoundaryId list
           AmbiguityIds: AmbiguityId list
           RequirementReferences: SpecificationRequirementReference list
-          UnresolvedAmbiguityCount: int
           Diagnostics: Diagnostic list }
 
     val specificationStandardSections: unit -> string list

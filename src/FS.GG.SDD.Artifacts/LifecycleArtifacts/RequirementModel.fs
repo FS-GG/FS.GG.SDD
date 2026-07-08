@@ -26,6 +26,9 @@ module RequirementModel =
         { Id: DecisionId
           Title: string
           Decision: string
+          RequirementRefs: RequirementId list
+          StoryRefs: UserStoryId list
+          AcceptanceRefs: AcceptanceScenarioId list
           Source: ArtifactRef
           SourceLocation: SourceLocation option }
 
@@ -95,6 +98,22 @@ module RequirementModel =
             |> Seq.toArray)
         |> Array.toList
 
+    /// Every id of one family the line names, deduplicated (by `Internal.idsInLine`) and then sorted, so
+    /// the author's phrasing order cannot move the bytes these refs reach — a decision's requirement refs
+    /// are emitted into a task's `requirements:` list (#164). `create` rejects a token the regex matched
+    /// but that is not a well-formed id, so a malformed ref is simply not a ref.
+    let private sortedRefsInLine pattern create (value: 'id -> string) line : 'id list =
+        idsInLine pattern create line |> List.sortBy value
+
+    let private requirementRefsInLine =
+        sortedRefsInLine @"\bFR-\d{3,}\b" Identifiers.createRequirementId (fun id -> id.Value)
+
+    let private storyRefsInLine =
+        sortedRefsInLine @"\bUS-\d{3,}\b" Identifiers.createUserStoryId (fun id -> id.Value)
+
+    let private acceptanceRefsInLine =
+        sortedRefsInLine @"\bAC-\d{3,}\b" Identifiers.createAcceptanceScenarioId (fun id -> id.Value)
+
     let parseDecisions (snapshot: FileSnapshot) =
         let kind =
             let path = normalizePath snapshot.Path
@@ -122,10 +141,16 @@ module RequirementModel =
             if m.Success then
                 match Identifiers.createDecisionId m.Groups.[1].Value with
                 | Ok id ->
+                    // A decision may settle several requirements at once, and name the stories and
+                    // acceptance scenarios it touches (#164). Every ref on the line reaches the work
+                    // model; before feature 093 none of them did.
                     Some
                         { Id = id
                           Title = m.Groups.[2].Value.Trim()
                           Decision = m.Groups.[2].Value.Trim()
+                          RequirementRefs = requirementRefsInLine line
+                          StoryRefs = storyRefsInLine line
+                          AcceptanceRefs = acceptanceRefsInLine line
                           Source = artifact
                           SourceLocation = sourceLocation lineNumber }
                 | Error _ -> None

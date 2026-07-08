@@ -38,7 +38,6 @@ module Specification =
           ScopeBoundaryIds: ScopeBoundaryId list
           AmbiguityIds: AmbiguityId list
           RequirementReferences: SpecificationRequirementReference list
-          UnresolvedAmbiguityCount: int
           Diagnostics: Diagnostic list }
 
     let specificationStandardSections () =
@@ -243,13 +242,6 @@ module Specification =
 
             let references = requirementReferences text
 
-            let unresolvedAmbiguityCount =
-                body.Split('\n')
-                |> Array.filter (fun line ->
-                    Regex.IsMatch(line, @"\bAMB-\d{3,}\b", RegexOptions.IgnoreCase)
-                    && not (Regex.IsMatch(line, @"\b(resolved|deferred)\b", RegexOptions.IgnoreCase)))
-                |> Array.length
-
             let diagnostics =
                 [ duplicateScopedDiagnostics artifact (fun (id: UserStoryId) -> id.Value) stories
                   duplicateScopedDiagnostics artifact (fun (id: RequirementId) -> id.Value) requirements
@@ -279,5 +271,4 @@ module Specification =
                     |> List.sortBy _.Value
                   AmbiguityIds = ambiguities |> List.map fst |> List.distinctBy _.Value |> List.sortBy _.Value
                   RequirementReferences = references |> List.sortBy (fun reference -> reference.RequirementId.Value)
-                  UnresolvedAmbiguityCount = unresolvedAmbiguityCount
                   Diagnostics = diagnostics }

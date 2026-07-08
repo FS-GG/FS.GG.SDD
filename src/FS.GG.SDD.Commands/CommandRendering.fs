@@ -22,9 +22,6 @@ module CommandRendering =
 
             builder.AppendLine($"specificationAcceptanceScenarios: {List.length specification.AcceptanceScenarioIds}")
             |> ignore
-
-            builder.AppendLine($"unresolvedAmbiguities: {specification.UnresolvedAmbiguityCount}")
-            |> ignore
         | None -> ()
 
         match report.Clarification with

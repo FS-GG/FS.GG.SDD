@@ -37,9 +37,6 @@ module Clarification =
         { QuestionId: ClarificationQuestionId
           Prompt: string
           SourceAmbiguityIds: AmbiguityId list
-          RelatedRequirementIds: RequirementId list
-          RelatedStoryIds: UserStoryId list
-          RelatedAcceptanceScenarioIds: AcceptanceScenarioId list
           Blocking: bool
           State: string
           SourceLocation: SourceLocation option }
@@ -59,9 +56,6 @@ module Clarification =
           Rationale: string option
           SourceQuestionIds: ClarificationQuestionId list
           SourceAmbiguityIds: AmbiguityId list
-          RelatedRequirementIds: RequirementId list
-          RelatedStoryIds: UserStoryId list
-          RelatedAcceptanceScenarioIds: AcceptanceScenarioId list
           SourceLocation: SourceLocation option }
 
     type RemainingAmbiguity =
@@ -157,26 +151,10 @@ module Clarification =
         |> Seq.distinctBy (fun id -> id.Value)
         |> Seq.toList
 
-    let requirementIdsInLine line =
-        Regex.Matches(line, @"\bFR-\d{3,}\b", RegexOptions.IgnoreCase)
-        |> Seq.cast<Match>
-        |> Seq.choose (fun m -> Identifiers.createRequirementId m.Value |> Result.toOption)
-        |> Seq.distinctBy (fun id -> id.Value)
-        |> Seq.toList
-
-    let storyIdsInLine line =
-        Regex.Matches(line, @"\bUS-\d{3,}\b", RegexOptions.IgnoreCase)
-        |> Seq.cast<Match>
-        |> Seq.choose (fun m -> Identifiers.createUserStoryId m.Value |> Result.toOption)
-        |> Seq.distinctBy (fun id -> id.Value)
-        |> Seq.toList
-
-    let acceptanceScenarioIdsInLine line =
-        Regex.Matches(line, @"\bAC-\d{3,}\b", RegexOptions.IgnoreCase)
-        |> Seq.cast<Match>
-        |> Seq.choose (fun m -> Identifiers.createAcceptanceScenarioId m.Value |> Result.toOption)
-        |> Seq.distinctBy (fun id -> id.Value)
-        |> Seq.toList
+    // `requirementIdsInLine` / `storyIdsInLine` / `acceptanceScenarioIdsInLine` lived here to populate
+    // `RelatedRequirementIds` / `RelatedStoryIds` / `RelatedAcceptanceScenarioIds` — three fields nothing
+    // ever read. Feature 093 removed the fields, so the scanners went with them. A decision's FR/US/AC
+    // refs now travel on `RequirementModel.Decision`, where `work-model.json` actually reads them (#164).
 
     let decisionIdsInLine line =
         Regex.Matches(line, @"\bDEC-\d{3,}\b", RegexOptions.IgnoreCase)
@@ -199,9 +177,6 @@ module Clarification =
                     { QuestionId = questionId
                       Prompt = cleanAfterId questionId.Value line
                       SourceAmbiguityIds = ambiguityIdsInLine line
-                      RelatedRequirementIds = requirementIdsInLine line
-                      RelatedStoryIds = storyIdsInLine line
-                      RelatedAcceptanceScenarioIds = acceptanceScenarioIdsInLine line
                       Blocking = not (Regex.IsMatch(lowered, @"\bnon-?blocking\b"))
                       State =
                         if containsWord "answered" lowered then "answered"
@@ -253,15 +228,16 @@ module Clarification =
                       Rationale = None
                       SourceQuestionIds = questionIdsInLine line
                       SourceAmbiguityIds = ambiguityIdsInLine line
-                      RelatedRequirementIds = requirementIdsInLine line
-                      RelatedStoryIds = storyIdsInLine line
-                      RelatedAcceptanceScenarioIds = acceptanceScenarioIdsInLine line
                       SourceLocation = sourceLocation lineNumber }
             | None -> None)
 
     let parseRemainingAmbiguity text =
         sectionLines "Remaining Ambiguity" text
         |> List.choose (fun (lineNumber, line) ->
+            // The line's ANCHOR — its subject — not every id it names. `remainingLineAnchor` retires a
+            // line by this same first id, and a line may legitimately mention others in its prose
+            // ("AMB-001 blocked on the AMB-002 decision"). Reporting a mentioned id as an unresolved
+            // blocker, or retiring the line when that id is answered, both destroy a still-blocking item.
             let ambiguity = ambiguityIdsInLine line |> List.tryHead
             let question = questionIdsInLine line |> List.tryHead
 

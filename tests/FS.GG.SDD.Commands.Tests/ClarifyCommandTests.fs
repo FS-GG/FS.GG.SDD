@@ -563,3 +563,199 @@ module ClarifyCommandTests =
         TestSupport.runClarify root workId title |> ignore
 
         Assert.Contains("status: needsAnswers", TestSupport.readRelative root clarificationPath)
+
+    // ---------------------------------------------------------------------------------------------
+    // Feature 093 / FS.GG.SDD#164: the clarify skeleton took its title from *this invocation's*
+    // `--title`, falling back to the humanized work id — never from the `spec.md` its own
+    // `sourceSpec:` line points at. Feature 089's blocked-seed path newly exposed it in exactly the
+    // situation where an author has no reason to pass `--title`.
+    // ---------------------------------------------------------------------------------------------
+
+    /// A work item whose spec title differs from both the humanized work id and any `--title`.
+    let private specTitle = "Ambient Audio Bed"
+
+    let private initializedWithSpecTitle () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root workId specTitle |> ignore
+
+        let specifyRequest =
+            { TestSupport.specifyRequest root workId specTitle with
+                InputText = Some TestSupport.specifyIntentWithAmbiguity }
+
+        TestSupport.runRequest specifyRequest |> ignore
+        root
+
+    let private runClarifyWithoutTitle root =
+        { TestSupport.clarifyRequest root workId specTitle with
+            Title = None }
+        |> TestSupport.runRequest
+
+    [<Fact>]
+    let ``clarify skeleton inherits the spec title when no --title is passed`` () =
+        let root = initializedWithSpecTitle ()
+
+        runClarifyWithoutTitle root |> ignore
+
+        let clarifications = TestSupport.readRelative root clarificationPath
+
+        Assert.Contains($"title: {specTitle}", clarifications)
+        Assert.Contains($"# {specTitle} Clarifications", clarifications)
+        // The pre-fix value: `titleFromWorkId "006-clarify-command"` = "Clarify Command".
+        Assert.DoesNotContain("title: Clarify Command", clarifications)
+
+    [<Fact>]
+    let ``clarify --title still wins over the spec title`` () =
+        let root = initializedWithSpecTitle ()
+
+        { TestSupport.clarifyRequest root workId specTitle with
+            Title = Some "Override" }
+        |> TestSupport.runRequest
+        |> ignore
+
+        let clarifications = TestSupport.readRelative root clarificationPath
+
+        Assert.Contains("title: Override", clarifications)
+        Assert.DoesNotContain($"title: {specTitle}", clarifications)
+
+    [<Fact>]
+    let ``clarify falls back to the humanized work id when the spec title is blank`` () =
+        let root = initializedWithSpecTitle ()
+
+        let blanked =
+            (TestSupport.readRelative root specPath).Replace($"title: {specTitle}", "title:   ")
+
+        TestSupport.writeRelative root specPath blanked
+
+        runClarifyWithoutTitle root |> ignore
+
+        Assert.Contains("title: Clarify Command", TestSupport.readRelative root clarificationPath)
+
+    /// The 089 blocked-seed path: unresolved blocking ambiguities, so `clarify` blocks — but it still
+    /// seeds the skeleton, and the skeleton must carry the spec's title.
+    [<Fact>]
+    let ``the blocked clarify seed carries the spec title`` () =
+        let root = initializedWithSpecTitle ()
+
+        let report =
+            { TestSupport.clarifyRequest root workId specTitle with
+                Title = None
+                InputText = None }
+            |> TestSupport.runRequest
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.True(TestSupport.existsRelative root clarificationPath)
+        Assert.Contains($"title: {specTitle}", TestSupport.readRelative root clarificationPath)
+
+    // ---------------------------------------------------------------------------------------------
+    // Feature 093 / FS.GG.SDD#164 (FS.GG.Game feedback §WD4). The reported symptom: with every
+    // ambiguity resolved, `unresolvedAmbiguities: 4` sat next to `remaining/blocking = 0`, and an
+    // author could not tell which one gated. The root cause was structural — the counter was a regex
+    // over `spec.md`'s own body and never read `clarifications.md`, so no `clarify` run could move it.
+    // ---------------------------------------------------------------------------------------------
+
+    [<Fact>]
+    let ``no ambiguity counter contradicts the gate once everything is resolved`` () =
+        let root = initializedSpecifiedProject ()
+
+        // The first run authors the artifact (no prior facts to summarize); the second reads it back.
+        TestSupport.runClarify root workId title |> ignore
+        let report = TestSupport.runClarify root workId title
+
+        let clarification = report.Clarification.Value
+
+        // The one declared ambiguity is answered, so the two counters that actually gate read 0.
+        Assert.Equal(0, clarification.RemainingAmbiguityCount)
+        Assert.Equal(0, clarification.BlockingAmbiguityCount)
+
+        // And no third counter disagrees, in any projection. Before this feature the specify-stage
+        // summary reported `unresolvedAmbiguities: 1` right here.
+        Assert.DoesNotContain("unresolvedAmbiguities", FS.GG.SDD.Commands.CommandRendering.renderText report)
+        Assert.DoesNotContain("unresolvedAmbiguityCount", serializeReport report)
+
+    /// FR-003: the two counters that *do* gate keep their values. Two ambiguities, neither answered →
+    /// both remaining, both blocking, and the run is blocked.
+    ///
+    /// The counts only exist from the second run onward: the first has no prior artifact to summarize.
+    /// (The `unresolvedBlockingAmbiguity` diagnostic these counts drive fires at the *checklist* stage,
+    /// not here — it is already pinned by `clarify then checklist` above and by `ChecklistCommandTests`.)
+    [<Fact>]
+    let ``the ambiguity counts that gate are unchanged by the counter removal`` () =
+        let root = initializedSpecifiedProjectWithTwoAmbiguities ()
+
+        runClarifyWith None root |> ignore
+        let rerun = runClarifyWith None root
+
+        Assert.Equal(CommandOutcome.Blocked, rerun.Outcome)
+        Assert.Equal(2, rerun.Clarification.Value.RemainingAmbiguityCount)
+        Assert.Equal(2, rerun.Clarification.Value.BlockingAmbiguityCount)
+
+    /// FR-013. The undeclared-reference gate predates this feature (`unknownReferenceDiagnostics`
+    /// resolves every AMB/CQ/FR/US/AC id in the `--input` lines against the spec's declared sets).
+    /// Feature 093 threads a decision's *extra* refs through to the work model and the task graph —
+    /// this pins that the threading cannot smuggle an undeclared ref past the gate.
+    [<Fact>]
+    let ``a multi-ref decision naming an undeclared requirement still blocks`` () =
+        let root = initializedSpecifiedProject ()
+
+        let report =
+            runClarifyWith
+                (Some "AMB-001: Settles FR-001 and FR-999 together.")
+                root
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+        let diagnostic =
+            report.Diagnostics
+            |> List.find (fun diagnostic -> diagnostic.Id = "unknownClarificationReference")
+
+        Assert.Contains("FR-999", diagnostic.Message)
+
+        // The declared sibling ref does not rescue the line: `FR-001` resolves, `FR-999` does not, and
+        // one unresolved ref is enough to block. Feature 089 still seeds a skeleton on a blocked run,
+        // and that skeleton echoes the author's own `--input` verbatim — bad ref included, because it
+        // is the text they must now correct. Blocking is the contract; a sanitized seed is not.
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+    // ---------------------------------------------------------------------------------------------
+    // Feature 093: inheriting the spec's title (above) put a YAML-*decoded* value into an unquoted
+    // `title:` slot. A spec whose front matter legally reads `title: "Plan: upstream snapshot"` then
+    // emitted `title: Plan: upstream snapshot` — not a scalar — and clarify blocked on the file it had
+    // just written, reporting "Clarification front matter is empty." A leading `#` was worse: it parsed
+    // as a comment and the title vanished while the command reported success.
+    // ---------------------------------------------------------------------------------------------
+
+    let private specWithTitle (rawTitleLine: string) root =
+        let spec = TestSupport.readRelative root specPath
+        TestSupport.writeRelative root specPath (spec.Replace($"title: {specTitle}", rawTitleLine))
+        root
+
+    [<Theory>]
+    // A colon would end the scalar; a leading `#` would start a comment; a quote would unbalance it.
+    [<InlineData("title: \"Plan: upstream snapshot\"", "Plan: upstream snapshot")>]
+    [<InlineData("title: \"#1 priority\"", "#1 priority")>]
+    [<InlineData("title: \"Trailing colon:\"", "Trailing colon:")>]
+    let ``an inherited spec title that needs quoting round-trips`` (rawTitleLine: string) (decoded: string) =
+        let root = initializedWithSpecTitle () |> specWithTitle rawTitleLine
+
+        let report = runClarifyWithoutTitle root
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+
+        // The tool must be able to re-read what it wrote: a second run parses the artifact and reports
+        // no change rather than blocking on malformed front matter.
+        let rerun = runClarifyWithoutTitle root
+        Assert.NotEqual(CommandOutcome.Blocked, rerun.Outcome)
+
+        let clarifications = TestSupport.readRelative root clarificationPath
+        Assert.Contains($"# {decoded} Clarifications", clarifications)
+
+    /// A title that needs no quoting keeps its exact bytes — the fix must not churn every artifact.
+    [<Fact>]
+    let ``a plain inherited title is still emitted unquoted`` () =
+        let root = initializedWithSpecTitle ()
+
+        runClarifyWithoutTitle root |> ignore
+
+        Assert.Contains($"title: {specTitle}", TestSupport.readRelative root clarificationPath)
+        Assert.DoesNotContain($"title: \"{specTitle}\"", TestSupport.readRelative root clarificationPath)

@@ -317,5 +317,14 @@ module Task =
                       Diagnostics = diagnostics }
             | _ -> Error versionDiagnostics
 
+    // NOT derived (#164). Unioning `requirements`/`decisions` into `SourceIds` here was tried and
+    // deferred: `SourceIds` is what `taskValidationDiagnostics.unknownSources` gates on, so the union
+    // silently subjects the typed ref fields to a validation they never had — an existing workspace
+    // whose hand-authored `requirements: [FR-007]` names an id since dropped from spec.md goes from
+    // green to exit 1 with no `schemaVersion` signal. It also widens `existingSources` (derivation
+    // suppression) and `derivedCoverage` (prior-task orphan deletion) in the re-generation merge.
+    // The blindness it was meant to fix is real — `evidence` reads only `SourceIds`, while the shipped
+    // example authors only typed refs — but the fix belongs at those consumers, not at the parser.
+    // Tracked separately; see the follow-up to FS.GG.SDD#164.
     let parseTasks (snapshot: FileSnapshot) =
         parseTaskFacts snapshot |> Result.map (fun facts -> facts.Tasks)
