@@ -483,3 +483,36 @@ module VerifyCommandTests =
         let second = TestSupport.readRelative root verifyPath
 
         Assert.Equal(first, second)
+
+    /// Rewrite the first recorded snapshot digest to one no source can hash to. Deliberately local
+    /// rather than shared with `EvidenceCommandTests`: each side asserts its own fixture drift, and
+    /// this keeps the shared `TestSupport` surface out of #216's touch-set.
+    let private staleFirstSnapshotDigest root =
+        let lines = (TestSupport.readRelative root evidencePath).Split('\n')
+
+        match
+            lines
+            |> Array.tryFindIndex (fun line -> line.StartsWith("    digest: ", System.StringComparison.Ordinal))
+        with
+        | None -> failwith "Fixture drift: expected a `    digest: ` snapshot line in the authored evidence.yml."
+        | Some index ->
+            lines[index] <- "    digest: " + String.replicate 64 "0"
+            lines |> String.concat "\n" |> TestSupport.writeRelative root evidencePath
+
+    [<Fact>]
+    let ``verify reports staleEvidenceSource when a recorded source digest has drifted`` () =
+        // #216: `verify` hands the *parsed* on-disk artifact to `evidenceValidationDiagnostics`, so
+        // the stale check is live here — unlike `evidence`, which re-stamped the snapshots first and
+        // compared them against themselves. Nothing pinned either side; this pins the enforcing one,
+        // so a refactor that re-stamps before validating reddens a test instead of going quiet.
+        let root = initializedEvidencedProject ()
+
+        // Absence first: without this the presence assertion below would still pass against a check
+        // that fires unconditionally.
+        let clean = TestSupport.runVerify root workId title
+        Assert.DoesNotContain(clean.Diagnostics, fun d -> d.Id = "evidence.staleEvidenceSource")
+
+        staleFirstSnapshotDigest root
+        let drifted = TestSupport.runVerify root workId title
+
+        Assert.Contains(drifted.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.staleEvidenceSource")

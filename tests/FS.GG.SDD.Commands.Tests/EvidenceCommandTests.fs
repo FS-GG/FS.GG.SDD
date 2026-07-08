@@ -382,6 +382,47 @@ evidence:
         | -1 -> failwith $"Fixture drift: expected to find '{needle}' in the emitted evidence.yml."
         | index -> text.Substring(0, index) + replacement + text.Substring(index + needle.Length)
 
+    /// Rewrite the first recorded snapshot digest to one no source can hash to, so the artifact's
+    /// recorded digests no longer match the sources on disk. The writer emits `sourceSnapshots:`
+    /// before `evidence:`, so the first `    digest: ` line is a snapshot's, not a `sourceRefs[]`
+    /// entry's.
+    let private staleFirstSnapshotDigest root =
+        let lines = (TestSupport.readRelative root evidencePath).Split('\n')
+
+        match
+            lines
+            |> Array.tryFindIndex (fun line -> line.StartsWith("    digest: ", System.StringComparison.Ordinal))
+        with
+        | None -> failwith "Fixture drift: expected a `    digest: ` snapshot line in the emitted evidence.yml."
+        | Some index ->
+            lines[index] <- "    digest: " + String.replicate 64 "0"
+            lines |> String.concat "\n" |> TestSupport.writeRelative root evidencePath
+
+    [<Fact>]
+    let ``evidence reports staleEvidenceSource when a recorded source digest has drifted`` () =
+        // #216: `evidence` re-stamps SourceSnapshots to the freshly computed ones before validating.
+        // Validating the re-stamped artifact compared `currentSnapshots` against itself, so this
+        // branch was structurally dead. It must compare against what the artifact *recorded*.
+        let root = initializedAnalyzedProject ()
+        TestSupport.runEvidence root workId title |> ignore
+        staleFirstSnapshotDigest root
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.staleEvidenceSource")
+
+    [<Fact>]
+    let ``evidence does not report staleEvidenceSource on a clean re-run`` () =
+        // The other side of #216: the check must stay silent when nothing drifted, and must not fire
+        // on the first run (where the recorded snapshot list is empty).
+        let root = initializedAnalyzedProject ()
+
+        let first = TestSupport.runEvidence root workId title
+        let second = TestSupport.runEvidence root workId title
+
+        for report in [ first; second ] do
+            Assert.DoesNotContain(report.Diagnostics, fun d -> d.Id = "evidence.staleEvidenceSource")
+
     /// Author `injected` YAML directly after the first `synthetic:` line, then re-run `evidence` so
     /// the writer re-renders what the reader parsed.
     let private authorAfterSynthetic root (syntheticLine: string) (injectedLines: string list) =
