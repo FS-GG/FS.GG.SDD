@@ -204,6 +204,52 @@ policyPointers:
 
     let numberedId prefix index = sprintf "%s-%03d" prefix (index + 1)
 
+    // --- Feature-shaped specify seed (feature 089 / FS-GG/FS.GG.SDD#174 §WD7) --------------
+    // When the author supplies no story or acceptance scenario, `specify` used to seed two
+    // sentences about the SDD process ("As a maintainer, I can specify X after chartering the
+    // work item."). They read as boilerplate to delete. These three total helpers derive a
+    // feature-shaped placeholder from the only feature-describing facts available at seeding
+    // time: the required `value:` intent fact, and the invocation title. (The charter title is
+    // NOT reachable here — `requestTitle` reads this invocation's `--title`, else the humanized
+    // work id — so the user value is what carries the meaning. See research D1.)
+    // Applied to the seeded lines only, never to author-supplied scope/requirement/non-goal text.
+
+    /// Drop at most one trailing period so an interpolated value never yields `..`.
+    let trimTrailingPeriod (text: string) =
+        let trimmed = text.Trim()
+
+        if trimmed.EndsWith('.') then
+            trimmed.Substring(0, trimmed.Length - 1).TrimEnd()
+        else
+            trimmed
+
+    /// Lowercase the first letter only when it starts an ordinary capitalized word, so
+    /// "Let a player…" reads mid-sentence while "MP4 export…" is left intact.
+    let decapitalizeFirst (text: string) =
+        if text.Length > 1 && Char.IsUpper text[0] && Char.IsLower text[1] then
+            string (Char.ToLowerInvariant text[0]) + text.Substring(1)
+        else
+            text
+
+    /// Author text is interpolated into lines that the artifact parsers scan for stable-id
+    /// cross-references. Rewrite any id-shaped token (`FR-002`) by replacing its hyphen with a
+    /// space (`FR 002`) so a seeded `US-001`/`AC-001` line cannot manufacture a reference the
+    /// author never intended (FR-017).
+    ///
+    /// Case-INSENSITIVE, and matched against the same id families the parsers scan for: every id
+    /// scanner in the artifact layer (`idMatches`, `scopedIdLocations`, the specification's
+    /// unresolved-ambiguity count) uses `RegexOptions.IgnoreCase`, so a case-sensitive rewrite here
+    /// would let `amb-001` in the author's user value survive into the seed and be counted as a
+    /// real ambiguity reference.
+    let neutralizeIds (text: string) =
+        Regex.Replace(text, @"\b(AMB|CQ|DEC|FR|US|AC|SB|PD)-(\d{3,})\b", "$1 $2", RegexOptions.IgnoreCase)
+
+    /// The capability clause of the seeded story: the author's user value, made to read after
+    /// "I can ". Neutralize BEFORE decapitalizing: decapitalizing first can turn `Amb-001` into
+    /// `amb-001`, and only a case-insensitive rewrite would still catch it.
+    let seedCapability (userValue: string) =
+        userValue |> trimTrailingPeriod |> neutralizeIds |> decapitalizeFirst
+
     let specificationTemplate request workId intent =
         let title = requestTitle request workId
 
@@ -228,15 +274,21 @@ policyPointers:
             else
                 intent.Requirements
 
+        // Feature-shaped placeholder seeds (089 §WD7). The ids and every cross-reference below
+        // are unchanged; only the prose after the `:` moves, so `checklist` coverage and the
+        // `plan`/`tasks` back-references still resolve. Neither seed names the SDD process.
+        let capability = seedCapability userValue
+        let seedTitle = neutralizeIds title
+
         let stories =
             if List.isEmpty intent.Stories then
-                [ $"As a maintainer, I can specify {title} after chartering the work item." ]
+                [ $"As a user, I can {capability}." ]
             else
                 intent.Stories
 
         let acceptanceScenarios =
             if List.isEmpty intent.AcceptanceScenarios then
-                [ "Given a chartered work item, when specify runs with intent, then spec.md is created with stable ids." ]
+                [ $"Given {seedTitle} is available, when the user exercises it, then they can {capability}." ]
             else
                 intent.AcceptanceScenarios
 
@@ -1001,27 +1053,84 @@ Prose status: specified
         else
             None
 
+    // --- Blocked-clarify skeleton (feature 089 / FS-GG/FS.GG.SDD#174 §WD5) ------------------
+    // The empty-state bodies the template renders. They are placeholders the operator (or a later
+    // `clarify --input`) replaces — see `retirePlaceholders`, which removes one once its section
+    // holds a real entry. `noBlockingAmbiguityRemains` is deliberately NOT in this set: it is a
+    // meaningful sentinel that `isNoOutstandingSentinel` exempts from the blocking count.
+    let noClarificationQuestions = "No clarification questions recorded."
+    let noClarificationAnswers = "No clarification answers recorded."
+    let noConcreteDecisions = "No concrete decisions recorded."
+    let noAcceptedDeferrals = "No accepted deferrals recorded."
+    let noBlockingAmbiguityRemains = "No blocking ambiguity remains."
+
+    let emptyStatePlaceholders =
+        [ noClarificationQuestions
+          noClarificationAnswers
+          noConcreteDecisions
+          noAcceptedDeferrals ]
+
+    /// An ambiguity is *resolved* only by a concrete decision or an accepted deferral. A
+    /// `stillOpen` answer records that it is unresolved; it does not resolve it.
+    let resolvesAmbiguity (answer: PlannedClarificationAnswer) =
+        answer.Kind = "decision" || answer.Kind = "acceptedDeferral"
+
+    /// The declared ambiguities that carry no resolution this run, in declaration order.
+    let unresolvedAmbiguityValues (specFacts: SpecificationFacts) answers =
+        let resolved =
+            answers
+            |> List.filter resolvesAmbiguity
+            |> List.map (fun answer -> answer.AmbiguityId)
+            |> Set.ofList
+
+        specFacts.AmbiguityIds
+        |> List.mapi (fun index ambiguity -> index, ambiguity.Value)
+        |> List.filter (fun (_, value) -> not (resolved.Contains value))
+
+    /// The Remaining Ambiguity line for an unresolved ambiguity. A `stillOpen` answer keeps its
+    /// own text (today's `renderRemainingLine` output, so no existing golden moves); an ambiguity
+    /// with no answer at all — the skeleton case — gets a generic explanation, because
+    /// `SpecificationFacts` carries ambiguity *ids* only and never their prose (research D5).
+    ///
+    /// The wording is load-bearing. `parseRemainingAmbiguity` classifies a line by scanning it for
+    /// `accepted deferral` / `defer` (⇒ acceptedDeferral) and `non-blocking` (⇒ nonBlocking), so an
+    /// explanation that merely *names* those resolutions as options would parse as one of them and
+    /// silently drop the ambiguity from `BlockingAmbiguityCount` — letting `checklist` pass with the
+    /// ambiguity unanswered. Keep this text free of `defer` and `non-blocking`.
+    let renderUnresolvedLine (answers: PlannedClarificationAnswer list) questionId ambiguityValue =
+        answers
+        |> List.tryFind (fun answer -> answer.AmbiguityId = ambiguityValue && answer.Kind = "stillOpen")
+        |> Option.bind renderRemainingLine
+        |> Option.defaultValue
+            $"- {ambiguityValue} [{questionId}] blocking: Unanswered. Resolve source ambiguity {ambiguityValue} before checklist."
+
     let clarificationTemplate request workId (specFacts: SpecificationFacts) answers =
         let title = requestTitle request workId
 
+        // Derived from the declared ambiguities that carry no resolution — NOT from the presence
+        // of a `stillOpen` answer (089 §WD5). With zero answers the old rule produced
+        // `status: clarified` and "No blocking ambiguity remains.", which is exactly the state a
+        // blocked run is in: a file asserting the work is clarified while the command blocks.
+        let unresolved = unresolvedAmbiguityValues specFacts answers
+
         let status =
-            if answers |> List.exists (fun answer -> answer.Kind = "stillOpen") then
-                "needsAnswers"
-            else
+            if List.isEmpty unresolved then
                 "clarified"
+            else
+                "needsAnswers"
 
         let questionLines =
             specFacts.AmbiguityIds
             |> List.mapi (fun index ambiguity -> renderQuestionLine (scopedId "CQ" (index + 1)) ambiguity.Value)
             |> fun lines ->
                 if List.isEmpty lines then
-                    [ "No clarification questions recorded." ]
+                    [ noClarificationQuestions ]
                 else
                     lines
 
         let answerLines =
             if List.isEmpty answers then
-                [ "No clarification answers recorded." ]
+                [ noClarificationAnswers ]
             else
                 answers |> List.map renderAnswerLine
 
@@ -1031,7 +1140,7 @@ Prose status: specified
             |> List.choose renderDecisionLine
             |> fun lines ->
                 if List.isEmpty lines then
-                    [ "No concrete decisions recorded." ]
+                    [ noConcreteDecisions ]
                 else
                     lines
 
@@ -1041,16 +1150,17 @@ Prose status: specified
             |> List.choose renderDecisionLine
             |> fun lines ->
                 if List.isEmpty lines then
-                    [ "No accepted deferrals recorded." ]
+                    [ noAcceptedDeferrals ]
                 else
                     lines
 
         let remainingLines =
-            answers
-            |> List.choose renderRemainingLine
+            unresolved
+            |> List.map (fun (index, ambiguityValue) ->
+                renderUnresolvedLine answers (scopedId "CQ" (index + 1)) ambiguityValue)
             |> fun lines ->
                 if List.isEmpty lines then
-                    [ "No blocking ambiguity remains." ]
+                    [ noBlockingAmbiguityRemains ]
                 else
                     lines
 
@@ -1144,6 +1254,212 @@ publicOrToolFacingImpact: true
             // Re-insert a single blank-line separator before the next heading (or trailing).
             (before @ bodyLines @ [ "" ] @ after) |> String.concat "\n"
 
+    // --- Retirement passes (feature 089, FR-018 / FR-019) -----------------------------------
+    // `appendClarificationAnswers` only ever *appends* to a section. That is fine while the tool
+    // writes the whole artifact in one shot, but from 089 a blocked `clarify` seeds a skeleton
+    // whose Remaining Ambiguity section lists every unanswered ambiguity as blocking, and whose
+    // other sections carry empty-state placeholders. A later `clarify --input` that answers those
+    // ambiguities must retire what it superseded — otherwise the recorded decision lands, the
+    // blocking line survives, `clarify` reports `succeeded` with a non-zero blocking count, and
+    // `checklist` blocks two stages later (research D4, verified against the pre-089 CLI).
+
+    /// Rewrite the body of an existing section (the lines between its heading and the next `##`)
+    /// through `transform`, which sees only the section's content lines (blanks stripped) and
+    /// returns the lines to keep. Blank lines are passed through to `transform` and preserved, so a
+    /// retirement pass removes exactly the lines it targets and reformats nothing else (FR-014); a
+    /// single blank-line separator is normalized before the next heading. A section that is absent,
+    /// or one whose transform keeps every line, is left byte-identical.
+    let transformSectionBody heading (transform: string list -> string list) (text: string) =
+        let normalized =
+            (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
+
+        let split = normalized.Split('\n') |> Array.toList
+        let headingPattern = $"^##\\s+{Regex.Escape heading}\\s*$"
+
+        match split |> List.tryFindIndex (fun line -> Regex.IsMatch(line, headingPattern)) with
+        | None -> normalized
+        | Some start ->
+            let next =
+                split
+                |> List.mapi (fun index line -> index, line)
+                |> List.tryFind (fun (index, line) -> index > start && Regex.IsMatch(line, "^##\\s+"))
+                |> Option.map fst
+                |> Option.defaultValue split.Length
+
+            let before = split |> List.take (start + 1)
+            let after = split |> List.skip next
+            let body = split |> List.skip (start + 1) |> List.take (next - start - 1)
+
+            // Blank lines ride through the transform untouched: a retirement pass drops the lines it
+            // targets and nothing else. Stripping them here would reflow the operator's prose —
+            // collapsing paragraph breaks, and blank lines inside a fenced block — on every pass
+            // (FR-014), and would make an otherwise byte-identical re-run report a changed artifact.
+            let kept = transform body
+
+            let trimmed =
+                kept |> List.rev |> List.skipWhile String.IsNullOrWhiteSpace |> List.rev
+
+            // Restore the single blank-line separator only when a following heading needs one.
+            let separator = if List.isEmpty after then [] else [ "" ]
+
+            let rebuilt = if List.isEmpty trimmed then [] else trimmed @ separator
+
+            if rebuilt = body then
+                normalized
+            else
+                (before @ rebuilt @ after) |> String.concat "\n"
+
+    let isSentinelLine (line: string) =
+        String.Equals(line.Trim(), noBlockingAmbiguityRemains, StringComparison.OrdinalIgnoreCase)
+
+    let isPlaceholderLine (line: string) =
+        emptyStatePlaceholders
+        |> List.exists (fun placeholder -> String.Equals(line.Trim(), placeholder, StringComparison.OrdinalIgnoreCase))
+
+    /// The ambiguity a Remaining Ambiguity line is *about*: its first `AMB-###` id, mirroring
+    /// `parseRemainingAmbiguity`, which classifies a line by `ambiguityIdsInLine |> List.tryHead`.
+    /// A line may legitimately mention other ids in its prose ("blocked on the AMB-002 decision");
+    /// only the anchor identifies the line's subject.
+    let remainingLineAnchor (line: string) =
+        idMatches @"\bAMB-\d{3,}\b" line |> List.tryHead
+
+    /// Same, for a line that names only a question id — `parseRemainingAmbiguity` counts those as
+    /// blocking too, so retirement must be able to reach them.
+    let remainingLineQuestionAnchor (line: string) =
+        idMatches @"\bCQ-\d{3,}\b" line |> List.tryHead
+
+    /// FR-018. Drop each Remaining Ambiguity line whose subject now carries a concrete decision or
+    /// an accepted deferral, and restore the sentinel when nothing unresolved is left. Lines for
+    /// still-unresolved ambiguities — including operator-authored prose — are untouched.
+    let retireResolvedRemaining (answers: PlannedClarificationAnswer list) (text: string) =
+        let resolvedAnswers = answers |> List.filter resolvesAmbiguity
+
+        let resolvedAmbiguities =
+            resolvedAnswers
+            |> List.map (fun answer -> answer.AmbiguityId.ToUpperInvariant())
+            |> Set.ofList
+
+        let resolvedQuestions =
+            resolvedAnswers
+            |> List.map (fun answer -> answer.QuestionId.ToUpperInvariant())
+            |> Set.ofList
+
+        if Set.isEmpty resolvedAmbiguities then
+            text
+        else
+            text
+            |> transformSectionBody "Remaining Ambiguity" (fun content ->
+                let isResolved line =
+                    // `idMatches` already upper-cases what it returns, matching the sets above.
+                    // Match the line's SUBJECT, never any id it merely mentions — otherwise an
+                    // operator's "AMB-001 blocked on the AMB-002 decision" is deleted the moment
+                    // AMB-002 is answered, destroying the explanation of a still-blocking item.
+                    match remainingLineAnchor line with
+                    | Some ambiguity -> resolvedAmbiguities.Contains ambiguity
+                    | None ->
+                        // No ambiguity id: a question-id-only line still blocks, so retire it when
+                        // its question was answered.
+                        match remainingLineQuestionAnchor line with
+                        | Some question -> resolvedQuestions.Contains question
+                        | None -> false
+
+                let survivors =
+                    content
+                    |> List.filter (fun line ->
+                        String.IsNullOrWhiteSpace line
+                        || (not (isSentinelLine line) && not (isResolved line)))
+
+                // "Empty" means no CONTENT line survived; blank lines carried through do not count.
+                if survivors |> List.forall String.IsNullOrWhiteSpace then
+                    [ noBlockingAmbiguityRemains ]
+                else
+                    survivors)
+
+    /// FR-019. Once a section holds a real entry, retire its empty-state placeholder. The
+    /// Remaining Ambiguity sentinel is governed by `retireResolvedRemaining`, not by this pass.
+    let retirePlaceholders (text: string) =
+        let drop content =
+            let isRealEntry line =
+                not (String.IsNullOrWhiteSpace line) && not (isPlaceholderLine line)
+
+            if content |> List.exists isRealEntry then
+                content |> List.filter (isPlaceholderLine >> not)
+            else
+                content
+
+        [ "Clarification Questions"; "Answers"; "Decisions"; "Accepted Deferrals" ]
+        |> List.fold (fun acc heading -> transformSectionBody heading drop acc) text
+
+    /// A real Remaining Ambiguity line and the "nothing remains" sentinel cannot both be true.
+    let retireStaleSentinel (text: string) =
+        text
+        |> transformSectionBody "Remaining Ambiguity" (fun content ->
+            let isRealEntry line =
+                not (String.IsNullOrWhiteSpace line) && not (isSentinelLine line)
+
+            if content |> List.exists isRealEntry then
+                content |> List.filter (isSentinelLine >> not)
+            else
+                content)
+
+    /// FR-020. Once nothing blocks, the front matter must not still say `needsAnswers` — the
+    /// skeleton this command seeded says so, and leaving it stale reproduces the very
+    /// self-contradiction FR-007/FR-008 exist to prevent.
+    ///
+    /// Scoped deliberately: rewrite ONLY the exact value this tool writes (`needsAnswers`), and
+    /// only inside the leading front-matter block. An operator who chose some other status keeps
+    /// it (FR-014) — the command corrects its own bookkeeping, it does not overwrite authorship.
+    let retireStaleStatus (text: string) =
+        let normalized =
+            (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
+
+        let split = normalized.Split('\n') |> Array.toList
+
+        let remainingResolved =
+            let content =
+                let headingPattern = @"^##\s+Remaining Ambiguity\s*$"
+
+                match split |> List.tryFindIndex (fun line -> Regex.IsMatch(line, headingPattern)) with
+                | None -> []
+                | Some start ->
+                    let next =
+                        split
+                        |> List.mapi (fun index line -> index, line)
+                        |> List.tryFind (fun (index, line) -> index > start && Regex.IsMatch(line, "^##\\s+"))
+                        |> Option.map fst
+                        |> Option.defaultValue split.Length
+
+                    split
+                    |> List.skip (start + 1)
+                    |> List.take (next - start - 1)
+                    |> List.filter (String.IsNullOrWhiteSpace >> not)
+
+            // Non-empty AND all sentinel. `List.forall` is vacuously true on an empty list, so an
+            // absent or hand-emptied Remaining Ambiguity section would otherwise be read as proof
+            // that everything was resolved. Absence of evidence is not evidence of resolution.
+            not (List.isEmpty content) && content |> List.forall isSentinelLine
+
+        // The front matter is the leading `---` … `---` block; never rewrite a `status:` in the body.
+        let frontMatterEnd =
+            match split with
+            | first :: _ when first.Trim() = "---" ->
+                split
+                |> List.mapi (fun index line -> index, line)
+                |> List.tryFind (fun (index, line) -> index > 0 && line.Trim() = "---")
+                |> Option.map fst
+            | _ -> None
+
+        match frontMatterEnd with
+        | Some fenceIndex when remainingResolved ->
+            split
+            |> List.mapi (fun index line ->
+                if index < fenceIndex && Regex.IsMatch(line, @"^status:\s*needsAnswers\s*$") then
+                    "status: clarified"
+                else
+                    line)
+            |> String.concat "\n"
+        | _ -> normalized
+
     let appendClarificationAnswers (existingText: string) (answers: PlannedClarificationAnswer list) =
         let questionLines =
             answers
@@ -1165,12 +1481,27 @@ publicOrToolFacingImpact: true
 
         let remainingLines = answers |> List.choose renderRemainingLine
 
-        existingText
-        |> appendToSection "Clarification Questions" questionLines
-        |> appendToSection "Answers" answerLines
-        |> appendToSection "Decisions" decisionLines
-        |> appendToSection "Accepted Deferrals" deferralLines
-        |> appendToSection "Remaining Ambiguity" remainingLines
+        let appended =
+            existingText
+            |> appendToSection "Clarification Questions" questionLines
+            |> appendToSection "Answers" answerLines
+            |> appendToSection "Decisions" decisionLines
+            |> appendToSection "Accepted Deferrals" deferralLines
+            // Append first, THEN retire the sentinel. Retiring first is a no-op — the section holds
+            // only the sentinel at that point, so there is no non-sentinel line to trigger the drop —
+            // and the new blocking line lands beside "No blocking ambiguity remains."
+            |> (if List.isEmpty remainingLines then
+                    id
+                else
+                    appendToSection "Remaining Ambiguity" remainingLines >> retireStaleSentinel)
+
+        // Retire what these answers superseded, so the artifact never contradicts itself
+        // (FR-018/FR-019/FR-020). Order matters: `retireResolvedRemaining` drops the resolved lines
+        // and restores the sentinel in one pass, and `retireStaleStatus` reads that settled section.
+        appended
+        |> retireResolvedRemaining answers
+        |> retirePlaceholders
+        |> retireStaleStatus
 
     let clarificationDiagnosticsTextAndSummary request workId specFacts model =
         let path = clarificationPath workId
@@ -1180,16 +1511,30 @@ publicOrToolFacingImpact: true
             let answers, answerDiagnostics =
                 plannedClarificationAnswers path request specFacts None
 
+            // The seed text a blocked run writes (089 FR-006). Threaded on its OWN channel, kept
+            // separate from the `text` result that feeds `generatedViewPlan` — passing the skeleton
+            // there would change a blocked run's reported GeneratedViewState (research D8). Seeded
+            // only from this branch, i.e. only when no `clarifications.md` exists, which is what
+            // makes "never clobber an existing artifact" true by construction (FR-011/FR-014).
+            let seedTextIfParses text =
+                match parseClarificationForCommand path text with
+                | Error _ -> None // never seed a skeleton that would not parse (FR-009)
+                | Ok _ -> Some text
+
             if
                 answerDiagnostics
                 |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
             then
-                answerDiagnostics |> DiagnosticsModule.sort, None, None
+                // Blocked on unanswered ambiguities: diagnostics, outcome, and exit code are
+                // unchanged (FR-010); the only delta is that the skeleton now lands (§WD5).
+                let skeleton = clarificationTemplate request workId specFacts answers
+
+                answerDiagnostics |> DiagnosticsModule.sort, None, None, seedTextIfParses skeleton
             else
                 let text = clarificationTemplate request workId specFacts answers
 
                 match parseClarificationForCommand path text with
-                | Error diagnostics -> diagnostics, Some text, None
+                | Error diagnostics -> diagnostics, Some text, None, None
                 | Ok(facts, diagnostics) ->
                     let unresolved =
                         if facts.BlockingAmbiguityCount > 0 then
@@ -1200,13 +1545,22 @@ publicOrToolFacingImpact: true
                         else
                             []
 
-                    diagnostics @ unresolved |> DiagnosticsModule.sort, Some text, Some(clarificationSummary facts)
+                    // A `stillOpen` answer blocks too, and today writes nothing. Seed it as well:
+                    // same file-absent state, same operator need.
+                    let seed = if List.isEmpty unresolved then None else Some text
+
+                    diagnostics @ unresolved |> DiagnosticsModule.sort,
+                    Some text,
+                    Some(clarificationSummary facts),
+                    seed
+        // An artifact already exists: it is the operator's. Every arm below returns `None` for the
+        // seed channel, so no skeleton can ever overwrite it (FR-011/FR-014).
         | Some existing ->
             if existing.Text.Contains("<!-- fsgg-sdd: unsafe-overwrite -->", StringComparison.OrdinalIgnoreCase) then
-                [ unsafeOverwrite path ], Some existing.Text, None
+                [ unsafeOverwrite path ], Some existing.Text, None, None
             else
                 match parseClarificationForCommand path existing.Text with
-                | Error diagnostics -> diagnostics, Some existing.Text, None
+                | Error diagnostics -> diagnostics, Some existing.Text, None, None
                 | Ok(existingFacts, existingDiagnostics) ->
                     let identityDiagnostics =
                         frontMatterIdentityDiagnostics
@@ -1260,13 +1614,14 @@ publicOrToolFacingImpact: true
                     | Error diagnostics ->
                         identityDiagnostics @ diagnostics @ answerDiagnostics |> DiagnosticsModule.sort,
                         Some proposedText,
+                        None,
                         None
                     | Ok(facts, proposedDiagnostics) ->
                         let diagnostics =
                             identityDiagnostics @ proposedDiagnostics @ answerDiagnostics
                             |> DiagnosticsModule.sort
 
-                        diagnostics, Some proposedText, Some(clarificationSummary facts)
+                        diagnostics, Some proposedText, Some(clarificationSummary facts), None
 
     let clarificationPrerequisiteDiagnosticsTextSummaryAndFacts workId model =
         let path = clarificationPath workId

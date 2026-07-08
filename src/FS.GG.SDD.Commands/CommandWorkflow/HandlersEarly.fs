@@ -107,7 +107,9 @@ module internal HandlersEarly =
 
     let computeClarifyPlan model =
         let (specification, clarification), diagnostics, generatedViews, effects =
-            runHandler model (None, None) (fun workId ->
+            // The one handler that uses the H-4 carve-out: a blocked `clarify` seeds the
+            // `clarifications.md` skeleton rather than leaving an empty work directory (089 §WD5).
+            runHandlerWithBlockedSeed model (None, None) (fun workId ->
                 let projectDiagnostics = projectDiagnostics model
                 let duplicateDiagnostics = duplicateWorkIdDiagnostics workId model
                 let prereqs = resolvePrerequisites workId model
@@ -118,10 +120,11 @@ module internal HandlersEarly =
                     prereqs.Specification,
                     prereqs.SpecificationFacts
 
-                let clarificationDiagnostics, clarificationText, clarification =
+                let clarificationDiagnostics, clarificationText, clarification, clarificationSeedText =
                     match specFacts with
+                    // A specification that failed to parse yields no questions to seed (FR-012).
+                    | None -> [], None, None, None
                     | Some facts -> clarificationDiagnosticsTextAndSummary model.Request workId facts model
-                    | None -> [], None, None
 
                 let commandDiagnostics =
                     projectDiagnostics
@@ -156,8 +159,23 @@ module internal HandlersEarly =
                           WriteFile(clarificationPath workId, text, AuthoredSource) ]
                     | None -> []
 
+                // Rides the blocked-seed channel, so it survives the H-4 gate — and nothing else
+                // does: `generatedEffects` stay gated, so a blocked clarify writes no work model.
+                // Exactly one effect: the interpreter's WriteFile already creates parent
+                // directories, so a CreateDirectory here would only add a `noChange` directory
+                // entry to `changedArtifacts` (FR-010 pins the blocked run at one changed artifact).
+                let blockedSeedEffects =
+                    match clarificationSeedText with
+                    | Some text -> [ WriteFile(clarificationPath workId, text, AuthoredSource) ]
+                    | None -> []
+
                 commandDiagnostics @ generatedDiagnostics,
-                (fun _ _ -> (specification, clarification), [ generatedView ], clarificationEffects, generatedEffects))
+                (fun _ _ ->
+                    (specification, clarification),
+                    [ generatedView ],
+                    clarificationEffects,
+                    generatedEffects,
+                    blockedSeedEffects))
 
         diagnostics, specification, clarification, generatedViews, effects
 

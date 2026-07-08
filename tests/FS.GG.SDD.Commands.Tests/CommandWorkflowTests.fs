@@ -450,3 +450,90 @@ status: chartered
                 | WriteFile _ -> true
                 | _ -> false
         )
+
+// -------------------------------------------------------------------------------------------
+// Feature 089. `runHandler`'s H-4 gate discards every effect on a blocking run — "blocked ⇒ zero
+// writes". Feature 089 opens exactly one carve-out (`blockedSeedEffects`) so a blocked `clarify`
+// can seed its skeleton. This guards the blast radius: every OTHER command must still write
+// nothing when it blocks, and a blocked `clarify` must write the skeleton and nothing else — in
+// particular no generated view, which stays inside the gate.
+// -------------------------------------------------------------------------------------------
+module BlockedEffectGateTests =
+    open FS.GG.SDD.Commands.CommandTypes
+    open Xunit
+
+    let private workId = "089-blocked-effect-gate"
+    let private title = "Blocked Effect Gate"
+
+    /// A work item whose specification declares an unanswered ambiguity: every stage from
+    /// `clarify` onward blocks.
+    let private blockedProject () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root workId title |> ignore
+
+        let specifyRequest =
+            { TestSupport.specifyRequest root workId title with
+                InputText = Some TestSupport.specifyIntentWithAmbiguity }
+
+        TestSupport.runRequest specifyRequest |> ignore
+        root
+
+    [<Fact>]
+    let ``blocked clarify writes the seed and no generated view`` () =
+        let root = blockedProject ()
+
+        let report =
+            TestSupport.runRequest
+                { TestSupport.clarifyRequest root workId title with
+                    InputText = None }
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Equal(1, report.ChangedArtifacts.Length)
+        Assert.Equal($"work/{workId}/clarifications.md", report.ChangedArtifacts.Head.Path)
+        Assert.False(TestSupport.existsRelative root $"readiness/{workId}/work-model.json")
+
+    [<Fact>]
+    let ``blocked checklist still writes nothing`` () =
+        let root = blockedProject ()
+
+        // Seed the skeleton, then let `checklist` block on its unresolved blocking ambiguity.
+        TestSupport.runRequest
+            { TestSupport.clarifyRequest root workId title with
+                InputText = None }
+        |> ignore
+
+        let report = TestSupport.runChecklist root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Empty(report.ChangedArtifacts)
+        Assert.False(TestSupport.existsRelative root $"work/{workId}/checklist.md")
+
+    [<Fact>]
+    let ``blocked plan and tasks still write nothing`` () =
+        let root = blockedProject ()
+
+        for report in
+            [ TestSupport.runPlan root workId title
+              TestSupport.runTasks root workId title ] do
+            Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+            Assert.Empty(report.ChangedArtifacts)
+
+        Assert.False(TestSupport.existsRelative root $"work/{workId}/plan.md")
+        Assert.False(TestSupport.existsRelative root $"work/{workId}/tasks.yml")
+
+    [<Fact>]
+    let ``blocked specify writes nothing`` () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root workId title |> ignore
+
+        // No intent facts at all: `specify` blocks on missingSpecificationIntent.
+        let report =
+            TestSupport.runRequest
+                { TestSupport.specifyRequest root workId title with
+                    InputText = Some "" }
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Empty(report.ChangedArtifacts)
+        Assert.False(TestSupport.existsRelative root $"work/{workId}/spec.md")

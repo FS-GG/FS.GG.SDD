@@ -209,5 +209,5 @@ When working here:
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/088-validate-force-color/plan.md
+at specs/089-early-stage-authoring-seeds/plan.md
 <!-- SPECKIT END -->

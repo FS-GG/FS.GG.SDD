@@ -23,6 +23,24 @@ module ClarifyCommandTests =
         TestSupport.runRequest specifyRequest |> ignore
         root
 
+    /// Feature 089: the shared `specifyIntentWithAmbiguity` declares exactly one ambiguity, which
+    /// cannot exercise "some answered, some not" or per-ambiguity line retirement.
+    let initializedSpecifiedProjectWithTwoAmbiguities () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root workId title |> ignore
+
+        let intent =
+            TestSupport.specifyIntentWithAmbiguity
+            + "\nambiguity: how long should a clarification decision remain valid?"
+
+        let specifyRequest =
+            { TestSupport.specifyRequest root workId title with
+                InputText = Some intent }
+
+        TestSupport.runRequest specifyRequest |> ignore
+        root
+
     let initializedSpecifiedProjectWithoutAmbiguity () =
         let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
@@ -169,15 +187,157 @@ module ClarifyCommandTests =
 
         Assert.Empty(report.Clarification.Value.DecisionIds)
 
+    // Feature 089 (FR-006/FR-010, §WD5). A blocked clarify still BLOCKS — same outcome, same
+    // diagnostic — but no longer leaves an empty work directory: it seeds the skeleton the operator
+    // is meant to fill in. Before 089 this test asserted `Assert.False(exists …)`; the flip to
+    // `Assert.True` IS the behavior change. What must not move is the outcome and the diagnostic.
     [<Fact>]
-    let ``clarify missing answer blocks before authored write`` () =
+    let ``clarify missing answer blocks but seeds the skeleton`` () =
         let root = initializedSpecifiedProject ()
 
         let report = runClarifyWith None root
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "missingClarificationAnswer")
-        Assert.False(TestSupport.existsRelative root clarificationPath)
+        Assert.True(TestSupport.existsRelative root clarificationPath)
+
+        // Exactly one changed artifact: the seed, and nothing else. The generated work model stays
+        // gated behind the blocking check (the H-4 carve-out passes only the seed).
+        Assert.Equal(1, report.ChangedArtifacts.Length)
+        Assert.Equal(clarificationPath, report.ChangedArtifacts.Head.Path)
+        Assert.False(TestSupport.existsRelative root workModelPath)
+
+        let skeleton = TestSupport.readRelative root clarificationPath
+
+        // Truthful: never `clarified`, never "nothing remains", while the command blocks (FR-007/008).
+        Assert.Contains("status: needsAnswers", skeleton)
+        Assert.DoesNotContain("status: clarified", skeleton)
+        Assert.DoesNotContain("No blocking ambiguity remains.", skeleton)
+        Assert.Contains("- CQ-001 [AMB:AMB-001]", skeleton)
+
+    // Feature 089 (FR-009/FR-021, K5/K9/K10). The skeleton's remaining-ambiguity entries must parse
+    // as BLOCKING. `parseRemainingAmbiguity` classifies by scanning the line's prose for
+    // `accepted deferral`/`defer` and `non-blocking`, so an explanation that merely names those
+    // resolutions as the operator's options parses as one of them, zeroes the blocking count, and
+    // lets `checklist` pass with every ambiguity unanswered. Assert the consequence, not the wording.
+    [<Fact>]
+    let ``seeded skeleton entries really block the next stage`` () =
+        let root = initializedSpecifiedProject ()
+
+        runClarifyWith None root |> ignore
+
+        let reread = runClarifyWith None root
+
+        // The fixture declares one ambiguity (AMB-001); it must count as blocking.
+        Assert.Equal(
+            Some 1,
+            reread.Clarification
+            |> Option.map (fun summary -> summary.BlockingAmbiguityCount)
+        )
+
+        let checklist = TestSupport.runChecklist root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, checklist.Outcome)
+        Assert.Contains(checklist.Diagnostics, fun diagnostic -> diagnostic.Id = "unresolvedBlockingAmbiguity")
+
+    // Feature 089 (FR-013/FR-015). Re-running over the seed neither duplicates the derived questions
+    // nor reads the skeleton's own questions as answers; the skeleton is byte-stable.
+    [<Fact>]
+    let ``clarify re-run over the seeded skeleton still blocks and is byte-stable`` () =
+        let root = initializedSpecifiedProject ()
+
+        runClarifyWith None root |> ignore
+        let first = TestSupport.readRelative root clarificationPath
+
+        let report = runClarifyWith None root
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "missingClarificationAnswer")
+        Assert.Equal(first, TestSupport.readRelative root clarificationPath)
+
+        let questionCount =
+            first.Split('\n')
+            |> Array.filter (fun line -> line.StartsWith("- CQ-"))
+            |> Array.length
+
+        Assert.Equal(1, questionCount)
+
+    // Feature 089 (FR-018/FR-019/FR-020, R1/R2/R3, SC-005). THE regression test for the trap: before
+    // 089 a skeleton plus a fully answering `clarify --input` recorded the decisions, left both
+    // blocking lines standing, reported `succeeded` with `blockingAmbiguities: 2`, and then blocked at
+    // `checklist` (rc=1) — replacing "hand-author the file" with a silent failure two stages later.
+    [<Fact>]
+    let ``answering the seeded skeleton retires the resolved ambiguities and unblocks checklist`` () =
+        let root = initializedSpecifiedProject ()
+
+        runClarifyWith None root |> ignore
+
+        let report =
+            runClarifyWith (Some "AMB-001: Record decisions in the clarifications artifact.") root
+
+        Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
+
+        Assert.Equal(
+            Some 0,
+            report.Clarification
+            |> Option.map (fun summary -> summary.BlockingAmbiguityCount)
+        )
+
+        let clarification = TestSupport.readRelative root clarificationPath
+
+        // R1: the resolved ambiguities' lines are retired and the sentinel restored.
+        Assert.Contains("No blocking ambiguity remains.", clarification)
+        Assert.DoesNotContain("[CQ-001] blocking:", clarification)
+
+        // R2: no empty-state placeholder stands beside a real entry...
+        Assert.DoesNotContain("No concrete decisions recorded.", clarification)
+        Assert.DoesNotContain("No clarification answers recorded.", clarification)
+        // ...but a genuinely empty section keeps its placeholder.
+        Assert.Contains("No accepted deferrals recorded.", clarification)
+
+        // R3: the status the tool itself seeded is corrected once nothing blocks.
+        Assert.Contains("status: clarified", clarification)
+        Assert.DoesNotContain("status: needsAnswers", clarification)
+
+        // And the whole point: the next stage now passes.
+        let checklist = TestSupport.runChecklist root workId title
+        Assert.Equal(CommandOutcome.Succeeded, checklist.Outcome)
+
+    // Feature 089 (research D10). A PARTIALLY answered clarify blocks and persists nothing. This is
+    // pre-existing, correct (never half-write an operator's artifact), and unchanged by 089.
+    [<Fact>]
+    let ``clarify partial answer blocks and leaves the seeded skeleton untouched`` () =
+        let root = initializedSpecifiedProjectWithTwoAmbiguities ()
+
+        runClarifyWith None root |> ignore
+        let before = TestSupport.readRelative root clarificationPath
+
+        // Answers AMB-001 but not AMB-002.
+        let report =
+            runClarifyWith (Some "AMB-001: Record decisions in the clarifications artifact.") root
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "missingClarificationAnswer")
+        Assert.Empty(report.ChangedArtifacts)
+        Assert.Equal(before, TestSupport.readRelative root clarificationPath)
+
+    // Feature 089 (FR-008). Every declared ambiguity, not just the first, is listed as blocking.
+    [<Fact>]
+    let ``seeded skeleton lists every declared ambiguity as blocking`` () =
+        let root = initializedSpecifiedProjectWithTwoAmbiguities ()
+
+        runClarifyWith None root |> ignore
+        let skeleton = TestSupport.readRelative root clarificationPath
+
+        Assert.Contains("- AMB-001 [CQ-001] blocking:", skeleton)
+        Assert.Contains("- AMB-002 [CQ-002] blocking:", skeleton)
+        Assert.DoesNotContain("No blocking ambiguity remains.", skeleton)
+
+        Assert.Equal(
+            Some 2,
+            (runClarifyWith None root).Clarification
+            |> Option.map (fun summary -> summary.BlockingAmbiguityCount)
+        )
 
     // §3.3 (FR-003, SC-003): a bullet "none outstanding" note under ## Ambiguities does not
     // block clarify with a missing-id error; a genuine AMB-### ambiguity still blocks (the
@@ -196,15 +356,23 @@ module ClarifyCommandTests =
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
         Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "missingSpecificationId")
 
+    // Feature 089. Still blocks on the unknown reference; the seed now lands too, because the run
+    // also has unanswered declared ambiguities and no artifact exists to clobber. The bogus AMB-999
+    // is NOT recorded — the skeleton enumerates only the ambiguities the specification declares.
     [<Fact>]
-    let ``clarify unknown reference blocks before authored write`` () =
+    let ``clarify unknown reference blocks and seeds only the declared ambiguities`` () =
         let root = initializedSpecifiedProject ()
 
         let report = runClarifyWith (Some "AMB-999: Use an unknown ambiguity.") root
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "unknownClarificationReference")
-        Assert.False(TestSupport.existsRelative root clarificationPath)
+        Assert.True(TestSupport.existsRelative root clarificationPath)
+
+        let skeleton = TestSupport.readRelative root clarificationPath
+
+        Assert.DoesNotContain("AMB-999", skeleton)
+        Assert.Contains("- CQ-001 [AMB:AMB-001]", skeleton)
 
     [<Fact>]
     let ``clarify identity mismatch blocks before authored write`` () =
@@ -288,3 +456,110 @@ module ClarifyCommandTests =
         Assert.Contains("\"name\": \"clarify\"", first)
         Assert.Contains("\"clarification\"", first)
         Assert.DoesNotContain(root, first)
+
+    // ---------------------------------------------------------------------------------------
+    // Feature 089 — regressions caught in code review of the first implementation. Each of these
+    // was reproduced against the built CLI before the fix.
+    // ---------------------------------------------------------------------------------------
+
+    /// An operator's explanation for a STILL-unresolved ambiguity often mentions the ambiguity it
+    /// waits on. The first implementation retired any line that merely *mentioned* a resolved id,
+    /// so answering AMB-002 silently deleted AMB-001's explanation. Retirement must key off the
+    /// line's subject (its first AMB id), exactly as `parseRemainingAmbiguity` classifies it.
+    [<Fact>]
+    let ``retirement keeps a still-open line that merely mentions a resolved ambiguity`` () =
+        let root = initializedSpecifiedProjectWithTwoAmbiguities ()
+
+        runClarifyWith None root |> ignore
+
+        let seeded = TestSupport.readRelative root clarificationPath
+
+        let edited =
+            seeded.Replace(
+                "- AMB-001 [CQ-001] blocking: Unanswered. Resolve source ambiguity AMB-001 before checklist.",
+                "- AMB-001 [CQ-001] blocking: Cannot decide until the AMB-002 question is settled."
+            )
+
+        TestSupport.writeRelative root clarificationPath edited
+
+        // Resolve AMB-002 only; AMB-001 stays open.
+        runClarifyWith
+            (Some "AMB-002: Decisions expire after one release.\nAMB-001 still open: waiting on AMB-002")
+            root
+        |> ignore
+
+        let after = TestSupport.readRelative root clarificationPath
+
+        Assert.Contains("Cannot decide until the AMB-002 question is settled.", after)
+        Assert.DoesNotContain("No blocking ambiguity remains.", after)
+        Assert.Contains("status: needsAnswers", after)
+
+    /// The sentinel and a real blocking line cannot both be true (contract K3). Appending a
+    /// still-open line to a section that held only the sentinel must retire the sentinel — which
+    /// means the retirement runs AFTER the append, not before.
+    [<Fact>]
+    let ``a new blocking line retires the nothing-remains sentinel`` () =
+        let root = initializedSpecifiedProjectWithoutAmbiguity ()
+
+        // A spec with no ambiguity yields a clarified artifact carrying the sentinel.
+        TestSupport.runClarify root workId title |> ignore
+        Assert.Contains("No blocking ambiguity remains.", TestSupport.readRelative root clarificationPath)
+
+        // The author then introduces an ambiguity and marks it still open.
+        let spec =
+            (TestSupport.readRelative root specPath)
+                .Replace("No material ambiguities recorded.", "- AMB-001 open: Which format?")
+
+        TestSupport.writeRelative root specPath spec
+
+        runClarifyWith (Some "AMB-001 still open: waiting on legal") root |> ignore
+
+        let after = TestSupport.readRelative root clarificationPath
+
+        Assert.DoesNotContain("No blocking ambiguity remains.", after)
+        Assert.Contains("- AMB-001 [CQ-001] blocking:", after)
+
+    /// A retirement pass must remove the lines it targets and reformat nothing else: the operator's
+    /// blank-line-separated prose survives, and the placeholder beside it does not.
+    [<Fact>]
+    let ``retirement preserves operator blank lines while dropping the placeholder`` () =
+        let root = initializedSpecifiedProject ()
+
+        runClarifyWith None root |> ignore
+
+        let seeded = TestSupport.readRelative root clarificationPath
+
+        let edited =
+            seeded.Replace(
+                "## Decisions\nNo concrete decisions recorded.",
+                "## Decisions\nNo concrete decisions recorded.\n\nNote: first paragraph.\n\nSecond paragraph."
+            )
+
+        TestSupport.writeRelative root clarificationPath edited
+
+        runClarifyWith (Some "AMB-001: Record decisions in the clarifications artifact.") root
+        |> ignore
+
+        let after = TestSupport.readRelative root clarificationPath
+
+        Assert.DoesNotContain("No concrete decisions recorded.", after)
+        Assert.Contains("Note: first paragraph.\n\nSecond paragraph.", after.Replace("\r\n", "\n"))
+
+    /// `List.forall` is vacuously true on an empty list. An absent or hand-emptied Remaining
+    /// Ambiguity section is not evidence that anything was resolved, and must never flip the status.
+    [<Fact>]
+    let ``an emptied remaining-ambiguity section does not flip the status`` () =
+        let root = initializedSpecifiedProjectWithoutAmbiguity ()
+
+        TestSupport.runClarify root workId title |> ignore
+
+        let emptied =
+            (TestSupport.readRelative root clarificationPath)
+                .Replace("## Remaining Ambiguity\nNo blocking ambiguity remains.", "## Remaining Ambiguity")
+                .Replace("status: clarified", "status: needsAnswers")
+
+        TestSupport.writeRelative root clarificationPath emptied
+
+        TestSupport.runClarify root workId title |> ignore
+
+        Assert.Contains("status: needsAnswers", TestSupport.readRelative root clarificationPath)

@@ -110,10 +110,22 @@ module internal Prerequisites =
     // The handler's `body` returns its pre-sort command+generated diagnostics (in
     // call-site order) paired with a continuation that, given hasBlocking and the
     // sorted diagnostics, yields the stage-specific summaries, generated views,
-    // write effects, and generated-view effects. The continuation lets handlers
-    // whose view content depends on hasBlocking (verify/ship readiness, analyze
-    // write gating) read it from the single source instead of recomputing it.
-    let runHandler
+    // write effects, generated-view effects, and blocked-seed effects. The
+    // continuation lets handlers whose view content depends on hasBlocking
+    // (verify/ship readiness, analyze write gating) read it from the single source
+    // instead of recomputing it.
+    //
+    // H-4 CARVE-OUT (feature 089). `blockedSeedEffects` is the single, named exception
+    // to "blocked ⇒ zero writes". It exists so a blocked `clarify` can seed the
+    // `clarifications.md` skeleton the operator is meant to fill in, instead of leaving an
+    // empty work directory and a diagnostic (FS-GG/FS.GG.SDD#174 §WD5). Exactly one handler
+    // — `computeClarifyPlan` — ever returns a non-empty value for it; every other handler
+    // reaches this shell through `runHandler` below, which supplies `[]`.
+    //
+    // Note what stays gated: on a blocking run `generatedEffects` are still discarded, so a
+    // blocked command never writes a generated view (no `readiness/<id>/work-model.json`).
+    // Only the seed escapes, and only for the one handler that asks. Do not widen this.
+    let runHandlerWithBlockedSeed
         (model: CommandModel)
         (empty: 'summaries)
         (body:
@@ -121,7 +133,11 @@ module internal Prerequisites =
                 -> Diagnostic list *
                 (bool
                     -> Diagnostic list
-                    -> 'summaries * GeneratedViewState list * CommandEffect list * CommandEffect list))
+                    -> 'summaries *
+                    GeneratedViewState list *
+                    CommandEffect list *
+                    CommandEffect list *
+                    CommandEffect list))
         =
         match model.Request.WorkId with
         | None -> empty, model.Diagnostics, [], []
@@ -133,8 +149,34 @@ module internal Prerequisites =
                 diagnostics
                 |> List.exists (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
 
-            let summaries, generatedViews, writeEffects, generatedEffects =
+            let summaries, generatedViews, writeEffects, generatedEffects, blockedSeedEffects =
                 resume hasBlocking diagnostics
 
-            let effects = if hasBlocking then [] else writeEffects @ generatedEffects
+            let effects =
+                if hasBlocking then
+                    blockedSeedEffects
+                else
+                    writeEffects @ generatedEffects
+
             summaries, diagnostics, generatedViews, effects
+
+    // The ordinary shell: no handler may write anything on a blocking run (H-4).
+    let runHandler
+        (model: CommandModel)
+        (empty: 'summaries)
+        (body:
+            string
+                -> Diagnostic list *
+                (bool
+                    -> Diagnostic list
+                    -> 'summaries * GeneratedViewState list * CommandEffect list * CommandEffect list))
+        =
+        runHandlerWithBlockedSeed model empty (fun workId ->
+            let diagnostics, resume = body workId
+
+            diagnostics,
+            (fun hasBlocking sorted ->
+                let summaries, generatedViews, writeEffects, generatedEffects =
+                    resume hasBlocking sorted
+
+                summaries, generatedViews, writeEffects, generatedEffects, []))
