@@ -147,40 +147,13 @@ module AgentsCommandTests =
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains(report.Diagnostics, (fun d -> d.Id = "agents.malformedWorkModel"))
 
-    [<Fact>]
-    let ``agents blocks divergent existing guidance when equivalence is required`` () =
-        let root = initializedVerifiedProject ()
-        TestSupport.runAgents root workId |> ignore
-
-        // Corrupt the codex behavior digest so it diverges from the shared model.
-        let codexGuidance = $"{codexRoot}/guidance.json"
-        let original = TestSupport.readRelative root codexGuidance
-
-        let tampered =
-            System.Text.RegularExpressions.Regex.Replace(
-                original,
-                "(\"behaviorModelDigest\": \\{\\s*\"algorithm\": \"sha256\",\\s*\"value\": \")[a-f0-9]{64}",
-                "${1}" + System.String('a', 64)
-            )
-
-        TestSupport.writeRelative root codexGuidance tampered
-
-        let report = TestSupport.runAgents root workId
-        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
-        Assert.Contains(report.Diagnostics, (fun d -> d.Id = "agents.behaviorDivergence"))
-
-        match report.AgentGuidance with
-        | Some summary -> Assert.Contains("codex", summary.DivergentTargetIds)
-        | None -> failwith "Expected agent-guidance summary."
-
-    // --- Regression: FS.GG.SDD#197 — staleness is not divergence ---
+    // --- Regression: FS.GG.SDD#197 — staleness is not divergence, and neither one gates ---
     //
-    // Both targets are rendered from one NormalizedGuidanceModel, so they cannot diverge from each
-    // other by construction. The guard used to compare each target's recorded digest against the
-    // recomputed one — i.e. staleness — and block, refusing the regeneration its own remediation
-    // demanded. The tests below pin the two conditions apart. `agents blocks divergent existing
-    // guidance…` above tampers ONE target and so passed under either reading; it never covered the
-    // ordinary "sources changed, both targets equally stale, regenerate" path that these do.
+    // Both targets are rendered from one NormalizedGuidanceModel and stamped with one recomputed digest,
+    // so they are equivalent by construction. The old guard compared each target's recorded digest against
+    // the recomputed one — i.e. staleness — and blocked, refusing the regeneration its own remediation
+    // demanded. It also could not have worked as named: a recorded digest cannot distinguish an older
+    // generation vintage from an out-of-band edit.
 
     /// Stale both targets the way an ordinary authored edit does: retitle a task, rebuild the model.
     let private retitleTaskAndRebuildWorkModel root =
@@ -200,6 +173,91 @@ module AgentsCommandTests =
 
     let private behaviorDigestOf root target =
         (readManifest root target).BehaviorModelDigest.Value
+
+    /// Corrupt a target's recorded behaviorModelDigest so it disagrees with the shared model.
+    let private tamperBehaviorDigest root target =
+        let guidance = $"readiness/{workId}/agent-commands/{target}/guidance.json"
+
+        let tampered =
+            System.Text.RegularExpressions.Regex.Replace(
+                TestSupport.readRelative root guidance,
+                "(\"behaviorModelDigest\": \\{\\s*\"algorithm\": \"sha256\",\\s*\"value\": \")[a-f0-9]{64}",
+                "${1}" + System.String('a', 64)
+            )
+
+        TestSupport.writeRelative root guidance tampered
+
+    // FS.GG.SDD#197: this used to assert `Blocked`. It no longer blocks, deliberately. A recorded digest
+    // cannot tell "rendered from an older work model" from "edited out of band" — an interrupted `agents`
+    // run leaves precisely this state — so divergence is reported and healed, never gated on.
+    [<Fact>]
+    let ``agents reports divergent existing guidance as an advisory and regenerates it`` () =
+        let root = initializedVerifiedProject ()
+        TestSupport.runAgents root workId |> ignore
+        tamperBehaviorDigest root "codex"
+
+        let report = TestSupport.runAgents root workId
+        Assert.Equal(CommandOutcome.SucceededWithWarnings, report.Outcome)
+        Assert.Equal(0, exitCodeForReport report)
+
+        let divergence =
+            report.Diagnostics |> List.filter (fun d -> d.Id = "agents.behaviorDivergence")
+
+        Assert.Single divergence |> ignore
+        Assert.Equal(FS.GG.SDD.Artifacts.Diagnostics.DiagnosticSeverity.DiagnosticWarning, divergence.Head.Severity)
+
+        match report.AgentGuidance with
+        | Some summary -> Assert.Contains("codex", summary.DivergentTargetIds)
+        | None -> failwith "Expected agent-guidance summary."
+
+        // Healed: the tampered manifest was rewritten and both targets agree again.
+        Assert.Equal<string>(
+            (readManifest root "claude").BehaviorModelDigest.Value,
+            (readManifest root "codex").BehaviorModelDigest.Value
+        )
+
+        Assert.Equal(CommandOutcome.NoChange, (TestSupport.runAgents root workId).Outcome)
+
+    // The state an interrupted `agents` run leaves: one target written at the new vintage, one still at
+    // the old one. Nothing was modified outside the generator, and it must self-heal at exit 0.
+    [<Fact>]
+    let ``agents self-heals vintage skew between targets without blocking`` () =
+        let root = initializedVerifiedProject ()
+        TestSupport.runAgents root workId |> ignore
+
+        let codexGuidance = $"{codexRoot}/guidance.json"
+        let staleVintage = TestSupport.readRelative root codexGuidance
+
+        retitleTaskAndRebuildWorkModel root
+        TestSupport.runAgents root workId |> ignore // both targets advance to the new vintage
+        TestSupport.writeRelative root codexGuidance staleVintage // ...but codex's write "never landed"
+
+        let report = TestSupport.runAgents root workId
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Equal(0, exitCodeForReport report)
+
+        Assert.Equal<string>(
+            (readManifest root "claude").BehaviorModelDigest.Value,
+            (readManifest root "codex").BehaviorModelDigest.Value
+        )
+
+    // The JSON automation contract: a non-current view always names its own cause. `refresh` discards the
+    // agents diagnostics and keeps only these ids, so an empty list leaves the author with nothing.
+    [<Fact>]
+    let ``agents attaches each view's cause to its generatedViews diagnosticIds`` () =
+        let root = initializedVerifiedProject ()
+        TestSupport.runAgents root workId |> ignore
+        tamperBehaviorDigest root "codex"
+
+        let report = TestSupport.runAgents root workId
+
+        let idsFor target =
+            report.GeneratedViews
+            |> List.find (fun view -> view.Path.Contains($"/{target}/"))
+            |> fun view -> view.DiagnosticIds
+
+        Assert.Equal<string list>([ "agents.behaviorDivergence" ], idsFor "codex")
+        Assert.Empty(idsFor "claude") // current: nothing to say
 
     [<Fact>]
     let ``agents regenerates equally stale guidance on both targets instead of blocking`` () =
@@ -255,17 +313,7 @@ module AgentsCommandTests =
     let ``agents reports divergence once, without a redundant staleness warning`` () =
         let root = initializedVerifiedProject ()
         TestSupport.runAgents root workId |> ignore
-
-        let codexGuidance = $"{codexRoot}/guidance.json"
-
-        let tampered =
-            System.Text.RegularExpressions.Regex.Replace(
-                TestSupport.readRelative root codexGuidance,
-                "(\"behaviorModelDigest\": \\{\\s*\"algorithm\": \"sha256\",\\s*\"value\": \")[a-f0-9]{64}",
-                "${1}" + System.String('a', 64)
-            )
-
-        TestSupport.writeRelative root codexGuidance tampered
+        tamperBehaviorDigest root "codex"
 
         let report = TestSupport.runAgents root workId
 
@@ -276,6 +324,47 @@ module AgentsCommandTests =
         Assert.Single divergence |> ignore
         Assert.DoesNotContain(report.Diagnostics, (fun d -> d.Id = "agents.staleGeneratedGuidance"))
         Assert.Equal<string list>([ "codex" ], divergence.Head.RelatedIds)
+
+    [<Fact>]
+    let ``agents names only the behavior-divergent target, not one merely stale beside it`` () =
+        let root = initializedVerifiedProject ()
+        TestSupport.runAgents root workId |> ignore
+
+        // claude: corrupt only its recorded SOURCE digest. Its behaviorModelDigest still matches the
+        // shared model, so it is stale — not divergent. (`digest` first hit is sources[0].digest.)
+        let claudeGuidance = $"{claudeRoot}/guidance.json"
+
+        let claudeStale =
+            System.Text.RegularExpressions
+                .Regex("(\"digest\": \\{\\s*\"algorithm\": \"sha256\",\\s*\"value\": \")[a-f0-9]{64}")
+                .Replace(TestSupport.readRelative root claudeGuidance, "${1}" + System.String('b', 64), 1)
+
+        TestSupport.writeRelative root claudeGuidance claudeStale
+
+        // codex: corrupt its behaviorModelDigest. This one really does diverge.
+        tamperBehaviorDigest root "codex"
+
+        let report = TestSupport.runAgents root workId
+        Assert.Equal(0, exitCodeForReport report)
+
+        let divergence =
+            report.Diagnostics |> List.filter (fun d -> d.Id = "agents.behaviorDivergence")
+
+        // Only codex diverges. Naming claude would accuse a target whose behavior digest is correct.
+        Assert.Single divergence |> ignore
+        Assert.Equal<string list>([ "codex" ], divergence.Head.RelatedIds)
+
+        match report.AgentGuidance with
+        | Some summary -> Assert.Equal<string list>([ "codex" ], summary.DivergentTargetIds)
+        | None -> failwith "Expected agent-guidance summary."
+
+        // claude is stale and still says so — it is not silenced by codex's divergence.
+        let stale =
+            report.Diagnostics
+            |> List.filter (fun d -> d.Id = "agents.staleGeneratedGuidance")
+
+        Assert.Single stale |> ignore
+        Assert.Equal<string list>([ "claude" ], stale.Head.RelatedIds)
 
     [<Fact>]
     let ``agents refuses malformed existing guidance manifest`` () =
