@@ -52,58 +52,92 @@ module internal NextActionRouting =
             if not (List.isEmpty blocking) then
                 let ids = blocking |> Set.ofList
 
-                let correctionCommand =
-                    match request.Command with
-                    | Plan -> planCorrectionCommand diagnostics
-                    | Tasks -> tasksCorrectionCommand diagnostics
-                    | Analyze -> tasksCorrectionCommand diagnostics
-                    | Verify -> verifyCorrectionCommand diagnostics
-                    | Ship -> shipCorrectionCommand diagnostics
-                    | Agents ->
-                        if
-                            ids |> Set.contains "agents.missingWorkModel"
-                            || ids |> Set.contains "agents.staleWorkModel"
-                            || ids |> Set.contains "agents.malformedWorkModel"
-                            || ids |> Set.contains "agents.blockedWorkModel"
-                        then
-                            Some Verify
-                        else
-                            None
-                    | Evidence ->
-                        if
-                            ids |> Set.contains "evidence.missingAnalysisPrerequisite"
-                            || ids |> Set.contains "evidence.analysisNotReady"
-                            || ids |> Set.contains "malformedAnalysisView"
-                            || ids |> Set.contains "analysisIdentityMismatch"
-                        then
-                            Some Analyze
-                        elif
-                            ids |> Set.contains "missingTasksPrerequisite"
-                            || ids |> Set.contains "malformedTasksArtifact"
-                            || ids |> Set.contains "tasksIdentityMismatch"
-                            || ids |> Set.contains "evidence.missingRequiredSkill"
-                        then
-                            Some Tasks
-                        elif
-                            ids
-                            |> Set.exists (fun id -> id.StartsWith("evidence.", StringComparison.OrdinalIgnoreCase))
-                        then
-                            Some Evidence
-                        else
-                            None
-                    | Refresh -> None
-                    // Feature 053: a blocked `upgrade` (a failed step, or the non-interactive
-                    // refusal) points back at `upgrade` (re-run interactively / with `--yes`).
-                    | Upgrade -> Some Upgrade
-                    | _ -> None
+                if ids |> Set.contains "stalePlanSnapshot" then
+                    // Feature 090 (#163), FR-010. A stale plan snapshot has one recovery, and it is
+                    // the same one from `plan`, `tasks`, and `analyze` — so this is deliberately not
+                    // gated on `request.Command`, and it precedes the generic
+                    // `correctBlockingDiagnostics` fallback below (which would otherwise swallow it,
+                    // `stalePlanSnapshot` being an error). RequiredArtifacts names the changed
+                    // sources — the diagnostic's RelatedIds — alongside the plan itself, because
+                    // reviewing them against the recorded decisions is exactly what
+                    // `--accept-upstream` asserts the operator has done.
+                    let changedSources =
+                        diagnostics
+                        |> List.tryFind (fun diagnostic -> diagnostic.Id = "stalePlanSnapshot")
+                        |> Option.map (fun diagnostic -> diagnostic.RelatedIds)
+                        |> Option.defaultValue []
 
-                Some
-                    { ActionId = "correctBlockingDiagnostics"
-                      Command = correctionCommand
-                      WorkId = request.WorkId
-                      Reason = "The command is blocked by diagnostics."
-                      RequiredArtifacts = []
-                      BlockingDiagnosticIds = blocking }
+                    Some
+                        { ActionId = "plan.acceptUpstream"
+                          Command = Some Plan
+                          WorkId = request.WorkId
+                          Reason =
+                            "The plan's recorded source snapshot is stale. Review the recorded plan decisions against the changed sources, then re-run fsgg-sdd plan --accept-upstream."
+                          RequiredArtifacts =
+                            (plan
+                             |> Option.map (fun summary -> [ $"work/{summary.WorkId}/plan.md" ])
+                             |> Option.defaultValue [])
+                            @ changedSources
+                          // `blocking`, not `[ "stalePlanSnapshot" ]`: this branch fires whenever the
+                          // snapshot is stale, which may be *alongside* an unrelated blocker. Naming
+                          // only the snapshot would drop the co-occurring ids from the JSON contract
+                          // that agents drive off, sending them round the loop once per hidden
+                          // blocker. The generic fallback below reports the full set; so do we.
+                          BlockingDiagnosticIds = blocking }
+                else
+
+                    let correctionCommand =
+                        match request.Command with
+                        | Plan -> planCorrectionCommand diagnostics
+                        | Tasks -> tasksCorrectionCommand diagnostics
+                        | Analyze -> tasksCorrectionCommand diagnostics
+                        | Verify -> verifyCorrectionCommand diagnostics
+                        | Ship -> shipCorrectionCommand diagnostics
+                        | Agents ->
+                            if
+                                ids |> Set.contains "agents.missingWorkModel"
+                                || ids |> Set.contains "agents.staleWorkModel"
+                                || ids |> Set.contains "agents.malformedWorkModel"
+                                || ids |> Set.contains "agents.blockedWorkModel"
+                            then
+                                Some Verify
+                            else
+                                None
+                        | Evidence ->
+                            if
+                                ids |> Set.contains "evidence.missingAnalysisPrerequisite"
+                                || ids |> Set.contains "evidence.analysisNotReady"
+                                || ids |> Set.contains "malformedAnalysisView"
+                                || ids |> Set.contains "analysisIdentityMismatch"
+                            then
+                                Some Analyze
+                            elif
+                                ids |> Set.contains "missingTasksPrerequisite"
+                                || ids |> Set.contains "malformedTasksArtifact"
+                                || ids |> Set.contains "tasksIdentityMismatch"
+                                || ids |> Set.contains "evidence.missingRequiredSkill"
+                            then
+                                Some Tasks
+                            elif
+                                ids
+                                |> Set.exists (fun id -> id.StartsWith("evidence.", StringComparison.OrdinalIgnoreCase))
+                            then
+                                Some Evidence
+                            else
+                                None
+                        | Refresh -> None
+                        // Feature 053: a blocked `upgrade` (a failed step, or the non-interactive
+                        // refusal) points back at `upgrade` (re-run interactively / with `--yes`).
+                        | Upgrade -> Some Upgrade
+                        | _ -> None
+
+                    Some
+                        { ActionId = "correctBlockingDiagnostics"
+                          Command = correctionCommand
+                          WorkId = request.WorkId
+                          Reason = "The command is blocked by diagnostics."
+                          RequiredArtifacts = []
+                          BlockingDiagnosticIds = blocking }
             elif
                 diagnostics
                 |> List.exists (fun diagnostic -> diagnostic.Id = "scaffold.cliBehindMinimum")

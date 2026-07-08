@@ -63,6 +63,18 @@ module CommandReports =
     val duplicatePlanId: path: string -> id: string -> Diagnostic
     val unknownPlanSourceReference: path: string -> id: string -> Diagnostic
     val stalePlanDecision: path: string -> decisionIds: string list -> Diagnostic
+
+    /// Feature 090. The plan's recorded `## Source Snapshot` digests no longer match the sources
+    /// they name. Blocking (`DiagnosticError`), so `runHandler`'s effect gate discards every write —
+    /// `plan` never mutates the authored `plan.md` to report this. `changedPaths` are the source
+    /// paths whose digest moved, ordinally sorted by the caller. Not a tool defect: a stale upstream
+    /// is workspace state, so a blocked command still exits 1, never 2.
+    val stalePlanSnapshot: path: string -> changedPaths: string list -> Diagnostic
+
+    /// Feature 090. Non-blocking (`DiagnosticInfo`) notice, emitted on a successful `plan`, that the
+    /// plan has snapshotted its sources and later edits to them require `plan --accept-upstream`.
+    /// Adds a fact, never an outcome: it changes no exit code and no `changedArtifacts`.
+    val planAuthoringWindow: path: string -> snapshottedSources: string list -> Diagnostic
     val missingPlanPrerequisite: path: string -> message: string -> Diagnostic
     val failedPlanPrerequisite: path: string -> message: string -> relatedIds: string list -> Diagnostic
     val tasksIdentityMismatch: path: string -> expectedWorkId: string -> actualWorkId: string -> Diagnostic

@@ -70,7 +70,8 @@ module ValidationRunner =
           Artifact = None
           Explain = false
           FromTests = None
-          SurfaceUpdate = false }
+          SurfaceUpdate = false
+          AcceptUpstream = false }
 
     let runRequest (request: CommandRequest) = driveToReport request
 

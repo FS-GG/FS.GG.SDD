@@ -256,6 +256,12 @@ module internal ViewGeneration =
         | "missingDisposition" -> "missingDisposition"
         | "staleTask"
         | "stalePlanDecision"
+        // Feature 090 (#163): a source moved under a derived artifact — precisely what the
+        // `staleSource` category means. Without this arm it falls to the `_` branch and is
+        // classified `blocking`, so `analysis.json` reports `staleSourceCount: 0` and a readiness
+        // of `needsCorrection` ("the artifacts are wrong") instead of "re-derive from current
+        // sources" for the single most common new block.
+        | "stalePlanSnapshot"
         | "staleChecklistResult"
         | "staleGeneratedView" -> "staleSource"
         | "malformedGeneratedView"

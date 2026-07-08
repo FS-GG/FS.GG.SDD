@@ -79,7 +79,11 @@ module CommandTypes =
           FromTests: string option
           // Feature 086: `fsgg-sdd surface --update` refreshes the `docs/api-surface/**` baselines
           // from the authored `.fsi` signatures; default false (read-only `--check`).
-          SurfaceUpdate: bool }
+          SurfaceUpdate: bool
+          // Feature 090: `fsgg-sdd plan --accept-upstream` re-baselines the plan's
+          // `## Source Snapshot` against the current sources; default false (a moved digest blocks
+          // with `stalePlanSnapshot` and writes nothing). Read only by `plan`.
+          AcceptUpstream: bool }
 
     type GeneratedViewSource =
         { Path: string

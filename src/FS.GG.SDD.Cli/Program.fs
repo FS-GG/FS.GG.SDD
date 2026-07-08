@@ -60,7 +60,8 @@ let printUnknown commandValue =
           Artifact = None
           Explain = false
           FromTests = None
-          SurfaceUpdate = false }
+          SurfaceUpdate = false
+          AcceptUpstream = false }
 
     let model =
         { Request = request
@@ -170,7 +171,8 @@ let private helpRequest command format =
       Artifact = None
       Explain = false
       FromTests = None
-      SurfaceUpdate = false }
+      SurfaceUpdate = false
+      AcceptUpstream = false }
 
 // §3.5: project a help report through the standard three views to stdout. Help carries no
 // diagnostics and no changes → NoChange → exit 0 (never `unknownCommand`, FR-008/011).
@@ -247,7 +249,10 @@ let run args =
                   FromTests = optionValue "--from-tests" rest
                   // Feature 086: `surface --update` refreshes the docs/api-surface baselines;
                   // default (or `--check`) is the read-only drift check.
-                  SurfaceUpdate = hasFlag "--update" rest }
+                  SurfaceUpdate = hasFlag "--update" rest
+                  // Feature 090: `plan --accept-upstream` re-baselines the plan's `## Source
+                  // Snapshot` against the current sources. Read only by `plan`.
+                  AcceptUpstream = hasFlag "--accept-upstream" rest }
 
             let report = driveToReport request
 

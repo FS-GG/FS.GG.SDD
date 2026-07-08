@@ -85,8 +85,17 @@ module CommandHelp =
                   (Some "<path>")
                   "Seed each scaffolded obligation with a verification source pointing at this test path."
               dryRun ]
+        | Plan ->
+            [ work
+              title
+              // Feature 090: the explicit gesture that re-baselines the plan's `## Source Snapshot`
+              // after an upstream edit. Without it a moved digest blocks and writes nothing.
+              flag
+                  "--accept-upstream"
+                  None
+                  "Re-baseline the plan's Source Snapshot against the current spec, clarifications, and checklist."
+              dryRun ]
         | Checklist
-        | Plan
         | Tasks
         | Analyze
         | Verify

@@ -83,6 +83,7 @@ FS.GG.SDD.Commands.CommandReports.missingTasksPrerequisite
 FS.GG.SDD.Commands.CommandReports.missingVerificationPrerequisite
 FS.GG.SDD.Commands.CommandReports.missingWorkId
 FS.GG.SDD.Commands.CommandReports.outsideProject
+FS.GG.SDD.Commands.CommandReports.planAuthoringWindow
 FS.GG.SDD.Commands.CommandReports.planIdentityMismatch
 FS.GG.SDD.Commands.CommandReports.refreshBlockedUpstreamView
 FS.GG.SDD.Commands.CommandReports.refreshEarlyStageGuidance
@@ -98,6 +99,7 @@ FS.GG.SDD.Commands.CommandReports.staleChecklistResult
 FS.GG.SDD.Commands.CommandReports.staleEvidence
 FS.GG.SDD.Commands.CommandReports.staleEvidenceSource
 FS.GG.SDD.Commands.CommandReports.stalePlanDecision
+FS.GG.SDD.Commands.CommandReports.stalePlanSnapshot
 FS.GG.SDD.Commands.CommandReports.staleRequiredTest
 FS.GG.SDD.Commands.CommandReports.staleTask
 FS.GG.SDD.Commands.CommandReports.staleVerificationView

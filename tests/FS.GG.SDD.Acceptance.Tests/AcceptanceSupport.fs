@@ -108,7 +108,8 @@ module AcceptanceSupport =
           Artifact = None
           Explain = false
           FromTests = None
-          SurfaceUpdate = false }
+          SurfaceUpdate = false
+          AcceptUpstream = false }
 
     /// The acceptance's fixed composition request: `--provider rendering --param
     /// lifecycle=sdd`. `rendering` is the author-supplied provider *name* (a generic

@@ -33,7 +33,8 @@ Then fix the authored source (not the generated view) and re-run.
 | `blockingAmbiguities` | clarify → checklist/plan | An `AMB-###` under `## Remaining Ambiguity` is still unresolved (or a bullet there names an AMB id) | Resolve it with a decision/accepted deferral, or write the section as a `None.`/`No remaining ambiguities.` disclaimer. See [[fs-gg-sdd-clarify]] |
 | `unresolvedAmbiguities` / `remainingAmbiguities` | clarify | Open questions/ambiguities still recorded | Record a `DEC-###` decision or an accepted deferral for each |
 | `checklistFailedBlocking` / `failedBlockingCount` | checklist → plan | A requirement failed the quality/coverage check, or `## Blocking Findings` holds a real finding | Fix the coverage line or clear the finding, then re-run `checklist`. See [[fs-gg-sdd-checklist]] |
-| `staleResultCount` | checklist/plan | A review/decision was recorded against an older source snapshot | Re-run the stage so results re-derive from current sources |
+| `staleResultCount` | checklist | A review was recorded against an older source snapshot | Re-run `checklist` — it re-derives its results and rewrites its own `## Source Snapshot` |
+| `stalePlanSnapshot` (diagnostic, not a counter) | plan → tasks/analyze | `plan.md`'s recorded `## Source Snapshot` digests no longer match `spec.md`/`clarifications.md`/`checklist.md`. `plan` does **not** self-heal: a bare re-run blocks and writes nothing | Review the recorded `PD-###` decisions against the changed sources (the diagnostic's `relatedIds` name them), then re-run **`fsgg-sdd plan --accept-upstream`** — the one gesture that re-baselines the snapshot |
 | checklist `status` not `checklistReady` | plan | The checklist review isn't clean (writes `needsCorrection`) | Clear blocking findings and **re-run `fsgg-sdd checklist`** — it auto-writes `checklistReady`; don't hand-edit the status |
 
 ## When the counter looks fine but the stage still blocks
