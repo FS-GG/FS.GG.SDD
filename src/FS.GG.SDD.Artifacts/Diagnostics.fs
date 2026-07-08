@@ -524,8 +524,22 @@ module Diagnostics =
         | Some loc -> defaultArg loc.Line 0, defaultArg loc.Column 0
         | None -> 0, 0
 
+    // #193: the canonical ordering seam is also the *set* seam. A diagnostic list is a set:
+    // two structurally identical diagnostics are indistinguishable in every projection (json,
+    // text, rich, analysis findings), so a second copy carries no information — it only inflates
+    // the report's `diagnostics` count and mints a phantom second `AF###` finding in
+    // `analysis.json`. Duplicates arise wherever a diagnostic has both a prereq producer and a
+    // downstream backstop producer (`missingDisposition` is emitted by the `tasks`-stage
+    // validation *and* by `analyze`'s backstop). Deduping here, at the single seam every
+    // producer already funnels through, closes the class rather than the instance.
+    //
+    // `List.distinct` (full structural equality), never a key projection: `IsToolDefect` is not
+    // serialized but does escalate a blocked command's exit code to 2, so collapsing two
+    // diagnostics that differ *only* there would make the exit code depend on which copy
+    // survived. Full equality drops only copies that are identical in every respect.
     let sort diagnostics =
         diagnostics
+        |> List.distinct
         |> List.sortBy (fun diagnostic ->
             let path =
                 diagnostic.Artifact

@@ -28,6 +28,9 @@ module internal ViewGeneration =
     // `TaskGraphAuthoring.missingDispositionIds` (the single `required` universe). `tasks`
     // now fails fast on a gap, so `analyze` normally sees none; this stays as the
     // downstream backstop and to render `missing` disposition relationships (#162).
+    // When a gap *is* introduced after `tasks.yml` was written, both producers reach `analyze`
+    // and build a byte-identical diagnostic; `Diagnostics.sort` collapses them (#193), so this
+    // is a backstop and not a duplicate.
     let missingDispositionDiagnostics
         workId
         (specFacts: SpecificationFacts)

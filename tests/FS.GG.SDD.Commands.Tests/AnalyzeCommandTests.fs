@@ -81,6 +81,40 @@ module AnalyzeCommandTests =
             fun fact -> fact.Path = ".fsgg/policy.yml" && fact.State = "notEvaluated"
         )
 
+    // #193: `missingDisposition` has two producers that both reach `analyze`'s command
+    // diagnostics — the `tasks`-stage validation (through `prereqs.TaskDiagnostics`) and the
+    // `analyze` backstop (`ViewGeneration.missingDispositionDiagnostics`). Introducing the gap
+    // *after* `tasks.yml` is written is the only way to reach `analyze` with one (`tasks` itself
+    // fails fast, writing nothing). Both producers build a byte-identical diagnostic, so the
+    // diagnostic list must carry it exactly once.
+    let private tasksReadyProjectWithDispositionGap () =
+        let root = initializedTasksReadyProject ()
+        let specPath = $"work/{workId}/spec.md"
+
+        let withOrphanScenario =
+            (TestSupport.readRelative root specPath)
+                .Replace(
+                    "## Acceptance Scenarios\n",
+                    "## Acceptance Scenarios\n- AC-777: Scenario referenced by no requirement.\n"
+                )
+
+        TestSupport.writeRelative root specPath withOrphanScenario
+        root
+
+    [<Fact>]
+    let ``analyze emits a duplicated-producer diagnostic exactly once`` () =
+        let root = tasksReadyProjectWithDispositionGap ()
+
+        let report = TestSupport.runAnalyze root workId title
+
+        let missing =
+            report.Diagnostics
+            |> List.filter (fun diagnostic -> diagnostic.Id = "missingDisposition")
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Equal(1, List.length missing)
+        Assert.Contains("AC-777", (List.exactlyOne missing).RelatedIds)
+
     [<Fact>]
     let ``analyze missing tasks blocks without analysis write`` () =
         let root = TestSupport.tempDirectory ()
