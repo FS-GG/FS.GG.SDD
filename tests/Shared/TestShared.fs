@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.TestShared
 
 open System
+open System.Diagnostics
 open System.IO
 open Xunit
 
@@ -132,6 +133,91 @@ module TestShared =
         | directory -> Directory.CreateDirectory directory |> ignore
 
         File.WriteAllText(absolute, text)
+
+    /// The single bounded, deadlock-free way for a test to run a child process (FS.GG.SDD#212).
+    ///
+    /// A child's stdout and stderr are two independent OS pipes with a small kernel buffer (64 KiB
+    /// on Linux). Draining them *sequentially* — `StandardOutput.ReadToEnd()` and only then
+    /// `StandardError.ReadToEnd()` — deadlocks whenever the child's stderr exceeds that buffer: the
+    /// child blocks in `write(2)` on stderr and can never exit, so the parent's stdout read never
+    /// sees EOF and never reaches the stderr read. Worse, any `WaitForExit(timeoutMs)` placed after
+    /// the reads is then *unreachable*, so the timeout that was supposed to bound the hang is dead
+    /// code and the test run wedges forever (observed: an 18-minute hang on a blocked `fsgg-sdd
+    /// refresh`, whose Blocked report puts ~38 KiB on stderr and nothing on stdout).
+    ///
+    /// So this module owns the invariant rather than restating it per call site: both pipes are
+    /// redirected here, drained *concurrently*, and the wait is always bounded. A child that
+    /// outlives `timeoutMs` is killed (whole tree) and reported as a failure, not a hang.
+    module ChildProcess =
+
+        /// A child that ran to completion within its bound.
+        type Completion =
+            { ExitCode: int
+              StandardOutput: string
+              StandardError: string }
+
+        /// Start `startInfo` and run it to completion under `timeoutMs`, capturing both streams.
+        /// `None` when the child could not be started. Redirection is forced on here so a caller
+        /// cannot opt out of the concurrent drain that makes the bound reachable.
+        let tryRunBounded (timeoutMs: int) (startInfo: ProcessStartInfo) : Completion option =
+            startInfo.RedirectStandardOutput <- true
+            startInfo.RedirectStandardError <- true
+            startInfo.UseShellExecute <- false
+
+            // A missing executable *throws* (Win32Exception) rather than returning null, so both
+            // failure shapes have to be folded into `None` — matching `AcceptanceSupport`.
+            let started =
+                try
+                    Process.Start startInfo |> Option.ofObj
+                with _ ->
+                    None
+
+            match started with
+            | None -> None
+            | Some started ->
+                use proc = started
+
+                // Both readers are in flight BEFORE the wait, so neither pipe can back up and
+                // stall the child. This is what keeps `WaitForExit timeoutMs` reachable.
+                let stdout = proc.StandardOutput.ReadToEndAsync()
+                let stderr = proc.StandardError.ReadToEndAsync()
+
+                if not (proc.WaitForExit timeoutMs) then
+                    try
+                        proc.Kill(entireProcessTree = true)
+                    with _ ->
+                        ()
+
+                    let commandLine =
+                        String.concat " " (startInfo.FileName :: List.ofSeq startInfo.ArgumentList)
+
+                    failwithf "Child process timed out after %d ms: %s" timeoutMs commandLine
+
+                // `WaitForExit(int)` does not itself flush the async readers (unlike the
+                // parameterless overload), so reap them explicitly. The child has exited, both
+                // pipes are at EOF, and these complete immediately.
+                Some
+                    { ExitCode = proc.ExitCode
+                      StandardOutput = stdout.GetAwaiter().GetResult()
+                      StandardError = stderr.GetAwaiter().GetResult() }
+
+        /// As `tryRunBounded`, but a child that cannot be started is a test failure rather than a
+        /// value to branch on — the shape nearly every call site wants.
+        let runBounded (timeoutMs: int) (startInfo: ProcessStartInfo) : Completion =
+            match tryRunBounded timeoutMs startInfo with
+            | Some completion -> completion
+            | None -> failwithf "Failed to start `%s`." startInfo.FileName
+
+        /// Run real `git` in a directory and return (exitCode, trimmed stdout). An unstartable
+        /// `git` reports `-1, ""` so a probe can branch on it. Was duplicated verbatim (and
+        /// deadlock-prone) in ScaffoldCommandTests and GitignoreNegationTests.
+        let git (root: string) (args: string list) =
+            let info = ProcessStartInfo(FileName = "git", WorkingDirectory = root)
+            args |> List.iter info.ArgumentList.Add
+
+            match tryRunBounded 60_000 info with
+            | None -> -1, ""
+            | Some completion -> completion.ExitCode, completion.StandardOutput.Trim()
 
     /// Unified public-surface baseline verification (feature 067 / FR-005). Set
     /// `FSGG_UPDATE_BASELINE=1` to re-capture intentionally; otherwise assert the captured surface

@@ -3,6 +3,7 @@ namespace FS.GG.SDD.Cli.Tests
 open System
 open System.Diagnostics
 open System.IO
+open FS.GG.SDD.TestShared
 open Xunit
 
 /// CLI smoke for `fsgg-sdd validate` (cli-validate-command). Invokes the real host
@@ -19,53 +20,34 @@ module ValidateCommandTests =
     let private cliDll =
         Path.Combine(Commands.repoRoot, "src", "FS.GG.SDD.Cli", "bin", configuration, "net10.0", "FS.GG.SDD.Cli.dll")
 
+    /// `dotnet <cliDll> <args>` with the .NET host banner / telemetry / color suppressed, so the
+    /// captured stdout is exactly the report (no host-emitted ANSI noise).
+    let private validateStartInfo (args: string list) =
+        let startInfo = ProcessStartInfo("dotnet")
+        startInfo.ArgumentList.Add cliDll
+        args |> List.iter startInfo.ArgumentList.Add
+        startInfo.Environment["DOTNET_NOLOGO"] <- "1"
+        startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] <- "1"
+        startInfo.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] <- "1"
+        startInfo.Environment["NO_COLOR"] <- "1"
+        startInfo
+
+    // A full `validate` matrix is the slowest thing these tests spawn; the bound only has to rule
+    // out a wedge, not police the runtime.
+    let private validateTimeoutMs = 300_000
+
     let private runCli (args: string list) =
-        let startInfo = ProcessStartInfo("dotnet")
-        startInfo.ArgumentList.Add cliDll
-        args |> List.iter startInfo.ArgumentList.Add
-        startInfo.RedirectStandardOutput <- true
-        startInfo.RedirectStandardError <- true
-        startInfo.UseShellExecute <- false
-        // Suppress .NET host banner / telemetry / color so the captured stdout is
-        // exactly the report (no host-emitted ANSI noise).
-        startInfo.Environment["DOTNET_NOLOGO"] <- "1"
-        startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] <- "1"
-        startInfo.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] <- "1"
-        startInfo.Environment["NO_COLOR"] <- "1"
+        let completion =
+            TestShared.ChildProcess.runBounded validateTimeoutMs (validateStartInfo args)
 
-        use proc =
-            match Process.Start startInfo with
-            | null -> failwith "Failed to start the dotnet process."
-            | started -> started
+        completion.StandardOutput, completion.ExitCode
 
-        let stdout = proc.StandardOutput.ReadToEnd()
-        proc.StandardError.ReadToEnd() |> ignore
-        proc.WaitForExit()
-        stdout, proc.ExitCode
-
-    /// As `runCli` but also returns captured stderr — for the user-input diagnostic path
-    /// (#68). Reads stdout concurrently so neither pipe can block the child.
+    /// As `runCli` but also returns captured stderr — for the user-input diagnostic path (#68).
     let private runCliFull (args: string list) =
-        let startInfo = ProcessStartInfo("dotnet")
-        startInfo.ArgumentList.Add cliDll
-        args |> List.iter startInfo.ArgumentList.Add
-        startInfo.RedirectStandardOutput <- true
-        startInfo.RedirectStandardError <- true
-        startInfo.UseShellExecute <- false
-        startInfo.Environment["DOTNET_NOLOGO"] <- "1"
-        startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] <- "1"
-        startInfo.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] <- "1"
-        startInfo.Environment["NO_COLOR"] <- "1"
+        let completion =
+            TestShared.ChildProcess.runBounded validateTimeoutMs (validateStartInfo args)
 
-        use proc =
-            match Process.Start startInfo with
-            | null -> failwith "Failed to start the dotnet process."
-            | started -> started
-
-        let stdoutTask = proc.StandardOutput.ReadToEndAsync()
-        let stderr = proc.StandardError.ReadToEnd()
-        proc.WaitForExit()
-        stdoutTask.GetAwaiter().GetResult(), stderr, proc.ExitCode
+        completion.StandardOutput, completion.StandardError, completion.ExitCode
 
     // `--matrix compatibility` is the cheapest matrix (no per-state lifecycle builds).
     [<Fact>]
@@ -159,27 +141,12 @@ module ValidateCommandTests =
 
     /// As `runCli` but forces color and does NOT set NO_COLOR — for the force-color path.
     let private runCliForced (args: string list) =
-        let startInfo = ProcessStartInfo("dotnet")
-        startInfo.ArgumentList.Add cliDll
-        args |> List.iter startInfo.ArgumentList.Add
-        startInfo.RedirectStandardOutput <- true
-        startInfo.RedirectStandardError <- true
-        startInfo.UseShellExecute <- false
-        startInfo.Environment["DOTNET_NOLOGO"] <- "1"
-        startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] <- "1"
-        startInfo.Environment["DOTNET_SKIP_FIRST_TIME_EXPERIENCE"] <- "1"
+        let startInfo = validateStartInfo args
         startInfo.Environment["FORCE_COLOR"] <- "1"
         startInfo.Environment.Remove "NO_COLOR" |> ignore
 
-        use proc =
-            match Process.Start startInfo with
-            | null -> failwith "Failed to start the dotnet process."
-            | started -> started
-
-        let stdout = proc.StandardOutput.ReadToEnd()
-        proc.StandardError.ReadToEnd() |> ignore
-        proc.WaitForExit()
-        stdout, proc.ExitCode
+        let completion = TestShared.ChildProcess.runBounded validateTimeoutMs startInfo
+        completion.StandardOutput, completion.ExitCode
 
     [<Fact>]
     let ``validate --markdown emits a capture-safe report card with zero ANSI`` () =

@@ -6,6 +6,7 @@ open FS.GG.SDD.Commands.CommandEffects
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.CommandWorkflow
+open FS.GG.SDD.TestShared
 open Xunit
 
 /// Fixture-driven scaffold semantics over a **real** `dotnet new` provider (no mocks):
@@ -1007,26 +1008,7 @@ module ScaffoldCommandTests =
         mode &&& UnixFileMode.UserExecute = UnixFileMode.UserExecute
 
     /// Run real `git` in a directory and return (exitCode, trimmed stdout).
-    let private git root (args: string list) =
-        let info =
-            System.Diagnostics.ProcessStartInfo(
-                FileName = "git",
-                WorkingDirectory = root,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false
-            )
-
-        args |> List.iter info.ArgumentList.Add
-
-        match System.Diagnostics.Process.Start info with
-        | null -> -1, ""
-        | started ->
-            use proc = started
-            let out = proc.StandardOutput.ReadToEnd()
-            proc.StandardError.ReadToEnd() |> ignore
-            proc.WaitForExit()
-            proc.ExitCode, out.Trim()
+    let private git = TestShared.ChildProcess.git
 
     // ---------- Phase 3 / US1: scaffolded product lands in an initialized repo ----------
 

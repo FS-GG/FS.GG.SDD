@@ -2,6 +2,7 @@ namespace FS.GG.SDD.Commands.Tests
 
 open System.IO
 open FS.GG.SDD.Commands.Internal
+open FS.GG.SDD.TestShared
 open Xunit
 
 /// Feature 092 (ADR-0026) — FR-014/FR-015, the load-bearing guard.
@@ -21,26 +22,7 @@ open Xunit
 module GitignoreNegationTests =
 
     /// Run real `git` in a directory and return (exitCode, trimmed stdout).
-    let private git root (args: string list) =
-        let info =
-            System.Diagnostics.ProcessStartInfo(
-                FileName = "git",
-                WorkingDirectory = root,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false
-            )
-
-        args |> List.iter info.ArgumentList.Add
-
-        match System.Diagnostics.Process.Start info with
-        | null -> -1, ""
-        | started ->
-            use proc = started
-            let out = proc.StandardOutput.ReadToEnd()
-            proc.StandardError.ReadToEnd() |> ignore
-            proc.WaitForExit()
-            proc.ExitCode, out.Trim()
+    let private git = TestShared.ChildProcess.git
 
     let private initRepo root =
         git root [ "init"; "-q"; "." ] |> ignore

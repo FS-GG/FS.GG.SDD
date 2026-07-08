@@ -35,32 +35,17 @@ module TestSupport =
         Path.Combine(repoRoot, "src", "FS.GG.SDD.Cli", "bin", cliConfiguration, "net10.0", "FS.GG.SDD.Cli.dll")
 
     /// Invoke the real host CLI directly and capture (exitCode, stdout, stderr). Kills the
-    /// process and fails on timeout so a hung smoke never wedges the suite.
+    /// process and fails on timeout so a hung smoke never wedges the suite — see
+    /// `TestShared.ChildProcess`, which drains both pipes concurrently and is what makes
+    /// `timeoutMs` reachable at all (FS.GG.SDD#212).
     let runCliRaw (timeoutMs: int) (args: string list) =
         let startInfo = ProcessStartInfo("dotnet")
         startInfo.WorkingDirectory <- repoRoot
-        startInfo.RedirectStandardOutput <- true
-        startInfo.RedirectStandardError <- true
-        startInfo.UseShellExecute <- false
         startInfo.ArgumentList.Add cliDll
         args |> List.iter startInfo.ArgumentList.Add
 
-        match Process.Start startInfo with
-        | null -> failwith "Failed to start CLI process."
-        | cliProcess ->
-            use cliProcess = cliProcess
-            let stdout = cliProcess.StandardOutput.ReadToEnd()
-            let stderr = cliProcess.StandardError.ReadToEnd()
-
-            if not (cliProcess.WaitForExit(timeoutMs)) then
-                try
-                    cliProcess.Kill(entireProcessTree = true)
-                with _ ->
-                    ()
-
-                failwith "CLI smoke process timed out."
-
-            cliProcess.ExitCode, stdout, stderr
+        let completion = TestShared.ChildProcess.runBounded timeoutMs startInfo
+        completion.ExitCode, completion.StandardOutput, completion.StandardError
 
     let tempDirectory = TestShared.tempDirectory
 
