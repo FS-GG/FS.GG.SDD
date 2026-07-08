@@ -31,13 +31,14 @@ module ValidationHarness =
         | EvaluateCompatibility
         | ReconcileDeclaredSurface
 
-    /// The catalogued determinism outputs: the nine generated views plus the
+    /// The catalogued determinism outputs: the ten generated views plus the
     /// `--json` command-report (matrix-runner matrix 2 / FR-003).
     let determinismOutputs =
         [ "work-model.json"
           "analysis.json"
           "verify.json"
           "ship.json"
+          "ship-verdict.json"
           "governance-handoff.json"
           "summary.md"
           "agent-commands/<target>/guidance.json"

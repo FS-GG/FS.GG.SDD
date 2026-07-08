@@ -56,6 +56,8 @@
     <Compile Include="LifecycleArtifacts/Verify.fs" />
     <Compile Include="LifecycleArtifacts/Ship.fsi" />
     <Compile Include="LifecycleArtifacts/Ship.fs" />
+    <Compile Include="LifecycleArtifacts/ShipVerdict.fsi" />
+    <Compile Include="LifecycleArtifacts/ShipVerdict.fs" />
     <Compile Include="LifecycleArtifacts/Guidance.fsi" />
     <Compile Include="LifecycleArtifacts/Guidance.fs" />
     <Compile Include="LifecycleArtifacts/WorkItem.fsi" />

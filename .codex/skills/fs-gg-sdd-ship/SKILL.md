@@ -21,7 +21,13 @@ fsgg-sdd ship --work <id>
 - **Consumes:** verification readiness and the aggregated authored sources.
 - **Authors:** nothing under `work/<id>/`.
 - **Tool generates:** `readiness/<id>/ship.json` (lifecycle readiness,
-  verification readiness, disposition, findings, readiness verdict).
+  verification readiness, disposition, findings, readiness verdict) and
+  `readiness/<id>/ship-verdict.json` — the compact, **committed** merge-boundary
+  verdict (ADR-0026). `ship.json` is regenerable and gitignored; the verdict is
+  the one readiness view you commit, because "was this ship-ready when it
+  merged?" is not a question regeneration can answer. It carries the
+  disposition, blocking finding ids, verification-readiness status, generator,
+  and a `sourcesDigest` binding it to the exact authored inputs.
 - **Next:** the optional Governance-owned protected-boundary handoff.
 
 ## The Governance boundary (this is the key part)

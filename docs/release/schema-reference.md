@@ -148,6 +148,7 @@ twice over identical inputs yields byte-identical output. (FR-008)
 | `analysis.json` | generated view (`analysis`) / JSON | 1 | — | AdditiveOptional | byte-stable | `readiness/<id>/analysis.json` |
 | `verify.json` | generated view (`verify`) / JSON | 1 | — | AdditiveOptional | byte-stable | `readiness/<id>/verify.json` |
 | `ship.json` | generated view (`ship`) / JSON | 1 | — | AdditiveOptional | byte-stable | `readiness/<id>/ship.json` |
+| `ship-verdict.json` | generated view (`shipVerdict`) / JSON — **durable generated** | 1 | — | AdditiveOptional | byte-stable | `readiness/<id>/ship-verdict.json` |
 | `governance-handoff.json` | generated view (`governance-handoff`) / JSON | 1 | **1.0.0** | **Stable** | byte-stable | `readiness/<id>/governance-handoff.json` |
 | `summary.md` | generated view (`summary`) / Markdown projection | gen (`0.2.0`) | — | AdditiveOptional | byte-stable | `readiness/<id>/summary.md` |
 | `agent-commands/<target>/guidance.json` | generated view (`agentCommands`) / JSON | 1 | — | AdditiveOptional | byte-stable | `readiness/<id>/agent-commands/<target>/guidance.json` |
@@ -188,6 +189,13 @@ in the authoritative `catalog[].inventory` of
   `findings`, `generatedViews`, `generator`, `governanceCompatibility`,
   `lifecycleReadiness`, `nextAction`, `readiness`, `schemaVersion` *(Stable)*,
   `sources`, `stage`, `status`, `verificationReadiness`, `viewVersion`, `workId`.
+- **`ship-verdict.json`** — `disposition`, `generator`, `readiness`,
+  `schemaVersion` *(Stable)*, `sourcesDigest`, `stage`, `status`,
+  `verificationReadiness`, `viewVersion`, `workId`. The **durable generated**
+  view (ADR-0026): a committed, ≤ 20-line projection of `ship.json` whose
+  `sourcesDigest` is one aggregate SHA-256 over the canonical `sources[]`
+  path→digest pairing, replacing that inventory. See
+  [`../reference/artifact-taxonomy.md`](../reference/artifact-taxonomy.md).
 - **`governance-handoff.json`** — `contractVersion` *(Stable)*, `diagnostics`,
   `evidence`, `generatorVersion`, `governanceConfig`, `governedReferences`,
   `readiness`, `schemaVersion` *(Stable)*, `sources`, `workId`.

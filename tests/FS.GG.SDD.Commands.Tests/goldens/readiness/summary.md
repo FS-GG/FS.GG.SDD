@@ -7,7 +7,7 @@
        - readiness/068-readiness-golden/ship.json  digest:a97905dba9823c955ca49957ef8ccdaf3fae417d093c98d4b8ce24ae9c96fe66  schema:1(current)
        - readiness/068-readiness-golden/verify.json  digest:9457074377de4cf694ca47eeb4210015daf47f92577886bc312ae39237f15b1d  schema:1(current)
        - readiness/068-readiness-golden/work-model.json  digest:6f46c15e3d1d52272ae175f365d1a9504eb874baabe1dc7e9dfd34808b32820e  schema:1(current)
-     outputDigest: 79002e5ccbbd2c9fc632d34e17dddbd1badf6935779f12169404bb5e767a39ec -->
+     outputDigest: 19d3b0ddd719d4f44e484a988c09c5d322263ee719fc8bf8a5abf978fbba28e5 -->
 
 # Readiness Summary — 068-readiness-golden
 
@@ -20,6 +20,7 @@
 | analysis | current |
 | verify | current |
 | ship | current |
+| ship-verdict | current |
 | governance-handoff | current |
 | agent-commands | current |
 | summary | current |

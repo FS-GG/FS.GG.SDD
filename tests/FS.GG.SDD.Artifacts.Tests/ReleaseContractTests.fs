@@ -39,6 +39,55 @@ module ReleaseContractTests =
         | Ok parsed -> Assert.Equal(json, serialize parsed)
         | Error message -> failwith $"parse failed: {message}"
 
+    // ===== Feature 092 (ADR-0026) — the durableGenerated marker =====
+
+    [<Fact>]
+    let ``the ship verdict is the only durableGenerated catalog entry`` () =
+        let durable =
+            release.Catalog
+            |> List.filter (fun entry -> entry.DurableGenerated)
+            |> List.map (fun entry -> entry.Contract)
+
+        Assert.Equal<string list>([ "ship-verdict.json" ], durable)
+
+    [<Fact>]
+    let ``the ship verdict entry is a generatedView with no cross-repo contractVersion`` () =
+        let entry =
+            release.Catalog |> List.find (fun entry -> entry.Contract = "ship-verdict.json")
+
+        Assert.Equal(ArtifactRef.GeneratedView, entry.SourceArtifact.Kind)
+        Assert.Equal("readiness/<id>/ship-verdict.json", entry.SourceArtifact.Path)
+        Assert.Equal(AdditiveOptional, entry.Stability)
+        Assert.Equal(None, entry.ContractVersion) // not a cross-repo contract (FR-018)
+        Assert.Equal(GeneratedViewContract(GenerationManifest.ShipVerdict, Json), entry.Kind)
+
+    [<Fact>]
+    let ``durableGenerated round-trips through serialize and parse`` () =
+        match parse (serialize release) with
+        | Error message -> failwith $"parse failed: {message}"
+        | Ok parsed ->
+            for entry in parsed.Catalog do
+                let original = release.Catalog |> List.find (fun e -> e.Contract = entry.Contract)
+
+                Assert.Equal(original.DurableGenerated, entry.DurableGenerated)
+
+    [<Fact>]
+    let ``a catalog entry without durableGenerated parses as regenerable`` () =
+        // Absence means what every pre-092 catalog meant. Guards the tolerant parse against a
+        // pre-092 release-readiness.json, which carries no such field at all.
+        let stripped =
+            System.Text.RegularExpressions.Regex.Replace(
+                serialize release,
+                ",\\s*\"durableGenerated\": (true|false)",
+                ""
+            )
+
+        Assert.DoesNotContain("durableGenerated", stripped)
+
+        match parse stripped with
+        | Error message -> failwith $"parse failed: {message}"
+        | Ok parsed -> Assert.Empty(parsed.Catalog |> List.filter (fun entry -> entry.DurableGenerated))
+
     [<Fact>]
     let ``T011 identity version equals the single Directory.Build.local.props Version and the generator version`` () =
         Assert.Equal(directoryBuildPropsVersion (), release.Identity.Version)

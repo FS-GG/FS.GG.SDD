@@ -53,15 +53,19 @@ module ReleaseContract =
           GovernanceContractVersionRange: string option }
 
     type SchemaReferenceEntry =
-        { Contract: string
-          Kind: ContractKind
-          SchemaVersion: int
-          ContractVersion: string option
-          Stability: StabilityClass
-          Determinism: string
-          Inventory: InventoryItem list
-          SourceArtifact: ArtifactRef
-          BaselinePresent: bool }
+        {
+            Contract: string
+            Kind: ContractKind
+            SchemaVersion: int
+            ContractVersion: string option
+            Stability: StabilityClass
+            Determinism: string
+            Inventory: InventoryItem list
+            SourceArtifact: ArtifactRef
+            BaselinePresent: bool
+            /// Feature 092 / ADR-0026: `true` for a committed *durable generated* artifact.
+            DurableGenerated: bool
+        }
 
     type MigrationNoteRef =
         { Version: string
@@ -169,7 +173,8 @@ module ReleaseContract =
           Determinism = determinism
           Inventory = jsonInventory stableNames names
           SourceArtifact = generatedViewSource ("readiness/<id>/" + contract)
-          BaselinePresent = true }
+          BaselinePresent = true
+          DurableGenerated = false }
 
     let markdownViewEntry contract viewKind sections =
         { Contract = contract
@@ -180,7 +185,8 @@ module ReleaseContract =
           Determinism = determinism
           Inventory = markdownInventory sections
           SourceArtifact = generatedViewSource ("readiness/<id>/" + contract)
-          BaselinePresent = true }
+          BaselinePresent = true
+          DurableGenerated = false }
 
     let currentRelease () : ReleaseReadiness =
         let identity =
@@ -284,6 +290,29 @@ module ReleaseContract =
                   "readiness"
                   "nextAction" ]
 
+        // The one *durable generated* lifecycle view (feature 092 / ADR-0026): a compact
+        // projection of ship.json, committed because its verdict is commit-bound and
+        // regeneration reports today's disposition rather than the merge's. `durableGenerated`
+        // is what moves it out of the taxonomy doc's regenerable table into the durable one;
+        // it is not a cross-repo contract, so it carries no contractVersion.
+        let shipVerdict =
+            { jsonViewEntry
+                  "ship-verdict.json"
+                  ShipVerdict
+                  AdditiveOptional
+                  [ "schemaVersion" ]
+                  [ "schemaVersion"
+                    "viewVersion"
+                    "workId"
+                    "stage"
+                    "status"
+                    "generator"
+                    "sourcesDigest"
+                    "verificationReadiness"
+                    "disposition"
+                    "readiness" ] with
+                DurableGenerated = true }
+
         // The governance handoff is the one cross-repo contract: it carries a
         // contractVersion and its envelope shape is Stable (FR-002 declared
         // integration fact only; no Governance gate logic — FR-014).
@@ -308,7 +337,8 @@ module ReleaseContract =
                       "readiness"
                       "diagnostics" ]
               SourceArtifact = generatedViewSource "readiness/<id>/governance-handoff.json"
-              BaselinePresent = true }
+              BaselinePresent = true
+              DurableGenerated = false }
 
         let summary =
             markdownViewEntry "summary.md" Summary [ "Generated-view currency"; "Diagnostics"; "Next action" ]
@@ -396,7 +426,8 @@ module ReleaseContract =
                          "release contract source artifact path %s rejected: %s"
                          "src/FS.GG.SDD.Commands/CommandSerialization.fs"
                          message)
-              BaselinePresent = true }
+              BaselinePresent = true
+              DurableGenerated = false }
 
         { SchemaVersion = 1
           GeneratorVersion = currentGeneratorVersion ()
@@ -407,6 +438,7 @@ module ReleaseContract =
               analysis
               verify
               ship
+              shipVerdict
               governanceHandoff
               summary
               guidance
@@ -466,6 +498,7 @@ module ReleaseContract =
         writer.WriteBoolean("requiredBySdd", entry.SourceArtifact.RequiredBySdd)
         writer.WriteEndObject()
         writer.WriteBoolean("baselinePresent", entry.BaselinePresent)
+        writer.WriteBoolean("durableGenerated", entry.DurableGenerated)
         writer.WriteEndObject()
 
     let serialize (release: ReleaseReadiness) =
@@ -663,7 +696,12 @@ module ReleaseContract =
                       Determinism = str "determinism" entry
                       Inventory = inventory
                       SourceArtifact = artifactOf (prop "sourceArtifact" entry)
-                      BaselinePresent = (prop "baselinePresent" entry).GetBoolean() })
+                      BaselinePresent = (prop "baselinePresent" entry).GetBoolean()
+                      // Absent ⇒ regenerable, which is what every pre-092 entry meant.
+                      DurableGenerated =
+                        match entry.TryGetProperty "durableGenerated" with
+                        | true, value -> value.GetBoolean()
+                        | _ -> false })
                 |> Seq.toList
 
             let migrations =

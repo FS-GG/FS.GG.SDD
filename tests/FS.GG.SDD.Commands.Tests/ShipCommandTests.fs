@@ -14,6 +14,7 @@ module ShipCommandTests =
     let workId = "013-ship-command"
     let title = "Ship Command"
     let shipPath = $"readiness/{workId}/ship.json"
+    let shipVerdictPath = $"readiness/{workId}/ship-verdict.json"
     let verifyPath = $"readiness/{workId}/verify.json"
     let workModelPath = $"readiness/{workId}/work-model.json"
     let analysisPath = $"readiness/{workId}/analysis.json"
@@ -39,6 +40,92 @@ module ShipCommandTests =
         { ExitCode = exitCode
           StdOut = stdout
           StdErr = stderr }
+
+    // --- Feature 092 (ADR-0026): the committed compact ship verdict ---
+
+    [<Fact>]
+    let ``ship emits the compact verdict beside ship json`` () =
+        let root = initializedVerifiedProject ()
+        let report = TestSupport.runShip root workId title
+
+        Assert.True(TestSupport.existsRelative root shipVerdictPath)
+
+        Assert.Contains(
+            report.ChangedArtifacts,
+            fun change -> change.Path = shipVerdictPath && change.Kind = "generatedView"
+        )
+
+        Assert.Contains(report.GeneratedViews, fun view -> view.Path = shipVerdictPath && view.Kind = "ship-verdict")
+
+    [<Fact>]
+    let ``the verdict's facts equal the ship json it projects`` () =
+        let root = initializedVerifiedProject ()
+        TestSupport.runShip root workId title |> ignore
+
+        let shipJson = TestSupport.readRelative root shipPath
+        let verdictJson = TestSupport.readRelative root shipVerdictPath
+
+        match parseShipView { Path = shipPath; Text = shipJson } with
+        | Error diagnostics -> failwith $"ship.json did not parse: {diagnostics}."
+        | Ok view ->
+            // The verdict is a projection: re-project the parsed ship view and demand byte equality
+            // with what `ship` wrote. Anything else means two sources of truth.
+            Assert.Equal(ShipVerdict.toJson (ShipVerdict.fromShipView view), verdictJson)
+
+            use doc = System.Text.Json.JsonDocument.Parse verdictJson
+            let root' = doc.RootElement
+            Assert.Equal(workId, root'.GetProperty("workId").GetString())
+            Assert.Equal("ship", root'.GetProperty("stage").GetString())
+            Assert.Equal(view.Status, root'.GetProperty("status").GetString())
+            Assert.Equal(view.Readiness, root'.GetProperty("readiness").GetString())
+            Assert.Equal(view.Disposition, root'.GetProperty("disposition").GetProperty("state").GetString())
+
+            Assert.Equal(
+                view.VerificationReadiness.Status,
+                root'.GetProperty("verificationReadiness").GetProperty("status").GetString()
+            )
+
+            Assert.Equal(
+                (ShipVerdict.sourcesDigest view.Sources).Value,
+                root'.GetProperty("sourcesDigest").GetProperty("value").GetString()
+            )
+
+    [<Fact>]
+    let ``a blocked ship writes neither ship json nor the verdict`` () =
+        // FR-005: the verdict inherits ship.json's `not hasBlocking` write gate. An incomplete
+        // ship must never be recorded as a committed verdict.
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeTasksReadyProject root workId title // no evidence -> ship blocks
+
+        let report = TestSupport.runShip root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.False(TestSupport.existsRelative root shipPath, "a blocked ship must not write ship.json")
+        Assert.False(TestSupport.existsRelative root shipVerdictPath, "a blocked ship must not write the verdict")
+
+    [<Fact>]
+    let ``two ship runs produce a byte-identical verdict with no clock, path, or ANSI`` () =
+        let root = initializedVerifiedProject ()
+
+        TestSupport.runShip root workId title |> ignore
+        let first = TestSupport.readRelative root shipVerdictPath
+
+        TestSupport.runShip root workId title |> ignore
+        let second = TestSupport.readRelative root shipVerdictPath
+
+        Assert.Equal(first, second)
+
+        // `Assert.DoesNotContain(string, string)` is culture-sensitive and ESC is zero-weight, so
+        // searching for "ESC[" would match the bare `[` of an array. Test the char (ordinal).
+        Assert.False(first.Contains '\u001b', "the verdict must carry no ANSI")
+
+        Assert.DoesNotContain(root, first)
+
+        // A bare year check false-positives on the sha256 hex; match an ISO-8601 stamp instead.
+        Assert.False(
+            System.Text.RegularExpressions.Regex.IsMatch(first, @"\d{4}-\d{2}-\d{2}T\d{2}:"),
+            "the verdict must carry no timestamp"
+        )
 
     // --- User Story 1: ship-ready a verification-ready work item ---
 

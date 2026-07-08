@@ -149,6 +149,12 @@ module Core =
               "Generated from verify readiness and evidence declarations."
               [ "staleGeneratedView" ]
           row
+              "readiness/<id>/ship-verdict.json"
+              ArtifactKind.GeneratedView
+              "Committed merge-boundary verdict (ADR-0026): the durable-generated projection of ship.json."
+              "Projected from ship.json; sources[] replaced by one aggregate sourcesDigest."
+              [ "staleGeneratedView" ]
+          row
               "readiness/<id>/summary.md"
               ArtifactKind.GeneratedView
               "Human-readable readiness summary."

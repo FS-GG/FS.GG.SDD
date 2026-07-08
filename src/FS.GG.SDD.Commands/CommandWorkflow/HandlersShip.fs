@@ -28,6 +28,8 @@ module internal HandlersShip =
     module GenerationManifestModule = FS.GG.SDD.Artifacts.GenerationManifest
     module GovernanceHandoffModule = FS.GG.SDD.Artifacts.GovernanceHandoff
     module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
+    module ShipModule = FS.GG.SDD.Artifacts.Ship
+    module ShipVerdictModule = FS.GG.SDD.Artifacts.ShipVerdict
     module WorkModelModule = FS.GG.SDD.Artifacts.WorkModel
 
     // ---- Ship command ----
@@ -181,6 +183,47 @@ module internal HandlersShip =
                 Some view, [ WriteFile(governanceHandoffPath workId, handoffJson, GeneratedView) ], Some handoffJson
             | Error _ -> None, [], None
         | None -> None, [], None
+
+    // ---- Ship verdict (feature 092 / ADR-0026: the committed merge-boundary projection) ----
+
+    let shipVerdictPath workId =
+        GenerationManifestModule.expectedShipVerdictOutputPath workId
+
+    /// Project the compact verdict and produce (generated-view state, write effect, json text).
+    /// Pure over the `ship.json` text alone — unlike the handoff, it needs no work model.
+    ///
+    /// This is the *single* projection `ship` and `refresh` both call, which is what makes the
+    /// two producers byte-identical by construction rather than by golden-file coincidence
+    /// (FR-007). A second "equivalent" writer in `HandlersRefresh` would satisfy today's golden
+    /// and drift tomorrow.
+    let shipVerdictEmission
+        workId
+        (generator: GeneratorVersion)
+        (shipText: string)
+        : GeneratedViewState option * CommandEffect list * string option =
+        match
+            ShipModule.parseShipView
+                { Path = shipPath workId
+                  Text = shipText }
+        with
+        | Ok view ->
+            let verdictJson = ShipVerdictModule.toJson (ShipVerdictModule.fromShipView view)
+            let outputDigest = SchemaVersionModule.outputSha256Text verdictJson
+
+            let viewSources = [ analysisSourceFromSnapshot (shipPath workId) shipText ]
+
+            let state =
+                generatedViewState
+                    (shipVerdictPath workId)
+                    "ship-verdict"
+                    generator
+                    viewSources
+                    (Some outputDigest)
+                    GeneratedViewCurrency.Current
+                    []
+
+            Some state, [ WriteFile(shipVerdictPath workId, verdictJson, GeneratedView) ], Some verdictJson
+        | Error _ -> None, [], None
 
     let shipFindings (diagnostics: Diagnostic list) =
         diagnostics
@@ -521,7 +564,7 @@ module internal HandlersShip =
                            else
                                "blocked") ]
 
-                    let shipSummaryOpt, shipView, shipHandoffView, shipEffects =
+                    let shipSummaryOpt, shipView, shipHandoffView, shipVerdictView, shipEffects =
                         match specText, clarificationText, checklistText, planText, taskText, analysisText with
                         | Some specText,
                           Some clarificationText,
@@ -630,22 +673,33 @@ module internal HandlersShip =
                                         text
                                         (governanceConfigPresence model)
 
+                            // --- Ship verdict: the committed merge-boundary projection (ADR-0026).
+                            // Inside the same `not hasBlocking` gate as ship.json, so an incomplete
+                            // ship is never recorded as a verdict (FR-005) without a new branch.
+                            let verdictView, verdictEffects, _ =
+                                if hasBlocking then
+                                    None, [], None
+                                else
+                                    shipVerdictEmission workId model.Request.GeneratorVersion text
+
                             let effects =
                                 if hasBlocking then
                                     []
                                 else
                                     [ CreateDirectory(readinessDirectory workId)
                                       WriteFile(shipPath workId, text, GeneratedView) ]
+                                    @ verdictEffects
                                     @ handoffEffects
 
-                            Some summary, Some view, handoffView, effects
-                        | _ -> None, None, None, []
+                            Some summary, Some view, handoffView, verdictView, effects
+                        | _ -> None, None, None, None, []
 
                     let generatedViews =
                         [ Some workModelView
                           Some analysisViewState
                           Some verifyViewState
                           shipView
+                          shipVerdictView
                           shipHandoffView ]
                         |> List.choose id
 

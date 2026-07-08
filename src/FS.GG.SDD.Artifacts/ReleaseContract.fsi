@@ -73,15 +73,22 @@ module ReleaseContract =
     /// The documented shape of one public generated artifact (or sub-file) or
     /// `--json` report.
     type SchemaReferenceEntry =
-        { Contract: string
-          Kind: ContractKind
-          SchemaVersion: int
-          ContractVersion: string option
-          Stability: StabilityClass
-          Determinism: string
-          Inventory: InventoryItem list
-          SourceArtifact: ArtifactRef
-          BaselinePresent: bool }
+        {
+            Contract: string
+            Kind: ContractKind
+            SchemaVersion: int
+            ContractVersion: string option
+            Stability: StabilityClass
+            Determinism: string
+            Inventory: InventoryItem list
+            SourceArtifact: ArtifactRef
+            BaselinePresent: bool
+            /// Feature 092 / ADR-0026. `true` for a *durable generated* artifact: machine-emitted,
+            /// byte-stable, drift-guarded, and **committed**. The taxonomy doc partitions the
+            /// `generatedView` catalog on this flag — regenerable table when `false`, durable table
+            /// when `true` — so the doc stays catalog-derived rather than hand-maintained.
+            DurableGenerated: bool
+        }
 
     /// A per-release record pointer for breaking changes (FR-009/FR-010).
     type MigrationNoteRef =

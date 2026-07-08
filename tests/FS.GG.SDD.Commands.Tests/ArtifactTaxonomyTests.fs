@@ -6,12 +6,17 @@ open System.Text.Json
 open FS.GG.SDD.Commands.Internal
 open Xunit
 
-/// Feature 073 (ADR-0018) drift guards. Two invariants:
-///   (T001/FR-002) the taxonomy doc's regenerable `readiness/<id>/…` list is exactly the
-///   `generatedView` catalog of `release-readiness.json` — the doc is a drift-guarded
-///   projection, never a second source of truth.
+/// Feature 073 (ADR-0018) + feature 092 (ADR-0026) drift guards. Two invariants:
+///   (T001/FR-002) each of the taxonomy doc's machine-emitted `readiness/<id>/…` lists is exactly
+///   the corresponding partition of the `generatedView` catalog of `release-readiness.json` —
+///   regenerable when `durableGenerated` is false, durable-generated when true. The doc is a
+///   drift-guarded projection, never a second source of truth.
 ///   (T002/FR-003/FR-005) `init` seeds a no-clobber `.gitignore` whose bytes equal
 ///   `Foundation.gitignoreSeedText`, and the taxonomy doc's seed fragment stays in sync.
+///
+/// NOTE: byte-equality against the seed constant proves the constant was *copied*, never that it
+/// *works*. That the `!readiness/*/ship-verdict.json` negation actually fires is proved only by
+/// `GitignoreNegationTests`, which runs real git (feature 092 / research D1-D2).
 module ArtifactTaxonomyTests =
 
     let private taxonomyDoc =
@@ -20,15 +25,20 @@ module ArtifactTaxonomyTests =
     let private releaseReadiness =
         TestSupport.readRelative TestSupport.repoRoot "docs/release/release-readiness.json"
 
-    // The generated-view source-artifact paths in the release catalog — the authoritative
-    // regenerable readiness set.
-    let private catalogGeneratedViewPaths () : Set<string> =
+    // The generated-view source-artifact paths in the release catalog, partitioned on the
+    // `durableGenerated` flag (ADR-0026 §4: the doc's tables stay catalog-derived).
+    let private catalogGeneratedViewPaths (durableGenerated: bool) : Set<string> =
         use doc = JsonDocument.Parse releaseReadiness
 
         doc.RootElement.GetProperty("catalog").EnumerateArray()
         |> Seq.choose (fun entry ->
+            let isDurable =
+                match entry.TryGetProperty "durableGenerated" with
+                | true, value -> value.GetBoolean()
+                | _ -> false
+
             match entry.TryGetProperty "sourceArtifact" with
-            | true, src ->
+            | true, src when isDurable = durableGenerated ->
                 match src.TryGetProperty "kind" with
                 | true, k when String.Equals(k.GetString(), "generatedView") ->
                     Option.ofObj (src.GetProperty("path").GetString())
@@ -36,19 +46,38 @@ module ArtifactTaxonomyTests =
             | _ -> None)
         |> Set.ofSeq
 
-    // Every `readiness/<id>/…` path the taxonomy doc lists as regenerable.
-    let private docReadinessPaths () : Set<string> =
-        taxonomyDoc.Replace("\r\n", "\n").Split('\n')
-        |> Array.map (fun l -> l.Trim())
-        |> Array.filter (fun l -> l.StartsWith "readiness/<id>/")
-        |> Set.ofArray
+    /// The doc's `readiness/<id>/…` lines within one `## `-delimited section. Section-scoped so the
+    /// durable-generated table and the regenerable block are distinguishable projections rather than
+    /// one merged list.
+    let private docReadinessPathsInSection (headingPrefix: string) : Set<string> =
+        let lines = taxonomyDoc.Replace("\r\n", "\n").Split('\n')
+
+        let start =
+            lines
+            |> Array.tryFindIndex (fun l -> l.StartsWith("## " + headingPrefix, StringComparison.Ordinal))
+
+        match start with
+        | None -> Set.empty
+        | Some startIndex ->
+            let rest = lines |> Array.skip (startIndex + 1)
+
+            let length =
+                rest
+                |> Array.tryFindIndex (fun l -> l.StartsWith("## ", StringComparison.Ordinal))
+                |> Option.defaultValue rest.Length
+
+            rest
+            |> Array.take length
+            |> Array.map (fun l -> l.Trim())
+            |> Array.filter (fun l -> l.StartsWith "readiness/<id>/")
+            |> Set.ofArray
 
     [<Fact>]
-    let ``taxonomy regenerable readiness list equals the release-readiness generatedView catalog`` () =
-        let expected = catalogGeneratedViewPaths ()
-        let actual = docReadinessPaths ()
+    let ``taxonomy regenerable readiness list equals the non-durable generatedView catalog`` () =
+        let expected = catalogGeneratedViewPaths false
+        let actual = docReadinessPathsInSection "Regenerable"
 
-        Assert.False(Set.isEmpty expected, "expected a non-empty generatedView catalog")
+        Assert.False(Set.isEmpty expected, "expected a non-empty regenerable generatedView catalog")
 
         Assert.True(
             (expected = actual),
@@ -58,6 +87,49 @@ module ArtifactTaxonomyTests =
         )
 
     [<Fact>]
+    let ``taxonomy durable-generated list equals the durable generatedView catalog`` () =
+        let expected = catalogGeneratedViewPaths true
+        let actual = docReadinessPathsInSection "Durable generated"
+
+        Assert.False(Set.isEmpty expected, "expected a non-empty durableGenerated generatedView catalog")
+
+        Assert.True(
+            (expected = actual),
+            $"artifact-taxonomy.md durable-generated list diverged from release-readiness.json.\n"
+            + $"missing from doc: {Set.difference expected actual}\n"
+            + $"extra in doc:     {Set.difference actual expected}"
+        )
+
+    [<Fact>]
+    let ``the two taxonomy partitions are disjoint and cover every catalogued generated view`` () =
+        // The partition must be total: a generated view that slips out of both tables would be
+        // invisible to the drift guard — the rot ADR-0018 pinned this doc against.
+        let regenerable = catalogGeneratedViewPaths false
+        let durable = catalogGeneratedViewPaths true
+
+        Assert.Empty(Set.intersect regenerable durable)
+
+        use doc = JsonDocument.Parse releaseReadiness
+
+        let allGeneratedViews =
+            doc.RootElement.GetProperty("catalog").EnumerateArray()
+            |> Seq.choose (fun entry ->
+                match entry.TryGetProperty "sourceArtifact" with
+                | true, src ->
+                    match src.TryGetProperty "kind" with
+                    | true, k when String.Equals(k.GetString(), "generatedView") ->
+                        Option.ofObj (src.GetProperty("path").GetString())
+                    | _ -> None
+                | _ -> None)
+            |> Set.ofSeq
+
+        Assert.Equal<Set<string>>(allGeneratedViews, Set.union regenerable durable)
+
+    [<Fact>]
+    let ``the ship verdict is the only durable-generated readiness view`` () =
+        Assert.Equal<Set<string>>(Set.ofList [ "readiness/<id>/ship-verdict.json" ], catalogGeneratedViewPaths true)
+
+    [<Fact>]
     let ``init seeds a no-clobber .gitignore equal to the seed constant`` () =
         let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
@@ -65,7 +137,16 @@ module ArtifactTaxonomyTests =
         let seeded = TestSupport.readRelative root ".gitignore"
 
         Assert.Equal(Foundation.gitignoreSeedText.Replace("\r\n", "\n"), seeded.Replace("\r\n", "\n"))
-        Assert.Contains("readiness/*/", seeded)
+
+        // The *contents* rule plus its negation. `Assert.Contains "readiness/*/"` — the pre-092
+        // assertion — is a substring of `readiness/*/*` and would pass with the negation absent,
+        // present-but-inert, or correct. Assert the exact lines instead (research D2).
+        let lines =
+            seeded.Replace("\r\n", "\n").Split('\n') |> Array.map (fun l -> l.Trim())
+
+        Assert.Contains("readiness/*/*", lines)
+        Assert.Contains("!readiness/*/ship-verdict.json", lines)
+        Assert.DoesNotContain("readiness/*/", lines) // the bare directory rule must be gone
 
     [<Fact>]
     let ``second init does not clobber an existing .gitignore`` () =

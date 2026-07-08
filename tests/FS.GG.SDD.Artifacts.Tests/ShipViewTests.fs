@@ -99,6 +99,38 @@ module ShipViewTests =
         | Ok _ -> failwith "Expected malformed ship view to fail parsing."
         | Error diagnostics -> Assert.NotEmpty diagnostics
 
+    // Feature 092: the parse previously flattened `disposition` to its `state` and dropped the
+    // blocking finding ids. The compact ship verdict carries them, so the view must surface them.
+    [<Fact>]
+    let ``parseShipView surfaces disposition blockingFindingIds, sorted`` () =
+        let withBlocking =
+            validShipJson.Replace(
+                "\"blockingFindingIds\": [],\n    \"warningFindingIds\"",
+                "\"blockingFindingIds\": [\"SF002\", \"SF001\"],\n    \"warningFindingIds\""
+            )
+
+        match
+            parseShipView
+                { Path = "readiness/013-ship-command/ship.json"
+                  Text = withBlocking }
+        with
+        | Ok view -> Assert.Equal<string list>([ "SF001"; "SF002" ], view.DispositionBlockingFindingIds)
+        | Error diagnostics -> failwith $"Expected a valid ship view, got {diagnostics}."
+
+    [<Fact>]
+    let ``parseShipView yields an empty blocking list when disposition omits the field`` () =
+        match
+            parseShipView
+                { Path = "readiness/013-ship-command/ship.json"
+                  Text =
+                    validShipJson.Replace(
+                        "\"blockingFindingIds\": [],\n    \"warningFindingIds\"",
+                        "\"warningFindingIds\""
+                    ) }
+        with
+        | Ok view -> Assert.Empty view.DispositionBlockingFindingIds
+        | Error diagnostics -> failwith $"Expected a valid ship view, got {diagnostics}."
+
     [<Fact>]
     let ``parseShipView rejects unsupported future schema version`` () =
         let futureJson =

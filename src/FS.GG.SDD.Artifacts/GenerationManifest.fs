@@ -11,6 +11,7 @@ module GenerationManifest =
         | Analysis
         | Verify
         | Ship
+        | ShipVerdict
         | Summary
         | AgentCommands
         | GovernanceHandoff
@@ -53,6 +54,7 @@ module GenerationManifest =
         | Analysis -> "analysis"
         | Verify -> "verify"
         | Ship -> "ship"
+        | ShipVerdict -> "shipVerdict"
         | Summary -> "summary"
         | AgentCommands -> "agentCommands"
         | GovernanceHandoff -> "governance-handoff"
@@ -71,6 +73,8 @@ module GenerationManifest =
 
     let expectedGovernanceHandoffOutputPath (workId: string) =
         $"readiness/{workId}/governance-handoff.json"
+
+    let expectedShipVerdictOutputPath (workId: string) = $"readiness/{workId}/ship-verdict.json"
 
     let createWorkModelManifest viewPath generatorVersion sources outputDigest =
         let view =

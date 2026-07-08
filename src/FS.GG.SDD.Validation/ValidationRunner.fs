@@ -648,6 +648,7 @@ module ValidationRunner =
             | "analysis.json"
             | "verify.json"
             | "ship.json"
+            | "ship-verdict.json"
             | "governance-handoff.json"
             | "summary.md" -> Some basename
             | _ -> None
