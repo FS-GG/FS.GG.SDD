@@ -28,7 +28,7 @@ Investigation sharpened three of the five beyond what the feedback reported:
    already carries a comment flagging the incoherence.
 
 2. **The multi-ref decision refs are not "ignored downstream" — they are never read.**
-   `ClarificationAnswerFact` and `ClarificationDecisionFact` both populate `RelatedRequirementIds`,
+   `ClarificationQuestion` and `ClarificationDecisionFact` both populate `RelatedRequirementIds`,
    `RelatedStoryIds`, and `RelatedAcceptanceScenarioIds` (`Clarification.fs:202-204`, `:256-258`).
    Grepping `src/` for those three names returns *only* the record definitions, their `.fsi`
    signatures, and those two assignment sites. **There are no read sites.** Separately,
@@ -131,10 +131,14 @@ Constitution §I and §III. No `schemaVersion` bump is proposed (see Clarificati
   dropped somewhere else, so the acceptance test is end-to-end: a `DEC-###` naming `FR-007`, `FR-001`,
   and `AC-005` reaches `work-model.json` and the task graph with all three refs.
 
-- Q: "Error on truly-invalid refs" (from the issue) — in scope? → A: **Yes, as a blocking
-  diagnostic, but only for refs that name a *well-formed but nonexistent* id** (e.g. `FR-999` when the
-  spec declares `FR-001..FR-008`). A malformed token is not a ref and is not matched by the id regex,
-  so it is not detectable here and is out of scope. See FR-013.
+- Q: "Error on truly-invalid refs" (from the issue) — in scope? → A: **Already implemented; this
+  feature adds regression coverage only.** `unknownReferenceDiagnostics` (`EarlyStageAuthoring.fs:882-916`)
+  already resolves every `AMB-`/`CQ-`/`FR-`/`US-`/`AC-` id in the `clarify --input` lines against the
+  spec's declared id sets and emits the blocking `unknownClarificationReference` (`errorForRef`,
+  asserted at `ClarifyCommandTests.fs:369`). The issue's "error on truly-invalid refs" is therefore
+  satisfied for the path an author actually uses. Two residual gaps are **out of scope**: a ref
+  hand-typed directly into a committed `clarifications.md` (never re-validated), and a malformed token,
+  which the id regex does not match and so cannot be distinguished from prose. See FR-013.
 
 - Q: Does the `clarify` title fix change the `fs-gg-sdd-clarify` process skill (and hence its pinned
   `sha256` in `skill-manifest.json` / `registry/skills.yml`)? → A: **No.** The skill documents the
@@ -358,14 +362,16 @@ that `evidence` and `verify` resolve those tasks' obligations.
   model, deduplicated and sorted. `RequirementModel.parseDecisions` MUST populate the refs it
   currently discards.
 - **FR-012**: `parseRemainingAmbiguity` MUST record every `AMB-###` a line names, not only the first.
-- **FR-013**: A decision naming a well-formed but undeclared id (e.g. `FR-999` against a spec
-  declaring `FR-001..FR-008`) MUST block with a diagnostic naming the offending id. A token that the
-  id regex does not match is not a reference and MUST NOT trigger this diagnostic.
-- **FR-014**: `clarificationDecisionTasks` MUST pass the decision's requirement refs through to the
-  derived task rather than `[]`.
-- **FR-015**: `Clarification`'s `RelatedRequirementIds`, `RelatedStoryIds`, and
-  `RelatedAcceptanceScenarioIds` MUST either be consumed by the work-model build or be removed. A
-  field that is parsed, stored, exposed in `.fsi`, and never read MUST NOT survive this feature.
+- **FR-013**: A `clarify --input` line naming a well-formed but undeclared id (e.g. `FR-999` against a
+  spec declaring `FR-001..FR-008`) MUST block with a diagnostic naming the offending id. **This already
+  holds** via `unknownReferenceDiagnostics`; this feature adds a regression test pinning it for a
+  *multi-ref decision line* specifically (the case the issue reported), and MUST NOT weaken it when
+  FR-011 threads the extra refs through.
+- **FR-014**: `clarificationDecisionTasks` MUST pass the decision's `RelatedRequirementIds` through to
+  the derived task rather than `[]`. This is also the read site that discharges FR-015.
+- **FR-015**: `ClarificationQuestion`'s and `ClarificationDecisionFact`'s `RelatedRequirementIds`,
+  `RelatedStoryIds`, and `RelatedAcceptanceScenarioIds` MUST either be consumed or be removed. A field
+  that is parsed, stored, exposed in `.fsi`, and never read MUST NOT survive this feature.
 
 **Task refs (US5)**
 
@@ -429,8 +435,9 @@ that `evidence` and `verify` resolve those tasks' obligations.
 - **SC-005**: A `DEC-003` line naming `FR-007`, `FR-001`, and `AC-005` yields exactly
   `["AC-005"; "FR-001"; "FR-007"]` on the `work-model.json` decision entry, and the derived task's
   `requirements:` is `[FR-001, FR-007]`. A `Remaining Ambiguity` line naming two AMB ids records both.
-- **SC-006**: A decision naming `FR-999` against a spec declaring `FR-001..FR-008` blocks `clarify`
-  with a diagnostic whose message contains `FR-999`, and writes nothing.
+- **SC-006**: A `clarify --input` decision line naming `FR-007`, `FR-001`, and `FR-999` against a spec
+  declaring `FR-001..FR-008` blocks with `unknownClarificationReference` naming `FR-999`, and writes
+  nothing — the multi-ref threading of FR-011 does not smuggle an undeclared ref past the existing gate.
 - **SC-007**: `grep -r "RelatedRequirementIds" src/` returns either read sites or nothing — never
   only definitions and assignments (FR-015).
 - **SC-008**: The shipped `docs/examples/lifecycle-artifacts/tasks.yml`, unmodified in its `sourceIds`
