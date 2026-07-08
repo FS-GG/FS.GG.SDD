@@ -1,14 +1,20 @@
-# A complete, valid `tasks.yml` you can copy-adapt. Validated on every build by the
-# live task parser (ExampleArtifactsContractTests). Each task back-references the
-# requirements/decisions it implements, the skills it needs, and the evidence that
-# will satisfy it (matched in evidence.yml). See [[fs-gg-sdd-tasks]].
+# A complete, valid `tasks.yml` you can copy-adapt. Validated on every build by the live
+# task parser (ExampleArtifactsContractTests) AND driven through the real lifecycle stages
+# analyze -> evidence -> verify -> ship (ExampleLifecycleContractTests). Each task
+# back-references the requirements/decisions it implements, the skills it needs, and the
+# evidence that will satisfy it (matched in evidence.yml). See [[fs-gg-sdd-tasks]].
 #
-# Note the shape below: `requirements:` and `decisions:` are the AUTHORED, typed reference
-# surface, and there is no `sourceIds:` line. `sourceIds` is the untyped superset the tool
-# DERIVES on parse (`sourceIds ∪ requirements ∪ decisions`); it is what `evidence` and
-# `verify` read, so a task authored this way is fully visible to both. Write `sourceIds:`
-# by hand only for a reference the typed fields cannot express — a scope boundary `SB-###`,
-# a plan decision `PD-###`, a verification obligation `VO-###`.
+# Note the shape below. `requirements:` and `decisions:` are the AUTHORED, typed reference
+# surface. `sourceIds:` is a SEPARATE authored list: the parser does NOT derive it and does
+# NOT union the typed fields into it (see "NOT derived (#164)" in Task.fs). The union lives
+# at the consumer — the disposition check shared by `tasks` and `analyze` tests
+# `sourceIds ∪ requirements ∪ decisions`.
+#
+# So every id the lifecycle requires a disposition for must appear in one of the three. Ids
+# with no typed field can ONLY be written by hand into `sourceIds:` — an acceptance scenario
+# `AC-###`, a plan decision `PD-###`, a contract impact `PC-###`, a verification obligation
+# `VO-###`, a migration note `PM-###`, a generated-view impact `GV-###`, an accepted checklist
+# deferral `CR-###`, a scope boundary `SB-###`. That is what the `sourceIds:` lines below do.
 schemaVersion: 1
 tasks:
   - id: T001
@@ -17,6 +23,10 @@ tasks:
     owner: codex
     requirements: [FR-001]
     decisions: [DEC-001]
+    # Untyped ids disposed here: the acceptance scenario for FR-001, and the plan chain
+    # that flows from PD-001 (contract impact, verification obligation, migration posture,
+    # generated-view impact).
+    sourceIds: [AC-001, PD-001, PC-001, VO-001, PM-001, GV-001]
     dependencies: []
     requiredSkills: [fs-gg-sdd-plan]
     requiredEvidence: [EV001]
@@ -26,6 +36,9 @@ tasks:
     owner: codex
     requirements: [FR-002]
     decisions: [DEC-001, DEC-002]
+    # AC-002 is FR-002's acceptance scenario; PD-002 plans it; CR-003 is the accepted
+    # checklist deferral recording that the match-end condition is out of scope (DEC-002).
+    sourceIds: [AC-002, PD-002, CR-003]
     dependencies: [T001]
     requiredSkills: [fs-gg-sdd-plan]
     requiredEvidence: [EV002]
