@@ -255,12 +255,14 @@ for `FsGgAudioVersion` and assert it appears in **no** file under `src/`.
 - **A `missing-baseline` file.** Per ADR-0025 step 1, a surface with no committed baseline is a *new*
   surface, not a mutation. Feature 087 already excludes it from classification, so it contributes no
   `requiredBump`. Unchanged here.
-- **`versionAxisFile` pointing outside the workspace root** (e.g. `../other/Directory.Build.props`).
-  Rejected as `undeterminable` by a **new** containment check (FR-017). Note that no such guard exists
-  today: `Foundation.normalizeRelativePath` strips a leading `/` but does not reject `..`, so
-  `sourceRoot`/`baselineRoot` can currently escape the root the same way. This feature adds the guard
-  for the param it introduces and does **not** retrofit the two existing roots — that is a separate,
-  behavior-changing fix with its own blast radius (see *Deferred*).
+- **`versionAxisFile` pointing outside the workspace root** — either `../other/Directory.Build.props`
+  or an absolute `/etc/passwd`. Both rejected as `undeterminable` by a **new** containment check
+  (FR-017). No such guard exists today, and the existing roots escape *asymmetrically* (measured, R7):
+  a `..` segment escapes reads, enumerates **and** writes, while an absolute path escapes reads and
+  enumerates but not writes (`baselinePathFor` normalizes the write target, which strips the leading
+  `/`). This feature adds the guard for the param it introduces and does **not** retrofit the two
+  existing roots — that is a separate, behavior-changing fix with its own blast radius (see *Deferred*,
+  tracked as FS.GG.SDD#185).
 - **The classification is `breaking` solely via the `UnparseableFallback` path** (a non-empty `.fsi`
   yielding no member tokens, feature 087 FR-011). The prompt fires with `requiredBump: major`, which is
   the conservative and correct behavior — the operator is already being asked to inspect that file.
@@ -315,10 +317,15 @@ for `FsGgAudioVersion` and assert it appears in **no** file under `src/`.
   Each MUST carry a comment naming the other and stating why they differ (`cosmetic → none` vs
   `Clarifying → patch`). Neither may be re-expressed in terms of the other.
 - **FR-016**: `fsgg-sdd surface --help` MUST document the two new `--param` keys and their defaults.
-- **FR-017**: A `versionAxisFile` that escapes the workspace root — one whose normalized form is
-  absolute or contains a `..` segment — MUST resolve to `versionAxisState: undeterminable` and MUST NOT
-  be read. No such containment guard exists today for `sourceRoot`/`baselineRoot`; this requirement
-  introduces one for `versionAxisFile` only.
+- **FR-017**: A `versionAxisFile` that escapes the workspace root MUST resolve to
+  `versionAxisState: undeterminable`, and MUST NOT be read (no `ReadFile` may be planned for it). It
+  escapes when the **raw** param is absolute (`Path.IsPathRooted`) or contains a `..` segment. The test
+  MUST be applied to the raw param, **not** to `normalizeRelativePath`'s output: normalization ends in
+  `.TrimStart('/')`, so a normalize-then-test guard silently admits `/etc/passwd`. The effect carries
+  the raw string, and `Path.Combine(root, "/etc/passwd")` returns `/etc/passwd`. The handler MUST also
+  verify the resolved path is under the root before trusting the snapshot. No such containment guard
+  exists today for `sourceRoot`/`baselineRoot`; this requirement introduces one for `versionAxisFile`
+  only.
 
 ### Key Entities
 
@@ -387,8 +394,10 @@ for `FsGgAudioVersion` and assert it appears in **no** file under `src/`.
 ## Deferred
 
 - **Root-containment for `sourceRoot` / `baselineRoot`.** FR-017 guards only the param this feature
-  introduces. The two feature-086 roots accept `../` today and can read outside the workspace root
-  (`Foundation.normalizeRelativePath` trims a leading `/` and nothing else; `CommandEffects.fullPath`
-  then combines it). Retrofitting the guard is behavior-changing for any workspace relying on an
-  out-of-root baseline and belongs in its own item — file against `surface` (086) rather than smuggling
-  it in here.
+  introduces. The two feature-086 roots escape the workspace root today, asymmetrically (R7): a `..`
+  segment escapes reads, enumerates **and** `--update` writes; an absolute path escapes reads and
+  enumerates (the effect carries the raw param straight into `Path.Combine`) but not writes (which go
+  through `baselinePathFor`'s normalization). Retrofitting the guard is behavior-changing for any
+  workspace relying on an out-of-root baseline and belongs in its own item — **filed as
+  FS.GG.SDD#185**, which lifts and reuses this feature's `escapesRoot` predicate rather than inventing
+  a parallel one.

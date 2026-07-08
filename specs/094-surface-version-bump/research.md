@@ -89,15 +89,34 @@ FS.GG.SDD#177, which is actively editing `ReleaseContract` for the ship-verdict 
 change. Feature 091's key-omission rule is about the authored `evidence.yml` and does not reach the
 `CommandReport`.
 
-## R7 — There is no root-containment guard today
+## R7 — There is no root-containment guard today, and the escape is asymmetric
 
-`Foundation.normalizeRelativePath` does `Trim() → Replace('\\','/') → TrimStart('/')`. It does not
-reject a `..` segment, and `CommandEffects.fullPath projectRoot path` then combines it, so a
-`--param baselineRoot=../elsewhere` escapes the workspace root today.
+`Foundation.normalizeRelativePath` does `Trim() → Replace('\\','/') → TrimStart('/')`. It rejects
+nothing. Critically, **the effects carry the raw param, not the normalized one**: `surfaceParam`
+returns `v.Trim()`, `surfaceReadEffects` wraps that directly in `EnumerateDirectory`, and
+`CommandEffects.fullPath` does `Path.GetFullPath(Path.Combine(projectRoot, raw))` — and `Path.Combine`
+returns its second argument verbatim when that argument is rooted.
 
-**Consequence**: FR-017's guard is genuinely new code, not a documentation of existing behavior.
-Scoped to `versionAxisFile` alone; retrofitting `sourceRoot`/`baselineRoot` is behavior-changing for
-any workspace relying on the hole and is deferred to its own item (spec § Deferred).
+**Executed** (`dotnet fsi`, the three functions verbatim, `root = …/FS.GG.SDD`):
+
+| `--param baselineRoot=` | enumerate/read → resolves to | write (via `baselinePathFor`) → resolves to |
+|---|---|---|
+| `docs/api-surface` | `…/FS.GG.SDD/docs/api-surface` ✓ | `…/FS.GG.SDD/docs/api-surface/Pkg/A.fsi` ✓ |
+| `../OUTSIDE` | `/home/developer/projects/OUTSIDE` **ESCAPE** | `…/projects/OUTSIDE/Pkg/A.fsi` **ESCAPE** |
+| `/etc` | `/etc` **ESCAPE** | `…/FS.GG.SDD/etc/Pkg/A.fsi` ✓ |
+
+So a `..` segment escapes **reads, enumerates, and writes**; an absolute path escapes **reads and
+enumerates** but not writes, because `baselinePathFor` normalizes its `baselineRoot` argument and
+`TrimStart('/')` neutralizes the leading slash on that path only.
+
+**Consequence 1**: FR-017's guard is genuinely new code. It must test the **raw** param — a
+`normalizeRelativePath`-then-`IsPathRooted` predicate is *dead* for absolute paths, because the trim
+happens first. A `..`-only test fixture would pass against such a guard while `/etc/passwd` sailed
+through; hence plan.md's V19**b**.
+
+**Consequence 2**: retrofitting `sourceRoot`/`baselineRoot` is behavior-changing for any workspace
+relying on the hole and is deferred to its own item — **FS.GG.SDD#185**, sequenced `Blocked by` #171
+so it can lift `escapesRoot` rather than reinvent it.
 
 ## R8 — No XML reader exists in `src/`
 
@@ -133,11 +152,23 @@ implementation silently produces the wrong answer.
 
 ## R9 — Report version and release catalog
 
-`CommandReports/ReportAssembly.fs` pins `ReportVersion = "1.3.0"` with a running changelog comment.
-An additive field set bumps it one minor → `1.4.0`. `ReleaseContract.fs`'s `inventory` list names only
-**top-level** report blocks; feature 087 added nested fields and did not touch it, nor
-`docs/release/release-readiness.json` or its baseline twin.
+`CommandReports/ReportAssembly.fs:79` pins `ReportVersion = "1.3.0"` with a running changelog comment
+at `:76-78`. An additive field set bumps it one minor → `1.4.0`. No test asserts the literal `"1.3.0"`
+(the only other `ReportVersion` in the tree is a hand-built `"1.0"` test report in
+`RichRenderingTests.fs`), so the bump breaks nothing.
+
+`ReleaseContract.inventory` is a **function** (`ReleaseContract.fs:149`), not a list — the actual list
+is the `names` argument to `jsonInventory` inside `currentRelease()`'s `commandReport` entry
+(`ReleaseContract.fs:342-382`), where `"surface"` appears at `:377` among **top-level** block names
+only. Verified: `grep -c classification` over both `docs/release/release-readiness.json` and
+`tests/FS.GG.SDD.Artifacts.Tests/baselines/release-readiness.json` returns `0` — feature 087's nested
+field is in neither, and neither records the `reportVersion` *value*.
+
+`helpReport` (`ReportAssembly.fs:135-162`) never constructs a `SurfaceSummary`; it sets `Surface = None`
+(`:156`). Adding a field to `SurfaceSummary` requires **no** change to it. The single record literal in
+the tree that will fail to compile is `tests/FS.GG.SDD.Cli.Tests/SurfaceProjectionTests.fs:23-42` —
+already in the touch-set.
 
 **Consequence**: this feature nests inside the existing `surface` block, so the release catalog and its
-two JSON baselines stay untouched. `docs/release/schema-reference.md` still gains the prose (that is
-what 087 did).
+two JSON baselines stay untouched, and `ReportAssembly.fs`'s only edit is the version literal + comment.
+`docs/release/schema-reference.md` still gains the prose (that is what 087 did).

@@ -145,16 +145,31 @@ let versionAxisProperty request = surfaceParam "versionAxisProperty" "Version" r
 
 // FR-017. No such guard exists for sourceRoot/baselineRoot today (research R7); this
 // introduces one for the param this feature adds, and does not retrofit the other two.
-let private escapesRoot (path: string) =
-    let normalized = normalizeRelativePath path
-    normalized = ""
-    || Path.IsPathRooted normalized
-    || normalized.Split('/') |> Array.contains ".."
+//
+// ⚠ The check MUST run on the RAW param, not on `normalizeRelativePath path`. Normalization
+// ends in `.TrimStart('/')`, which strips the leading slash *before* `IsPathRooted` could see
+// it — so a normalize-then-test predicate lets `/etc/passwd` through. The effect carries the
+// raw string anyway (`surfaceParam` returns `v.Trim()`), and `CommandEffects.fullPath` calls
+// `Path.Combine(projectRoot, raw)`, which returns the second argument verbatim when rooted.
+let private escapesRoot (raw: string) =
+    let trimmed = raw.Trim().Replace('\\', '/')
+
+    System.String.IsNullOrWhiteSpace trimmed
+    || Path.IsPathRooted trimmed                            // on the RAW string
+    || (trimmed.Split('/') |> Array.contains "..")
 ```
 
-The read joins the **first** wave, so it is interpreted by the time `computeSummary` runs (the second
-wave is `readGate`'s body reads; `computeSummary` already depends on first-wave `EnumerateDirectory`
-snapshots — R1/R2):
+Belt and braces: the handler additionally asserts the *resolved* path is under the root before
+trusting a snapshot, so a future change to `normalizeRelativePath` or `fullPath` cannot silently
+reopen the hole. A predicate over strings is not a containment proof.
+
+The read joins the **first** wave, so it is interpreted by the time `computeSummary` runs. The guarantee
+is stronger than "`computeSummary` already depends on first-wave snapshots": `CommandWorkflow.fs:376`
+dispatches `| Surface, _ ->` through `allPlannedReadsInterpreted model` (`Foundation.fs:828-834`), which
+requires *every* pending `ReadFile` **and** `EnumerateDirectory` to be interpreted before
+`computeSurfaceNext` is entered at all. `readGate`/`bodyReads` gates only the second `.fsi`-body wave,
+which is appended to `PendingEffects` and folds into the same predicate on the next tick. There is no
+planned-but-uninterpreted window for the axis read (R1/R2):
 
 ```fsharp
 let surfaceReadEffects (request: CommandRequest) =
@@ -254,7 +269,8 @@ Each row is a real-filesystem fixture; no mocks (Principle VI).
 | V16 | non-default axis | `--param versionAxisProperty=FsGgAudioVersion`, `2.3.1`, breaking | `currentVersion=2.3.1`, `suggestedVersion=3.0.0` | US4-1, FR-001 |
 | V17 | non-default file | `--param versionAxisFile=Directory.Build.local.props` | resolves there | US4-2 |
 | V18 | **no provider literal** | `grep -rE 'FsGg[A-Za-z]+Version' src/` | zero matches | US4-3, FR-003, SC-003 |
-| V19 | root escape | `--param versionAxisFile=../outside.props` | `undeterminable`, **and no `ReadFile` is planned for it** | FR-017 |
+| V19a | root escape (`..`) | `--param versionAxisFile=../outside.props` | `undeterminable`, **and no `ReadFile` is planned for it** | FR-017 |
+| V19b | root escape (**absolute**) | `--param versionAxisFile=/etc/passwd` | `undeterminable`, **no `ReadFile` planned**. A `..`-only fixture passes against a normalize-then-test guard while the absolute hole stays open — this row is what catches it. | FR-017 |
 | V20 | projections | V1's fixture | `--json` object shape, five `--text` lines, `--rich` degrades to the same text | FR-014 |
 | V21 | determinism | V1, run twice | byte-identical `--json` and `--text` | FR-014, SC-006 |
 | V22 | diagnostic contract | — | id `surface.versionBumpRequired`, severity `DiagnosticWarning` | FR-008 |

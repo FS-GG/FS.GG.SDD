@@ -41,7 +41,7 @@ classification verdict, independent of the axis.
 
 | Condition on `{AxisFile}` | `AxisState` | `CurrentVersion` | `SuggestedVersion` |
 |---|---|---|---|
-| escapes root (absolute, or a `..` segment) — FR-017 | `undeterminable` | `None` | `None` |
+| escapes root — **raw** param is absolute, or contains a `..` segment (FR-017; test the *raw* string, never `normalizeRelativePath`'s output, which strips the leading `/` first) | `undeterminable` | `None` | `None` |
 | absent (`snapshot` → `None`) | `undeterminable` | `None` | `None` |
 | present, not well-formed XML (`XmlException`) | `undeterminable` | `None` | `None` |
 | present, well-formed, no `{AxisProperty}` element | `undeterminable` | `None` | `None` |
