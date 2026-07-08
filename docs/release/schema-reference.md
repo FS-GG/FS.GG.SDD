@@ -227,6 +227,19 @@ in the authoritative `catalog[].inventory` of
   `removedOrChangedMembers[]`, and `unparseableFallback`. It is advisory (ADR-0025): it changes no
   exit code and adds no diagnostic. This additive-optional field moved `reportVersion` to `1.3.0`
   (a semantic minor); `schemaVersion` stays `1`.
+  Feature 094 adds the additive `surface.versionBump` object (always present): `axisFile`,
+  `axisProperty`, `axisState` (`resolved`/`undeterminable`/`unparseable`), `currentVersion`,
+  `requiredBump` (`major`/`minor`/`none`), and `suggestedVersion`. It states the coherent-set version
+  obligation the classification implies (ADR-0025 reconcile step 3a): `requiredBump` mirrors
+  `classification.recommendedBump`, so it lands in **every** axis state, while `currentVersion` and
+  `suggestedVersion` are explicit `null` unless `axisState` is `resolved` — the report never asserts a
+  version it did not read. The axis is workspace-declared via `--param versionAxisFile` (default
+  `Directory.Build.props`) and `--param versionAxisProperty` (default `Version`); it is **read, never
+  written** (ADR-0009 detect-and-remediate), and a path escaping the workspace root plans no read at
+  all. Unlike `classification`, this field does add a diagnostic — the advisory
+  `surface.versionBumpRequired` **warning**, emitted under both `--check` and `--update` exactly when
+  `requiredBump` is `major` or `minor` — but still changes no exit code. This additive-optional field
+  moved `reportVersion` to `1.4.0` (a semantic minor); `schemaVersion` stays `1`.
   The additive `lifecycleStatus` field is present on **every** command's report — feature 084;
   it is the standardized lifecycle-status footer's authoritative fact, carrying `workId`,
   `isLifecycleStage`, `currentOrdinal`, `totalStages`, `outcome`, `nextCommand`, and `stages[]`

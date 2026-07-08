@@ -1,6 +1,9 @@
 namespace FS.GG.SDD.Commands.Internal
 
 open System
+open System.Xml
+open System.Xml.Linq
+open Fsgg
 open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.Internal.Foundation
@@ -62,6 +65,13 @@ module internal HandlersSurface =
             |> Array.filter (fun token -> token <> "")
             |> Set.ofArray
 
+        // Feature 094 / FR-015. This is deliberately NOT `ReleaseContract.bumpRule`, and the two must
+        // not be unified: `bumpRule` maps the *release-contract* change classes
+        // (Breaking→major, Additive→minor, Clarifying→**patch**), whereas this maps the
+        // *surface-mutation* verdicts (breaking→major, additive→minor, cosmetic/none→**none**).
+        // A cosmetic `.fsi` reformat implies no release at all; a Clarifying contract change implies
+        // a patch. Collapsing them would silently turn every cosmetic drift into a patch bump — a
+        // behavior change, not a refactor (spec 094 AMB-005, research R5).
         let private bumpFor classification =
             match classification with
             | "breaking" -> "major"
@@ -115,6 +125,69 @@ module internal HandlersSurface =
             { Verdict = verdict
               RecommendedBump = bumpFor verdict
               Entries = sorted }
+
+    /// Feature 094 (FS-GG/.github ADR-0025 reconcile step 3a): the coherent-set version obligation a
+    /// classified mutation implies. Pure over the interpreted axis snapshot — no disk access here.
+    module private VersionAxis =
+
+        /// Read one MSBuild property out of the axis file's *text*. `XElement.Value` concatenates
+        /// text nodes and ignores comments, so `<Version>0.8.0<!-- pinned --></Version>` resolves
+        /// cleanly; the `.Trim()` is load-bearing for the usual `<Version>\n  0.8.0\n</Version>`
+        /// (research R4). Matched on `LocalName` because some repos' `Directory.Build.props` still
+        /// declares the legacy MSBuild 2003 namespace (research R8).
+        ///
+        /// MSBuild is NOT evaluated (FR-002): no imports, no `$(…)` expansion, no conditions, no
+        /// property functions. A malformed file is `None` — `undeterminable`, never an exception.
+        let readAxisText (property: string) (text: string) : string option =
+            try
+                XDocument.Parse(text).Descendants()
+                |> Seq.tryFind (fun element -> element.Name.LocalName = property)
+                |> Option.map (fun element -> element.Value.Trim())
+            with :? XmlException ->
+                None
+
+        /// Pure, total. `bumpFor` supplies the bump; see its comment for why this is not
+        /// `ReleaseContract.bumpRule`.
+        let applyBump (version: Version.Version) bump : Version.Version =
+            match bump with
+            | "major" ->
+                { Major = version.Major + 1
+                  Minor = 0
+                  Patch = 0 }
+            | "minor" ->
+                { version with
+                    Minor = version.Minor + 1
+                    Patch = 0 }
+            | _ -> version
+
+        let private render (version: Version.Version) =
+            $"{version.Major}.{version.Minor}.{version.Patch}"
+
+        /// Fold the axis snapshot and the run verdict into the prompt. `RequiredBump` is a total
+        /// function of the classification alone, so it lands in *every* axis state (FR-006, I1) —
+        /// an unresolvable axis still tells the operator what the mutation costs.
+        let prompt (axisFile: string) (axisProperty: string) (axisSnapshot: string option) (classification: SurfaceClassification) =
+            let requiredBump = classification.RecommendedBump
+
+            // `resolved` requires both a readable property and a parseable triple. The two `None`
+            // branches collapse to `undeterminable`; a present-but-bad value is `unparseable`, and
+            // its text is deliberately NOT echoed (it is not a version).
+            let axisState, currentVersion, suggestedVersion =
+                match axisSnapshot |> Option.bind (readAxisText axisProperty) with
+                | None -> "undeterminable", None, None
+                | Some text ->
+                    match Version.tryParse text with
+                    | None -> "unparseable", None, None
+                    | Some version ->
+                        let suggested = applyBump version requiredBump
+                        "resolved", Some(render version), Some(render suggested)
+
+            { AxisFile = axisFile
+              AxisProperty = axisProperty
+              AxisState = axisState
+              CurrentVersion = currentVersion
+              RequiredBump = requiredBump
+              SuggestedVersion = suggestedVersion }
 
     // A candidate authored signature: ends with `.fsi`, and not inside a build-output tree
     // (`obj`/`bin`), which can hold compiler-generated signatures that are not the public surface.
@@ -253,6 +326,25 @@ module internal HandlersSurface =
                 | _ -> None)
             |> SurfaceClassify.rollup
 
+        // Feature 094: the version-bump prompt. Read from the first-wave axis snapshot, so it is
+        // computed from the tree as it was *before* any `--update` write above (R1) — the run that
+        // erases the drift still reports what the drift cost. `escapesRoot` may have planned no read
+        // at all, in which case the snapshot is `None` ⇒ `undeterminable`, exactly as for an absent
+        // file. Belt and braces: a snapshot is only trusted when the raw param stayed inside the
+        // root, so a future change to `normalizeRelativePath`/`fullPath` cannot silently reopen the
+        // hole (FR-017) — a predicate over strings is not a containment proof.
+        let axisFile = versionAxisFile model.Request
+        let axisProperty = versionAxisProperty model.Request
+
+        let axisSnapshot =
+            if escapesRoot axisFile then
+                None
+            else
+                snapshot axisFile model |> Option.map (fun snap -> snap.Text)
+
+        let versionBump =
+            VersionAxis.prompt axisFile axisProperty axisSnapshot classification
+
         let summary =
             { SourceRoot = normalizeRelativePath sourceRoot
               BaselineRoot = normalizeRelativePath baselineRoot
@@ -263,7 +355,8 @@ module internal HandlersSurface =
               OrphanBaselinePaths = orphans
               UpdatedBaselinePaths = updated
               IsCoherent = List.isEmpty missing && List.isEmpty drifted
-              Classification = classification }
+              Classification = classification
+              VersionBump = versionBump }
 
         summary, writes
 
@@ -301,8 +394,32 @@ module internal HandlersSurface =
                     else
                         [ surfaceOrphanBaseline summary.OrphanBaselinePaths ]
 
+                // Feature 094 / ADR-0025 step 3a. Emitted under BOTH modes — deliberately NOT gated
+                // on `not model.Request.SurfaceUpdate` the way `driftDiagnostics` is (FR-011, US2).
+                // `--update` is the run that *erases* the drift; a prompt only under `--check` would
+                // never be seen by the normal PR workflow. Emitted iff the mutation actually implies
+                // a bump (I4) — a cosmetic or absent drift is inert and stays silent (FR-008).
+                let versionDiagnostics =
+                    let bump = summary.VersionBump
+
+                    if bump.RequiredBump = "major" || bump.RequiredBump = "minor" then
+                        [ surfaceVersionBumpRequired
+                              summary.Classification.Verdict
+                              bump.AxisFile
+                              bump.AxisProperty
+                              bump.AxisState
+                              bump.CurrentVersion
+                              bump.RequiredBump
+                              bump.SuggestedVersion ]
+                    else
+                        []
+
                 { model with
                     Surface = Some summary
-                    Diagnostics = model.Diagnostics @ driftDiagnostics @ orphanDiagnostics
+                    Diagnostics =
+                        model.Diagnostics
+                        @ driftDiagnostics
+                        @ orphanDiagnostics
+                        @ versionDiagnostics
                     PendingEffects = model.PendingEffects @ writes },
                 writes

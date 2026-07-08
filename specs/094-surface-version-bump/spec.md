@@ -302,13 +302,16 @@ for `FsGgAudioVersion` and assert it appears in **no** file under `src/`.
   verdict, the resolved axis (`{versionAxisFile}:{versionAxisProperty}`), the required bump, and —
   when resolved — the current and suggested versions. It MUST be worded as a prompt the operator
   confirms, explicitly allowing that the bump may already be applied in the change under review.
-- **FR-010**: When `versionAxisState` is not `resolved`, the diagnostic MUST additionally name which
-  of the two `--param` overrides would resolve the axis.
+- **FR-010**: When `versionAxisState` is not `resolved`, the diagnostic MUST additionally name the
+  `--param` overrides that would resolve the axis. It names **both** (`versionAxisFile` and
+  `versionAxisProperty`): an absent file and an absent property both resolve to `undeterminable`, so the
+  diagnostic cannot tell them apart and offers both rather than guessing.
 - **FR-011**: `surface` MUST emit the prompt under **both** `--check` and `--update`, derived from the
   drift as classified at the start of the run (before any baseline write is planned).
-- **FR-012**: `surface` MUST make **zero** writes to the `versionAxisFile` under either mode. No effect
-  whose target is the version axis may be planned. (ADR-0009: detect-and-remediate, never silent
-  auto-update.)
+- **FR-012**: `surface` MUST make **zero** writes to the `versionAxisFile` under either mode. No
+  **mutating** effect (`WriteFile`/`CreateDirectory`/`SetExecutable`) whose target is the version axis
+  may be planned. The axis is *read* — that `ReadFile` is the whole mechanism — but never written.
+  (ADR-0009: detect-and-remediate, never silent auto-update.)
 - **FR-013**: The prompt MUST NOT change `surface`'s exit code, in any state, relative to feature 086 +
   087 behavior for the same tree.
 - **FR-014**: The new fields MUST appear in all three `CommandReport` projections — `--json` (the

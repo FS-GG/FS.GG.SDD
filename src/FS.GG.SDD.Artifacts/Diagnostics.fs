@@ -490,6 +490,35 @@ module Diagnostics =
             "Remove the stale baseline file(s) under the baseline root if the source was intentionally deleted."
             (paths |> List.sort)
 
+    // Feature 094 (FS-GG/.github ADR-0025 reconcile step 3a): a classified shipped-surface mutation
+    // implies a coherent-set version bump. `DiagnosticWarning`, never blocking (FR-008/FR-013): SDD
+    // reads the *declared* axis, not the previously *published* version, so it cannot prove the bump
+    // was not already applied in this change. The message is therefore a prompt the operator
+    // confirms, not an accusation (FR-009). When the axis is unresolved, the remediation names both
+    // `--param` overrides that would resolve it (FR-010) — the diagnostic cannot tell a missing file
+    // from a missing property, so it offers both rather than guessing.
+    let surfaceVersionBumpRequired
+        (verdict: string)
+        (axisFile: string)
+        (axisProperty: string)
+        (axisState: string)
+        (currentVersion: string option)
+        (requiredBump: string)
+        (suggestedVersion: string option)
+        =
+        let axis = $"`{axisFile}:{axisProperty}`"
+
+        let message, remediation =
+            match currentVersion, suggestedVersion with
+            | Some current, Some suggested ->
+                $"Shipped-surface mutation classified `{verdict}`. The coherent-set version axis {axis} reads `{current}`; a {requiredBump} bump to `{suggested}` is required — unless it is already applied in this change.",
+                $"Set `{axisProperty}` to `{suggested}` in `{axisFile}` if the bump is not already applied in this change. `fsgg-sdd` does not write the version axis (ADR-0009: detect-and-remediate)."
+            | _ ->
+                $"Shipped-surface mutation classified `{verdict}`. A {requiredBump} bump of the coherent-set version is required, but the version axis {axis} could not be resolved (`{axisState}`).",
+                $"Point `fsgg-sdd surface` at the axis with `--param versionAxisFile=<file>` and `--param versionAxisProperty=<property>`, then apply the {requiredBump} bump yourself. `fsgg-sdd` does not write the version axis (ADR-0009: detect-and-remediate)."
+
+        create "surface.versionBumpRequired" DiagnosticWarning None None message remediation []
+
     let locationKey location =
         match location with
         | Some loc -> defaultArg loc.Line 0, defaultArg loc.Column 0

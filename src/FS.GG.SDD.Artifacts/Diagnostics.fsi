@@ -123,5 +123,22 @@ module Diagnostics =
     /// (advisory, exit 0) — never auto-removed in this version.
     val surfaceOrphanBaseline: paths: string list -> Diagnostic
 
+    /// Feature 094 (FS-GG/.github ADR-0025 reconcile step 3a): a classified shipped-surface mutation
+    /// implies a coherent-set version bump on the workspace's version axis. `DiagnosticWarning` —
+    /// advisory, never changes the exit code (FR-008/FR-013), because SDD cannot see the previously
+    /// *published* version and so cannot prove the bump was not already applied in this change.
+    /// Emitted iff `requiredBump` is `major` or `minor`. When the axis is unresolved the message
+    /// names the `--param` override that would resolve it (FR-010). Detect-and-remediate: the axis
+    /// is never written (ADR-0009).
+    val surfaceVersionBumpRequired:
+        verdict: string ->
+        axisFile: string ->
+        axisProperty: string ->
+        axisState: string ->
+        currentVersion: string option ->
+        requiredBump: string ->
+        suggestedVersion: string option ->
+            Diagnostic
+
     val sort: diagnostics: Diagnostic list -> Diagnostic list
     val hasBlocking: diagnostics: Diagnostic list -> bool

@@ -1,9 +1,12 @@
 namespace FS.GG.SDD.Commands.Tests
 
 open System.IO
+open FS.GG.SDD.Commands.CommandEffects
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Commands.CommandWorkflow
+open FS.GG.SDD.Commands.Internal
 open Xunit
 
 /// `fsgg-sdd surface` command tests (feature 086). Real-filesystem fixtures: authored `.fsi`
@@ -286,3 +289,455 @@ module SurfaceCommandTests =
         Assert.Equal("breaking", entry.Classification)
         Assert.True entry.UnparseableFallback
         Assert.Equal(1, exitCodeForReport report)
+
+    // ---- Feature 094: the two load-bearing research claims, characterized ---------------
+    //
+    // These two tests assert properties of the *pre-094* handler. They are what makes the 094
+    // design valid: R1 lets `--update` prompt with a real verdict (US2) without restructuring the
+    // handler, and R2 lets an absent axis file degrade to `undeterminable` without an `Exists`
+    // probe (US3). If either regresses, the version-bump prompt is built on sand.
+
+    /// R1: `--update` computes the classification from the snapshots read *before* the baseline
+    /// writes are applied, so the run that erases the drift still reports what the drift was.
+    [<Fact>]
+    let ``R1 — update classifies from the pre-write snapshots, not the reconciled tree`` () =
+        let root = coherentFixture ()
+        writeRelative root "src/Foo/Bar.fsi" (signature2 "int" true) // additive drift
+        let report = surfaceReport true root
+        let summary = summaryOf report
+
+        // The write happened...
+        Assert.Equal<string list>([ "docs/api-surface/Foo/Bar.fsi" ], summary.UpdatedBaselinePaths)
+        Assert.Equal(signature2 "int" true, readRelative root "docs/api-surface/Foo/Bar.fsi")
+
+        // ...and yet the verdict is the pre-write one. `none` here would mean 094's US2 is impossible.
+        Assert.Equal("additive", summary.Classification.Verdict)
+        Assert.Equal("minor", summary.Classification.RecommendedBump)
+        Assert.Equal(0, exitCodeForReport report)
+
+    /// R2: a `ReadFile` of a path that does not exist still *interprets* — it yields a result whose
+    /// `Snapshot` is `None`. Absence is therefore observable from the pure handler without probing
+    /// the filesystem, which is what makes the axis read a plain first-wave effect.
+    [<Fact>]
+    let ``R2 — a ReadFile of a nonexistent path interprets to a None snapshot`` () =
+        let root = tempDirectory ()
+        let missing = "Directory.Build.props" // never written
+        let model, _ = init (request Surface root)
+        let effect = ReadFile missing
+
+        let interpreted =
+            interpretAll root false [ effect ]
+            |> List.fold (fun state result -> update (EffectInterpreted result) state |> fst) model
+
+        Assert.True(Foundation.hasInterpreted (Foundation.effectKey effect) interpreted)
+        Assert.True((Foundation.snapshot missing interpreted).IsNone)
+
+    // ---- Feature 094: the coherent-set version-bump prompt ------------------------------
+    //
+    // `surface` classifies a shipped-surface mutation (087) and now tells the operator what that
+    // classification costs on the workspace's *declared* version axis. Advisory only: it never
+    // changes an exit code and never writes the axis (ADR-0009 detect-and-remediate).
+
+    /// A real `Directory.Build.props`-shaped document with one property.
+    let private propsWith (property: string) (value: string) =
+        $"<Project>\n  <PropertyGroup>\n    <{property}>{value}</{property}>\n  </PropertyGroup>\n</Project>\n"
+
+    let private writeAxis root property value =
+        writeRelative root "Directory.Build.props" (propsWith property value)
+
+    let private bumpOf (report: CommandReport) = (summaryOf report).VersionBump
+
+    let private versionWarnings (report: CommandReport) =
+        report.Diagnostics
+        |> List.filter (fun d -> d.Id = "surface.versionBumpRequired")
+
+    /// Every effect the workflow plans across the whole run — the first wave plus everything
+    /// produced by interpreting it. FR-012/SC-005 are asserted here rather than on file mtimes.
+    let private allPlannedEffects request =
+        let model, firstWave = init request
+
+        let rec loop state pending accumulated =
+            match pending with
+            | [] -> accumulated
+            | _ ->
+                let results = interpretAll request.ProjectRoot request.DryRun pending
+
+                let nextState, produced =
+                    results
+                    |> List.fold
+                        (fun (currentState, acc) result ->
+                            let updated, producedEffects = update (EffectInterpreted result) currentState
+                            updated, acc @ producedEffects)
+                        (state, [])
+
+                loop nextState produced (accumulated @ produced)
+
+        loop model firstWave firstWave
+
+    /// Source gains a member the baseline lacks ⇒ additive ⇒ minor.
+    let private additiveFixture () =
+        let root = coherentFixture ()
+        writeRelative root "src/Foo/Bar.fsi" (signature2 "int" true)
+        root
+
+    /// Baseline has a member the source dropped ⇒ breaking ⇒ major.
+    let private breakingFixture () =
+        let root = tempDirectory ()
+        writeRelative root "docs/api-surface/Foo/Bar.fsi" (signature2 "int" true)
+        writeRelative root "src/Foo/Bar.fsi" (signature2 "int" false)
+        root
+
+    /// Byte-level drift with an unchanged member set ⇒ cosmetic ⇒ no bump.
+    let private cosmeticFixture () =
+        let root = coherentFixture ()
+        writeRelative root "src/Foo/Bar.fsi" "namespace Foo\nmodule Bar =\n    // a note\n    val baz:  int -> int\n"
+        root
+
+    // ---- US1: the operator is told what the mutation costs (V1–V4) ---------------------
+
+    /// V1: additive drift on a `0.8.0` axis ⇒ `minor`, suggesting `0.9.0`, with exactly one warning.
+    [<Fact>]
+    let ``V1 — additive drift prompts a minor bump off the resolved axis`` () =
+        let root = additiveFixture ()
+        writeAxis root "Version" "0.8.0"
+        let report = surfaceReport false root
+        let bump = bumpOf report
+
+        Assert.Equal("Directory.Build.props", bump.AxisFile)
+        Assert.Equal("Version", bump.AxisProperty)
+        Assert.Equal("resolved", bump.AxisState)
+        Assert.Equal(Some "0.8.0", bump.CurrentVersion)
+        Assert.Equal("minor", bump.RequiredBump)
+        Assert.Equal(Some "0.9.0", bump.SuggestedVersion)
+
+        let warning = Assert.Single(versionWarnings report)
+        Assert.Equal(FS.GG.SDD.Artifacts.Diagnostics.DiagnosticWarning, warning.Severity)
+        Assert.False warning.IsToolDefect
+        // FR-009: the verdict, the axis, the bump and both versions are named, as a prompt.
+        Assert.Contains("additive", warning.Message)
+        Assert.Contains("Directory.Build.props:Version", warning.Message)
+        Assert.Contains("0.8.0", warning.Message)
+        Assert.Contains("0.9.0", warning.Message)
+        Assert.Contains("already applied", warning.Message)
+
+    /// V2: breaking drift ⇒ `major`, `0.8.0` → `1.0.0` (minor and patch reset).
+    [<Fact>]
+    let ``V2 — breaking drift prompts a major bump and resets minor and patch`` () =
+        let root = breakingFixture ()
+        writeAxis root "Version" "0.8.0"
+        let bump = bumpOf (surfaceReport false root)
+
+        Assert.Equal("resolved", bump.AxisState)
+        Assert.Equal("major", bump.RequiredBump)
+        Assert.Equal(Some "1.0.0", bump.SuggestedVersion)
+
+    /// V3 (I3, I4): a cosmetic reformat implies no release — the bump is the identity and the
+    /// prompt stays silent, even though the tree is byte-drifted and still exits 1.
+    [<Fact>]
+    let ``V3 — cosmetic drift implies no bump and emits no warning`` () =
+        let root = cosmeticFixture ()
+        writeAxis root "Version" "0.8.0"
+        let report = surfaceReport false root
+        let bump = bumpOf report
+
+        Assert.Equal("cosmetic", (summaryOf report).Classification.Verdict)
+        Assert.Equal("none", bump.RequiredBump)
+        Assert.Equal(bump.CurrentVersion, bump.SuggestedVersion) // I3: the identity bump
+        Assert.Empty(versionWarnings report)
+        Assert.Equal(1, exitCodeForReport report) // byte drift still blocks, as in 086
+
+    /// V4: a coherent tree is inert — `none`, no warning, exit 0.
+    [<Fact>]
+    let ``V4 — a coherent tree implies no bump and emits no warning`` () =
+        let root = coherentFixture ()
+        writeAxis root "Version" "0.8.0"
+        let report = surfaceReport false root
+        let bump = bumpOf report
+
+        Assert.Equal("resolved", bump.AxisState)
+        Assert.Equal("none", bump.RequiredBump)
+        Assert.Equal(Some "0.8.0", bump.SuggestedVersion)
+        Assert.Empty(versionWarnings report)
+        Assert.Equal(0, exitCodeForReport report)
+
+    /// V5 (FR-013, SC-004): the prompt changes no exit code, in any tree state, in either mode.
+    /// The expected codes are feature 086 + 087's, unchanged.
+    [<Fact>]
+    let ``V5 — the prompt never changes an exit code in either mode`` () =
+        let cases =
+            [ "additive", additiveFixture, 1
+              "breaking", breakingFixture, 1
+              "cosmetic", cosmeticFixture, 1
+              "coherent", coherentFixture, 0 ]
+
+        for name, fixture, expectedCheckExit in cases do
+            let checkRoot = fixture ()
+            writeAxis checkRoot "Version" "0.8.0"
+            let checkExit = exitCodeForReport (surfaceReport false checkRoot)
+            Assert.Equal((name, expectedCheckExit), (name, checkExit))
+
+            // `--update` reconciles the drift, so it exits 0 in every state.
+            let updateRoot = fixture ()
+            writeAxis updateRoot "Version" "0.8.0"
+            let updateExit = exitCodeForReport (surfaceReport true updateRoot)
+            Assert.Equal((name, 0), (name, updateExit))
+
+    // ---- US2: `--update` does not silently consume the governed event (V6–V8) -----------
+
+    /// V6 (FR-011, SC-002): the run that *erases* the drift is the run that reports its cost.
+    [<Fact>]
+    let ``V6 — update rewrites the baselines and still prompts the major bump`` () =
+        let root = breakingFixture ()
+        writeAxis root "Version" "0.8.0"
+        let report = surfaceReport true root
+        let bump = bumpOf report
+
+        Assert.Equal<string list>([ "docs/api-surface/Foo/Bar.fsi" ], (summaryOf report).UpdatedBaselinePaths)
+        Assert.Equal(signature2 "int" false, readRelative root "docs/api-surface/Foo/Bar.fsi")
+        Assert.Equal("major", bump.RequiredBump)
+        Assert.Equal(Some "1.0.0", bump.SuggestedVersion)
+        Assert.Single(versionWarnings report) |> ignore
+        Assert.Equal(0, exitCodeForReport report)
+
+    /// V7: a second `--update` over the now-reconciled tree is inert — no drift, no prompt.
+    [<Fact>]
+    let ``V7 — a second update is idempotent and emits no warning`` () =
+        let root = breakingFixture ()
+        writeAxis root "Version" "0.8.0"
+        surfaceReport true root |> ignore
+        let second = surfaceReport true root
+
+        Assert.Equal("none", (summaryOf second).Classification.Verdict)
+        Assert.Equal("none", (bumpOf second).RequiredBump)
+        Assert.Empty(versionWarnings second)
+        Assert.Equal(0, exitCodeForReport second)
+
+    /// V8 (FR-012, SC-005, I5): `surface` never *writes* the version axis, in either mode. Asserted
+    /// on the planned effect set — a structural argument is not a regression test, and file mtimes
+    /// would not catch a planned-but-unexecuted write. The axis is read (that is the whole point);
+    /// what must never exist is a mutating effect that targets it.
+    [<Fact>]
+    let ``V8 — no planned effect ever writes the version axis`` () =
+        for update in [ false; true ] do
+            let root = breakingFixture ()
+            writeAxis root "Version" "0.8.0"
+
+            let effects =
+                allPlannedEffects
+                    { request Surface root with
+                        SurfaceUpdate = update }
+
+            let mutating =
+                effects
+                |> List.filter (function
+                    | WriteFile(path, _, _) -> Foundation.normalizeRelativePath path = "Directory.Build.props"
+                    | CreateDirectory path
+                    | SetExecutable path -> Foundation.normalizeRelativePath path = "Directory.Build.props"
+                    | _ -> false)
+
+            Assert.Empty mutating
+
+            // The only effect that touches the axis at all is the read the prompt is derived from.
+            let axisEffects =
+                effects
+                |> List.filter (fun effect -> (Foundation.effectKey effect).EndsWith "Directory.Build.props")
+
+            Assert.All(axisEffects, fun effect -> Assert.True((match effect with
+                                                               | ReadFile _ -> true
+                                                               | _ -> false)))
+
+            // And the tree still holds the authored axis text, byte for byte.
+            Assert.Equal(propsWith "Version" "0.8.0", readRelative root "Directory.Build.props")
+
+    // ---- US3: an unresolvable axis degrades honestly (V9–V15, V19) ----------------------
+
+    /// V9 (SC-007, FR-010): no axis file at all. The required bump still lands — it depends on the
+    /// classification, not the axis — and the remediation names the override that would resolve it.
+    [<Fact>]
+    let ``V9 — an absent axis file is undeterminable and still reports the required bump`` () =
+        let root = breakingFixture () // no Directory.Build.props written
+        let report = surfaceReport false root
+        let bump = bumpOf report
+
+        Assert.Equal("undeterminable", bump.AxisState)
+        Assert.Equal(None, bump.CurrentVersion)
+        Assert.Equal(None, bump.SuggestedVersion)
+        Assert.Equal("major", bump.RequiredBump) // never dead-ends
+
+        let warning = Assert.Single(versionWarnings report)
+        Assert.Contains("--param versionAxisFile", warning.Correction)
+        Assert.Equal(1, exitCodeForReport report) // unchanged: the drift error, not the warning
+
+    /// V10 (FR-010): the file exists but declares no such property.
+    [<Fact>]
+    let ``V10 — a missing property element is undeterminable and names the property override`` () =
+        let root = breakingFixture ()
+        writeAxis root "SomethingElse" "0.8.0"
+        let report = surfaceReport false root
+        let bump = bumpOf report
+
+        Assert.Equal("undeterminable", bump.AxisState)
+        Assert.Equal(None, bump.CurrentVersion)
+        Assert.Equal("major", bump.RequiredBump)
+
+        let warning = Assert.Single(versionWarnings report)
+        Assert.Contains("--param versionAxisProperty", warning.Correction)
+
+    /// V11: a present-but-nonsense value is `unparseable`, and the bad text is NOT echoed — the
+    /// report must never present a non-version as a version.
+    [<Fact>]
+    let ``V11 — an unparseable axis value is reported without echoing the bad text`` () =
+        let root = breakingFixture ()
+        writeAxis root "Version" "not-a-version"
+        let report = surfaceReport false root
+        let bump = bumpOf report
+
+        Assert.Equal("unparseable", bump.AxisState)
+        Assert.Equal(None, bump.CurrentVersion)
+        Assert.Equal(None, bump.SuggestedVersion)
+        Assert.Equal("major", bump.RequiredBump)
+
+        let warning = Assert.Single(versionWarnings report)
+        Assert.DoesNotContain("not-a-version", warning.Message)
+        Assert.DoesNotContain("not-a-version", warning.Correction)
+
+    /// V12: malformed XML degrades to `undeterminable`; no `XmlException` escapes the handler.
+    [<Fact>]
+    let ``V12 — malformed props XML degrades to undeterminable without throwing`` () =
+        let root = breakingFixture ()
+        writeRelative root "Directory.Build.props" "<Project><PropertyGroup><Version>0.8.0</Project>"
+        let report = surfaceReport false root
+
+        Assert.Equal("undeterminable", (bumpOf report).AxisState)
+        Assert.Equal("major", (bumpOf report).RequiredBump)
+        Assert.Equal(1, exitCodeForReport report)
+
+    /// V13: a prerelease triple is not the `major.minor.patch` grammar ⇒ `unparseable`.
+    [<Fact>]
+    let ``V13 — a prerelease version is unparseable`` () =
+        let root = breakingFixture ()
+        writeAxis root "Version" "1.2.3-beta"
+        Assert.Equal("unparseable", (bumpOf (surfaceReport false root)).AxisState)
+
+    /// V14: the `.Trim()` is load-bearing for the usual pretty-printed element, and `XElement.Value`
+    /// ignores comment nodes.
+    [<Fact>]
+    let ``V14 — surrounding whitespace and comments do not defeat the axis read`` () =
+        let root = breakingFixture ()
+
+        writeRelative
+            root
+            "Directory.Build.props"
+            "<Project>\n  <PropertyGroup>\n    <Version>\n      0.8.0 <!-- pinned -->\n    </Version>\n  </PropertyGroup>\n</Project>\n"
+
+        let bump = bumpOf (surfaceReport false root)
+        Assert.Equal("resolved", bump.AxisState)
+        Assert.Equal(Some "0.8.0", bump.CurrentVersion)
+        Assert.Equal(Some "1.0.0", bump.SuggestedVersion)
+
+    /// V15: two declarations of the axis property ⇒ the first in document order wins (deterministic).
+    [<Fact>]
+    let ``V15 — a duplicated axis property resolves to the first in document order`` () =
+        let root = breakingFixture ()
+
+        writeRelative
+            root
+            "Directory.Build.props"
+            "<Project>\n  <PropertyGroup>\n    <Version>0.8.0</Version>\n  </PropertyGroup>\n  <PropertyGroup>\n    <Version>9.9.9</Version>\n  </PropertyGroup>\n</Project>\n"
+
+        Assert.Equal(Some "0.8.0", (bumpOf (surfaceReport false root)).CurrentVersion)
+
+    // ---- US4: a consumer declares a non-default axis (V16–V18) --------------------------
+
+    /// V16: a product points `surface` at its own property. Generic SDD learns no axis name.
+    [<Fact>]
+    let ``V16 — a non-default axis property is honored and echoed`` () =
+        let root = breakingFixture ()
+        writeAxis root "FsGgAudioVersion" "2.3.1"
+
+        let report =
+            { request Surface root with
+                Parameters = [ "versionAxisProperty", "FsGgAudioVersion" ] }
+            |> runRequest
+
+        let bump = bumpOf report
+        Assert.Equal("FsGgAudioVersion", bump.AxisProperty)
+        Assert.Equal("resolved", bump.AxisState)
+        Assert.Equal(Some "2.3.1", bump.CurrentVersion)
+        Assert.Equal(Some "3.0.0", bump.SuggestedVersion) // breaking ⇒ major
+
+    /// V17: a non-default axis *file*, resolved relative to the workspace root.
+    [<Fact>]
+    let ``V17 — a non-default axis file is honored and echoed`` () =
+        let root = breakingFixture ()
+        writeRelative root "build/Versions.props" (propsWith "Version" "1.4.2")
+
+        let report =
+            { request Surface root with
+                Parameters = [ "versionAxisFile", "build/Versions.props" ] }
+            |> runRequest
+
+        let bump = bumpOf report
+        Assert.Equal("build/Versions.props", bump.AxisFile)
+        Assert.Equal("resolved", bump.AxisState)
+        Assert.Equal(Some "1.4.2", bump.CurrentVersion)
+        Assert.Equal(Some "2.0.0", bump.SuggestedVersion)
+
+    /// V18 (FR-003, SC-003): the constitutional guard. No product's version-axis name may appear in
+    /// generic SDD source. This is a source-tree assertion, not a behavior test — it is what makes
+    /// the feature safe to generalize. Fixture *test* files legitimately name `FsGgAudioVersion`
+    /// (see V16), so the assertion is scoped to `src/` only.
+    [<Fact>]
+    let ``V18 — no product version-axis literal appears anywhere in src`` () =
+        let sourceRoot = Path.Combine(repoRoot, "src")
+
+        let offenders =
+            Directory.GetFiles(sourceRoot, "*.fs*", SearchOption.AllDirectories)
+            |> Array.filter (fun path ->
+                let normalized = path.Replace('\\', '/')
+                not (normalized.Contains "/obj/") && not (normalized.Contains "/bin/"))
+            |> Array.filter (fun path ->
+                System.Text.RegularExpressions.Regex.IsMatch(File.ReadAllText path, @"FsGg[A-Za-z]+Version"))
+
+        Assert.Empty offenders
+
+    /// V19a (FR-017): a relative path that climbs out of the workspace resolves to `undeterminable`
+    /// and — the load-bearing half — plans **no read at all**. Nothing outside the root is opened.
+    [<Fact>]
+    let ``V19a — a parent-escaping axis path is undeterminable and plans no read`` () =
+        let root = breakingFixture ()
+
+        let escaping =
+            { request Surface root with
+                Parameters = [ "versionAxisFile", "../outside.props" ] }
+
+        Assert.Equal("undeterminable", (bumpOf (runRequest escaping)).AxisState)
+
+        Assert.DoesNotContain(
+            allPlannedEffects escaping,
+            fun effect ->
+                match effect with
+                | ReadFile path -> path.Contains "outside.props"
+                | _ -> false
+        )
+
+    /// V19b (FR-017): NOT redundant with V19a. `normalizeRelativePath` ends in `.TrimStart('/')`, so
+    /// a guard that normalizes *before* testing `Path.IsPathRooted` passes V19a and still happily
+    /// opens `/etc/passwd`. The guard must run on the raw param; this row is what proves it does.
+    [<Fact>]
+    let ``V19b — an absolute axis path is undeterminable and plans no read`` () =
+        let root = breakingFixture ()
+
+        let escaping =
+            { request Surface root with
+                Parameters = [ "versionAxisFile", "/etc/passwd" ] }
+
+        Assert.Equal("undeterminable", (bumpOf (runRequest escaping)).AxisState)
+
+        Assert.DoesNotContain(
+            allPlannedEffects escaping,
+            fun effect ->
+                match effect with
+                | ReadFile path -> path.Contains "passwd"
+                | _ -> false
+        )
