@@ -79,12 +79,14 @@ Re-run byte-idempotence (issue #161) MUST hold. A quoted `"null"` MUST survive a
   quoted-`"null"` retention assertion that the current test only covers negatively. Real filesystem
   fixtures (`initializedAnalyzedProject`), no mocks. ✅
 - **VII. Agent And Human Workflows Share One Contract**: Agents and humans author and read the same
-  `evidence.yml`. The `fs-gg-sdd-evidence` skill does not document the five omitted fields, so its
-  body — and its pinned `sha256` in `FS-GG/.github` `registry/skills.yml` — is unchanged. No skill↔
-  gate drift. ✅
-- **VIII. Observability And Safe Failure**: No diagnostic is added or removed. FR-009 pins the one
-  hazard: the "synthetic evidence lacks a disclosure" diagnostic derives from the parsed model, not
-  from the presence of a `syntheticDisclosure: null` line, so omitting the line cannot silence it. ✅
+  `evidence.yml`. The `fs-gg-sdd-evidence` skill *does* document four of the five fields (as the
+  deferral requirements) and `RequiredFieldContractTests` enforces that it keeps doing so — but this
+  feature edits no skill body, and the four stay gate-required and still written when populated. The
+  pinned `sha256` in `FS-GG/.github` `registry/skills.yml` is unchanged. No skill↔gate drift. ✅
+- **VIII. Observability And Safe Failure**: No diagnostic is added or removed. Two gates read these
+  fields and both read the *parsed model*, never key presence: `evidence.undisclosedSyntheticEvidence`
+  (FR-009) and `evidence.missingDeferralRationale` (FR-010). Both block **before** the write, so an
+  under-specified declaration never reaches the writer. Omitting a line cannot silence either. ✅
 
 **Result: PASS.** No violations; Complexity Tracking not required.
 
@@ -117,9 +119,23 @@ tests/FS.GG.SDD.Artifacts.Tests/
 └── EvidenceArtifactTests.fs     # verbose-vs-slim parse equivalence; quoted-"null" boundary
 
 tests/FS.GG.SDD.Commands.Tests/
-└── EvidenceCommandTests.fs      # emitted-text assertions; populated-field retention;
-                                 # re-run byte-idempotence (adapted #161 test)
+├── EvidenceCommandTests.fs      # emitted-text assertions; populated-field retention;
+│                                # re-run byte-idempotence (adapted #161 test)
+└── goldens/readiness/           # regenerated: digest cascade, see below
+    ├── verify.json
+    ├── ship.json
+    └── summary.md
 ```
+
+**Digest cascade (discovered during implementation).** `evidence.yml`'s bytes are hashed into
+`readiness/<id>/work-model.json`'s source digests, whose own digest is in turn embedded in
+`verify.json`, `ship.json`, and the `summary.md` projection. Slimming the file therefore moves five
+`sha256` values in the committed readiness goldens. The regeneration
+(`FSGG_UPDATE_BASELINE=1 dotnet test --filter ReadinessViewGoldenTests`) changes **only** digest
+values — zero non-digest lines — which is the proof that no readiness *semantics* moved. The
+feature's `Paths:` touch-set was widened to include `tests/FS.GG.SDD.Commands.Tests/goldens/**` and
+`scripts/fsgg-coord overlap` re-checked against the live FS.GG.SDD#163 (still DISJOINT) before those
+files were touched, per ADR-0021.
 
 **Structure Decision**: Single project. The writer lives in the Commands layer's internal
 `HandlersEvidence` module; the model and reader live in the Artifacts layer and are not touched.
@@ -135,8 +151,12 @@ src/FS.GG.SDD.Artifacts/LifecycleArtifacts/Evidence.fsi
 src/FS.GG.SDD.Commands/CommandWorkflow/HandlersEvidence.fs
 tests/FS.GG.SDD.Artifacts.Tests/EvidenceArtifactTests.fs
 tests/FS.GG.SDD.Commands.Tests/EvidenceCommandTests.fs
+tests/FS.GG.SDD.Commands.Tests/goldens/**      # widened mid-flight (digest cascade)
 specs/091-evidence-obligation-shape/**
 ```
+
+In the event, `Evidence.fs` and `Evidence.fsi` were **not** touched at all — the reader needed no
+change, as R1 predicted. They stay in the declared set because the feature reasons about them.
 
 ## Design Detail
 
@@ -235,10 +255,30 @@ byte-identical (FR-007). Files written by an older CLI, and files hand-authored 
 | FR-006 | Quoted `"null"` parses to `Some "null"` and re-renders quoted | `EvidenceArtifactTests` + `EvidenceCommandTests` |
 | FR-007 | Two `evidence` runs produce byte-identical output (adapted #161 test) | `EvidenceCommandTests` |
 | FR-008 | `evidence` report/diagnostics/exit code unchanged | existing `EvidenceCommandTests` suite |
-| FR-009 | Synthetic-without-disclosure diagnostic still fires with the key omitted | `EvidenceCommandTests` |
+| FR-009 | Synthetic-without-disclosure diagnostic still fires with the key omitted | **pre-existing** `evidence blocks undisclosed synthetic evidence without mutation` |
+| FR-010 | A populated deferral round-trips all four gate-required fields; an under-specified one blocks with no write | `evidence writes every gate-required field of a deferral declaration`, `evidence blocks an under-specified deferral before the writer can omit its fields` |
 
-Each new test is written to fail against the current writer and pass after the change (constitution
-principle VI). No mocks: `initializedAnalyzedProject` builds a real on-disk workspace.
+**Red-before-green, stated precisely.** Constitution VI requires behaviour-changing code to carry
+tests that fail before and pass after. That holds for the tests covering FR-001/002/003/006/007
+(they fail against the `origin/main` writer). Three tests are deliberately *not* red-first, and
+saying otherwise would be false:
+
+- **T002/T003** are *characterization* tests of the unchanged reader. They must pass **before** the
+  change — that is their entire purpose. If they were red, the absent≡null claim would be wrong and
+  the feature would need a schema bump.
+- **The FR-004 blank-line test** passes on `origin/main` too (the old writer emits `<key>: null`, a
+  non-blank line). It is not a regression test for the shipped implementation; it is a guard against
+  the plausible-but-wrong `| None -> ""` variant that research.md R4 rejects. Kept for that reason,
+  labelled honestly here rather than counted as red-first coverage.
+- **FR-009 needs no new test.** The pre-existing `evidence blocks undisclosed synthetic evidence
+  without mutation` already feeds an input carrying no `syntheticDisclosure` key at all, so it
+  already proves the diagnostic derives from the parsed model. Writing a duplicate would add a green
+  test that was never red and prove nothing new.
+
+No mocks: `initializedAnalyzedProject` builds a real on-disk workspace. All seven `quickstart.md`
+scenarios were additionally walked against the real `fsgg-sdd` binary, and the emitted `evidence.yml`
+compared byte-for-byte against `origin/main`'s writer on identical input (170 → 140 lines; identical
+after stripping the 30 `null` lines).
 
 ## Agent-facing behavior
 

@@ -330,6 +330,13 @@ evidence:
         // Issue #161: re-running evidence parsed a bare `null` optional scalar back as the string
         // "null" and re-serialized it quoted, producing spurious diff on unchanged content. The
         // round-trip must be idempotent: serialize(parse(x)) == x.
+        //
+        // Feature 091 changed the shape this test observes: the writer no longer emits the
+        // always-null optional scalars *at all*, so `rationale: null` is now absent rather than
+        // present. The idempotence core below (`Assert.Equal(first, second)`) is the invariant that
+        // matters and is unchanged. The positive "a quoted \"null\" survives as a quoted string"
+        // guard that the old `Assert.Contains("rationale: null", …)` only implied is now carried
+        // explicitly by `evidence preserves a quoted "null" rationale as a string value` below.
         let root = initializedAnalyzedProject ()
         TestSupport.runEvidence root workId title |> ignore
         let first = TestSupport.readRelative root evidencePath
@@ -337,11 +344,234 @@ evidence:
         let second = TestSupport.readRelative root evidencePath
 
         Assert.Equal(first, second)
-        Assert.Contains("rationale: null", second)
+        Assert.DoesNotContain("rationale:", second)
         Assert.DoesNotContain("rationale: \"null\"", second)
         Assert.DoesNotContain("owner: \"null\"", second)
         Assert.DoesNotContain("scope: \"null\"", second)
         Assert.DoesNotContain("laterLifecycleVisibility: \"null\"", second)
+
+    // ---- Feature 091: slim the evidence declaration shape ----------------------------------
+    // The writer omits the five always-null optional fields instead of emitting `<key>: null`.
+    // FR-009 (omission must not silence the synthetic-disclosure diagnostic) is already covered by
+    // `evidence blocks undisclosed synthetic evidence without mutation` above: its input carries no
+    // `syntheticDisclosure` key at all, proving the diagnostic derives from the parsed model rather
+    // than from a `null` line in the text.
+
+    let private slimmedOptionalKeys =
+        [ "syntheticDisclosure:"
+          "rationale:"
+          "owner:"
+          "scope:"
+          "laterLifecycleVisibility:" ]
+
+    /// `String.Replace` has no occurrence-count overload; splice at the first hit only, so exactly
+    /// one declaration is mutated and the others stay in the slim shape.
+    let private replaceFirst (needle: string) (replacement: string) (text: string) =
+        match text.IndexOf(needle, System.StringComparison.Ordinal) with
+        | -1 -> failwith $"Fixture drift: expected to find '{needle}' in the emitted evidence.yml."
+        | index -> text.Substring(0, index) + replacement + text.Substring(index + needle.Length)
+
+    /// Author `injected` YAML directly after the first `synthetic:` line, then re-run `evidence` so
+    /// the writer re-renders what the reader parsed.
+    let private authorAfterSynthetic root (syntheticLine: string) (injectedLines: string list) =
+        TestSupport.runEvidence root workId title |> ignore
+
+        let replacement =
+            (sprintf "    %s\n" syntheticLine) + (injectedLines |> List.map (sprintf "%s\n") |> String.concat "")
+
+        TestSupport.readRelative root evidencePath
+        |> replaceFirst "    synthetic: false\n" replacement
+        |> TestSupport.writeRelative root evidencePath
+
+        let report = TestSupport.runEvidence root workId title
+        report, TestSupport.readRelative root evidencePath
+
+    [<Fact>]
+    let ``evidence omits the always-null optional declaration fields`` () =
+        // FR-001, FR-002, SC-001.
+        let root = initializedAnalyzedProject ()
+        let report = TestSupport.runEvidence root workId title
+        let evidence = TestSupport.readRelative root evidencePath
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+
+        for key in slimmedOptionalKeys do
+            Assert.DoesNotContain(key, evidence)
+
+        // The decision-bearing fields are untouched.
+        Assert.Contains("    kind: ", evidence)
+        Assert.Contains("    result: ", evidence)
+        Assert.Contains("    synthetic: ", evidence)
+        Assert.Contains("    notes: ", evidence)
+
+        // `notes:` follows `synthetic:` directly once every optional is omitted.
+        Assert.Contains("    synthetic: false\n    notes: ", evidence)
+
+        // SC-002, made CI-enforceable rather than resting on a one-off manual line count: every
+        // declaration in a freshly scaffolded file has zero lines between `synthetic:` and `notes:`,
+        // so the file is exactly 5 × N lines shorter than the pre-091 rendering of the same input.
+        let declarationCount = evidence.Split("\n  - id: ").Length - 1
+        let adjacentCount = evidence.Split("    synthetic: false\n    notes: ").Length - 1
+        Assert.True(declarationCount > 0, "Fixture drift: no declarations were scaffolded.")
+        Assert.Equal(declarationCount, adjacentCount)
+
+    [<Fact>]
+    let ``evidence emits no blank line or trailing whitespace when optional fields are omitted`` () =
+        // FR-004. Guards the naive `| None -> ""` fix, which would leave five blank lines per
+        // declaration: no `null` keys, but malformed-looking YAML.
+        let root = initializedAnalyzedProject ()
+        TestSupport.runEvidence root workId title |> ignore
+        let evidence = TestSupport.readRelative root evidencePath
+
+        let lines = evidence.Split('\n')
+
+        let offenders =
+            lines
+            |> Array.indexed
+            // The document's trailing newline yields one final empty element; ignore only that.
+            |> Array.filter (fun (index, _) -> index < lines.Length - 1)
+            |> Array.filter (fun (_, line) -> line = "" || line.TrimEnd() <> line)
+            |> Array.map (fun (index, line) -> $"line {index + 1}: '{line}'")
+
+        Assert.Empty(offenders)
+
+        match parseEvidenceArtifact { Path = evidencePath; Text = evidence } with
+        | Ok _ -> ()
+        | Error diagnostics -> failwith $"Slimmed evidence artifact did not parse: {diagnostics}."
+
+    [<Fact>]
+    let ``evidence preserves a populated syntheticDisclosure across a re-render`` () =
+        // FR-003. Values are never omitted — only `None` is. Injected unquoted; the writer
+        // re-renders quoted, which proves the round-trip actually ran.
+        let root = initializedAnalyzedProject ()
+
+        let injected =
+            [ "    syntheticDisclosure:"
+              "      standsInFor: a real headless render"
+              "      reason: no GPU on the CI runner" ]
+
+        let report, evidence = authorAfterSynthetic root "synthetic: true" injected
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains("    syntheticDisclosure:\n", evidence)
+        Assert.Contains("      standsInFor: \"a real headless render\"", evidence)
+        Assert.Contains("      reason: \"no GPU on the CI runner\"", evidence)
+
+    [<Fact>]
+    let ``evidence preserves populated optional scalars across a re-render`` () =
+        // FR-003 for the four scalar optionals.
+        let root = initializedAnalyzedProject ()
+
+        let injected =
+            [ "    rationale: accepted deferral see DEC-004"
+              "    owner: platform"
+              "    scope: workspace"
+              "    laterLifecycleVisibility: verify" ]
+
+        let report, evidence = authorAfterSynthetic root "synthetic: false" injected
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains("    rationale: \"accepted deferral see DEC-004\"", evidence)
+        Assert.Contains("    owner: \"platform\"", evidence)
+        Assert.Contains("    scope: \"workspace\"", evidence)
+        Assert.Contains("    laterLifecycleVisibility: \"verify\"", evidence)
+
+    [<Fact>]
+    let ``evidence preserves a quoted "null" rationale as a string value`` () =
+        // FR-006, the feature-161 boundary stated positively. A *quoted* "null" is a real string:
+        // it parses to Some "null" and must be re-emitted quoted — never omitted, never unquoted.
+        //
+        // `rationale: "null"` alone would be self-satisfying: the assertion would hold even if the
+        // writer never re-rendered the file, because those are the bytes we injected. The unquoted
+        // `owner` is the witness — it can only come back quoted if the round-trip actually ran.
+        let root = initializedAnalyzedProject ()
+
+        let report, evidence =
+            authorAfterSynthetic root "synthetic: false" [ "    rationale: \"null\""; "    owner: platform" ]
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains("    owner: \"platform\"", evidence) // witness: the writer re-rendered
+        Assert.Contains("    rationale: \"null\"", evidence)
+
+    [<Fact>]
+    let ``evidence writes every gate-required field of a deferral declaration`` () =
+        // Feature 091 removes the four `rationale`/`owner`/`scope`/`laterLifecycleVisibility` hint
+        // lines from the scaffold — and those four are exactly what `evidence.missingDeferralRationale`
+        // (HandlersEvidence, RequiredKeys.requiredDeferralKeys) requires of a `kind: deferral`
+        // declaration. This is the one shape where omission could plausibly bite, so pin it:
+        // a fully-populated deferral round-trips with all four fields intact, and the writer never
+        // drops one. (A deferral *missing* any of the four blocks before the write, so the writer
+        // can never emit an under-specified deferral — see the sibling test below.)
+        let root = initializedAnalyzedProject ()
+
+        let injected =
+            [ "    rationale: no GPU on the CI runner"
+              "    owner: platform"
+              "    scope: the headless render check"
+              "    laterLifecycleVisibility: verify" ]
+
+        TestSupport.runEvidence root workId title |> ignore
+
+        TestSupport.readRelative root evidencePath
+        |> replaceFirst "    kind: verification\n" "    kind: deferral\n"
+        |> replaceFirst "    result: pass\n" "    result: deferred\n"
+        |> replaceFirst "    synthetic: false\n" ("    synthetic: false\n" + (injected |> List.map (sprintf "%s\n") |> String.concat ""))
+        |> TestSupport.writeRelative root evidencePath
+
+        let report = TestSupport.runEvidence root workId title
+        let evidence = TestSupport.readRelative root evidencePath
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.DoesNotContain(report.Diagnostics, fun d -> d.Id = "evidence.missingDeferralRationale")
+        Assert.Contains("    rationale: \"no GPU on the CI runner\"", evidence)
+        Assert.Contains("    owner: \"platform\"", evidence)
+        Assert.Contains("    scope: \"the headless render check\"", evidence)
+        Assert.Contains("    laterLifecycleVisibility: \"verify\"", evidence)
+
+    [<Fact>]
+    let ``evidence blocks an under-specified deferral before the writer can omit its fields`` () =
+        // The safety property behind the test above: `evidence.missingDeferralRationale` is a
+        // *blocking* diagnostic derived from the parsed model (Option.isNone on each of the four),
+        // so a deferral lacking them never reaches `renderEvidenceDeclaration` and no write occurs.
+        // Omitting the always-null keys therefore cannot produce a silently under-specified deferral.
+        let root = initializedAnalyzedProject ()
+        TestSupport.runEvidence root workId title |> ignore
+
+        TestSupport.readRelative root evidencePath
+        |> replaceFirst "    kind: verification\n" "    kind: deferral\n"
+        |> replaceFirst "    result: pass\n" "    result: deferred\n"
+        |> TestSupport.writeRelative root evidencePath
+
+        let before = TestSupport.readRelative root evidencePath
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun d -> d.Id = "evidence.missingDeferralRationale")
+        Assert.Empty(report.ChangedArtifacts)
+        Assert.Equal(before, TestSupport.readRelative root evidencePath)
+
+    [<Fact>]
+    let ``evidence normalizes an authored bare-null declaration to the slim shape, then settles`` () =
+        // FR-005 + FR-007 + research.md R5: an evidence.yml written by an older CLI (explicit
+        // `null` lines) parses, is rewritten once in the slim form, and is byte-stable thereafter.
+        let root = initializedAnalyzedProject ()
+
+        let injected =
+            [ "    syntheticDisclosure: null"
+              "    rationale: null"
+              "    owner: null"
+              "    scope: null"
+              "    laterLifecycleVisibility: null" ]
+
+        let report, normalized = authorAfterSynthetic root "synthetic: false" injected
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+
+        for key in slimmedOptionalKeys do
+            Assert.DoesNotContain(key, normalized)
+
+        TestSupport.runEvidence root workId title |> ignore
+        Assert.Equal(normalized, TestSupport.readRelative root evidencePath)
 
     // Feature 077 / US2: `evidence --from-tests <path>` pre-maps each newly scaffolded obligation
     // to a verification-kind source pointing at the proving test file. Additive and inert when

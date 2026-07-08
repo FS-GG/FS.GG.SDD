@@ -282,10 +282,16 @@ module Evidence =
                                           Result = tryScalarAt [ "result" ] mapping |> Option.defaultValue "pending"
                                           Synthetic = boolAt [ "synthetic" ] mapping false
                                           SyntheticDisclosure = parseSyntheticDisclosure mapping
-                                          // Optional scalars are written as bare `null` when
-                                          // absent (HandlersEvidence.renderOptionalScalar); read a
-                                          // plain-null token back as `None` so re-serialize stays
-                                          // idempotent instead of rewriting `null` → `"null"`.
+                                          // An absent optional scalar and a bare `null` are the same
+                                          // absence. Since feature 091 the writer omits the key
+                                          // (HandlersEvidence.renderOptionalScalar); older files and
+                                          // hand-authored ones still carry `null`, so a plain-null
+                                          // token must read back as `None` too — otherwise a re-run
+                                          // rewrites `null` → the quoted string `"null"` (#161) and
+                                          // the round-trip stops being idempotent. A *quoted* "null"
+                                          // is a real string and survives (isPlainNullScalar checks
+                                          // ScalarStyle.Plain). This equivalence is what makes 091's
+                                          // omission a serialization change, not a schema change.
                                           Rationale = tryScalarNonNullAt [ "rationale" ] mapping
                                           Owner = tryScalarNonNullAt [ "owner" ] mapping
                                           Scope = tryScalarNonNullAt [ "scope" ] mapping

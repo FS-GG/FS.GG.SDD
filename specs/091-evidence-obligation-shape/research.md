@@ -57,10 +57,16 @@ There is no `contracts.yml`/`compatibility.yml`, and therefore no registered con
 `evidence.yml` obligation shape to coordinate against.
 
 Checked the `fs-gg-sdd-evidence` process skill (pinned in `registry/skills.yml` at
-`sha256: b79c867a…`): its body carries the satisfaction rule (`result: pass` **and**
-`synthetic: false`) and the `kind`/`result` vocabularies. It does not mention `syntheticDisclosure`,
-`rationale`, `owner`, `scope`, or `laterLifecycleVisibility`. Its body is unchanged by this feature,
-so the pinned digest stays valid and no ADR-0017 skill-manifest reconcile is triggered.
+`sha256: b79c867a…`). **Correction to an earlier draft of this document, which claimed the skill does
+not mention these fields — it does.** `.claude/skills/fs-gg-sdd-evidence/SKILL.md` documents
+`rationale`, `owner`, `scope`, and `laterLifecycleVisibility` as the four fields a `kind: deferral`
+declaration must carry, and `tests/FS.GG.SDD.Commands.Tests/RequiredFieldContractTests.fs`
+*enforces* that the skill lists every key in `RequiredKeys.requiredDeferralKeys`, backtick-wrapped,
+in registry order. Do not delete those bullets on the strength of this feature.
+
+The conclusion is nonetheless unchanged, for a different reason: this feature edits **no** skill
+body. The four fields are still documented, still gate-required, and still rendered whenever they
+hold a value. The pinned `sha256` stays valid and no ADR-0017 skill-manifest reconcile is triggered.
 
 Governance's effective-evidence freshness reads parsed values, not raw keys. Parsed values are
 unchanged.
@@ -89,6 +95,41 @@ may write. `[]` also costs 4 characters on a line that would exist anyway, versu
 **Alternative considered**: also drop empty lists, per the issue's "~20-line block" framing.
 Rejected on the above; and the measured win is already 5 of the ~20 lines, with the ref buckets
 carrying real authoring affordance.
+
+### R3a — The affordance argument cuts *against* four of the five fields. Why omit them anyway?
+
+The R3 rationale above ("an empty list tells the author the bucket exists") applies with more force,
+not less, to `rationale`/`owner`/`scope`/`laterLifecycleVisibility`. Those four are not decorative:
+`RequiredKeys.requiredDeferralKeys` lists them, and `HandlersEvidence` blocks with
+`evidence.missingDeferralRationale` when a `kind: deferral` (or `result: deferred`) declaration
+leaves any of them `None`. Calling them "fields that say nothing" is wrong for a deferral.
+
+This was surfaced by an adversarial review of this feature's own artifacts, after the writer was
+implemented. It is a real objection and the honest resolution is a bound, not a dismissal:
+
+1. **The gate is value-based, not presence-based.** It reads `Option.isNone declaration.Rationale`
+   on the parsed model. A `null` line and an absent key are the same `None`. Omission cannot weaken
+   the gate.
+2. **The gate blocks *before* the write.** A deferral missing any of the four resolves to
+   `CommandOutcome.Blocked` with `changedArtifacts: []` — verified on the real CLI. So
+   `renderEvidenceDeclaration` is never reached for an under-specified deferral, and the writer can
+   never emit one. Both directions are now pinned by tests
+   (`evidence writes every gate-required field of a deferral declaration` and
+   `evidence blocks an under-specified deferral before the writer can omit its fields`).
+3. **The residual cost is real but small and signposted.** A *non-deferral* scaffolded declaration no
+   longer displays the four key names as hints for the day an author converts it to a deferral. When
+   that day comes, the blocking diagnostic names all four fields explicitly and
+   `RemediationPointers` routes the author to `docs/examples/lifecycle-artifacts/evidence.yml`, whose
+   `EV003` is a fully populated deferral. The author is told what to add, not left guessing.
+4. **The empty ref buckets have no such backstop.** Nothing blocks on an unfilled `taskRefs: []`, so
+   the *only* thing telling an author the bucket exists is the line itself. That asymmetry — a
+   blocking diagnostic with a correction, versus nothing at all — is what distinguishes the five
+   omitted fields from the ten retained ones. The distinction is not "always null" (the issue's
+   framing); it is **"absence is diagnosed"** versus **"absence is silent."**
+
+**Alternative considered**: keep the four deferral keys and omit only `syntheticDisclosure`. Rejected
+— it saves 1 line of 5, retains 80% of the boilerplate the issue is about, and buys an affordance the
+diagnostic already provides. Recorded here so a future reader sees the trade was weighed, not missed.
 
 ## R4 — How should omission be implemented without emitting blank lines?
 

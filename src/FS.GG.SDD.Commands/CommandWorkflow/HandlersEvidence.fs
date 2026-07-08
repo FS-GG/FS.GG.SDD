@@ -713,18 +713,21 @@ module internal HandlersEvidence =
 
             $"    sourceRefs:\n{lines}"
 
+    // Feature 091: an absent optional field is written as *no line at all*, not as `<key>: null`.
+    // Safe because the reader collapses "key absent" and "key present, plain null" to the same
+    // `None` (Internal.tryChild / Internal.isPlainNullScalar), so this is a serialization change,
+    // not a schema change — no schemaVersion bump, and files still carrying explicit `null`s parse
+    // unchanged. Returning `string option` (rather than `""`) is what keeps the omitted case from
+    // leaving a blank line behind; see `renderEvidenceDeclaration`.
     let renderOptionalScalar name value =
-        match value with
-        | Some value -> $"    {name}: {yamlString value}"
-        | None -> $"    {name}: null"
+        value |> Option.map (fun value -> $"    {name}: {yamlString value}")
 
     let renderSyntheticDisclosure (disclosure: SyntheticDisclosure option) =
-        match disclosure with
-        | Some disclosure ->
+        disclosure
+        |> Option.map (fun disclosure ->
             $"""    syntheticDisclosure:
       standsInFor: {yamlString disclosure.StandsInFor}
-      reason: {yamlString disclosure.Reason}"""
-        | None -> "    syntheticDisclosure: null"
+      reason: {yamlString disclosure.Reason}""")
 
     let renderEvidenceDeclaration (declaration: EvidenceDeclaration) =
         let taskRefs = declaration.TaskRefs |> List.map _.Value
@@ -734,6 +737,21 @@ module internal HandlersEvidence =
         let checklistRefs = declaration.ChecklistResultRefs |> List.map _.Value
         let planRefs = declaration.PlanDecisionRefs |> List.map _.Value
         let artifactRefs = declaration.ArtifactRefs |> List.map _.Path
+
+        // The five optional fields, in their established emission order. Present ones are spliced
+        // in as a block between `synthetic:` and `notes:`; when every one is absent the block
+        // contributes zero characters, so `notes:` follows `synthetic:` directly and no blank line
+        // is left behind. The leading newline belongs to the block, not to the template.
+        let optionalFields =
+            [ renderSyntheticDisclosure declaration.SyntheticDisclosure
+              renderOptionalScalar "rationale" declaration.Rationale
+              renderOptionalScalar "owner" declaration.Owner
+              renderOptionalScalar "scope" declaration.Scope
+              renderOptionalScalar "laterLifecycleVisibility" declaration.LaterLifecycleVisibility ]
+            |> List.choose id
+            |> function
+                | [] -> ""
+                | lines -> "\n" + String.concat "\n" lines
 
         $"""  - id: {declaration.Id.Value}
     kind: {evidenceKindSourceValue declaration.Kind}
@@ -750,12 +768,7 @@ module internal HandlersEvidence =
     artifacts: {artifactRefs |> yamlInlineList}
 {renderEvidenceSourceRefs declaration.SourceRefs}
     result: {normalizedEvidenceResult declaration.Result}
-    synthetic: {if declaration.Synthetic then "true" else "false"}
-{renderSyntheticDisclosure declaration.SyntheticDisclosure}
-{renderOptionalScalar "rationale" declaration.Rationale}
-{renderOptionalScalar "owner" declaration.Owner}
-{renderOptionalScalar "scope" declaration.Scope}
-{renderOptionalScalar "laterLifecycleVisibility" declaration.LaterLifecycleVisibility}
+    synthetic: {if declaration.Synthetic then "true" else "false"}{optionalFields}
     notes: {declaration.Notes |> yamlInlineList}"""
 
     let evidenceArtifactText workId (artifact: EvidenceArtifact) (summary: EvidenceSummary) =

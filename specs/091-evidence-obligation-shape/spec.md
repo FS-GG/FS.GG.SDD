@@ -75,9 +75,20 @@ value and must survive verbatim.
   (ADR-0021 intra-repo parallel work). It is deferred to a follow-up after #163 merges. This
   feature is the schema half only.
 - Q: Does the `fs-gg-sdd-evidence` process skill need updating (and hence a `registry/skills.yml`
-  sha reconcile)? → A: **No.** The skill documents the `kind`/`result`/`synthetic` satisfaction
-  rule and vocabularies; it does not document the five omitted optional fields. Its body is
-  unchanged, so its pinned `sha256` in the org registry stays valid.
+  sha reconcile)? → A: **No** — but not for the reason first recorded. The skill *does* document
+  `rationale`, `owner`, `scope`, and `laterLifecycleVisibility` (as the four fields a `kind: deferral`
+  declaration must carry), and `RequiredFieldContractTests` enforces that it keeps doing so. This
+  feature edits no skill body: those four fields remain documented, remain gate-required, and are
+  still written whenever they hold a value. The pinned `sha256` therefore stays valid.
+- Q: Four of the five omitted fields are gate-required for deferrals. Doesn't removing their `null`
+  lines take away the author's cue? → A: **Partly, and it is safe.** The
+  `evidence.missingDeferralRationale` gate reads the *parsed* value (`Option.isNone`), not the key's
+  presence, and it **blocks before the write** — so an under-specified deferral never reaches the
+  writer and can never be emitted. What is lost is only the hint on a *non-deferral* declaration. When
+  an author converts one to a deferral, the blocking diagnostic names all four fields and points at
+  the shipped `docs/examples/lifecycle-artifacts/evidence.yml`. See research.md R3a for the full
+  trade, including why the empty ref buckets (`taskRefs: []`, …) are retained while these are not:
+  absence of a ref bucket is *silent*, absence of a deferral field is *diagnosed*.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -199,6 +210,10 @@ then re-render twice and assert byte-equality.
 - **FR-009**: Omitting the `syntheticDisclosure` key MUST NOT suppress any diagnostic that depends
   on a synthetic declaration lacking a disclosure; such diagnostics derive from the parsed model,
   not from the key's presence in text.
+- **FR-010**: Omitting `rationale`/`owner`/`scope`/`laterLifecycleVisibility` MUST NOT weaken the
+  `evidence.missingDeferralRationale` gate. A `kind: deferral` (or `result: deferred`) declaration
+  lacking any of the four MUST still block, with no write; a deferral carrying all four MUST have all
+  four re-emitted verbatim.
 
 ### Key Entities
 
@@ -217,12 +232,21 @@ then re-render twice and assert byte-equality.
   occurrences of `syntheticDisclosure`, `rationale`, `owner`, `scope`, and
   `laterLifecycleVisibility`.
 - **SC-002**: Each declaration block shrinks by exactly **5 lines** when all five optional fields
-  are `None`; a 16-obligation work item's `evidence.yml` shrinks by **80 lines**.
+  are `None`; a 16-obligation work item's `evidence.yml` shrinks by **80 lines**. Enforced in CI as
+  the equivalent structural invariant — every scaffolded declaration has **zero lines** between
+  `synthetic:` and `notes:` — rather than as a brittle absolute line count.
 - **SC-003**: `parseEvidenceArtifact` returns the same `EvidenceDeclaration list` for the verbose
   and slim renderings of the same content — asserted by a direct equality test, not by inspection.
 - **SC-004**: Re-running `fsgg-sdd evidence` on a slim file produces byte-identical output
   (existing #161 idempotence test still passes, adapted to the slim expectation).
 - **SC-005**: No `.fsi` signature, no `schemaVersion` value, and no `CommandReport` field changes.
+- **SC-006**: The committed readiness goldens (`verify.json`, `ship.json`, `summary.md`) change in
+  **digest values only** — zero non-digest lines — proving `evidence.yml`'s new bytes cascade through
+  the work-model digest without moving any readiness semantics.
+
+**Measured (real CLI, 6-obligation work item):** `170 → 140` lines, exactly `5 × 6 = 30` removed.
+Stripping those 30 `null` lines from the `origin/main` rendering yields a file byte-identical to the
+new one. Re-running `evidence` changes no byte.
 
 ## Assumptions
 
