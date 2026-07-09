@@ -69,7 +69,7 @@ module GitignoreNegationTests =
 
     // ---------- FR-014: the seeded consumer fragment ----------
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``the seeded gitignore stages exactly the ship verdict under readiness`` () =
         let root = TestSupport.tempDirectory ()
         initRepo root
@@ -78,7 +78,7 @@ module GitignoreNegationTests =
 
         Assert.Equal<Set<string>>(Set.ofList [ "readiness/003-demo/ship-verdict.json" ], stagedUnder root "readiness/")
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``the pre-092 directory rule makes the negation inert - staging nothing`` () =
         // The regression that proves `readiness/*/*` is load-bearing. With ADR-0018's directory
         // rule, the *identical* negation stages nothing: git never descends into `readiness/003-demo/`.
@@ -89,7 +89,7 @@ module GitignoreNegationTests =
 
         Assert.Empty(stagedUnder root "readiness/")
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``nested agent-command views stay ignored under the contents rule`` () =
         let root = TestSupport.tempDirectory ()
         initRepo root
@@ -113,7 +113,7 @@ module GitignoreNegationTests =
             "the ship verdict must NOT be ignored — the negation has to fire"
         )
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``a per-file durable proof pin still fires under the contents rule`` () =
         // ADR-0018's `!readiness/<id>/<proof>` escape hatch must survive the change: excluding
         // directory *contents* keeps the parent traversable, so per-file negations still work.
@@ -135,7 +135,7 @@ module GitignoreNegationTests =
 
     // ---------- FR-015: this repository's own dogfood rule ----------
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``this repo's gitignore stages exactly the ship verdict under specs readiness`` () =
         // SDD dogfoods through Spec Kit, so its readiness views land at
         // `specs/<feature>/readiness/<work-id>/`. Same trap, different prefix (ADR-0026).
@@ -150,7 +150,7 @@ module GitignoreNegationTests =
             stagedUnder root "specs/092-x/readiness/"
         )
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``this repo's root readiness pinned proofs stay committed`` () =
         // The root `readiness/<id>/` holds hand-pinned durable proofs. It is matched by NO rule
         // and must stay that way — `specs/*/readiness/*/*` must not leak up to it.

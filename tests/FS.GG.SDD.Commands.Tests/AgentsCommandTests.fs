@@ -462,7 +462,7 @@ module AgentsCommandTests =
         [ "agents"; "--root"; root; "--work"; workId ] @ extraArgs
         |> TestSupport.runCliRaw 120000
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``agents CLI smoke generates guidance and exits zero`` () =
         let root = initializedVerifiedProject ()
         let exitCode, stdout, _ = runAgentsCli root []
@@ -470,7 +470,7 @@ module AgentsCommandTests =
         Assert.Contains("agentGuidance", stdout)
         Assert.True(TestSupport.existsRelative root $"{claudeRoot}/guidance.json")
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``agents CLI text smoke surfaces summary facts`` () =
         let root = initializedVerifiedProject ()
         let exitCode, stdout, _ = runAgentsCli root [ "--text" ]
@@ -479,7 +479,7 @@ module AgentsCommandTests =
 
     // FS.GG.SDD#197: the in-process report and the serialized CLI contract are different surfaces.
     // On main this exited 1 and wrote nothing after an ordinary authored edit.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``agents CLI smoke regenerates stale guidance and exits zero`` () =
         let root = initializedVerifiedProject ()
         runAgentsCli root [] |> ignore

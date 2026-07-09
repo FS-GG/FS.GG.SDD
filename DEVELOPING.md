@@ -39,24 +39,29 @@ Tier-1 change updates it). The `WarningsAsErrors` ratchet
 ### Testing tiers
 
 A whole-solution `dotnet test` takes minutes, which is too slow for a casual inner loop.
-The cost is **concentrated, not diffuse**: `Commands.Tests` is ~74% of the wall clock,
-because ~12 of its files spawn real `dotnet`/CLI subprocesses (scaffold, init, the
-CLI-raw smokes). The pure layer most edits touch runs in about a second.
+The cost is **concentrated, not diffuse**: it lives in the ~140 tests that spawn a real
+`dotnet`/CLI/git subprocess (scaffold's real `dotnet new`, the CLI-raw smokes, the apphost
+help/validate/lint smokes, the git-backed gitignore checks). The other ~1,130 tests —
+parsers, codec, work model, serializers, command handlers, report projections — run
+in-process in seconds. But ~770 of those cheap tests live *inside* the `Commands.Tests` and
+`Cli.Tests` projects, next to their subprocess-spawning siblings, so project granularity
+alone cannot reach them cheaply. They are separated by a trait: the subprocess-spawning
+tests carry `[<Trait("tier", "slow")>]`, and the cheap tiers exclude them with
+`--filter tier!=slow` ([#209](https://github.com/FS-GG/FS.GG.SDD/issues/209)).
 
 [`scripts/test.sh`](scripts/test.sh) runs a **tier** matched to what you changed:
 
-| Tier | Command | Adds | Tests | Wall | Run it when |
+| Tier | Command | Runs | Tests | Wall | Run it when |
 |---|---|---|---|---|---|
-| **fast** | `scripts/test.sh fast` | Contracts, Artifacts | 354 | ~3s | every save — parser, work model, codec, serialization work |
-| **component** | `scripts/test.sh component` | + Validation, Cli | 510 | ~30s | before pushing a CLI, report-projection, or validation change |
-| **full** | `scripts/test.sh` | + Commands, Acceptance | 1,288 | ~2m20s | before push, and whenever you touched `Commands` |
+| **fast** | `scripts/test.sh fast` | pure + `Commands`/`Cli` in-process (`tier!=slow`) | 1,132 | ~14s | every save — parser, work model, codec, handlers, report work |
+| **component** | `scripts/test.sh component` | + Validation + full `Cli` (incl. CLI process smokes) | 1,189 | ~25s | before pushing a CLI, report-projection, or validation change |
+| **full** | `scripts/test.sh` | every project, unfiltered | ~1,297 | ~2–3m | before push, and whenever you touched the scaffold/CLI subprocess tests |
 
-`Commands.Tests` alone is ~101s of that ~139s.
-
-The fast tier's ~3s is almost entirely test-host startup — the 354 assertions themselves
-execute in ~320ms. Add `--no-build` to reuse existing binaries, and `-- <args>` to forward
-to `dotnet test` (e.g. `scripts/test.sh fast -- --filter 'FullyQualifiedName~Codec'`).
-`scripts/test.sh --help` prints the same table.
+The trait is deliberately **not** a CI filter: the PR gate runs every project unfiltered,
+so the union of the tiers is the whole suite and no test is reachable only under a filter.
+Add `--no-build` to reuse existing binaries, and `-- <args>` to forward to `dotnet test`
+(e.g. `scripts/test.sh fast -- --filter 'FullyQualifiedName~Codec'` — a user `--filter`
+wins over the tier's). `scripts/test.sh --help` prints the same table.
 
 **Tiering removes no CI coverage.** The per-PR gate (`.github/workflows/gate.yml`) still
 runs the full suite and is still required, so a `Commands`-layer regression is caught at

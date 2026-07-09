@@ -146,7 +146,7 @@ module ScaffoldCommandTests =
             "update must be skipped."
         )
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold ok materializes a runnable product under SDD management`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
@@ -254,7 +254,7 @@ module ScaffoldCommandTests =
         Assert.Contains("scaffold.targetCollision", diagnosticIds report)
         Assert.Equal(1, exitCodeForReport report)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold empty provider succeeds with providerEmpty`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "empty.providers.yml"
@@ -266,7 +266,7 @@ module ScaffoldCommandTests =
         Assert.True(summary.ProviderInvoked)
         Assert.Empty(summary.ProducedPaths)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold provider failure is a provider defect with partial paths`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "fails-midway.providers.yml"
@@ -279,7 +279,7 @@ module ScaffoldCommandTests =
         // Provenance records the partial-path failure (provider actually ran).
         Assert.True(TestSupport.existsRelative root ".fsgg/scaffold-provenance.json")
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold provider writing into SDD trees is a provider defect`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "writes-into-fsgg.providers.yml"
@@ -287,7 +287,7 @@ module ScaffoldCommandTests =
         Assert.Contains("scaffold.providerWroteSddTree", diagnosticIds report)
         Assert.Equal(2, exitCodeForReport report)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``repeat scaffold blocks on collision without clobbering provenance`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
@@ -310,7 +310,7 @@ module ScaffoldCommandTests =
 
     // ---------- US4 ----------
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``provenance records provider identity, contract version, and produced owner`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
@@ -326,7 +326,7 @@ module ScaffoldCommandTests =
 
     // Feature 052 US1 scenario 1 (SC-001): provenance records BOTH the producing CLI
     // version (generator) and the provider-declared required minimum, side by side.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``provenance records the producing CLI version and the provider-declared required minimum`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "min-behind.providers.yml"
@@ -343,7 +343,7 @@ module ScaffoldCommandTests =
 
     // Feature 052 US1 scenario 2: no provider minimum ⇒ the field is recorded as null
     // (absent, not fabricated); the producing CLI version is still recorded.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``provenance records requiredMinimumCliVersion as null when the provider declares none`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
@@ -356,7 +356,7 @@ module ScaffoldCommandTests =
 
     // Feature 052 US1 (D6): a malformed provider minimum is NOT persisted — recorded
     // as null (the raw malformed value never lands in provenance).
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``provenance records requiredMinimumCliVersion as null when the provider minimum is malformed`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "min-malformed.providers.yml"
@@ -368,7 +368,7 @@ module ScaffoldCommandTests =
         Assert.Contains("\"requiredMinimumCliVersion\": null", provenance)
         Assert.DoesNotContain("not-a-version", provenance)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``refresh excludes provider-produced paths and flags malformed provenance`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
@@ -392,7 +392,7 @@ module ScaffoldCommandTests =
         let refreshMalformed = TestSupport.runRefresh root workId
         Assert.Contains("scaffold.provenanceMalformed", refreshMalformed.Diagnostics |> List.map (fun d -> d.Id))
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold happy-path JSON is byte-stable and root-free (golden)`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
@@ -412,7 +412,7 @@ module ScaffoldCommandTests =
         Assert.DoesNotContain(root, first)
         Assert.DoesNotContain("timestamp", first)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold report facts are identical across json and text projections`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
@@ -457,7 +457,7 @@ module ScaffoldCommandTests =
 
     // T010 (F1 / FR-002 / US1.1): a real run forwards `lifecycle=sdd` to the child
     // verbatim — the recording fixture echoes it back into the app-only manifest.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold forwards lifecycle=sdd to the provider verbatim`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
@@ -469,7 +469,7 @@ module ScaffoldCommandTests =
         Assert.Contains("lifecycle=sdd", manifest)
 
     // T011 (US1.2): the same run reports the success outcome and that the provider ran.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold lifecycle run reports providerSucceeded and ProviderInvoked`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
@@ -515,7 +515,7 @@ module ScaffoldCommandTests =
     // T014 (F4 / FR-007 / US3.2 companion C4): forwarding is value-agnostic — an
     // arbitrary nonce lifecycle value behaves identically to `sdd` modulo the echoed
     // value (the behavioral half of the US3 no-special-casing guard).
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold forwards an arbitrary lifecycle value identically to sdd`` () =
         let nonce = "q7-Zx_NONCE-42"
 
@@ -586,7 +586,7 @@ module ScaffoldCommandTests =
     // T015 (P1, P2 / FR-004 / SC-002,003 / US2.1,2.3): provenance.producedPaths equals
     // the app-only file set (diff of target vs a standalone init skeleton, minus the
     // provenance file itself), and every entry is owned `generatedProduct`.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold provenance records exactly the app-only tree, all generatedProduct`` () =
         let appRoot = TestSupport.tempDirectory ()
         writeRegistry appRoot "lifecycle.providers.yml"
@@ -626,7 +626,7 @@ module ScaffoldCommandTests =
 
     // T016 (P3, P4 / FR-005 / SC-002 / US2.2): produced ∩ skeleton == ∅, and every
     // skeleton file a lifecycle=sdd scaffold writes is byte-identical to a standalone init.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold skeleton is disjoint from the product and byte-identical to init`` () =
         let leaf = "scaffold-skel"
         let appRoot = rootWithLeaf leaf
@@ -662,7 +662,7 @@ module ScaffoldCommandTests =
     // T017 (P5, P6 / FR-006 / SC-004): two identical runs into clean targets yield
     // byte-identical provenance and byte-identical --json; provenance has sorted paths,
     // no clock, and no absolute path.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold provenance and json are deterministic across identical runs`` () =
         let runOnce () =
             let root = rootWithLeaf "scaffold-det"
@@ -692,7 +692,7 @@ module ScaffoldCommandTests =
 
     // T018 (P7 / 030-FR-007 re-asserted): refresh never adopts the app-only produced
     // paths into its generated-view ledger — they are externally owned.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``refresh excludes the lifecycle scaffold app-only produced paths`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
@@ -730,7 +730,7 @@ module ScaffoldCommandTests =
 
     // T024 (FR-008 / SC-006): an empty-product provider under lifecycle=sdd succeeds empty
     // at exit 0 with no produced paths.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold empty product under lifecycle=sdd succeeds with providerEmpty`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle-empty.providers.yml"
@@ -748,7 +748,7 @@ module ScaffoldCommandTests =
     // T025 (FR-008 / SC-006): a provider that writes into SDD trees under lifecycle=sdd is a
     // provider defect (exit 2), reported incomplete, and its SDD-tree intrusions are never
     // laundered into provenance as app-only paths.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold provider writing SDD trees under lifecycle=sdd is a provider defect`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle-intrusion.providers.yml"
@@ -768,7 +768,7 @@ module ScaffoldCommandTests =
     // (.claude/skills/ or .codex/skills/) is a provider defect — rejected as
     // providerWroteSddTree (exit 2), and the skill subtrees never appear in the provenance
     // producedPaths. Exercises the T015 isSddTree guard end-to-end over a real provider.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold provider writing into the seeded skill trees is a provider defect`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "skills-intrusion.providers.yml"
@@ -807,7 +807,7 @@ module ScaffoldCommandTests =
     // 056 T012 (US2 / FR-001 / SC-002 / P1): a provider write into the whole-root-reserved
     // .claude/skills/ OR .codex/skills/ is a defect (exit 2), no fan-out, path never recorded.
     // Each per-root fixture is driven independently so each whole-root clause is proven alone.
-    [<Theory>]
+    [<Theory; Trait("tier", "slow")>]
     [<InlineData("skills-intrusion-claude.providers.yml", ".claude/skills/leak/SKILL.md")>]
     [<InlineData("skills-intrusion-codex.providers.yml", ".codex/skills/leak/SKILL.md")>]
     let ``scaffold provider writing a whole-root-reserved skill tree is a defect``
@@ -829,7 +829,7 @@ module ScaffoldCommandTests =
 
     // 056 T013 (US2 / FR-002 / SC-002 / P2): the fs-gg-sdd-* namespace is reserved even in the
     // neutral .agents/skills/ root — a provider write there is a defect (exit 2), no fan-out.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold provider writing into the reserved namespace under .agents is a defect`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "skills-intrusion-agents.providers.yml"
@@ -845,7 +845,7 @@ module ScaffoldCommandTests =
         Assert.DoesNotContain(".agents/skills/fs-gg-sdd-custom/SKILL.md", summary.MirroredPaths)
 
     // 056 T014 (US2 / P4 regression): the .fsgg/·work/·readiness/ intrusion behavior is unchanged.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold provider writing into lifecycle trees remains a defect`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle-intrusion.providers.yml"
@@ -858,7 +858,7 @@ module ScaffoldCommandTests =
 
     // 056 T016 (US1 / FR-005/006 / SC-001 / P6): a compliant provider that writes a co-tenant
     // skill into .agents/skills/ fans the byte-identical union into all three roots.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold fans out the union to all three roots byte-identically`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "skills-agents-cotenant.providers.yml"
@@ -883,7 +883,7 @@ module ScaffoldCommandTests =
     // 056 T017 (US1 / FR-007 / P7): the provider's .agents canonical stays generatedProduct in
     // producedPaths; the .claude/.codex mirror copies are recorded in mirroredPaths (mirrored);
     // no fs-gg-sdd-* path appears in either; schemaVersion stays 1.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold attributes the fan-out mirror copies to SDD in provenance`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "skills-agents-cotenant.providers.yml"
@@ -938,7 +938,7 @@ module ScaffoldCommandTests =
 
     // 056 T018 (US1 acceptance #3): a provider that produces NO skills leaves all three roots
     // with the seeded fs-gg-sdd-* set byte-identical and mirroredPaths empty.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold with a provider that emits no skills mirrors nothing`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
@@ -965,7 +965,7 @@ module ScaffoldCommandTests =
     // (AgentGuidanceTarget) mirror WriteFile is refused — the fan-out fails mid-mirror. The
     // scaffold finalizes non-success at exit 2 with scaffold.mirrorFailed, and neither the
     // report nor provenance records a completed fan-out.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold with a blocked mirror target fails the fan-out at exit 2`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "skills-agents-cotenant.providers.yml"
@@ -1014,7 +1014,7 @@ module ScaffoldCommandTests =
 
     // T008 (US1-AC1): a success into a fresh temp dir outside any work tree initializes a
     // real git repository at the product root and reports `RepoInitOutcome = initialized`.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold initializes a git repository at the product root`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
@@ -1032,7 +1032,7 @@ module ScaffoldCommandTests =
 
     // T009 (US1-AC2 / FR-004): the initialized work tree captures the SDD skeleton, the
     // provider product files, and the scaffold-provenance record.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold repo captures the skeleton, product, and provenance`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
@@ -1056,7 +1056,7 @@ module ScaffoldCommandTests =
 
     // T010 (Edge / FR-004): the empty-but-successful outcome still initializes a repo over
     // the skeleton + provenance and reports `initialized`.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold empty-but-successful still initializes a repository`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "empty.providers.yml"
@@ -1073,7 +1073,7 @@ module ScaffoldCommandTests =
 
     // T013 (US2-AC1): the produced `run.sh` carries an executable bit and the run reports
     // exactly one script made executable, none skipped.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold makes a produced shell script executable`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "with-script.providers.yml"
@@ -1088,7 +1088,7 @@ module ScaffoldCommandTests =
 
     // T014 (US2-AC2): a provider with no shell scripts is a no-op — make-executable
     // succeeds with a zero count.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold with no shell scripts reports a zero executable count`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
@@ -1121,7 +1121,7 @@ module ScaffoldCommandTests =
 
     // T018 (US3-AC1 / SC-002): scaffolding into an existing work tree creates no nested repo
     // and reports `skippedExistingRepository`; the scaffold still succeeds.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold inside an existing work tree skips repo-init non-fatally`` () =
         let root = TestSupport.tempDirectory ()
         git root [ "init" ] |> ignore
@@ -1144,7 +1144,7 @@ module ScaffoldCommandTests =
     // repo-init/chmod steps only — the second run still hits the *pre-existing* provenance
     // clobber-guard (StructuredSource refuses an unsafe overwrite), so its overall exit is not
     // asserted here; that guard is unrelated to this feature.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold re-run resolves to the existing-repository case with a stable script bit`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "with-script.providers.yml"
@@ -1183,7 +1183,7 @@ module ScaffoldCommandTests =
     // `Started = false`; repo-init is skipped non-fatally as `skippedGitUnavailable`, and the
     // scaffold otherwise succeeds at exit 0. Real env (a git-free PATH for the spawned
     // probe), restored in a finally.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold with git unavailable skips repo-init non-fatally`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
@@ -1211,7 +1211,7 @@ module ScaffoldCommandTests =
 
     // T020 (US3-AC3 / FR-010): a successful scaffold with a skipped convenience step is not
     // reported failed or incomplete.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold with a skipped step is not reported failed or incomplete`` () =
         let root = TestSupport.tempDirectory ()
         git root [ "init" ] |> ignore
@@ -1228,7 +1228,7 @@ module ScaffoldCommandTests =
 
     // T022 (US4-AC1): a non-rendering provider gets identical repo-init + make-executable
     // behavior, driven only by the scaffolded tree.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold post-instantiation behavior is identical for a neutral provider`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "with-script.providers.yml"
@@ -1259,7 +1259,7 @@ module ScaffoldCommandTests =
 
     // T028 (FR-012): two identical runs in the same environment yield byte-identical
     // provenance AND report JSON; the sensed repo-init field is additive only.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold provenance and json stay deterministic with the repo-init field`` () =
         let runOnce () =
             let root = rootWithLeaf "scaffold-032-det"
@@ -1298,7 +1298,7 @@ module ScaffoldCommandTests =
     // T030 (FR-009): on a provider failure the post-instantiation steps do not run —
     // `RepoInitOutcome = notApplicable`, no repo, and the existing failure diagnostic + exit
     // code are preserved.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold provider failure runs no post-instantiation steps`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "fails-midway.providers.yml"
@@ -1311,7 +1311,7 @@ module ScaffoldCommandTests =
         Assert.Contains("scaffold.providerFailed", diagnosticIds report)
         Assert.Equal(2, exitCodeForReport report)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold SDD-tree intrusion runs no post-instantiation steps`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "writes-into-fsgg.providers.yml"
@@ -1345,7 +1345,7 @@ module ScaffoldCommandTests =
     // T008 (US2-AC1 / FR-004): scaffold with lifecycle=sdd delivers the constitution
     // via the reused init skeleton; the report attributes it as the SDD skeleton's
     // authored agent-guidance artifact, not the provider's generatedProduct.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold delivers the constitution via the reused init skeleton`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
@@ -1368,7 +1368,7 @@ module ScaffoldCommandTests =
 
     // T008 (US2-AC2 / FR-005/SC-002): the constitution is absent from the app-only
     // generatedProduct paths in scaffold-provenance.json.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold provenance excludes the constitution from generatedProduct`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
@@ -1381,7 +1381,7 @@ module ScaffoldCommandTests =
     // T008 (Edge / FR-004): the constitution rides the always-run init effects, so a
     // NON-sdd lifecycle param still produces it — emission is not gated on the provider's
     // lifecycle parameter.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold emits the constitution under a non-sdd lifecycle param`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
@@ -1465,7 +1465,7 @@ module ScaffoldCommandTests =
     // T008 (US1 / FR-001 / FR-003 / SC-001): omitting `variant` forwards the declared
     // default `alpha` to the provider verbatim, and both the report summary and provenance
     // record `variant=alpha` (plus the supplied `productName`) as effective, sorted by key.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold DefaultApplied forwards the declared default and records it effective`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "default-declaring.providers.yml"
@@ -1492,7 +1492,7 @@ module ScaffoldCommandTests =
     // T009 (US1 / FR-008): the default-applied run projects effectiveParameters in json (an
     // array of {key,value} after producedPaths, sorted) and text (one sorted
     // `scaffoldEffectiveParam: key=value` line per entry), changing no other scaffold fact.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold DefaultApplied projects effectiveParameters in json and text`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "default-declaring.providers.yml"
@@ -1572,7 +1572,7 @@ module ScaffoldCommandTests =
     // T010b(d) (Edge / no default): a provider/parameter that declares NO default and is
     // omitted forwards no key for it — the effective set holds only supplied values, and an
     // optional no-default param omitted leaves the set empty (behavior unchanged).
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold forwards no key for an omitted no-default optional parameter`` () =
         let root = TestSupport.tempDirectory ()
         // lifecycle-empty declares an OPTIONAL `lifecycle` with NO default.
@@ -1589,7 +1589,7 @@ module ScaffoldCommandTests =
 
     // T013 (US2 / FR-002 / FR-003 / SC-002): an explicit `--param variant=beta` is forwarded
     // (NOT the declared default `alpha`), and the report + provenance record `variant=beta`.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold Override forwards the author value over the declared default`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "default-declaring.providers.yml"
@@ -1614,7 +1614,7 @@ module ScaffoldCommandTests =
 
     // T014 (US2 / FR-008): the override run projects the override value (not the default) in
     // json and text; the effectiveParameters field stays scaffold-scoped.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold Override projects the override value in json and text`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "default-declaring.providers.yml"
@@ -1648,7 +1648,7 @@ module ScaffoldCommandTests =
     // T005 (US1 / R1): the edge now returns the executed command line and the captured,
     // truncation-flagged stdout/stderr (content kept, drain retained) instead of discarding
     // them. This is the behavioral change the whole feature rests on.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``runProcess edge returns the command line and captured stdout and stderr`` () =
         let processResult = runShell "printf 'OUT-MARKER'; printf 'ERR-MARKER' >&2; exit 4"
         Assert.True(processResult.Started)
@@ -1662,7 +1662,7 @@ module ScaffoldCommandTests =
 
     // T005 / SC-005: a stream larger than the per-stream cap is bounded and flagged, while
     // the smaller stream is untouched (drain is deadlock-safe under concurrent read).
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``runProcess edge bounds an oversize stream and flags truncation`` () =
         let oversize = providerOutputCapChars + 4096
 
@@ -1679,7 +1679,7 @@ module ScaffoldCommandTests =
     // characters) — the edge returns without throwing and the captured text is representable
     // in valid JSON. SYNTHETIC: raw bytes emitted by `printf` stand in for a provider that
     // writes a binary blob; the real-evidence path is the same decode used for `dotnet new`.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``runProcess edge decodes binary bytes defensively and stays JSON-safe_Synthetic`` () =
         let processResult = runShell "printf '\\377\\376\\375\\000A'"
         Assert.True(processResult.Started)
@@ -1690,7 +1690,7 @@ module ScaffoldCommandTests =
 
     // T007 edge: a child that writes nothing to stderr and exits non-zero yields a
     // present-and-empty capture (fields emitted, not omitted).
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``runProcess edge captures empty stderr on a silent nonzero exit`` () =
         let processResult = runShell "exit 7"
         Assert.True(processResult.Started)
@@ -1713,7 +1713,7 @@ module ScaffoldCommandTests =
     // T007 (US1 / Scenario A + determinism, FR-001/002/009, SC-002): a provider defect
     // surfaces the invoked command line, exit code, and captured streams in a deterministic
     // JSON scaffold block; the outcome is still `providerFailed` at exit 2.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold provider failure surfaces the invocation facts deterministically`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "fails-midway.providers.yml"
@@ -1747,7 +1747,7 @@ module ScaffoldCommandTests =
     // `dotnet new` engine reject the option — its own wording is surfaced on `standardError`
     // with no PATH shim and no re-run. Assert-contains, not golden: the engine wording is SDK
     // data (R7) — a real engine message stands in for any provider's own rejection text.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold surfaces the dotnet-new invalid-option rejection on stderr_Synthetic`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "rejects-param.providers.yml"
@@ -1775,7 +1775,7 @@ module ScaffoldCommandTests =
     // failure); this is the capture the handler maps to `providerUnavailable`. (A fully
     // end-to-end `providerUnavailable` is host-infeasible here: the create program is
     // `dotnet`, which resolves via the apphost even with an empty PATH — see T009b.)
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``runProcess edge surfaces the launch error when the program cannot start`` () =
         let root = TestSupport.tempDirectory ()
 
@@ -1798,7 +1798,7 @@ module ScaffoldCommandTests =
     // on a dotnet-equipped host, so the launch-failure path cannot be driven end-to-end here.
     // The real-evidence path is the T009a edge launch failure, which produces exactly this
     // shape (`Started = false` + launch error on `StandardError`).
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``provider-unavailable report projects a null exit code and the launch error_Synthetic`` () =
         // Start from a real provider-failure report, then swap in a never-launched
         // invocation record (the shape T009a produces at the edge).
@@ -1836,7 +1836,7 @@ module ScaffoldCommandTests =
 
     // T010 (US1 / Scenario H, FR-010): provenance is untouched — after a provider failure it
     // still parses as schema v1 and carries no captured-output keys.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold provider failure leaves provenance at schema v1 with no captured output`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "fails-midway.providers.yml"
@@ -1850,7 +1850,7 @@ module ScaffoldCommandTests =
 
     // T017 (US3 / Scenario E, FR-006, SC-004): success and every pre-invocation user-input
     // block carry no provider output — `providerInvocation` serializes as null.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold success and pre-invocation blocks carry a null providerInvocation`` () =
         // (a) success ⇒ null, exit 0, no captured content.
         let okRoot = TestSupport.tempDirectory ()
@@ -1897,7 +1897,7 @@ module ScaffoldCommandTests =
     // cap is bounded in the report and flagged truncated. Driven at the edge (a `dotnet new`
     // template cannot deterministically emit > 64 KiB), asserting the same bound the report
     // surfaces.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``provider output beyond the cap is bounded and flagged in the report`` () =
         let oversize = providerOutputCapChars + 10000
         let processResult = runShell $"head -c {oversize} /dev/zero | tr '\\0' 'y' >&2"
@@ -1907,7 +1907,7 @@ module ScaffoldCommandTests =
 
     // T019 (US3 / Scenario G, edge case): an SDD-tree intrusion keeps `providerWroteSddTree`
     // as the primary diagnostic AND surfaces the invocation for consistency.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold SDD-tree intrusion still surfaces the provider invocation`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "writes-into-fsgg.providers.yml"
@@ -1919,7 +1919,7 @@ module ScaffoldCommandTests =
 
     // T020 (US3 / FR-007, SC-006): the exit-code taxonomy and outcome strings are unchanged —
     // success ⇒ 0, provider defect ⇒ 2, user-input ⇒ 1 — with the additive block present.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold exit-code taxonomy and outcomes are unchanged by the additive block`` () =
         let okRoot = TestSupport.tempDirectory ()
         writeRegistry okRoot "ok.providers.yml"
@@ -1948,7 +1948,7 @@ module ScaffoldCommandTests =
     // probe) must be killed at the process-timeout bound and reported as a fail-closed nonzero
     // exit — never an indefinite hang. In the "Scaffold" collection so the tiny timeout env
     // override can never race a concurrent real `dotnet new`.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``a child exceeding the process-timeout bound is killed and reported as a nonzero exit`` () =
         if
             System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform
@@ -2018,7 +2018,7 @@ module ScaffoldCommandTests =
     // T014 (US2 / FR-006 / FR-007): a real run keeps the raw name verbatim in string contexts
     // (the produced Program.fs string literal + manifest), puts the derived valid identifier in
     // the namespace context, and records BOTH in provenance — schema unchanged.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold real run preserves the raw name and uses the derived namespace`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "identifier-declaring.providers.yml"
@@ -2048,7 +2048,7 @@ module ScaffoldCommandTests =
         )
 
     // T015 (US2 / FR-007): the recorded provenance schema stays v1 (additive rows only).
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``scaffold identifier derivation keeps provenance schema at 1`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "identifier-declaring.providers.yml"

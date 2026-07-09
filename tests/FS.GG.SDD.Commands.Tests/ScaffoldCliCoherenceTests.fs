@@ -65,7 +65,7 @@ module ScaffoldCliCoherenceTests =
     // The minimum tracks the installed version by exactly one minor, so the "behind by
     // 1 minor version" assertion keeps testing the gap arithmetic and not a constant.
     // 0.10.0 > 0.9.0 numerically (components are ints, not strings) — see Fsgg.Version.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``behind minimum emits exactly one cliBehindMinimum advisory naming installed minimum and gap`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "min-behind.providers.yml"
@@ -81,7 +81,7 @@ module ScaffoldCliCoherenceTests =
 
     // US2 scenario 3 / SC-004: a behind run's outcome and exit code are IDENTICAL to an
     // at/above run — the advisory is provably non-blocking (never reclassifies).
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``behind minimum run has the same outcome and exit code as an at-or-above run`` () =
         let behindRoot = TestSupport.tempDirectory ()
         writeRegistry behindRoot "min-behind.providers.yml"
@@ -98,7 +98,7 @@ module ScaffoldCliCoherenceTests =
 
     // US3 scenario 1 (FR-008 / SC-006 / D8): the behind advisory carries a next-action
     // pointer to the SUPPORTED re-seed path — `fsgg-sdd init`, NOT `refresh`.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``behind minimum carries a reseedSeededSkills next-action pointing at init not refresh`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "min-behind.providers.yml"
@@ -114,7 +114,7 @@ module ScaffoldCliCoherenceTests =
         | None -> Assert.True(false, "expected a reseedSeededSkills next-action in the behind case")
 
     // US3: at/above the minimum, no staleness ⇒ no reseed next-action is forced.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``at or above minimum does not emit a reseedSeededSkills next-action`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "min-satisfied.providers.yml"
@@ -125,7 +125,7 @@ module ScaffoldCliCoherenceTests =
         | None -> ()
 
     // US2 scenario 2 (SC-003): installed at/above the minimum ⇒ no staleness advisory.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``at or above minimum emits no cliBehindMinimum advisory`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "min-satisfied.providers.yml"
@@ -133,7 +133,7 @@ module ScaffoldCliCoherenceTests =
         Assert.Empty(cliBehind report)
 
     // US2 edge (boundary): installed exactly equal to the minimum is coherent — no advisory.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``equal to minimum emits no cliBehindMinimum advisory`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "min-equal.providers.yml"
@@ -141,7 +141,7 @@ module ScaffoldCliCoherenceTests =
         Assert.Empty(cliBehind report)
 
     // US2 scenario 4 (SC-003): provider declares no minimum ⇒ nothing to compare, no advisory.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``no declared minimum emits no cliBehindMinimum advisory`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "ok.providers.yml"
@@ -152,7 +152,7 @@ module ScaffoldCliCoherenceTests =
     // version is null (PENDING PUBLISH). SDD degrades to "no minimum" — no advisory, and
     // provenance records requiredMinimumCliVersion as null. This is the independently
     // shippable degradation ahead of the concrete-version publish.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``pending null minimum emits no advisory and records null provenance`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "min-pending.providers.yml"
@@ -165,7 +165,7 @@ module ScaffoldCliCoherenceTests =
 
     // US2 edge (D6): a malformed provider minimum surfaces scaffold.providerMinimumMalformed
     // (warning), never cliBehindMinimum, and is not silently ignored.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``malformed minimum emits providerMinimumMalformed warning and no cliBehindMinimum`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "min-malformed.providers.yml"
@@ -179,7 +179,7 @@ module ScaffoldCliCoherenceTests =
     // US2 edge (D7 / U2): when the installed CLI version cannot be parsed, the comparison
     // is skipped (no advisory) AND provenance still records the producing CLI version
     // HONESTLY — the pre-existing generator value, never a fabricated version.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``unparseable installed version skips the comparison and records the CLI version honestly`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "min-behind.providers.yml"

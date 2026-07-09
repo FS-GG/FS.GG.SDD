@@ -287,7 +287,7 @@ module VerifyCommandTests =
         Assert.True(createWatch.Elapsed.TotalSeconds < 2.0, $"Create took {createWatch.Elapsed}.")
         Assert.True(rerunWatch.Elapsed.TotalSeconds < 2.0, $"Rerun took {rerunWatch.Elapsed}.")
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``verify CLI JSON smoke creates verification view`` () =
         let root = initializedEvidencedProject ()
 
@@ -300,7 +300,7 @@ module VerifyCommandTests =
         Assert.Equal("", result.StdErr)
         Assert.True(TestSupport.existsRelative root verifyPath)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``verify CLI dry run smoke avoids generated mutation`` () =
         let root = initializedEvidencedProject ()
 
@@ -312,7 +312,7 @@ module VerifyCommandTests =
         Assert.Equal("", result.StdErr)
         Assert.False(TestSupport.existsRelative root verifyPath)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``verify CLI text smoke renders human projection`` () =
         let root = initializedEvidencedProject ()
 

@@ -130,32 +130,32 @@ module HelpRenderingTests =
            StdOut = completion.StandardOutput
            StdErr = completion.StandardError |}
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``CLI top-level --help exits 0 with top-level help on stdout`` () =
         let result = runHost [] [ "--help" ]
         Assert.Equal(0, result.ExitCode)
         Assert.Contains("\"scope\": \"topLevel\"", result.StdOut)
         Assert.DoesNotContain("unknownCommand", result.StdOut)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``CLI --help --json resolves to help and never falls through`` () =
         let result = runHost [] [ "--help"; "--json" ]
         Assert.Equal(0, result.ExitCode)
         Assert.Contains("\"scope\": \"topLevel\"", result.StdOut)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``CLI command --help exits 0 with that command's help`` () =
         let result = runHost [] [ "verify"; "--help" ]
         Assert.Equal(0, result.ExitCode)
         Assert.Contains("\"command\": \"verify\"", result.StdOut)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``CLI unknown command with --help still resolves to unknownCommand exit 1`` () =
         let result = runHost [] [ "frobnicate"; "--help" ]
         Assert.Equal(1, result.ExitCode)
         Assert.Contains("unknownCommand", result.StdErr)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``CLI help --rich under NO_COLOR emits zero ANSI`` () =
         let result = runHost [ "NO_COLOR", "1" ] [ "--help"; "--rich" ]
         Assert.Equal(0, result.ExitCode)
