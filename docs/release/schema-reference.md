@@ -242,7 +242,12 @@ in the authoritative `catalog[].inventory` of
   all. Unlike `classification`, this field does add a diagnostic — the advisory
   `surface.versionBumpRequired` **warning**, emitted under both `--check` and `--update` exactly when
   `requiredBump` is `major` or `minor` — but still changes no exit code. This additive-optional field
-  moved `reportVersion` to `1.4.0` (a semantic minor); `schemaVersion` stays `1`.
+  moved `reportVersion` to `2.1.0` (a semantic minor); `schemaVersion` stays `1`. The intervening
+  major came from feature 093 (FS-GG/FS.GG.SDD#164), which **removed**
+  `specification.unresolvedAmbiguityCount` — a Breaking change under the versioning policy — taking
+  `reportVersion` `1.3.0` → `2.0.0`; feature 094's additive block then took it `2.0.0` → `2.1.0`. So
+  `reportVersion` is the in-band signal that distinguishes a pre-removal (`1.x`) report shape from a
+  post-removal (`≥2.0.0`) one.
   The additive `lifecycleStatus` field is present on **every** command's report — feature 084;
   it is the standardized lifecycle-status footer's authoritative fact, carrying `workId`,
   `isLifecycleStage`, `currentOrdinal`, `totalStages`, `outcome`, `nextCommand`, and `stages[]`
