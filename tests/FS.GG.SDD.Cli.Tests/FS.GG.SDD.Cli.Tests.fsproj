@@ -20,6 +20,7 @@
     <Compile Include="ValidationRichRenderingTests.fs" />
     <Compile Include="ValidateCommandTests.fs" />
     <Compile Include="LintCommandTests.fs" />
+    <Compile Include="RegistrySkillManifestContainmentTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
