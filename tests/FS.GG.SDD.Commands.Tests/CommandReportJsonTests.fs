@@ -50,10 +50,16 @@ module CommandReportJsonTests =
         let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
 
-        let first = TestSupport.runCharter root "004-charter-command" "Charter Command" |> serializeReport
+        let first =
+            TestSupport.runCharter root "004-charter-command" "Charter Command"
+            |> serializeReport
+
         Assert.Contains("\"coherent\": false", first)
 
-        let rerun = TestSupport.runCharter root "004-charter-command" "Charter Command" |> serializeReport
+        let rerun =
+            TestSupport.runCharter root "004-charter-command" "Charter Command"
+            |> serializeReport
+
         Assert.Contains("\"coherent\": true", rerun)
 
     [<Fact>]
