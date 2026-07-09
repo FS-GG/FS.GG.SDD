@@ -26,6 +26,97 @@ module GeneratedViewCommandTests =
         Assert.False(TestSupport.existsRelative root workModelPath)
 
     [<Fact>]
+    let ``verify surfaces work-model diagnostics rather than silently skipping the write`` () =
+        // Regression for FS.GG.SDD#191. At `verify` (where the work model is built) a blocking
+        // work model with no work-model.json on disk used to drop the blocking reasons and
+        // report succeeded with an empty diagnostics list while writing no view. It must
+        // instead surface them — Constitution VIII: operationally significant events produce
+        // actionable diagnostics.
+        let verifyWorkId = "012-verify-command"
+        let verifyTitle = "Verify Command"
+        let verifyWorkModelPath = $"readiness/{verifyWorkId}/work-model.json"
+        let tasksPath = $"work/{verifyWorkId}/tasks.yml"
+
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeEvidencedProject root verifyWorkId verifyTitle
+
+        // Point an authored task at an undeclared decision, so the derived work model now
+        // blocks on `unknownReference`/`workModelInconsistent` while `verify`'s own
+        // command-level source-reference check (which covers requirement/source ids but not
+        // `decisions:`) still passes — the exact shape of the shipped-example silent skip.
+        // Then remove the clean work-model.json the setup wrote, reproducing "blocking model,
+        // no view on disk".
+        let tasks = TestSupport.readRelative root tasksPath
+        TestSupport.writeRelative root tasksPath (tasks.Replace("decisions: []", "decisions: [DEC-999]"))
+
+        System.IO.File.Delete(
+            System.IO.Path.Combine(root, verifyWorkModelPath.Replace('/', System.IO.Path.DirectorySeparatorChar))
+        )
+
+        Assert.False(TestSupport.existsRelative root verifyWorkModelPath)
+
+        let report = TestSupport.runVerify root verifyWorkId verifyTitle
+
+        // The blocking reason itself must travel with the surfaced diagnostic, not just a
+        // generic "blocked" marker — the author needs to know *what* to fix.
+        Assert.Contains(
+            report.Diagnostics,
+            fun diagnostic ->
+                diagnostic.Id = "workModelNotGenerated"
+                && diagnostic.RelatedIds |> List.contains "workModelInconsistent"
+        )
+
+        Assert.NotEqual(CommandOutcome.Succeeded, report.Outcome)
+        Assert.NotEqual(CommandOutcome.NoChange, report.Outcome)
+        Assert.False(TestSupport.existsRelative root verifyWorkModelPath)
+
+        Assert.Contains(
+            report.GeneratedViews,
+            fun view ->
+                view.Path = verifyWorkModelPath
+                && view.Currency = GeneratedViewCurrency.Missing
+                && view.DiagnosticIds |> List.contains "workModelNotGenerated"
+        )
+
+    [<Fact>]
+    let ``authoring stages stay silent when the work model blocks and no view exists`` () =
+        // The complement of the verify test: at a pre-verify authoring stage the work model is
+        // a side view, so a blocking model with no view on disk is reported through the view
+        // state (Missing) but owes no diagnostic — surfacing the always-on authoring-stage case
+        // awaits the reference-resolution work in FS.GG.SDD#204.
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+        TestSupport.writeRelative root $"work/{workId}/spec.md" (TestSupport.validSpec workId title)
+
+        TestSupport.writeRelative
+            root
+            $"work/{workId}/tasks.yml"
+            """schemaVersion: 1
+tasks:
+  - id: T001
+    title: Implement selected lifecycle work
+    status: pending
+    owner: sdd
+    dependencies: []
+    requirements: [FR-404]
+    decisions: []
+    requiredSkills: []
+    requiredEvidence: []
+"""
+
+        TestSupport.writeRelative root $"work/{workId}/evidence.yml" TestSupport.validEvidence
+
+        let report = TestSupport.runCharter root workId title
+
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "workModelNotGenerated")
+        Assert.False(TestSupport.existsRelative root workModelPath)
+
+        Assert.Contains(
+            report.GeneratedViews,
+            fun view -> view.Path = workModelPath && view.Currency = GeneratedViewCurrency.Missing
+        )
+
+    [<Fact>]
     let ``charter refreshes generated work model when source data is valid`` () =
         let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
