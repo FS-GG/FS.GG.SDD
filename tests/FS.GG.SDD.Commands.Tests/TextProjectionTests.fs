@@ -30,6 +30,25 @@ module TextProjectionTests =
         Assert.Contains("outcome: succeeded", text)
         Assert.Contains($"changedArtifacts: {List.length report.ChangedArtifacts}", text)
 
+    // FS-GG/FS.GG.SDD#183: the text/rich views surface the positive "clean, advance" signal only when
+    // it is earned — a bare first run stays a quiet `outcome: succeeded`, a coherent re-run reads
+    // unambiguously. (The rich details table scrapes this same text line, so this covers both.)
+    [<Fact>]
+    let ``text projection surfaces coherent only on a clean re-run`` () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+
+        // First run authors the charter — a real Create — so it is not a "nothing changed" state.
+        let firstRun = TestSupport.runCharter root "004-charter-command" "Charter Command"
+        Assert.False firstRun.Coherent
+        Assert.DoesNotContain("coherent:", renderText firstRun)
+
+        // Second run finds every artifact already coherent → outcome noChange → the advance signal.
+        let rerun = TestSupport.runCharter root "004-charter-command" "Charter Command"
+        Assert.Equal(CommandOutcome.NoChange, rerun.Outcome)
+        Assert.True rerun.Coherent
+        Assert.Contains("coherent: true", renderText rerun)
+
     [<Fact>]
     let ``charter text projection summarizes report facts only`` () =
         let root = TestSupport.tempDirectory ()

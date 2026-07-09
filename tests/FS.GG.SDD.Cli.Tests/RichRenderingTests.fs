@@ -108,6 +108,7 @@ module RichRenderingTests =
           OutputFormat = Rich
           DryRun = true
           Outcome = SucceededWithWarnings
+          Coherent = false
           WorkId = Some "042-rich-sample"
           ChangedArtifacts = [ changedArtifact "work/042-rich-sample/spec.md" ]
           Specification = Some specification

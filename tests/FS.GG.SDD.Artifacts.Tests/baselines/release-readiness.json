@@ -283,6 +283,11 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "coherent",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "command",
           "kind": "jsonField",
           "stability": "additiveOptional"

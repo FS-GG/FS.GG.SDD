@@ -712,6 +712,7 @@ module CommandTypes =
           OutputFormat: OutputFormat
           DryRun: bool
           Outcome: CommandOutcome
+          Coherent: bool
           WorkId: string option
           ChangedArtifacts: ArtifactChange list
           Specification: SpecificationSummary option

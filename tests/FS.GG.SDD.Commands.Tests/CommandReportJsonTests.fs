@@ -31,9 +31,36 @@ module CommandReportJsonTests =
     // ⇒ minor, removal/retype ⇒ major — and then deliberately update this expected value.
     [<Fact>]
     let ``reportVersion is pinned to its current contract value`` () =
-        let expected = "2.1.0"
+        let expected = "2.2.0"
         Assert.Equal(expected, dryRunReport().ReportVersion)
         Assert.Contains(sprintf "\"reportVersion\": \"%s\"" expected, dryRunReport () |> serializeReport)
+
+    // FS-GG/FS.GG.SDD#183: `coherent` is a first-class, always-present JSON fact alongside `outcome`
+    // (never dropped, whatever its value), so a Governance consumer can key on it unconditionally.
+    [<Fact>]
+    let ``coherent is always emitted as a boolean fact`` () =
+        let json = dryRunReport () |> serializeReport
+        Assert.Contains("\"coherent\":", json)
+        Assert.Matches("\"coherent\": (true|false)", json)
+
+    // FS-GG/FS.GG.SDD#183: pin the actual serialized value at the JSON seam (not just the key's
+    // presence) for both discriminands — a first-run Create is `false`, a clean re-run is `true`.
+    [<Fact>]
+    let ``coherent serializes false on a first run and true on a clean re-run`` () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+
+        let first =
+            TestSupport.runCharter root "004-charter-command" "Charter Command"
+            |> serializeReport
+
+        Assert.Contains("\"coherent\": false", first)
+
+        let rerun =
+            TestSupport.runCharter root "004-charter-command" "Charter Command"
+            |> serializeReport
+
+        Assert.Contains("\"coherent\": true", rerun)
 
     [<Fact>]
     let ``deterministic JSON excludes absolute project root`` () =

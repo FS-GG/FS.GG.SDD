@@ -204,7 +204,7 @@ in the authoritative `catalog[].inventory` of
   `schemaVersion` *(Stable)*, `skills`, `sources`, `targetId`, `viewVersion`,
   `workId`.
 - **`command-report (--json)`** — `agentGuidance`, `analysis`, `changedArtifacts`,
-  `checklist`, `clarification`, `command`, `context`, `diagnostics`, `doctor`, `evidence`,
+  `checklist`, `clarification`, `coherent`, `command`, `context`, `diagnostics`, `doctor`, `evidence`,
   `generatedViews`, `governanceCompatibility`, `help` *(present on `--help`/`-h`/`help`
   invocations; `null` otherwise)*, `invocation`, `lifecycleStatus`, `lint`, `nextAction`,
   `outcome`, `plan`, `refresh`, `reportVersion`, `scaffold`, `schemaVersion` *(Stable)*, `ship`,
@@ -248,6 +248,17 @@ in the authoritative `catalog[].inventory` of
   `reportVersion` `1.3.0` → `2.0.0`; feature 094's additive block then took it `2.0.0` → `2.1.0`. So
   `reportVersion` is the in-band signal that distinguishes a pre-removal (`1.x`) report shape from a
   post-removal (`≥2.0.0`) one.
+  The additive top-level `coherent` field (always present, boolean) is the positive
+  "clean, advance" disambiguator for `outcome: noChange` — feature 093 (FS-GG/FS.GG.SDD#183). It is
+  `true` exactly when the stage ran, every artifact it evaluated was already present and current (all
+  recorded changes `noChange`/`preserve`), and nothing blocked — so the work item is coherent for this
+  stage and it is safe to advance. It is `false` for a bare no-op (`outcome: noChange` with an empty
+  `changedArtifacts`) and for every non-`noChange` outcome. It leaves the `outcome` vocabulary
+  untouched. It is distinct from the nested domain facts `isCoherent` (`surface`/remediation blocks)
+  and `alreadyCoherent` (remediation) — those assert a *specific* invariant (baselines match, drift is
+  absent); top-level `coherent` asserts only "this stage found the work item already current and
+  recorded no change". This additive-optional field moved `reportVersion` to `2.2.0` (a semantic
+  minor); `schemaVersion` stays `1`.
   The additive `lifecycleStatus` field is present on **every** command's report — feature 084;
   it is the standardized lifecycle-status footer's authoritative fact, carrying `workId`,
   `isLifecycleStage`, `currentOrdinal`, `totalStages`, `outcome`, `nextCommand`, and `stages[]`

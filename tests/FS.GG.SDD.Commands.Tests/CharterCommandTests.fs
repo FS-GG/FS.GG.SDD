@@ -46,6 +46,9 @@ status: chartered
         let charter = TestSupport.readRelative root charterPath
 
         Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
+        // FS-GG/FS.GG.SDD#183: a first run that authored a real artifact is not a "nothing changed,
+        // already coherent" state — the clean-advance signal is reserved for the no-op re-run below.
+        Assert.False report.Coherent
         Assert.Contains("schemaVersion: 1", charter)
         Assert.Contains($"workId: {workId}", charter)
         Assert.Contains("## Identity", charter)
@@ -96,6 +99,9 @@ status: chartered
         let after = TestSupport.readRelative root charterPath
 
         Assert.Equal(CommandOutcome.NoChange, report.Outcome)
+        // FS-GG/FS.GG.SDD#183: the stage ran and found the charter already coherent (every recorded
+        // change was NoChange) — the positive "clean, advance" signal that disambiguates a bare no-op.
+        Assert.True report.Coherent
         Assert.Equal(existingCharter, after)
 
         Assert.Contains(
@@ -154,6 +160,8 @@ status: chartered
         let report = TestSupport.runCharter root workId title
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        // FS-GG/FS.GG.SDD#183: a blocked stage is never coherent-to-advance.
+        Assert.False report.Coherent
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "charterIdentityMismatch")
         Assert.Equal(original, TestSupport.readRelative root charterPath)
 
