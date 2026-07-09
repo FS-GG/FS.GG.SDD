@@ -49,6 +49,16 @@ module ValidateCommandTests =
 
         completion.StandardOutput, completion.StandardError, completion.ExitCode
 
+    /// As `runCliFull` but runs the child in `workDir`, so a *relative* `--out` resolves there. The
+    /// containment guard (#256) refuses absolute/`..` paths, so persisted-output tests write a bare
+    /// relative filename into an isolated working directory rather than an absolute temp path.
+    let private runCliFullIn (workDir: string) (args: string list) =
+        let startInfo = validateStartInfo args
+        startInfo.WorkingDirectory <- workDir
+
+        let completion = TestShared.ChildProcess.runBounded validateTimeoutMs startInfo
+        completion.StandardOutput, completion.StandardError, completion.ExitCode
+
     // `--matrix compatibility` is the cheapest matrix (no per-state lifecycle builds).
     [<Fact; Trait("tier", "slow")>]
     let ``validate --json emits a schemaVersion 1 report`` () =
@@ -73,10 +83,14 @@ module ValidateCommandTests =
     // diagnostic + exit 1, never a raw stack trace, while the stdout report contract still emits.
     [<Fact; Trait("tier", "slow")>]
     let ``validate --out to a path under a missing directory fails cleanly without a stack trace`` () =
-        let badPath = Path.Combine(Commands.tempDirectory (), "missing-dir", "report.json")
+        // A *relative* missing-directory path (resolved against an isolated working dir): it passes
+        // the containment guard (#256) and reaches the DirectoryNotFoundException handler this test
+        // exists to cover (#68) — an absolute path would now be short-circuited by the guard instead.
+        let workDir = Commands.tempDirectory ()
+        let badPath = Path.Combine("missing-dir", "report.json")
 
         let stdout, stderr, exitCode =
-            runCliFull [ "validate"; "--matrix"; "compatibility"; "--json"; "--out"; badPath ]
+            runCliFullIn workDir [ "validate"; "--matrix"; "compatibility"; "--json"; "--out"; badPath ]
 
         Assert.Equal(1, exitCode)
         Assert.Contains("cannot write --out", stderr)
@@ -85,6 +99,42 @@ module ValidateCommandTests =
         Assert.False(stderr.Contains("   at ", StringComparison.Ordinal), "a stack frame leaked to stderr")
         // The stdout automation contract is emitted regardless of the --out failure.
         Assert.Contains("\"schemaVersion\": 1", stdout)
+
+    // ADR-0002 Gap C finding 1 (FS-GG/FS.GG.SDD#256): an `--out` path that is absolute or carries a
+    // `..` segment escapes the workspace root. It is refused *before* the write — exit 1, a stderr
+    // diagnostic, and no file created — while the stdout report contract still emits. Parity with the
+    // `surface`/`registry` root-escape guards (#185/#237).
+    [<Fact; Trait("tier", "slow")>]
+    let ``validate --out to an absolute path is refused as a root escape without writing`` () =
+        // The target directory is writable, so a refused write proves the containment guard rather
+        // than a coincidental IO failure: an absolute path trips `IsPathRooted` on the raw value.
+        let escapePath =
+            Path.Combine(Commands.tempDirectory (), $"escape-{System.Guid.NewGuid():N}.json")
+
+        try
+            let stdout, stderr, exitCode =
+                runCliFull [ "validate"; "--matrix"; "compatibility"; "--json"; "--out"; escapePath ]
+
+            Assert.Equal(1, exitCode)
+            Assert.Contains("escapes the workspace root", stderr)
+            Assert.False(File.Exists escapePath, "the escaping --out path was written despite the guard")
+            // The stdout automation contract is emitted regardless of the refused --out.
+            Assert.Contains("\"schemaVersion\": 1", stdout)
+            // No stack frame leaked (user-input failure, not a tool defect).
+            Assert.False(stderr.Contains("   at ", StringComparison.Ordinal), "a stack frame leaked to stderr")
+        finally
+            if File.Exists escapePath then
+                File.Delete escapePath
+
+    [<Fact; Trait("tier", "slow")>]
+    let ``validate --out with a .. segment is refused as a root escape`` () =
+        let dotDotPath = $"../escape-{System.Guid.NewGuid():N}.json"
+
+        let _, stderr, exitCode =
+            runCliFull [ "validate"; "--matrix"; "compatibility"; "--json"; "--out"; dotDotPath ]
+
+        Assert.Equal(1, exitCode)
+        Assert.Contains("escapes the workspace root", stderr)
 
     // ----- T012: --rich end-to-end (degrades to text when redirected) -----
 
@@ -120,22 +170,19 @@ module ValidateCommandTests =
     [<Fact; Trait("tier", "slow")>]
     let ``validate --rich --out persists deterministic text with zero ANSI`` () =
         // FR-010: --out never receives rich ANSI; it persists the deterministic
-        // plain-text projection (equal to --text stdout).
-        let outPath =
-            Path.Combine(Path.GetTempPath(), $"validate-rich-{System.Guid.NewGuid():N}.txt")
+        // plain-text projection (equal to --text stdout). A relative --out under an isolated working
+        // dir (the containment guard #256 refuses absolute paths).
+        let workDir = Commands.tempDirectory ()
+        let outName = $"validate-rich-{System.Guid.NewGuid():N}.txt"
 
-        try
-            let _, _ =
-                runCli [ "validate"; "--matrix"; "compatibility"; "--rich"; "--out"; outPath ]
+        let _, _, _ =
+            runCliFullIn workDir [ "validate"; "--matrix"; "compatibility"; "--rich"; "--out"; outName ]
 
-            let persisted = File.ReadAllText outPath
-            let textOut, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--text" ]
-            Assert.False(persisted |> Seq.exists (fun c -> int c = 27), "persisted --out contains an ANSI escape")
-            // runCli appends a trailing newline to stdout; compare on trimmed content.
-            Assert.Equal(textOut.TrimEnd(), persisted.TrimEnd())
-        finally
-            if File.Exists outPath then
-                File.Delete outPath
+        let persisted = File.ReadAllText(Path.Combine(workDir, outName))
+        let textOut, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--text" ]
+        Assert.False(persisted |> Seq.exists (fun c -> int c = 27), "persisted --out contains an ANSI escape")
+        // runCli appends a trailing newline to stdout; compare on trimmed content.
+        Assert.Equal(textOut.TrimEnd(), persisted.TrimEnd())
 
     // ----- Feature 088 / FS.GG.SDD#172: Markdown report card + force-color -----
 
@@ -164,21 +211,18 @@ module ValidateCommandTests =
 
     [<Fact; Trait("tier", "slow")>]
     let ``validate --markdown --out persists the card and exits on verdict only`` () =
-        let outPath =
-            Path.Combine(Path.GetTempPath(), $"validate-md-{System.Guid.NewGuid():N}.md")
+        // A relative --out under an isolated working dir (the containment guard #256 refuses absolute).
+        let workDir = Commands.tempDirectory ()
+        let outName = $"validate-md-{System.Guid.NewGuid():N}.md"
 
-        try
-            let stdout, exitCode =
-                runCli [ "validate"; "--matrix"; "compatibility"; "--markdown"; "--out"; outPath ]
+        let stdout, _, exitCode =
+            runCliFullIn workDir [ "validate"; "--matrix"; "compatibility"; "--markdown"; "--out"; outName ]
 
-            let persisted = File.ReadAllText outPath
-            Assert.Contains("# Validation Report", persisted)
-            Assert.Equal(stdout.TrimEnd(), persisted.TrimEnd())
-            // Partial (single-matrix) run never reads as a full pass — exit reflects the verdict.
-            Assert.NotEqual(0, exitCode)
-        finally
-            if File.Exists outPath then
-                File.Delete outPath
+        let persisted = File.ReadAllText(Path.Combine(workDir, outName))
+        Assert.Contains("# Validation Report", persisted)
+        Assert.Equal(stdout.TrimEnd(), persisted.TrimEnd())
+        // Partial (single-matrix) run never reads as a full pass — exit reflects the verdict.
+        Assert.NotEqual(0, exitCode)
 
     [<Fact; Trait("tier", "slow")>]
     let ``validate exit code is identical across --markdown and --json`` () =
