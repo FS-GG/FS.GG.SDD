@@ -36,9 +36,11 @@ open Xunit
 //     (a `None` and an authored `Some true` are the same rendered value);
 //   • `sourceIds` is upper-cased on read, so the generator emits already-upper-cased tokens; the
 //     inline-list writers `List.distinct |> List.sort`, so every generated list is
-//     distinct-and-sorted — its canonical round-trip form;
-//   • an *empty* task list renders `tasks:` then a bare `[]` on the following line (invalid YAML),
-//     a degenerate form the `tasks` stage never emits, so the generator always produces ≥1 task.
+    //     distinct-and-sorted — its canonical round-trip form.
+    //
+    // An *empty* task list is in-domain: the emitter renders the inline `tasks: []` marker (mirroring
+    // `evidence: []` and the scalar note blocks), which `parseTaskFacts` reads back as no tasks — so
+    // the generator emits zero-or-more tasks (FS.GG.SDD#279).
 module TasksRoundTripPropertyTests =
 
     let private workId = "011-round-trip"
@@ -187,15 +189,13 @@ module TasksRoundTripPropertyTests =
         gen {
             let! title = safeToken
             let! impact = Gen.elements [ true; false ]
-            // At least one task: an *empty* task list renders `tasks:` then a bare `[]` on the next
-            // line — a degenerate, non-round-tripping form the `tasks` stage never emits (it always
-            // derives at least one task from the spec's requirements), so it is outside this
-            // property's authored domain, the same way the evidence property excludes empty notes.
-            let! head = Gen.elements [ 1..5 ]
-            let! tail = sublistOf [ 1..5 ]
+            // Zero-or-more tasks: the empty list is in-domain, rendered as the inline `tasks: []`
+            // marker that round-trips to no tasks (FS.GG.SDD#279), so the generator draws a plain
+            // subset of the id pool — possibly empty.
+            let! idxs = sublistOf [ 1..5 ]
 
             let ids =
-                (head :: tail)
+                idxs
                 |> List.distinct
                 |> List.map (fun i -> createTaskId (sprintf "T%03d" i) |> orFail "taskId")
                 |> List.sortBy (fun (id: TaskId) -> id.Value)
@@ -346,3 +346,25 @@ module TasksRoundTripPropertyTests =
             let reparsed = Assert.Single facts.Tasks
             Assert.Equal(TaskStatus.Skipped "not-needed-yet", reparsed.Status) // skipRationale round-trips
             Assert.Equal<string list>([ "AC-002"; "FR-001" ], reparsed.SourceIds)
+
+    // The empty-task-list boundary (FS.GG.SDD#279): the emitter must render the inline `tasks: []`
+    // marker — valid YAML that `parseTaskFacts` reads back as zero tasks — not `tasks:` followed by a
+    // bare `[]` on the next line, which the parser rejected as an empty file.
+    [<Fact>]
+    let ``round-trip preserves an empty task list as inline tasks: [] (#279)`` () =
+        let authored =
+            { Title = "Empty-Tasks"
+              PublicOrToolFacingImpact = true
+              Tasks = []
+              AcceptedDeferrals = []
+              AdvisoryNotes = []
+              LifecycleNotes = [ "kept-note" ] }
+
+        let text = renderText authored
+        Assert.Contains("tasks: []", text) // inline marker, not `tasks:\n[]`
+
+        match parseTaskFacts { Path = tasksPath; Text = text } with
+        | Error diagnostics -> failwithf "empty-tasks round-trip parse failed: %A\n--- rendered ---\n%s" diagnostics text
+        | Ok facts ->
+            Assert.Equal(authoredPartition authored, parsedPartition facts)
+            Assert.Empty facts.Tasks
