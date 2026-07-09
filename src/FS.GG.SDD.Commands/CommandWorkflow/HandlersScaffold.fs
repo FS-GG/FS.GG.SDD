@@ -101,6 +101,37 @@ module internal HandlersScaffold =
         request.Parameters
         |> List.fold (fun (state: Map<string, string>) (key, value) -> Map.add key value state) defaults
 
+    // `dotnet new <template>` exposes each template symbol as a `--<symbol>` option and
+    // offers no collision-free passthrough (see `scaffoldInvocationEffects`). An author
+    // `--param <key>=<value>` whose key is empty (renders to a bare `--` options
+    // terminator), dash-prefixed (a malformed option token), or shadows a `dotnet new`
+    // built-in long option (`force`→`--force`, `output`→`--output <path>`, …) would
+    // silently inject that option instead of forwarding a template symbol. Reject such
+    // keys at the boundary rather than forward option-injection to the child (Gap C
+    // finding 5 / ADR-0002). Short single-dash aliases (`-o`/`-n`/…) cannot be produced
+    // by the `--<key>` interpolation, so only the long forms can collide. Only
+    // author-supplied keys are validated; provider-declared defaults are the trusted
+    // contract.
+    let private reservedDotnetNewOptions =
+        set
+            [ "force"
+              "output"
+              "name"
+              "dry-run"
+              "no-update"
+              "language"
+              "type"
+              "project"
+              "verbosity"
+              "diagnostics"
+              "help" ]
+
+    let invalidAuthorParamKeys (request: CommandRequest) =
+        request.Parameters
+        |> List.map fst
+        |> List.filter (fun key -> key = "" || key.StartsWith "-" || Set.contains key reservedDotnetNewOptions)
+        |> List.distinct
+
     let missingRequiredParameters (descriptor: ProviderDescriptor) (effective: Map<string, string>) =
         descriptor.Parameters
         |> List.filter (fun spec -> spec.Required && not (Map.containsKey spec.Key effective))
@@ -197,6 +228,14 @@ module internal HandlersScaffold =
                         (Some name)
                         (Some descriptor.ContractVersion)
                         $"Upgrade SDD or the provider to a contract version within {supportedContractRange}."
+                )
+            | Some descriptor when not (List.isEmpty (invalidAuthorParamKeys request)) ->
+                ScaffoldBlocked(
+                    [ DiagnosticsModule.scaffoldInvalidParamKey (invalidAuthorParamKeys request) ],
+                    notRunSummary
+                        (Some name)
+                        (Some descriptor.ContractVersion)
+                        "Rename the offending `--param` key(s) to a template symbol name that is not a `dotnet new` option."
                 )
             | Some descriptor ->
                 match deriveIdentifierParameter descriptor request (effectiveParameters descriptor request) with

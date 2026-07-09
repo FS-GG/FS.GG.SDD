@@ -244,6 +244,19 @@ module Diagnostics =
             "Choose a product name containing at least one letter, digit, or underscore."
             [ name ]
 
+    let scaffoldInvalidParamKey (keys: string list) =
+        let ordered = keys |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.invalidParamKey"
+            DiagnosticError
+            None
+            None
+            $"`--param` key(s) would inject a `dotnet new` built-in option instead of forwarding a template symbol: {rendered}."
+            "Rename each parameter to a non-empty template symbol name that is not dash-prefixed and does not shadow a `dotnet new` option (e.g. not `force`, `output`, `name`, `language`)."
+            ordered
+
     let scaffoldTargetCollision (paths: string list) =
         let ordered = paths |> List.sort
 
