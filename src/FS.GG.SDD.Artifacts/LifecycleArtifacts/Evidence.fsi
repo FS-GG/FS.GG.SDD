@@ -112,5 +112,16 @@ module Evidence =
         val disclosureDraftSeed: DisclosureDraft
         val disclosureFields: ArtifactCodec.FieldCodec<DisclosureDraft> list
 
+        /// The whole authored evidence declaration as one shared field list — drives both the
+        /// reader (`parseEvidenceArtifact`) and the renderer (`HandlersEvidence`). `id` is framed by
+        /// the artifact-level renderer and read by the semantic layer, so it is not a field here.
+        val declarationSeed: EvidenceDeclaration
+        val declarationFields: ArtifactCodec.FieldCodec<EvidenceDeclaration> list
+
+    /// Serialization mappings shared by the codec and the Commands validation/render (FS.GG.SDD#260).
+    val evidenceKindSourceValue: kind: EvidenceKind -> string
+    val allowedEvidenceResults: Set<string>
+    val normalizedEvidenceResult: result: string -> string
+
     val parseEvidenceArtifact: snapshot: FileSnapshot -> Result<EvidenceArtifact, Diagnostic list>
     val parseEvidence: snapshot: FileSnapshot -> Result<EvidenceDeclaration list, Diagnostic list>

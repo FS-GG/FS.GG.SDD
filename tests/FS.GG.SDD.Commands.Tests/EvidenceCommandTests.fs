@@ -525,10 +525,11 @@ evidence:
         let report, evidence = authorAfterSynthetic root "synthetic: false" injected
 
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
-        Assert.Contains("    rationale: \"accepted deferral see DEC-004\"", evidence)
-        Assert.Contains("    owner: \"platform\"", evidence)
-        Assert.Contains("    scope: \"workspace\"", evidence)
-        Assert.Contains("    laterLifecycleVisibility: \"verify\"", evidence)
+        // The codec quotes minimally (FS.GG.SDD#260): these safe plain scalars round-trip bare.
+        Assert.Contains("    rationale: accepted deferral see DEC-004", evidence)
+        Assert.Contains("    owner: platform", evidence)
+        Assert.Contains("    scope: workspace", evidence)
+        Assert.Contains("    laterLifecycleVisibility: verify", evidence)
 
     [<Fact>]
     let ``evidence sourceRefs round-trip preserves id, digest and relatedSourceId (#181)`` () =
@@ -667,8 +668,8 @@ evidence:
             authorAfterSynthetic root "synthetic: false" [ "    rationale: \"null\""; "    owner: platform" ]
 
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
-        Assert.Contains("    owner: \"platform\"", evidence) // witness: the writer re-rendered
-        Assert.Contains("    rationale: \"null\"", evidence)
+        Assert.Contains("    owner: platform", evidence) // witness: the writer re-rendered (bare, #260)
+        Assert.Contains("    rationale: \"null\"", evidence) // the null token stays quoted so it round-trips
 
     [<Fact>]
     let ``evidence round-trips a populated deferral declaration through the slim writer`` () =
@@ -710,10 +711,11 @@ evidence:
 
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
         Assert.DoesNotContain(report.Diagnostics, fun d -> d.Id = "evidence.missingDeferralRationale")
-        Assert.Contains("    rationale: \"no GPU on the CI runner\"", evidence)
-        Assert.Contains("    owner: \"platform\"", evidence)
-        Assert.Contains("    scope: \"the headless render check\"", evidence)
-        Assert.Contains("    laterLifecycleVisibility: \"verify\"", evidence)
+        // Minimal quoting (FS.GG.SDD#260): safe plain scalars render bare and round-trip.
+        Assert.Contains("    rationale: no GPU on the CI runner", evidence)
+        Assert.Contains("    owner: platform", evidence)
+        Assert.Contains("    scope: the headless render check", evidence)
+        Assert.Contains("    laterLifecycleVisibility: verify", evidence)
 
     [<Fact>]
     let ``evidence normalizes an authored bare-null declaration to the slim shape, then settles`` () =

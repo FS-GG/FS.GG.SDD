@@ -78,6 +78,8 @@ FS.GG.SDD.Artifacts.Diagnostics.upgradeResidualDrift
 FS.GG.SDD.Artifacts.Diagnostics.upgradeSelfUpdateFailed
 FS.GG.SDD.Artifacts.Diagnostics.upgradeStepFailed
 FS.GG.SDD.Artifacts.Diagnostics.workModelInconsistent
+FS.GG.SDD.Artifacts.Evidence.evidenceKindSourceValue
+FS.GG.SDD.Artifacts.Evidence.normalizedEvidenceResult
 FS.GG.SDD.Artifacts.Evidence.parseEvidence
 FS.GG.SDD.Artifacts.Evidence.parseEvidenceArtifact
 FS.GG.SDD.Artifacts.FsharpIdentifier.deriveNamespace

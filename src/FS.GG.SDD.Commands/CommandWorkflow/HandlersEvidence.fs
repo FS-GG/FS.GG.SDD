@@ -33,26 +33,9 @@ module internal HandlersEvidence =
           TaskIds: string list
           DiagnosticIds: string list }
 
-    let evidenceKindSourceValue kind =
-        match kind with
-        | EvidenceKind.Implementation -> "implementation"
-        | EvidenceKind.Verification -> "verification"
-        | EvidenceKind.Review -> "review"
-        | EvidenceKind.GeneratedViewEvidence -> "generated-view"
-        | EvidenceKind.Synthetic -> "synthetic"
-        | EvidenceKind.Deferral -> "deferral"
-        | EvidenceKind.Note -> "note"
-        | EvidenceKind.Missing -> "missing"
-
-    let allowedEvidenceResults =
-        [ "pass"; "fail"; "deferred"; "missing"; "stale"; "advisory"; "blocked" ]
-        |> Set.ofList
-
-    let normalizedEvidenceResult (result: string) =
-        (if String.IsNullOrEmpty result then
-             ""
-         else
-             result.Trim().ToLowerInvariant())
+    // `evidenceKindSourceValue`/`allowedEvidenceResults`/`normalizedEvidenceResult` moved to
+    // FS.GG.SDD.Artifacts (Evidence.fs) so the shared codec can drive both directions; call sites
+    // here and in HandlersVerify resolve them via AutoOpen (FS.GG.SDD#260).
 
     let evidenceAnalysisSummary path (view: AnalysisView) : AnalysisSummary =
         { WorkId = view.WorkId.Value
@@ -755,100 +738,21 @@ module internal HandlersEvidence =
         $"""  - label: {snapshot.Label}
     path: {snapshot.Path}{optionalFields}"""
 
-    // Re-indent a column-0 `ArtifactCodec.render` block for embedding under a parent key.
-    // `codecListItem` formats it as a YAML block-sequence item at `indent` spaces — the first field
-    // lands on the `- ` marker line, the rest align two spaces deeper; `codecIndent` shifts every
-    // line by `indent` spaces for a nested mapping. (Rendered blocks never contain blank lines.)
-    let private codecListItem (indent: int) (rendered: string) =
-        let pad = System.String(' ', indent)
-        let cont = System.String(' ', indent + 2)
-
-        rendered.Split('\n')
-        |> Array.mapi (fun i line -> if i = 0 then $"{pad}- {line}" else $"{cont}{line}")
-        |> String.concat "\n"
-
+    // Shift a column-0 `ArtifactCodec.render` block `indent` spaces deeper, for embedding under a key.
     let private codecIndent (indent: int) (rendered: string) =
         let pad = System.String(' ', indent)
         rendered.Split('\n') |> Array.map (fun line -> pad + line) |> String.concat "\n"
 
-    let renderEvidenceSourceRefs (refs: EvidenceSourceReference list) =
-        match refs with
-        | [] -> "    sourceRefs: []"
-        | refs ->
-            // One shared field list (`EvidenceCodec.sourceRefFields`) drives this render and the
-            // reader, so every authored field round-trips (FS.GG.SDD#181) — `id`/`digest`/
-            // `relatedSourceId` can no longer be read-but-not-written. Absent optionals omit their
-            // line; the codec quotes minimally (a bare scalar that round-trips stays bare).
-            let lines =
-                refs
-                |> List.map (fun ref -> codecListItem 6 (ArtifactCodec.render EvidenceCodec.sourceRefFields ref))
-                |> String.concat "\n"
-
-            $"    sourceRefs:\n{lines}"
-
-    // Feature 091: an absent optional field is written as *no line at all*, not as `<key>: null`.
-    // Safe because the reader collapses "key absent" and "key present, plain null" to the same
-    // `None` (Internal.tryChild / Internal.isPlainNullScalar), so this is a serialization change,
-    // not a schema change — no schemaVersion bump, and files still carrying explicit `null`s parse
-    // unchanged. Returning `string option` (rather than `""`) is what keeps the omitted case from
-    // leaving a blank line behind; see `renderEvidenceDeclaration`.
-    let renderOptionalScalar name value =
-        value |> Option.map (fun value -> $"    {name}: {yamlString value}")
-
-    let renderSyntheticDisclosure (disclosure: SyntheticDisclosure option) =
-        disclosure
-        |> Option.map (fun disclosure ->
-            // The same shared `EvidenceCodec.disclosureFields` list that reads the disclosure renders
-            // it (FS.GG.SDD#180). A quoted "null" stays quoted (it is not a safe bare scalar), so the
-            // literal survives while a bare null still reads back as absence.
-            let body =
-                ArtifactCodec.render
-                    EvidenceCodec.disclosureFields
-                    { StandsInFor = Some disclosure.StandsInFor
-                      Reason = Some disclosure.Reason }
-
-            "    syntheticDisclosure:\n" + codecIndent 6 body)
-
     let renderEvidenceDeclaration (declaration: EvidenceDeclaration) =
-        let taskRefs = declaration.TaskRefs |> List.map _.Value
-        let requirementRefs = declaration.RequirementRefs |> List.map _.Value
-        let acceptanceRefs = declaration.AcceptanceScenarioRefs |> List.map _.Value
-        let clarificationRefs = declaration.ClarificationDecisionRefs |> List.map _.Value
-        let checklistRefs = declaration.ChecklistResultRefs |> List.map _.Value
-        let planRefs = declaration.PlanDecisionRefs |> List.map _.Value
-        let artifactRefs = declaration.ArtifactRefs |> List.map _.Path
-
-        // The five optional fields, in their established emission order, spliced between
-        // `synthetic:` and `notes:`. Each present field carries its own leading newline — the same
-        // convention `renderEvidenceSourceRefs` uses for `path`/`uri`/`result` — so the all-absent
-        // case concatenates to "" with no empty-list special case, `notes:` follows `synthetic:`
-        // directly, and no blank line is left behind.
-        let optionalFields =
-            [ renderSyntheticDisclosure declaration.SyntheticDisclosure
-              renderOptionalScalar "rationale" declaration.Rationale
-              renderOptionalScalar "owner" declaration.Owner
-              renderOptionalScalar "scope" declaration.Scope
-              renderOptionalScalar "laterLifecycleVisibility" declaration.LaterLifecycleVisibility ]
-            |> List.choose (Option.map (fun line -> "\n" + line))
-            |> String.concat ""
-
-        $"""  - id: {declaration.Id.Value}
-    kind: {evidenceKindSourceValue declaration.Kind}
-    subject:
-      type: {yamlString declaration.Subject.SubjectType}
-      id: {yamlString declaration.Subject.Id}
-    taskRefs: {taskRefs |> yamlInlineList}
-    requirementRefs: {requirementRefs |> yamlInlineList}
-    acceptanceScenarioRefs: {acceptanceRefs |> yamlInlineList}
-    clarificationDecisionRefs: {clarificationRefs |> yamlInlineList}
-    checklistResultRefs: {checklistRefs |> yamlInlineList}
-    planDecisionRefs: {planRefs |> yamlInlineList}
-    obligationRefs: {declaration.ObligationRefs |> yamlInlineList}
-    artifacts: {artifactRefs |> yamlInlineList}
-{renderEvidenceSourceRefs declaration.SourceRefs}
-    result: {normalizedEvidenceResult declaration.Result}
-    synthetic: {if declaration.Synthetic then "true" else "false"}{optionalFields}
-    notes: {declaration.Notes |> yamlInlineList}"""
+        // One shared field list (`EvidenceCodec.declarationFields`) drives this render and the reader
+        // (FS.GG.SDD#260) — a field cannot be read without being written or vice versa; the read/write
+        // asymmetry behind #180/#181 is unrepresentable. `id` frames the block-sequence item and is
+        // read by the semantic layer, so it is not a codec field; the rest render column-0 and shift
+        // four spaces under it. The codec quotes minimally (a scalar that round-trips bare stays bare).
+        "  - id: "
+        + declaration.Id.Value
+        + "\n"
+        + codecIndent 4 (ArtifactCodec.render EvidenceCodec.declarationFields declaration)
 
     let evidenceArtifactText workId (artifact: EvidenceArtifact) (summary: EvidenceSummary) =
         let sourceSnapshots =
