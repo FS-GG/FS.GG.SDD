@@ -132,7 +132,6 @@ tasks:
             fun view ->
                 view.Path = workModelPath
                 && view.Currency = GeneratedViewCurrency.Current
-                && view.OutputDigest.IsSome
                 && view.Sources
                    |> List.exists (fun source -> source.Path = $"work/{workId}/charter.md")
         )

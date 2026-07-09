@@ -67,7 +67,7 @@
     {
       "id": "fs-gg-sdd-refresh-agents",
       "scope": "process",
-      "sha256": "557ec14f288c39dc3fa337bcdee0e8765ff53b574527619c2564025db1a74838",
+      "sha256": "537dd263bb13d5570093764d8fd4e041ae28661070bc7fcb8d8c9067256d6f83",
       "resolvablePath": ".agents/skills/fs-gg-sdd-refresh-agents/SKILL.md",
       "materializes-when": "always"
     },

@@ -674,17 +674,8 @@ module internal ViewGeneration =
         let text =
             analysisJson workId model.Request.GeneratorVersion sources relationships summary diagnostics generatedViews
 
-        let outputDigest = SchemaVersionModule.outputSha256Text text
-
         let view =
-            generatedViewState
-                path
-                "analysis"
-                model.Request.GeneratorVersion
-                sources
-                (Some outputDigest)
-                GeneratedViewCurrency.Current
-                []
+            generatedViewState path "analysis" model.Request.GeneratorVersion sources GeneratedViewCurrency.Current []
 
         summary, text, view
 
@@ -831,7 +822,6 @@ module internal ViewGeneration =
                     "workModel"
                     request.GeneratorVersion
                     sources
-                    None
                     GeneratedViewCurrency.Blocked
                     blockingCommandIds
 
@@ -872,7 +862,6 @@ module internal ViewGeneration =
                         "workModel"
                         request.GeneratorVersion
                         sources
-                        (Some result.OutputDigest)
                         GeneratedViewCurrency.Current
                         diagnosticIds
 
@@ -951,7 +940,7 @@ module internal ViewGeneration =
                     |> List.choose id
 
                 let view =
-                    generatedViewState path "workModel" request.GeneratorVersion sources None currency diagnosticIds
+                    generatedViewState path "workModel" request.GeneratorVersion sources currency diagnosticIds
 
                 diagnostics, view, []
 
