@@ -55,10 +55,47 @@ module RegistrySkillManifest =
     let private usage =
         "Usage: fsgg-sdd registry skill-manifest [--check|--write] [--root <dir>]"
 
+    // ADR-0002 Gap C finding 4 (#203, FS-GG/FS.GG.SDD#258): the registry subcommands parse with
+    // their own scanners outside the lifecycle interpreter, so — like every lifecycle command since
+    // #196 — an option they cannot honor must block (exit 1, nothing written) instead of being
+    // silently swallowed by the `_ :: rest` catch-all. Recognized here: the three modes and the
+    // value-taking `--root`. The bare `--` end-of-options separator (#246) is not an option, and the
+    // token after `--root` is its value, not an option. (`RegistryValidate` keeps a sibling copy of
+    // this reject pass over its own recognized set; kept small and comment-linked so they cannot drift.)
+    let private recognizedOptions =
+        set [ "--check"; "--write"; "--root"; "--help"; "-h" ]
+
+    let private unknownOptions (args: string list) =
+        let rec scan acc =
+            function
+            | [] -> List.rev acc
+            | "--root" :: value :: rest when not (value.StartsWith("--", StringComparison.Ordinal)) -> scan acc rest // `--root <value>`: the value is not an option token
+            | "--" :: rest -> scan acc rest // POSIX end-of-options separator (#246)
+            | token :: rest when
+                token.StartsWith("-", StringComparison.Ordinal)
+                && not (recognizedOptions.Contains token)
+                ->
+                scan (token :: acc) rest
+            | _ :: rest -> scan acc rest
+
+        scan [] args
+
+    let private formatOptions (options: string list) =
+        options |> List.map (fun option -> $"'{option}'") |> String.concat ", "
+
     let run (args: string list) : int =
+        // Reject an unrecognized option before anything acts; a token the command cannot honor is
+        // not masked by a later `--help`/mode flag — stderr diagnostic + exit 1, stdout clean (parity
+        // with the `--root` containment error below).
+        let unknown = unknownOptions args
+
+        if not (List.isEmpty unknown) then
+            Console.Error.WriteLine($"registry skill-manifest: unrecognized option {formatOptions unknown} — {usage}")
+
+            1
         // `--help` must not depend on manifest generation, so resolve it before any
         // embedded-resource read; `generate ()` runs only in the branches that emit.
-        if args |> List.exists (fun a -> a = "--help" || a = "-h") then
+        elif args |> List.exists (fun a -> a = "--help" || a = "-h") then
             Console.Out.WriteLine usage
             0
         else
