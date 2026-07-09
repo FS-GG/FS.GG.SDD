@@ -42,9 +42,12 @@ module internal NextActionRouting =
             None
         else
 
-            let blocking =
+            let blockingDiagnostics =
                 diagnostics
                 |> List.filter (fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError)
+
+            let blocking =
+                blockingDiagnostics
                 |> List.map (fun diagnostic -> diagnostic.Id)
                 |> List.distinct
                 |> List.sort
@@ -52,7 +55,25 @@ module internal NextActionRouting =
             if not (List.isEmpty blocking) then
                 let ids = blocking |> Set.ofList
 
-                if ids |> Set.contains "stalePlanSnapshot" then
+                // #252 item 2: a tool-defect blocker — the `unhandledException` backstop,
+                // `scaffold.provider*`, `upgrade.selfUpdateFailed`/`stepFailed` — is the exit-2 class
+                // and is NOT correctable by the agent; its own text says "this is a tool defect, not a
+                // problem with your input". When *every* blocking diagnostic is a tool defect there is
+                // nothing to correct, so the generic `correctBlockingDiagnostics` NextAction (Reason:
+                // "The command is blocked by diagnostics.") directly contradicts the diagnostic. Route
+                // instead to a no-action `reportToolDefect`, whose remedy is each diagnostic's own
+                // Correction. A *mixed* set (a correctable input error alongside a defect) keeps the
+                // generic action, since the input error genuinely is correctable.
+                if blockingDiagnostics |> List.forall (fun diagnostic -> diagnostic.IsToolDefect) then
+                    Some
+                        { ActionId = "reportToolDefect"
+                          Command = None
+                          WorkId = request.WorkId
+                          Reason =
+                            "The command is blocked by an internal tool defect, not a problem with your input. Follow each diagnostic's correction for any manual remedy, then report the defect to FS.GG.SDD if it recurs."
+                          RequiredArtifacts = []
+                          BlockingDiagnosticIds = blocking }
+                elif ids |> Set.contains "stalePlanSnapshot" then
                     // Feature 090 (#163), FR-010. A stale plan snapshot has one recovery, and it is
                     // the same one from `plan`, `tasks`, and `analyze` — so this is deliberately not
                     // gated on `request.Command`, and it precedes the generic
