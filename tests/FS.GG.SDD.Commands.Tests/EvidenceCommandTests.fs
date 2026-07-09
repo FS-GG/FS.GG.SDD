@@ -560,10 +560,12 @@ evidence:
             + "    notes: []\n"
             + "lifecycleNotes:\n  - Next lifecycle action: verify.\n"
 
-        let declaration =
+        let seededArtifact =
             match parseEvidenceArtifact { Path = evidencePath; Text = seed } with
-            | Ok artifact -> Assert.Single(artifact.Evidence)
+            | Ok artifact -> artifact
             | Error diagnostics -> failwith $"Seed evidence did not parse: {diagnostics}."
+
+        let declaration = Assert.Single(seededArtifact.Evidence)
 
         // Guard the fixture: the seed itself must actually carry the three previously-dropped fields.
         let seeded = Assert.Single(declaration.SourceRefs)
@@ -571,10 +573,13 @@ evidence:
         Assert.Equal(Some "deadbeefcafe", seeded.Digest)
         Assert.Equal(Some "SRC-42", seeded.RelatedSourceId)
 
+        // Re-render the whole artifact through the real writer (the `evidence` block is now a codec
+        // recordList), then parse it back — parse ∘ render ∘ parse.
         let reRendered =
-            "schemaVersion: 1\nworkId: 011-evidence-command\nstage: evidence\nstatus: evidenceReady\nsourceSnapshots: []\nevidence:\n"
-            + HandlersEvidence.renderEvidenceDeclaration declaration
-            + "\nlifecycleNotes:\n  - Next lifecycle action: verify.\n"
+            HandlersEvidence.evidenceArtifactText
+                "011-evidence-command"
+                seededArtifact
+                (HandlersEvidence.evidenceSummary "011-evidence-command" seededArtifact [])
 
         match
             parseEvidenceArtifact

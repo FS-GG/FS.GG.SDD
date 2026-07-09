@@ -738,21 +738,26 @@ module internal HandlersEvidence =
         $"""  - label: {snapshot.Label}
     path: {snapshot.Path}{optionalFields}"""
 
-    // Shift a column-0 `ArtifactCodec.render` block `indent` spaces deeper, for embedding under a key.
-    let private codecIndent (indent: int) (rendered: string) =
-        let pad = System.String(' ', indent)
-        rendered.Split('\n') |> Array.map (fun line -> pad + line) |> String.concat "\n"
-
-    let renderEvidenceDeclaration (declaration: EvidenceDeclaration) =
-        // One shared field list (`EvidenceCodec.declarationFields`) drives this render and the reader
-        // (FS.GG.SDD#260) — a field cannot be read without being written or vice versa; the read/write
-        // asymmetry behind #180/#181 is unrepresentable. `id` frames the block-sequence item and is
-        // read by the semantic layer, so it is not a codec field; the rest render column-0 and shift
-        // four spaces under it. The codec quotes minimally (a scalar that round-trips bare stays bare).
-        "  - id: "
-        + declaration.Id.Value
-        + "\n"
-        + codecIndent 4 (ArtifactCodec.render EvidenceCodec.declarationFields declaration)
+    // The authored artifact tail — the `evidence` block sequence and `lifecycleNotes` — is now codec-
+    // driven too (FS.GG.SDD#260): `id` is the first `declarationFields` key, so `recordList` frames
+    // each declaration as `  - id: …`; an empty list renders `evidence: []`. The front matter and
+    // `sourceSnapshots` above it stay tool-owned (canonical / recomputed), so they are hand-rendered.
+    let private evidenceArtifactAuthoredFields: ArtifactCodec.FieldCodec<EvidenceArtifact> list =
+        [ ArtifactCodec.recordList
+              "evidence"
+              EvidenceCodec.declarationFields
+              EvidenceCodec.declarationSeed
+              (fun artifact -> artifact.Evidence |> List.sortBy (fun declaration -> declaration.Id.Value))
+              (fun value artifact -> { artifact with Evidence = value })
+          ArtifactCodec.scalarBlock
+              "lifecycleNotes"
+              // An empty authored list seeds the canonical next-action note (unchanged behaviour).
+              (fun artifact ->
+                  if List.isEmpty artifact.LifecycleNotes then
+                      [ defaultEvidenceLifecycleNote ]
+                  else
+                      artifact.LifecycleNotes)
+              (fun value artifact -> { artifact with LifecycleNotes = value }) ]
 
     let evidenceArtifactText workId (artifact: EvidenceArtifact) (summary: EvidenceSummary) =
         let sourceSnapshots =
@@ -765,16 +770,6 @@ module internal HandlersEvidence =
                 |> String.concat "\n"
                 |> fun text -> $"sourceSnapshots:\n{text}"
 
-        let evidence =
-            match artifact.Evidence with
-            | [] -> "evidence: []"
-            | evidence ->
-                evidence
-                |> List.sortBy (fun declaration -> declaration.Id.Value)
-                |> List.map renderEvidenceDeclaration
-                |> String.concat "\n"
-                |> fun text -> $"evidence:\n{text}"
-
         $"""schemaVersion: 1
 workId: {workId}
 stage: evidence
@@ -786,13 +781,7 @@ sourcePlan: {planPath workId}
 sourceTasks: {tasksPath workId}
 sourceAnalysis: {analysisPath workId}
 {sourceSnapshots}
-{evidence}
-{renderScalarBlock
-     "lifecycleNotes"
-     (if List.isEmpty artifact.LifecycleNotes then
-          [ defaultEvidenceLifecycleNote ]
-      else
-          artifact.LifecycleNotes)}
+{ArtifactCodec.render evidenceArtifactAuthoredFields artifact}
 """
 
     let computeEvidencePlan model =
