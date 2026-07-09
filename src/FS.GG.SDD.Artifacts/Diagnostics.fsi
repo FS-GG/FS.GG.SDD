@@ -84,6 +84,11 @@ module Diagnostics =
     /// User-input class → exit 1; blocks before provider invocation.
     val scaffoldNameUnrepresentable: name: string -> Diagnostic
 
+    /// An author `--param` key that would inject a `dotnet new` built-in option (empty,
+    /// dash-prefixed, or a reserved long-option name) rather than a template symbol.
+    /// User-input class → exit 1; blocks before provider invocation.
+    val scaffoldInvalidParamKey: keys: string list -> Diagnostic
+
     val scaffoldTargetCollision: paths: string list -> Diagnostic
     val scaffoldProviderEmpty: name: string -> Diagnostic
     val scaffoldProviderFailed: name: string -> exitCode: int -> Diagnostic

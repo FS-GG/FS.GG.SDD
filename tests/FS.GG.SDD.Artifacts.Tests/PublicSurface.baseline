@@ -36,6 +36,7 @@ FS.GG.SDD.Artifacts.Diagnostics.missingGeneratedWorkModel
 FS.GG.SDD.Artifacts.Diagnostics.proseStructuredMismatch
 FS.GG.SDD.Artifacts.Diagnostics.requirementNotTyped
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldCliBehindMinimum
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldInvalidParamKey
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldMirrorFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldNameUnrepresentable
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProvenanceMalformed

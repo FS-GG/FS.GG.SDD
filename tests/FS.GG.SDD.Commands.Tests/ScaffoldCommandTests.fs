@@ -242,6 +242,37 @@ module ScaffoldCommandTests =
         Assert.Contains("scaffold.providerParamMissing", diagnosticIds report)
         Assert.Equal(1, exitCodeForReport report)
 
+    [<Theory>]
+    [<InlineData("force")>] // shadows the `dotnet new --force` flag
+    [<InlineData("output")>] // shadows `--output`, redirecting the product out of the target
+    [<InlineData("-o")>] // dash-prefixed: a malformed option token
+    [<InlineData("")>] // empty key: renders to a bare `--` options terminator
+    let ``scaffold rejects an author --param key that injects a dotnet new option`` (badKey: string) =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme"; badKey, "x" ] false false)
+
+        Assert.Contains("scaffold.invalidParamKey", diagnosticIds report)
+        Assert.Equal(1, exitCodeForReport report)
+        Assert.False((scaffoldSummary report).ProviderInvoked)
+        Assert.False(TestSupport.existsRelative root "App.fsproj")
+
+    [<Fact>]
+    let ``scaffold does not reject a legitimate author --param key`` () =
+        // A well-formed, non-option key must pass the injection guard. The block here is the
+        // unrelated missing-required-param block (`productName` absent), which proves the key
+        // itself was accepted rather than rejected as an injection.
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "EnableAudio", "true" ] false false)
+
+        Assert.DoesNotContain("scaffold.invalidParamKey", diagnosticIds report)
+        Assert.Contains("scaffold.providerParamMissing", diagnosticIds report)
+
     [<Fact>]
     let ``scaffold into a non-empty target without --force blocks per-path`` () =
         let root = TestSupport.tempDirectory ()
