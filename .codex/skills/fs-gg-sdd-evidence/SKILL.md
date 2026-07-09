@@ -106,11 +106,11 @@ the skill↔gate doctest):
 
 <!-- fsgg-sdd:example corpus=evidence.yml mode=contains -->
 ```yaml
-  - id: EV003
+  - id: EV012
     kind: deferral
     subject:
       type: task
-      id: T002
+      id: T012
     requirementRefs: [FR-002]
     clarificationDecisionRefs: [DEC-002]
     result: deferred

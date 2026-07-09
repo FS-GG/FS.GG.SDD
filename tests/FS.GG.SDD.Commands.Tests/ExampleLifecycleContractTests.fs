@@ -83,6 +83,35 @@ module ExampleLifecycleContractTests =
         assertStagePasses "verify" (TestSupport.runVerify root workId title)
         assertStagePasses "ship" (TestSupport.runShip root workId title)
 
+    /// FS.GG.SDD#211: the example must survive the *generating* stages that precede the gates,
+    /// not just the gates themselves. `tasks` re-derives the whole task graph and `plan`
+    /// re-authors its decisions on every run; before #211 the shipped example was a fixpoint of
+    /// neither — `tasks` renumbered the authored `T001`/`T002`, `evidence.yml`'s `subject.id`
+    /// refs then dangled, and `evidence` blocked on `unknownReference` two stages on. Copy
+    /// verbatim, run plan -> tasks (the generators) FIRST, then walk the gates, so a regression
+    /// that reintroduces the renumber-and-orphan surfaces here rather than in a user's workspace.
+    [<Fact>]
+    let ``Shipped example survives its own generators: plan -> tasks -> analyze -> evidence -> verify -> ship`` () =
+        let root = exampleWorkspace ()
+
+        assertStagePasses "plan" (TestSupport.runPlan root workId title)
+        assertStagePasses "tasks" (TestSupport.runTasks root workId title)
+        assertStagePasses "analyze" (TestSupport.runAnalyze root workId title)
+        assertStagePasses "evidence" (TestSupport.runEvidence root workId title)
+        assertStagePasses "verify" (TestSupport.runVerify root workId title)
+        assertStagePasses "ship" (TestSupport.runShip root workId title)
+
+    /// The fixpoint property behind the walk above: running each generator over the shipped bytes
+    /// rewrites nothing, so it reports `NoChange`. This is the sharper guard — a generator that
+    /// re-derived an *equivalent-but-different* graph (renumbered ids, reordered fields) would
+    /// still pass the gates above yet fail here, catching the drift at its source.
+    [<Fact>]
+    let ``Shipped example is a fixpoint of its generators: plan and tasks report NoChange`` () =
+        let root = exampleWorkspace ()
+
+        Assert.Equal(CommandOutcome.NoChange, (TestSupport.runPlan root workId title).Outcome)
+        Assert.Equal(CommandOutcome.NoChange, (TestSupport.runTasks root workId title).Outcome)
+
     /// The specific regression #192 filed: nine ids required a task disposition and the example
     /// authored none of them, because `AC-###`/`CR-###`/`GV-###`/`PC-###`/`PD-###`/`PM-###`/`VO-###`
     /// have no typed `tasks.yml` field and are expressible only through `sourceIds:`. Pinned
