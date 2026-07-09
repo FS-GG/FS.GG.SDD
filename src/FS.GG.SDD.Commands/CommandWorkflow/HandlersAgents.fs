@@ -70,6 +70,7 @@ module internal HandlersAgents =
         (commands: GuidanceCommandEntry list)
         (skills: GuidanceSkillEntry list)
         (renderedFiles: (string * string) list)
+        (diagnostics: Diagnostic list)
         =
         use stream = new MemoryStream()
         use writer = new Utf8JsonWriter(stream, JsonWriterOptions(Indented = true))
@@ -130,6 +131,15 @@ module internal HandlersAgents =
 
         writer.WriteEndArray()
         writer.WriteStartArray("diagnostics")
+
+        // The durable guidance view records the diagnostics attributable to it — the same
+        // set the command report projects into this target's generated-view `diagnosticIds`.
+        // Hardcoding an empty array silently dropped real diagnostics into a durable artifact
+        // (ADR-0002 Gap B, finding 4). Canonicalize the order so the view stays byte-stable.
+        diagnostics
+        |> DiagnosticsModule.sort
+        |> List.iter (writeAnalysisDiagnosticJson writer)
+
         writer.WriteEndArray()
         writer.WriteEndObject()
         writer.Flush()
@@ -322,7 +332,11 @@ module internal HandlersAgents =
                             let skillsPath = root + "/skills.md"
                             let renderedFiles = [ commandsPath, "commands"; skillsPath, "skills" ]
 
-                            let manifestJson =
+                            // The manifest is finalized at write time, not here: a target's own
+                            // diagnostics (currency/divergence) are only fully known once every
+                            // target is compared, so defer the render behind a builder that takes
+                            // the resolved per-target diagnostics.
+                            let buildManifest diagnostics =
                                 agentGuidanceManifestJson
                                     workId
                                     target.Id
@@ -333,6 +347,7 @@ module internal HandlersAgents =
                                     guidanceModel.Commands
                                     guidanceModel.Skills
                                     renderedFiles
+                                    diagnostics
 
                             let commandsMd = agentCommandsMarkdown workId target.Id guidanceModel.Commands
                             let skillsMd = agentSkillsMarkdown workId target.Id guidanceModel.Skills
@@ -384,7 +399,7 @@ module internal HandlersAgents =
                             {| TargetId = target.Id
                                Root = root
                                GuidancePath = guidancePath
-                               ManifestJson = manifestJson
+                               BuildManifest = buildManifest
                                CommandsPath = commandsPath
                                CommandsMd = commandsMd
                                SkillsPath = skillsPath
@@ -438,7 +453,10 @@ module internal HandlersAgents =
                 // also staleness. Keyed by target so it can also become each generated view's
                 // `diagnosticIds` — a non-current view must name its own cause, because `refresh` discards
                 // the agents diagnostics and keeps only those ids.
-                let viewDiagnosticIdsByTarget =
+                // One per-target diagnostic set feeds both the generated-view `diagnosticIds`
+                // (below) and the durable guidance.json (finding 4) — derived once so the machine
+                // contract and the command report can never disagree about a target's cause.
+                let viewDiagnosticsByTarget =
                     targetResults
                     |> List.map (fun result ->
                         let currency =
@@ -451,9 +469,12 @@ module internal HandlersAgents =
 
                         result.TargetId,
                         (result.Diagnostics @ currency)
-                        |> List.map (fun diagnostic -> diagnostic.Id)
-                        |> List.distinct)
+                        |> List.distinctBy (fun diagnostic -> diagnostic.Id))
                     |> Map.ofList
+
+                let viewDiagnosticIdsByTarget =
+                    viewDiagnosticsByTarget
+                    |> Map.map (fun _ diagnostics -> diagnostics |> List.map (fun diagnostic -> diagnostic.Id))
 
                 let currencyDiagnostics =
                     (divergenceDiagnostic |> Option.toList)
@@ -501,8 +522,17 @@ module internal HandlersAgents =
                                 match result.Currency with
                                 | GeneratedViewCurrency.Current -> []
                                 | _ ->
+                                    let targetDiagnostics =
+                                        viewDiagnosticsByTarget
+                                        |> Map.tryFind result.TargetId
+                                        |> Option.defaultValue []
+
                                     [ CreateDirectory result.Root
-                                      WriteFile(result.GuidancePath, result.ManifestJson, GeneratedView)
+                                      WriteFile(
+                                          result.GuidancePath,
+                                          result.BuildManifest targetDiagnostics,
+                                          GeneratedView
+                                      )
                                       WriteFile(result.CommandsPath, result.CommandsMd, GeneratedView)
                                       WriteFile(result.SkillsPath, result.SkillsMd, GeneratedView) ])
 
