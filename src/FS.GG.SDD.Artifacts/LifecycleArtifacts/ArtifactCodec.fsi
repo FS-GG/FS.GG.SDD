@@ -39,6 +39,38 @@ module ArtifactCodec =
     /// empty list omits the line; absence reads as `[]`.
     val inlineList: key: string -> get: ('M -> string list) -> set: (string list -> 'M -> 'M) -> FieldCodec<'M>
 
+    /// Like `inlineList` but for a fixed-shape record where the key is always present:
+    /// an empty list renders `key: []` rather than omitting the line. Distinct+sorted on
+    /// write (matching the legacy `yamlInlineList`); the reader preserves order.
+    val alwaysInlineList: key: string -> get: ('M -> string list) -> set: (string list -> 'M -> 'M) -> FieldCodec<'M>
+
+    /// A typed-id list (`key: [FR-001, FR-002]`), always present (`key: []` when empty),
+    /// distinct+sorted on write. The read is lenient — parse each token via `create`, drop
+    /// malformed, order preserved (mirroring `parseTaskIds`); the malformed-ref diagnostics
+    /// remain the caller's semantic-layer responsibility, so nothing is silently lost.
+    val refList:
+        key: string ->
+        create: (string -> Result<'id, 'e>) ->
+        value: ('id -> string) ->
+        get: ('M -> 'id list) ->
+        set: ('id list -> 'M -> 'M) ->
+            FieldCodec<'M>
+
+    /// A scalar mapped through a total render/read pair — `toStr` on write, `ofStr` on read
+    /// (which must be total, supplying a default for an unrecognised token like the lenient
+    /// `parseEvidenceKind`). An absent key keeps the seed value. Always writes.
+    val mappedScalar:
+        key: string ->
+        toStr: ('a -> string) ->
+        ofStr: (string -> 'a) ->
+        get: ('M -> 'a) ->
+        set: ('a -> 'M -> 'M) ->
+            FieldCodec<'M>
+
+    /// A required `bool` field. Mirrors `boolAt`: only an explicit case-insensitive
+    /// `true`/`false` is honoured, anything else reads as `fallback`. Always writes.
+    val boolScalar: key: string -> fallback: bool -> get: ('M -> bool) -> set: (bool -> 'M -> 'M) -> FieldCodec<'M>
+
     /// A `string list` rendered as a YAML block sequence under `key:`. An empty
     /// list omits the line; absence reads as `[]`.
     val scalarBlock: key: string -> get: ('M -> string list) -> set: (string list -> 'M -> 'M) -> FieldCodec<'M>

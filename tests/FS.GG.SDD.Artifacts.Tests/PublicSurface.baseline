@@ -1,10 +1,14 @@
 FS.GG.SDD.Artifacts.Analysis.parseAnalysisView
+FS.GG.SDD.Artifacts.ArtifactCodec.alwaysInlineList
+FS.GG.SDD.Artifacts.ArtifactCodec.boolScalar
 FS.GG.SDD.Artifacts.ArtifactCodec.decode
 FS.GG.SDD.Artifacts.ArtifactCodec.defaultedScalar
 FS.GG.SDD.Artifacts.ArtifactCodec.foldInto
 FS.GG.SDD.Artifacts.ArtifactCodec.inlineList
 FS.GG.SDD.Artifacts.ArtifactCodec.keys
+FS.GG.SDD.Artifacts.ArtifactCodec.mappedScalar
 FS.GG.SDD.Artifacts.ArtifactCodec.optionalScalar
+FS.GG.SDD.Artifacts.ArtifactCodec.refList
 FS.GG.SDD.Artifacts.ArtifactCodec.render
 FS.GG.SDD.Artifacts.ArtifactCodec.requiredScalar
 FS.GG.SDD.Artifacts.ArtifactCodec.scalarBlock

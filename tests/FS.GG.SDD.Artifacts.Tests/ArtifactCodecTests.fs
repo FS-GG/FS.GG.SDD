@@ -168,6 +168,87 @@ module ArtifactCodecTests =
     // by EvidenceArtifactTests + the round-trip property; the YAML helpers it needs are assembly-
     // internal, so there is no toy-level unit for it here.
 
+    // --- typed combinators: the staged foundation for the declaration wiring (FS.GG.SDD#260) ---
+    // Flat, indentation-free combinators the evidence declaration needs (DU `kind`, `synthetic`
+    // bool, the typed-id ref lists, the always-present string lists). Validated here over a toy so
+    // the byte behaviour is pinned before the declaration is refactored onto them.
+
+    type private Typed =
+        { Kind: string // mappedScalar (total render/read pair)
+          Flag: bool // boolScalar
+          Refs: string list // refList (lenient, always-present, distinct+sorted)
+          Tags: string list } // alwaysInlineList
+
+    // A total mapping: unknown tokens fold to "other" (as parseEvidenceKind folds to Verification).
+    let private kindOfStr s =
+        if s = "a" || s = "b" then s else "other"
+
+    let private typedFields: ArtifactCodec.FieldCodec<Typed> list =
+        [ ArtifactCodec.mappedScalar "kind" id kindOfStr (fun m -> m.Kind) (fun v m -> { m with Kind = v })
+          ArtifactCodec.boolScalar "flag" false (fun m -> m.Flag) (fun v m -> { m with Flag = v })
+          ArtifactCodec.refList
+              "refs"
+              (fun s -> if s.StartsWith "R" then Ok s else Error "bad")
+              id
+              (fun m -> m.Refs)
+              (fun v m -> { m with Refs = v })
+          ArtifactCodec.alwaysInlineList "tags" (fun m -> m.Tags) (fun v m -> { m with Tags = v }) ]
+
+    let private typedSeed =
+        { Kind = "other"
+          Flag = false
+          Refs = []
+          Tags = [] }
+
+    [<Fact>]
+    let ``mappedScalar round-trips a known token and folds an unknown one via ofStr`` () =
+        match ArtifactCodec.decode typedFields typedSeed "kind: a\nflag: true\nrefs: []\ntags: []" with
+        | Ok m -> Assert.Equal("a", m.Kind)
+        | Error e -> failwith e
+
+        match ArtifactCodec.decode typedFields typedSeed "kind: zzz\nflag: false\nrefs: []\ntags: []" with
+        | Ok m -> Assert.Equal("other", m.Kind) // unrecognised token -> total default
+        | Error e -> failwith e
+
+    [<Fact>]
+    let ``boolScalar honours only explicit true/false, else the fallback`` () =
+        let flagOf text =
+            match ArtifactCodec.decode typedFields typedSeed text with
+            | Ok m -> m.Flag
+            | Error e -> failwith e
+
+        Assert.True(flagOf "kind: a\nflag: TRUE\nrefs: []\ntags: []")
+        Assert.False(flagOf "kind: a\nflag: nonsense\nrefs: []\ntags: []") // junk -> fallback
+        Assert.False(flagOf "kind: a\nrefs: []\ntags: []") // absent -> fallback
+
+    [<Fact>]
+    let ``refList drops malformed tokens, stays always-present, and renders distinct+sorted`` () =
+        match ArtifactCodec.decode typedFields typedSeed "kind: a\nflag: false\nrefs: [R2, bad, R1]\ntags: []" with
+        | Ok m -> Assert.Equal<string list>([ "R2"; "R1" ], m.Refs) // 'bad' dropped, read order preserved
+        | Error e -> failwith e
+
+        Assert.Contains(
+            "refs: [R1, R2]",
+            ArtifactCodec.render
+                typedFields
+                { typedSeed with
+                    Refs = [ "R2"; "R1"; "R2" ] }
+        )
+
+        Assert.Contains("refs: []", ArtifactCodec.render typedFields typedSeed) // empty -> [], never omitted
+
+    [<Fact>]
+    let ``alwaysInlineList renders [] when empty instead of omitting the line`` () =
+        Assert.Contains("tags: []", ArtifactCodec.render typedFields typedSeed)
+
+        Assert.Contains(
+            "tags: [x, y]",
+            ArtifactCodec.render
+                typedFields
+                { typedSeed with
+                    Tags = [ "y"; "x"; "y" ] }
+        )
+
     // === T031 — the real evidence record↔codec coupling (FR-007, FS.GG.SDD#260) ===
     // The wiring has landed: `EvidenceCodec.{sourceRefFields,disclosureFields}` drive both the
     // Evidence.fs reader and the HandlersEvidence renderer. These assert the codec Key set equals

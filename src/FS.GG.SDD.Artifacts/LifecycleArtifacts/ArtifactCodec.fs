@@ -80,6 +80,71 @@ module ArtifactCodec =
                 | [] -> None
                 | items -> Some(sprintf "%s: [%s]" key (items |> List.map yamlScalar |> String.concat ", ")) }
 
+    let private renderInlineAlways (key: string) (items: string list) =
+        match items |> List.distinct |> List.sort with
+        | [] -> sprintf "%s: []" key
+        | items -> sprintf "%s: [%s]" key (items |> List.map yamlScalar |> String.concat ", ")
+
+    let alwaysInlineList (key: string) (get: 'M -> string list) (set: string list -> 'M -> 'M) : FieldCodec<'M> =
+        // Like `inlineList` but for a fixed-shape record where the key is always present: an empty
+        // list renders `key: []` rather than omitting the line. Distinct+sorted on write (matching
+        // the legacy `yamlInlineList`); reader preserves order.
+        { Key = key
+          Read = fun mapping model -> Ok(set (scalarList [ key ] (mapping :> YamlNode)) model)
+          Write = fun model -> Some(renderInlineAlways key (get model)) }
+
+    let refList
+        (key: string)
+        (create: string -> Result<'id, 'e>)
+        (value: 'id -> string)
+        (get: 'M -> 'id list)
+        (set: 'id list -> 'M -> 'M)
+        : FieldCodec<'M> =
+        // A typed-id list. The read is lenient — parse each token, drop malformed, order preserved
+        // (mirroring `parseTaskIds`/etc.); the malformed-ref DIAGNOSTICS stay the semantic layer's
+        // job (computed via `malformedRefs`), so nothing is silently lost, the codec owns only the
+        // value round-trip. Always present (`key: []` when empty), distinct+sorted on write.
+        { Key = key
+          Read =
+            fun mapping model ->
+                Ok(
+                    set
+                        (scalarList [ key ] (mapping :> YamlNode)
+                         |> List.choose (create >> Result.toOption))
+                        model
+                )
+          Write = fun model -> Some(renderInlineAlways key (get model |> List.map value)) }
+
+    let mappedScalar
+        (key: string)
+        (toStr: 'a -> string)
+        (ofStr: string -> 'a)
+        (get: 'M -> 'a)
+        (set: 'a -> 'M -> 'M)
+        : FieldCodec<'M> =
+        // A scalar mapped through a total pair: render via `toStr`, read via `ofStr` (which must be
+        // total — it supplies a default for an unrecognised token, like the lenient `parseEvidenceKind`).
+        // An absent key keeps the seed value. Always writes.
+        { Key = key
+          Read =
+            fun mapping model ->
+                match tryScalarAt [ key ] (mapping :> YamlNode) with
+                | Some value -> Ok(set (ofStr value) model)
+                | None -> Ok model
+          Write = fun model -> Some $"{key}: {yamlScalar (toStr (get model))}" }
+
+    let boolScalar (key: string) (fallback: bool) (get: 'M -> bool) (set: bool -> 'M -> 'M) : FieldCodec<'M> =
+        // Mirrors `boolAt`: only an explicit case-insensitive `true`/`false` is honoured; anything
+        // else (absent, null, junk) reads as `fallback`. Always writes `key: true|false`.
+        { Key = key
+          Read =
+            fun mapping model ->
+                match tryScalarAt [ key ] (mapping :> YamlNode) with
+                | Some value when value.Equals("true", StringComparison.OrdinalIgnoreCase) -> Ok(set true model)
+                | Some value when value.Equals("false", StringComparison.OrdinalIgnoreCase) -> Ok(set false model)
+                | _ -> Ok(set fallback model)
+          Write = fun model -> Some(sprintf "%s: %b" key (get model)) }
+
     let scalarBlock (key: string) (get: 'M -> string list) (set: string list -> 'M -> 'M) : FieldCodec<'M> =
         { Key = key
           Read = fun mapping model -> Ok(set (scalarList [ key ] (mapping :> YamlNode)) model)
