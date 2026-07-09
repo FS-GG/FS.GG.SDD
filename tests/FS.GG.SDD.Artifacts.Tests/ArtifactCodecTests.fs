@@ -479,7 +479,9 @@ module ArtifactCodecTests =
                 PlanDecisionRefs = [ createPlanDecisionId "PD-007" |> orFail "pdId" ]
                 ObligationRefs = [ "obligval" ]
                 ArtifactRefs = [ artifactRef ]
-                SourceRefs = [ { EvidenceCodec.sourceRefSeed with Kind = "srckindval" } ]
+                SourceRefs =
+                    [ { EvidenceCodec.sourceRefSeed with
+                          Kind = "srckindval" } ]
                 Result = "advisory"
                 Synthetic = true
                 SyntheticDisclosure =
@@ -540,7 +542,9 @@ module ArtifactCodecTests =
             TaskCodec.taskFields
             model
             [ "Title", [ "title", "title: titleval" ]
-              "Status", [ "status", "status: skipped"; "skipRationale", "skipRationale: skiprationaleval" ]
+              "Status",
+              [ "status", "status: skipped"
+                "skipRationale", "skipRationale: skiprationaleval" ]
               "Owner", [ "owner", "owner: ownerval" ]
               "Dependencies", [ "dependencies", "dependencies: [T007]" ]
               "Requirements", [ "requirements", "requirements: [FR-007]" ]
