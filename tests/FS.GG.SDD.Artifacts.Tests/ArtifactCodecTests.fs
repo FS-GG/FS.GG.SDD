@@ -413,7 +413,8 @@ module ArtifactCodecTests =
         // serialization. `ArtifactRefs` serializes as `artifacts`.
         let labelToKey =
             Map
-                [ "Kind", "kind"
+                [ "Id", "id"
+                  "Kind", "kind"
                   "Subject", "subject"
                   "TaskRefs", "taskRefs"
                   "RequirementRefs", "requirementRefs"
@@ -434,9 +435,10 @@ module ArtifactCodecTests =
                   "Notes", "notes" ]
 
         // The map covers exactly the authored declaration fields — a new authored field with no
-        // mapping fails here (adding it to the record without a codec entry, SC-004)...
+        // mapping fails here (adding it to the record without a codec entry, SC-004). `id` is now a
+        // codec field (the `evidence` recordList frames it); only parse provenance is excluded.
         Assert.Equal<Set<string>>(
-            authoredKeys [ "Id"; "Source"; "SourceLocation" ] typeof<EvidenceDeclaration>,
+            authoredKeys [ "Source"; "SourceLocation" ] typeof<EvidenceDeclaration>,
             labelToKey |> Map.toSeq |> Seq.map fst |> Set.ofSeq
         )
 

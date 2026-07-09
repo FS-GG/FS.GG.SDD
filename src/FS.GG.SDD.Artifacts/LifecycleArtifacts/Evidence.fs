@@ -273,12 +273,14 @@ module Evidence =
               Source = sourceArtifact "work/seed/evidence.yml" ArtifactKind.Evidence
               SourceLocation = None }
 
-        // The whole authored declaration, in emission order (`id` is framed by the artifact-level
-        // renderer and read by the semantic layer, so it is not a field here). One list drives both
-        // the reader and the renderer (FR-007). Typed-id ref lists read leniently — the malformed-ref
+        // The whole authored declaration, in emission order — `id` first, so the artifact's `evidence`
+        // `recordList` frames each item as `  - id: …`. One list drives both the reader and the
+        // renderer (FR-007). The semantic layer still validates `id` (malformed → skip + diagnostic)
+        // and re-applies it after decode; typed-id ref lists read leniently — the malformed-ref
         // diagnostics stay the semantic layer's job.
         let declarationFields: ArtifactCodec.FieldCodec<EvidenceDeclaration> list =
-            [ ArtifactCodec.mappedScalar "kind" evidenceKindSourceValue parseEvidenceKind (fun d -> d.Kind) (fun v d ->
+            [ ArtifactCodec.requiredScalar "id" (fun d -> d.Id.Value) (fun v d -> { d with Id = { Value = v } })
+              ArtifactCodec.mappedScalar "kind" evidenceKindSourceValue parseEvidenceKind (fun d -> d.Kind) (fun v d ->
                   { d with Kind = v })
               ArtifactCodec.nested "subject" subjectFields subjectSeed (fun d -> d.Subject) (fun v d ->
                   { d with Subject = v })
