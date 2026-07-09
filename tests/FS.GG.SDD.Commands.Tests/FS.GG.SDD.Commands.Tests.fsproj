@@ -61,6 +61,7 @@
     <Compile Include="LifecycleStatusTests.fs" />
     <Compile Include="SurfaceCommandTests.fs" />
     <Compile Include="EvidenceRoundTripPropertyTests.fs" />
+    <Compile Include="TasksRoundTripPropertyTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
