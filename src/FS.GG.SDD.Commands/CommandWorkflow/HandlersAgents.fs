@@ -528,7 +528,11 @@ module internal HandlersAgents =
                                         |> Option.defaultValue []
 
                                     [ CreateDirectory result.Root
-                                      WriteFile(result.GuidancePath, result.BuildManifest targetDiagnostics, GeneratedView)
+                                      WriteFile(
+                                          result.GuidancePath,
+                                          result.BuildManifest targetDiagnostics,
+                                          GeneratedView
+                                      )
                                       WriteFile(result.CommandsPath, result.CommandsMd, GeneratedView)
                                       WriteFile(result.SkillsPath, result.SkillsMd, GeneratedView) ])
 
