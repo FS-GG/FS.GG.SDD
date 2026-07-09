@@ -53,6 +53,34 @@ module NormalizedWorkModelTests =
         Assert.Contains(model.Evidence, fun evidence -> evidence.Id = "EV001" && evidence.TaskRefs = [ "T001" ])
         Assert.Contains(model.GovernanceBoundaries, fun boundary -> boundary.Path = ".fsgg/capabilities.yml")
 
+    // #241 (ADR-0002 Gap D, finding 1): the builder path populates GovernanceBoundaries and
+    // serializeWorkModel persists them, but parseWorkModel used to hardcode `[]` on the
+    // round-trip. Because ship/refresh build the governance handoff *through* parseWorkModel,
+    // that zeroing shipped an empty `governedReferences` to Governance. Guard the round-trip.
+    [<Fact>]
+    let ``NormalizedWorkModel round-trips governance boundaries through parseWorkModel`` () =
+        let result = TestSupport.generationResult "valid-work-item"
+
+        // The persisted work-model.json carries the boundary (builder path).
+        Assert.Contains(result.Model.GovernanceBoundaries, fun boundary -> boundary.Path = ".fsgg/capabilities.yml")
+
+        let parsed =
+            match
+                WorkModel.parseWorkModel
+                    { Path = result.OutputPath
+                      Text = result.Json }
+            with
+            | Ok model -> model
+            | Error diagnostics -> failwith $"Expected a parseable work model, got {diagnostics}"
+
+        // Parsing it back must preserve the boundaries verbatim, not zero them.
+        Assert.Equal<string list>(
+            result.Model.GovernanceBoundaries |> List.map (fun boundary -> boundary.Path),
+            parsed.GovernanceBoundaries |> List.map (fun boundary -> boundary.Path)
+        )
+
+        Assert.Contains(parsed.GovernanceBoundaries, fun boundary -> boundary.Path = ".fsgg/capabilities.yml")
+
     [<Fact>]
     let ``NormalizedWorkModel invalid fixtures emit actionable diagnostics`` () =
         [ "requirement-not-typed", "requirementNotTyped"
