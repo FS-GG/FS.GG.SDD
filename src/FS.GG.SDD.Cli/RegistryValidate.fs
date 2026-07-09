@@ -174,6 +174,36 @@ module RegistryValidate =
                 Rule = "MissingField"
                 Message = message } ] }
 
+    // FS-GG/FS.GG.SDD#263 (Gap C finding 4 / #203): confine `<path>` so `registry validate` cannot
+    // read outside the workspace. The path flows straight into `RegistryDocument.load path` →
+    // `File.ReadAllText path`, so a bare `registry validate /etc/passwd` (or a `..` escape) reads an
+    // arbitrary file. This is the lexical guard `surface` (#185) and `registry skill-manifest` (#239)
+    // already use: check the RAW value, because a normalize-then-test would `TrimStart('/')` the
+    // leading slash away and let `/etc` through as `etc`. It is a copy of the internal
+    // `Commands.Internal.Foundation.escapesRoot` — unreachable from this assembly — kept small and
+    // comment-linked with its `RegistrySkillManifest.escapesRoot` sibling so the two cannot drift;
+    // the durable effect-edge containment primitive is #203/ADR-0002, not this predicate.
+    let private escapesRoot (raw: string) =
+        let trimmed = raw.Trim().Replace('\\', '/')
+
+        String.IsNullOrWhiteSpace trimmed
+        || Path.IsPathRooted trimmed // on the RAW string, before any TrimStart('/')
+        || (trimmed.Split('/') |> Array.contains "..")
+
+    // A containment failure is a user-input failure surfaced through this command's own verdict
+    // channel (parity with the unrecognized-option / missing-path cases, #258): `valid:false` on
+    // stdout + exit 1, no read. Names the offending path and mirrors the shared "escapes the
+    // workspace root" phrasing (`registry skill-manifest`, `validate --out`).
+    let private pathEscapeError (path: string) : RegistryValidateReport =
+        { Path = path
+          Valid = false
+          Diagnostics =
+            [ { Entry = path
+                Rule = "PathEscape"
+                Message =
+                  $"'{path}' escapes the workspace root — "
+                  + "pass a path inside the workspace (no absolute path or '..')." } ] }
+
     let private usage =
         "Usage: fsgg-sdd registry validate <path> [--json|--text|--rich]"
 
@@ -209,7 +239,10 @@ module RegistryValidate =
                 | (_ :: _) as unknown -> argError $"unrecognized option {formatOptions unknown}. {usage}"
                 | [] ->
                     match rest |> List.tryFind (fun token -> not (token.StartsWith "--")) with
-                    | Some path when not (String.IsNullOrWhiteSpace path) -> validate path
+                    | Some path when not (String.IsNullOrWhiteSpace path) ->
+                        // Containment before the read: an absolute or `..` path plans no
+                        // `RegistryDocument.load` (parity with `surface` #185 / skill-manifest #239).
+                        if escapesRoot path then pathEscapeError path else validate path
                     | _ -> argError usage
             | subcommand :: _ -> argError $"Unknown registry subcommand '{subcommand}'. {usage}"
             | [] -> argError usage
