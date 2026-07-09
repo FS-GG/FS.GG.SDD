@@ -72,6 +72,14 @@ module UnknownOptionTests =
     let ``lint's positional artifact is not residue`` () =
         Assert.Empty(Options.unrecognized Lint [ "--text"; "work/x/checklist.md" ])
 
+    // Bare `-` and the POSIX end-of-options separator `--` are option syntax, not option names.
+    // Pre-#196 the positional finder skipped `--`; rejecting it as an unknown option would break
+    // `fsgg-sdd lint -- work/x/spec.md`, which still selects the file (FS-GG/FS.GG.SDD#246).
+    [<Fact>]
+    let ``the end-of-options separator is not residue`` () =
+        Assert.Empty(Options.unrecognized Lint [ "--"; "work/x/checklist.md" ])
+        Assert.Empty(Options.unrecognized Init [ "-" ])
+
     [<Fact>]
     let ``repeated --input and --param are recognized`` () =
         Assert.Empty(Options.unrecognized Specify [ "--input"; "value: v"; "--input"; "scope: s" ])
