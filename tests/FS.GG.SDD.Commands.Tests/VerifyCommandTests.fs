@@ -5,6 +5,7 @@ open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.CommandRendering
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Commands.Internal
 open Xunit
 
 // Joins ProcessGlobalEnv: the CLI smoke here spawns a PATH-resolved process, so it must not
@@ -483,6 +484,69 @@ module VerifyCommandTests =
         let second = TestSupport.readRelative root verifyPath
 
         Assert.Equal(first, second)
+
+    // --- Issue #225 finding 5 (spec 096 AC-005): an obligation linked to two tasks unions lineage ---
+    //
+    // Finding 4 merged duplicate obligation ids in `evidenceObligations` (mirroring
+    // `verifyTestDispositionViews`' groupBy), so a disposition draft can finally carry two task ids.
+    // This pins the verify side: `verifyEvidenceDispositionViews` emits ONE `ED-` row for the
+    // obligation and folds `affectedSourceIds` over BOTH tasks — the many-tasks fold the shipped code
+    // was written for but no fixture reached (every draft's `TaskIds` was a singleton), so AC-005
+    // verified vacuously. Deliberately local (see the note on `staleFirstSnapshotDigest`).
+    let private twoTaskSharedEvidenceFacts () =
+        let text =
+            """schemaVersion: 1
+tasks:
+  - id: T001
+    title: First task
+    status: pending
+    owner: codex
+    requirements: [FR-001]
+    decisions: [DEC-001]
+    sourceIds: [AC-001]
+    dependencies: []
+    requiredSkills: [fs-gg-sdd-project]
+    requiredEvidence: [EV001]
+  - id: T002
+    title: Second task
+    status: pending
+    owner: codex
+    requirements: [FR-002]
+    decisions: [DEC-002]
+    sourceIds: [AC-002]
+    dependencies: [T001]
+    requiredSkills: [fs-gg-sdd-project]
+    requiredEvidence: [EV001]
+"""
+
+        match Task.parseTaskFacts { Path = tasksPath; Text = text } with
+        | Ok facts -> facts
+        | Error diagnostics -> failwith $"Two-task fixture did not parse: {diagnostics}."
+
+    [<Fact>]
+    let ``verifyEvidenceDispositionViews emits one ED- row unioning affectedSourceIds across both tasks`` () =
+        let facts = twoTaskSharedEvidenceFacts ()
+
+        // The shape `evidenceObligations` now produces for a two-task obligation: one draft, two task
+        // ids (sorted, as `evidenceDispositions` writes them).
+        let draft: HandlersEvidence.EvidenceDispositionDraft =
+            { ObligationId = "EV001"
+              State = "supported"
+              EvidenceIds = [ "EV001" ]
+              TaskIds = [ "T001"; "T002" ]
+              DiagnosticIds = [] }
+
+        let views = HandlersVerify.verifyEvidenceDispositionViews facts [ draft ]
+
+        Assert.Equal(1, List.length views)
+        let view = List.head views
+        Assert.Equal("ED-EV001", view.Id)
+        Assert.Equal<string list>([ "T001"; "T002" ], view.TaskIds |> List.sort)
+        // The distinct, sorted union of T001's {AC-001, DEC-001, FR-001} and T002's {AC-002, DEC-002, FR-002}.
+        Assert.Equal<string list>(
+            [ "AC-001"; "AC-002"; "DEC-001"; "DEC-002"; "FR-001"; "FR-002" ],
+            view.SourceIds
+        )
 
     /// Rewrite the first recorded snapshot digest to one no source can hash to. Deliberately local
     /// rather than shared with `EvidenceCommandTests`: each side asserts its own fixture drift, and

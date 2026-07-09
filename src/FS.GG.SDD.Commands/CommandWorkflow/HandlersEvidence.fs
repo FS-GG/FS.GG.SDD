@@ -223,6 +223,26 @@ module internal HandlersEvidence =
                   Blocking = true
                   Correction =
                     $"Add evidence {id} for {task.Id.Value} with result: pass and synthetic: false (a synthetic pass does not satisfy it), or an accepted deferral linked to {task.Id.Value}." }))
+        // Spec 096 AC-005 (issue #225): an obligation id required by two tasks must yield ONE
+        // obligation carrying the union of both lineages — not a duplicate per task. The
+        // `List.collect` above emits one draft per (task, requiredEvidence) pair, so two tasks that
+        // share `requiredEvidence: [EV-001]` would otherwise produce two obligations with the same
+        // `ObligationId`, scaffolding duplicate `EV-001` declarations and duplicate `ED-EV-001`
+        // disposition rows, and leaving `verifyEvidenceDispositionViews.affectedSourceIds`' union
+        // fold (written for many task ids) unreachable. Group by the obligation id and union the
+        // lineage — the same shape `verifyTestDispositionViews` reaches with its `groupBy` on the
+        // obligation id, so `TD-`/`ED-` merge identically. Scalar fields (`Kind`, source, correction,
+        // …) are per-first-task and not read downstream; `List.distinct` preserves first-occurrence
+        // (task) order, so a single-task obligation passes through byte-identically.
+        |> List.groupBy (fun obligation -> obligation.ObligationId)
+        |> List.map (fun (_, group) ->
+            { List.head group with
+                LinkedTaskIds = group |> List.collect _.LinkedTaskIds |> List.distinct
+                LinkedRequirementIds = group |> List.collect _.LinkedRequirementIds |> List.distinct
+                LinkedDecisionIds = group |> List.collect _.LinkedDecisionIds |> List.distinct
+                LinkedSourceIds = group |> List.collect _.LinkedSourceIds |> List.distinct
+                RequiredSkillOrCapabilityTags =
+                    group |> List.collect _.RequiredSkillOrCapabilityTags |> List.distinct })
 
     // Feature 077 (issue #124): route an obligation's origin lineage into the declaration's
     // `requirementRefs` / `planDecisionRefs` buckets by the shared id grammar
