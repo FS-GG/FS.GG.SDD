@@ -84,6 +84,50 @@ module ReleaseConformanceTests =
 
         Assert.True(List.isEmpty diagnostics, $"Expected produced artifacts to conform, but saw drift:\n{detail}")
 
+    // ADR-0002 Gap B / #291. `fullDepthKeys` is blind to fields under an *empty* array: an empty
+    // `foo[]` contributes no `foo[].bar` path, so any nested field reachable only through it escapes
+    // `evaluate`. The catalog copes by documenting nested fields only for arrays the clean ready
+    // fixture actually populates — but nothing pins that the fixture keeps populating them. This guard
+    // makes the invariant explicit and self-describing: every catalogued `array[]` prefix must be
+    // observed (>=1 element) in the produced conformance snapshot, so a future producer change that
+    // silently empties a catalogued array fails HERE with a precise message ("catalogued array X is
+    // empty in the conformance fixture") rather than as an opaque `releaseFieldAbsent` drift.
+    // Every array level named by a dotted key, each including its "[]" marker: "sources[].path"
+    // -> ["sources[]"]; "generatedViews[].sources[].digest" -> ["generatedViews[]";
+    // "generatedViews[].sources[]"]. Both levels matter — an outer array can be populated while a
+    // nested one is empty, which is the same blind spot one level down.
+    let private arrayPrefixes (name: string) =
+        let rec loop (from: int) acc =
+            match name.IndexOf("[]", from) with
+            | -1 -> List.rev acc
+            | idx -> loop (idx + 2) (name.Substring(0, idx + 2) :: acc)
+
+        loop 0 []
+
+    let private cataloguedArrayPrefixes contract =
+        documentedSections contract |> List.collect arrayPrefixes |> List.distinct
+
+    [<Fact>]
+    let ``T016 every catalogued array is populated (>=1 element) in the conformance fixture (#291)`` () =
+        let root, shipReport = producedProject ()
+        let produced = producedArtifacts root shipReport
+
+        let empties =
+            produced
+            |> List.collect (fun p ->
+                let observed = Set.ofList p.Inventory
+
+                cataloguedArrayPrefixes p.Contract
+                |> List.filter (fun prefix -> not (observed |> Set.exists (fun k -> k.StartsWith prefix)))
+                |> List.map (fun prefix -> $"{p.Contract}: catalogued array '{prefix}' is empty in the conformance fixture"))
+
+        let detail = empties |> String.concat "\n"
+
+        Assert.True(
+            List.isEmpty empties,
+            $"Every catalogued array must be exercised with >=1 element so its nested fields stay drift-checkable (#291):\n{detail}"
+        )
+
     [<Fact>]
     let ``T015 the catalog covers exactly the produced public outputs (no gap, no extra)`` () =
         let root, shipReport = producedProject ()

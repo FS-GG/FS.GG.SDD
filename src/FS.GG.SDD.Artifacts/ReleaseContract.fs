@@ -105,6 +105,16 @@ module ReleaseContract =
     /// inputs). This is the observed key set the release drift check compares against a contract's
     /// documented inventory (ADR-0002 Gap B finding 6 / #261): walking to full depth makes a nested
     /// add/remove visible to `evaluate`, not only to the full-shape byte-goldens (#249).
+    ///
+    /// Blind spot (#291): an **empty** array contributes no `array[].field` paths, so a nested field
+    /// reachable only through an array that is empty in the produced conformance snapshot is invisible
+    /// to `evaluate` — it can neither be catalogued (the conformance test's `releaseFieldAbsent` check
+    /// would flag it as documented-but-unobserved) nor flagged as undocumented drift. Full nested
+    /// coverage of a catalogued array therefore depends on the conformance fixture populating that
+    /// array with at least one element; `ReleaseConformanceTests` pins that invariant for every
+    /// catalogued `array[]`, and the full-shape byte-goldens (#249) backstop the residual (a field
+    /// under an array the ready fixture legitimately leaves empty — e.g. `diagnostics`/`findings` in a
+    /// clean run — is deliberately left un-catalogued for exactly this reason).
     let fullDepthKeys (text: string) : string list =
         let acc = System.Collections.Generic.HashSet<string>()
 
