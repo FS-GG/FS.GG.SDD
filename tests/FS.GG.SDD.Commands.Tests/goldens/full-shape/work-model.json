@@ -1,0 +1,518 @@
+{
+  "schemaVersion": 1,
+  "modelVersion": "1.0.0",
+  "workId": "247-full-shape-golden",
+  "project": {
+    "id": "247-full-shape-golden",
+    "defaultWorkRoot": "work"
+  },
+  "sources": [
+    {
+      "path": ".fsgg/agents.yml",
+      "kind": "agentsConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+      }
+    },
+    {
+      "path": ".fsgg/project.yml",
+      "kind": "projectConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "f8f1f5985f56f10a5810b9fee0ca5d66830709fb66a5cb5b50de2cccc997e984"
+      }
+    },
+    {
+      "path": ".fsgg/sdd.yml",
+      "kind": "sddConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "05deb1b6ae6632aed6ad2bcaaf70e3dee66889e64a1e076cf633f570802720de"
+      }
+    },
+    {
+      "path": "work/247-full-shape-golden/checklist.md",
+      "kind": "checklist",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "41bf3db807b9102f1d86f0fa4044ccf51726ae124a575fd43461a3b22ff3b962"
+      }
+    },
+    {
+      "path": "work/247-full-shape-golden/clarifications.md",
+      "kind": "clarifications",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "4542445521975c320a043e9839f530beba8346bce1e1942b59485d29a46d119f"
+      }
+    },
+    {
+      "path": "work/247-full-shape-golden/evidence.yml",
+      "kind": "evidence",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "125d2ec1396f23ce1ab25c70fb7788ffd36ee35b7bfaae7292dc5326332f86ec"
+      }
+    },
+    {
+      "path": "work/247-full-shape-golden/plan.md",
+      "kind": "plan",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "943fa3c286ef54ef056c3318e4232b0d7afc13342081955b4eac0797a028c23a"
+      }
+    },
+    {
+      "path": "work/247-full-shape-golden/spec.md",
+      "kind": "spec",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "0ee3ca5951c1c32227cc99360053008408d1006e7409d9d09a2d8f7fec0c7ff5"
+      }
+    },
+    {
+      "path": "work/247-full-shape-golden/tasks.yml",
+      "kind": "tasks",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "119c7e7c9ea2f541379f66b68a480438d59eb5f902359b1658331b821dce892e"
+      }
+    }
+  ],
+  "workItem": {
+    "id": "247-full-shape-golden",
+    "title": "Full Shape Golden",
+    "stage": "specify",
+    "changeTier": "tier1",
+    "status": "specified"
+  },
+  "requirements": [
+    {
+      "id": "FR-001",
+      "title": "create a specification artifact with stable ids (Stories: US-001; Acceptance: AC-001)",
+      "text": "create a specification artifact with stable ids (Stories: US-001; Acceptance: AC-001)",
+      "acceptanceCriteria": [
+        "AC-001"
+      ],
+      "priority": null,
+      "source": "work/247-full-shape-golden/spec.md",
+      "sourceLocation": {
+        "line": 31,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T001"
+      ],
+      "linkedEvidenceIds": []
+    }
+  ],
+  "decisions": [],
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "Implement requirement FR-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-001"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "FR-001"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "speckit-implement"
+      ],
+      "requiredEvidence": [
+        "EV001"
+      ],
+      "source": "work/247-full-shape-golden/tasks.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "T002",
+      "title": "Implement plan decision PD-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "FR-001",
+        "PD-001"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "speckit-implement"
+      ],
+      "requiredEvidence": [
+        "EV002"
+      ],
+      "source": "work/247-full-shape-golden/tasks.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "T003",
+      "title": "Update contract surface PC-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PD-001"
+      ],
+      "requiredSkills": [
+        "fsharp"
+      ],
+      "requiredEvidence": [
+        "EV003"
+      ],
+      "source": "work/247-full-shape-golden/tasks.yml",
+      "sourceLocation": {
+        "line": 3,
+        "column": 1
+      }
+    },
+    {
+      "id": "T004",
+      "title": "Record verification evidence VO-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PD-001",
+        "VO-001"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV004"
+      ],
+      "source": "work/247-full-shape-golden/tasks.yml",
+      "sourceLocation": {
+        "line": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "T005",
+      "title": "Handle migration posture PM-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PM-001"
+      ],
+      "requiredSkills": [
+        "schema-versioning"
+      ],
+      "requiredEvidence": [
+        "EV005"
+      ],
+      "source": "work/247-full-shape-golden/tasks.yml",
+      "sourceLocation": {
+        "line": 5,
+        "column": 1
+      }
+    },
+    {
+      "id": "T006",
+      "title": "Refresh generated view impact GV-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "GV-001",
+        "PD-001"
+      ],
+      "requiredSkills": [
+        "deterministic-json"
+      ],
+      "requiredEvidence": [
+        "EV006"
+      ],
+      "source": "work/247-full-shape-golden/tasks.yml",
+      "sourceLocation": {
+        "line": 6,
+        "column": 1
+      }
+    }
+  ],
+  "evidence": [
+    {
+      "id": "EV001",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T001",
+      "taskRefs": [
+        "T001"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [],
+      "result": "pass",
+      "synthetic": false,
+      "rationale": null,
+      "source": "work/247-full-shape-golden/evidence.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV002",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T002",
+      "taskRefs": [
+        "T002"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [],
+      "result": "pass",
+      "synthetic": false,
+      "rationale": null,
+      "source": "work/247-full-shape-golden/evidence.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV003",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T003",
+      "taskRefs": [
+        "T003"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [],
+      "result": "pass",
+      "synthetic": false,
+      "rationale": null,
+      "source": "work/247-full-shape-golden/evidence.yml",
+      "sourceLocation": {
+        "line": 3,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV004",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T004",
+      "taskRefs": [
+        "T004"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [],
+      "result": "pass",
+      "synthetic": false,
+      "rationale": null,
+      "source": "work/247-full-shape-golden/evidence.yml",
+      "sourceLocation": {
+        "line": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV005",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T005",
+      "taskRefs": [
+        "T005"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [],
+      "result": "pass",
+      "synthetic": false,
+      "rationale": null,
+      "source": "work/247-full-shape-golden/evidence.yml",
+      "sourceLocation": {
+        "line": 5,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV006",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T006",
+      "taskRefs": [
+        "T006"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [],
+      "result": "pass",
+      "synthetic": false,
+      "rationale": null,
+      "source": "work/247-full-shape-golden/evidence.yml",
+      "sourceLocation": {
+        "line": 6,
+        "column": 1
+      }
+    }
+  ],
+  "generatedViews": [
+    {
+      "path": "readiness/247-full-shape-golden/work-model.json",
+      "kind": "workModel",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "0.9.0"
+      },
+      "sources": [
+        {
+          "path": ".fsgg/agents.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/project.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "f8f1f5985f56f10a5810b9fee0ca5d66830709fb66a5cb5b50de2cccc997e984"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/sdd.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "05deb1b6ae6632aed6ad2bcaaf70e3dee66889e64a1e076cf633f570802720de"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/247-full-shape-golden/checklist.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "41bf3db807b9102f1d86f0fa4044ccf51726ae124a575fd43461a3b22ff3b962"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/247-full-shape-golden/clarifications.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "4542445521975c320a043e9839f530beba8346bce1e1942b59485d29a46d119f"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/247-full-shape-golden/evidence.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "125d2ec1396f23ce1ab25c70fb7788ffd36ee35b7bfaae7292dc5326332f86ec"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/247-full-shape-golden/plan.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "943fa3c286ef54ef056c3318e4232b0d7afc13342081955b4eac0797a028c23a"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/247-full-shape-golden/spec.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "0ee3ca5951c1c32227cc99360053008408d1006e7409d9d09a2d8f7fec0c7ff5"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/247-full-shape-golden/tasks.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "119c7e7c9ea2f541379f66b68a480438d59eb5f902359b1658331b821dce892e"
+          },
+          "schemaVersion": 1
+        }
+      ],
+      "outputDigest": {
+        "algorithm": "sha256",
+        "value": "4ec2519ce4372acd2db68f777b88f9abc3051e8680924f06c90f05f7c90175e1"
+      },
+      "currency": "current"
+    }
+  ],
+  "diagnostics": [],
+  "governanceBoundaries": []
+}

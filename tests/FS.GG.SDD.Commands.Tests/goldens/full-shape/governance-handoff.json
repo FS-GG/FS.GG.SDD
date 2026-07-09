@@ -1,0 +1,188 @@
+{
+  "schemaVersion": 1,
+  "contractVersion": "1.0.0",
+  "generatorVersion": "FS.GG.SDD.Artifacts/0.9.0",
+  "workId": "247-full-shape-golden",
+  "sources": [
+    {
+      "path": "readiness/247-full-shape-golden/ship.json",
+      "digest": "sha256:7a82eb872cadb41df5fa126aa79f3e9305e24c8cdff6bd8333c95669b8ccc636",
+      "schemaVersion": 1
+    },
+    {
+      "path": "readiness/247-full-shape-golden/verify.json",
+      "digest": "sha256:b6a8ba3261d6c69df4edf0513d9d98ff013c27554333fc3d7fe291137ab2e699",
+      "schemaVersion": 1
+    },
+    {
+      "path": "readiness/247-full-shape-golden/work-model.json",
+      "digest": "sha256:b806c2b5d26f59ce64bdd58cf5c21215aa71f4aa02d259206774769ec4c7c950",
+      "schemaVersion": 1
+    }
+  ],
+  "evidence": {
+    "nodes": [
+      {
+        "id": "evidence:EV001",
+        "state": "real",
+        "rationale": null
+      },
+      {
+        "id": "evidence:EV002",
+        "state": "real",
+        "rationale": null
+      },
+      {
+        "id": "evidence:EV003",
+        "state": "real",
+        "rationale": null
+      },
+      {
+        "id": "evidence:EV004",
+        "state": "real",
+        "rationale": null
+      },
+      {
+        "id": "evidence:EV005",
+        "state": "real",
+        "rationale": null
+      },
+      {
+        "id": "evidence:EV006",
+        "state": "real",
+        "rationale": null
+      },
+      {
+        "id": "task:T001",
+        "state": "pending",
+        "rationale": null
+      },
+      {
+        "id": "task:T002",
+        "state": "pending",
+        "rationale": null
+      },
+      {
+        "id": "task:T003",
+        "state": "pending",
+        "rationale": null
+      },
+      {
+        "id": "task:T004",
+        "state": "pending",
+        "rationale": null
+      },
+      {
+        "id": "task:T005",
+        "state": "pending",
+        "rationale": null
+      },
+      {
+        "id": "task:T006",
+        "state": "pending",
+        "rationale": null
+      }
+    ],
+    "dependencies": [
+      {
+        "dependent": "evidence:EV001",
+        "dependency": "task:T001"
+      },
+      {
+        "dependent": "evidence:EV002",
+        "dependency": "task:T002"
+      },
+      {
+        "dependent": "evidence:EV003",
+        "dependency": "task:T003"
+      },
+      {
+        "dependent": "evidence:EV004",
+        "dependency": "task:T004"
+      },
+      {
+        "dependent": "evidence:EV005",
+        "dependency": "task:T005"
+      },
+      {
+        "dependent": "evidence:EV006",
+        "dependency": "task:T006"
+      },
+      {
+        "dependent": "task:T001",
+        "dependency": "evidence:EV001"
+      },
+      {
+        "dependent": "task:T002",
+        "dependency": "evidence:EV002"
+      },
+      {
+        "dependent": "task:T002",
+        "dependency": "task:T001"
+      },
+      {
+        "dependent": "task:T003",
+        "dependency": "evidence:EV003"
+      },
+      {
+        "dependent": "task:T003",
+        "dependency": "task:T001"
+      },
+      {
+        "dependent": "task:T004",
+        "dependency": "evidence:EV004"
+      },
+      {
+        "dependent": "task:T004",
+        "dependency": "task:T001"
+      },
+      {
+        "dependent": "task:T005",
+        "dependency": "evidence:EV005"
+      },
+      {
+        "dependent": "task:T005",
+        "dependency": "task:T001"
+      },
+      {
+        "dependent": "task:T006",
+        "dependency": "evidence:EV006"
+      },
+      {
+        "dependent": "task:T006",
+        "dependency": "task:T001"
+      }
+    ]
+  },
+  "governedReferences": [],
+  "governanceConfig": {
+    "policyPresent": false,
+    "capabilitiesPresent": false,
+    "toolingPresent": false
+  },
+  "readiness": {
+    "shipDisposition": "shipReady",
+    "verificationReadiness": "verificationReady",
+    "counts": {
+      "advisory": 0,
+      "warning": 0,
+      "blocking": 0
+    },
+    "blockingDiagnosticIds": [],
+    "perViewState": [
+      {
+        "view": "ship.json",
+        "state": "current"
+      },
+      {
+        "view": "verify.json",
+        "state": "current"
+      },
+      {
+        "view": "work-model.json",
+        "state": "current"
+      }
+    ]
+  },
+  "diagnostics": []
+}

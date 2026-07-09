@@ -22,6 +22,7 @@
     <Compile Include="VerifyCommandTests.fs" />
     <Compile Include="ShipCommandTests.fs" />
     <Compile Include="ReadinessViewGoldenTests.fs" />
+    <Compile Include="FullShapeGoldenTests.fs" />
     <Compile Include="ReconciliationDuTests.fs" />
     <Compile Include="FoundationTests.fs" />
     <Compile Include="AgentsCommandTests.fs" />

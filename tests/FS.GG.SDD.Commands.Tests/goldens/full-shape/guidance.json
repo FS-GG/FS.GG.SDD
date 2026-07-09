@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "viewVersion": "1.0",
+  "workId": "247-full-shape-golden",
+  "targetId": "claude",
+  "generator": "FS.GG.SDD.Artifacts/0.9.0",
+  "generated": true,
+  "sources": [
+    {
+      "path": "readiness/247-full-shape-golden/work-model.json",
+      "kind": "workModel",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "b806c2b5d26f59ce64bdd58cf5c21215aa71f4aa02d259206774769ec4c7c950"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    }
+  ],
+  "behaviorModelDigest": {
+    "algorithm": "sha256",
+    "value": "2c638e19fd0631988ac501a301a93457558a20318e0908a2e2a7a3428ed5f421"
+  },
+  "commands": [
+    {
+      "id": "T001",
+      "title": "Implement requirement FR-001",
+      "stage": "specify",
+      "purpose": "Carry out lifecycle task T001 (pending) covering AC-001, FR-001.",
+      "relatedIds": [
+        "AC-001",
+        "FR-001"
+      ]
+    },
+    {
+      "id": "T002",
+      "title": "Implement plan decision PD-001",
+      "stage": "specify",
+      "purpose": "Carry out lifecycle task T002 (pending) covering AC-001, FR-001, PD-001.",
+      "relatedIds": [
+        "AC-001",
+        "FR-001",
+        "PD-001"
+      ]
+    },
+    {
+      "id": "T003",
+      "title": "Update contract surface PC-001",
+      "stage": "specify",
+      "purpose": "Carry out lifecycle task T003 (pending) covering PC-001, PD-001.",
+      "relatedIds": [
+        "PC-001",
+        "PD-001"
+      ]
+    },
+    {
+      "id": "T004",
+      "title": "Record verification evidence VO-001",
+      "stage": "specify",
+      "purpose": "Carry out lifecycle task T004 (pending) covering PC-001, PD-001, VO-001.",
+      "relatedIds": [
+        "PC-001",
+        "PD-001",
+        "VO-001"
+      ]
+    },
+    {
+      "id": "T005",
+      "title": "Handle migration posture PM-001",
+      "stage": "specify",
+      "purpose": "Carry out lifecycle task T005 (pending) covering PC-001, PM-001.",
+      "relatedIds": [
+        "PC-001",
+        "PM-001"
+      ]
+    },
+    {
+      "id": "T006",
+      "title": "Refresh generated view impact GV-001",
+      "stage": "specify",
+      "purpose": "Carry out lifecycle task T006 (pending) covering GV-001, PD-001.",
+      "relatedIds": [
+        "GV-001",
+        "PD-001"
+      ]
+    }
+  ],
+  "skills": [
+    {
+      "id": "automated-tests",
+      "title": "automated-tests",
+      "capability": "Required by tasks: T004.",
+      "relatedIds": [
+        "T004"
+      ]
+    },
+    {
+      "id": "deterministic-json",
+      "title": "deterministic-json",
+      "capability": "Required by tasks: T006.",
+      "relatedIds": [
+        "T006"
+      ]
+    },
+    {
+      "id": "fsharp",
+      "title": "fsharp",
+      "capability": "Required by tasks: T001, T002, T003.",
+      "relatedIds": [
+        "T001",
+        "T002",
+        "T003"
+      ]
+    },
+    {
+      "id": "readiness-evidence",
+      "title": "readiness-evidence",
+      "capability": "Required by tasks: T004.",
+      "relatedIds": [
+        "T004"
+      ]
+    },
+    {
+      "id": "schema-versioning",
+      "title": "schema-versioning",
+      "capability": "Required by tasks: T005.",
+      "relatedIds": [
+        "T005"
+      ]
+    },
+    {
+      "id": "speckit-implement",
+      "title": "speckit-implement",
+      "capability": "Required by tasks: T001, T002.",
+      "relatedIds": [
+        "T001",
+        "T002"
+      ]
+    }
+  ],
+  "renderedFiles": [
+    {
+      "path": "readiness/247-full-shape-golden/agent-commands/claude/commands.md",
+      "kind": "commands"
+    },
+    {
+      "path": "readiness/247-full-shape-golden/agent-commands/claude/skills.md",
+      "kind": "skills"
+    }
+  ],
+  "diagnostics": []
+}
