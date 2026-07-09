@@ -445,3 +445,32 @@ module ArtifactCodecTests =
             labelToKey |> Map.toSeq |> Seq.map snd |> Set.ofSeq,
             ArtifactCodec.keys EvidenceCodec.declarationFields |> Set.ofList
         )
+
+    [<Fact>]
+    let ``taskFields couple to every authored WorkTask field (T031)`` () =
+        // Record label -> the YAML key(s) it owns. `Id` is framed by the renderer / read by the
+        // semantic layer; `Source`/`SourceLocation` are parse provenance — all excluded. `Status` (a
+        // DU) spans TWO keys: `status` (the tag) and `skipRationale` (the Skipped payload).
+        let labelToKeys =
+            Map
+                [ "Title", [ "title" ]
+                  "Status", [ "status"; "skipRationale" ]
+                  "Owner", [ "owner" ]
+                  "Dependencies", [ "dependencies" ]
+                  "Requirements", [ "requirements" ]
+                  "Decisions", [ "decisions" ]
+                  "SourceIds", [ "sourceIds" ]
+                  "RequiredSkills", [ "requiredSkills" ]
+                  "RequiredEvidence", [ "requiredEvidence" ] ]
+
+        // The map covers exactly the authored record fields — a new field with no mapping fails here...
+        Assert.Equal<Set<string>>(
+            authoredKeys [ "Id"; "Source"; "SourceLocation" ] typeof<WorkTask>,
+            labelToKeys |> Map.toSeq |> Seq.map fst |> Set.ofSeq
+        )
+
+        // ...and the union of mapped keys equals the codec's Key set — codec and record stay coupled.
+        Assert.Equal<Set<string>>(
+            labelToKeys |> Map.toSeq |> Seq.collect snd |> Set.ofSeq,
+            ArtifactCodec.keys TaskCodec.taskFields |> Set.ofList
+        )

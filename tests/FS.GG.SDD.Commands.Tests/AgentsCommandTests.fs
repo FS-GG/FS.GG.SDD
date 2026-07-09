@@ -160,8 +160,9 @@ module AgentsCommandTests =
         let tasksPath = $"work/{workId}/tasks.yml"
         let tasks = TestSupport.readRelative root tasksPath
 
+        // Titles render bare under the codec's minimal quoting (FS.GG.SDD#260).
         let retitled =
-            tasks.Replace("title: \"Implement requirement FR-001\"", "title: \"Implement the FR-001 requirement\"")
+            tasks.Replace("title: Implement requirement FR-001", "title: Implement the FR-001 requirement")
 
         Assert.True(
             tasks <> retitled,

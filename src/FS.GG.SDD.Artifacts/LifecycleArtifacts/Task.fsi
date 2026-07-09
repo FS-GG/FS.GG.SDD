@@ -67,5 +67,12 @@ module Task =
           StaleTaskCount: int
           Diagnostics: Diagnostic list }
 
+    /// The authored task record as one shared field list (FS.GG.SDD#260) — drives both the reader
+    /// (`parseTaskFacts`) and the renderer (`TaskGraphAuthoring`). `id` is framed by the renderer and
+    /// read by the semantic layer, so it is not a field here.
+    module TaskCodec =
+        val taskSeed: WorkTask
+        val taskFields: ArtifactCodec.FieldCodec<WorkTask> list
+
     val parseTaskFacts: snapshot: FileSnapshot -> Result<TaskFacts, Diagnostic list>
     val parseTasks: snapshot: FileSnapshot -> Result<WorkTask list, Diagnostic list>

@@ -93,6 +93,80 @@ module Task =
         | Skipped _ -> "skipped"
         | TaskStatus.Stale -> "stale"
 
+    // Shared field list for the authored task record — ADR-0002 invariant 1 / FR-007 (FS.GG.SDD#260).
+    // One `FieldCodec` list drives BOTH the reader (`parseTaskFacts`) and the renderer
+    // (`TaskGraphAuthoring`). `id` is framed by the renderer and read by the semantic layer, so it is
+    // not a field here; `status`+`skipRationale` together carry the `TaskStatus` DU (`status` reads the
+    // tag, `skipRationale` refines the `Skipped` rationale — its field runs after `status` in order).
+    module TaskCodec =
+        let taskSeed: WorkTask =
+            { Id = { Value = "T000" }
+              Title = ""
+              Status = Pending
+              Owner = "unassigned"
+              Dependencies = []
+              Requirements = []
+              Decisions = []
+              SourceIds = []
+              RequiredSkills = []
+              RequiredEvidence = []
+              Source = sourceArtifact "work/seed/tasks.yml" ArtifactKind.Tasks
+              SourceLocation = None }
+
+        let taskFields: ArtifactCodec.FieldCodec<WorkTask> list =
+            [ ArtifactCodec.mappedScalar "title" id id (fun t -> t.Title) (fun v t -> { t with Title = v })
+              ArtifactCodec.mappedScalar "status" taskStatusSourceValue parseTaskStatus (fun t -> t.Status) (fun v t ->
+                  { t with Status = v })
+              ArtifactCodec.defaultedScalar "owner" "unassigned" (fun t -> t.Owner) (fun v t -> { t with Owner = v })
+              ArtifactCodec.refList
+                  "dependencies"
+                  Identifiers.createTaskId
+                  (fun (id: TaskId) -> id.Value)
+                  (fun t -> t.Dependencies)
+                  (fun v t -> { t with Dependencies = v })
+              ArtifactCodec.refList
+                  "requirements"
+                  Identifiers.createRequirementId
+                  (fun (id: RequirementId) -> id.Value)
+                  (fun t -> t.Requirements)
+                  (fun v t -> { t with Requirements = v })
+              ArtifactCodec.refList
+                  "decisions"
+                  Identifiers.createDecisionId
+                  (fun (id: DecisionId) -> id.Value)
+                  (fun t -> t.Decisions)
+                  (fun v t -> { t with Decisions = v })
+              ArtifactCodec.alwaysInlineList
+                  "sourceIds"
+                  (fun t -> t.SourceIds)
+                  // sourceIds are upper-cased, distinct, and sorted on read (matching the pre-codec
+                  // parser); the renderer already distinct+sorts every inline list.
+                  (fun v t ->
+                      { t with
+                          SourceIds =
+                              v
+                              |> List.map (fun (s: string) -> s.ToUpperInvariant())
+                              |> List.distinct
+                              |> List.sort })
+              ArtifactCodec.alwaysInlineList "requiredSkills" (fun t -> t.RequiredSkills) (fun v t ->
+                  { t with RequiredSkills = v })
+              ArtifactCodec.refList
+                  "requiredEvidence"
+                  Identifiers.createEvidenceId
+                  (fun (id: EvidenceId) -> id.Value)
+                  (fun t -> t.RequiredEvidence)
+                  (fun v t -> { t with RequiredEvidence = v })
+              ArtifactCodec.optionalScalar
+                  "skipRationale"
+                  (fun t ->
+                      match t.Status with
+                      | Skipped rationale -> Some rationale
+                      | _ -> None)
+                  (fun ropt t ->
+                      match t.Status, ropt with
+                      | Skipped _, Some rationale -> { t with Status = Skipped rationale }
+                      | _ -> t) ]
+
     let workIdFromTaskPath (path: string) =
         let normalized = normalizePath path
         let parts = normalized.Split([| '/' |], StringSplitOptions.RemoveEmptyEntries)
@@ -250,40 +324,27 @@ module Task =
                                     | Error _ ->
                                         None, (Diagnostics.malformedReference artifact "task" rawId :: refDiagnostics)
                                     | Ok id ->
-                                        let status =
-                                            tryScalarAt [ "status" ] mapping
-                                            |> Option.map parseTaskStatus
-                                            |> Option.defaultValue Pending
-
-                                        let skipRationale = tryScalarAt [ "skipRationale" ] mapping
-
-                                        let status =
-                                            match status, skipRationale with
-                                            | Skipped _, Some rationale -> Skipped rationale
-                                            | _ -> status
+                                        // The shared `TaskCodec.taskFields` codec decodes every authored
+                                        // field (FR-007); the semantic layer here owns the parse-assigned
+                                        // `Id`/`Source`/`SourceLocation`. The per-task seed carries the
+                                        // id-derived default title so an absent `title:` falls back to it,
+                                        // exactly as before. Malformed-ref diagnostics are `refDiagnostics`.
+                                        let decoded =
+                                            match
+                                                ArtifactCodec.foldInto
+                                                    TaskCodec.taskFields
+                                                    { TaskCodec.taskSeed with
+                                                        Title = Identifiers.taskIdValue id }
+                                                    mapping
+                                            with
+                                            | Ok value -> value
+                                            | Error _ -> TaskCodec.taskSeed
 
                                         Some
-                                            { Id = id
-                                              Title =
-                                                tryScalarAt [ "title" ] mapping
-                                                |> Option.defaultValue (Identifiers.taskIdValue id)
-                                              Status = status
-                                              Owner =
-                                                tryScalarAt [ "owner" ] mapping |> Option.defaultValue "unassigned"
-                                              Dependencies = scalarList [ "dependencies" ] mapping |> parseTaskIds
-                                              Requirements =
-                                                scalarList [ "requirements" ] mapping |> parseRequirementIds
-                                              Decisions = scalarList [ "decisions" ] mapping |> parseDecisionIds
-                                              SourceIds =
-                                                scalarList [ "sourceIds" ] mapping
-                                                |> List.map (fun value -> value.ToUpperInvariant())
-                                                |> List.distinct
-                                                |> List.sort
-                                              RequiredSkills = scalarList [ "requiredSkills" ] mapping
-                                              RequiredEvidence =
-                                                scalarList [ "requiredEvidence" ] mapping |> parseEvidenceIds
-                                              Source = artifact
-                                              SourceLocation = sourceLocation (index + 1) },
+                                            { decoded with
+                                                Id = id
+                                                Source = artifact
+                                                SourceLocation = sourceLocation (index + 1) },
                                         refDiagnostics)
                         |> Seq.toList)
                     |> Option.defaultValue []

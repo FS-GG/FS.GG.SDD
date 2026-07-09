@@ -107,13 +107,6 @@ module internal TaskGraphAuthoring =
         | [] -> "[]"
         | values -> values |> List.map yamlString |> String.concat ", " |> (fun text -> $"[{text}]")
 
-    let taskStatusYaml (status: TaskStatus) =
-        match status with
-        | TaskStatus.Pending -> "pending"
-        | TaskStatus.InProgress -> "in-progress"
-        | TaskStatus.Done -> "done"
-        | TaskStatus.Skipped _ -> "skipped"
-        | TaskStatus.Stale -> "stale"
 
     let taskEvidenceId index =
         let candidate = sprintf "EV%03d" index
@@ -562,32 +555,20 @@ work:
     schemaVersion: 1""")
         |> String.concat "\n"
 
+    // Shift a column-0 `ArtifactCodec.render` block `indent` spaces deeper, for embedding under a key.
+    let private codecIndent (indent: int) (rendered: string) =
+        let pad = System.String(' ', indent)
+        rendered.Split('\n') |> Array.map (fun line -> pad + line) |> String.concat "\n"
+
     let renderTask (task: WorkTask) =
-        let skip =
-            match task.Status with
-            | TaskStatus.Skipped rationale -> $"\n    skipRationale: {yamlString rationale}"
-            | _ -> ""
-
-        let dependencyIds = task.Dependencies |> List.map (fun (id: TaskId) -> id.Value)
-
-        let requirementIds =
-            task.Requirements |> List.map (fun (id: RequirementId) -> id.Value)
-
-        let decisionIds = task.Decisions |> List.map (fun (id: DecisionId) -> id.Value)
-
-        let evidenceIds =
-            task.RequiredEvidence |> List.map (fun (id: EvidenceId) -> id.Value)
-
-        $"""  - id: {task.Id.Value}
-    title: {yamlString task.Title}
-    status: {taskStatusYaml task.Status}
-    owner: {yamlString task.Owner}
-    dependencies: {dependencyIds |> yamlInlineList}
-    requirements: {requirementIds |> yamlInlineList}
-    decisions: {decisionIds |> yamlInlineList}
-    sourceIds: {task.SourceIds |> yamlInlineList}
-    requiredSkills: {task.RequiredSkills |> yamlInlineList}
-    requiredEvidence: {evidenceIds |> yamlInlineList}{skip}"""
+        // One shared field list (`TaskCodec.taskFields`) drives this render and the reader
+        // (FS.GG.SDD#260) — a field cannot be read without being written or vice versa. `id` frames the
+        // block-sequence item and is read by the semantic layer, so it is not a codec field; the rest
+        // render column-0 and shift four spaces under it. Minimal quoting (a safe bare scalar stays bare).
+        "  - id: "
+        + task.Id.Value
+        + "\n"
+        + codecIndent 4 (ArtifactCodec.render TaskCodec.taskFields task)
 
     let renderFindingsBlock (findings: TaskGraphFinding list) =
         match findings with
