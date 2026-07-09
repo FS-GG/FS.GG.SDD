@@ -528,6 +528,125 @@ evidence:
         Assert.Contains("    laterLifecycleVisibility: \"verify\"", evidence)
 
     [<Fact>]
+    let ``evidence sourceRefs round-trip preserves id, digest and relatedSourceId (#181)`` () =
+        // FS.GG.SDD#181: `id`, `digest` and `relatedSourceId` were read by the parser but never
+        // re-emitted, so a re-render silently dropped them. Render a fully-populated declaration
+        // and parse it back — every authored sourceRef field must survive parse ∘ render ∘ parse.
+        let seed =
+            "schemaVersion: 1\n"
+            + "workId: 011-evidence-command\n"
+            + "stage: evidence\n"
+            + "status: evidenceReady\n"
+            + "sourceSnapshots: []\n"
+            + "evidence:\n"
+            + "  - id: EV001\n"
+            + "    kind: verification\n"
+            + "    subject:\n      type: task\n      id: T001\n"
+            + "    taskRefs: [T001]\n"
+            + "    sourceRefs:\n"
+            + "      - kind: test-output\n"
+            + "        id: SR-001\n"
+            + "        path: specs/x/proof.txt\n"
+            + "        uri: https://ci/run/1\n"
+            + "        digest: deadbeefcafe\n"
+            + "        relatedSourceId: SRC-42\n"
+            + "        result: pass\n"
+            + "    result: pass\n"
+            + "    synthetic: false\n"
+            + "    notes: []\n"
+            + "lifecycleNotes:\n  - Next lifecycle action: verify.\n"
+
+        let declaration =
+            match parseEvidenceArtifact { Path = evidencePath; Text = seed } with
+            | Ok artifact -> Assert.Single(artifact.Evidence)
+            | Error diagnostics -> failwith $"Seed evidence did not parse: {diagnostics}."
+
+        // Guard the fixture: the seed itself must actually carry the three previously-dropped fields.
+        let seeded = Assert.Single(declaration.SourceRefs)
+        Assert.Equal(Some "SR-001", seeded.ReferenceId)
+        Assert.Equal(Some "deadbeefcafe", seeded.Digest)
+        Assert.Equal(Some "SRC-42", seeded.RelatedSourceId)
+
+        let reRendered =
+            "schemaVersion: 1\nworkId: 011-evidence-command\nstage: evidence\nstatus: evidenceReady\nsourceSnapshots: []\nevidence:\n"
+            + HandlersEvidence.renderEvidenceDeclaration declaration
+            + "\nlifecycleNotes:\n  - Next lifecycle action: verify.\n"
+
+        match parseEvidenceArtifact { Path = evidencePath; Text = reRendered } with
+        | Ok artifact ->
+            let reference = Assert.Single((Assert.Single(artifact.Evidence)).SourceRefs)
+            Assert.Equal("test-output", reference.Kind)
+            Assert.Equal(Some "SR-001", reference.ReferenceId)
+            Assert.Equal(Some "specs/x/proof.txt", reference.Path)
+            Assert.Equal(Some "https://ci/run/1", reference.Uri)
+            Assert.Equal(Some "deadbeefcafe", reference.Digest)
+            Assert.Equal(Some "SRC-42", reference.RelatedSourceId)
+            Assert.Equal(Some "pass", reference.Result)
+        | Error diagnostics -> failwith $"Re-rendered evidence did not parse: {diagnostics}."
+
+    let bareNullDisclosureInput =
+        """schemaVersion: 1
+workId: 011-evidence-command
+stage: evidence
+status: evidenceReady
+evidence:
+  - id: EV999
+    kind: synthetic
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: []
+    obligationRefs: [EV001]
+    sourceRefs:
+      - kind: transcript
+        path: specs/011-evidence-command/readiness/synthetic-fsi.txt
+        result: pass
+    result: pass
+    synthetic: true
+    syntheticDisclosure:
+      standsInFor: null
+      reason: null
+"""
+
+    [<Fact>]
+    let ``evidence blocks a synthetic pass whose syntheticDisclosure is bare null (#180)`` () =
+        // FS.GG.SDD#180: an explicit `standsInFor: null` / `reason: null` is *absence*, so the
+        // undisclosed-synthetic gate must fire exactly as it does when the block is omitted. Before
+        // the null-aware read these parsed to Some "null" and the gate was silently bypassed.
+        let root = initializedAnalyzedProject ()
+        let before = TestSupport.readRelative root evidencePath
+
+        let request =
+            { TestSupport.evidenceRequest root workId title with
+                InputText = Some bareNullDisclosureInput }
+
+        let report = TestSupport.runRequest request
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.undisclosedSyntheticEvidence")
+        Assert.Equal(before, TestSupport.readRelative root evidencePath)
+
+    [<Fact>]
+    let ``evidence preserves an authored lifecycleNotes across a re-run (#181)`` () =
+        // FS.GG.SDD#181: the renderer hardcoded the canned "verify" note, clobbering whatever the
+        // author wrote on every re-run. A custom note must now survive, and the canned default must
+        // not be re-injected over it.
+        let root = initializedAnalyzedProject ()
+        TestSupport.runEvidence root workId title |> ignore
+
+        TestSupport.readRelative root evidencePath
+        |> replaceFirst "  - \"Next lifecycle action: verify.\"\n" "  - \"Investigate the flaky GPU probe first.\"\n"
+        |> TestSupport.writeRelative root evidencePath
+
+        let report = TestSupport.runEvidence root workId title
+        let evidence = TestSupport.readRelative root evidencePath
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains("Investigate the flaky GPU probe first.", evidence)
+        Assert.DoesNotContain("Next lifecycle action: verify.", evidence)
+
+    [<Fact>]
     let ``evidence preserves a quoted "null" rationale as a string value`` () =
         // FR-006, the feature-161 boundary stated positively. A *quoted* "null" is a real string:
         // it parses to Some "null" and must be re-emitted quoted — never omitted, never unquoted.

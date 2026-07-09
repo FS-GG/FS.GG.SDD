@@ -158,6 +158,69 @@ lifecycleNotes:
         Assert.Equal(None, rationaleOf slimEvidenceYaml)
         Assert.Equal(Some "null", rationaleOf (validEvidenceYaml.Replace("rationale: null", "rationale: \"null\"")))
 
+    let private singleDeclarationOf label text =
+        match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+        | Ok artifact -> Assert.Single(artifact.Evidence)
+        | Error diagnostics -> failwith $"Expected the {label} evidence artifact to parse, got {diagnostics}."
+
+    [<Fact>]
+    let ``parseEvidenceArtifact reads a nested bare-null syntheticDisclosure as None`` () =
+        // FS.GG.SDD#180: a bare `standsInFor: null` / `reason: null` is absence, so the whole
+        // disclosure reads back as None and the undisclosed-synthetic gate can fire. Before the fix
+        // these parsed to Some "null", silently disclosing nothing while satisfying the gate.
+        for token in [ "null"; "Null"; "NULL"; "~"; "" ] do
+            let text =
+                validEvidenceYaml.Replace(
+                    "    syntheticDisclosure: null\n",
+                    $"    syntheticDisclosure:\n      standsInFor: {token}\n      reason: {token}\n"
+                )
+
+            Assert.Equal(None, (singleDeclarationOf $"bare-{token}" text).SyntheticDisclosure)
+
+    [<Fact>]
+    let ``parseEvidenceArtifact keeps a quoted "null" syntheticDisclosure as a real disclosure`` () =
+        // The other side of FS.GG.SDD#180: a *quoted* "null" is a genuine string, so the disclosure
+        // is present and survives — only a bare null is absence.
+        let text =
+            validEvidenceYaml.Replace(
+                "    syntheticDisclosure: null\n",
+                "    syntheticDisclosure:\n      standsInFor: \"null\"\n      reason: \"null\"\n"
+            )
+
+        Assert.Equal(
+            Some { StandsInFor = "null"; Reason = "null" },
+            (singleDeclarationOf "quoted" text).SyntheticDisclosure
+        )
+
+    [<Fact>]
+    let ``parseEvidenceArtifact reads bare-null sourceRef scalars as None`` () =
+        // FS.GG.SDD#180/#181: every optional sourceRef scalar is null-aware, so a bare-null field is
+        // absence and the round-trip renderer omits it rather than re-emitting the string "null".
+        let text =
+            validEvidenceYaml.Replace(
+                "    sourceRefs:\n"
+                + "      - kind: test-output\n"
+                + "        path: specs/011-evidence-command/readiness/command-evidence-tests.txt\n"
+                + "        result: pass\n",
+                "    sourceRefs:\n"
+                + "      - kind: test-output\n"
+                + "        id: null\n"
+                + "        path: null\n"
+                + "        uri: null\n"
+                + "        digest: null\n"
+                + "        relatedSourceId: null\n"
+                + "        result: null\n"
+            )
+
+        let reference = Assert.Single((singleDeclarationOf "bare-null-refs" text).SourceRefs)
+        Assert.Equal("test-output", reference.Kind)
+        Assert.Equal(None, reference.ReferenceId)
+        Assert.Equal(None, reference.Path)
+        Assert.Equal(None, reference.Uri)
+        Assert.Equal(None, reference.Digest)
+        Assert.Equal(None, reference.RelatedSourceId)
+        Assert.Equal(None, reference.Result)
+
     let private singleSnapshotOf text =
         match parseEvidenceArtifact { Path = evidencePath; Text = text } with
         | Ok artifact -> Assert.Single(artifact.SourceSnapshots)

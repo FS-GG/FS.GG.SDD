@@ -158,6 +158,41 @@ module TasksCommandTests =
         Assert.Equal(firstWorkModel, secondWorkModel)
 
     [<Fact>]
+    let ``tasks re-run preserves an authored title and publicOrToolFacingImpact (#181)`` () =
+        // FS.GG.SDD#181: the front-matter renderer hardcoded the request-derived title and
+        // `publicOrToolFacingImpact: true`, so a re-run reverted a custom title to the humanized id
+        // and flipped an authored `false` back to `true`. Both authored values must now survive.
+        let root = initializedPlanReadyProject ()
+        TestSupport.runTasks root workId title |> ignore
+
+        let customized =
+            TestSupport.readRelative root tasksPath
+            |> fun text -> text.Split('\n')
+            |> Array.map (fun line ->
+                if line.StartsWith("  title:") then
+                    "  title: A deliberately custom work title"
+                elif line.StartsWith("  publicOrToolFacingImpact:") then
+                    "  publicOrToolFacingImpact: false"
+                else
+                    line)
+            |> String.concat "\n"
+
+        // Guard the fixture: the edit must have actually taken effect.
+        Assert.Contains("  title: A deliberately custom work title", customized)
+        Assert.Contains("  publicOrToolFacingImpact: false", customized)
+
+        TestSupport.writeRelative root tasksPath customized
+
+        let report = TestSupport.runTasks root workId title
+        let reRun = TestSupport.readRelative root tasksPath
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        // `yamlString` always double-quotes, so the preserved title comes back quoted.
+        Assert.Contains("title: \"A deliberately custom work title\"", reRun)
+        Assert.Contains("publicOrToolFacingImpact: false", reRun)
+        Assert.DoesNotContain("publicOrToolFacingImpact: true", reRun)
+
+    [<Fact>]
     let ``tasks creates traceable task graph with real filesystem evidence`` () =
         let root = initializedPlanReadyProject ()
 

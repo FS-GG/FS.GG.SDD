@@ -524,8 +524,21 @@ module internal TaskGraphAuthoring =
                     task.Dependencies
                     |> List.filter (fun dep -> Set.contains dep.Value survivingIds) })
 
-    let taskFrontMatterText request workId =
-        let title = requestTitle request workId
+    let taskFrontMatterText request workId (existingFrontMatter: TaskFrontMatter option) =
+        // The authored `title` and `publicOrToolFacingImpact` round-trip on a re-run
+        // (FS.GG.SDD#181): a prior file's values win, and only a freshly-created file falls back to
+        // the request-derived title and the `true` default. Previously both were unconditionally
+        // regenerated, so a re-run reverted a custom title to the humanized id and flipped
+        // `publicOrToolFacingImpact: false` back to `true`.
+        let title =
+            existingFrontMatter
+            |> Option.map (fun front -> front.Title)
+            |> Option.defaultValue (requestTitle request workId)
+
+        let publicOrToolFacingImpact =
+            existingFrontMatter
+            |> Option.bind (fun front -> front.PublicOrToolFacingImpact)
+            |> Option.defaultValue true
 
         $"""schemaVersion: 1
 work:
@@ -537,7 +550,7 @@ work:
   sourceClarifications: {clarificationPath workId}
   sourceChecklist: {checklistPath workId}
   sourcePlan: {planPath workId}
-  publicOrToolFacingImpact: true
+  publicOrToolFacingImpact: {if publicOrToolFacingImpact then "true" else "false"}
 """
 
     let renderTaskSourceSnapshots workId specText clarificationText checklistText planText =
@@ -605,6 +618,7 @@ work:
     let tasksArtifactText
         (request: CommandRequest)
         (workId: string)
+        (existingFrontMatter: TaskFrontMatter option)
         (specText: string)
         (clarificationText: string)
         (checklistText: string)
@@ -630,7 +644,7 @@ work:
             else
                 lifecycleNotes
 
-        $"""{taskFrontMatterText request workId}
+        $"""{taskFrontMatterText request workId existingFrontMatter}
 sources:
 {renderTaskSourceSnapshots workId specText clarificationText checklistText planText}
 tasks:
@@ -908,6 +922,7 @@ tasks:
                 tasksArtifactText
                     request
                     workId
+                    None
                     specText
                     clarificationText
                     checklistText
@@ -1048,6 +1063,7 @@ tasks:
                             tasksArtifactText
                                 request
                                 workId
+                                (Some existingFacts.FrontMatter)
                                 specText
                                 clarificationText
                                 checklistText
