@@ -27,6 +27,8 @@
   <ItemGroup>
     <Compile Include="Rendering.fsi" />
     <Compile Include="Rendering.fs" />
+    <Compile Include="Options.fsi" />
+    <Compile Include="Options.fs" />
     <Compile Include="RegistryValidate.fsi" />
     <Compile Include="RegistryValidate.fs" />
     <Compile Include="RegistrySkillManifest.fsi" />

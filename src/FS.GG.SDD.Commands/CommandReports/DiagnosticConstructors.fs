@@ -53,6 +53,25 @@ module internal DiagnosticConstructors =
             "Use one of: init, charter, specify, clarify, checklist, plan, tasks, analyze, evidence, verify, ship, agents, refresh, scaffold, doctor, upgrade, validate, registry."
             []
 
+    // Sibling of `unknownCommand` (FS-GG/FS.GG.SDD#196): an unrecognized *option* used to fall
+    // through silently, so `init --project-root /tmp/b` seeded the current directory and reported
+    // `succeeded`. `recognized` is supplied by the caller's option table rather than re-spelled
+    // here, so the correction cannot drift from what the parser accepts.
+    let unknownOption (command: SddCommand) (value: string) (recognized: string list) (suggestion: string option) =
+        let options = String.Join(", ", recognized)
+
+        let hint =
+            match suggestion with
+            | Some candidate -> $" Did you mean '{candidate}'?"
+            | None -> ""
+
+        errorDiagnostic
+            "unknownOption"
+            None
+            $"Unknown option '{value}' for command '{commandName command}'."
+            $"Use one of: {options}.{hint}"
+            [ value ]
+
     let malformedWorkId (value: string) =
         errorDiagnostic
             "malformedWorkId"

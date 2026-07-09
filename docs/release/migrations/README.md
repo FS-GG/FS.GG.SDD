@@ -33,7 +33,7 @@ Use [TEMPLATE.md](TEMPLATE.md) as the starting point for a new note.
 
 | Version | Note | Breaking changes |
 |---|---|---|
-| `0.9.0` | [`0.9.0.md`](0.9.0.md) | **(1)** Removed `specification.unresolvedAmbiguityCount` from the `--json` command-report contract — it gated nothing; the gate is `clarification.blockingAmbiguityCount`, on a **different** block. **(2)** `tasks` can now exit `1` (`missingDisposition`). **(3)** `plan` can now exit `1` (`stalePlanSnapshot`; use `--accept-upstream`). |
+| `0.9.0` | [`0.9.0.md`](0.9.0.md) | **(1)** Removed `specification.unresolvedAmbiguityCount` from the `--json` command-report contract — it gated nothing; the gate is `clarification.blockingAmbiguityCount`, on a **different** block. **(2)** `tasks` can now exit `1` (`missingDisposition`). **(3)** `plan` can now exit `1` (`stalePlanSnapshot`; use `--accept-upstream`). **(4)** Every command can now exit `1` (`unknownOption`); an unrecognized option used to be silently ignored. |
 
 The current `0.9.0` release is **breaking** and therefore carries the note above.
 The `migrations[]` array in [`release-readiness.json`](../release-readiness.json)
@@ -41,8 +41,8 @@ lists it, and a test asserts the referenced file exists — the obligation is a
 file, not a claim. Under the `0.x` carve-out the changes ride a **minor** bump;
 the note is still mandatory.
 
-A migration note must enumerate **every** breaking change in its release. Two of
-the three above are exit-code contract changes, not field removals — the policy
+A migration note must enumerate **every** breaking change in its release. Three of
+the four above are exit-code contract changes, not field removals — the policy
 table classes both as Breaking, and a note that lists only the field removal is
 the exact failure this obligation exists to prevent.
 

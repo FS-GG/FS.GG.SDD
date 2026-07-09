@@ -1,3 +1,8 @@
+FS.GG.SDD.Cli.Options.commandOptions
+FS.GG.SDD.Cli.Options.recognized
+FS.GG.SDD.Cli.Options.recognizedTokens
+FS.GG.SDD.Cli.Options.suggestion
+FS.GG.SDD.Cli.Options.unrecognized
 FS.GG.SDD.Cli.RegistrySkillManifest.run
 FS.GG.SDD.Cli.RegistryValidate.exitCode
 FS.GG.SDD.Cli.RegistryValidate.renderText
