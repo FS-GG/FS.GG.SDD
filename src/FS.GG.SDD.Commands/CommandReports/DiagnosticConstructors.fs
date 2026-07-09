@@ -715,6 +715,22 @@ module internal DiagnosticConstructors =
             "Fix the named lifecycle diagnostics before treating the generated view as current."
             (path :: relatedIds)
 
+    // The counterpart to `blockedGeneratedViewRefresh` for the case where the view was never
+    // written at all: the derived work model carries blocking diagnostics and no prior view
+    // exists on disk. Previously that arm dropped its diagnostics and the command reported
+    // success with the view silently absent (FS.GG.SDD#191). This is a distinct id — not
+    // `blockedGeneratedViewRefresh` — precisely because "the work model could not be
+    // generated" is not "an existing generated view is stale"; keeping them separate stops
+    // it from being read as a `staleSource`/`generatedView` analysis finding that would
+    // falsely mark analysis as needing a refresh.
+    let workModelNotGenerated path relatedIds =
+        warningDiagnostic
+            "workModelNotGenerated"
+            (Some path)
+            $"Generated view '{path}' was not written: the derived work model has blocking diagnostics."
+            "Resolve the named lifecycle diagnostics, then re-run to generate the work model view."
+            (path :: relatedIds)
+
     let missingEvidencePrerequisite path message =
         errorForPath
             "verify.missingEvidencePrerequisite"

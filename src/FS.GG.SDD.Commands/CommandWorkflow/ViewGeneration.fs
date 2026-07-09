@@ -892,10 +892,49 @@ module internal ViewGeneration =
                     | Some _, Some diagnostic when diagnostic.Id = "staleGeneratedView" -> GeneratedViewCurrency.Stale
                     | Some _, _ -> GeneratedViewCurrency.Blocked
 
+                // Surface the blocking model diagnostics rather than dropping them.
+                //
+                //  - `Some _` (a prior view is on disk): unchanged — the existing view is
+                //    now un-refreshable, which `blockedGeneratedViewRefresh` names.
+                //  - `None` (no view was ever written): previously returned `None`, so a
+                //    workspace whose required sources are all present but whose derived work
+                //    model is inconsistent reported `succeeded` with an empty diagnostics
+                //    list while silently writing no view (FS.GG.SDD#191) — a violation of
+                //    Constitution VIII (operationally significant events MUST produce
+                //    actionable diagnostics). It now emits the distinct `workModelNotGenerated`
+                //    warning ("could not be generated", not "an existing view is stale").
+                //
+                // Two `None` cases legitimately owe no diagnostic:
+                //  1. The pre-work-model early stage — a required lifecycle source is not
+                //     authored yet, so a missing view is the correct state and the transient
+                //     inconsistencies that follow (e.g. tasks.yml referencing evidence ids
+                //     before evidence.yml exists) are expected. That state is exactly "a
+                //     `missingArtifact` among the blocking reasons".
+                //  2. The pre-verify authoring stages (charter…evidence), which generate the
+                //     work model opportunistically as a side view. `verify` is where the work
+                //     model is *built* and `ship` where it is consumed at the merge boundary;
+                //     those are the stages whose report the author depends on, and where the
+                //     silent success #191 describes actually misleads. A blocking model at an
+                //     authoring stage is not yet a consumed-dependency failure — surfacing it
+                //     there is the always-on behavior that awaits the reference-resolution
+                //     work in FS.GG.SDD#204 (Gap D).
+                let blockingIncludesMissingSource =
+                    blockingModelDiagnostics
+                    |> List.exists (fun diagnostic -> diagnostic.Id = "missingArtifact")
+
+                let workModelIsConsumedHere =
+                    match request.Command with
+                    | Verify
+                    | Ship -> true
+                    | _ -> false
+
+                let relatedIds = blockingModelDiagnostics |> List.map _.Id
+
                 let diagnostic =
                     match existing with
-                    | None -> None
-                    | Some _ -> Some(blockedGeneratedViewRefresh path (blockingModelDiagnostics |> List.map _.Id))
+                    | None when blockingIncludesMissingSource || not workModelIsConsumedHere -> None
+                    | None -> Some(workModelNotGenerated path relatedIds)
+                    | Some _ -> Some(blockedGeneratedViewRefresh path relatedIds)
 
                 let diagnostics = [ currentDiagnostic; diagnostic ] |> List.choose id
                 let diagnosticIds = diagnostics |> List.map _.Id
