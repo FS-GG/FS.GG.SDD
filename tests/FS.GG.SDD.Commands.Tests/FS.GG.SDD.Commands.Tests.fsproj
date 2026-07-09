@@ -62,6 +62,7 @@
     <Compile Include="SurfaceCommandTests.fs" />
     <Compile Include="EvidenceRoundTripPropertyTests.fs" />
     <Compile Include="TasksRoundTripPropertyTests.fs" />
+    <Compile Include="MarkdownArtifactRoundTripPropertyTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
