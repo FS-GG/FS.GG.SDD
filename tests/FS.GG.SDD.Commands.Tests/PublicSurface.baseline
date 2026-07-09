@@ -108,6 +108,7 @@ FS.GG.SDD.Commands.CommandReports.unknownChecklistSourceReference
 FS.GG.SDD.Commands.CommandReports.unknownClarificationReference
 FS.GG.SDD.Commands.CommandReports.unknownCommand
 FS.GG.SDD.Commands.CommandReports.unknownEvidenceReference
+FS.GG.SDD.Commands.CommandReports.unknownOption
 FS.GG.SDD.Commands.CommandReports.unknownPlanSourceReference
 FS.GG.SDD.Commands.CommandReports.unknownSpecificationReference
 FS.GG.SDD.Commands.CommandReports.unknownTaskDependency

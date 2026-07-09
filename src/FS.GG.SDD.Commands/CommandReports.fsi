@@ -14,6 +14,10 @@ module CommandReports =
             Diagnostic
 
     val unknownCommand: value: string -> Diagnostic
+
+    val unknownOption:
+        command: SddCommand -> value: string -> recognized: string list -> suggestion: string option -> Diagnostic
+
     val malformedWorkId: value: string -> Diagnostic
     val missingWorkId: command: SddCommand -> Diagnostic
     val lintMissingArtifact: unit -> Diagnostic

@@ -452,7 +452,7 @@ module ReleaseContract =
               commandsMd
               skillsMd
               commandReport ]
-          // 0.9.0 is the first BREAKING release since 0.8.0. Three changes qualify under
+          // 0.9.0 is the first BREAKING release since 0.8.0. Four changes qualify under
           // `versioning-policy.md` ("remove a public field" AND "change an exit-code
           // contract" are both Breaking). Under the pre-1.0 `0.x` carve-out they land on a
           // minor bump, but the migration note stays mandatory (FR-009 / FR-010;
@@ -472,7 +472,8 @@ module ReleaseContract =
                 BreakingChanges =
                   [ "removed the specification.unresolvedAmbiguityCount field from the --json command-report contract (text key unresolvedAmbiguities); it blocked nothing -- the blocking counter is clarification.blockingAmbiguityCount, on a different report block"
                     "the tasks stage can now exit 1 with the blocking missingDisposition diagnostic, which was not reachable from tasks in 0.8.0 (fix 162); re-run fsgg-sdd tasks to re-derive the graph, or restore the dropped disposition"
-                    "the plan stage can now exit 1 with the blocking stalePlanSnapshot diagnostic when an upstream source changed after planning (feature 090); re-run fsgg-sdd plan --accept-upstream after reviewing the recorded decisions" ] } ] }
+                    "the plan stage can now exit 1 with the blocking stalePlanSnapshot diagnostic when an upstream source changed after planning (feature 090); re-run fsgg-sdd plan --accept-upstream after reviewing the recorded decisions"
+                    "every command can now exit 1 with the blocking unknownOption diagnostic when the invocation carries an option that command does not recognize (fix 196); in 0.8.0 the token was ignored and the command proceeded with defaults, so fsgg-sdd init --project-root DIR seeded the current directory and reported success -- correct the option name, which the diagnostic correction lists for that command" ] } ] }
 
     // ---- canonical serialization ----
 

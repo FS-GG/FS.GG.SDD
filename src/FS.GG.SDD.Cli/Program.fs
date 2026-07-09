@@ -6,6 +6,7 @@ open FS.GG.SDD.Commands.CommandRendering
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.CommandWorkflow
+open FS.GG.SDD.Cli
 open FS.GG.SDD.Cli.Rendering
 
 module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
@@ -187,6 +188,45 @@ let private printTopLevelHelp format forceColor =
 let private printCommandHelp format forceColor command =
     emitHelp format forceColor command (CommandHelp.commandHelp command)
 
+/// A command invoked with tokens no option claimed (FS-GG/FS.GG.SDD#196). The residue blocks:
+/// the report is an ordinary `CommandReport`, so it projects three ways and routes to stderr,
+/// and it carries no effects, so the run writes nothing. Reported *before* the `--help` branch,
+/// mirroring FR-011 for unknown commands — a token the CLI cannot honor is never masked by a
+/// help flag, and the correction enumerates the options that would have been honored.
+let private printUnknownOptions format forceColor command (tokens: string list) =
+    let diagnostics =
+        tokens
+        |> List.map (fun token ->
+            unknownOption command token (Options.recognizedTokens command) (Options.suggestion command token))
+
+    let model =
+        { Request = helpRequest command format
+          PendingEffects = []
+          InterpretedEffects = []
+          Diagnostics = diagnostics
+          Specification = None
+          Clarification = None
+          Checklist = None
+          Plan = None
+          Tasks = None
+          Analysis = None
+          Evidence = None
+          Verification = None
+          Ship = None
+          AgentGuidance = None
+          Refresh = None
+          Scaffold = None
+          Doctor = None
+          Upgrade = None
+          Lint = None
+          Surface = None
+          GeneratedViews = []
+          Report = None }
+
+    let report = buildReport model
+    Console.Error.WriteLine((resolve format (detectCapabilities forceColor Console.IsErrorRedirected) report).Text)
+    exitCodeForReport report
+
 let printVersion () =
     // Single reconciled version source (Directory.Build.props <Version>), surfaced
     // through the generator version so the CLI reports the same number as every
@@ -215,83 +255,90 @@ let run args =
         // Unknown command resolves to `unknownCommand` even with `--help` (FR-011): a
         // genuinely unknown command is never masked by a help flag.
         | Error _ -> printUnknown commandValue
-        | Ok command when hasFlag "--help" rest || hasFlag "-h" rest ->
-            // §3.5: `<known> --help` / `-h` → that command's help (FR-009).
-            printCommandHelp (outputFormat rest) (forceColorRequested rest) command
         | Ok command ->
+
             let format = outputFormat rest
             let forceColor = forceColorRequested rest
-            let capabilities = detectCapabilities forceColor Console.IsOutputRedirected
 
-            let request =
-                { Command = command
-                  ProjectRoot = optionValue "--root" rest |> Option.defaultValue "."
-                  WorkId = optionValue "--work" rest
-                  Title = optionValue "--title" rest
-                  InputText = optionValue "--input" rest
-                  OutputFormat = format
-                  DryRun = hasFlag "--dry-run" rest
-                  GeneratorVersion = SchemaVersionModule.currentGeneratorVersion ()
-                  Provider = optionValue "--provider" rest
-                  Parameters = parseParams rest
-                  Force = hasFlag "--force" rest
-                  TemplateUpdate = not (hasFlag "--no-update" rest)
-                  // Feature 053: `upgrade`'s explicit non-interactive apply flag, and the
-                  // input-interactivity signal that gates the per-step confirm loop (FR-011/FR-012).
-                  AssumeYes = hasFlag "--yes" rest
-                  IsInteractive = capabilities.IsInputInteractive
-                  // Feature 076: the `lint <artifact>` positional is the first non-flag token
-                  // (so `lint --rich spec.md` and `lint spec.md --rich` both resolve), + `--explain`.
-                  Artifact = rest |> List.tryFind (fun (a: string) -> not (a.StartsWith "--"))
-                  Explain = hasFlag "--explain" rest
-                  // Feature 077: `evidence --from-tests <path>` pre-maps scaffolded obligations to
-                  // a proving test file.
-                  FromTests = optionValue "--from-tests" rest
-                  // Feature 086: `surface --update` refreshes the docs/api-surface baselines;
-                  // default (or `--check`) is the read-only drift check.
-                  SurfaceUpdate = hasFlag "--update" rest
-                  // Feature 090: `plan --accept-upstream` re-baselines the plan's `## Source
-                  // Snapshot` against the current sources. Read only by `plan`.
-                  AcceptUpstream = hasFlag "--accept-upstream" rest }
+            match Options.unrecognized command rest with
+            // #196: reject the residue before anything reads the request, so a misdirected run
+            // (`init --project-root /tmp/b`) exits 1 having written nothing, instead of seeding the
+            // current directory and reporting `succeeded`.
+            | _ :: _ as unknownTokens -> printUnknownOptions format forceColor command unknownTokens
+            // §3.5: `<known> --help` / `-h` → that command's help (FR-009).
+            | [] when hasFlag "--help" rest || hasFlag "-h" rest -> printCommandHelp format forceColor command
+            | [] ->
+                let capabilities = detectCapabilities forceColor Console.IsOutputRedirected
 
-            let report = driveToReport request
+                let request =
+                    { Command = command
+                      ProjectRoot = optionValue "--root" rest |> Option.defaultValue "."
+                      WorkId = optionValue "--work" rest
+                      Title = optionValue "--title" rest
+                      InputText = optionValue "--input" rest
+                      OutputFormat = format
+                      DryRun = hasFlag "--dry-run" rest
+                      GeneratorVersion = SchemaVersionModule.currentGeneratorVersion ()
+                      Provider = optionValue "--provider" rest
+                      Parameters = parseParams rest
+                      Force = hasFlag "--force" rest
+                      TemplateUpdate = not (hasFlag "--no-update" rest)
+                      // Feature 053: `upgrade`'s explicit non-interactive apply flag, and the
+                      // input-interactivity signal that gates the per-step confirm loop (FR-011/FR-012).
+                      AssumeYes = hasFlag "--yes" rest
+                      IsInteractive = capabilities.IsInputInteractive
+                      // Feature 076: the `lint <artifact>` positional is the first non-flag token
+                      // (so `lint --rich spec.md` and `lint spec.md --rich` both resolve), + `--explain`.
+                      Artifact = rest |> List.tryFind (fun (a: string) -> not (a.StartsWith "--"))
+                      Explain = hasFlag "--explain" rest
+                      // Feature 077: `evidence --from-tests <path>` pre-maps scaffolded obligations to
+                      // a proving test file.
+                      FromTests = optionValue "--from-tests" rest
+                      // Feature 086: `surface --update` refreshes the docs/api-surface baselines;
+                      // default (or `--check`) is the read-only drift check.
+                      SurfaceUpdate = hasFlag "--update" rest
+                      // Feature 090: `plan --accept-upstream` re-baselines the plan's `## Source
+                      // Snapshot` against the current sources. Read only by `plan`.
+                      AcceptUpstream = hasFlag "--accept-upstream" rest }
 
-            // Resolve the effective rendering against the stream this report actually routes
-            // to — Blocked reports go to stderr, everything else to stdout — so Rich degrades
-            // to plain text when *that* sink is redirected or color-disabled (#68). Stream
-            // routing and exit code are unchanged across formats. Lint / `<stage> --explain`
-            // reports (feature 076) are a successful read-only result even when they report
-            // defects, so they always route to stdout — the `--json` contract must not land on
-            // stderr just because the artifact has defects.
-            let routesToStderr = report.Outcome = Blocked && Option.isNone report.Lint
+                let report = driveToReport request
 
-            let sinkRedirected =
+                // Resolve the effective rendering against the stream this report actually routes
+                // to — Blocked reports go to stderr, everything else to stdout — so Rich degrades
+                // to plain text when *that* sink is redirected or color-disabled (#68). Stream
+                // routing and exit code are unchanged across formats. Lint / `<stage> --explain`
+                // reports (feature 076) are a successful read-only result even when they report
+                // defects, so they always route to stdout — the `--json` contract must not land on
+                // stderr just because the artifact has defects.
+                let routesToStderr = report.Outcome = Blocked && Option.isNone report.Lint
+
+                let sinkRedirected =
+                    if routesToStderr then
+                        Console.IsErrorRedirected
+                    else
+                        Console.IsOutputRedirected
+
+                let rendered =
+                    (resolve format (detectCapabilities forceColor sinkRedirected) report).Text
+
                 if routesToStderr then
-                    Console.IsErrorRedirected
+                    Console.Error.WriteLine(rendered)
                 else
-                    Console.IsOutputRedirected
+                    Console.Out.WriteLine(rendered)
 
-            let rendered =
-                (resolve format (detectCapabilities forceColor sinkRedirected) report).Text
-
-            if routesToStderr then
-                Console.Error.WriteLine(rendered)
-            else
-                Console.Out.WriteLine(rendered)
-
-            // Feature 076: any report carrying a lint summary — `fsgg-sdd lint` OR
-            // `<stage> --explain` — uses the bespoke 0/1/2 exit polarity (clean / defects /
-            // unusable input), the opposite of exitCodeForReport (whose exit 2 is the
-            // tool-defect class). Every other command keeps exitCodeForReport.
-            match report.Command, report.Lint with
-            | _, Some lint ->
-                match lint.Outcome with
-                | Clean -> 0
-                | DefectsFound -> 1
-                | UnusableInput -> 2
-            // `lint` with no summary (e.g. no `<artifact>` supplied) is unusable input.
-            | Lint, None -> 2
-            | _ -> exitCodeForReport report
+                // Feature 076: any report carrying a lint summary — `fsgg-sdd lint` OR
+                // `<stage> --explain` — uses the bespoke 0/1/2 exit polarity (clean / defects /
+                // unusable input), the opposite of exitCodeForReport (whose exit 2 is the
+                // tool-defect class). Every other command keeps exitCodeForReport.
+                match report.Command, report.Lint with
+                | _, Some lint ->
+                    match lint.Outcome with
+                    | Clean -> 0
+                    | DefectsFound -> 1
+                    | UnusableInput -> 2
+                // `lint` with no summary (e.g. no `<artifact>` supplied) is unusable input.
+                | Lint, None -> 2
+                | _ -> exitCodeForReport report
 
 [<EntryPoint>]
 let main argv = run (Array.toList argv)
