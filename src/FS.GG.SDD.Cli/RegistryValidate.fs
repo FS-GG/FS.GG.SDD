@@ -177,15 +177,40 @@ module RegistryValidate =
     let private usage =
         "Usage: fsgg-sdd registry validate <path> [--json|--text|--rich]"
 
+    // ADR-0002 Gap C finding 4 (#203, FS-GG/FS.GG.SDD#258): mirror #196 — an option this command
+    // cannot honor blocks instead of being silently dropped by the `tryFind` positional scan (which
+    // would also mistake a bare `-x` for the `<path>`). Recognized here: the format/color flags and
+    // `--help`; the `<path>` is a positional (not `-`-prefixed) and the bare `--` separator (#246) is
+    // not an option. Sibling copy of `RegistrySkillManifest.unknownOptions` — kept small and
+    // comment-linked so the two cannot drift.
+    let private recognizedOptions =
+        set [ "--json"; "--text"; "--rich"; "--force-color"; "--help"; "-h" ]
+
+    let private unknownOptions (args: string list) =
+        args
+        |> List.filter (fun token ->
+            token.StartsWith("-", StringComparison.Ordinal)
+            && token <> "--"
+            && not (recognizedOptions.Contains token))
+
+    let private formatOptions (options: string list) =
+        options |> List.map (fun option -> $"'{option}'") |> String.concat ", "
+
     let run (args: string list) : int =
         let format = selectFormat args
 
         let report =
             match args with
             | "validate" :: rest ->
-                match rest |> List.tryFind (fun token -> not (token.StartsWith "--")) with
-                | Some path when not (String.IsNullOrWhiteSpace path) -> validate path
-                | _ -> argError usage
+                match unknownOptions rest with
+                // An unrecognized flag is a user-input failure surfaced through this command's own
+                // verdict channel: an `argError` on stdout (valid:false) + exit 1, parity with the
+                // missing-path / unknown-subcommand cases (a gate-callable validator always emits a verdict).
+                | (_ :: _) as unknown -> argError $"unrecognized option {formatOptions unknown}. {usage}"
+                | [] ->
+                    match rest |> List.tryFind (fun token -> not (token.StartsWith "--")) with
+                    | Some path when not (String.IsNullOrWhiteSpace path) -> validate path
+                    | _ -> argError usage
             | subcommand :: _ -> argError $"Unknown registry subcommand '{subcommand}'. {usage}"
             | [] -> argError usage
 
