@@ -629,14 +629,17 @@ work:
         (advisoryNotes: string list)
         (lifecycleNotes: string list)
         =
-        let taskLines =
+        let tasksBlock =
             match tasks with
-            | [] -> "[]"
+            | [] -> "tasks: []"
             | tasks ->
-                tasks
-                |> List.sortBy (fun task -> task.Id.Value)
-                |> List.map renderTask
-                |> String.concat "\n"
+                let taskLines =
+                    tasks
+                    |> List.sortBy (fun task -> task.Id.Value)
+                    |> List.map renderTask
+                    |> String.concat "\n"
+
+                $"tasks:\n{taskLines}"
 
         let lifecycle =
             if List.isEmpty lifecycleNotes then
@@ -647,8 +650,7 @@ work:
         $"""{taskFrontMatterText request workId existingFrontMatter}
 sources:
 {renderTaskSourceSnapshots workId specText clarificationText checklistText planText}
-tasks:
-{taskLines}
+{tasksBlock}
 {renderScalarBlock "acceptedDeferrals" acceptedDeferrals}
 {renderFindingsBlock findings}
 {renderScalarBlock "advisoryNotes" advisoryNotes}
