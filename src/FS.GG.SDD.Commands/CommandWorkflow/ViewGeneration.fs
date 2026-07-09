@@ -902,35 +902,32 @@ module internal ViewGeneration =
                 //    actionable diagnostics). It now emits the distinct `workModelNotGenerated`
                 //    warning ("could not be generated", not "an existing view is stale").
                 //
-                // Two `None` cases legitimately owe no diagnostic:
-                //  1. The pre-work-model early stage — a required lifecycle source is not
-                //     authored yet, so a missing view is the correct state and the transient
-                //     inconsistencies that follow (e.g. tasks.yml referencing evidence ids
-                //     before evidence.yml exists) are expected. That state is exactly "a
-                //     `missingArtifact` among the blocking reasons".
-                //  2. The pre-verify authoring stages (charter…evidence), which generate the
-                //     work model opportunistically as a side view. `verify` is where the work
-                //     model is *built* and `ship` where it is consumed at the merge boundary;
-                //     those are the stages whose report the author depends on, and where the
-                //     silent success #191 describes actually misleads. A blocking model at an
-                //     authoring stage is not yet a consumed-dependency failure — surfacing it
-                //     there is the always-on behavior that awaits the reference-resolution
-                //     work in FS.GG.SDD#204 (Gap D).
+                // One `None` case legitimately owes no diagnostic:
+                //  - The pre-work-model early stage — a required lifecycle source is not
+                //    authored yet, so a missing view is the correct state and the transient
+                //    inconsistencies that follow (e.g. tasks.yml referencing evidence ids
+                //    before evidence.yml exists) are expected. That state is exactly "a
+                //    `missingArtifact` among the blocking reasons".
+                //
+                // A second carve-out for the pre-verify authoring stages (charter…evidence)
+                // used to suppress the diagnostic everywhere but verify/ship, on the grounds
+                // that a blocking model at an authoring stage was not yet a consumed-dependency
+                // failure. It awaited the Gap D reference-resolution work (FS.GG.SDD#204); now
+                // that the decision-grammar convergence has landed (#265 / ADR-0003) so the
+                // shipped example's decisions round-trip and its work model generates cleanly,
+                // that carve-out is retired (FS.GG.SDD#262): `workModelNotGenerated` is now
+                // always-on at every `generatedViewPlan` seam, surfacing a never-written
+                // blocking model at analyze / evidence / refresh and the early `HandlersEarly`
+                // sites too, not just verify/ship.
                 let blockingIncludesMissingSource =
                     blockingModelDiagnostics
                     |> List.exists (fun diagnostic -> diagnostic.Id = "missingArtifact")
-
-                let workModelIsConsumedHere =
-                    match request.Command with
-                    | Verify
-                    | Ship -> true
-                    | _ -> false
 
                 let relatedIds = blockingModelDiagnostics |> List.map _.Id
 
                 let diagnostic =
                     match existing with
-                    | None when blockingIncludesMissingSource || not workModelIsConsumedHere -> None
+                    | None when blockingIncludesMissingSource -> None
                     | None -> Some(workModelNotGenerated path relatedIds)
                     | Some _ -> Some(blockedGeneratedViewRefresh path relatedIds)
 
