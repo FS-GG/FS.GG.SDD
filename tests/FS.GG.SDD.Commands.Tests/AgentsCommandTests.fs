@@ -259,6 +259,32 @@ module AgentsCommandTests =
         Assert.Equal<string list>([ "agents.behaviorDivergence" ], idsFor "codex")
         Assert.Empty(idsFor "claude") // current: nothing to say
 
+    // ADR-0002 Gap B, finding 4: guidance.json is a durable machine contract, so it must record its
+    // own diagnostics — not hardcode an empty array while the command report carries real ones. A
+    // clean first generation has nothing to say and stays byte-empty.
+    [<Fact>]
+    let ``a cleanly generated guidance manifest records an empty diagnostics array`` () =
+        let root = initializedVerifiedProject ()
+        TestSupport.runAgents root workId |> ignore
+
+        Assert.Empty (readManifest root "claude").Diagnostics
+        Assert.Empty (readManifest root "codex").Diagnostics
+
+    // The durable guidance.json now carries the same cause the command projects into the view's
+    // `diagnosticIds`: a regenerated divergent target records its divergence, an untouched current
+    // target records nothing. Previously both were silently written empty.
+    [<Fact>]
+    let ``a regenerated view records its own diagnostics in the durable guidance manifest`` () =
+        let root = initializedVerifiedProject ()
+        TestSupport.runAgents root workId |> ignore
+        tamperBehaviorDigest root "codex"
+
+        TestSupport.runAgents root workId |> ignore
+
+        let codexDiagnostics = (readManifest root "codex").Diagnostics
+        Assert.Contains(codexDiagnostics, (fun d -> d.Id = "agents.behaviorDivergence"))
+        Assert.Empty (readManifest root "claude").Diagnostics
+
     [<Fact>]
     let ``agents regenerates equally stale guidance on both targets instead of blocking`` () =
         let root = initializedVerifiedProject ()
