@@ -675,13 +675,7 @@ module internal ViewGeneration =
             analysisJson workId model.Request.GeneratorVersion sources relationships summary diagnostics generatedViews
 
         let view =
-            generatedViewState
-                path
-                "analysis"
-                model.Request.GeneratorVersion
-                sources
-                GeneratedViewCurrency.Current
-                []
+            generatedViewState path "analysis" model.Request.GeneratorVersion sources GeneratedViewCurrency.Current []
 
         summary, text, view
 
