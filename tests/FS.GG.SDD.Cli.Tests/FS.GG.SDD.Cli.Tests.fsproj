@@ -22,6 +22,7 @@
     <Compile Include="LintCommandTests.fs" />
     <Compile Include="RegistrySkillManifestContainmentTests.fs" />
     <Compile Include="UnknownOptionTests.fs" />
+    <Compile Include="ExceptionBackstopTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

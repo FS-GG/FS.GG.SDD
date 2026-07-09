@@ -227,6 +227,54 @@ let private printUnknownOptions format forceColor command (tokens: string list) 
     Console.Error.WriteLine((resolve format (detectCapabilities forceColor Console.IsErrorRedirected) report).Text)
     exitCodeForReport report
 
+/// Top-level exception backstop (FS-GG/FS.GG.SDD#250, Gap C finding 7 of ADR-0002 invariant 4).
+/// The pure plan/update/serialize pipeline is defensive, but an unhandled throw would otherwise
+/// print a raw CLR stack trace and exit with the default unhandled code — violating the "never a
+/// raw stack trace; distinguish malformed input (exit 1) from tool defect (exit 2)" doctrine.
+/// Project a deterministic `unhandledException` tool-defect report (blocked → exit 2 via the typed
+/// `IsToolDefect` bit) through the same three views as every other CLI-edge diagnostic, honoring
+/// the output-format flags, and route it to stderr. The stack trace is swallowed, not printed.
+let private printUnhandled (args: string list) (ex: exn) =
+    let format = outputFormat args
+    let forceColor = forceColorRequested args
+
+    let model =
+        { Request = helpRequest Init format
+          PendingEffects = []
+          InterpretedEffects = []
+          Diagnostics = [ unhandledException ex.Message ]
+          Specification = None
+          Clarification = None
+          Checklist = None
+          Plan = None
+          Tasks = None
+          Analysis = None
+          Evidence = None
+          Verification = None
+          Ship = None
+          AgentGuidance = None
+          Refresh = None
+          Scaffold = None
+          Doctor = None
+          Upgrade = None
+          Lint = None
+          Surface = None
+          GeneratedViews = []
+          Report = None }
+
+    let report = buildReport model
+    Console.Error.WriteLine((resolve format (detectCapabilities forceColor Console.IsErrorRedirected) report).Text)
+    exitCodeForReport report
+
+/// Run the top-level dispatch under the exception backstop (finding 7). Extracted so the backstop
+/// is unit-testable with an injected throwing dispatch — the real pipeline is too defensive to
+/// throw on demand end-to-end. Any escape becomes a classified tool-defect report, never a leak.
+let guarded (dispatch: string list -> int) (args: string list) =
+    try
+        dispatch args
+    with ex ->
+        printUnhandled args ex
+
 let printVersion () =
     // Single reconciled version source (Directory.Build.props <Version>), surfaced
     // through the generator version so the CLI reports the same number as every
@@ -341,4 +389,4 @@ let run args =
                 | _ -> exitCodeForReport report
 
 [<EntryPoint>]
-let main argv = run (Array.toList argv)
+let main argv = guarded run (Array.toList argv)
