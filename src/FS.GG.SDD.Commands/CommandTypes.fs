@@ -550,6 +550,12 @@ module CommandTypes =
           OutputFormat: OutputFormat
           DryRun: bool
           Outcome: CommandOutcome
+          // A positive "clean, advance" signal that disambiguates `Outcome = NoChange`: `true` when the
+          // stage ran, every artifact it evaluated was already present and current (all recorded changes
+          // NoChange/Preserve), and nothing blocked — so the work item is coherent for this stage and it
+          // is safe to advance. `false` for a bare no-op (nothing recorded) and for every non-NoChange
+          // outcome. Orthogonal to `Outcome`; leaves the outcome vocabulary stable (FS-GG/FS.GG.SDD#183).
+          Coherent: bool
           WorkId: string option
           ChangedArtifacts: ArtifactChange list
           Specification: SpecificationSummary option

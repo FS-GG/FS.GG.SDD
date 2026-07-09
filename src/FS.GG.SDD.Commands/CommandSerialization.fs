@@ -731,6 +731,8 @@ module CommandSerialization =
         writer.WriteBoolean("dryRun", report.DryRun)
         writer.WriteEndObject()
         writer.WriteString("outcome", outcomeValue report.Outcome)
+        // FS-GG/FS.GG.SDD#183: the positive "clean, advance" disambiguator for `outcome: noChange`.
+        writer.WriteBoolean("coherent", report.Coherent)
         writer.WriteStartArray("changedArtifacts")
 
         report.ChangedArtifacts

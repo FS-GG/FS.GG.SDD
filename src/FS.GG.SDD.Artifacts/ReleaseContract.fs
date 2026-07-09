@@ -390,6 +390,8 @@ module ReleaseContract =
                       "context"
                       "invocation"
                       "outcome"
+                      // Feature 093 (FS-GG/FS.GG.SDD#183): additive positive "clean, advance" fact.
+                      "coherent"
                       "changedArtifacts"
                       "specification"
                       "clarification"

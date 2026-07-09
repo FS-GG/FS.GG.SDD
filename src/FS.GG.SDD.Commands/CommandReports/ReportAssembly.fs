@@ -34,6 +34,16 @@ module internal ReportAssembly =
         else
             CommandOutcome.Succeeded
 
+    // The positive "clean, advance" signal for FS-GG/FS.GG.SDD#183. `resolveOutcome` collapses two
+    // distinct situations to `NoChange`: a bare no-op (no changes recorded at all) and a clean re-run
+    // (the command evaluated its artifacts and found every one already current — all changes
+    // NoChange/Preserve). Only the second means "everything is already coherent, advance". Because
+    // `NoChange` with a non-empty change set can arise *only* from the all-NoChange/Preserve branch
+    // above (any real Create/Update/Delete yields `Succeeded`; any error/warning pre-empts `NoChange`),
+    // the discriminator is exactly: outcome is `NoChange` and at least one change was recorded.
+    let coherent (reportOutcome: CommandOutcome) (changes: ArtifactChange list) =
+        reportOutcome = CommandOutcome.NoChange && not (List.isEmpty changes)
+
     let sortChanges (changes: ArtifactChange list) =
         changes
         |> List.sortBy (fun change -> change.Path, artifactOperationValue change.Operation, change.Ownership)
@@ -79,7 +89,8 @@ module internal ReportAssembly =
           // A *removal* forces a major bump (versioning-policy.md, "Change class to bump rule"):
           // feature 093 (FS-GG/FS.GG.SDD#164) removed `specification.unresolvedAmbiguityCount`, so
           // reportVersion goes 1.3.0 -> 2.0.0. 2.1.0 then adds `surface.versionBump` (feature 094).
-          ReportVersion = "2.1.0"
+          // 2.2.0 adds the top-level `coherent` fact (FS-GG/FS.GG.SDD#183).
+          ReportVersion = "2.2.0"
           Command = model.Request.Command
           // Intentionally the literal "." — decoupled from model.Request.ProjectRoot (which may be
           // an absolute/temporary path) so the report JSON stays reproducible/deterministic. Do not
@@ -88,6 +99,7 @@ module internal ReportAssembly =
           OutputFormat = model.Request.OutputFormat
           DryRun = model.Request.DryRun
           Outcome = reportOutcome
+          Coherent = coherent reportOutcome changes
           WorkId = model.Request.WorkId
           ChangedArtifacts = changes
           Specification = model.Specification

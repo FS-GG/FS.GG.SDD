@@ -9,6 +9,12 @@ module CommandRendering =
         builder.AppendLine($"command: {commandName report.Command}") |> ignore
         builder.AppendLine($"outcome: {outcomeValue report.Outcome}") |> ignore
 
+        // FS-GG/FS.GG.SDD#183: surface the positive "clean, advance" signal only when earned, so a bare
+        // no-op stays a quiet `outcome: noChange` while a coherent re-run reads unambiguously. The rich
+        // view scrapes this line into its details table, so this one seam covers text and rich alike.
+        if report.Coherent then
+            builder.AppendLine("coherent: true") |> ignore
+
         builder.AppendLine($"changedArtifacts: {List.length report.ChangedArtifacts}")
         |> ignore
 
