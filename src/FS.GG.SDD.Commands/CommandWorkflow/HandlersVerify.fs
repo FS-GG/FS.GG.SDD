@@ -689,7 +689,6 @@ module internal HandlersVerify =
                                           "verification"
                                           model.Request.GeneratorVersion
                                           []
-                                          None
                                           GeneratedViewCurrency.Current
                                           [])
                                   |> Option.defaultValue (
@@ -698,7 +697,6 @@ module internal HandlersVerify =
                                           "verification"
                                           model.Request.GeneratorVersion
                                           []
-                                          None
                                           GeneratedViewCurrency.Missing
                                           []
                                   ) ]
@@ -725,15 +723,12 @@ module internal HandlersVerify =
                                     generatedViewsForVerify
                                     diagnostics
 
-                            let outputDigest = SchemaVersionModule.outputSha256Text text
-
                             let view =
                                 generatedViewState
                                     (verifyPath workId)
                                     "verification"
                                     model.Request.GeneratorVersion
                                     sources
-                                    (Some outputDigest)
                                     GeneratedViewCurrency.Current
                                     []
 

@@ -812,7 +812,6 @@ module internal HandlersRefresh =
                               SchemaVersion = Some 1
                               Generator = Some request.GeneratorVersion
                               Sources = summarySources
-                              OutputDigest = None
                               Currency = GeneratedViewCurrency.Current
                               DiagnosticIds = [] }
 
@@ -885,7 +884,6 @@ module internal HandlersRefresh =
                       SchemaVersion = Some 1
                       Generator = Some request.GeneratorVersion
                       Sources = []
-                      OutputDigest = None
                       Currency = viewCurrencyToGenerated state
                       DiagnosticIds = [] }
 

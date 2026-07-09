@@ -168,7 +168,6 @@ module internal HandlersShip =
                     GovernanceHandoffModule.fromWorkModel workModel handoffSources config readiness generator
 
                 let handoffJson = GovernanceHandoffModule.toJson handoff
-                let outputDigest = SchemaVersionModule.outputSha256Text handoffJson
 
                 let view =
                     generatedViewState
@@ -176,7 +175,6 @@ module internal HandlersShip =
                         "governance-handoff"
                         generator
                         viewSources
-                        (Some outputDigest)
                         GeneratedViewCurrency.Current
                         []
 
@@ -208,7 +206,6 @@ module internal HandlersShip =
         with
         | Ok view ->
             let verdictJson = ShipVerdictModule.toJson (ShipVerdictModule.fromShipView view)
-            let outputDigest = SchemaVersionModule.outputSha256Text verdictJson
 
             let viewSources = [ analysisSourceFromSnapshot (shipPath workId) shipText ]
 
@@ -218,7 +215,6 @@ module internal HandlersShip =
                     "ship-verdict"
                     generator
                     viewSources
-                    (Some outputDigest)
                     GeneratedViewCurrency.Current
                     []
 
@@ -506,7 +502,6 @@ module internal HandlersShip =
                                 "analysis"
                                 model.Request.GeneratorVersion
                                 []
-                                None
                                 GeneratedViewCurrency.Current
                                 [])
                         |> Option.defaultValue (
@@ -515,7 +510,6 @@ module internal HandlersShip =
                                 "analysis"
                                 model.Request.GeneratorVersion
                                 []
-                                None
                                 GeneratedViewCurrency.Missing
                                 []
                         )
@@ -528,7 +522,6 @@ module internal HandlersShip =
                                 "verification"
                                 model.Request.GeneratorVersion
                                 []
-                                None
                                 GeneratedViewCurrency.Current
                                 []
                         | None ->
@@ -537,7 +530,6 @@ module internal HandlersShip =
                                 "verification"
                                 model.Request.GeneratorVersion
                                 []
-                                None
                                 GeneratedViewCurrency.Missing
                                 []
 
@@ -610,15 +602,12 @@ module internal HandlersShip =
                                     generatedViewsForShip
                                     diagnostics
 
-                            let outputDigest = SchemaVersionModule.outputSha256Text text
-
                             let view =
                                 generatedViewState
                                     (shipPath workId)
                                     "ship"
                                     model.Request.GeneratorVersion
                                     sources
-                                    (Some outputDigest)
                                     GeneratedViewCurrency.Current
                                     []
 

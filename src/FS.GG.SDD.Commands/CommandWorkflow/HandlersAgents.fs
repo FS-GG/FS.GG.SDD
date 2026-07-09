@@ -547,7 +547,6 @@ module internal HandlersAgents =
                                     Digest = Some sourceDigest
                                     SchemaVersion = Some 1
                                     SchemaStatus = Some "current" } ]
-                                None
                                 (if
                                      hasBlocking
                                      && (result.Currency = GeneratedViewCurrency.Missing

@@ -107,7 +107,6 @@ module CommandTypes =
           SchemaVersion: int option
           Generator: GeneratorVersion option
           Sources: GeneratedViewSource list
-          OutputDigest: OutputDigest option
           Currency: GeneratedViewCurrency
           DiagnosticIds: string list }
 

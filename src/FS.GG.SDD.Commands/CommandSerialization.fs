@@ -587,7 +587,6 @@ module CommandSerialization =
         |> List.iter (writeGeneratedSource writer)
 
         writer.WriteEndArray()
-        writeOutputDigest writer "outputDigest" view.OutputDigest
         writer.WriteString("currency", generatedViewCurrencyValue view.Currency)
         writeStringList writer Sorted "diagnosticIds" view.DiagnosticIds
         writer.WriteEndObject()

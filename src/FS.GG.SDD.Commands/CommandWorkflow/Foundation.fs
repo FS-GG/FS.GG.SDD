@@ -963,7 +963,6 @@ nuget-cache/
         (kind: string)
         (generator: GeneratorVersion)
         (sources: GeneratedViewSource list)
-        (outputDigest: OutputDigest option)
         (currency: GeneratedViewCurrency)
         (diagnosticIds: string list)
         : GeneratedViewState =
@@ -972,7 +971,6 @@ nuget-cache/
           SchemaVersion = Some 1
           Generator = Some generator
           Sources = sources |> List.sortBy _.Path
-          OutputDigest = outputDigest
           Currency = currency
           DiagnosticIds = diagnosticIds |> List.distinct |> List.sort }
 
@@ -986,7 +984,7 @@ nuget-cache/
         (generator: GeneratorVersion)
         (blockingIds: string list)
         : GeneratedViewState =
-        generatedViewState path "workModel" generator [] None GeneratedViewCurrency.Blocked blockingIds
+        generatedViewState path "workModel" generator [] GeneratedViewCurrency.Blocked blockingIds
 
     /// The blocked-work-model generated-view plan `(diagnostics, [view], effects)` a stage
     /// returns when its prerequisites are missing: no diagnostics and no effects, a single

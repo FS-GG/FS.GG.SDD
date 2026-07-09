@@ -268,8 +268,8 @@ module LifecycleSmokeTests =
     [<Fact>]
     let ``smoke generated readiness views record sources and generator identity in the report`` () =
         let d = driven.Value
-        // The originating stage report records each generated view's sources,
-        // generator identity, and output digest.
+        // The originating stage report records each generated view's sources
+        // and generator identity.
         let viewReports =
             [ $"readiness/{workId}/analysis.json", d.Analyze
               $"readiness/{workId}/verify.json", d.Verify
@@ -280,7 +280,6 @@ module LifecycleSmokeTests =
             | Some v ->
                 Assert.NotEmpty v.Sources
                 Assert.True(v.Generator.IsSome, $"{path} generated view missing generator identity.")
-                Assert.True(v.OutputDigest.IsSome, $"{path} generated view missing output digest.")
             | None -> failwith $"Expected a generated-view entry for {path} in the {report.Command} report."
 
     [<Fact>]

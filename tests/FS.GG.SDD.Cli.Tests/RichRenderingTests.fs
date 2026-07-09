@@ -51,7 +51,6 @@ module RichRenderingTests =
           SchemaVersion = Some 1
           Generator = None
           Sources = []
-          OutputDigest = None
           Currency = currency
           DiagnosticIds = [] }
 
