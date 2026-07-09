@@ -75,9 +75,11 @@ module internal ReportAssembly =
         { SchemaVersion = 1
           // Additive optional command blocks/fields bump the semantic reportVersion one minor while
           // `schemaVersion` stays Stable (1): 1.1.0 added `lifecycleStatus` (feature 084); 1.2.0
-          // adds `surface` (feature 086); 1.3.0 adds `surface.classification` (feature 087);
-          // 1.4.0 adds `surface.versionBump` (feature 094).
-          ReportVersion = "1.4.0"
+          // adds `surface` (feature 086); 1.3.0 adds `surface.classification` (feature 087).
+          // A *removal* forces a major bump (versioning-policy.md, "Change class to bump rule"):
+          // feature 093 (FS-GG/FS.GG.SDD#164) removed `specification.unresolvedAmbiguityCount`, so
+          // reportVersion goes 1.3.0 -> 2.0.0. 2.1.0 then adds `surface.versionBump` (feature 094).
+          ReportVersion = "2.1.0"
           Command = model.Request.Command
           // Intentionally the literal "." — decoupled from model.Request.ProjectRoot (which may be
           // an absolute/temporary path) so the report JSON stays reproducible/deterministic. Do not

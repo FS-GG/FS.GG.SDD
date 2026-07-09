@@ -23,6 +23,18 @@ module CommandReportJsonTests =
         |> fun state -> update BuildReport state |> fst
         |> fun state -> state.Report.Value
 
+    // Guards hole #1 of FS-GG/FS.GG.SDD#198: `reportVersion` is a hand-maintained literal, and
+    // nothing forced it to move when feature 093 (#164) removed `specification.unresolvedAmbiguityCount`
+    // — so a `0.8.0`- and a `0.9.0`-shaped report both claimed `1.3.0`. This pin reddens whenever the
+    // literal changes: any change to the report's shape (adding/removing a block or field) must bump
+    // `reportVersion` per `docs/release/versioning-policy.md` ("Change class to bump rule") — additive
+    // ⇒ minor, removal/retype ⇒ major — and then deliberately update this expected value.
+    [<Fact>]
+    let ``reportVersion is pinned to its current contract value`` () =
+        let expected = "2.1.0"
+        Assert.Equal(expected, dryRunReport().ReportVersion)
+        Assert.Contains(sprintf "\"reportVersion\": \"%s\"" expected, dryRunReport () |> serializeReport)
+
     [<Fact>]
     let ``deterministic JSON excludes absolute project root`` () =
         let first = dryRunReport () |> serializeReport
