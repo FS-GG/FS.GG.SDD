@@ -1268,7 +1268,15 @@ publicOrToolFacingImpact: true
 
                 let before = split |> List.take next
                 let after = split |> List.skip next
-                (before @ lines @ after) |> String.concat "\n"
+                // Join the appended lines onto the section's existing content, *before* the
+                // blank-line separator that precedes the next heading. Splicing after that blank
+                // instead (the old `before @ lines @ after`) split the markdown list in two and
+                // abutted the next `##` heading with no separating blank line (#211).
+                let trimmedBefore =
+                    before |> List.rev |> List.skipWhile (fun line -> line.Trim() = "") |> List.rev
+
+                let separator = if List.isEmpty after then [] else [ "" ]
+                (trimmedBefore @ lines @ separator @ after) |> String.concat "\n"
 
     // Replace the body of an existing section (the lines between its heading and the next
     // `##` heading) with the supplied lines, preserving the heading and the blank-line
