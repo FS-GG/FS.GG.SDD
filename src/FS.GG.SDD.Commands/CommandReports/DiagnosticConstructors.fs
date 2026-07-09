@@ -784,14 +784,6 @@ module internal DiagnosticConstructors =
             "Correct the underlying verification findings and rerun fsgg-sdd verify before ship."
             ids
 
-    let staleVerificationView path ids =
-        errorDiagnostic
-            "ship.staleVerificationView"
-            (Some path)
-            "Verification view source digests no longer match the current lifecycle sources."
-            "Rerun fsgg-sdd verify to refresh the verification view before ship."
-            ids
-
     let shipIdentityMismatch path expectedWorkId actualWorkId =
         errorDiagnostic
             "ship.identityMismatch"
@@ -829,13 +821,6 @@ module internal DiagnosticConstructors =
             $"Work model work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
             "Select the work id that matches the normalized work model, or regenerate the work model."
             [ expectedWorkId; actualWorkId ]
-
-    let agentsMissingWorkModel path =
-        errorForPath
-            "agents.missingWorkModel"
-            path
-            $"Normalized work model '{path}' is missing."
-            "Run fsgg-sdd verify or ship for the selected work item to generate the work model before generating agent guidance."
 
     // Early-stage (FR-010b): a *missing* work model at a pre-work-model stage is not a
     // defect — it is the expected early-stage state. This advisory (DiagnosticInfo, so it
@@ -907,14 +892,6 @@ module internal DiagnosticConstructors =
             "Configured agent targets record different workflow behavior digests for the same lifecycle model, so at least one target's guidance was not rendered from the current normalized work model."
             "Regenerate agent guidance so every target is rendered from the current normalized work model."
             targetIds
-
-    let agentsUnsafeGeneratedViewRefresh path relatedIds =
-        errorDiagnostic
-            "agents.unsafeGeneratedViewRefresh"
-            (Some path)
-            "Generated agent guidance cannot be safely refreshed in this run."
-            "Resolve the underlying generated-view diagnostics before refreshing agent guidance."
-            relatedIds
 
     let refreshMissingSource viewPath sourcePath =
         errorForRef
@@ -1198,7 +1175,6 @@ module internal DiagnosticConstructors =
             ids |> Set.contains "ship.missingVerificationPrerequisite"
             || ids |> Set.contains "ship.verificationNotReady"
             || ids |> Set.contains "ship.failedVerification"
-            || ids |> Set.contains "ship.staleVerificationView"
             || ids |> Set.contains "verify.identityMismatch"
             || ids |> Set.contains "verify.malformedVerificationView"
         then
