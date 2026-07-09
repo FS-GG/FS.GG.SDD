@@ -135,8 +135,23 @@ module RequirementModel =
         text.Split('\n')
         |> Array.mapi (fun index line -> index + 1, line)
         |> Array.choose (fun (lineNumber, line) ->
+            // Converge on the *authored* decision grammar the clarify stage and
+            // `.fsgg/early-stage-guidance.md` teach and the shipped example uses:
+            // `- **DEC-001** [CQ-001] [AMB:AMB-001] [FR-001] [AC-001]: text` — the id may
+            // be bold, and bracketed decision tags stand between the id and the colon (a tag
+            // like `[AMB:AMB-001]` may itself carry a colon, so the tag run is matched by
+            // brackets, not by "up to the first colon"). The bare `- DEC-001: text` form still
+            // parses (empty bold, empty tag run). Fixing this here rather than re-authoring the
+            // example is a blocking->green change: a decision authored in the canonical grammar
+            // never entered the work model before, so a task referencing it raised
+            // unknownReference; it cannot newly break a `tasks.yml` that parses today
+            // (ADR-0003, FS.GG.SDD#265).
             let m =
-                Regex.Match(line, @"^\s*-\s*(DEC-\d{3,})\s*:\s*(.+)$", RegexOptions.IgnoreCase)
+                Regex.Match(
+                    line,
+                    @"^\s*-\s*\*{0,2}(DEC-\d{3,})\*{0,2}((?:\s*\[[^\]]*\])*)\s*:\s*(.+)$",
+                    RegexOptions.IgnoreCase
+                )
 
             if m.Success then
                 match Identifiers.createDecisionId m.Groups.[1].Value with
@@ -146,8 +161,8 @@ module RequirementModel =
                     // model; before feature 093 none of them did.
                     Some
                         { Id = id
-                          Title = m.Groups.[2].Value.Trim()
-                          Decision = m.Groups.[2].Value.Trim()
+                          Title = m.Groups.[3].Value.Trim()
+                          Decision = m.Groups.[3].Value.Trim()
                           RequirementRefs = requirementRefsInLine line
                           StoryRefs = storyRefsInLine line
                           AcceptanceRefs = acceptanceRefsInLine line

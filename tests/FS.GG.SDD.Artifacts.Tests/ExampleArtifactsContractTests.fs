@@ -40,6 +40,21 @@ module ExampleArtifactsContractTests =
             Assert.Empty(blocking facts.Diagnostics)
             Assert.Equal(0, facts.BlockingAmbiguityCount)
 
+    /// FS.GG.SDD#265 / ADR-0003 — the decision-path fixpoint fence, tied to the example bytes.
+    /// The example authors its decisions in the canonical `- **DEC-001** [tags]:` grammar; the parser
+    /// that populates `work-model.json` (`RequirementModel.parseDecisions`) must actually read them.
+    /// Before the fix this returned empty, the decisions never entered the work model, and any task
+    /// referencing `DEC-001`/`DEC-002` raised `unknownReference`. Pinning the round-trip here means a
+    /// regression that re-breaks the grammar fails on the shipped example, not in a user's workspace.
+    [<Fact>]
+    let ``Example clarifications.md decisions round-trip through the work-model decision parser`` () =
+        let decisionIds =
+            RequirementModel.parseDecisions (snapshot "clarifications.md")
+            |> List.map (fun decision -> decision.Id.Value)
+
+        Assert.Contains("DEC-001", decisionIds)
+        Assert.Contains("DEC-002", decisionIds)
+
     [<Fact>]
     let ``Example checklist.md parses with no blocking diagnostics and no blocking findings`` () =
         match Checklist.parseChecklistFacts (snapshot "checklist.md") with

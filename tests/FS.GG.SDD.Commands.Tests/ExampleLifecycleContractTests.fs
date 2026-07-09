@@ -105,9 +105,22 @@ module ExampleLifecycleContractTests =
     /// rewrites nothing, so it reports `NoChange`. This is the sharper guard — a generator that
     /// re-derived an *equivalent-but-different* graph (renumbered ids, reordered fields) would
     /// still pass the gates above yet fail here, catching the drift at its source.
+    ///
+    /// FS.GG.SDD#265: the very first `plan` over a *bare* copy legitimately *creates* the derived
+    /// work model (`readiness/<id>/work-model.json`) and so reports `Succeeded`, not `NoChange`.
+    /// Before #265 the example's authored `**DEC**` decisions never parsed, the work model was
+    /// blocking, and `plan` took its no-write arm — reporting `NoChange` for the wrong reason (the
+    /// silent-generation bug this ADR closes). Bring the derived views to steady state first, then
+    /// assert the generators rewrite nothing: the *authored* plan.md/tasks.yml are the fixpoint, and
+    /// a generator that re-derived an equivalent-but-different graph still surfaces here as a
+    /// non-`NoChange` re-run.
     [<Fact>]
     let ``Shipped example is a fixpoint of its generators: plan and tasks report NoChange`` () =
         let root = exampleWorkspace ()
+
+        // Settle the derived work model (first `plan` creates it; `tasks` then sees it current).
+        TestSupport.runPlan root workId title |> ignore
+        TestSupport.runTasks root workId title |> ignore
 
         Assert.Equal(CommandOutcome.NoChange, (TestSupport.runPlan root workId title).Outcome)
         Assert.Equal(CommandOutcome.NoChange, (TestSupport.runTasks root workId title).Outcome)

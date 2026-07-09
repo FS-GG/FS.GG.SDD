@@ -127,13 +127,23 @@ tasks:
         Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
         Assert.True(TestSupport.existsRelative root workModelPath)
 
+        // The `charter` command refreshes the work model and records its authored sources. charter.md
+        // is deliberately NOT among them (ADR-0003 / FS.GG.SDD#265): the normalized work model derives
+        // no content from charter, so it is excluded from the work-model source set to keep the view a
+        // fixpoint across the stages that never read charter. spec.md is a genuine recorded source.
         Assert.Contains(
             report.GeneratedViews,
             fun view ->
                 view.Path = workModelPath
                 && view.Currency = GeneratedViewCurrency.Current
                 && view.Sources
-                   |> List.exists (fun source -> source.Path = $"work/{workId}/charter.md")
+                   |> List.exists (fun source -> source.Path = $"work/{workId}/spec.md")
+        )
+
+        Assert.DoesNotContain(
+            report.GeneratedViews
+            |> List.collect (fun view -> if view.Path = workModelPath then view.Sources else []),
+            fun source -> source.Path = $"work/{workId}/charter.md"
         )
 
     [<Fact>]
