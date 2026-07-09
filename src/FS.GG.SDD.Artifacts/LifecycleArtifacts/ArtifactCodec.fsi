@@ -75,6 +75,42 @@ module ArtifactCodec =
     /// list omits the line; absence reads as `[]`.
     val scalarBlock: key: string -> get: ('M -> string list) -> set: (string list -> 'M -> 'M) -> FieldCodec<'M>
 
+    /// An always-present nested mapping: `key:` then the sub-record's fields (driven by their own
+    /// field list) indented two spaces. An absent key keeps `subSeed`.
+    val nested:
+        key: string ->
+        subFields: FieldCodec<'S> list ->
+        subSeed: 'S ->
+        get: ('M -> 'S) ->
+        set: ('S -> 'M -> 'M) ->
+            FieldCodec<'M>
+
+    /// An optional nested mapping decoded through a draft `'D`: read the sub-mapping into the draft
+    /// (e.g. an option-carrying draft that reads null-aware), then `lift` it to the model field
+    /// `'F option` — `None` rejects the draft (e.g. a blank synthetic disclosure, keeping the
+    /// undisclosed-synthetic gate honest). `lower` projects the field back for rendering. Omits the
+    /// key when the field is `None`.
+    val optionalNestedVia:
+        key: string ->
+        subFields: FieldCodec<'D> list ->
+        subSeed: 'D ->
+        lift: ('D -> 'F option) ->
+        lower: ('F -> 'D) ->
+        get: ('M -> 'F option) ->
+        set: ('F option -> 'M -> 'M) ->
+            FieldCodec<'M>
+
+    /// A YAML block sequence of sub-records (driven by their own field list), always present
+    /// (`key: []` when empty). Each element decodes via that field list; a malformed element
+    /// (non-mapping) is dropped, mirroring the legacy per-record parsers.
+    val recordList:
+        key: string ->
+        subFields: FieldCodec<'S> list ->
+        subSeed: 'S ->
+        get: ('M -> 'S list) ->
+        set: ('S list -> 'M -> 'M) ->
+            FieldCodec<'M>
+
     /// The YAML keys the field list owns, in declaration order. Used by the
     /// record-vs-codec coupling test (FS.GG.SDD#201 FR-007).
     val keys: fields: FieldCodec<'M> list -> string list

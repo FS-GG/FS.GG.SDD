@@ -7,7 +7,10 @@ FS.GG.SDD.Artifacts.ArtifactCodec.foldInto
 FS.GG.SDD.Artifacts.ArtifactCodec.inlineList
 FS.GG.SDD.Artifacts.ArtifactCodec.keys
 FS.GG.SDD.Artifacts.ArtifactCodec.mappedScalar
+FS.GG.SDD.Artifacts.ArtifactCodec.nested
+FS.GG.SDD.Artifacts.ArtifactCodec.optionalNestedVia
 FS.GG.SDD.Artifacts.ArtifactCodec.optionalScalar
+FS.GG.SDD.Artifacts.ArtifactCodec.recordList
 FS.GG.SDD.Artifacts.ArtifactCodec.refList
 FS.GG.SDD.Artifacts.ArtifactCodec.render
 FS.GG.SDD.Artifacts.ArtifactCodec.requiredScalar
