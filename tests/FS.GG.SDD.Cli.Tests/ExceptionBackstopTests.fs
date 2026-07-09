@@ -38,6 +38,15 @@ module ExceptionBackstopTests =
     let private boom (_: string list) : int =
         raise (InvalidOperationException "kaboom-42")
 
+    /// A stderr sink that throws on every write — the broken-pipe (EPIPE) / render-fault shape that
+    /// can make the backstop's *own* projection throw (#252 item 1).
+    type private ThrowingWriter() =
+        inherit TextWriter()
+        override _.Encoding = System.Text.Encoding.UTF8
+        override _.Write(_: char) : unit = raise (IOException "Broken pipe")
+        override _.Write(_: string) : unit = raise (IOException "Broken pipe")
+        override _.WriteLine(_: string) : unit = raise (IOException "Broken pipe")
+
     [<Fact>]
     let ``a throw escaping the dispatch is classified as a tool defect (exit 2)`` () =
         let code, stderr = captureStderr (fun () -> Program.guarded boom [])
@@ -76,6 +85,35 @@ module ExceptionBackstopTests =
         // The human-facing message is present in every projection (--rich degrades to plain text
         // over the redirected sink); only the JSON view carries the raw diagnostic id.
         Assert.Contains("unexpected internal error", stderr)
+
+    // #252 item 2: the backstop's NextAction must report the defect, not advise the agent to
+    // "correct" an internal crash. The JSON view (the automation contract) carries `reportToolDefect`,
+    // never the generic `correctBlockingDiagnostics`.
+    [<Fact>]
+    let ``the backstop NextAction reports the tool defect rather than advising a correction`` () =
+        let _, stderr = captureStderr (fun () -> Program.guarded boom [ "--json" ])
+
+        Assert.Contains("reportToolDefect", stderr)
+        Assert.DoesNotContain("correctBlockingDiagnostics", stderr)
+
+    // #252 item 1 (defense-in-depth): the recovery path is itself unguarded. If projecting the defect
+    // report throws — a broken stderr pipe, a `--rich` render fault — the exception used to escape
+    // `guarded` and print the exact raw CLR stack trace the backstop exists to prevent, on the very
+    // path meant to enforce "never a raw stack trace". The last-resort inner guard must swallow it and
+    // still return the tool-defect exit code.
+    [<Fact>]
+    let ``a throw in the recovery path itself never escapes and still exits 2`` () =
+        let original = Console.Error
+        Console.SetError(new ThrowingWriter())
+
+        try
+            // Every stderr write throws, so `printUnhandled` throws while reporting the primary defect;
+            // `guarded` must not propagate that (the assertion is that this call returns at all) and
+            // must still yield the tool-defect exit code.
+            let code = Program.guarded boom []
+            Assert.Equal(2, code)
+        finally
+            Console.SetError original
 
     // ----- the pure diagnostic constructor -----
 

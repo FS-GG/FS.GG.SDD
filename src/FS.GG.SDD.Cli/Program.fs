@@ -273,7 +273,23 @@ let guarded (dispatch: string list -> int) (args: string list) =
     try
         dispatch args
     with ex ->
-        printUnhandled args ex
+        // Defense-in-depth (#252 item 1): the recovery path is itself unguarded. Projecting the
+        // defect report can throw — a Spectre render fault under `--rich`, or a broken stderr pipe
+        // (EPIPE) in `Console.Error.WriteLine` — and that escape would leak the exact raw CLR stack
+        // trace the backstop exists to prevent, on precisely the path meant to enforce "never a raw
+        // stack trace". Wrap the handler in a last-resort inner guard that falls back to a minimal
+        // plain-text stderr line (itself guarded against a broken pipe) and still returns the
+        // tool-defect exit code (2).
+        try
+            printUnhandled args ex
+        with _ ->
+            (try
+                Console.Error.WriteLine(
+                    "fsgg-sdd: unhandledException — an unexpected internal error occurred (tool defect)."
+                )
+             with _ -> ())
+
+            2
 
 let printVersion () =
     // Single reconciled version source (Directory.Build.props <Version>), surfaced

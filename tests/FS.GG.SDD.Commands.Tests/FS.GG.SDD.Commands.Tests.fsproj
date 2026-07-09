@@ -45,6 +45,7 @@
     <Compile Include="SeededSkillsTests.fs" />
     <Compile Include="ProcessSkillManifestTests.fs" />
     <Compile Include="HelpCommandTests.fs" />
+    <Compile Include="NextActionRoutingTests.fs" />
     <Compile Include="AuthoringDocsContractTests.fs" />
     <Compile Include="EarlyStageGuidanceContractTests.fs" />
     <Compile Include="SurfaceBaselineTests.fs" />
