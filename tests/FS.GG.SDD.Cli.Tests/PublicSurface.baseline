@@ -1,4 +1,5 @@
 FS.GG.SDD.Cli.Options.commandOptions
+FS.GG.SDD.Cli.Options.positional
 FS.GG.SDD.Cli.Options.recognized
 FS.GG.SDD.Cli.Options.recognizedTokens
 FS.GG.SDD.Cli.Options.suggestion

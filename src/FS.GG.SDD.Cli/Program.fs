@@ -335,9 +335,11 @@ let run args =
                       // input-interactivity signal that gates the per-step confirm loop (FR-011/FR-012).
                       AssumeYes = hasFlag "--yes" rest
                       IsInteractive = capabilities.IsInputInteractive
-                      // Feature 076: the `lint <artifact>` positional is the first non-flag token
-                      // (so `lint --rich spec.md` and `lint spec.md --rich` both resolve), + `--explain`.
-                      Artifact = rest |> List.tryFind (fun (a: string) -> not (a.StartsWith "--"))
+                      // Feature 076: the `lint <artifact>` positional (so `lint --rich spec.md` and
+                      // `lint spec.md --rich` both resolve), + `--explain`. #253 (Gap C finding 3):
+                      // `Options.positional` skips a preceding valued option's argument, so
+                      // `lint --root . spec.md` resolves `spec.md`, not the `--root` value `.`.
+                      Artifact = Options.positional command rest
                       Explain = hasFlag "--explain" rest
                       // Feature 077: `evidence --from-tests <path>` pre-maps scaffolded obligations to
                       // a proving test file.
