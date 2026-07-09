@@ -210,17 +210,13 @@ let private printTopLevelHelp format forceColor =
 let private printCommandHelp format forceColor command =
     emitHelp format forceColor command (CommandHelp.commandHelp command)
 
-/// A command invoked with tokens no option claimed (FS-GG/FS.GG.SDD#196). The residue blocks:
-/// the report is an ordinary `CommandReport`, so it projects three ways and routes to stderr,
-/// and it carries no effects, so the run writes nothing. Reported *before* the `--help` branch,
-/// mirroring FR-011 for unknown commands — a token the CLI cannot honor is never masked by a
-/// help flag, and the correction enumerates the options that would have been honored.
-let private printUnknownOptions format forceColor command (tokens: string list) =
-    let diagnostics =
-        tokens
-        |> List.map (fun token ->
-            unknownOption command token (Options.recognizedTokens command) (Options.suggestion command token))
-
+/// A command invoked with malformed argv (FS-GG/FS.GG.SDD#196 unknown tokens, #264 a valued option
+/// with no value). Each defect is a blocking `DiagnosticError`: the report is an ordinary
+/// `CommandReport`, so it projects three ways and routes to stderr, and it carries no effects, so the
+/// run writes nothing. Reported *before* the `--help` branch, mirroring FR-011 for unknown commands —
+/// a token the CLI cannot honor is never masked by a help flag, and each correction enumerates the
+/// options that would have been honored.
+let private printArgvErrors format forceColor command diagnostics =
     let model =
         { Request = helpRequest command format
           PendingEffects = []
@@ -347,11 +343,21 @@ let run args =
             let format = outputFormat rest
             let forceColor = forceColorRequested rest
 
-            match Options.unrecognized command rest with
-            // #196: reject the residue before anything reads the request, so a misdirected run
-            // (`init --project-root /tmp/b`) exits 1 having written nothing, instead of seeding the
-            // current directory and reporting `succeeded`.
-            | _ :: _ as unknownTokens -> printUnknownOptions format forceColor command unknownTokens
+            // Malformed argv is rejected before anything reads the request, so a misdirected run exits
+            // 1 having written nothing. Two defect classes are collected together: #196 residue (a
+            // `--`-prefixed token no option claimed — `init --project-root /tmp/b` used to seed the
+            // current directory and report `succeeded`) and #264 a value-taking option supplied with no
+            // value (a trailing `--work`/`--from-tests`/`--root` used to read as absent and default).
+            let argvDiagnostics =
+                (Options.unrecognized command rest
+                 |> List.map (fun token ->
+                     unknownOption command token (Options.recognizedTokens command) (Options.suggestion command token)))
+                @ (Options.missingValue command rest
+                   |> Option.map (missingOptionValue command)
+                   |> Option.toList)
+
+            match argvDiagnostics with
+            | _ :: _ -> printArgvErrors format forceColor command argvDiagnostics
             // §3.5: `<known> --help` / `-h` → that command's help (FR-009).
             | [] when hasFlag "--help" rest || hasFlag "-h" rest -> printCommandHelp format forceColor command
             | [] ->

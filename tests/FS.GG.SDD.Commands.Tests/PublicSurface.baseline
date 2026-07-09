@@ -68,6 +68,7 @@ FS.GG.SDD.Commands.CommandReports.missingClarificationPrerequisite
 FS.GG.SDD.Commands.CommandReports.missingDeferralRationale
 FS.GG.SDD.Commands.CommandReports.missingDisposition
 FS.GG.SDD.Commands.CommandReports.missingEvidencePrerequisite
+FS.GG.SDD.Commands.CommandReports.missingOptionValue
 FS.GG.SDD.Commands.CommandReports.missingPlanPrerequisite
 FS.GG.SDD.Commands.CommandReports.missingProjectConfig
 FS.GG.SDD.Commands.CommandReports.missingRequiredEvidence

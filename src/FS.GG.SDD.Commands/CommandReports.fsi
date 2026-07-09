@@ -18,6 +18,8 @@ module CommandReports =
     val unknownOption:
         command: SddCommand -> value: string -> recognized: string list -> suggestion: string option -> Diagnostic
 
+    val missingOptionValue: command: SddCommand -> option: string -> Diagnostic
+
     val unhandledException: message: string -> Diagnostic
 
     val malformedWorkId: value: string -> Diagnostic
