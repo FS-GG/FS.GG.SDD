@@ -138,6 +138,7 @@ FS.GG.SDD.Artifacts.ReleaseContract.channelOfVersion
 FS.GG.SDD.Artifacts.ReleaseContract.contractFormatValue
 FS.GG.SDD.Artifacts.ReleaseContract.currentRelease
 FS.GG.SDD.Artifacts.ReleaseContract.evaluate
+FS.GG.SDD.Artifacts.ReleaseContract.fullDepthKeys
 FS.GG.SDD.Artifacts.ReleaseContract.inventoryKindValue
 FS.GG.SDD.Artifacts.ReleaseContract.migrationNoteRequired
 FS.GG.SDD.Artifacts.ReleaseContract.parse

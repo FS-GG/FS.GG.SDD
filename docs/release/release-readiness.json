@@ -65,7 +65,42 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "behaviorModelDigest.algorithm",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "behaviorModelDigest.value",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "commands",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "commands[].id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "commands[].purpose",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "commands[].relatedIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "commands[].stage",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "commands[].title",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -90,6 +125,16 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "renderedFiles[].kind",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "renderedFiles[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "schemaVersion",
           "kind": "jsonField",
           "stability": "stable"
@@ -100,7 +145,62 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "skills[].capability",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "skills[].id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "skills[].relatedIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "skills[].title",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "sources",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].digest",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].digest.algorithm",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].digest.value",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].kind",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].schemaStatus",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].schemaVersion",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -182,6 +282,26 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "generatedViews[].currency",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].diagnosticIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].kind",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "generator",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -192,12 +312,102 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "nextAction.actionId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "nextAction.command",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "nextAction.reason",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "optionalBoundaryFacts",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
         {
+          "name": "optionalBoundaryFacts[].diagnosticIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "optionalBoundaryFacts[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "optionalBoundaryFacts[].relationship",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "optionalBoundaryFacts[].requiredBySdd",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "optionalBoundaryFacts[].state",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "readiness",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.acceptedDeferralCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.advisoryCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.blockingCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.generatedViewFindingCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.malformedSourceCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.missingDispositionCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.readyCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.staleSourceCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.warningCount",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -212,7 +422,82 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "sourceRelationships[].diagnosticIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sourceRelationships[].id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sourceRelationships[].relationship",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sourceRelationships[].sourceId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sourceRelationships[].sourcePath",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sourceRelationships[].state",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sourceRelationships[].targetId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sourceRelationships[].targetPath",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "sources",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].digest",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].digest.algorithm",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].digest.value",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].kind",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].schemaStatus",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].schemaVersion",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -268,7 +553,147 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "analysis.acceptedDeferralCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "analysis.advisoryCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "analysis.analysisPath",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "analysis.blockingCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "analysis.generatedViewFindingCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "analysis.malformedSourceCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "analysis.missingDispositionCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "analysis.readiness",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "analysis.readyFindingCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "analysis.sourceCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "analysis.sourceRelationshipCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "analysis.stage",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "analysis.staleSourceCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "analysis.status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "analysis.warningCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "analysis.workId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "changedArtifacts",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "changedArtifacts[].afterDigest",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "changedArtifacts[].afterDigest.algorithm",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "changedArtifacts[].afterDigest.value",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "changedArtifacts[].beforeDigest",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "changedArtifacts[].beforeDigest.algorithm",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "changedArtifacts[].beforeDigest.value",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "changedArtifacts[].diagnosticIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "changedArtifacts[].kind",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "changedArtifacts[].operation",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "changedArtifacts[].ownership",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "changedArtifacts[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "changedArtifacts[].safeWriteDecision",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -278,7 +703,117 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "checklist.acceptedDeferralCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "checklist.advisoryCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "checklist.failedBlockingCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "checklist.itemIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "checklist.passedCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "checklist.resultIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "checklist.sourceClarifications",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "checklist.sourceSpec",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "checklist.stage",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "checklist.staleResultCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "checklist.status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "checklist.workId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "clarification",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "clarification.acceptedDeferralIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "clarification.answeredQuestionIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "clarification.blockingAmbiguityCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "clarification.decisionIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "clarification.questionIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "clarification.remainingAmbiguityCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "clarification.sourceSpec",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "clarification.stage",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "clarification.status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "clarification.workId",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -293,7 +828,27 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "command.name",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "command.stage",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "context",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "context.projectRoot",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "context.workId",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -318,7 +873,107 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "generatedViews[].currency",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].diagnosticIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].generator",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].generator.id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].generator.version",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].kind",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].schemaVersion",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].sources",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].sources[].digest",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].sources[].digest.algorithm",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].sources[].digest.value",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].sources[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].sources[].schemaStatus",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].sources[].schemaVersion",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "governanceCompatibility",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceCompatibility[].diagnosticIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceCompatibility[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceCompatibility[].relationship",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceCompatibility[].requiredBySdd",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceCompatibility[].state",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -333,7 +988,67 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "invocation.dryRun",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "invocation.outputFormat",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "lifecycleStatus",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleStatus.currentOrdinal",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleStatus.isLifecycleStage",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleStatus.nextCommand",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleStatus.outcome",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleStatus.stages",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleStatus.stages[].command",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleStatus.stages[].ordinal",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleStatus.stages[].state",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleStatus.totalStages",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleStatus.workId",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -348,12 +1063,117 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "nextAction.actionId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "nextAction.blockingDiagnosticIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "nextAction.command",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "nextAction.reason",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "nextAction.requiredArtifacts",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "nextAction.workId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "outcome",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
         {
           "name": "plan",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "plan.acceptedDeferralCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "plan.advisoryCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "plan.blockingFindingCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "plan.contractReferenceIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "plan.decisionIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "plan.generatedViewImpactIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "plan.migrationNoteIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "plan.sourceChecklist",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "plan.sourceClarifications",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "plan.sourceSpec",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "plan.stage",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "plan.staleDecisionCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "plan.status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "plan.verificationObligationIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "plan.workId",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -383,7 +1203,187 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "ship.advisoryCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.blockingCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.disposition",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.evidenceDeferredCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.evidenceInvalidCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.evidenceMissingCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.evidenceStaleCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.evidenceSupportedCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.evidenceSyntheticCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.findingIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.generatedViewState",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.lifecycleStageReadiness",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.lifecycleStageReadiness.analyze",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.lifecycleStageReadiness.checklist",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.lifecycleStageReadiness.clarify",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.lifecycleStageReadiness.evidence",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.lifecycleStageReadiness.plan",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.lifecycleStageReadiness.specify",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.lifecycleStageReadiness.tasks",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.lifecycleStageReadiness.verify",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.readiness",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.readyFindingCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.shipPath",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.sourceSnapshotCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.stage",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.verificationReadiness",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.warningCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.workId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "specification",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "specification.acceptanceScenarioIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "specification.ambiguityIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "specification.requirementIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "specification.stage",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "specification.status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "specification.storyIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "specification.workId",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -394,6 +1394,101 @@
         },
         {
           "name": "tasks",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.acceptedDeferralCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.advisoryCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.blockingFindingCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.dependencyCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.doneCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.inProgressCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.pendingCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.requiredEvidenceCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.requiredSkillCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.skippedCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.sourceChecklist",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.sourceClarifications",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.sourcePlan",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.sourceSpec",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.stage",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.staleCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.taskIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks.workId",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -444,12 +1539,62 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "evidence.dependencies",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence.dependencies[].dependency",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence.dependencies[].dependent",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence.nodes",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence.nodes[].id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence.nodes[].rationale",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence.nodes[].state",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "generatorVersion",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
         {
           "name": "governanceConfig",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceConfig.capabilitiesPresent",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceConfig.policyPresent",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceConfig.toolingPresent",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -464,12 +1609,77 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "readiness.blockingDiagnosticIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.counts",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.counts.advisory",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.counts.blocking",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.counts.warning",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.perViewState",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.perViewState[].state",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.perViewState[].view",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.shipDisposition",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "readiness.verificationReadiness",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "schemaVersion",
           "kind": "jsonField",
           "stability": "stable"
         },
         {
           "name": "sources",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].digest",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].schemaVersion",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -505,6 +1715,16 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "disposition.blockingFindingIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "disposition.state",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "generator",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -525,6 +1745,16 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "sourcesDigest.algorithm",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sourcesDigest.value",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "stage",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -536,6 +1766,11 @@
         },
         {
           "name": "verificationReadiness",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "verificationReadiness.status",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -581,7 +1816,62 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "disposition.advisoryFindingIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "disposition.blockingFindingIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "disposition.contributingStages",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "disposition.correction",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "disposition.state",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "disposition.warningFindingIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "evidenceDispositions",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions[].diagnosticIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions[].id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions[].obligationId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions[].severity",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions[].state",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -596,6 +1886,26 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "generatedViews[].currency",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].diagnosticIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].kind",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "generator",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -606,12 +1916,72 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "governanceCompatibility[].diagnosticIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceCompatibility[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceCompatibility[].relationship",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceCompatibility[].requiredBySdd",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceCompatibility[].state",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "lifecycleReadiness",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
         {
+          "name": "lifecycleReadiness.stages",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleReadiness.stages[].stage",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleReadiness.stages[].status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleReadiness.status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "nextAction",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "nextAction.actionId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "nextAction.command",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "nextAction.reason",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -631,6 +2001,41 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "sources[].digest",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].digest.algorithm",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].digest.value",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].kind",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].schemaStatus",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].schemaVersion",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "stage",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -642,6 +2047,46 @@
         },
         {
           "name": "verificationReadiness",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "verificationReadiness.blockingFindingIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "verificationReadiness.evidenceDeferredCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "verificationReadiness.evidenceInvalidCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "verificationReadiness.evidenceMissingCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "verificationReadiness.evidenceStaleCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "verificationReadiness.evidenceSupportedCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "verificationReadiness.evidenceSyntheticCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "verificationReadiness.status",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -723,12 +2168,77 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "evidenceDispositions[].affectedSourceIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions[].affectedTaskIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions[].correction",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions[].diagnosticIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions[].evidenceIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions[].id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions[].obligationId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions[].severity",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions[].state",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "findings",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
         {
           "name": "generatedViews",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].currency",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].diagnosticIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].kind",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].path",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -743,12 +2253,72 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "governanceCompatibility[].diagnosticIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceCompatibility[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceCompatibility[].relationship",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceCompatibility[].requiredBySdd",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "governanceCompatibility[].state",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "lifecycleReadiness",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
         {
+          "name": "lifecycleReadiness.stages",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleReadiness.stages[].stage",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleReadiness.stages[].status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "lifecycleReadiness.status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "nextAction",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "nextAction.actionId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "nextAction.command",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "nextAction.reason",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -768,7 +2338,77 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "skillVisibility[].correction",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "skillVisibility[].diagnosticIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "skillVisibility[].requiringTaskIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "skillVisibility[].severity",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "skillVisibility[].skill",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "skillVisibility[].sourceArtifactPath",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "skillVisibility[].visibility",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "sources",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].digest",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].digest.algorithm",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].digest.value",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].kind",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].schemaStatus",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].schemaVersion",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -788,7 +2428,77 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "taskGraph.dependenciesValid",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "taskGraph.dependencyCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "taskGraph.findingIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "taskGraph.statusesValid",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "taskGraph.taskCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "testDispositions",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "testDispositions[].affectedRequirementIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "testDispositions[].affectedTaskIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "testDispositions[].correction",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "testDispositions[].diagnosticIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "testDispositions[].evidenceIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "testDispositions[].id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "testDispositions[].obligationId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "testDispositions[].severity",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "testDispositions[].state",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -839,7 +2549,157 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "evidence[].artifactRefs",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].kind",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].rationale",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].requirementRefs",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].result",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].source",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].sourceLocation",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].sourceLocation.column",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].sourceLocation.line",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].subjectId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].subjectType",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].synthetic",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].taskRefs",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "generatedViews",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].currency",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].generator",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].generator.id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].generator.version",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].kind",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].outputDigest",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].outputDigest.algorithm",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].outputDigest.value",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].schemaVersion",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].sources",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].sources[].digest",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].sources[].digest.algorithm",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].sources[].digest.value",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].sources[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "generatedViews[].sources[].schemaVersion",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -859,7 +2719,72 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "project.defaultWorkRoot",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "project.id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "requirements",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "requirements[].acceptanceCriteria",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "requirements[].id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "requirements[].linkedEvidenceIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "requirements[].linkedTaskIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "requirements[].priority",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "requirements[].source",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "requirements[].sourceLocation",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "requirements[].sourceLocation.column",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "requirements[].sourceLocation.line",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "requirements[].text",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "requirements[].title",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -874,7 +2799,122 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "sources[].kind",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].owner",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].rawSchemaVersion",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].schemaStatus",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].schemaVersion",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].sourceDigest",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].sourceDigest.algorithm",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "sources[].sourceDigest.value",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "tasks",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks[].decisions",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks[].dependencies",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks[].id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks[].owner",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks[].requiredEvidence",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks[].requiredSkills",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks[].requirements",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks[].source",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks[].sourceIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks[].sourceLocation",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks[].sourceLocation.column",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks[].sourceLocation.line",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks[].status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "tasks[].title",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -885,6 +2925,31 @@
         },
         {
           "name": "workItem",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "workItem.changeTier",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "workItem.id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "workItem.stage",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "workItem.status",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "workItem.title",
           "kind": "jsonField",
           "stability": "additiveOptional"
         }

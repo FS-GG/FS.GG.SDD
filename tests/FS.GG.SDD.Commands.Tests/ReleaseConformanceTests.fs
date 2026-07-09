@@ -27,10 +27,9 @@ module ReleaseConformanceTests =
         TestSupport.runRefresh root workId |> ignore
         root, shipReport
 
-    let topKeys (json: string) =
-        (JsonDocument.Parse json).RootElement.EnumerateObject()
-        |> Seq.map (fun p -> p.Name)
-        |> Seq.toList
+    // Full-depth observed key set (ADR-0002 Gap B finding 6 / #261) via the shared walker, so a
+    // nested add/remove in a produced artifact surfaces as structured drift, not only a golden diff.
+    let topKeys (json: string) = ReleaseContract.fullDepthKeys json
 
     let refOf (relative: string) =
         match ArtifactRef.create relative ArtifactRef.GeneratedView ArtifactRef.Sdd false with

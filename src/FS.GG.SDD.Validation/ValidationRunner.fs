@@ -269,17 +269,8 @@ module ValidationRunner =
         | _ -> findProducedFile root output |> Option.map File.ReadAllText
 
     // ---- JSON key extraction (baseline conformance) ----
-
-    let topLevelKeys (text: string) =
-        try
-            use document = JsonDocument.Parse text
-
-            if document.RootElement.ValueKind = JsonValueKind.Object then
-                [ for property in document.RootElement.EnumerateObject() -> property.Name ]
-            else
-                []
-        with _ ->
-            []
+    // Observed inventories walk to full depth (ADR-0002 Gap B finding 6 / #261) via the shared
+    // `ReleaseContract.fullDepthKeys`, so nested drift reaches `evaluate`, not only the byte-goldens.
 
     // ============================================================
     //  cell evaluators
@@ -445,7 +436,7 @@ module ValidationRunner =
                     |> Option.map (fun file ->
                         { Contract = entry.Contract
                           Source = entry.SourceArtifact
-                          Inventory = topLevelKeys (File.ReadAllText file) }))
+                          Inventory = fullDepthKeys (File.ReadAllText file) }))
 
         let diagnostics = evaluate release produced
 
