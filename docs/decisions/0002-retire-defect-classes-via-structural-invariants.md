@@ -128,3 +128,34 @@ unfiled findings and reference this decision.
 - The invariants are independent enough to be sequenced against the existing
   intra-repo overlap protocol (ADR-0021); the grouped issues carry their
   `Paths:` touch-sets for that purpose.
+
+## Note: the round-trip property takes two shapes (invariant 1, all six families)
+
+Invariant 1 asks for an FsCheck round-trip property `render(parse(x)) = x` per
+authored artifact. The six authored families split into two structural kinds,
+and the property is instantiated differently — but by the *same* invariant — for
+each. Both kinds are now covered; #288 closed the residual.
+
+- **The two YAML families — `tasks.yml`, `evidence.yml`** — have a genuine model
+  codec: one `render : model -> text` paired with a parser. The property is the
+  direct `parse(render m) = m` over the authored partition
+  (`TasksRoundTripPropertyTests`, `EvidenceRoundTripPropertyTests`; feature 097
+  T029/T030). This is the form invariant 1 sketches literally.
+
+- **The four Markdown families — `spec.md`, `clarifications.md`, `checklist.md`,
+  `plan.md`** — have no `render : Facts -> text`: the author owns the prose, and
+  the pure re-emit on every re-run is `ensure*Sections existing.Text`. For these,
+  the property is the *text-space* identity in invariant 1's own wording,
+  `render(parse(x)) = x`: for a well-formed authored document `x`, re-running the
+  stage reproduces `x` byte-for-byte (`ensure*Sections x = x`) and loses no
+  authored id — the exact "silent revert on re-run" data-loss class. This is
+  `MarkdownArtifactRoundTripPropertyTests`, and it exercises the real
+  `parse`/`ensure*Sections` production functions, not a test-only renderer.
+  Migrating these four onto `ArtifactCodec` is *not* required by the invariant
+  (there is no YAML field set to couple); the generative re-run property is the
+  guardrail that makes the class unrepresentable for them.
+
+  Tool-owned/derived fields (`Diagnostics`, `StandardSections`,
+  `SourceSnapshots`/digests, `Stale*Count`, `BlockingAmbiguityCount`) are excluded
+  from the compared partition, exactly as the YAML properties exclude their
+  tool-owned fields.
