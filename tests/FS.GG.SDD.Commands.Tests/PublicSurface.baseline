@@ -11,12 +11,10 @@ FS.GG.SDD.Commands.CommandReports.agentsEarlyStageGuidance
 FS.GG.SDD.Commands.CommandReports.agentsInvalidGeneratedRoot
 FS.GG.SDD.Commands.CommandReports.agentsMalformedGeneratedGuidance
 FS.GG.SDD.Commands.CommandReports.agentsMalformedWorkModel
-FS.GG.SDD.Commands.CommandReports.agentsMissingWorkModel
 FS.GG.SDD.Commands.CommandReports.agentsNoTargets
 FS.GG.SDD.Commands.CommandReports.agentsStaleGeneratedGuidance
 FS.GG.SDD.Commands.CommandReports.agentsStaleWorkModel
 FS.GG.SDD.Commands.CommandReports.agentsUnknownSourceReference
-FS.GG.SDD.Commands.CommandReports.agentsUnsafeGeneratedViewRefresh
 FS.GG.SDD.Commands.CommandReports.agentsWorkModelIdentityMismatch
 FS.GG.SDD.Commands.CommandReports.analysisIdentityMismatch
 FS.GG.SDD.Commands.CommandReports.analysisNotReady
@@ -102,7 +100,6 @@ FS.GG.SDD.Commands.CommandReports.stalePlanDecision
 FS.GG.SDD.Commands.CommandReports.stalePlanSnapshot
 FS.GG.SDD.Commands.CommandReports.staleRequiredTest
 FS.GG.SDD.Commands.CommandReports.staleTask
-FS.GG.SDD.Commands.CommandReports.staleVerificationView
 FS.GG.SDD.Commands.CommandReports.taskDependencyCycle
 FS.GG.SDD.Commands.CommandReports.tasksIdentityMismatch
 FS.GG.SDD.Commands.CommandReports.toolDefect

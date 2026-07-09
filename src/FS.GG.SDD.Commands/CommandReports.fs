@@ -283,9 +283,6 @@ module CommandReports =
     let failedVerification path ids =
         DiagnosticConstructors.failedVerification path ids
 
-    let staleVerificationView path ids =
-        DiagnosticConstructors.staleVerificationView path ids
-
     let shipIdentityMismatch path expectedWorkId actualWorkId =
         DiagnosticConstructors.shipIdentityMismatch path expectedWorkId actualWorkId
 
@@ -300,9 +297,6 @@ module CommandReports =
 
     let agentsWorkModelIdentityMismatch path expectedWorkId actualWorkId =
         DiagnosticConstructors.agentsWorkModelIdentityMismatch path expectedWorkId actualWorkId
-
-    let agentsMissingWorkModel path =
-        DiagnosticConstructors.agentsMissingWorkModel path
 
     let agentsEarlyStageGuidance presentStages =
         DiagnosticConstructors.agentsEarlyStageGuidance presentStages
@@ -327,9 +321,6 @@ module CommandReports =
 
     let agentsBehaviorDivergence path targetIds =
         DiagnosticConstructors.agentsBehaviorDivergence path targetIds
-
-    let agentsUnsafeGeneratedViewRefresh path relatedIds =
-        DiagnosticConstructors.agentsUnsafeGeneratedViewRefresh path relatedIds
 
     let refreshMissingSource viewPath sourcePath =
         DiagnosticConstructors.refreshMissingSource viewPath sourcePath

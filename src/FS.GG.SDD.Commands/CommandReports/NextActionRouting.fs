@@ -95,8 +95,7 @@ module internal NextActionRouting =
                         | Ship -> shipCorrectionCommand diagnostics
                         | Agents ->
                             if
-                                ids |> Set.contains "agents.missingWorkModel"
-                                || ids |> Set.contains "agents.staleWorkModel"
+                                ids |> Set.contains "agents.staleWorkModel"
                                 || ids |> Set.contains "agents.malformedWorkModel"
                                 || ids |> Set.contains "agents.blockedWorkModel"
                             then
