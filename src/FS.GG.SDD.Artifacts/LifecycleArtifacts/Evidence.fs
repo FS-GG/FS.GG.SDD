@@ -157,6 +157,47 @@ module Evidence =
             |> Seq.toList)
         |> Option.defaultValue []
 
+    // Shared field lists — ADR-0002 invariant 1 / FR-007 (FS.GG.SDD#201, #260). One `FieldCodec`
+    // list per authored record drives BOTH the reader here and the renderer in `HandlersEvidence`,
+    // so a field can no longer be read without being written or vice versa — the read/write
+    // asymmetry behind #180 (bare-null disclosure) and #181 (dropped `id`/`digest`/`relatedSourceId`)
+    // becomes unrepresentable. Optional scalars read null-aware (a bare-null token is absence; a
+    // quoted "null" survives as the literal string).
+    module EvidenceCodec =
+        let sourceRefSeed: EvidenceSourceReference =
+            { ReferenceId = None
+              Kind = "artifact"
+              Path = None
+              Uri = None
+              Digest = None
+              RelatedSourceId = None
+              Result = None
+              SourceLocation = None }
+
+        let sourceRefFields: ArtifactCodec.FieldCodec<EvidenceSourceReference> list =
+            [ ArtifactCodec.defaultedScalar "kind" "artifact" (fun r -> r.Kind) (fun v r -> { r with Kind = v })
+              ArtifactCodec.optionalScalar "id" (fun r -> r.ReferenceId) (fun v r -> { r with ReferenceId = v })
+              ArtifactCodec.optionalScalar "path" (fun r -> r.Path) (fun v r -> { r with Path = v })
+              ArtifactCodec.optionalScalar "uri" (fun r -> r.Uri) (fun v r -> { r with Uri = v })
+              ArtifactCodec.optionalScalar "digest" (fun r -> r.Digest) (fun v r -> { r with Digest = v })
+              ArtifactCodec.optionalScalar "relatedSourceId" (fun r -> r.RelatedSourceId) (fun v r ->
+                  { r with RelatedSourceId = v })
+              ArtifactCodec.optionalScalar "result" (fun r -> r.Result) (fun v r -> { r with Result = v }) ]
+
+        // The disclosure's inner scalars read null-aware into an option-carrying draft (#180); the
+        // caller lifts a fully-populated, non-blank draft to `Some SyntheticDisclosure` and everything
+        // else (bare null, absence, blank) to `None`, so the undisclosed-synthetic gate stays honest.
+        type DisclosureDraft =
+            { StandsInFor: string option
+              Reason: string option }
+
+        let disclosureDraftSeed = { StandsInFor = None; Reason = None }
+
+        let disclosureFields: ArtifactCodec.FieldCodec<DisclosureDraft> list =
+            [ ArtifactCodec.optionalScalar "standsInFor" (fun d -> d.StandsInFor) (fun v d ->
+                  { d with StandsInFor = v })
+              ArtifactCodec.optionalScalar "reason" (fun d -> d.Reason) (fun v d -> { d with Reason = v }) ]
+
     let parseEvidenceSourceRefs (mapping: YamlMappingNode) =
         trySequenceAt [ "sourceRefs" ] mapping
         |> Option.map (fun sequence ->
@@ -165,39 +206,45 @@ module Evidence =
                 node
                 |> tryMapping
                 |> Option.map (fun source ->
-                    // Every optional sourceRef scalar is read null-aware (FS.GG.SDD#180): a bare
-                    // `path: null`/`uri: null`/`result: null` (and `id`/`digest`/`relatedSourceId`)
-                    // reads back as `None` so the round-trip renderer omits the line rather than
-                    // re-emitting the quoted string `"null"`. `kind` keeps its authored default.
-                    { ReferenceId = tryScalarNonNullAt [ "id" ] source
-                      Kind = tryScalarAt [ "kind" ] source |> Option.defaultValue "artifact"
-                      Path = tryScalarNonNullAt [ "path" ] source
-                      Uri = tryScalarNonNullAt [ "uri" ] source
-                      Digest = tryScalarNonNullAt [ "digest" ] source
-                      RelatedSourceId = tryScalarNonNullAt [ "relatedSourceId" ] source
-                      Result = tryScalarNonNullAt [ "result" ] source
-                      SourceLocation = sourceLocation (index + 1) }))
+                    // The shared `EvidenceCodec.sourceRefFields` drives this read and the renderer, so
+                    // every authored scalar round-trips (FS.GG.SDD#180/#181). `SourceLocation` is
+                    // parse-assigned provenance, set after decode.
+                    let decoded =
+                        match
+                            ArtifactCodec.foldInto EvidenceCodec.sourceRefFields EvidenceCodec.sourceRefSeed source
+                        with
+                        | Ok value -> value
+                        | Error _ -> EvidenceCodec.sourceRefSeed
+
+                    { decoded with
+                        SourceLocation = sourceLocation (index + 1) }))
             |> Seq.choose id
             |> Seq.toList)
         |> Option.defaultValue []
 
     let parseSyntheticDisclosure (mapping: YamlMappingNode) =
-        // Null-aware (FS.GG.SDD#180): a bare `standsInFor: null`/`reason: null` (or `~`/empty
-        // plain scalar) reads back as `None`, not `Some "null"`, so the whitespace guard below
-        // treats it as absence and the undisclosed-synthetic gate fires. A *quoted* "null" is a
-        // real string (`isPlainNullScalar` checks ScalarStyle.Plain) and still round-trips.
+        // The disclosure's inner scalars read null-aware via the shared `EvidenceCodec.disclosureFields`
+        // (FS.GG.SDD#180): a bare `standsInFor: null`/`reason: null` (or `~`/empty plain scalar) reads
+        // back as `None`, so the whitespace guard treats it as absence and the undisclosed-synthetic
+        // gate fires. A *quoted* "null" is a real string and still round-trips.
         match
-            tryScalarNonNullAt [ "syntheticDisclosure"; "standsInFor" ] mapping,
-            tryScalarNonNullAt [ "syntheticDisclosure"; "reason" ] mapping
+            tryNodeAt [ "syntheticDisclosure" ] (mapping :> YamlNode)
+            |> Option.bind tryMapping
         with
-        | Some standsInFor, Some reason when
-            not (String.IsNullOrWhiteSpace standsInFor)
-            && not (String.IsNullOrWhiteSpace reason)
-            ->
-            Some
-                { StandsInFor = standsInFor
-                  Reason = reason }
-        | _ -> None
+        | None -> None
+        | Some sub ->
+            match ArtifactCodec.foldInto EvidenceCodec.disclosureFields EvidenceCodec.disclosureDraftSeed sub with
+            | Ok draft ->
+                match draft.StandsInFor, draft.Reason with
+                | Some standsInFor, Some reason when
+                    not (String.IsNullOrWhiteSpace standsInFor)
+                    && not (String.IsNullOrWhiteSpace reason)
+                    ->
+                    Some
+                        { StandsInFor = standsInFor
+                          Reason = reason }
+                | _ -> None
+            | Error _ -> None
 
     let workIdFromEvidencePath (path: string) =
         let normalized = normalizePath path

@@ -29,6 +29,12 @@ module ArtifactCodec =
     /// A required `string` field. Reads the key (Error if absent); always writes.
     val requiredScalar: key: string -> get: ('M -> string) -> set: (string -> 'M -> 'M) -> FieldCodec<'M>
 
+    /// A `string` field with a fallback: reads the key, or `fallback` when the key is
+    /// absent (never errors); always writes `key: value`. Mirrors the reader's
+    /// `tryScalarAt |> Option.defaultValue` for keys such as evidence `sourceRef.kind`.
+    val defaultedScalar:
+        key: string -> fallback: string -> get: ('M -> string) -> set: (string -> 'M -> 'M) -> FieldCodec<'M>
+
     /// A `string list` rendered as a YAML flow sequence `key: [a, b, c]`. An
     /// empty list omits the line; absence reads as `[]`.
     val inlineList: key: string -> get: ('M -> string list) -> set: (string list -> 'M -> 'M) -> FieldCodec<'M>
@@ -49,3 +55,12 @@ module ArtifactCodec =
     /// parsed mapping, starting from `seed`. `Error` on an unparseable document,
     /// a non-mapping root, or a missing required field.
     val decode: fields: FieldCodec<'M> list -> seed: 'M -> text: string -> Result<'M, string>
+
+    /// Decode a model by folding every field's reader over an already-parsed YAML
+    /// mapping (e.g. one element of a block sequence), starting from `seed` — `decode`
+    /// without the document-parse/root-mapping step, for nested records.
+    val foldInto:
+        fields: FieldCodec<'M> list ->
+        seed: 'M ->
+        mapping: YamlDotNet.RepresentationModel.YamlMappingNode ->
+            Result<'M, string>

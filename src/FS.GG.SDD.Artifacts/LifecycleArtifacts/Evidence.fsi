@@ -98,5 +98,19 @@ module Evidence =
           LifecycleNotes: string list
           Diagnostics: Diagnostic list }
 
+    /// Shared authored-record field lists (ADR-0002 invariant 1 / FR-007, FS.GG.SDD#201): one
+    /// `FieldCodec` list drives both the reader (here) and the renderer (`HandlersEvidence`) for each
+    /// record, so a field cannot be read without being written or vice versa (#180/#181).
+    module EvidenceCodec =
+        val sourceRefSeed: EvidenceSourceReference
+        val sourceRefFields: ArtifactCodec.FieldCodec<EvidenceSourceReference> list
+
+        type DisclosureDraft =
+            { StandsInFor: string option
+              Reason: string option }
+
+        val disclosureDraftSeed: DisclosureDraft
+        val disclosureFields: ArtifactCodec.FieldCodec<DisclosureDraft> list
+
     val parseEvidenceArtifact: snapshot: FileSnapshot -> Result<EvidenceArtifact, Diagnostic list>
     val parseEvidence: snapshot: FileSnapshot -> Result<EvidenceDeclaration list, Diagnostic list>

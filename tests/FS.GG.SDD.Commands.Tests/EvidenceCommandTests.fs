@@ -492,8 +492,11 @@ evidence:
 
     [<Fact>]
     let ``evidence preserves a populated syntheticDisclosure across a re-render`` () =
-        // FR-003. Values are never omitted — only `None` is. Injected unquoted; the writer
-        // re-renders quoted, which proves the round-trip actually ran.
+        // FR-003. Values are never omitted — only `None` is. The disclosure now renders through the
+        // shared `EvidenceCodec.disclosureFields` (FS.GG.SDD#260), which quotes minimally: these
+        // space-bearing values are safe YAML plain scalars, so they round-trip bare. (The generative
+        // round-trip proof lives in EvidenceRoundTripPropertyTests; this confirms a populated
+        // disclosure survives a real CLI re-render.)
         let root = initializedAnalyzedProject ()
 
         let injected =
@@ -505,8 +508,8 @@ evidence:
 
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains("    syntheticDisclosure:\n", evidence)
-        Assert.Contains("      standsInFor: \"a real headless render\"", evidence)
-        Assert.Contains("      reason: \"no GPU on the CI runner\"", evidence)
+        Assert.Contains("      standsInFor: a real headless render", evidence)
+        Assert.Contains("      reason: no GPU on the CI runner", evidence)
 
     [<Fact>]
     let ``evidence preserves populated optional scalars across a re-render`` () =
@@ -572,7 +575,11 @@ evidence:
             + HandlersEvidence.renderEvidenceDeclaration declaration
             + "\nlifecycleNotes:\n  - Next lifecycle action: verify.\n"
 
-        match parseEvidenceArtifact { Path = evidencePath; Text = reRendered } with
+        match
+            parseEvidenceArtifact
+                { Path = evidencePath
+                  Text = reRendered }
+        with
         | Ok artifact ->
             let reference = Assert.Single((Assert.Single(artifact.Evidence)).SourceRefs)
             Assert.Equal("test-output", reference.Kind)
@@ -908,7 +915,11 @@ tasks:
     requiredEvidence: [EV001]
 """
 
-        match Task.parseTaskFacts { Path = $"work/{workId}/tasks.yml"; Text = text } with
+        match
+            Task.parseTaskFacts
+                { Path = $"work/{workId}/tasks.yml"
+                  Text = text }
+        with
         | Ok facts -> facts
         | Error diagnostics -> failwith $"Two-task fixture did not parse: {diagnostics}."
 
@@ -924,10 +935,7 @@ tasks:
         Assert.Equal(1, List.length shared)
         let obligation = List.head shared
 
-        Assert.Equal<string list>(
-            [ "T001"; "T002" ],
-            obligation.LinkedTaskIds |> List.map _.Value |> List.sort
-        )
+        Assert.Equal<string list>([ "T001"; "T002" ], obligation.LinkedTaskIds |> List.map _.Value |> List.sort)
 
         Assert.Equal<string list>(
             [ "FR-001"; "FR-002" ],
@@ -968,7 +976,8 @@ evidence:
 
     [<Fact>]
     let ``evidenceDispositions does not let a task-ref-only declaration satisfy a shared obligation`` () =
-        let obligations = HandlersEvidence.evidenceObligations (twoTaskSharedEvidenceFacts ())
+        let obligations =
+            HandlersEvidence.evidenceObligations (twoTaskSharedEvidenceFacts ())
 
         // Declares evidence *about task T001* — no `id: EV001`, no `obligationRefs: [EV001]`. Pre-#230
         // the widened `TaskRefs` clause pulled it into EV001 (LinkedTaskIds = [T001; T002]) and reported
@@ -995,7 +1004,8 @@ evidence:
 
     [<Fact>]
     let ``evidenceDispositions supports a shared obligation once the declaration names the obligation`` () =
-        let obligations = HandlersEvidence.evidenceObligations (twoTaskSharedEvidenceFacts ())
+        let obligations =
+            HandlersEvidence.evidenceObligations (twoTaskSharedEvidenceFacts ())
 
         // The positive control: the identical declaration that *names* EV001 (as every scaffolded
         // declaration does) resolves the one merged obligation for both T001 and T002 — satisfied once,
@@ -1044,7 +1054,11 @@ tasks:
     requiredEvidence: []
 """
 
-        match Task.parseTaskFacts { Path = $"work/{workId}/tasks.yml"; Text = text } with
+        match
+            Task.parseTaskFacts
+                { Path = $"work/{workId}/tasks.yml"
+                  Text = text }
+        with
         | Ok facts -> facts
         | Error diagnostics -> failwith $"Done-task fixture did not parse: {diagnostics}."
 
