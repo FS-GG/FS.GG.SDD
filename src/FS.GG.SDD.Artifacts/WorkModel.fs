@@ -743,6 +743,116 @@ module WorkModel =
           // exit-code decision never reads parsed diagnostics (see feature 062 research).
           IsToolDefect = false }
 
+    // A `{ "algorithm": …, "value": … }` digest object, or None for a `null`/absent field. Typed
+    // `SourceDigest` because `SourceDigest` and `OutputDigest` share a shape — the annotation keeps the
+    // record-literal inference off the wrong (last-declared) type.
+    let jmDigest (name: string) (element: JsonElement) : SourceDigest option =
+        jmProp name element
+        |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Object)
+        |> Option.map (fun value ->
+            ({ Algorithm = jmString "algorithm" value
+               Value = jmString "value" value }
+            : SourceDigest))
+
+    // FS-GG/FS.GG.SDD#266 (ADR-0003 Gap D part 2): the inverse of `Serialization.writeSource`.
+    // `parseWorkModel` used to hardcode `Sources = []`, which collapsed
+    // `deriveGuidanceModel.sourceIdentities` to a singleton in every flow that rebuilds the model from
+    // `work-model.json` (the `agents`/`refresh` generators). Round-trip the flat entry, mirroring the
+    // `GovernanceBoundaries` fix (#242); sorted by path like the construction path (`sourceEntries`).
+    let parseSourceEntry (item: JsonElement) : SourceEntry =
+        { Path = jmString "path" item
+          Kind = jmString "kind" item
+          Owner = jmString "owner" item
+          SchemaVersion = jmInt "schemaVersion" item |> Option.defaultValue 0
+          RawSchemaVersion =
+            (match jmString "rawSchemaVersion" item with
+             | "" -> None
+             | value -> Some value)
+          SchemaStatus = jmString "schemaStatus" item
+          SourceDigest =
+            jmDigest "sourceDigest" item
+            |> Option.defaultValue { Algorithm = "sha256"; Value = "" } }
+
+    // Inverses of `GenerationManifest.viewKindValue` / `currencyStatusValue`. An unrecognized kind
+    // preserves its literal via `Other` (matching the forward map); an unrecognized currency defaults
+    // to `current`, the only status the writer emits for a freshly generated view.
+    let parseViewKind (value: string) : GeneratedViewKind =
+        match value with
+        | "workModel" -> GeneratedViewKind.WorkModel
+        | "analysis" -> GeneratedViewKind.Analysis
+        | "verify" -> GeneratedViewKind.Verify
+        | "ship" -> GeneratedViewKind.Ship
+        | "shipVerdict" -> GeneratedViewKind.ShipVerdict
+        | "summary" -> GeneratedViewKind.Summary
+        | "agentCommands" -> GeneratedViewKind.AgentCommands
+        | "governance-handoff" -> GeneratedViewKind.GovernanceHandoff
+        | other -> GeneratedViewKind.Other other
+
+    let parseCurrencyStatus (value: string) : GeneratedViewCurrencyStatus =
+        match value with
+        | "missing" -> CurrencyMissing
+        | "stale" -> CurrencyStale
+        | "malformed" -> CurrencyMalformed
+        | _ -> CurrencyCurrent
+
+    // Inverse of `Serialization.writeManifestSource`. The writer emits only path/digest/schemaVersion,
+    // so `SchemaStatus`/`RawSchemaVersion` are re-derived from the written `schemaVersion` exactly as
+    // the canonical `GenerationManifest.parseSource` does — the manifest-source round-trip is partial
+    // by the serializer's design, not by this parse. A source with no digest is dropped.
+    let parseManifestSource (item: JsonElement) : SourceIdentity option =
+        jmDigest "digest" item
+        |> Option.map (fun digest ->
+            let path = jmString "path" item
+
+            let sourceArtifact =
+                match ArtifactRef.create path (ArtifactKind.Other "generatedSource") ArtifactOwner.Sdd true with
+                | Ok value -> value
+                | Error _ ->
+                    match ArtifactRef.create path ArtifactKind.GeneratedView ArtifactOwner.Sdd true with
+                    | Ok value -> value
+                    | Error message -> invalidArg (nameof path) message
+
+            let rawSchema = jmInt "schemaVersion" item |> Option.map string
+            let compatibility = SchemaVersion.classifyRaw rawSchema
+
+            { Artifact = sourceArtifact
+              Digest = digest
+              SchemaVersion = compatibility.Version
+              SchemaStatus = compatibility.Status
+              RawSchemaVersion = rawSchema })
+
+    // FS-GG/FS.GG.SDD#266 (ADR-0003 Gap D part 2): the inverse of `Serialization.writeGeneratedView`.
+    // `parseWorkModel` used to hardcode `GeneratedViews = []`. Round-trips every field the writer emits;
+    // `Diagnostics` is not serialized, so it round-trips as `[]`. A view with an unresolvable path is
+    // dropped rather than aborting the whole model parse.
+    let parseGeneratedView (item: JsonElement) : GenerationManifest option =
+        match ArtifactRef.create (jmString "path" item) ArtifactKind.GeneratedView ArtifactOwner.Sdd true with
+        | Ok view ->
+            Some
+                { View = view
+                  Kind = parseViewKind (jmString "kind" item)
+                  SchemaVersion = SchemaVersion.create (jmInt "schemaVersion" item |> Option.defaultValue 1)
+                  Generator =
+                    jmProp "generator" item
+                    |> Option.map (fun generator ->
+                        { Id = jmString "id" generator
+                          Version = jmString "version" generator })
+                    |> Option.defaultValue { Id = ""; Version = "" }
+                  Sources =
+                    jmArray "sources" item
+                    |> List.choose parseManifestSource
+                    |> List.sortBy (fun source -> source.Artifact.Path)
+                  OutputDigest =
+                    jmProp "outputDigest" item
+                    |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Object)
+                    |> Option.map (fun value ->
+                        ({ Algorithm = jmString "algorithm" value
+                           Value = jmString "value" value }
+                        : OutputDigest))
+                  Currency = parseCurrencyStatus (jmString "currency" item)
+                  Diagnostics = [] }
+        | Error _ -> None
+
     let parseWorkModel (snapshot: FileSnapshot) : Result<WorkModel, Diagnostic list> =
         let artifact =
             match
@@ -791,7 +901,10 @@ module WorkModel =
                             |> Option.defaultValue
                                 { Id = "unknown"
                                   DefaultWorkRoot = "work" }
-                          Sources = []
+                          Sources =
+                            jmArray "sources" root
+                            |> List.map parseSourceEntry
+                            |> List.sortBy (fun source -> source.Path)
                           WorkItem =
                             workItem
                             |> Option.map (fun item ->
@@ -878,7 +991,7 @@ module WorkModel =
                                   Source = jmString "source" item
                                   SourceLocation = None })
                             |> List.sortBy (fun evidence -> evidence.Id)
-                          GeneratedViews = []
+                          GeneratedViews = jmArray "generatedViews" root |> List.choose parseGeneratedView
                           Diagnostics =
                             jmArray "diagnostics" root
                             |> List.map parseEmbeddedDiagnostic

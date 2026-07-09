@@ -81,6 +81,82 @@ module NormalizedWorkModelTests =
 
         Assert.Contains(parsed.GovernanceBoundaries, fun boundary -> boundary.Path = ".fsgg/capabilities.yml")
 
+    // #266 (ADR-0002 Gap D, finding 2): the sibling of #241. `parseWorkModel` also hardcoded
+    // `Sources = []`, so `deriveGuidanceModel.sourceIdentities` — which is `[work-model.json] ++
+    // model.Sources.paths` — collapsed to a singleton in every flow that rebuilds the model from
+    // `work-model.json` (the `agents`/`refresh` generators). Guard the source round-trip *and* the
+    // identity set it feeds.
+    [<Fact>]
+    let ``NormalizedWorkModel round-trips sources through parseWorkModel`` () =
+        let result = TestSupport.generationResult "valid-work-item"
+
+        // The builder path populates Sources and serializeWorkModel persists them.
+        Assert.NotEmpty(result.Model.Sources)
+
+        let parsed =
+            match
+                WorkModel.parseWorkModel
+                    { Path = result.OutputPath
+                      Text = result.Json }
+            with
+            | Ok model -> model
+            | Error diagnostics -> failwith $"Expected a parseable work model, got {diagnostics}"
+
+        // Parsing back preserves the sources verbatim (path, kind, owner, schema status), not `[]`.
+        Assert.Equal<string list>(
+            result.Model.Sources |> List.map (fun source -> source.Path),
+            parsed.Sources |> List.map (fun source -> source.Path)
+        )
+
+        Assert.Contains(
+            parsed.Sources,
+            fun source ->
+                source.Path = "work/002-normalized-work-model/spec.md"
+                && source.SchemaStatus = "current"
+        )
+
+        // The concrete defect: the identity set derived from the *parsed* model no longer collapses to
+        // the lone work-model path — it carries the real sources the agents/refresh guidance needs.
+        let identities = (WorkModel.deriveGuidanceModel parsed).SourceIdentities
+        Assert.Contains("work/002-normalized-work-model/spec.md", identities)
+        Assert.True(List.length identities > 1, "sourceIdentities collapsed to a singleton after round-trip")
+
+    // #266 (ADR-0002 Gap D, finding 2): `parseWorkModel` likewise hardcoded `GeneratedViews = []`.
+    // Round-trip the generated-view manifests the builder persists. `Diagnostics` is not serialized,
+    // so the recoverable shape (view path, kind, manifest sources) is what the round-trip guards.
+    [<Fact>]
+    let ``NormalizedWorkModel round-trips generated views through parseWorkModel`` () =
+        let result = TestSupport.generationResult "valid-work-item"
+
+        Assert.NotEmpty(result.Model.GeneratedViews)
+
+        let parsed =
+            match
+                WorkModel.parseWorkModel
+                    { Path = result.OutputPath
+                      Text = result.Json }
+            with
+            | Ok model -> model
+            | Error diagnostics -> failwith $"Expected a parseable work model, got {diagnostics}"
+
+        Assert.Equal<string list>(
+            result.Model.GeneratedViews |> List.map (fun view -> view.View.Path),
+            parsed.GeneratedViews |> List.map (fun view -> view.View.Path)
+        )
+
+        Assert.Equal<GenerationManifest.GeneratedViewKind list>(
+            result.Model.GeneratedViews |> List.map (fun view -> view.Kind),
+            parsed.GeneratedViews |> List.map (fun view -> view.Kind)
+        )
+
+        // The manifest's own source identities round-trip too (by path).
+        Assert.Equal<string list>(
+            result.Model.GeneratedViews
+            |> List.collect (fun view -> view.Sources |> List.map (fun source -> source.Artifact.Path)),
+            parsed.GeneratedViews
+            |> List.collect (fun view -> view.Sources |> List.map (fun source -> source.Artifact.Path))
+        )
+
     [<Fact>]
     let ``NormalizedWorkModel invalid fixtures emit actionable diagnostics`` () =
         [ "requirement-not-typed", "requirementNotTyped"
