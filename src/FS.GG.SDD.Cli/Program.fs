@@ -92,6 +92,21 @@ let printUnknown commandValue =
     Console.Error.WriteLine(serializeReport report)
     exitCodeForReport report
 
+/// Lexical raw-string containment guard for `validate --out` (ADR-0002 Gap C finding 1,
+/// FS-GG/FS.GG.SDD#256): rejects a value that is absolute or carries a `..` segment. A copy of the
+/// internal `Commands.Internal.Foundation.escapesRoot` (#185) — unreachable from this assembly — and
+/// of `RegistrySkillManifest.escapesRoot` (#237); kept small and comment-linked so the copies cannot
+/// silently drift. The durable effect-edge containment primitive is #203/ADR-0002, not this predicate.
+///
+/// The check MUST run on the RAW value: a normalize-then-test would `TrimStart('/')` the leading slash
+/// away and let `/etc/x` through as `etc/x`. It is a lexical guard, not a filesystem containment proof.
+let private escapesRoot (raw: string) =
+    let trimmed = raw.Trim().Replace('\\', '/')
+
+    String.IsNullOrWhiteSpace trimmed
+    || System.IO.Path.IsPathRooted trimmed // on the RAW string, before any TrimStart('/')
+    || (trimmed.Split('/') |> Array.contains "..")
+
 let printValidate (rest: string list) =
     // CLI-level command (peer of `--version`), dispatched before `parseCommand` so
     // `CommandReport`, `parseCommand`, and the per-command contracts stay untouched
@@ -128,6 +143,13 @@ let printValidate (rest: string list) =
     // exit 1, never a raw stack trace (#68). The stdout report contract is emitted regardless.
     let outWriteError =
         match optionValue "--out" rest with
+        | Some path when escapesRoot path ->
+            // Containment (ADR-0002 Gap C finding 1, FS-GG/FS.GG.SDD#256): an `--out` path that is
+            // absolute or carries a `..` segment escapes the workspace root. Refuse it *before* the
+            // write — no file is created — routing through the same stderr-diagnostic + exit-1 path as
+            // an unwritable target (parity with `surface` #185 / `registry` #237). The stdout report
+            // contract is still emitted below, unchanged.
+            Some(path, "escapes the workspace root — pass a path inside the workspace (no absolute path or '..')")
         | Some path ->
             let persisted =
                 match format with
