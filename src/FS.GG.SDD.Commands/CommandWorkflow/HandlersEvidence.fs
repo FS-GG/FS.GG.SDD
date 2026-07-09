@@ -570,6 +570,33 @@ module internal HandlersEvidence =
         : EvidenceDispositionDraft list =
         obligations
         |> List.mapi (fun index obligation ->
+            // Issue #230: match a declaration to a *nameable* (`EV###`) obligation by obligation id
+            // ONLY (`id` or `obligationRefs`), byte-for-byte mirroring `verifyTestDispositionViews`
+            // above. `ED-` used to carry a third `TaskRefs`-overlap clause for every obligation — a
+            // declaration referencing one of the obligation's `LinkedTaskIds` matched even without
+            // naming the obligation. #225 unioned `LinkedTaskIds` across the tasks sharing an
+            // obligation (to mirror `TD-`), which widened that clause to span *all* of a shared
+            // obligation's tasks: a declaration referencing only task `T1` then silently satisfied a
+            // `T1`+`T2` `EV###` obligation, hiding `T2`'s uncovered gap and passing verify (the
+            // collapse also propagated through `verifySkillViews`). #225's stated model is "one merged
+            // obligation, satisfied once — mirror `TD-`", and the `TaskRefs` clause was exactly the
+            // piece `TD-` lacked, so for `EV###` obligations dropping it finishes the mirror: a
+            // scaffolded `EV###` declaration always carries `obligationRefs: [<obligationId>]`, so it
+            // still matches id-first, and only a purely hand-authored declaration that references a
+            // task but never names the obligation changes — it must now name the obligation.
+            //
+            // The one exception is a `task.{id}.completion` obligation (minted at the `evidenceObligations`
+            // `List.isEmpty task.RequiredEvidence && Done` branch above): the one obligation kind `TD-`
+            // lacks and that *no* declaration can name — it is never scaffolded (the `StartsWith("EV")`
+            // filter below skips it), its id is not a valid evidence `id` (`^EV\d{3,}$`), and naming it
+            // in `obligationRefs` trips `evidence.unknownReference`. Its only satisfaction route is a
+            // task reference, and its id embeds the task id so `LinkedTaskIds` is always a singleton —
+            // the task-ref match is exact, with none of the shared-`EV###` widening #230 removes. So
+            // keep the `TaskRefs` clause, scoped to completion obligations only.
+            let isCompletionObligation =
+                obligation.ObligationId.StartsWith("task.", StringComparison.Ordinal)
+                && obligation.ObligationId.EndsWith(".completion", StringComparison.Ordinal)
+
             let matches: EvidenceDeclaration list =
                 artifact.Evidence
                 |> List.filter (fun declaration ->
@@ -577,10 +604,11 @@ module internal HandlersEvidence =
                     || declaration.ObligationRefs
                        |> List.exists (fun id ->
                            String.Equals(id, obligation.ObligationId, StringComparison.OrdinalIgnoreCase))
-                    || declaration.TaskRefs
-                       |> List.exists (fun taskId ->
-                           obligation.LinkedTaskIds
-                           |> List.exists (fun linked -> linked.Value = taskId.Value)))
+                    || (isCompletionObligation
+                        && declaration.TaskRefs
+                           |> List.exists (fun taskId ->
+                               obligation.LinkedTaskIds
+                               |> List.exists (fun linked -> linked.Value = taskId.Value))))
 
             let state, diagnostics =
                 if List.isEmpty matches then
