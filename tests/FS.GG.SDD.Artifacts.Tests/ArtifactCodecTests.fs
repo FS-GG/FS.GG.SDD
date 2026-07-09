@@ -4,11 +4,12 @@ open FS.GG.SDD.Artifacts
 open FSharp.Reflection
 open Xunit
 
-// Foundation tests for the field-list codec (FS.GG.SDD#201, ADR-0002 invariant 1).
-// Exercised over a toy model so the abstraction is validated independently of the
-// evidence/tasks wiring (which is Blocked by #189). No FsCheck here — the
-// artifact round-trip *properties* land with the wiring (spec 097 Phase 6); these
-// are the codec-primitive facts (omission, null-as-absence, determinism, coupling).
+// Tests for the field-list codec (FS.GG.SDD#201, ADR-0002 invariant 1). The codec-primitive facts
+// (omission, null-as-absence, determinism, coupling) are exercised over a toy model so the
+// abstraction is validated independently; the real evidence record↔codec coupling (spec 097 T031,
+// FS.GG.SDD#260) is asserted at the bottom, now that `EvidenceCodec.{sourceRefFields,disclosureFields}`
+// drive both the Evidence.fs reader and the HandlersEvidence renderer. The generative artifact
+// round-trip properties live in the Commands tests (EvidenceRoundTripPropertyTests, spec 097 Phase 6).
 module ArtifactCodecTests =
 
     type private Toy =
@@ -135,3 +136,86 @@ module ArtifactCodecTests =
             |> Set.ofList
 
         Assert.Equal<Set<string>>(recordFields, codecKeys)
+
+    // --- new combinators wired for the evidence records (FS.GG.SDD#260) ---
+
+    type private Kinded =
+        { Kind: string // defaulted scalar
+          Extra: string option }
+
+    let private kindedFields: ArtifactCodec.FieldCodec<Kinded> list =
+        [ ArtifactCodec.defaultedScalar "kind" "artifact" (fun m -> m.Kind) (fun v m -> { m with Kind = v })
+          ArtifactCodec.optionalScalar "extra" (fun m -> m.Extra) (fun v m -> { m with Extra = v }) ]
+
+    let private kindedSeed = { Kind = "artifact"; Extra = None }
+
+    [<Fact>]
+    let ``defaultedScalar reads the fallback when absent and the authored value when present`` () =
+        match ArtifactCodec.decode kindedFields kindedSeed "extra: x" with
+        | Ok m -> Assert.Equal("artifact", m.Kind)
+        | Error e -> failwith e
+
+        match ArtifactCodec.decode kindedFields kindedSeed "kind: test-output" with
+        | Ok m -> Assert.Equal("test-output", m.Kind)
+        | Error e -> failwith e
+
+    [<Fact>]
+    let ``defaultedScalar always writes its line`` () =
+        Assert.Contains("kind: artifact", ArtifactCodec.render kindedFields kindedSeed)
+
+    // `foldInto` (decode from an already-parsed mapping) is exercised end-to-end by the evidence
+    // wiring — `parseEvidenceSourceRefs`/`parseSyntheticDisclosure` drive it per record — and pinned
+    // by EvidenceArtifactTests + the round-trip property; the YAML helpers it needs are assembly-
+    // internal, so there is no toy-level unit for it here.
+
+    // === T031 — the real evidence record↔codec coupling (FR-007, FS.GG.SDD#260) ===
+    // The wiring has landed: `EvidenceCodec.{sourceRefFields,disclosureFields}` drive both the
+    // Evidence.fs reader and the HandlersEvidence renderer. These assert the codec Key set equals
+    // each authored record's label set, so adding an authored field with no codec entry — or a codec
+    // field with no record field — fails here (SC-004).
+
+    let private authoredKeys (excluded: string list) (ty: System.Type) =
+        FSharpType.GetRecordFields ty
+        |> Array.map (fun p -> p.Name)
+        |> Array.filter (fun name -> not (Set.contains name (set excluded)))
+        |> Set.ofArray
+
+    [<Fact>]
+    let ``sourceRefFields couple to every authored EvidenceSourceReference field (T031)`` () =
+        // Record label -> YAML key: `ReferenceId`/`RelatedSourceId` serialize as `id`/`relatedSourceId`;
+        // `SourceLocation` is parse-assigned provenance, excluded from serialization.
+        let labelToKey =
+            Map
+                [ "ReferenceId", "id"
+                  "Kind", "kind"
+                  "Path", "path"
+                  "Uri", "uri"
+                  "Digest", "digest"
+                  "RelatedSourceId", "relatedSourceId"
+                  "Result", "result" ]
+
+        // The map covers exactly the authored record fields — a new field with no mapping fails here...
+        Assert.Equal<Set<string>>(
+            authoredKeys [ "SourceLocation" ] typeof<EvidenceSourceReference>,
+            labelToKey |> Map.toSeq |> Seq.map fst |> Set.ofSeq
+        )
+
+        // ...and the codec's Key set equals the mapped YAML keys — codec and record stay coupled.
+        Assert.Equal<Set<string>>(
+            labelToKey |> Map.toSeq |> Seq.map snd |> Set.ofSeq,
+            ArtifactCodec.keys EvidenceCodec.sourceRefFields |> Set.ofList
+        )
+
+    [<Fact>]
+    let ``disclosureFields couple to every authored SyntheticDisclosure field (T031)`` () =
+        let labelToKey = Map [ "StandsInFor", "standsInFor"; "Reason", "reason" ]
+
+        Assert.Equal<Set<string>>(
+            authoredKeys [] typeof<SyntheticDisclosure>,
+            labelToKey |> Map.toSeq |> Seq.map fst |> Set.ofSeq
+        )
+
+        Assert.Equal<Set<string>>(
+            labelToKey |> Map.toSeq |> Seq.map snd |> Set.ofSeq,
+            ArtifactCodec.keys EvidenceCodec.disclosureFields |> Set.ofList
+        )

@@ -241,8 +241,7 @@ module internal HandlersEvidence =
                 LinkedRequirementIds = group |> List.collect _.LinkedRequirementIds |> List.distinct
                 LinkedDecisionIds = group |> List.collect _.LinkedDecisionIds |> List.distinct
                 LinkedSourceIds = group |> List.collect _.LinkedSourceIds |> List.distinct
-                RequiredSkillOrCapabilityTags =
-                    group |> List.collect _.RequiredSkillOrCapabilityTags |> List.distinct })
+                RequiredSkillOrCapabilityTags = group |> List.collect _.RequiredSkillOrCapabilityTags |> List.distinct })
 
     // Feature 077 (issue #124): route an obligation's origin lineage into the declaration's
     // `requirementRefs` / `planDecisionRefs` buckets by the shared id grammar
@@ -756,31 +755,33 @@ module internal HandlersEvidence =
         $"""  - label: {snapshot.Label}
     path: {snapshot.Path}{optionalFields}"""
 
+    // Re-indent a column-0 `ArtifactCodec.render` block for embedding under a parent key.
+    // `codecListItem` formats it as a YAML block-sequence item at `indent` spaces — the first field
+    // lands on the `- ` marker line, the rest align two spaces deeper; `codecIndent` shifts every
+    // line by `indent` spaces for a nested mapping. (Rendered blocks never contain blank lines.)
+    let private codecListItem (indent: int) (rendered: string) =
+        let pad = System.String(' ', indent)
+        let cont = System.String(' ', indent + 2)
+
+        rendered.Split('\n')
+        |> Array.mapi (fun i line -> if i = 0 then $"{pad}- {line}" else $"{cont}{line}")
+        |> String.concat "\n"
+
+    let private codecIndent (indent: int) (rendered: string) =
+        let pad = System.String(' ', indent)
+        rendered.Split('\n') |> Array.map (fun line -> pad + line) |> String.concat "\n"
+
     let renderEvidenceSourceRefs (refs: EvidenceSourceReference list) =
         match refs with
         | [] -> "    sourceRefs: []"
         | refs ->
-            // Every authored sourceRef field round-trips (FS.GG.SDD#181): `id`, `digest`, and
-            // `relatedSourceId` were previously read but never re-written, so a re-run silently
-            // dropped them. Each optional field renders its own line when present and omits it
-            // when `None` — the same omit-when-absent convention the reader is now null-aware for.
-            let optionalLine name value =
-                value |> Option.map (fun value -> $"\n        {name}: {yamlString value}")
-
+            // One shared field list (`EvidenceCodec.sourceRefFields`) drives this render and the
+            // reader, so every authored field round-trips (FS.GG.SDD#181) — `id`/`digest`/
+            // `relatedSourceId` can no longer be read-but-not-written. Absent optionals omit their
+            // line; the codec quotes minimally (a bare scalar that round-trips stays bare).
             let lines =
                 refs
-                |> List.map (fun ref ->
-                    let optionalFields =
-                        [ optionalLine "id" ref.ReferenceId
-                          optionalLine "path" ref.Path
-                          optionalLine "uri" ref.Uri
-                          optionalLine "digest" ref.Digest
-                          optionalLine "relatedSourceId" ref.RelatedSourceId
-                          optionalLine "result" ref.Result ]
-                        |> List.choose id
-                        |> String.concat ""
-
-                    $"      - kind: {yamlString ref.Kind}{optionalFields}")
+                |> List.map (fun ref -> codecListItem 6 (ArtifactCodec.render EvidenceCodec.sourceRefFields ref))
                 |> String.concat "\n"
 
             $"    sourceRefs:\n{lines}"
@@ -797,9 +798,16 @@ module internal HandlersEvidence =
     let renderSyntheticDisclosure (disclosure: SyntheticDisclosure option) =
         disclosure
         |> Option.map (fun disclosure ->
-            $"""    syntheticDisclosure:
-      standsInFor: {yamlString disclosure.StandsInFor}
-      reason: {yamlString disclosure.Reason}""")
+            // The same shared `EvidenceCodec.disclosureFields` list that reads the disclosure renders
+            // it (FS.GG.SDD#180). A quoted "null" stays quoted (it is not a safe bare scalar), so the
+            // literal survives while a bare null still reads back as absence.
+            let body =
+                ArtifactCodec.render
+                    EvidenceCodec.disclosureFields
+                    { StandsInFor = Some disclosure.StandsInFor
+                      Reason = Some disclosure.Reason }
+
+            "    syntheticDisclosure:\n" + codecIndent 6 body)
 
     let renderEvidenceDeclaration (declaration: EvidenceDeclaration) =
         let taskRefs = declaration.TaskRefs |> List.map _.Value

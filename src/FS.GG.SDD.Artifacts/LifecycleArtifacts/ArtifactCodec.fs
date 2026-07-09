@@ -55,6 +55,22 @@ module ArtifactCodec =
                 | None -> Error $"required field '{key}' is missing"
           Write = fun model -> Some $"{key}: {yamlScalar (get model)}" }
 
+    let defaultedScalar
+        (key: string)
+        (fallback: string)
+        (get: 'M -> string)
+        (set: string -> 'M -> 'M)
+        : FieldCodec<'M> =
+        { Key = key
+          // Reads the key, or `fallback` when the key is absent — never errors. Mirrors the
+          // `tryScalarAt |> Option.defaultValue` reader for keys like evidence `sourceRef.kind`.
+          Read =
+            fun mapping model ->
+                match tryScalarAt [ key ] (mapping :> YamlNode) with
+                | Some value -> Ok(set value model)
+                | None -> Ok(set fallback model)
+          Write = fun model -> Some $"{key}: {yamlScalar (get model)}" }
+
     let inlineList (key: string) (get: 'M -> string list) (set: string list -> 'M -> 'M) : FieldCodec<'M> =
         { Key = key
           Read = fun mapping model -> Ok(set (scalarList [ key ] (mapping :> YamlNode)) model)
@@ -93,3 +109,6 @@ module ArtifactCodec =
             match tryMapping node with
             | Some mapping -> parseMapping fields seed mapping
             | None -> Error "document root is not a YAML mapping"
+
+    let foldInto (fields: FieldCodec<'M> list) (seed: 'M) (mapping: YamlMappingNode) : Result<'M, string> =
+        parseMapping fields seed mapping
