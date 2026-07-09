@@ -69,10 +69,13 @@ policy:
 ## Currency model
 
 Every generated view records its `sources` (each with a sha256 `digest` and
-`schemaVersion`), an `outputDigest`, the `generator` id + version, and a
-`currency` (`current · missing · stale · malformed · blocked`). The
-`sdd.yml` `generatedViews.staleBehavior: diagnostic` setting means a digest
-mismatch emits a stale diagnostic rather than hard-failing.
+`schemaVersion`), the `generator` id + version, and a `currency`
+(`current · missing · stale · malformed · blocked`). Currency is one model:
+the `work-model.json` `outputDigest` plus the source digests drive staleness,
+which every downstream view inherits transitively — the views themselves record
+no separate digest. The `sdd.yml` `generatedViews.staleBehavior: diagnostic`
+setting means a digest mismatch emits a stale diagnostic rather than
+hard-failing.
 
 ## Pitfalls
 
