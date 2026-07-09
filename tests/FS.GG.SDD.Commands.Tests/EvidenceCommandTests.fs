@@ -823,18 +823,20 @@ tasks:
         // single-obligation fixture's golden, which the `List.distinct` union leaves byte-identical.)
         Assert.Equal(1, List.length obligations)
 
-    // --- Issue #230: `ED-` matches by obligation id only, mirroring `TD-` ---
+    // --- Issue #230: `ED-` matches an `EV###` obligation by obligation id only, mirroring `TD-` ---
     //
     // `evidenceDispositions` used to carry a third match clause `verifyTestDispositionViews` lacks: a
     // declaration referencing one of the obligation's `LinkedTaskIds` matched even without naming the
     // obligation. #225 unioned `LinkedTaskIds` across the tasks sharing an obligation, widening that
     // clause to span *all* of a shared obligation's tasks — so a declaration referencing only T001
     // silently satisfied the merged T001+T002 obligation and hid T002's uncovered gap (verify passed).
-    // #230 drops the clause: `ED-` now matches by obligation id only, exactly like `TD-`.
+    // #230 drops the clause for `EV###` obligations: they now match by obligation id only, like `TD-`.
     //
-    // This is the two-task, task-ref-only fixture the issue asks for, with the literal assertion. Only
-    // *hand-authored* declarations are affected — a scaffolded one always carries `obligationRefs`, so
-    // the positive control below (same declaration, obligation id added back) still resolves.
+    // These are the two-task, task-ref-only fixtures the issue asks for, with the literal assertion.
+    // Only *hand-authored* declarations are affected — a scaffolded one always carries `obligationRefs`,
+    // so the positive control below (same declaration, obligation id added back) still resolves. The
+    // `task.{id}.completion` carve-out (which cannot be named by any declaration) is pinned separately
+    // by ``evidenceDispositions still lets a task-ref declaration satisfy a completion obligation``.
     let private evidenceArtifactWith declaration =
         let text =
             $"""schemaVersion: 1
@@ -899,3 +901,59 @@ evidence:
         Assert.Equal("supported", ev001.State)
         Assert.Equal<string list>([ "EV999" ], ev001.EvidenceIds)
         Assert.Equal<string list>([ "T001"; "T002" ], ev001.TaskIds |> List.sort)
+
+    // A `task.{id}.completion` obligation is minted for a Done task with no `requiredEvidence`
+    // (`evidenceObligations`, `List.isEmpty task.RequiredEvidence && Done`). It is the one obligation
+    // kind `TD-` lacks and that no declaration can name: never scaffolded (the `StartsWith("EV")`
+    // filter skips it), its id is not a valid evidence `id` (`^EV\d{3,}$`), and naming it in
+    // `obligationRefs` trips `evidence.unknownReference`. Its only satisfaction route is a task
+    // reference — so #230 keeps the `TaskRefs` clause scoped to completion obligations. Regression
+    // guard: without the carve-out this obligation would be permanently `missing` with no clean fix.
+    let private doneTaskNoEvidenceFacts () =
+        let text =
+            """schemaVersion: 1
+tasks:
+  - id: T050
+    title: Done task without declared evidence
+    status: done
+    owner: codex
+    requirements: [FR-001]
+    decisions: []
+    sourceIds: [AC-001]
+    dependencies: []
+    requiredSkills: [fs-gg-sdd-project]
+    requiredEvidence: []
+"""
+
+        match Task.parseTaskFacts { Path = $"work/{workId}/tasks.yml"; Text = text } with
+        | Ok facts -> facts
+        | Error diagnostics -> failwith $"Done-task fixture did not parse: {diagnostics}."
+
+    [<Fact>]
+    let ``evidenceDispositions still lets a task-ref declaration satisfy a completion obligation`` () =
+        let obligations = HandlersEvidence.evidenceObligations (doneTaskNoEvidenceFacts ())
+
+        // The obligation exists, is completion-kind, and is single-task (its id embeds the task id).
+        let completionId = "task.T050.completion"
+        Assert.Contains(obligations, fun obligation -> obligation.ObligationId = completionId)
+
+        // The only declaration shape that can satisfy it: references the task, names no obligation.
+        let artifact =
+            evidenceArtifactWith
+                """  - id: EV010
+    kind: verification
+    subject:
+      type: task
+      id: T050
+    taskRefs: [T050]
+    requirementRefs: []
+    result: pass
+    synthetic: false"""
+
+        let completion =
+            HandlersEvidence.evidenceDispositions obligations artifact
+            |> List.find (fun disposition -> disposition.ObligationId = completionId)
+
+        Assert.Equal("supported", completion.State)
+        Assert.Equal<string list>([ "EV010" ], completion.EvidenceIds)
+        Assert.Equal<string list>([ "T050" ], completion.TaskIds)
