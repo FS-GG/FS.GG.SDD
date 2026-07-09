@@ -165,22 +165,30 @@ module Evidence =
                 node
                 |> tryMapping
                 |> Option.map (fun source ->
-                    { ReferenceId = tryScalarAt [ "id" ] source
+                    // Every optional sourceRef scalar is read null-aware (FS.GG.SDD#180): a bare
+                    // `path: null`/`uri: null`/`result: null` (and `id`/`digest`/`relatedSourceId`)
+                    // reads back as `None` so the round-trip renderer omits the line rather than
+                    // re-emitting the quoted string `"null"`. `kind` keeps its authored default.
+                    { ReferenceId = tryScalarNonNullAt [ "id" ] source
                       Kind = tryScalarAt [ "kind" ] source |> Option.defaultValue "artifact"
-                      Path = tryScalarAt [ "path" ] source
-                      Uri = tryScalarAt [ "uri" ] source
-                      Digest = tryScalarAt [ "digest" ] source
-                      RelatedSourceId = tryScalarAt [ "relatedSourceId" ] source
-                      Result = tryScalarAt [ "result" ] source
+                      Path = tryScalarNonNullAt [ "path" ] source
+                      Uri = tryScalarNonNullAt [ "uri" ] source
+                      Digest = tryScalarNonNullAt [ "digest" ] source
+                      RelatedSourceId = tryScalarNonNullAt [ "relatedSourceId" ] source
+                      Result = tryScalarNonNullAt [ "result" ] source
                       SourceLocation = sourceLocation (index + 1) }))
             |> Seq.choose id
             |> Seq.toList)
         |> Option.defaultValue []
 
     let parseSyntheticDisclosure (mapping: YamlMappingNode) =
+        // Null-aware (FS.GG.SDD#180): a bare `standsInFor: null`/`reason: null` (or `~`/empty
+        // plain scalar) reads back as `None`, not `Some "null"`, so the whitespace guard below
+        // treats it as absence and the undisclosed-synthetic gate fires. A *quoted* "null" is a
+        // real string (`isPlainNullScalar` checks ScalarStyle.Plain) and still round-trips.
         match
-            tryScalarAt [ "syntheticDisclosure"; "standsInFor" ] mapping,
-            tryScalarAt [ "syntheticDisclosure"; "reason" ] mapping
+            tryScalarNonNullAt [ "syntheticDisclosure"; "standsInFor" ] mapping,
+            tryScalarNonNullAt [ "syntheticDisclosure"; "reason" ] mapping
         with
         | Some standsInFor, Some reason when
             not (String.IsNullOrWhiteSpace standsInFor)

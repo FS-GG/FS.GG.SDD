@@ -353,6 +353,11 @@ module internal HandlersEvidence =
                     message
           SourceLocation = None }
 
+    // The default next-action note a freshly-created evidence.yml carries. On a re-run the author's
+    // own `lifecycleNotes` are preserved verbatim (FS.GG.SDD#181); this is only the seed for a file
+    // that declared none, and the empty-list fallback in `evidenceArtifactText` re-injects it.
+    let private defaultEvidenceLifecycleNote = "Next lifecycle action: verify."
+
     let mergeEvidenceArtifacts
         (workId: string)
         (fromTests: string option)
@@ -423,7 +428,7 @@ module internal HandlersEvidence =
                          Some(skeletonEvidenceDeclaration workId fromTests obligation)
                      else
                          None)
-               LifecycleNotes = [ "Next lifecycle action: verify after evidence is supported or deferred." ]
+               LifecycleNotes = [ defaultEvidenceLifecycleNote ]
                Diagnostics = [] }
             : EvidenceArtifact),
             []
@@ -755,25 +760,27 @@ module internal HandlersEvidence =
         match refs with
         | [] -> "    sourceRefs: []"
         | refs ->
+            // Every authored sourceRef field round-trips (FS.GG.SDD#181): `id`, `digest`, and
+            // `relatedSourceId` were previously read but never re-written, so a re-run silently
+            // dropped them. Each optional field renders its own line when present and omits it
+            // when `None` — the same omit-when-absent convention the reader is now null-aware for.
+            let optionalLine name value =
+                value |> Option.map (fun value -> $"\n        {name}: {yamlString value}")
+
             let lines =
                 refs
                 |> List.map (fun ref ->
-                    let pathLine =
-                        ref.Path
-                        |> Option.map (fun path -> $"\n        path: {yamlString path}")
-                        |> Option.defaultValue ""
+                    let optionalFields =
+                        [ optionalLine "id" ref.ReferenceId
+                          optionalLine "path" ref.Path
+                          optionalLine "uri" ref.Uri
+                          optionalLine "digest" ref.Digest
+                          optionalLine "relatedSourceId" ref.RelatedSourceId
+                          optionalLine "result" ref.Result ]
+                        |> List.choose id
+                        |> String.concat ""
 
-                    let uriLine =
-                        ref.Uri
-                        |> Option.map (fun uri -> $"\n        uri: {yamlString uri}")
-                        |> Option.defaultValue ""
-
-                    let resultLine =
-                        ref.Result
-                        |> Option.map (fun result -> $"\n        result: {yamlString result}")
-                        |> Option.defaultValue ""
-
-                    $"      - kind: {yamlString ref.Kind}{pathLine}{uriLine}{resultLine}")
+                    $"      - kind: {yamlString ref.Kind}{optionalFields}")
                 |> String.concat "\n"
 
             $"    sourceRefs:\n{lines}"
@@ -868,7 +875,12 @@ sourceTasks: {tasksPath workId}
 sourceAnalysis: {analysisPath workId}
 {sourceSnapshots}
 {evidence}
-{renderScalarBlock "lifecycleNotes" [ "Next lifecycle action: verify." ]}
+{renderScalarBlock
+     "lifecycleNotes"
+     (if List.isEmpty artifact.LifecycleNotes then
+          [ defaultEvidenceLifecycleNote ]
+      else
+          artifact.LifecycleNotes)}
 """
 
     let computeEvidencePlan model =
