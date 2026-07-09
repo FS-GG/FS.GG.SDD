@@ -46,6 +46,14 @@ module Options =
     /// for the positional (FS-GG/FS.GG.SDD#253).
     val positional: command: SddCommand -> args: string list -> string option
 
+    /// The value-taking option in `args` that `command` recognizes but that was supplied with no
+    /// following value (`charter --work` with nothing after it), or `None` when every valued option
+    /// has an argument. A trailing valued option is the only shape that reads as absent, because
+    /// `optionValue` consumes the next token as the value; shares `unrecognized`'s value-skipping
+    /// scan so a satisfied option whose value merely looks like a flag is never reported
+    /// (FS-GG/FS.GG.SDD#264).
+    val missingValue: command: SddCommand -> args: string list -> string option
+
     /// The recognized token `token` most plausibly meant, or `None` when nothing is close.
     /// Deterministic: candidates are ranked by (containment before edit distance, distance,
     /// declaration order), never by a score that could reorder between runs.

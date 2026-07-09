@@ -24,6 +24,7 @@
     <Compile Include="RegistryValidateContainmentTests.fs" />
     <Compile Include="RegistryUnknownFlagTests.fs" />
     <Compile Include="UnknownOptionTests.fs" />
+    <Compile Include="MissingOptionValueTests.fs" />
     <Compile Include="ExceptionBackstopTests.fs" />
   </ItemGroup>
 

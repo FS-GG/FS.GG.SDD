@@ -16,6 +16,9 @@ module CommandReports =
     let unknownOption command value recognized suggestion =
         DiagnosticConstructors.unknownOption command value recognized suggestion
 
+    let missingOptionValue command option =
+        DiagnosticConstructors.missingOptionValue command option
+
     let unhandledException message =
         DiagnosticConstructors.unhandledException message
 

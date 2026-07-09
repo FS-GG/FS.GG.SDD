@@ -72,6 +72,21 @@ module internal DiagnosticConstructors =
             $"Use one of: {options}.{hint}"
             [ value ]
 
+    // Sibling of `unknownOption` (FS-GG/FS.GG.SDD#264, ADR-0002 Gap C finding 6): a value-taking
+    // option supplied with no following value used to read as `None` and silently fall back to its
+    // default — `charter --work` (trailing) ran with no work id, `evidence --from-tests` mapped no
+    // proving test, a trailing `--root` defaulted to `.`. This is the dangling-value half of the
+    // "malformed argv silently accepted" class #196 closed for unknown *tokens*; it now blocks the
+    // same way — a `DiagnosticError`, exit 1, zero writes — rather than running against a defaulted
+    // input. Reported before the request is read, so nothing is seeded.
+    let missingOptionValue (command: SddCommand) (option: string) =
+        errorDiagnostic
+            "missingOptionValue"
+            None
+            $"Option '{option}' for command '{commandName command}' requires a value, but none was given."
+            $"Supply a value after '{option}' (for example `{option} <value>`)."
+            [ option ]
+
     // Top-level exception backstop (FS-GG/FS.GG.SDD#250, Gap C finding 7): a throw that escapes the
     // pure plan/update/serialize pipeline used to print a raw CLR stack trace and exit with the
     // default unhandled code. This is the CLI-edge sibling of `unknownCommand`/`unknownOption`,

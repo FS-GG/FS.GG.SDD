@@ -116,6 +116,33 @@ module Options =
 
         scan args
 
+    // FS-GG/FS.GG.SDD#264 (Gap C finding 6 / #203): a value-taking option supplied with no following
+    // value used to read as absent — `optionValue` returns `None` for a trailing valued option and the
+    // command then falls back to its default (`charter --work` ran against no work id; a trailing
+    // `--root` defaulted to `.`). `optionValue` consumes the token *after* an option as its value, so a
+    // valued option can lack a value only when it is the final token. Walking left-to-right consuming
+    // each valued option's argument — the identical scan `unrecognized`/`positional` run — the option
+    // that reaches the end of the list with nothing to consume is the one missing its value. At most one
+    // token can be in that position, so the result is a single option (or `None`). A valued option
+    // *followed* by any token is satisfied (its value may look like a flag, exactly as `optionValue`
+    // treats it), so `--title --rich` is not flagged — mirroring the value-skipping care of #196.
+    let missingValue (command: SddCommand) (args: string list) =
+        let known = recognized command
+
+        let rec scan args =
+            match args with
+            | [] -> None
+            | token :: rest when isOptionToken token ->
+                match known |> List.tryFind (fun spec -> spec.Token = token) with
+                | Some spec when spec.TakesValue ->
+                    match rest with
+                    | _value :: tail -> scan tail
+                    | [] -> Some token
+                | _ -> scan rest
+            | _ :: rest -> scan rest
+
+        scan args
+
     /// Levenshtein distance. Bounded by the token lengths the CLI deals in (< 20 chars), so the
     /// quadratic table is free and the result is exact rather than a heuristic score.
     let private editDistance (left: string) (right: string) =
