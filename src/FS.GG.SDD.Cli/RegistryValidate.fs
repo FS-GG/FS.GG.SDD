@@ -242,7 +242,10 @@ module RegistryValidate =
                     | Some path when not (String.IsNullOrWhiteSpace path) ->
                         // Containment before the read: an absolute or `..` path plans no
                         // `RegistryDocument.load` (parity with `surface` #185 / skill-manifest #239).
-                        if escapesRoot path then pathEscapeError path else validate path
+                        if escapesRoot path then
+                            pathEscapeError path
+                        else
+                            validate path
                     | _ -> argError usage
             | subcommand :: _ -> argError $"Unknown registry subcommand '{subcommand}'. {usage}"
             | [] -> argError usage
