@@ -18,7 +18,13 @@ set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cli_proj="$repo_root/src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj"
-good_fixture="$repo_root/tests/fixtures/registry/dependencies.yml"
+
+# `registry validate` confines <path> to the workspace: it rejects any ROOTED path and any `..`
+# segment outright (RegistryValidate.escapesRoot, SDD#263), then resolves what survives against the
+# process cwd. So every fixture path handed to the tool below must be workspace-relative, and the
+# tool must run from the repo root.
+cd "$repo_root"
+good_fixture="tests/fixtures/registry/dependencies.yml"
 
 # Evaluated CLI <Version> — the source of truth (matches the producer's resolve-versions).
 version="$(dotnet msbuild "$cli_proj" -getProperty:Version | tr -d '[:space:]')"
@@ -29,7 +35,10 @@ fi
 echo "Smoke: FS.GG.SDD.Cli $version (offline install -> run)"
 
 work="$(mktemp -d)"
-cleanup() { rm -rf "$work"; }
+# The malformed fixture must sit INSIDE the workspace so it can be named relatively (see the
+# escapesRoot note above); $work is a /tmp dir and could only be named with a rooted path.
+bad_dir="$(mktemp -d "$repo_root/.fsgg-smoke-XXXXXX")"
+cleanup() { rm -rf "$work" "$bad_dir"; }
 trap cleanup EXIT
 
 tool_dir="$work/tool"
@@ -67,10 +76,18 @@ if ! "$fsgg_sdd" registry validate "$good_fixture" --text; then
 fi
 
 # 3b. Failure leg: a malformed registry exits non-zero (loud failure preserved).
-bad_fixture="$work/malformed.yml"
+bad_fixture="${bad_dir#"$repo_root"/}/malformed.yml"
 printf 'this: is: not: valid: registry\n  - broken\n' > "$bad_fixture"
-if "$fsgg_sdd" registry validate "$bad_fixture" --text; then
+bad_output="$("$fsgg_sdd" registry validate "$bad_fixture" --text 2>&1)" && {
   echo "::error::C6 FAIL — installed tool reported a malformed registry as valid (exit 0)" >&2
+  exit 1
+}
+# A rooted/`..` path is rejected by the containment guard BEFORE the YAML is read, so a leg that
+# tripped PathEscape would exit non-zero without testing anything. Assert the non-zero came from
+# parsing the fixture, not from the guard.
+if printf '%s' "$bad_output" | grep -q 'PathEscape'; then
+  echo "::error::C6 FAIL — malformed-registry leg tripped the path guard instead of parsing '$bad_fixture'; the leg is vacuous" >&2
+  printf '%s\n' "$bad_output" >&2
   exit 1
 fi
 
