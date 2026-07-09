@@ -323,8 +323,10 @@ module Task =
     // whose hand-authored `requirements: [FR-007]` names an id since dropped from spec.md goes from
     // green to exit 1 with no `schemaVersion` signal. It also widens `existingSources` (derivation
     // suppression) and `derivedCoverage` (prior-task orphan deletion) in the re-generation merge.
-    // The blindness it was meant to fix is real — `evidence` reads only `SourceIds`, while the shipped
-    // example authors only typed refs — but the fix belongs at those consumers, not at the parser.
-    // Tracked separately; see the follow-up to FS.GG.SDD#164.
+    // The blindness it was meant to fix has since been fixed at those consumers, not the parser
+    // (feature 096 / #189): `WorkModel.deriveGuidanceModel` and `HandlersVerify` now union
+    // `requirements`/`decisions`/`SourceIds` at their own seams, and `evidence` was never blind (its
+    // `LinkedSourceIds` feeds `routeSourceRefs`, which already unions). No consumer reads `SourceIds`
+    // alone any more, so nothing motivates re-deriving it here — the deferral stands. See FS.GG.SDD#164.
     let parseTasks (snapshot: FileSnapshot) =
         parseTaskFacts snapshot |> Result.map (fun facts -> facts.Tasks)
