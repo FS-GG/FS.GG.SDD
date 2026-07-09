@@ -50,19 +50,19 @@ module ValidateCommandTests =
         completion.StandardOutput, completion.StandardError, completion.ExitCode
 
     // `--matrix compatibility` is the cheapest matrix (no per-state lifecycle builds).
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``validate --json emits a schemaVersion 1 report`` () =
         let stdout, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--json" ]
         Assert.Contains("\"schemaVersion\": 1", stdout)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``validate --text carries no ANSI when redirected`` () =
         let stdout, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--text" ]
         // Ordinal scan: xUnit's string DoesNotContain is culture-aware and treats the
         // ESC control char as ignorable, so it would spuriously "find" it anywhere.
         Assert.False(stdout |> Seq.exists (fun c -> int c = 27), "report text contains an ANSI escape")
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``a single-matrix run reports the others as notValidated with a non-zero exit`` () =
         // INV-1 / FR-007: restricting to one matrix never reads as a full pass.
         let stdout, exitCode = runCli [ "validate"; "--matrix"; "compatibility"; "--text" ]
@@ -71,7 +71,7 @@ module ValidateCommandTests =
 
     // #68: a bad `--out` path is user input, not a tool defect — it must surface as a stderr
     // diagnostic + exit 1, never a raw stack trace, while the stdout report contract still emits.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``validate --out to a path under a missing directory fails cleanly without a stack trace`` () =
         let badPath = Path.Combine(Commands.tempDirectory (), "missing-dir", "report.json")
 
@@ -88,7 +88,7 @@ module ValidateCommandTests =
 
     // ----- T012: --rich end-to-end (degrades to text when redirected) -----
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``validate --rich redirected carries zero ANSI and equals --text`` () =
         // Redirected stdout (+ NO_COLOR from runCli) degrades rich to the exact plain
         // text projection: zero ANSI, byte-identical to --text (FR-005 / C-4 / SC-005).
@@ -97,7 +97,7 @@ module ValidateCommandTests =
         Assert.False(richOut |> Seq.exists (fun c -> int c = 27), "rich output contains an ANSI escape")
         Assert.Equal(textOut, richOut)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``validate --json keeps the sensed fence normalized to null`` () =
         // FR-003 / INV-3: the rich feature changes no JSON byte; the sensed block
         // stays null in the automation contract.
@@ -106,7 +106,7 @@ module ValidateCommandTests =
         Assert.Contains("\"durationMs\": null", stdout)
         Assert.Contains("\"host\": null", stdout)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``validate exit code is identical across --json, --text, and --rich`` () =
         // SC-005: format selection changes presentation only, never the exit code.
         let _, jsonExit = runCli [ "validate"; "--matrix"; "compatibility"; "--json" ]
@@ -117,7 +117,7 @@ module ValidateCommandTests =
         // Partial (single-matrix) run never reads as a full pass.
         Assert.NotEqual(0, jsonExit)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``validate --rich --out persists deterministic text with zero ANSI`` () =
         // FR-010: --out never receives rich ANSI; it persists the deterministic
         // plain-text projection (equal to --text stdout).
@@ -148,7 +148,7 @@ module ValidateCommandTests =
         let completion = TestShared.ChildProcess.runBounded validateTimeoutMs startInfo
         completion.StandardOutput, completion.ExitCode
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``validate --markdown emits a capture-safe report card with zero ANSI`` () =
         let stdout, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--markdown" ]
         Assert.Contains("# Validation Report", stdout)
@@ -156,13 +156,13 @@ module ValidateCommandTests =
         Assert.Contains("| passed | failed | skipped | coverageGaps | notValidated |", stdout)
         Assert.False(stdout |> Seq.exists (fun c -> int c = 27), "markdown output contains an ANSI escape")
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``validate --markdown is byte-identical across runs`` () =
         let first, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--markdown" ]
         let second, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--markdown" ]
         Assert.Equal(first, second)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``validate --markdown --out persists the card and exits on verdict only`` () =
         let outPath =
             Path.Combine(Path.GetTempPath(), $"validate-md-{System.Guid.NewGuid():N}.md")
@@ -180,20 +180,20 @@ module ValidateCommandTests =
             if File.Exists outPath then
                 File.Delete outPath
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``validate exit code is identical across --markdown and --json`` () =
         let _, jsonExit = runCli [ "validate"; "--matrix"; "compatibility"; "--json" ]
         let _, mdExit = runCli [ "validate"; "--matrix"; "compatibility"; "--markdown" ]
         Assert.Equal(jsonExit, mdExit)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``FORCE_COLOR re-enables rich ANSI on a redirected stdout`` () =
         // Captured (piped) stdout is not a TTY, so --rich normally degrades; FORCE_COLOR
         // bypasses the sensing and emits real ANSI (the core #172 remedy).
         let forced, _ = runCliForced [ "validate"; "--matrix"; "compatibility"; "--rich" ]
         Assert.True(forced |> Seq.exists (fun c -> int c = 27), "forced --rich output carries no ANSI")
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``force-color leaves the --json bytes unchanged`` () =
         let plain, _ = runCli [ "validate"; "--matrix"; "compatibility"; "--json" ]
         let forced, _ = runCliForced [ "validate"; "--matrix"; "compatibility"; "--json" ]

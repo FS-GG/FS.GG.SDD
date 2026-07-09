@@ -191,7 +191,7 @@ evidence:
         Assert.Contains("evidenceReadiness: evidenceReady", text)
         Assert.Contains("nextAction: evidence.next.verify", text)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``evidence CLI JSON smoke creates evidence artifact`` () =
         let root = initializedAnalyzedProject ()
 
@@ -203,7 +203,7 @@ evidence:
         Assert.Equal("", result.StdErr)
         Assert.True(TestSupport.existsRelative root evidencePath)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``evidence CLI dry run smoke avoids authored mutation`` () =
         let root = initializedAnalyzedProject ()
         let before = TestSupport.readRelative root evidencePath
@@ -216,7 +216,7 @@ evidence:
         Assert.Equal("", result.StdErr)
         Assert.Equal(before, TestSupport.readRelative root evidencePath)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``evidence CLI text smoke renders human projection`` () =
         let root = initializedAnalyzedProject ()
 
@@ -659,7 +659,7 @@ evidence:
         for declaration in artifact.Evidence do
             Assert.Empty(declaration.SourceRefs)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``evidence CLI --from-tests threads the path onto scaffolded sources`` () =
         // Real CLI parse + handler: `evidence --from-tests <path>` reaches the scaffolded evidence.
         let root = initializedAnalyzedProject ()

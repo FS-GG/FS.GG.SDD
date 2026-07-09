@@ -765,7 +765,7 @@ module RefreshCommandTests =
         [ "refresh"; "--root"; root; "--work"; workId ] @ extraArgs
         |> TestSupport.runCliRaw 120000
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``refresh CLI smoke regenerates views and exits zero`` () =
         let root = shippedProject ()
         let exitCode, stdout, _ = runRefreshCli root []
@@ -773,21 +773,21 @@ module RefreshCommandTests =
         Assert.Contains("refresh", stdout)
         Assert.True(TestSupport.existsRelative root summaryPath)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``refresh CLI text smoke surfaces refresh disposition`` () =
         let root = shippedProject ()
         let exitCode, stdout, _ = runRefreshCli root [ "--text" ]
         Assert.Equal(0, exitCode)
         Assert.Contains("refreshDisposition: refreshed-current", stdout)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``refresh CLI dry-run smoke writes nothing`` () =
         let root = shippedProject ()
         let exitCode, _, _ = runRefreshCli root [ "--dry-run" ]
         Assert.Equal(0, exitCode)
         Assert.False(TestSupport.existsRelative root summaryPath)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``refresh CLI smoke names ship json as the malformed artifact`` () =
         // Feature 095 through the REAL host binary -- the JSON an operator or CI job actually reads.
         // Matrix cell 5, quickstart Scenario A. The in-process tests assert the CommandReport; this

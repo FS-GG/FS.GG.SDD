@@ -47,41 +47,41 @@ module LintCommandTests =
 
     // ---- SC-006: 0 clean / 1 defects / 2 unusable input ----
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``SC-006 clean artifact exits 0`` () =
         let _, code = runCli [ "lint"; example "clarifications.md" ]
         Assert.Equal(0, code)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``SC-006 defect-bearing artifact exits 1`` () =
         let _, code = runCli [ "lint"; fixture "checklist.md" ]
         Assert.Equal(1, code)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``SC-006 missing artifact exits 2`` () =
         let _, code = runCli [ "lint"; "tests/fixtures/lint/does-not-exist.md" ]
         Assert.Equal(2, code)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``SC-006 unrecognized artifact kind exits 2`` () =
         let _, code = runCli [ "lint"; "README.md" ]
         Assert.Equal(2, code)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``SC-006 no artifact argument exits 2`` () =
         let _, code = runCli [ "lint" ]
         Assert.Equal(2, code)
 
     // ---- FR-010: the lint block appears in the json / text projections ----
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``FR-010 json projection carries the lint block with the defect class`` () =
         let stdout, _ = runCli [ "lint"; fixture "checklist.md"; "--json" ]
         Assert.Contains("\"lint\"", stdout)
         Assert.Contains("duplicateId", stdout)
         Assert.Contains("grammarPointer", stdout)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``FR-010 text projection carries the lint facts (kind, outcome, pointer)`` () =
         let stdout, code = runCli [ "lint"; fixture "checklist.md"; "--text" ]
         Assert.Equal(1, code)
@@ -93,7 +93,7 @@ module LintCommandTests =
 
     // A defect-bearing lint is a successful read-only result; its --json must land on STDOUT,
     // not stderr, so `lint --json > file` captures the report.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``lint --json with defects writes the report to stdout`` () =
         let stdout, _stderr, code =
             runCliIn Commands.repoRoot [ "lint"; fixture "checklist.md"; "--json" ]
@@ -103,13 +103,13 @@ module LintCommandTests =
         Assert.Contains("duplicateId", stdout)
 
     // The artifact positional resolves even when a flag precedes it.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``lint resolves the artifact when a flag precedes it`` () =
         let _, code = runCli [ "lint"; "--text"; fixture "checklist.md" ]
         Assert.Equal(1, code)
 
     // `<stage> --explain` shares the 0/1/2 mapping: a missing stage artifact is unusable -> 2.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``stage --explain on a missing artifact exits 2`` () =
         let tmp = Commands.tempDirectory ()
 
@@ -119,7 +119,7 @@ module LintCommandTests =
         Assert.Equal(2, code)
 
     // `<stage> --explain` with defects is a non-blocking dry run: NextAction is none.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``stage --explain with defects reports no NextAction`` () =
         let tmp = Commands.tempDirectory ()
 
@@ -135,7 +135,7 @@ module LintCommandTests =
         Assert.Contains("\"nextAction\": null", stdout)
 
     // `--explain` on a command with no primary artifact must NOT run (and mutate) the stage.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``analyze --explain is rejected and writes no readiness artifact`` () =
         let tmp = Commands.tempDirectory ()
 

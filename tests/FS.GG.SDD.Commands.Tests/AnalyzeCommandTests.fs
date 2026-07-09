@@ -199,7 +199,7 @@ module AnalyzeCommandTests =
         Assert.True(createWatch.Elapsed.TotalSeconds < 2.0, $"Create took {createWatch.Elapsed}.")
         Assert.True(rerunWatch.Elapsed.TotalSeconds < 2.0, $"Rerun took {rerunWatch.Elapsed}.")
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``analyze CLI JSON smoke creates analysis view`` () =
         let root = initializedTasksReadyProject ()
 
@@ -212,7 +212,7 @@ module AnalyzeCommandTests =
         Assert.Equal("", result.StdErr)
         Assert.True(TestSupport.existsRelative root analysisPath)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``analyze CLI dry run smoke avoids generated mutation`` () =
         let root = initializedTasksReadyProject ()
 
@@ -224,7 +224,7 @@ module AnalyzeCommandTests =
         Assert.Equal("", result.StdErr)
         Assert.False(TestSupport.existsRelative root analysisPath)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``analyze CLI text smoke renders human projection`` () =
         let root = initializedTasksReadyProject ()
 

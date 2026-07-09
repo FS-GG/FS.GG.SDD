@@ -50,7 +50,7 @@ module ChildProcessTests =
 
     // The deadlock itself: a child whose stderr overflows the pipe buffer must still run to
     // completion, with both streams captured whole. A sequential drain never returns from here.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``a child flooding stderr with an empty stdout completes instead of deadlocking`` () =
         let completion = TestShared.ChildProcess.runBounded 30_000 (stderrFlood false)
 
@@ -61,7 +61,7 @@ module ChildProcessTests =
     // The bound is *reachable*: a child that fills a pipe and then never exits is killed at
     // `timeoutMs` and reported as a failure. Under a sequential drain the timeout is dead code and
     // this test hangs forever instead of throwing.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``a hung child with a full stderr pipe is killed at its bound, not waited on forever`` () =
         let elapsed = Stopwatch.StartNew()
 
@@ -84,7 +84,7 @@ module ChildProcessTests =
     // `WaitForExit(int)` returns at CHILD exit, not at pipe EOF. A grandchild that inherited the
     // write end keeps both readers pending, so reaping them unbounded would relocate the hang from
     // before the wait to after it. The drain is bounded too; this pins that.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``a grandchild still holding the pipes cannot hang the reap after the child exits`` () =
         // The direct `sh` exits immediately; the backgrounded `sleep` inherits stdout/stderr and
         // outlives it, so the reads never reach EOF. SYNTHETIC stand-in for a build server or any
@@ -110,14 +110,14 @@ module ChildProcessTests =
 
     // A child that cannot be started is a `None` — `Process.Start` *throws* for a missing
     // executable rather than returning null, so that shape has to be folded in, not left to escape.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``an unstartable child yields None rather than throwing`` () =
         let missing = ProcessStartInfo "fsgg-sdd-no-such-executable-212"
         Assert.True((TestShared.ChildProcess.tryRunBounded 5_000 missing).IsNone)
 
     // ...but `runBounded` — and therefore `git` — turns that `None` into a loud failure. A silent
     // `-1, ""` would let the ADR-0026 gitignore-negation proofs pass without git ever running.
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``runBounded turns an unstartable child into a loud failure`` () =
         let missing = ProcessStartInfo "fsgg-sdd-no-such-executable-212"
 

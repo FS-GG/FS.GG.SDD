@@ -393,7 +393,7 @@ module ShipCommandTests =
         Assert.True(createWatch.Elapsed.TotalSeconds < 2.0, $"Create took {createWatch.Elapsed}.")
         Assert.True(rerunWatch.Elapsed.TotalSeconds < 2.0, $"Rerun took {rerunWatch.Elapsed}.")
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``ship CLI JSON smoke creates ship view`` () =
         let root = initializedVerifiedProject ()
 
@@ -406,7 +406,7 @@ module ShipCommandTests =
         Assert.Equal("", result.StdErr)
         Assert.True(TestSupport.existsRelative root shipPath)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``ship CLI dry run smoke avoids generated mutation`` () =
         let root = initializedVerifiedProject ()
 
@@ -418,7 +418,7 @@ module ShipCommandTests =
         Assert.Equal("", result.StdErr)
         Assert.False(TestSupport.existsRelative root shipPath)
 
-    [<Fact>]
+    [<Fact; Trait("tier", "slow")>]
     let ``ship CLI text smoke renders human projection`` () =
         let root = initializedVerifiedProject ()
 
