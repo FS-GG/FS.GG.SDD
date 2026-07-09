@@ -105,7 +105,7 @@ module TasksCommandTests =
 
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
         // The verification-obligation task carries the Expecto-matched skill.
-        Assert.Contains("requiredSkills: [\"expecto\", \"readiness-evidence\"]", tasks)
+        Assert.Contains("requiredSkills: [expecto, readiness-evidence]", tasks)
         // No xunit token survives anywhere in the generated task metadata.
         Assert.DoesNotContain("xunit", tasks)
         Assert.DoesNotContain("xunit", workModel)
@@ -121,7 +121,7 @@ module TasksCommandTests =
         let workModel = TestSupport.readRelative root workModelPath
 
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
-        Assert.Contains("requiredSkills: [\"automated-tests\", \"readiness-evidence\"]", tasks)
+        Assert.Contains("requiredSkills: [automated-tests, readiness-evidence]", tasks)
         // No framework-specific token leaks into the generated task metadata.
         Assert.DoesNotContain("xunit", tasks)
         Assert.DoesNotContain("expecto", tasks)
@@ -137,7 +137,7 @@ module TasksCommandTests =
 
         // Only the verification-obligation test skill is framework-aware; every
         // other task category keeps its exact skill list (SC-004 / FR-005).
-        Assert.Contains("requiredSkills: [\"fsharp\", \"speckit-implement\"]", tasks)
+        Assert.Contains("requiredSkills: [fsharp, speckit-implement]", tasks)
         Assert.Contains("readiness-evidence", tasks)
         Assert.DoesNotContain("xunit", tasks)
 
@@ -187,7 +187,8 @@ module TasksCommandTests =
         let reRun = TestSupport.readRelative root tasksPath
 
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
-        // `yamlString` always double-quotes, so the preserved title comes back quoted.
+        // `yamlString` always double-quotes the FRONT-MATTER work title, so it comes back quoted
+        // (only the task *records* adopt the codec's minimal quoting, FS.GG.SDD#260).
         Assert.Contains("title: \"A deliberately custom work title\"", reRun)
         Assert.Contains("publicOrToolFacingImpact: false", reRun)
         Assert.DoesNotContain("publicOrToolFacingImpact: true", reRun)
@@ -259,7 +260,7 @@ module TasksCommandTests =
         TestSupport.runTasks root workId title |> ignore
 
         let authored =
-            (TestSupport.readRelative root tasksPath).Replace("owner: \"sdd\"", "owner: \"platform\"")
+            (TestSupport.readRelative root tasksPath).Replace("owner: sdd", "owner: platform")
 
         TestSupport.writeRelative root tasksPath authored
 
@@ -308,7 +309,7 @@ module TasksCommandTests =
         TestSupport.runTasks root workId title |> ignore
 
         let authored =
-            (TestSupport.readRelative root tasksPath).Replace("owner: \"sdd\"", "owner: \"platform\"")
+            (TestSupport.readRelative root tasksPath).Replace("owner: sdd", "owner: platform")
 
         TestSupport.writeRelative root tasksPath authored
 
@@ -327,7 +328,7 @@ module TasksCommandTests =
 
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains("Implement requirement FR-002", tasks)
-        Assert.Contains("owner: \"platform\"", tasks)
+        Assert.Contains("owner: platform", tasks) // bare under minimal quoting (FS.GG.SDD#260)
         Assert.DoesNotContain("status: stale", tasks)
 
     // Feature 082 (#147, research Decision 3): a task whose source no longer exists is DROPPED
@@ -396,7 +397,7 @@ module TasksCommandTests =
             |> List.sort
 
         let idNumbers = numbers @"id: T0*(\d+)"
-        let evidenceNumbers = numbers @"requiredEvidence: \[""EV0*(\d+)""\]"
+        let evidenceNumbers = numbers @"requiredEvidence: \[EV0*(\d+)\]"
 
         Assert.NotEmpty idNumbers
         Assert.Equal<string list>(idNumbers, evidenceNumbers)
@@ -533,7 +534,7 @@ module TasksCommandTests =
 
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains("Implement clarification decision DEC-001", tasks)
-        Assert.Contains("decisions: [\"DEC-001\"]", tasks)
+        Assert.Contains("decisions: [DEC-001]", tasks)
 
     // The end-to-end regression: with the decision now disposed at `tasks`, `analyze` no longer
     // backtracks through three green stages to block on `missingDisposition` (#162).

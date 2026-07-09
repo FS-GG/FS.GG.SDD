@@ -76,7 +76,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "f888359326fa95767aaf03f70a482011d3d090c2c2bd718586944ed141bdb1eb"
+        "value": "750d40e7bd0006825e674823cf5603a7cce1129d6963c3c54847e202a91bbd48"
       }
     },
     {
@@ -112,7 +112,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "119c7e7c9ea2f541379f66b68a480438d59eb5f902359b1658331b821dce892e"
+        "value": "deb09a5aa9d7aa81477f0ec3d0b179dda4ceb8daeb766d9276678582a61a796b"
       }
     }
   ],
@@ -477,7 +477,7 @@
           "path": "work/247-full-shape-golden/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "f888359326fa95767aaf03f70a482011d3d090c2c2bd718586944ed141bdb1eb"
+            "value": "750d40e7bd0006825e674823cf5603a7cce1129d6963c3c54847e202a91bbd48"
           },
           "schemaVersion": 1
         },
@@ -501,14 +501,14 @@
           "path": "work/247-full-shape-golden/tasks.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "119c7e7c9ea2f541379f66b68a480438d59eb5f902359b1658331b821dce892e"
+            "value": "deb09a5aa9d7aa81477f0ec3d0b179dda4ceb8daeb766d9276678582a61a796b"
           },
           "schemaVersion": 1
         }
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "7e15f75f22f763bd0151dbb1ce1c4ea6d47519f0d266641a7b8dbd58f0db4a27"
+        "value": "56d27ece2991c97fb347bcafe0e6e30f84c403866be1ba2273c07247a7f39a8e"
       },
       "currency": "current"
     }
