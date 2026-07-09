@@ -1,0 +1,901 @@
+{
+  "schemaVersion": 1,
+  "reportVersion": "2.2.0",
+  "command": {
+    "name": "init",
+    "stage": "project"
+  },
+  "context": {
+    "projectRoot": ".",
+    "workId": null
+  },
+  "invocation": {
+    "outputFormat": "json",
+    "dryRun": true
+  },
+  "outcome": "succeeded",
+  "coherent": false,
+  "changedArtifacts": [
+    {
+      "path": ".agents/skills/fs-gg-sdd-analyze/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "5e9e90ca2ac254d9e8028c015b86053fcf6d23534cb9688a72de7e2355217312"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".agents/skills/fs-gg-sdd-authoring-contracts/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "d7dfd4537c6e29018a9044cbee8b42b793b95d02832c330569dcb98ac7bd25e4"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".agents/skills/fs-gg-sdd-charter/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "9855bd3c7d1422d331213fe0a7e59c7454e1cc1080cf0ef6bd25379da2e40b24"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".agents/skills/fs-gg-sdd-checklist/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "63aa9c23681d61e572b850b1ad502e01ee8cd6b552dc3d3a783028a81d5fc736"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".agents/skills/fs-gg-sdd-clarify/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "09d2ed9726307cd7ec745edf2fc7a9bd4f6c1486c62d954080ab534c0c5a4238"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".agents/skills/fs-gg-sdd-evidence/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "581db14d7e4f85401b0deca03bfe24bded405566be5f23db418ec849f2553447"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".agents/skills/fs-gg-sdd-getting-started/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "498a8881158fbb06495b7fbd1ef02ae07a5f7ddd6252954e7f2c0492b86a03b5"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".agents/skills/fs-gg-sdd-lifecycle/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "628e1d53f08fc5407f016676e0b1495bf915d62f0330cf3d0c817cb7fc4e3e9e"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".agents/skills/fs-gg-sdd-plan/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "a0c201136634403a7cefb79e05195a467d878361070c70aea406b99936ac7695"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".agents/skills/fs-gg-sdd-refresh-agents/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "557ec14f288c39dc3fa337bcdee0e8765ff53b574527619c2564025db1a74838"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".agents/skills/fs-gg-sdd-ship/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "c98e3e86701945bd90fdb3033ee991ad4e39e9b9699b081a438bb166099807bb"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".agents/skills/fs-gg-sdd-specify/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "55c65444da945788b247e38fcd1fc39540d5e3b1cc9a833365bc6f21b138454e"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".agents/skills/fs-gg-sdd-tasks/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "5dad7efaa8da30560c852c8568528d6d401170f87b6453a36e0f9ffe77372692"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".agents/skills/fs-gg-sdd-troubleshooting/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "e1d92bc789903d8c7c3920a8d56cc5e15c242f211a7b549858137c9431aac1cf"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".agents/skills/fs-gg-sdd-validate/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "87ed462650a26b7deafad23c46fa313928740ea9554385465fe74b5ecc23ec2a"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".agents/skills/fs-gg-sdd-verify/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "8ac403e477a02de2b5ea251e64146cea5798c33feb2a3a7c0868985368ab65c4"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".claude/skills/fs-gg-sdd-analyze/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "5e9e90ca2ac254d9e8028c015b86053fcf6d23534cb9688a72de7e2355217312"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".claude/skills/fs-gg-sdd-authoring-contracts/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "d7dfd4537c6e29018a9044cbee8b42b793b95d02832c330569dcb98ac7bd25e4"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".claude/skills/fs-gg-sdd-charter/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "9855bd3c7d1422d331213fe0a7e59c7454e1cc1080cf0ef6bd25379da2e40b24"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".claude/skills/fs-gg-sdd-checklist/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "63aa9c23681d61e572b850b1ad502e01ee8cd6b552dc3d3a783028a81d5fc736"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".claude/skills/fs-gg-sdd-clarify/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "09d2ed9726307cd7ec745edf2fc7a9bd4f6c1486c62d954080ab534c0c5a4238"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".claude/skills/fs-gg-sdd-evidence/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "581db14d7e4f85401b0deca03bfe24bded405566be5f23db418ec849f2553447"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".claude/skills/fs-gg-sdd-getting-started/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "498a8881158fbb06495b7fbd1ef02ae07a5f7ddd6252954e7f2c0492b86a03b5"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".claude/skills/fs-gg-sdd-lifecycle/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "628e1d53f08fc5407f016676e0b1495bf915d62f0330cf3d0c817cb7fc4e3e9e"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".claude/skills/fs-gg-sdd-plan/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "a0c201136634403a7cefb79e05195a467d878361070c70aea406b99936ac7695"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".claude/skills/fs-gg-sdd-refresh-agents/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "557ec14f288c39dc3fa337bcdee0e8765ff53b574527619c2564025db1a74838"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".claude/skills/fs-gg-sdd-ship/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "c98e3e86701945bd90fdb3033ee991ad4e39e9b9699b081a438bb166099807bb"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".claude/skills/fs-gg-sdd-specify/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "55c65444da945788b247e38fcd1fc39540d5e3b1cc9a833365bc6f21b138454e"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".claude/skills/fs-gg-sdd-tasks/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "5dad7efaa8da30560c852c8568528d6d401170f87b6453a36e0f9ffe77372692"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".claude/skills/fs-gg-sdd-troubleshooting/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "e1d92bc789903d8c7c3920a8d56cc5e15c242f211a7b549858137c9431aac1cf"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".claude/skills/fs-gg-sdd-validate/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "87ed462650a26b7deafad23c46fa313928740ea9554385465fe74b5ecc23ec2a"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".claude/skills/fs-gg-sdd-verify/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "8ac403e477a02de2b5ea251e64146cea5798c33feb2a3a7c0868985368ab65c4"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".codex/skills/fs-gg-sdd-analyze/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "5e9e90ca2ac254d9e8028c015b86053fcf6d23534cb9688a72de7e2355217312"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".codex/skills/fs-gg-sdd-authoring-contracts/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "d7dfd4537c6e29018a9044cbee8b42b793b95d02832c330569dcb98ac7bd25e4"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".codex/skills/fs-gg-sdd-charter/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "9855bd3c7d1422d331213fe0a7e59c7454e1cc1080cf0ef6bd25379da2e40b24"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".codex/skills/fs-gg-sdd-checklist/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "63aa9c23681d61e572b850b1ad502e01ee8cd6b552dc3d3a783028a81d5fc736"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".codex/skills/fs-gg-sdd-clarify/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "09d2ed9726307cd7ec745edf2fc7a9bd4f6c1486c62d954080ab534c0c5a4238"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".codex/skills/fs-gg-sdd-evidence/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "581db14d7e4f85401b0deca03bfe24bded405566be5f23db418ec849f2553447"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".codex/skills/fs-gg-sdd-getting-started/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "498a8881158fbb06495b7fbd1ef02ae07a5f7ddd6252954e7f2c0492b86a03b5"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".codex/skills/fs-gg-sdd-lifecycle/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "628e1d53f08fc5407f016676e0b1495bf915d62f0330cf3d0c817cb7fc4e3e9e"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".codex/skills/fs-gg-sdd-plan/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "a0c201136634403a7cefb79e05195a467d878361070c70aea406b99936ac7695"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".codex/skills/fs-gg-sdd-refresh-agents/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "557ec14f288c39dc3fa337bcdee0e8765ff53b574527619c2564025db1a74838"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".codex/skills/fs-gg-sdd-ship/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "c98e3e86701945bd90fdb3033ee991ad4e39e9b9699b081a438bb166099807bb"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".codex/skills/fs-gg-sdd-specify/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "55c65444da945788b247e38fcd1fc39540d5e3b1cc9a833365bc6f21b138454e"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".codex/skills/fs-gg-sdd-tasks/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "5dad7efaa8da30560c852c8568528d6d401170f87b6453a36e0f9ffe77372692"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".codex/skills/fs-gg-sdd-troubleshooting/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "e1d92bc789903d8c7c3920a8d56cc5e15c242f211a7b549858137c9431aac1cf"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".codex/skills/fs-gg-sdd-validate/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "87ed462650a26b7deafad23c46fa313928740ea9554385465fe74b5ecc23ec2a"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".codex/skills/fs-gg-sdd-verify/SKILL.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "8ac403e477a02de2b5ea251e64146cea5798c33feb2a3a7c0868985368ab65c4"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg",
+      "kind": "directory",
+      "ownership": "sdd",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": null,
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/agents.yml",
+      "kind": "structuredSource",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/constitution.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "b17d95de11c7b6e267bf27c5f702aff7ca0aaf996023dd9f3d26a3488900679e"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/early-stage-guidance.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "c3a5c2500c9c9f4f61c187ae3be57373caf115ca02a68dcaaa0a02d17dbd4b61"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/project.yml",
+      "kind": "structuredSource",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "b42ec094e5a52a7f4ea8db861ee76b5b9d949543f2216ea3b11a67759a89ed50"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/scaffold-provenance.json",
+      "kind": "structuredSource",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "8990a21c0731609b2c780db282dab99eb520d5e45f1ec26f60a20e0304d8d6d0"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/sdd.yml",
+      "kind": "structuredSource",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "05deb1b6ae6632aed6ad2bcaaf70e3dee66889e64a1e076cf633f570802720de"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".gitignore",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "62a471dc3da66ba16fbfb1c7d6ae44efb017540624eff49b38eb9f8553b56775"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": "AGENTS.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "573478302f23f99b81bc09a4685fdf8f0de01632835835d91330f30f7a7868dc"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": "CLAUDE.md",
+      "kind": "agentGuidance",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "4fd9dae32b327ab0bd4fd12f8f71096359b26f8cefc9eea6cfdfa4f0528793d2"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": "readiness",
+      "kind": "directory",
+      "ownership": "sdd",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": null,
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
+      "path": "work",
+      "kind": "directory",
+      "ownership": "sdd",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": null,
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    }
+  ],
+  "specification": null,
+  "clarification": null,
+  "checklist": null,
+  "plan": null,
+  "tasks": null,
+  "analysis": null,
+  "evidence": null,
+  "verification": null,
+  "ship": null,
+  "agentGuidance": null,
+  "refresh": null,
+  "scaffold": null,
+  "doctor": null,
+  "upgrade": null,
+  "lint": null,
+  "surface": null,
+  "generatedViews": [],
+  "diagnostics": [],
+  "governanceCompatibility": [
+    {
+      "path": ".fsgg/capabilities.yml",
+      "relationship": "optionalGovernanceCapabilities",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/policy.yml",
+      "relationship": "optionalGovernancePolicy",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    },
+    {
+      "path": ".fsgg/tooling.yml",
+      "relationship": "optionalGovernanceTooling",
+      "requiredBySdd": false,
+      "state": "notEvaluated",
+      "diagnosticIds": []
+    }
+  ],
+  "nextAction": {
+    "actionId": "nextLifecycleCommand",
+    "command": "charter",
+    "workId": null,
+    "reason": "Command \u0027init\u0027 completed.",
+    "requiredArtifacts": [],
+    "blockingDiagnosticIds": []
+  },
+  "help": null,
+  "lifecycleStatus": {
+    "workId": null,
+    "isLifecycleStage": false,
+    "currentOrdinal": 0,
+    "totalStages": 10,
+    "outcome": "succeeded",
+    "nextCommand": "charter",
+    "stages": [
+      {
+        "command": "charter",
+        "ordinal": 1,
+        "state": "next"
+      },
+      {
+        "command": "specify",
+        "ordinal": 2,
+        "state": "pending"
+      },
+      {
+        "command": "clarify",
+        "ordinal": 3,
+        "state": "pending"
+      },
+      {
+        "command": "checklist",
+        "ordinal": 4,
+        "state": "pending"
+      },
+      {
+        "command": "plan",
+        "ordinal": 5,
+        "state": "pending"
+      },
+      {
+        "command": "tasks",
+        "ordinal": 6,
+        "state": "pending"
+      },
+      {
+        "command": "analyze",
+        "ordinal": 7,
+        "state": "pending"
+      },
+      {
+        "command": "evidence",
+        "ordinal": 8,
+        "state": "pending"
+      },
+      {
+        "command": "verify",
+        "ordinal": 9,
+        "state": "pending"
+      },
+      {
+        "command": "ship",
+        "ordinal": 10,
+        "state": "pending"
+      }
+    ]
+  }
+}
