@@ -713,6 +713,18 @@ module WorkModel =
                 None)
         |> List.filter (String.IsNullOrWhiteSpace >> not)
 
+    // Canonicalize a reference id list read verbatim from `work-model.json` to the same
+    // upper-invariant form the in-memory path produces, so downstream unions
+    // (`deriveGuidanceModel.relatedIds`) dedupe case-insensitively (#215). The two helpers mirror
+    // the two in-memory shapes exactly, adding no new asymmetry: `sourceIds` is uppercased, deduped
+    // and sorted (Task.fs `parseTaskFacts`), while the typed fields arrive uppercased through
+    // `Identifiers.create*` and are sorted but not deduped.
+    let upperSourceIds (ids: string list) =
+        ids |> List.map (fun id -> id.ToUpperInvariant()) |> List.distinct |> List.sort
+
+    let upperTypedIds (ids: string list) =
+        ids |> List.map (fun id -> id.ToUpperInvariant()) |> List.sort
+
     let jmSeverity (value: string) =
         match value.Trim().ToLowerInvariant() with
         | "error" -> DiagnosticError
@@ -831,9 +843,15 @@ module WorkModel =
                                   Status = jmString "status" item
                                   Owner = jmString "owner" item
                                   Dependencies = jmStringList "dependencies" item |> List.sort
-                                  Requirements = jmStringList "requirements" item |> List.sort
-                                  Decisions = jmStringList "decisions" item |> List.sort
-                                  SourceIds = jmStringList "sourceIds" item |> List.sort
+                                  // Upper-normalize the three reference fields to mirror the in-memory
+                                  // path. `deriveGuidanceModel` unions all three and dedupes with a
+                                  // case-sensitive `List.distinct`, so a hand-edited `work-model.json`
+                                  // mixing `requirements: ["FR-001"]` with `sourceIds: ["fr-001"]` would
+                                  // otherwise yield a duplicated `relatedIds` coverage clause and a
+                                  // `behaviorModelDigest` no normalized re-run reproduces (#215).
+                                  Requirements = jmStringList "requirements" item |> upperTypedIds
+                                  Decisions = jmStringList "decisions" item |> upperTypedIds
+                                  SourceIds = jmStringList "sourceIds" item |> upperSourceIds
                                   RequiredSkills = jmStringList "requiredSkills" item |> List.sort
                                   RequiredEvidence = jmStringList "requiredEvidence" item |> List.sort
                                   Source = jmString "source" item

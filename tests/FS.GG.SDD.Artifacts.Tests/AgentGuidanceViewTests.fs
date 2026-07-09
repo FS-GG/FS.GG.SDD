@@ -119,6 +119,44 @@ module AgentGuidanceViewTests =
         let guidance = deriveGuidanceModel (unionModel ())
         Assert.Equal<string list>([ "DEC-001"; "VO-001" ], guidance |> relatedIdsOf "T003")
 
+    // #215: `parseWorkModel` reads the reference fields verbatim, while the in-memory path
+    // canonicalizes them to upper-invariant (Task.fs uppercases `sourceIds`; requirements/decisions
+    // arrive through `Identifiers.create*`). Since `deriveGuidanceModel` dedupes with a
+    // case-sensitive `List.distinct`, a hand-edited work model that restates a requirement in a
+    // different case in `sourceIds` must still collapse to one id — not `["FR-001"; "fr-001"]`.
+    let private caseCollisionWorkModelJson =
+        """{
+  "schemaVersion": 1,
+  "modelVersion": "1.0.0",
+  "workId": "215-case",
+  "project": { "id": "demo", "defaultWorkRoot": "work" },
+  "sources": [],
+  "workItem": { "id": "215-case", "title": "Case", "stage": "tasks", "changeTier": "tier1", "status": "draft" },
+  "requirements": [ { "id": "FR-001", "title": "First", "text": "x", "acceptanceCriteria": [], "priority": null, "source": "work/215-case/spec.md", "linkedTaskIds": ["T001"], "linkedEvidenceIds": [] } ],
+  "decisions": [],
+  "tasks": [
+    { "id": "T001", "title": "Case-collision task", "status": "pending", "owner": "codex", "dependencies": [], "requirements": ["FR-001"], "decisions": [], "sourceIds": ["fr-001"], "requiredSkills": ["fs-gg-sdd-project"], "requiredEvidence": [], "source": "work/215-case/tasks.yml" }
+  ],
+  "evidence": [],
+  "generatedViews": [],
+  "diagnostics": [],
+  "governanceBoundaries": []
+}"""
+
+    [<Fact>]
+    let ``deriveGuidanceModel dedupes a sourceIds id that restates a requirement in a different case`` () =
+        let model =
+            match
+                parseWorkModel
+                    { Path = "readiness/215-case/work-model.json"
+                      Text = caseCollisionWorkModelJson }
+            with
+            | Ok model -> model
+            | Error diagnostics -> failwith $"Expected a parseable work model, got {diagnostics}"
+
+        let guidance = deriveGuidanceModel model
+        Assert.Equal<string list>([ "FR-001" ], guidance |> relatedIdsOf "T001")
+
     [<Fact>]
     let ``deriveGuidanceModel yields no relatedIds for a task with no references`` () =
         // AC-002 boundary: an empty union is empty, and `purpose` degrades without a coverage clause.
