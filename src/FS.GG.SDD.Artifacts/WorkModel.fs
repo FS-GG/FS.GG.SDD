@@ -743,6 +743,113 @@ module WorkModel =
           // exit-code decision never reads parsed diagnostics (see feature 062 research).
           IsToolDefect = false }
 
+    // ---- FS-GG/FS.GG.SDD#266 (ADR-0002 Gap D, finding 2) round-trip helpers ----
+    // `parseWorkModel` used to hardcode `Sources = []` and `GeneratedViews = []`, so a model rebuilt
+    // through the parser (the `agents`/`refresh` generators, which build via `parseWorkModel`) lost
+    // its source set and `deriveGuidanceModel.sourceIdentities` collapsed to a singleton. These parse
+    // the persisted arrays back, mirroring the #242 fix for `governanceBoundaries`. `SourceDigest` and
+    // `OutputDigest` share a shape, so the record reads are annotated to disambiguate them.
+
+    let jmSourceDigest name element : SourceDigest =
+        jmProp name element
+        |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Object)
+        |> Option.map (fun digest ->
+            ({ Algorithm = jmString "algorithm" digest
+               Value = jmString "value" digest }
+            : SourceDigest))
+        |> Option.defaultValue ({ Algorithm = "sha256"; Value = "" }: SourceDigest)
+
+    let jmOutputDigest name element : OutputDigest option =
+        jmProp name element
+        |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Object)
+        |> Option.map (fun digest ->
+            ({ Algorithm = jmString "algorithm" digest
+               Value = jmString "value" digest }
+            : OutputDigest))
+
+    // Reverse of `GenerationManifest.viewKindValue` / `currencyStatusValue`. Total: an unrecognized
+    // kind round-trips through `Other`, and any currency string outside the four known values reads as
+    // malformed (the serializer only ever writes the four).
+    let jmViewKind (value: string) : GeneratedViewKind =
+        match value with
+        | "workModel" -> GenerationManifest.WorkModel
+        | "analysis" -> GenerationManifest.Analysis
+        | "verify" -> GenerationManifest.Verify
+        | "ship" -> GenerationManifest.Ship
+        | "shipVerdict" -> GenerationManifest.ShipVerdict
+        | "summary" -> GenerationManifest.Summary
+        | "agentCommands" -> GenerationManifest.AgentCommands
+        | "governance-handoff" -> GenerationManifest.GovernanceHandoff
+        | other -> GenerationManifest.Other other
+
+    let jmCurrency (value: string) : GeneratedViewCurrencyStatus =
+        match value with
+        | "current" -> CurrencyCurrent
+        | "missing" -> CurrencyMissing
+        | "stale" -> CurrencyStale
+        | _ -> CurrencyMalformed
+
+    let parseSourceEntry (item: JsonElement) : SourceEntry =
+        { Path = jmString "path" item
+          Kind = jmString "kind" item
+          Owner = jmString "owner" item
+          SchemaVersion = jmInt "schemaVersion" item |> Option.defaultValue 0
+          RawSchemaVersion =
+            (match jmString "rawSchemaVersion" item with
+             | "" -> None
+             | value -> Some value)
+          SchemaStatus = jmString "schemaStatus" item
+          SourceDigest = jmSourceDigest "sourceDigest" item }
+
+    // `writeManifestSource` persists only path/digest/schemaVersion; `SchemaStatus` and
+    // `RawSchemaVersion` are not serialized, so they default here — re-serialization stays
+    // byte-identical. Making those fields representable across the seam is the Gap A codec's job (#201).
+    let parseManifestSource (item: JsonElement) : SourceIdentity option =
+        match
+            FS.GG.SDD.Artifacts.ArtifactRef.create
+                (jmString "path" item)
+                (ArtifactKind.Other "source")
+                ArtifactOwner.Sdd
+                true
+        with
+        | Error _ -> None
+        | Ok artifact ->
+            Some
+                { Artifact = artifact
+                  Digest = jmSourceDigest "digest" item
+                  SchemaVersion = jmInt "schemaVersion" item |> Option.map SchemaVersion.create
+                  SchemaStatus = Current
+                  RawSchemaVersion = None }
+
+    let parseGeneratedView (item: JsonElement) : GenerationManifest option =
+        match
+            FS.GG.SDD.Artifacts.ArtifactRef.create
+                (jmString "path" item)
+                ArtifactKind.GeneratedView
+                ArtifactOwner.Sdd
+                true
+        with
+        | Error _ -> None
+        | Ok view ->
+            Some
+                { View = view
+                  Kind = jmViewKind (jmString "kind" item)
+                  SchemaVersion = SchemaVersion.create (jmInt "schemaVersion" item |> Option.defaultValue 1)
+                  Generator =
+                    jmProp "generator" item
+                    |> Option.map (fun generator ->
+                        ({ Id = jmString "id" generator
+                           Version = jmString "version" generator }
+                        : GeneratorVersion))
+                    |> Option.defaultValue (SchemaVersion.currentGeneratorVersion ())
+                  Sources =
+                    jmArray "sources" item
+                    |> List.choose parseManifestSource
+                    |> List.sortBy (fun source -> source.Artifact.Path)
+                  OutputDigest = jmOutputDigest "outputDigest" item
+                  Currency = jmCurrency (jmString "currency" item)
+                  Diagnostics = [] }
+
     let parseWorkModel (snapshot: FileSnapshot) : Result<WorkModel, Diagnostic list> =
         let artifact =
             match
@@ -791,7 +898,10 @@ module WorkModel =
                             |> Option.defaultValue
                                 { Id = "unknown"
                                   DefaultWorkRoot = "work" }
-                          Sources = []
+                          Sources =
+                            jmArray "sources" root
+                            |> List.map parseSourceEntry
+                            |> List.sortBy (fun source -> source.Path)
                           WorkItem =
                             workItem
                             |> Option.map (fun item ->
@@ -878,7 +988,7 @@ module WorkModel =
                                   Source = jmString "source" item
                                   SourceLocation = None })
                             |> List.sortBy (fun evidence -> evidence.Id)
-                          GeneratedViews = []
+                          GeneratedViews = jmArray "generatedViews" root |> List.choose parseGeneratedView
                           Diagnostics =
                             jmArray "diagnostics" root
                             |> List.map parseEmbeddedDiagnostic
