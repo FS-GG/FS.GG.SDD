@@ -120,6 +120,30 @@ module Evidence =
         | "missing" -> Missing
         | _ -> Verification
 
+    // The inverse serialization mappings, moved here from HandlersEvidence (Commands) so the shared
+    // `EvidenceCodec.declarationFields` can drive both the reader and the renderer over one list
+    // (FS.GG.SDD#260). Pure functions; every existing call site resolves unchanged via AutoOpen.
+    let evidenceKindSourceValue kind =
+        match kind with
+        | EvidenceKind.Implementation -> "implementation"
+        | EvidenceKind.Verification -> "verification"
+        | EvidenceKind.Review -> "review"
+        | EvidenceKind.GeneratedViewEvidence -> "generated-view"
+        | EvidenceKind.Synthetic -> "synthetic"
+        | EvidenceKind.Deferral -> "deferral"
+        | EvidenceKind.Note -> "note"
+        | EvidenceKind.Missing -> "missing"
+
+    let allowedEvidenceResults =
+        [ "pass"; "fail"; "deferred"; "missing"; "stale"; "advisory"; "blocked" ]
+        |> Set.ofList
+
+    let normalizedEvidenceResult (result: string) =
+        (if String.IsNullOrEmpty result then
+             ""
+         else
+             result.Trim().ToLowerInvariant())
+
     let parseArtifactRefs values =
         values
         |> List.map (fun path -> artifact path (ArtifactKind.Other "evidenceArtifact") ArtifactOwner.Sdd false)
@@ -198,53 +222,139 @@ module Evidence =
                   { d with StandsInFor = v })
               ArtifactCodec.optionalScalar "reason" (fun d -> d.Reason) (fun v d -> { d with Reason = v }) ]
 
-    let parseEvidenceSourceRefs (mapping: YamlMappingNode) =
-        trySequenceAt [ "sourceRefs" ] mapping
-        |> Option.map (fun sequence ->
-            sequence.Children
-            |> Seq.mapi (fun index node ->
-                node
-                |> tryMapping
-                |> Option.map (fun source ->
-                    // The shared `EvidenceCodec.sourceRefFields` drives this read and the renderer, so
-                    // every authored scalar round-trips (FS.GG.SDD#180/#181). `SourceLocation` is
-                    // parse-assigned provenance, set after decode.
-                    let decoded =
-                        match
-                            ArtifactCodec.foldInto EvidenceCodec.sourceRefFields EvidenceCodec.sourceRefSeed source
-                        with
-                        | Ok value -> value
-                        | Error _ -> EvidenceCodec.sourceRefSeed
+        // The disclosure draft <-> field projection (the #180 gate lives in `lift`): a blank/partial
+        // draft lifts to None (undisclosed), a fully-populated one to Some.
+        let liftDisclosure (draft: DisclosureDraft) : SyntheticDisclosure option =
+            match draft.StandsInFor, draft.Reason with
+            | Some standsInFor, Some reason when
+                not (String.IsNullOrWhiteSpace standsInFor)
+                && not (String.IsNullOrWhiteSpace reason)
+                ->
+                Some
+                    { StandsInFor = standsInFor
+                      Reason = reason }
+            | _ -> None
 
-                    { decoded with
-                        SourceLocation = sourceLocation (index + 1) }))
-            |> Seq.choose id
-            |> Seq.toList)
-        |> Option.defaultValue []
+        let lowerDisclosure (d: SyntheticDisclosure) : DisclosureDraft =
+            { StandsInFor = Some d.StandsInFor
+              Reason = Some d.Reason }
 
-    let parseSyntheticDisclosure (mapping: YamlMappingNode) =
-        // The disclosure's inner scalars read null-aware via the shared `EvidenceCodec.disclosureFields`
-        // (FS.GG.SDD#180): a bare `standsInFor: null`/`reason: null` (or `~`/empty plain scalar) reads
-        // back as `None`, so the whitespace guard treats it as absence and the undisclosed-synthetic
-        // gate fires. A *quoted* "null" is a real string and still round-trips.
-        match
-            tryNodeAt [ "syntheticDisclosure" ] (mapping :> YamlNode)
-            |> Option.bind tryMapping
-        with
-        | None -> None
-        | Some sub ->
-            match ArtifactCodec.foldInto EvidenceCodec.disclosureFields EvidenceCodec.disclosureDraftSeed sub with
-            | Ok draft ->
-                match draft.StandsInFor, draft.Reason with
-                | Some standsInFor, Some reason when
-                    not (String.IsNullOrWhiteSpace standsInFor)
-                    && not (String.IsNullOrWhiteSpace reason)
-                    ->
-                    Some
-                        { StandsInFor = standsInFor
-                          Reason = reason }
-                | _ -> None
-            | Error _ -> None
+        let subjectSeed: EvidenceSubject = { SubjectType = "task"; Id = "" }
+
+        let subjectFields: ArtifactCodec.FieldCodec<EvidenceSubject> list =
+            [ ArtifactCodec.defaultedScalar "type" "task" (fun s -> s.SubjectType) (fun v s ->
+                  { s with SubjectType = v })
+              ArtifactCodec.defaultedScalar "id" "" (fun s -> s.Id) (fun v s -> { s with Id = v }) ]
+
+        // A placeholder declaration; the semantic layer in `parseEvidenceArtifact` overwrites `Id`,
+        // `Source`, and `SourceLocation` (parse provenance) and applies the subject-type ref merge
+        // after `foldInto`, so these seed values never reach the decoded result.
+        let declarationSeed: EvidenceDeclaration =
+            { Id = { Value = "EV000" }
+              Kind = Verification
+              Subject = subjectSeed
+              TaskRefs = []
+              RequirementRefs = []
+              AcceptanceScenarioRefs = []
+              ClarificationDecisionRefs = []
+              ChecklistResultRefs = []
+              PlanDecisionRefs = []
+              ObligationRefs = []
+              ArtifactRefs = []
+              SourceRefs = []
+              Result = "pending"
+              Synthetic = false
+              SyntheticDisclosure = None
+              Rationale = None
+              Owner = None
+              Scope = None
+              LaterLifecycleVisibility = None
+              Notes = []
+              Source = sourceArtifact "work/seed/evidence.yml" ArtifactKind.Evidence
+              SourceLocation = None }
+
+        // The whole authored declaration, in emission order (`id` is framed by the artifact-level
+        // renderer and read by the semantic layer, so it is not a field here). One list drives both
+        // the reader and the renderer (FR-007). Typed-id ref lists read leniently — the malformed-ref
+        // diagnostics stay the semantic layer's job.
+        let declarationFields: ArtifactCodec.FieldCodec<EvidenceDeclaration> list =
+            [ ArtifactCodec.mappedScalar "kind" evidenceKindSourceValue parseEvidenceKind (fun d -> d.Kind) (fun v d ->
+                  { d with Kind = v })
+              ArtifactCodec.nested "subject" subjectFields subjectSeed (fun d -> d.Subject) (fun v d ->
+                  { d with Subject = v })
+              ArtifactCodec.refList
+                  "taskRefs"
+                  Identifiers.createTaskId
+                  (fun (id: TaskId) -> id.Value)
+                  (fun d -> d.TaskRefs)
+                  (fun v d -> { d with TaskRefs = v })
+              ArtifactCodec.refList
+                  "requirementRefs"
+                  Identifiers.createRequirementId
+                  (fun (id: RequirementId) -> id.Value)
+                  (fun d -> d.RequirementRefs)
+                  (fun v d -> { d with RequirementRefs = v })
+              ArtifactCodec.refList
+                  "acceptanceScenarioRefs"
+                  Identifiers.createAcceptanceScenarioId
+                  (fun (id: AcceptanceScenarioId) -> id.Value)
+                  (fun d -> d.AcceptanceScenarioRefs)
+                  (fun v d -> { d with AcceptanceScenarioRefs = v })
+              ArtifactCodec.refList
+                  "clarificationDecisionRefs"
+                  Identifiers.createDecisionId
+                  (fun (id: DecisionId) -> id.Value)
+                  (fun d -> d.ClarificationDecisionRefs)
+                  (fun v d -> { d with ClarificationDecisionRefs = v })
+              ArtifactCodec.refList
+                  "checklistResultRefs"
+                  Identifiers.createChecklistResultId
+                  (fun (id: ChecklistResultId) -> id.Value)
+                  (fun d -> d.ChecklistResultRefs)
+                  (fun v d -> { d with ChecklistResultRefs = v })
+              ArtifactCodec.refList
+                  "planDecisionRefs"
+                  Identifiers.createPlanDecisionId
+                  (fun (id: PlanDecisionId) -> id.Value)
+                  (fun d -> d.PlanDecisionRefs)
+                  (fun v d -> { d with PlanDecisionRefs = v })
+              ArtifactCodec.alwaysInlineList
+                  "obligationRefs"
+                  (fun d -> d.ObligationRefs)
+                  // The reader distinct+sorts obligationRefs to match the pre-codec parser (the
+                  // renderer already distinct+sorts every inline list); notes deliberately do not.
+                  (fun v d ->
+                      { d with
+                          ObligationRefs = v |> List.distinct |> List.sort })
+              ArtifactCodec.alwaysInlineList
+                  "artifacts"
+                  (fun d -> d.ArtifactRefs |> List.map (fun (a: ArtifactRef) -> a.Path))
+                  (fun v d ->
+                      { d with
+                          ArtifactRefs = parseArtifactRefs v })
+              ArtifactCodec.recordList "sourceRefs" sourceRefFields sourceRefSeed (fun d -> d.SourceRefs) (fun v d ->
+                  { d with SourceRefs = v })
+              ArtifactCodec.mappedScalar "result" normalizedEvidenceResult id (fun d -> d.Result) (fun v d ->
+                  { d with Result = v })
+              ArtifactCodec.boolScalar "synthetic" false (fun d -> d.Synthetic) (fun v d -> { d with Synthetic = v })
+              ArtifactCodec.optionalNestedVia
+                  "syntheticDisclosure"
+                  disclosureFields
+                  disclosureDraftSeed
+                  liftDisclosure
+                  lowerDisclosure
+                  (fun d -> d.SyntheticDisclosure)
+                  (fun v d -> { d with SyntheticDisclosure = v })
+              ArtifactCodec.optionalScalar "rationale" (fun d -> d.Rationale) (fun v d -> { d with Rationale = v })
+              ArtifactCodec.optionalScalar "owner" (fun d -> d.Owner) (fun v d -> { d with Owner = v })
+              ArtifactCodec.optionalScalar "scope" (fun d -> d.Scope) (fun v d -> { d with Scope = v })
+              ArtifactCodec.optionalScalar "laterLifecycleVisibility" (fun d -> d.LaterLifecycleVisibility) (fun v d ->
+                  { d with LaterLifecycleVisibility = v })
+              ArtifactCodec.alwaysInlineList "notes" (fun d -> d.Notes) (fun v d -> { d with Notes = v }) ]
+
+    // `parseEvidenceSourceRefs`/`parseSyntheticDisclosure` were retired when the declaration moved onto
+    // `declarationFields` (FS.GG.SDD#260): its `recordList "sourceRefs"` and
+    // `optionalNestedVia "syntheticDisclosure"` now own both directions for those records.
 
     let workIdFromEvidencePath (path: string) =
         let normalized = normalizePath path
@@ -304,76 +414,47 @@ module Evidence =
                                 | Error _ ->
                                     None, (Diagnostics.malformedReference artifact "evidence" rawId :: refDiagnostics)
                                 | Ok id ->
-                                    let subjectType =
-                                        tryScalarAt [ "subject"; "type" ] mapping |> Option.defaultValue "task"
-
-                                    let subjectId = tryScalarAt [ "subject"; "id" ] mapping |> Option.defaultValue ""
+                                    // The shared `declarationFields` codec decodes every authored field
+                                    // (FR-007); the semantic layer here owns what is NOT serialization:
+                                    // the parse-assigned `Id`/`Source`/`SourceLocation`, and the
+                                    // subject-type ref merge — a `task`/`requirement` subject prepends
+                                    // its id into the corresponding ref list. Malformed-ref diagnostics
+                                    // are computed above (`refDiagnostics`); the codec read is lenient.
+                                    let decoded =
+                                        match
+                                            ArtifactCodec.foldInto
+                                                EvidenceCodec.declarationFields
+                                                EvidenceCodec.declarationSeed
+                                                mapping
+                                        with
+                                        | Ok value -> value
+                                        | Error _ -> EvidenceCodec.declarationSeed
 
                                     let taskRefs =
-                                        match subjectType with
-                                        | "task" -> subjectId :: scalarList [ "taskRefs" ] mapping
-                                        | _ -> scalarList [ "taskRefs" ] mapping
-                                        |> parseTaskIds
+                                        match decoded.Subject.SubjectType with
+                                        | "task" ->
+                                            (Identifiers.createTaskId decoded.Subject.Id
+                                             |> Result.toOption
+                                             |> Option.toList)
+                                            @ decoded.TaskRefs
+                                        | _ -> decoded.TaskRefs
 
                                     let requirementRefs =
-                                        match subjectType with
-                                        | "requirement" -> subjectId :: scalarList [ "requirementRefs" ] mapping
-                                        | _ -> scalarList [ "requirementRefs" ] mapping
-                                        |> parseRequirementIds
+                                        match decoded.Subject.SubjectType with
+                                        | "requirement" ->
+                                            (Identifiers.createRequirementId decoded.Subject.Id
+                                             |> Result.toOption
+                                             |> Option.toList)
+                                            @ decoded.RequirementRefs
+                                        | _ -> decoded.RequirementRefs
 
                                     Some
-                                        { Id = id
-                                          Kind =
-                                            tryScalarAt [ "kind" ] mapping
-                                            |> Option.map parseEvidenceKind
-                                            |> Option.defaultValue Verification
-                                          Subject =
-                                            { SubjectType = subjectType
-                                              Id = subjectId }
-                                          TaskRefs = taskRefs
-                                          RequirementRefs = requirementRefs
-                                          AcceptanceScenarioRefs =
-                                            scalarList [ "acceptanceScenarioRefs" ] mapping
-                                            |> parseAcceptanceScenarioIds
-                                          ClarificationDecisionRefs =
-                                            scalarList [ "clarificationDecisionRefs" ] mapping |> parseDecisionIds
-                                          ChecklistResultRefs =
-                                            scalarList [ "checklistResultRefs" ] mapping |> parseChecklistResultIds
-                                          PlanDecisionRefs =
-                                            scalarList [ "planDecisionRefs" ] mapping |> parsePlanDecisionIds
-                                          ObligationRefs =
-                                            scalarList [ "obligationRefs" ] mapping |> List.distinct |> List.sort
-                                          ArtifactRefs = scalarList [ "artifacts" ] mapping |> parseArtifactRefs
-                                          SourceRefs = parseEvidenceSourceRefs mapping
-                                          Result = tryScalarAt [ "result" ] mapping |> Option.defaultValue "pending"
-                                          Synthetic = boolAt [ "synthetic" ] mapping false
-                                          SyntheticDisclosure = parseSyntheticDisclosure mapping
-                                          // For THESE four scalars an absent key and a bare `null`
-                                          // are the same absence. Since feature 091 the writer omits
-                                          // the key (HandlersEvidence.renderOptionalScalar); older
-                                          // files and hand-authored ones still carry `null`, so a
-                                          // plain-null token must read back as `None` too — otherwise
-                                          // a re-run rewrites `null` → the quoted string `"null"`
-                                          // (#161) and the round-trip stops being idempotent. A
-                                          // *quoted* "null" is a real string and survives
-                                          // (isPlainNullScalar checks ScalarStyle.Plain). That
-                                          // equivalence is what makes 091's omission a serialization
-                                          // change rather than a schema change.
-                                          //
-                                          // It does NOT extend to `syntheticDisclosure`'s nested
-                                          // `standsInFor`/`reason`, which `parseSyntheticDisclosure`
-                                          // still reads with the null-unaware `tryScalarAt`: a bare
-                                          // `standsInFor: null` parses to `Some "null"`, defeating the
-                                          // undisclosed-synthetic gate. Pre-existing, not introduced
-                                          // and not fixed here — see FS.GG.SDD#180.
-                                          Rationale = tryScalarNonNullAt [ "rationale" ] mapping
-                                          Owner = tryScalarNonNullAt [ "owner" ] mapping
-                                          Scope = tryScalarNonNullAt [ "scope" ] mapping
-                                          LaterLifecycleVisibility =
-                                            tryScalarNonNullAt [ "laterLifecycleVisibility" ] mapping
-                                          Notes = scalarList [ "notes" ] mapping
-                                          Source = artifact
-                                          SourceLocation = sourceLocation (index + 1) },
+                                        { decoded with
+                                            Id = id
+                                            TaskRefs = taskRefs
+                                            RequirementRefs = requirementRefs
+                                            Source = artifact
+                                            SourceLocation = sourceLocation (index + 1) },
                                     refDiagnostics)
                     |> Seq.toList)
                 |> Option.defaultValue []

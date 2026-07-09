@@ -76,7 +76,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "125d2ec1396f23ce1ab25c70fb7788ffd36ee35b7bfaae7292dc5326332f86ec"
+        "value": "f888359326fa95767aaf03f70a482011d3d090c2c2bd718586944ed141bdb1eb"
       }
     },
     {
@@ -477,7 +477,7 @@
           "path": "work/247-full-shape-golden/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "125d2ec1396f23ce1ab25c70fb7788ffd36ee35b7bfaae7292dc5326332f86ec"
+            "value": "f888359326fa95767aaf03f70a482011d3d090c2c2bd718586944ed141bdb1eb"
           },
           "schemaVersion": 1
         },
@@ -508,7 +508,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "4ec2519ce4372acd2db68f777b88f9abc3051e8680924f06c90f05f7c90175e1"
+        "value": "7e15f75f22f763bd0151dbb1ce1c4ea6d47519f0d266641a7b8dbd58f0db4a27"
       },
       "currency": "current"
     }

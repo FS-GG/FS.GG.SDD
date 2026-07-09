@@ -405,3 +405,43 @@ module ArtifactCodecTests =
             labelToKey |> Map.toSeq |> Seq.map snd |> Set.ofSeq,
             ArtifactCodec.keys EvidenceCodec.disclosureFields |> Set.ofList
         )
+
+    [<Fact>]
+    let ``declarationFields couple to every authored EvidenceDeclaration field (T031)`` () =
+        // Record label -> YAML key. `Id` is framed by the artifact renderer and read by the semantic
+        // layer; `Source`/`SourceLocation` are parse-assigned provenance — all three are excluded from
+        // serialization. `ArtifactRefs` serializes as `artifacts`.
+        let labelToKey =
+            Map
+                [ "Kind", "kind"
+                  "Subject", "subject"
+                  "TaskRefs", "taskRefs"
+                  "RequirementRefs", "requirementRefs"
+                  "AcceptanceScenarioRefs", "acceptanceScenarioRefs"
+                  "ClarificationDecisionRefs", "clarificationDecisionRefs"
+                  "ChecklistResultRefs", "checklistResultRefs"
+                  "PlanDecisionRefs", "planDecisionRefs"
+                  "ObligationRefs", "obligationRefs"
+                  "ArtifactRefs", "artifacts"
+                  "SourceRefs", "sourceRefs"
+                  "Result", "result"
+                  "Synthetic", "synthetic"
+                  "SyntheticDisclosure", "syntheticDisclosure"
+                  "Rationale", "rationale"
+                  "Owner", "owner"
+                  "Scope", "scope"
+                  "LaterLifecycleVisibility", "laterLifecycleVisibility"
+                  "Notes", "notes" ]
+
+        // The map covers exactly the authored declaration fields — a new authored field with no
+        // mapping fails here (adding it to the record without a codec entry, SC-004)...
+        Assert.Equal<Set<string>>(
+            authoredKeys [ "Id"; "Source"; "SourceLocation" ] typeof<EvidenceDeclaration>,
+            labelToKey |> Map.toSeq |> Seq.map fst |> Set.ofSeq
+        )
+
+        // ...and the codec's Key set equals the mapped YAML keys — codec and record stay coupled.
+        Assert.Equal<Set<string>>(
+            labelToKey |> Map.toSeq |> Seq.map snd |> Set.ofSeq,
+            ArtifactCodec.keys EvidenceCodec.declarationFields |> Set.ofList
+        )
