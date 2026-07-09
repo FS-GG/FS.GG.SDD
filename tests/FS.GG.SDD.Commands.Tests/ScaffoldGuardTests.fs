@@ -238,3 +238,113 @@ module ScaffoldGuardTests =
         Assert.NotEmpty(starterValueOffenders "planted.providers.yml" plantedRegistry)
         // The pattern does NOT false-positive on a legitimate fixture template id.
         Assert.Empty(starterValueOffenders "ok.providers.yml" "    templateId: fsgg-fixture-app\n")
+
+    // ===================================================================
+    // 292 (FS.GG.SDD#292): the SDD-owned scaffold-provider fixture `App.fsproj` files sit
+    // OUTSIDE `FS.GG.SDD.sln` — they are instantiated via real `dotnet new`/scaffold at test
+    // runtime, so they must look like a fresh authored product, not a solution member. That
+    // deliberate exclusion also puts them outside Central Package Management, the committed
+    // `packages.lock.json` set, and the locked-restore determinism gate: nothing in that gate
+    // catches a TFM or package-version drift inside a fixture — only the slow, occasionally
+    // network scaffold smokes would, and those flake locally. This deterministic, offline guard
+    // pins the exclusion's blind spot: every fixture `App.fsproj` must target the repo TFM and
+    // pin no package version, so a drift fails fast in the cheap inner loop instead.
+    // ===================================================================
+
+    /// The repo's single TargetFramework source of truth (`Directory.Build.local.props`), read
+    /// live so the guard tracks a repo TFM bump rather than a hard-coded copy.
+    let private repoTargetFramework () =
+        let path = Path.Combine(TestSupport.repoRoot, "Directory.Build.local.props")
+
+        let m =
+            System.Text.RegularExpressions.Regex.Match(
+                File.ReadAllText path,
+                "<TargetFramework>([^<]+)</TargetFramework>"
+            )
+
+        Assert.True(m.Success, "Directory.Build.local.props declares no <TargetFramework>")
+        m.Groups.[1].Value.Trim()
+
+    /// Every SDD-owned scaffold-provider fixture `App.fsproj` — the projects instantiated outside
+    /// the solution / CPM / lockfile gate.
+    let private fixtureProjectFiles () =
+        let fixturesRoot =
+            Path.Combine(TestSupport.repoRoot, "tests", "fixtures", "scaffold-provider")
+
+        if Directory.Exists fixturesRoot then
+            Directory.EnumerateFiles(fixturesRoot, "*.fsproj", SearchOption.AllDirectories)
+            |> Seq.toList
+        else
+            []
+
+    // A `<PackageReference … Version="…" />` or a `<PackageVersion …>`: an ungated package pin in a
+    // fixture that lives outside CPM. Under CPM discipline a project references packages
+    // version-agnostically (the version is centrally managed); these fixtures currently declare no
+    // packages at all. Any versioned pin here is exactly the drift #292 names.
+    let private versionedPackagePattern =
+        System.Text.RegularExpressions.Regex("(?is)<PackageReference\\b[^>]*\\bVersion\\s*=|<PackageVersion\\b")
+
+    // ---------- C6 (292): fixture-project TFM + package-pin discipline ----------
+
+    [<Fact>]
+    let ``scaffold fixture projects target the repo TFM`` () =
+        let expected = repoTargetFramework ()
+        let projects = fixtureProjectFiles ()
+        // Not vacuous: the guard must see fixtures, or a rename/move silently disarmed it.
+        Assert.NotEmpty projects
+
+        let offenders =
+            projects
+            |> List.choose (fun path ->
+                let m =
+                    System.Text.RegularExpressions.Regex.Match(
+                        File.ReadAllText path,
+                        "<TargetFramework>([^<]+)</TargetFramework>"
+                    )
+
+                let actual =
+                    if m.Success then
+                        m.Groups.[1].Value.Trim()
+                    else
+                        "(no TargetFramework)"
+
+                if actual = expected then None else Some $"{path}: {actual}")
+
+        Assert.True(
+            List.isEmpty offenders,
+            $"Scaffold fixture projects drifted off the repo TFM ({expected}): "
+            + String.Join("; ", offenders)
+        )
+
+    [<Fact>]
+    let ``scaffold fixture projects pin no package version (outside CPM)`` () =
+        let projects = fixtureProjectFiles ()
+        Assert.NotEmpty projects
+
+        let offenders =
+            projects
+            |> List.filter (fun path -> versionedPackagePattern.IsMatch(File.ReadAllText path))
+
+        Assert.True(
+            List.isEmpty offenders,
+            "Scaffold fixture projects declare a versioned package pin outside CPM/lockfile enforcement: "
+            + String.Join("; ", offenders)
+        )
+
+    // ---------- C7 (292): planted-violation proof for both fixture-drift shapes ----------
+
+    [<Fact>]
+    let ``fixture-project scan catches a planted TFM drift and a planted versioned package pin`` () =
+        // A fixture flipped off the repo TFM.
+        let plantedTfm = "<TargetFramework>net9.0</TargetFramework>"
+
+        let tfmMatch =
+            System.Text.RegularExpressions.Regex.Match(plantedTfm, "<TargetFramework>([^<]+)</TargetFramework>")
+
+        Assert.NotEqual<string>(repoTargetFramework (), tfmMatch.Groups.[1].Value.Trim())
+
+        // A fixture pinning a drifting package version outside CPM.
+        Assert.True(versionedPackagePattern.IsMatch("""<PackageReference Include="FsCheck" Version="3.3.3" />"""))
+        Assert.True(versionedPackagePattern.IsMatch("""  <PackageVersion Include="FsCheck" Version="3.3.3" />"""))
+        // A version-agnostic (CPM-style) reference is legitimate and does NOT trip the guard.
+        Assert.False(versionedPackagePattern.IsMatch("""<PackageReference Include="FsCheck" />"""))
