@@ -33,6 +33,22 @@ module RegistrySkillManifest =
 
         find args |> Option.defaultValue "."
 
+    // FS-GG/FS.GG.SDD#237 (Gap C finding 4 / #203): confine `--root` so the manifest path
+    // stays inside the workspace. `Path.Combine(root, …)` returns the manifest suffix verbatim
+    // when `root` is rooted, and `GetFullPath` resolves `..`, so a bare `--root /etc --write`
+    // would write out of tree. This is the lexical guard `surface` already uses (#185): the
+    // check MUST run on the RAW value, because a normalize-then-test would `TrimStart('/')` the
+    // leading slash away and let `/etc` through as `etc`. It is a copy of the internal
+    // `Commands.Internal.Foundation.escapesRoot` — unreachable from this assembly — kept small
+    // and comment-linked so the two cannot silently drift; the durable effect-edge containment
+    // primitive is #203/ADR-0002, not this predicate.
+    let private escapesRoot (raw: string) =
+        let trimmed = raw.Trim().Replace('\\', '/')
+
+        String.IsNullOrWhiteSpace trimmed
+        || Path.IsPathRooted trimmed // on the RAW string, before any TrimStart('/')
+        || (trimmed.Split('/') |> Array.contains "..")
+
     let private targetPath (root: string) =
         Path.Combine(root, manifestPath.Replace('/', Path.DirectorySeparatorChar))
 
@@ -47,35 +63,48 @@ module RegistrySkillManifest =
             0
         else
 
-            let target = targetPath (rootOf args)
-            let json = generate ()
+            let root = rootOf args
 
-            if List.contains "--check" args then
-                // Drift-guard mode: the committed artifact must match a fresh generation
-                // (modulo checkout line endings). Missing or stale ⇒ non-zero + an actionable
-                // hint on stderr, so stdout stays clean and CI fails loud (SC/AC-006).
-                if File.Exists target && normalizeNewlines (File.ReadAllText target) = json then
-                    Console.Out.WriteLine($"registry skill-manifest: {manifestPath} up to date")
+            // Containment first: an escaping `--root` plans no read and no write (parity with
+            // `surface` #185). User-input failure ⇒ exit 1, stderr diagnostic, stdout stays clean.
+            if escapesRoot root then
+                Console.Error.WriteLine(
+                    $"registry skill-manifest: --root '{root}' escapes the workspace root — "
+                    + "pass a path inside the workspace (no absolute path or '..')."
+                )
+
+                1
+            else
+
+                let target = targetPath root
+                let json = generate ()
+
+                if List.contains "--check" args then
+                    // Drift-guard mode: the committed artifact must match a fresh generation
+                    // (modulo checkout line endings). Missing or stale ⇒ non-zero + an actionable
+                    // hint on stderr, so stdout stays clean and CI fails loud (SC/AC-006).
+                    if File.Exists target && normalizeNewlines (File.ReadAllText target) = json then
+                        Console.Out.WriteLine($"registry skill-manifest: {manifestPath} up to date")
+                        0
+                    else
+                        let reason = if File.Exists target then "is STALE" else "is MISSING"
+
+                        Console.Error.WriteLine(
+                            $"registry skill-manifest: {manifestPath} {reason} — "
+                            + "run `fsgg-sdd registry skill-manifest --write`"
+                        )
+
+                        1
+                elif List.contains "--write" args then
+                    match Path.GetDirectoryName target with
+                    | null
+                    | "" -> ()
+                    | dir -> Directory.CreateDirectory dir |> ignore
+
+                    File.WriteAllText(target, json)
+                    Console.Out.WriteLine($"registry skill-manifest: wrote {manifestPath}")
                     0
                 else
-                    let reason = if File.Exists target then "is STALE" else "is MISSING"
-
-                    Console.Error.WriteLine(
-                        $"registry skill-manifest: {manifestPath} {reason} — "
-                        + "run `fsgg-sdd registry skill-manifest --write`"
-                    )
-
-                    1
-            elif List.contains "--write" args then
-                match Path.GetDirectoryName target with
-                | null
-                | "" -> ()
-                | dir -> Directory.CreateDirectory dir |> ignore
-
-                File.WriteAllText(target, json)
-                Console.Out.WriteLine($"registry skill-manifest: wrote {manifestPath}")
-                0
-            else
-                // Bare: the manifest JSON is itself the automation contract — to stdout.
-                Console.Out.Write json
-                0
+                    // Bare: the manifest JSON is itself the automation contract — to stdout.
+                    Console.Out.Write json
+                    0
