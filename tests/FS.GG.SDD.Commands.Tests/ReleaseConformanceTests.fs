@@ -92,13 +92,20 @@ module ReleaseConformanceTests =
     // observed (>=1 element) in the produced conformance snapshot, so a future producer change that
     // silently empties a catalogued array fails HERE with a precise message ("catalogued array X is
     // empty in the conformance fixture") rather than as an opaque `releaseFieldAbsent` drift.
+    // Every array level named by a dotted key, each including its "[]" marker: "sources[].path"
+    // -> ["sources[]"]; "generatedViews[].sources[].digest" -> ["generatedViews[]";
+    // "generatedViews[].sources[]"]. Both levels matter — an outer array can be populated while a
+    // nested one is empty, which is the same blind spot one level down.
+    let private arrayPrefixes (name: string) =
+        let rec loop (from: int) acc =
+            match name.IndexOf("[]", from) with
+            | -1 -> List.rev acc
+            | idx -> loop (idx + 2) (name.Substring(0, idx + 2) :: acc)
+
+        loop 0 []
+
     let private cataloguedArrayPrefixes contract =
-        documentedSections contract
-        |> List.choose (fun name ->
-            match name.IndexOf "[]" with
-            | -1 -> None
-            | idx -> Some(name.Substring(0, idx + 2))) // include the "[]" marker, e.g. "sources[]"
-        |> List.distinct
+        documentedSections contract |> List.collect arrayPrefixes |> List.distinct
 
     [<Fact>]
     let ``T016 every catalogued array is populated (>=1 element) in the conformance fixture (#291)`` () =
