@@ -115,6 +115,12 @@ module ReleaseContract =
 
     val releaseChannelValue: channel: ReleaseChannel -> string
     val changeClassValue: changeClass: ChangeClass -> string
+
+    /// Every distinct JSON field path to full depth, as dotted paths (`parent.child`, arrays as
+    /// `parent[].child`, elements deduplicated); `[]` for a non-object or unparseable root. The
+    /// observed key set the release drift check walks so nested drift is visible to `evaluate`
+    /// (ADR-0002 Gap B finding 6 / #261).
+    val fullDepthKeys: text: string -> string list
     val stabilityClassValue: stability: StabilityClass -> string
     val contractFormatValue: format: ContractFormat -> string
     val inventoryKindValue: kind: InventoryKind -> string

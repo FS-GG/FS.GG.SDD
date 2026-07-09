@@ -164,12 +164,16 @@ twice over identical inputs yields byte-identical output. (FR-008)
 
 ## Field and section inventories
 
-For each contract the catalog enumerates an inventory: every JSON field (with
-per-field stability) for JSON contracts, or every document section for Markdown
-projections. In every JSON contract the `schemaVersion` field is classed
-**Stable**; remaining fields are **AdditiveOptional**. The full inventories live
-in the authoritative `catalog[].inventory` of
-[`release-readiness.json`](release-readiness.json); summaries follow.
+For each contract the catalog enumerates an inventory: every JSON field **to full
+depth** (nested fields as dotted paths — `sources[].path`, `readiness.status` —
+with array elements deduplicated) for JSON contracts, or every document section
+for Markdown projections. So the release drift check (`ReleaseContract.evaluate`)
+sees a nested add/remove, not only a top-level one (ADR-0002 Gap B finding 6 /
+FS-GG/FS.GG.SDD#261). The top-level `schemaVersion` field is classed **Stable**;
+every other field — top-level or nested — is **AdditiveOptional**. The full
+inventories live in the authoritative `catalog[].inventory` of
+[`release-readiness.json`](release-readiness.json); the summaries below list
+top-level fields only.
 
 ### JSON contracts (fields)
 
