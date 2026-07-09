@@ -287,7 +287,8 @@ let guarded (dispatch: string list -> int) (args: string list) =
                 Console.Error.WriteLine(
                     "fsgg-sdd: unhandledException — an unexpected internal error occurred (tool defect)."
                 )
-             with _ -> ())
+             with _ ->
+                 ())
 
             2
 
