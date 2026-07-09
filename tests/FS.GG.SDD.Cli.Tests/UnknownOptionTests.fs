@@ -80,6 +80,29 @@ module UnknownOptionTests =
         Assert.Empty(Options.unrecognized Lint [ "--"; "work/x/checklist.md" ])
         Assert.Empty(Options.unrecognized Init [ "-" ])
 
+    // ----- the positional extractor (FS-GG/FS.GG.SDD#253, Gap C finding 3) -----
+
+    // The defect: the first non-`--` token was `.` (the `--root` value), so `lint --root . spec.md`
+    // read `.` instead of the artifact. `positional` skips a valued option's argument.
+    [<Fact>]
+    let ``positional skips a preceding valued option's argument`` () =
+        Assert.Equal(Some "spec.md", Options.positional Lint [ "--root"; "."; "spec.md" ])
+
+    [<Fact>]
+    let ``positional resolves the artifact whether a flag precedes or follows it`` () =
+        Assert.Equal(Some "spec.md", Options.positional Lint [ "--text"; "spec.md" ])
+        Assert.Equal(Some "spec.md", Options.positional Lint [ "spec.md"; "--text" ])
+
+    [<Fact>]
+    let ``positional selects the token after the end-of-options separator`` () =
+        Assert.Equal(Some "work/x/spec.md", Options.positional Lint [ "--"; "work/x/spec.md" ])
+
+    [<Fact>]
+    let ``positional is None when args carry only options and their values`` () =
+        Assert.Equal(None, Options.positional Charter [ "--work"; "x"; "--title"; "t" ])
+        Assert.Equal(None, Options.positional Lint [ "--text" ])
+        Assert.Equal(None, Options.positional Lint [])
+
     [<Fact>]
     let ``repeated --input and --param are recognized`` () =
         Assert.Empty(Options.unrecognized Specify [ "--input"; "value: v"; "--input"; "scope: s" ])

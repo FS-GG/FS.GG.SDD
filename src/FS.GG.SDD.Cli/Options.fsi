@@ -39,6 +39,13 @@ module Options =
     /// a value that happens to look like a flag is never reported.
     val unrecognized: command: SddCommand -> args: string list -> string list
 
+    /// The first positional token in `args` — a bare token that is neither an option token nor
+    /// the argument of a preceding valued option (`lint`'s `<artifact>`). The POSIX `--` separator
+    /// is skipped so the token after it is selected; `None` when `args` carries no positional.
+    /// Shares `unrecognized`'s value-skipping scan so a valued option's argument is never mistaken
+    /// for the positional (FS-GG/FS.GG.SDD#253).
+    val positional: command: SddCommand -> args: string list -> string option
+
     /// The recognized token `token` most plausibly meant, or `None` when nothing is close.
     /// Deterministic: candidates are ranked by (containment before edit distance, distance,
     /// declaration order), never by a score that could reorder between runs.

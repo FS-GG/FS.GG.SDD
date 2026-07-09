@@ -108,6 +108,14 @@ module LintCommandTests =
         let _, code = runCli [ "lint"; "--text"; fixture "checklist.md" ]
         Assert.Equal(1, code)
 
+    // #253 (Gap C finding 3): a preceding *valued* option must not swallow the positional.
+    // Pre-fix, `--root .` made the artifact resolve to `.` (exit 2, unusable) instead of the
+    // defect-bearing checklist (exit 1).
+    [<Fact; Trait("tier", "slow")>]
+    let ``lint resolves the artifact past a preceding valued option's argument`` () =
+        let _, code = runCli [ "lint"; "--root"; "."; fixture "checklist.md" ]
+        Assert.Equal(1, code)
+
     // `<stage> --explain` shares the 0/1/2 mapping: a missing stage artifact is unusable -> 2.
     [<Fact; Trait("tier", "slow")>]
     let ``stage --explain on a missing artifact exits 2`` () =

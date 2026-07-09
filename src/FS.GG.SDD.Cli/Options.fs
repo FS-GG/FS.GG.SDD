@@ -89,6 +89,33 @@ module Options =
 
         scan args []
 
+    // FS-GG/FS.GG.SDD#253 (Gap C finding 3 / #203): the `lint <artifact>` positional used to be the
+    // first token that did not start with `--`. That predicate cannot see which tokens are *values*
+    // of a preceding valued option, so `lint --root . spec.md` resolved `.` (the `--root` value) as
+    // the artifact and never read `spec.md`. The same value-skipping scan `unrecognized` already runs
+    // is the correct classifier: a token is the positional only when it is neither an option token nor
+    // a valued option's argument. `--` (the POSIX end-of-options separator) is option *syntax*, not a
+    // positional, so it is skipped and the token after it is selected (`lint -- work/x/spec.md` still
+    // lints the file, FS-GG/FS.GG.SDD#246); a bare `-` carries no dash and remains selectable.
+    let positional (command: SddCommand) (args: string list) =
+        let known = recognized command
+
+        let rec scan args =
+            match args with
+            | [] -> None
+            | token :: rest when isOptionToken token ->
+                match known |> List.tryFind (fun spec -> spec.Token = token) with
+                | Some spec when spec.TakesValue ->
+                    match rest with
+                    | _value :: tail -> scan tail
+                    | [] -> None
+                | _ -> scan rest
+            // The end-of-options separator is not itself a positional; the token after it is.
+            | "--" :: rest -> scan rest
+            | token :: _ -> Some token
+
+        scan args
+
     /// Levenshtein distance. Bounded by the token lengths the CLI deals in (< 20 chars), so the
     /// quadratic table is free and the result is exact rather than a heuristic score.
     let private editDistance (left: string) (right: string) =
