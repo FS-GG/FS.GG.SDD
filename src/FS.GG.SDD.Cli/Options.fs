@@ -62,8 +62,12 @@ module Options =
     /// A token the scanner should classify — everything the CLI spells with a leading dash.
     /// `lint`'s positional artifact and every option *value* are excluded by construction:
     /// values are consumed alongside their option, and a bare positional carries no dash.
+    /// Bare `-` and the POSIX end-of-options separator `--` are option *syntax*, not option
+    /// names, so neither is residue — the pre-#196 positional finder skipped `--`, and this
+    /// preserves that (`fsgg-sdd lint -- work/x/spec.md` still lints the file) rather than
+    /// rejecting `--` with a spurious `unknownOption` / "did you mean '-h'?" (FS-GG/FS.GG.SDD#246).
     let private isOptionToken (token: string) =
-        token.StartsWith("-", StringComparison.Ordinal) && token <> "-"
+        token.StartsWith("-", StringComparison.Ordinal) && token <> "-" && token <> "--"
 
     let unrecognized (command: SddCommand) (args: string list) =
         let known = recognized command
