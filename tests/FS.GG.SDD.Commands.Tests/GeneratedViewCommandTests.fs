@@ -79,11 +79,14 @@ module GeneratedViewCommandTests =
         )
 
     [<Fact>]
-    let ``authoring stages stay silent when the work model blocks and no view exists`` () =
-        // The complement of the verify test: at a pre-verify authoring stage the work model is
-        // a side view, so a blocking model with no view on disk is reported through the view
-        // state (Missing) but owes no diagnostic — surfacing the always-on authoring-stage case
-        // awaits the reference-resolution work in FS.GG.SDD#204.
+    let ``authoring stages surface a never-written blocking work model`` () =
+        // FS.GG.SDD#262 (Gap B finding 7): the always-on half of the #191 silent-drop fix. A
+        // blocking work model with no view on disk used to owe no diagnostic at the pre-verify
+        // authoring stages (charter…evidence) — the verify/ship-only carve-out that awaited the
+        // Gap D reference-resolution work (FS.GG.SDD#204). With the decision-grammar convergence
+        // landed (#265 / ADR-0003), that carve-out is retired: `workModelNotGenerated` now fires
+        // at every seam, so `charter` (an authoring stage) surfaces the blocking reason too,
+        // rather than reporting the view Missing with an empty diagnostics list.
         let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.writeRelative root $"work/{workId}/spec.md" (TestSupport.validSpec workId title)
@@ -108,12 +111,23 @@ tasks:
 
         let report = TestSupport.runCharter root workId title
 
-        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "workModelNotGenerated")
+        // The blocking reason travels with the surfaced diagnostic (FR-404 is undeclared, so the
+        // derived model blocks on `unknownReference`), not just a generic Missing marker.
+        Assert.Contains(
+            report.Diagnostics,
+            fun diagnostic ->
+                diagnostic.Id = "workModelNotGenerated"
+                && diagnostic.RelatedIds |> List.contains "unknownReference"
+        )
+
         Assert.False(TestSupport.existsRelative root workModelPath)
 
         Assert.Contains(
             report.GeneratedViews,
-            fun view -> view.Path = workModelPath && view.Currency = GeneratedViewCurrency.Missing
+            fun view ->
+                view.Path = workModelPath
+                && view.Currency = GeneratedViewCurrency.Missing
+                && view.DiagnosticIds |> List.contains "workModelNotGenerated"
         )
 
     [<Fact>]
