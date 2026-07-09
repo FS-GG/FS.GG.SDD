@@ -754,3 +754,71 @@ evidence:
             let snapshot = Assert.Single(artifact.SourceSnapshots)
             Assert.Equal(None, snapshot.Digest)
             Assert.Equal(None, snapshot.SchemaVersion)
+
+    // --- Issue #225 finding 4 (spec 096 AC-005): duplicate obligation ids merge like `TD-` ---
+    //
+    // `evidenceObligations` is a `List.collect` over tasks that emits one obligation per
+    // (task, requiredEvidence) pair. Two tasks sharing `requiredEvidence: [EV001]` used to yield two
+    // obligations with the same `ObligationId`, which scaffold a duplicate `EV001` declaration and a
+    // duplicate `ED-EV001` disposition row, and left AC-005's union-lineage fold unreachable. The fix
+    // groups by the obligation id and unions the lineage — the shape `verifyTestDispositionViews`
+    // already reaches with its `groupBy`, so `TD-`/`ED-` merge identically.
+    let private twoTaskSharedEvidenceFacts () =
+        let text =
+            """schemaVersion: 1
+tasks:
+  - id: T001
+    title: First task
+    status: pending
+    owner: codex
+    requirements: [FR-001]
+    decisions: [DEC-001]
+    sourceIds: [AC-001]
+    dependencies: []
+    requiredSkills: [fs-gg-sdd-project]
+    requiredEvidence: [EV001]
+  - id: T002
+    title: Second task
+    status: pending
+    owner: codex
+    requirements: [FR-002]
+    decisions: [DEC-002]
+    sourceIds: [AC-002]
+    dependencies: [T001]
+    requiredSkills: [fs-gg-sdd-project]
+    requiredEvidence: [EV001]
+"""
+
+        match Task.parseTaskFacts { Path = $"work/{workId}/tasks.yml"; Text = text } with
+        | Ok facts -> facts
+        | Error diagnostics -> failwith $"Two-task fixture did not parse: {diagnostics}."
+
+    [<Fact>]
+    let ``evidenceObligations merges an obligation shared by two tasks into one unioned obligation`` () =
+        let facts = twoTaskSharedEvidenceFacts ()
+        let obligations = HandlersEvidence.evidenceObligations facts
+
+        let shared =
+            obligations |> List.filter (fun obligation -> obligation.ObligationId = "EV001")
+
+        // One obligation, not one-per-task: no duplicate `EV001` reaches scaffolding or dispositions.
+        Assert.Equal(1, List.length shared)
+        let obligation = List.head shared
+
+        Assert.Equal<string list>(
+            [ "T001"; "T002" ],
+            obligation.LinkedTaskIds |> List.map _.Value |> List.sort
+        )
+
+        Assert.Equal<string list>(
+            [ "FR-001"; "FR-002" ],
+            obligation.LinkedRequirementIds |> List.map _.Value |> List.sort
+        )
+
+        Assert.Equal<string list>([ "DEC-001"; "DEC-002" ], obligation.LinkedDecisionIds |> List.sort)
+        Assert.Equal<string list>([ "AC-001"; "AC-002" ], obligation.LinkedSourceIds |> List.sort)
+
+        // The two per-task obligations collapsed to exactly one row — no duplicate reaches the
+        // scaffold or the disposition views. (Single-task pass-through is guarded by every existing
+        // single-obligation fixture's golden, which the `List.distinct` union leaves byte-identical.)
+        Assert.Equal(1, List.length obligations)
