@@ -883,7 +883,16 @@ module WorkModel =
                             jmArray "diagnostics" root
                             |> List.map parseEmbeddedDiagnostic
                             |> Diagnostics.sort
-                          GovernanceBoundaries = [] }
+                          GovernanceBoundaries =
+                            jmArray "governanceBoundaries" root
+                            |> List.map (fun item ->
+                                { Path = jmString "path" item
+                                  Owner = jmString "owner" item
+                                  RequiredBySdd =
+                                    (jmProp "requiredBySdd" item
+                                     |> Option.exists (fun value -> value.ValueKind = JsonValueKind.True))
+                                  Relationship = jmString "relationship" item })
+                            |> List.sortBy (fun boundary -> boundary.Path) }
             | _ ->
                 Error
                     [ Diagnostics.malformedSchemaVersion
