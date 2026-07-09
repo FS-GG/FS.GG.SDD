@@ -72,6 +72,21 @@ module internal DiagnosticConstructors =
             $"Use one of: {options}.{hint}"
             [ value ]
 
+    // Top-level exception backstop (FS-GG/FS.GG.SDD#250, Gap C finding 7): a throw that escapes the
+    // pure plan/update/serialize pipeline used to print a raw CLR stack trace and exit with the
+    // default unhandled code. This is the CLI-edge sibling of `unknownCommand`/`unknownOption`,
+    // classifying the escape as a *tool defect* (exit 2 via `IsToolDefect`) rather than malformed
+    // input — the "never a raw stack trace; distinguish malformed input from tool defect" doctrine.
+    // Carries the exception message (not the stack) so the failure is diagnosable without a leak.
+    let unhandledException (message: string) =
+        errorDiagnostic
+            "unhandledException"
+            None
+            $"The CLI failed with an unexpected internal error: {message}"
+            "This is a tool defect, not a problem with your input. Re-run with the same arguments; if it recurs, report it to FS.GG.SDD with the command line that triggered it."
+            []
+        |> DiagnosticsModule.markToolDefect
+
     let malformedWorkId (value: string) =
         errorDiagnostic
             "malformedWorkId"

@@ -16,6 +16,9 @@ module CommandReports =
     let unknownOption command value recognized suggestion =
         DiagnosticConstructors.unknownOption command value recognized suggestion
 
+    let unhandledException message =
+        DiagnosticConstructors.unhandledException message
+
     let malformedWorkId value =
         DiagnosticConstructors.malformedWorkId value
 

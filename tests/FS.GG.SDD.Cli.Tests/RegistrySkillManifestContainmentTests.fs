@@ -9,6 +9,11 @@ open Xunit
 /// inside the workspace. An absolute or `..`-bearing root is refused with exit 1 and plans no
 /// read and no write — parity with the `surface` #185 mitigation. In-process (no subprocess) so
 /// it stays on the fast tier and observes the "no filesystem effect" invariant directly.
+///
+/// Serialized via the `Console` collection: the capture swaps the process-global `Console.Error`,
+/// so it must not run concurrently with any other stderr-capturing class (e.g.
+/// `ExceptionBackstopTests`).
+[<Collection("Console")>]
 module RegistrySkillManifestContainmentTests =
 
     // `run` reports the escape on stderr; capture it without disturbing the shared console.
