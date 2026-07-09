@@ -1,6 +1,8 @@
 namespace FS.GG.SDD.Artifacts.Tests
 
 open FS.GG.SDD.Artifacts
+open FS.GG.SDD.Artifacts.Identifiers
+open FS.GG.SDD.Artifacts.ArtifactRef
 open FSharp.Reflection
 open Xunit
 
@@ -354,11 +356,23 @@ module ArtifactCodecTests =
 
         Assert.Equal("", ArtifactCodec.render holderFields { D = None }) // None -> key omitted
 
-    // === T031 — the real evidence record↔codec coupling (FR-007, FS.GG.SDD#260) ===
-    // The wiring has landed: `EvidenceCodec.{sourceRefFields,disclosureFields}` drive both the
-    // Evidence.fs reader and the HandlersEvidence renderer. These assert the codec Key set equals
-    // each authored record's label set, so adding an authored field with no codec entry — or a codec
-    // field with no record field — fails here (SC-004).
+    // === T031 — the real record↔codec coupling (FR-007, FS.GG.SDD#260, hardened FS.GG.SDD#290) ===
+    // One shared `fields` list drives both the reader (Evidence.fs / Task.fs) and the renderer
+    // (HandlersEvidence / task authoring) for each authored record. Each test below pins that
+    // coupling THREE ways from a single per-field `spec`, so drift in any direction fails here:
+    //   (1) the record's authored LABELS equal the spec's labels — a new authored field with no
+    //       spec row (hence no codec entry) fails (SC-004);
+    //   (2) the codec's KEY set equals the union of the spec's keys — a codec field with no record
+    //       field (or vice-versa) fails;
+    //   (3) rendering a fully-populated record (every field a DISTINCT value) puts each field's own
+    //       value under its OWN key — a *transposition* (two fields whose keys are cross-wired but
+    //       whose key SET is unchanged) fails here. The earlier key-set-only assertions were blind
+    //       to that transposition (FS.GG.SDD#290); the round-trip properties covered it only
+    //       generatively.
+    // A spec row is `label, [ key, valuePinnedFragment ]` — one key for a scalar/list field, two for
+    // the task `Status` DU (`status` tag + `skipRationale` payload). Structurally-unique block fields
+    // (the nested `subject`/`syntheticDisclosure`, the `sourceRefs` record list) pin their block
+    // header plus a first inner value; a scalar can never transpose into a block by shape.
 
     let private authoredKeys (excluded: string list) (ty: System.Type) =
         FSharpType.GetRecordFields ty
@@ -366,113 +380,171 @@ module ArtifactCodecTests =
         |> Array.filter (fun name -> not (Set.contains name (set excluded)))
         |> Set.ofArray
 
-    [<Fact>]
-    let ``sourceRefFields couple to every authored EvidenceSourceReference field (T031)`` () =
-        // Record label -> YAML key: `ReferenceId`/`RelatedSourceId` serialize as `id`/`relatedSourceId`;
-        // `SourceLocation` is parse-assigned provenance, excluded from serialization.
-        let labelToKey =
-            Map
-                [ "ReferenceId", "id"
-                  "Kind", "kind"
-                  "Path", "path"
-                  "Uri", "uri"
-                  "Digest", "digest"
-                  "RelatedSourceId", "relatedSourceId"
-                  "Result", "result" ]
+    let private orFail label =
+        function
+        | Ok value -> value
+        | Error(error: string) -> failwithf "%s: %s" label error
 
-        // The map covers exactly the authored record fields — a new field with no mapping fails here...
+    // Assert the three-way coupling of a record type, its codec field list, and a fully-populated
+    // model whose every field carries a distinct value, against a per-field `spec`.
+    let private assertCoupled
+        (excluded: string list)
+        (recordType: System.Type)
+        (codecFields: ArtifactCodec.FieldCodec<'M> list)
+        (model: 'M)
+        (spec: (string * (string * string) list) list)
+        =
+        // (1) labels cover exactly the authored record fields (minus parse-assigned provenance).
+        Assert.Equal<Set<string>>(authoredKeys excluded recordType, spec |> List.map fst |> Set.ofList)
+
+        // (2) the codec's Key set equals the union of the spec's keys.
         Assert.Equal<Set<string>>(
-            authoredKeys [ "SourceLocation" ] typeof<EvidenceSourceReference>,
-            labelToKey |> Map.toSeq |> Seq.map fst |> Set.ofSeq
+            spec |> List.collect (snd >> List.map fst) |> Set.ofList,
+            ArtifactCodec.keys codecFields |> Set.ofList
         )
 
-        // ...and the codec's Key set equals the mapped YAML keys — codec and record stay coupled.
-        Assert.Equal<Set<string>>(
-            labelToKey |> Map.toSeq |> Seq.map snd |> Set.ofSeq,
-            ArtifactCodec.keys EvidenceCodec.sourceRefFields |> Set.ofList
-        )
+        // (3) each field's own value renders under its own key — catches a label->key transposition.
+        let rendered = ArtifactCodec.render codecFields model
 
-    [<Fact>]
-    let ``disclosureFields couple to every authored SyntheticDisclosure field (T031)`` () =
-        let labelToKey = Map [ "StandsInFor", "standsInFor"; "Reason", "reason" ]
-
-        Assert.Equal<Set<string>>(
-            authoredKeys [] typeof<SyntheticDisclosure>,
-            labelToKey |> Map.toSeq |> Seq.map fst |> Set.ofSeq
-        )
-
-        Assert.Equal<Set<string>>(
-            labelToKey |> Map.toSeq |> Seq.map snd |> Set.ofSeq,
-            ArtifactCodec.keys EvidenceCodec.disclosureFields |> Set.ofList
-        )
+        for label, keyed in spec do
+            for key, fragment in keyed do
+                Assert.True(
+                    rendered.Contains(fragment: string),
+                    $"field '{label}' (key '{key}') not value-pinned: expected\n  {fragment}\nin rendered:\n{rendered}"
+                )
 
     [<Fact>]
-    let ``declarationFields couple to every authored EvidenceDeclaration field (T031)`` () =
-        // Record label -> YAML key. `Id` is framed by the artifact renderer and read by the semantic
-        // layer; `Source`/`SourceLocation` are parse-assigned provenance — all three are excluded from
-        // serialization. `ArtifactRefs` serializes as `artifacts`.
-        let labelToKey =
-            Map
-                [ "Id", "id"
-                  "Kind", "kind"
-                  "Subject", "subject"
-                  "TaskRefs", "taskRefs"
-                  "RequirementRefs", "requirementRefs"
-                  "AcceptanceScenarioRefs", "acceptanceScenarioRefs"
-                  "ClarificationDecisionRefs", "clarificationDecisionRefs"
-                  "ChecklistResultRefs", "checklistResultRefs"
-                  "PlanDecisionRefs", "planDecisionRefs"
-                  "ObligationRefs", "obligationRefs"
-                  "ArtifactRefs", "artifacts"
-                  "SourceRefs", "sourceRefs"
-                  "Result", "result"
-                  "Synthetic", "synthetic"
-                  "SyntheticDisclosure", "syntheticDisclosure"
-                  "Rationale", "rationale"
-                  "Owner", "owner"
-                  "Scope", "scope"
-                  "LaterLifecycleVisibility", "laterLifecycleVisibility"
-                  "Notes", "notes" ]
+    let ``sourceRefFields couple to every authored EvidenceSourceReference field (T031/#290)`` () =
+        // `ReferenceId`/`RelatedSourceId` serialize as `id`/`relatedSourceId`; `SourceLocation` is
+        // parse-assigned provenance, excluded from serialization.
+        let model =
+            { EvidenceCodec.sourceRefSeed with
+                ReferenceId = Some "idval"
+                Kind = "kindval"
+                Path = Some "pathval"
+                Uri = Some "urival"
+                Digest = Some "digestval"
+                RelatedSourceId = Some "relatedval"
+                Result = Some "resultval" }
 
-        // The map covers exactly the authored declaration fields — a new authored field with no
-        // mapping fails here (adding it to the record without a codec entry, SC-004). `id` is now a
-        // codec field (the `evidence` recordList frames it); only parse provenance is excluded.
-        Assert.Equal<Set<string>>(
-            authoredKeys [ "Source"; "SourceLocation" ] typeof<EvidenceDeclaration>,
-            labelToKey |> Map.toSeq |> Seq.map fst |> Set.ofSeq
-        )
-
-        // ...and the codec's Key set equals the mapped YAML keys — codec and record stay coupled.
-        Assert.Equal<Set<string>>(
-            labelToKey |> Map.toSeq |> Seq.map snd |> Set.ofSeq,
-            ArtifactCodec.keys EvidenceCodec.declarationFields |> Set.ofList
-        )
+        assertCoupled
+            [ "SourceLocation" ]
+            typeof<EvidenceSourceReference>
+            EvidenceCodec.sourceRefFields
+            model
+            [ "ReferenceId", [ "id", "id: idval" ]
+              "Kind", [ "kind", "kind: kindval" ]
+              "Path", [ "path", "path: pathval" ]
+              "Uri", [ "uri", "uri: urival" ]
+              "Digest", [ "digest", "digest: digestval" ]
+              "RelatedSourceId", [ "relatedSourceId", "relatedSourceId: relatedval" ]
+              "Result", [ "result", "result: resultval" ] ]
 
     [<Fact>]
-    let ``taskFields couple to every authored WorkTask field (T031)`` () =
-        // Record label -> the YAML key(s) it owns. `Id` is framed by the renderer / read by the
-        // semantic layer; `Source`/`SourceLocation` are parse provenance — all excluded. `Status` (a
-        // DU) spans TWO keys: `status` (the tag) and `skipRationale` (the Skipped payload).
-        let labelToKeys =
-            Map
-                [ "Title", [ "title" ]
-                  "Status", [ "status"; "skipRationale" ]
-                  "Owner", [ "owner" ]
-                  "Dependencies", [ "dependencies" ]
-                  "Requirements", [ "requirements" ]
-                  "Decisions", [ "decisions" ]
-                  "SourceIds", [ "sourceIds" ]
-                  "RequiredSkills", [ "requiredSkills" ]
-                  "RequiredEvidence", [ "requiredEvidence" ] ]
+    let ``disclosureFields couple to every authored SyntheticDisclosure field (T031/#290)`` () =
+        // The codec operates over the null-aware `DisclosureDraft`, whose fields mirror the authored
+        // `SyntheticDisclosure` one-for-one (the coupling is asserted against the authored record).
+        let model: EvidenceCodec.DisclosureDraft =
+            { StandsInFor = Some "standsval"
+              Reason = Some "reasonval" }
 
-        // The map covers exactly the authored record fields — a new field with no mapping fails here...
-        Assert.Equal<Set<string>>(
-            authoredKeys [ "Id"; "Source"; "SourceLocation" ] typeof<WorkTask>,
-            labelToKeys |> Map.toSeq |> Seq.map fst |> Set.ofSeq
-        )
+        assertCoupled
+            []
+            typeof<SyntheticDisclosure>
+            EvidenceCodec.disclosureFields
+            model
+            [ "StandsInFor", [ "standsInFor", "standsInFor: standsval" ]
+              "Reason", [ "reason", "reason: reasonval" ] ]
 
-        // ...and the union of mapped keys equals the codec's Key set — codec and record stay coupled.
-        Assert.Equal<Set<string>>(
-            labelToKeys |> Map.toSeq |> Seq.collect snd |> Set.ofSeq,
-            ArtifactCodec.keys TaskCodec.taskFields |> Set.ofList
-        )
+    [<Fact>]
+    let ``declarationFields couple to every authored EvidenceDeclaration field (T031/#290)`` () =
+        // `Id` is a codec field (the `evidence` recordList frames it); `Source`/`SourceLocation` are
+        // parse-assigned provenance, excluded. `ArtifactRefs` serializes as `artifacts`.
+        let artifactRef =
+            ArtifactRef.create "docs/artifactval.md" (ArtifactKind.Other "e") ArtifactOwner.Sdd false
+            |> orFail "artifactRef"
+
+        let model =
+            { EvidenceCodec.declarationSeed with
+                Id = createEvidenceId "EV009" |> orFail "evId"
+                Kind = EvidenceKind.Verification
+                Subject =
+                    { SubjectType = "subjtypeval"
+                      Id = "subjidval" }
+                TaskRefs = [ createTaskId "T007" |> orFail "taskId" ]
+                RequirementRefs = [ createRequirementId "FR-007" |> orFail "reqId" ]
+                AcceptanceScenarioRefs = [ createAcceptanceScenarioId "AC-007" |> orFail "acId" ]
+                ClarificationDecisionRefs = [ createDecisionId "DEC-007" |> orFail "decId" ]
+                ChecklistResultRefs = [ createChecklistResultId "CR-007" |> orFail "crId" ]
+                PlanDecisionRefs = [ createPlanDecisionId "PD-007" |> orFail "pdId" ]
+                ObligationRefs = [ "obligval" ]
+                ArtifactRefs = [ artifactRef ]
+                SourceRefs = [ { EvidenceCodec.sourceRefSeed with Kind = "srckindval" } ]
+                Result = "advisory"
+                Synthetic = true
+                SyntheticDisclosure =
+                    Some
+                        { StandsInFor = "standsval"
+                          Reason = "reasonval" }
+                Rationale = Some "rationaleval"
+                Owner = Some "ownerval"
+                Scope = Some "scopeval"
+                LaterLifecycleVisibility = Some "visibilityval"
+                Notes = [ "noteval" ] }
+
+        assertCoupled
+            [ "Source"; "SourceLocation" ]
+            typeof<EvidenceDeclaration>
+            EvidenceCodec.declarationFields
+            model
+            [ "Id", [ "id", "id: EV009" ]
+              "Kind", [ "kind", "kind: verification" ]
+              "Subject", [ "subject", "subject:\n  type: subjtypeval" ]
+              "TaskRefs", [ "taskRefs", "taskRefs: [T007]" ]
+              "RequirementRefs", [ "requirementRefs", "requirementRefs: [FR-007]" ]
+              "AcceptanceScenarioRefs", [ "acceptanceScenarioRefs", "acceptanceScenarioRefs: [AC-007]" ]
+              "ClarificationDecisionRefs", [ "clarificationDecisionRefs", "clarificationDecisionRefs: [DEC-007]" ]
+              "ChecklistResultRefs", [ "checklistResultRefs", "checklistResultRefs: [CR-007]" ]
+              "PlanDecisionRefs", [ "planDecisionRefs", "planDecisionRefs: [PD-007]" ]
+              "ObligationRefs", [ "obligationRefs", "obligationRefs: [obligval]" ]
+              "ArtifactRefs", [ "artifacts", $"artifacts: [{artifactRef.Path}]" ]
+              "SourceRefs", [ "sourceRefs", "sourceRefs:\n  - kind: srckindval" ]
+              "Result", [ "result", "result: advisory" ]
+              "Synthetic", [ "synthetic", "synthetic: true" ]
+              "SyntheticDisclosure", [ "syntheticDisclosure", "syntheticDisclosure:\n  standsInFor: standsval" ]
+              "Rationale", [ "rationale", "rationale: rationaleval" ]
+              "Owner", [ "owner", "owner: ownerval" ]
+              "Scope", [ "scope", "scope: scopeval" ]
+              "LaterLifecycleVisibility", [ "laterLifecycleVisibility", "laterLifecycleVisibility: visibilityval" ]
+              "Notes", [ "notes", "notes: [noteval]" ] ]
+
+    [<Fact>]
+    let ``taskFields couple to every authored WorkTask field (T031/#290)`` () =
+        // `Id`/`Source`/`SourceLocation` are provenance, excluded. `Status` (a DU) spans two keys:
+        // `status` (the tag) and `skipRationale` (the `Skipped` payload).
+        let model =
+            { TaskCodec.taskSeed with
+                Title = "titleval"
+                Status = Skipped "skiprationaleval"
+                Owner = "ownerval"
+                Dependencies = [ createTaskId "T007" |> orFail "taskId" ]
+                Requirements = [ createRequirementId "FR-007" |> orFail "reqId" ]
+                Decisions = [ createDecisionId "DEC-007" |> orFail "decId" ]
+                SourceIds = [ "SRCIDVAL" ]
+                RequiredSkills = [ "skillval" ]
+                RequiredEvidence = [ createEvidenceId "EV007" |> orFail "evId" ] }
+
+        assertCoupled
+            [ "Id"; "Source"; "SourceLocation" ]
+            typeof<WorkTask>
+            TaskCodec.taskFields
+            model
+            [ "Title", [ "title", "title: titleval" ]
+              "Status", [ "status", "status: skipped"; "skipRationale", "skipRationale: skiprationaleval" ]
+              "Owner", [ "owner", "owner: ownerval" ]
+              "Dependencies", [ "dependencies", "dependencies: [T007]" ]
+              "Requirements", [ "requirements", "requirements: [FR-007]" ]
+              "Decisions", [ "decisions", "decisions: [DEC-007]" ]
+              "SourceIds", [ "sourceIds", "sourceIds: [SRCIDVAL]" ]
+              "RequiredSkills", [ "requiredSkills", "requiredSkills: [skillval]" ]
+              "RequiredEvidence", [ "requiredEvidence", "requiredEvidence: [EV007]" ] ]
