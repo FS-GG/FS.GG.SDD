@@ -822,3 +822,80 @@ tasks:
         // scaffold or the disposition views. (Single-task pass-through is guarded by every existing
         // single-obligation fixture's golden, which the `List.distinct` union leaves byte-identical.)
         Assert.Equal(1, List.length obligations)
+
+    // --- Issue #230: `ED-` matches by obligation id only, mirroring `TD-` ---
+    //
+    // `evidenceDispositions` used to carry a third match clause `verifyTestDispositionViews` lacks: a
+    // declaration referencing one of the obligation's `LinkedTaskIds` matched even without naming the
+    // obligation. #225 unioned `LinkedTaskIds` across the tasks sharing an obligation, widening that
+    // clause to span *all* of a shared obligation's tasks — so a declaration referencing only T001
+    // silently satisfied the merged T001+T002 obligation and hid T002's uncovered gap (verify passed).
+    // #230 drops the clause: `ED-` now matches by obligation id only, exactly like `TD-`.
+    //
+    // This is the two-task, task-ref-only fixture the issue asks for, with the literal assertion. Only
+    // *hand-authored* declarations are affected — a scaffolded one always carries `obligationRefs`, so
+    // the positive control below (same declaration, obligation id added back) still resolves.
+    let private evidenceArtifactWith declaration =
+        let text =
+            $"""schemaVersion: 1
+evidence:
+{declaration}"""
+
+        match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+        | Ok artifact -> artifact
+        | Error diagnostics -> failwith $"Task-ref-only evidence fixture did not parse: {diagnostics}."
+
+    [<Fact>]
+    let ``evidenceDispositions does not let a task-ref-only declaration satisfy a shared obligation`` () =
+        let obligations = HandlersEvidence.evidenceObligations (twoTaskSharedEvidenceFacts ())
+
+        // Declares evidence *about task T001* — no `id: EV001`, no `obligationRefs: [EV001]`. Pre-#230
+        // the widened `TaskRefs` clause pulled it into EV001 (LinkedTaskIds = [T001; T002]) and reported
+        // `supported`, silently covering the uncovered T002. It must now leave EV001 unmatched.
+        let artifact =
+            evidenceArtifactWith
+                """  - id: EV999
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: []
+    result: pass
+    synthetic: false"""
+
+        let ev001 =
+            HandlersEvidence.evidenceDispositions obligations artifact
+            |> List.find (fun disposition -> disposition.ObligationId = "EV001")
+
+        Assert.Equal("missing", ev001.State)
+        Assert.Empty(ev001.EvidenceIds)
+        Assert.Contains("evidence.missingRequiredEvidence", ev001.DiagnosticIds)
+
+    [<Fact>]
+    let ``evidenceDispositions supports a shared obligation once the declaration names the obligation`` () =
+        let obligations = HandlersEvidence.evidenceObligations (twoTaskSharedEvidenceFacts ())
+
+        // The positive control: the identical declaration that *names* EV001 (as every scaffolded
+        // declaration does) resolves the one merged obligation for both T001 and T002 — satisfied once,
+        // mirroring `TD-`. This is the id-first path #230 keeps.
+        let artifact =
+            evidenceArtifactWith
+                """  - id: EV999
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: []
+    obligationRefs: [EV001]
+    result: pass
+    synthetic: false"""
+
+        let ev001 =
+            HandlersEvidence.evidenceDispositions obligations artifact
+            |> List.find (fun disposition -> disposition.ObligationId = "EV001")
+
+        Assert.Equal("supported", ev001.State)
+        Assert.Equal<string list>([ "EV999" ], ev001.EvidenceIds)
+        Assert.Equal<string list>([ "T001"; "T002" ], ev001.TaskIds |> List.sort)

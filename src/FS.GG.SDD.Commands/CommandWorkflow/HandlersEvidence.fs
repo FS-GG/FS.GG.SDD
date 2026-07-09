@@ -570,17 +570,27 @@ module internal HandlersEvidence =
         : EvidenceDispositionDraft list =
         obligations
         |> List.mapi (fun index obligation ->
+            // Issue #230: match a declaration to an obligation by obligation id ONLY (`id` or
+            // `obligationRefs`), byte-for-byte mirroring `verifyTestDispositionViews` above. `ED-`
+            // used to carry a third `TaskRefs`-overlap clause — a declaration referencing one of the
+            // obligation's `LinkedTaskIds` matched even without naming the obligation. #225 unioned
+            // `LinkedTaskIds` across the tasks sharing an obligation (to mirror `TD-`), which widened
+            // that clause to span *all* of a shared obligation's tasks: a declaration referencing only
+            // task `T1` then silently satisfied a `T1`+`T2` obligation, hiding `T2`'s uncovered gap and
+            // passing verify (the collapse also propagated through `verifySkillViews`). #225's stated
+            // model is "one merged obligation, satisfied once — mirror `TD-`", and the `TaskRefs`
+            // clause was exactly the piece `TD-` lacked, so dropping it finishes the mirror. Safe: a
+            // scaffolded declaration (regular *and* `task.{id}.completion`) always carries
+            // `obligationRefs: [<obligationId>]`, so it still matches id-first; only a purely
+            // hand-authored declaration that references a task but never names the obligation changes —
+            // it must now name the obligation, the same contract `TD-` already enforces.
             let matches: EvidenceDeclaration list =
                 artifact.Evidence
                 |> List.filter (fun declaration ->
                     declaration.Id.Value = obligation.ObligationId
                     || declaration.ObligationRefs
                        |> List.exists (fun id ->
-                           String.Equals(id, obligation.ObligationId, StringComparison.OrdinalIgnoreCase))
-                    || declaration.TaskRefs
-                       |> List.exists (fun taskId ->
-                           obligation.LinkedTaskIds
-                           |> List.exists (fun linked -> linked.Value = taskId.Value)))
+                           String.Equals(id, obligation.ObligationId, StringComparison.OrdinalIgnoreCase)))
 
             let state, diagnostics =
                 if List.isEmpty matches then
