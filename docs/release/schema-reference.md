@@ -254,8 +254,11 @@ in the authoritative `catalog[].inventory` of
   recorded changes `noChange`/`preserve`), and nothing blocked — so the work item is coherent for this
   stage and it is safe to advance. It is `false` for a bare no-op (`outcome: noChange` with an empty
   `changedArtifacts`) and for every non-`noChange` outcome. It leaves the `outcome` vocabulary
-  untouched. This additive-optional field moved `reportVersion` to `2.2.0` (a semantic minor);
-  `schemaVersion` stays `1`.
+  untouched. It is distinct from the nested domain facts `isCoherent` (`surface`/remediation blocks)
+  and `alreadyCoherent` (remediation) — those assert a *specific* invariant (baselines match, drift is
+  absent); top-level `coherent` asserts only "this stage found the work item already current and
+  recorded no change". This additive-optional field moved `reportVersion` to `2.2.0` (a semantic
+  minor); `schemaVersion` stays `1`.
   The additive `lifecycleStatus` field is present on **every** command's report — feature 084;
   it is the standardized lifecycle-status footer's authoritative fact, carrying `workId`,
   `isLifecycleStage`, `currentOrdinal`, `totalStages`, `outcome`, `nextCommand`, and `stages[]`

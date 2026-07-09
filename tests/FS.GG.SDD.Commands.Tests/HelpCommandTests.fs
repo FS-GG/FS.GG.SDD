@@ -64,6 +64,12 @@ module HelpCommandTests =
         Assert.Equal(0, exitCodeForReport report)
         Assert.True(report.Help.IsSome)
         Assert.True(report.NextAction.IsNone)
+        // FS-GG/FS.GG.SDD#183: the OTHER half of the disambiguation — a bare no-op is `NoChange` with
+        // no recorded change, and is NOT coherent-to-advance. This pins the negative branch of the
+        // discriminator so a regression to `outcome = NoChange` alone (dropping the empty-change guard)
+        // reddens instead of silently reporting "advance" on a command that did nothing.
+        Assert.Empty report.ChangedArtifacts
+        Assert.False report.Coherent
 
     // FR-011: a genuinely unknown command resolves to unknownCommand/exit 1 — the
     // ± --help dispatch in Program.fs routes unknown commands here unchanged.

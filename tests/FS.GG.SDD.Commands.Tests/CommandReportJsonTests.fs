@@ -43,6 +43,19 @@ module CommandReportJsonTests =
         Assert.Contains("\"coherent\":", json)
         Assert.Matches("\"coherent\": (true|false)", json)
 
+    // FS-GG/FS.GG.SDD#183: pin the actual serialized value at the JSON seam (not just the key's
+    // presence) for both discriminands — a first-run Create is `false`, a clean re-run is `true`.
+    [<Fact>]
+    let ``coherent serializes false on a first run and true on a clean re-run`` () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+
+        let first = TestSupport.runCharter root "004-charter-command" "Charter Command" |> serializeReport
+        Assert.Contains("\"coherent\": false", first)
+
+        let rerun = TestSupport.runCharter root "004-charter-command" "Charter Command" |> serializeReport
+        Assert.Contains("\"coherent\": true", rerun)
+
     [<Fact>]
     let ``deterministic JSON excludes absolute project root`` () =
         let first = dryRunReport () |> serializeReport
