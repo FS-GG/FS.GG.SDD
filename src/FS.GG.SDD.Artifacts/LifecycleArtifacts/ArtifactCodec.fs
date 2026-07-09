@@ -167,6 +167,102 @@ module ArtifactCodec =
     let render (fields: FieldCodec<'M> list) (model: 'M) : string =
         fields |> List.choose (fun field -> field.Write model) |> String.concat "\n"
 
+    // --- relative-indentation helpers for nested/list combinators ---
+    // A field's `Write` returns column-0 text; these shift a rendered sub-block down one level.
+    // `indentLines` prepends `n` spaces to every line; `listItemLines` frames a block as one YAML
+    // block-sequence item (first line on the `- ` marker, the rest aligned two spaces deeper), both
+    // at a base of `n` spaces. Rendered blocks never contain blank lines, so no empty-line guard.
+    let private indentLines (n: int) (text: string) =
+        let pad = String(' ', n)
+        text.Split('\n') |> Array.map (fun line -> pad + line) |> String.concat "\n"
+
+    let private listItemLines (n: int) (text: string) =
+        let pad = String(' ', n)
+        let cont = String(' ', n + 2)
+
+        text.Split('\n')
+        |> Array.mapi (fun i line -> if i = 0 then $"{pad}- {line}" else $"{cont}{line}")
+        |> String.concat "\n"
+
+    let nested
+        (key: string)
+        (subFields: FieldCodec<'S> list)
+        (subSeed: 'S)
+        (get: 'M -> 'S)
+        (set: 'S -> 'M -> 'M)
+        : FieldCodec<'M> =
+        // An always-present nested mapping: `key:` then the sub-record's fields indented two spaces.
+        // An absent key keeps the seed sub-record.
+        { Key = key
+          Read =
+            fun mapping model ->
+                match tryNodeAt [ key ] (mapping :> YamlNode) |> Option.bind tryMapping with
+                | Some sub -> parseMapping subFields subSeed sub |> Result.map (fun s -> set s model)
+                | None -> Ok model
+          Write = fun model -> Some(key + ":\n" + indentLines 2 (render subFields (get model))) }
+
+    let optionalNestedVia
+        (key: string)
+        (subFields: FieldCodec<'D> list)
+        (subSeed: 'D)
+        (lift: 'D -> 'F option)
+        (lower: 'F -> 'D)
+        (get: 'M -> 'F option)
+        (set: 'F option -> 'M -> 'M)
+        : FieldCodec<'M> =
+        // An optional nested mapping decoded through a draft: read the sub-mapping into `'D` (e.g. an
+        // option-carrying draft that reads null-aware), then `lift` it to the model field `'F option`
+        // — returning `None` rejects the draft (e.g. a blank synthetic disclosure, keeping the
+        // undisclosed-synthetic gate honest, FS.GG.SDD#180). `lower` projects the field back to the
+        // draft for rendering. Omits the key entirely when the field is `None`.
+        { Key = key
+          Read =
+            fun mapping model ->
+                match tryNodeAt [ key ] (mapping :> YamlNode) |> Option.bind tryMapping with
+                | Some sub ->
+                    parseMapping subFields subSeed sub
+                    |> Result.map (fun draft -> set (lift draft) model)
+                | None -> Ok(set None model)
+          Write =
+            fun model ->
+                get model
+                |> Option.map (fun field -> key + ":\n" + indentLines 2 (render subFields (lower field))) }
+
+    let recordList
+        (key: string)
+        (subFields: FieldCodec<'S> list)
+        (subSeed: 'S)
+        (get: 'M -> 'S list)
+        (set: 'S list -> 'M -> 'M)
+        : FieldCodec<'M> =
+        // A block sequence of sub-records, always present (`key: []` when empty). Each element
+        // decodes via `foldInto subFields subSeed`; a malformed element is dropped (it never yields
+        // a mapping), mirroring the legacy per-record parsers.
+        { Key = key
+          Read =
+            fun mapping model ->
+                match trySequenceAt [ key ] (mapping :> YamlNode) with
+                | None -> Ok(set [] model)
+                | Some sequence ->
+                    let items =
+                        sequence.Children
+                        |> Seq.choose tryMapping
+                        |> Seq.choose (fun sub -> parseMapping subFields subSeed sub |> Result.toOption)
+                        |> Seq.toList
+
+                    Ok(set items model)
+          Write =
+            fun model ->
+                match get model with
+                | [] -> Some(sprintf "%s: []" key)
+                | items ->
+                    let lines =
+                        items
+                        |> List.map (fun item -> listItemLines 2 (render subFields item))
+                        |> String.concat "\n"
+
+                    Some(key + ":\n" + lines) }
+
     let decode (fields: FieldCodec<'M> list) (seed: 'M) (text: string) : Result<'M, string> =
         match parseYaml text with
         | None -> Error "document is empty or not parseable YAML"

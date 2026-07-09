@@ -249,6 +249,111 @@ module ArtifactCodecTests =
                     Tags = [ "y"; "x"; "y" ] }
         )
 
+    // --- indented combinators: nested mapping + block sequence of sub-records (FS.GG.SDD#260) ---
+    // The declaration needs `subject` (nested) and `sourceRefs` (recordList). These render column-0
+    // text with relative indentation that the artifact-level framing then shifts, so the byte layout
+    // is pinned here.
+
+    type private Leaf = { A: string; B: string option }
+
+    let private leafFields: ArtifactCodec.FieldCodec<Leaf> list =
+        [ ArtifactCodec.requiredScalar "a" (fun m -> m.A) (fun v m -> { m with A = v })
+          ArtifactCodec.optionalScalar "b" (fun m -> m.B) (fun v m -> { m with B = v }) ]
+
+    let private leafSeed = { A = ""; B = None }
+
+    type private Parent =
+        { Name: string
+          Sub: Leaf
+          Items: Leaf list }
+
+    let private parentFields: ArtifactCodec.FieldCodec<Parent> list =
+        [ ArtifactCodec.requiredScalar "name" (fun m -> m.Name) (fun v m -> { m with Name = v })
+          ArtifactCodec.nested "sub" leafFields leafSeed (fun m -> m.Sub) (fun v m -> { m with Sub = v })
+          ArtifactCodec.recordList "items" leafFields leafSeed (fun m -> m.Items) (fun v m -> { m with Items = v }) ]
+
+    let private parentSeed =
+        { Name = ""
+          Sub = leafSeed
+          Items = [] }
+
+    [<Fact>]
+    let ``nested renders key then two-space-indented sub-fields`` () =
+        let text =
+            ArtifactCodec.render
+                parentFields
+                { parentSeed with
+                    Name = "p"
+                    Sub = { A = "x"; B = Some "y" } }
+
+        Assert.Contains("sub:\n  a: x\n  b: y", text) // sub-fields indented exactly two spaces
+        Assert.Contains("items: []", text) // empty recordList stays present
+
+    [<Fact>]
+    let ``recordList renders a block sequence with dash items and aligned continuations`` () =
+        let text =
+            ArtifactCodec.render
+                parentFields
+                { parentSeed with
+                    Name = "p"
+                    Items = [ { A = "x"; B = Some "y" }; { A = "z"; B = None } ] }
+
+        // First field on the `- ` marker, the rest two spaces deeper; an absent optional omits its line.
+        Assert.Contains("items:\n  - a: x\n    b: y\n  - a: z", text)
+
+    [<Fact>]
+    let ``nested + recordList round-trip through decode`` () =
+        let model =
+            { Name = "p"
+              Sub = { A = "x"; B = Some "y" }
+              Items = [ { A = "m"; B = None }; { A = "n"; B = Some "o" } ] }
+
+        match ArtifactCodec.decode parentFields parentSeed (ArtifactCodec.render parentFields model) with
+        | Ok back -> Assert.Equal<Parent>(model, back)
+        | Error e -> failwith e
+
+    // optionalNestedVia: the draft reads null-aware, `lift` rejects a blank/partial draft to None
+    // (the synthetic-disclosure gate shape, FS.GG.SDD#180), `lower` projects back for rendering.
+    type private Draft = { X: string option; Y: string option }
+    type private Field = { X: string; Y: string }
+
+    type private Holder = { D: Field option }
+
+    let private draftFields: ArtifactCodec.FieldCodec<Draft> list =
+        [ ArtifactCodec.optionalScalar "x" (fun m -> m.X) (fun v m -> { m with X = v })
+          ArtifactCodec.optionalScalar "y" (fun m -> m.Y) (fun v m -> { m with Y = v }) ]
+
+    let private liftField (d: Draft) =
+        match d.X, d.Y with
+        | Some x, Some y when x <> "" && y <> "" -> Some { X = x; Y = y }
+        | _ -> None
+
+    let private holderFields: ArtifactCodec.FieldCodec<Holder> list =
+        [ ArtifactCodec.optionalNestedVia
+              "d"
+              draftFields
+              { X = None; Y = None }
+              liftField
+              (fun (f: Field) -> { X = Some f.X; Y = Some f.Y })
+              (fun m -> m.D)
+              (fun v m -> { m with D = v }) ]
+
+    [<Fact>]
+    let ``optionalNestedVia rejects a bare-null draft and round-trips a populated one`` () =
+        // bare-null inner scalars -> draft (None, None) -> lift -> None (key omitted on write)
+        match ArtifactCodec.decode holderFields { D = None } "d:\n  x: null\n  y: null" with
+        | Ok m -> Assert.Equal<Field option>(None, m.D)
+        | Error e -> failwith e
+
+        // populated -> Some, and it round-trips
+        let model = { D = Some { X = "a"; Y = "b" } }
+
+        match ArtifactCodec.decode holderFields { D = None } (ArtifactCodec.render holderFields model) with
+        | Ok back -> Assert.Equal<Holder>(model, back)
+        | Error e -> failwith e
+
+        Assert.Equal("", ArtifactCodec.render holderFields { D = None }) // None -> key omitted
+
     // === T031 — the real evidence record↔codec coupling (FR-007, FS.GG.SDD#260) ===
     // The wiring has landed: `EvidenceCodec.{sourceRefFields,disclosureFields}` drive both the
     // Evidence.fs reader and the HandlersEvidence renderer. These assert the codec Key set equals
