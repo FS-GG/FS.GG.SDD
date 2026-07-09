@@ -704,9 +704,16 @@ module internal ViewGeneration =
             | Ok _ ->
                 // §3.4: the currency-check input set MUST mirror the exact authored-source
                 // set used to generate the work model (`workModelSnapshots`), including
-                // plan.md and charter.md. Omitting them made `sourceStale`'s "recorded
-                // source absent from current set" branch fire on every clean run (FR-005/006);
-                // genuine source-digest drift still flags via `sourceStale` (FR-007).
+                // plan.md. Omitting a recorded source made `sourceStale`'s "recorded source
+                // absent from current set" branch fire on every clean run (FR-005/006); genuine
+                // source-digest drift still flags via `sourceStale` (FR-007). charter.md is
+                // excluded from BOTH sides (recording in `workModelSnapshots` and checking here)
+                // per ADR-0003 / FS.GG.SDD#265: the normalized work model derives no content from
+                // charter (`WorkItem.loadWorkItemFromSnapshots` never reads it), and only `plan`
+                // reads charter (for its authoring window). Before #265 the asymmetry was invisible
+                // because the example's decisions never parsed so the model was never written; once
+                // the model resolves, `plan` recorded a charter-bearing source set that `analyze`/
+                // `verify`/`ship`/`refresh` then re-derived without, spuriously staling the view.
                 let currentSnapshots =
                     [ snapshot ".fsgg/project.yml" model
                       snapshot ".fsgg/sdd.yml" model
@@ -715,7 +722,6 @@ module internal ViewGeneration =
                       snapshot (clarificationPath workId) model
                       snapshot (checklistPath workId) model
                       snapshot (planPath workId) model
-                      snapshot (charterPath workId) model
                       snapshot (tasksPath workId) model
                       snapshot (evidencePath workId) model
                       Some generated ]
@@ -750,6 +756,14 @@ module internal ViewGeneration =
         evidenceText
         model
         =
+        // charterText is intentionally NOT a work-model source (ADR-0003 / FS.GG.SDD#265): the
+        // normalized work model derives no content from charter, and only `plan` reads it (for its
+        // authoring window). Recording it here desynchronised the recorded source set from the
+        // analyze/verify/ship/refresh re-derivation — which never reads charter — spuriously staling
+        // the view once the model resolved. `charterText` is retained as a parameter for signature
+        // stability across callers.
+        ignore charterText
+
         [ snapshot ".fsgg/project.yml" model
           snapshot ".fsgg/sdd.yml" model
           snapshot ".fsgg/agents.yml" model
@@ -776,12 +790,7 @@ module internal ViewGeneration =
           |> Option.map (fun text ->
               { Path = evidencePath workId
                 Text = text })
-          |> Option.orElseWith (fun () -> snapshot (evidencePath workId) model)
-          charterText
-          |> Option.map (fun text ->
-              { Path = charterPath workId
-                Text = text })
-          |> Option.orElseWith (fun () -> snapshot (charterPath workId) model) ]
+          |> Option.orElseWith (fun () -> snapshot (evidencePath workId) model) ]
         |> List.choose id
         |> List.map (fun snapshot ->
             { snapshot with

@@ -172,5 +172,22 @@ registry orchestrator-axis minimum is the separate release dance (FS-GG/FS.GG.SD
 feature. Per this policy an additive change carries **no `<version>.md` migration note**
 (`release-readiness.json` `migrations[]` stays empty); this paragraph records the change instead.
 
+The Gap D decision-grammar convergence (ADR-0003 part 1, FS-GG/FS.GG.SDD#265) is additive:
+`RequirementModel.parseDecisions` — the parser that populates `work-model.json`'s `decisions`
+— now accepts the *authored* grammar (`- **DEC-001** [CQ-001] [AMB:AMB-001] [FR-001] [AC-001]:`,
+bold-optional id with bracketed tags between the id and the colon) in addition to the bare
+`- DEC-001:` form it already read. The change is **blocking → green**: a decision authored in the
+canonical grammar previously never entered the work model, so a task referencing it raised
+`unknownReference` and the work model reported blocking diagnostics; the parser cannot newly break
+a `tasks.yml` that parses today (this is the *opposite* migration direction from the deferred
+`#164` parser-side reference-set union, which invariant 5 keeps at the consumers). No schema, field,
+key order, stream, or exit-code contract changes — `work-model.json` stays schema v1 and its
+`decisions` shape is unchanged; only its *content* grows on workspaces that author `**DEC**`
+decisions (those decisions, and the agent-guidance/analyze disposition sets derived from them, now
+appear where they were silently dropped). The existing `reportVersion`/`viewVersion` guards move
+if any emitted shape ever changes. Per this policy an additive change carries **no `<version>.md`
+migration note** (`release-readiness.json` `migrations[]` stays empty); this paragraph records the
+change instead.
+
 When a release introduces a breaking change, add its note here as
 `<version>.md` and list it in this index.

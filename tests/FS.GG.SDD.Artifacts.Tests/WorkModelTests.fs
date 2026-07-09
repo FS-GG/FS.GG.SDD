@@ -90,6 +90,53 @@ module WorkModelTests =
         Assert.Empty decision.StoryRefs
         Assert.Empty decision.AcceptanceRefs
 
+    // ---------------------------------------------------------------------------------------------
+    // FS.GG.SDD#265 / ADR-0003. `parseDecisions` must converge on the *authored* decision grammar the
+    // clarify stage and `.fsgg/early-stage-guidance.md` teach and the shipped example uses:
+    // `- **DEC-001** [CQ-001] [AMB:AMB-001] [FR-001] [AC-001]: text`. Before, it accepted only the bare
+    // `- DEC-001: text` form, so a canonically-authored decision never entered the work model and any
+    // task referencing it raised `unknownReference` — the Gap D fixpoint blocker.
+    // ---------------------------------------------------------------------------------------------
+
+    /// The bold id and the bracketed tags between the id and the colon are the authored form. The tags
+    /// are not part of the decision text, and a tag that itself carries a colon (`[AMB:AMB-001]`) must
+    /// not be read as the terminating colon.
+    [<Fact>]
+    let ``a decision authored in the bold-id tagged grammar parses, tags excluded from its text`` () =
+        let decision =
+            decisionSnapshot "- **DEC-001** [CQ-001] [AMB:AMB-001] [FR-001] [AC-001]: The serve targets the loser."
+            |> RequirementModel.parseDecisions
+            |> Assert.Single
+
+        Assert.Equal("DEC-001", decision.Id.Value)
+        Assert.Equal("The serve targets the loser.", decision.Title)
+        Assert.Equal("The serve targets the loser.", decision.Decision)
+        Assert.Equal<string list>([ "FR-001" ], decision.RequirementRefs |> List.map _.Value)
+        Assert.Equal<string list>([ "AC-001" ], decision.AcceptanceRefs |> List.map _.Value)
+
+    /// The exact line `clarify` writes (`renderDecisionLine`): a non-bold id carrying its question and
+    /// ambiguity tags. It must round-trip identically to the bold form.
+    [<Fact>]
+    let ``a decision in the clarify-written non-bold tagged grammar parses`` () =
+        let decision =
+            decisionSnapshot "- DEC-002 [CQ-002] [AMB:AMB-002]: A match-end condition is deferred."
+            |> RequirementModel.parseDecisions
+            |> Assert.Single
+
+        Assert.Equal("DEC-002", decision.Id.Value)
+        Assert.Equal("A match-end condition is deferred.", decision.Decision)
+
+    /// The bare `- DEC-001: text` grammar the fixtures use keeps parsing — the fix is additive.
+    [<Fact>]
+    let ``the bare decision grammar still parses`` () =
+        let decision =
+            decisionSnapshot "- DEC-006: A plain decision with no tags."
+            |> RequirementModel.parseDecisions
+            |> Assert.Single
+
+        Assert.Equal("DEC-006", decision.Id.Value)
+        Assert.Equal("A plain decision with no tags.", decision.Decision)
+
     /// The refs must survive serialization to `work-model.json` — the artifact an agent actually reads.
     [<Fact>]
     let ``work model JSON carries the decision reference arrays`` () =
