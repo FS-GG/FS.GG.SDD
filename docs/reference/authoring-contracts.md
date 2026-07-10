@@ -465,6 +465,64 @@ canonical rendering registry (with its real default starter) is owned by FS.GG.T
 and consumed only through the versioned provider contract and the network-gated
 composition-acceptance — generic SDD carries no provider-specific starter value.
 
+## Derived task skills (`project.testFramework`, `project.implementSkill`)
+
+`tasks` stamps a `requiredSkills:` list onto each task it derives. Two of those skills are
+**declared by the workspace**, in `.fsgg/project.yml`, rather than fixed by the tool:
+
+| Declaration | Used by | Neutral default when absent |
+| --- | --- | --- |
+| `project.testFramework` | verification-obligation (`VO-###`) tasks | `automated-tests` |
+| `project.implementSkill` | requirement, clarification-decision, and plan-decision tasks | `implementation` |
+
+```yaml
+schemaVersion: 1
+project:
+  id: my-product
+  defaultWorkRoot: work
+  testFramework: expecto
+  implementSkill: speckit-implement
+```
+
+Both are optional, trusted verbatim (SDD keeps no allow-list), and normalized the same way —
+trimmed, lowercased, internal whitespace runs collapsed to `-`, so `My Custom Runner` becomes
+`my-custom-runner`. A missing, empty, or whitespace-only value declares nothing and degrades to
+the neutral default; no other task category's skills are affected by either declaration.
+
+Before FS.GG.SDD#310 the implement skill was the hardcoded literal `speckit-implement` — SDD's
+own authoring toolchain leaking into every consumer's task graph. Declare `implementSkill` to
+name the skill your agents actually have.
+
+## Plan decisions that mirror a requirement earn no task of their own
+
+`plan` auto-derives exactly one `PD-###` per functional requirement, and that derived decision
+mirrors the requirement's own refs. `tasks` therefore does **not** emit a separate
+`Implement plan decision PD-001` task over the same `FR-001` / `AC-001` set — it *folds* the
+`PD-001` id into the requirement task's `sourceIds:`, which is what disposes it:
+
+```yaml
+tasks:
+  - id: T001
+    title: Implement requirement FR-001
+    requirements: [FR-001]
+    sourceIds: [AC-001, FR-001, PD-001]   # PD-001 folded in — no duplicate task
+```
+
+The rule: a `PD-###` whose refs are **subsumed** by some requirement task's refs is folded into
+that task. A `PD-###` that refs anything no requirement task covers — an accepted deferral, a
+contract, a decision you wrote by hand — still earns its own task. A `PD-###` with no refs at
+all is subsumed by nothing and also keeps its task.
+
+Folding, not dropping, is the point. A `PD-###` is a **required disposition**: `analyze` demands
+that some task dispose it. Removing the duplicate task without carrying its id forward would
+block `analyze` with `missingDisposition` two stages later.
+
+The practical consequence for authors: a work item with *n* requirements produces *n* tasks for
+them, not *2n*. If you are migrating an existing `tasks.yml`, the surviving tasks keep their
+`T###` ids (the merge matches on title), the folded ones disappear, and any `evidence.yml`
+declaration whose `subject.id` names a folded task must be removed — its obligation is now
+carried by the requirement task's own evidence entry.
+
 ## Regeneration semantics (re-running `checklist` and `tasks`)
 
 `checklist.md` and `tasks.yml` are **generated gate artifacts** you also author against.
@@ -490,12 +548,18 @@ a write.
 - **Authored content is preserved.** `checklist`'s authored sections (`Advisory Notes`,
   `Lifecycle Notes`, the `Source Specification`/`Source Clarifications` mirrors) are left
   untouched. In `tasks.yml`, a task's advanced `status` (`inProgress`/`done`/`skipped`),
-  its `owner`, and any **hand-added disposition refs** you wrote (`requirements` /
+  its `owner`, any **hand-added disposition refs** you wrote (`requirements` /
   `decisions` / `sourceIds`, e.g. `decisions: [DEC-001]` to record a decision's
-  disposition) are carried onto the re-derived task, and a wholly hand-authored task is
-  kept when it uniquely covers a live disposition the derivation cannot. Authored refs and
-  tasks whose sources are gone — or already covered by derivation — are dropped, so nothing
-  stale accumulates.
+  disposition), and any **hand-added `requiredSkills`** are carried onto the re-derived
+  task, and a wholly hand-authored task is kept when it uniquely covers a live disposition
+  the derivation cannot. Authored refs and tasks whose sources are gone — or already covered
+  by derivation — are dropped, so nothing stale accumulates.
+
+  `requiredSkills` is **unioned**, not replaced: the derived skills always reappear
+  alongside the ones you added. There is no id universe to check a skill against, so unlike
+  the ref fields nothing is ever dropped from it as dead — including a skill that a *previous*
+  CLI derived. If you change `project.implementSkill`, the old value stays on tasks that
+  already carry it until you remove it by hand.
 - **A task's refs: all three fields are authored, and the parser reads each verbatim.** Write the
   typed fields. They carry the FR/DEC distinction `analyze`'s disposition relationships rely on,
   and they are what a human reads. You write `sourceIds:` by hand for a reference the typed fields

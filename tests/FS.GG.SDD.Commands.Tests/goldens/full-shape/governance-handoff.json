@@ -6,17 +6,17 @@
   "sources": [
     {
       "path": "readiness/247-full-shape-golden/ship.json",
-      "digest": "sha256:6d7770f09da0e95e4ef35f39fd7f8f90dfa92bb6ca9f842f1cb174f77c226c1a",
+      "digest": "sha256:c45f1a05b42a5437d698a1aa68620208831b82c9bab73c21d32d8c2809b2c4a6",
       "schemaVersion": 1
     },
     {
       "path": "readiness/247-full-shape-golden/verify.json",
-      "digest": "sha256:62ffe83772bd9b2d01e1be3cd4e26d0eb9337b9d2b5b6c55e7e5a7fab133999f",
+      "digest": "sha256:b4a66167b470477d86749a8b6bab33d3525106a27abdc4478fb438e9c42b53db",
       "schemaVersion": 1
     },
     {
       "path": "readiness/247-full-shape-golden/work-model.json",
-      "digest": "sha256:78053e2f974bab4b0a003fc83e2e23fe472ac4651e4507d96c51b8429a939313",
+      "digest": "sha256:480e68e0c30cd5f80bc26211cec46c7f667483a160fb9c3564c98790de7512a1",
       "schemaVersion": 1
     }
   ],
@@ -48,11 +48,6 @@
         "rationale": null
       },
       {
-        "id": "evidence:EV006",
-        "state": "real",
-        "rationale": null
-      },
-      {
         "id": "task:T001",
         "state": "pending",
         "rationale": null
@@ -74,11 +69,6 @@
       },
       {
         "id": "task:T005",
-        "state": "pending",
-        "rationale": null
-      },
-      {
-        "id": "task:T006",
         "state": "pending",
         "rationale": null
       }
@@ -103,10 +93,6 @@
       {
         "dependent": "evidence:EV005",
         "dependency": "task:T005"
-      },
-      {
-        "dependent": "evidence:EV006",
-        "dependency": "task:T006"
       },
       {
         "dependent": "task:T001",
@@ -142,14 +128,6 @@
       },
       {
         "dependent": "task:T005",
-        "dependency": "task:T001"
-      },
-      {
-        "dependent": "task:T006",
-        "dependency": "evidence:EV006"
-      },
-      {
-        "dependent": "task:T006",
         "dependency": "task:T001"
       }
     ]

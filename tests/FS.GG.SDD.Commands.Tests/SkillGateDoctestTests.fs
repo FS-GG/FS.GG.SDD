@@ -169,9 +169,11 @@ module SkillGateDoctestTests =
     // #142: the evidence gate's deferral rule — a COMPLETE four-field deferral is accepted;
     // one MISSING a field blocks with evidence.missingDeferralRationale. The evidence skill
     // documents exactly these four fields; here we pin the gate behaviour they describe.
+    // The derived graph has five tasks (#310 folds `PD-001` into the `FR-001` task rather than
+    // deriving a duplicate for it), so the ladder passes T001..T004 and defers the fifth.
     let private ladderWithDeferral (includeVisibility: bool) =
         let passes =
-            [ for i in 1..5 ->
+            [ for i in 1..4 ->
                   sprintf
                       "  - id: EV%03d\n    kind: verification\n    subject:\n      type: task\n      id: T%03d\n    result: pass"
                       i
@@ -184,7 +186,7 @@ module SkillGateDoctestTests =
                 ""
 
         let deferral =
-            "  - id: EV006\n    kind: deferral\n    subject:\n      type: task\n      id: T006\n    result: deferred\n    synthetic: false\n    rationale: Out of scope for this work item.\n    owner: codex\n    scope: the deferred capability"
+            "  - id: EV005\n    kind: deferral\n    subject:\n      type: task\n      id: T005\n    result: deferred\n    synthetic: false\n    rationale: Out of scope for this work item.\n    owner: codex\n    scope: the deferred capability"
             + visibilityLine
 
         "schemaVersion: 1\nevidence:\n"

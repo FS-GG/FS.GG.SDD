@@ -237,9 +237,12 @@ module TestSupport =
         runChecklist root workId title |> ignore
         runPlan root workId title |> ignore
 
-    // The T001..T006 evidence ladder is derived once in TestShared (feature 067 / FR-011),
-    // byte-compatible with the former hardcoded literal.
-    let passingTaskEvidence = TestShared.EvidenceLadder.passingTaskEvidence 6
+    // The T001..T005 evidence ladder is derived once in TestShared (feature 067 / FR-011).
+    // Five, not six: the plan scaffold derives `PD-001` mirroring `FR-001`'s own refs, and since
+    // #310 `tasks` folds that PD into the requirement task rather than deriving a duplicate task
+    // for it. A sixth entry would reference a task the graph no longer contains and every
+    // downstream stage would block on `evidence.unknownReference`.
+    let passingTaskEvidence = TestShared.EvidenceLadder.passingTaskEvidence 5
 
     let writePassingTaskEvidenceFor root workId =
         writeRelative root $"work/{workId}/evidence.yml" passingTaskEvidence

@@ -24,6 +24,9 @@ module Config =
           GovernanceCapabilitiesPath: string option
           GovernanceToolingPath: string option
           TestFramework: string option
+          // FS-GG/FS.GG.SDD#310: `project.implementSkill`, the workspace's implementation skill for
+          // derived implementation tasks. None degrades to a neutral, non-misleading skill.
+          ImplementSkill: string option
           // FS-GG/FS.GG.SDD#305: `sdd.minToolVersion`, the workspace's declared floor for the fsgg-sdd
           // toolchain. None declares no floor.
           MinToolVersion: string option }
@@ -83,6 +86,12 @@ module Config =
                       GovernanceToolingPath = tryScalarAt [ "governance"; "tooling" ] root
                       TestFramework =
                         tryScalarAt [ "project"; "testFramework" ] root
+                        |> Option.filter (fun value -> not (String.IsNullOrWhiteSpace value))
+                      // FS-GG/FS.GG.SDD#310: the workspace-declared implementation skill. Read and
+                      // filtered exactly like `testFramework`; normalization and the neutral default
+                      // live with the task generator that consumes it.
+                      ImplementSkill =
+                        tryScalarAt [ "project"; "implementSkill" ] root
                         |> Option.filter (fun value -> not (String.IsNullOrWhiteSpace value))
                       // FS-GG/FS.GG.SDD#305: the workspace-declared floor for the fsgg-sdd toolchain.
                       // Optional and unvalidated here — an unparseable value is a warning at report

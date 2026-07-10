@@ -32,6 +32,27 @@ module TasksCommandTests =
         Assert.Equal(neutralTestSkill, resolveTestSkill (Some declared))
         Assert.Equal("automated-tests", resolveTestSkill (Some declared))
 
+    // #310 (AC8): the implement skill is declared, not hardcoded. Same normalization and the same
+    // degrade-to-neutral contract as the test skill above.
+    [<Theory>]
+    [<InlineData("speckit-implement", "speckit-implement")>]
+    [<InlineData("SpecKit-Implement", "speckit-implement")>]
+    [<InlineData("My Custom Implementer", "my-custom-implementer")>]
+    let ``resolveImplementSkill normalizes a declared skill`` (declared: string) (expected: string) =
+        Assert.Equal(expected, resolveImplementSkill (Some declared))
+
+    [<Fact>]
+    let ``resolveImplementSkill yields the neutral skill when absent`` () =
+        Assert.Equal(neutralImplementSkill, resolveImplementSkill None)
+        Assert.Equal("implementation", resolveImplementSkill None)
+
+    [<Theory>]
+    [<InlineData("")>]
+    [<InlineData("   ")>]
+    let ``resolveImplementSkill yields the neutral skill when blank`` (declared: string) =
+        Assert.Equal(neutralImplementSkill, resolveImplementSkill (Some declared))
+        Assert.Equal("implementation", resolveImplementSkill (Some declared))
+
     let workId = "009-tasks-command"
     let title = "Tasks Command"
     let specPath = $"work/{workId}/spec.md"
@@ -74,6 +95,15 @@ module TasksCommandTests =
 
         let declared =
             projectYml.Replace("  defaultWorkRoot: work", $"  defaultWorkRoot: work\n  testFramework: {framework}")
+
+        TestSupport.writeRelative root ".fsgg/project.yml" declared
+
+    // #310 (AC8): the same read effect also carries `project.implementSkill`.
+    let private declareImplementSkill root (skill: string) =
+        let projectYml = TestSupport.readRelative root ".fsgg/project.yml"
+
+        let declared =
+            projectYml.Replace("  defaultWorkRoot: work", $"  defaultWorkRoot: work\n  implementSkill: {skill}")
 
         TestSupport.writeRelative root ".fsgg/project.yml" declared
 
@@ -128,6 +158,90 @@ module TasksCommandTests =
         Assert.DoesNotContain("xunit", workModel)
         Assert.DoesNotContain("expecto", workModel)
 
+    // ---- #310 -----------------------------------------------------------------------------
+
+    /// AC8: the implement skill comes from `.fsgg/project.yml`, not a `speckit-implement` literal.
+    [<Fact>]
+    let ``tasks implement skill matches the declared implementSkill`` () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+        declareImplementSkill root "my-implementer"
+        TestSupport.runCharter root workId title |> ignore
+        TestSupport.runSpecify root workId title |> ignore
+
+        TestSupport.runRequest
+            { TestSupport.clarifyRequest root workId title with
+                InputText = None }
+        |> ignore
+
+        TestSupport.runChecklist root workId title |> ignore
+        TestSupport.runPlan root workId title |> ignore
+
+        let report = TestSupport.runTasks root workId title
+        let tasks = TestSupport.readRelative root tasksPath
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains("requiredSkills: [fsharp, my-implementer]", tasks)
+        // SDD's own authoring toolchain no longer leaks into a consumer's task graph.
+        Assert.DoesNotContain("speckit-implement", tasks)
+
+    /// AC8: with nothing declared, the derived skill is the neutral default.
+    [<Fact>]
+    let ``tasks implement skill is neutral when no implementSkill is declared`` () =
+        let root = initializedPlanReadyProject ()
+
+        TestSupport.runTasks root workId title |> ignore
+        let tasks = TestSupport.readRelative root tasksPath
+
+        Assert.Contains("requiredSkills: [fsharp, implementation]", tasks)
+        Assert.DoesNotContain("speckit-implement", tasks)
+
+    /// AC7: `requiredSkills` is authored state and must survive a re-derivation. Breakout1 lost 54
+    /// hand-edited entries because `mergeAuthoredTaskState` carried every other authored field.
+    [<Fact>]
+    let ``tasks carries a hand-edited requiredSkills across a regeneration`` () =
+        let root = initializedPlanReadyProject ()
+        TestSupport.runTasks root workId title |> ignore
+
+        let generated = TestSupport.readRelative root tasksPath
+
+        let authored =
+            generated.Replace("requiredSkills: [fsharp, implementation]", "requiredSkills: [fsharp, hand-edited-skill]")
+
+        TestSupport.writeRelative root tasksPath authored
+
+        let report = TestSupport.runTasks root workId title
+        let tasks = TestSupport.readRelative root tasksPath
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains("hand-edited-skill", tasks)
+        // Unioned, not replaced: the derived skills still appear alongside the authored one.
+        Assert.Contains("requiredSkills: [fsharp, hand-edited-skill, implementation]", tasks)
+
+    /// AC9: the plan scaffold derives one `PD-###` per FR mirroring that FR's own refs. `tasks`
+    /// must not emit a second task over the identical FR/AC set — it folds the PD id into the
+    /// requirement task, which keeps the decision disposed (analyze's `required` set demands it).
+    [<Fact>]
+    let ``tasks folds a plan decision subsumed by its requirement task`` () =
+        let root = initializedPlanReadyProject ()
+
+        let report = TestSupport.runTasks root workId title
+        let tasks = TestSupport.readRelative root tasksPath
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        // No duplicate task for PD-001 ...
+        Assert.DoesNotContain("Implement plan decision PD-001", tasks)
+        // ... but the requirement task disposes it in its sourceIds.
+        Assert.Contains("sourceIds: [AC-001, FR-001, PD-001]", tasks)
+
+        // So `analyze` cannot report the decision as an undisposed obligation. This is the half of
+        // the collapse that is easy to get wrong: dropping the task without folding the id would
+        // block `analyze` with `missingDisposition` two stages downstream.
+        TestSupport.writePassingTaskEvidenceFor root workId
+        let analysis = TestSupport.runAnalyze root workId title
+
+        Assert.DoesNotContain("missingDisposition", analysis.Diagnostics |> List.map (fun diagnostic -> diagnostic.Id))
+
     [<Fact>]
     let ``tasks non-test category skills are unchanged by the framework-aware skill`` () =
         let root = planReadyProjectDeclaring "expecto"
@@ -137,7 +251,7 @@ module TasksCommandTests =
 
         // Only the verification-obligation test skill is framework-aware; every
         // other task category keeps its exact skill list (SC-004 / FR-005).
-        Assert.Contains("requiredSkills: [fsharp, speckit-implement]", tasks)
+        Assert.Contains("requiredSkills: [fsharp, implementation]", tasks)
         Assert.Contains("readiness-evidence", tasks)
         Assert.DoesNotContain("xunit", tasks)
 

@@ -23,18 +23,46 @@ module internal TaskGraphAuthoring =
     module IdentifiersModule = FS.GG.SDD.Artifacts.Identifiers
     module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
 
-    // The required test skill for verification-obligation tasks is framework-aware.
-    // SDD keeps no closed allow-list: a declared framework is trusted and normalized
-    // (trim -> invariant-culture lowercase -> collapse internal whitespace runs to `-`),
-    // and an absent/blank declaration degrades to a neutral, non-misleading skill.
-    let neutralTestSkill = "automated-tests"
-
-    let resolveTestSkill (declared: string option) : string =
+    // A declared skill is trusted and normalized (trim -> invariant-culture lowercase ->
+    // collapse internal whitespace runs to `-`); SDD keeps no closed allow-list. An
+    // absent/blank declaration degrades to the caller's neutral, non-misleading default.
+    let private resolveSkill (neutral: string) (declared: string option) : string =
         match declared with
         | Some raw when not (String.IsNullOrWhiteSpace raw) ->
             let lowered = raw.Trim().ToLowerInvariant()
             Regex.Replace(lowered, @"\s+", "-")
-        | _ -> neutralTestSkill
+        | _ -> neutral
+
+    // The required test skill for verification-obligation tasks is framework-aware.
+    let neutralTestSkill = "automated-tests"
+
+    let resolveTestSkill (declared: string option) : string = resolveSkill neutralTestSkill declared
+
+    // The required implement skill for derived implementation tasks (#310, AC8). It was the
+    // literal `speckit-implement` — SDD's own authoring toolchain leaking into every consumer's
+    // task graph. Declared as `project.implementSkill`, it degrades to a neutral default that
+    // names the obligation rather than any one workspace's skill.
+    let neutralImplementSkill = "implementation"
+
+    let resolveImplementSkill (declared: string option) : string =
+        resolveSkill neutralImplementSkill declared
+
+    /// The workspace-declared skills the task generator stamps onto derived tasks. Passed as a
+    /// record rather than two adjacent `string option`s, which are trivially swapped at a call site.
+    type DerivedSkills =
+        { TestSkill: string
+          ImplementSkill: string }
+
+    /// Resolve both derived skills from a `.fsgg/project.yml` that may be absent or malformed.
+    let derivedSkills (config: ProjectLifecycleConfig option) : DerivedSkills =
+        { TestSkill = resolveTestSkill (config |> Option.bind _.TestFramework)
+          ImplementSkill = resolveImplementSkill (config |> Option.bind _.ImplementSkill) }
+
+    /// Lifecycle ids compare case-insensitively. One spelling of the fold, shared by every
+    /// membership test below, so a change of comparison convention cannot reach three of four
+    /// call sites and silently miss the fourth.
+    let internal upperSet (values: string list) =
+        values |> List.map (fun value -> value.ToUpperInvariant()) |> Set.ofList
 
     let tasksSummary (facts: TaskFacts) : TasksSummary =
         let statusCount predicate =
@@ -170,7 +198,7 @@ module internal TaskGraphAuthoring =
           SourceLocation = None }
 
     let plannedTasks
-        (declaredTestFramework: string option)
+        (skills: DerivedSkills)
         (specFacts: SpecificationFacts)
         (clarificationFacts: ClarificationFacts)
         (checklistFacts: ChecklistFacts)
@@ -244,7 +272,7 @@ module internal TaskGraphAuthoring =
                     [ requirement ]
                     []
                     []
-                    [ "fsharp"; "speckit-implement" ])
+                    [ "fsharp"; skills.ImplementSkill ])
 
         let primaryDependency: TaskId list =
             existingTasks
@@ -285,18 +313,72 @@ module internal TaskGraphAuthoring =
                     []
                     [ decision.DecisionId ]
                     primaryDependency
-                    [ "fsharp"; "speckit-implement" ])
+                    [ "fsharp"; skills.ImplementSkill ])
+
+        // #310 (AC9): the plan scaffold auto-derives exactly one `PD-###` per FR, mirroring that
+        // FR's own refs. `tasks` then emitted BOTH an "Implement requirement FR-001" task and an
+        // "Implement plan decision PD-001" task over the identical FR/AC set — ~35% of Breakout1's
+        // obligations were this duplicate. They never collapsed because `maybeTask` dedups on the
+        // first raw sourceId only (`FR-001` for one, `PD-001` for the other).
+        //
+        // A PD whose refs are subsumed by some requirement task's refs disposes nothing that task
+        // does not already dispose, so it earns no task of its own. It is NOT simply dropped: a
+        // `PD-###` is in `requiredDispositionIds`, so dropping the task would leave the decision
+        // undisposed and `analyze` would block with `missingDisposition` two stages later. Instead
+        // the id is FOLDED into the subsuming task's `sourceIds`, which is what disposes it.
+        //
+        // A PD with no refs at all is subsumed by nothing (an empty set is a subset of anything),
+        // and a PD that refs an accepted deferral (`[AMB-007]`) matches no requirement task. Both
+        // keep their own task.
+        // Each requirement task's ref set, built once. `tryFind` below would otherwise rebuild
+        // every candidate's set per decision — quadratic in a spec's requirement count.
+        let requirementRefSets: (WorkTask * Set<string>) list =
+            requirementTasks |> List.map (fun task -> task, upperSet task.SourceIds)
+
+        // Decide each decision's fate up front, as a value. Deriving `planDecisionTasks` and the
+        // folded requirement tasks from ONE partition keeps them from depending on each other's
+        // evaluation order.
+        let subsumerOf (decision: PlanDecision) =
+            let refs = upperSet decision.SourceIds
+
+            if Set.isEmpty refs then
+                None
+            else
+                requirementRefSets
+                |> List.tryFind (fun (_, taskRefs) -> Set.isSubset refs taskRefs)
+                |> Option.map fst
+
+        let subsumed, standalone =
+            planFacts.Decisions
+            |> List.map (fun decision -> decision, subsumerOf decision)
+            |> List.partition (snd >> Option.isSome)
+
+        let foldedByTaskId =
+            subsumed
+            |> List.map (fun (decision, subsumer) -> (Option.get subsumer).Id.Value, decision.DecisionId.Value)
+            |> List.groupBy fst
+            |> List.map (fun (taskId, pairs) -> taskId, pairs |> List.map snd)
+            |> Map.ofList
 
         let planDecisionTasks =
-            planFacts.Decisions
-            |> List.choose (fun decision ->
+            standalone
+            |> List.choose (fun (decision, _) ->
                 maybeTask
                     (decision.DecisionId.Value :: decision.SourceIds)
                     $"Implement plan decision {decision.DecisionId.Value}"
                     []
                     []
                     primaryDependency
-                    [ "fsharp"; "speckit-implement" ])
+                    [ "fsharp"; skills.ImplementSkill ])
+
+        let requirementTasksWithFoldedDecisions =
+            requirementTasks
+            |> List.map (fun task ->
+                match Map.tryFind task.Id.Value foldedByTaskId with
+                | Some folded ->
+                    { task with
+                        SourceIds = task.SourceIds @ folded |> List.distinct |> List.sort }
+                | None -> task)
 
         let contractTasks =
             planFacts.ContractReferences
@@ -318,7 +400,7 @@ module internal TaskGraphAuthoring =
                     []
                     []
                     primaryDependency
-                    [ resolveTestSkill declaredTestFramework; "readiness-evidence" ])
+                    [ skills.TestSkill; "readiness-evidence" ])
 
         let migrationTasks =
             planFacts.MigrationNotes
@@ -353,7 +435,7 @@ module internal TaskGraphAuthoring =
             |> List.choose (fun id ->
                 maybeTask [ id ] $"Keep accepted deferral {id} visible" [] [] primaryDependency [ "traceability" ])
 
-        requirementTasks
+        requirementTasksWithFoldedDecisions
         @ clarificationDecisionTasks
         @ planDecisionTasks
         @ contractTasks
@@ -450,6 +532,14 @@ module internal TaskGraphAuthoring =
                         |> List.distinct
                         |> List.sort
 
+                    // `requiredSkills` is authored state too (#310, AC7). It was the one authored
+                    // field the merge dropped, so a re-derivation silently reverted every
+                    // hand-added skill to the derived set. Unioned rather than prior-wins, so a
+                    // skill the generator newly derives still appears; unlike the ref fields there
+                    // is no id universe to filter against, so nothing is dropped as dead.
+                    let requiredSkills =
+                        task.RequiredSkills @ priorTask.RequiredSkills |> List.distinct |> List.sort
+
                     { task with
                         Id = finalId
                         Dependencies = dependencies
@@ -458,6 +548,7 @@ module internal TaskGraphAuthoring =
                         Owner = priorTask.Owner
                         Requirements = requirements
                         Decisions = decisions
+                        RequiredSkills = requiredSkills
                         SourceIds = sourceIds }
                 | None ->
                     { task with
@@ -475,8 +566,7 @@ module internal TaskGraphAuthoring =
                 (task.Requirements |> List.map (fun id -> id.Value))
                 @ (task.Decisions |> List.map (fun id -> id.Value))
                 @ task.SourceIds)
-            |> List.map (fun value -> value.ToUpperInvariant())
-            |> Set.ofList
+            |> upperSet
 
         let keptAuthored =
             prior
@@ -752,8 +842,7 @@ sources:
           facts.Tasks |> List.collect (fun task -> task.Decisions |> List.map _.Value)
           facts.AcceptedDeferrals ]
         |> List.concat
-        |> List.map (fun value -> value.ToUpperInvariant())
-        |> Set.ofList
+        |> upperSet
 
     // Required dispositions the task graph does NOT cover (sorted, distinct). Empty means the
     // graph is disposition-complete. Shared by the `tasks` fail-fast check and `analyze`.
@@ -893,19 +982,21 @@ sources:
         let path = tasksPath workId
         let evidence, evidenceDiagnostics = parseEvidenceForCommand workId model
 
-        // The declared test framework rides the already-loaded `.fsgg/project.yml`
-        // read effect; no new I/O edge. Absent/malformed config => neutral skill.
-        let declaredTestFramework =
+        // The declared test framework and implement skill ride the already-loaded
+        // `.fsgg/project.yml` read effect; no new I/O edge. Absent/malformed config =>
+        // neutral skills.
+        let skills =
             snapshot ".fsgg/project.yml" model
             |> Option.bind (fun projectSnapshot ->
                 match parseProjectConfig projectSnapshot with
-                | Ok config -> config.TestFramework
+                | Ok config -> Some config
                 | Error _ -> None)
+            |> derivedSkills
 
         match snapshot path model with
         | None ->
             let tasks =
-                plannedTasks declaredTestFramework specFacts clarificationFacts checklistFacts planFacts None
+                plannedTasks skills specFacts clarificationFacts checklistFacts planFacts None
 
             let acceptedDeferrals =
                 [ clarificationFacts.AcceptedDeferrals
@@ -1029,13 +1120,7 @@ sources:
                         // never reports stale-and-unchanged (FR-004/FR-005). Derived rows are
                         // reclaimed — prior tool-injected rows are never re-ingested (FR-002).
                         let derived =
-                            plannedTasks
-                                declaredTestFramework
-                                specFacts
-                                clarificationFacts
-                                checklistFacts
-                                planFacts
-                                None
+                            plannedTasks skills specFacts clarificationFacts checklistFacts planFacts None
 
                         // The universe of ids the current sources can dispose (the ONE shared
                         // `requiredDispositionIds` list analyze's completeness check also reads).
@@ -1043,8 +1128,7 @@ sources:
                         // anything else is a dead orphan and is dropped on re-derive.
                         let liveIds =
                             requiredDispositionIds specFacts clarificationFacts checklistFacts planFacts
-                            |> List.map (fun value -> value.ToUpperInvariant())
-                            |> Set.ofList
+                            |> upperSet
 
                         let mergedTasks =
                             mergeAuthoredTaskState MergePolicies.tasks liveIds existingFacts.Tasks derived

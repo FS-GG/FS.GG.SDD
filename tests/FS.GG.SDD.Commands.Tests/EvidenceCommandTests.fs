@@ -254,28 +254,35 @@ evidence:
         |> Option.defaultWith (fun () -> failwith $"No scaffolded obligation for task {taskId}.")
 
     [<Fact>]
-    let ``evidence plan-decision obligation preserves planDecisionRefs and recovers requirementRefs`` () =
+    let ``evidence scaffolds no separate obligation for a plan decision folded into its requirement`` () =
         let root = initializedAnalyzedProject ()
         let artifact = scaffoldFreshEvidence root
 
-        // T002 is the `Implement plan decision PD-001` task: its task.Requirements / task.Decisions
-        // are empty, so before the fix both requirementRefs and planDecisionRefs scaffolded empty.
-        let declaration = declarationForTask artifact "T002"
+        // #310 (AC9): `PD-001` mirrors `FR-001`'s own refs, so `tasks` folds it into the requirement
+        // task instead of deriving an `Implement plan decision PD-001` task over the identical
+        // FR/AC set. There is therefore no obligation of its own to scaffold — the duplicate
+        // obligation this fixture used to produce (its own T002) is exactly what #310 removed.
+        let planDecisionTasks =
+            artifact.Evidence
+            |> List.filter (fun declaration ->
+                declaration.PlanDecisionRefs |> List.exists (fun ref -> ref.Value = "PD-001"))
+            |> List.map (fun declaration -> declaration.Subject.Id)
 
-        Assert.Equal<string list>([ "PD-001" ], declaration.PlanDecisionRefs |> List.map _.Value)
-        // The PD→FR linkage is recovered from the plan decision's own source lineage (FR-001).
-        Assert.Equal<string list>([ "FR-001" ], declaration.RequirementRefs |> List.map _.Value)
+        Assert.DoesNotContain("Implement plan decision", TestSupport.readRelative root $"work/{workId}/tasks.yml")
+        // PD-001 survives as a ref on the tasks whose sourceIds carry it, never as its own task.
+        Assert.NotEmpty(planDecisionTasks)
 
     [<Fact>]
-    let ``evidence requirement obligation still carries requirementRefs (no regression)`` () =
+    let ``evidence requirement obligation carries requirementRefs and the folded planDecisionRefs`` () =
         let root = initializedAnalyzedProject ()
         let artifact = scaffoldFreshEvidence root
 
-        // T001 is the `Implement requirement FR-001` task.
+        // T001 is the `Implement requirement FR-001` task. Since #310 it also disposes PD-001,
+        // the plan decision derived from FR-001's own refs, so its obligation carries both.
         let declaration = declarationForTask artifact "T001"
 
         Assert.Equal<string list>([ "FR-001" ], declaration.RequirementRefs |> List.map _.Value)
-        Assert.Empty(declaration.PlanDecisionRefs)
+        Assert.Equal<string list>([ "PD-001" ], declaration.PlanDecisionRefs |> List.map _.Value)
 
     [<Fact>]
     let ``evidence obligation refs never misroute a plan decision into clarification refs`` () =
@@ -283,8 +290,9 @@ evidence:
         let artifact = scaffoldFreshEvidence root
 
         // PD-001 is a plan decision, not a clarification decision (DEC-###) — it must land only in
-        // planDecisionRefs, never clarificationDecisionRefs.
-        let declaration = declarationForTask artifact "T002"
+        // planDecisionRefs, never clarificationDecisionRefs. T001 is the task that disposes it
+        // since #310 folded it in.
+        let declaration = declarationForTask artifact "T001"
 
         Assert.Empty(declaration.ClarificationDecisionRefs)
         Assert.Contains("PD-001", declaration.PlanDecisionRefs |> List.map _.Value)

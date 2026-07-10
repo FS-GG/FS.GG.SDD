@@ -125,6 +125,31 @@ module ExampleLifecycleContractTests =
         Assert.Equal(CommandOutcome.NoChange, (TestSupport.runPlan root workId title).Outcome)
         Assert.Equal(CommandOutcome.NoChange, (TestSupport.runTasks root workId title).Outcome)
 
+    /// FS.GG.SDD#310 (AC9), both directions. The example's plan carries four `PD-###`: two that
+    /// mirror a requirement's own refs (`PD-001`→FR-001, `PD-002`→FR-002) and two that do not
+    /// (`PD-003` refs the accepted deferral `DEC-002`, `PD-004` refs the checklist deferral
+    /// `CR-003`). `tasks` must fold the first pair into the requirement tasks and leave the second
+    /// pair with tasks of their own.
+    ///
+    /// The over-collapse direction is the dangerous one and the one every other test misses: a
+    /// predicate that swallowed every plan decision would still satisfy "no duplicate PD-001 task",
+    /// while silently discarding two real design decisions.
+    [<Fact>]
+    let ``Shipped example folds only the plan decisions its requirement tasks subsume`` () =
+        let root = exampleWorkspace ()
+        TestSupport.runTasks root workId title |> ignore
+        let tasks = TestSupport.readRelative root $"work/{workId}/tasks.yml"
+
+        // Folded: no task of their own, but disposed by the requirement task that subsumes them.
+        Assert.DoesNotContain("Implement plan decision PD-001", tasks)
+        Assert.DoesNotContain("Implement plan decision PD-002", tasks)
+        Assert.Contains("sourceIds: [AC-001, FR-001, PD-001]", tasks)
+        Assert.Contains("sourceIds: [AC-002, FR-002, PD-002]", tasks)
+
+        // Not subsumed by any requirement task's refs: each keeps its own task.
+        Assert.Contains("Implement plan decision PD-003", tasks)
+        Assert.Contains("Implement plan decision PD-004", tasks)
+
     /// The specific regression #192 filed: nine ids required a task disposition and the example
     /// authored none of them, because `AC-###`/`CR-###`/`GV-###`/`PC-###`/`PD-###`/`PM-###`/`VO-###`
     /// have no typed `tasks.yml` field and are expressible only through `sourceIds:`. Pinned

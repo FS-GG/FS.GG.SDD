@@ -28,6 +28,9 @@
 schemaVersion: 1
 evidence:
   # Satisfies EV001 (T001, requirement FR-001): real (non-synthetic) verification that passed.
+  # T001 also disposes PD-001: the plan scaffold derives one PD per FR mirroring that FR's own
+  # refs, so `tasks` folds the PD id into the requirement task rather than deriving a duplicate
+  # task over the identical FR/AC set.
   - id: EV001
     kind: verification
     subject:
@@ -35,10 +38,11 @@ evidence:
       id: T001
     requirementRefs: [FR-001]
     acceptanceScenarioRefs: [AC-001]
+    planDecisionRefs: [PD-001]
     artifacts: [tests/ExampleApp.Tests/ServeRuleTests.fs]
     result: pass
     synthetic: false
-  # Satisfies EV002 (T002, requirement FR-002).
+  # Satisfies EV002 (T002, requirement FR-002), and disposes PD-002 the same way.
   - id: EV002
     kind: verification
     subject:
@@ -46,6 +50,7 @@ evidence:
       id: T002
     requirementRefs: [FR-002]
     acceptanceScenarioRefs: [AC-002]
+    planDecisionRefs: [PD-002]
     artifacts: [tests/ExampleApp.Tests/RallyScoreTests.fs]
     result: pass
     synthetic: false
@@ -59,28 +64,10 @@ evidence:
     artifacts: [tests/ExampleApp.Tests/ServeRuleTests.fs]
     result: pass
     synthetic: false
-  # Satisfies EV004 (T004, plan decision PD-001 for FR-001).
-  - id: EV004
-    kind: verification
-    subject:
-      type: task
-      id: T004
-    requirementRefs: [FR-001]
-    planDecisionRefs: [PD-001]
-    artifacts: [tests/ExampleApp.Tests/ServeRuleTests.fs]
-    result: pass
-    synthetic: false
-  # Satisfies EV005 (T005, plan decision PD-002 for FR-002).
-  - id: EV005
-    kind: verification
-    subject:
-      type: task
-      id: T005
-    requirementRefs: [FR-002]
-    planDecisionRefs: [PD-002]
-    artifacts: [tests/ExampleApp.Tests/RallyScoreTests.fs]
-    result: pass
-    synthetic: false
+  # There is deliberately no EV004/EV005 here. PD-001 and PD-002 mirror FR-001/FR-002 exactly, so
+  # `tasks` collapses them into T001/T002 above (see EV001/EV002) instead of emitting duplicate
+  # tasks. Only a PD that refs something no requirement task covers — PD-003, PD-004 below — earns
+  # a task, and therefore an evidence obligation, of its own.
   # Satisfies EV006 (T006, plan decision PD-003 keeping accepted deferral DEC-002 visible).
   - id: EV006
     kind: verification
