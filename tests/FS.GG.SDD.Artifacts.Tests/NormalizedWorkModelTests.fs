@@ -162,7 +162,8 @@ module NormalizedWorkModelTests =
 
         // sourceLocation survives the parser verbatim instead of collapsing to None.
         Assert.Equal<Diagnostics.SourceLocation option list>(
-            result.Model.Requirements |> List.map (fun requirement -> requirement.SourceLocation),
+            result.Model.Requirements
+            |> List.map (fun requirement -> requirement.SourceLocation),
             parsed.Requirements |> List.map (fun requirement -> requirement.SourceLocation)
         )
 
