@@ -710,6 +710,17 @@ module internal DiagnosticConstructors =
             "Add rationale, owner, scope, and laterLifecycleVisibility to every deferral declaration."
             ids
 
+    // FS-GG/FS.GG.SDD#306: a visual-inspection obligation is discharged by a rendered artifact plus an
+    // explicit disposition. A `pass` that names no artifact claims someone looked at a frame that does
+    // not exist — the exact shape of the green-suite-over-a-visual-bug the obligation was added to catch.
+    let missingVisualInspectionArtifact path ids =
+        errorDiagnostic
+            "evidence.missingVisualInspectionArtifact"
+            (Some path)
+            "Visual-inspection evidence passes without naming a rendered artifact."
+            "Render one representative frame, look at it, and record the produced image in artifacts or a sourceRefs path/uri — or defer the obligation and say why."
+            ids
+
     let missingRequiredSkill path ids =
         errorDiagnostic
             "evidence.missingRequiredSkill"

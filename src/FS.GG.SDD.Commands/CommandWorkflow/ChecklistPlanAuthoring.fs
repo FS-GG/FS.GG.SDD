@@ -104,7 +104,11 @@ module internal ChecklistPlanAuthoring =
     // §3.1 (082): reviews are always derived fresh from the current sources — the tool never
     // seeds derivation with prior CHK/CR rows, so there is no `existingFacts` dedup. Every
     // requirement/deferral gets a re-derived verdict on every run (#146).
-    let plannedChecklistReviews (specFacts: SpecificationFacts) (clarificationFacts: ClarificationFacts) =
+    let plannedChecklistReviews
+        (specFacts: SpecificationFacts)
+        (clarificationFacts: ClarificationFacts)
+        (visualSurface: bool)
+        =
         let mutable nextItem = nextScopedIndex "CHK" ""
         let mutable nextResult = nextScopedIndex "CR" ""
 
@@ -152,7 +156,30 @@ module internal ChecklistPlanAuthoring =
                     None
                     false)
 
-        requirementReviews @ deferralReviews
+        // #306: the requirement reviews above each check ONE requirement. A spec incoherence that
+        // exists only as pixels lives in the conjunction of two — no single requirement references
+        // it, so no per-requirement review can reach it. Name the class, once, over the whole
+        // requirement set.
+        //
+        // ADVISORY, never blocking. Reviews are re-derived from source on every run and prior CHK/CR
+        // rows are never re-ingested (082, #146), so a blocking row an author reviewed and passed
+        // would reappear on the next run and dead-end the lifecycle. This row prompts; the blocking
+        // gate is the visual-inspection obligation, two stages later at `evidence`.
+        let incoherenceReviews =
+            let requirementIds = specFacts.RequirementIds |> List.map _.Value
+
+            if not visualSurface || List.isEmpty requirementIds then
+                []
+            else
+                [ allocate
+                      requirementIds
+                      "advisory"
+                      "Requirements are reviewed for incoherence that exists only BETWEEN them, which no single-requirement review can reach: draw order versus geometry, overlapping bands, and z-order versus collision bounds."
+                      (Some
+                          "Render one representative frame, look at it, and declare the rendered artifact against this work item's visual-inspection obligation.")
+                      false ]
+
+        requirementReviews @ deferralReviews @ incoherenceReviews
 
     let renderChecklistItemLine review =
         let source = review.SourceIds |> List.map (fun id -> $"[{id}]") |> String.concat " "
@@ -401,7 +428,19 @@ Prose status: {status}
         model
         =
         let path = checklistPath workId
-        let baseReviews = plannedChecklistReviews specFacts clarificationFacts
+
+        // #306: `checklistReadEffects` already requests `.fsgg/project.yml`; the visual-surface
+        // declaration rides that read. No new I/O edge, and an absent/malformed config declares none.
+        let visualSurface =
+            snapshot ".fsgg/project.yml" model
+            |> Option.bind (fun projectSnapshot ->
+                match parseProjectConfig projectSnapshot with
+                | Ok config -> Some config
+                | Error _ -> None)
+            |> Option.map _.VisualSurface
+            |> Option.defaultValue false
+
+        let baseReviews = plannedChecklistReviews specFacts clarificationFacts visualSurface
 
         match snapshot path model with
         | None ->
@@ -481,7 +520,7 @@ Prose status: {status}
                         // FR-003). Authored sections are preserved by `ensureChecklistSections`
                         // and the Source Snapshot is refreshed; unchanged sources re-derive to
                         // identical bytes → noChange (FR-008).
-                        let reviews = plannedChecklistReviews specFacts clarificationFacts
+                        let reviews = plannedChecklistReviews specFacts clarificationFacts visualSurface
 
                         let proposedText =
                             rederiveChecklist workId specText clarificationText reviews ensuredText

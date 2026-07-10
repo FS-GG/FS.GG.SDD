@@ -138,11 +138,43 @@ module Evidence =
         [ "pass"; "fail"; "deferred"; "missing"; "stale"; "advisory"; "blocked" ]
         |> Set.ofList
 
+    // FS-GG/FS.GG.SDD#306: the skill tag that marks a task — and therefore the obligation minted
+    // from it — as discharged by rendering a frame and looking at it. It lives here, in Artifacts,
+    // because the task generator that stamps it and the evidence handler that reads it back off the
+    // obligation sit in different modules of `Commands` and must agree on one literal.
+    let visualInspectionSkill = "visual-inspection"
+
+    /// Does this obligation's skill/capability tag set mark it a visual-inspection obligation?
+    let isVisualInspectionTagged (tags: string list) =
+        tags
+        |> List.exists (fun tag -> String.Equals(tag, visualInspectionSkill, StringComparison.OrdinalIgnoreCase))
+
+    /// Does this declaration name a rendered artifact — an `artifacts:` entry, or a `sourceRefs[]`
+    /// entry carrying a `path` or a `uri`? Blank strings do not count (FS.GG.SDD#306, FR-004).
+    let namesRenderedArtifact (declaration: EvidenceDeclaration) =
+        let named (value: string) = not (String.IsNullOrWhiteSpace value)
+
+        declaration.ArtifactRefs |> List.exists (fun ref -> named ref.Path)
+        || declaration.SourceRefs
+           |> List.exists (fun source -> (source.Path |> Option.exists named) || (source.Uri |> Option.exists named))
+
     let normalizedEvidenceResult (result: string) =
         (if String.IsNullOrEmpty result then
              ""
          else
              result.Trim().ToLowerInvariant())
+
+    /// The visual-inspection artifact rule (FS.GG.SDD#306, FR-004), stated once. A declaration that
+    /// claims a real, non-synthetic pass while naming no rendered artifact asserts that someone
+    /// looked at a frame that does not exist. Three call sites read this — the `evidence` pre-write
+    /// gate, the `ED-` disposition cascade, and the `TD-` mirror — so the rule cannot drift between
+    /// what blocks and what the readiness view records.
+    ///
+    /// A disclosed synthetic pass and a deferral both fall outside it: neither claims a real pass.
+    let passesWithoutRenderedArtifact (declaration: EvidenceDeclaration) =
+        normalizedEvidenceResult declaration.Result = "pass"
+        && not declaration.Synthetic
+        && not (namesRenderedArtifact declaration)
 
     let parseArtifactRefs values =
         values

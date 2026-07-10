@@ -554,3 +554,58 @@ No blocking ambiguity remains.
 
         Assert.Contains("missingChecklistBackReference", ids)
         Assert.DoesNotContain("malformedChecklistFrontMatter", ids)
+
+    // ---- #306: the between-requirements incoherence prompt --------------------------------------
+
+    let private visualSurfaceClarifiedProject () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+        TestSupport.declareVisualSurface root
+        TestSupport.runCharter root workId title |> ignore
+        TestSupport.runSpecify root workId title |> ignore
+
+        TestSupport.runRequest
+            { TestSupport.clarifyRequest root workId title with
+                InputText = None }
+        |> ignore
+
+        root
+
+    /// FR-007: one advisory row, over the whole requirement set, naming the defect class that no
+    /// per-requirement review can reach.
+    [<Fact>]
+    let ``checklist prompts for between-requirement incoherence when a visual surface is declared`` () =
+        let root = visualSurfaceClarifiedProject ()
+
+        let report = TestSupport.runChecklist root workId title
+        let checklist = TestSupport.readRelative root checklistPath
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains("incoherence that exists only BETWEEN them", checklist)
+        Assert.Contains("draw order versus geometry", checklist)
+        // The row references the requirement set whose conjunction is unreviewed...
+        Assert.Contains("[FR-001] advisory: Requirements are reviewed for incoherence", checklist)
+        // ...and it is ADVISORY, never blocking: the checklist re-derives rows from source on every
+        // run, so a blocking row an author reviewed and passed would reappear and dead-end `plan`.
+        Assert.DoesNotContain("blocking: Requirements are reviewed for incoherence", checklist)
+
+    /// FR-007: undeclared workspaces see no such row (SC-001 at the checklist seam).
+    [<Fact>]
+    let ``checklist derives no incoherence prompt when nothing is declared`` () =
+        let root = initializedClarifiedProject ()
+
+        TestSupport.runChecklist root workId title |> ignore
+        let checklist = TestSupport.readRelative root checklistPath
+
+        Assert.DoesNotContain("incoherence", checklist)
+
+    /// The advisory row is a re-derived, tool-owned section: a second run reproduces it byte for byte.
+    [<Fact>]
+    let ``checklist re-derives the incoherence prompt idempotently`` () =
+        let root = visualSurfaceClarifiedProject ()
+        TestSupport.runChecklist root workId title |> ignore
+        let first = TestSupport.readRelative root checklistPath
+
+        let report = TestSupport.runChecklist root workId title
+        Assert.Equal(CommandOutcome.NoChange, report.Outcome)
+        Assert.Equal(first, TestSupport.readRelative root checklistPath)

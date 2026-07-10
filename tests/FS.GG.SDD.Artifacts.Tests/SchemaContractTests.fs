@@ -139,3 +139,38 @@ module SchemaContractTests =
             "schemaVersion: 1\nproject:\n  id: fs-gg-sdd\n  defaultWorkRoot: work\n  implementSkill: \"   \"\nsdd:\n  config: .fsgg/sdd.yml\n  agents: .fsgg/agents.yml\n"
 
         Assert.Equal(None, parsedImplementSkill text)
+
+    // FS.GG.SDD#306 (FR-001): `project.visualSurface` is an optional boolean. It is a convenience
+    // flag, not a contract — anything that is not a YAML `true` reads as `false`, so a typo declares
+    // "no visual surface" rather than blocking every command in the workspace.
+    let private parsedVisualSurface text =
+        match parseProjectConfig (projectSnapshot text) with
+        | Ok config -> config.VisualSurface
+        | Error diagnostics -> failwith $"Project config failed: {diagnostics}"
+
+    let private projectConfigDeclaring (declaration: string) =
+        $"schemaVersion: 1\nproject:\n  id: fs-gg-sdd\n  defaultWorkRoot: work\n{declaration}sdd:\n  config: .fsgg/sdd.yml\n  agents: .fsgg/agents.yml\n"
+
+    [<Theory>]
+    [<InlineData("  visualSurface: true\n", true)>]
+    [<InlineData("  visualSurface: True\n", true)>]
+    [<InlineData("  visualSurface: false\n", false)>]
+    [<InlineData("", false)>]
+    let ``project.visualSurface parses a declared boolean`` (declaration: string) (expected: bool) =
+        Assert.Equal(expected, parsedVisualSurface (projectConfigDeclaring declaration))
+
+    [<Theory>]
+    [<InlineData("  visualSurface: \"   \"\n")>]
+    [<InlineData("  visualSurface: yes-please\n")>]
+    [<InlineData("  visualSurface: 1\n")>]
+    let ``project.visualSurface degrades to false on a non-boolean scalar`` (declaration: string) =
+        Assert.False(parsedVisualSurface (projectConfigDeclaring declaration))
+
+    [<Fact>]
+    let ``project.visualSurface is false when absent from a real project config`` () =
+        let config =
+            match parseProjectConfig (TestSupport.snapshot "valid-work-item" ".fsgg/project.yml") with
+            | Ok config -> config
+            | Error diagnostics -> failwith $"Project config failed: {diagnostics}"
+
+        Assert.False(config.VisualSurface)

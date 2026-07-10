@@ -123,5 +123,20 @@ module Evidence =
     val allowedEvidenceResults: Set<string>
     val normalizedEvidenceResult: result: string -> string
 
+    /// The skill tag marking a task, and the obligation minted from it, as discharged by rendering a
+    /// frame and looking at it (FS.GG.SDD#306).
+    val visualInspectionSkill: string
+
+    val isVisualInspectionTagged: tags: string list -> bool
+
+    /// Does this declaration name a rendered artifact — an `artifactRefs` entry, or a `sourceRefs[]`
+    /// entry carrying a `path` or a `uri`?
+    val namesRenderedArtifact: declaration: EvidenceDeclaration -> bool
+
+    /// The visual-inspection artifact rule, stated once for the `evidence` gate, the `ED-`
+    /// disposition, and the `TD-` mirror: a real (non-synthetic) `pass` that names no rendered
+    /// artifact. A synthetic pass and a deferral both fall outside it.
+    val passesWithoutRenderedArtifact: declaration: EvidenceDeclaration -> bool
+
     val parseEvidenceArtifact: snapshot: FileSnapshot -> Result<EvidenceArtifact, Diagnostic list>
     val parseEvidence: snapshot: FileSnapshot -> Result<EvidenceDeclaration list, Diagnostic list>

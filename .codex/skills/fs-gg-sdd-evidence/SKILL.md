@@ -191,6 +191,62 @@ affordances the tool already gives you, then keep each classification honest:
   otherwise). A blanket `pass` across the set is exactly the dishonesty `verify` and
   the satisfaction rule are built to catch.
 
+## The visual-inspection obligation
+
+If `.fsgg/project.yml` declares
+
+```yaml
+project:
+  visualSurface: true
+```
+
+then `tasks` derives one extra task — **`Inspect a rendered frame`** — carrying the
+`visual-inspection` required skill, and therefore one extra obligation in your
+`evidence.yml`. It exists because SDD's obligation graph is otherwise closed over
+requirements: a defect that lives in the **conjunction** of two requirements — a
+draw order that occludes a geometry the physics got exactly right — is in no
+requirement, so no requirements-derived gate can reach it. The only thing that
+reaches it is rendering one representative frame and **looking at it**.
+
+Discharge it by doing exactly that:
+
+1. Drive your product's own update loop to a representative state (the state where
+   the requirements you are worried about interact).
+2. Render **one frame** through whatever render-to-image entry point your product
+   already has, and write the image somewhere durable.
+3. **Look at the image.** This step is not automatable and is not optional.
+4. Declare the produced image as the obligation's evidence.
+
+```yaml
+  - id: EV006
+    kind: verification
+    subject:
+      type: task
+      id: T006
+    obligationRefs: [EV006]
+    artifacts: [evidence/frame-ceiling-bounce.png]
+    result: pass
+    synthetic: false
+```
+
+Two rules are enforced, and both exist because a green suite over a
+self-contradicting spec once shipped an invisible ball:
+
+- **A `pass` must name a rendered artifact.** A non-synthetic `result: pass` with an
+  empty `artifacts:` and no `sourceRefs[]` `path`/`uri` blocks with
+  `evidence.missingVisualInspectionArtifact`. A pass that names no image asserts that
+  someone looked at a frame that does not exist.
+- **A `synthetic: true` pass never satisfies it**, exactly as for every other
+  obligation. Disclosing a stand-in is honest; it is not proof.
+
+If you cannot render and look in this cut, **defer it** with the four deferral fields.
+A declared deferral is a first-class outcome (above); a synthetic pass is not a
+shortcut to one.
+
+SDD owns the obligation, never the renderer. It does not know what your visual
+surface is, does not check that the named file is an image, and ships no `render`
+command — the declaration is a boolean, and the recipe is your product's.
+
 ## Disambiguation
 
 This lifecycle `evidence.yml` is the **SDD evidence contract**. A product

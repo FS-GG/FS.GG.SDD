@@ -225,6 +225,13 @@ module internal HandlersVerify =
                             || Option.isNone declaration.LaterLifecycleVisibility))
                 then
                     "invalid", [ "evidence.missingDeferralRationale" ]
+                // #306: mirror the `ED-` cascade in `evidenceDispositions` — a visual-inspection
+                // obligation that passes without naming a rendered artifact is invalid, not satisfied.
+                elif
+                    isVisualInspectionTagged (tasks |> List.collect (fun task -> task.RequiredSkills))
+                    && matches |> List.exists passesWithoutRenderedArtifact
+                then
+                    "invalid", [ "evidence.missingVisualInspectionArtifact" ]
                 elif
                     matches
                     |> List.exists (fun declaration ->

@@ -188,7 +188,9 @@ lifecycleNotes:
             )
 
         Assert.Equal(
-            Some { StandsInFor = "null"; Reason = "null" },
+            Some
+                { StandsInFor = "null"
+                  Reason = "null" },
             (singleDeclarationOf "quoted" text).SyntheticDisclosure
         )
 
@@ -212,7 +214,9 @@ lifecycleNotes:
                 + "        result: null\n"
             )
 
-        let reference = Assert.Single((singleDeclarationOf "bare-null-refs" text).SourceRefs)
+        let reference =
+            Assert.Single((singleDeclarationOf "bare-null-refs" text).SourceRefs)
+
         Assert.Equal("test-output", reference.Kind)
         Assert.Equal(None, reference.ReferenceId)
         Assert.Equal(None, reference.Path)
@@ -275,3 +279,55 @@ lifecycleNotes:
         match parseEvidenceArtifact { Path = evidencePath; Text = text } with
         | Ok artifact -> Assert.Contains(artifact.Diagnostics, fun diagnostic -> diagnostic.Id = "duplicateIdentifier")
         | Error diagnostics -> failwith $"Expected duplicate ids to be artifact diagnostics, got {diagnostics}."
+
+    // ---- FS.GG.SDD#306: the visual-inspection obligation --------------------------------------
+
+    [<Fact>]
+    let ``visualInspectionSkill is the tag the task generator stamps`` () =
+        Assert.Equal("visual-inspection", visualInspectionSkill)
+
+    [<Theory>]
+    [<InlineData("visual-inspection", true)>]
+    [<InlineData("Visual-Inspection", true)>]
+    [<InlineData("visual inspection", false)>]
+    [<InlineData("implementation", false)>]
+    let ``isVisualInspectionTagged matches the tag case-insensitively`` (tag: string) (expected: bool) =
+        Assert.Equal(expected, isVisualInspectionTagged [ "fsharp"; tag ])
+
+    [<Fact>]
+    let ``isVisualInspectionTagged is false for an untagged task`` () =
+        Assert.False(isVisualInspectionTagged [])
+        Assert.False(isVisualInspectionTagged [ "fsharp"; "implementation" ])
+
+    // FR-004: a rendered artifact is an `artifacts:` entry, or a `sourceRefs[]` `path`/`uri`.
+    // The scaffolded declaration has neither, which is exactly the state the gate must reject
+    // once an author flips it to a non-synthetic pass.
+    [<Fact>]
+    let ``namesRenderedArtifact accepts an artifacts entry`` () =
+        let declaration = singleDeclarationOf "valid" validEvidenceYaml
+        Assert.True(namesRenderedArtifact declaration)
+
+    [<Fact>]
+    let ``namesRenderedArtifact accepts a sourceRefs path with no artifacts entry`` () =
+        let text =
+            validEvidenceYaml.Replace(
+                "    artifacts: [specs/011-evidence-command/readiness/command-evidence-tests.txt]\n",
+                "    artifacts: []\n"
+            )
+
+        Assert.True(namesRenderedArtifact (singleDeclarationOf "sourceRef-only" text))
+
+    [<Fact>]
+    let ``namesRenderedArtifact rejects a declaration naming nothing`` () =
+        let text =
+            validEvidenceYaml
+                .Replace(
+                    "    artifacts: [specs/011-evidence-command/readiness/command-evidence-tests.txt]\n",
+                    "    artifacts: []\n"
+                )
+                .Replace(
+                    "    sourceRefs:\n      - kind: test-output\n        path: specs/011-evidence-command/readiness/command-evidence-tests.txt\n        result: pass\n",
+                    "    sourceRefs: []\n"
+                )
+
+        Assert.False(namesRenderedArtifact (singleDeclarationOf "bare" text))

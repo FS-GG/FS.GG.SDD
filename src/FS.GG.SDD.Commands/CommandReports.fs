@@ -244,6 +244,9 @@ module CommandReports =
     let missingDeferralRationale path ids =
         DiagnosticConstructors.missingDeferralRationale path ids
 
+    let missingVisualInspectionArtifact path ids =
+        DiagnosticConstructors.missingVisualInspectionArtifact path ids
+
     let missingRequiredSkill path ids =
         DiagnosticConstructors.missingRequiredSkill path ids
 

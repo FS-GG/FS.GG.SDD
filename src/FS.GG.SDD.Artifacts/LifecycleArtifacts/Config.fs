@@ -27,6 +27,10 @@ module Config =
           // FS-GG/FS.GG.SDD#310: `project.implementSkill`, the workspace's implementation skill for
           // derived implementation tasks. None degrades to a neutral, non-misleading skill.
           ImplementSkill: string option
+          // FS-GG/FS.GG.SDD#306: `project.visualSurface`, the workspace's declaration that its product
+          // renders something a human must look at. Value-agnostic on purpose: the consumer decides
+          // what a visual surface is (a scene graph, a terminal frame, a plot), SDD reads a boolean.
+          VisualSurface: bool
           // FS-GG/FS.GG.SDD#305: `sdd.minToolVersion`, the workspace's declared floor for the fsgg-sdd
           // toolchain. None declares no floor.
           MinToolVersion: string option }
@@ -93,6 +97,10 @@ module Config =
                       ImplementSkill =
                         tryScalarAt [ "project"; "implementSkill" ] root
                         |> Option.filter (fun value -> not (String.IsNullOrWhiteSpace value))
+                      // FS-GG/FS.GG.SDD#306: an optional convenience flag, not a contract. `boolAt`
+                      // reads a non-boolean scalar as the default, so a typo degrades to "no visual
+                      // surface" rather than blocking every command in the workspace (Principle VIII).
+                      VisualSurface = boolAt [ "project"; "visualSurface" ] root false
                       // FS-GG/FS.GG.SDD#305: the workspace-declared floor for the fsgg-sdd toolchain.
                       // Optional and unvalidated here — an unparseable value is a warning at report
                       // assembly, not a parse error that would block every command on a config typo.
