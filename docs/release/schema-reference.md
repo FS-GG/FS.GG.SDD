@@ -268,12 +268,21 @@ top-level fields only.
   prints. Without it a stale toolchain is invisible in the artifacts it emits, so a consumer feedback
   report cannot be told apart from a stale one without re-verifying every finding against `main` —
   three separate consumers independently rediscovered one already-fixed defect that way. A workspace
-  may additionally declare the floor it expects as `sdd.minToolVersion` in `.fsgg/project.yml`;
-  running below it warns (`project.toolVersionBelowMinimum`), and a floor that is not a
-  `major.minor.patch` triple warns (`project.minToolVersionUnparseable`) rather than being silently
-  ignored. Both are warnings, never gates, and the floor is opt-in — absent, nothing changes. This
-  additive-optional field moved `reportVersion` to `2.3.0` (a semantic minor); `schemaVersion` stays
-  `1`.
+  may additionally declare the floor it expects as `sdd.minToolVersion` in `.fsgg/project.yml`
+  (nested under `sdd:`, not at the top level); running below it warns
+  (`project.toolVersionBelowMinimum`), and a floor that is not a `major.minor.patch` triple warns
+  (`project.minToolVersionUnparseable`) rather than being silently ignored. The floor is opt-in —
+  absent, nothing changes.
+  Both diagnostics are warnings, never gates: the exit code stays `0` and nothing blocks. They do,
+  however, participate in the ordinary severity rule, so while a workspace runs below its declared
+  floor every command reports `outcome: succeededWithWarnings` — which pre-empts `noChange` and
+  therefore reports `coherent: false` even on an otherwise-current re-run. That is deliberate: a
+  workspace running below the floor it declared is not told "clean, advance". A consumer keying on
+  `coherent` should update the CLI, or lower the floor, rather than special-case the warning.
+  This floor is distinct from the provider-declared `minimumCliVersion` that `doctor`/`upgrade`
+  reconcile (ADR-0009); `doctor` does not yet read `sdd.minToolVersion` (FS-GG/FS.GG.SDD#313).
+  This additive-optional field moved `reportVersion` to `2.3.0` (a semantic minor); `schemaVersion`
+  stays `1`.
   The additive `lifecycleStatus` field is present on **every** command's report — feature 084;
   it is the standardized lifecycle-status footer's authoritative fact, carrying `workId`,
   `isLifecycleStage`, `currentOrdinal`, `totalStages`, `outcome`, `nextCommand`, and `stages[]`

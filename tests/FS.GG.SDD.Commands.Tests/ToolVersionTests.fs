@@ -102,6 +102,57 @@ sdd:
         let report = reportWithFloor (Some "999.0.0")
         Assert.Equal(CommandOutcome.SucceededWithWarnings, report.Outcome)
 
+    /// Deliberate, not incidental. The floor warning participates in the ordinary severity rule (any
+    /// warning ⇒ `succeededWithWarnings`), which pre-empts `noChange` and therefore clears the #183
+    /// clean-advance signal on an otherwise-current re-run. Exempting tool diagnostics from that rule
+    /// would be a special case layered on the shared outcome mechanism; instead a workspace running
+    /// below its own declared floor is told, on every command, that it is not safe to advance. This
+    /// test exists so that consequence cannot be silently reverted or silently introduced.
+    [<Fact>]
+    let ``a floor warning clears the clean-advance signal on an otherwise-current re-run`` () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+        TestSupport.writeRelative root ".fsgg/project.yml" (projectConfig None)
+
+        // First run authors the charter; the second finds everything current.
+        TestSupport.runCharter root workId title |> ignore
+        let cleanRerun = TestSupport.runCharter root workId title
+
+        Assert.Equal(CommandOutcome.NoChange, cleanRerun.Outcome)
+        Assert.True cleanRerun.Coherent
+
+        // Same workspace, same already-current artifacts — only the declared floor moved.
+        TestSupport.writeRelative root ".fsgg/project.yml" (projectConfig (Some "999.0.0"))
+        let staleToolRerun = TestSupport.runCharter root workId title
+
+        Assert.Equal(CommandOutcome.SucceededWithWarnings, staleToolRerun.Outcome)
+        Assert.False staleToolRerun.Coherent
+
+    /// The floor is read from `sdd.minToolVersion`, not a top-level `minToolVersion`. Issue #305 names
+    /// the key without a parent, so this pins the one the parser actually reads — a floor written at the
+    /// wrong depth would enforce nothing and warn nothing, which is precisely the silent staleness the
+    /// issue exists to close.
+    [<Fact>]
+    let ``the floor is read from sdd minToolVersion and not from a top-level key`` () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+
+        let topLevelFloor =
+            $"""schemaVersion: 1
+minToolVersion: 999.0.0
+project:
+  id: {workId}
+  defaultWorkRoot: work
+sdd:
+  config: .fsgg/sdd.yml
+  agents: .fsgg/agents.yml
+"""
+
+        TestSupport.writeRelative root ".fsgg/project.yml" topLevelFloor
+        let report = TestSupport.runCharter root workId title
+
+        Assert.Empty(floorDiagnosticIds report)
+
     /// An unparseable floor enforces nothing. Saying so out loud is the whole point of #305 — a silently
     /// ignored floor is exactly the invisible-staleness failure this issue exists to close.
     [<Fact>]
