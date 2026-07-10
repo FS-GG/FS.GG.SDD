@@ -751,3 +751,80 @@ module TasksCommandTests =
         Assert.NotEqual(CommandOutcome.Blocked, rerunReport.Outcome)
         Assert.True(createWatch.Elapsed < TimeSpan.FromSeconds 2.0, $"Create took {createWatch.Elapsed}.")
         Assert.True(rerunWatch.Elapsed < TimeSpan.FromSeconds 2.0, $"Rerun took {rerunWatch.Elapsed}.")
+
+    // ---- #306: the visual-inspection obligation -----------------------------------------------
+
+    let private visualSurfacePlanReadyProject () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+        TestSupport.declareVisualSurface root
+        TestSupport.runCharter root workId title |> ignore
+        TestSupport.runSpecify root workId title |> ignore
+
+        TestSupport.runRequest
+            { TestSupport.clarifyRequest root workId title with
+                InputText = None }
+        |> ignore
+
+        TestSupport.runChecklist root workId title |> ignore
+        TestSupport.runPlan root workId title |> ignore
+        root
+
+    /// FR-002: the declaration derives exactly one render-and-look task, tagged, with one obligation.
+    [<Fact>]
+    let ``tasks derives a visual-inspection task when a visual surface is declared`` () =
+        let root = visualSurfacePlanReadyProject ()
+
+        let report = TestSupport.runTasks root workId title
+        let tasks = TestSupport.readRelative root tasksPath
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains($"title: {visualInspectionTaskTitle}", tasks)
+        Assert.Contains("requiredSkills: [implementation, visual-inspection]", tasks)
+        // FR-002/§Design: it descends from no lifecycle fact id, so it declares none. Any id it
+        // invented would be rejected by `taskValidationDiagnostics.unknownSources`.
+        let visualTaskBlock = tasks.Substring(tasks.IndexOf(visualInspectionTaskTitle))
+        Assert.Contains("sourceIds: []", visualTaskBlock)
+        // FR-003: exactly one obligation, minted by the existing per-task mechanism.
+        Assert.Equal(1, TestSupport.countOccurrences visualInspectionTaskTitle tasks)
+
+    /// FR-002: with nothing declared, no such task exists. This is the whole of SC-001 at the tasks
+    /// seam — an undeclaring workspace's graph is byte-identical to the graph before this feature.
+    [<Fact>]
+    let ``tasks derives no visual-inspection task when nothing is declared`` () =
+        let root = initializedPlanReadyProject ()
+
+        TestSupport.runTasks root workId title |> ignore
+        let tasks = TestSupport.readRelative root tasksPath
+
+        Assert.DoesNotContain(visualInspectionTaskTitle, tasks)
+        Assert.DoesNotContain("visual-inspection", tasks)
+
+    /// SC-004: the task's title is its identity across a re-derivation, so its `T###` — and the
+    /// `EV###` obligation keyed to it — are stable and the second run is a byte-for-byte noChange.
+    [<Fact>]
+    let ``tasks re-derives the visual-inspection task idempotently`` () =
+        let root = visualSurfacePlanReadyProject ()
+
+        TestSupport.runTasks root workId title |> ignore
+        let first = TestSupport.readRelative root tasksPath
+
+        let report = TestSupport.runTasks root workId title
+        let second = TestSupport.readRelative root tasksPath
+
+        Assert.Equal(CommandOutcome.NoChange, report.Outcome)
+        Assert.Equal(first, second)
+
+    /// The declaration flips off: the derived task covers no live disposition, so the existing
+    /// orphan rule in `mergeAuthoredTaskState` reclaims it rather than stranding it forever.
+    [<Fact>]
+    let ``tasks drops the visual-inspection task when the declaration is withdrawn`` () =
+        let root = visualSurfacePlanReadyProject ()
+        TestSupport.runTasks root workId title |> ignore
+        Assert.Contains(visualInspectionTaskTitle, TestSupport.readRelative root tasksPath)
+
+        let projectYml = TestSupport.readRelative root ".fsgg/project.yml"
+        TestSupport.writeRelative root ".fsgg/project.yml" (projectYml.Replace("  visualSurface: true\n", ""))
+
+        TestSupport.runTasks root workId title |> ignore
+        Assert.DoesNotContain(visualInspectionTaskTitle, TestSupport.readRelative root tasksPath)

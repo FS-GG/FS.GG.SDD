@@ -310,7 +310,16 @@ module internal HandlersEvidence =
           PlanDecisionRefs = routed.PlanDecisions
           ObligationRefs = [ obligation.ObligationId ]
           ArtifactRefs = []
-          SourceRefs = fromTestsSourceRefs fromTests
+          // #306: `--from-tests` seeds a proving TEST path onto each newly scaffolded obligation.
+          // A visual-inspection obligation is discharged by a rendered frame, not by a test file,
+          // and `namesRenderedArtifact` cannot tell the two apart — so seeding one here would
+          // pre-satisfy the artifact gate with the wrong kind of proof the moment the author flipped
+          // `result: pass`. It is left unseeded: the author names the image, deliberately.
+          SourceRefs =
+            if isVisualInspectionTagged obligation.RequiredSkillOrCapabilityTags then
+                []
+            else
+                fromTestsSourceRefs fromTests
           Result = "missing"
           Synthetic = false
           SyntheticDisclosure = None
@@ -518,6 +527,30 @@ module internal HandlersEvidence =
                 || Option.isNone declaration.LaterLifecycleVisibility)
             |> List.map (fun declaration -> declaration.Id.Value)
 
+        // #306: this gate runs BEFORE the writer, so it has no `EvidenceObligation` list to read the
+        // visual-inspection tag off (`evidenceDispositions` does, and applies the same rule to the
+        // disposition). Recover the obligation ids from the tasks that mint them: a task tagged
+        // `visual-inspection` obligates each id in its `requiredEvidence`.
+        let visualObligationIds =
+            taskFacts.Tasks
+            |> List.filter (fun task -> isVisualInspectionTagged task.RequiredSkills)
+            |> List.collect (fun task -> task.RequiredEvidence |> List.map _.Value)
+            |> Set.ofList
+
+        let namesVisualObligation (declaration: EvidenceDeclaration) =
+            Set.contains declaration.Id.Value visualObligationIds
+            || declaration.ObligationRefs
+               |> List.exists (fun id ->
+                   visualObligationIds
+                   |> Set.exists (fun obligationId ->
+                       String.Equals(id, obligationId, StringComparison.OrdinalIgnoreCase)))
+
+        let missingVisualArtifacts =
+            artifact.Evidence
+            |> List.filter (fun declaration ->
+                namesVisualObligation declaration && passesWithoutRenderedArtifact declaration)
+            |> List.map (fun declaration -> declaration.Id.Value)
+
         [ if not (String.Equals(artifact.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
               evidenceIdentityMismatch path workId artifact.WorkId.Value
           if artifact.Stage <> LifecycleStage.Evidence then
@@ -544,6 +577,8 @@ module internal HandlersEvidence =
               undisclosedSyntheticEvidence path undisclosedSynthetic
           if not (List.isEmpty missingDeferralFields) then
               missingDeferralRationale path missingDeferralFields
+          if not (List.isEmpty missingVisualArtifacts) then
+              missingVisualInspectionArtifact path missingVisualArtifacts
           if evidenceSourceSnapshotStale currentSnapshots artifact.SourceSnapshots then
               staleEvidenceSource
                   path
@@ -623,6 +658,16 @@ module internal HandlersEvidence =
                         not (Set.contains (normalizedEvidenceResult declaration.Result) allowedEvidenceResults))
                 then
                     "invalid", [ "evidence.unsupportedResultState" ]
+                // #306: a visual-inspection obligation is satisfied only by a rendered artifact plus
+                // an explicit disposition. The `not declaration.Synthetic` guard keeps a disclosed
+                // synthetic pass falling through to `"synthetic"` below (unsatisfying, but honest and
+                // not a defect) rather than being reclassified `"invalid"`. A deferral never reaches
+                // here — its result is `deferred`, not `pass`.
+                elif
+                    isVisualInspectionTagged obligation.RequiredSkillOrCapabilityTags
+                    && matches |> List.exists passesWithoutRenderedArtifact
+                then
+                    "invalid", [ "evidence.missingVisualInspectionArtifact" ]
                 elif
                     matches
                     |> List.exists (fun declaration ->

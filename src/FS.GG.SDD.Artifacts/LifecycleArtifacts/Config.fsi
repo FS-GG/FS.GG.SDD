@@ -21,6 +21,7 @@ module Config =
           GovernanceToolingPath: string option
           TestFramework: string option
           ImplementSkill: string option
+          VisualSurface: bool
           MinToolVersion: string option }
 
     type SddLifecyclePolicy =

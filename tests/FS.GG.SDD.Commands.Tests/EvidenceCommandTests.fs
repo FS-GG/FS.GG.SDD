@@ -1107,3 +1107,201 @@ tasks:
         Assert.Equal("supported", completion.State)
         Assert.Equal<string list>([ "EV010" ], completion.EvidenceIds)
         Assert.Equal<string list>([ "T050" ], completion.TaskIds)
+
+    // ---- #306: the visual-inspection obligation gate --------------------------------------------
+
+    /// A visual-surface workspace, scaffolded through `evidence`. Unlike `initializeAnalyzedProject`
+    /// this cannot reuse the fixed five-entry evidence ladder: the declaration derives a sixth task
+    /// (`Inspect a rendered frame`), so the scaffold must come from the obligations themselves.
+    let private visualSurfaceScaffoldedProject () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+        TestSupport.declareVisualSurface root
+        TestSupport.runCharter root workId title |> ignore
+        TestSupport.runSpecify root workId title |> ignore
+
+        TestSupport.runRequest
+            { TestSupport.clarifyRequest root workId title with
+                InputText = None }
+        |> ignore
+
+        TestSupport.runChecklist root workId title |> ignore
+        TestSupport.runPlan root workId title |> ignore
+        TestSupport.runTasks root workId title |> ignore
+        TestSupport.runAnalyze root workId title |> ignore
+        TestSupport.runEvidence root workId title |> ignore
+        root
+
+    /// The obligation minted for the `visual-inspection`-tagged task, read off the generated graph
+    /// rather than hardcoded, so a change to the derivation order cannot silently pass these tests.
+    let private visualObligationId root =
+        let tasks = TestSupport.readRelative root $"work/{workId}/tasks.yml"
+        let marker = "title: Inspect a rendered frame"
+        let block = tasks.Substring(tasks.IndexOf(marker))
+        let evidenceLine = block.Substring(block.IndexOf("requiredEvidence: ["))
+        evidenceLine.Substring("requiredEvidence: [".Length).Split(']').[0].Trim()
+
+    /// Replace the visual obligation's scaffolded declaration with `body`, keeping every other
+    /// obligation's declaration exactly as scaffolded.
+    let private declareVisualEvidence root (body: string) =
+        let obligationId = visualObligationId root
+        let evidence = TestSupport.readRelative root evidencePath
+        let start = evidence.IndexOf($"  - id: {obligationId}\n")
+        let after = evidence.IndexOf("\nlifecycleNotes:", start)
+        let replaced = evidence.Substring(0, start) + body + evidence.Substring(after)
+        TestSupport.writeRelative root evidencePath replaced
+        obligationId
+
+    let private visualDeclaration obligationId taskId fields =
+        $"  - id: {obligationId}\n    kind: verification\n    subject:\n      type: task\n      id: {taskId}\n    taskRefs: [{taskId}]\n    obligationRefs: [{obligationId}]\n{fields}"
+
+    /// FR-004 / SC-003: a non-synthetic `pass` that names no rendered artifact is exactly the shape
+    /// of Breakout1's green suite over an invisible ball. It blocks.
+    [<Fact>]
+    let ``evidence blocks a visual-inspection pass that names no rendered artifact`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                "    artifacts: []\n    sourceRefs: []\n    result: pass\n    synthetic: false\n")
+        |> ignore
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+        Assert.Contains(
+            report.Diagnostics,
+            fun diagnostic -> diagnostic.Id = "evidence.missingVisualInspectionArtifact"
+        )
+
+    /// FR-004: naming the rendered frame discharges it.
+    [<Fact>]
+    let ``evidence accepts a visual-inspection pass that names a rendered artifact`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                "    artifacts: [evidence/frame-ceiling-bounce.png]\n    sourceRefs: []\n    result: pass\n    synthetic: false\n")
+        |> ignore
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+
+        Assert.DoesNotContain(
+            report.Diagnostics,
+            fun diagnostic -> diagnostic.Id = "evidence.missingVisualInspectionArtifact"
+        )
+
+    /// FR-004: a `sourceRefs[]` path is a rendered artifact too — the gate reads either bucket.
+    [<Fact>]
+    let ``evidence accepts a visual-inspection pass whose rendered artifact is a sourceRef`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                "    artifacts: []\n    sourceRefs:\n      - kind: verification\n        path: evidence/frame-ceiling-bounce.png\n        result: pass\n    result: pass\n    synthetic: false\n")
+        |> ignore
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+
+    /// FR-005 / SC-002: a disclosed synthetic pass is honest, so it does not BLOCK — but it never
+    /// satisfies. The gate must not reclassify it `invalid`; the existing cascade records it
+    /// `synthetic`, which is unsatisfying by the satisfaction rule this feature inherits.
+    [<Fact>]
+    let ``evidence records a synthetic visual-inspection pass as unsatisfying, not invalid`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+
+        declareVisualEvidence
+            root
+            ($"  - id: {obligationId}\n    kind: synthetic\n    subject:\n      type: task\n      id: T006\n    taskRefs: [T006]\n    obligationRefs: [{obligationId}]\n    artifacts: []\n    sourceRefs: []\n    result: pass\n    synthetic: true\n    syntheticDisclosure:\n      standsInFor: a real rendered frame\n      reason: the renderer is not wired yet\n")
+        |> ignore
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+
+        Assert.DoesNotContain(
+            report.Diagnostics,
+            fun diagnostic -> diagnostic.Id = "evidence.missingVisualInspectionArtifact"
+        )
+
+        match report.Evidence with
+        | Some summary -> Assert.Equal(1, summary.SyntheticCount)
+        | None -> failwith "Expected an evidence summary."
+
+    /// FR-006: a deferral is a first-class disposition. Its `result` is `deferred`, never `pass`, so
+    /// the artifact gate must not fire on it — only the existing four-field deferral gate applies.
+    [<Fact>]
+    let ``evidence lets a visual-inspection obligation be deferred without a rendered artifact`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+
+        declareVisualEvidence
+            root
+            ($"  - id: {obligationId}\n    kind: deferral\n    subject:\n      type: task\n      id: T006\n    taskRefs: [T006]\n    obligationRefs: [{obligationId}]\n    artifacts: []\n    sourceRefs: []\n    result: deferred\n    synthetic: false\n    rationale: the renderer lands in the next cut\n    owner: platform\n    scope: the ceiling-bounce frame inspection\n    laterLifecycleVisibility: re-open when the renderer ships\n")
+        |> ignore
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+
+        Assert.DoesNotContain(
+            report.Diagnostics,
+            fun diagnostic -> diagnostic.Id = "evidence.missingVisualInspectionArtifact"
+        )
+
+    /// FR-004, defence in depth: `--from-tests` pre-maps each newly scaffolded obligation to a
+    /// proving TEST path. `namesRenderedArtifact` cannot tell a test file from a rendered frame, so
+    /// seeding one onto the visual-inspection obligation would pre-satisfy the artifact gate with the
+    /// wrong kind of proof the instant the author flipped `result: pass` — the exact bypass this
+    /// obligation exists to prevent. The visual obligation is left unseeded; every other one is not.
+    [<Fact>]
+    let ``evidence --from-tests does not seed a test path onto the visual-inspection obligation`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+        System.IO.File.Delete(System.IO.Path.Combine(root, "work", workId, "evidence.yml"))
+
+        { TestSupport.evidenceRequest root workId title with
+            FromTests = Some "tests/Product.Tests/PhysicsTests.fs" }
+        |> TestSupport.runRequest
+        |> ignore
+
+        let artifact =
+            match
+                parseEvidenceArtifact
+                    { Path = evidencePath
+                      Text = TestSupport.readRelative root evidencePath }
+            with
+            | Ok artifact -> artifact
+            | Error diagnostics -> failwith $"Scaffolded evidence artifact did not parse: {diagnostics}."
+
+        let visual =
+            artifact.Evidence
+            |> List.find (fun declaration -> declaration.Id.Value = obligationId)
+
+        Assert.Empty(visual.SourceRefs)
+        Assert.False(namesRenderedArtifact visual)
+
+        // Every other obligation still gets its proving-test pointer.
+        for declaration in artifact.Evidence |> List.filter (fun d -> d.Id.Value <> obligationId) do
+            Assert.Contains(
+                declaration.SourceRefs,
+                fun source -> source.Path = Some "tests/Product.Tests/PhysicsTests.fs"
+            )

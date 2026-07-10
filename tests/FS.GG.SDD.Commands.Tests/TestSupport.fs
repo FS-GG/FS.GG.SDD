@@ -247,6 +247,30 @@ module TestSupport =
     let writePassingTaskEvidenceFor root workId =
         writeRelative root $"work/{workId}/evidence.yml" passingTaskEvidence
 
+    let countOccurrences (needle: string) (haystack: string) =
+        if needle = "" then
+            0
+        else
+            let mutable count = 0
+            let mutable index = haystack.IndexOf(needle, StringComparison.Ordinal)
+
+            while index >= 0 do
+                count <- count + 1
+                index <- haystack.IndexOf(needle, index + needle.Length, StringComparison.Ordinal)
+
+            count
+
+    /// FS.GG.SDD#306: declare `project.visualSurface` on an already-initialized `.fsgg/project.yml`.
+    /// `checklist`, `tasks`, and `evidence` each already request that read effect, so the flag rides
+    /// an existing read. Must be called after `initializeProject` and before `charter`.
+    let declareVisualSurface root =
+        let projectYml = readRelative root ".fsgg/project.yml"
+
+        writeRelative
+            root
+            ".fsgg/project.yml"
+            (projectYml.Replace("  defaultWorkRoot: work", "  defaultWorkRoot: work\n  visualSurface: true"))
+
     let initializeTasksReadyProject root workId title =
         initializePlanReadyProject root workId title
         runTasks root workId title |> ignore

@@ -39,7 +39,7 @@
     {
       "id": "fs-gg-sdd-evidence",
       "scope": "process",
-      "sha256": "581db14d7e4f85401b0deca03bfe24bded405566be5f23db418ec849f2553447",
+      "sha256": "7576a7c5fc31e29ce4b01b811cc8e0c8ab031a313c8d6966d42b12bba1a3d30d",
       "resolvablePath": ".agents/skills/fs-gg-sdd-evidence/SKILL.md",
       "materializes-when": "always"
     },

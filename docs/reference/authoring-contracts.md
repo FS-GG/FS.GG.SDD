@@ -493,6 +493,51 @@ Before FS.GG.SDD#310 the implement skill was the hardcoded literal `speckit-impl
 own authoring toolchain leaking into every consumer's task graph. Declare `implementSkill` to
 name the skill your agents actually have.
 
+## The visual-inspection obligation (`project.visualSurface`)
+
+Every obligation SDD derives descends from a lifecycle fact id — an `FR-###`, a `DEC-###`, a
+`PD-###`, a contract or migration id. The graph is therefore **closed over requirements**, and a
+defect that lives in the *conjunction* of two requirements is in no requirement at all. A spec that
+puts a wall at `y = 16`, an opaque status band over `y ∈ [0, 48]`, and draws the band last is
+internally satisfiable, fully covered, and renders an invisible ball. No requirements-derived gate
+can reach it.
+
+A workspace whose product renders something a human must look at declares so:
+
+```yaml
+schemaVersion: 1
+project:
+  id: my-product
+  defaultWorkRoot: work
+  visualSurface: true
+```
+
+The declaration is a **boolean, and value-agnostic** — you decide what a visual surface is (a scene
+graph, a terminal frame, a plot); SDD never learns why. It is optional; absent, blank, non-boolean,
+or in an unparseable config, it reads `false` and nothing changes.
+
+When it is `true`:
+
+| Stage | Effect |
+| --- | --- |
+| `checklist` | one **advisory** (non-blocking) review row prompting for the between-requirements defect class — draw order vs geometry, overlapping bands, z-order vs collision bounds |
+| `tasks` | one derived task `Inspect a rendered frame`, `requiredSkills: [<implement skill>, visual-inspection]`, empty `sourceIds:` (it descends from no fact id — that is the point), and one `requiredEvidence` obligation |
+| `evidence` / `verify` | that obligation is satisfied only by `result: pass` ∧ `synthetic: false` ∧ **a named rendered artifact** |
+
+The artifact is an `artifacts:` entry, or a `sourceRefs[]` entry carrying a `path` or a `uri`. A
+non-synthetic `pass` that names neither blocks with `evidence.missingVisualInspectionArtifact`: it
+asserts that someone looked at a frame that does not exist. A `synthetic: true` pass never satisfies
+it, as for every other obligation, and an accepted deferral (with all four deferral fields) is a
+first-class outcome that the artifact rule does not touch.
+
+SDD owns the obligation, never the renderer: it ships no `render` command, embeds no rendering API,
+and does not check that the named file is an image.
+
+**Migration.** Additive and opt-in; the schema stays v1. A workspace that never declares
+`visualSurface` sees no change to any artifact. Withdrawing the declaration drops the derived task
+under the existing orphan rule, so remove its `evidence.yml` entry — the same cleanup a folded
+`PD-###` requires (see below).
+
 ## Plan decisions that mirror a requirement earn no task of their own
 
 `plan` auto-derives exactly one `PD-###` per functional requirement, and that derived decision

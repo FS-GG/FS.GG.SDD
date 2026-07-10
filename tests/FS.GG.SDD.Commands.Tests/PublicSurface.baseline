@@ -80,6 +80,7 @@ FS.GG.SDD.Commands.CommandReports.missingSpecificationIntent
 FS.GG.SDD.Commands.CommandReports.missingSpecificationPrerequisite
 FS.GG.SDD.Commands.CommandReports.missingTasksPrerequisite
 FS.GG.SDD.Commands.CommandReports.missingVerificationPrerequisite
+FS.GG.SDD.Commands.CommandReports.missingVisualInspectionArtifact
 FS.GG.SDD.Commands.CommandReports.missingWorkId
 FS.GG.SDD.Commands.CommandReports.outsideProject
 FS.GG.SDD.Commands.CommandReports.planAuthoringWindow

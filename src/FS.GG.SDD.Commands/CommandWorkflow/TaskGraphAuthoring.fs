@@ -58,6 +58,16 @@ module internal TaskGraphAuthoring =
         { TestSkill = resolveTestSkill (config |> Option.bind _.TestFramework)
           ImplementSkill = resolveImplementSkill (config |> Option.bind _.ImplementSkill) }
 
+    /// Does the workspace declare a visual surface (#306)? An absent or malformed
+    /// `.fsgg/project.yml` declares none, matching how the derived skills degrade.
+    let derivedVisualSurface (config: ProjectLifecycleConfig option) : bool =
+        config |> Option.map _.VisualSurface |> Option.defaultValue false
+
+    /// The one derived task whose obligation is not descended from any requirement (#306). Its title
+    /// is its identity: `mergeAuthoredTaskState` matches derived to prior tasks by title, which is
+    /// what keeps its `T###` — and therefore its `EV###` obligation — stable across re-derivations.
+    let visualInspectionTaskTitle = "Inspect a rendered frame"
+
     /// Lifecycle ids compare case-insensitively. One spelling of the fold, shared by every
     /// membership test below, so a change of comparison convention cannot reach three of four
     /// call sites and silently miss the fourth.
@@ -199,6 +209,7 @@ module internal TaskGraphAuthoring =
 
     let plannedTasks
         (skills: DerivedSkills)
+        (visualSurface: bool)
         (specFacts: SpecificationFacts)
         (clarificationFacts: ClarificationFacts)
         (checklistFacts: ChecklistFacts)
@@ -435,6 +446,25 @@ module internal TaskGraphAuthoring =
             |> List.choose (fun id ->
                 maybeTask [ id ] $"Keep accepted deferral {id} visible" [] [] primaryDependency [ "traceability" ])
 
+        // #306: the render-and-look obligation. Every other derived task descends from a lifecycle
+        // fact id; this one descends from none, because the defect class it exists to catch — a spec
+        // incoherence that appears only as pixels — lives in the CONJUNCTION of requirements that no
+        // single requirement references. Its `sourceIds` are therefore empty: any id it invented
+        // would be rejected by `taskValidationDiagnostics.unknownSources`, the very gate that keeps
+        // the graph honest. Emitted last so the ids of the families above are unperturbed.
+        let visualInspectionTasks =
+            if not visualSurface then
+                []
+            else
+                [ maybeTask
+                      []
+                      visualInspectionTaskTitle
+                      []
+                      []
+                      primaryDependency
+                      [ visualInspectionSkill; skills.ImplementSkill ] ]
+                |> List.choose id
+
         requirementTasksWithFoldedDecisions
         @ clarificationDecisionTasks
         @ planDecisionTasks
@@ -443,6 +473,7 @@ module internal TaskGraphAuthoring =
         @ migrationTasks
         @ generatedViewTasks
         @ deferralTasks
+        @ visualInspectionTasks
 
     let currentTaskSourceDigests workId specText clarificationText checklistText planText =
         [ "spec", specPath workId, specText
@@ -982,21 +1013,23 @@ sources:
         let path = tasksPath workId
         let evidence, evidenceDiagnostics = parseEvidenceForCommand workId model
 
-        // The declared test framework and implement skill ride the already-loaded
-        // `.fsgg/project.yml` read effect; no new I/O edge. Absent/malformed config =>
-        // neutral skills.
-        let skills =
+        // The declared test framework, implement skill, and visual surface (#306) all ride the
+        // already-loaded `.fsgg/project.yml` read effect; no new I/O edge. Absent/malformed config
+        // => neutral skills and no visual surface.
+        let projectConfig =
             snapshot ".fsgg/project.yml" model
             |> Option.bind (fun projectSnapshot ->
                 match parseProjectConfig projectSnapshot with
                 | Ok config -> Some config
                 | Error _ -> None)
-            |> derivedSkills
+
+        let skills = derivedSkills projectConfig
+        let visualSurface = derivedVisualSurface projectConfig
 
         match snapshot path model with
         | None ->
             let tasks =
-                plannedTasks skills specFacts clarificationFacts checklistFacts planFacts None
+                plannedTasks skills visualSurface specFacts clarificationFacts checklistFacts planFacts None
 
             let acceptedDeferrals =
                 [ clarificationFacts.AcceptedDeferrals
@@ -1120,7 +1153,7 @@ sources:
                         // never reports stale-and-unchanged (FR-004/FR-005). Derived rows are
                         // reclaimed — prior tool-injected rows are never re-ingested (FR-002).
                         let derived =
-                            plannedTasks skills specFacts clarificationFacts checklistFacts planFacts None
+                            plannedTasks skills visualSurface specFacts clarificationFacts checklistFacts planFacts None
 
                         // The universe of ids the current sources can dispose (the ONE shared
                         // `requiredDispositionIds` list analyze's completeness check also reads).
