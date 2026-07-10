@@ -1070,7 +1070,11 @@ module internal DiagnosticConstructors =
             Some
                 { Path = path
                   Kind = writeKindValue kind
-                  Ownership = if kind = GeneratedView then "generated" else "authored"
+                  Ownership =
+                    match kind with
+                    | GeneratedView -> "generated"
+                    | HybridArtifact -> "hybrid"
+                    | _ -> "authored"
                   Operation = operation
                   BeforeDigest = beforeDigest
                   AfterDigest = afterDigest

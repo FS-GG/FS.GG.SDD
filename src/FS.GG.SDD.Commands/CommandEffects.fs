@@ -90,11 +90,17 @@ module CommandEffects =
         else
             None
 
+    /// The tag decides. An absent file is always writable, and an identical rewrite is a no-op
+    /// whatever the kind. Otherwise only the two tool-owned kinds may replace bytes: a
+    /// `GeneratedView` the tool alone produces, and a `HybridArtifact` whose text is already the
+    /// merge of re-derived tool regions with the author's preserved ones. `AuthoredSource` joins
+    /// `StructuredSource` and `AgentGuidanceTarget` in refusing — the tool never writes authored
+    /// prose, so an effect that claims it is a tool defect, caught here rather than on disk.
     let canOverwrite (kind: ArtifactWriteKind) (existing: FileSnapshot option) (text: string) =
         match existing, kind with
         | None, _ -> true
         | Some snapshot, _ when snapshot.Text = text -> true
-        | Some _, AuthoredSource -> true
+        | Some _, HybridArtifact -> true
         | Some _, GeneratedView -> true
         | Some _, _ -> false
 

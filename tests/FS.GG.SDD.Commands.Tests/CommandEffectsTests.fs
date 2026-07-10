@@ -46,7 +46,7 @@ module CommandEffectsTests =
     let ``creates a file that does not yet exist`` () =
         let root = TestSupport.tempDirectory ()
 
-        let result = interpret root (WriteFile(relative, "created", AuthoredSource))
+        let result = interpret root (WriteFile(relative, "created", HybridArtifact))
 
         Assert.True result.Succeeded
         Assert.Equal("created", File.ReadAllText(absolute root))
@@ -57,7 +57,7 @@ module CommandEffectsTests =
         let root = TestSupport.tempDirectory ()
         seed root "old content that is longer than the new"
 
-        let result = interpret root (WriteFile(relative, "new", AuthoredSource))
+        let result = interpret root (WriteFile(relative, "new", HybridArtifact))
 
         Assert.True result.Succeeded
         Assert.Equal("new", File.ReadAllText(absolute root))
@@ -79,7 +79,7 @@ module CommandEffectsTests =
         File.SetLastWriteTimeUtc(absolute root, before.AddDays -1.0)
         let stamped = File.GetLastWriteTimeUtc(absolute root)
 
-        let result = interpret root (WriteFile(relative, "same", AuthoredSource))
+        let result = interpret root (WriteFile(relative, "same", HybridArtifact))
 
         Assert.True result.Succeeded
         Assert.Equal("same", File.ReadAllText(absolute root))
@@ -90,7 +90,8 @@ module CommandEffectsTests =
     let ``dryRun writes nothing at all - destination or temp`` () =
         let root = TestSupport.tempDirectory ()
 
-        let result = CommandEffects.interpret root true (WriteFile(relative, "unwritten", AuthoredSource))
+        let result =
+            CommandEffects.interpret root true (WriteFile(relative, "unwritten", HybridArtifact))
 
         Assert.True result.Succeeded
         Assert.False(File.Exists(absolute root))
@@ -130,7 +131,7 @@ module CommandEffectsTests =
             seed root "before"
             File.SetUnixFileMode(absolute root, enum<UnixFileMode> mode)
 
-            let result = interpret root (WriteFile(relative, "after", AuthoredSource))
+            let result = interpret root (WriteFile(relative, "after", HybridArtifact))
 
             Assert.True result.Succeeded
             Assert.Equal("after", File.ReadAllText(absolute root))
@@ -152,7 +153,7 @@ module CommandEffectsTests =
             File.SetUnixFileMode(directory, UnixFileMode.UserRead ||| UnixFileMode.UserExecute)
 
             try
-                let result = interpret root (WriteFile(relative, "never lands", AuthoredSource))
+                let result = interpret root (WriteFile(relative, "never lands", HybridArtifact))
 
                 Assert.False result.Succeeded
 

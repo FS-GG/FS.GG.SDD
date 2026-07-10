@@ -82,9 +82,11 @@ evidence:
         Assert.Contains($"sourceAnalysis: {analysisPath}", evidence)
         Assert.Contains("sourceSnapshots:", evidence)
 
+        // `evidence.yml` is a hybrid: the author declares the obligations, and re-running the stage
+        // re-derives the tool-owned header and `sourceSnapshots` around them (FS.GG.SDD#308).
         Assert.Contains(
             report.ChangedArtifacts,
-            fun change -> change.Path = evidencePath && change.Kind = "authoredSource"
+            fun change -> change.Path = evidencePath && change.Kind = "hybridArtifact"
         )
 
         Assert.Contains(report.GeneratedViews, fun view -> view.Path = workModelPath)

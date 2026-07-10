@@ -938,7 +938,7 @@ sourceAnalysis: {analysisPath workId}
                     match evidenceText with
                     | Some text ->
                         [ CreateDirectory($"work/{workId}")
-                          WriteFile(evidencePath workId, text, AuthoredSource) ]
+                          WriteFile(evidencePath workId, text, HybridArtifact) ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,

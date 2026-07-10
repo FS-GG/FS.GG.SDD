@@ -1112,7 +1112,7 @@ No blocking planning findings recorded.
     // Feature 090 (#163) removed `appendStalePlanDecision`. It synthesized a
     // `- PD-00N [DEC-00M] stale: Source specification, clarification, or checklist facts changed …`
     // line and appended it to the operator's `## Plan Decisions` — a diagnostic wearing a decision's
-    // clothes, written into a file the artifact model classifies `AuthoredSource`. The parser then
+    // clothes, appended to a section of `plan.md` the artifact model reserves to the author. The parser then
     // read it back as a decision with `Status = "stale"`, so `tasks` blocked two stages later on
     // `failedPlanPrerequisite`. It is replaced by the `stalePlanSnapshot` DiagnosticError, which
     // `runHandler`'s effect gate turns into a zero-write block at `plan` itself.

@@ -31,8 +31,19 @@ module CommandTypes =
         | Text
         | Rich
 
+    /// How a written path is owned, and therefore whether the interpreter may overwrite it.
+    ///
+    /// `AuthoredSource` is the strict case: content the tool reads and never writes. It has no
+    /// write site in `src/`, and `canOverwrite` refuses any effect that claims it, so a handler
+    /// cannot acquire the ability to clobber authored prose by tagging a write wrongly.
+    ///
+    /// The seven lifecycle artifacts are `HybridArtifact`: each carries tool-owned regions its
+    /// stage re-derives every run, alongside authored regions the stage preserves. They are
+    /// overwritable *because* the handler's merge step already preserved the authored content —
+    /// the write the interpreter sees is the merge result, not a replacement.
     type ArtifactWriteKind =
         | AuthoredSource
+        | HybridArtifact
         | StructuredSource
         | GeneratedView
         | AgentGuidanceTarget
@@ -691,6 +702,7 @@ module CommandTypes =
     let writeKindValue (kind: ArtifactWriteKind) =
         match kind with
         | AuthoredSource -> "authoredSource"
+        | HybridArtifact -> "hybridArtifact"
         | StructuredSource -> "structuredSource"
         | GeneratedView -> "generatedView"
         | AgentGuidanceTarget -> "agentGuidance"

@@ -30,8 +30,12 @@ module CommandTypes =
         | Text
         | Rich
 
+    /// How a written path is owned, and therefore whether the interpreter may overwrite it.
+    /// `AuthoredSource` is never written by the tool; `HybridArtifact` is a merge result whose
+    /// tool-owned regions are re-derived and whose authored regions are preserved.
     type ArtifactWriteKind =
         | AuthoredSource
+        | HybridArtifact
         | StructuredSource
         | GeneratedView
         | AgentGuidanceTarget
