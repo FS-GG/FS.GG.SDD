@@ -41,7 +41,7 @@
       "kind": "analysis",
       "digest": {
         "algorithm": "sha256",
-        "value": "2c48254ed798f3c2b4ab587b2813e44872b880ab212e9874a3d2ce354e6f0ed1"
+        "value": "9544bd7bb6f5643d6505094316efc65fdbfdeca05789fddd137c0d6d31721619"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -51,7 +51,7 @@
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "069724ff91771c05d10034d1a08dfdb6b32317a2697a97fedb287950b6cefb18"
+        "value": "d9f4828a6219224a62a67c5a4acaa403333796f82f88a0cb97cad9c6e89db28c"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -81,7 +81,7 @@
       "kind": "evidence",
       "digest": {
         "algorithm": "sha256",
-        "value": "359dfc69f14347cb38386083e1ea80eea18e66041d19cfce81c00975e1d27fec"
+        "value": "fba79836382841b401335600fc6296d77dea9455b58137f3c1ec0d92b6934260"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -111,7 +111,7 @@
       "kind": "tasks",
       "digest": {
         "algorithm": "sha256",
-        "value": "3f72747635f88c23c9f567cf8c469d1dd2d89adefc457e7b6fbc27cd2c638553"
+        "value": "e01456e68553feb7406a76bcdfdac757e85686ad8d2c59544fda09c219ada0f4"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -151,8 +151,8 @@
     ]
   },
   "taskGraph": {
-    "taskCount": 6,
-    "dependencyCount": 5,
+    "taskCount": 5,
+    "dependencyCount": 4,
     "dependenciesValid": true,
     "statusesValid": true,
     "findingIds": []
@@ -170,7 +170,8 @@
       ],
       "affectedSourceIds": [
         "AC-001",
-        "FR-001"
+        "FR-001",
+        "PD-001"
       ],
       "severity": "ready",
       "diagnosticIds": [],
@@ -187,8 +188,7 @@
         "T002"
       ],
       "affectedSourceIds": [
-        "AC-001",
-        "FR-001",
+        "PC-001",
         "PD-001"
       ],
       "severity": "ready",
@@ -207,7 +207,8 @@
       ],
       "affectedSourceIds": [
         "PC-001",
-        "PD-001"
+        "PD-001",
+        "VO-001"
       ],
       "severity": "ready",
       "diagnosticIds": [],
@@ -225,8 +226,7 @@
       ],
       "affectedSourceIds": [
         "PC-001",
-        "PD-001",
-        "VO-001"
+        "PM-001"
       ],
       "severity": "ready",
       "diagnosticIds": [],
@@ -241,24 +241,6 @@
       ],
       "affectedTaskIds": [
         "T005"
-      ],
-      "affectedSourceIds": [
-        "PC-001",
-        "PM-001"
-      ],
-      "severity": "ready",
-      "diagnosticIds": [],
-      "correction": ""
-    },
-    {
-      "id": "ED-EV006",
-      "obligationId": "EV006",
-      "state": "supported",
-      "evidenceIds": [
-        "EV006"
-      ],
-      "affectedTaskIds": [
-        "T006"
       ],
       "affectedSourceIds": [
         "GV-001",
@@ -346,28 +328,13 @@
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
-    },
-    {
-      "id": "TD-EV006",
-      "obligationId": "EV006",
-      "state": "satisfied",
-      "evidenceIds": [
-        "EV006"
-      ],
-      "affectedTaskIds": [
-        "T006"
-      ],
-      "affectedRequirementIds": [],
-      "severity": "ready",
-      "diagnosticIds": [],
-      "correction": ""
     }
   ],
   "skillVisibility": [
     {
       "skill": "automated-tests",
       "requiringTaskIds": [
-        "T004"
+        "T003"
       ],
       "visibility": "visible",
       "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
@@ -378,7 +345,7 @@
     {
       "skill": "deterministic-json",
       "requiringTaskIds": [
-        "T006"
+        "T005"
       ],
       "visibility": "visible",
       "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
@@ -390,8 +357,18 @@
       "skill": "fsharp",
       "requiringTaskIds": [
         "T001",
-        "T002",
-        "T003"
+        "T002"
+      ],
+      "visibility": "visible",
+      "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
+      "severity": "ready",
+      "diagnosticIds": [],
+      "correction": ""
+    },
+    {
+      "skill": "implementation",
+      "requiringTaskIds": [
+        "T001"
       ],
       "visibility": "visible",
       "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
@@ -402,7 +379,7 @@
     {
       "skill": "readiness-evidence",
       "requiringTaskIds": [
-        "T004"
+        "T003"
       ],
       "visibility": "visible",
       "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
@@ -413,19 +390,7 @@
     {
       "skill": "schema-versioning",
       "requiringTaskIds": [
-        "T005"
-      ],
-      "visibility": "visible",
-      "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",
-      "severity": "ready",
-      "diagnosticIds": [],
-      "correction": ""
-    },
-    {
-      "skill": "speckit-implement",
-      "requiringTaskIds": [
-        "T001",
-        "T002"
+        "T004"
       ],
       "visibility": "visible",
       "sourceArtifactPath": "work/068-readiness-golden/tasks.yml",

@@ -11,7 +11,7 @@
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "78053e2f974bab4b0a003fc83e2e23fe472ac4651e4507d96c51b8429a939313"
+        "value": "480e68e0c30cd5f80bc26211cec46c7f667483a160fb9c3564c98790de7512a1"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -19,24 +19,14 @@
   ],
   "behaviorModelDigest": {
     "algorithm": "sha256",
-    "value": "2c638e19fd0631988ac501a301a93457558a20318e0908a2e2a7a3428ed5f421"
+    "value": "f5285214867e4743291f3ee904c8a0ff568e4812e81a9e2ff4aa531ca67525e8"
   },
   "commands": [
     {
       "id": "T001",
       "title": "Implement requirement FR-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T001 (pending) covering AC-001, FR-001.",
-      "relatedIds": [
-        "AC-001",
-        "FR-001"
-      ]
-    },
-    {
-      "id": "T002",
-      "title": "Implement plan decision PD-001",
-      "stage": "specify",
-      "purpose": "Carry out lifecycle task T002 (pending) covering AC-001, FR-001, PD-001.",
+      "purpose": "Carry out lifecycle task T001 (pending) covering AC-001, FR-001, PD-001.",
       "relatedIds": [
         "AC-001",
         "FR-001",
@@ -44,20 +34,20 @@
       ]
     },
     {
-      "id": "T003",
+      "id": "T002",
       "title": "Update contract surface PC-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T003 (pending) covering PC-001, PD-001.",
+      "purpose": "Carry out lifecycle task T002 (pending) covering PC-001, PD-001.",
       "relatedIds": [
         "PC-001",
         "PD-001"
       ]
     },
     {
-      "id": "T004",
+      "id": "T003",
       "title": "Record verification evidence VO-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T004 (pending) covering PC-001, PD-001, VO-001.",
+      "purpose": "Carry out lifecycle task T003 (pending) covering PC-001, PD-001, VO-001.",
       "relatedIds": [
         "PC-001",
         "PD-001",
@@ -65,20 +55,20 @@
       ]
     },
     {
-      "id": "T005",
+      "id": "T004",
       "title": "Handle migration posture PM-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T005 (pending) covering PC-001, PM-001.",
+      "purpose": "Carry out lifecycle task T004 (pending) covering PC-001, PM-001.",
       "relatedIds": [
         "PC-001",
         "PM-001"
       ]
     },
     {
-      "id": "T006",
+      "id": "T005",
       "title": "Refresh generated view impact GV-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T006 (pending) covering GV-001, PD-001.",
+      "purpose": "Carry out lifecycle task T005 (pending) covering GV-001, PD-001.",
       "relatedIds": [
         "GV-001",
         "PD-001"
@@ -89,52 +79,50 @@
     {
       "id": "automated-tests",
       "title": "automated-tests",
-      "capability": "Required by tasks: T004.",
+      "capability": "Required by tasks: T003.",
       "relatedIds": [
-        "T004"
+        "T003"
       ]
     },
     {
       "id": "deterministic-json",
       "title": "deterministic-json",
-      "capability": "Required by tasks: T006.",
-      "relatedIds": [
-        "T006"
-      ]
-    },
-    {
-      "id": "fsharp",
-      "title": "fsharp",
-      "capability": "Required by tasks: T001, T002, T003.",
-      "relatedIds": [
-        "T001",
-        "T002",
-        "T003"
-      ]
-    },
-    {
-      "id": "readiness-evidence",
-      "title": "readiness-evidence",
-      "capability": "Required by tasks: T004.",
-      "relatedIds": [
-        "T004"
-      ]
-    },
-    {
-      "id": "schema-versioning",
-      "title": "schema-versioning",
       "capability": "Required by tasks: T005.",
       "relatedIds": [
         "T005"
       ]
     },
     {
-      "id": "speckit-implement",
-      "title": "speckit-implement",
+      "id": "fsharp",
+      "title": "fsharp",
       "capability": "Required by tasks: T001, T002.",
       "relatedIds": [
         "T001",
         "T002"
+      ]
+    },
+    {
+      "id": "implementation",
+      "title": "implementation",
+      "capability": "Required by tasks: T001.",
+      "relatedIds": [
+        "T001"
+      ]
+    },
+    {
+      "id": "readiness-evidence",
+      "title": "readiness-evidence",
+      "capability": "Required by tasks: T003.",
+      "relatedIds": [
+        "T003"
+      ]
+    },
+    {
+      "id": "schema-versioning",
+      "title": "schema-versioning",
+      "capability": "Required by tasks: T004.",
+      "relatedIds": [
+        "T004"
       ]
     }
   ],

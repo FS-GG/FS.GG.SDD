@@ -41,7 +41,7 @@
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "ce5d7a18b460187f5915036c4aaa2aded855ca6236a13b1b651d21deb5c23a82"
+        "value": "fe85550fbaf6f23fd55bf9d89abc8e7bcf3bff15ebeb9957108ec53217929aa2"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -91,7 +91,7 @@
       "kind": "tasks",
       "digest": {
         "algorithm": "sha256",
-        "value": "3f72747635f88c23c9f567cf8c469d1dd2d89adefc457e7b6fbc27cd2c638553"
+        "value": "e01456e68553feb7406a76bcdfdac757e85686ad8d2c59544fda09c219ada0f4"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -307,21 +307,11 @@
       "relationship": "taskDependency",
       "state": "current",
       "diagnosticIds": []
-    },
-    {
-      "id": "AR022",
-      "sourcePath": "work/068-readiness-golden/tasks.yml",
-      "targetPath": "work/068-readiness-golden/tasks.yml",
-      "sourceId": "T006",
-      "targetId": "T001",
-      "relationship": "taskDependency",
-      "state": "current",
-      "diagnosticIds": []
     }
   ],
   "readiness": {
     "status": "implementationReady",
-    "readyCount": 22,
+    "readyCount": 21,
     "advisoryCount": 0,
     "warningCount": 0,
     "blockingCount": 0,

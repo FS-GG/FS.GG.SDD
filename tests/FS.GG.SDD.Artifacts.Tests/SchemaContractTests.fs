@@ -109,3 +109,33 @@ module SchemaContractTests =
             "schemaVersion: 1\nproject:\n  id: fs-gg-sdd\n  defaultWorkRoot: work\n  testFramework: \"   \"\nsdd:\n  config: .fsgg/sdd.yml\n  agents: .fsgg/agents.yml\n"
 
         Assert.Equal(None, parsedTestFramework text)
+
+    // FS.GG.SDD#310: `project.implementSkill` is optional, read and filtered exactly like
+    // `testFramework`. Normalization and the neutral default live with the task generator.
+    let private parsedImplementSkill text =
+        match parseProjectConfig (projectSnapshot text) with
+        | Ok config -> config.ImplementSkill
+        | Error diagnostics -> failwith $"Project config failed: {diagnostics}"
+
+    [<Fact>]
+    let ``project.implementSkill parses present declared scalar`` () =
+        let text =
+            "schemaVersion: 1\nproject:\n  id: fs-gg-sdd\n  defaultWorkRoot: work\n  implementSkill: speckit-implement\nsdd:\n  config: .fsgg/sdd.yml\n  agents: .fsgg/agents.yml\n"
+
+        Assert.Equal(Some "speckit-implement", parsedImplementSkill text)
+
+    [<Fact>]
+    let ``project.implementSkill is None when absent`` () =
+        let config =
+            match parseProjectConfig (TestSupport.snapshot "valid-work-item" ".fsgg/project.yml") with
+            | Ok config -> config
+            | Error diagnostics -> failwith $"Project config failed: {diagnostics}"
+
+        Assert.Equal(None, config.ImplementSkill)
+
+    [<Fact>]
+    let ``project.implementSkill is None when blank or whitespace`` () =
+        let text =
+            "schemaVersion: 1\nproject:\n  id: fs-gg-sdd\n  defaultWorkRoot: work\n  implementSkill: \"   \"\nsdd:\n  config: .fsgg/sdd.yml\n  agents: .fsgg/agents.yml\n"
+
+        Assert.Equal(None, parsedImplementSkill text)

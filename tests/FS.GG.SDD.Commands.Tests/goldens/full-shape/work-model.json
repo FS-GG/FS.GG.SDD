@@ -76,7 +76,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "750d40e7bd0006825e674823cf5603a7cce1129d6963c3c54847e202a91bbd48"
+        "value": "29e1a05fa042f30e58a75e5c00a800bbcd085a1bd863423ce4ea7467c6395105"
       }
     },
     {
@@ -112,7 +112,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "deb09a5aa9d7aa81477f0ec3d0b179dda4ceb8daeb766d9276678582a61a796b"
+        "value": "b4c574386e36bbe0dbee13df621f73dbe9d0444625909c2b376a16541f82df5b"
       }
     }
   ],
@@ -157,11 +157,12 @@
       "decisions": [],
       "sourceIds": [
         "AC-001",
-        "FR-001"
+        "FR-001",
+        "PD-001"
       ],
       "requiredSkills": [
         "fsharp",
-        "speckit-implement"
+        "implementation"
       ],
       "requiredEvidence": [
         "EV001"
@@ -174,34 +175,6 @@
     },
     {
       "id": "T002",
-      "title": "Implement plan decision PD-001",
-      "status": "pending",
-      "owner": "sdd",
-      "dependencies": [
-        "T001"
-      ],
-      "requirements": [],
-      "decisions": [],
-      "sourceIds": [
-        "AC-001",
-        "FR-001",
-        "PD-001"
-      ],
-      "requiredSkills": [
-        "fsharp",
-        "speckit-implement"
-      ],
-      "requiredEvidence": [
-        "EV002"
-      ],
-      "source": "work/247-full-shape-golden/tasks.yml",
-      "sourceLocation": {
-        "line": 2,
-        "column": 1
-      }
-    },
-    {
-      "id": "T003",
       "title": "Update contract surface PC-001",
       "status": "pending",
       "owner": "sdd",
@@ -218,16 +191,16 @@
         "fsharp"
       ],
       "requiredEvidence": [
-        "EV003"
+        "EV002"
       ],
       "source": "work/247-full-shape-golden/tasks.yml",
       "sourceLocation": {
-        "line": 3,
+        "line": 2,
         "column": 1
       }
     },
     {
-      "id": "T004",
+      "id": "T003",
       "title": "Record verification evidence VO-001",
       "status": "pending",
       "owner": "sdd",
@@ -246,16 +219,16 @@
         "readiness-evidence"
       ],
       "requiredEvidence": [
-        "EV004"
+        "EV003"
       ],
       "source": "work/247-full-shape-golden/tasks.yml",
       "sourceLocation": {
-        "line": 4,
+        "line": 3,
         "column": 1
       }
     },
     {
-      "id": "T005",
+      "id": "T004",
       "title": "Handle migration posture PM-001",
       "status": "pending",
       "owner": "sdd",
@@ -272,16 +245,16 @@
         "schema-versioning"
       ],
       "requiredEvidence": [
-        "EV005"
+        "EV004"
       ],
       "source": "work/247-full-shape-golden/tasks.yml",
       "sourceLocation": {
-        "line": 5,
+        "line": 4,
         "column": 1
       }
     },
     {
-      "id": "T006",
+      "id": "T005",
       "title": "Refresh generated view impact GV-001",
       "status": "pending",
       "owner": "sdd",
@@ -298,11 +271,11 @@
         "deterministic-json"
       ],
       "requiredEvidence": [
-        "EV006"
+        "EV005"
       ],
       "source": "work/247-full-shape-golden/tasks.yml",
       "sourceLocation": {
-        "line": 6,
+        "line": 5,
         "column": 1
       }
     }
@@ -402,25 +375,6 @@
         "line": 5,
         "column": 1
       }
-    },
-    {
-      "id": "EV006",
-      "kind": "verification",
-      "subjectType": "task",
-      "subjectId": "T006",
-      "taskRefs": [
-        "T006"
-      ],
-      "requirementRefs": [],
-      "artifactRefs": [],
-      "result": "pass",
-      "synthetic": false,
-      "rationale": null,
-      "source": "work/247-full-shape-golden/evidence.yml",
-      "sourceLocation": {
-        "line": 6,
-        "column": 1
-      }
     }
   ],
   "generatedViews": [
@@ -477,7 +431,7 @@
           "path": "work/247-full-shape-golden/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "750d40e7bd0006825e674823cf5603a7cce1129d6963c3c54847e202a91bbd48"
+            "value": "29e1a05fa042f30e58a75e5c00a800bbcd085a1bd863423ce4ea7467c6395105"
           },
           "schemaVersion": 1
         },
@@ -501,14 +455,14 @@
           "path": "work/247-full-shape-golden/tasks.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "deb09a5aa9d7aa81477f0ec3d0b179dda4ceb8daeb766d9276678582a61a796b"
+            "value": "b4c574386e36bbe0dbee13df621f73dbe9d0444625909c2b376a16541f82df5b"
           },
           "schemaVersion": 1
         }
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "56d27ece2991c97fb347bcafe0e6e30f84c403866be1ba2273c07247a7f39a8e"
+        "value": "f71aab986fb7475dfcd585528ab567a3477a2b7ba3a5993b2fd28b9e20958e85"
       },
       "currency": "current"
     }
