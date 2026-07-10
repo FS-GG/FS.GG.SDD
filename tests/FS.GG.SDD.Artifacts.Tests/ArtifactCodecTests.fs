@@ -552,3 +552,61 @@ module ArtifactCodecTests =
               "SourceIds", [ "sourceIds", "sourceIds: [SRCIDVAL]" ]
               "RequiredSkills", [ "requiredSkills", "requiredSkills: [skillval]" ]
               "RequiredEvidence", [ "requiredEvidence", "requiredEvidence: [EV007]" ] ]
+
+    // === The ArtifactCodec migration boundary is complete (ADR-0002 §Note; re-scopes #338) ===
+    // Every authored/lifecycle artifact is round-tripped by exactly ONE mechanism. This manifest is
+    // the executable statement of that boundary: the codec migration (Gap A, invariant 1) is COMPLETE,
+    // and the artifacts NOT on the codec are out of scope BY DESIGN, not unfinished work. Pinning it as
+    // data makes reclassifying or adding an artifact a conscious, review-visible change — and stops the
+    // "~N artifacts still to migrate" over-count (FS.GG.SDD#338) from being re-derived from the raw
+    // reader-in-Artifacts / writer-in-Commands heuristic.
+    type private RoundTrip =
+        | Codec // one FieldCodec list drives read AND write (the Gap A codec)
+        | TextSpaceIdentity // author-owned prose; the re-emit is `ensure*Sections x = x` (#288)
+        | NotRoundTripped // readiness JSON / read-only / generated view — not an authored round-trip artifact
+
+    let private migrationBoundary: (string * RoundTrip) list =
+        [ "tasks.yml", Codec
+          "evidence.yml", Codec
+          "spec.md", TextSpaceIdentity
+          "clarifications.md", TextSpaceIdentity
+          "checklist.md", TextSpaceIdentity
+          "plan.md", TextSpaceIdentity
+          "charter.md", TextSpaceIdentity
+          "analysis.json", NotRoundTripped
+          "verify.json", NotRoundTripped
+          "ship.json", NotRoundTripped
+          "registryDocument", NotRoundTripped
+          "config", NotRoundTripped
+          "requirementModel", NotRoundTripped
+          "guidance", NotRoundTripped ]
+
+    [<Fact>]
+    let ``the ArtifactCodec migration boundary is complete`` () =
+        // (1) every artifact is classified exactly once.
+        let names = migrationBoundary |> List.map fst
+        Assert.Equal<string list>(List.distinct names, names)
+
+        // (2) the codec-migrated set is EXACTLY tasks.yml and evidence.yml — the whole of Gap A's
+        //     codec surface. A new artifact migrated onto the codec, or one of these dropped, fails here.
+        let codecArtifacts =
+            migrationBoundary
+            |> List.choose (fun (name, kind) -> if kind = Codec then Some name else None)
+            |> List.sort
+
+        Assert.Equal<string list>([ "evidence.yml"; "tasks.yml" ], codecArtifacts)
+
+        // (3) tie the manifest's Codec claim to the REAL field lists that drive those two artifacts'
+        //     reader and renderer (coupled field-by-field in the T031 tests above), so this guards the
+        //     code, not just the table.
+        Assert.NotEmpty(ArtifactCodec.keys TaskCodec.taskFields)
+        Assert.NotEmpty(ArtifactCodec.keys EvidenceCodec.declarationFields)
+
+        // (4) the full classification shape is present: the five Markdown docs are text-space by
+        //     design, and the seven readiness-JSON / read-only / generated artifacts are not round-tripped.
+        let count kind =
+            migrationBoundary |> List.filter (fun (_, k) -> k = kind) |> List.length
+
+        Assert.Equal(2, count Codec)
+        Assert.Equal(5, count TextSpaceIdentity)
+        Assert.Equal(7, count NotRoundTripped)
