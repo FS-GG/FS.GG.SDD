@@ -136,6 +136,55 @@ module NormalizedWorkModelTests =
         Assert.Contains("work/002-normalized-work-model/spec.md", identities)
         Assert.True(identities.Length > 1, "sourceIdentities collapsed to the work-model output path alone")
 
+    // FS-GG/FS.GG.SDD#342 (item 2 of #338): the last field-collapse hole in the work-model round-trip.
+    // serializeWorkModel emits `sourceLocation` for every requirement/decision/task/evidence entry, but
+    // parseWorkModel used to hardcode `SourceLocation = None`, so a serialize→parse→serialize cycle
+    // silently dropped every populated location to null in the agents/refresh/ship generators that
+    // build the model *through* the parser. Guard both the field and the whole-document byte-stability
+    // (the sibling of the #241/#266 source/view/boundary guards above; the #266/#242/#215 class).
+    [<Fact>]
+    let ``NormalizedWorkModel round-trips sourceLocation and is byte-stable through parseWorkModel`` () =
+        let result = TestSupport.generationResult "valid-work-item"
+
+        // Precondition: the builder path populates sourceLocation on authored entries, so the
+        // round-trip has something to lose.
+        Assert.Contains(result.Model.Requirements, fun requirement -> requirement.SourceLocation.IsSome)
+        Assert.Contains(result.Model.Tasks, fun task -> task.SourceLocation.IsSome)
+
+        let parsed =
+            match
+                WorkModel.parseWorkModel
+                    { Path = result.OutputPath
+                      Text = result.Json }
+            with
+            | Ok model -> model
+            | Error diagnostics -> failwith $"Expected a parseable work model, got {diagnostics}"
+
+        // sourceLocation survives the parser verbatim instead of collapsing to None.
+        Assert.Equal<Diagnostics.SourceLocation option list>(
+            result.Model.Requirements |> List.map (fun requirement -> requirement.SourceLocation),
+            parsed.Requirements |> List.map (fun requirement -> requirement.SourceLocation)
+        )
+
+        Assert.Equal<Diagnostics.SourceLocation option list>(
+            result.Model.Tasks |> List.map (fun task -> task.SourceLocation),
+            parsed.Tasks |> List.map (fun task -> task.SourceLocation)
+        )
+
+        Assert.Equal<Diagnostics.SourceLocation option list>(
+            result.Model.Decisions |> List.map (fun decision -> decision.SourceLocation),
+            parsed.Decisions |> List.map (fun decision -> decision.SourceLocation)
+        )
+
+        Assert.Equal<Diagnostics.SourceLocation option list>(
+            result.Model.Evidence |> List.map (fun evidence -> evidence.SourceLocation),
+            parsed.Evidence |> List.map (fun evidence -> evidence.SourceLocation)
+        )
+
+        // The whole serialize→parse→serialize cycle is byte-stable (regression lock for the
+        // #266/#242/#215 field-collapse class).
+        Assert.Equal(result.Json, Serialization.serializeWorkModel parsed)
+
     [<Fact>]
     let ``NormalizedWorkModel invalid fixtures emit actionable diagnostics`` () =
         [ "requirement-not-typed", "requirementNotTyped"

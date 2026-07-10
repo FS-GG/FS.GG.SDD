@@ -698,6 +698,21 @@ module WorkModel =
             else
                 None)
 
+    // Reverse of `writeLocation`: a `null`/absent `sourceLocation` reads as `None`; an object reads
+    // its `line`/`column` back as `int option`s (each independently `null`-tolerant, mirroring the
+    // writer). Restoring this closes the last field-collapse hole in the work-model round-trip — the
+    // sibling of the #241/#266 source/view/boundary round-trip guards — where `parseWorkModel`
+    // hardcoded `SourceLocation = None`, so a serialize→parse→serialize cycle silently dropped every
+    // populated location to `null` in the agents/refresh/ship generators that build through this
+    // parser (FS.GG.SDD#342, item 2 of #338; root cause of #266/#242/#215-class field loss).
+    let jmLocation name element : SourceLocation option =
+        jmProp name element
+        |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Object)
+        |> Option.map (fun location ->
+            ({ Line = jmInt "line" location
+               Column = jmInt "column" location }
+            : SourceLocation))
+
     let jmArray name element =
         jmProp name element
         |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Array)
@@ -928,7 +943,7 @@ module WorkModel =
                                      | "" -> None
                                      | value -> Some value)
                                   Source = jmString "source" item
-                                  SourceLocation = None
+                                  SourceLocation = jmLocation "sourceLocation" item
                                   LinkedTaskIds = jmStringList "linkedTaskIds" item |> List.sort
                                   LinkedEvidenceIds = jmStringList "linkedEvidenceIds" item |> List.sort })
                             |> List.sortBy (fun requirement -> requirement.Id)
@@ -942,7 +957,7 @@ module WorkModel =
                                   StoryRefs = jmStringList "storyRefs" item |> List.sort
                                   AcceptanceRefs = jmStringList "acceptanceRefs" item |> List.sort
                                   Source = jmString "source" item
-                                  SourceLocation = None
+                                  SourceLocation = jmLocation "sourceLocation" item
                                   LinkedTaskIds = jmStringList "linkedTaskIds" item |> List.sort })
                             |> List.sortBy (fun decision -> decision.Id)
                           Tasks =
@@ -965,7 +980,7 @@ module WorkModel =
                                   RequiredSkills = jmStringList "requiredSkills" item |> List.sort
                                   RequiredEvidence = jmStringList "requiredEvidence" item |> List.sort
                                   Source = jmString "source" item
-                                  SourceLocation = None })
+                                  SourceLocation = jmLocation "sourceLocation" item })
                             |> List.sortBy (fun task -> task.Id)
                           Evidence =
                             jmArray "evidence" root
@@ -986,7 +1001,7 @@ module WorkModel =
                                      | "" -> None
                                      | value -> Some value)
                                   Source = jmString "source" item
-                                  SourceLocation = None })
+                                  SourceLocation = jmLocation "sourceLocation" item })
                             |> List.sortBy (fun evidence -> evidence.Id)
                           GeneratedViews = jmArray "generatedViews" root |> List.choose parseGeneratedView
                           Diagnostics =
