@@ -515,3 +515,37 @@ module AgentsCommandTests =
         let exitCode, stdout, _ = runAgentsCli root []
         Assert.Equal(0, exitCode)
         Assert.DoesNotContain("agents.behaviorDivergence", stdout)
+
+    // --- FS.GG.SDD#340: agentRootResolvesWithinProject must reject the SAME paths as the
+    //     authoritative PathContainment.escapesRoot, including a mid-path `..` escape. ---
+
+    let private withinProject workId raw =
+        FS.GG.SDD.Commands.Internal.HandlersAgents.agentRootResolvesWithinProject workId raw
+
+    [<Fact>]
+    let ``agentRootResolvesWithinProject rejects a mid-path .. escape`` () =
+        // On main this returned true ("within project") and the `..` was then resolved out of tree
+        // by the downstream Path.Combine + GetFullPath.
+        Assert.False(withinProject "014-agent-guidance" "foo/../../../etc")
+
+    [<Fact>]
+    let ``agentRootResolvesWithinProject rejects a rooted path`` () =
+        Assert.False(withinProject "014-agent-guidance" "/etc/passwd")
+
+    [<Fact>]
+    let ``agentRootResolvesWithinProject rejects a leading .. escape`` () =
+        Assert.False(withinProject "014-agent-guidance" "../escape")
+
+    [<Fact>]
+    let ``agentRootResolvesWithinProject rejects whitespace`` () =
+        Assert.False(withinProject "014-agent-guidance" "   ")
+
+    [<Fact>]
+    let ``agentRootResolvesWithinProject accepts a contained relative root`` () =
+        Assert.True(withinProject "014-agent-guidance" "readiness/014-agent-guidance/agent-commands/claude")
+
+    [<Fact>]
+    let ``agentRootResolvesWithinProject substitutes {workId} before the containment check`` () =
+        Assert.True(withinProject "014-agent-guidance" "readiness/{workId}/agent-commands/claude")
+        // A `..` that only appears after substitution is still rejected.
+        Assert.False(withinProject ".." "readiness/{workId}/agent-commands/claude")
