@@ -145,6 +145,7 @@ FS.GG.SDD.Artifacts.Identifiers.workIdValue
 FS.GG.SDD.Artifacts.LifecycleRuleContracts.contractIds
 FS.GG.SDD.Artifacts.LifecycleRuleContracts.initialContracts
 FS.GG.SDD.Artifacts.LifecycleRuleContracts.sddOnlyCompatibility
+FS.GG.SDD.Artifacts.PathContainment.escapesRoot
 FS.GG.SDD.Artifacts.Plan.parsePlanFacts
 FS.GG.SDD.Artifacts.Plan.planStandardSections
 FS.GG.SDD.Artifacts.RegistryDocument.load
