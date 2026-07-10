@@ -796,3 +796,67 @@ module ToolVersionFloorDriftTests =
 
         Assert.Equal(before, treeHash root)
         Assert.Equal(1, exitCode report)
+
+/// FS-GG/FS.GG.SDD#313, regression. Reading `.fsgg/project.yml` gave `doctor`/`upgrade` their
+/// first source of a *workspace* warning that is not scaffold drift: an unparseable
+/// `sdd.minToolVersion` warns (`project.minToolVersionUnparseable`) over a perfectly coherent
+/// scaffold. `NextAction` derived coherence from the outcome enum, so that warning alone made
+/// `doctor` route a coherent workspace at `upgrade`, and made an already-coherent `upgrade` tell
+/// the author to re-run and confirm steps that do not exist. Coherence is a fact on the summary.
+///
+/// In the `Console` collection: the skipped-step case drives the real `Confirm` edge through
+/// scripted stdin, and `Console.In`/`Console.Out` are process-global.
+[<Collection("Console")>]
+module RemediationRoutingTests =
+    open RemediationSupport
+
+    let private unparseableFloor = "not-a-version"
+
+    let private actionId (report: CommandReport) =
+        report.NextAction |> Option.map (fun a -> a.ActionId)
+
+    [<Fact>]
+    let ``an unparseable floor does not route a coherent scaffold at upgrade`` () =
+        let root =
+            makeFixtureWithFloor (Some farBehindMinimum) (Some unparseableFloor) Drift.expectedArtifactPaths true
+
+        let report = doctorReport root
+        // The warning is still reported...
+        Assert.Contains("project.minToolVersionUnparseable", diagnosticIds report)
+        // ...but the scaffold is coherent, so the report must say so and route nowhere.
+        Assert.True report.Doctor.Value.IsCoherent
+        Assert.Equal(Some "doctor.coherent", actionId report)
+        Assert.Equal(0, exitCode report)
+
+    [<Fact>]
+    let ``an unparseable floor does not tell an already-coherent upgrade to re-run itself`` () =
+        let root =
+            makeFixtureWithFloor (Some farBehindMinimum) (Some unparseableFloor) Drift.expectedArtifactPaths true
+
+        let report = upgradeYes root
+        Assert.Contains("project.minToolVersionUnparseable", diagnosticIds report)
+        Assert.True report.Upgrade.Value.AlreadyCoherent
+        Assert.Equal(Some "upgrade.alreadyCoherent", actionId report)
+        Assert.Equal(0, exitCode report)
+
+    /// An unmet floor *is* drift, so it must still route at `upgrade`.
+    [<Fact>]
+    let ``an unmet floor still routes a drifted scaffold at upgrade`` () =
+        let root =
+            makeFixtureWithFloor (Some farBehindMinimum) (Some farAheadMinimum) Drift.expectedArtifactPaths true
+
+        let report = doctorReport root
+        Assert.False report.Doctor.Value.IsCoherent
+        Assert.Equal(Some "doctor.next.upgrade", actionId report)
+
+    /// A *skipped* step is the only thing that asks to be re-confirmed. An applied CLI self-update
+    /// also sets `residualDrift` — the running binary is stale until the next invocation — and must
+    /// route forward to `doctor`, not back to `upgrade`.
+    [<Fact>]
+    let ``Synthetic a declined re-seed routes back to upgrade with residual drift`` () =
+        let root = atOrAboveMissingFixture ()
+        let report = upgradeInteractive root "n\n"
+        let summary = report.Upgrade.Value
+        Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.SkippedStepIds)
+        Assert.True summary.ResidualDrift
+        Assert.Equal(Some "upgrade.residualDrift", actionId report)

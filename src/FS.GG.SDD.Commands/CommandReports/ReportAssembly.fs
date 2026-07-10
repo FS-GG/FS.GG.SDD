@@ -180,6 +180,8 @@ module internal ReportAssembly =
                 model.Ship
                 model.AgentGuidance
                 model.Refresh
+                model.Doctor
+                model.Upgrade
           Help = None
           // Feature 084: sensed from the interpreted stage-artifact reads; pure fold, no I/O here.
           LifecycleStatus =

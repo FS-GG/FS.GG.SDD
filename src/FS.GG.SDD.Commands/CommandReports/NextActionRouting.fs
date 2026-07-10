@@ -34,6 +34,8 @@ module internal NextActionRouting =
         (ship: ShipSummary option)
         (agentGuidance: AgentGuidanceSummary option)
         (refresh: RefreshSummary option)
+        (doctor: DoctorSummary option)
+        (upgradeSummary: UpgradeSummary option)
         =
         // Feature 076: `fsgg-sdd lint` and `<stage> --explain` are read-only pre-flights that
         // advance no lifecycle state — they never emit a NextAction (the lint defects are the
@@ -371,7 +373,17 @@ module internal NextActionRouting =
                       BlockingDiagnosticIds = [] }
             elif request.Command = Doctor then
                 // Read-only report: point drift at `upgrade`, or state coherence (FR-002/FR-005).
-                let coherent = reportOutcome = CommandOutcome.NoChange
+                //
+                // FS-GG/FS.GG.SDD#313: coherence is a fact ON the doctor summary, not a property of
+                // the outcome enum. Since `doctor` began reading `.fsgg/project.yml` it can carry a
+                // workspace warning that is not drift — an unparseable `sdd.minToolVersion` warns
+                // via `project.minToolVersionUnparseable` over a perfectly coherent scaffold — and
+                // keying on `NoChange` would then send a coherent workspace to an `upgrade` that
+                // has nothing to reconcile. Fall back to the outcome only when there is no summary.
+                let coherent =
+                    doctor
+                    |> Option.map (fun summary -> summary.IsCoherent)
+                    |> Option.defaultValue (reportOutcome = CommandOutcome.NoChange)
 
                 Some
                     { ActionId =
@@ -391,8 +403,16 @@ module internal NextActionRouting =
             elif request.Command = Upgrade then
                 // Non-blocking upgrade outcomes (blocked ones are handled above): residual drift
                 // → re-run upgrade; applied → confirm with doctor; no-op → already coherent.
-                match reportOutcome with
-                | CommandOutcome.SucceededWithWarnings ->
+                //
+                // FS-GG/FS.GG.SDD#313: read these off the summary rather than the outcome enum, for
+                // the same reason `doctor` does — since `upgrade` began reading `.fsgg/project.yml`
+                // a non-drift workspace warning could turn an already-coherent run into
+                // `succeededWithWarnings`, which told the author to re-run and confirm steps that
+                // do not exist. `ResidualDrift` alone cannot stand in for the enum either: an
+                // *applied* CLI self-update sets it (the running binary is stale until the next
+                // invocation), and that must still route to `doctor`, not back to `upgrade`. Only a
+                // **skipped** step asks to be re-confirmed; a failed one is a blocking error above.
+                let residualDriftAction =
                     Some
                         { ActionId = "upgrade.residualDrift"
                           Command = Some Upgrade
@@ -401,7 +421,20 @@ module internal NextActionRouting =
                             "Some reconciliation steps were skipped; residual drift remains. Re-run `fsgg-sdd upgrade` and confirm them to finish."
                           RequiredArtifacts = []
                           BlockingDiagnosticIds = [] }
-                | CommandOutcome.Succeeded ->
+
+                let alreadyCoherentAction =
+                    Some
+                        { ActionId = "upgrade.alreadyCoherent"
+                          Command = None
+                          WorkId = None
+                          Reason = "Already coherent — nothing to reconcile."
+                          RequiredArtifacts = []
+                          BlockingDiagnosticIds = [] }
+
+                match upgradeSummary with
+                | Some summary when summary.AlreadyCoherent -> alreadyCoherentAction
+                | Some summary when not (List.isEmpty summary.SkippedStepIds) -> residualDriftAction
+                | Some _ ->
                     Some
                         { ActionId = "upgrade.next.doctor"
                           Command = Some Doctor
@@ -410,14 +443,10 @@ module internal NextActionRouting =
                             "Reconciliation applied; run `fsgg-sdd doctor` to confirm coherence (a CLI self-update takes effect on the next invocation)."
                           RequiredArtifacts = []
                           BlockingDiagnosticIds = [] }
-                | _ ->
-                    Some
-                        { ActionId = "upgrade.alreadyCoherent"
-                          Command = None
-                          WorkId = None
-                          Reason = "Already coherent — nothing to reconcile."
-                          RequiredArtifacts = []
-                          BlockingDiagnosticIds = [] }
+                // No summary at all (an upgrade that never computed one): keep the pre-#313
+                // outcome-derived answer rather than inventing coherence.
+                | None when reportOutcome = CommandOutcome.SucceededWithWarnings -> residualDriftAction
+                | None -> alreadyCoherentAction
             else
                 match nextLifecycleCommand request.Command with
                 | Some command ->
