@@ -51,11 +51,49 @@ module internal ReportAssembly =
     let sortGovernance (facts: GovernanceCompatibilityFact list) =
         facts |> List.sortBy (fun fact -> fact.Path)
 
+    // FS-GG/FS.GG.SDD#305: the workspace-declared tool floor, checked once here rather than per handler,
+    // so every command that reads .fsgg/project.yml warns uniformly. A command that never reads the
+    // config (init on an empty directory, scaffold) simply finds no snapshot and warns nothing.
+    //
+    // A malformed project.yml yields no floor and no diagnostic: the handler that required the config
+    // already reported the parse failure, and re-reporting it here would double-count it.
+    let private minToolVersionDiagnostics (model: CommandModel) =
+        let projectConfigSnapshot =
+            model.InterpretedEffects
+            |> List.tryPick (fun result ->
+                match result.Effect with
+                | ReadFile path when path = ".fsgg/project.yml" -> result.Snapshot
+                | _ -> None)
+
+        let declaredFloor =
+            projectConfigSnapshot
+            |> Option.bind (fun snapshot ->
+                match FS.GG.SDD.Artifacts.Config.parseProjectConfig snapshot with
+                | Ok config -> config.MinToolVersion
+                | Error _ -> None)
+
+        match declaredFloor with
+        | None -> []
+        | Some floor ->
+            let installed = model.Request.GeneratorVersion.Version
+
+            match Fsgg.Version.tryParse floor with
+            | None -> [ projectMinToolVersionUnparseable floor ]
+            | Some _ ->
+                // `compare` returns None when either side is unparseable. The floor already parsed, so a
+                // None here means the *installed* version did — it comes from the assembly, not the
+                // workspace, and there is nothing an author could fix. Degrade to silence.
+                match Fsgg.Version.compare installed floor with
+                | Some rank when rank < 0 -> [ projectToolVersionBelowMinimum installed floor ]
+                | _ -> []
+
     let buildReport (model: CommandModel) =
         let effectDiagnostics =
             model.InterpretedEffects |> List.choose (fun result -> result.Diagnostic)
 
-        let diagnostics = model.Diagnostics @ effectDiagnostics |> DiagnosticsModule.sort
+        let diagnostics =
+            model.Diagnostics @ effectDiagnostics @ minToolVersionDiagnostics model
+            |> DiagnosticsModule.sort
 
         // Produced provider files are not SDD write effects; they are discovered by
         // the scaffold diff and recorded as externally-owned change entries so the
@@ -89,8 +127,13 @@ module internal ReportAssembly =
           // A *removal* forces a major bump (versioning-policy.md, "Change class to bump rule"):
           // feature 093 (FS-GG/FS.GG.SDD#164) removed `specification.unresolvedAmbiguityCount`, so
           // reportVersion goes 1.3.0 -> 2.0.0. 2.1.0 then adds `surface.versionBump` (feature 094).
-          // 2.2.0 adds the top-level `coherent` fact (FS-GG/FS.GG.SDD#183).
-          ReportVersion = "2.2.0"
+          // 2.2.0 adds the top-level `coherent` fact (FS-GG/FS.GG.SDD#183). 2.3.0 adds the top-level
+          // `toolVersion` fact (FS-GG/FS.GG.SDD#305).
+          ReportVersion = "2.3.0"
+          // The version of the CLI that produced this report, so a stale toolchain is legible in the
+          // artifact rather than only in the shell that ran it (FS-GG/FS.GG.SDD#305). Same source as
+          // `fsgg-sdd --version`, injected into the request at the CLI edge.
+          ToolVersion = model.Request.GeneratorVersion.Version
           Command = model.Request.Command
           // Intentionally the literal "." — decoupled from model.Request.ProjectRoot (which may be
           // an absolute/temporary path) so the report JSON stays reproducible/deterministic. Do not

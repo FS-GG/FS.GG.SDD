@@ -102,6 +102,7 @@ module RichRenderingTests =
     let sampleReport: CommandReport =
         { SchemaVersion = 1
           ReportVersion = "1.0"
+          ToolVersion = "0.0.0-test"
           Command = Specify
           ProjectRoot = "."
           OutputFormat = Rich

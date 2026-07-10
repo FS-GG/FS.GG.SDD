@@ -23,7 +23,10 @@ module Config =
           GovernancePolicyPath: string option
           GovernanceCapabilitiesPath: string option
           GovernanceToolingPath: string option
-          TestFramework: string option }
+          TestFramework: string option
+          // FS-GG/FS.GG.SDD#305: `sdd.minToolVersion`, the workspace's declared floor for the fsgg-sdd
+          // toolchain. None declares no floor.
+          MinToolVersion: string option }
 
     type SddLifecyclePolicy =
         { SchemaVersion: SchemaVersion
@@ -80,6 +83,12 @@ module Config =
                       GovernanceToolingPath = tryScalarAt [ "governance"; "tooling" ] root
                       TestFramework =
                         tryScalarAt [ "project"; "testFramework" ] root
+                        |> Option.filter (fun value -> not (String.IsNullOrWhiteSpace value))
+                      // FS-GG/FS.GG.SDD#305: the workspace-declared floor for the fsgg-sdd toolchain.
+                      // Optional and unvalidated here — an unparseable value is a warning at report
+                      // assembly, not a parse error that would block every command on a config typo.
+                      MinToolVersion =
+                        tryScalarAt [ "sdd"; "minToolVersion" ] root
                         |> Option.filter (fun value -> not (String.IsNullOrWhiteSpace value)) }
             | _ -> Error(versionDiagnostics @ fieldDiagnostics)
 

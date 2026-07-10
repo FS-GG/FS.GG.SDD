@@ -1493,6 +1493,11 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "toolVersion",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "upgrade",
           "kind": "jsonField",
           "stability": "additiveOptional"

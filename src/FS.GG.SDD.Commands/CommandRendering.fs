@@ -7,6 +7,9 @@ module CommandRendering =
     let renderText (report: CommandReport) =
         let builder = StringBuilder()
         builder.AppendLine($"command: {commandName report.Command}") |> ignore
+        // FS-GG/FS.GG.SDD#305: unconditional, so a captured text report carries the producing version
+        // too. The rich view scrapes this "key: value" line into its details table for free.
+        builder.AppendLine($"toolVersion: {report.ToolVersion}") |> ignore
         builder.AppendLine($"outcome: {outcomeValue report.Outcome}") |> ignore
 
         // FS-GG/FS.GG.SDD#183: surface the positive "clean, advance" signal only when earned, so a bare

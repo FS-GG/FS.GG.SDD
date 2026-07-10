@@ -710,6 +710,7 @@ module CommandTypes =
     type CommandReport =
         { SchemaVersion: int
           ReportVersion: string
+          ToolVersion: string
           Command: SddCommand
           ProjectRoot: string
           OutputFormat: OutputFormat
