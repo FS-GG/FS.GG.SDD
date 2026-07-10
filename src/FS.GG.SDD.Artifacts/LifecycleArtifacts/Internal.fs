@@ -23,24 +23,54 @@ module internal Internal =
 
     let sourceArtifact path kind = artifact path kind Sdd true
 
-    let parseYaml (text: string | null) =
+    /// The three distinguishable outcomes of loading an authored YAML document.
+    /// Constitution VIII requires a diagnostic to separate malformed user input from
+    /// an absent one, so a syntax error keeps the parser's position and message
+    /// rather than collapsing into the same value as an empty document.
+    type YamlDocument =
+        | YamlEmpty
+        | YamlMalformed of message: string * line: int * column: int
+        | YamlRoot of YamlNode
+
+    let parseYamlDocument (text: string | null) =
         let stream = YamlStream()
         use reader = new StringReader(Option.ofObj text |> Option.defaultValue "")
 
-        // A malformed authored document (tab indentation, a duplicate key, bad
-        // syntax) makes YamlDotNet throw YamlException. Every Result-returning
-        // lifecycle parser treats None as an absent/unparseable document and
-        // surfaces a diagnostic (exit 1), which honors the malformed-input ->
-        // diagnostic doctrine instead of crashing through the parser.
+        // A malformed authored document (tab indentation, a duplicate key, an
+        // unescaped quote) makes YamlDotNet throw YamlException. Carrying its
+        // Start mark and message out honors the malformed-input -> diagnostic
+        // doctrine instead of crashing through the parser.
         try
             stream.Load reader
 
             if stream.Documents.Count = 0 then
-                None
+                YamlEmpty
             else
-                Some stream.Documents.[0].RootNode
-        with :? YamlDotNet.Core.YamlException ->
-            None
+                YamlRoot stream.Documents.[0].RootNode
+        with :? YamlDotNet.Core.YamlException as ex ->
+            // YamlDotNet marks positions as int64; a source line/column that overflows
+            // int is not a document a human authored.
+            YamlMalformed(ex.Message, int ex.Start.Line, int ex.Start.Column)
+
+    /// A lossy probe for the callers that answer a question about a document rather
+    /// than diagnose it (a raw schemaVersion read for identity/digest purposes).
+    /// A parser that reports to an author must use `yamlRoot`, which keeps the
+    /// malformed case distinct.
+    let tryParseYamlNode (text: string | null) =
+        match parseYamlDocument text with
+        | YamlRoot node -> Some node
+        | YamlEmpty
+        | YamlMalformed _ -> None
+
+    /// Loads an authored YAML document into the `Result` the lifecycle parsers speak.
+    /// `lineOffset` maps a position back onto the containing file: front matter starts
+    /// on the line after the opening `---`, so its parser passes 1.
+    let yamlRoot (artifact: ArtifactRef) (emptyMessage: string) (lineOffset: int) (text: string | null) =
+        match parseYamlDocument text with
+        | YamlRoot root -> Ok root
+        | YamlEmpty -> Error [ Diagnostics.malformedSchemaVersion artifact emptyMessage ]
+        | YamlMalformed(message, line, column) ->
+            Error [ Diagnostics.malformedYaml artifact message (line + lineOffset) column ]
 
     let tryMapping (node: YamlNode) =
         match node with

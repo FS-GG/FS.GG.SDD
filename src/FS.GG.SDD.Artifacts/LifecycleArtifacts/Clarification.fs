@@ -97,9 +97,9 @@ module Clarification =
                       artifact
                       "Clarification artifact is missing structured front matter." ]
         | Some(yaml, body) ->
-            match parseYaml yaml with
-            | None -> Error [ Diagnostics.malformedSchemaVersion artifact "Clarification front matter is empty." ]
-            | Some root ->
+            match yamlRoot artifact "Clarification front matter is empty." 1 yaml with
+            | Error diagnostics -> Error diagnostics
+            | Ok root ->
                 let version, versionDiagnostics = schemaVersion artifact root
 
                 let workId =

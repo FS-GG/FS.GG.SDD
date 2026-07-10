@@ -38,6 +38,7 @@ FS.GG.SDD.Artifacts.Diagnostics.hasBlocking
 FS.GG.SDD.Artifacts.Diagnostics.malformedDigest
 FS.GG.SDD.Artifacts.Diagnostics.malformedReference
 FS.GG.SDD.Artifacts.Diagnostics.malformedSchemaVersion
+FS.GG.SDD.Artifacts.Diagnostics.malformedYaml
 FS.GG.SDD.Artifacts.Diagnostics.markToolDefect
 FS.GG.SDD.Artifacts.Diagnostics.missingArtifact
 FS.GG.SDD.Artifacts.Diagnostics.missingChecklistBackReference

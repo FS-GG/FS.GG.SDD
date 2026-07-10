@@ -29,9 +29,9 @@ module WorkItemMetadata =
         | None ->
             Error [ Diagnostics.malformedSchemaVersion artifact "Work item spec is missing structured front matter." ]
         | Some(yaml, body) ->
-            match parseYaml yaml with
-            | None -> Error [ Diagnostics.malformedSchemaVersion artifact "Work item front matter is empty." ]
-            | Some root ->
+            match yamlRoot artifact "Work item front matter is empty." 1 yaml with
+            | Error diagnostics -> Error diagnostics
+            | Ok root ->
                 let version, versionDiagnostics = schemaVersion artifact root
 
                 let workId =
