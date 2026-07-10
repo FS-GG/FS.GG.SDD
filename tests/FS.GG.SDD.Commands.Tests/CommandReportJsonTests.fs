@@ -8,6 +8,8 @@ open FS.GG.SDD.Commands.CommandWorkflow
 open Xunit
 
 module CommandReportJsonTests =
+    module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
+
     let dryRunReport () =
         let root =
             Path.Combine(TestSupport.repoRoot, "tests", "fixtures", "lifecycle-commands", "deterministic-report")
@@ -31,9 +33,19 @@ module CommandReportJsonTests =
     // ⇒ minor, removal/retype ⇒ major — and then deliberately update this expected value.
     [<Fact>]
     let ``reportVersion is pinned to its current contract value`` () =
-        let expected = "2.2.0"
+        let expected = "2.3.0"
         Assert.Equal(expected, dryRunReport().ReportVersion)
         Assert.Contains(sprintf "\"reportVersion\": \"%s\"" expected, dryRunReport () |> serializeReport)
+
+    // FS-GG/FS.GG.SDD#305: `toolVersion` is an always-present JSON fact carrying the version of the CLI
+    // that produced the report, so a consumer can tell a live finding from one already fixed upstream.
+    // It must agree with what `fsgg-sdd --version` prints — both read the same generator version — or a
+    // report would attest to a version that never produced it.
+    [<Fact>]
+    let ``toolVersion is always emitted and matches the running generator version`` () =
+        let expected = SchemaVersionModule.currentGeneratorVersion().Version
+        Assert.Equal(expected, dryRunReport().ToolVersion)
+        Assert.Contains(sprintf "\"toolVersion\": \"%s\"" expected, dryRunReport () |> serializeReport)
 
     // FS-GG/FS.GG.SDD#183: `coherent` is a first-class, always-present JSON fact alongside `outcome`
     // (never dropped, whatever its value), so a Governance consumer can key on it unconditionally.

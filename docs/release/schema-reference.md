@@ -263,6 +263,17 @@ top-level fields only.
   absent); top-level `coherent` asserts only "this stage found the work item already current and
   recorded no change". This additive-optional field moved `reportVersion` to `2.2.0` (a semantic
   minor); `schemaVersion` stays `1`.
+  The additive top-level `toolVersion` field (always present, string) records the `fsgg-sdd` version
+  that produced the report — FS-GG/FS.GG.SDD#305. It carries the same value `fsgg-sdd --version`
+  prints. Without it a stale toolchain is invisible in the artifacts it emits, so a consumer feedback
+  report cannot be told apart from a stale one without re-verifying every finding against `main` —
+  three separate consumers independently rediscovered one already-fixed defect that way. A workspace
+  may additionally declare the floor it expects as `sdd.minToolVersion` in `.fsgg/project.yml`;
+  running below it warns (`project.toolVersionBelowMinimum`), and a floor that is not a
+  `major.minor.patch` triple warns (`project.minToolVersionUnparseable`) rather than being silently
+  ignored. Both are warnings, never gates, and the floor is opt-in — absent, nothing changes. This
+  additive-optional field moved `reportVersion` to `2.3.0` (a semantic minor); `schemaVersion` stays
+  `1`.
   The additive `lifecycleStatus` field is present on **every** command's report — feature 084;
   it is the standardized lifecycle-status footer's authoritative fact, carrying `workId`,
   `isLifecycleStage`, `currentOrdinal`, `totalStages`, `outcome`, `nextCommand`, and `stages[]`
