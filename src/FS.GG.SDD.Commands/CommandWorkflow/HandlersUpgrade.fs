@@ -230,7 +230,7 @@ module internal HandlersUpgrade =
                 "Reconciliation complete; run `fsgg-sdd doctor` to confirm coherence."
 
         let summary: UpgradeSummary =
-            { HasProvenance = true
+            { HasProvenance = drift.HasProvenance
               Mode = if request.AssumeYes then "assumeYes" else "interactive"
               AlreadyCoherent = false
               Steps = steps
@@ -270,7 +270,11 @@ module internal HandlersUpgrade =
                     drift.Steps
                     |> List.filter (fun step -> step.Outcome = ReconciliationOutcome.WouldApply)
 
-                if not drift.HasProvenance then
+                // #313: provenance-less no longer implies nothing-to-reconcile. The CLI axis is a
+                // fact about the installed tool, so an unmet `sdd.minToolVersion` floor makes the
+                // self-update step actionable even here. Absent a floor there is no actionable
+                // step and this is the unchanged "nothing to reconcile" no-op.
+                if not drift.HasProvenance && List.isEmpty actionable then
                     { model with
                         Upgrade = Some(noOpSummary request drift "No scaffold provenance — nothing to reconcile.") },
                     []
@@ -301,7 +305,7 @@ module internal HandlersUpgrade =
                     // FR-012 / SC-004: non-interactive without `--yes` refuses up front when there IS
                     // actionable reconciliation — zero writes, no `Confirm`, no prompt-hang (exit 1).
                     let summary: UpgradeSummary =
-                        { HasProvenance = true
+                        { HasProvenance = drift.HasProvenance
                           Mode = "refusedNonInteractive"
                           AlreadyCoherent = false
                           Steps = drift.Steps

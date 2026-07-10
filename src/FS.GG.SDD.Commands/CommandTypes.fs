@@ -508,6 +508,7 @@ module CommandTypes =
           ProviderName: string option
           InstalledCliVersion: string
           RequiredMinimumCliVersion: string option
+          RequiredMinimumCliVersionSource: string option
           CliAxis: string
           CliBehindBy: string option
           ExpectedArtifactCount: int

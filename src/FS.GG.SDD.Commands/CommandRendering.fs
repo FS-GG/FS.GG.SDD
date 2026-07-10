@@ -411,6 +411,10 @@ module CommandRendering =
         | Some doctor ->
             let doctorProvider = defaultArg doctor.ProviderName "(none)"
             let doctorRequiredMinimum = defaultArg doctor.RequiredMinimumCliVersion "(none)"
+
+            let doctorRequiredMinimumSource =
+                defaultArg doctor.RequiredMinimumCliVersionSource "(none)"
+
             let doctorBehindBy = defaultArg doctor.CliBehindBy "(none)"
             builder.AppendLine($"doctorHasProvenance: {doctor.HasProvenance}") |> ignore
             builder.AppendLine($"doctorProvider: {doctorProvider}") |> ignore
@@ -419,6 +423,9 @@ module CommandRendering =
             |> ignore
 
             builder.AppendLine($"doctorRequiredMinimumCli: {doctorRequiredMinimum}")
+            |> ignore
+
+            builder.AppendLine($"doctorRequiredMinimumCliSource: {doctorRequiredMinimumSource}")
             |> ignore
 
             builder.AppendLine($"doctorCliAxis: {doctor.CliAxis}") |> ignore

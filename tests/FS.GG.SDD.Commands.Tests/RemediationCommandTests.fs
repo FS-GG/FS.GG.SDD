@@ -14,13 +14,19 @@ open Xunit
 module DriftTests =
     open RemediationSupport
 
-    let private drift minimum installed present =
+    /// A scaffolded workspace declaring `minimum` on both the descriptor and the provenance,
+    /// and (#313) `floor` as its `sdd.minToolVersion`.
+    let private driftWithFloor minimum floor installed present =
         Drift.compute
             (Some(record minimum))
             (Some(descriptor minimum))
+            floor
             installed
             (Set.ofList present)
             (skillBodiesFor present)
+
+    let private drift minimum installed present =
+        driftWithFloor minimum None installed present
 
     [<Fact>]
     let ``CLI axis is behind with a delta when installed is below the declared minimum`` () =
@@ -77,7 +83,7 @@ module DriftTests =
 
     [<Fact>]
     let ``no provenance yields HasProvenance false, no steps, coherent-degradation`` () =
-        let report = Drift.compute None None installedVersion Set.empty Map.empty
+        let report = Drift.compute None None None installedVersion Set.empty Map.empty
         Assert.False report.HasProvenance
         Assert.Empty report.Steps
         Assert.True report.IsCoherent
@@ -105,6 +111,7 @@ module DriftTests =
             Drift.compute
                 (Some(devRepoRecordOf ()))
                 None
+                None
                 installedVersion
                 (Set.ofList Drift.expectedArtifactPaths)
                 (skillBodiesFor Drift.expectedArtifactPaths)
@@ -125,7 +132,13 @@ module DriftTests =
         let present = Drift.expectedArtifactPaths |> List.skip 1
 
         let report =
-            Drift.compute (Some(devRepoRecordOf ())) None installedVersion (Set.ofList present) (skillBodiesFor present)
+            Drift.compute
+                (Some(devRepoRecordOf ()))
+                None
+                None
+                installedVersion
+                (Set.ofList present)
+                (skillBodiesFor present)
 
         Assert.True report.HasProvenance
         Assert.Equal(None, report.ProviderName)
@@ -535,3 +548,315 @@ module ConfirmPromptTests =
             Console.SetIn originalIn
             Console.SetOut originalOut
             Console.SetError originalError
+
+/// FS-GG/FS.GG.SDD#313 — the two independent minimum-CLI-version floors, reconciled.
+///
+/// `Drift.compute` sourced the required minimum from the provider descriptor (falling back to
+/// the value recorded in scaffold-provenance) and never read the workspace-declared
+/// `sdd.minToolVersion` that FS-GG/FS.GG.SDD#305 added. An author who set the floor above the
+/// running CLI therefore got `project.toolVersionBelowMinimum` warned on every lifecycle command
+/// while `doctor` reported the CLI axis coherent and `upgrade` — the only command permitted to
+/// mutate the CLI installation — declined to remediate it. Two floors, divergent verdicts.
+///
+/// The stricter floor now governs the CLI axis, and the report names the source that produced it.
+module ToolVersionFloorDriftTests =
+    open RemediationSupport
+
+    /// A scaffolded workspace declaring `minimum` on both provider surfaces and `floor` as its
+    /// `sdd.minToolVersion`.
+    let private driftOf minimum floor =
+        Drift.compute
+            (Some(record minimum))
+            (Some(descriptor minimum))
+            floor
+            installedVersion
+            (Set.ofList Drift.expectedArtifactPaths)
+            (skillBodiesFor Drift.expectedArtifactPaths)
+
+    let private cliStep (report: Drift.DriftReport) =
+        report.Steps
+        |> List.find (fun s -> s.StepId = ReconciliationStepId.CliSelfUpdate)
+
+    // ----- AC1: both floors are considered; the stricter one wins. -----
+
+    /// The reported defect: the provider is silent (or satisfied) and only the workspace declares
+    /// a floor. Before #313 this read `coherentByAbsence` / `atOrAbove` and reconciled nothing.
+    [<Fact>]
+    let ``a workspace floor alone drives the CLI axis when the provider declares no minimum`` () =
+        let report = driftOf None (Some farAheadMinimum)
+        Assert.Equal("behind", report.CliAxis)
+        Assert.Equal(Some farAheadMinimum, report.RequiredMinimumCliVersion)
+        Assert.True report.CliBehindBy.IsSome
+        Assert.False report.IsCoherent
+
+    [<Fact>]
+    let ``the workspace floor wins when it is stricter than the provider minimum`` () =
+        let report = driftOf (Some farBehindMinimum) (Some farAheadMinimum)
+        Assert.Equal("behind", report.CliAxis)
+        Assert.Equal(Some farAheadMinimum, report.RequiredMinimumCliVersion)
+        Assert.Equal(Some Drift.workspaceFloorSource, report.RequiredMinimumCliVersionSource)
+
+    [<Fact>]
+    let ``the provider minimum wins when it is stricter than the workspace floor`` () =
+        let report = driftOf (Some farAheadMinimum) (Some farBehindMinimum)
+        Assert.Equal("behind", report.CliAxis)
+        Assert.Equal(Some farAheadMinimum, report.RequiredMinimumCliVersion)
+        Assert.Equal(Some Drift.providerDescriptorSource, report.RequiredMinimumCliVersionSource)
+
+    /// An equal floor is inert, so the tie names the pre-existing authority rather than flapping.
+    [<Fact>]
+    let ``an equal workspace floor leaves the provider named as the source`` () =
+        let report = driftOf (Some farAheadMinimum) (Some farAheadMinimum)
+        Assert.Equal(Some farAheadMinimum, report.RequiredMinimumCliVersion)
+        Assert.Equal(Some Drift.providerDescriptorSource, report.RequiredMinimumCliVersionSource)
+
+    /// An unparseable floor is not this module's to report — `project.minToolVersionUnparseable`
+    /// already warns at report assembly. It must not be mistaken for a real minimum.
+    [<Fact>]
+    let ``an unparseable workspace floor is ignored by the CLI axis`` () =
+        let report = driftOf None (Some "not-a-version")
+        Assert.Equal("coherentByAbsence", report.CliAxis)
+        Assert.Equal(None, report.RequiredMinimumCliVersion)
+        Assert.Equal(None, report.RequiredMinimumCliVersionSource)
+
+    // ----- AC2: the effective minimum names its source. -----
+
+    [<Fact>]
+    let ``the source is the provider descriptor when only the provider declares a minimum`` () =
+        let report = driftOf (Some farAheadMinimum) None
+        Assert.Equal(Some Drift.providerDescriptorSource, report.RequiredMinimumCliVersionSource)
+
+    /// The descriptor is silent, so the recorded provenance value governs — and says so.
+    [<Fact>]
+    let ``the source is scaffold provenance when only the recorded minimum declares one`` () =
+        let report =
+            Drift.compute
+                (Some(record (Some farAheadMinimum)))
+                (Some(descriptor None))
+                None
+                installedVersion
+                (Set.ofList Drift.expectedArtifactPaths)
+                (skillBodiesFor Drift.expectedArtifactPaths)
+
+        Assert.Equal(Some farAheadMinimum, report.RequiredMinimumCliVersion)
+        Assert.Equal(Some Drift.scaffoldProvenanceSource, report.RequiredMinimumCliVersionSource)
+
+    [<Fact>]
+    let ``no minimum anywhere names no source`` () =
+        let report = driftOf None None
+        Assert.Equal("coherentByAbsence", report.CliAxis)
+        Assert.Equal(None, report.RequiredMinimumCliVersionSource)
+
+    /// A descriptor that declares an unparseable minimum still *shadows* the recorded value, as it
+    /// did before #313 — precedence is by presence, not by parseability.
+    [<Fact>]
+    let ``an unparseable descriptor minimum still shadows the recorded provenance value`` () =
+        let report =
+            Drift.compute
+                (Some(record (Some farAheadMinimum)))
+                (Some(descriptor (Some "not-a-version")))
+                None
+                installedVersion
+                (Set.ofList Drift.expectedArtifactPaths)
+                (skillBodiesFor Drift.expectedArtifactPaths)
+
+        Assert.Equal("coherentByAbsence", report.CliAxis)
+        Assert.Equal(None, report.RequiredMinimumCliVersionSource)
+
+    // ----- AC3: the self-update step is reachable when only the workspace floor is unmet. -----
+
+    [<Fact>]
+    let ``an unmet workspace floor previews the CLI self-update as wouldApply`` () =
+        let report = driftOf None (Some farAheadMinimum)
+        Assert.Equal(ReconciliationOutcome.WouldApply, (cliStep report).Outcome)
+
+    /// The CLI axis is a fact about the *installed tool*, not about the scaffold, so a workspace
+    /// that was never scaffolded still reconciles its declared floor. With no floor this stays the
+    /// unchanged "no provenance — nothing to reconcile" no-op (asserted above).
+    [<Fact>]
+    let ``a provenance-less workspace still previews the self-update for its declared floor`` () =
+        let report =
+            Drift.compute None None (Some farAheadMinimum) installedVersion Set.empty Map.empty
+
+        Assert.False report.HasProvenance
+        Assert.Equal("behind", report.CliAxis)
+        Assert.Equal(ReconciliationOutcome.WouldApply, (cliStep report).Outcome)
+        Assert.False report.IsCoherent
+
+    // ----- AC1/AC2/AC4 end to end: doctor reads the floor, reports the source, stays read-only. -----
+
+    let private doctorSummary (report: CommandReport) = report.Doctor.Value
+
+    /// An otherwise fully coherent scaffold whose only drift is the floor it declared. This is the
+    /// exact shape that used to report `coherent` while every other command warned.
+    [<Fact>]
+    let ``doctor reads the workspace floor, names it, and reports the drift it used to hide`` () =
+        let root =
+            makeFixtureWithFloor (Some farBehindMinimum) (Some farAheadMinimum) Drift.expectedArtifactPaths true
+
+        let report = doctorReport root
+        let summary = doctorSummary report
+        Assert.Equal("behind", summary.CliAxis)
+        Assert.Equal(Some farAheadMinimum, summary.RequiredMinimumCliVersion)
+        Assert.Equal(Some Drift.workspaceFloorSource, summary.RequiredMinimumCliVersionSource)
+        Assert.False summary.IsCoherent
+        Assert.Contains("doctor.driftDetected", diagnosticIds report)
+        // AC4: doctor stays strictly read-only and exits 0 whenever it reports.
+        Assert.Equal(0, exitCode report)
+
+    [<Fact>]
+    let ``doctor over an unmet workspace floor makes zero writes`` () =
+        let root =
+            makeFixtureWithFloor (Some farBehindMinimum) (Some farAheadMinimum) Drift.expectedArtifactPaths true
+
+        let before = treeHash root
+        doctorReport root |> ignore
+        Assert.Equal(before, treeHash root)
+
+    /// The floor is opt-in: a workspace that declares none is unchanged by #313.
+    [<Fact>]
+    let ``doctor over a coherent scaffold with no declared floor is still coherent`` () =
+        let root = coherentFixture ()
+        let summary = doctorSummary (doctorReport root)
+        Assert.Equal("atOrAbove", summary.CliAxis)
+        Assert.Equal(Some Drift.providerDescriptorSource, summary.RequiredMinimumCliVersionSource)
+        Assert.True summary.IsCoherent
+
+    /// The doctor block's new fact survives the trip out of JSON into the text projection.
+    [<Fact>]
+    let ``the text projection names the source of the effective minimum`` () =
+        let root =
+            makeFixtureWithFloor (Some farBehindMinimum) (Some farAheadMinimum) Drift.expectedArtifactPaths true
+
+        let text = FS.GG.SDD.Commands.CommandRendering.renderText (doctorReport root)
+        Assert.Contains($"doctorRequiredMinimumCliSource: {Drift.workspaceFloorSource}", text)
+
+    /// The JSON automation contract carries the source beside the minimum it explains. The
+    /// full-shape golden pins `doctor` as `null`, so this is the doctor block's only json pin.
+    [<Fact>]
+    let ``the json contract emits requiredMinimumCliVersionSource beside the minimum`` () =
+        let root =
+            makeFixtureWithFloor (Some farBehindMinimum) (Some farAheadMinimum) Drift.expectedArtifactPaths true
+
+        let json = serializeReport (doctorReport root)
+        Assert.Contains($"\"requiredMinimumCliVersion\": \"{farAheadMinimum}\"", json)
+        Assert.Contains($"\"requiredMinimumCliVersionSource\": \"{Drift.workspaceFloorSource}\"", json)
+
+    /// ...and it is an explicit `null` — not an omitted key — when there is no effective minimum,
+    /// so a consumer can tell "no floor declared" from "field dropped by an older CLI".
+    [<Fact>]
+    let ``the json contract emits a null source when no minimum is declared`` () =
+        let json = serializeReport (doctorReport (noMinimumFixture ()))
+        Assert.Contains("\"requiredMinimumCliVersionSource\": null", json)
+
+    // ----- AC3 end to end: upgrade reaches the self-update step it used to decline. -----
+
+    /// `upgrade` non-interactive without `--yes` refuses *because there is actionable work* — the
+    /// fail-closed probe that the self-update step is reachable, without running `dotnet tool
+    /// update` in a test. Before #313 the unmet floor was invisible and this exited 0 as a no-op.
+    [<Fact>]
+    let ``upgrade reaches the self-update step when only the workspace floor is unmet`` () =
+        let root =
+            makeFixtureWithFloor (Some farBehindMinimum) (Some farAheadMinimum) Drift.expectedArtifactPaths true
+
+        let before = treeHash root
+        let report = upgradeNonInteractive root
+        let summary = report.Upgrade.Value
+        Assert.Equal("refusedNonInteractive", summary.Mode)
+        Assert.False summary.AlreadyCoherent
+
+        Assert.Contains(
+            summary.Steps,
+            fun s ->
+                s.StepId = ReconciliationStepId.CliSelfUpdate
+                && s.Outcome = ReconciliationOutcome.WouldApply
+        )
+
+        Assert.Contains("upgrade.nonInteractiveNoYes", diagnosticIds report)
+        Assert.Equal(before, treeHash root)
+        Assert.Equal(1, exitCode report)
+
+    /// ...and it is reachable in a workspace that was never scaffolded, where the old
+    /// `not HasProvenance` short-circuit returned "nothing to reconcile" unconditionally.
+    [<Fact>]
+    let ``upgrade reaches the self-update step in a provenance-less workspace with a floor`` () =
+        let root = makeFixtureWithFloor None (Some farAheadMinimum) [] false
+        let before = treeHash root
+        let report = upgradeNonInteractive root
+        let summary = report.Upgrade.Value
+        Assert.False summary.HasProvenance
+        Assert.Equal("refusedNonInteractive", summary.Mode)
+
+        Assert.Contains(
+            summary.Steps,
+            fun s ->
+                s.StepId = ReconciliationStepId.CliSelfUpdate
+                && s.Outcome = ReconciliationOutcome.WouldApply
+        )
+
+        Assert.Equal(before, treeHash root)
+        Assert.Equal(1, exitCode report)
+
+/// FS-GG/FS.GG.SDD#313, regression. Reading `.fsgg/project.yml` gave `doctor`/`upgrade` their
+/// first source of a *workspace* warning that is not scaffold drift: an unparseable
+/// `sdd.minToolVersion` warns (`project.minToolVersionUnparseable`) over a perfectly coherent
+/// scaffold. `NextAction` derived coherence from the outcome enum, so that warning alone made
+/// `doctor` route a coherent workspace at `upgrade`, and made an already-coherent `upgrade` tell
+/// the author to re-run and confirm steps that do not exist. Coherence is a fact on the summary.
+///
+/// In the `Console` collection: the skipped-step case drives the real `Confirm` edge through
+/// scripted stdin, and `Console.In`/`Console.Out` are process-global.
+[<Collection("Console")>]
+module RemediationRoutingTests =
+    open RemediationSupport
+
+    let private unparseableFloor = "not-a-version"
+
+    let private actionId (report: CommandReport) =
+        report.NextAction |> Option.map (fun a -> a.ActionId)
+
+    [<Fact>]
+    let ``an unparseable floor does not route a coherent scaffold at upgrade`` () =
+        let root =
+            makeFixtureWithFloor (Some farBehindMinimum) (Some unparseableFloor) Drift.expectedArtifactPaths true
+
+        let report = doctorReport root
+        // The warning is still reported...
+        Assert.Contains("project.minToolVersionUnparseable", diagnosticIds report)
+        // ...but the scaffold is coherent, so the report must say so and route nowhere.
+        Assert.True report.Doctor.Value.IsCoherent
+        Assert.Equal(Some "doctor.coherent", actionId report)
+        Assert.Equal(0, exitCode report)
+
+    [<Fact>]
+    let ``an unparseable floor does not tell an already-coherent upgrade to re-run itself`` () =
+        let root =
+            makeFixtureWithFloor (Some farBehindMinimum) (Some unparseableFloor) Drift.expectedArtifactPaths true
+
+        let report = upgradeYes root
+        Assert.Contains("project.minToolVersionUnparseable", diagnosticIds report)
+        Assert.True report.Upgrade.Value.AlreadyCoherent
+        Assert.Equal(Some "upgrade.alreadyCoherent", actionId report)
+        Assert.Equal(0, exitCode report)
+
+    /// An unmet floor *is* drift, so it must still route at `upgrade`.
+    [<Fact>]
+    let ``an unmet floor still routes a drifted scaffold at upgrade`` () =
+        let root =
+            makeFixtureWithFloor (Some farBehindMinimum) (Some farAheadMinimum) Drift.expectedArtifactPaths true
+
+        let report = doctorReport root
+        Assert.False report.Doctor.Value.IsCoherent
+        Assert.Equal(Some "doctor.next.upgrade", actionId report)
+
+    /// A *skipped* step is the only thing that asks to be re-confirmed. An applied CLI self-update
+    /// also sets `residualDrift` — the running binary is stale until the next invocation — and must
+    /// route forward to `doctor`, not back to `upgrade`.
+    [<Fact>]
+    let ``Synthetic a declined re-seed routes back to upgrade with residual drift`` () =
+        let root = atOrAboveMissingFixture ()
+        let report = upgradeInteractive root "n\n"
+        let summary = report.Upgrade.Value
+        Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.SkippedStepIds)
+        Assert.True summary.ResidualDrift
+        Assert.Equal(Some "upgrade.residualDrift", actionId report)

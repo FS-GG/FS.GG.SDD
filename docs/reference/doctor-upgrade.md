@@ -18,8 +18,8 @@ fsgg-sdd doctor --root .
 writes** — the working tree is byte-identical before and after, and it exits `0` whenever it
 produces a report (including when drift is present).
 
-It reports, from declarative truth (the feature-052 recorded minimum and the live
-provider-declared `minimumFsggSdd`, live wins):
+It reports, from declarative truth (the feature-052 recorded minimum, the live
+provider-declared `minimumFsggSdd` — live wins — and the workspace's own `sdd.minToolVersion`):
 
 - **CLI axis** — installed CLI vs the required minimum: `behind` (with a behind-by delta) /
   `atOrAbove` / `coherentByAbsence` (no declared minimum) / `undeterminable` (installed
@@ -30,7 +30,39 @@ provider-declared `minimumFsggSdd`, live wins):
   none of it.
 
 With no `.fsgg/scaffold-provenance.json` (a bare `init` skeleton or plain repo), `doctor`
-reports "no scaffold provenance — nothing to reconcile" and exits 0.
+reports "no scaffold provenance — nothing to reconcile" and exits 0 — unless the workspace
+declares a floor the installed CLI does not meet (below).
+
+### Two floors, one CLI axis
+
+Two independent sources can declare a minimum CLI version, and `doctor`/`upgrade` honor both
+(FS-GG/FS.GG.SDD#313):
+
+| Source | Declared in | Reported as |
+|---|---|---|
+| Provider descriptor | `.fsgg/providers.yml` → `minimumFsggSdd` | `providerDescriptor` |
+| Scaffold provenance | `.fsgg/scaffold-provenance.json` → `requiredMinimumCliVersion` | `scaffoldProvenance` |
+| Workspace floor | `.fsgg/project.yml` → `sdd.minToolVersion` | `workspaceFloor` |
+
+The **stricter** floor governs the CLI axis, and `doctor.requiredMinimumCliVersionSource` names
+which one produced it (`null` exactly when there is no effective minimum). The provider surfaces
+resolve between themselves first — a live descriptor shadows the recorded value by *presence*, so
+a descriptor declaring an unparseable minimum degrades to `coherentByAbsence` rather than falling
+back — and the survivor is then compared against the workspace floor. An equal floor names the
+provider-side source, because the tie makes the choice inert.
+
+An unparseable `sdd.minToolVersion` is never treated as a minimum; `project.minToolVersionUnparseable`
+reports it once, at report assembly.
+
+Before this, a workspace that declared `sdd.minToolVersion: 1.0.0` while running `0.9.0` was warned
+by `project.toolVersionBelowMinimum` on *every* lifecycle command, while `doctor` called the CLI axis
+coherent and `upgrade` — the only command permitted to mutate the CLI installation — declined to
+remediate it.
+
+Because the CLI axis is a fact about the **installed tool** and not about the scaffold, an unmet
+workspace floor makes `upgrade`'s self-update step actionable even where there is no provenance. Such
+a run still reports `hasProvenance: false` and still previews no re-pin and no re-seed; only the CLI
+step is in play.
 
 ## `fsgg-sdd upgrade` — the reconciliation verb
 
@@ -64,8 +96,8 @@ stage) ever self-updates or re-seeds as a side effect.
   reads, re-pins, or reports drift on it: the pin is a consumer-owned, Renovate-updatable
   file, and `upgrade`'s CLI self-update targets the *installed* tool (`dotnet tool update`),
   not the manifest. A workspace whose manifest has fallen behind is therefore invisible to
-  `doctor` — the same blindness it has to the `sdd.minToolVersion` floor
-  (FS-GG/FS.GG.SDD#313).
+  `doctor`. (The `sdd.minToolVersion` floor once shared that blindness; it no longer does —
+  see **Two floors, one CLI axis** below.)
 - **Explicit apply only.** The non-interactive apply is triggered **only** by `--yes`. A
   non-interactive run without `--yes` makes zero writes, does not hang on a prompt, and
   refuses with a pointer to `--yes` (`upgrade.nonInteractiveNoYes`, exit 1). CI keeps the

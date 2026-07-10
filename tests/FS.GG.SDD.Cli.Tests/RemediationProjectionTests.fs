@@ -32,6 +32,7 @@ module RemediationProjectionTests =
           ProviderName = Some "rendering"
           InstalledCliVersion = "0.2.1"
           RequiredMinimumCliVersion = Some "9.9.9"
+          RequiredMinimumCliVersionSource = Some "workspaceFloor"
           CliAxis = "behind"
           CliBehindBy = Some "0.2.1 -> 9.9.9"
           ExpectedArtifactCount = 31
@@ -92,9 +93,14 @@ module RemediationProjectionTests =
         for projection in [ json; text; rich ] do
             Assert.Contains("behind", projection)
             Assert.Contains("fs-gg-sdd-plan", projection)
+            // FS-GG/FS.GG.SDD#313: the effective minimum is meaningless without the floor that
+            // produced it, so the source travels with it into every projection.
+            Assert.Contains("workspaceFloor", projection)
 
         Assert.Contains("\"cliAxis\": \"behind\"", json)
         Assert.Contains("doctorCliAxis: behind", text)
+        Assert.Contains("\"requiredMinimumCliVersionSource\": \"workspaceFloor\"", json)
+        Assert.Contains("doctorRequiredMinimumCliSource: workspaceFloor", text)
 
         let redirected = resolve Rich nonInteractive doctorReport
         Assert.False redirected.UsedRichRendering
