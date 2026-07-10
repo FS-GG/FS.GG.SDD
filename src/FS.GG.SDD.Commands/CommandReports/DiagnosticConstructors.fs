@@ -734,12 +734,22 @@ module internal DiagnosticConstructors =
             "Preserve existing declaration ids and meanings; append a compatible new declaration instead."
             ids
 
+    // The fix must name an authored line that disposes the id, not tasks.yml: tasks.yml is
+    // regenerated, so editing it is inert, and rerunning `tasks` over unchanged sources
+    // reproduces the same gap. Those were the old text's only two suggestions (#311).
+    //
+    // Tagging a `## Plan Decisions` PD-### line with the id is the general route, and it is
+    // id-class agnostic: `Plan.planSourceIdsInLine` matches AC/DEC/FR/… alike, lifting every id
+    // on the line into the decision's `SourceIds`, which `TaskGraphAuthoring.planDecisionTasks`
+    // forwards into the generated task's `sourceIds` — the set `allTaskDispositionIds` reads.
+    // An orphan AC-### is the case that actually reaches an author (every other required class
+    // has its own task generator), so the text names its spec.md route too.
     let missingDisposition path ids =
         errorDiagnostic
             "missingDisposition"
             (Some path)
             "One or more lifecycle facts have no current task disposition."
-            "Update tasks.yml or rerun fsgg-sdd tasks after correcting the source artifact."
+            "Tag a plan.md '## Plan Decisions' line with each id so fsgg-sdd tasks derives a disposing task, for example '- PD-005 [AC-012] [DEC-003] complete: ...'; an orphan AC-### may instead be referenced from a spec.md requirement. Editing tasks.yml has no effect, because tasks regenerates it."
             ids
 
     let unsafeOverwrite (path: string) =
