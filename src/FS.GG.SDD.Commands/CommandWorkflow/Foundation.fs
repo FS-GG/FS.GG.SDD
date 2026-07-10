@@ -702,12 +702,11 @@ nuget-cache/
     // enforced here is "no param NAMES a path outside the root". Containing the effect *edge* is the
     // one-containment-primitive work in FS-GG/FS.GG.SDD#203 (ADR-0002); do not read this predicate as
     // having already done it.
-    let escapesRoot (raw: string) =
-        let trimmed = raw.Trim().Replace('\\', '/')
-
-        String.IsNullOrWhiteSpace trimmed
-        || Path.IsPathRooted trimmed // on the RAW string, before any TrimStart('/')
-        || (trimmed.Split('/') |> Array.contains "..")
+    //
+    // The predicate itself is the single authoritative `FS.GG.SDD.Artifacts.PathContainment.escapesRoot`
+    // (FS-GG/FS.GG.SDD#337) — this binding is the in-assembly alias its `surface` callers use; there is
+    // no second implementation to drift against the CLI copies.
+    let escapesRoot (raw: string) = PathContainment.escapesRoot raw
 
     // FS-GG/FS.GG.SDD#185: the two `surface` roots, checked before a single effect is planned. One
     // diagnostic per offending param (both are named when both escape), ordered by param name so the

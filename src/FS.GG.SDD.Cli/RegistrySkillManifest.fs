@@ -36,18 +36,9 @@ module RegistrySkillManifest =
     // FS-GG/FS.GG.SDD#237 (Gap C finding 4 / #203): confine `--root` so the manifest path
     // stays inside the workspace. `Path.Combine(root, …)` returns the manifest suffix verbatim
     // when `root` is rooted, and `GetFullPath` resolves `..`, so a bare `--root /etc --write`
-    // would write out of tree. This is the lexical guard `surface` already uses (#185): the
-    // check MUST run on the RAW value, because a normalize-then-test would `TrimStart('/')` the
-    // leading slash away and let `/etc` through as `etc`. It is a copy of the internal
-    // `Commands.Internal.Foundation.escapesRoot` — unreachable from this assembly — kept small
-    // and comment-linked so the two cannot silently drift; the durable effect-edge containment
-    // primitive is #203/ADR-0002, not this predicate.
-    let private escapesRoot (raw: string) =
-        let trimmed = raw.Trim().Replace('\\', '/')
-
-        String.IsNullOrWhiteSpace trimmed
-        || Path.IsPathRooted trimmed // on the RAW string, before any TrimStart('/')
-        || (trimmed.Split('/') |> Array.contains "..")
+    // would write out of tree. The single authoritative lexical guard lives in
+    // `FS.GG.SDD.Artifacts.PathContainment.escapesRoot` (FS-GG/FS.GG.SDD#337); the durable
+    // effect-edge containment primitive is #203/ADR-0002, not this predicate.
 
     let private targetPath (root: string) =
         Path.Combine(root, manifestPath.Replace('/', Path.DirectorySeparatorChar))
@@ -104,7 +95,7 @@ module RegistrySkillManifest =
 
             // Containment first: an escaping `--root` plans no read and no write (parity with
             // `surface` #185). User-input failure ⇒ exit 1, stderr diagnostic, stdout stays clean.
-            if escapesRoot root then
+            if PathContainment.escapesRoot root then
                 Console.Error.WriteLine(
                     $"registry skill-manifest: --root '{root}' escapes the workspace root — "
                     + "pass a path inside the workspace (no absolute path or '..')."
