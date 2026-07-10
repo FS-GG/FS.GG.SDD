@@ -439,27 +439,29 @@ Prose status: specified
         | "Lifecycle Notes" -> $"## Lifecycle Notes\n- Next lifecycle action: `fsgg-sdd specify --work {workId}`.\n"
         | _ -> $"## {heading}\n"
 
-    let ensureStandardSections workId text =
+    /// The `ensure` half of every markdown hybrid's merge, for all five stages (#309). A heading the
+    /// policy names but the file lacks is appended, rendered by the stage; a heading already present
+    /// is left exactly as the author left it, body and all. This function never removes or rewrites.
+    ///
+    /// The policy supplies the headings, so a stage cannot ensure a section it does not declare —
+    /// which is what makes `HybridArtifact`'s tag and its merge agree by construction.
+    let ensureSections (policy: MergePolicy) (sectionText: string -> string) (text: string) =
         let normalized =
             (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
 
-        let required =
-            [ "Identity"
-              "Principles"
-              "Scope Boundaries"
-              "Policy Pointers"
-              "Lifecycle Notes" ]
-
         let missing =
-            required |> List.filter (fun heading -> not (hasSection heading normalized))
+            MergePolicy.ensuredSections policy
+            |> List.filter (fun heading -> not (hasSection heading normalized))
 
         if List.isEmpty missing then
             normalized
         else
-            let suffix = missing |> List.map (sectionText workId) |> String.concat "\n"
-
+            let suffix = missing |> List.map sectionText |> String.concat "\n"
             let trimmed = normalized.TrimEnd()
             $"{trimmed}\n\n{suffix}"
+
+    let ensureStandardSections workId text =
+        ensureSections MergePolicies.charter (sectionText workId) text
 
     let specificationSectionText heading =
         match heading with
@@ -475,19 +477,7 @@ Prose status: specified
         | _ -> $"## {heading}\n"
 
     let ensureSpecificationSections text =
-        let normalized =
-            (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
-
-        let missing =
-            specificationStandardSections ()
-            |> List.filter (fun heading -> not (hasSection heading normalized))
-
-        if List.isEmpty missing then
-            normalized
-        else
-            let suffix = missing |> List.map specificationSectionText |> String.concat "\n"
-            let trimmed = normalized.TrimEnd()
-            $"{trimmed}\n\n{suffix}"
+        ensureSections MergePolicies.specification specificationSectionText text
 
     let candidateSnapshots model =
         model.InterpretedEffects
@@ -771,21 +761,7 @@ Prose status: specified
         | _ -> $"## {heading}\n"
 
     let ensureClarificationSections workId text =
-        let normalized =
-            (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
-
-        let missing =
-            clarificationStandardSections ()
-            |> List.filter (fun heading -> not (hasSection heading normalized))
-
-        if List.isEmpty missing then
-            normalized
-        else
-            let suffix =
-                missing |> List.map (clarificationSectionText workId) |> String.concat "\n"
-
-            let trimmed = normalized.TrimEnd()
-            $"{trimmed}\n\n{suffix}"
+        ensureSections MergePolicies.clarifications (clarificationSectionText workId) text
 
     let nextScopedIndex prefix (text: string) =
         Regex.Matches(text, $@"\b{Regex.Escape prefix}-(\d{{3,}})\b", RegexOptions.IgnoreCase)
@@ -1306,6 +1282,21 @@ publicOrToolFacingImpact: true
             // Re-insert a single blank-line separator before the next heading (or trailing).
             (before @ bodyLines @ [ "" ] @ after) |> String.concat "\n"
 
+    // The policy-driven form of the two primitives above (#309). `headings` comes from a
+    // `MergePolicy`, so the sections a stage may rewrite are the sections its write tag declares —
+    // drop a heading from the policy and that region reverts to the author, with no code change.
+    // `bodies` must cover every heading the policy names; `MergePolicyTests` pins that, so a miss
+    // here is a tool defect and `Map.find` says so rather than silently blanking a section.
+    let private mergeSections merge (bodies: Map<string, string list>) headings text =
+        headings
+        |> List.fold (fun acc heading -> merge heading (Map.find heading bodies) acc) text
+
+    let replaceSectionBodies bodies headings text =
+        mergeSections replaceSectionBody bodies headings text
+
+    let appendToSections bodies headings text =
+        mergeSections appendToSection bodies headings text
+
     // --- Retirement passes (feature 089, FR-018 / FR-019) -----------------------------------
     // `appendClarificationAnswers` only ever *appends* to a section. That is fine while the tool
     // writes the whole artifact in one shot, but from 089 a blocked `clarify` seeds a skeleton
@@ -1533,12 +1524,22 @@ publicOrToolFacingImpact: true
 
         let remainingLines = answers |> List.choose renderRemainingLine
 
+        let bodies =
+            Map
+                [ "Clarification Questions", questionLines
+                  "Answers", answerLines
+                  "Decisions", decisionLines
+                  "Accepted Deferrals", deferralLines ]
+
+        // `Remaining Ambiguity` is the one appended section with a conditional pass of its own, so it
+        // is appended below rather than in the fold. The rest come from the policy, in policy order.
+        let unconditional =
+            MergePolicy.appendedSections MergePolicies.clarifications
+            |> List.filter (fun heading -> heading <> "Remaining Ambiguity")
+
         let appended =
             existingText
-            |> appendToSection "Clarification Questions" questionLines
-            |> appendToSection "Answers" answerLines
-            |> appendToSection "Decisions" decisionLines
-            |> appendToSection "Accepted Deferrals" deferralLines
+            |> appendToSections bodies unconditional
             // Append first, THEN retire the sentinel. Retiring first is a no-op — the section holds
             // only the sentinel at that point, so there is no non-sentinel line to trigger the drop —
             // and the new blocking line lands beside "No blocking ambiguity remains."

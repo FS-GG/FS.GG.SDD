@@ -37,19 +37,7 @@ module internal ChecklistPlanAuthoring =
         | _ -> $"## {heading}\n"
 
     let ensureChecklistSections workId text =
-        let normalized =
-            (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
-
-        let missing =
-            checklistStandardSections ()
-            |> List.filter (fun heading -> not (hasSection heading normalized))
-
-        if List.isEmpty missing then
-            normalized
-        else
-            let suffix = missing |> List.map (checklistSectionText workId) |> String.concat "\n"
-            let trimmed = normalized.TrimEnd()
-            $"{trimmed}\n\n{suffix}"
+        ensureSections MergePolicies.checklist (checklistSectionText workId) text
 
     let checklistSummary (facts: ChecklistFacts) : ChecklistSummary =
         let results = facts.Results
@@ -379,14 +367,16 @@ Prose status: {status}
             [ sourceSnapshotLine "spec" (specPath workId) specText
               sourceSnapshotLine "clarifications" (clarificationPath workId) clarificationText ]
 
+        let bodies =
+            Map
+                [ "Source Snapshot", snapshotLines
+                  "Checklist Items", placeholder "No checklist items recorded." itemLines
+                  "Review Results", placeholder "No review results recorded." resultLines
+                  "Accepted Deferrals", placeholder "No accepted checklist deferrals recorded." deferralLines
+                  "Blocking Findings", placeholder "No blocking findings recorded." findingLines ]
+
         ensuredText
-        |> replaceSectionBody "Source Snapshot" snapshotLines
-        |> replaceSectionBody "Checklist Items" (placeholder "No checklist items recorded." itemLines)
-        |> replaceSectionBody "Review Results" (placeholder "No review results recorded." resultLines)
-        |> replaceSectionBody
-            "Accepted Deferrals"
-            (placeholder "No accepted checklist deferrals recorded." deferralLines)
-        |> replaceSectionBody "Blocking Findings" (placeholder "No blocking findings recorded." findingLines)
+        |> replaceSectionBodies bodies (MergePolicy.rederivedSections MergePolicies.checklist)
 
     let checklistQualityDiagnostics (path: string) (reviews: PlannedChecklistReview list) =
         reviews
@@ -627,19 +617,7 @@ Prose status: {status}
         | _ -> $"## {heading}\n"
 
     let ensurePlanSections workId text =
-        let normalized =
-            (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
-
-        let missing =
-            planStandardSections ()
-            |> List.filter (fun heading -> not (hasSection heading normalized))
-
-        if List.isEmpty missing then
-            normalized
-        else
-            let suffix = missing |> List.map (planSectionText workId) |> String.concat "\n"
-            let trimmed = normalized.TrimEnd()
-            $"{trimmed}\n\n{suffix}"
+        ensureSections MergePolicies.plan (planSectionText workId) text
 
     let planSummary (facts: PlanFacts) : PlanSummary =
         { WorkId = facts.FrontMatter.WorkId.Value
@@ -1099,15 +1077,19 @@ No blocking planning findings recorded.
             (sourceSnapshotLines workId specText clarificationText checklistText None)
 
     let appendPlanEntries existingText entries =
+        let bodies =
+            Map
+                [ "Plan Decisions", entries.DecisionLines
+                  "Contract Impact", entries.ContractLines
+                  "Verification Obligations", entries.ObligationLines
+                  "Migration Posture", entries.MigrationLines
+                  "Generated View Impact", entries.ImpactLines
+                  "Accepted Deferrals", entries.DeferralLines
+                  "Planning Findings", entries.FindingLines
+                  "Advisory Notes", entries.AdvisoryLines ]
+
         existingText
-        |> appendToSection "Plan Decisions" entries.DecisionLines
-        |> appendToSection "Contract Impact" entries.ContractLines
-        |> appendToSection "Verification Obligations" entries.ObligationLines
-        |> appendToSection "Migration Posture" entries.MigrationLines
-        |> appendToSection "Generated View Impact" entries.ImpactLines
-        |> appendToSection "Accepted Deferrals" entries.DeferralLines
-        |> appendToSection "Planning Findings" entries.FindingLines
-        |> appendToSection "Advisory Notes" entries.AdvisoryLines
+        |> appendToSections bodies (MergePolicy.appendedSections MergePolicies.plan)
 
     // Feature 090 (#163) removed `appendStalePlanDecision`. It synthesized a
     // `- PD-00N [DEC-00M] stale: Source specification, clarification, or checklist facts changed …`

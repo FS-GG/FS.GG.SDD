@@ -29,15 +29,15 @@ module ArtifactWriteKindTests =
         Directory.CreateDirectory(Path.Combine(root, "work", "demo")) |> ignore
         File.WriteAllText(absolute root, text)
 
+    /// The write kind of `work/<id>/spec.md`, the path these tests write to. The `MergePolicy`
+    /// payload names the merge that earns the overwrite; `canOverwrite` reads only the case.
+    let private hybrid = HybridArtifact MergePolicies.specification
+
     let private allKinds =
-        [ AuthoredSource
-          HybridArtifact
-          StructuredSource
-          GeneratedView
-          AgentGuidanceTarget ]
+        [ AuthoredSource; hybrid; StructuredSource; GeneratedView; AgentGuidanceTarget ]
 
     /// The two tool-owned kinds, and only those, may replace existing bytes.
-    let private overwritable = [ HybridArtifact; GeneratedView ]
+    let private overwritable = [ hybrid; GeneratedView ]
 
     let private write root kind text =
         CommandEffects.interpret root false (WriteFile(relative, text, kind))

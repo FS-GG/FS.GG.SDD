@@ -20,7 +20,8 @@ fsgg-sdd tasks --work <id>
 ## Produces / consumes
 
 - **Consumes:** the plan cascade (`spec` → `clarify` → `checklist` → `plan`).
-- **You author:** `work/<id>/tasks.yml`.
+- **Hybrid source:** `work/<id>/tasks.yml` — the tool derives the graph; see
+  "Who owns what" below.
 - **Tool refreshes:** `readiness/<id>/work-model.json`.
 - **Next:** `analyze` ([[fs-gg-sdd-analyze]]).
 
@@ -31,29 +32,32 @@ back-references to `requirements` and `decisions`, `dependencies`, `requiredSkil
 (capability tags the implementer must have loaded), and `requiredEvidence` (the
 obligation ids that close the task).
 
+## Who owns what
+
+`tasks.yml` is a **hybrid**, and for the derived graph the tool holds the pen. Every
+run of `fsgg-sdd tasks` re-derives that graph from the plan cascade, so a derived
+task's `title`, `requirements`, `decisions`, `dependencies`, `requiredSkills` and
+`requiredEvidence` are overwritten from source. Change the plan, not the graph.
+
+Two fields are carried across a regeneration, because they are the ones only you know:
+
 <!-- fsgg-sdd:example corpus=tasks.yml mode=ref -->
 ```yaml
-schemaVersion: 1
-tasks:
   - id: T001
-    title: Declare the input-map public surface
-    status: pending
-    owner: codex
-    requirements: [FR-001]
-    decisions: [DEC-001]
-    dependencies: []
-    requiredSkills: [fs-gg-sdd-project]
-    requiredEvidence: [EV001]
-  - id: T002
-    title: Implement W/S paddle motion and serve targeting
-    status: pending
-    owner: codex
-    requirements: [FR-001, FR-002]
-    decisions: [DEC-001]
-    dependencies: [T001]
-    requiredSkills: [fs-gg-sdd-project]
-    requiredEvidence: [EV002]
+    status: done        # yours: pending | inProgress | done | skipped
+    owner: codex        # yours: the agent or role that took the task
 ```
+
+The merge matches a derived task to a prior one by its **title**, and carries that
+task's `status`, `owner`, its stable `T###`, and its still-live authored refs across.
+A `status` of `stale` is never carried — it was a tool signal, not something you wrote.
+
+A task you wrote yourself, matching nothing derived, is kept **verbatim** for as long
+as it still references a requirement or decision that exists upstream. When that
+disposition goes, the task is dropped as an orphan.
+
+`docs/examples/lifecycle-artifacts/tasks.yml` shows a full generated graph. Read it
+to learn the schema; there is nothing there to copy into your own file.
 
 ## Notes
 
@@ -78,8 +82,8 @@ tasks:
 
 ## Worked example
 
-A complete, valid, copy-adaptable `tasks.yml` (with a matching `clarifications.md`,
-`checklist.md`, and `evidence.yml` for one coherent work item) ships at
+A complete, valid `tasks.yml` (with a matching `clarifications.md`, `checklist.md`,
+and `evidence.yml` for one coherent work item) ships at
 `docs/examples/lifecycle-artifacts/`. Every example there is validated against the
 live parser on each build, so it never drifts from the tool.
 

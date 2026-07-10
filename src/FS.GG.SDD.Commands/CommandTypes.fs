@@ -31,6 +31,23 @@ module CommandTypes =
         | Text
         | Rich
 
+    /// How a stage reconciles a `HybridArtifact`'s tool-owned regions with the text already on
+    /// disk. The policy travels *with* the write tag, so the permission to overwrite and the
+    /// merge step that earns it cannot drift apart: `canOverwrite` lets a hybrid write land
+    /// precisely because one of these ran first and produced the merge result.
+    type MergePolicy =
+        /// Markdown. `Ensured` headings are guaranteed to exist — a missing one is appended, an
+        /// existing body is left untouched. `Rederived` bodies are replaced wholesale from
+        /// current source on every run, so nothing a hand wrote there survives. `Appended`
+        /// sections gain newly-derived entries beneath whatever the author already wrote. Every
+        /// other line in the file is authored, and the merge never reaches it.
+        | SectionMerge of ensured: string list * rederived: string list * appended: string list
+        /// Structured YAML. The artifact is re-derived from source in full while selected
+        /// authored state is carried forward (a task's `status`/`owner` and its still-live
+        /// disposition refs; an evidence declaration), so the rendered text the interpreter
+        /// sees is a merge result rather than a replacement.
+        | StructuredMerge
+
     /// How a written path is owned, and therefore whether the interpreter may overwrite it.
     ///
     /// `AuthoredSource` is the strict case: content the tool reads and never writes. It has no
@@ -40,13 +57,106 @@ module CommandTypes =
     /// The seven lifecycle artifacts are `HybridArtifact`: each carries tool-owned regions its
     /// stage re-derives every run, alongside authored regions the stage preserves. They are
     /// overwritable *because* the handler's merge step already preserved the authored content —
-    /// the write the interpreter sees is the merge result, not a replacement.
+    /// the write the interpreter sees is the merge result, not a replacement. The `MergePolicy`
+    /// payload names which regions those are (#309); `MergePolicies` holds the seven values.
     type ArtifactWriteKind =
         | AuthoredSource
-        | HybridArtifact
+        | HybridArtifact of policy: MergePolicy
         | StructuredSource
         | GeneratedView
         | AgentGuidanceTarget
+
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module MergePolicy =
+        let ensuredSections (policy: MergePolicy) =
+            match policy with
+            | SectionMerge(ensured, _, _) -> ensured
+            | StructuredMerge -> []
+
+        let rederivedSections (policy: MergePolicy) =
+            match policy with
+            | SectionMerge(_, rederived, _) -> rederived
+            | StructuredMerge -> []
+
+        let appendedSections (policy: MergePolicy) =
+            match policy with
+            | SectionMerge(_, _, appended) -> appended
+            | StructuredMerge -> []
+
+    /// The seven lifecycle artifacts' merge policies — the single place that says which regions of
+    /// each hybrid the tool owns. A stage's `WriteFile` carries the policy its merge step
+    /// implements, and the merge functions read their section names from here rather than
+    /// hardcoding them, so removing a heading below is enough to hand that region back to the
+    /// author (#309). `rederived` and `appended` are disjoint subsets of `ensured`.
+    module MergePolicies =
+        /// The charter has no `LifecycleArtifacts` parser module, so its sections live here.
+        let charterSections =
+            [ "Identity"
+              "Principles"
+              "Scope Boundaries"
+              "Policy Pointers"
+              "Lifecycle Notes" ]
+
+        let charter = SectionMerge(charterSections, [], [])
+
+        let specification = SectionMerge(specificationStandardSections (), [], [])
+
+        let clarifications =
+            SectionMerge(
+                clarificationStandardSections (),
+                [],
+                [ "Clarification Questions"
+                  "Answers"
+                  "Decisions"
+                  "Accepted Deferrals"
+                  "Remaining Ambiguity" ]
+            )
+
+        let checklist =
+            SectionMerge(
+                checklistStandardSections (),
+                [ "Source Snapshot"
+                  "Checklist Items"
+                  "Review Results"
+                  "Accepted Deferrals"
+                  "Blocking Findings" ],
+                []
+            )
+
+        let plan =
+            SectionMerge(
+                planStandardSections (),
+                [ "Source Snapshot" ],
+                [ "Plan Decisions"
+                  "Contract Impact"
+                  "Verification Obligations"
+                  "Migration Posture"
+                  "Generated View Impact"
+                  "Accepted Deferrals"
+                  "Planning Findings"
+                  "Advisory Notes" ]
+            )
+
+        let tasks = StructuredMerge
+
+        let evidence = StructuredMerge
+
+        /// Every stage that writes a `work/<id>/` artifact, the file it writes, and the policy it
+        /// writes it under. All seven are `HybridArtifact`: no lifecycle stage writes a file the
+        /// author alone owns, and none writes one the author has no stake in.
+        ///
+        /// This is the authority the prose is pinned to. `fs-gg-sdd-lifecycle`'s stage table and
+        /// `docs/reference/artifact-taxonomy.md` both classify these files, and both used to say
+        /// "authored" — a claim the tag contradicts and a re-run disproves. Drift guards now hold
+        /// them to this list (#309), so the docs cannot describe an ownership the code does not have.
+        let byStage: (SddCommand * string * MergePolicy) list =
+            [ Charter, "charter.md", charter
+              Specify, "spec.md", specification
+              Clarify, "clarifications.md", clarifications
+              Checklist, "checklist.md", checklist
+              Plan, "plan.md", plan
+              Tasks, "tasks.yml", tasks
+              Evidence, "evidence.yml", evidence ]
 
     type ArtifactOperation =
         | Create
@@ -708,7 +818,7 @@ module CommandTypes =
     let writeKindValue (kind: ArtifactWriteKind) =
         match kind with
         | AuthoredSource -> "authoredSource"
-        | HybridArtifact -> "hybridArtifact"
+        | HybridArtifact _ -> "hybridArtifact"
         | StructuredSource -> "structuredSource"
         | GeneratedView -> "generatedView"
         | AgentGuidanceTarget -> "agentGuidance"

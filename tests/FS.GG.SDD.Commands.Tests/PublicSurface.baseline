@@ -124,6 +124,9 @@ FS.GG.SDD.Commands.CommandReports.unsupportedEvidenceResultState
 FS.GG.SDD.Commands.CommandReports.verificationNotReady
 FS.GG.SDD.Commands.CommandReports.verifyIdentityMismatch
 FS.GG.SDD.Commands.CommandSerialization.serializeReport
+FS.GG.SDD.Commands.CommandTypes+MergePolicyModule.appendedSections
+FS.GG.SDD.Commands.CommandTypes+MergePolicyModule.ensuredSections
+FS.GG.SDD.Commands.CommandTypes+MergePolicyModule.rederivedSections
 FS.GG.SDD.Commands.CommandTypes.artifactOperationValue
 FS.GG.SDD.Commands.CommandTypes.commandName
 FS.GG.SDD.Commands.CommandTypes.commandStage

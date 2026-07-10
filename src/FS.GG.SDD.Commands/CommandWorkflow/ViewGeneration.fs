@@ -952,4 +952,4 @@ module internal ViewGeneration =
 
     let charterWriteEffects workId text =
         [ CreateDirectory($"work/{workId}")
-          WriteFile(charterPath workId, text, HybridArtifact) ]
+          WriteFile(charterPath workId, text, HybridArtifact MergePolicies.charter) ]

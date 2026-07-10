@@ -25,7 +25,7 @@
     {
       "id": "fs-gg-sdd-checklist",
       "scope": "process",
-      "sha256": "63aa9c23681d61e572b850b1ad502e01ee8cd6b552dc3d3a783028a81d5fc736",
+      "sha256": "c267d33f32cc1d2ab571b8f9b4fcaecde31ba385a00337db2160d77ad351b507",
       "resolvablePath": ".agents/skills/fs-gg-sdd-checklist/SKILL.md",
       "materializes-when": "always"
     },
@@ -53,7 +53,7 @@
     {
       "id": "fs-gg-sdd-lifecycle",
       "scope": "process",
-      "sha256": "628e1d53f08fc5407f016676e0b1495bf915d62f0330cf3d0c817cb7fc4e3e9e",
+      "sha256": "64ea0db488639c35c449b5554282e294d97b4f9f638c7683273bbd34f839a598",
       "resolvablePath": ".agents/skills/fs-gg-sdd-lifecycle/SKILL.md",
       "materializes-when": "always"
     },
@@ -88,7 +88,7 @@
     {
       "id": "fs-gg-sdd-tasks",
       "scope": "process",
-      "sha256": "5dad7efaa8da30560c852c8568528d6d401170f87b6453a36e0f9ffe77372692",
+      "sha256": "c62b462419b85d939cfb9bef864f44d6cfccb1595b3c46afbe74b460d80a5ef6",
       "resolvablePath": ".agents/skills/fs-gg-sdd-tasks/SKILL.md",
       "materializes-when": "always"
     },

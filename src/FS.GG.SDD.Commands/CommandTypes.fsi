@@ -30,15 +30,46 @@ module CommandTypes =
         | Text
         | Rich
 
+    /// How a stage reconciles a `HybridArtifact`'s tool-owned regions with the text on disk.
+    /// `SectionMerge` names the markdown headings the tool ensures, re-derives, and appends to;
+    /// `StructuredMerge` re-derives a YAML artifact in full, carrying authored state forward.
+    type MergePolicy =
+        | SectionMerge of ensured: string list * rederived: string list * appended: string list
+        | StructuredMerge
+
     /// How a written path is owned, and therefore whether the interpreter may overwrite it.
     /// `AuthoredSource` is never written by the tool; `HybridArtifact` is a merge result whose
-    /// tool-owned regions are re-derived and whose authored regions are preserved.
+    /// tool-owned regions — named by its `MergePolicy` — are re-derived and whose authored
+    /// regions are preserved.
     type ArtifactWriteKind =
         | AuthoredSource
-        | HybridArtifact
+        | HybridArtifact of policy: MergePolicy
         | StructuredSource
         | GeneratedView
         | AgentGuidanceTarget
+
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module MergePolicy =
+        val ensuredSections: policy: MergePolicy -> string list
+        val rederivedSections: policy: MergePolicy -> string list
+        val appendedSections: policy: MergePolicy -> string list
+
+    /// The seven lifecycle artifacts' merge policies. `rederived` and `appended` are disjoint
+    /// subsets of `ensured`.
+    module MergePolicies =
+        val charterSections: string list
+        val charter: MergePolicy
+        val specification: MergePolicy
+        val clarifications: MergePolicy
+        val checklist: MergePolicy
+        val plan: MergePolicy
+        val tasks: MergePolicy
+        val evidence: MergePolicy
+
+        /// Every stage that writes a `work/<id>/` artifact, the file, and its policy. All seven are
+        /// `HybridArtifact`; the lifecycle skill's stage table and `artifact-taxonomy.md` are pinned
+        /// to this list so neither can claim an ownership the write tag denies.
+        val byStage: (SddCommand * string * MergePolicy) list
 
     type ArtifactOperation =
         | Create

@@ -26,7 +26,7 @@ Prose status: planned
 ## Source Snapshot
 - spec: work/001-example/spec.md sha256:780f0fe89e3ef54473c37ac69c3225ee4765474ad9991f641ecb8908a6924300 schemaVersion:1
 - clarifications: work/001-example/clarifications.md sha256:c4a046356d2826d3b006ee63fe10207f715211d66681c08cfbb5cf642539fa53 schemaVersion:1
-- checklist: work/001-example/checklist.md sha256:7ccd0cebf69a72e5e7215d830908f7cb61c8fda6c62a20c57bb5794a026dca25 schemaVersion:1
+- checklist: work/001-example/checklist.md sha256:f2abd1d517f05641ae270ec9c9fce04054b7cea1a1cd1ca231c7ca1be3995f84 schemaVersion:1
 
 ## Plan Scope
 - Work item 001-example is planned from the current specification, clarification, and checklist facts.

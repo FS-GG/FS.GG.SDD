@@ -100,7 +100,7 @@ module CommandEffects =
         match existing, kind with
         | None, _ -> true
         | Some snapshot, _ when snapshot.Text = text -> true
-        | Some _, HybridArtifact -> true
+        | Some _, HybridArtifact _ -> true
         | Some _, GeneratedView -> true
         | Some _, _ -> false
 

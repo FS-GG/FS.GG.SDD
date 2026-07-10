@@ -19,7 +19,7 @@ fsgg-sdd checklist --work <id>
 ## Produces / consumes
 
 - **Consumes:** `work/<id>/spec.md`, `work/<id>/clarifications.md`.
-- **You author:** `work/<id>/checklist.md`.
+- **Hybrid source:** `work/<id>/checklist.md` — see "Who owns which section" below.
 - **Tool refreshes:** `readiness/<id>/work-model.json`.
 - **Next:** `plan` ([[fs-gg-sdd-plan]]).
 
@@ -62,25 +62,32 @@ Lifecycle Notes.**
 
 Id prefixes: `CHK-###` (checklist items), `CR-###` (review results).
 
-## Example
+## Who owns which section
+
+`checklist.md` is a **hybrid**: yours to keep, but not yours alone. Every run of
+`fsgg-sdd checklist` re-derives five sections wholesale from the current `spec.md`
+and `clarifications.md`, discarding whatever was there:
+
+**Source Snapshot, Checklist Items, Review Results, Accepted Deferrals, Blocking
+Findings.**
+
+Hand-writing a review into any of them is work the next run erases — the reviews
+come from `--input`. What is left to you is **Source Specification, Source
+Clarifications, Advisory Notes, Lifecycle Notes**, and the front matter:
 
 <!-- fsgg-sdd:example corpus=checklist.md mode=ref -->
 ```markdown
-# Checklist
-
-## Source Specification
-work/001-two-player-volley/spec.md
-
-## Checklist Items
-- **CHK-001**: Every FR has at least one acceptance reference on its coverage line.
-- **CHK-002**: No FR is ambiguous about timing or input source.
-
-## Review Results
-- **CR-001**: Coverage complete — see lines below.
-
-- FR-001: W/S move the left paddle. (covers AC-001)
-- FR-002: Serve targets the prior-rally loser. (covers AC-002)
+## Advisory Notes
+- Coverage is complete; both requirements pass.
 ```
+
+Note also that **coverage lines live in `spec.md`, not here.** A `- FR-001: … (covers
+AC-001)` line written into `checklist.md` establishes nothing — and the section you
+wrote it in is re-derived anyway.
+
+`docs/examples/lifecycle-artifacts/checklist.md` is a full gate-clean artifact,
+tool-written sections and all. Read it to see what the stage produces; don't copy it
+in — the tool writes those bytes itself.
 
 ## Pitfalls
 

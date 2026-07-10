@@ -45,11 +45,11 @@ init → charter → specify → clarify → checklist → plan → tasks → an
 
 ## The stage table
 
-For each stage: the command, the **authored source** *you* write under
-`work/<id>/`, the **generated readiness view** the *tool* writes under
-`readiness/<id>/`, and the next action.
+For each stage: the command, the **hybrid source** under `work/<id>/` — yours to
+author, but carrying regions the stage re-derives on every run — the **generated
+readiness view** the *tool* writes under `readiness/<id>/`, and the next action.
 
-| Stage | Command | You author (`work/<id>/`) | Tool refreshes/reports (`readiness/<id>/`) | Next |
+| Stage | Command | Hybrid source (`work/<id>/`) | Tool refreshes/reports (`readiness/<id>/`) | Next |
 |---|---|---|---|---|
 | charter | `fsgg-sdd charter --work <id> --title "<title>"` | `charter.md` | `work-model.json` | specify |
 | specify | `fsgg-sdd specify --work <id> --input "<intent>"` | `spec.md` | `work-model.json` | clarify |
@@ -62,8 +62,15 @@ For each stage: the command, the **authored source** *you* write under
 | verify | `fsgg-sdd verify --work <id>` | — | `verify.json` | ship |
 | ship | `fsgg-sdd ship --work <id>` | — | `ship.json` | Governance handoff (optional) |
 
-`analyze`, `verify`, and `ship` author no `work/<id>/` source — they aggregate
-the authored sources into a generated readiness view.
+`analyze`, `verify`, and `ship` write no `work/<id>/` source — they aggregate the
+hybrid sources into a generated readiness view.
+
+**None of the seven is yours alone.** Each stage re-derives the regions the tool
+owns and preserves the regions you own; that merge is what makes the file safe to
+rewrite. Text you put in a re-derived region does not survive the next run of that
+stage. `docs/reference/authoring-contracts.md` names the regions per stage, and
+`docs/reference/artifact-taxonomy.md` classifies them. The one strictly authored
+thing here is `work/<id>/contracts/…`, which the tool never writes.
 
 > **When the work model is built.** Each stage *refreshes or reports* the
 > `work-model.json` status, but the **normalized `work-model.json` is only built
