@@ -432,6 +432,13 @@ module CommandTypes =
             /// (FR-003). Projected after `producedPaths` in json/text/rich.
             EffectiveParameters: (string * string) list
             RepoInitOutcome: string
+            /// The `.config/dotnet-tools.json` CLI-pin post-instantiation step (FS.GG.SDD#315):
+            /// `pinned` (SDD wrote it), `skippedExisting` (one was already there and was
+            /// preserved — no-clobber), `failed` (planned, did not land), or `notApplicable`
+            /// (the step never ran: dry run, provider defect, or a pre-invocation block).
+            /// Projected as `toolManifestOutcome` in json and `scaffoldToolManifest` in
+            /// text/rich, beside `repoInitOutcome`.
+            ToolManifestOutcome: string
             ExecutableScriptCount: int
             ExecutableScriptsSkipped: int
             NextActionHint: string

@@ -1,11 +1,14 @@
 namespace FS.GG.SDD.Commands.Tests
 
 open System.IO
+open FS.GG.SDD.Artifacts
+open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Commands
 open FS.GG.SDD.Commands.CommandEffects
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.CommandWorkflow
+open FS.GG.SDD.Commands.Internal
 open FS.GG.SDD.TestShared
 open Xunit
 
@@ -614,6 +617,10 @@ module ScaffoldCommandTests =
 
     let private provenancePath = ".fsgg/scaffold-provenance.json"
 
+    /// Pinned here rather than imported: the CLI-pin path is a published consumer contract
+    /// (FS.GG.SDD#315), so a silent change to the source constant must redden a test.
+    let private toolManifestPath = ".config/dotnet-tools.json"
+
     // T015 (P1, P2 / FR-004 / SC-002,003 / US2.1,2.3): provenance.producedPaths equals
     // the app-only file set (diff of target vs a standalone init skeleton, minus the
     // provenance file itself), and every entry is owned `generatedProduct`.
@@ -634,9 +641,12 @@ module ScaffoldCommandTests =
         let skeleton = relativeFiles initRoot |> Set.ofList
 
         // The app-only set is the target minus: the init skeleton, the provenance file
-        // scaffold writes, and the `.fsgg/providers.yml` registry the test pre-planted
-        // (an author input, not provider output).
-        let preexisting = Set.ofList [ provenancePath; ".fsgg/providers.yml" ]
+        // scaffold writes, the `.config/dotnet-tools.json` CLI pin scaffold writes as an
+        // SDD-owned post-instantiation step (FS.GG.SDD#315 — SDD's file, not the provider's),
+        // and the `.fsgg/providers.yml` registry the test pre-planted (an author input, not
+        // provider output).
+        let preexisting =
+            Set.ofList [ provenancePath; toolManifestPath; ".fsgg/providers.yml" ]
 
         let producedExpected =
             relativeFiles appRoot
@@ -646,14 +656,30 @@ module ScaffoldCommandTests =
         Assert.Equal<string list>([ "App.fsproj"; "Program.fs"; "scaffold-manifest.txt" ], producedExpected)
         Assert.Equal<Set<string>>(Set.ofList producedExpected, Set.ofList summary.ProducedPaths)
 
-        // Every provenance entry is owned generatedProduct (no other owner appears).
+        // Every *producedPaths* entry is owned generatedProduct. Since FS.GG.SDD#315 the
+        // document also carries `sddOwnedPaths` — SDD's own post-instantiation writes, owner
+        // `sdd`. They are a disjoint list precisely so P1/P3 (producedPaths == exactly the
+        // provider's tree, disjoint from the skeleton) keep holding, so the generatedProduct
+        // count still equals the app-only set and the only other owner is that one `sdd` entry.
         let provenance = TestSupport.readRelative appRoot provenancePath
 
         let countOf (needle: string) =
             (provenance.Length - provenance.Replace(needle, "").Length) / needle.Length
 
-        Assert.Equal(countOf "\"owner\":", countOf "\"owner\": \"generatedProduct\"")
         Assert.Equal(producedExpected.Length, countOf "\"owner\": \"generatedProduct\"")
+        Assert.Equal(1, countOf "\"owner\": \"sdd\"")
+        Assert.Equal(countOf "\"owner\":", producedExpected.Length + 1)
+
+        let parsed =
+            ScaffoldProvenance.tryParse provenance
+            |> Option.defaultWith (fun () -> failwith "Expected parseable provenance.")
+
+        Assert.Equal<string list>([ toolManifestPath ], parsed.SddOwnedPaths |> List.map (fun p -> p.Path))
+        Assert.All(parsed.ProducedPaths, fun p -> Assert.Equal(ArtifactOwner.GeneratedProduct, p.Owner))
+        Assert.All(parsed.SddOwnedPaths, fun p -> Assert.Equal(ArtifactOwner.Sdd, p.Owner))
+
+        // P3 restated against the new list: SDD's own writes never leak into producedPaths.
+        Assert.DoesNotContain(toolManifestPath, parsed.ProducedPaths |> List.map (fun p -> p.Path))
 
     // T016 (P3, P4 / FR-005 / SC-002 / US2.2): produced ∩ skeleton == ∅, and every
     // skeleton file a lifecycle=sdd scaffold writes is byte-identical to a standalone init.
@@ -1272,6 +1298,138 @@ module ScaffoldCommandTests =
         Assert.True(isExecutable root "run.sh")
         Assert.Equal(0, exitCodeForReport report)
 
+    // ---------- 315: the `.config/dotnet-tools.json` CLI pin ----------
+
+    /// The version the running CLI would pin — never a literal, so the assertions cannot rot
+    /// at the next version bump (the pattern ToolVersionTests established for #305).
+    let private installedVersion =
+        FS.GG.SDD.Artifacts.SchemaVersion.currentGeneratorVersion().Version
+
+    // T031 (AC1 / AC4): a successful scaffold writes the tool manifest pinning the scaffolding
+    // CLI's own version, reports `pinned`, and records the path in provenance as SDD-owned —
+    // never in `producedPaths`, which stays exactly the provider's tree (P1/P3).
+    [<Fact; Trait("tier", "slow")>]
+    let ``scaffold pins the fsgg-sdd CLI in a dotnet tool manifest`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] false false)
+
+        let summary = scaffoldSummary report
+        Assert.Equal("pinned", summary.ToolManifestOutcome)
+        Assert.True(TestSupport.existsRelative root toolManifestPath)
+
+        let manifest = TestSupport.readRelative root toolManifestPath
+        Assert.Contains("\"fs.gg.sdd.cli\"", manifest)
+        Assert.Contains($"\"version\": \"{installedVersion}\"", manifest)
+        Assert.Contains("\"fsgg-sdd\"", manifest)
+
+        // It is real JSON, not a string that merely looks like one.
+        use parsed = System.Text.Json.JsonDocument.Parse manifest
+        let tool = parsed.RootElement.GetProperty("tools").GetProperty("fs.gg.sdd.cli")
+        Assert.Equal(installedVersion, tool.GetProperty("version").GetString())
+        Assert.Equal("fsgg-sdd", tool.GetProperty("commands").[0].GetString())
+        Assert.True(parsed.RootElement.GetProperty("isRoot").GetBoolean())
+
+        let provenance =
+            TestSupport.readRelative root provenancePath
+            |> ScaffoldProvenance.tryParse
+            |> Option.defaultWith (fun () -> failwith "Expected parseable provenance.")
+
+        Assert.Equal<string list>([ toolManifestPath ], provenance.SddOwnedPaths |> List.map (fun p -> p.Path))
+        Assert.All(provenance.SddOwnedPaths, fun p -> Assert.Equal(ArtifactOwner.Sdd, p.Owner))
+        Assert.DoesNotContain(toolManifestPath, provenance.ProducedPaths |> List.map (fun p -> p.Path))
+        Assert.Equal(0, exitCodeForReport report)
+
+    // T032 (AC3): no-clobber. An existing manifest is preserved byte-for-byte, the step reports
+    // `skippedExisting` with a non-fatal advisory, and provenance claims no SDD ownership of a
+    // file SDD did not write. (Reachable via `--force`, since any pre-existing non-SDD file is
+    // otherwise a blocking collision, or when a provider produces the manifest itself.)
+    [<Fact; Trait("tier", "slow")>]
+    let ``scaffold preserves an existing dotnet tool manifest`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+
+        let authored =
+            "{\n  \"version\": 1,\n  \"isRoot\": true,\n  \"tools\": {\n    \"fake-cli\": {\n      \"version\": \"6.1.4\",\n      \"commands\": [\n        \"fake\"\n      ]\n    }\n  }\n}\n"
+
+        TestSupport.writeRelative root toolManifestPath authored
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] true false)
+
+        let summary = scaffoldSummary report
+        Assert.Equal("skippedExisting", summary.ToolManifestOutcome)
+        Assert.Contains("scaffold.toolManifestSkippedExisting", diagnosticIds report)
+
+        // Byte-identical: the author's manifest was never rewritten, and no fsgg-sdd pin was
+        // grafted into it.
+        Assert.Equal(authored, TestSupport.readRelative root toolManifestPath)
+        Assert.DoesNotContain("fs.gg.sdd.cli", TestSupport.readRelative root toolManifestPath)
+
+        let provenance =
+            TestSupport.readRelative root provenancePath
+            |> ScaffoldProvenance.tryParse
+            |> Option.defaultWith (fun () -> failwith "Expected parseable provenance.")
+
+        Assert.Empty provenance.SddOwnedPaths
+
+        // Advisory, never fatal (FR-010): a preserved manifest is a successful scaffold.
+        Assert.Equal(0, exitCodeForReport report)
+
+    // T033 (AC4 / FR-009): a write that cannot land must not be recorded as landed. `.config`
+    // occupied by a regular file makes the manifest write throw at the edge; the step reports
+    // `failed`, and provenance claims NO sdd ownership of the file that was never created.
+    // Guards the ordering: provenance is planned only after the write is interpreted, so it can
+    // never attest to a pin the filesystem refused.
+    [<Fact; Trait("tier", "slow")>]
+    let ``scaffold reports a failed tool-manifest write and claims no ownership`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "ok.providers.yml"
+        // `.config` as a FILE, so creating `.config/` as a directory fails.
+        TestSupport.writeRelative root ".config" "occupied"
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "productName", "Acme" ] true false)
+
+        let summary = scaffoldSummary report
+        Assert.Equal("failed", summary.ToolManifestOutcome)
+        Assert.False(TestSupport.existsRelative root toolManifestPath)
+
+        let provenance =
+            TestSupport.readRelative root provenancePath
+            |> ScaffoldProvenance.tryParse
+            |> Option.defaultWith (fun () -> failwith "Expected parseable provenance.")
+
+        // The whole point: no attestation to a file that does not exist.
+        Assert.Empty provenance.SddOwnedPaths
+        Assert.DoesNotContain(toolManifestPath, provenance.ProducedPaths |> List.map (fun p -> p.Path))
+
+        // A failed SDD *artifact write* blocks, exactly as a failed `.fsgg/*` or provenance
+        // write does — unlike the `git init` / chmod steps, which degrade over externally-owned
+        // state. The interpreter's own error diagnostic carries the failure.
+        Assert.NotEqual(0, exitCodeForReport report)
+
+    // T035 (AC1 determinism): the manifest text is a pure function of the version — no clock,
+    // no environment — so two runs of one CLI produce byte-identical bytes, and a different
+    // version produces different bytes.
+    [<Fact>]
+    let ``tool manifest text is deterministic and version-addressed`` () =
+        let a = HandlersScaffold.toolManifestText "1.2.3"
+        let b = HandlersScaffold.toolManifestText "1.2.3"
+        Assert.Equal(a, b)
+        Assert.NotEqual(a, HandlersScaffold.toolManifestText "1.2.4")
+
+        // Trailing newline; canonical two-space indent; the SDD-owned id and command only.
+        Assert.EndsWith("}\n", a)
+        Assert.Contains("  \"version\": 1,", a)
+        Assert.Contains("    \"fs.gg.sdd.cli\": {", a)
+        Assert.DoesNotContain("\r", a)
+
+        use parsed = System.Text.Json.JsonDocument.Parse a
+        Assert.Equal(1, parsed.RootElement.GetProperty("version").GetInt32())
+
     // T024 (US4-AC3 / FR-007): scaffold passes NO provider-specific git option to the
     // provider; the `dotnet new` create-arg vector carries no `initGit`/`allow-scripts` — SDD
     // performs the steps itself.
@@ -1325,6 +1483,10 @@ module ScaffoldCommandTests =
         Assert.Equal(0, summary.ExecutableScriptsSkipped)
         Assert.Contains("git repository", summary.NextActionHint)
         Assert.Contains("executable", summary.NextActionHint)
+        // 315: the CLI pin is previewed and not written.
+        Assert.Equal("notApplicable", summary.ToolManifestOutcome)
+        Assert.False(TestSupport.existsRelative root toolManifestPath)
+        Assert.Contains(toolManifestPath, summary.NextActionHint)
 
     // T030 (FR-009): on a provider failure the post-instantiation steps do not run —
     // `RepoInitOutcome = notApplicable`, no repo, and the existing failure diagnostic + exit
@@ -1341,6 +1503,9 @@ module ScaffoldCommandTests =
         Assert.False(gitDirExists root)
         Assert.Contains("scaffold.providerFailed", diagnosticIds report)
         Assert.Equal(2, exitCodeForReport report)
+        // 315: an incomplete scaffold never leaves a pin claiming a reproducible toolchain.
+        Assert.Equal("notApplicable", summary.ToolManifestOutcome)
+        Assert.False(TestSupport.existsRelative root toolManifestPath)
 
     [<Fact; Trait("tier", "slow")>]
     let ``scaffold SDD-tree intrusion runs no post-instantiation steps`` () =

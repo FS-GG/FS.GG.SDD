@@ -39,6 +39,15 @@ module ScaffoldProvenance =
             /// optional field, sorted ascending by path, serialized immediately after
             /// `producedPaths`; `tryParse` defaults absent/null to `[]` (schema stays v1).
             MirroredPaths: ScaffoldProducedPath list
+            /// The files SDD itself wrote during a post-instantiation step (owner `Sdd`) —
+            /// currently `.config/dotnet-tools.json`, the CLI pin (FS.GG.SDD#315). Kept out of
+            /// `ProducedPaths`, which the app-only invariant defines as **exactly** the
+            /// provider's tree (specs/031 P1/P3): an SDD-written file there would break both
+            /// precision and skeleton-disjointness. Recording it here classifies it as
+            /// SDD-owned rather than externally owned. Sorted ascending by path, serialized
+            /// immediately after `mirroredPaths`; `tryParse` defaults absent/null to `[]`
+            /// (schema stays v1, additive). Empty when the step was skipped or preserved.
+            SddOwnedPaths: ScaffoldProducedPath list
             /// The effective `key → value` parameters forwarded to the provider —
             /// provider-declared `default`s overlaid by author `--param` overrides
             /// (author wins). Sorted ascending by key; `[]` when none. Records the
@@ -64,8 +73,8 @@ module ScaffoldProvenance =
 
     /// Build the canonical dev-repo provenance record: empty provider/contract/template, no
     /// required minimum, `devRepoOutcome`, the given `producedPaths` (the seeded skeleton,
-    /// owner `Sdd`), and empty mirrored/effective sets. Deterministic — no clock/randomness,
-    /// so `init` stays byte-identical for a given CLI version (FR-007).
+    /// owner `Sdd`), and empty mirrored/sdd-owned/effective sets. Deterministic — no
+    /// clock/randomness, so `init` stays byte-identical for a given CLI version (FR-007).
     val devRepoRecord:
         generator: GeneratorVersion -> producedPaths: ScaffoldProducedPath list -> ScaffoldProvenanceRecord
 

@@ -158,6 +158,7 @@ evidence:
                 Owner = GeneratedProduct
                 Sha256 = None } ]
           MirroredPaths = []
+          SddOwnedPaths = []
           EffectiveParameters = [] }
 
     [<Fact>]

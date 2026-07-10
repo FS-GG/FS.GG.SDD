@@ -329,6 +329,8 @@ module CommandSerialization =
 
             writer.WriteEndArray()
             writer.WriteString("repoInitOutcome", summary.RepoInitOutcome)
+            // FS.GG.SDD#315: the CLI-pin post-instantiation step, beside its sibling steps.
+            writer.WriteString("toolManifestOutcome", summary.ToolManifestOutcome)
             writer.WriteNumber("executableScriptCount", summary.ExecutableScriptCount)
             writer.WriteNumber("executableScriptsSkipped", summary.ExecutableScriptsSkipped)
             writer.WriteString("nextActionHint", summary.NextActionHint)

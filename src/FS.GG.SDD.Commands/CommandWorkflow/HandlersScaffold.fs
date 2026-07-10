@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Commands.Internal
 
 open System
+open System.Text.Json
 open Fsgg.Provider
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Artifacts.ArtifactRef
@@ -191,6 +192,7 @@ module internal HandlersScaffold =
           MirroredPaths = []
           EffectiveParameters = []
           RepoInitOutcome = "notApplicable"
+          ToolManifestOutcome = "notApplicable"
           ExecutableScriptCount = 0
           ExecutableScriptsSkipped = 0
           NextActionHint = hint
@@ -294,6 +296,45 @@ module internal HandlersScaffold =
         match effect with
         | SetExecutable _ -> true
         | _ -> false
+
+    /// The dotnet tool manifest scaffold pins `fsgg-sdd` into (FS.GG.SDD#315), so a scaffolded
+    /// product's toolchain is reproducible and Renovate-updatable rather than "whatever is
+    /// installed globally". A generic, SDD-owned post-instantiation step in the same class as
+    /// `git init` and the script executable bit — never delegated to the provider. The pinned id
+    /// is SDD's **own** (`FS.GG.SDD.Cli` / `fsgg-sdd`), which generic SDD may legitimately name;
+    /// no provider package id, template id, or docs URL appears here.
+    let toolManifestPath = ".config/dotnet-tools.json"
+
+    let private isToolManifestWrite effect =
+        match effect with
+        | WriteFile(path, _, _) -> normalizeRelativePath path = toolManifestPath
+        | _ -> false
+
+    /// The canonical `dotnet tool` manifest shape, pinning the scaffolding CLI's version.
+    /// `dotnet` keys the manifest by the lowercased package id and lists the `ToolCommandName`.
+    /// A pure function of `version` — no clock, no environment — so two runs of one CLI produce
+    /// byte-identical bytes (the determinism the rest of scaffold's output already guarantees).
+    let toolManifestText (version: string) =
+        // Escaped through the JSON serializer rather than interpolated raw: the version reaches
+        // here from an assembly attribute, and a report must never emit malformed JSON.
+        let quotedVersion = JsonSerializer.Serialize(version: string)
+
+        String.Join(
+            "\n",
+            [ "{"
+              "  \"version\": 1,"
+              "  \"isRoot\": true,"
+              "  \"tools\": {"
+              "    \"fs.gg.sdd.cli\": {"
+              $"      \"version\": {quotedVersion},"
+              "      \"commands\": ["
+              "        \"fsgg-sdd\""
+              "      ]"
+              "    }"
+              "  }"
+              "}"
+              "" ]
+        )
 
     let scaffoldInvocationEffects
         (request: CommandRequest)
@@ -414,6 +455,7 @@ module internal HandlersScaffold =
         outcome
         (producedPaths: string list)
         (mirroredPaths: string list)
+        (sddOwnedPaths: string list)
         (skillDigests: Map<string, string>)
         (effective: Map<string, string>)
         =
@@ -443,6 +485,15 @@ module internal HandlersScaffold =
                     { Path = path
                       Owner = ArtifactOwner.Mirrored
                       Sha256 = Map.tryFind path skillDigests })
+              // FS.GG.SDD#315: files SDD itself wrote post-instantiation (owner `sdd`), kept out
+              // of `producedPaths` so the app-only invariant — producedPaths == exactly the
+              // provider's tree — survives. Empty on every non-success terminal path.
+              SddOwnedPaths =
+                sddOwnedPaths
+                |> List.map (fun path ->
+                    { Path = path
+                      Owner = ArtifactOwner.Sdd
+                      Sha256 = None })
               // `Map.toList` is already ascending by key — the FR-003 effective set
               // (declared defaults overlaid by `--param` overrides) forwarded verbatim.
               EffectiveParameters = Map.toList effective }
@@ -503,6 +554,7 @@ module internal HandlersScaffold =
               MirroredPaths = []
               EffectiveParameters = Map.toList effective
               RepoInitOutcome = "notApplicable"
+              ToolManifestOutcome = "notApplicable"
               ExecutableScriptCount = 0
               ExecutableScriptsSkipped = 0
               NextActionHint = hint
@@ -525,10 +577,11 @@ module internal HandlersScaffold =
                   // (FR-003 audit preview): the resolved effective set.
                   EffectiveParameters = Map.toList effective
                   RepoInitOutcome = "notApplicable"
+                  ToolManifestOutcome = "notApplicable"
                   ExecutableScriptCount = 0
                   ExecutableScriptsSkipped = 0
                   NextActionHint =
-                    $"dry run: would run `{planned}`, initialize a git repository, and make produced scripts executable (produced paths are determined at execution)."
+                    $"dry run: would run `{planned}`, initialize a git repository, pin `fsgg-sdd` in `{toolManifestPath}`, and make produced scripts executable (produced paths are determined at execution)."
                   ProviderInvocation = None }
 
             FinalizeTerminal(summary, [], [])
@@ -579,7 +632,7 @@ module internal HandlersScaffold =
                             "Fix the provider; it wrote into SDD-owned trees."
                             (Some(providerInvocationOf processResult)),
                         [ DiagnosticsModule.scaffoldProviderWroteSddTree intrusions ],
-                        provenanceWriteEffect request descriptor ProviderFailed producedPaths [] Map.empty effective
+                        provenanceWriteEffect request descriptor ProviderFailed producedPaths [] [] Map.empty effective
                     )
                 elif processResult.ExitCode <> 0 then
                     FinalizeTerminal(
@@ -591,7 +644,7 @@ module internal HandlersScaffold =
                             "Inspect the provider failure, then re-run scaffold."
                             (Some(providerInvocationOf processResult)),
                         [ DiagnosticsModule.scaffoldProviderFailed name processResult.ExitCode ],
-                        provenanceWriteEffect request descriptor ProviderFailed producedPaths [] Map.empty effective
+                        provenanceWriteEffect request descriptor ProviderFailed producedPaths [] [] Map.empty effective
                     )
                 elif List.isEmpty producedPaths then
                     FinalizeSuccess(ProviderSucceededEmpty, [])
@@ -603,7 +656,12 @@ module internal HandlersScaffold =
     // TICK C: compute the terminal success summary from the interpreted post-instantiation
     // effects — the repo-init outcome from the `git rev-parse` probe (exit-code only,
     // Decision 1) and the make-executable counts from the `SetExecutable` results. Every
-    // emitted diagnostic is advisory and non-fatal (FR-010).
+    // diagnostic emitted *here* is advisory and non-fatal (FR-010). That is a statement about
+    // this function, not about the whole step set: a failed `WriteFile` of the tool manifest
+    // carries its own `toolDefect`/`unsafeOverwrite` error from the interpreter and blocks, as
+    // every SDD artifact write does (`.fsgg/*`, `.gitignore`, provenance). The non-fatal
+    // siblings — `git init`, `chmod` — are `RunProcess`/`SetExecutable` over externally-owned
+    // state, which is why they degrade instead.
     let private finalizePostInstantiation
         model
         (descriptor: ProviderDescriptor)
@@ -621,6 +679,24 @@ module internal HandlersScaffold =
                 "skippedExistingRepository", [ DiagnosticsModule.scaffoldRepoInitSkippedExistingRepository () ]
             | Some { Started = true } -> "initialized", []
             | None -> "notApplicable", []
+
+        // FS.GG.SDD#315: re-derived from the interpreted log like every other post-instantiation
+        // fact. `pinned` — SDD wrote the manifest; `skippedExisting` — one was already there and
+        // was preserved; `failed` — the write was planned and did not land (its own diagnostic
+        // already rides on the effect result, so none is added here); `notApplicable` — the step
+        // never ran. An incomplete pin is never reported as a pin (FR-009).
+        let toolManifestOutcome, toolManifestDiagnostics =
+            match
+                model.InterpretedEffects
+                |> List.tryFind (fun result -> isToolManifestWrite result.Effect)
+            with
+            | Some result when result.Succeeded -> "pinned", []
+            | Some _ -> "failed", []
+            | None ->
+                if snapshot toolManifestPath model |> Option.isSome then
+                    "skippedExisting", [ DiagnosticsModule.scaffoldToolManifestSkippedExisting toolManifestPath ]
+                else
+                    "notApplicable", []
 
         let execResults =
             model.InterpretedEffects
@@ -666,12 +742,17 @@ module internal HandlersScaffold =
               MirroredPaths = mirroredPaths
               EffectiveParameters = Map.toList effective
               RepoInitOutcome = repoInitOutcome
+              ToolManifestOutcome = toolManifestOutcome
               ExecutableScriptCount = executableCount
               ExecutableScriptsSkipped = List.length skippedPaths
               NextActionHint = hint
               ProviderInvocation = None }
 
-        summary, outcomeDiagnostics @ repoInitDiagnostics @ execDiagnostics
+        summary,
+        outcomeDiagnostics
+        @ repoInitDiagnostics
+        @ toolManifestDiagnostics
+        @ execDiagnostics
 
     // The post-instantiation machine, re-derived from the interpreted-effect log each tick
     // (no new model field). Reached only on a success create outcome. 056 prepends a MIRROR
@@ -712,6 +793,7 @@ module internal HandlersScaffold =
                   MirroredPaths = []
                   EffectiveParameters = Map.toList effective
                   RepoInitOutcome = "notApplicable"
+                  ToolManifestOutcome = "notApplicable"
                   ExecutableScriptCount = 0
                   ExecutableScriptsSkipped = 0
                   NextActionHint =
@@ -719,7 +801,7 @@ module internal HandlersScaffold =
                   ProviderInvocation = None }
 
             let provenanceEffects =
-                provenanceWriteEffect model.Request descriptor ProviderFailed producedPaths [] Map.empty effective
+                provenanceWriteEffect model.Request descriptor ProviderFailed producedPaths [] [] Map.empty effective
 
             { model with
                 PendingEffects = model.PendingEffects @ provenanceEffects
@@ -814,7 +896,60 @@ module internal HandlersScaffold =
 
             let initPlanned = model.PendingEffects |> List.exists isInitProcess
 
-            if not (probeInterpreted || probePlanned) then
+            // FS.GG.SDD#315 — TICK 0 (read) and TICK 0b (write) both precede TICK A, because the
+            // single provenance write must record whether SDD actually owns
+            // `.config/dotnet-tools.json`, and that is only knowable once the write is
+            // interpreted. Recording ownership from the *plan* would leave provenance attesting
+            // to a file a failed write never produced (FR-009: never report incomplete as
+            // complete). Both effects still precede `git init`, so FR-004's ordering holds.
+            let manifestReadEffect = ReadFile toolManifestPath
+            let manifestReadKey = effectKey manifestReadEffect
+            let manifestReadInterpreted = hasInterpreted manifestReadKey model
+            let manifestReadPlanned = hasPlanned manifestReadKey model
+
+            // Interpreted read + no snapshot ⇒ absent ⇒ SDD writes the pin. Present ⇒ preserve
+            // it (no-clobber): either the author placed it there or the provider produced it,
+            // and in the latter case it already stands in `producedPaths` as generatedProduct.
+            // Planning the write over a present file would instead hand `canOverwrite
+            // StructuredSource` a snapshot and be refused as `unsafeOverwrite` — an error, not
+            // the graceful preserve the step owes. (A file appearing between the read and the
+            // write is still refused rather than clobbered, which is the safe direction.)
+            let manifestPresent =
+                manifestReadInterpreted && (snapshot toolManifestPath model |> Option.isSome)
+
+            let manifestWriteEffect =
+                WriteFile(toolManifestPath, toolManifestText model.Request.GeneratorVersion.Version, StructuredSource)
+
+            let manifestWriteResult =
+                model.InterpretedEffects
+                |> List.tryFind (fun result -> isToolManifestWrite result.Effect)
+
+            // SDD claims ownership only of a write that actually landed. A refused or failed
+            // write leaves `sddOwnedPaths` empty, so provenance and `toolManifestOutcome` agree.
+            let sddOwnedPaths =
+                match manifestWriteResult with
+                | Some result when result.Succeeded -> [ toolManifestPath ]
+                | _ -> []
+
+            if not manifestReadInterpreted then
+                if manifestReadPlanned then
+                    // Read planned, awaiting interpretation.
+                    model, []
+                else
+                    { model with
+                        PendingEffects = model.PendingEffects @ [ manifestReadEffect ] },
+                    [ manifestReadEffect ]
+            elif not manifestPresent && Option.isNone manifestWriteResult then
+                // TICK 0b — the manifest is absent: write the pin, then let TICK A record the
+                // interpreted result. `hasPlanned` keeps the write from being re-emitted while
+                // it awaits interpretation.
+                if hasPlanned (effectKey manifestWriteEffect) model then
+                    model, []
+                else
+                    { model with
+                        PendingEffects = model.PendingEffects @ [ manifestWriteEffect ] },
+                    [ manifestWriteEffect ]
+            elif not (probeInterpreted || probePlanned) then
                 // TICK A — the success path's single provenance write (FR-004, before `git
                 // init`), the work-tree probe, and one SetExecutable per produced `.sh`.
                 let scriptEffects =
@@ -845,6 +980,7 @@ module internal HandlersScaffold =
                         outcome
                         producedPaths
                         mirroredPaths
+                        sddOwnedPaths
                         skillDigests
                         effective
                     @ [ RunProcess("git", [ "rev-parse"; "--is-inside-work-tree" ], "") ]

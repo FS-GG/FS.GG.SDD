@@ -143,6 +143,7 @@ providers:
                 Owner = GeneratedProduct
                 Sha256 = None } ]
           MirroredPaths = []
+          SddOwnedPaths = []
           EffectiveParameters = [ "variant", "alpha"; "productName", "Demo" ] }
 
     [<Fact>]
@@ -364,6 +365,73 @@ providers:
     let ``serialize emits an empty mirroredPaths array when nothing mirrored`` () =
         let json = serialize record
         Assert.Contains("\"mirroredPaths\": []", json)
+
+    // --- 315: additive sddOwnedPaths, schema stays v1 ---
+
+    let private sddOwnedRecord =
+        { record with
+            SddOwnedPaths =
+                [ { Path = ".config/dotnet-tools.json"
+                    Owner = Sdd
+                    Sha256 = None } ] }
+
+    [<Fact>]
+    let ``serialize then tryParse round-trips sddOwnedPaths and keeps schemaVersion 1`` () =
+        match tryParse (serialize sddOwnedRecord) with
+        | Some parsed ->
+            Assert.Equal(1, parsed.SchemaVersion)
+
+            Assert.Equal<string list>(
+                [ ".config/dotnet-tools.json" ],
+                parsed.SddOwnedPaths |> List.map (fun p -> p.Path)
+            )
+
+            Assert.True(parsed.SddOwnedPaths |> List.forall (fun p -> p.Owner = Sdd))
+        | None -> failwith "Expected the sdd-owned record to round-trip."
+
+    [<Fact>]
+    let ``serialize emits sddOwnedPaths immediately after mirroredPaths`` () =
+        let json = serialize sddOwnedRecord
+        Assert.True(json.IndexOf "\"mirroredPaths\"" < json.IndexOf "\"sddOwnedPaths\"")
+        Assert.True(json.IndexOf "\"sddOwnedPaths\"" < json.IndexOf "\"effectiveParameters\"")
+        Assert.Contains("\"owner\": \"sdd\"", json)
+
+    // The whole point of the separate list: an SDD-written file never enters producedPaths,
+    // so the app-only invariant (producedPaths == exactly the provider's tree) survives.
+    [<Fact>]
+    let ``sdd owner appears only inside sddOwnedPaths never in producedPaths`` () =
+        let json = serialize sddOwnedRecord
+
+        let producedSegment =
+            json.Substring(
+                json.IndexOf "\"producedPaths\"",
+                json.IndexOf "\"mirroredPaths\"" - json.IndexOf "\"producedPaths\""
+            )
+
+        Assert.DoesNotContain("\"owner\": \"sdd\"", producedSegment)
+        Assert.DoesNotContain(".config/dotnet-tools.json", producedSegment)
+
+    [<Fact>]
+    let ``tryParse defaults sddOwnedPaths to empty when the key is absent`` () =
+        let withoutField =
+            """{
+  "schemaVersion": 1,
+  "generator": { "id": "fsgg-sdd", "version": "0.0.0" },
+  "providerName": "fixture",
+  "providerContractVersion": "1.0.0",
+  "templateRef": "fsgg-fixture-app",
+  "outcome": "providerSucceeded",
+  "producedPaths": [ { "path": "App.fsproj", "owner": "generatedProduct" } ]
+}"""
+
+        match tryParse withoutField with
+        | Some parsed -> Assert.Equal<ScaffoldProducedPath list>([], parsed.SddOwnedPaths)
+        | None -> failwith "A v1 document without sddOwnedPaths must still parse."
+
+    [<Fact>]
+    let ``serialize emits an empty sddOwnedPaths array when SDD wrote nothing`` () =
+        let json = serialize record
+        Assert.Contains("\"sddOwnedPaths\": []", json)
 
     [<Fact>]
     let ``tryParse on malformed JSON yields None`` () =

@@ -128,8 +128,9 @@ module internal ReportAssembly =
           // feature 093 (FS-GG/FS.GG.SDD#164) removed `specification.unresolvedAmbiguityCount`, so
           // reportVersion goes 1.3.0 -> 2.0.0. 2.1.0 then adds `surface.versionBump` (feature 094).
           // 2.2.0 adds the top-level `coherent` fact (FS-GG/FS.GG.SDD#183). 2.3.0 adds the top-level
-          // `toolVersion` fact (FS-GG/FS.GG.SDD#305).
-          ReportVersion = "2.3.0"
+          // `toolVersion` fact (FS-GG/FS.GG.SDD#305). 2.4.0 adds `scaffold.toolManifestOutcome`
+          // (FS-GG/FS.GG.SDD#315).
+          ReportVersion = "2.4.0"
           // The version of the CLI that produced this report, so a stale toolchain is legible in the
           // artifact rather than only in the shell that ran it (FS-GG/FS.GG.SDD#305). Same source as
           // `fsgg-sdd --version`, injected into the request at the CLI edge.

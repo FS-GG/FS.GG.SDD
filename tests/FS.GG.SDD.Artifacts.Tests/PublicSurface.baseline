@@ -63,6 +63,7 @@ FS.GG.SDD.Artifacts.Diagnostics.scaffoldRepoInitSkippedExistingRepository
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldRepoInitSkippedGitUnavailable
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldScriptsNotMadeExecutable
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldTargetCollision
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldToolManifestSkippedExisting
 FS.GG.SDD.Artifacts.Diagnostics.severityRank
 FS.GG.SDD.Artifacts.Diagnostics.severityValue
 FS.GG.SDD.Artifacts.Diagnostics.signalsStaleView

@@ -111,6 +111,7 @@ module Diagnostics =
     // code or flip the scaffold to failed/incomplete.
     val scaffoldRepoInitSkippedExistingRepository: unit -> Diagnostic
     val scaffoldRepoInitSkippedGitUnavailable: unit -> Diagnostic
+    val scaffoldToolManifestSkippedExisting: path: string -> Diagnostic
     val scaffoldScriptsNotMadeExecutable: paths: string list -> Diagnostic
 
     // Remediation (`fsgg-sdd doctor` / `fsgg-sdd upgrade`) diagnostics (feature 053,

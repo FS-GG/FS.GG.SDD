@@ -58,6 +58,14 @@ stage) ever self-updates or re-seeds as a side effect.
   governed registry / provider-descriptor state is never touched.
 - **No-clobber re-seed.** Only *missing* artifacts are materialized; a present,
   possibly author-edited artifact is never overwritten.
+- **The tool manifest is not reconciled.** `fsgg-sdd scaffold` writes
+  `.config/dotnet-tools.json` once, pinning `fsgg-sdd` at the scaffolding CLI's version
+  (FS-GG/FS.GG.SDD#315), and preserves an existing manifest. Neither `doctor` nor `upgrade`
+  reads, re-pins, or reports drift on it: the pin is a consumer-owned, Renovate-updatable
+  file, and `upgrade`'s CLI self-update targets the *installed* tool (`dotnet tool update`),
+  not the manifest. A workspace whose manifest has fallen behind is therefore invisible to
+  `doctor` — the same blindness it has to the `sdd.minToolVersion` floor
+  (FS-GG/FS.GG.SDD#313).
 - **Explicit apply only.** The non-interactive apply is triggered **only** by `--yes`. A
   non-interactive run without `--yes` makes zero writes, does not hang on a prompt, and
   refuses with a pointer to `--yes` (`upgrade.nonInteractiveNoYes`, exit 1). CI keeps the
