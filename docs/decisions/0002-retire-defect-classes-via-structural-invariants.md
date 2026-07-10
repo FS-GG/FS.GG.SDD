@@ -159,3 +159,37 @@ each. Both kinds are now covered; #288 closed the residual.
   `SourceSnapshots`/digests, `Stale*Count`, `BlockingAmbiguityCount`) are excluded
   from the compared partition, exactly as the YAML properties exclude their
   tool-owned fields.
+
+### Scope boundary: the artifacts invariant 1 does *not* reach — the migration is complete
+
+Invariant 1 is an **authored-round-trip** invariant, so it reaches only the six
+authored families above (plus `charter.md`, which shares the four Markdown
+families' `ensure*Sections` text-space re-emit — `ensureStandardSections` — though
+the #288 property set covers the four post-charter families). The remaining
+lifecycle artifacts are outside it by construction, and are listed here so the
+codec migration's completeness is not mistaken for partial coverage:
+
+- **Readiness JSON — `analysis.json`, `verify.json`, `ship.json`** are
+  `System.Text.Json`-serialized *generated* output, produced from a work model
+  and never round-tripped from author edits, not authored YAML.
+- **Read-only — RegistryDocument, the `.fsgg` Config** have a parser and no
+  writer; there is nothing to render, hence no round-trip.
+- **Generated views — RequirementModel, Guidance** are derived, not authored.
+
+There is therefore **no remaining `ArtifactCodec` migration**: the codec applies
+to exactly `tasks.yml` and `evidence.yml` (both migrated, #201/#260), the five
+Markdown docs are text-space by design (this Note; #288), and the seven artifacts
+above are not authored round-trip artifacts at all. Epic **#338**'s "~10 authored
+artifacts still to migrate" framing was an over-count derived from a raw
+reader-in-`FS.GG.SDD.Artifacts` / writer-in-`FS.GG.SDD.Commands` heuristic; it is
+re-scoped to lock this boundary rather than perform a migration. Its item 2 (the
+lossy `parseWorkModel` round-trip, the real #266/#242/#215 data-loss seam) shipped
+separately via #342.
+
+This partition is pinned as data by the guard
+``the ArtifactCodec migration boundary is complete`` in
+`tests/FS.GG.SDD.Artifacts.Tests/ArtifactCodecTests.fs`: the codec-migrated set is
+asserted to be exactly `{tasks.yml, evidence.yml}` (tied to the real
+`TaskCodec.taskFields` / `EvidenceCodec.declarationFields`), so migrating a new
+artifact onto the codec, or reclassifying one, fails until this Note and the guard
+are updated together.
