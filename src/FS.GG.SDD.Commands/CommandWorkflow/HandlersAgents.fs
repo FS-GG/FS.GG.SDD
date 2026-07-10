@@ -34,10 +34,13 @@ module internal HandlersAgents =
         if String.IsNullOrWhiteSpace raw then
             false
         else
-            let substituted = raw.Replace("{workId}", workId)
-
-            not (Path.IsPathRooted substituted)
-            && not ((resolveGeneratedRoot workId raw).StartsWith("..", StringComparison.Ordinal))
+            // Delegate to the single authoritative containment predicate so the agents command
+            // rejects the SAME paths as every other seam. The old `StartsWith "..")` check ran
+            // against `resolveGeneratedRoot`, which does not collapse `..` segments, so a mid-path
+            // escape (`foo/../../../etc`) was accepted as "within project" and then resolved out of
+            // tree by the downstream `Path.Combine` + `GetFullPath` (#340). `escapesRoot` rejects any
+            // `..` segment (and any rooted path) on the RAW, substituted string.
+            not (PathContainment.escapesRoot (raw.Replace("{workId}", workId)))
 
     let agentsConfigOpt model =
         match snapshot ".fsgg/agents.yml" model with
