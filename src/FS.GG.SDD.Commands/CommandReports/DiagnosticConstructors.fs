@@ -1258,3 +1258,27 @@ module internal DiagnosticConstructors =
             Some Evidence
         else
             None
+
+    // FS-GG/FS.GG.SDD#305: a stale toolchain is invisible in the artifacts it emits, so three separate
+    // consumers independently rediscovered one already-fixed defect. A workspace declares its floor as
+    // `sdd.minToolVersion` in .fsgg/project.yml; running below it warns on every command that reads the
+    // config. Warning, not error: the floor states what the workspace expects, and a stale tool still
+    // produces usable output — it just cannot be trusted as fresh signal.
+    let projectToolVersionBelowMinimum (installed: string) (minimum: string) =
+        warningDiagnostic
+            "project.toolVersionBelowMinimum"
+            (Some ".fsgg/project.yml")
+            $"fsgg-sdd {installed} is older than the workspace floor sdd.minToolVersion {minimum}; reports from this run may reflect already-fixed defects."
+            "Update the CLI (dotnet tool update --global FS.GG.SDD.Cli), or lower sdd.minToolVersion in .fsgg/project.yml if the floor is wrong."
+            [ installed; minimum ]
+
+    // A floor that cannot be parsed is a silent no-op unless it is surfaced — exactly the failure mode
+    // FS-GG/FS.GG.SDD#305 exists to close. Warn rather than block, so a config typo never wedges a
+    // workspace out of every lifecycle command.
+    let projectMinToolVersionUnparseable (value: string) =
+        warningDiagnostic
+            "project.minToolVersionUnparseable"
+            (Some ".fsgg/project.yml")
+            $"sdd.minToolVersion '{value}' is not a major.minor.patch version; the tool-version floor is not enforced."
+            "Set sdd.minToolVersion to a major.minor.patch version (for example 0.9.0), or remove it to declare no floor."
+            [ value ]

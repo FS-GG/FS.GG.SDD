@@ -869,6 +869,7 @@ module ReleaseContract =
                       "tasks.status"
                       "tasks.taskIds"
                       "tasks.workId"
+                      "toolVersion"
                       "upgrade"
                       "verification" ]
               SourceArtifact =

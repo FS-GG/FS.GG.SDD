@@ -713,6 +713,9 @@ module CommandSerialization =
         writer.WriteStartObject()
         writer.WriteNumber("schemaVersion", report.SchemaVersion)
         writer.WriteString("reportVersion", report.ReportVersion)
+        // FS-GG/FS.GG.SDD#305: the producing CLI version, so a report can be told fresh from stale
+        // without re-verifying every finding against main.
+        writer.WriteString("toolVersion", report.ToolVersion)
         writer.WriteStartObject("command")
         writer.WriteString("name", commandName report.Command)
         writer.WriteString("stage", commandStage report.Command)

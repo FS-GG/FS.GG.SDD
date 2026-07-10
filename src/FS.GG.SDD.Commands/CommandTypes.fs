@@ -544,6 +544,12 @@ module CommandTypes =
     type CommandReport =
         { SchemaVersion: int
           ReportVersion: string
+          // The fsgg-sdd version that produced this report (FS-GG/FS.GG.SDD#305). A stale toolchain is
+          // otherwise invisible in the artifacts it emits, so a feedback report cannot be told apart
+          // from a stale one without re-verifying every finding against main. Sourced from the request's
+          // injected GeneratorVersion — never read from the assembly here, which would put reflection in
+          // pure code.
+          ToolVersion: string
           Command: SddCommand
           ProjectRoot: string
           OutputFormat: OutputFormat
