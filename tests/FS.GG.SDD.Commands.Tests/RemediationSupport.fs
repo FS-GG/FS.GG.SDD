@@ -60,14 +60,40 @@ module RemediationSupport =
         |> List.choose (fun path -> canonicalSkillBody path |> Option.map (fun body -> path, body))
         |> Map.ofList
 
+    /// FS-GG/FS.GG.SDD#313: a `.fsgg/project.yml` declaring the workspace tool floor
+    /// `sdd.minToolVersion`. Same shape `init` seeds, so the fixtures take the real parse path.
+    let projectYml (floor: string option) =
+        let floorLine =
+            match floor with
+            | Some value -> $"\n  minToolVersion: {value}"
+            | None -> ""
+
+        $"""schemaVersion: 1
+project:
+  id: 313-remediation
+  defaultWorkRoot: work
+sdd:
+  config: .fsgg/sdd.yml
+  agents: .fsgg/agents.yml{floorLine}
+"""
+
     /// Write a fixture root. `minimum` = provider-declared minimum (None = coherent-by-absence).
-    /// `presentArtifacts` = expected seeded paths to materialize as present (the rest are
-    /// missing). `withProvenance` = whether to write `.fsgg/scaffold-provenance.json`. A present
-    /// seeded skill copy is written with its canonical body (content-addressed coherence); a
-    /// non-skill present artifact keeps the placeholder body.
-    let makeFixture (minimum: string option) (presentArtifacts: string list) (withProvenance: bool) =
+    /// `floor` = the workspace's `sdd.minToolVersion`; `None` writes no `.fsgg/project.yml` at all,
+    /// so the pre-#313 fixtures keep their exact on-disk shape. `presentArtifacts` = expected seeded
+    /// paths to materialize as present (the rest are missing). `withProvenance` = whether to write
+    /// `.fsgg/scaffold-provenance.json`. A present seeded skill copy is written with its canonical
+    /// body (content-addressed coherence); a non-skill present artifact keeps the placeholder body.
+    let makeFixtureWithFloor
+        (minimum: string option)
+        (floor: string option)
+        (presentArtifacts: string list)
+        (withProvenance: bool)
+        =
         let root = TestSupport.tempDirectory ()
         TestSupport.writeRelative root ".fsgg/providers.yml" (providersYml minimum)
+
+        if Option.isSome floor then
+            TestSupport.writeRelative root ".fsgg/project.yml" (projectYml floor)
 
         if withProvenance then
             TestSupport.writeRelative root ".fsgg/scaffold-provenance.json" (provenanceJson minimum)
@@ -77,6 +103,9 @@ module RemediationSupport =
             TestSupport.writeRelative root path body
 
         root
+
+    let makeFixture (minimum: string option) (presentArtifacts: string list) (withProvenance: bool) =
+        makeFixtureWithFloor minimum None presentArtifacts withProvenance
 
     /// A fully coherent scaffold: all expected seeded artifacts present, CLI at/above minimum.
     let coherentFixture () =

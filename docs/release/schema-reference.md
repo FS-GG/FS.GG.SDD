@@ -288,10 +288,23 @@ top-level fields only.
   therefore reports `coherent: false` even on an otherwise-current re-run. That is deliberate: a
   workspace running below the floor it declared is not told "clean, advance". A consumer keying on
   `coherent` should update the CLI, or lower the floor, rather than special-case the warning.
-  This floor is distinct from the provider-declared `minimumCliVersion` that `doctor`/`upgrade`
-  reconcile (ADR-0009); `doctor` does not yet read `sdd.minToolVersion` (FS-GG/FS.GG.SDD#313).
   This additive-optional field moved `reportVersion` to `2.3.0` (a semantic minor); `schemaVersion`
   stays `1`.
+
+  This floor is distinct from the provider-declared `minimumCliVersion` that `doctor`/`upgrade`
+  reconcile (ADR-0009), but it is no longer invisible to them (FS-GG/FS.GG.SDD#313): both floors
+  feed one CLI axis and the **stricter** of the two governs it. The additive
+  `doctor.requiredMinimumCliVersionSource` names which floor produced the effective minimum —
+  `providerDescriptor`, `scaffoldProvenance`, or `workspaceFloor` — and is `null` exactly when
+  there is no effective minimum. On an equal floor the provider-side source is named (the tie is
+  inert). An unparseable `sdd.minToolVersion` never becomes a minimum; it is reported once, by
+  `project.minToolVersionUnparseable`. Because the CLI axis is a fact about the *installed tool*
+  rather than about the scaffold, an unmet workspace floor also makes `upgrade`'s CLI self-update
+  step actionable in a workspace that was never scaffolded, where `doctor`/`upgrade` otherwise
+  report `hasProvenance: false` and reconcile nothing.
+  This additive-optional field moved `reportVersion` to `2.5.0` (a semantic minor);
+  `schemaVersion` stays `1`.
+
   The additive `scaffold.toolManifestOutcome` field (FS-GG/FS.GG.SDD#315) reports the
   `.config/dotnet-tools.json` CLI-pin post-instantiation step — `pinned` (SDD wrote the
   manifest, pinning `fsgg-sdd` at the scaffolding CLI's version), `skippedExisting` (a manifest

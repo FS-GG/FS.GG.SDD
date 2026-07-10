@@ -388,6 +388,10 @@ module CommandSerialization =
             | Some minimum -> writer.WriteString("requiredMinimumCliVersion", minimum)
             | None -> writer.WriteNull "requiredMinimumCliVersion"
 
+            match summary.RequiredMinimumCliVersionSource with
+            | Some source -> writer.WriteString("requiredMinimumCliVersionSource", source)
+            | None -> writer.WriteNull "requiredMinimumCliVersionSource"
+
             writer.WriteString("cliAxis", summary.CliAxis)
 
             match summary.CliBehindBy with

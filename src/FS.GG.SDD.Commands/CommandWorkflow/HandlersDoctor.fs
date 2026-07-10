@@ -75,6 +75,17 @@ module internal HandlersDoctor =
         |> List.choose (fun path -> snapshot path model |> Option.map (fun snap -> path, snap.Text))
         |> Map.ofList
 
+    // FS-GG/FS.GG.SDD#313: the workspace-declared `sdd.minToolVersion` floor, read from the
+    // `.fsgg/project.yml` snapshot the remediation plan now takes. A malformed config yields no
+    // floor and no diagnostic here — `ReportAssembly` already owns that reporting.
+    let resolveWorkspaceFloor model =
+        match snapshot ".fsgg/project.yml" model with
+        | Some snap ->
+            match FS.GG.SDD.Artifacts.Config.parseProjectConfig snap with
+            | Ok config -> config.MinToolVersion
+            | Error _ -> None
+        | None -> None
+
     let computeDrift model =
         let provenance = resolveProvenance model
         let descriptor = resolveDriftDescriptor model provenance
@@ -82,6 +93,7 @@ module internal HandlersDoctor =
         Drift.compute
             provenance
             descriptor
+            (resolveWorkspaceFloor model)
             model.Request.GeneratorVersion.Version
             (presentArtifacts model)
             (skillBodies model)
@@ -91,6 +103,7 @@ module internal HandlersDoctor =
           ProviderName = drift.ProviderName
           InstalledCliVersion = drift.InstalledCliVersion
           RequiredMinimumCliVersion = drift.RequiredMinimumCliVersion
+          RequiredMinimumCliVersionSource = drift.RequiredMinimumCliVersionSource
           CliAxis = drift.CliAxis
           CliBehindBy = drift.CliBehindBy
           ExpectedArtifactCount = drift.ExpectedArtifactCount
@@ -117,10 +130,12 @@ module internal HandlersDoctor =
                 let drift = computeDrift model
                 let summary = doctorSummaryOf drift
 
-                // Non-blocking drift advisory (doctor always exits 0); only when there is a
-                // scaffold to reconcile and it is not already coherent.
+                // Non-blocking drift advisory (doctor always exits 0) whenever there is drift to
+                // reconcile. #313: `IsCoherent` — not `HasProvenance` — is the gate, because an
+                // unmet workspace floor is real drift in a workspace that was never scaffolded.
+                // With no provenance and no floor, `IsCoherent` is true, so this stays silent.
                 let diagnostics =
-                    if drift.HasProvenance && not drift.IsCoherent then
+                    if not drift.IsCoherent then
                         [ doctorDriftDetected () ]
                     else
                         []

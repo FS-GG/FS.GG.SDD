@@ -654,7 +654,12 @@ nuget-cache/
     // effect at this stage (doctor never does; upgrade plans applies only after the
     // pure driver decides).
     let remediationReadEffects =
-        [ ReadFile ".fsgg/scaffold-provenance.json"; ReadFile ".fsgg/providers.yml" ]
+        [ ReadFile ".fsgg/scaffold-provenance.json"
+          ReadFile ".fsgg/providers.yml"
+          // FS-GG/FS.GG.SDD#313: the workspace-declared `sdd.minToolVersion` floor. Without this
+          // read `doctor`/`upgrade` saw only the provider floor and reported the CLI axis coherent
+          // against a floor the author had declared and every other command was warning about.
+          ReadFile ".fsgg/project.yml" ]
         @ (Drift.expectedArtifactPaths |> List.map ReadFile)
 
     // Feature 086: `surface` roots — convention defaults with optional `--param` overrides. The

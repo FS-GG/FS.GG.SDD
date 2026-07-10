@@ -494,6 +494,11 @@ module CommandTypes =
             ProviderName: string option
             InstalledCliVersion: string
             RequiredMinimumCliVersion: string option
+            /// FS-GG/FS.GG.SDD#313: which floor produced `RequiredMinimumCliVersion` —
+            /// `providerDescriptor`, `scaffoldProvenance`, or the workspace's own
+            /// `sdd.minToolVersion` (`workspaceFloor`). The stricter floor wins; `None`
+            /// iff there is no effective minimum.
+            RequiredMinimumCliVersionSource: string option
             CliAxis: string
             CliBehindBy: string option
             ExpectedArtifactCount: int

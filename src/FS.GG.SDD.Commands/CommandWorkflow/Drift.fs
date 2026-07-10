@@ -38,6 +38,11 @@ module internal Drift =
           ProviderName: string option
           InstalledCliVersion: string
           RequiredMinimumCliVersion: string option
+          // FS-GG/FS.GG.SDD#313: which of the two floors produced `RequiredMinimumCliVersion` —
+          // `providerDescriptor` / `scaffoldProvenance` / `workspaceFloor`. `None` iff there is no
+          // effective minimum. Without it a divergence between the provider floor and the
+          // workspace's `sdd.minToolVersion` is invisible in the report.
+          RequiredMinimumCliVersionSource: string option
           CliAxis: string
           CliBehindBy: string option
           ExpectedArtifactCount: int
@@ -140,52 +145,123 @@ module internal Drift =
           Outcome = ReconciliationOutcome.NoTarget
           TargetPaths = [] }
 
+    let private cliSelfUpdateStep installedVersion (minimumText: string) : ReconciliationStep =
+        { StepId = ReconciliationStepId.CliSelfUpdate
+          Kind = ReconciliationStepId.CliSelfUpdate
+          DiffPreview = $"installed {installedVersion} → target ≥{minimumText}"
+          Outcome = ReconciliationOutcome.WouldApply
+          TargetPaths = [] }
+
+    // FS-GG/FS.GG.SDD#313: the source labels reported alongside the effective minimum, so a
+    // divergence between the two floors is legible rather than silent.
+    [<Literal>]
+    let providerDescriptorSource = "providerDescriptor"
+
+    [<Literal>]
+    let scaffoldProvenanceSource = "scaffoldProvenance"
+
+    [<Literal>]
+    let workspaceFloorSource = "workspaceFloor"
+
+    // Only a parseable `major.minor.patch` counts as a real minimum. An unparseable value is
+    // not this module's to report: the provider floor degrades to coherent-by-absence (as it
+    // always has), and an unparseable `sdd.minToolVersion` is already warned by
+    // `project.minToolVersionUnparseable` at report assembly — re-reporting would double-count.
+    let private validVersion raw =
+        Fsgg.Version.tryParse raw |> Option.map (fun _ -> raw)
+
+    // The strictest of the candidate minima, each paired with the source that declared it.
+    // Candidates arrive in tie-break order and a later one replaces the incumbent only when it
+    // is *strictly* greater, so an equal floor leaves the earlier (provider-side) source named —
+    // the pre-existing authority, and the tie makes the choice inert anyway.
+    let private strictestMinimum (candidates: (string * string) list) =
+        candidates
+        |> List.fold
+            (fun best (version, source) ->
+                match best with
+                | None -> Some(version, source)
+                | Some(incumbent, _) ->
+                    match Fsgg.Version.compare version incumbent with
+                    | Some rank when rank > 0 -> Some(version, source)
+                    | _ -> best)
+            None
+
+    let private cliAxisOf installedVersion effectiveMinimum =
+        match effectiveMinimum with
+        | None -> "coherentByAbsence", None
+        | Some(minimum, _) ->
+            match Fsgg.Version.tryParse installedVersion with
+            | None -> "undeterminable", None
+            | Some _ ->
+                match Fsgg.Version.compare installedVersion minimum with
+                | Some -1 -> "behind", Some $"{installedVersion} → {minimum}"
+                | _ -> "atOrAbove", None
+
     /// Compute the drift picture from already-snapshotted inputs. `descriptor` is the
     /// live provider descriptor resolved from `.fsgg/providers.yml` by the provenance's
     /// provider name; when it disagrees with the provenance-recorded minimum, the live
-    /// descriptor value wins (spec Assumption).
+    /// descriptor value wins (spec Assumption). `workspaceFloor` is the raw
+    /// `sdd.minToolVersion` declared in `.fsgg/project.yml` (FS-GG/FS.GG.SDD#305); the
+    /// **stricter** of the two floors governs the CLI axis (FS-GG/FS.GG.SDD#313), so the
+    /// remediation verbs can no longer report `coherent` against a floor the author declared.
     let compute
         (provenance: ScaffoldProvenanceRecord option)
         (descriptor: ProviderDescriptor option)
+        (workspaceFloor: string option)
         (installedVersion: string)
         (presentArtifacts: Set<string>)
         (skillBodies: Map<string, string>)
         : DriftReport =
+        let workspaceCandidate =
+            workspaceFloor
+            |> Option.bind validVersion
+            |> Option.map (fun version -> version, workspaceFloorSource)
+            |> Option.toList
+
         match provenance with
         | None ->
-            // Not a scaffolded product (FR-015 / R12): nothing to reconcile, no steps.
+            // Not a scaffolded product (FR-015 / R12): no provider, so no re-pin and no re-seed
+            // to preview. The CLI axis is not scaffold-scoped, though — it is a fact about the
+            // *installed tool* — so a workspace-declared floor still governs it and still
+            // previews a self-update. Absent that floor this is byte-identical to the pre-#313
+            // shape: coherent by absence, no steps, coherent.
+            let effectiveMinimum = strictestMinimum workspaceCandidate
+            let cliAxis, cliBehindBy = cliAxisOf installedVersion effectiveMinimum
+
+            let steps =
+                match cliAxis, effectiveMinimum with
+                | "behind", Some(minimum, _) -> [ cliSelfUpdateStep installedVersion minimum ]
+                | _ -> []
+
             { HasProvenance = false
               ProviderName = None
               InstalledCliVersion = installedVersion
-              RequiredMinimumCliVersion = None
-              CliAxis = "coherentByAbsence"
-              CliBehindBy = None
+              RequiredMinimumCliVersion = effectiveMinimum |> Option.map fst
+              RequiredMinimumCliVersionSource = effectiveMinimum |> Option.map snd
+              CliAxis = cliAxis
+              CliBehindBy = cliBehindBy
               ExpectedArtifactCount = expectedArtifactCount
               MissingArtifactPaths = []
               SkillDriftPaths = []
-              Steps = []
-              IsCoherent = true }
+              Steps = steps
+              IsCoherent = List.isEmpty steps }
         | Some record ->
-            // Live descriptor minimum wins over the provenance-recorded one; only a
-            // parseable value is treated as a real minimum (else coherent-by-absence).
-            let effectiveMinimumRaw =
-                (descriptor |> Option.bind (fun d -> d.MinimumCliVersion))
-                |> Option.orElseWith (fun () -> record.RequiredMinimumCliVersion)
+            // Live descriptor minimum wins over the provenance-recorded one — by *presence*, not
+            // by parseability: a descriptor that declares an unparseable minimum still shadows the
+            // recorded value, and degrades to coherent-by-absence exactly as it did before #313.
+            let providerCandidate =
+                match descriptor |> Option.bind (fun d -> d.MinimumCliVersion) with
+                | Some raw -> raw |> validVersion |> Option.map (fun v -> v, providerDescriptorSource)
+                | None ->
+                    record.RequiredMinimumCliVersion
+                    |> Option.bind validVersion
+                    |> Option.map (fun v -> v, scaffoldProvenanceSource)
+                |> Option.toList
 
-            let validMinimum =
-                effectiveMinimumRaw
-                |> Option.bind (fun raw -> Fsgg.Version.tryParse raw |> Option.map (fun _ -> raw))
-
-            let cliAxis, cliBehindBy =
-                match validMinimum with
-                | None -> "coherentByAbsence", None
-                | Some minimum ->
-                    match Fsgg.Version.tryParse installedVersion with
-                    | None -> "undeterminable", None
-                    | Some _ ->
-                        match Fsgg.Version.compare installedVersion minimum with
-                        | Some -1 -> "behind", Some $"{installedVersion} → {minimum}"
-                        | _ -> "atOrAbove", None
+            // Provider-side first: it is the tie-break winner (see `strictestMinimum`).
+            let effectiveMinimum = strictestMinimum (providerCandidate @ workspaceCandidate)
+            let validMinimum = effectiveMinimum |> Option.map fst
+            let cliAxis, cliBehindBy = cliAxisOf installedVersion effectiveMinimum
 
             let missing =
                 expectedArtifactPaths
@@ -196,11 +272,7 @@ module internal Drift =
 
             let cliStep =
                 if cliAxis = "behind" then
-                    { StepId = ReconciliationStepId.CliSelfUpdate
-                      Kind = ReconciliationStepId.CliSelfUpdate
-                      DiffPreview = $"installed {installedVersion} → target ≥{minimumText}"
-                      Outcome = ReconciliationOutcome.WouldApply
-                      TargetPaths = [] }
+                    cliSelfUpdateStep installedVersion minimumText
                 else
                     noTargetStep ReconciliationStepId.CliSelfUpdate "no CLI version target"
 
@@ -239,6 +311,7 @@ module internal Drift =
               ProviderName = (if isDevRepo record then None else Some record.ProviderName)
               InstalledCliVersion = installedVersion
               RequiredMinimumCliVersion = validMinimum
+              RequiredMinimumCliVersionSource = effectiveMinimum |> Option.map snd
               CliAxis = cliAxis
               CliBehindBy = cliBehindBy
               ExpectedArtifactCount = expectedArtifactCount

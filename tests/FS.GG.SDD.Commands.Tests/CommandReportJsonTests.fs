@@ -33,7 +33,7 @@ module CommandReportJsonTests =
     // ⇒ minor, removal/retype ⇒ major — and then deliberately update this expected value.
     [<Fact>]
     let ``reportVersion is pinned to its current contract value`` () =
-        let expected = "2.4.0"
+        let expected = "2.5.0"
         Assert.Equal(expected, dryRunReport().ReportVersion)
         Assert.Contains(sprintf "\"reportVersion\": \"%s\"" expected, dryRunReport () |> serializeReport)
 
