@@ -472,6 +472,14 @@ Re-running their stage regenerates the tool-owned content from the current sourc
 preserves your authored content — it never re-ingests its own prior output as input
 (feature 082 / FR-002).
 
+All seven lifecycle artifacts work this way, and every command report names it: each is
+reported with write kind `hybridArtifact` and ownership `hybrid` (FS.GG.SDD#308). The
+remaining write kinds are `generatedView` (the tool alone produces it), `structuredSource`
+and `agentGuidance` (seeded once, never clobbered), and `authoredSource` — which the tool
+**never** writes. An effect that claims `authoredSource` over existing content is refused by
+the interpreter, so a stage cannot acquire the ability to replace your prose by mis-tagging
+a write.
+
 - **Tool-owned content is re-derived every run, never re-ingested.** `checklist`
   recomputes its `Checklist Items` / `Review Results` / `Accepted Deferrals` /
   `Blocking Findings` rows (and refreshes `Source Snapshot`) from the current spec/clarify
