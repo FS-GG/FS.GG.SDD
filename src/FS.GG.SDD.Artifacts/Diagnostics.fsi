@@ -51,6 +51,11 @@ module Diagnostics =
 
     val missingArtifact: artifact: ArtifactRef -> correction: string -> Diagnostic
     val malformedSchemaVersion: artifact: ArtifactRef -> message: string -> Diagnostic
+
+    /// A YAML syntax error in an authored artifact, positioned at the parser's mark.
+    /// A non-positive `line` means the parser could not place the error; the diagnostic
+    /// then carries the message without a source location.
+    val malformedYaml: artifact: ArtifactRef -> message: string -> line: int -> column: int -> Diagnostic
     val deprecatedSchemaVersion: artifact: ArtifactRef -> value: string -> Diagnostic
     val unsupportedSchemaVersion: artifact: ArtifactRef -> value: string -> Diagnostic
     val futureSchemaVersion: artifact: ArtifactRef -> value: string -> Diagnostic

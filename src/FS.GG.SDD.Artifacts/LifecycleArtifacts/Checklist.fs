@@ -79,9 +79,9 @@ module Checklist =
             Error
                 [ Diagnostics.malformedSchemaVersion artifact "Checklist artifact is missing structured front matter." ]
         | Some(yaml, body) ->
-            match parseYaml yaml with
-            | None -> Error [ Diagnostics.malformedSchemaVersion artifact "Checklist front matter is empty." ]
-            | Some root ->
+            match yamlRoot artifact "Checklist front matter is empty." 1 yaml with
+            | Error diagnostics -> Error diagnostics
+            | Ok root ->
                 let version, versionDiagnostics = schemaVersion artifact root
 
                 let workId =

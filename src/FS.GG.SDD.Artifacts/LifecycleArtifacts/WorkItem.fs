@@ -42,17 +42,19 @@ module WorkItem =
         | ArtifactKind.Spec ->
             snapshot
             |> frontMatter
-            |> Option.bind (fun (yaml, _) -> parseYaml yaml)
+            |> Option.bind (fun (yaml, _) -> tryParseYamlNode yaml)
             |> Option.bind (tryScalarAt [ "schemaVersion" ])
         | _ ->
             if snapshot.Path.EndsWith(".md", StringComparison.OrdinalIgnoreCase) then
                 snapshot
                 |> frontMatter
-                |> Option.bind (fun (yaml, _) -> parseYaml yaml)
+                |> Option.bind (fun (yaml, _) -> tryParseYamlNode yaml)
                 |> Option.bind (tryScalarAt [ "schemaVersion" ])
             else
                 try
-                    snapshot.Text |> parseYaml |> Option.bind (tryScalarAt [ "schemaVersion" ])
+                    snapshot.Text
+                    |> tryParseYamlNode
+                    |> Option.bind (tryScalarAt [ "schemaVersion" ])
                 with _ ->
                     None
 

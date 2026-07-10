@@ -98,9 +98,11 @@ module RegistryDocument =
             else
                 let text = File.ReadAllText path
 
-                match parseYaml text with
-                | None -> err path "Registry file is empty or has no YAML document."
-                | Some root ->
+                match parseYamlDocument text with
+                | YamlEmpty -> err path "Registry file is empty."
+                | YamlMalformed(message, line, column) ->
+                    err path $"Registry file has a YAML syntax error at line {line}, column {column}: {message}"
+                | YamlRoot root ->
                     match tryMapping root with
                     | None -> err path "Registry root is not a YAML mapping."
                     | Some rootMapping ->

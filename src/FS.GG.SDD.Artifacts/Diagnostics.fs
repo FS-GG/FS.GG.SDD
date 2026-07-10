@@ -68,6 +68,28 @@ module Diagnostics =
             "Add schemaVersion: 1 to the structured artifact."
             []
 
+    /// A YAML syntax error in an authored artifact, positioned at the parser's mark.
+    /// A parser that cannot place the error (YamlDotNet leaves the mark at 0) reports
+    /// the message without a location rather than pointing at a line that does not exist.
+    let malformedYaml artifact (message: string) (line: int) (column: int) =
+        let located = line > 0
+
+        let position = if located then $" at line {line}, column {column}" else ""
+
+        create
+            "malformedYaml"
+            DiagnosticError
+            (Some artifact)
+            (if located then
+                 Some
+                     { Line = Some line
+                       Column = Some column }
+             else
+                 None)
+            $"Artifact '{artifact.Path}' has a YAML syntax error{position}: {message}"
+            "Correct the YAML syntax at the reported position; the document could not be parsed."
+            []
+
     let deprecatedSchemaVersion artifact value =
         create
             "deprecatedSchemaVersion"

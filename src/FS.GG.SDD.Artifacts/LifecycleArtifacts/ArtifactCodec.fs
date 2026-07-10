@@ -5,7 +5,7 @@ open YamlDotNet.RepresentationModel
 
 // Field-list-driven codec — the Gap-A invariant (FS.GG.SDD#201, ADR-0002).
 // Reuses the Internal YAML helpers (AutoOpen, same namespace/assembly):
-// `parseYaml`, `tryMapping`, `tryScalarAt`, `tryScalarNonNullAt`, `scalarList`.
+// `parseYamlDocument`, `tryMapping`, `tryScalarAt`, `tryScalarNonNullAt`, `scalarList`.
 [<RequireQualifiedAccess>]
 module ArtifactCodec =
 
@@ -264,9 +264,10 @@ module ArtifactCodec =
                     Some(key + ":\n" + lines) }
 
     let decode (fields: FieldCodec<'M> list) (seed: 'M) (text: string) : Result<'M, string> =
-        match parseYaml text with
-        | None -> Error "document is empty or not parseable YAML"
-        | Some node ->
+        match parseYamlDocument text with
+        | YamlEmpty -> Error "document is empty"
+        | YamlMalformed(message, line, column) -> Error $"YAML syntax error at line {line}, column {column}: {message}"
+        | YamlRoot node ->
             match tryMapping node with
             | Some mapping -> parseMapping fields seed mapping
             | None -> Error "document root is not a YAML mapping"

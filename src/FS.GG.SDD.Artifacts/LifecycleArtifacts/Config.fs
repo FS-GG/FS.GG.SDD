@@ -49,9 +49,9 @@ module Config =
     let parseProjectConfig (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.ProjectConfig
 
-        match parseYaml snapshot.Text with
-        | None -> Error [ Diagnostics.malformedSchemaVersion artifact "Project config is empty." ]
-        | Some root ->
+        match yamlRoot artifact "Project config is empty." 0 snapshot.Text with
+        | Error diagnostics -> Error diagnostics
+        | Ok root ->
             let version, versionDiagnostics = schemaVersion artifact root
 
             let fields =
@@ -86,9 +86,9 @@ module Config =
     let parseSddLifecyclePolicy (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.SddConfig
 
-        match parseYaml snapshot.Text with
-        | None -> Error [ Diagnostics.malformedSchemaVersion artifact "SDD config is empty." ]
-        | Some root ->
+        match yamlRoot artifact "SDD config is empty." 0 snapshot.Text with
+        | Error diagnostics -> Error diagnostics
+        | Ok root ->
             let version, versionDiagnostics = schemaVersion artifact root
 
             let stageResults =
@@ -130,9 +130,9 @@ module Config =
     let parseAgentGuidanceConfig (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.AgentsConfig
 
-        match parseYaml snapshot.Text with
-        | None -> Error [ Diagnostics.malformedSchemaVersion artifact "Agent config is empty." ]
-        | Some root ->
+        match yamlRoot artifact "Agent config is empty." 0 snapshot.Text with
+        | Error diagnostics -> Error diagnostics
+        | Ok root ->
             let version, versionDiagnostics = schemaVersion artifact root
 
             let targets =
@@ -184,9 +184,9 @@ module Config =
     let parseProviderRegistry (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path (ArtifactKind.Other "providerRegistry")
 
-        match parseYaml snapshot.Text with
-        | None -> Error [ Diagnostics.malformedSchemaVersion artifact "Provider registry is empty." ]
-        | Some root ->
+        match yamlRoot artifact "Provider registry is empty." 0 snapshot.Text with
+        | Error diagnostics -> Error diagnostics
+        | Ok root ->
             let version, versionDiagnostics = schemaVersion artifact root
 
             // Each entry needs name/contractVersion/templateId/source; declared

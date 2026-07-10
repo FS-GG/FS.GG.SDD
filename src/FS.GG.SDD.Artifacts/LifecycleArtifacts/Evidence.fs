@@ -370,9 +370,9 @@ module Evidence =
     let parseEvidenceArtifact (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Evidence
 
-        match parseYaml snapshot.Text with
-        | None -> Error [ Diagnostics.malformedSchemaVersion artifact "Evidence file is empty." ]
-        | Some root ->
+        match yamlRoot artifact "Evidence file is empty." 0 snapshot.Text with
+        | Error diagnostics -> Error diagnostics
+        | Ok root ->
             let version, versionDiagnostics = schemaVersion artifact root
 
             let workIdValue =

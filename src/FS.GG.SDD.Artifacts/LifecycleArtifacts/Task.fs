@@ -281,9 +281,9 @@ module Task =
     let parseTaskFacts (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Tasks
 
-        match parseYaml snapshot.Text with
-        | None -> Error [ Diagnostics.malformedSchemaVersion artifact "Tasks file is empty." ]
-        | Some root ->
+        match yamlRoot artifact "Tasks file is empty." 0 snapshot.Text with
+        | Error diagnostics -> Error diagnostics
+        | Ok root ->
             let version, versionDiagnostics = schemaVersion artifact root
 
             match version, versionDiagnostics with
