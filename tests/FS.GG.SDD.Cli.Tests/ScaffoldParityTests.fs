@@ -35,6 +35,7 @@ module ScaffoldParityTests =
               ".codex/skills/fs-gg-elmish/SKILL.md" ]
           EffectiveParameters = [ "productName", "Acme"; "variant", "alpha" ]
           RepoInitOutcome = "initialized"
+          ToolManifestOutcome = "pinned"
           ExecutableScriptCount = 0
           ExecutableScriptsSkipped = 0
           NextActionHint = "SDD skeleton ready; begin the lifecycle at charter."
@@ -140,8 +141,9 @@ module ScaffoldParityTests =
         Assert.Equal(renderText report, result.Text)
         Assert.DoesNotContain("[", result.Text)
 
-    // 032 (FR-011 / SC-006): the repo-init outcome and the make-executable counts are
-    // fact-identical across json/text/rich, and the rich projection adds/drops no JSON byte.
+    // 032 (FR-011 / SC-006): the repo-init outcome, the tool-manifest pin (FS.GG.SDD#315),
+    // and the make-executable counts are fact-identical across json/text/rich, and the rich
+    // projection adds/drops no JSON byte.
     [<Fact>]
     let ``scaffold repo-init and exec facts are identical across json text and rich`` () =
         let postInstReport: CommandReport =
@@ -152,6 +154,7 @@ module ScaffoldParityTests =
                             ProducedPathCount = 2
                             ProducedPaths = [ "App.fsproj"; "run.sh" ]
                             RepoInitOutcome = "initialized"
+                            ToolManifestOutcome = "pinned"
                             ExecutableScriptCount = 1
                             ExecutableScriptsSkipped = 0 } }
 
@@ -165,12 +168,15 @@ module ScaffoldParityTests =
         let rich = (resolve Rich interactiveColor postInstReport).Text
 
         Assert.Contains("\"repoInitOutcome\": \"initialized\"", json)
+        Assert.Contains("\"toolManifestOutcome\": \"pinned\"", json)
         Assert.Contains("\"executableScriptCount\": 1", json)
         Assert.Contains("scaffoldRepoInit: initialized", text)
+        Assert.Contains("scaffoldToolManifest: pinned", text)
         Assert.Contains("scaffoldExecutableScripts: 1", text)
 
         for projection in [ json; text; rich ] do
             Assert.Contains("initialized", projection)
+            Assert.Contains("pinned", projection)
             Assert.Contains("run.sh", projection)
 
     // Feature 052 T024 (US2 / FR-007 / SC-002): the behind-minimum advisory is a pure

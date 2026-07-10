@@ -61,7 +61,8 @@ rather than silent.
   provider actually runs. It records the provider name, the provider
   `contractVersion`, the `templateRef`, the `outcome`
   (`providerSucceeded` / `providerSucceededEmpty` / `providerFailed`), the
-  `producedPaths` (sorted, each marked `owner: generatedProduct`), and the
+  `producedPaths` (sorted, each marked `owner: generatedProduct`), the
+  `sddOwnedPaths`, and the
   `effectiveParameters` — the resolved `key → value` set forwarded to the provider
   (provider-declared `parameters[].default`s overlaid by author `--param` overrides;
   the author value always wins), emitted **after** `producedPaths` as an array of
@@ -77,7 +78,15 @@ rather than silent.
   the provider declares none **or** declares a malformed one (never fabricated; a malformed
   minimum additionally surfaces a `scaffold.providerMinimumMalformed` warning). This field
   is likewise **additive optional** (schema stays v1, **minor** package bump; `tryParse`
-  defaults absent/null to `None`, so records written before it still parse). It is the
+  defaults absent/null to `None`, so records written before it still parse).
+  `sddOwnedPaths` (sorted, each marked `owner: sdd`, emitted immediately after
+  `mirroredPaths`) records the files **SDD itself** wrote during a post-instantiation step —
+  currently `.config/dotnet-tools.json`, the CLI pin (FS-GG/FS.GG.SDD#315). It is a list
+  separate from `producedPaths` on purpose: the app-only invariant defines `producedPaths` as
+  *exactly* the provider's tree (100% precision and recall, disjoint from the skeleton), so an
+  SDD-written file recorded there would break it. Empty when the step was skipped (a manifest
+  already existed) or never ran. Likewise **additive optional** (schema stays v1; `tryParse`
+  defaults absent/null to `[]`). It is the
   **authority for refresh exclusion** (FR-007 / SC-007): `fsgg-sdd refresh` reads it
   and never regenerates or flags provider-produced runtime files as stale SDD views;
   malformed provenance surfaces `scaffold.provenanceMalformed` and is treated as
@@ -283,6 +292,25 @@ top-level fields only.
   reconcile (ADR-0009); `doctor` does not yet read `sdd.minToolVersion` (FS-GG/FS.GG.SDD#313).
   This additive-optional field moved `reportVersion` to `2.3.0` (a semantic minor); `schemaVersion`
   stays `1`.
+  The additive `scaffold.toolManifestOutcome` field (FS-GG/FS.GG.SDD#315) reports the
+  `.config/dotnet-tools.json` CLI-pin post-instantiation step — `pinned` (SDD wrote the
+  manifest, pinning `fsgg-sdd` at the scaffolding CLI's version), `skippedExisting` (a manifest
+  was already present and was preserved byte-for-byte; a non-fatal
+  `scaffold.toolManifestSkippedExisting` advisory says so), `failed` (planned, did not land), or
+  `notApplicable` (the step never ran — dry run, provider defect, or a pre-invocation block).
+  It sits beside `repoInitOutcome` in json, and renders as `scaffoldToolManifest` in text/rich.
+  This additive-optional field moved `reportVersion` to `2.4.0` (a semantic minor);
+  `schemaVersion` stays `1`.
+
+  Scaffold pins the tool **without** seeding `sdd.minToolVersion` in `.fsgg/project.yml`, and
+  that is a decision rather than an omission (FS-GG/FS.GG.SDD#315 AC5). Scaffold establishes the
+  skeleton by reusing `init`'s effects **unchanged**, so `init` stays byte-identical for a given
+  CLI version; writing a version-dependent floor through that seam would make `init`'s output
+  vary with the CLI that ran it and break the determinism its golden pins. The two facts also
+  differ in kind: the manifest is a *pin* (a reproducibility fact — this is the toolchain), while
+  the floor is a *policy* the author chooses (this is the oldest CLI we accept). An author who
+  wants the floor sets `sdd.minToolVersion` explicitly; the pin already makes the producing
+  version reproducible without it.
   The additive `lifecycleStatus` field is present on **every** command's report — feature 084;
   it is the standardized lifecycle-status footer's authoritative fact, carrying `workId`,
   `isLifecycleStage`, `currentOrdinal`, `totalStages`, `outcome`, `nextCommand`, and `stages[]`

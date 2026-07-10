@@ -422,6 +422,16 @@ module Diagnostics =
             "Install git and re-run, or run `git init` yourself; scaffold otherwise succeeded."
             []
 
+    let scaffoldToolManifestSkippedExisting (path: string) =
+        create
+            "scaffold.toolManifestSkippedExisting"
+            DiagnosticInfo
+            None
+            None
+            "A dotnet tool manifest already exists; the fsgg-sdd pin was not written."
+            "Left the existing manifest untouched; add or update the fsgg-sdd entry yourself if it is absent or stale."
+            [ path ]
+
     let scaffoldScriptsNotMadeExecutable (paths: string list) =
         let ordered = paths |> List.sort
 

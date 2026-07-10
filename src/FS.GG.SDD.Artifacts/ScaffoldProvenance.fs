@@ -26,6 +26,7 @@ module ScaffoldProvenance =
           Outcome: string
           ProducedPaths: ScaffoldProducedPath list
           MirroredPaths: ScaffoldProducedPath list
+          SddOwnedPaths: ScaffoldProducedPath list
           EffectiveParameters: (string * string) list }
 
     let provenancePath = ".fsgg/scaffold-provenance.json"
@@ -52,6 +53,7 @@ module ScaffoldProvenance =
           Outcome = devRepoOutcome
           ProducedPaths = producedPaths
           MirroredPaths = []
+          SddOwnedPaths = []
           EffectiveParameters = [] }
 
     let ownerFromValue (value: string) =
@@ -124,6 +126,24 @@ module ScaffoldProvenance =
             writer.WriteString("path", mirrored.Path)
             writer.WriteString("owner", ownerValue mirrored.Owner)
             writeSha256 writer mirrored.Sha256
+            writer.WriteEndObject())
+
+        writer.WriteEndArray()
+
+        // The files SDD itself wrote during a post-instantiation step, owner `sdd`. They are
+        // deliberately NOT in `producedPaths`, which the app-only invariant defines as exactly
+        // the provider's tree (specs/031 P1/P3); recording them here classifies them as
+        // SDD-owned rather than externally owned. Sorted by path, immediately after
+        // `mirroredPaths`; empty array when none (schema stays v1).
+        writer.WriteStartArray("sddOwnedPaths")
+
+        record.SddOwnedPaths
+        |> List.sortBy (fun owned -> owned.Path)
+        |> List.iter (fun owned ->
+            writer.WriteStartObject()
+            writer.WriteString("path", owned.Path)
+            writer.WriteString("owner", ownerValue owned.Owner)
+            writeSha256 writer owned.Sha256
             writer.WriteEndObject())
 
         writer.WriteEndArray()
@@ -200,6 +220,22 @@ module ScaffoldProvenance =
                                           Sha256 = readSha256 element }
                                 | _ -> None)
 
+                        // Additive SDD-owned record: absent/null ⇒ `[]`, so provenance written
+                        // before this field still parses (schema stays v1).
+                        let sddOwnedPaths =
+                            jsonArray "sddOwnedPaths" root
+                            |> List.choose (fun element ->
+                                match jsonString "path" element with
+                                | Some path when not (String.IsNullOrWhiteSpace path) ->
+                                    Some
+                                        { Path = path
+                                          Owner =
+                                            jsonString "owner" element
+                                            |> Option.map ownerFromValue
+                                            |> Option.defaultValue ArtifactOwner.Sdd
+                                          Sha256 = readSha256 element }
+                                | _ -> None)
+
                         // Additive optional field (D3): absent ⇒ `[]`, so provenance
                         // written before `effectiveParameters` still parses.
                         let effectiveParameters =
@@ -226,6 +262,7 @@ module ScaffoldProvenance =
                               Outcome = outcome
                               ProducedPaths = producedPaths
                               MirroredPaths = mirroredPaths
+                              SddOwnedPaths = sddOwnedPaths
                               EffectiveParameters = effectiveParameters }
                     | _ -> None
                 | None -> None

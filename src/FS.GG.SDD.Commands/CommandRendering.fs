@@ -364,6 +364,9 @@ module CommandRendering =
 
             builder.AppendLine($"scaffoldRepoInit: {scaffold.RepoInitOutcome}") |> ignore
 
+            builder.AppendLine($"scaffoldToolManifest: {scaffold.ToolManifestOutcome}")
+            |> ignore
+
             builder.AppendLine($"scaffoldExecutableScripts: {scaffold.ExecutableScriptCount}")
             |> ignore
 

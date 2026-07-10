@@ -473,6 +473,7 @@ module CommandTypes =
           MirroredPaths: string list
           EffectiveParameters: (string * string) list
           RepoInitOutcome: string
+          ToolManifestOutcome: string
           ExecutableScriptCount: int
           ExecutableScriptsSkipped: int
           NextActionHint: string

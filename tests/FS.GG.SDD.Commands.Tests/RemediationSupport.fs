@@ -209,6 +209,7 @@ module RemediationSupport =
           Outcome = "providerSucceeded"
           ProducedPaths = []
           MirroredPaths = []
+          SddOwnedPaths = []
           EffectiveParameters = [] }
 
     let descriptor (minimum: string option) : ProviderDescriptor =
