@@ -21,7 +21,7 @@ sources:
     schemaVersion: 1
   - label: checklist
     path: work/001-example/checklist.md
-    digest: 7ccd0cebf69a72e5e7215d830908f7cb61c8fda6c62a20c57bb5794a026dca25
+    digest: f2abd1d517f05641ae270ec9c9fce04054b7cea1a1cd1ca231c7ca1be3995f84
     schemaVersion: 1
   - label: plan
     path: work/001-example/plan.md

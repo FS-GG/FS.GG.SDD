@@ -54,6 +54,7 @@
     <Compile Include="FixtureManifestGuardTests.fs" />
     <Compile Include="ArtifactTaxonomyTests.fs" />
     <Compile Include="ArtifactWriteKindTests.fs" />
+    <Compile Include="MergePolicyTests.fs" />
     <Compile Include="GitignoreNegationTests.fs" />
     <Compile Include="RemediationPointersTests.fs" />
     <Compile Include="CharterExampleContractTests.fs" />

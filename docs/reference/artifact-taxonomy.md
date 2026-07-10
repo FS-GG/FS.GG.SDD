@@ -5,7 +5,8 @@
 > **Owner:** FS.GG.SDD (the lifecycle owns this convention; consuming repos adopt it).
 
 FS.GG.SDD lifecycle artifacts fall into three classes. **Durable** artifacts are authored
-input and the record of record — commit them. **Regenerable** artifacts are machine-emitted
+input and the record of record — commit them. (Most are *hybrid*: authored regions the stage
+preserves, alongside tool-owned regions it re-derives. See below.) **Regenerable** artifacts are machine-emitted
 output that `fsgg-sdd` recreates deterministically on demand — do not commit them; ignore
 them by directory **role**, not with a per-feature exception list. **Durable generated**
 artifacts are machine-emitted, byte-stable, drift-guarded — and **committed**, because their
@@ -22,15 +23,29 @@ Authored lifecycle sources and the intentional audit record:
 
 | Artifact | Path | Why durable |
 |---|---|---|
-| Charter | `work/<id>/charter.md` | authored identity |
-| Specification | `work/<id>/spec.md` | authored requirements (FR/AC/US ids) |
-| Clarifications | `work/<id>/clarifications.md` | authored decisions (CQ/DEC/AMB) |
-| Checklist | `work/<id>/checklist.md` | authored requirements-quality review |
-| Plan | `work/<id>/plan.md` | authored technical plan |
-| Tasks | `work/<id>/tasks.yml` | authored task graph |
-| Evidence | `work/<id>/evidence.yml` | authored evidence declarations |
+| Charter | `work/<id>/charter.md` | hybrid — authored identity; the stage ensures its standard sections |
+| Specification | `work/<id>/spec.md` | hybrid — authored requirements (FR/AC/US ids); the stage ensures its standard sections |
+| Clarifications | `work/<id>/clarifications.md` | hybrid — authored decisions (CQ/DEC/AMB); the stage appends and retires derived lines |
+| Checklist | `work/<id>/checklist.md` | hybrid — authored requirements-quality review; the stage re-derives five sections |
+| Plan | `work/<id>/plan.md` | hybrid — authored technical plan; the stage re-derives the source snapshot and appends entries |
+| Tasks | `work/<id>/tasks.yml` | hybrid — tool-derived task graph carrying authored `status`, `owner`, and refs |
+| Evidence | `work/<id>/evidence.yml` | hybrid — authored evidence declarations, re-rendered from the merged artifact |
 | Contracts / schemas | `work/<id>/contracts/…` | authored machine contracts |
 | Governance audit/evidence | (Governance repo) | **record of record — never swept** |
+
+### The hybrid class
+
+The seven lifecycle artifacts are not *authored* in the strict sense, and calling them that
+misleads: each is a **hybrid**. Its stage re-derives the regions the tool owns on every run and
+preserves the regions you own — which is exactly why the interpreter is allowed to overwrite the
+file at all. The write carries the tag `HybridArtifact`, and the tag carries a `MergePolicy`
+naming the sections the stage ensures, re-derives, and appends to. Strictly authored content —
+`contracts/…` — is tagged `AuthoredSource`, which the interpreter refuses to write.
+
+Practically: text you write in a section the policy re-derives will not survive the next run of
+that stage. `docs/reference/authoring-contracts.md` states the per-stage semantics; this table
+and the `fs-gg-sdd-lifecycle` stage table are both pinned to `MergePolicies.byStage` by drift
+guards, so neither can claim an ownership the write tag denies.
 
 > Governance commits evidence *as the audit trail by design*. This taxonomy targets
 > regenerable process noise only; Governance's durable record is explicitly out of scope for

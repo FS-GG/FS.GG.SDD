@@ -1073,7 +1073,7 @@ module internal DiagnosticConstructors =
                   Ownership =
                     match kind with
                     | GeneratedView -> "generated"
-                    | HybridArtifact -> "hybrid"
+                    | HybridArtifact _ -> "hybrid"
                     | _ -> "authored"
                   Operation = operation
                   BeforeDigest = beforeDigest

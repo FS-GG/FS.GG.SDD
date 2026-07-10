@@ -382,7 +382,11 @@ module internal TaskGraphAuthoring =
     //      author-written task — preserved verbatim, its refs filtered to live ids.
     //   4. Dropped (prior, no derived match, no live ref): a genuine orphan whose source is gone.
     // A retired `Stale` status is never carried (it was a tool signal, not authored state).
-    let mergeAuthoredTaskState (liveIds: Set<string>) (prior: WorkTask list) (derived: WorkTask list) : WorkTask list =
+    let private mergeStructuredTaskState
+        (liveIds: Set<string>)
+        (prior: WorkTask list)
+        (derived: WorkTask list)
+        : WorkTask list =
         let priorByTitle = prior |> List.map (fun task -> task.Title, task) |> Map.ofList
         let derivedTitles = derived |> List.map (fun task -> task.Title) |> Set.ofList
 
@@ -516,6 +520,20 @@ module internal TaskGraphAuthoring =
                 Dependencies =
                     task.Dependencies
                     |> List.filter (fun dep -> Set.contains dep.Value survivingIds) })
+
+    /// Dispatch the merge above on the policy `tasks.yml`'s write tag carries (#309). Only
+    /// `StructuredMerge` can carry authored state forward; under a section policy this function has
+    /// no way to preserve `status`/`owner`, so it hands the prior graph back untouched. Mis-tagging
+    /// the write therefore costs a regeneration, never an author's work.
+    let mergeAuthoredTaskState
+        (policy: MergePolicy)
+        (liveIds: Set<string>)
+        (prior: WorkTask list)
+        (derived: WorkTask list)
+        : WorkTask list =
+        match policy with
+        | SectionMerge _ -> prior
+        | StructuredMerge -> mergeStructuredTaskState liveIds prior derived
 
     let taskFrontMatterText request workId (existingFrontMatter: TaskFrontMatter option) =
         // The authored `title` and `publicOrToolFacingImpact` round-trip on a re-run
@@ -1028,7 +1046,8 @@ sources:
                             |> List.map (fun value -> value.ToUpperInvariant())
                             |> Set.ofList
 
-                        let mergedTasks = mergeAuthoredTaskState liveIds existingFacts.Tasks derived
+                        let mergedTasks =
+                            mergeAuthoredTaskState MergePolicies.tasks liveIds existingFacts.Tasks derived
 
                         let acceptedDeferrals =
                             [ clarificationFacts.AcceptedDeferrals

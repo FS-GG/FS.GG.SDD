@@ -97,7 +97,7 @@ module internal HandlersEarly =
                     match specText with
                     | Some text ->
                         [ CreateDirectory($"work/{workId}")
-                          WriteFile(specPath workId, text, HybridArtifact) ]
+                          WriteFile(specPath workId, text, HybridArtifact MergePolicies.specification) ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,
@@ -156,7 +156,7 @@ module internal HandlersEarly =
                     match clarificationText with
                     | Some text ->
                         [ CreateDirectory($"work/{workId}")
-                          WriteFile(clarificationPath workId, text, HybridArtifact) ]
+                          WriteFile(clarificationPath workId, text, HybridArtifact MergePolicies.clarifications) ]
                     | None -> []
 
                 // Rides the blocked-seed channel, so it survives the H-4 gate — and nothing else
@@ -166,7 +166,7 @@ module internal HandlersEarly =
                 // entry to `changedArtifacts` (FR-010 pins the blocked run at one changed artifact).
                 let blockedSeedEffects =
                     match clarificationSeedText with
-                    | Some text -> [ WriteFile(clarificationPath workId, text, HybridArtifact) ]
+                    | Some text -> [ WriteFile(clarificationPath workId, text, HybridArtifact MergePolicies.clarifications) ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,
@@ -242,7 +242,7 @@ module internal HandlersEarly =
                     match checklistText with
                     | Some text ->
                         [ CreateDirectory($"work/{workId}")
-                          WriteFile(checklistPath workId, text, HybridArtifact) ]
+                          WriteFile(checklistPath workId, text, HybridArtifact MergePolicies.checklist) ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,
@@ -327,7 +327,7 @@ module internal HandlersEarly =
                     match planText with
                     | Some text ->
                         [ CreateDirectory($"work/{workId}")
-                          WriteFile(planPath workId, text, HybridArtifact) ]
+                          WriteFile(planPath workId, text, HybridArtifact MergePolicies.plan) ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,
@@ -427,7 +427,7 @@ module internal HandlersEarly =
                     match taskText with
                     | Some text ->
                         [ CreateDirectory($"work/{workId}")
-                          WriteFile(tasksPath workId, text, HybridArtifact) ]
+                          WriteFile(tasksPath workId, text, HybridArtifact MergePolicies.tasks) ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,

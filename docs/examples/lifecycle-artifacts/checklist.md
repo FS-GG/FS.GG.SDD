@@ -13,10 +13,12 @@ publicOrToolFacingImpact: true
 # Example Work Item Checklist
 
 <!--
-A complete, valid `checklist.md` you can copy-adapt. Validated on every build by
-the live checklist parser (ExampleArtifactsContractTests). `status: checklistReady`
-is written automatically by a clean `fsgg-sdd checklist` review — there is no manual
-transition to author. See [[fs-gg-sdd-checklist]] and the coverage-line grammar in
+A complete, valid `checklist.md`, as `fsgg-sdd checklist` leaves it. Validated on every
+build by the live checklist parser (ExampleArtifactsContractTests). Read it to see what
+the stage produces — most of it is tool-owned and re-derived on every run, so it is not
+a file to copy-adapt. `status: checklistReady` is written automatically by a clean
+`fsgg-sdd checklist` review — there is no manual transition to author. See
+[[fs-gg-sdd-checklist]] and the coverage-line grammar in
 docs/reference/authoring-contracts.md.
 -->
 

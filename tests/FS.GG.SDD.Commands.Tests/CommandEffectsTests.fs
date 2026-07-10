@@ -19,7 +19,8 @@ open Xunit
 /// asserted is the property that actually protects the author — **a failed write leaves the prior
 /// bytes intact and no residue** — plus the structural fact that no direct truncating write remains.
 module CommandEffectsTests =
-    let private interpret root effect = CommandEffects.interpret root false effect
+    let private interpret root effect =
+        CommandEffects.interpret root false effect
 
     let private relative = "work/demo/spec.md"
 
@@ -46,7 +47,8 @@ module CommandEffectsTests =
     let ``creates a file that does not yet exist`` () =
         let root = TestSupport.tempDirectory ()
 
-        let result = interpret root (WriteFile(relative, "created", HybridArtifact))
+        let result =
+            interpret root (WriteFile(relative, "created", HybridArtifact MergePolicies.specification))
 
         Assert.True result.Succeeded
         Assert.Equal("created", File.ReadAllText(absolute root))
@@ -57,7 +59,8 @@ module CommandEffectsTests =
         let root = TestSupport.tempDirectory ()
         seed root "old content that is longer than the new"
 
-        let result = interpret root (WriteFile(relative, "new", HybridArtifact))
+        let result =
+            interpret root (WriteFile(relative, "new", HybridArtifact MergePolicies.specification))
 
         Assert.True result.Succeeded
         Assert.Equal("new", File.ReadAllText(absolute root))
@@ -79,7 +82,8 @@ module CommandEffectsTests =
         File.SetLastWriteTimeUtc(absolute root, before.AddDays -1.0)
         let stamped = File.GetLastWriteTimeUtc(absolute root)
 
-        let result = interpret root (WriteFile(relative, "same", HybridArtifact))
+        let result =
+            interpret root (WriteFile(relative, "same", HybridArtifact MergePolicies.specification))
 
         Assert.True result.Succeeded
         Assert.Equal("same", File.ReadAllText(absolute root))
@@ -91,7 +95,10 @@ module CommandEffectsTests =
         let root = TestSupport.tempDirectory ()
 
         let result =
-            CommandEffects.interpret root true (WriteFile(relative, "unwritten", HybridArtifact))
+            CommandEffects.interpret
+                root
+                true
+                (WriteFile(relative, "unwritten", HybridArtifact MergePolicies.specification))
 
         Assert.True result.Succeeded
         Assert.False(File.Exists(absolute root))
@@ -131,7 +138,8 @@ module CommandEffectsTests =
             seed root "before"
             File.SetUnixFileMode(absolute root, enum<UnixFileMode> mode)
 
-            let result = interpret root (WriteFile(relative, "after", HybridArtifact))
+            let result =
+                interpret root (WriteFile(relative, "after", HybridArtifact MergePolicies.specification))
 
             Assert.True result.Succeeded
             Assert.Equal("after", File.ReadAllText(absolute root))
@@ -153,7 +161,8 @@ module CommandEffectsTests =
             File.SetUnixFileMode(directory, UnixFileMode.UserRead ||| UnixFileMode.UserExecute)
 
             try
-                let result = interpret root (WriteFile(relative, "never lands", HybridArtifact))
+                let result =
+                    interpret root (WriteFile(relative, "never lands", HybridArtifact MergePolicies.specification))
 
                 Assert.False result.Succeeded
 
