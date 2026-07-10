@@ -581,6 +581,46 @@ module TasksCommandTests =
 
         Assert.False(TestSupport.existsRelative root tasksPath)
 
+    // #311: `missingDisposition`'s `fix:` names a route the author can actually take. Pin the
+    // route so the text cannot drift from the code: a `Plan Decisions` PD-### line tagged with
+    // the stranded id disposes it. `planSourceIdsInLine` lifts every id on the line into the
+    // decision's `SourceIds`, and `planDecisionTasks` forwards those into the generated task's
+    // `sourceIds`, which is what `allTaskDispositionIds` reads.
+    //
+    // The tag is id-class agnostic — the same alternation matches `AC` and `DEC` alike. The
+    // orphan acceptance scenario above is the case that reaches an author, because every other
+    // required class already has its own generator (a resolved clarify DEC-### gets one from
+    // `clarificationDecisionTasks`, per #162 above).
+    [<Fact>]
+    let ``a plan decision line tagged with a stranded id disposes it`` () =
+        let root = initializedPlanReadyProject ()
+
+        let withOrphanScenario =
+            (TestSupport.readRelative root specPath)
+                .Replace(
+                    "## Acceptance Scenarios\n",
+                    "## Acceptance Scenarios\n- AC-777: Scenario referenced by no requirement.\n"
+                )
+
+        TestSupport.writeRelative root specPath withOrphanScenario
+        // 090 (#163): the spec edit moved the plan's recorded snapshot; re-baseline before tasks.
+        acceptUpstream root
+
+        let withDisposingDecision =
+            (TestSupport.readRelative root planPath)
+                .Replace(
+                    "## Plan Decisions\n",
+                    "## Plan Decisions\n- PD-900 [AC-777] complete: Dispose the orphan acceptance scenario.\n"
+                )
+
+        TestSupport.writeRelative root planPath withDisposingDecision
+
+        let report = TestSupport.runTasks root workId title
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "missingDisposition")
+        Assert.Contains("AC-777", TestSupport.readRelative root tasksPath)
+
     [<Fact>]
     let ``tasks create and rerun complete under local harness budget`` () =
         let root = initializedPlanReadyProject ()

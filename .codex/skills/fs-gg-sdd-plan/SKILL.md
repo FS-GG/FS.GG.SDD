@@ -67,9 +67,26 @@ messages; paddle motion is a pure transition; rendering is the edge effect.
 - Pure `update : Msg -> Model -> Model * Effect list`.
 - `contracts/input-map.md` defines the W/S → paddle-delta mapping.
 
+## Plan Decisions
+- PD-001 [FR-001] [AC-001] complete: Map W/S to paddle deltas through `InputMap`.
+- PD-002 [DEC-003] complete: Key repeat is a held-key model flag, not an event
+  stream — implements the resolved clarify decision.
+- PD-003 [AC-007] complete: Dispose the acceptance scenario no requirement
+  references.
+
 ## Tests
 - Real-fixture transition tests (fail-before/pass-after) for FR-001, FR-002.
 ```
+
+Every id you tag on a `## Plan Decisions` line becomes a `sourceIds` entry on the
+task `tasks` derives for that line. That is how a lifecycle fact acquires a **task
+disposition**, and the tag is id-class agnostic (`FR`/`AC`/`DEC`/…).
+
+Most required facts already have a generator of their own — a resolved `DEC-###`
+gets a disposing task straight from `clarifications.md`, so `PD-002`'s tag above is
+**traceability**, not disposition. The tag is load-bearing exactly when a fact has
+no generator: `PD-003` disposes `AC-007`, an acceptance scenario no requirement
+references, which otherwise blocks `tasks` with `missingDisposition`.
 
 ## Pitfalls
 
@@ -77,6 +94,10 @@ messages; paddle motion is a pure transition; rendering is the edge effect.
   III). Name the signatures in the plan.
 - Authoring `contracts/` content that contradicts the spec — the work model
   surfaces prose-vs-structured conflicts as diagnostics rather than merging them.
+- Answering `missingDisposition` by editing `tasks.yml` or re-running `tasks`.
+  Neither works: `tasks` regenerates `tasks.yml` from the authored sources. Tag
+  the stranded id on a `PD-###` line here instead (or, for an orphan `AC-###`,
+  reference it from a `spec.md` requirement).
 
 ## Next
 

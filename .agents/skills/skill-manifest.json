@@ -60,7 +60,7 @@
     {
       "id": "fs-gg-sdd-plan",
       "scope": "process",
-      "sha256": "a0c201136634403a7cefb79e05195a467d878361070c70aea406b99936ac7695",
+      "sha256": "51a95d10b9412c6b01a962c3344e0245b6436d451b70cf6ab79f3fc88dac1e2f",
       "resolvablePath": ".agents/skills/fs-gg-sdd-plan/SKILL.md",
       "materializes-when": "always"
     },
