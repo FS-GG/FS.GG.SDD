@@ -13,7 +13,8 @@ open Xunit
 ///
 /// Two guarantees:
 ///   1. The copyable example corpus under docs/examples/lifecycle-artifacts/ passes the
-///      REAL gates (charter→analyze), run through the in-process command loop.
+///      REAL gates (charter→ship — the whole cascade, including the evidence gate over the
+///      artifacts it cites), run through the in-process command loop.
 ///   2. Each stage skill's marked example is consistent with that gate-run corpus
 ///      (`contains`/`equals` bind the exact load-bearing bytes; `ref` guarantees the
 ///      corpus file it points at is gate-clean).
@@ -123,9 +124,8 @@ module SkillGateDoctestTests =
 
                 match m.Mode with
                 | "ref" -> () // pointer only: the corpus file exists and is parser-validated by
-                // ExampleArtifactsContractTests; charter/spec/clarifications/tasks are
-                // additionally gate-run below (evidence is validated by the parser + the
-                // deferral gate tests, not the charter→analyze chain).
+                // ExampleArtifactsContractTests, and every authored corpus artifact — evidence.yml
+                // included — is additionally gate-run below through the full charter→ship cascade.
                 | "equals" ->
                     Assert.True(
                         (corpusText = block),
@@ -138,19 +138,41 @@ module SkillGateDoctestTests =
                     )
                 | other -> failwith $"{m.Skill}: unknown example marker mode '{other}'."
 
-    // FR-001/002/003: the corpus authored sources pass the REAL gates through analyze.
+    /// The corpus files that are AUTHORED lifecycle artifacts, seeded into `work/<id>/`.
+    /// checklist.md and plan.md are generated VIEWS the commands regenerate from these, so they
+    /// are intentionally not seeded — the gates produce them fresh with current digests.
+    let private authoredCorpusArtifacts =
+        set [ "charter.md"; "spec.md"; "clarifications.md"; "tasks.yml"; "evidence.yml"; "checklist.md"; "plan.md" ]
+
+    // FR-001/002/003: the corpus authored sources pass the REAL gates — the WHOLE cascade the
+    // corpus claims to demonstrate, not a prefix of it.
+    //
+    // This used to stop at `analyze`, which meant the corpus `evidence.yml` was seeded into the
+    // fixture and then never gated: analyze (stage 7) does not consume evidence (stage 8), so the
+    // only guarantee on the artifact an author is most likely to copy was "it parses" (#361). That
+    // is how #355 survived — the canonical evidence.yml cited artifacts that did not exist, green,
+    // for as long as it took someone to read the test. A parser cannot catch that; the gate can,
+    // and the gate was never run.
     [<Fact>]
-    let ``Corpus authored sources pass the real gates through analyze`` () =
+    let ``Corpus authored sources pass the real gates through ship`` () =
         let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         let workId = "001-example"
         let title = "Example Work Item"
 
-        // Seed the pure AUTHORED corpus artifacts (charter/spec/clarifications/tasks/evidence).
-        // checklist.md and plan.md are generated VIEWS the commands regenerate from these, so
-        // they are intentionally not seeded — the gates produce them fresh with current digests.
         for f in [ "charter.md"; "spec.md"; "clarifications.md"; "tasks.yml"; "evidence.yml" ] do
             TestSupport.writeRelative root $"work/{workId}/{f}" (File.ReadAllText(Path.Combine(corpusDir, f)))
+
+        // Seed the artifacts the corpus evidence.yml CITES (docs/examples/.../tests/ExampleApp.Tests/*).
+        // #349's existence check resolves `artifacts:` against the WORKSPACE ROOT, so a fixture that
+        // omitted them would fail `evidence` for a reason the corpus is not guilty of. Discovered from
+        // the corpus rather than listed here, so a newly-cited artifact cannot silently drift out of
+        // the check — which is the exact class of hole this test exists to close.
+        for file in Directory.EnumerateFiles(corpusDir, "*", SearchOption.AllDirectories) do
+            let rel = Path.GetRelativePath(corpusDir, file).Replace('\\', '/')
+
+            if not (authoredCorpusArtifacts.Contains rel) then
+                TestSupport.writeRelative root rel (File.ReadAllText file)
 
         let assertClean label (report: CommandReport) =
             let errs = errorIds report
@@ -165,6 +187,9 @@ module SkillGateDoctestTests =
         assertClean "plan" (TestSupport.runPlan root workId title)
         assertClean "tasks" (TestSupport.runTasks root workId title)
         assertClean "analyze" (TestSupport.runAnalyze root workId title)
+        assertClean "evidence" (TestSupport.runEvidence root workId title)
+        assertClean "verify" (TestSupport.runVerify root workId title)
+        assertClean "ship" (TestSupport.runShip root workId title)
 
     // #142: the evidence gate's deferral rule — a COMPLETE four-field deferral is accepted;
     // one MISSING a field blocks with evidence.missingDeferralRationale. The evidence skill
