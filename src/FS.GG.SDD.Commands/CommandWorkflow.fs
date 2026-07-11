@@ -83,13 +83,18 @@ module CommandWorkflow =
                 else
                     let candidateReads =
                         duplicateCandidateReadEffects workId model
-                        // FS.GG.SDD#349: probe every artifact a satisfying evidence declaration cites,
-                        // for the three stages that read evidence. The paths only become known once
-                        // `evidence.yml` has been read, so they join the existing second wave.
+                        // FS.GG.SDD#349: probe every artifact a satisfying evidence declaration cites.
+                        // The paths only become known once `evidence.yml` has been read, so they join
+                        // the existing second wave.
+                        //
+                        // `Evidence` and `Verify` only: they are the two stages that evaluate evidence
+                        // (the gate + the `ED-`/`TD-` cascades). `Ship` re-reads none of it — it
+                        // aggregates the blocking findings already recorded in `verify.json` — so
+                        // probing there would read every cited artifact's bytes off disk for a verdict
+                        // nothing consults.
                         @ (match model.Request.Command with
                            | Evidence
-                           | Verify
-                           | Ship -> citedArtifactReadEffects workId model
+                           | Verify -> citedArtifactReadEffects workId model
                            | _ -> [])
 
                     match candidateReads with

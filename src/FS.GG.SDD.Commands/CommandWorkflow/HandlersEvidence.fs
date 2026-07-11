@@ -105,6 +105,16 @@ module internal HandlersEvidence =
             | Error diagnostics -> None, diagnostics, Some snapshot.Text)
         |> Option.defaultValue (None, [], None)
 
+    let parseInputEvidence workId (request: CommandRequest) : EvidenceArtifact option * Diagnostic list =
+        let path = evidencePath workId
+
+        request.InputText
+        |> Option.map (fun text ->
+            match parseEvidenceArtifactForCommand path text with
+            | Ok(artifact, diagnostics) -> Some artifact, diagnostics
+            | Error diagnostics -> None, diagnostics)
+        |> Option.defaultValue (None, [])
+
     /// FS.GG.SDD#349 (FR-003). The cited paths are *data* — they are not known until `evidence.yml`
     /// has been read — so the probe cannot be planned in the first read wave. This is the same
     /// two-phase shape as `duplicateCandidateReadEffects`: once the first wave has landed, the pure
@@ -118,16 +128,23 @@ module internal HandlersEvidence =
     let citedArtifactReadEffects workId (model: CommandModel) : CommandEffect list =
         let alreadyPlanned = plannedReadPaths model |> Set.ofList
 
-        let cited =
-            match parseExistingEvidence workId model with
-            | Some artifact, _, _ ->
-                artifact.Evidence
-                // `exists` is `fun _ -> false` here: we are collecting *candidates to probe*, not
-                // deciding absence. The real verdict is taken in the gate, against the probe results.
-                |> List.collect (missingCitedArtifacts (fun _ -> false))
-            | _ -> []
+        // `exists` is `fun _ -> false` throughout: we are collecting *candidates to probe*, not
+        // deciding absence. The real verdict is taken in the gate, against the probe results.
+        let citedBy (artifact: EvidenceArtifact option) =
+            match artifact with
+            | Some artifact -> artifact.Evidence |> List.collect (missingCitedArtifacts (fun _ -> false))
+            | None -> []
 
-        cited
+        // BOTH sources, because the gate validates `merged` (existing ⊕ input), not the on-disk
+        // artifact alone. Probing only what is on disk would leave an input-supplied declaration
+        // unprobed — and an unprobed path is treated as present, so the gate would fail OPEN on
+        // exactly the authoring route it is meant to police. `--input` is not currently accepted for
+        // `evidence` at the CLI, but `computeEvidencePlan` merges and validates it, so any consumer
+        // of the Commands library reaches it. A gate against fail-open must not itself fail open.
+        let existing, _, _ = parseExistingEvidence workId model
+        let input, _ = parseInputEvidence workId model.Request
+
+        citedBy existing @ citedBy input
         |> List.map normalizeRelativePath
         |> List.filter (fun path -> not (Set.contains path alreadyPlanned))
         |> List.distinct
@@ -144,16 +161,6 @@ module internal HandlersEvidence =
             (snapshot path model).IsSome
         else
             true
-
-    let parseInputEvidence workId (request: CommandRequest) : EvidenceArtifact option * Diagnostic list =
-        let path = evidencePath workId
-
-        request.InputText
-        |> Option.map (fun text ->
-            match parseEvidenceArtifactForCommand path text with
-            | Ok(artifact, diagnostics) -> Some artifact, diagnostics
-            | Error diagnostics -> None, diagnostics)
-        |> Option.defaultValue (None, [])
 
     let evidenceSourceSnapshot label path text : EvidenceSourceSnapshot =
         { Label = label

@@ -1308,6 +1308,47 @@ tasks:
 
         Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
 
+    /// FR-001: the gate validates `merged` (on-disk ⊕ `InputText`), so the probe must see BOTH.
+    ///
+    /// Probing only the on-disk artifact left an input-supplied declaration unprobed — and an
+    /// unprobed path is treated as present — so the gate failed OPEN on exactly the authoring route
+    /// it polices. Caught in review of this feature; this is its regression leg. A gate against
+    /// fail-open must not itself fail open.
+    /// Mirrors `undisclosedSyntheticInput` above — the established shape for an InputText-supplied
+    /// declaration that merges cleanly. It *adds* a declaration rather than overwriting an authored
+    /// one, which the merge policy would refuse first as `evidence.unsafeUpdate`.
+    let phantomArtifactInput =
+        """schemaVersion: 1
+workId: 011-evidence-command
+stage: evidence
+status: evidenceReady
+evidence:
+  - id: EV999
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: []
+    obligationRefs: [EV001]
+    artifacts: [tests/PhantomSuppliedViaInput.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+"""
+
+    [<Fact>]
+    let ``evidence blocks a phantom cited path supplied through InputText, not just on disk`` () =
+        let root = initializedAnalyzedProject ()
+
+        let report =
+            TestSupport.runRequest
+                { TestSupport.evidenceRequest root workId title with
+                    InputText = Some phantomArtifactInput }
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
+
     /// FR-006 / US3: a deferral may legitimately cite an artifact that does not exist yet — that is
     /// what deferring *means*. Blocking it would teach authors to stop deferring, which is the
     /// failure mode #266 exists to cure, not to cause. Only `pass` ∧ ¬`synthetic` is held to the rule.
