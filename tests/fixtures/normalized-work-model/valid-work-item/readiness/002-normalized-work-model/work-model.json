@@ -140,6 +140,9 @@
       "id": "DEC-001",
       "title": "Normalize from FileSnapshot values and return generated output.",
       "decision": "Normalize from FileSnapshot values and return generated output.",
+      "requirementRefs": [],
+      "storyRefs": [],
+      "acceptanceRefs": [],
       "source": "work/002-normalized-work-model/spec.md",
       "sourceLocation": {
         "line": 22,
@@ -154,6 +157,9 @@
       "id": "DEC-002",
       "title": "Structured graph data remains execution authority.",
       "decision": "Structured graph data remains execution authority.",
+      "requirementRefs": [],
+      "storyRefs": [],
+      "acceptanceRefs": [],
       "source": "work/002-normalized-work-model/spec.md",
       "sourceLocation": {
         "line": 23,
@@ -270,7 +276,7 @@
       "schemaVersion": 1,
       "generator": {
         "id": "FS.GG.SDD.Artifacts",
-        "version": "0.9.0"
+        "version": "0.10.0"
       },
       "sources": [
         {
@@ -324,24 +330,12 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "b02165fe47005b661737bb2b6abd06ad165b4caaeee7eab355994ddde7f42ff8"
+        "value": "25763512b1d966a44d1aab74a90f6fb1e221065be9af022b96caea6354d46e30"
       },
       "currency": "current"
     }
   ],
-  "diagnostics": [
-    {
-      "id": "staleGeneratedView",
-      "severity": "error",
-      "artifact": "readiness/002-normalized-work-model/work-model.json",
-      "location": null,
-      "message": "Generated view metadata no longer matches current sources.",
-      "correction": "Regenerate the view from current source digests and generator version.",
-      "relatedIds": [
-        "readiness/002-normalized-work-model/work-model.json"
-      ]
-    }
-  ],
+  "diagnostics": [],
   "governanceBoundaries": [
     {
       "path": ".fsgg/capabilities.yml",
