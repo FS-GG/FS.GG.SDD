@@ -242,7 +242,13 @@ module TestSupport =
     // #310 `tasks` folds that PD into the requirement task rather than deriving a duplicate task
     // for it. A sixth entry would reference a task the graph no longer contains and every
     // downstream stage would block on `evidence.unknownReference`.
-    let passingTaskEvidence = TestShared.EvidenceLadder.passingTaskEvidence 5
+    /// Bound once: the declaration and the artifacts it cites must be built from the SAME count.
+    /// Two literals would let the fixture cite five proving tests while writing four — a
+    /// cite-vs-write divergence, which is the exact defect #355 exists to remove.
+    let ladderTaskCount = 5
+
+    let passingTaskEvidence =
+        TestShared.EvidenceLadder.passingTaskEvidence ladderTaskCount
 
     /// FS.GG.SDD#355: writes the evidence AND the artifacts it cites, together.
     ///
@@ -251,7 +257,7 @@ module TestSupport =
     /// item exists to remove. Every caller goes through here, which is why none of them had to change.
     let writePassingTaskEvidenceFor root workId =
         writeRelative root $"work/{workId}/evidence.yml" passingTaskEvidence
-        TestShared.EvidenceLadder.writeArtifacts root 5
+        TestShared.EvidenceLadder.writeArtifacts root ladderTaskCount
 
     let countOccurrences (needle: string) (haystack: string) =
         if needle = "" then

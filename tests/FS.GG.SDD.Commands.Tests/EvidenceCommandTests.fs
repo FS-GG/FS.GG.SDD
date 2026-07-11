@@ -1486,7 +1486,7 @@ evidence:
     let ``the canonical passing evidence fixture cites an artifact for every obligation`` () =
         let text = TestSupport.passingTaskEvidence
 
-        for taskId in TestShared.EvidenceLadder.taskIds 5 do
+        for taskId in TestShared.EvidenceLadder.taskIds TestSupport.ladderTaskCount do
             Assert.Contains(TestShared.EvidenceLadder.artifactPath taskId, text)
 
     /// ...and every cited artifact is actually written into the workspace, so the citation resolves.
@@ -1497,7 +1497,7 @@ evidence:
 
         TestSupport.writePassingTaskEvidenceFor root workId
 
-        for path in TestShared.EvidenceLadder.artifactPaths 5 do
+        for path in TestShared.EvidenceLadder.artifactPaths TestSupport.ladderTaskCount do
             Assert.True(TestSupport.existsRelative root path, $"fixture cites {path} but never wrote it")
 
     /// The end-to-end proof, and the reason #355 was filed: drive the canonical fixture through the
