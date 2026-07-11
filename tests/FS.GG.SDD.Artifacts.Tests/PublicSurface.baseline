@@ -35,6 +35,7 @@ FS.GG.SDD.Artifacts.Diagnostics.doctorDriftDetected
 FS.GG.SDD.Artifacts.Diagnostics.duplicateIdentifier
 FS.GG.SDD.Artifacts.Diagnostics.futureSchemaVersion
 FS.GG.SDD.Artifacts.Diagnostics.hasBlocking
+FS.GG.SDD.Artifacts.Diagnostics.malformedArtifactPath
 FS.GG.SDD.Artifacts.Diagnostics.malformedDigest
 FS.GG.SDD.Artifacts.Diagnostics.malformedReference
 FS.GG.SDD.Artifacts.Diagnostics.malformedSchemaVersion
@@ -81,6 +82,7 @@ FS.GG.SDD.Artifacts.Diagnostics.upgradeSelfUpdateFailed
 FS.GG.SDD.Artifacts.Diagnostics.upgradeStepFailed
 FS.GG.SDD.Artifacts.Diagnostics.workModelInconsistent
 FS.GG.SDD.Artifacts.Evidence.citedArtifactPaths
+FS.GG.SDD.Artifacts.Evidence.citedPathIsContained
 FS.GG.SDD.Artifacts.Evidence.evidenceKindSourceValue
 FS.GG.SDD.Artifacts.Evidence.isVisualInspectionTagged
 FS.GG.SDD.Artifacts.Evidence.missingCitedArtifacts

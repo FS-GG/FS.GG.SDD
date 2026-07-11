@@ -410,3 +410,78 @@ lifecycleNotes:
             |> List.sort
 
         Assert.Empty(missing)
+
+    // FS.GG.SDD#359 / #365 — the containment rule for CITED paths, at the parse layer.
+    //
+    // Before: `artifacts:` went through `Internal.artifact`, which RAISED on a `..`. The
+    // ArgumentException escaped the pure parse (and, in the CLI, the pure `update`), so the author's
+    // own bad path was reported to them as a tool defect. These tests are the failure leg: the parse
+    // must be TOTAL and must NAME the offending path.
+    let private diagnosticsOf text =
+        match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+        | Ok artifact -> artifact.Diagnostics
+        | Error diagnostics -> diagnostics
+
+    let private citedPathYaml field value =
+        match field with
+        | "artifacts" ->
+            $"schemaVersion: 1\nevidence:\n  - id: EV001\n    kind: verification\n    subject:\n      type: task\n      id: T001\n    result: pass\n    synthetic: false\n    artifacts: [{value}]\n"
+        | _ ->
+            $"schemaVersion: 1\nevidence:\n  - id: EV001\n    kind: verification\n    subject:\n      type: task\n      id: T001\n    result: pass\n    synthetic: false\n    sourceRefs:\n      - kind: verification\n        path: {value}\n"
+
+    [<Theory>]
+    [<InlineData("artifacts")>]
+    [<InlineData("sourceRefs")>]
+    let ``a '..' in a cited path is a parse diagnostic, not an exception`` (field: string) =
+        let escaping = "../../../etc/passwd"
+
+        // The assertion is as much that this does not THROW as that it diagnoses.
+        let diagnostics = diagnosticsOf (citedPathYaml field escaping)
+
+        let malformed = diagnostics |> List.filter (fun d -> d.Id = "malformedArtifactPath")
+
+        Assert.NotEmpty malformed
+
+        // Malformed USER INPUT, never a tool defect (Constitution VIII) — and it names the path,
+        // because "which path is wrong" is the one fact the author needs.
+        Assert.All(
+            malformed,
+            fun d ->
+                Assert.False d.IsToolDefect
+                Assert.Equal(Diagnostics.DiagnosticError, d.Severity)
+                Assert.Contains(escaping, d.RelatedIds)
+        )
+
+    [<Fact>]
+    let ``an escaping sourceRefs path is never offered to the existence probe`` () =
+        // FS.GG.SDD#365: `citedArtifactPaths` feeds the #349 existence gate. An escaping path must be
+        // excluded from it, so no probe is ever PLANNED for a path outside the workspace — otherwise
+        // an out-of-repo file that happens to exist (/etc/passwd) discharges the gate.
+        let declarations =
+            match
+                parseEvidenceArtifact
+                    { Path = evidencePath
+                      Text = citedPathYaml "sourceRefs" "../../../../../../../../etc/passwd" }
+            with
+            | Ok artifact -> artifact.Evidence
+            | Error diagnostics -> failwith $"expected a parse with diagnostics, got %A{diagnostics}"
+
+        let cited = declarations |> List.collect citedArtifactPaths
+
+        Assert.DoesNotContain("../../../../../../../../etc/passwd", cited)
+        Assert.All(cited, fun path -> Assert.True(citedPathIsContained path))
+
+    [<Fact>]
+    let ``a contained cited path still parses and is still probed`` () =
+        // The green path is unaffected: a legal repository-relative path survives both buckets.
+        let text = citedPathYaml "artifacts" "evidence/frame.png"
+        let diagnostics = diagnosticsOf text
+
+        Assert.DoesNotContain(diagnostics, fun d -> d.Id = "malformedArtifactPath")
+
+        let cited =
+            match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+            | Ok artifact -> artifact.Evidence |> List.collect citedArtifactPaths
+            | Error diagnostics -> failwith $"expected the contained path to parse: %A{diagnostics}"
+
+        Assert.Contains("evidence/frame.png", cited)

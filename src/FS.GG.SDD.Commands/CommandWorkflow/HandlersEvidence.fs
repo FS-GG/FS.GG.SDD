@@ -84,6 +84,10 @@ module internal HandlersEvidence =
         |> List.map (fun diagnostic ->
             match diagnostic.Id, diagnostic.RelatedIds with
             | "duplicateIdentifier", id :: _ -> duplicateEvidenceId path id
+            // #359/#365: a cited path that escapes the repository. Namespaced into the `evidence.*`
+            // vocabulary next to its sibling `evidence.artifactNotFound`, carrying the offending
+            // path so the author is told WHICH path is theirs to fix.
+            | "malformedArtifactPath", values -> malformedCitedArtifactPath path values
             | "workModelInconsistent", _ -> malformedEvidenceArtifact path diagnostic.Message
             | "malformedSchemaVersion", _ -> malformedEvidenceArtifact path diagnostic.Message
             | "unsupportedSchemaVersion", _ -> malformedEvidenceArtifact path diagnostic.Message

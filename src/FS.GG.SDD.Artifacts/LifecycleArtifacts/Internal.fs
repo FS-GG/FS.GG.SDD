@@ -21,6 +21,18 @@ module internal Internal =
         | Ok value -> value
         | Error message -> invalidArg (nameof path) message
 
+    /// The total counterpart to `artifact`, for paths that come from AUTHORED YAML rather than from
+    /// the tool (FS.GG.SDD#359).
+    ///
+    /// `artifact` raises on a rejected path. That is defensible for a *tool-constructed* path
+    /// (`work/<id>/spec.md` — a `..` there is a genuine invariant violation, i.e. a real tool
+    /// defect) and catastrophic for an *authored* one: the exception escapes the pure `update`, the
+    /// lifecycle facts are never assembled, and the author is told their own bad path is a bug in
+    /// SDD — inverting Constitution VIII. Authored paths go through this instead, and the caller
+    /// reports the `Error` as the malformed user input it is.
+    let tryArtifact path kind owner requiredBySdd =
+        FS.GG.SDD.Artifacts.ArtifactRef.create (normalizePath path) kind owner requiredBySdd
+
     let sourceArtifact path kind = artifact path kind Sdd true
 
     /// The three distinguishable outcomes of loading an authored YAML document.

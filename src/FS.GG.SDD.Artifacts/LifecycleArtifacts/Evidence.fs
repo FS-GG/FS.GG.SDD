@@ -149,6 +149,32 @@ module Evidence =
         tags
         |> List.exists (fun tag -> String.Equals(tag, visualInspectionSkill, StringComparison.OrdinalIgnoreCase))
 
+    let private evidenceArtifactRef path =
+        tryArtifact path (ArtifactKind.Other "evidenceArtifact") ArtifactOwner.Sdd false
+
+    /// The raw authored `sourceRefs[].path` scalars of one evidence mapping. Read from the YAML
+    /// rather than from the parsed declaration so a malformed path can be named back to the author.
+    let private sourceRefPaths mapping =
+        trySequenceAt [ "sourceRefs" ] mapping
+        |> Option.map (fun sequence ->
+            sequence.Children
+            |> Seq.choose tryMapping
+            |> Seq.choose (fun node -> tryScalarAt [ "path" ] node)
+            |> List.ofSeq)
+        |> Option.defaultValue []
+
+    /// The one lexical containment rule for every CITED path — `artifacts:` and `sourceRefs[].path`
+    /// alike. `ArtifactRef.create` already encodes it (repository-relative, no `..`); this states it
+    /// once, totally, so it can be *reported* rather than thrown or skipped.
+    ///
+    /// Both cited buckets needed it and neither had it:
+    ///   * `artifacts:` reached the rule only by RAISING out of the pure core, so a `..` was
+    ///     reported to the author as a tool defect (#359);
+    ///   * `sourceRefs[].path` never reached the rule at all — it is a raw scalar — so a `..` chain
+    ///     escaped the workspace and let a file OUTSIDE the repository discharge the #349
+    ///     cited-artifact gate (#365). `citedArtifactPaths` reads both buckets; only one was checked.
+    let citedPathIsContained (path: string) = evidenceArtifactRef path |> Result.isOk
+
     /// Does this declaration name a rendered artifact — an `artifacts:` entry, or a `sourceRefs[]`
     /// entry carrying a `path` or a `uri`? Blank strings do not count (FS.GG.SDD#306, FR-004).
     let namesRenderedArtifact (declaration: EvidenceDeclaration) =
@@ -183,12 +209,17 @@ module Evidence =
     let citedArtifactPaths (declaration: EvidenceDeclaration) =
         let named (value: string) = not (String.IsNullOrWhiteSpace value)
 
+        // `ArtifactRefs` are already contained by construction (they only exist if `ArtifactRef.create`
+        // accepted them). `SourceRefs[].path` is a raw authored scalar, so it is filtered by the same
+        // rule HERE, before the caller plans a probe for it: an escaping path is malformed input and is
+        // blocked by `malformedArtifactPath`, never statted (#365 — the probe used to resolve `..`
+        // right out of the workspace, so an out-of-repo file could discharge this very gate).
         [ for ref in declaration.ArtifactRefs do
               if named ref.Path then
                   ref.Path
           for source in declaration.SourceRefs do
               match source.Path with
-              | Some path when named path -> path
+              | Some path when named path && citedPathIsContained path -> path
               | _ -> () ]
         |> List.distinct
         |> List.sort
@@ -208,8 +239,9 @@ module Evidence =
             citedArtifactPaths declaration |> List.filter (exists >> not)
 
     let parseArtifactRefs values =
-        values
-        |> List.map (fun path -> artifact path (ArtifactKind.Other "evidenceArtifact") ArtifactOwner.Sdd false)
+        // Total: a rejected path is DROPPED here rather than raised, and is reported as malformed
+        // user input from the raw YAML by `parseEvidenceArtifact` — so nothing is silently lost.
+        values |> List.choose (evidenceArtifactRef >> Result.toOption)
 
     let parseEvidenceSourceSnapshots root =
         trySequenceAt [ "sourceSnapshots" ] root
@@ -463,6 +495,18 @@ module Evidence =
                             match tryScalarAt [ "id" ] mapping with
                             | None -> None, []
                             | Some rawId ->
+                                // Both cited-path buckets, read RAW from the YAML — `artifacts:` because
+                                // the codec drops what it cannot contain, and `sourceRefs[].path`
+                                // because it is never turned into an `ArtifactRef` at all. Reading the
+                                // authored text is what lets the malformed value be NAMED back to the
+                                // author instead of vanishing (#359/#365).
+                                let citedPathDiagnostics =
+                                    [ yield! scalarList [ "artifacts" ] mapping; yield! sourceRefPaths mapping ]
+                                    |> List.filter (fun path -> not (String.IsNullOrWhiteSpace path))
+                                    |> List.filter (citedPathIsContained >> not)
+                                    |> List.distinct
+                                    |> List.map (Diagnostics.malformedArtifactPath artifact)
+
                                 let refDiagnostics =
                                     [ scalarList [ "taskRefs" ] mapping
                                       |> malformedRefs Identifiers.createTaskId
@@ -472,7 +516,8 @@ module Evidence =
                                       |> List.map (Diagnostics.malformedReference artifact "requirement")
                                       scalarList [ "clarificationDecisionRefs" ] mapping
                                       |> malformedRefs Identifiers.createDecisionId
-                                      |> List.map (Diagnostics.malformedReference artifact "decision") ]
+                                      |> List.map (Diagnostics.malformedReference artifact "decision")
+                                      citedPathDiagnostics ]
                                     |> List.concat
 
                                 match Identifiers.createEvidenceId rawId with

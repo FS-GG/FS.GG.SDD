@@ -734,6 +734,23 @@ module internal DiagnosticConstructors =
             "Produce the cited artifact, correct the path, or stop claiming a pass — a cited path that is not on disk proves nothing."
             paths
 
+    /// FS.GG.SDD#359 / #365. The sibling of `artifactNotFound`, one step earlier: that path is legal
+    /// but absent; this path is not legal at all. It is the author's typo, not a tool defect, and it
+    /// is refused BEFORE any filesystem probe is planned for it — a `..` chain used to be resolved
+    /// straight out of the workspace, so a file outside the repository could discharge the gate.
+    let malformedCitedArtifactPath path values =
+        // Name the offending path IN THE MESSAGE, not only in relatedIds. #359's whole complaint is
+        // that the author was told to go file a bug against SDD and never told which of their paths
+        // was wrong — so the text projection has to carry the one fact they need to act.
+        let named = values |> List.map (fun value -> $"'{value}'") |> String.concat ", "
+
+        errorDiagnostic
+            "evidence.malformedArtifactPath"
+            (Some path)
+            $"Evidence cites an artifact path that is not repository-relative: {named}."
+            "Cite artifacts by a repository-relative path with no '..' segment. A path outside the workspace proves nothing, and is refused before it is ever read."
+            values
+
     let missingRequiredSkill path ids =
         errorDiagnostic
             "evidence.missingRequiredSkill"
