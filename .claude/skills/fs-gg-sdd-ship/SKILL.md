@@ -11,10 +11,10 @@ ship-ready. It authors **no** `work/<id>/` source. It is the terminal lifecycle
 command — there is no successor inside SDD.
 
 **Read the worked example first.** `ship` authors nothing — it aggregates what the earlier
-stages produced. `docs/examples/lifecycle-artifacts/` is a complete, gate-clean instance of
-that whole cascade, run verbatim through the real gates by the skill↔gate doctest on every
-build. When `ship` reports not-ready, the example is the reference for what a ship-ready
-set of artifacts looks like.
+stages produced. `docs/examples/lifecycle-artifacts/` is a complete, machine-checked instance
+of that whole cascade: parser-validated on every build, and driven through the real `charter`
+→ `analyze` gates by the skill↔gate doctest. When `ship` reports not-ready, it is the
+reference for what a coherent set of artifacts looks like.
 
 ## Command
 

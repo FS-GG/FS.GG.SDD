@@ -10,11 +10,10 @@ graph, the evidence dispositions, test and skill obligations, and lifecycle stag
 state, and emits a readiness view. It authors **no** `work/<id>/` source; it (with
 `ship`) is also the point at which the normalized `work-model.json` is built.
 
-**Read the worked example first.** `verify` authors nothing, but what it evaluates is the
-`tasks.yml` and `evidence.yml` you wrote — and `docs/examples/lifecycle-artifacts/` is a
-complete, gate-clean instance of both. The skill↔gate doctest runs that corpus verbatim
-through the real gates on every build, so when `verify` reports an obligation unsatisfied,
-the example is the fastest way to see what a satisfying declaration actually looks like.
+**Read the worked example first.** `verify` authors nothing; what it evaluates is the
+`tasks.yml` and `evidence.yml` you wrote — and `docs/examples/lifecycle-artifacts/` holds a
+complete, machine-checked instance of both. When `verify` reports an obligation unsatisfied,
+that corpus is the fastest reference for what a satisfying declaration actually looks like.
 
 ## Command
 

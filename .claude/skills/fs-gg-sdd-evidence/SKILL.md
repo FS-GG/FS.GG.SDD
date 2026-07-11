@@ -11,10 +11,10 @@ contracts: a subtly wrong declaration leaves an obligation unsatisfied even thou
 the work is done.
 
 **Read the worked example first.** `docs/examples/lifecycle-artifacts/evidence.yml` is a
-complete, gate-clean `evidence.yml`. It is not illustrative prose: the skill↔gate doctest
-runs the corpus verbatim through the real gates on every build, so a form copied from it
-cannot be one the gate rejects. Where the prose below and the example disagree, the
-example is the authority.
+complete, worked `evidence.yml`, machine-checked rather than illustrative: it is
+parser-validated on every build, and the deferral rule it demonstrates is pinned directly by
+the evidence gate tests. (It sits outside the `charter` → `analyze` gate chain.) Where the
+prose below and the example disagree, the example is the authority.
 
 ## Command
 

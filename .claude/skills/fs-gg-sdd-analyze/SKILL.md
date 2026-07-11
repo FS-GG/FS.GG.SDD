@@ -11,10 +11,10 @@ inconsistencies and readiness, and emits a generated view. It authors **no**
 `work/<id>/` source — it aggregates.
 
 **Read the worked example first.** `analyze` authors nothing, but it reads the whole
-authored cascade — and `docs/examples/lifecycle-artifacts/` is a complete, gate-clean
-instance of every artifact it consumes. The skill↔gate doctest runs that corpus verbatim
-through the real gates (charter→analyze) on every build, so it is the fastest way to see
-the shape `analyze` expects to find — and what a clean run looks like.
+authored cascade — and `docs/examples/lifecycle-artifacts/` is a complete, worked instance of
+it. The skill↔gate doctest drives that corpus through the real gates (`charter` →
+`analyze`) on every build, so it is both the shape `analyze` expects to find and a
+known-clean run.
 
 After `analyze` reports implementation-ready, you **implement** (write the code —
 there is no `fsgg-sdd implement` command), then record `evidence`.

@@ -10,10 +10,10 @@ evidence, and ship audit. It establishes the **stable ids** (`FR-###`, `AC-###`,
 `US-###`) that every later stage references, so getting the ids right here matters
 more than anywhere else.
 
-**Read the worked example first.** `docs/examples/lifecycle-artifacts/spec.md` is a
-complete, gate-clean `spec.md`. It is not illustrative prose: the skill↔gate doctest
-runs the corpus verbatim through the real gates on every build, so a form copied from it
-cannot be one the gate rejects. Where the prose below and the example disagree, the
+**Read the worked example first.** `docs/examples/lifecycle-artifacts/spec.md` is a complete,
+worked `spec.md`, and it is machine-checked rather than illustrative: on every build the
+skill↔gate doctest seeds it and drives the real gates (`charter` → `analyze`) over it,
+failing if it does not come out clean. Where the prose below and the example disagree, the
 example is the authority.
 
 ## Command
