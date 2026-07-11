@@ -152,6 +152,7 @@ module ValidationRunner =
         | Upgrade -> 0
         | Lint -> 0
         | Surface -> 0
+        | Help -> 0
 
     /// Build a disposable project at the requested state by driving the real
     /// CommandWorkflow over a temp dir (matrix-runner C-1). `withEvidence = false`
@@ -589,6 +590,7 @@ module ValidationRunner =
             | Upgrade -> "upgrade"
             | Lint -> "lint"
             | Surface -> "surface"
+            | Help -> "help"
 
         // `scaffold` (and, feature 053, `doctor`/`upgrade`) are deliberately excluded from
         // determinism-matrix reconciliation: `scaffold`/`upgrade` spawn an external process

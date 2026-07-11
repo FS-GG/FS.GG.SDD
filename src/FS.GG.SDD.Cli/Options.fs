@@ -51,6 +51,8 @@ module Options =
         // `lint` takes its artifact as a positional; `--explain` is global.
         | Lint -> []
         | Surface -> [ flag "--check"; flag "--update"; valued "--param" ]
+        // `Help` is a report scope, not an invocable command — argv never routes to it.
+        | Help -> []
 
     let recognized (command: SddCommand) =
         globalOptions @ commandOptions command

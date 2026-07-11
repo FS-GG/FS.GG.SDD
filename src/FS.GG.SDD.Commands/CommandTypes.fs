@@ -25,6 +25,10 @@ module CommandTypes =
         | Upgrade
         | Lint
         | Surface
+        /// The scope a `--help` report is stamped with. Not an invocable command — `parseCommand`
+        /// never yields it, so `fsgg-sdd help` stays an unknown command. It exists so a help
+        /// report can carry its own identity instead of masquerading as `init` (FS.GG.SDD#352).
+        | Help
 
     type OutputFormat =
         | Json
@@ -783,6 +787,7 @@ module CommandTypes =
         | Upgrade -> "upgrade"
         | Lint -> "lint"
         | Surface -> "surface"
+        | Help -> "help"
 
     let commandStage (command: SddCommand) =
         match command with
@@ -932,6 +937,7 @@ module CommandTypes =
         | Upgrade -> None
         | Lint -> None
         | Surface -> None
+        | Help -> None
 
     let effectPath (effect: CommandEffect) =
         match effect with

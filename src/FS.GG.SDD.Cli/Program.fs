@@ -168,7 +168,9 @@ let private helpRequest command format =
       Title = None
       InputText = None
       OutputFormat = format
-      DryRun = true
+      // A help request is a QUERY, not a dry run: nothing was planned and then withheld, so
+      // stamping `dryRun: true` describes a run that never happened (FS.GG.SDD#352).
+      DryRun = false
       GeneratorVersion = SchemaVersionModule.currentGeneratorVersion ()
       Provider = None
       Parameters = []
@@ -190,7 +192,9 @@ let private emitHelp format forceColor (envelopeCommand: SddCommand) (summary: H
     exitCodeForReport report
 
 let private printTopLevelHelp format forceColor =
-    emitHelp format forceColor Init (CommandHelp.topLevelHelp (SchemaVersionModule.currentGeneratorVersion ()))
+    // Stamped `Help`, not `Init`: `fsgg-sdd --help` is not an invocation of `init`, and a report
+    // that says it is misleads every machine reader of the JSON contract (FS.GG.SDD#352).
+    emitHelp format forceColor Help (CommandHelp.topLevelHelp (SchemaVersionModule.currentGeneratorVersion ()))
 
 let private printCommandHelp format forceColor command =
     emitHelp format forceColor command (CommandHelp.commandHelp command)

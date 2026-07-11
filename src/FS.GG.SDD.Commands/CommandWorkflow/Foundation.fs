@@ -345,10 +345,14 @@ parser finds a list item that leads with `- FR-###:` and carries an acceptance r
 A bold id (`**FR-001**`), a colon-less id (`- FR-001 — …`), or an acceptance reference on
 a different line does **not** establish coverage.
 
-Copyable accepted form (establishes coverage):
+The word `covers` is **decoration, not a magic token** — the scan looks for an `AC-###` on
+the line and nothing else. How you word the reference is up to you. Both of these
+establish coverage, and the second is the form `fsgg-sdd specify` scaffolds for you, so a
+scaffolded line is already correct as written:
 
 ```text coverage:accepted
 - FR-001: The system records one outcome per request. (covers AC-001)
+- FR-002: The system records one outcome per request. (Stories: US-001; Acceptance: AC-002)
 ```
 
 ## §1.2 `evidence.yml` satisfaction
