@@ -905,15 +905,16 @@ module ReleaseContract =
               commandsMd
               skillsMd
               commandReport ]
-          // 0.9.0 is the first BREAKING release since 0.8.0. Four changes qualify under
-          // `versioning-policy.md` ("remove a public field" AND "change an exit-code
-          // contract" are both Breaking). Under the pre-1.0 `0.x` carve-out they land on a
-          // minor bump, but the migration note stays mandatory (FR-009 / FR-010;
-          // `migrationNoteRequired Breaking = true`). Enumerate EVERY breaking change: a
-          // note that under-reports is the failure mode the note exists to prevent.
+          // 0.10.0 is the first BREAKING release since 0.9.0. Two changes qualify under
+          // `versioning-policy.md` (a change to a public `--json` output shape AND a change
+          // to the derived task-graph shape are both Breaking; there are NO F# public-surface
+          // removals — `PublicSurface.baseline` had no deletions). Under the pre-1.0 `0.x`
+          // carve-out they land on a minor bump, but the migration note stays mandatory
+          // (FR-009 / FR-010; `migrationNoteRequired Breaking = true`). Enumerate EVERY
+          // breaking change: a note that under-reports is the failure mode the note prevents.
           Migrations =
-            [ { Version = "0.9.0"
-                Path = "docs/release/migrations/0.9.0.md"
+            [ { Version = "0.10.0"
+                Path = "docs/release/migrations/0.10.0.md"
                 // Two constraints on this text, both enforced by tests:
                 //  1. Backtick-free: the default JavaScriptEncoder escapes U+0060 (as it
                 //     already escapes '>' in specKitRange), which would put ` noise in a
@@ -923,10 +924,8 @@ module ReleaseContract =
                 //     "enforce"). SDD reports blocking readiness; it never gates. Say
                 //     "blocks"/"blocking", never "gates"/"gating".
                 BreakingChanges =
-                  [ "removed the specification.unresolvedAmbiguityCount field from the --json command-report contract (text key unresolvedAmbiguities); it blocked nothing -- the blocking counter is clarification.blockingAmbiguityCount, on a different report block"
-                    "the tasks stage can now exit 1 with the blocking missingDisposition diagnostic, which was not reachable from tasks in 0.8.0 (fix 162); re-run fsgg-sdd tasks to re-derive the graph, or restore the dropped disposition"
-                    "the plan stage can now exit 1 with the blocking stalePlanSnapshot diagnostic when an upstream source changed after planning (feature 090); re-run fsgg-sdd plan --accept-upstream after reviewing the recorded decisions"
-                    "every command can now exit 1 with the blocking unknownOption diagnostic when the invocation carries an option that command does not recognize (fix 196); in 0.8.0 the token was ignored and the command proceeded with defaults, so fsgg-sdd init --project-root DIR seeded the current directory and reported success -- correct the option name, which the diagnostic correction lists for that command" ] } ] }
+                  [ "the seven lifecycle artifacts in the --json command-report changedArtifacts now report kind hybridArtifact and ownership hybrid instead of authoredSource and authored (feature 312); a consumer matching lifecycle artifacts on kind authoredSource or ownership authored must now match hybridArtifact and hybrid"
+                    "the task graph now derives n implementation tasks from a work item with n requirements instead of 2n (feature 319): a plan-decision PD-### task whose refs are subsumed by a requirement task is folded into it, not dropped; re-run fsgg-sdd tasks to re-derive the graph, and remove any evidence.yml declaration whose subject.id names a folded task, since its obligation is now carried by the requirement task entry" ] } ] }
 
     // ---- canonical serialization ----
 
