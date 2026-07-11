@@ -76,7 +76,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "ed6be62dccf3c2ff5492b60e02e058ab94b7f0c269e95c3e5137148665de8baf"
+        "value": "47833167644dd0ee523ee273e03c5109b73d36f5afc4d26735e3d359a30fd596"
       }
     },
     {
@@ -290,7 +290,9 @@
         "T001"
       ],
       "requirementRefs": [],
-      "artifactRefs": [],
+      "artifactRefs": [
+        "tests/EvidenceLadder.Tests/T001Tests.fs"
+      ],
       "result": "pass",
       "synthetic": false,
       "rationale": null,
@@ -309,7 +311,9 @@
         "T002"
       ],
       "requirementRefs": [],
-      "artifactRefs": [],
+      "artifactRefs": [
+        "tests/EvidenceLadder.Tests/T002Tests.fs"
+      ],
       "result": "pass",
       "synthetic": false,
       "rationale": null,
@@ -328,7 +332,9 @@
         "T003"
       ],
       "requirementRefs": [],
-      "artifactRefs": [],
+      "artifactRefs": [
+        "tests/EvidenceLadder.Tests/T003Tests.fs"
+      ],
       "result": "pass",
       "synthetic": false,
       "rationale": null,
@@ -347,7 +353,9 @@
         "T004"
       ],
       "requirementRefs": [],
-      "artifactRefs": [],
+      "artifactRefs": [
+        "tests/EvidenceLadder.Tests/T004Tests.fs"
+      ],
       "result": "pass",
       "synthetic": false,
       "rationale": null,
@@ -366,7 +374,9 @@
         "T005"
       ],
       "requirementRefs": [],
-      "artifactRefs": [],
+      "artifactRefs": [
+        "tests/EvidenceLadder.Tests/T005Tests.fs"
+      ],
       "result": "pass",
       "synthetic": false,
       "rationale": null,
@@ -431,7 +441,7 @@
           "path": "work/247-full-shape-golden/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "ed6be62dccf3c2ff5492b60e02e058ab94b7f0c269e95c3e5137148665de8baf"
+            "value": "47833167644dd0ee523ee273e03c5109b73d36f5afc4d26735e3d359a30fd596"
           },
           "schemaVersion": 1
         },
@@ -462,7 +472,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "708523847cae4eb0c9dfc1397d5323f994c1bb7f9f95f7f3e1c51868e19c9649"
+        "value": "3f54a3e7ba96d360dd6bc1e145b8409fbe3df6b1cf959cde2810438d39eff4cd"
       },
       "currency": "current"
     }

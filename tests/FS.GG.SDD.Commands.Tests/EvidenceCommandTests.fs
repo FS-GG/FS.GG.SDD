@@ -5,6 +5,7 @@ open FS.GG.SDD.Commands.CommandRendering
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.Internal
+open FS.GG.SDD.TestShared
 open Xunit
 
 // Joins ProcessGlobalEnv: the CLI smoke here spawns a PATH-resolved process, so it must not
@@ -1473,3 +1474,42 @@ evidence:
                 declaration.SourceRefs,
                 fun source -> source.Path = Some "tests/Product.Tests/PhysicsTests.fs"
             )
+
+    // ---------------------------------------------------------------------------------------------
+    // FS.GG.SDD#355 — the canonical *passing* fixture must demonstrate a SATISFIED obligation, not a
+    // merely declared one. Before #349/#355 it shipped `result: pass` with no `artifacts:` key at
+    // all: the shape every smoke test taught was a bare self-attestation.
+    // ---------------------------------------------------------------------------------------------
+
+    /// The fixture cites an artifact for every obligation — it is no longer a bare `result: pass`.
+    [<Fact>]
+    let ``the canonical passing evidence fixture cites an artifact for every obligation`` () =
+        let text = TestSupport.passingTaskEvidence
+
+        for taskId in TestShared.EvidenceLadder.taskIds 5 do
+            Assert.Contains(TestShared.EvidenceLadder.artifactPath taskId, text)
+
+    /// ...and every cited artifact is actually written into the workspace, so the citation resolves.
+    /// This is the pairing #355 is about: a declaration and a file, together or not at all.
+    [<Fact>]
+    let ``the canonical passing evidence fixture materializes every artifact it cites`` () =
+        let root = initializedAnalyzedProject ()
+
+        TestSupport.writePassingTaskEvidenceFor root workId
+
+        for path in TestShared.EvidenceLadder.artifactPaths 5 do
+            Assert.True(TestSupport.existsRelative root path, $"fixture cites {path} but never wrote it")
+
+    /// The end-to-end proof, and the reason #355 was filed: drive the canonical fixture through the
+    /// live gate. It must pass *honestly* — no `evidence.artifactNotFound` — which is only true
+    /// because the artifacts are real. Before this, the same fixture passed while citing nothing.
+    [<Fact>]
+    let ``the canonical passing evidence fixture clears the artifact-existence gate`` () =
+        let root = initializedAnalyzedProject ()
+
+        TestSupport.writePassingTaskEvidenceFor root workId
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)

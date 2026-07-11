@@ -244,8 +244,14 @@ module TestSupport =
     // downstream stage would block on `evidence.unknownReference`.
     let passingTaskEvidence = TestShared.EvidenceLadder.passingTaskEvidence 5
 
+    /// FS.GG.SDD#355: writes the evidence AND the artifacts it cites, together.
+    ///
+    /// They are inseparable now. Since #349, a `result: pass` citing a file that is not on disk is
+    /// refused, so a fixture that wrote only the declaration would be asserting the very defect this
+    /// item exists to remove. Every caller goes through here, which is why none of them had to change.
     let writePassingTaskEvidenceFor root workId =
         writeRelative root $"work/{workId}/evidence.yml" passingTaskEvidence
+        TestShared.EvidenceLadder.writeArtifacts root 5
 
     let countOccurrences (needle: string) (haystack: string) =
         if needle = "" then

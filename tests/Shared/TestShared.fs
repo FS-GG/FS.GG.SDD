@@ -355,15 +355,49 @@ module TestShared =
         let taskIds count =
             [ for i in 1..count -> sprintf "T%03d" i ]
 
-        let private evidenceEntry index (taskId: string) =
+        /// FS.GG.SDD#355. The proving test each ladder obligation cites.
+        ///
+        /// Before #349 this fixture declared `result: pass` and named NO artifact at all — the
+        /// canonical "passing evidence" every smoke test ships was a bare self-attestation, and it
+        /// was what taught the shape. Citing an artifact makes the fixture demonstrate a *satisfied*
+        /// obligation rather than a merely *declared* one; `writeArtifacts` is what keeps the citation
+        /// honest, because #349's gate now refuses a pass whose cited file is not on disk.
+        let artifactPath (taskId: string) =
+            sprintf "tests/EvidenceLadder.Tests/%sTests.fs" taskId
+
+        let artifactPaths count = taskIds count |> List.map artifactPath
+
+        /// The body of a proving test. Not compiled by any project — it stands in for the real test
+        /// an author's obligation would cite, and it must EXIST, which is the whole point.
+        let artifactText (taskId: string) =
             sprintf
-                "  - id: EV%03d\n    kind: verification\n    subject:\n      type: task\n      id: %s\n    result: pass"
-                index
+                "module EvidenceLadder.Tests.%sTests\n\n// The proving test cited by the evidence ladder's obligation for %s.\n// It exists because `fsgg-sdd evidence` refuses a `result: pass` that cites a file which does\n// not (FS.GG.SDD#349) — a fixture that cited fiction is what #355 was filed about.\n"
+                taskId
                 taskId
 
-        /// evidence.yml declaring `result: pass` verification for each of `T001..T00count`.
+        let private evidenceEntry index (taskId: string) =
+            sprintf
+                "  - id: EV%03d\n    kind: verification\n    subject:\n      type: task\n      id: %s\n    artifacts: [%s]\n    result: pass"
+                index
+                taskId
+                (artifactPath taskId)
+
+        /// evidence.yml declaring `result: pass` verification for each of `T001..T00count`, each
+        /// citing the proving test at `artifactPath`. The citation only holds if the caller also
+        /// materializes those files — see `writeArtifacts`.
         let passingTaskEvidence count =
             let entries =
                 taskIds count |> List.mapi (fun i taskId -> evidenceEntry (i + 1) taskId)
 
             "schemaVersion: 1\nevidence:\n" + String.concat "\n" entries + "\n"
+
+        /// Materialize every artifact `passingTaskEvidence count` cites, under `root`.
+        /// Paired with it: declaring the citation without writing the file is exactly the defect.
+        let writeArtifacts (root: string) count =
+            // The directory is derived from the same literal `artifactPath` builds from, rather than
+            // via `Path.GetDirectoryName` (which is nullable, and nullness warnings are errors here).
+            let directory = Path.Combine(root, "tests", "EvidenceLadder.Tests")
+            Directory.CreateDirectory directory |> ignore
+
+            for taskId in taskIds count do
+                File.WriteAllText(Path.Combine(root, artifactPath taskId), artifactText taskId)
