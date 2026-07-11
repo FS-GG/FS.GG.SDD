@@ -131,6 +131,11 @@ module Evidence =
 
     /// Does this declaration name a rendered artifact — an `artifactRefs` entry, or a `sourceRefs[]`
     /// entry carrying a `path` or a `uri`?
+    /// FS.GG.SDD#359 / #365. The one lexical containment rule for a CITED path (`artifacts:` and
+    /// `sourceRefs[].path` alike): repository-relative, no `..`. Total — it reports rather than
+    /// raising, so a malformed authored path is user input, not a tool defect.
+    val citedPathIsContained: path: string -> bool
+
     val namesRenderedArtifact: declaration: EvidenceDeclaration -> bool
 
     /// The visual-inspection artifact rule, stated once for the `evidence` gate, the `ED-`

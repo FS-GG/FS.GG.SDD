@@ -62,6 +62,10 @@ module Diagnostics =
     val duplicateIdentifier: artifact: ArtifactRef -> id: string -> locations: SourceLocation list -> Diagnostic
     val unknownReference: artifact: ArtifactRef -> id: string -> correction: string -> Diagnostic
     val malformedReference: artifact: ArtifactRef -> kind: string -> value: string -> Diagnostic
+
+    /// FS.GG.SDD#359 / #365: a cited artifact path that escapes the repository. Malformed user
+    /// input (`IsToolDefect = false`), never a tool defect.
+    val malformedArtifactPath: artifact: ArtifactRef -> value: string -> Diagnostic
     val requirementNotTyped: artifact: ArtifactRef -> id: string -> correction: string -> Diagnostic
 
     val workModelInconsistent:

@@ -156,6 +156,20 @@ module Diagnostics =
             $"Use a canonical {kind} id, or remove the reference."
             [ value ]
 
+    /// FS.GG.SDD#359 / #365. A cited artifact path that is not repository-relative. This is MALFORMED
+    /// USER INPUT — the author wrote the path — so it is a `DiagnosticError` naming the offending
+    /// value (`create` stamps `IsToolDefect = false`), not an escaped `ArgumentException` reported to
+    /// them as a bug in SDD.
+    let malformedArtifactPath artifact (value: string) =
+        create
+            "malformedArtifactPath"
+            DiagnosticError
+            (Some artifact)
+            None
+            $"Cited artifact path '{value}' is not repository-relative — it must stay inside the repository and contain no '..' segment."
+            "Cite the artifact by its repository-relative path, or remove the reference. A path outside the workspace proves nothing and is never read."
+            [ value ]
+
     let requirementNotTyped artifact id correction =
         create
             "requirementNotTyped"
