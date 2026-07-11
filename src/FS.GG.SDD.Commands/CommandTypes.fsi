@@ -24,6 +24,9 @@ module CommandTypes =
         | Upgrade
         | Lint
         | Surface
+        /// The scope a `--help` report is stamped with. Not an invocable command — `parseCommand`
+        /// never yields it, so `fsgg-sdd help` stays an unknown command.
+        | Help
 
     type OutputFormat =
         | Json

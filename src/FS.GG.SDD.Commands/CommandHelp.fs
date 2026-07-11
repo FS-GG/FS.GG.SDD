@@ -131,6 +131,9 @@ module CommandHelp =
                   "--param"
                   (Some "versionAxisProperty=<name>")
                   "MSBuild property holding the coherent-set version (default Version)." ]
+        // `Help` is the scope a help report is stamped with, not an invocable command, so it has
+        // no flags of its own — `commandHelp Help` is unreachable from argv.
+        | Help -> []
 
     let topLevelHelp (generator: GeneratorVersion) =
         { Scope = TopLevel

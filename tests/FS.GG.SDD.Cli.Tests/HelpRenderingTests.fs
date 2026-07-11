@@ -3,6 +3,7 @@ namespace FS.GG.SDD.Cli.Tests
 open System
 open System.Diagnostics
 open System.IO
+open System.Text.Json
 open FS.GG.SDD.Commands
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandRendering
@@ -142,6 +143,32 @@ module HelpRenderingTests =
         let result = runHost [] [ "--help"; "--json" ]
         Assert.Equal(0, result.ExitCode)
         Assert.Contains("\"scope\": \"topLevel\"", result.StdOut)
+
+    // FS.GG.SDD#352: top-level help used to be stamped with the `Init` envelope, so
+    // `fsgg-sdd --help` emitted a report whose `command` said `init`/`project` and whose
+    // `invocation` said `dryRun: true` — the "JSON dry-run report for init" the TankSim1 field
+    // report saw and mis-attributed to broken per-command help. Help now carries its own `Help`
+    // scope, and a help request is a query rather than a withheld run.
+    //
+    // Asserted on the parsed ENVELOPE, not on raw substrings: top-level help legitimately LISTS
+    // `init` in its `commands` array, so a `DoesNotContain "\"name\": \"init\""` would fail on
+    // correct output. The defect was never the listing — it was the envelope.
+    // Pinned on the apphost, the only path that exercises top-level help honestly.
+    [<Fact; Trait("tier", "slow")>]
+    let ``CLI top-level --help envelope is stamped help, not init, and is not a dry run`` () =
+        let result = runHost [] [ "--help" ]
+        Assert.Equal(0, result.ExitCode)
+
+        use document = JsonDocument.Parse result.StdOut
+        let root = document.RootElement
+        let command = root.GetProperty "command"
+
+        Assert.Equal("help", command.GetProperty("name").GetString())
+        Assert.Equal("help", command.GetProperty("stage").GetString())
+        Assert.False(root.GetProperty("invocation").GetProperty("dryRun").GetBoolean())
+
+        // The commands array still advertises `init` — that is the listing, not the envelope.
+        Assert.Contains("\"name\": \"init\"", result.StdOut)
 
     [<Fact; Trait("tier", "slow")>]
     let ``CLI command --help exits 0 with that command's help`` () =
