@@ -344,14 +344,16 @@ module LifecycleSmokeTests =
                 { TestSupport.clarifyRequest root workId title with
                     InputText = None }
 
+        let checklist = TestSupport.runChecklist root workId title
+        let plan = TestSupport.runPlan root workId title
+        // #351: the scaffold's prose blocks `analyze`, so author it before driving on.
+        TestSupport.authorPlanProse root workId
+
         let reports =
             reports
             @ [ "clarify", clarify
-                "checklist", TestSupport.runChecklist root workId title
-                "plan",
-                (let report = TestSupport.runPlan root workId title in
-                 TestSupport.authorPlanProse root workId // #351
-                 report)
+                "checklist", checklist
+                "plan", plan
                 "tasks", TestSupport.runTasks root workId title ]
 
         TestSupport.writePassingTaskEvidenceFor root workId

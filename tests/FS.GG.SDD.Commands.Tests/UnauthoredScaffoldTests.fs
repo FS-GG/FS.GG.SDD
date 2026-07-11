@@ -125,3 +125,38 @@ module UnauthoredScaffoldTests =
 
         Assert.DoesNotContain("PD-001", diagnostic.RelatedIds) // authored — left alone
         Assert.Contains("PC-001", diagnostic.RelatedIds) // still the tool's words
+
+    /// The gate must not key on the entry ID, and this is the failure leg that says so.
+    ///
+    /// We re-derive from a blank slate, so our ids always count from `PD-001`. `plan` numbers its ids
+    /// incrementally (`nextScopedIndex` over the plan that already exists) and appends only for
+    /// sources it has not yet covered — so a plan grown over several runs legitimately carries an id
+    /// that a fresh derivation would never produce. Insert a requirement above an existing one, re-run
+    /// `plan`, and the plan holds `PD-002 [FR-001] …` where we derive `PD-001 [FR-001] …`.
+    ///
+    /// Compare whole lines and NOTHING matches: no diagnostic, and a plan that is scaffold top to
+    /// bottom ships. The gate would fail open in exactly the shape it was built to close, and it would
+    /// do it silently — green, not red. So: same prose, different id, still blocked.
+    [<Fact>]
+    let ``a renumbered entry is still scaffold — the gate does not key on the id`` () =
+        let root = scaffoldOnlyProject ()
+
+        let path = $"work/{workId}/plan.md"
+
+        // Exactly what an incremental re-plan leaves behind: the scaffold's refs and the scaffold's
+        // prose, under an id a from-scratch derivation would never assign.
+        TestSupport.readRelative root path
+        |> fun text -> text.Replace("- PD-001 ", "- PD-014 ")
+        |> TestSupport.writeRelative root path
+
+        let report = TestSupport.runAnalyze root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+        let diagnostic =
+            report.Diagnostics
+            |> List.find (fun diagnostic -> diagnostic.Id = "unauthoredScaffoldContent")
+
+        // Named by the id the PLAN carries, so the author can actually go and find the entry.
+        Assert.Contains("PD-014", diagnostic.RelatedIds)
+        Assert.DoesNotContain("PD-001", diagnostic.RelatedIds)

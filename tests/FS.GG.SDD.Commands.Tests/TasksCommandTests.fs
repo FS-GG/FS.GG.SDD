@@ -638,7 +638,7 @@ module TasksCommandTests =
 
         TestSupport.writeRelative root clarificationsPath withDecision
         // 090 (#163): the clarify edit moved the plan's recorded snapshot; re-baseline before tasks.
-        acceptUpstream root |> ignore
+        acceptUpstream root
         // #351: `acceptUpstream` RE-RUNS `plan`, which scaffolds fresh prose for whatever the new
         // clarify decision added. That prose is unauthored, so `analyze` blocks — correctly. Author
         // it again, exactly as a human would after re-planning.

@@ -928,6 +928,18 @@ Prose status: {status}
     ///
     /// Conservative by construction: a line the author has touched at all no longer matches, so this
     /// only ever fires on prose the tool wrote and the human never read.
+    ///
+    /// It compares the line MINUS its entry id, and that is load-bearing rather than fastidious. We
+    /// re-derive from a blank slate (`None`), so our ids always count from `PD-001`; `plan` assigns
+    /// its ids incrementally (`Some existingFacts` → `nextScopedIndex`, appending only for sources it
+    /// has not already covered). The two agree only while the plan was written in one pass. Insert a
+    /// requirement ABOVE an existing one and re-run `plan` and they diverge — the plan holds
+    /// `PD-002 [FR-001] …` where we derive `PD-001 [FR-001] …` — so a whole-line comparison would
+    /// match nothing, report nothing, and pass a plan that is scaffold top to bottom. That is the
+    /// very fail-open this gate exists to close, so the id is exactly the part we must NOT key on.
+    /// The refs and the prose are what the tool authored; they are what we compare, and the id we
+    /// report is the one the PLAN carries, so the diagnostic names the entry the author must go and
+    /// find.
     let unauthoredPlanLines
         workId
         (specFacts: SpecificationFacts)
@@ -942,16 +954,33 @@ Prose status: {status}
             // "- PD-001 [FR-001] complete: ..." -> "PD-001"
             line.TrimStart('-', ' ').Split(' ') |> Array.tryHead |> Option.defaultValue line
 
-        seeded.DecisionLines
-        @ seeded.ContractLines
-        @ seeded.ObligationLines
-        @ seeded.MigrationLines
-        @ seeded.ImpactLines
-        @ seeded.DeferralLines
-        |> List.filter planText.Contains
-        |> List.map idOf
-        |> List.distinct
-        |> List.sort
+        // "- PD-001 [FR-001] complete: ..." -> "[FR-001] complete: ..." — everything the scaffold
+        // wrote except the id it happened to number the entry with.
+        let bodyOf (line: string) =
+            let entry = line.TrimStart('-', ' ')
+
+            match entry.IndexOf ' ' with
+            | -1 -> entry
+            | space -> entry.Substring(space + 1)
+
+        let seededBodies =
+            seeded.DecisionLines
+            @ seeded.ContractLines
+            @ seeded.ObligationLines
+            @ seeded.MigrationLines
+            @ seeded.ImpactLines
+            @ seeded.DeferralLines
+            |> List.map bodyOf
+            |> Set.ofList
+
+        planText.Split '\n'
+        |> Array.map (fun line -> line.TrimEnd '\r')
+        |> Array.filter (fun line -> line.TrimStart().StartsWith "-")
+        |> Array.filter (fun line -> seededBodies.Contains(bodyOf line))
+        |> Array.map idOf
+        |> Array.distinct
+        |> Array.sort
+        |> List.ofArray
 
     let sourceSnapshotLines workId specText clarificationText checklistText planText =
         let lines =
