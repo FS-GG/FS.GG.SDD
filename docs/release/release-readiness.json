@@ -16,7 +16,7 @@
   },
   "compatibility": [
     {
-      "sddVersionLine": "0.9.x",
+      "sddVersionLine": "0.10.x",
       "specKitRange": "\u003E=0.8.5",
       "governanceContractVersionRange": "1.x"
     }
