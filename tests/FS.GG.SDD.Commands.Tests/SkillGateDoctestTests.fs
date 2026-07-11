@@ -142,7 +142,14 @@ module SkillGateDoctestTests =
     /// checklist.md and plan.md are generated VIEWS the commands regenerate from these, so they
     /// are intentionally not seeded — the gates produce them fresh with current digests.
     let private authoredCorpusArtifacts =
-        set [ "charter.md"; "spec.md"; "clarifications.md"; "tasks.yml"; "evidence.yml"; "checklist.md"; "plan.md" ]
+        set
+            [ "charter.md"
+              "spec.md"
+              "clarifications.md"
+              "tasks.yml"
+              "evidence.yml"
+              "checklist.md"
+              "plan.md" ]
 
     // FR-001/002/003: the corpus authored sources pass the REAL gates — the WHOLE cascade the
     // corpus claims to demonstrate, not a prefix of it.
