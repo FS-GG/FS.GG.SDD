@@ -19,6 +19,10 @@ module WorkModelViewTests =
     [<Fact>]
     let ``a changed source changes the view`` () =
         let view = WorkModelView.generate MatchSource.sample
-        let changed = WorkModelView.generate { MatchSource.sample with Title = "A different match" }
+
+        let changed =
+            WorkModelView.generate
+                { MatchSource.sample with
+                    Title = "A different match" }
 
         Assert.NotEqual(view, changed)

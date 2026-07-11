@@ -9,8 +9,7 @@ module SchemaVersionTests =
     /// The version is pinned, not incidental: a report that silently changes shape breaks every
     /// downstream consumer that trusted it.
     [<Fact>]
-    let ``report declares its schema version`` () =
-        Assert.Equal(1, Report.schemaVersion)
+    let ``report declares its schema version`` () = Assert.Equal(1, Report.schemaVersion)
 
     /// The failure leg: an unsupported version is refused rather than best-effort parsed.
     [<Fact>]

@@ -119,7 +119,8 @@ module ReleaseConformanceTests =
 
                 cataloguedArrayPrefixes p.Contract
                 |> List.filter (fun prefix -> not (observed |> Set.exists (fun k -> k.StartsWith prefix)))
-                |> List.map (fun prefix -> $"{p.Contract}: catalogued array '{prefix}' is empty in the conformance fixture"))
+                |> List.map (fun prefix ->
+                    $"{p.Contract}: catalogued array '{prefix}' is empty in the conformance fixture"))
 
         let detail = empties |> String.concat "\n"
 

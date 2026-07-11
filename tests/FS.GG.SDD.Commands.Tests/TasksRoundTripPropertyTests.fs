@@ -36,11 +36,11 @@ open Xunit
 //     (a `None` and an authored `Some true` are the same rendered value);
 //   • `sourceIds` is upper-cased on read, so the generator emits already-upper-cased tokens; the
 //     inline-list writers `List.distinct |> List.sort`, so every generated list is
-    //     distinct-and-sorted — its canonical round-trip form.
-    //
-    // An *empty* task list is in-domain: the emitter renders the inline `tasks: []` marker (mirroring
-    // `evidence: []` and the scalar note blocks), which `parseTaskFacts` reads back as no tasks — so
-    // the generator emits zero-or-more tasks (FS.GG.SDD#279).
+//     distinct-and-sorted — its canonical round-trip form.
+//
+// An *empty* task list is in-domain: the emitter renders the inline `tasks: []` marker (mirroring
+// `evidence: []` and the scalar note blocks), which `parseTaskFacts` reads back as no tasks — so
+// the generator emits zero-or-more tasks (FS.GG.SDD#279).
 module TasksRoundTripPropertyTests =
 
     let private workId = "011-round-trip"
@@ -364,7 +364,8 @@ module TasksRoundTripPropertyTests =
         Assert.Contains("tasks: []", text) // inline marker, not `tasks:\n[]`
 
         match parseTaskFacts { Path = tasksPath; Text = text } with
-        | Error diagnostics -> failwithf "empty-tasks round-trip parse failed: %A\n--- rendered ---\n%s" diagnostics text
+        | Error diagnostics ->
+            failwithf "empty-tasks round-trip parse failed: %A\n--- rendered ---\n%s" diagnostics text
         | Ok facts ->
             Assert.Equal(authoredPartition authored, parsedPartition facts)
             Assert.Empty facts.Tasks

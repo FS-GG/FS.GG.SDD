@@ -699,9 +699,7 @@ module ClarifyCommandTests =
         let root = initializedSpecifiedProject ()
 
         let report =
-            runClarifyWith
-                (Some "AMB-001: Settles FR-001 and FR-999 together.")
-                root
+            runClarifyWith (Some "AMB-001: Settles FR-001 and FR-999 together.") root
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
 
