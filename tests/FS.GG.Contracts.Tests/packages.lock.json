@@ -6,7 +6,7 @@
         "type": "Direct",
         "requested": "[10.1.301, )",
         "resolved": "10.1.301",
-        "contentHash": "excLf2zM/qUB3WhRUfI0xvOOaPwcRAEdYT/BXe9eiTKySnWVuIKMQTf5+6ETy5nsb1dpLp1s2j2yAM/XcRgFMg=="
+        "contentHash": "UYKV0m7iiN0JsTfCdD3wE+lYaZreLUBL4EkdktKYnDtKWqig4wmtD8XquUGKHNKyXNbxrkZ8n0dfvo+GTFzaqg=="
       },
       "Microsoft.NET.Test.Sdk": {
         "type": "Direct",
