@@ -573,8 +573,10 @@ module TasksCommandTests =
     let ``tasks refreshes generated work model when evidence source is present`` () =
         let root = initializedPlanReadyProject ()
 
-        // The T001..T006 evidence ladder is derived once in TestShared (feature 067 / FR-011).
-        TestSupport.writeRelative root $"work/{workId}/evidence.yml" TestSupport.passingTaskEvidence
+        // The T001..T005 evidence ladder is derived once in TestShared (feature 067 / FR-011).
+        // #355: go through the helper, which writes the cited artifacts alongside the declaration —
+        // writing `evidence.yml` alone would cite five proving tests that do not exist.
+        TestSupport.writePassingTaskEvidenceFor root workId
 
         let report = TestSupport.runTasks root workId title
 
