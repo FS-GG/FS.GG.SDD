@@ -103,7 +103,7 @@ module ReleaseContractTests =
     [<Fact>]
     let ``T011 the compatibility entry carries a Spec Kit range and tolerates a null Governance range`` () =
         let entry = List.exactlyOne release.Compatibility
-        Assert.Equal("0.9.x", entry.SddVersionLine)
+        Assert.Equal("0.10.x", entry.SddVersionLine)
         Assert.False(String.IsNullOrWhiteSpace entry.SpecKitRange)
 
         // a null Governance range is valid and must round-trip and not block readiness
@@ -196,9 +196,10 @@ module ReleaseContractTests =
         // An additive release still carries no note — the policy is unchanged.
         Assert.False(migrationNoteRequired Additive)
 
-        // 0.9.0 removes `specification.unresolvedAmbiguityCount` from the `--json`
-        // command-report contract (feature 093 / #164) — Breaking ⇒ a note is owed
-        // (FS-GG/FS.GG.SDD#190). Pre-1.0 it rides a minor bump; the note is not optional.
+        // 0.10.0 relabels the seven lifecycle artifacts in the `--json` command-report
+        // (`authoredSource`/`authored` → `hybridArtifact`/`hybrid`, feature 312) and folds
+        // the derived task graph from 2n to n tasks (feature 319) — Breaking ⇒ a note is
+        // owed (FS-GG/FS.GG.SDD#190). Pre-1.0 it rides a minor bump; the note is not optional.
         Assert.True(migrationNoteRequired Breaking)
 
         let note = List.exactlyOne release.Migrations
@@ -215,8 +216,8 @@ module ReleaseContractTests =
             $"migration note {note.Path} is referenced by release-readiness.json but absent from disk"
         )
 
-        // and it must name the field it removed, so a consumer can grep for it.
-        Assert.Contains(note.BreakingChanges, fun change -> change.Contains "unresolvedAmbiguityCount")
+        // and it must name a stable marker of a 0.10.0 breaking change, so a consumer can grep for it.
+        Assert.Contains(note.BreakingChanges, fun change -> change.Contains "hybridArtifact")
 
     [<Fact>]
     let ``T023 a breaking release is obliged to carry a migration note`` () =
