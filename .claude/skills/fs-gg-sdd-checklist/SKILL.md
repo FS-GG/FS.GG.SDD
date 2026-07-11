@@ -10,6 +10,11 @@ spec." Its most important job is computing **FR→AC coverage**, and that depend
 a strict, easy-to-get-subtly-wrong grammar. Get the grammar right and coverage is
 real; get it wrong and a requirement is silently reported uncovered.
 
+**Read the worked example first.** `docs/examples/lifecycle-artifacts/checklist.md` is a complete,
+worked `checklist.md` — the view the real `checklist` gate produces from the corpus sources, regenerated and
+checked clean on every build by the skill↔gate doctest. Where the prose below and the
+example disagree, the example is the authority.
+
 ## Command
 
 ```text

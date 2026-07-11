@@ -9,6 +9,12 @@ description: Stage 3 of the FS.GG SDD lifecycle — fsgg-sdd clarify records cla
 recorded **decisions** before they harden into plan and tasks. Skipping it leaves
 ambiguity to be discovered (expensively) during implementation.
 
+**Read the worked example first.** `docs/examples/lifecycle-artifacts/clarifications.md` is a complete,
+worked `clarifications.md`, and it is machine-checked rather than illustrative: on every build the
+skill↔gate doctest seeds it and drives the real gates (`charter` → `analyze`) over it,
+failing if it does not come out clean. Where the prose below and the example disagree, the
+example is the authority.
+
 ## Command
 
 ```text

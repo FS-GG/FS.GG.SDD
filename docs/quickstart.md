@@ -117,14 +117,16 @@ wrong. The full grammar, accepted/rejected forms, and copyable examples are in
 
 - **`checklist`** marks a functional requirement covered only when a list item
   leads with `- FR-###:` and carries the acceptance reference **on the same
-  line**:
+  line**. `covers` is decoration, not a magic token — the gate looks for an
+  `AC-###` on the line, so either of these works:
 
   ```text
   - FR-001: W/S move the left paddle. (covers AC-002)
+  - FR-001: W/S move the left paddle. (Stories: US-001; Acceptance: AC-002)
   ```
 
-  A bold `**FR-001**`, a colon-less line, or an `(covers AC-###)` on a separate
-  line is counted but **not** covered.
+  The second is the form `specify` scaffolds. A bold `**FR-001**`, a colon-less
+  line, or an `AC-###` on a separate line is counted but **not** covered.
 
 - **`evidence`** satisfies an obligation only with a matching, **non-synthetic**
   `evidence.yml` declaration whose `result` is `pass` (a synthetic pass and a

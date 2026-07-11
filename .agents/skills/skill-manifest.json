@@ -4,7 +4,7 @@
     {
       "id": "fs-gg-sdd-analyze",
       "scope": "process",
-      "sha256": "5e9e90ca2ac254d9e8028c015b86053fcf6d23534cb9688a72de7e2355217312",
+      "sha256": "ae59ef0f6a58d70985b027e99ed728f687265d7631c600cc4998b040cd084bf3",
       "resolvablePath": ".agents/skills/fs-gg-sdd-analyze/SKILL.md",
       "materializes-when": "always"
     },
@@ -18,28 +18,28 @@
     {
       "id": "fs-gg-sdd-charter",
       "scope": "process",
-      "sha256": "9855bd3c7d1422d331213fe0a7e59c7454e1cc1080cf0ef6bd25379da2e40b24",
+      "sha256": "8e1df19bf175309f46de3426a039c82a630bb87caf6a06189d858c1dba97c707",
       "resolvablePath": ".agents/skills/fs-gg-sdd-charter/SKILL.md",
       "materializes-when": "always"
     },
     {
       "id": "fs-gg-sdd-checklist",
       "scope": "process",
-      "sha256": "c267d33f32cc1d2ab571b8f9b4fcaecde31ba385a00337db2160d77ad351b507",
+      "sha256": "04528366f895d77c4b1878c67ca8a28194cdcfcfd67a0af653eed7e4c7dbd325",
       "resolvablePath": ".agents/skills/fs-gg-sdd-checklist/SKILL.md",
       "materializes-when": "always"
     },
     {
       "id": "fs-gg-sdd-clarify",
       "scope": "process",
-      "sha256": "09d2ed9726307cd7ec745edf2fc7a9bd4f6c1486c62d954080ab534c0c5a4238",
+      "sha256": "2d5729afd202d0f9c1cb921de2250383cbd1c7cd81cf04da5ce6b84a587c1c78",
       "resolvablePath": ".agents/skills/fs-gg-sdd-clarify/SKILL.md",
       "materializes-when": "always"
     },
     {
       "id": "fs-gg-sdd-evidence",
       "scope": "process",
-      "sha256": "7576a7c5fc31e29ce4b01b811cc8e0c8ab031a313c8d6966d42b12bba1a3d30d",
+      "sha256": "46952485857c2dbed34a942345a74f4221b24643631a31feafe925b82efb587a",
       "resolvablePath": ".agents/skills/fs-gg-sdd-evidence/SKILL.md",
       "materializes-when": "always"
     },
@@ -60,7 +60,7 @@
     {
       "id": "fs-gg-sdd-plan",
       "scope": "process",
-      "sha256": "51a95d10b9412c6b01a962c3344e0245b6436d451b70cf6ab79f3fc88dac1e2f",
+      "sha256": "62b6d9be4da8ade00440b5e0544a6d95c49f05024c974f2ac64994820ed8e2ad",
       "resolvablePath": ".agents/skills/fs-gg-sdd-plan/SKILL.md",
       "materializes-when": "always"
     },
@@ -74,21 +74,21 @@
     {
       "id": "fs-gg-sdd-ship",
       "scope": "process",
-      "sha256": "c98e3e86701945bd90fdb3033ee991ad4e39e9b9699b081a438bb166099807bb",
+      "sha256": "5255a14d529dea40802c438c9d69722d37d9fe545e2048d44f051efc673a84f2",
       "resolvablePath": ".agents/skills/fs-gg-sdd-ship/SKILL.md",
       "materializes-when": "always"
     },
     {
       "id": "fs-gg-sdd-specify",
       "scope": "process",
-      "sha256": "55c65444da945788b247e38fcd1fc39540d5e3b1cc9a833365bc6f21b138454e",
+      "sha256": "f4bd7db58110b6d842bd0f48ab317029e3e5c1911a6a2d2bcb846bb06f976496",
       "resolvablePath": ".agents/skills/fs-gg-sdd-specify/SKILL.md",
       "materializes-when": "always"
     },
     {
       "id": "fs-gg-sdd-tasks",
       "scope": "process",
-      "sha256": "c62b462419b85d939cfb9bef864f44d6cfccb1595b3c46afbe74b460d80a5ef6",
+      "sha256": "ee82144065c3288e34180350655c4fccd3e95b473c2b745b490937fdf893d0a7",
       "resolvablePath": ".agents/skills/fs-gg-sdd-tasks/SKILL.md",
       "materializes-when": "always"
     },
@@ -109,7 +109,7 @@
     {
       "id": "fs-gg-sdd-verify",
       "scope": "process",
-      "sha256": "8ac403e477a02de2b5ea251e64146cea5798c33feb2a3a7c0868985368ab65c4",
+      "sha256": "ea8a770da57bd6c1c076bc115fa324e003e77e346b8aa52188f7c3a8c7548ee5",
       "resolvablePath": ".agents/skills/fs-gg-sdd-verify/SKILL.md",
       "materializes-when": "always"
     }

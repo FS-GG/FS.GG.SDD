@@ -10,6 +10,12 @@ any new piece of work, before specifying anything. It is part of the
 pre-work-model window (no `work-model.json` exists yet), so author from this skill
 and the seeded `.fsgg/early-stage-guidance.md`.
 
+**Read the worked example first.** `docs/examples/lifecycle-artifacts/charter.md` is a complete,
+worked `charter.md`, and it is machine-checked rather than illustrative: on every build the
+skill↔gate doctest seeds it and drives the real gates (`charter` → `analyze`) over it,
+failing if it does not come out clean. Where the prose below and the example disagree, the
+example is the authority.
+
 ## Command
 
 ```text

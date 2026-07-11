@@ -11,6 +11,11 @@ schema/migration posture, the structured contracts, and the tests that will cove
 the change. Per the doctrine, signatures come before implementation — the plan
 names the surface you will declare.
 
+**Read the worked example first.** `docs/examples/lifecycle-artifacts/plan.md` is a complete,
+worked `plan.md` — the view the real `plan` gate produces from the corpus sources, regenerated and
+checked clean on every build by the skill↔gate doctest. Where the prose below and the
+example disagree, the example is the authority.
+
 ## Command
 
 ```text

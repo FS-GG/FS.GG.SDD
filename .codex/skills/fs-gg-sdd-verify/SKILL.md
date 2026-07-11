@@ -10,6 +10,11 @@ graph, the evidence dispositions, test and skill obligations, and lifecycle stag
 state, and emits a readiness view. It authors **no** `work/<id>/` source; it (with
 `ship`) is also the point at which the normalized `work-model.json` is built.
 
+**Read the worked example first.** `verify` authors nothing; what it evaluates is the
+`tasks.yml` and `evidence.yml` you wrote — and `docs/examples/lifecycle-artifacts/` holds a
+complete, machine-checked instance of both. When `verify` reports an obligation unsatisfied,
+that corpus is the fastest reference for what a satisfying declaration actually looks like.
+
 ## Command
 
 ```text

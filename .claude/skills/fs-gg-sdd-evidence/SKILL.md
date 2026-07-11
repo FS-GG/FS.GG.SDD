@@ -10,6 +10,12 @@ description: Stage 8 of the FS.GG SDD lifecycle — fsgg-sdd evidence authors wo
 contracts: a subtly wrong declaration leaves an obligation unsatisfied even though
 the work is done.
 
+**Read the worked example first.** `docs/examples/lifecycle-artifacts/evidence.yml` is a
+complete, worked `evidence.yml`, machine-checked rather than illustrative: it is
+parser-validated on every build, and the deferral rule it demonstrates is pinned directly by
+the evidence gate tests. (It sits outside the `charter` → `analyze` gate chain.) Where the
+prose below and the example disagree, the example is the authority.
+
 ## Command
 
 ```text
