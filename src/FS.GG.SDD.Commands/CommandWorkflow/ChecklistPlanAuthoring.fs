@@ -911,6 +911,48 @@ Prose status: {status}
             ImpactLines = impactLines
             DeferralLines = deferralLines }
 
+    /// FS.GG.SDD#351 — the unauthored-scaffold rule, stated once, beside the generator it re-derives.
+    ///
+    /// `plan` scaffolds a decision per requirement, plus a contract / obligation / migration /
+    /// generated-view row, each carrying its `[FR-###] [AC-###]` refs BY CONSTRUCTION. So the
+    /// FR→plan→task→evidence traceability chain closes with zero human authorship: the gates check
+    /// that the ids line up, and the scaffold generates ids that line up. The check and the thing
+    /// being checked had the same author.
+    ///
+    /// The detector is the generator. `plannedPlanEntries` is pure in the four facts `analyze`
+    /// already holds, so we re-derive exactly what `plan` WOULD have written and ask whether the
+    /// authored plan still contains it, verbatim. No marker for an author to forget to delete, no
+    /// schema field, and — the point — the reference is the scaffold's own output, so the rule cannot
+    /// drift from the thing it is detecting. (Same idiom as the shipped example's
+    /// "fixpoint of its generators" test: re-derive, then compare.)
+    ///
+    /// Conservative by construction: a line the author has touched at all no longer matches, so this
+    /// only ever fires on prose the tool wrote and the human never read.
+    let unauthoredPlanLines
+        workId
+        (specFacts: SpecificationFacts)
+        (clarificationFacts: ClarificationFacts)
+        (checklistFacts: ChecklistFacts)
+        (planText: string)
+        =
+        let seeded =
+            plannedPlanEntries workId specFacts clarificationFacts checklistFacts None
+
+        let idOf (line: string) =
+            // "- PD-001 [FR-001] complete: ..." -> "PD-001"
+            line.TrimStart('-', ' ').Split(' ') |> Array.tryHead |> Option.defaultValue line
+
+        seeded.DecisionLines
+        @ seeded.ContractLines
+        @ seeded.ObligationLines
+        @ seeded.MigrationLines
+        @ seeded.ImpactLines
+        @ seeded.DeferralLines
+        |> List.filter planText.Contains
+        |> List.map idOf
+        |> List.distinct
+        |> List.sort
+
     let sourceSnapshotLines workId specText clarificationText checklistText planText =
         let lines =
             [ sourceSnapshotLine "spec" (specPath workId) specText

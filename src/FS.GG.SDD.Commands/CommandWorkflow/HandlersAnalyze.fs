@@ -17,6 +17,7 @@ open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.Internal.Foundation
 open FS.GG.SDD.Commands.Internal.EarlyStageAuthoring
+open FS.GG.SDD.Commands.Internal.ChecklistPlanAuthoring
 open FS.GG.SDD.Commands.Internal.ViewGeneration
 open FS.GG.SDD.Commands.Internal.Prerequisites
 open FS.GG.SDD.Commands.Internal.HandlersEarly
@@ -70,8 +71,23 @@ module internal HandlersAnalyze =
                 let analysisViewDiagnostics =
                     existingAnalysisDiagnostic workId model |> Option.toList
 
+                // FS.GG.SDD#351. `analyze` is the right and only place for this: it is the last gate
+                // before implementation, it already holds every authored artifact, and one
+                // `DiagnosticError` here means no `analysis.json` is written — so `evidence` refuses
+                // (`evidence.analysisNotReady`), and `verify` and `ship` never run. A lifecycle walked
+                // on untouched scaffold output therefore cannot reach `shipReady`, which is the
+                // acceptance criterion, satisfied at a single point rather than re-litigated per stage.
+                let unauthoredScaffoldDiagnostics =
+                    match specFacts, clarificationFacts, checklistFacts, planText with
+                    | Some specFacts, Some clarificationFacts, Some checklistFacts, Some planText ->
+                        match unauthoredPlanLines workId specFacts clarificationFacts checklistFacts planText with
+                        | [] -> []
+                        | ids -> [ unauthoredScaffoldContent (planPath workId) ids ]
+                    | _ -> []
+
                 let commandDiagnostics =
                     projectDiagnostics
+                    @ unauthoredScaffoldDiagnostics
                     @ duplicateDiagnostics
                     @ specificationDiagnostics
                     @ clarificationDiagnostics

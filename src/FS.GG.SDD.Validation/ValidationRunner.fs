@@ -4,6 +4,7 @@ open System
 open System.Globalization
 open System.IO
 open System.Text.Json
+open System.Text.RegularExpressions
 open System.Threading
 open FS.GG.SDD.Artifacts.ReleaseContract
 open FS.GG.SDD.Artifacts.SchemaVersion
@@ -154,6 +155,36 @@ module ValidationRunner =
         | Surface -> 0
         | Help -> 0
 
+    /// FS.GG.SDD#351. Author the fixture's plan the way a human would: keep the id, the refs, and the
+    /// kind token — the machine contract the later stages resolve against — and replace only the
+    /// prose after it, which is the part that requires judgement and which `analyze` now demands.
+    let authorPlanProse root =
+        let relative = $"work/{fixtureWorkId}/plan.md"
+
+        let absolute =
+            Path.Combine(root, relative.Replace('/', Path.DirectorySeparatorChar))
+
+        if File.Exists absolute then
+            let prose =
+                "Authored by the validation fixture: a real decision would say why, not restate the id."
+
+            let authored =
+                File.ReadAllText absolute
+                |> fun text ->
+                    Regex.Replace(
+                        text,
+                        @"(?m)^(- (?:PD|PC|VO|PM|GV)-\d+\b[^:\r\n]*: )(.+)$",
+                        (fun m -> m.Groups[1].Value + prose)
+                    )
+                |> fun text ->
+                    Regex.Replace(
+                        text,
+                        @"(?m)^(- [A-Z]{2,4}-\d+ acceptedDeferral: )(.+)$",
+                        (fun m -> m.Groups[1].Value + prose)
+                    )
+
+            File.WriteAllText(absolute, authored)
+
     /// Build a disposable project at the requested state by driving the real
     /// CommandWorkflow over a temp dir (matrix-runner C-1). `withEvidence = false`
     /// yields the `blocked` ladder (tasks present, passing evidence withheld).
@@ -168,6 +199,13 @@ module ValidationRunner =
             runWork Clarify root None |> ignore
             runWork Checklist root None |> ignore
             runWork Plan root None |> ignore
+            // FS.GG.SDD#351: `analyze` now BLOCKS while the plan still holds the prose the scaffold
+            // wrote, so this fixture — which drives the real lifecycle — must author it, exactly as
+            // an author would. Without this the harness does not fail; it *skips* the cells that
+            // need an analyzed-or-later project (6 of them), which is coverage silently going
+            // missing rather than going red. Keep the id, the refs, and the kind token (the machine
+            // contract); replace only the prose, which is the part that needs judgement.
+            authorPlanProse root
 
         if rank >= 60 then
             runWork Tasks root None |> ignore
