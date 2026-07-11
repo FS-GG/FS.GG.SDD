@@ -81,7 +81,16 @@ module CommandWorkflow =
                 if not (allPlannedReadsInterpreted model) then
                     model, []
                 else
-                    let candidateReads = duplicateCandidateReadEffects workId model
+                    let candidateReads =
+                        duplicateCandidateReadEffects workId model
+                        // FS.GG.SDD#349: probe every artifact a satisfying evidence declaration cites,
+                        // for the three stages that read evidence. The paths only become known once
+                        // `evidence.yml` has been read, so they join the existing second wave.
+                        @ (match model.Request.Command with
+                           | Evidence
+                           | Verify
+                           | Ship -> citedArtifactReadEffects workId model
+                           | _ -> [])
 
                     match candidateReads with
                     | _ :: _ ->

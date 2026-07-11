@@ -80,8 +80,10 @@ FS.GG.SDD.Artifacts.Diagnostics.upgradeResidualDrift
 FS.GG.SDD.Artifacts.Diagnostics.upgradeSelfUpdateFailed
 FS.GG.SDD.Artifacts.Diagnostics.upgradeStepFailed
 FS.GG.SDD.Artifacts.Diagnostics.workModelInconsistent
+FS.GG.SDD.Artifacts.Evidence.citedArtifactPaths
 FS.GG.SDD.Artifacts.Evidence.evidenceKindSourceValue
 FS.GG.SDD.Artifacts.Evidence.isVisualInspectionTagged
+FS.GG.SDD.Artifacts.Evidence.missingCitedArtifacts
 FS.GG.SDD.Artifacts.Evidence.namesRenderedArtifact
 FS.GG.SDD.Artifacts.Evidence.normalizedEvidenceResult
 FS.GG.SDD.Artifacts.Evidence.parseEvidence

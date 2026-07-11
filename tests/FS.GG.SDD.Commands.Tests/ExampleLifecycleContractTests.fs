@@ -34,6 +34,22 @@ module ExampleLifecycleContractTests =
           "tasks.yml"
           "evidence.yml" ]
 
+    /// The proving tests the example's evidence CITES. They are staged at the workspace root
+    /// (`tests/ExampleApp.Tests/…`), not under `work/<id>/`, because that is where the evidence
+    /// declarations point.
+    ///
+    /// FS.GG.SDD#349: before the existence check, the example cited all six of these and shipped
+    /// none of them — the corpus this product publishes to teach evidence authoring was itself
+    /// citing files that do not exist, and passed. Shipping them is what makes the example honest;
+    /// staging them here is what lets the gate see them.
+    let private exampleProvingTests =
+        [ "ServeRuleTests.fs"
+          "RallyScoreTests.fs"
+          "CommandReportContractTests.fs"
+          "CommandSmokeTests.fs"
+          "SchemaVersionTests.fs"
+          "WorkModelViewTests.fs" ]
+
     /// Copy the shipped example verbatim into `work/001-example/` of a freshly initialized
     /// workspace. Verbatim matters: the point is to exercise the bytes an author would copy,
     /// not a re-derived equivalent.
@@ -47,6 +63,12 @@ module ExampleLifecycleContractTests =
         for name in exampleArtifacts do
             let text = File.ReadAllText(Path.Combine(sourceDir, name))
             TestSupport.writeRelative root $"work/{workId}/{name}" text
+
+        for name in exampleProvingTests do
+            let text =
+                File.ReadAllText(Path.Combine(sourceDir, "tests", "ExampleApp.Tests", name))
+
+            TestSupport.writeRelative root $"tests/ExampleApp.Tests/{name}" text
 
         root
 

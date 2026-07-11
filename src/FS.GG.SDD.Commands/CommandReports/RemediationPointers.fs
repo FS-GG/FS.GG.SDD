@@ -102,6 +102,7 @@ module internal RemediationPointers =
           "evidence.undisclosedSyntheticEvidence", at evidenceEx evidenceDecl
           "evidence.missingDeferralRationale", at evidenceEx evidenceDecl
           "evidence.missingRequiredSkill", at evidenceEx evidenceDecl
+          "evidence.artifactNotFound", at evidenceEx evidenceDecl
           "evidence.unsupportedResultState", at evidenceEx evidenceDecl
           "evidence.unsafeUpdate", at evidenceEx evidenceDecl
           "evidence.identityMismatch", at evidenceEx frontMatter

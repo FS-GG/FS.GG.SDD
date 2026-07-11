@@ -176,6 +176,37 @@ module Evidence =
         && not declaration.Synthetic
         && not (namesRenderedArtifact declaration)
 
+    /// FS.GG.SDD#349 (FR-002). Both path-bearing buckets, because `namesRenderedArtifact` above
+    /// discharges an obligation from either one: checking only `artifacts:` would leave the
+    /// identical hole one field to the left, and an author who writes the phantom path into
+    /// `sourceRefs` would pass exactly as before. `uri` is not a local file and is never probed.
+    let citedArtifactPaths (declaration: EvidenceDeclaration) =
+        let named (value: string) = not (String.IsNullOrWhiteSpace value)
+
+        [ for ref in declaration.ArtifactRefs do
+              if named ref.Path then
+                  ref.Path
+          for source in declaration.SourceRefs do
+              match source.Path with
+              | Some path when named path -> path
+              | _ -> () ]
+        |> List.distinct
+        |> List.sort
+
+    /// The cited-artifact existence rule (FS.GG.SDD#349, FR-006/FR-007), stated once. A declaration
+    /// that claims a real, non-synthetic pass while citing a file that is not on disk asserts that
+    /// something was proven by an artifact nobody can open.
+    ///
+    /// Gated on the satisfaction rule (`pass` ∧ not synthetic) *inside* the rule, so that the three
+    /// call sites — the `evidence` pre-write gate, the `ED-` cascade, and the `TD-` mirror — cannot
+    /// drift on which declarations are held to it. A deferral legitimately cites an artifact that
+    /// does not exist yet; blocking it would teach authors to stop deferring.
+    let missingCitedArtifacts (exists: string -> bool) (declaration: EvidenceDeclaration) =
+        if normalizedEvidenceResult declaration.Result <> "pass" || declaration.Synthetic then
+            []
+        else
+            citedArtifactPaths declaration |> List.filter (exists >> not)
+
     let parseArtifactRefs values =
         values
         |> List.map (fun path -> artifact path (ArtifactKind.Other "evidenceArtifact") ArtifactOwner.Sdd false)
