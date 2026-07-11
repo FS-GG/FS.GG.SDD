@@ -30,15 +30,24 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.0.x"
-          # NuGet restore cache keyed on the committed lockfiles (feature 064): an
-          # unchanged dependency set restores from cache; a real lockfile change busts
-          # it into a fresh cold restore. Speed only — --locked-mode still enforces.
-          # This full-solution restore is the SOLE cacher of this key: setup-dotnet keys
-          # only on hashFiles(packages.lock.json)+OS+runtime with no per-job component, so
-          # narrow single-project restores elsewhere must NOT cache or they poison this key
-          # with a partial package set → NU1403 here (#92 root cause).
-          cache: true
-          cache-dependency-path: '**/packages.lock.json'
+          # NO NuGet cache on this job, deliberately (FS-GG/.github#429).
+          #
+          # This previously read `cache: true`, justified as "Speed only — --locked-mode still
+          # enforces." That justification was FALSE, and it was the load-bearing assumption of
+          # the whole gate. --locked-mode validates the committed contentHash against whatever
+          # copy of the package is already in the global-packages folder; a cache hit therefore
+          # satisfies the gate from a STALE package without ever contacting the feed. When
+          # FSharp.Core 10.1.301 was re-published, this gate stayed green on a main whose
+          # lock files no fresh clone could restore — and went red on the correct re-pin, because
+          # changing the lock files busted the cache key. A cache that can decide the verdict is
+          # not "speed only".
+          #
+          # The locked-restore action now resolves into a fresh, empty NUGET_PACKAGES with the
+          # HTTP cache cleared, so this job's package folder is cold by construction and a
+          # setup-dotnet cache would be pure overhead (restored, then never read). The cost is a
+          # real download per run; for the one job whose entire purpose is to prove the committed
+          # lock file matches the feed, that download IS the gate.
+          cache: false
 
       # Locked restore is the single enforcement point, now via the shared composite
       # action (feature 064) so the --locked-mode enforcement and the regenerate hint
