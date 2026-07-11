@@ -115,6 +115,53 @@ module internal HandlersEvidence =
             | Error diagnostics -> None, diagnostics)
         |> Option.defaultValue (None, [])
 
+    /// FS.GG.SDD#349 (FR-003). The cited paths are *data* — they are not known until `evidence.yml`
+    /// has been read — so the probe cannot be planned in the first read wave. This is the same
+    /// two-phase shape as `duplicateCandidateReadEffects`: once the first wave has landed, the pure
+    /// core derives a second wave of `ReadFile` effects from what it just read, and the stage plan is
+    /// computed only when that wave comes back empty.
+    ///
+    /// `ReadFile` is the probe: the interpreter answers a missing file with `Succeeded = true,
+    /// Snapshot = None` (`CommandEffects.interpret`), so "probed and absent" is already a fact in the
+    /// interpreted log and `Artifacts` never touches `System.IO`. Only the paths of *satisfying*
+    /// declarations are probed — a deferral may legitimately cite an artifact that does not exist yet.
+    let citedArtifactReadEffects workId (model: CommandModel) : CommandEffect list =
+        let alreadyPlanned = plannedReadPaths model |> Set.ofList
+
+        // `exists` is `fun _ -> false` throughout: we are collecting *candidates to probe*, not
+        // deciding absence. The real verdict is taken in the gate, against the probe results.
+        let citedBy (artifact: EvidenceArtifact option) =
+            match artifact with
+            | Some artifact -> artifact.Evidence |> List.collect (missingCitedArtifacts (fun _ -> false))
+            | None -> []
+
+        // BOTH sources, because the gate validates `merged` (existing ⊕ input), not the on-disk
+        // artifact alone. Probing only what is on disk would leave an input-supplied declaration
+        // unprobed — and an unprobed path is treated as present, so the gate would fail OPEN on
+        // exactly the authoring route it is meant to police. `--input` is not currently accepted for
+        // `evidence` at the CLI, but `computeEvidencePlan` merges and validates it, so any consumer
+        // of the Commands library reaches it. A gate against fail-open must not itself fail open.
+        let existing, _, _ = parseExistingEvidence workId model
+        let input, _ = parseInputEvidence workId model.Request
+
+        citedBy existing @ citedBy input
+        |> List.map normalizeRelativePath
+        |> List.filter (fun path -> not (Set.contains path alreadyPlanned))
+        |> List.distinct
+        |> List.sort
+        |> List.map ReadFile
+
+    /// The existence verdict, read back off the interpreted effect log. A path counts as present only
+    /// when it was probed *and* the probe returned a snapshot; a path that was never probed is treated
+    /// as present, so a planning bug degrades to today's behaviour rather than to a false refusal.
+    let citedArtifactExists (model: CommandModel) (path: string) =
+        let key = readEffectKey path
+
+        if hasInterpreted key model then
+            (snapshot path model).IsSome
+        else
+            true
+
     let evidenceSourceSnapshot label path text : EvidenceSourceSnapshot =
         { Label = label
           Path = path
@@ -435,6 +482,9 @@ module internal HandlersEvidence =
         (planFacts: PlanFacts)
         (taskFacts: TaskFacts)
         (currentSnapshots: EvidenceSourceSnapshot list)
+        // FS.GG.SDD#349: injected, not called — the probe happened at the edge and this fold reads
+        // its result, so no handler touches `System.IO` (Constitution V, FR-003).
+        (artifactExists: string -> bool)
         (artifact: EvidenceArtifact)
         =
         let path = evidencePath workId
@@ -551,6 +601,15 @@ module internal HandlersEvidence =
                 namesVisualObligation declaration && passesWithoutRenderedArtifact declaration)
             |> List.map (fun declaration -> declaration.Id.Value)
 
+        // FS.GG.SDD#349: every path a satisfying declaration cites but that is not on disk. The
+        // diagnostic names the *paths*, not the declaration ids — the path is what the author has to
+        // go and fix, and it is the fact the gate was missing.
+        let missingArtifactPaths =
+            artifact.Evidence
+            |> List.collect (missingCitedArtifacts artifactExists)
+            |> List.distinct
+            |> List.sort
+
         [ if not (String.Equals(artifact.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
               evidenceIdentityMismatch path workId artifact.WorkId.Value
           if artifact.Stage <> LifecycleStage.Evidence then
@@ -579,6 +638,8 @@ module internal HandlersEvidence =
               missingDeferralRationale path missingDeferralFields
           if not (List.isEmpty missingVisualArtifacts) then
               missingVisualInspectionArtifact path missingVisualArtifacts
+          if not (List.isEmpty missingArtifactPaths) then
+              evidenceArtifactNotFound path missingArtifactPaths
           if evidenceSourceSnapshotStale currentSnapshots artifact.SourceSnapshots then
               staleEvidenceSource
                   path
@@ -588,6 +649,9 @@ module internal HandlersEvidence =
 
     let evidenceDispositions
         (obligations: EvidenceObligation list)
+        // FS.GG.SDD#349: same injected probe result as the gate above, so the `ED-` disposition and
+        // the blocking diagnostic cannot disagree about which declarations are supported.
+        (artifactExists: string -> bool)
         (artifact: EvidenceArtifact)
         : EvidenceDispositionDraft list =
         obligations
@@ -668,6 +732,17 @@ module internal HandlersEvidence =
                     && matches |> List.exists passesWithoutRenderedArtifact
                 then
                     "invalid", [ "evidence.missingVisualInspectionArtifact" ]
+                // #349: a pass whose cited artifact is not on disk is unsupported, not supported.
+                // Sits beside the #306 arm because it is the same defect one step further along: #306
+                // catches "claimed a look at a frame it never names", this catches "named a frame that
+                // is not there". `missingCitedArtifacts` applies the `pass ∧ ¬synthetic` gate itself,
+                // so a deferral and a disclosed synthetic pass both fall through, as above.
+                elif
+                    matches
+                    |> List.exists (fun declaration ->
+                        not (List.isEmpty (missingCitedArtifacts artifactExists declaration)))
+                then
+                    "invalid", [ "evidence.artifactNotFound" ]
                 elif
                     matches
                     |> List.exists (fun declaration ->
@@ -930,9 +1005,11 @@ sourceAnalysis: {analysisPath workId}
                                 planFacts
                                 taskFacts
                                 currentSnapshots
+                                (citedArtifactExists model)
                                 merged
 
-                        let dispositions = evidenceDispositions obligations artifact
+                        let dispositions =
+                            evidenceDispositions obligations (citedArtifactExists model) artifact
 
                         let dispositionDiagnostics =
                             evidenceDispositionDiagnostics (evidencePath workId) dispositions

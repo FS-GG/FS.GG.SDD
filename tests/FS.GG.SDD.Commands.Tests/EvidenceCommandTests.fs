@@ -1012,7 +1012,7 @@ evidence:
     synthetic: false"""
 
         let ev001 =
-            HandlersEvidence.evidenceDispositions obligations artifact
+            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) artifact
             |> List.find (fun disposition -> disposition.ObligationId = "EV001")
 
         Assert.Equal("missing", ev001.State)
@@ -1041,7 +1041,7 @@ evidence:
     synthetic: false"""
 
         let ev001 =
-            HandlersEvidence.evidenceDispositions obligations artifact
+            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) artifact
             |> List.find (fun disposition -> disposition.ObligationId = "EV001")
 
         Assert.Equal("supported", ev001.State)
@@ -1101,7 +1101,7 @@ tasks:
     synthetic: false"""
 
         let completion =
-            HandlersEvidence.evidenceDispositions obligations artifact
+            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) artifact
             |> List.find (fun disposition -> disposition.ObligationId = completionId)
 
         Assert.Equal("supported", completion.State)
@@ -1155,6 +1155,16 @@ tasks:
     let private visualDeclaration obligationId taskId fields =
         $"  - id: {obligationId}\n    kind: verification\n    subject:\n      type: task\n      id: {taskId}\n    taskRefs: [{taskId}]\n    obligationRefs: [{obligationId}]\n{fields}"
 
+    /// FS.GG.SDD#349. Actually produce the frame the declaration cites.
+    ///
+    /// Before #349 these fixtures cited `evidence/frame-ceiling-bounce.png` and never wrote it — the
+    /// file appears nowhere in the repository — so the two "accepts a rendered artifact" tests were
+    /// green while proving the exact opposite of their names. That committed pair *was* the field
+    /// report's probe, already merged. The rendered frame now exists, and the gate is what makes the
+    /// difference between the two states observable.
+    let private renderFrame root (relativePath: string) =
+        TestSupport.writeRelative root relativePath "not-a-real-png-but-a-real-file"
+
     /// FR-004 / SC-003: a non-synthetic `pass` that names no rendered artifact is exactly the shape
     /// of Breakout1's green suite over an invisible ball. It blocks.
     [<Fact>]
@@ -1179,11 +1189,13 @@ tasks:
             fun diagnostic -> diagnostic.Id = "evidence.missingVisualInspectionArtifact"
         )
 
-    /// FR-004: naming the rendered frame discharges it.
+    /// FR-004: naming the rendered frame discharges it — and, since #349, only when the frame is
+    /// actually there.
     [<Fact>]
     let ``evidence accepts a visual-inspection pass that names a rendered artifact`` () =
         let root = visualSurfaceScaffoldedProject ()
         let obligationId = visualObligationId root
+        renderFrame root "evidence/frame-ceiling-bounce.png"
 
         declareVisualEvidence
             root
@@ -1203,10 +1215,12 @@ tasks:
         )
 
     /// FR-004: a `sourceRefs[]` path is a rendered artifact too — the gate reads either bucket.
+    /// #349: and both buckets are existence-checked, so this bucket is not an evasion route.
     [<Fact>]
     let ``evidence accepts a visual-inspection pass whose rendered artifact is a sourceRef`` () =
         let root = visualSurfaceScaffoldedProject ()
         let obligationId = visualObligationId root
+        renderFrame root "evidence/frame-ceiling-bounce.png"
 
         declareVisualEvidence
             root
@@ -1219,6 +1233,160 @@ tasks:
         let report = TestSupport.runEvidence root workId title
 
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+
+    // ---------------------------------------------------------------------------------------------
+    // FS.GG.SDD#349 — a cited artifact must exist. The failure leg is asserted on the diagnostic id,
+    // not on a bare exit code (FR-009): per epic #266's own open note, a fix whose failure leg is
+    // untested is how this class of defect survives.
+    // ---------------------------------------------------------------------------------------------
+
+    /// FR-001 / SC-001 / SC-004: the field report's probe. A real, non-synthetic pass citing a file
+    /// that is not on disk is refused, and the diagnostic names the path.
+    [<Fact>]
+    let ``evidence blocks a pass whose cited artifacts path does not exist`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+        // Deliberately do NOT render the frame.
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                "    artifacts: [evidence/frame-that-was-never-rendered.png]\n    sourceRefs: []\n    result: pass\n    synthetic: false\n")
+        |> ignore
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+        let diagnostic =
+            report.Diagnostics
+            |> List.find (fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
+
+        // The path is the actionable fact — it is what the author has to go and produce.
+        Assert.Contains("evidence/frame-that-was-never-rendered.png", diagnostic.RelatedIds)
+
+    /// FR-002 / SC-004: the evasion route. `namesRenderedArtifact` discharges an obligation from
+    /// EITHER bucket, so a check that only reads `artifacts:` leaves the identical hole one field to
+    /// the left. Writing the phantom path into `sourceRefs` must be refused identically.
+    [<Fact>]
+    let ``evidence blocks a pass whose cited sourceRefs path does not exist`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                "    artifacts: []\n    sourceRefs:\n      - kind: verification\n        path: evidence/frame-that-was-never-rendered.png\n        result: pass\n    result: pass\n    synthetic: false\n")
+        |> ignore
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
+
+    /// FR-002: a `uri` is not a local file. It is never probed, and it never blocks — otherwise the
+    /// gate would refuse every declaration pointing at a CI run or a dashboard.
+    [<Fact>]
+    let ``evidence does not probe a sourceRefs uri`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                "    artifacts: []\n    sourceRefs:\n      - kind: verification\n        uri: https://ci.example/run/1\n        result: pass\n    result: pass\n    synthetic: false\n")
+        |> ignore
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
+
+    /// FR-001: the gate validates `merged` (on-disk ⊕ `InputText`), so the probe must see BOTH.
+    ///
+    /// Probing only the on-disk artifact left an input-supplied declaration unprobed — and an
+    /// unprobed path is treated as present — so the gate failed OPEN on exactly the authoring route
+    /// it polices. Caught in review of this feature; this is its regression leg. A gate against
+    /// fail-open must not itself fail open.
+    /// Mirrors `undisclosedSyntheticInput` above — the established shape for an InputText-supplied
+    /// declaration that merges cleanly. It *adds* a declaration rather than overwriting an authored
+    /// one, which the merge policy would refuse first as `evidence.unsafeUpdate`.
+    let phantomArtifactInput =
+        """schemaVersion: 1
+workId: 011-evidence-command
+stage: evidence
+status: evidenceReady
+evidence:
+  - id: EV999
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: []
+    obligationRefs: [EV001]
+    artifacts: [tests/PhantomSuppliedViaInput.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+"""
+
+    [<Fact>]
+    let ``evidence blocks a phantom cited path supplied through InputText, not just on disk`` () =
+        let root = initializedAnalyzedProject ()
+
+        let report =
+            TestSupport.runRequest
+                { TestSupport.evidenceRequest root workId title with
+                    InputText = Some phantomArtifactInput }
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
+
+    /// FR-006 / US3: a deferral may legitimately cite an artifact that does not exist yet — that is
+    /// what deferring *means*. Blocking it would teach authors to stop deferring, which is the
+    /// failure mode #266 exists to cure, not to cause. Only `pass` ∧ ¬`synthetic` is held to the rule.
+    [<Fact>]
+    let ``evidence does not block a deferral citing an artifact that does not exist yet`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                "    artifacts: [evidence/frame-not-yet-rendered.png]\n    sourceRefs: []\n    result: deferred\n    synthetic: false\n    rationale: the renderer is not wired up yet\n    owner: finch\n    scope: this work item\n    laterLifecycleVisibility: verify\n")
+        |> ignore
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
+
+    /// FR-006: a disclosed synthetic pass does not satisfy, so it is not held to the existence rule
+    /// either — it is already honest about being synthetic, and the cascade records it `synthetic`.
+    [<Fact>]
+    let ``evidence does not block a disclosed synthetic pass citing a missing artifact`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                "    artifacts: [evidence/frame-never-rendered.png]\n    sourceRefs: []\n    result: pass\n    synthetic: true\n    syntheticDisclosure:\n      reason: no renderer in this test workspace\n      realPath: a real frame rendered by the app\n")
+        |> ignore
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
 
     /// FR-005 / SC-002: a disclosed synthetic pass is honest, so it does not BLOCK — but it never
     /// satisfies. The gate must not reclassify it `invalid`; the existing cascade records it

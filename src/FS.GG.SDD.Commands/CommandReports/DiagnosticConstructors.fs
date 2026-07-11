@@ -721,6 +721,19 @@ module internal DiagnosticConstructors =
             "Render one representative frame, look at it, and record the produced image in artifacts or a sourceRefs path/uri — or defer the obligation and say why."
             ids
 
+    // FS-GG/FS.GG.SDD#349 (epic .github#266, instance (j)): a cited artifact path is a pointer to a
+    // file on disk, and nothing ever followed it. A `pass` citing an artifact that is not there is
+    // evidence whose only support is a string — the gate compared against a record of reality
+    // instead of reality. Both buckets are probed (`artifacts:` and `sourceRefs[].path`); a `uri` is
+    // not a local file and is never probed.
+    let evidenceArtifactNotFound path paths =
+        errorDiagnostic
+            "evidence.artifactNotFound"
+            (Some path)
+            "Evidence passes while citing an artifact that does not exist."
+            "Produce the cited artifact, correct the path, or stop claiming a pass — a cited path that is not on disk proves nothing."
+            paths
+
     let missingRequiredSkill path ids =
         errorDiagnostic
             "evidence.missingRequiredSkill"

@@ -331,3 +331,82 @@ lifecycleNotes:
                 )
 
         Assert.False(namesRenderedArtifact (singleDeclarationOf "bare" text))
+
+    // ---------------------------------------------------------------------------------------------
+    // FS.GG.SDD#349 — the cited-artifact rule, and the census guard that keeps the shipped example
+    // from rotting back into fiction.
+    // ---------------------------------------------------------------------------------------------
+
+    /// FR-002: both path-bearing buckets are cited paths — `artifacts:` AND `sourceRefs[].path` —
+    /// because `namesRenderedArtifact` discharges an obligation from either one.
+    [<Fact>]
+    let ``citedArtifactPaths reads both the artifacts and sourceRefs buckets`` () =
+        let cited = citedArtifactPaths (singleDeclarationOf "both" validEvidenceYaml)
+
+        Assert.Contains("specs/011-evidence-command/readiness/command-evidence-tests.txt", cited)
+
+    /// FR-002: a `uri` is not a local file. It must never become a probed path, or the gate would
+    /// refuse every declaration pointing at a CI run.
+    [<Fact>]
+    let ``citedArtifactPaths never yields a sourceRefs uri`` () =
+        let text =
+            validEvidenceYaml
+                .Replace(
+                    "    artifacts: [specs/011-evidence-command/readiness/command-evidence-tests.txt]\n",
+                    "    artifacts: []\n"
+                )
+                .Replace(
+                    "    sourceRefs:\n      - kind: test-output\n        path: specs/011-evidence-command/readiness/command-evidence-tests.txt\n        result: pass\n",
+                    "    sourceRefs:\n      - kind: test-output\n        uri: https://ci.example/run/1\n        result: pass\n"
+                )
+
+        Assert.Empty(citedArtifactPaths (singleDeclarationOf "uri-only" text))
+
+    /// FR-001: a satisfying declaration whose cited path is absent yields that path.
+    [<Fact>]
+    let ``missingCitedArtifacts reports a cited path that does not exist`` () =
+        let declaration = singleDeclarationOf "missing" validEvidenceYaml
+        let missing = missingCitedArtifacts (fun _ -> false) declaration
+
+        Assert.Contains("specs/011-evidence-command/readiness/command-evidence-tests.txt", missing)
+
+    /// FR-006: only `pass` ∧ ¬`synthetic` is held to the rule. A deferral legitimately cites an
+    /// artifact that does not exist yet, and must not be reported missing.
+    [<Fact>]
+    let ``missingCitedArtifacts holds only satisfying declarations to the rule`` () =
+        let deferred =
+            validEvidenceYaml.Replace("    result: pass\n", "    result: deferred\n")
+
+        Assert.Empty(missingCitedArtifacts (fun _ -> false) (singleDeclarationOf "deferred" deferred))
+
+    /// SC-002 / FR-008: the census. Every path the SHIPPED example cites must exist in the corpus.
+    ///
+    /// At `d21774d` this repository cited 29 artifact paths and 29 of them did not exist — including
+    /// all six in the example below, the corpus this product publishes to teach evidence authoring.
+    /// This test is the guard: the example cannot go back to citing files it does not ship.
+    [<Fact>]
+    let ``the shipped example cites only artifacts that exist`` () =
+        let corpus =
+            System.IO.Path.Combine(TestSupport.repoRoot, "docs", "examples", "lifecycle-artifacts")
+
+        let text =
+            System.IO.File.ReadAllText(System.IO.Path.Combine(corpus, "evidence.yml"))
+
+        let declarations =
+            match
+                parseEvidence
+                    { Path = "docs/examples/lifecycle-artifacts/evidence.yml"
+                      Text = text }
+            with
+            | Ok declarations -> declarations
+            | Error diagnostics -> failwith $"the shipped example does not parse: %A{diagnostics}"
+
+        let missing =
+            declarations
+            |> List.collect (
+                missingCitedArtifacts (fun path -> System.IO.File.Exists(System.IO.Path.Combine(corpus, path)))
+            )
+            |> List.distinct
+            |> List.sort
+
+        Assert.Empty(missing)

@@ -138,5 +138,22 @@ module Evidence =
     /// artifact. A synthetic pass and a deferral both fall outside it.
     val passesWithoutRenderedArtifact: declaration: EvidenceDeclaration -> bool
 
+    /// Every locally-resolvable path this declaration cites: `artifactRefs` ∪ `sourceRefs[].path`
+    /// (FS.GG.SDD#349, FR-002). A `sourceRefs[].uri` is deliberately excluded — it is not a local
+    /// file and is never probed. Blanks are dropped; the result is deduplicated and sorted.
+    val citedArtifactPaths: declaration: EvidenceDeclaration -> string list
+
+    /// The cited-artifact existence rule, stated once for the `evidence` gate, the `ED-`
+    /// disposition, and the `TD-` mirror (FS.GG.SDD#349, FR-007): the cited paths of a *satisfying*
+    /// declaration that `exists` reports absent, sorted.
+    ///
+    /// Only `result: pass` ∧ `synthetic: false` — the satisfaction rule — is held to this. A
+    /// deferral, a disclosed synthetic pass, and any non-pass result may legitimately cite an
+    /// artifact that does not exist yet, and yield `[]` (FR-006).
+    ///
+    /// `exists` is injected so that `Artifacts` performs no I/O: the probe is a `ReadFile` effect
+    /// interpreted at the edge, and this fold reads its result (Constitution V, FR-003).
+    val missingCitedArtifacts: exists: (string -> bool) -> declaration: EvidenceDeclaration -> string list
+
     val parseEvidenceArtifact: snapshot: FileSnapshot -> Result<EvidenceArtifact, Diagnostic list>
     val parseEvidence: snapshot: FileSnapshot -> Result<EvidenceDeclaration list, Diagnostic list>

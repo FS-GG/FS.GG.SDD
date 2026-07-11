@@ -191,7 +191,15 @@ module internal HandlersVerify =
                     $"Resolve evidence obligation {draft.ObligationId}." })
         |> List.sortBy (fun view -> view.Id)
 
-    let verifyTestDispositionViews (taskFacts: TaskFacts) (artifact: EvidenceArtifact) =
+    let verifyTestDispositionViews
+        (taskFacts: TaskFacts)
+        // FS.GG.SDD#349: the `TD-` mirror of the cited-artifact rule. `evidence` declares and
+        // `verify` is the merge-boundary gate, so an artifact deleted *after* evidence was authored
+        // must still be caught here — otherwise the check only ever fires at authoring time and a
+        // stale citation walks straight past the boundary that matters (FR-004, US2).
+        (artifactExists: string -> bool)
+        (artifact: EvidenceArtifact)
+        =
         taskFacts.Tasks
         |> List.collect (fun task -> task.RequiredEvidence |> List.map (fun ev -> ev.Value, task))
         |> List.groupBy fst
@@ -232,6 +240,15 @@ module internal HandlersVerify =
                     && matches |> List.exists passesWithoutRenderedArtifact
                 then
                     "invalid", [ "evidence.missingVisualInspectionArtifact" ]
+                // #349: mirror the `ED-` cascade — a pass citing an artifact that is not on disk is
+                // invalid, not satisfied. Same rule object (`missingCitedArtifacts`), so `ED-` and
+                // `TD-` cannot drift on what counts as supported.
+                elif
+                    matches
+                    |> List.exists (fun declaration ->
+                        not (List.isEmpty (missingCitedArtifacts artifactExists declaration)))
+                then
+                    "invalid", [ "evidence.artifactNotFound" ]
                 elif
                     matches
                     |> List.exists (fun declaration ->
@@ -520,16 +537,22 @@ module internal HandlersVerify =
                                 planFacts
                                 taskFacts
                                 currentSnapshots
+                                (citedArtifactExists model)
                                 artifact
 
                         let obligations = evidenceObligations taskFacts
-                        let dispositions = evidenceDispositions obligations artifact
+
+                        let dispositions =
+                            evidenceDispositions obligations (citedArtifactExists model) artifact
 
                         let dispositionDiagnostics =
                             evidenceDispositionDiagnostics (evidencePath workId) dispositions
 
                         let evidenceViews = verifyEvidenceDispositionViews taskFacts dispositions
-                        let testViews = verifyTestDispositionViews taskFacts artifact
+
+                        let testViews =
+                            verifyTestDispositionViews taskFacts (citedArtifactExists model) artifact
+
                         let skillViews = verifySkillViews workId taskFacts dispositions
 
                         let testDiagnostics =
