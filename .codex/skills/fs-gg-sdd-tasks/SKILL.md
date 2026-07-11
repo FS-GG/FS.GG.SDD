@@ -11,6 +11,12 @@ schema-versioned file where each task carries stable cross-references that the w
 model resolves into links. This is what makes "is this task done?" a checkable
 fact later.
 
+**Read the worked example first.** `docs/examples/lifecycle-artifacts/tasks.yml` is a
+complete, gate-clean `tasks.yml`. It is not illustrative prose: the skill↔gate doctest runs
+the corpus verbatim through the real gates on every build, so a form copied from it cannot
+be one the gate rejects. Where the prose below and the example disagree, the example is the
+authority.
+
 ## Command
 
 ```text

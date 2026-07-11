@@ -10,6 +10,12 @@ spec." Its most important job is computing **FR→AC coverage**, and that depend
 a strict, easy-to-get-subtly-wrong grammar. Get the grammar right and coverage is
 real; get it wrong and a requirement is silently reported uncovered.
 
+**Read the worked example first.** `docs/examples/lifecycle-artifacts/checklist.md` is a
+complete, gate-clean `checklist.md`. It is not illustrative prose: the skill↔gate doctest
+runs the corpus verbatim through the real gates on every build, so a form copied from it
+cannot be one the gate rejects. Where the prose below and the example disagree, the
+example is the authority.
+
 ## Command
 
 ```text

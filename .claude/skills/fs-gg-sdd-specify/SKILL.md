@@ -10,6 +10,12 @@ evidence, and ship audit. It establishes the **stable ids** (`FR-###`, `AC-###`,
 `US-###`) that every later stage references, so getting the ids right here matters
 more than anywhere else.
 
+**Read the worked example first.** `docs/examples/lifecycle-artifacts/spec.md` is a
+complete, gate-clean `spec.md`. It is not illustrative prose: the skill↔gate doctest
+runs the corpus verbatim through the real gates on every build, so a form copied from it
+cannot be one the gate rejects. Where the prose below and the example disagree, the
+example is the authority.
+
 ## Command
 
 ```text
@@ -55,10 +61,23 @@ requirements), `SB-###` (scope boundaries), `AMB-###` (ambiguities).
 Write requirements with MUST language and stable ids — these are the ids
 `checklist`, `tasks`, and `evidence` will reference. Each `FR-###` is a **non-bold**
 `- FR-###:` list item that carries its acceptance reference on the **same physical
-line** as `(covers AC-###)`. A bold `**FR-###**`, a colon-less line, or an acceptance
-ref on its own line is *counted but not covered* — `checklist` will report it as
-uncovered. This block is the same coverage grammar the `checklist` gate accepts (run
-verbatim through the gate by the skill↔gate doctest against `docs/examples/lifecycle-artifacts/spec.md`):
+line**.
+
+`covers` is **decoration, not a magic token.** The gate scans the line for an `AC-###`
+reference and nothing else — the word `covers` appears in no regex. So both of these
+establish coverage, and you may write either:
+
+```text
+- FR-001: The system MUST serve toward the prior loser. (covers AC-001)
+- FR-001: The system MUST serve toward the prior loser. (Stories: US-001; Acceptance: AC-001)
+```
+
+The second is the form `fsgg-sdd specify` scaffolds for you, so leaving a scaffolded line
+as-is is correct. What actually breaks coverage is the *shape*: a bold `**FR-###**`, a
+colon-less line, or an acceptance ref on its own line is *counted but not covered* —
+`checklist` will report it as uncovered. The block below is the same coverage grammar the
+`checklist` gate accepts (run verbatim through the gate by the skill↔gate doctest against
+`docs/examples/lifecycle-artifacts/spec.md`):
 
 <!-- fsgg-sdd:example corpus=spec.md mode=contains -->
 ```markdown

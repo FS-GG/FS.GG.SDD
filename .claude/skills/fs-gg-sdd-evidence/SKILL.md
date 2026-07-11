@@ -10,6 +10,12 @@ description: Stage 8 of the FS.GG SDD lifecycle — fsgg-sdd evidence authors wo
 contracts: a subtly wrong declaration leaves an obligation unsatisfied even though
 the work is done.
 
+**Read the worked example first.** `docs/examples/lifecycle-artifacts/evidence.yml` is a
+complete, gate-clean `evidence.yml`. It is not illustrative prose: the skill↔gate doctest
+runs the corpus verbatim through the real gates on every build, so a form copied from it
+cannot be one the gate rejects. Where the prose below and the example disagree, the
+example is the authority.
+
 ## Command
 
 ```text

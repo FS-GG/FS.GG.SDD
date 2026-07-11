@@ -10,6 +10,12 @@ the whole authored cascade (spec → clarify → checklist → plan → tasks), 
 inconsistencies and readiness, and emits a generated view. It authors **no**
 `work/<id>/` source — it aggregates.
 
+**Read the worked example first.** `analyze` authors nothing, but it reads the whole
+authored cascade — and `docs/examples/lifecycle-artifacts/` is a complete, gate-clean
+instance of every artifact it consumes. The skill↔gate doctest runs that corpus verbatim
+through the real gates (charter→analyze) on every build, so it is the fastest way to see
+the shape `analyze` expects to find — and what a clean run looks like.
+
 After `analyze` reports implementation-ready, you **implement** (write the code —
 there is no `fsgg-sdd implement` command), then record `evidence`.
 
