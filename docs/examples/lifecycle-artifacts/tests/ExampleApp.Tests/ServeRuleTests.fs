@@ -14,14 +14,18 @@ module ServeRuleTests =
     /// AC-001: given a rally has just ended, the next serve goes toward the loser.
     [<Fact>]
     let ``serve goes to the player who lost the prior rally`` () =
-        let rally = { Winner = PlayerOne; Loser = PlayerTwo }
+        let rally =
+            { Winner = PlayerOne
+              Loser = PlayerTwo }
 
         Assert.Equal(PlayerTwo, ServeRule.nextServer rally)
 
     /// The rule is symmetric — it is "the loser serves", not "player two serves".
     [<Fact>]
     let ``serve follows the loser, whichever player that is`` () =
-        let rally = { Winner = PlayerTwo; Loser = PlayerOne }
+        let rally =
+            { Winner = PlayerTwo
+              Loser = PlayerOne }
 
         Assert.Equal(PlayerOne, ServeRule.nextServer rally)
 
@@ -29,6 +33,8 @@ module ServeRuleTests =
     /// by the same player must serve to the same opponent twice — the failure leg of that decision.
     [<Fact>]
     let ``consecutive rallies won by one player serve to the same opponent`` () =
-        let rally = { Winner = PlayerOne; Loser = PlayerTwo }
+        let rally =
+            { Winner = PlayerOne
+              Loser = PlayerTwo }
 
         Assert.Equal(ServeRule.nextServer rally, ServeRule.nextServer rally)

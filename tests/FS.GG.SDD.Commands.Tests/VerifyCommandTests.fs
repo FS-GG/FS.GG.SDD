@@ -547,10 +547,7 @@ tasks:
         Assert.Equal("ED-EV001", view.Id)
         Assert.Equal<string list>([ "T001"; "T002" ], view.TaskIds |> List.sort)
         // The distinct, sorted union of T001's {AC-001, DEC-001, FR-001} and T002's {AC-002, DEC-002, FR-002}.
-        Assert.Equal<string list>(
-            [ "AC-001"; "AC-002"; "DEC-001"; "DEC-002"; "FR-001"; "FR-002" ],
-            view.SourceIds
-        )
+        Assert.Equal<string list>([ "AC-001"; "AC-002"; "DEC-001"; "DEC-002"; "FR-001"; "FR-002" ], view.SourceIds)
 
     /// Rewrite the first recorded snapshot digest to one no source can hash to. Deliberately local
     /// rather than shared with `EvidenceCommandTests`: each side asserts its own fixture drift, and

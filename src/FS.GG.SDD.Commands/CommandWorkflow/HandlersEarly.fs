@@ -166,7 +166,8 @@ module internal HandlersEarly =
                 // entry to `changedArtifacts` (FR-010 pins the blocked run at one changed artifact).
                 let blockedSeedEffects =
                     match clarificationSeedText with
-                    | Some text -> [ WriteFile(clarificationPath workId, text, HybridArtifact MergePolicies.clarifications) ]
+                    | Some text ->
+                        [ WriteFile(clarificationPath workId, text, HybridArtifact MergePolicies.clarifications) ]
                     | None -> []
 
                 commandDiagnostics @ generatedDiagnostics,

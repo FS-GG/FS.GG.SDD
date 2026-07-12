@@ -59,7 +59,10 @@ module internal EarlyStageAuthoring =
         |> String.concat " "
 
     let private nonBlank (value: string) =
-        if String.IsNullOrWhiteSpace value then None else Some(value.Trim())
+        if String.IsNullOrWhiteSpace value then
+            None
+        else
+            Some(value.Trim())
 
     /// A front-matter scalar that survives its own re-parse.
     ///

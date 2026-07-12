@@ -182,7 +182,4 @@ module SurfaceProjectionTests =
         for candidate in [ report; unresolvedReport ] do
             Assert.Equal(serializeReport candidate, serializeReport candidate)
 
-            Assert.Equal(
-                (resolve Text nonInteractive candidate).Text,
-                (resolve Text nonInteractive candidate).Text
-            )
+            Assert.Equal((resolve Text nonInteractive candidate).Text, (resolve Text nonInteractive candidate).Text)

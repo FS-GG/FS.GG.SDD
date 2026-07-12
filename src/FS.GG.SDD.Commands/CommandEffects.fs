@@ -45,7 +45,9 @@ module CommandEffects =
     /// path is a symlink or a hardlink.
     let private writeFileAtomic (absolute: string) (text: string) =
         let directory = parentDirectory absolute
-        let temp = Path.Combine(directory, $".{Path.GetFileName absolute}.{Guid.NewGuid():N}.tmp")
+
+        let temp =
+            Path.Combine(directory, $".{Path.GetFileName absolute}.{Guid.NewGuid():N}.tmp")
 
         try
             File.WriteAllText(temp, text)
