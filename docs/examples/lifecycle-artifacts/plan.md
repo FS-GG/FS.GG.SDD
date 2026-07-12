@@ -35,26 +35,26 @@ Prose status: planned
 - Checklist result count: 2.
 
 ## Plan Decisions
-- PD-001 [AC-001] [FR-001] complete: Plan requirement FR-001 (serve-to-loser) through the plan command contract.
-- PD-002 [AC-002] [FR-002] complete: Plan requirement FR-002 (rally scoring, no match-end) through the plan command contract.
-- PD-003 [DEC-002] acceptedDeferral: Accepted deferral DEC-002 remains visible to task generation.
-- PD-004 [CR-003] acceptedDeferral: Accepted deferral CR-003 remains visible to task generation.
+- PD-001 [AC-001] [FR-001] complete: Serve direction is derived from the finished rally's loser at rally end and stored on the match, not recomputed at serve time — so a replayed match and a live one cannot disagree.
+- PD-002 [AC-002] [FR-002] complete: The scoreboard accumulates points and exposes no terminal state, because the clarified rally is endless; a win condition would be a new requirement, not a tweak.
+- PD-003 [DEC-002] acceptedDeferral: A match-end/win condition is deferred: the rally rules are provable without it, and inventing one now would fix a scoring model we have not played against yet.
+- PD-004 [CR-003] acceptedDeferral: The checklist's request for a scoring-limit review is deferred alongside the win-condition question, because it cannot be answered until a win condition exists.
 
 ## Contract Impact
-- PC-001 [PD-001] command report: fsgg-sdd plan, work/001-example/plan.md, and command-report JSON are tool-facing and compatibility-preserving.
+- PC-001 [PD-001] command report: `nextServer` is returned as a value rather than applied as a mutation, so a caller cannot desync the scoreboard from the serve.
 
 ## Verification Obligations
-- VO-001 [PD-001] [PC-001] semanticTest: Run focused command tests, FSI/prelude evidence, and CLI smoke evidence before task generation.
+- VO-001 [PD-001] [PC-001] semanticTest: Win two consecutive rallies with the same player and assert the serve goes to the same opponent twice — the failure leg of the serve rule: the loser serves, it does not alternate.
 
 ## Migration Posture
-- PM-001 [PC-001] diagnoseOnly: Plan schemaVersion 1 is accepted; unsupported plan schemas diagnose before write.
+- PM-001 [PC-001] diagnoseOnly: No persisted match state changes shape, so there is nothing to migrate; a stored match from before this change still loads.
 
 ## Generated View Impact
-- GV-001 [PD-001] workModel: readiness/001-example/work-model.json refreshes from current plan sources or reports staleGeneratedView.
+- GV-001 [PD-001] workModel: The work model gains no new node kinds — only PD-001's prose moves — so a stale view is a regenerate, not a migration.
 
 ## Accepted Deferrals
-- DEC-002 acceptedDeferral: Deferral remains visible to tasks and evidence.
-- CR-003 acceptedDeferral: Deferral remains visible to tasks and evidence.
+- DEC-002 acceptedDeferral: No win condition this cycle — carried into tasks and evidence so it is deferred in the open, not dropped.
+- CR-003 acceptedDeferral: Scoring-limit review waits on the win-condition question; it stays visible so the next cycle inherits the question rather than rediscovering it.
 
 ## Planning Findings
 No blocking planning findings recorded.

@@ -25,7 +25,7 @@ sources:
     schemaVersion: 1
   - label: plan
     path: work/001-example/plan.md
-    digest: 625bc9a040ca802ba44e088f914bf01a529da46cd24f6b5496e4ea09650ec260
+    digest: c16b143afcb84a0cc5c49db25a35842f825f4906888bfe85516894ad822ec347
     schemaVersion: 1
 tasks:
   - id: T001

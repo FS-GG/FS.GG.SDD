@@ -55,8 +55,14 @@ by two workers who could not see each other's filing —
 
 ```sh
 scripts/fsgg-coord issues <target> --jq '.[] | select(.title | test("<keyword>"; "i")) | "#\(.number) \(.title)"'
-gh api repos/FS-GG/<repo>/issues/<parent>/sub_issues --jq '.[] | "#\(.number) \(.title)"'   # filing a child? look here
+gh api repos/FS-GG/<repo>/issues/<parent>/sub_issues --paginate --jq '.[] | "#\(.number) \(.title)"'   # filing a child? look here
 ```
+
+**`--paginate` is load-bearing, not tidiness.** `sub_issues` pages at 30, and the parents worth
+checking are precisely the big, active epics where several workers are splitting one parent at once —
+so the read truncates exactly where the duplicate it is meant to catch actually lives. Without it,
+#266 returns 30 of its 51 children and says nothing about the other 21 (#547). Any `gh api` read of a
+LIST needs it; `fsgg-coord issues` already pages for you.
 
 On a hit, **comment on the existing issue** rather than opening a rival — the finding's value is its
 context, and a comment carries that just as well.
@@ -70,20 +76,27 @@ schedulable). You are the one holding the context — you can usually name the f
 the eventual claimant can.
 
 ```sh
-gh issue create --repo FS-GG/<target> \
-  --title "[cross-repo] <short summary>" \
-  --label cross-repo --label cross-repo:request [--label blocked] \
-  --body "From: <your repo>. Blocks: <ref>. Contract: <id>. <what you need and why>
+# REST: `gh issue create` is GraphQL, and the budget is shared by the whole fleet (#587).
+gh api -X POST repos/FS-GG/<target>/issues \
+  -f title='[cross-repo] <short summary>' \
+  -f 'labels[]=cross-repo' -f 'labels[]=cross-repo:request' \
+  -f body="From: <your repo>. Blocks: <ref>. Contract: <id>. <what you need and why>
 
-Paths: src/Scene/ tests/Scene/"
+Paths: src/Scene/ tests/Scene/" --jq .html_url
 ```
 
 `Paths:` is not a glob language — exact paths, directory prefixes, and a *trailing* `/**` or
 `/*`; a leading `**/` matches nothing and is refused, and so is a backticked one
-([#435](https://github.com/FS-GG/.github/issues/435)). If you genuinely cannot name the
-touch-set (a decision item, an epic, an investigation whose scope *is* the question), **say so
-in the body** — "no touch-set: declare at claim time with `widen`". Then an undeclared item is
-a decision somebody made, not an omission nobody noticed.
+([#435](https://github.com/FS-GG/.github/issues/435)).
+
+If you genuinely cannot name the touch-set (a decision item, an epic, an investigation whose
+scope *is* the question), declare **`Paths: none`** — the sentinel, not a comment
+([#496](https://github.com/FS-GG/.github/issues/496)). It does not make the item schedulable;
+it makes the absence **deliberate and machine-readable**, and `fsgg-coord lint` goes **red** on a
+`Ready`/`Backlog` item that declares neither paths nor the sentinel. Prose here was the old
+instruction, and **nothing read prose** — so an epic and a forgotten touch-set looked identical,
+and real work went invisible to every worker who asked for work. **A finding filed without either
+is a finding nobody can pick up.**
 
 ## Respond / resolve
 
@@ -191,19 +204,29 @@ not lost** — `fsgg-coord flush` replays it, and the next board-writing command
 `FSGG_COORD_DEBUG=1` logs every call's cost, so **verify the saving instead of assuming it**. Full cost
 model, with the measured table: `docs/coordination/graphql-budget.md`.
 
-**`gh` runbook** — the escape hatch, for what `fsgg-coord` deliberately does not do (creating the board
-and its fields, adding items). View layout/grouping, sub-issue links, issue-type assignment, and
-built-in workflows are UI/REST-driven:
+**Adding an item to the board is `fsgg-coord add`** — not `gh project item-add`. It is idempotent, it
+caches the item id (so the `set-field` that always follows pays nothing), and it refuses to add on a
+*failed* lookup rather than creating a duplicate (#421). Reaching past the client puts an unmetered
+principal on a budget the whole fleet shares (#587).
 
+```sh
+scripts/fsgg-coord add FS-GG/<repo>#<n>              # put it on the board
+scripts/fsgg-coord set-field <n> Status Backlog      # ...then sequence it
+# `ready` / `next` read the board. NEVER `gh project item-list` — 6 pts to read FIVE items.
+```
+
+**One-time board PROVISIONING** is the genuine exception: a human runs it once, with admin rights, and
+no worker ever executes it. View layout/grouping, sub-issue links, issue-type assignment, and built-in
+workflows are UI-driven.
+
+<!-- graphql-monopoly: exempt — one-time board provisioning, run once by a human with admin rights; never on a worker path -->
 ```sh
 gh auth refresh -s project,read:project                       # token needs project scope
 P=$(gh project create --owner FS-GG --title "Coordination" --format json --jq '.number')
 gh project field-create $P --owner FS-GG --name "Phase" --data-type SINGLE_SELECT \
   --single-select-options "P0 Decisions,P1 Rendering,P2 SDD,P3 Governance,P4 Templates,P5 Versioning,P6 Game,P7 Audio"
 # ...Repo Scope / Workstream / Effort single-selects; Start / Target dates; Contract / Blocked by text
-gh project item-add    $P --owner FS-GG --url https://github.com/FS-GG/<repo>/issues/<n>
 gh project item-create $P --owner FS-GG --title "<draft item>" --body "<acceptance criteria>"
-# item-list is the one to NEVER reach for — see above. next/ready answer the same question for ~1/100th.
 ```
 
 > **Adding an option to an existing single-select is destructive — prefer the UI.** There is no

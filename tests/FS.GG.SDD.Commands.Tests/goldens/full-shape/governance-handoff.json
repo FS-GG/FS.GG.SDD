@@ -6,17 +6,17 @@
   "sources": [
     {
       "path": "readiness/247-full-shape-golden/ship.json",
-      "digest": "sha256:ae23c6e8cc38493f3da41f0f95a87394df945e19268e9088abfbf554c12038fc",
+      "digest": "sha256:97f2bff71083ddd7ade47e9dcdb075a831fe4467cf584cb2c7b03453f14b6951",
       "schemaVersion": 1
     },
     {
       "path": "readiness/247-full-shape-golden/verify.json",
-      "digest": "sha256:ce6af95f4fac1e4dcd93d40c0cccf823310f73db74b9cc06c7a60c1dce07db9f",
+      "digest": "sha256:150399e092613f324d6e2444eba756fc992b5d6b26004f5fe8ac7738607ee2a4",
       "schemaVersion": 1
     },
     {
       "path": "readiness/247-full-shape-golden/work-model.json",
-      "digest": "sha256:6b16726c8f6625514a9da1b83ebf54d37a219ba1b2d152a2825285decc0fc222",
+      "digest": "sha256:c08ec77a86602ae28932fc5e08ce439e879a62cf95f9c45e7eeecce1eb7c3def",
       "schemaVersion": 1
     }
   ],

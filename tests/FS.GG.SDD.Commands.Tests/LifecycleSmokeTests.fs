@@ -74,6 +74,9 @@ module LifecycleSmokeTests =
 
         let checklist = TestSupport.runChecklist root workId title
         let plan = TestSupport.runPlan root workId title
+        // #351: author the plan before `analyze`. The scaffold's prose now BLOCKS, so a smoke that
+        // drove the lifecycle on untouched boilerplate was asserting exactly the defect #351 removes.
+        TestSupport.authorPlanProse root workId
         let tasks = TestSupport.runTasks root workId title
         // Authored passing task evidence so analyze/evidence/verify/ship are ready.
         TestSupport.writePassingTaskEvidenceFor root workId
@@ -341,11 +344,16 @@ module LifecycleSmokeTests =
                 { TestSupport.clarifyRequest root workId title with
                     InputText = None }
 
+        let checklist = TestSupport.runChecklist root workId title
+        let plan = TestSupport.runPlan root workId title
+        // #351: the scaffold's prose blocks `analyze`, so author it before driving on.
+        TestSupport.authorPlanProse root workId
+
         let reports =
             reports
             @ [ "clarify", clarify
-                "checklist", TestSupport.runChecklist root workId title
-                "plan", TestSupport.runPlan root workId title
+                "checklist", checklist
+                "plan", plan
                 "tasks", TestSupport.runTasks root workId title ]
 
         TestSupport.writePassingTaskEvidenceFor root workId

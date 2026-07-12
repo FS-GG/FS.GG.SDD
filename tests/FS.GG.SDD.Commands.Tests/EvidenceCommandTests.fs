@@ -1128,6 +1128,7 @@ tasks:
 
         TestSupport.runChecklist root workId title |> ignore
         TestSupport.runPlan root workId title |> ignore
+        TestSupport.authorPlanProse root workId // #351: the scaffold's plan prose now blocks analyze
         TestSupport.runTasks root workId title |> ignore
         TestSupport.runAnalyze root workId title |> ignore
         TestSupport.runEvidence root workId title |> ignore

@@ -382,6 +382,10 @@ module VerifyCommandTests =
 
         TestSupport.runChecklist root workId title |> ignore
         TestSupport.runPlan root workId title |> ignore
+        // Hand-rolled rather than `initializePlanReadyProject` (the framework must be declared
+        // before `charter`), so the authoring that helper chains has to happen here too: since #351
+        // `analyze` blocks on the plan prose the scaffold wrote, and this test needs it to pass.
+        TestSupport.authorPlanProse root workId
 
         let tasksReport = TestSupport.runTasks root workId title
         let allTaskIds = tasksReport.Tasks.Value.TaskIds
