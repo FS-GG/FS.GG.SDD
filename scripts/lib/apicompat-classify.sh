@@ -62,16 +62,47 @@ apicompat_strip_project_suffix() {
 }
 
 # The gate verdict. Prints a one-word reason on stdout; RETURNS the script's exit code.
-#   $1 broke          — packages with a real CP#### break
-#   $2 indeterminate  — packages whose pack / tool / feed read FAILED (the check did not run)
-#   $3 nobaseline     — packages with no baseline that are NOT allowlisted
+#   $1 broke          — packages with a real CP#### break                              -> exit 1
+#   $2 indeterminate  — packages whose PACK/TOOL failed (a fact about the tree)        -> exit 3
+#   $3 nobaseline     — packages with no baseline that are NOT allowlisted             -> exit 1
 #
-# Any non-zero count fails: a break is a break, and every other counted outcome means the gate could
-# not prove there wasn't one. Reported in severity order so the summary names the worst thing found.
+# FeedUnavailable is deliberately NOT an argument: it does not fail. See below.
+#
+# THE FIVE STATES, and the exit code each earns. This mirrors FS.GG.Rendering's
+# scripts/apicompat-check.sh, which reached this model first (their #186/#216) — the mechanism is
+# ONE org-registered gate (`apicompat-publicapi-gate`, Governance spec 088 D1), so it gets one
+# model, not two divergent ones.
+#
+#   OK               packed, and ApiCompat found no break vs the baseline.            -> 0
+#   BREAK            packed, and ApiCompat reported a CP#### error.                   -> 1
+#   NoBaselineYet    the feed ANSWERED, and this package has no published version.    -> 1 unless
+#                    Nothing to compare against.                                         allowlisted
+#   Indeterminate    the pack or the tool failed. The comparison did NOT happen, and  -> 3
+#                    the cause is a fact about THE TREE UNDER TEST, not the network.
+#   FeedUnavailable  the feed did not answer (transport error, 5xx, 401/403, no       -> 0, ::error::
+#                    token). The comparison did not happen for a reason EXTERNAL to
+#                    the change.
+#
+# WHY FeedUnavailable EXITS 0 (ADR-0101, adopted from Rendering)
+#   Requiring this check already takes a dependency on feed availability. A GitHub Packages outage
+#   must INFORM a merge, not block every merge in the org behind an external service. It is a loud
+#   `::error::` and an explicit "not a pass" line — never a silent green. The split is on WHO FAILED
+#   TO ANSWER, and it is drawn BEFORE packing, at the feed read (see feed_latest_version). Pack logs
+#   are never pattern-matched for "looks like a network problem", because NU1403 looked exactly like
+#   one and was not — it was the lock bug, a fact about the tree, and treating it as a feed blip is
+#   how this gate went blind in the first place.
+#
+# WHERE SDD IS DELIBERATELY STRICTER THAN RENDERING
+#   NoBaselineYet is allowlist-gated here (FS.GG.SDD#381 asks for it explicitly: "an explicit
+#   allowlist, not a fallthrough"). Rendering exits 0 on it unconditionally, which is reasonable for
+#   17 packables that gain new members often — but it leaves a hole: GitHub Packages answers 404 for
+#   an UNAUTHORIZED read as readily as for an absent package, so a token that quietly loses
+#   `packages: read` reports NoBaselineYet and passes. SDD has exactly one packable, published since
+#   1.0.0, so for SDD a missing baseline can only mean something is wrong.
 apicompat_verdict() {
   local broke="${1:-0}" indeterminate="${2:-0}" nobaseline="${3:-0}"
   if [ "$broke" -gt 0 ]; then printf 'break\n'; return 1; fi
-  if [ "$indeterminate" -gt 0 ]; then printf 'indeterminate\n'; return 1; fi
+  if [ "$indeterminate" -gt 0 ]; then printf 'indeterminate\n'; return 3; fi
   if [ "$nobaseline" -gt 0 ]; then printf 'nobaseline\n'; return 1; fi
   printf 'pass\n'
   return 0

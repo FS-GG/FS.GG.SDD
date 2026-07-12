@@ -78,13 +78,22 @@ check_verdict "clean-passes"                0     0     0    "pass"            0
 check_verdict "break-fails"                 1     0     0    "break"           1
 
 # THE #381 REGRESSION CASES. Both of these exited 0 before, and the required gate went green.
-check_verdict "indeterminate-alone-FAILS"   0     1     0    "indeterminate"   1
+# Indeterminate earns exit 3, not 1 — it is distinguishable from a break because the tree failed to
+# pack rather than the API changing (Rendering's model, adopted; see lib/apicompat-classify.sh).
+check_verdict "indeterminate-alone-FAILS"   0     1     0    "indeterminate"   3
 check_verdict "nobaseline-alone-FAILS"      0     0     1    "nobaseline"      1
 
-# Severity order: name the worst thing found.
+# Severity order: name the worst thing found. A BREAK means the gate RAN and found something, which
+# is the stronger signal, so it outranks a pack failure.
 check_verdict "break-outranks-indet"        1     1     0    "break"           1
-check_verdict "indet-outranks-nobaseline"   0     1     1    "indeterminate"   1
+check_verdict "indet-outranks-nobaseline"   0     1     1    "indeterminate"   3
 check_verdict "all-three"                   2     3     1    "break"           1
+
+# FeedUnavailable is not an argument at all: the feed not answering is external to the change and
+# must not block a merge (ADR-0101). It is reported loudly, never as a pass — but it exits 0, so a
+# run whose ONLY non-OK outcome is FeedUnavailable is indistinguishable HERE from a clean one. That
+# is deliberate; the "not compared" reporting lives in apicompat-check.sh, not in the verdict.
+check_verdict "feedunavailable-not-a-fail"  0     0     0    "pass"            0
 
 # --- apicompat_baseline_optional ----------------------------------------------------------------
 

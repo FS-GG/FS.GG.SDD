@@ -40,16 +40,26 @@
 #   a SEPARATE job and never reddens the normal build/release pack (Package Validation is left OFF
 #   there), so `gate` / `build-config-drift` are unaffected by it.
 #
-# FAIL-CLOSED — a gate that could not run has NOT passed (FS.GG.SDD#381, epic FS-GG/.github#266)
-#   Every non-OK outcome exits non-zero: a real CP#### BREAK, an Indeterminate (the pack, the tool,
-#   or the feed read failed — the comparison never happened), and a NoBaselineYet for a package that
-#   is not explicitly allowlisted in lib/apicompat-classify.sh.
+# A GATE THAT COULD NOT RUN NEVER REPORTS A PASS (FS.GG.SDD#381, epic FS-GG/.github#266)
+#   Every packable lands in exactly one of five states, and only two of them mean "compared". The
+#   full table, and why each earns its exit code, is in lib/apicompat-classify.sh:
 #
-#   It did not used to. Only BREAK exited 1; Indeterminate and NoBaselineYet exited 0 and the
+#     OK               packed, ApiCompat found no break.                              -> 0
+#     BREAK            packed, ApiCompat reported a CP####.                           -> 1
+#     NoBaselineYet    the feed ANSWERED; no published version to compare against.    -> 1 unless
+#                                                                                        allowlisted
+#     Indeterminate    the pack/tool FAILED — a fact about the tree under test.       -> 3
+#     FeedUnavailable  the feed did NOT ANSWER — external to the change.              -> 0, ::error::
+#
+#   It did not used to. Only BREAK exited non-zero; Indeterminate and NoBaselineYet exited 0 and the
 #   required check went green. NU1403 then made the pack fail on EVERY run for as long as the
 #   pre-ADR-0032 lock bug existed — so this gate spent its whole life Indeterminate, reporting
 #   `success`, having never once compared an API. "Compared and clean" and "never compared" rendered
 #   identically, which is the only reason it took months to notice.
+#
+#   This model is FS.GG.Rendering's (their #186/#216, ADR-0101), adopted rather than re-invented:
+#   `apicompat-publicapi-gate` is ONE org-registered mechanism and gets ONE model. Rendering reached
+#   it first, after the same bug bit them across 17 packables at once.
 #
 # BASELINE RATCHET — this gate cannot catch a break that already SHIPPED
 #   The baseline is whatever is LATEST on the feed, so publishing a break makes it the new baseline
@@ -67,13 +77,9 @@
 #   package source mapping, so we write a throwaway, source-mapped nuget.config (via --configfile)
 #   that serves only FS.GG.* from the feed (everything else from nuget.org).
 #
-#   NO TOKEN IS A HARD FAILURE, not a skip. It used to exit 0 "advisory-clean" to keep fork PRs
-#   mergeable — but a fork PR is *given* a GITHUB_TOKEN, it simply cannot read the FS-GG feed with
-#   it, so that path never fired on a fork anyway: forks fell through the NoBaselineYet hole instead
-#   and were waved through unverified. This repo has taken 0 fork PRs in 212 and has 0 forks, so no
-#   real case is being served by exiting 0 without checking. If fork PRs ever matter, make it a
-#   VISIBLE decision in the CI job (a conditional `continue-on-error` on
-#   `github.event.pull_request.head.repo.fork`) rather than a silent fallthrough here.
+#   NO TOKEN IS FeedUnavailable — it exits 0, but it is NOT a pass and says so loudly. It used to
+#   exit 0 "advisory-clean", which is the same exit code for the opposite reason: it claimed to be
+#   clean. Nothing was compared, and the log now states exactly that.
 #
 # USAGE
 #   scripts/apicompat-check.sh [--baseline <version>]
@@ -98,8 +104,12 @@ done
 
 token="${NUGET_FEED_TOKEN:-${GH_TOKEN:-${GITHUB_TOKEN:-}}}"
 if [ -z "$token" ]; then
-  echo "::error title=ApiCompat gate could not run::no feed token (NUGET_FEED_TOKEN / GH_TOKEN / GITHUB_TOKEN) — the baseline is unreadable, so no API comparison was performed. A gate that could not run has not passed (FS.GG.SDD#381). In CI, grant the job \`packages: read\`; locally, export NUGET_FEED_TOKEN=\$(gh auth token)." >&2
-  exit 1
+  # FeedUnavailable, not a pass — and not a failure either (ADR-0101). No token means the baseline is
+  # unreadable for a reason EXTERNAL to the change, and a required gate must not make every merge in
+  # the org hostage to feed availability. It is loud, and it says plainly that nothing was compared.
+  echo "::error title=ApiCompat did not run::no feed token (NUGET_FEED_TOKEN / GH_TOKEN / GITHUB_TOKEN) — the baseline could not be read, so NOTHING WAS COMPARED. Exiting 0 by decision (ADR-0101: a feed outage informs a merge, it does not block one), NOT because the check passed. In CI, grant the job \`packages: read\`; locally: export NUGET_FEED_TOKEN=\$(gh auth token)." >&2
+  echo "apicompat-check: FeedUnavailable (no token) — the API surface was NOT verified." >&2
+  exit 0
 fi
 feed_user="${NUGET_FEED_USER:-${GITHUB_ACTOR:-x-access-token}}"
 
@@ -138,9 +148,14 @@ EOF
 . "$(dirname "${BASH_SOURCE[0]}")/lib/apicompat-classify.sh"
 
 # Resolve the latest published version of package id $1 on the feed.
-#   sets FEED_STATUS  = ok | absent | error
+#   sets FEED_STATUS  = ok | absent | unavailable
 #        FEED_VERSION = the selected baseline (only when ok)
-#        FEED_DETAIL  = why, for the log (when absent/error)
+#        FEED_DETAIL  = why, for the log (when absent/unavailable)
+#
+# `absent` is the feed ANSWERING "no such package" (404 / an empty version list). `unavailable` is
+# the feed NOT ANSWERING (transport error, 5xx, 401/403). That distinction is the whole ballgame: it
+# is drawn HERE, at the feed read, and never by pattern-matching a pack log later — NU1403 looked
+# exactly like a network problem and was not.
 #
 # The HTTP status is load-bearing and must NOT be thrown away. This used to be `curl -fsSL … 2>/dev/null`
 # piped straight into the version picker, which rendered EVERY failure — 401, 403, a 5xx, a DNS
@@ -160,7 +175,7 @@ feed_latest_version() {
   id_lower="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
   body="$workdir/feed-$id_lower.json"
   errf="$workdir/feed-$id_lower.err"
-  FEED_STATUS="error"; FEED_VERSION=""; FEED_DETAIL=""
+  FEED_STATUS="unavailable"; FEED_VERSION=""; FEED_DETAIL=""
 
   code="$(curl -sSL --retry 2 --max-time 30 -o "$body" -w '%{http_code}' \
             -H "Authorization: Bearer $token" \
@@ -203,13 +218,15 @@ echo "feed: $FEED_URL   projects: ${#PROJECTS[@]}"
 echo
 
 # Every project lands in exactly one bucket, and they sum to ${#PROJECTS[@]} — so the summary can
-# never quietly lose one (`allowlisted` is the only bucket that is both non-OK and non-blocking).
-ok=0; broke=0; nobaseline=0; indeterminate=0; allowlisted=0
+# never quietly lose one. `allowlisted` and `feedunavailable` are the two non-OK buckets that do not
+# fail the gate; both say plainly that nothing was compared.
+ok=0; broke=0; nobaseline=0; indeterminate=0; allowlisted=0; feedunavailable=0
 
 # Assign the arrays rather than `declare -a` them: under `set -u`, ${#arr[@]} on a declared-but-never-
 # assigned array is an *unbound variable* error, so the clean path would blow up on its own summary.
 break_lines=()
 blocked_lines=()
+feed_lines=()
 
 for proj in "${PROJECTS[@]}"; do
   pkgid="$(grep -oE '<PackageId>[^<]+</PackageId>' "$proj" | sed -E 's/<\/?PackageId>//g' | head -1)"
@@ -237,10 +254,12 @@ for proj in "${PROJECTS[@]}"; do
         continue
         ;;
       *)
-        printf '  %-22s Indeterminate (feed read failed — %s)\n' "$pkgid" "$FEED_DETAIL"
-        indeterminate=$((indeterminate + 1))
-        blocked_lines+=("    $pkgid: feed read failed — $FEED_DETAIL")
-        echo "::error title=ApiCompat could not read the baseline for $pkgid::$FEED_DETAIL — nothing was compared."
+        # FeedUnavailable — the feed did not ANSWER. External to the change, so it does not fail the
+        # gate (ADR-0101), but it is loud and it is counted: nothing was compared for this package.
+        printf '  %-22s FeedUnavailable (NOT compared — %s)\n' "$pkgid" "$FEED_DETAIL"
+        feedunavailable=$((feedunavailable + 1))
+        feed_lines+=("    $pkgid: the feed did not answer — $FEED_DETAIL")
+        echo "::error title=ApiCompat did not run for $pkgid::the feed did not answer ($FEED_DETAIL) — NOTHING WAS COMPARED. Exit 0 by decision (ADR-0101), not because the check passed."
         continue
         ;;
     esac
@@ -282,12 +301,13 @@ for proj in "${PROJECTS[@]}"; do
 done
 
 echo
-echo "summary: OK=$ok  BREAK=$broke  NoBaselineYet=$nobaseline  Indeterminate=$indeterminate  Allowlisted=$allowlisted  (total ${#PROJECTS[@]})"
+compared=$((ok + broke))
+echo "summary: OK=$ok  BREAK=$broke  NoBaselineYet=$nobaseline  Indeterminate=$indeterminate  FeedUnavailable=$feedunavailable  Allowlisted=$allowlisted  (total ${#PROJECTS[@]}, compared $compared)"
 
 # The buckets must account for every project. If they don't, a package fell through the loop without
 # being classified — which is precisely the shape of the defect this gate is being fixed for, so it
 # is a failure rather than a rounding error.
-counted=$((ok + broke + nobaseline + indeterminate + allowlisted))
+counted=$((ok + broke + nobaseline + indeterminate + feedunavailable + allowlisted))
 if [ "$counted" -ne "${#PROJECTS[@]}" ]; then
   echo "::error title=ApiCompat accounting is wrong::classified $counted of ${#PROJECTS[@]} projects — one was never classified. Refusing to report a verdict."
   exit 1
@@ -304,8 +324,16 @@ fi
 
 if [ "${#blocked_lines[@]}" -gt 0 ]; then
   echo
-  echo "the gate could not compare these — that is a FAILURE, not a pass (#381):"
+  echo "NOT COMPARED — the gate could not run for these, and that is a FAILURE, not a pass (#381):"
   printf '%s\n' "${blocked_lines[@]}"
+fi
+
+# FeedUnavailable is reported separately and does NOT fail: the feed not answering is external to the
+# change (ADR-0101). It is still stated plainly as "not compared" so nobody reads the exit 0 as a pass.
+if [ "${#feed_lines[@]}" -gt 0 ]; then
+  echo
+  echo "FEED UNAVAILABLE — no baseline could be read (external to this change; exit 0 by ADR-0101, NOT a pass):"
+  printf '%s\n' "${feed_lines[@]}"
 fi
 
 if [ "$rc" -ne 0 ]; then
