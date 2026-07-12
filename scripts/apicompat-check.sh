@@ -202,9 +202,14 @@ echo "REQUIRED gate: any outcome below other than OK exits non-zero and blocks t
 echo "feed: $FEED_URL   projects: ${#PROJECTS[@]}"
 echo
 
-ok=0; broke=0; nobaseline=0; indeterminate=0
-declare -a break_lines
-declare -a blocked_lines
+# Every project lands in exactly one bucket, and they sum to ${#PROJECTS[@]} — so the summary can
+# never quietly lose one (`allowlisted` is the only bucket that is both non-OK and non-blocking).
+ok=0; broke=0; nobaseline=0; indeterminate=0; allowlisted=0
+
+# Assign the arrays rather than `declare -a` them: under `set -u`, ${#arr[@]} on a declared-but-never-
+# assigned array is an *unbound variable* error, so the clean path would blow up on its own summary.
+break_lines=()
+blocked_lines=()
 
 for proj in "${PROJECTS[@]}"; do
   pkgid="$(grep -oE '<PackageId>[^<]+</PackageId>' "$proj" | sed -E 's/<\/?PackageId>//g' | head -1)"
@@ -222,6 +227,7 @@ for proj in "${PROJECTS[@]}"; do
         # otherwise the gate has nothing to compare against and must not claim it compared (#381).
         if apicompat_baseline_optional "$pkgid"; then
           printf '  %-22s NoBaselineYet (allowlisted — never published)\n' "$pkgid"
+          allowlisted=$((allowlisted + 1))
         else
           printf '  %-22s NoBaselineYet (NOT allowlisted — %s)\n' "$pkgid" "$FEED_DETAIL"
           nobaseline=$((nobaseline + 1))
@@ -276,20 +282,27 @@ for proj in "${PROJECTS[@]}"; do
 done
 
 echo
-echo "summary: OK=$ok  BREAK=$broke  NoBaselineYet=$nobaseline  Indeterminate=$indeterminate  (total ${#PROJECTS[@]})"
+echo "summary: OK=$ok  BREAK=$broke  NoBaselineYet=$nobaseline  Indeterminate=$indeterminate  Allowlisted=$allowlisted  (total ${#PROJECTS[@]})"
+
+# The buckets must account for every project. If they don't, a package fell through the loop without
+# being classified — which is precisely the shape of the defect this gate is being fixed for, so it
+# is a failure rather than a rounding error.
+counted=$((ok + broke + nobaseline + indeterminate + allowlisted))
+if [ "$counted" -ne "${#PROJECTS[@]}" ]; then
+  echo "::error title=ApiCompat accounting is wrong::classified $counted of ${#PROJECTS[@]} projects — one was never classified. Refusing to report a verdict."
+  exit 1
+fi
 
 verdict="$(apicompat_verdict "$broke" "$indeterminate" "$nobaseline")"
 rc=$?
 
-if [ "$broke" -gt 0 ]; then
+if [ "${#break_lines[@]}" -gt 0 ]; then
   echo
   echo "breaking changes (force a SemVer major, or suppress deliberately with ApiCompatGenerateSuppressionFile):"
   printf '%s\n' "${break_lines[@]}"
 fi
 
-# Gate on the COUNTERS, not on ${#blocked_lines[@]}: under `set -u` an array that was declared but
-# never appended to is still unbound, so testing its length blows up on the clean path.
-if [ $((indeterminate + nobaseline)) -gt 0 ]; then
+if [ "${#blocked_lines[@]}" -gt 0 ]; then
   echo
   echo "the gate could not compare these — that is a FAILURE, not a pass (#381):"
   printf '%s\n' "${blocked_lines[@]}"
