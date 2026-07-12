@@ -16,11 +16,36 @@ the authoritative sources of truth. Follow it on **every** `FS.GG.Contracts`
 source bump so the failure mode of feature 042 — source bumped to `1.1.0` while
 the feed and registry still served `1.0.1` — cannot recur unnoticed.
 
-A bump that **breaks** the public surface additionally owes a written break
-declaration. The `2.0.0` bump is the worked example:
-[contracts-2.0.0.md](contracts-2.0.0.md). Note that no field can be added to an F#
-record additively — every field changes the generated constructor's arity — so a
-new field on a public record is *always* a major.
+## Change class → bump (`FS.GG.Contracts` line)
+
+**`FS.GG.Contracts` is not on the product version line.** The
+[versioning policy](versioning-policy.md) governs the `FS.GG.SDD.*` packages and
+the `fsgg-sdd` CLI — one shared `0.x` version from `Directory.Build.props`.
+`FS.GG.Contracts` carries its **own** `<Version>` and its own SemVer, and its public
+contract is a **.NET API surface**, not a `--json` shape or a CLI flag. This table is
+that line's bump rule; the policy's table does not reach it.
+
+| Change to the public API surface | Class | Bump | Break declaration |
+|---|---|---|---|
+| **Add a field to a public record** | **Breaking** | **major** | **required** |
+| Remove/rename/retype a public member; change a signature | Breaking | major | required |
+| Add a new module, type, or `val` | Additive | minor | none |
+| Behaviour change with no surface change; docs; internals | Clarifying | patch | none |
+
+> **The first row is the one that gets missed, and it is not intuitive.** An F# record
+> generates a **positional primary constructor**, so *every* field — added at the end,
+> in the middle, anywhere — changes its arity and **deletes the old constructor**.
+> There is **no** additive way to add a field to a public F# record. It reads like an
+> additive change, it is spelled like an additive change, and it is a binary break.
+>
+> This is not hypothetical: it is exactly how `IdentifierParameter` landed with no bump
+> and then shipped as the `1.4.1` **patch**, forcing `2.0.0`. See the worked example,
+> [contracts-2.0.0.md](contracts-2.0.0.md).
+
+The detector is `scripts/apicompat-check.sh` (ApiCompat / Package Validation vs the
+feed baseline) — but it can only catch a break **before** it is published, because it
+baselines against whatever is newest on the feed. Once a break ships, the gate is
+green against it forever. The table above is what you use *before* the gate runs.
 
 ## The coherence invariant
 

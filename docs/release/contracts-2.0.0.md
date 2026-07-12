@@ -2,20 +2,32 @@
 title: FS.GG.Contracts 2.0.0 — break declaration and the 1.4.1 disposition
 category: SDD
 categoryindex: 6
-index: 21
+index: 24
 description: The declared binary break that forces FS.GG.Contracts to 2.0.0, the consumer adaptation step, and the recorded decision on the already-published 1.4.1.
 ---
 
 # FS.GG.Contracts 2.0.0
 
 `FS.GG.Contracts` moves `1.4.1` → **`2.0.0`**. This note is the **declaration** of
-the break, per the migration-note obligation in the
-[versioning policy](versioning-policy.md). The break is declared, not suppressed:
-there is no `CompatibilitySuppressions.xml`, and there will not be one.
+the break. It is declared, not suppressed: there is no
+`CompatibilitySuppressions.xml`, and there will not be one.
 
 The bump itself follows the
 [FS.GG.Contracts version-bump checklist](contracts-version-bump-checklist.md) —
 source, feed, and the `.github` registry advance as one coordinated change.
+
+> **Note the version line.** The [versioning policy](versioning-policy.md) governs
+> the `FS.GG.SDD.*` packages and the `fsgg-sdd` CLI — one shared `0.x` version out
+> of `Directory.Build.props`. `FS.GG.Contracts` is **not** on that line: it carries
+> its own `<Version>` and its own `1.x`/`2.x` SemVer. So the policy's migration-note
+> obligation (`docs/release/migrations/<version>.md`) does not reach this bump, and
+> this note deliberately does not live there — a `migrations/2.0.0.md` would collide
+> with the *product* line's eventual `2.0.0`.
+>
+> That gap is not incidental. **Nothing written anywhere said that adding a field to
+> a public F# record is a major** — which is precisely how the break got in and then
+> shipped as a patch. The change-class rule for this line now lives in the
+> [version-bump checklist](contracts-version-bump-checklist.md#change-class--bump-fsggcontracts-line).
 
 > **This is the SemVer major the repo had already decided on, twice, and never
 > made.** It was recorded in `src/FS.GG.Contracts/CompatibilitySuppressions.xml`
@@ -65,7 +77,7 @@ satisfies a range, not the highest:
 | Consumer pin | Resolves | Affected? |
 |---|---|---|
 | `Version="1.4.0"` (CPM; FS.GG.Governance today) | `1.4.0` — lowest applicable | **No** |
-| `[1.0.0, 2.0.0)` | `1.0.1` — lowest in range | **No** |
+| `[1.0.0, 2.0.0)` | the lowest `1.x` the feed serves — `1.0.1` on the org feed, `1.2.0` on nuget.org | **No** |
 | `1.4.*` / `1.*` (floating) | `1.4.1` | **Yes** — `MissingMethodException` |
 | fresh `dotnet add package FS.GG.Contracts` | latest — was `1.4.1` | **Yes** |
 | a regenerated lock file on a floating pin | `1.4.1` | **Yes** |
@@ -90,10 +102,20 @@ Re-pin to the `2.x` line:
 `2.0.0`'s public surface is **identical to `1.4.1`'s** — the 12-field
 `ProviderDescriptor` and everything else. So for a consumer already building
 against `1.4.1`, this is a version-number change and nothing else: **no source
-edit is required**. A consumer still on `≤1.4.0` must add the two fields
-(`IdentifierParameter`, `MinimumCliVersion`) to any `ProviderDescriptor` it
-constructs positionally; record-expression construction (`{ Name = …; … }`) needs
-each field named regardless.
+edit is required**.
+
+A consumer coming from an older `1.x` owes exactly the fields added since it, on
+any `ProviderDescriptor` it constructs:
+
+| Coming from | Fields to add |
+|---|---|
+| `1.4.x` | none |
+| `1.2.0` – `1.4.0` | `IdentifierParameter` (feature 080) |
+| `≤ 1.1.1` | `IdentifierParameter` **and** `MinimumCliVersion` (feature 052) |
+
+Both are `string option`, so `None` preserves existing behaviour in each case.
+Record-expression construction (`{ Name = …; … }`) must name every field
+regardless of how the constructor is generated.
 
 ## Decision: what happens to the already-published 1.4.1
 
