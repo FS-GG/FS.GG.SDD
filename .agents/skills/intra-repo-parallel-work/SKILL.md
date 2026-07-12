@@ -38,6 +38,24 @@ sessions with their own ids, so there it is per-worker and does not warn.) **Fan
 worktrees, or set `FSGG_WORKER` per worker.** See
 `docs/coordination/agent-session-identifiers.md` in FS-GG/.github for the harness survey.
 
+When you set it, **mint it with the tool — never invent it, and never copy one from a document**:
+
+```sh
+eval "$(scripts/fsgg-coord whoami --mint)"
+```
+
+This is the **one** mint idiom across the tool, the protocol doc, and both skill roots — the line
+`whoami`'s own warning prints (#551).
+
+A hand-picked id is the same-account bug a *third* level down. Agents asked to name themselves
+converge — this board has carried **four `finch-*` workers at once**, every one of them copied from
+the worked example that used to sit on this line, while the ids `whoami` *mints* spread cleanly
+across the word list. Two workers holding one id defeats every operation that keys on it: `release`
+drops the other's claim mid-flight, `heartbeat` renews a marker that is not yours, `say`/`inbox`
+cross-deliver, and `claim`'s CAS cannot tell its own marker from its twin's. Re-rolling the suffix
+is not enough — the attractor is the **word**, and any literal printed here becomes one (#419).
+Which is why there is none: not on this line, not in the loop below, not in the protocol doc.
+
 Whatever named you, the claim marker records `harness=<name> session=<id>` as provenance, so
 "which agent transcript took this lock?" is a lookup rather than mtime forensics.
 
@@ -67,7 +85,7 @@ If the work is cross-repo (needs a change/release from *another* FS-GG repo), us
 ## The loop
 
 ```sh
-export FSGG_WORKER=finch-a3f                   # or let the worktree name you
+eval "$(scripts/fsgg-coord whoami --mint)"     # MINT one; never invent or copy one (#419, #551)
 scripts/fsgg-coord take --repo <this-repo>     # pick + claim the next SCHEDULABLE item, retrying a lost race
 git worktree add ../<repo>-<n> -b item/<n>-<slug> origin/main   # `take` prints this; name the base
 # ...implement, commit with the printed FSGG-Worker trailer, PR into main...
@@ -88,26 +106,48 @@ of a contract: it makes the shared surface explicit and checkable *before* work 
 Paths: src/Scene/**, tests/Scene/**, Directory.Packages.props
 ```
 
+**An item with no touch-set says `Paths: none`** (`.github#496`) — an epic, a decision item, an
+investigation whose scope *is* the question. It stays unschedulable either way; the sentinel makes
+the absence **deliberate and machine-readable**. `fsgg-coord lint` errors (`NO-TOUCH-SET`) on a
+`Ready`/`Backlog` item declaring neither, because the alternative is what actually happened: an epic
+and an omission rendered identically, nine items of real work went invisible to every worker who
+asked for work, and the one surface whose job is board health reported `0 error(s)` over a dead queue.
+
 **Not globs** (ADR-0021, `.github#273`). A token matches by exact equality or subtree containment;
 the only wildcard is a **trailing** `/**` or `/*`. A leading `**/` — or a `*` in the middle —
 matches nothing, and a token that matches nothing would conflict with nothing, i.e. read as
 `DISJOINT` against everything. So the tool **refuses** it: `claim`, `widen`, `batch`, `overlap`,
 and `verify-paths` all reject an unmatchable token and name it. Want every lockfile? List them.
 
-**Editing a kit source obliges `registry/repos.yml`** (`.github#469`, ADR-0019). The coordination kit
-is **content-addressed**: `registry/repos.yml` pins a `sha256` of every kit source — `scripts/fsgg-coord`
-and each `.claude/skills/<kit>/` directory. Any edit to one invalidates its digest, and `repos-registry`
-reds `main` until it is regenerated. So the touch-set for a kit change is **three** files, not two:
+**Editing a kit source obliges `registry/repos.lock` — and you must NOT reserve it** (`.github#469`,
+`#527`, ADR-0019). The coordination kit is **content-addressed**: `registry/repos.lock` pins a `sha256`
+of every kit source — `scripts/fsgg-coord` and each `.claude/skills/<kit>/` directory. Any edit to one
+invalidates its digest, and `repos-registry-selftest` reds `main` until it is regenerated:
 
 ```sh
-scripts/repos.sh digest scripts/fsgg-coord    # then commit registry/repos.yml
+scripts/repos.sh relock          # regenerates registry/repos.lock
 ```
 
-`widen` and `verify-paths` now name this the moment a kit source appears in a touch-set — advisory,
-because `repos-registry` is the authority. Note what bit before they did: `verify-paths` asks *"did the
-PR stay **inside** what you declared"*, never *"was your declaration **sufficient** for what you
-touched"* — so a touch-set of `scripts/fsgg-coord` alone reported **OK** and red `main` anyway. A gate
-can be most reassuring exactly when it is least informed (epic `.github#266`).
+**The touch-set for a kit change is the kit source ONLY.** `registry/repos.lock` is a **generated,
+CI-gated artifact**, so `#309`'s rule applies to it: *do not reserve a generated artifact*. Regenerate
+it, commit it, and name it as **expected drift** in the PR body. A collision in it is a **rebase, not a
+decision**.
+
+> This paragraph used to say the opposite — reserve `registry/repos.yml`, run `repos.sh digest`. Both
+> were true before `#527`, which moved the digest out of the authored roster and into the generated
+> lock *precisely to end the deadlock that reserving it caused*: three workers serialised on one file
+> in a single afternoon (`#428`). `#527` touched seven files and **none of them was a skill**, so this
+> recipe went on telling every worker to re-create the deadlock the fix had just removed, and
+> `repos.sh digest` — which still exists, and now writes nothing — went on reporting success and doing
+> nothing (`#588`, `#563`; epic `#416`). The rule reached the registry and the tool, and not the one
+> artifact a worker actually loads. That is the projection defect, and it is why ADR-0034 proposes
+> generating this file rather than copying it.
+
+`widen` and `verify-paths` now **look**: they recompute each kit source's digest and compare it against
+`registry/repos.lock`, so the warning fires exactly when the lock is genuinely stale and goes quiet
+exactly when you have relocked. It used to ask whether you had *declared* a file, and call the
+obligation met if you had — which was silent in precisely the case where it was wrong (`#563`).
+Advisory, because `repos-registry-selftest` is the authority.
 
 **A declaration is a line you wrote as one** (`.github#277`). A `Paths:` line inside a fenced
 (``` or `~~~`) or indented code block is a **quotation**, not a declaration — quote freely in
@@ -119,6 +159,42 @@ code block, and so does the reader.
 Quote in a **fence**, not bare. A bare `Paths:` line at column 0 *is* a declaration, and if you leave
 two of them the reader **unions** both — it over-reserves rather than guess which one you meant, so
 you get a loud false `OVERLAP` instead of a silent collision. `widen` collapses them back to one.
+
+**Do not reserve generated artifacts** (`.github#309`). A `Paths:` token names a file two workers might
+*author* into conflict. A file produced by a checked-in generator and guarded by a **regeneration gate**
+— a CI check that re-runs the generator and fails on any diff — is neither authored nor semantically
+conflicting: **a collision in it is a rebase, not a decision.** Declaring it reserves a file nobody owns,
+and serialises every item that regenerates it. `FS.GG.Game` is the instance: one generated
+`readiness/surface-baselines/<pkg>.txt` per package, and every `[core]` item appends a line to it — so
+declared honestly, every `[core]` item overlapped every other and the whole `P6 Game` phase collapsed to
+**one worker**, in the phase the protocol exists to fan out.
+
+Two conditions, and the second is not optional:
+
+1. **Nobody authors it.** Ask whether a human makes a *merge decision* in the file. If two workers' edits
+   can only be reconciled by re-running a script, neither has an intent to preserve. The test is
+   **authorship, not `.gitignore`** — a generated file that is committed and reviewed is still not
+   authored.
+2. **A regeneration gate guards it.** Excluding the file moves the guarantee from the *scheduler* to
+   *CI*, so CI must actually have it. **If nothing fails on a stale copy, do not exclude it** — you would
+   be trading a loud false `OVERLAP` for a silent unguarded staleness, which is strictly worse. Add the
+   gate first, or keep declaring the file.
+
+**Beware the subtree.** `overlap` matches directory prefixes, so declaring the artifact's *parent*
+reserves it exactly as effectively as naming it. Declare your sources, not the directory the generated
+file happens to sit in — `src/Core/**, readiness/**` locks the baseline against the whole board just as
+`readiness/surface-baselines/**` does, while `src/Core/Pathfinding.fs, tests/Core/PathfindingTests.fs`
+locks nothing it does not own.
+
+**Declare against what the generator emits, not against the issue's prose.** `FS.GG.Game#31`'s acceptance
+said "surface baseline"; it adds a *function* to an existing module, and the generator emits one exported
+**type** per line — so it never touched the baseline at all. A `Paths:` line asserted from an issue body
+rather than from the generator's output is how a *false global lock* gets created.
+
+**Then expect the drift, and name it.** Excluding an artifact you go on to regenerate is exactly what
+`verify-paths` reports as touch-set drift, and it cannot today tell that from a real undeclared edit
+(`.github#498`). **Say which one it is in the PR** — an advisory that fires on correct behaviour is one
+workers learn to skip past.
 
 Declare narrowly and honestly. An item with no `Paths:` is **unschedulable** — `batch` will
 report it and refuse to hand it out.
@@ -149,14 +225,23 @@ item's touch-set is **reserved**, not merely skipped.
 scripts/fsgg-coord claim <issue>            # marker + assignee + Status=In progress; prints the worktree
 scripts/fsgg-coord claim <issue> --force    # steal an item another worker holds
 scripts/fsgg-coord heartbeat <issue>        # renew the lease on a long-running claim
-scripts/fsgg-coord release <issue>          # drop the lease; In progress -> Ready
+scripts/fsgg-coord release <issue>          # drop the lease; Status RESTORED to what the claim overwrote
 scripts/fsgg-coord release <issue> --status Blocked   # ...drop it, but say where it lands
 scripts/fsgg-coord child <parent> <issue>   # link <issue> as a sub-issue — see §5
 ```
 
-`release` drops the **lease**, which is not the same claim as *"this item is startable"*. It resets
-the `In progress` that `claim` set, and only that: a `Status` you chose deliberately — `Blocked`,
-`Backlog`, `Done` — is preserved, and a `Status` it cannot read is left alone rather than guessed.
+`release` drops the **lease**, which is not the same claim as *"this item is startable"*. It undoes
+the `In progress` that `claim` set, and only that — but note *how*, because the two cases are
+different mechanisms (#481):
+
+- **Restored.** `claim` **overwrites** the column, so it *records* what it overwrote. `release` puts
+  that back: a `Backlog` item returns to `Backlog`. It is not preserved — it is remembered. `Ready`
+  is only the fallback for a claim that recorded nothing (a pre-#481 marker, or a column that could
+  not be read). Guessing `Ready` was the bug: since #440 made `claim` reachable from `Backlog`,
+  every undo path quietly **promoted** triaged work into the queue humans read as ready.
+- **Kept.** A `Status` you set *deliberately during* the lease — `Blocked`, `Done` — is left alone
+  (#331). A column it cannot read is left alone too, rather than guessed.
+
 `reap` collects an expired lease under the same rule, so a claim that dies on a `Blocked` item does
 not resurrect it as `Ready`. So handing back an item you cannot finish keeps its column honest:
 

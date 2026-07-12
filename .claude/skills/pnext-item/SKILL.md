@@ -34,9 +34,27 @@ harness session id — and on Claude Code every subagent of a session shares one
 `CLAUDE_CODE_SESSION_ID`, so a fan-out silently collapses onto **one id**. That is the same-account
 bug one level down, and it defeats the lock you are about to take.
 
+**Mint the id with the tool. Do not invent one, and do not copy one out of a document** — run this
+verbatim, before anything else:
+
 ```sh
-export FSGG_WORKER=finch-a3f    # per worker, before anything else
+eval "$(scripts/fsgg-coord whoami --mint)"
 ```
+
+This is the **one** mint idiom across the tool, the protocol doc, and both skill roots. It is the line
+`whoami`'s own warning prints, so the thing the tool tells you to run is the thing written here.
+
+Inventing one *feels* safe and is not. Agents asked to pick an id converge on the same corner of the
+name space, and an id two workers share is an id the lock cannot separate — `release` would drop the
+other's claim mid-flight, `heartbeat` would renew a marker that is not yours, and `say`/`inbox` would
+cross-deliver. This board has carried **four `finch-*` workers at once**, all of them pattern-matched
+off the single example id that used to sit on this line, while `whoami`'s own minted ids spread
+cleanly across the word list (#419). The attractor is the *word*, not the suffix: re-rolling the hex
+does not help if you still reach for the bird you just read — which is why **no literal id appears
+anywhere in these docs for you to copy**, and why minting is the tool's job, not yours (#551).
+
+Until `claim` refuses a marker whose `worker=` duplicates a live one (the tool half of #419), **the id
+scheme is advisory** — a mint you skip is a lock you do not have.
 
 Then read your mail — another worker may have left you a message on an item you are about to touch:
 
@@ -64,9 +82,16 @@ fan-out that scales and one that takes the board down with it:
 - **Read issues over REST, not GraphQL.** `fsgg-coord issues <repo>` is free; `gh issue list` /
   `gh issue view` cost 2 points each, and `gh issue edit` costs 4. When GraphQL is gone, REST is still
   up — `gh api repos/…` will still open your PR and post your comments.
-- **A rate-limited board write is DEFERRED, not lost.** `claim` says so, queues it, and `fsgg-coord
-  flush` (or the next board write) replays it. Do not "fix" the board by hand; you will just duplicate
-  the write.
+- **A rate-limited board write is DEFERRED, not lost.** *Every* board write — `set-field`, `claim`,
+  `done --flip`, `release`, `reap` — says so, queues it, and `fsgg-coord flush` (or the next board
+  write) replays it. Do not "fix" the board by hand; you will just duplicate the write.
+  Until `.github#510` this was true of `claim` **only**, while the exhaustion message promised it to
+  everyone — so a `set-field` on an exhausted budget printed "Board WRITES are queued" and dropped
+  the write, and `flush` then reported "nothing pending" and confirmed the lie. If you are running an
+  older kit, check `fsgg-coord flush --dry-run` after any board write you did not see land.
+- **A REFUSED write is not queued, and that is deliberate.** An unknown field, an unknown option, a
+  `Blocked by` that is not a ref — the tool rejects these *before* spending any GraphQL, and replaying
+  them could never succeed. You get the refusal and a non-zero exit, not a queue entry.
 
 **If `take` finds nothing, that is a finding, not an empty queue.** Diagnose before you idle:
 
@@ -99,6 +124,16 @@ it exits non-zero on a collision. Declare **narrowly and honestly** — `Paths:`
 language (exact paths, directory prefixes, and a *trailing* `/**` or `/*`; a leading `**/` matches
 nothing and is refused).
 
+**And do not reserve a generated artifact** (`.github#309`). If a checked-in generator produces the file
+and a CI **regeneration gate** fails on any diff in it, nobody *authors* it — a collision there is a
+rebase, not a decision — so declaring it reserves a file nobody owns and serialises every item that
+regenerates it. Both conditions are required: if nothing in CI fails on a stale copy, keep declaring it,
+because you would be trading a loud false `OVERLAP` for a silent staleness. Mind the **subtree**, too —
+naming the artifact's parent directory reserves it just as effectively as naming the file. Declare
+against **what the generator emits**, not what the issue's prose says it does. The full rule, with the
+authorship test, is [intra-repo-parallel-work §1](../intra-repo-parallel-work/SKILL.md); expect
+`verify-paths` to report the regenerated artifact as drift in §5, and say so there.
+
 ## 2. Isolate
 
 `claim` prints the branch and the worktree command. Use them — never work an item in the shared
@@ -118,6 +153,11 @@ discipline, managed for you.
   just edit it: `fsgg-coord widen <issue> --paths "<new set>"`. Non-zero exit means you have
   collided with a live claim — stop editing the shared paths and talk:
   `fsgg-coord say <issue> --to <worker> 'I need src/Audio for this; can you land first?'`
+  **One exception, and it is the rule from §1: do NOT `widen` onto a generated artifact.** If the
+  file you just touched is one a checked-in generator emits and a CI regeneration gate guards, you
+  regenerated it — you did not author it. Declaring it now reserves a file nobody owns and
+  serialises every other item that regenerates it, which is the exact failure §1 keeps you out of.
+  Leave it undeclared, and name it as expected drift in the PR (§5).
 - **Heartbeat long work.** A claim goes stale after `FSGG_CLAIM_LEASE_MIN` (default 120m) without
   one, and the next claimant collects it.
 
@@ -129,10 +169,14 @@ discipline, managed for you.
   tells you to stop working it. Believe it. Re-take with `claim`, or walk away — renewing a dead
   marker would put two workers on one item, which is the entire failure this protocol exists to
   prevent.
-- **Commit with the trailer** `claim` printed, so attribution survives into history:
+- **Commit with the trailer `claim` printed** — the literal line, with your id already in it — so
+  attribution survives into history. No id is written here to copy (#551), and **do not derive one**:
+  `$FSGG_WORKER` is empty if your id came from the worktree name, and `$(git config fsgg.worker)`
+  returns whoever claimed most recently (it is repo-shared unless `extensions.worktreeConfig` is set).
+  A blank trailer loses the attribution; a borrowed one asserts a false one.
 
-  ```
-  FSGG-Worker: finch-a3f
+  ```sh
+  git commit --trailer "FSGG-Worker: <the id `claim` printed>"
   ```
 
 - Watch for stray build artifacts (`.pyc`, `bin/`, `obj/`) sneaking into the commit from a fresh
@@ -166,8 +210,19 @@ scripts/fsgg-coord issues <target> --jq '.[] | select(.title | test("<keyword>";
 
 # 2. If you are filing a CHILD of an item you hold — look at what it ALREADY has. This is the
 #    highest-signal place to look, and the one people skip.
-gh api repos/FS-GG/<repo>/issues/<parent>/sub_issues --jq '.[] | "#\(.number) \(.title)"'
+#    --paginate is NOT optional: this endpoint pages at 30, and the parents worth checking are
+#    exactly the big ones. Without it, #266 lists 30 of its 51 children and confidently omits
+#    the rest (#547).
+gh api repos/FS-GG/<repo>/issues/<parent>/sub_issues --paginate --jq '.[] | "#\(.number) \(.title)"'
 ```
+
+**Every `gh api` read of a LIST needs `--paginate`.** A truncated read does not look truncated — it
+looks like an answer, and here it is the answer to "has someone already filed this?", so the failure
+mode is a confident *no* on a parent that already has the child you are about to duplicate. Worse, it
+is a false negative on **linkage**: `done --flip` rolls up over the native sub-issue graph and
+nothing else (#322), so a worker reading a truncated graph can conclude an epic's children are all
+done when 19 of them are merely off-page. `fsgg-coord issues` pages for you; hand-written `gh api`
+lines do not. `scripts/check-recipe-pagination.py` gates this recipe so the rule cannot rot.
 
 This step exists because eager filing plus N workers **deterministically** produces duplicates, and
 they are worst exactly where the protocol is working hardest — several workers splitting one parent
@@ -216,10 +271,24 @@ over a full one ([#442](https://github.com/FS-GG/.github/issues/442)). You are t
 context — you can name the files better than the eventual claimant can.
 
 Declare it **narrowly and honestly**: exact paths, directory prefixes, and a *trailing* `/**` or
-`/*` (a leading `**/` matches nothing and is refused; so is a backticked line, #435). If you truly
-cannot name a touch-set — a decision item, an epic, an investigation whose scope *is* the question —
-**write that in the body** ("no touch-set: declare at claim time with `widen`"), so an undeclared
-item is a decision somebody made rather than an omission nobody noticed.
+`/*` (a leading `**/` matches nothing and is refused; so is a backticked line, #435), and **no
+generated artifact** — see §1: a file a generator emits and a CI regeneration gate guards is not
+authored, and reserving it serialises every item that regenerates it.
+
+If you truly cannot name a touch-set — a decision item, an epic, an investigation whose scope *is*
+the question — say so **in the declaration itself**, not in prose:
+
+```
+Paths: none
+```
+
+`Paths: none` is a real sentinel, not a comment ([#496](https://github.com/FS-GG/.github/issues/496)).
+It does not make the item schedulable — nothing does, without files — but it makes the *absence*
+**deliberate and machine-readable**, and `fsgg-coord lint` now goes **red** on a `Ready`/`Backlog`
+item that declares neither. This used to be a prose instruction, and **nothing read prose**: an epic
+and an omission rendered identically (`no 'Paths:' declared`), so nine items of real work sat on the
+board looking like work, invisible to every worker who asked for work, while `lint` reported
+`0 error(s)`. Write the sentinel, or write the paths — those are the only two honest states.
 
 `Repo Scope` decides the `Phase`, not the subject matter — a `game` item is `P6 Game` even when it
 happens to do geometry. Always name the contract/registry id and cross-reference the item you were
@@ -259,9 +328,48 @@ gh pr create --fill --base main
 scripts/fsgg-coord verify-paths --pr <n>    # did the PR stay inside its declaration?
 ```
 
+> **Put `Closes #<n>` in the commit BODY, never in the subject — and know why.**
+>
+> `--fill` maps the commit **subject → PR title** and the commit **body → PR body**. GitHub builds
+> `closingIssuesReferences` — the field that says *"this PR closes that issue"* — from the **PR body
+> only**, and **only while the PR is open**. So the near-universal convention
+>
+> ```
+> gate: reconstruct the scaffold's scene edge (closes #165)
+> ```
+>
+> puts the keyword in the **title**, where that field never looks. Everything still *works* — the
+> squash commit closes the issue, because GitHub honours the keyword there too — so you get: PR
+> merged ✓, issue closed ✓, CI green ✓, board Done ✓ … and the linkage GitHub records for the *PR* is
+> **empty**. Before [#558](https://github.com/FS-GG/.github/issues/558) that meant a **permanently red
+> stamp** on correct, merged, green work, unrepairable after the fact (editing the merged PR's body
+> does **not** backfill the link — the window shuts at merge).
+>
+> `done` now also reads GitHub's own `CLOSED_EVENT` closer, so the stamp is earned either way. **The
+> guidance stands anyway**: the body reference is the one that makes the link visible on the PR itself,
+> and the two records agreeing is worth more than either alone.
+
+> **Two independent reasons the landing steps below are `gh api`, not `gh pr …`.**
+>
+> 1. **The merge must be, always.** `gh pr merge` merges and *then* fails, because its local cleanup
+>    cannot check out `main` from the worktree §2 puts you in — so a successful merge reports failure
+>    and the branch survives ([#564](https://github.com/FS-GG/.github/issues/564)). This has nothing
+>    to do with the budget; it is true on a fresh one.
+> 2. **Every `gh pr …` command is GraphQL**, and so is `gh issue create`. On an exhausted budget — the
+>    state §1 tells you to *expect*, and the one you are most likely to be in by the time you are
+>    merging — they fail with `API rate limit already exceeded`, and you are left with finished,
+>    green, reviewed work you cannot land ([#528](https://github.com/FS-GG/.github/issues/528)).
+>
+> Neither is a workaround for the *rules*, only for the transport: REST enforces branch protection
+> exactly as GraphQL does. See [REST when the budget is gone](#rest-when-the-budget-is-gone).
+
 `verify-paths` is **advisory** — the touch-set is a declaration, not an enforced boundary, and CI
-reports drift rather than blocking it. Drift still means one of two things, and both need an
-answer before merge: you should have `widen`ed, or you edited a file that is not this item's work.
+reports drift rather than blocking it. Drift means one of three things, and each needs an answer
+before merge: you should have `widen`ed; you edited a file that is not this item's work; or you
+**regenerated an artifact §1 told you not to declare** — which is correct behaviour, and the one
+case where the right answer is to say so and merge. `verify-paths` cannot yet tell the third from
+the first ([#498](https://github.com/FS-GG/.github/issues/498)), so **name which one it is in the
+PR**: an advisory that fires on correct behaviour, unexplained, is one the next worker skips past.
 
 Then review before you merge. Run `/code-review` on the diff and fix what it finds; if the change
 has a runtime surface, drive it with `/verify` rather than trusting tests.
@@ -272,13 +380,44 @@ Merge once — and only once — **every required check is green**:
 
 ```sh
 gh pr checks <n> --watch                    # wait for CI, don't merge into a pending run
-gh pr merge <n> --squash --delete-branch
+
+# MERGE over REST. This is the DEFAULT here, not a rate-limit workaround (#564) — see below.
+gh api -X PUT repos/FS-GG/<repo>/pulls/<n>/merge \
+  -f merge_method=squash -f commit_title="<title> (#<pr>)" --jq '"merged=\(.merged)"'
+
+gh api -X DELETE repos/FS-GG/<repo>/git/refs/heads/item/<n>-<slug>    # the branch, explicitly
 ```
+
+**Why not `gh pr merge <n> --squash --delete-branch`?** Because §2 mandates a worktree, and under
+that layout `gh pr merge` **merges the PR and then exits 1**:
+
+```
+failed to run git: fatal: 'main' is already used by worktree at '/…/<repo>'
+```
+
+The API merge already succeeded. What failed is `gh`'s *local* post-merge cleanup — check out the
+base branch, delete the local branch — and `git checkout main` cannot succeed in a worktree whose
+repo has `main` checked out in the shared checkout. Which it always does: that is the checkout every
+other worker is standing in. So this is not an edge case; it is **deterministic for every worker who
+follows §2**, on every item. The remote branch is left undeleted (`--delete-branch` was part of the
+aborted cleanup), and — the serious half — **a successful merge reports failure**. An agent loop
+reads the exit code, concludes the merge failed, and then retries it, "fixes" something that is not
+broken, or walks away without stamping, leaving merged work with `Status` un-flipped and its claim
+still reserving the touch-set for the rest of the lease.
+
+The REST form does no local checkout switching, so none of this arises. It is **not** a protection
+bypass: REST enforces branch protection exactly as `gh pr merge` does, and a PR that needs a human
+review is refused there identically. `gh pr merge` remains fine when you are merging from a plain
+shared checkout — but that is not the layout this skill puts you in.
+
+Do not "fix" this by reading past the `fatal:`. A recipe whose happy path depends on the worker
+disbelieving an error is one that teaches them to skip errors, and the next one will be real.
 
 **Hard rules on the merge.** Never `--admin`. Never bypass branch protection, and never disable a
 required check to get past it. The repo's rules are authoritative over this skill: if protection
-requires a human review, `gh pr merge` will refuse — **stop there and report the PR for review**
-rather than looking for a way around it. A red check is a finding, not an obstacle.
+requires a human review, the merge is **refused** — `gh api` exits non-zero and prints GitHub's
+reason — and you **stop there and report the PR for review** rather than looking for a way around it.
+A red check is a finding, not an obstacle.
 
 Then earn the stamp:
 
@@ -291,6 +430,67 @@ parent epic whose children are now all `Done`. A **red** stamp means a check fai
 not done, whatever you believe. Do not hand-set `Status` to make the stamp green; the stamp is
 earned, and faking it is how the board starts lying.
 
+**`done --flip` is a board write, so an exhausted budget DROPS it — silently.** It exits 75 saying
+*"Board WRITES are queued: see `fsgg-coord flush`"*, and that is **false**: only `claim` defers.
+Nothing is queued, `flush` has an empty queue and will cheerfully report success, and your merged
+work sits **unstamped** with your claim still reserving its touch-set
+([#510](https://github.com/FS-GG/.github/issues/510)). Check, don't trust:
+
+```sh
+scripts/fsgg-coord budget | jq .pendingBoardWrites   # 0 means your stamp was DROPPED, not queued
+```
+
+**Wait for the reset and re-run `done --flip`.** Do not hand-set `Status` to close the gap — an
+unstamped item is a nuisance; a hand-stamped one is a board that lies.
+
+### REST when the budget is gone
+
+The **merge** is already REST above — it has to be, under §2's worktree (#564). These are the *other*
+`gh pr …` / `gh issue …` commands, which are GraphQL and die on an exhausted budget with
+`API rate limit already exceeded`. Verified end-to-end at **0 remaining** GraphQL. `gh api repos/…`
+spends the **REST** budget, which is separate and almost never exhausted — `fsgg-coord budget` shows
+both.
+
+```sh
+# CREATE the PR  (gh pr create is GraphQL)
+jq -n --arg t "<title>" --rawfile b pr-body.md \
+      '{title:$t, body:$b, head:"item/<n>-<slug>", base:"main"}' \
+  | gh api -X POST repos/FS-GG/<repo>/pulls --input - --jq '"PR #\(.number)  \(.html_url)"'
+
+# WATCH the checks  (gh pr checks is GraphQL)
+# --paginate, again, and it matters MOST here: check-runs pages at 30, this repo has ~30 workflows,
+# and a truncated read reports `pending=0 failed=0` while the checks that would have stopped you sit
+# on page 2. That is a merge gate that greenlights a red PR (#547).
+# `--slurp` cannot be combined with `--jq`, so aggregate in a separate `jq`.
+SHA=$(gh api repos/FS-GG/<repo>/pulls/<n> --jq .head.sha)
+gh api "repos/FS-GG/<repo>/commits/$SHA/check-runs" --paginate --slurp \
+  | jq -r '[.[].check_runs[]]
+           | "checks=\(length) pending=\([.[]|select(.status!="completed")]|length) failed=\([.[]|select(.conclusion!=null and .conclusion!="success")]|length)"'
+```
+
+`gh pr checks <n> --watch` itself is fine in a worktree — it is GraphQL, but it reads the API and
+never touches your local checkout, so only the budget can take it from you, not the layout.
+
+Two more that bite in the same state:
+
+- **`verify-paths` blames the wrong thing.** It reports *"not inside a GitHub checkout"* when the real
+  cause is the rate limit, because it derives the repo via a GraphQL call and reads the empty result
+  as "no checkout" ([#430](https://github.com/FS-GG/.github/issues/430)). Pass the repo explicitly:
+  `scripts/fsgg-coord verify-paths --pr <n> --repo FS-GG/<repo>`.
+- **`gh issue create` is GraphQL too** — which strands you in §4, at the exact moment you are filing
+  a finding after a long session, i.e. precisely when the budget is gone:
+
+  ```sh
+  jq -n --arg t "<title>" --rawfile b body.md \
+        '{title:$t, body:$b, labels:["cross-repo","cross-repo:request"]}' \
+    | gh api -X POST repos/FS-GG/<target>/issues --input - --jq '"#\(.number) \(.html_url)"'
+  ```
+
+  The **board** placement that follows it (`gh project item-add`, `set-field`) is Projects v2 and has
+  no REST form. It cannot be done on an exhausted budget, and `set-field` will *say* it queued the
+  write and drop it (#510). File the issue now, place it after the reset, and say so on the issue so
+  the gap is a decision somebody made rather than an omission nobody noticed.
+
 ## 6. Clean up, then go again
 
 Before you remove the worktree, empty your head into the board (§4). Everything you noticed and did
@@ -299,17 +499,29 @@ worker rediscovers it from scratch.
 
 ```sh
 cd - && git worktree remove ../<repo>-<n>
+git branch -D item/<n>-<slug>               # the LOCAL branch; §5's REST DELETE removed only the remote
 scripts/fsgg-coord inbox --repo <r>         # anything arrive while you were heads-down?
 /pnext-item                                 # next
 ```
+
+**The local branch is not cleaned by anything else.** `--delete-branch` never deleted it either — `gh`
+aborted at the `git checkout main` step *before* it got that far (#564) — so these have been quietly
+accumulating for as long as the bug existed: the shared checkout of `.github` was holding **~40**
+stale `item/*` branches from merged, done-stamped items when this was written. Harmless individually,
+noise in every `git branch` you will ever run.
 
 ## Abandoning an item
 
 Do not just walk away — the lease holds the item for two hours and blocks its touch-set.
 
 ```sh
-scripts/fsgg-coord release <issue>          # marker deleted, unassigned, Status -> Ready
+scripts/fsgg-coord release <issue>          # marker deleted, unassigned, Status RESTORED
 ```
+
+`release` puts back **the column the claim overwrote** — a `Backlog` item returns to `Backlog`, not
+`Ready` (#481). `Ready` is only the fallback for a claim that recorded nothing to restore. A column
+you set *deliberately* during the lease still wins, so `release` will not undo a `Blocked` you meant
+(#331); to land somewhere specific, say so: `release <issue> --status Blocked`.
 
 If you got far enough to be worth resuming, say so on the issue first (`fsgg-coord say`), and push
 the branch so the next worker inherits the work rather than redoing it.
