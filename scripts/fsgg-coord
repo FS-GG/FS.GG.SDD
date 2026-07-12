@@ -202,6 +202,13 @@ EX_RATE=75        # EX_TEMPFAIL: the GraphQL budget is exhausted. TRY AGAIN LATE
 EX_OFFBOARD=3     # the issue is not an item on the board at all. A different fact, and permanent.
 trap 'exit $(cat "$RC_FILE" 2>/dev/null || echo 1)' TERM
 
+# Scratch files this process owns, swept on ANY exit — including the TERM a fatal `die` raises, which
+# is how a rate-limited scan used to strand them in $CACHE. It tracks PATHS, not a `$CACHE/.foo.*`
+# glob, precisely because N workers share that cache: a pattern sweep would delete a CONCURRENT
+# worker's live scratch, which is the failure this protocol exists to avoid, one level down.
+TMPFILES=()
+trap 'rm -f "${TMPFILES[@]+"${TMPFILES[@]}"}"' EXIT
+
 OWNER="${FSGG_COORD_OWNER:-FS-GG}"
 TITLE="${FSGG_COORD_PROJECT:-Coordination}"
 # The ONLY Status a claim writes. Undoing a claim (`release`, `reap`) resets this column and no
@@ -352,11 +359,22 @@ HARNESS_SESSION=""
 _WORKER_WORDS=(finch heron wren swift kite tern rook crake snipe plover
                merlin godwit curlew dunlin teal smew osprey shrike avocet brant)
 
+# A genuinely random id. Both halves come from /dev/urandom, INCLUDING the word: `$RANDOM` is seeded
+# from the pid+time, so N agents a harness fans out within the same second draw the SAME word (#419).
+# The suffix is 4 hex chars, not 2 — 20 words x 65,536 is a space a dozen concurrent workers do not
+# meaningfully collide in, and the id is still short enough to read in a `who` table.
+# The $RANDOM branch is a fallback for a system with no /dev/urandom, and is NOT collision-safe under
+# a same-second fan-out — it is strictly better than dying, and nothing more.
 gen_worker() {
-  local w h
-  w="${_WORKER_WORDS[$((RANDOM % ${#_WORKER_WORDS[@]}))]}"
-  h="$(head -c 2 /dev/urandom 2>/dev/null | od -An -tx1 | tr -d ' \n')"
-  [ -n "$h" ] || h="$(printf '%04x' "$((RANDOM % 65536))")"
+  local w h bytes
+  bytes="$(head -c 3 /dev/urandom 2>/dev/null | od -An -tx1 | tr -d ' \n')"
+  if [ "${#bytes}" -eq 6 ]; then
+    w="${_WORKER_WORDS[$(( 16#${bytes:0:2} % ${#_WORKER_WORDS[@]} ))]}"
+    h="${bytes:2:4}"
+  else
+    w="${_WORKER_WORDS[$((RANDOM % ${#_WORKER_WORDS[@]}))]}"
+    h="$(printf '%04x' "$((RANDOM % 65536))")"
+  fi
   printf '%s-%s' "$w" "$h"
 }
 
@@ -435,12 +453,21 @@ worker() {
 
 # Rules 4 and 5 can each hand the same id to several workers — for different reasons. Say which one,
 # loudly, at every point a claim depends on it: a lock that cannot separate two workers is not a lock.
+#
+# The remedy must be a command to RUN, never an id to INVENT. "set FSGG_WORKER explicitly" is what
+# this warning used to say, and #419 is what came back: an LLM agent told to make up an id does not
+# make up a unique one. Eight live workers, not one of them using its derived id, drawn from four of
+# the twenty words — two of them independently picking the suffix `7c2`. Any literal a worker can
+# copy (the skill's `finch-a3f`) is a collision attractor, so this prints none.
 warn_shared_identity() {
   [ -n "$WORKER_SHARED_WHY" ] || return 0
   echo "fsgg-coord: WARNING — worker id '$WORKER_ID' may not be unique to this worker:" >&2
   echo "  $WORKER_SHARED_WHY." >&2
   echo "  The claim lock cannot separate workers that share an id. Give each worker its own git" >&2
-  echo "  worktree (the identity ADR-0021 already mandates), or set FSGG_WORKER explicitly." >&2
+  echo "  worktree (the identity ADR-0021 already mandates), or mint an id — do NOT invent one:" >&2
+  echo "" >&2
+  echo "      eval \"\$(fsgg-coord whoami --mint)\"" >&2
+  echo "" >&2
 }
 
 # Stamp the worker into the worktree itself, so "who edited these files?" is a `git config` read
@@ -466,6 +493,19 @@ stamp_worktree() {
 }
 
 whoami_cmd() {
+  # `--mint` is the executable remedy the warning points at. It prints ONE shell line and nothing
+  # else on stdout, so `eval "$(fsgg-coord whoami --mint)"` is the whole ritual — the worker runs a
+  # command instead of inventing a name, which is the entire fix for #419. Commentary goes to stderr
+  # so it survives the eval. It deliberately does NOT consult the current identity: minting is for
+  # the case where the derived id is known to be shared, and reusing it would defeat the point.
+  if [ "${1:-}" = "--mint" ]; then
+    local id; id="$(gen_worker)"
+    printf 'export FSGG_WORKER=%s\n' "$id"
+    echo "fsgg-coord: minted worker id '$id' — eval this line, or export it, in EACH worker's shell." >&2
+    return 0
+  fi
+  [ -z "${1:-}" ] || die "whoami: unknown argument '$1' (only --mint is accepted)."
+
   worker >/dev/null; local w="$WORKER_ID"
   printf 'worker  %s\n' "$w"
   printf 'source  %s\n' "$WORKER_FROM"
@@ -520,8 +560,12 @@ parse_claims() {
     map(select(.body | test("^<!--\\s*fsgg:claim\\s")))
     | map(. as $c
         | (($c.body | [capture("^<!--\\s*fsgg:claim\\s+worker=(?<w>[^\\s>]+)")] | first) // null) as $m
+        | (($c.body | [capture("^<!--[^>]*\\sprev=(?<p>[^\\s>]*)")] | first) // null) as $p
+        | (($c.body | [capture("^<!--[^>]*\\ssession=(?<s>[^\\s>]+)")] | first) // null) as $x
         | { id: $c.id, worker: ($m.w // "unparsed-marker"), user: $c.user.login,
             updatedAt: $c.updated_at,
+            session: ($x.s // ""),
+            prev: (($p.p // "") | gsub("%20"; " ") | gsub("%25"; "%")),
             ageSec: ((now - ($c.updated_at | fromdateiso8601)) | floor) })
     | map(. + { stale: (.ageSec > $lease) })
     | sort_by(.id)'
@@ -575,22 +619,39 @@ notify_reaped() {  # $1=owner $2=repo $3=num $4=reaped-worker $5=age-min $6=by-w
     "$MSG_MARK" "$6" "$4" "$4" "$5" "$CLAIM_LEASE_MIN")" >/dev/null || true
 }
 
+# A claim OVERWRITES the Status column, so it must remember what it overwrote (#481). `unclaim_status`
+# could once derive the reset target — `Ready` — because `claim` was reachable only from `Ready`. #440
+# gave `take` a Backlog fallback and broke that invariant, and a value nobody recorded cannot be
+# recovered afterwards: by the time `release` looks, the column says `In progress`, which is the
+# claim's own footprint. So the marker carries it. The marker is the right home for it precisely
+# because the marker IS the claim — it is created, stolen, inherited and destroyed with the lease.
+#
+# Marker keys are SPACE-separated and Status names are not (`In progress`, `In review`), so the value
+# is percent-encoded. `%` first on the way in — and therefore LAST on the way out, or the escape eats
+# its own escapes. The matching decode is in `parse_claims`, which is the only reader.
+enc_status() { local s="${1//%/%25}"; printf '%s' "${s// /%20}"; }
+
 # The claim marker. `renewed` changes on every heartbeat so the edit always moves `updated_at` —
 # the lease clock is the comment's own mtime, which no worker can forge without touching the comment.
 # `worker=` stays the FIRST key after the marker, because that is what parse_claims anchors on. The
 # rest is PROVENANCE, not identity: the harness + session id say WHICH agent transcript made this
 # claim. That is the question FS-GG/.github#255 could only answer with file mtimes and `ps`.
-claim_body() {  # $1=worker $2=branch $3=ts $4=ref
-  local prov="" provline=""
+#
+# `prev=` is the exception: it is not provenance but STATE — the one fact about the pre-claim board
+# that only this claim knows. Every rewrite of this body (`heartbeat`, `say`, a re-claim) must carry
+# it forward, or the lease renews itself into amnesia and `release` is back to guessing `Ready`.
+claim_body() {  # $1=worker $2=branch $3=ts $4=ref $5=prev-status (optional)
+  local prov="" provline="" prev=""
   if [ -n "$HARNESS_SESSION" ]; then
     prov=" harness=$HARNESS_NAME session=$HARNESS_SESSION"
     provline=$'\n'"<sub>agent: \`$HARNESS_NAME\` · session \`$HARNESS_SESSION\`</sub>"
   fi
+  [ -n "${5:-}" ] && prev=" prev=$(enc_status "$5")"
   cat <<EOF
-<!-- $CLAIM_MARK worker=$1 lease=$CLAIM_LEASE_MIN$prov -->
+<!-- $CLAIM_MARK worker=$1 lease=$CLAIM_LEASE_MIN$prov$prev -->
 🔒 **Claimed** by worker \`$1\` · lease ${CLAIM_LEASE_MIN}m · renewed \`$3\`
 
-Isolated on branch \`$2\`. Renew with \`fsgg-coord heartbeat $4\`, drop with \`fsgg-coord release $4\`.$provline
+Isolated on branch \`$2\`. Renew with \`fsgg-coord heartbeat $4\`, drop with \`fsgg-coord release $4\`.${5:+ Was \`$5\` before this claim.}$provline
 EOF
 }
 
@@ -602,8 +663,12 @@ branch_for() {  # $1=owner $2=repo $3=num -> item/<n>-<title-slug>
   printf 'item/%s%s' "$3" "${s:+-$s}"
 }
 
-heartbeat_comment() {  # $1=owner $2=repo $3=num $4=commentId $5=worker $6=ref
-  patch_comment "$1" "$2" "$4" "$(claim_body "$5" "$(branch_for "$1" "$2" "$3")" "$(now_iso)" "$6")"
+# $7 is the marker's OWN `prev`, read back off the comment we are about to overwrite. A heartbeat
+# rewrites the whole body, so anything not passed here is DROPPED — and a claim that beats for two
+# hours would forget the column it overwrote long before it ever released it (#481).
+heartbeat_comment() {  # $1=owner $2=repo $3=num $4=commentId $5=worker $6=ref $7=prev-status
+  patch_comment "$1" "$2" "$4" \
+    "$(claim_body "$5" "$(branch_for "$1" "$2" "$3")" "$(now_iso)" "$6" "${7:-}")"
 }
 
 # ---- GraphQL wrapper: run a query, log its rateLimit cost when FSGG_COORD_DEBUG=1 ----------------
@@ -693,7 +758,7 @@ board_get()  { jq -r "$1" "$BOARD_FILE"; }   # read a jq expression from the cac
 field_id() {
   ensure_board >/dev/null
   local id; id="$(board_get ".fields[\"$1\"].id // empty")"
-  [ -n "$id" ] || die "no field named '$1' on board '$TITLE' (fields: $(board_get '.fields | keys | join(\", \")'))."
+  [ -n "$id" ] || die "no field named '$1' on board '$TITLE' (fields: $(board_get '.fields | keys | join(", ")'))."
   printf '%s\n' "$id"
 }
 
@@ -863,16 +928,30 @@ item_status() {
 # And a Status we could not READ is not a Status we may overwrite: guessing `Ready` over an unknown
 # column is the same fail-open one turn in (#266).
 #
+# RESTORING the claim's column is not the same as guessing `Ready` for it (#481). Undoing a write
+# means putting back what was there, and $2 — the `prev=` the claim recorded in its own marker — is
+# the only witness to that. #331 reset to `Ready` and was right to, but only because `claim` was then
+# reachable only FROM `Ready`; #440's Backlog fallback made `Ready` a promotion, and every undo path
+# (`release`, `take`'s lost-race retry, `reap`) quietly drained Backlog into the queue humans read as
+# triaged work.
+#
+# `Ready` survives only as the fallback for a claim that recorded NOTHING — a marker minted before
+# this change, or one whose pre-claim column could not be read. That is the old behaviour, now scoped
+# to the one case where there is genuinely nothing to restore.
+#
 # Echoes one TAB-separated verdict; always rc 0, because every outcome here is a decision:
-#   write<TAB>Ready   reset the claim's own column
+#   write<TAB><name>  restore the column this claim overwrote (`Ready` if it recorded none)
 #   keep<TAB><name>   leave a deliberately-chosen column alone
 #   offboard<TAB>     the item is on no board; there is nothing to reset
 #   unreadable<TAB>   the read failed; do not touch the column
-unclaim_status() {
-  local cur rc=0
+unclaim_status() {  # $1=ref $2=prev-status recorded by the claim (may be empty)
+  local cur rc=0 prev="${2:-}"
+  # A claim that recorded `In progress` recorded its own footprint, not a column anybody chose —
+  # restoring it would leave the item looking claimed with no claim on it. Treat it as unrecorded.
+  [ "$prev" = "$CLAIM_STATUS" ] && prev=""
   cur="$(item_status "$1" 2>/dev/null)" || rc=$?
   case "$rc" in
-    0) if [ -z "$cur" ] || [ "$cur" = "$CLAIM_STATUS" ]; then printf 'write\tReady\n'
+    0) if [ -z "$cur" ] || [ "$cur" = "$CLAIM_STATUS" ]; then printf 'write\t%s\n' "${prev:-Ready}"
        else printf 'keep\t%s\n' "$cur"; fi ;;
     2) printf 'offboard\t\n' ;;
     *) printf 'unreadable\t\n' ;;
@@ -886,7 +965,7 @@ set_field() {
   local pid dtype fid item
   pid="$(board_get '.id')"
   dtype="$(board_get ".fields[\"$field\"].dataType // empty")"
-  [ -n "$dtype" ] || die "no field named '$field' on board '$TITLE' (fields: $(board_get '.fields | keys | join(\", \")'))."
+  [ -n "$dtype" ] || die "no field named '$field' on board '$TITLE' (fields: $(board_get '.fields | keys | join(", ")'))."
   fid="$(field_id "$field")"
 
   # Canonicalize BEFORE resolving the item: a rejected value must cost zero GraphQL.
@@ -944,6 +1023,58 @@ defer_write() {  # <ref> <field> <value>
 }
 
 pending_count() { [ -s "$PENDING" ] && wc -l <"$PENDING" | tr -d ' ' || echo 0; }
+
+# ---- board_write: the ONE board write, and it QUEUES (#510) ---------------------------------------
+# EVERY board write goes through here. Nothing else may call `set_field` directly.
+#
+# The defect this closes: `claim` deferred its write. NOTHING ELSE DID — and yet `die_rate` told every
+# caller, in the same breath, "Board WRITES are queued: see `fsgg-coord flush`". So a `set-field` (or
+# a `done --flip`) that met an exhausted budget PRINTED THE PROMISE AND DROPPED THE WRITE; `flush`
+# then found an empty queue and reported success, CONFIRMING the lie. A finding filed mid-recipe
+# landed on the board with no Status, no Phase and no Repo Scope — and the worker who read the
+# message did the correct thing, trusted it, and carried on (#510; family: epic #416).
+#
+# So the promise in that message is now true of every board write, because there is only one.
+#
+# The one thing that is NOT queued is a write to something that is not on the board: that write can
+# never land (flush drops it too, permanently), so queueing it would be a second unkeepable promise —
+# which is the defect, not the cure. Say so, loudly, and return EX_OFFBOARD.
+#
+# Sets BOARD_WRITE_NOTE, a caller-printable phrase. Returns:
+#   0            written
+#   EX_OFFBOARD  permanent — not on the board. NOT queued.
+#   EX_RATE      QUEUED behind an exhausted budget.
+#   other        QUEUED behind a transient failure.
+# ONLY EX_RATE IS QUEUED, and that is the whole subtlety. A write can fail three ways and they are
+# three different facts — collapsing them is the defect this command exists to fix, one level down:
+#
+#   EX_RATE      TRANSIENT.  The budget will come back and the same write will then succeed. QUEUE it.
+#   EX_OFFBOARD  PERMANENT.  There is no board item to write to. A queued write here can NEVER land
+#                (flush drops it too), so queueing it is a second unkeepable promise.
+#   anything else  REFUSED.  `set_field` rejected the write — an unknown field, an unknown option, a
+#                `Blocked by` value that is not a ref (it canonicalises BEFORE spending any GraphQL,
+#                precisely so a bad value costs nothing). Queueing a REFUSED write would replay a
+#                write that can never succeed, forever, and swallow the refusal that says why.
+#                So: never queued, and `set_field`'s own message is carried out in BOARD_WRITE_ERR.
+BOARD_WRITE_NOTE=""
+BOARD_WRITE_ERR=""
+board_write() {  # <ref> <field> <value> [refresh]
+  local ref="$1" field="$2" value="$3" refresh="${4:-}" rc=0
+  # A SUBSHELL, not just a redirect: set_field's `die` is an `exit`. soft_run carries out the code the
+  # die actually chose (EX_RATE / EX_OFFBOARD / 1), however deeply nested it fired. Its stderr is
+  # CAPTURED, not discarded — a refusal that nobody can read is a refusal that did not happen.
+  BOARD_WRITE_ERR=""
+  BOARD_WRITE_ERR="$(soft_run set_field "$ref" "$field" "$value" "$refresh" 2>&1 1>/dev/null)" || rc=$?
+  case "$rc" in
+    0)              BOARD_WRITE_NOTE="board: ${value:-<cleared>}" ;;
+    "$EX_OFFBOARD") BOARD_WRITE_NOTE="note: not on board '$TITLE' — NOT queued (a queued write to a non-item can never land); add it, then rerun" ;;
+    "$EX_RATE")     defer_write "$ref" "$field" "$value"
+                    BOARD_WRITE_NOTE="board: DEFERRED — GraphQL budget exhausted, resets in $(rate_reset_in). The write is QUEUED; run 'fsgg-coord flush' (or any board write auto-flushes)." ;;
+    *)              BOARD_WRITE_NOTE="board: WRITE REFUSED (rc=$rc) — NOT queued; the value or the field was rejected, and replaying it would never succeed" ;;
+  esac
+  dbg "board_write $ref $field='$value' -> rc=$rc"
+  return "$rc"
+}
 
 # Replay the queue. Each entry is retried ONCE per flush: a success drops it, another rate-limit
 # stops the whole flush (the budget is gone; the rest would fail identically), and a PERMANENT
@@ -1161,7 +1292,15 @@ board_items() {
     cursor="$(jq -r '.data.organization.projectV2.items.pageInfo.endCursor // empty' <<<"$out")"
     [ "$hasNext" = "true" ] && [ -z "$cursor" ] && break   # defensive: stop if a page lies
   done
-  local scan; scan="$(jq -s '.' "$tmp" | board_annotate)"; rm -f "$tmp"
+  # Annotate in two steps (#485 leg e): the scan can only resolve blockers that are ON the board, and a
+  # PR never is — so those refs used to resolve to UNKNOWN and block their item FOREVER. Resolve them
+  # server-side first, in ONE batched query, then annotate with that map in hand. Both the resolution
+  # and the annotation are paid for once per scan and stored in the shared cache below, so this is one
+  # query per TTL across every worker — not one per read.
+  local raw extra scan
+  raw="$(jq -s '.' "$tmp")"; rm -f "$tmp"
+  extra="$(resolve_offboard_blockers "$raw")"
+  scan="$(board_annotate "$extra" <<<"$raw")"
   # Store the ANNOTATED scan — every reader wants the blocker resolution, and re-deriving it per read
   # would make the cache a half-measure. Stored on every scan, whoever paid for it: the next worker
   # through the door reads it for free (that is the point — the cache dir is user-level, not per-worker).
@@ -1191,7 +1330,23 @@ board_items() {
 # `next` refuse work that is in fact startable. Only the READ side is forgiving — `set-field` still
 # refuses to write one (it tells you to clear the field instead), so they cannot spread.
 board_annotate() {
-  jq '
+  # $1 (optional): a JSON map of refs the SCAN could not resolve, resolved server-side —
+  # {"FS-GG/.github#449": "MERGED", ...}. See resolve_offboard_blockers.
+  #
+  # RESOLVED MEANS CLOSED *OR* MERGED (#485 leg e, was #476). This used to be
+  #
+  #     blocked: ($blockers | any(.state != "CLOSED"))
+  #
+  # which is exactly right for an Issue — `IssueState` is only OPEN|CLOSED — and silently wrong for a
+  # PullRequest, whose state is OPEN|CLOSED|**MERGED**. So a `Blocked by` naming a PR unblocked when
+  # that PR was ABANDONED (closed unmerged) and stayed blocked FOREVER once it was MERGED. The gate
+  # opened precisely when the blocking work was thrown away, and shut precisely when it was finished.
+  #
+  # `board_items` really does select `... on PullRequest { state }`, so MERGED genuinely reaches here.
+  # Live on a critical path: FS.GG.SDD#350 is `Blocked by: FS-GG/.github#449` — the PR carrying the very
+  # ADR that resolves it. Adding MERGED is strictly safe for issues, which are never MERGED.
+  local extra="${1:-{\}}"
+  jq --argjson extra "$extra" '
     def placeholder: test("^(-+|—|–|none|n/?a|tbd|todo)$"; "i");
     def canon($owner; $selfrepo):
       if   test("^https?://github\\.com/[^/]+/[^/]+/issues/[0-9]+$")
@@ -1214,11 +1369,70 @@ board_annotate() {
               | select(length > 0) | select(placeholder | not) ]
             | map( canon($owner; $selfrepo) as $c
                    | if $c == null then { ref: ., state: "UNPARSEABLE" }
-                     else { ref: $c, state: ($idx[$c] // "UNKNOWN") } end )
+                     # The board scan first, then the server-resolved map for refs the board never had
+                     # (a PR is never a board item, so it could ONLY ever resolve to UNKNOWN — which
+                     # counts as blocking, i.e. blocked-forever). UNKNOWN survives only when BOTH miss,
+                     # and it still blocks: an unresolvable blocker is the safe direction.
+                     else { ref: $c, state: ($idx[$c] // $extra[$c] // "UNKNOWN") } end )
             | unique_by(.ref) ) as $blockers
         | $it + { blockers: $blockers,
-                  blocked: ($blockers | any(.state != "CLOSED")) }
+                  blocked: ($blockers | any(.state != "CLOSED" and .state != "MERGED")) }
       )'
+}
+
+# ---- resolve_offboard_blockers: the refs the SCAN cannot see (#485 leg e) -------------------------
+#
+# `board_annotate` resolves a blocker against the scan, and the scan is THE BOARD. Two whole classes of
+# blocker are therefore unresolvable by construction, and both starve the item forever:
+#
+#   * a PULL REQUEST — never a board item, so it can never appear in the index. This is the normal way
+#     to reference blocking work, and it was the one guaranteed never to resolve.
+#   * an ISSUE THAT IS NOT ON THE BOARD — filed but never placed (which is #485 leg c's whole subject).
+#
+# Both resolve to UNKNOWN, and UNKNOWN blocks. That is the right default for a thing you cannot see —
+# but the fix is to LOOK, not to keep guessing.
+#
+# OVER REST, DELIBERATELY. GraphQL has `issueOrPullRequest`, which would answer this in one batched
+# query — and that is the wrong budget. GraphQL is the scarce one, shared by every worker and drained
+# by exactly this loop (#418); REST has its own, and `gh api repos/O/R/issues/N` serves PULL REQUESTS
+# TOO (a PR is an issue in REST), carrying `pull_request.merged_at` — so one cheap call per unresolved
+# ref answers both kinds AND distinguishes MERGED from CLOSED. Resolution is paid for once per scan and
+# stored in the shared cache with it, so it is a handful of REST calls per TTL across every worker.
+#
+# $1: the raw (unannotated) scan.  stdout: {"owner/repo#n": "STATE", ...}, or {} if nothing to do.
+resolve_offboard_blockers() {
+  local raw="$1"
+  # Two-pass: annotate with an empty map to reuse `canon` (ONE ref grammar, not two — re-deriving it
+  # here would be a second implementation of the very thing this item is about), then take the refs it
+  # could not resolve.
+  local unknown
+  unknown="$(board_annotate '{}' <<<"$raw" \
+    | jq -r '[ .[].blockers[]? | select(.state == "UNKNOWN") | .ref ] | unique | .[]' 2>/dev/null || true)"
+  [ -n "$unknown" ] || { printf '{}'; return 0; }
+
+  # BOUND THE COST, AND SAY SO IF IT BITES. A board with hundreds of dangling refs must not turn one
+  # scan into hundreds of reads — but a SILENT cap would leave the overflow blocked-forever with no
+  # trace, which is the exact failure this function exists to remove (#266: no silent caps).
+  local total; total="$(printf '%s\n' "$unknown" | grep -c . || true)"
+  if [ "${total:-0}" -gt 60 ]; then
+    printf 'fsgg-coord: %s off-board blocker refs; resolving the first 60. The rest stay UNKNOWN — which BLOCKS, so nothing is handed out wrongly, but those items need placing on the board.\n' "$total" >&2
+    unknown="$(printf '%s\n' "$unknown" | head -60)"
+  fi
+
+  local ref o r num st merged out="{}"
+  while IFS= read -r ref; do
+    [ -n "$ref" ] || continue
+    o="${ref%%/*}"; r="${ref#*/}"; num="${r##*#}"; r="${r%%#*}"
+    case "$num" in ''|*[!0-9]*) continue ;; esac
+    # A failed lookup must NOT become "unblocked": skip it, leaving the ref UNKNOWN, which blocks. That
+    # is the same safe direction the old code reached by never looking at all.
+    st="$(gh api "repos/$o/$r/issues/$num" \
+            --jq 'if (.pull_request.merged_at // null) != null then "MERGED"
+                  elif .state == "closed" then "CLOSED" else "OPEN" end' 2>/dev/null)" || continue
+    [ -n "$st" ] || continue
+    out="$(jq -c --arg k "$ref" --arg v "$st" '. + {($k): $v}' <<<"$out")"
+  done <<<"$unknown"
+  printf '%s' "$out"
 }
 
 # Resolve a --repo value to the actual GitHub repo name the board items carry. Accepts the registry
@@ -1315,29 +1529,57 @@ next() {
       *)      die "next: unexpected argument '$1'." ;;
     esac
   done
+  # "Why was each candidate skipped?" is a question about THIS repo's queue (#480). A `next` that
+  # answers it over the whole org explains a queue the worker is not standing in — and is the very
+  # command the recipe reaches for when `take` says there is nothing to do.
+  repo="$(scope_repo "$repo")"
   [ -n "$repo" ] && repo="$(resolve_repo "$repo")"
+  # ONE ANSWER TO "WHAT CAN I START?" (#485 leg a, was #431).
+  #
+  # `next` used to decide schedulability ITSELF, and it decided it DIFFERENTLY from `batch`: it filtered
+  # on Status and `.blocked`, and nothing else. It never called `paths_of`, never called
+  # `conflicts_between`, and never read a live claim marker. So it recommended items that `batch` — the
+  # thing `take` actually schedules from — passes over as unschedulable, and it recommended them to the
+  # one audience with no way to check: a human asking "what should I do next".
+  #
+  # Live, 6 workers in flight: every FS.GG.Rendering candidate was undeclared, so `take` reported "no
+  # schedulable item" while `next` recommended #436 — which OVERLAPPED #453, held by a LIVE claim. It
+  # was not merely optimistic; it pointed a worker at a collision the tool had already detected.
+  #
+  # So it is not a second implementation any more. `batch` IS the predicate — blockers, undeclared
+  # touch-sets, unmatchable tokens, live claims, batch-mate overlaps — and `next` is its presentation
+  # layer, exactly as `take` is its claiming layer. Ready first, then Backlog: the same two-step `take`
+  # performs, so the two commands a worker treats as "what do I do next" can no longer disagree.
+  local -a repoflag=(); [ -n "$repo" ] && repoflag=(--repo "$repo")
+  local -a ignflag=();  [ -n "$ignore_blocked" ] && ignflag=(--ignore-blocked)
+  local pickid
   # SCHEDULING read: a scan another worker paid for within the TTL is good enough, because the claim
   # CAS — not this list — is what decides who gets the item (#418).
-  local items; items="$(CACHED=1 FRESH="$fresh" board_items)"
-  local pick="" cand="" s skipped=""
-  for s in Ready Backlog; do
-    cand="$(board_filter "$repo" "$s" "" "0" <<<"$items")"
-    if [ -z "$ignore_blocked" ]; then
-      # Say WHY an otherwise-startable item was passed over — a silent skip reads as "nothing to do".
-      local notes
-      notes="$(jq -r '.[] | select(.blocked)
-        | "fsgg-coord: skipping " + ((.repo // "" | sub("^[^/]+/";"")) + "#" + (.number|tostring))
-          + " — blocked by " + ([.blockers[] | "\(.ref) (\(.state|ascii_downcase))"] | join(", "))' \
-        <<<"$cand")"
-      if [ -n "$notes" ]; then printf '%s\n' "$notes" >&2; skipped=1; fi
-      cand="$(jq -c 'map(select(.blocked | not))' <<<"$cand")"
-    fi
-    pick="$(jq -c 'first(.[])? // empty' <<<"$cand")"
-    [ -n "$pick" ] && break
-  done
+  #
+  # --fresh BUYS EXACTLY ONE SCAN. Spend it here, up front, and let everything below read the cache it
+  # writes. `batch_cmd` reaches `board_items` TWICE — once for its candidates and once inside
+  # `active_claims` — and the Ready/Backlog split is a CLIENT-SIDE filter over the same bytes, so
+  # handing FRESH down into either call would rescan the whole board again. `next --fresh` would then
+  # silently cost two or three full scans of the one budget #418 exists to protect.
+  [ -n "$fresh" ] && CACHED=1 FRESH=1 board_items >/dev/null
+  pickid="$(CACHED=1 batch_cmd "${repoflag[@]+"${repoflag[@]}"}" \
+              "${ignflag[@]+"${ignflag[@]}"}" -n 1 --json | jq -r '.[0] // empty')"
+  if [ -z "$pickid" ]; then
+    pickid="$(CACHED=1 batch_cmd "${repoflag[@]+"${repoflag[@]}"}" \
+                "${ignflag[@]+"${ignflag[@]}"}" --include-backlog -n 1 --json | jq -r '.[0] // empty')"
+  fi
+  # `batch --json` hands back the ID (`repo#n`) — that is the contract `take` reads. `next` prints a
+  # human line, so resolve the id back to its board row through the SAME cached scan batch just used.
+  local pick=""
+  if [ -n "$pickid" ]; then
+    pick="$(CACHED=1 board_items \
+            | jq -c --arg id "$pickid" 'map(select(((.repo // "" | sub("^[^/]+/";"")) + "#" + ((.number // 0)|tostring)) == $id)) | .[0] // empty')"
+  fi
   if [ -z "$pick" ]; then
+    # `batch` has already said, on stderr and per item, WHY each candidate was passed over — in the
+    # words of the check that actually passed it over (#440). Restating that as a guess is what the
+    # old "every candidate was blocked" line did, and it was frequently just wrong.
     echo "fsgg-coord: no startable item (Ready/Backlog)${repo:+ for repo '$repo'} on board '$TITLE'." >&2
-    [ -n "$skipped" ] && echo "fsgg-coord: (every candidate was blocked — see above, or pass --ignore-blocked)" >&2
     return 0
   fi
   jq -r '"→ " + ((.repo // "" | sub("^[^/]+/";"")) + (if .number then "#"+(.number|tostring) else "" end))
@@ -1443,6 +1685,30 @@ lint() {
   local items findings
   items="$(lint_items)"
   findings="$(jq --arg repo "$repo" "$JQ_BODY_CHILD_REFS"'
+    # touchset_decl (#496) -> null if the body declares NO touch-set at all (the omission NO-TOUCH-SET
+    # fires on), "none" for the sentinel, otherwise the declared token string.
+    #
+    # It must skip FENCED lines, exactly as `paths_from_body` does. A `Paths:` line quoted inside a
+    # ``` block is invisible to the scheduler — so an item whose only declaration is fenced really
+    # does declare nothing, and a checker that counted it would report the item healthy while `take`
+    # kept refusing it. That is the gate failing open on the one state it exists to catch (#277 is the
+    # same trap on the write side). Same rule, both sides.
+    def unfenced:
+      (. // "") | split("\n")
+      | reduce .[] as $l ({f:false, out:[]};
+          if ($l | test("^\\s{0,3}(```|~~~)")) then .f = (.f | not)
+          elif .f then .
+          else .out += [$l] end)
+      | .out;
+    def touchset_decl:
+      ( unfenced | map(select(test("^ {0,3}[Pp]aths:"))) ) as $lines
+      | if ($lines | length) == 0 then null
+        else ( $lines | map(sub("^ *[Pp]aths:\\s*"; "")) | join(" ")
+               | gsub("`"; "") | gsub(","; " ") | ascii_downcase
+               | gsub("\\s+"; " ") | ltrimstr(" ") | rtrimstr(" ") )
+             | if . == "" then null else . end
+        end;
+
     def repo_match($f): ($f|ascii_downcase) as $q
       | (.repo // "" | ascii_downcase) as $r
       | ($q=="") or ($r==$q) or (($r|split("/")|last // "")==$q);
@@ -1471,7 +1737,28 @@ lint() {
               detail:"body declares child(ren) absent from the sub-issue graph, so rollup cannot see them: \([$unlinked[]|short]|join(", "))" } ),
         ( .[] | select(.status == "Done" and .state == "OPEN")
           | { code:"DONE-STATUS-OPEN-ISSUE", severity:"note", id:.id, status:.status, url:.url,
-              detail:"board Status is Done but the issue is still open" } )
+              detail:"board Status is Done but the issue is still open" } ),
+
+        # NO-TOUCH-SET (#496) — the rule whose absence let `lint` report 0 errors over a DEAD queue.
+        #
+        # Every other rule here validates the epic ROLL-UP GRAPH. Not one asked the only question a
+        # worker actually has: CAN ANYONE PICK THIS UP? A Ready/Backlog item with no `Paths:` is
+        # refused by `batch`/`take` — correctly, an undeclared touch-set cannot be proven disjoint —
+        # so it sits on the board looking like work and is invisible to every worker who asks for
+        # work. Nine such items had accumulated in `.github` while this surface said `0 error(s)`.
+        # That is the #266 shape (a gate green on a missing subject) in the one place whose whole
+        # job is board health.
+        #
+        # `Paths: none` is the out, and it is the POINT: a touch-set-less item (an epic, a decision,
+        # an investigation whose scope IS the question) is legitimate, but it must SAY so. Before the
+        # sentinel, "deliberately undeclared" and "somebody forgot" rendered identically and no gate
+        # could tell them apart — so no gate could be written at all.
+        ( .[] | select(.number != null)
+          | select(.state == "OPEN")
+          | select(.status == "Ready" or .status == "Backlog")
+          | select((.body | touchset_decl) == null)
+          | { code:"NO-TOUCH-SET", severity:"error", id:.id, status:.status, url:.url,
+              detail:"\(.status) but declares no `Paths:` — `batch`/`take` cannot schedule it, so no worker can ever pick it up. Declare a touch-set, or `Paths: none` if it genuinely has none (an epic, a decision item)." } )
       ]' <<<"$items")"
 
   # A body-declared ref that resolves to a PR is not an unlinked child — a PR can never be a
@@ -1708,8 +1995,12 @@ epic_rollup() {
     if [ "$p_status" = "Done" ]; then
       dbg "epic_rollup: $p_lbl already Done — walking up"
     else
-      set_field "$p_or#$p_num" Status Done >/dev/null
-      banner done "✓✓ FSGG-DONE   $p_lbl (epic)" "all $total children Done + closed  ·  board: Done"
+      # #510: a rolled-up epic whose board write the budget refused is QUEUED, and the banner says so
+      # rather than asserting a `board: Done` that never landed.
+      local erc=0
+      board_write "$p_or#$p_num" Status Done || erc=$?
+      banner done "✓✓ FSGG-DONE   $p_lbl (epic)" "all $total children Done + closed  ·  $BOARD_WRITE_NOTE"
+      [ "$erc" = 0 ] || break   # the climb rests on THIS epic being Done; if it is only queued, stop.
     fi
     cur="$p_or#$p_num"
   done
@@ -1856,8 +2147,19 @@ done_cmd() {
   if [ "$status" != "Done" ]; then
     if [ -n "$flip" ]; then
       dbg "done: PR #$prnum merged — flipping board Status -> Done"
-      set_field "$ref" Status Done >/dev/null
-      status="Done"
+      # The stamp attests the WORK; the board write is a separate fact. If the budget refused the
+      # write it is now QUEUED (#510) — so keep the stamp green (the work IS done and saying otherwise
+      # is how a red stamp becomes noise, #558) but say plainly that the board does not know yet, and
+      # exit EX_RATE so a worker loop backs off and flushes instead of believing the board.
+      local wrc=0
+      board_write "$ref" Status Done || wrc=$?
+      if [ "$wrc" = 0 ]; then
+        status="Done"
+      else
+        banner done "✓✓ FSGG-DONE   $item_lbl" \
+                    "merged PR #$prnum @ ${prsha:-?}${prday:+ ($prday)}  ·  $BOARD_WRITE_NOTE"
+        return "$wrc"
+      fi
     else
       banner fail "✗✗ FSGG-NOT-DONE   $item_lbl" \
                   "merged PR #$prnum @ ${prsha:-?}  ·  board: '${status:-unset}' != Done  ->  rerun with --flip"
@@ -1924,6 +2226,16 @@ claim_cmd() {
   local claims live stale mine others
   claims="$(claims_of "$R_OWNER" "$R_REPO" "$R_NUM")"
 
+  # The pre-claim Status this item's EXISTING claim (if any) already recorded — read BEFORE the GC
+  # below deletes those markers, because it deletes the record along with the comment (#481). Without
+  # this, `claim` over an expired claim reads a column that already says `In progress`, concludes
+  # nothing was overwritten, and the Backlog the FIRST claim overwrote is lost for good — so a
+  # reaped-then-reclaimed item still comes back `Ready`. Lowest marker id first: `parse_claims` sorts
+  # by id, and the oldest claim is the one that did the overwriting. Inherited by a `--force` steal
+  # and a re-claim for exactly the same reason.
+  local prev_claimed
+  prev_claimed="$(jq -r 'map(select(.prev != "")) | .[0].prev // ""' <<<"$claims")"
+
   # GARBAGE-COLLECT dead markers before deciding anything. A stale marker that is merely *ignored*
   # survives, and `heartbeat` would later renew it back to life underneath whoever claimed next —
   # two live markers, two workers, one item. Collect it here (telling its worker), so that after this
@@ -1957,6 +2269,37 @@ claim_cmd() {
   fi
 
   live="$(jq -c 'map(select(.stale | not))' <<<"$claims")"
+
+  # THE TWIN BACKSTOP (#419). A marker bearing our worker id is not proof it is OURS — and `mine`
+  # below cannot tell the difference, so a twin's lock gets silently adopted by the heartbeat path.
+  # The marker has carried `session=` since ADR-0027; nothing ever read it. Now it does: same worker
+  # id + a DIFFERENT session is two workers on one id, which is the failure the whole lock exists to
+  # prevent. Refuse, loudly, and hand over the one remedy that resolves it.
+  #
+  # Both sessions must be non-empty to conclude anything: a marker with no `session=` (a human, a
+  # harness that exports none, a pre-#419 marker) is genuinely indistinguishable from ours, so it
+  # keeps the old behaviour — treated as ours, and warned about — rather than failing on old data.
+  #
+  # NOT overridable with --force. `--force` steals another WORKER's item; this is not a contested
+  # item, it is a broken identity, and the fix for a broken identity is a new identity, never a
+  # steal — stealing here would delete a marker that our own twin is actively working behind.
+  local twin=""
+  if [ -n "$HARNESS_SESSION" ]; then
+    twin="$(jq -c --arg w "$w" --arg s "$HARNESS_SESSION" \
+              'map(select(.worker == $w and .session != "" and .session != $s)) | first // empty' <<<"$live")"
+  fi
+  if [ -n "$twin" ]; then
+    die "claim: worker id '$w' is ALREADY held on $R_REPO#$R_NUM by a DIFFERENT session — two workers share one id.
+  theirs: session $(jq -r '.session' <<<"$twin") (claimed $(jq -r '.ageSec / 60 | floor' <<<"$twin")m ago)
+  ours:   session $HARNESS_SESSION
+  The claim lock keys on the worker id, so it cannot separate you from them: renewing that marker
+  would put TWO workers on this item, which is the exact failure this lock exists to prevent.
+  Do NOT --force (that steals a marker your twin is working behind). Take a unique id and retry:
+
+      eval \"\$(fsgg-coord whoami --mint)\"
+"
+  fi
+
   mine="$(jq -c --arg w "$w" 'map(select(.worker == $w)) | first // empty' <<<"$live")"
   others="$(jq -c --arg w "$w" 'map(select(.worker != $w))' <<<"$live")"
 
@@ -1978,7 +2321,7 @@ claim_cmd() {
   # sibling silently adopts another worker's lock. Warn here too; the success path's warning at the
   # bottom of this function is never reached from this early return.
   if [ -n "$mine" ]; then
-    heartbeat_comment "$R_OWNER" "$R_REPO" "$R_NUM" "$(jq -r '.id' <<<"$mine")" "$w" "$ref"
+    heartbeat_comment "$R_OWNER" "$R_REPO" "$R_NUM" "$(jq -r '.id' <<<"$mine")" "$w" "$ref" "$prev_claimed"
     stamp_worktree "$w" "$R_REPO#$R_NUM"
     printf 'held %s by worker %s (lease renewed)\n' "$R_REPO#$R_NUM" "$w"
     if [ -n "$WORKER_SHARED_WHY" ]; then
@@ -1992,10 +2335,24 @@ claim_cmd() {
     die "$R_REPO#$R_NUM is held by worker '$(jq -r '.[0].worker' <<<"$others")' ($(jq -r '.[0].ageSec / 60 | floor' <<<"$others")m ago). Use --force to steal, or 'reap' if its lease has expired."
   fi
 
+  # Read the column we are about to overwrite, and record it in the marker (#481). This is the ONLY
+  # moment it is knowable: one line further down the board says `In progress` and the answer is gone.
+  #
+  # A read that FAILS records nothing rather than guessing — an unrecorded claim releases to `Ready`,
+  # which is exactly the pre-#481 behaviour, so a flaky read degrades to the old defect instead of
+  # inventing a column. It must not abort the claim: the pre-claim status is bookkeeping, and the CAS
+  # below is the lock.
+  local prev=""
+  prev="$(item_status "$ref" 2>/dev/null)" || prev=""
+  # Already `In progress`, or blank? Then it is not a column somebody chose — it is a claim's leftover
+  # footprint (a `--force` steal, or a re-claim after `reap` cleared the marker but not the board).
+  # Inherit what the superseded claim recorded; re-reading here would only re-read that footprint.
+  if [ -z "$prev" ] || [ "$prev" = "$CLAIM_STATUS" ]; then prev="$prev_claimed"; fi
+
   local branch myid
   branch="$(branch_for "$R_OWNER" "$R_REPO" "$R_NUM")"
   myid="$(post_comment "$R_OWNER" "$R_REPO" "$R_NUM" \
-            "$(claim_body "$w" "$branch" "$(now_iso)" "$ref")")"
+            "$(claim_body "$w" "$branch" "$(now_iso)" "$ref" "$prev")")"
   [ -n "$myid" ] || die "claim: could not post the claim marker on $R_REPO#$R_NUM."
 
   # The CAS. Lowest LIVE marker id wins; a loser removes its own marker so the item stays clean.
@@ -2036,15 +2393,12 @@ claim_cmd() {
   # while a worker held the item and `next` hid it from everyone else (the CLAIM-STATUS-LAG drift
   # /check-board reconciles). The three outcomes are now three outcomes:
   local boardnote rc=0
-  soft_run set_field "$ref" Status "$CLAIM_STATUS" >/dev/null 2>&1 || rc=$?
-  case "$rc" in
-    0)                boardnote="board: $CLAIM_STATUS" ;;
-    "$EX_OFFBOARD")   boardnote="note: not on board '$TITLE' (the marker is the lock; add it to sequence it)" ;;
-    "$EX_RATE")       defer_write "$ref" Status "$CLAIM_STATUS"
-                      boardnote="board: DEFERRED — GraphQL budget exhausted, resets in $(rate_reset_in). The write is QUEUED (flushes on the next board write, or run 'fsgg-coord flush')" ;;
-    *)                defer_write "$ref" Status "$CLAIM_STATUS"
-                      boardnote="board: WRITE FAILED (rc=$rc) — queued; run 'fsgg-coord flush'" ;;
-  esac
+  board_write "$ref" Status "$CLAIM_STATUS" || rc=$?
+  boardnote="$BOARD_WRITE_NOTE"
+  # One claim-specific wording: off-board is not a failure HERE, because the marker is the lock and it
+  # is already held. Everywhere else off-board means the write is lost; here it means only that the
+  # item cannot be SEQUENCED until someone adds it.
+  [ "$rc" = "$EX_OFFBOARD" ] && boardnote="note: not on board '$TITLE' (the marker is the lock; add it to sequence it)"
   printf 'claimed %s by worker %s  ·  %s\n' "$R_REPO#$R_NUM" "$w" "$boardnote"
   # `origin/main` is not decoration. `git worktree add -b <new>` with no commit-ish branches from the
   # shared checkout's HEAD, and this protocol's premise is that N workers pass through that checkout —
@@ -2083,7 +2437,8 @@ heartbeat_cmd() {
   if [ -z "$holder" ] || [ "$(jq -r '.stale' <<<"$mine")" = "true" ]; then
     die "heartbeat: worker '$w' lease on $R_REPO#$R_NUM EXPIRED ($(jq -r '.ageSec / 60 | floor' <<<"$mine")m > ${CLAIM_LEASE_MIN}m). STOP working it. Re-take it with 'fsgg-coord claim $ref'."
   fi
-  heartbeat_comment "$R_OWNER" "$R_REPO" "$R_NUM" "$(jq -r '.id' <<<"$mine")" "$w" "$ref"
+  heartbeat_comment "$R_OWNER" "$R_REPO" "$R_NUM" "$(jq -r '.id' <<<"$mine")" "$w" "$ref" \
+    "$(jq -r '.prev // ""' <<<"$mine")"
   printf 'renewed %s for worker %s (lease %sm)\n' "$R_REPO#$R_NUM" "$w" "$CLAIM_LEASE_MIN"
 }
 
@@ -2105,6 +2460,9 @@ heartbeat_cmd() {
 #
 # A status we could not READ is not a status we may overwrite: forcing `Ready` over an unknown one is
 # the same defect a turn further in. An unreadable Status writes nothing and says so.
+#
+# And undoing the claim's own column means RESTORING it, not guessing `Ready` for it (#481) — the
+# marker recorded what the claim overwrote, so we read it back off the marker we are about to delete.
 #
 # `--status S` still wins outright. That is the caller stating the end state, rather than release
 # guessing it.
@@ -2131,6 +2489,13 @@ release_cmd() {
       && die "release: $R_REPO#$R_NUM is held by worker '$holder', not '$w' — pass --force to release it anyway."
   fi
 
+  # What did the claim we are dropping overwrite? Read it off the marker BEFORE the loop below deletes
+  # it — afterwards the only witness to the pre-claim column is gone (#481). Same selector as the
+  # delete, so a `--force` release restores what the EVICTED claim recorded, not what we imagine.
+  local prev_claimed
+  prev_claimed="$(jq -r --arg w "$w" --arg f "${force:-}" \
+    'map(select(($f != "" or .worker == $w) and .prev != "")) | .[0].prev // ""' <<<"$claims")"
+
   local id
   while read -r id; do
     [ -n "$id" ] || continue
@@ -2143,25 +2508,38 @@ release_cmd() {
   # The marker is gone by here, so the lease is ALREADY dropped. Nothing below may abort the release
   # — a board that cannot be read or written leaves the column alone and reports that, exactly as it
   # has always done for a board write that failed.
-  local boardnote=""
+  local boardnote="" restored=""
   if [ -z "$explicit" ]; then
     local act val
-    IFS=$'\t' read -r act val < <(unclaim_status "$ref")
+    IFS=$'\t' read -r act val < <(unclaim_status "$ref" "$prev_claimed")
     case "$act" in
-      write) status="$val" ;;
+      # An `if`, not an `&&` chain: this is the LAST command of the branch, so under `set -e` a false
+      # test would make the `case` — and the `if` wrapping it — exit non-zero on the ordinary path.
+      write) status="$val"
+             if [ -n "$prev_claimed" ] && [ "$val" = "$prev_claimed" ]; then restored=1; fi ;;
       keep)  boardnote="board: $val (preserved — release resets only the '$CLAIM_STATUS' claim set)" ;;
       offboard) boardnote="note: not on board '$TITLE'" ;;
+      # The column is unreadable, so we write nothing — but we still KNOW what this claim overwrote,
+      # and the repair we hand the operator must say so. Hardcoding `Ready` here would reintroduce
+      # #481's promotion in the ADVICE on the one path where the marker can still prove it wrong.
       *)     boardnote="note: Status unchanged — could not read it"
              echo "fsgg-coord: release: could not read $R_REPO#$R_NUM Status. The lease IS dropped; the board column is untouched." >&2
-             echo "  set it yourself if it still says '$CLAIM_STATUS': fsgg-coord set-field $ref Status Ready" >&2 ;;
+             echo "  set it yourself if it still says '$CLAIM_STATUS': fsgg-coord set-field $ref Status ${prev_claimed:-Ready}" >&2 ;;
     esac
   fi
 
   if [ -z "$boardnote" ]; then
-    # SOFT_DIE=1: the board write is best-effort (the lease is already dropped); its `die` must not
-    # escalate to the whole command under #344's fatal-die rule.
-    if ( SOFT_DIE=1; set_field "$ref" Status "$status" ) >/dev/null 2>&1; then boardnote="board: $status"
-    else boardnote="note: not on board '$TITLE'"; fi
+    # The board write is best-effort (the lease is already dropped) but it is NOT don't-care: this
+    # used to report "not on board" for EVERY failure, so an exhausted budget silently DROPPED the
+    # restore and left the item sitting in the column the claim overwrote, with no claim on it —
+    # #418's defect, still live in `release` (#510). board_write queues it instead.
+    local rrc=0
+    board_write "$ref" Status "$status" || rrc=$?
+    case "$rrc" in
+      0)           boardnote="board: $status${restored:+ (restored — the column this claim overwrote)}" ;;
+      "$EX_RATE")  boardnote="$BOARD_WRITE_NOTE" ;;
+      *)           boardnote="note: not on board '$TITLE'" ;;
+    esac
   fi
   printf 'released %s (worker %s)  ·  %s\n' "$R_REPO#$R_NUM" "$w" "$boardnote"
 }
@@ -2234,13 +2612,67 @@ function fence_delim(line,   t, lead, ch, n, rest) {
 # patches a quoted line inside a fence and the reader never sees the new touch-set — so both sides
 # share `FENCE_AWK` and the same `^ {0,3}[Pp]aths:` bound.
 paths_from_body() {  # $1=issue body -> one normalized touch-set token per line (possibly none)
-  printf '%s\n' "$1" \
+  # BACKTICKS ARE STRIPPED BEFORE ANYTHING ELSE (#485 leg b, was #435). A `Paths:` line written the way
+  # everyone naturally writes one — ``Paths: `src/Foo/**`, `tests/Foo/**` `` — used to normalize to
+  # tokens with the backticks STILL ATTACHED, and the trailing-glob strip below is anchored at
+  # end-of-string. The token ends in a backtick, not `*`, so `/\*\*$` never matched: the `**` survived,
+  # `invalid_paths` flagged the token as unmatchable, and the item was refused.
+  #
+  # The refusal itself was CORRECT and fail-closed (#273: an unmatchable token must never answer
+  # DISJOINT). The defect was that a GRAMMAR-LEGAL declaration was rejected for its markdown, and the
+  # item then vanished from `batch` while `take` reported an empty queue — a well-formed touch-set
+  # made invisible by a formatting character. FS.GG.Audio#29 and #31 were both filed this way.
+  #
+  # A touch-set token can never legitimately contain a backtick (it is not a path character anyone
+  # means), so stripping is unambiguous — and `widen` shares this function, so both sides stay coherent.
+  # `Paths: none` is the SENTINEL, not a directory called `none` (#496). It is how an epic, a decision
+  # item, or an investigation whose scope IS the question says "this item deliberately has no
+  # touch-set" — in a form a machine can read. Emit NOTHING for it: it declares no files, so it
+  # reserves no files, and `batch` still (correctly) refuses to schedule it. The difference the
+  # sentinel buys is not schedulability, it is INTENT — `lint` can now tell an epic from an omission,
+  # which it could not do while both rendered as "no 'Paths:' declared".
+  #
+  # Recognised only when it is the WHOLE declaration. `Paths: none src/Foo` is NOT a sentinel: `none`
+  # stays an ordinary token (it matches no file, so it reserves nothing and conflicts with nothing),
+  # and the item schedules on its real paths. That is the safe reading of a contradictory declaration
+  # — "I have no touch-set, and here it is" cannot be honoured as written, and the alternative
+  # (treating the whole line as the sentinel) would silently DISCARD a declared path and hand two
+  # workers the same files. Half-honouring it errs toward reserving too much, never too little.
+  local toks
+  toks="$(printf '%s\n' "$1" \
     | awk "$FENCE_AWK"'{ if (fence_delim($0)) next; if (!IN_FENCE) print }' \
     | grep -E '^ {0,3}[Pp]aths:' \
     | sed -E 's/^ *[Pp]aths:[[:space:]]*//' \
+    | tr -d '`' \
     | tr ',' ' ' | tr '\t' ' ' | tr -s ' ' '\n' | sed '/^$/d' \
     | sed -E 's#^\./##; s#/\*\*$##; s#/\*$##; s#/+$##' \
-    || true                                  # normalize: strip ./ prefix, /** /* and trailing /
+    || true)"                                # normalize: strip backticks, ./ prefix, /** /* and trailing /
+  if [ "$(printf '%s' "$toks" | tr '[:upper:]' '[:lower:]')" = "$NO_TOUCHSET" ]; then return 0; fi
+  printf '%s' "$toks"
+  [ -n "$toks" ] && echo
+  return 0
+}
+
+# The machine-readable "this item deliberately has no touch-set" declaration (#496).
+#
+# The protocol always DEPENDED on this distinction — the recipe asks a filer to write "no touch-set:
+# declare at claim time with `widen`" in the body — but it asked for it as PROSE, and nothing read
+# prose. So an epic and an omission rendered identically ("no 'Paths:' declared"), the distinction
+# existed only in the filer's head, a real omission hid among the legitimate ones, and no gate could
+# be written to catch it: there was nothing to check against. Nine items of real work sat on the board
+# looking like work and invisible to every worker who asked for work, while `lint` said 0 errors.
+NO_TOUCHSET='none'
+
+# 0 iff the body carries the sentinel as its whole `Paths:` declaration.
+declares_no_touchset() {  # $1=issue body
+  local raw
+  raw="$(printf '%s\n' "$1" \
+    | awk "$FENCE_AWK"'{ if (fence_delim($0)) next; if (!IN_FENCE) print }' \
+    | grep -E '^ {0,3}[Pp]aths:' \
+    | sed -E 's/^ *[Pp]aths:[[:space:]]*//' \
+    | tr -d '`' | tr ',' ' ' | tr '\t' ' ' | tr -s ' ' '\n' | sed '/^$/d' \
+    | tr '[:upper:]' '[:lower:]' || true)"
+  [ "$raw" = "$NO_TOUCHSET" ]
 }
 
 # The touch-set grammar the matcher ACTUALLY implements — and the refusal that keeps the gap between
@@ -2300,11 +2732,17 @@ die_on_invalid_paths() {  # $1=normalized tokens $2=what declared them (e.g. 'FS
   die "$2 declares touch-set token(s) that can never match a file: $(fmt_bad_paths "$bad") — $TOUCHSET_GRAMMAR"
 }
 
-paths_of() {  # $1=owner $2=repo $3=num -> one normalized touch-set token per line (possibly none)
-  local body
-  body="$(gh api "repos/$1/$2/issues/$3" --jq '.body // ""' 2>/dev/null)" \
+# The issue body, or a hard failure. Split out of `paths_of` (#496) so a caller that needs BOTH the
+# touch-set and whether it is the `Paths: none` sentinel reads the body ONCE. Two reads per item would
+# have doubled the REST cost of the scheduling loop — on the hot path, for a distinction that is free
+# to compute from bytes already in hand.
+body_of() {  # $1=owner $2=repo $3=num -> the issue body (dies if unreadable)
+  gh api "repos/$1/$2/issues/$3" --jq '.body // ""' 2>/dev/null \
     || die "cannot read the touch-set on $2#$3 (rate limit? network?) — refusing to schedule against an unknown touch-set."
-  paths_from_body "$body"
+}
+
+paths_of() {  # $1=owner $2=repo $3=num -> one normalized touch-set token per line (possibly none)
+  paths_from_body "$(body_of "$1" "$2" "$3")"
 }
 # The comparison core, shared by `overlap`, `batch`, `take`, and `widen`. Two newline-separated token
 # lists in; the conflicting pairs out (empty = disjoint). Subtree containment in either direction.
@@ -2394,11 +2832,54 @@ open_claim_candidates() {  # $1=owner/repo -> JSON array of {number,title,url,bo
 # open_claim_candidates), which also carries each issue's body — so a touch-set costs zero extra
 # reads. Each surviving candidate then costs one comments read.
 #
+# ---- scope_repo: the repo a WORKER command defaults to — the one you are standing in (#480) -------
+#
+# `take`/`batch`/`next`/`who` answer "what do I work on HERE" and "who else is HERE", and the protocol
+# has always documented their default as the current checkout (pnext-item: *"Default: the repo you are
+# standing in"*). It was never implemented. They initialised `repo=""` — and every board read treats
+# an empty repo as THE WHOLE ORG — so a bare `take` in the `.github` checkout claimed FS.GG.Game#141,
+# walked past four schedulable `.github` items, and printed
+#
+#     git worktree add ../FS.GG.Game-141 -b item/141-... origin/main
+#
+# where `origin/main` is `.github`'s. Follow that and you get a worktree of the WRONG REPOSITORY and
+# start "working" an item whose files are not in it. Not a useless command — one that silently
+# succeeds at the wrong thing: the #416 silent-no-op shape, one level up, in the dispatcher itself.
+#
+# NOT APPLIED TO EVERY --repo COMMAND, and the exceptions are the point:
+#   * `ready` / `lint` are org-wide RECONCILERS. /check-board runs a BARE `ready --all` and `lint` to
+#     reconcile the whole board; defaulting them to the checkout would silently shrink the reconciler
+#     to one repo — trading this scope bug for a worse one, in the tool that exists to catch it.
+#   * `inbox` is a MAILBOX. Another worker can `say` to you on any repo's issue — a cross-repo request
+#     you filed, most obviously. Narrowing it to the checkout would silently HIDE mail. That is a drop,
+#     not a scope.
+#
+# RESOLVED FROM THE GIT REMOTE, NOT `gh repo view`. The remote is free and offline; the API call costs
+# budget and, worse, FAILS ON AN EXHAUSTED ONE — which `verify-paths` then reports as "not inside a
+# GitHub checkout" (#430), a wrong cause stated with total confidence. A scheduling command that ran
+# out of GraphQL must not tell the worker they are in the wrong directory.
+scope_repo() {
+  local repo="${1:-}"
+  [ -n "$repo" ] && { printf '%s' "$repo"; return 0; }
+  local url
+  url="$(git config --get remote.origin.url 2>/dev/null || true)"
+  # https://github.com/FS-GG/.github(.git) | git@github.com:FS-GG/.github(.git) | ssh://…/FS-GG/x.git
+  case "$url" in
+    *github.com[:/]*)
+      repo="${url##*github.com}"; repo="${repo#[:/]}"; repo="${repo%.git}"; repo="${repo%/}"
+      # Must look like owner/repo. Anything else (a bare host, a nested path) is not a scope.
+      case "$repo" in */*/*|*/) repo="" ;; */*) : ;; *) repo="" ;; esac
+      ;;
+    *) repo="" ;;
+  esac
+  printf '%s' "$repo"
+}
+
 # KNOWN BOUND: with no --repo, the repos to scan are derived from the board. A claim in a repo with
 # ZERO board items is therefore invisible to an org-wide `who`/`reap`. Pass --repo to reach it.
 active_claims() {
   local repo="${1:-}"
-  local board inprog repos offboard cand n=0 i=0 tmp
+  local board inprog repos cand n=0 i=0 tmp armA armB
 
   board="$(board_items)"
   inprog="$(board_filter "$repo" "In progress" "" "0" <<<"$board")"
@@ -2410,19 +2891,50 @@ active_claims() {
     case "$repo" in */*) repos="$repo" ;; *) repos="$OWNER/$repo" ;; esac
   fi
 
-  offboard='[]'
+  # NEVER PASS THE CANDIDATE SET THROUGH `argv` (#497). Both arms carry each issue's full BODY — arm
+  # B reads bodies on purpose, so a touch-set costs zero extra reads — and on Linux a SINGLE argument
+  # is capped at MAX_ARG_STRLEN (128 KiB), independently of the much larger total ARG_MAX. Past that,
+  # `execve` returns E2BIG, `jq` never runs, and the `$( )` yields the EMPTY STRING — which the next
+  # iteration of an `--argjson`-accumulator loop feeds straight back in as `--argjson acc ''`
+  # ("invalid JSON text"). The org crossed 128 KiB of open-issue bodies and every claim-aware read —
+  # who, reap, batch, take, inbox, widen, overlap --active — died at once.
+  #
+  # So the arms travel as FILES, never as arguments: arm B streams to NDJSON (one row per candidate,
+  # tagged with its repo), arm A lands as the array it already is, and the merge slurps both. That is
+  # the same `mktemp` + `jq -s` idiom this function already uses to collect its own rows below, and
+  # it is flat in the payload — a board twice this size costs the same argv.
+  #
+  # NOT YET FLAT, and deliberately out of this fix's scope: ONE candidate's body still rides argv,
+  # via `--argjson it` and `paths_from_body` below. GitHub caps a body at 65,536 CHARACTERS, not
+  # bytes, so a CJK/emoji-heavy body can still reach ~196 KB and breach the cap on its own (#507).
+  armA="$(mktemp "$CACHE/.armA.XXXXXX")"; armB="$(mktemp "$CACHE/.armB.XXXXXX")"
+  TMPFILES+=("$armA" "$armB")
+  printf '%s' "$inprog" >"$armA"
+
   local r lst
   while IFS= read -r r; do
     [ -n "$r" ] || continue
-    lst="$(open_claim_candidates "$r")"
-    offboard="$(jq -c -n --argjson acc "$offboard" --argjson lst "$lst" --arg repo "$r" \
-                  '$acc + [ $lst[] | . + {repo: $repo} ]')"
+    lst="$(open_claim_candidates "$r")"      # dies on an unreadable read — never hands back junk
+    # A DROPPED REPO IS A FAIL-OPEN, so this append may not fail quietly. If it did — a partial write,
+    # a full $CACHE — the loop would carry on, the merge would still produce a well-formed array over
+    # the SURVIVING repos, and the guard below would wave it through: a claim in the dropped repo goes
+    # invisible, its touch-set is never reserved, and `batch` hands the item to a second worker.
+    jq -c --arg repo "$r" '.[] | . + {repo: $repo}' <<<"$lst" >>"$armB" \
+      || die "cannot assemble the claim candidates for $r — refusing to proceed on a partial lock read."
   done <<<"$repos"
 
   # Merge the arms. `body` rides in from arm B (free touch-set); `inProgress` remembers arm A, which
   # is the ONLY thing that licenses an `unclaimed` verdict on a markerless item.
-  cand="$(jq -c -n --argjson a "$inprog" --argjson b "$offboard" '
-    ( [ $a[] | select(.number != null)
+  # `--slurpfile a` wraps arm A's single array, hence `$a[0]`; arm B is NDJSON, so `$b` IS the rows.
+  #
+  # `$a[0]` is deliberately NOT defaulted (`// []`). `board_filter` is a jq `map(…)`, so on SUCCESS it
+  # always emits an array — `[]` at the very least. An EMPTY armA therefore means the board read
+  # FAILED, and defaulting it to `[]` would quietly rebuild the claim set from arm B alone: a
+  # well-formed array, missing every board-`In progress` item, sailing straight past the fail-closed
+  # guard below — including the markerless `unclaimed` verdicts that ONLY arm A can produce (#257).
+  # Iterating null instead ERRORS, `$cand` comes back empty, and the guard does its job.
+  cand="$(jq -c -n --slurpfile a "$armA" --slurpfile b "$armB" '
+    ( [ $a[0][] | select(.number != null)
         | {repo, number, title, url, body: null, inProgress: true} ]
     + [ $b[] | {repo, number, title, url, body, inProgress: false} ] )
     | group_by("\(.repo)#\(.number)")
@@ -2432,7 +2944,8 @@ active_claims() {
             url:        ([ .[].url  ] | map(select(. != null)) | first // null),
             body:       ([ .[].body ] | map(select(. != null)) | first // null),
             inProgress: ([ .[].inProgress ] | any) })
-    | sort_by(.repo, .number)')"
+    | sort_by(.repo, .number)')" || true
+  rm -f "$armA" "$armB"
 
   # FAIL CLOSED ON AN UNREADABLE CLAIM SET (#461, epic #266). `[]` is a CLAIM: "I read the locks and
   # nobody holds anything." A failed scan is not entitled to make it. If the merge above produced
@@ -2453,7 +2966,7 @@ active_claims() {
     ''|*[!0-9]*) die "the claim set${repo:+ for '$repo'} did not yield a count (got '$n') — refusing to proceed on an unread lock." ;;
   esac
 
-  tmp="$(mktemp "$CACHE/.claims.XXXXXX")"; : >"$tmp"
+  tmp="$(mktemp "$CACHE/.claims.XXXXXX")"; TMPFILES+=("$tmp")
   while [ "$i" -lt "$n" ]; do
     local it r2 num o rp claims paths pathsjson
     it="$(jq -c ".[$i]" <<<"$cand")"; i=$((i + 1))
@@ -2622,6 +3135,9 @@ who_cmd() {
       *)       die "who: unexpected argument '$1'." ;;
     esac
   done
+  # "Is everything here already claimed?" — the recipe's own diagnosis step, and it is about THIS
+  # repo (#480). /check-board passes `--repo` explicitly, so it is unaffected.
+  repo="$(scope_repo "$repo")"
   [ -n "$repo" ] && repo="$(resolve_repo "$repo")"
   local claims; claims="$(active_claims "$repo")"
 
@@ -2672,6 +3188,12 @@ reap_cmd() {
       *)       die "reap: unexpected argument '$1'." ;;
     esac
   done
+  # Scoped to the checkout like its siblings (#480) — and this is the one where it matters most.
+  # `reap --apply` DESTROYS state: it deletes another worker's claim marker and unassigns them. A
+  # destructive command whose bare default is THE WHOLE ORG is the scope bug at its worst — a janitor
+  # run in `.github` would collect live-looking claims in five other repos it was never pointed at.
+  # Every documented use already passes --repo; nothing relied on the org-wide default.
+  repo="$(scope_repo "$repo")"
   [ -n "$repo" ] && repo="$(resolve_repo "$repo")"
   local stale n=0 i=0
   stale="$(active_claims "$repo" | jq -c '[.[] | select(.state == "stale")]')"
@@ -2718,11 +3240,23 @@ reap_cmd() {
     # Reaping UNDOES a claim, exactly as `release` does, so it owes the board the same answer and
     # asks the same question (#331). A worker whose lease expired on an item it had marked `Blocked`
     # must not have that column reset to `Ready` on its way out.
+    #
+    # And it restores the claim's own column rather than guessing `Ready` for it (#481), from the
+    # `prev=` the dead worker's marker recorded. `now_state` is that marker, re-read fresh a few lines
+    # above — the delete has already happened, so this is the last copy of it we will ever have.
     local rnote ract rval
-    IFS=$'\t' read -r ract rval < <(unclaim_status "$r#$num")
+    IFS=$'\t' read -r ract rval < <(unclaim_status "$r#$num" "$(jq -r '.prev // ""' <<<"$now_state")")
     case "$ract" in
-      write) if ( SOFT_DIE=1; set_field "$r#$num" Status "$rval" ) >/dev/null 2>&1; then rnote="board: $rval"
-             else rnote="not on board (marker cleared; nothing to reset)"; fi ;;
+      # As in `release`: an exhausted budget is not "not on board" — that misdiagnosis is #418's, and
+      # it was still live here. Queue the reset in that case (#510); every other failure keeps the
+      # existing wording, which correctly claims no reset it did not perform.
+      write) wrc=0
+             board_write "$r#$num" Status "$rval" || wrc=$?
+             case "$wrc" in
+               0)           rnote="board: $rval" ;;
+               "$EX_RATE")  rnote="$BOARD_WRITE_NOTE" ;;
+               *)           rnote="not on board (marker cleared; nothing to reset)" ;;
+             esac ;;
       keep)  rnote="board: $rval (preserved)" ;;
       offboard)   rnote="not on board (marker cleared; nothing to reset)" ;;
       *)          rnote="board: Status unchanged — could not read it (marker cleared)" ;;
@@ -2760,17 +3294,26 @@ reserved_in() {  # $1=repo-tagged lines  $2=owner/repo -> the bare tokens reserv
   printf '%s\n' "$1" | awk -F'\t' -v r="$2" 'NF >= 2 && $1 == r { print $2 }'
 }
 batch_cmd() {
-  local repo="" want=0 json="" include_backlog=""
+  local repo="" want=0 json="" include_backlog="" ignore_blocked=""
   while [ $# -gt 0 ]; do
     case "$1" in
       --repo)   repo="${2:?--repo needs a value}"; shift 2 ;;
       -n)       want="${2:?-n needs a value}"; shift 2 ;;
       --json)   json=1; shift ;;
       --include-backlog) include_backlog=1; shift ;;
+      # A DIAGNOSTIC, never a scheduling mode (#485 leg a). `next --ignore-blocked` exists to answer
+      # "what WOULD be startable if the blockers cleared", and `next` is now this function's
+      # presentation layer, so the flag has to live here. It relaxes the blocker filter and NOTHING
+      # else: touch-sets, unmatchable tokens and live claims are still enforced, because those are
+      # collisions rather than sequencing — no flag may hand out an item two workers would fight over.
+      --ignore-blocked)  ignore_blocked=1; shift ;;
       -*)       die "batch: unknown flag '$1'." ;;
       *)        die "batch: unexpected argument '$1'." ;;
     esac
   done
+  # The engine `take` schedules from — it must answer for the same scope (#480). A read, so an
+  # undetectable checkout falls back to the org rather than dying; `take` is the one that refuses.
+  repo="$(scope_repo "$repo")"
   [ -n "$repo" ] && repo="$(resolve_repo "$repo")"
   case "$want" in ''|*[!0-9]*) die "batch: -n must be a number." ;; esac
 
@@ -2786,7 +3329,36 @@ batch_cmd() {
   if [ -n "$include_backlog" ]; then
     cands="$(jq -c -s 'add' <(printf '%s' "$cands") <(board_filter "$repo" "Backlog" "" "0" <<<"$items"))"
   fi
-  cands="$(jq -c 'map(select(.blocked | not) | select(.number != null)) | sort_by(.number)' <<<"$cands")"
+  # A BLOCKED candidate is dropped here — but it must not be dropped SILENTLY (#488). It never reaches
+  # the skip-reason loop below, so before that fix it contributed nothing to `$skipped`, `take`'s stderr
+  # came back empty, and `take` concluded from that emptiness that there were "no open board items at
+  # all — an empty queue, not a blocked one". The one state most likely to starve a queue was the one
+  # state that left no trace. `blocked` is a REASON, and reasons are what `batch` exists to report.
+  #
+  # It is also where `next` gets its blocker diagnostic from now (#485 leg a): `next` used to compute
+  # and print this itself, with its own idea of what "startable" meant. It no longer has one — `batch`
+  # is the predicate, so the reason has to be produced HERE or it is lost.
+  local blocked_out skipped=""
+  if [ -z "$ignore_blocked" ]; then
+    # Name the blocker's STATE too. A MERGED blocker is RESOLVED (#485 leg e), so it can never be why
+    # an item is blocked — listing it among the reasons would send a reader to look at finished work.
+    blocked_out="$(jq -r '
+      .[] | select(.number != null) | select(.blocked)
+      | ( [ (.blockers // [])[] | select(.state != "CLOSED" and .state != "MERGED")
+            | "\(.ref | sub("^[^/]+/";"")) (\(.state | ascii_downcase))" ]
+          | if length == 0 then "an unnamed blocker" else join(", ") end ) as $b
+      | "  \(.repo | sub("^[^/]+/";""))#\(.number) — blocked by \($b)"' <<<"$cands")"
+    # An `&&` statement here would return 1 when there are NO blocked candidates — the common case —
+    # and `set -euo pipefail` would exit the script on it, silently. Use an explicit `if`.
+    if [ -n "$blocked_out" ]; then skipped="$skipped$blocked_out"$'\n'; fi
+    cands="$(jq -c 'map(select(.blocked | not) | select(.number != null)) | sort_by(.number)' <<<"$cands")"
+  else
+    # `--ignore-blocked` is a DIAGNOSTIC, never a scheduling mode (#485 leg a): it answers "what WOULD
+    # be startable if the blockers cleared". It relaxes the blocker filter and NOTHING else — touch-sets,
+    # unmatchable tokens and live claims are still enforced, because those are COLLISIONS rather than
+    # sequencing, and no flag may hand out an item two workers would fight over.
+    cands="$(jq -c 'map(select(.number != null)) | sort_by(.number)' <<<"$cands")"
+  fi
 
   # Touch-sets already spoken for by in-flight work. `active_claims` finds a claim by its MARKER, so
   # this reserves the touch-sets of items the board has lost track of (a failed `Status` flip, or an
@@ -2804,10 +3376,10 @@ batch_cmd() {
   [ -z "$active_bad" ] || die "batch: in-flight claim(s) declare unmatchable touch-set token(s) and therefore reserve nothing: $active_bad — refusing to schedule against an unknown touch-set. Fix with: fsgg-coord widen <issue> --paths '<paths>'"
 
   local -a chosen_ids=() chosen_paths=() chosen_repos=()
-  local n i=0 skipped=""
-  n="$(jq 'length' <<<"$cands")"
+  local n i=0                    # NB: `skipped` is declared ABOVE — it is pre-seeded with the blocked
+  n="$(jq 'length' <<<"$cands")" # candidates (#488). Re-declaring it here would silently drop them.
   while [ "$i" -lt "$n" ]; do
-    local it r num id p hits j clash holder
+    local it r num id p hits j clash holder body
     it="$(jq -c ".[$i]" <<<"$cands")"; i=$((i + 1))
     r="$(jq -r '.repo' <<<"$it")"; num="$(jq -r '.number' <<<"$it")"
     id="${r#*/}#$num"
@@ -2815,7 +3387,10 @@ batch_cmd() {
     # a claimed item does not merely drop out of the batch — its touch-set is OCCUPIED, so it must
     # also be added to `active_paths`. Skipping without reserving would happily schedule a candidate
     # that overlaps the very item another worker is holding.
-    p="$(paths_of "${r%%/*}" "${r#*/}" "$num")"
+    #
+    # ONE body read, two questions (#496): the touch-set, and whether it is the `Paths: none` sentinel.
+    body="$(body_of "${r%%/*}" "${r#*/}" "$num")"
+    p="$(paths_from_body "$body")"
     holder="$(live_claim_worker "${r%%/*}" "${r#*/}" "$num")"
     if [ -n "$holder" ]; then
       # Same rule as the `active` pre-check, for a claim that never reached the board: an unmatchable
@@ -2825,12 +3400,24 @@ batch_cmd() {
       skipped="$skipped  $id — already claimed by worker $holder"$'\n'; continue
     fi
     if [ -z "$p" ]; then
-      skipped="$skipped  $id — no 'Paths:' declared (cannot schedule)"$'\n'; continue
+      # Two very different states used to print one sentence (#496). Neither is schedulable, but only
+      # one is a BUG: `Paths: none` is a decision somebody made, an absent line is an omission nobody
+      # noticed. Say which — the worker reading this list is the person who can fix the second.
+      if declares_no_touchset "$body"; then
+        skipped="$skipped  $id — 'Paths: none' (deliberately has no touch-set; not schedulable by design)"$'\n'
+      else
+        skipped="$skipped  $id — no 'Paths:' declared (cannot schedule — this is an OMISSION; declare one, or 'Paths: none' if it truly has no touch-set)"$'\n'
+      fi
+      continue
     fi
     # A candidate is merely unschedulable, not fatal: pass it over with the reason, as an undeclared
     # touch-set is. Never let it fall through to `conflicts_between`, which would clear it against all.
     if [ -n "$(invalid_paths "$p")" ]; then
-      skipped="$skipped  $id — unmatchable 'Paths:' token(s): $(fmt_bad_paths "$(invalid_paths "$p")") (cannot schedule)"$'\n'; continue
+      # NAME THE CAUSE (#485 leg b). This used to print the tokens and stop, so an author whose only
+      # sin was writing the line in markdown saw their item vanish from the queue and were told
+      # nothing they could act on. Backticks are now stripped at parse, so anything still flagged here
+      # is a REAL author error — and the grammar is the one thing that says which.
+      skipped="$skipped  $id — unmatchable 'Paths:' token(s): $(fmt_bad_paths "$(invalid_paths "$p")") (cannot schedule; $TOUCHSET_GRAMMAR)"$'\n'; continue
     fi
     hits="$(conflicts_between "$p" "$(reserved_in "$active_paths" "$r")")"
     if [ -n "$hits" ]; then
@@ -2864,7 +3451,45 @@ batch_cmd() {
   # nothing to do", and `take` — which calls this with --json — used to throw them away and print a
   # fixed sentence naming four causes instead, none of which had to be true. stdout still carries
   # only the JSON, so no consumer is disturbed.
+  # Blocked candidates are passed over BEFORE the touch-set loop runs, so their reasons are collected
+  # separately — but they are the same answer to the same question, and a worker should not have to
+  # know which stage rejected their item to find out why (#485 leg a).
   [ -n "$skipped" ] && { echo "passed over:"; printf '%s' "$skipped"; } >&2
+  return 0
+}
+
+# ---- assert_blockers_clear: the scheduler's last word before it points a worker at an item --------
+#
+# The board scan says an item is startable. This asks the SERVER whether that is still true, for the
+# ONE item about to be claimed. It exists because #485 leg (f) is an observed fail-open whose mechanism
+# was never pinned: `batch` handed out an item whose blocker was open, with `blocked=false`.
+#
+# Deliberately NOT a re-derivation from the same scan — that would re-read the input that was already
+# wrong. It goes to the source. Cost is bounded by the picked item's blocker count (almost always
+# zero, occasionally one or two), and it spends REST, which is not the budget under pressure.
+#
+# REST answers both kinds in one endpoint: `/issues/N` serves pull requests too, and a MERGED PR is
+# `state: closed` there — so "still blocking" is exactly `state == "open"`, for issues and PRs alike.
+# A lookup that FAILS leaves the ref unresolved, and an unresolved blocker blocks: the safe direction.
+assert_blockers_clear() {
+  local pick="$1" item refs ref o r n st open="" failed=""
+  item="$(CACHED=1 board_items \
+          | jq -c --arg id "$pick" 'map(select(((.repo // "" | sub("^[^/]+/";"")) + "#" + ((.number // 0)|tostring)) == $id)) | .[0] // empty')"
+  [ -n "$item" ] || return 0
+  refs="$(jq -r '.blockers[]?.ref // empty' <<<"$item" 2>/dev/null || true)"
+  [ -n "$refs" ] || return 0                       # the common case: no blockers, no calls, no cost
+  while IFS= read -r ref; do
+    [ -n "$ref" ] || continue
+    o="${ref%%/*}"; r="${ref#*/}"; n="${r##*#}"; r="${r%%#*}"
+    case "$n" in ''|*[!0-9]*) continue ;; esac
+    if st="$(gh api "repos/$o/$r/issues/$n" --jq '.state' 2>/dev/null)"; then
+      [ "$st" = "open" ] && open="$open $ref"
+    else
+      failed="$failed $ref"                        # could not read it -> cannot claim it resolved
+    fi
+  done <<<"$refs"
+  [ -z "$open" ] || die "take: refusing to claim $pick — its blocker(s) are OPEN right now:$open. The board scan called this item startable and the server disagrees, so the board is lying about a dependency (.github#485 leg f). Claiming it would put you on work another item still owns. Re-run with --fresh, and if it persists, run /check-board."
+  [ -z "$failed" ] || die "take: refusing to claim $pick — could not read its blocker(s):$failed. An unverifiable blocker is not a cleared one, and this is the last check before a worker is pointed at the item."
   return 0
 }
 
@@ -2884,9 +3509,16 @@ take_cmd() {
     esac
   done
   case "$tries" in ''|*[!0-9]*) die "take: --tries must be a number." ;; esac
+  # Default to the repo you are standing in (#480). `take` is the one command here that ACTS — it
+  # claims an item and prints a worktree command against THIS checkout's origin — so an undetectable
+  # scope is a hard error, not a quiet fall back to the whole org. Falling back is what handed a
+  # `.github` worker an FS.GG.Game item and a worktree command that would have built it in the wrong
+  # repository. A read can afford to guess wide; a claim cannot.
+  repo="$(scope_repo "$repo")"
+  [ -n "$repo" ] || die "take: --repo required (no git remote here, so 'the repo you are standing in' is undefined)."
   worker >/dev/null; local w="$WORKER_ID"
   autoflush                                    # a queued board write drains here, not on a human's memory
-  local -a repoflag=(); [ -n "$repo" ] && repoflag=(--repo "$repo")
+  local -a repoflag=(--repo "$repo")
   local attempt=1
   while [ "$attempt" -le "$tries" ]; do
     local pick
@@ -2913,8 +3545,56 @@ take_cmd() {
       # finding: on the board that produced #440, all four clauses were false and the real reason —
       # the item was in Backlog — was not among them. A worker that believes such a message stops.
       echo "fsgg-coord: nothing schedulable${repo:+ for repo '$repo'} — no Ready or Backlog item is startable." >&2
-      if [ -s "$berr" ]; then cat "$berr" >&2
-      else echo "  (no open board item${repo:+ for '$repo'} at all — this is an empty queue, not a blocked one.)" >&2
+      # `batch`'s stderr carries the per-item skip REASONS — and also anything else it writes there,
+      # `dbg` included. The old branch asked `[ -s "$berr" ]`: "did batch write ANY byte to stderr?"
+      # That is not the question, and it is wrong in both directions. With FSGG_COORD_DEBUG=1 a single
+      # "scan cache HIT" line made `$berr` non-empty, so the whole diagnosis below was skipped — the
+      # branch that explains a starved queue, suppressed by a debug line. Key on the reasons: `passed
+      # over:` is the header `batch` prints when, and only when, it actually has some.
+      if [ -s "$berr" ]; then cat "$berr" >&2; fi   # `&&` here would exit on an empty $berr (set -e)
+      if ! grep -q '^passed over:' "$berr" 2>/dev/null; then
+        # COUNT IT. DO NOT INFER IT FROM AN EMPTY STDERR (#488).
+        #
+        # This branch used to assert the strongest available negative — "no open board item at all —
+        # this is an empty queue, not a blocked one" — on the sole evidence that `batch` wrote nothing
+        # to stderr. An empty stderr is not an empty board. Nothing here counted anything, and the
+        # sentence stated as fact something the code never established.
+        #
+        # It was the same defect #440 was closed for, sitting directly beneath #440's own comment
+        # warning against it ("a guess dressed as a finding … A worker that believes such a message
+        # stops"). And it pointed the worker AWAY from the true cause: it does not merely omit
+        # "blocked", it rules it out.
+        #
+        # The scan is the one `batch` just paid for (CACHED=1), so counting is FREE — no extra
+        # GraphQL, which is why there was never a good reason to guess.
+        # `$repo` here is what `scope_repo` produced — a registry short-id (`audio`), NOT the repo name
+        # the board carries (`FS-GG/FS.GG.Audio`). `batch` resolves it internally; this count has to do
+        # the same, or `board_filter` matches nothing and every queue reads as empty — which is the very
+        # lie being fixed, reintroduced by the fix.
+        local open_items n_open rrepo=""
+        [ -n "$repo" ] && rrepo="$(resolve_repo "$repo" 2>/dev/null || printf '%s' "$repo")"
+        open_items="$(CACHED=1 board_items 2>/dev/null | board_filter "$rrepo" "" "" 1 2>/dev/null)" || open_items=''
+        n_open="$(jq 'length' <<<"${open_items:-}" 2>/dev/null || true)"
+        case "${n_open:-}" in
+          '' | *[!0-9]*)
+            # A failed count is NOT an empty queue. "I could not look" and "I looked, and it is empty"
+            # must not produce the same sentence (#266's ratified rule).
+            echo "  (could not read the board to say WHY — so this is 'no verdict', not 'an empty queue'. Retry, or run: fsgg-coord ready --repo '${repo:-<repo>}' --all)" >&2
+            ;;
+          0)
+            echo "  (no open board item${repo:+ for '$repo'} at all — this is an empty queue, not a blocked one.)" >&2
+            ;;
+          *)
+            echo "  $n_open open board item(s)${repo:+ for '$repo'}, and NONE of them is startable — a BLOCKED queue, not an empty one:" >&2
+            jq -r 'group_by(.status // "(no Status)")
+                   | map("    \(length) × \(.[0].status // "(no Status)")") | .[]' <<<"$open_items" >&2
+            jq -r '.[] | select(.blocked)
+                   | ( [ (.blockers // [])[] | select(.state != "CLOSED") | (.ref | sub("^[^/]+/";"")) ]
+                       | if length == 0 then "an unnamed blocker" else join(", ") end ) as $b
+                   | "    \(.repo | sub("^[^/]+/";""))#\(.number) — blocked by \($b)"' <<<"$open_items" >&2
+            echo "  See them all: fsgg-coord ready --repo '${repo:-<repo>}' --all" >&2
+            ;;
+        esac
       fi
       rm -f "$berr"
       return 0
@@ -2922,6 +3602,21 @@ take_cmd() {
     rm -f "$berr"
     [ -n "$from_backlog" ] && \
       echo "fsgg-coord: no Ready item${repo:+ for '$repo'}; taking $pick from Backlog." >&2
+    # DO NOT TRUST THE ANNOTATED BOOLEAN AT THE MOMENT OF CLAIMING (#485 leg f, was #343).
+    #
+    # `batch` once handed out FS.GG.Game#75 with `blockedBy=…#74, …#84` and `blocked=false` while #84
+    # was demonstrably OPEN — and #75 and #84 overlap on two files. Two workers would have been editing
+    # the same source with no `Blocked by` between them; it was caught only because the reporter had
+    # just claimed #84 by hand. The jq is provably correct on those exact rows, so the bad input came
+    # from somewhere in the scan (a stale `content.state` on some page, or a last-wins `from_entries`
+    # collision) and the mechanism is STILL NOT PINNED.
+    #
+    # An unexplained fail-open is not a reason to keep trusting the cached flag. Ask the SERVER about
+    # this one item's blockers, at the instant we are about to claim it — a handful of REST calls, on a
+    # budget that is not the scarce one — and refuse if any is still open. That converts the silent
+    # double-assignment into a refusal that names the disagreement, which is what a scheduler owes a
+    # worker it is about to point at a collision. It stays correct whatever leg (f) turns out to be.
+    assert_blockers_clear "$pick"
     # claim in a subshell: its `die` (a lost race) must end the attempt, not `take`. SOFT_DIE=1 keeps
     # that `die` local under #344's fatal-die rule — the board read that must fail closed already
     # happened in `batch_cmd` above, before we ever get a `$pick` to claim.
@@ -2985,7 +3680,8 @@ say_cmd() {
   local mine
   mine="$(claims_of "$R_OWNER" "$R_REPO" "$R_NUM" \
           | jq -c --arg w "$w" 'map(select(.stale | not) | select(.worker == $w)) | first // empty')"
-  [ -n "$mine" ] && heartbeat_comment "$R_OWNER" "$R_REPO" "$R_NUM" "$(jq -r '.id' <<<"$mine")" "$w" "$ref"
+  [ -n "$mine" ] && heartbeat_comment "$R_OWNER" "$R_REPO" "$R_NUM" "$(jq -r '.id' <<<"$mine")" "$w" "$ref" \
+    "$(jq -r '.prev // ""' <<<"$mine")"
   return 0
 }
 
@@ -3379,7 +4075,18 @@ case "$cmd" in
   field-id)  [ $# -ge 1 ] || die "field-id: <Field> required.";  field_id "$1" ;;
   option-id) [ $# -ge 2 ] || die "option-id: <Field> <Option> required."; option_id "$1" "$2" ;;
   item-id)   [ $# -ge 1 ] || die "item-id: <issue> required.";  item_id "$1" "${2:-}" ;;
-  set-field) [ $# -ge 3 ] || die "set-field: <issue> <Field> <Value> required."; autoflush; set_field "$1" "$2" "$3" "${4:-}" ;;
+  # #510: this used to call set_field directly, so an exhausted budget printed die_rate's "Board
+  # WRITES are queued" and queued NOTHING. It goes through the one board write now, which really does.
+  set-field) [ $# -ge 3 ] || die "set-field: <issue> <Field> <Value> required."; autoflush
+             sf_rc=0; board_write "$1" "$2" "$3" "${4:-}" || sf_rc=$?
+             if [ "$sf_rc" != 0 ]; then
+               # set_field's OWN message first — it is the precise one ("'none' is not a ref", "no
+               # field named X"). Swallowing it and printing a generic note is how a refusal becomes
+               # a mystery.
+               [ -n "$BOARD_WRITE_ERR" ] && printf '%s\n' "$BOARD_WRITE_ERR" >&2
+               echo "fsgg-coord: $BOARD_WRITE_NOTE" >&2
+             fi
+             exit "$sf_rc" ;;
   flush)     flush_cmd "$@" ;;
   issues)    issues "$@" ;;
   ready)     ready "$@" ;;
@@ -3387,7 +4094,7 @@ case "$cmd" in
   lint)      lint "$@" ;;
   child)     child_cmd "$@" ;;
   done)      autoflush; done_cmd "$@" ;;
-  whoami)    whoami_cmd ;;
+  whoami)    whoami_cmd "$@" ;;
   claim)     autoflush; claim_cmd "$@" ;;
   heartbeat) heartbeat_cmd "$@" ;;
   release)   release_cmd "$@" ;;
