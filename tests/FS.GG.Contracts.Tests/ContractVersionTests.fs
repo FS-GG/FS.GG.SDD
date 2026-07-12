@@ -46,10 +46,12 @@ module ContractVersionTests =
     [<Fact>]
     let ``the fsproj <Version> and ContractVersion.value cannot disagree`` () =
         let asm = System.Reflection.Assembly.Load("FS.GG.Contracts")
+
         let attr =
             asm.GetCustomAttributes(typeof<System.Reflection.AssemblyInformationalVersionAttribute>, false)
             |> Array.map (fun a -> a :?> System.Reflection.AssemblyInformationalVersionAttribute)
             |> Array.tryHead
+
         match attr with
         | None ->
             // Never a silent pass: if the attribute is missing the coupling is UNVERIFIABLE, and an
