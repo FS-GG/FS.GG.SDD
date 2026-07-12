@@ -16,6 +16,12 @@ the authoritative sources of truth. Follow it on **every** `FS.GG.Contracts`
 source bump so the failure mode of feature 042 — source bumped to `1.1.0` while
 the feed and registry still served `1.0.1` — cannot recur unnoticed.
 
+A bump that **breaks** the public surface additionally owes a written break
+declaration. The `2.0.0` bump is the worked example:
+[contracts-2.0.0.md](contracts-2.0.0.md). Note that no field can be added to an F#
+record additively — every field changes the generated constructor's arity — so a
+new field on a public record is *always* a major.
+
 ## The coherence invariant
 
 `FS.GG.Contracts` is **coherent** only when all four values agree:

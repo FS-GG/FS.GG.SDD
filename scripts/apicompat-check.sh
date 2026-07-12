@@ -68,8 +68,10 @@
 #   design (catch it BEFORE release), but it has a sharp edge: a green run here says nothing about
 #   whether the CURRENT baseline was itself a legitimate release. It was not, once already —
 #   FS.GG.Contracts 1.4.1 shipped a removed-constructor break as a PATCH while this gate was blind,
-#   and the gate has been green against it ever since (FS.GG.SDD#381; the SemVer resolution is a
-#   cross-repo release event, tracked separately).
+#   and the gate was green against it from then on (FS.GG.SDD#381). RESOLVED by the SemVer major:
+#   Contracts 2.0.0 declares that break (docs/release/contracts-2.0.0.md) and 1.4.1 is deprecated +
+#   unlisted on nuget.org (FS.GG.SDD#393). The sharp edge above is unchanged and permanent — it is a
+#   property of baselining against the feed, not a bug that was fixed.
 #
 # AUTH
 #   Needs read access to https://nuget.pkg.github.com/FS-GG. Provide a token via NUGET_FEED_TOKEN
