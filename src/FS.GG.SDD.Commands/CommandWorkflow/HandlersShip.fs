@@ -34,6 +34,26 @@ module internal HandlersShip =
 
     // ---- Ship command ----
 
+    /// FS.GG.SDD#398. The attestation split, folded once. `ship` READS the per-obligation basis
+    /// `verify` recorded — it never re-derives the rule — so the day #350 makes an obligation
+    /// observed, every counter here moves without `ship` being touched.
+    ///
+    /// Returns `supported, selfAttested, observed`, with `supported = selfAttested + observed` true
+    /// by construction rather than by two call sites agreeing.
+    let shipEvidenceAttestationCounts (verificationView: VerificationView option) =
+        let dispositions =
+            match verificationView with
+            | Some view -> view.EvidenceDispositions
+            | None -> []
+
+        let supported =
+            dispositions
+            |> List.filter (fun disposition -> disposition.State = EvidenceSupported)
+
+        let observed = supported |> List.filter _.Observed |> List.length
+
+        supported.Length, supported.Length - observed, observed
+
     let shipEvidenceStateValue (state: EvidenceDispositionState) =
         match state with
         | EvidenceSupported -> "supported"
@@ -300,6 +320,9 @@ module internal HandlersShip =
                 |> List.length
             | None -> 0
 
+        let _, evidenceSelfAttestedCount, evidenceObservedCount =
+            shipEvidenceAttestationCounts verificationView
+
         writeReadinessEnvelope workId "ship" readiness generator verifySourceKind sources (fun writer ->
             writeLifecycleReadiness writer lifecycleStatus lifecycleStages
             writer.WriteStartObject("verificationReadiness")
@@ -317,6 +340,8 @@ module internal HandlersShip =
                  | None -> [])
 
             writer.WriteNumber("evidenceSupportedCount", evidenceCount EvidenceSupported)
+            writer.WriteNumber("evidenceSelfAttestedCount", evidenceSelfAttestedCount)
+            writer.WriteNumber("evidenceObservedCount", evidenceObservedCount)
             writer.WriteNumber("evidenceDeferredCount", evidenceCount EvidenceDeferred)
             writer.WriteNumber("evidenceMissingCount", evidenceCount EvidenceMissingDisposition)
             writer.WriteNumber("evidenceStaleCount", evidenceCount EvidenceStale)
@@ -334,6 +359,7 @@ module internal HandlersShip =
                 writer.WriteString("id", disposition.DispositionId)
                 writer.WriteString("obligationId", disposition.ObligationId)
                 writer.WriteString("state", shipEvidenceStateValue disposition.State)
+                writer.WriteBoolean("observed", disposition.Observed)
                 writer.WriteString("severity", disposition.Severity)
                 writeStringArray writer "diagnosticIds" disposition.DiagnosticIds
                 writer.WriteEndObject())
@@ -626,6 +652,9 @@ module internal HandlersShip =
                                     |> List.length
                                 | None -> 0
 
+                            let _, evidenceSelfAttestedCount, evidenceObservedCount =
+                                shipEvidenceAttestationCounts verificationView
+
                             let summary: ShipSummary =
                                 { WorkId = workId
                                   Stage = "ship"
@@ -640,6 +669,8 @@ module internal HandlersShip =
                                   LifecycleStageReadiness = lifecycleStages
                                   VerificationReadiness = verificationStatus
                                   EvidenceSupportedCount = evidenceCount EvidenceSupported
+                                  EvidenceSelfAttestedCount = evidenceSelfAttestedCount
+                                  EvidenceObservedCount = evidenceObservedCount
                                   EvidenceDeferredCount = evidenceCount EvidenceDeferred
                                   EvidenceMissingCount = evidenceCount EvidenceMissingDisposition
                                   EvidenceStaleCount = evidenceCount EvidenceStale

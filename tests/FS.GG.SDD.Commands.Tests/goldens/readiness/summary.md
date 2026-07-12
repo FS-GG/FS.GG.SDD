@@ -4,8 +4,8 @@
        - readiness/068-readiness-golden/agent-commands/claude/guidance.json  digest:020ea045965347f5ae4b2ec558a67a21e058ada33a2b075a208d93a56c3f48f1  schema:1(current)
        - readiness/068-readiness-golden/agent-commands/codex/guidance.json  digest:ea9dac0d0a61de2f43d4840265b303dd72aafb9f5d90c543e9d042b479d115e6  schema:1(current)
        - readiness/068-readiness-golden/analysis.json  digest:7ad86b7c35ebfc862478ee0a846018dcc237e85f206ed36db896a6b5bc503c04  schema:1(current)
-       - readiness/068-readiness-golden/ship.json  digest:1f9a3c124c80a05db665f1af27b9d50eedb5f9fa2ccf1c93659617fbf206d8d0  schema:1(current)
-       - readiness/068-readiness-golden/verify.json  digest:87e6f61fe4c607b93f889f2c7ac2700a5014ea4fca9f565480c79801de02906e  schema:1(current)
+       - readiness/068-readiness-golden/ship.json  digest:b67f0af4e33ea2ef7489996a073697a6daaacccaea0b0ddd091653a578933d23  schema:1(current)
+       - readiness/068-readiness-golden/verify.json  digest:5e12566e9d954dcb3021fe5d58426564badd33b516aba44ded57276e7d762485  schema:1(current)
        - readiness/068-readiness-golden/work-model.json  digest:75f08ed991df8bff27bf3e76dde794fc56d977c29ca339bb05793ccf982794be  schema:1(current)
      outputDigest: 19d3b0ddd719d4f44e484a988c09c5d322263ee719fc8bf8a5abf978fbba28e5 -->
 

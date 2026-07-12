@@ -27,11 +27,18 @@ module internal HandlersEvidence =
     module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
 
     type EvidenceDispositionDraft =
-        { ObligationId: string
-          State: string
-          EvidenceIds: string list
-          TaskIds: string list
-          DiagnosticIds: string list }
+        {
+            ObligationId: string
+            State: string
+            /// FS.GG.SDD#398 (FR-003): did a run the tool *observed* discharge this obligation, or only
+            /// the author's word? Carried per-obligation — rather than recomputed by each consumer —
+            /// so `verify`, `ship`, and the committed verdict cannot drift on it, and so no consumer
+            /// can hardcode the `false` it reads today. Always `false` until FS.GG.SDD#350 lands.
+            Observed: bool
+            EvidenceIds: string list
+            TaskIds: string list
+            DiagnosticIds: string list
+        }
 
     // `evidenceKindSourceValue`/`allowedEvidenceResults`/`normalizedEvidenceResult` moved to
     // FS.GG.SDD.Artifacts (Evidence.fs) so the shared codec can drive both directions; call sites
@@ -780,6 +787,17 @@ module internal HandlersEvidence =
 
             ({ ObligationId = obligation.ObligationId
                State = state
+               // #398: only a *supported* obligation can be observed — every other state either
+               // claims no pass (deferred/stale/blocking/advisory), discloses itself as unproven
+               // (synthetic), or is already refused (invalid). So the two counters partition
+               // `supported` exactly and `supported = selfAttested + observed` holds by construction.
+               //
+               // The rule itself lives in `Artifacts` (`obligationIsObserved`) and is CONSUMED here,
+               // not restated: `verify`, `ship`, and the committed verdict must not be able to drift
+               // on what "observed" means, which is the same discipline #349's `missingCitedArtifacts`
+               // imposed on what "cited" means. Today it is false for everything, and saying so out
+               // loud — in the console and in the committed verdict — is the feature.
+               Observed = state = "supported" && obligationIsObserved matches
                EvidenceIds =
                  matches
                  |> List.map (fun declaration -> declaration.Id.Value)

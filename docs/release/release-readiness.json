@@ -1233,6 +1233,16 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "ship.evidenceObservedCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "ship.evidenceSelfAttestedCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "ship.evidenceStaleCount",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -1775,6 +1785,21 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "verificationReadiness.evidenceObservedCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "verificationReadiness.evidenceSelfAttestedCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "verificationReadiness.evidenceSupportedCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "verificationReadiness.status",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -1867,6 +1892,11 @@
         },
         {
           "name": "evidenceDispositions[].obligationId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions[].observed",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -2076,6 +2106,16 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "verificationReadiness.evidenceObservedCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "verificationReadiness.evidenceSelfAttestedCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "verificationReadiness.evidenceStaleCount",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -2204,6 +2244,11 @@
         },
         {
           "name": "evidenceDispositions[].obligationId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions[].observed",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -2494,6 +2539,11 @@
         },
         {
           "name": "testDispositions[].obligationId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "testDispositions[].observed",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },

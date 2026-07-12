@@ -346,54 +346,73 @@ module CommandTypes =
           Readiness: string }
 
     type VerificationSummary =
-        { WorkId: string
-          Stage: string
-          Status: string
-          VerifyPath: string
-          FindingIds: string list
-          ReadyFindingCount: int
-          AdvisoryCount: int
-          WarningCount: int
-          BlockingCount: int
-          ObligationCount: int
-          EvidenceSupportedCount: int
-          EvidenceDeferredCount: int
-          EvidenceMissingCount: int
-          EvidenceStaleCount: int
-          EvidenceSyntheticCount: int
-          EvidenceInvalidCount: int
-          TestSatisfiedCount: int
-          TestDeferredCount: int
-          TestMissingCount: int
-          TestStaleCount: int
-          TestInvalidCount: int
-          SkillVisibleCount: int
-          SkillMissingCount: int
-          SourceSnapshotCount: int
-          Readiness: string }
+        {
+            WorkId: string
+            Stage: string
+            Status: string
+            VerifyPath: string
+            FindingIds: string list
+            ReadyFindingCount: int
+            AdvisoryCount: int
+            WarningCount: int
+            BlockingCount: int
+            ObligationCount: int
+            EvidenceSupportedCount: int
+            /// FS.GG.SDD#398: the two halves of `EvidenceSupportedCount`
+            /// (`supported = selfAttested + observed`). `EvidenceObservedCount` is `0` today — SDD
+            /// invokes no test runner — and saying so beside the green is the point.
+            EvidenceSelfAttestedCount: int
+            EvidenceObservedCount: int
+            EvidenceDeferredCount: int
+            EvidenceMissingCount: int
+            EvidenceStaleCount: int
+            EvidenceSyntheticCount: int
+            EvidenceInvalidCount: int
+            TestSatisfiedCount: int
+            /// FS.GG.SDD#398: the two halves of `TestSatisfiedCount`. The name says a test was
+            /// satisfied; nothing ever ran one. `TestObservedCount` is `0` today, and that is why
+            /// these exist beside it.
+            TestSelfAttestedCount: int
+            TestObservedCount: int
+            TestDeferredCount: int
+            TestMissingCount: int
+            TestStaleCount: int
+            TestInvalidCount: int
+            SkillVisibleCount: int
+            SkillMissingCount: int
+            SourceSnapshotCount: int
+            Readiness: string
+        }
 
     type ShipSummary =
-        { WorkId: string
-          Stage: string
-          Status: string
-          ShipPath: string
-          FindingIds: string list
-          ReadyFindingCount: int
-          AdvisoryCount: int
-          WarningCount: int
-          BlockingCount: int
-          Disposition: string
-          LifecycleStageReadiness: (string * string) list
-          VerificationReadiness: string
-          EvidenceSupportedCount: int
-          EvidenceDeferredCount: int
-          EvidenceMissingCount: int
-          EvidenceStaleCount: int
-          EvidenceSyntheticCount: int
-          EvidenceInvalidCount: int
-          GeneratedViewState: string
-          SourceSnapshotCount: int
-          Readiness: string }
+        {
+            WorkId: string
+            Stage: string
+            Status: string
+            ShipPath: string
+            FindingIds: string list
+            ReadyFindingCount: int
+            AdvisoryCount: int
+            WarningCount: int
+            BlockingCount: int
+            Disposition: string
+            LifecycleStageReadiness: (string * string) list
+            VerificationReadiness: string
+            EvidenceSupportedCount: int
+            /// FS.GG.SDD#398: the two halves of `EvidenceSupportedCount`
+            /// (`supported = selfAttested + observed`). `EvidenceObservedCount` is `0` today — SDD
+            /// invokes no test runner — and saying so beside the green is the point.
+            EvidenceSelfAttestedCount: int
+            EvidenceObservedCount: int
+            EvidenceDeferredCount: int
+            EvidenceMissingCount: int
+            EvidenceStaleCount: int
+            EvidenceSyntheticCount: int
+            EvidenceInvalidCount: int
+            GeneratedViewState: string
+            SourceSnapshotCount: int
+            Readiness: string
+        }
 
     type GuidanceDisposition =
         | GeneratedCurrent

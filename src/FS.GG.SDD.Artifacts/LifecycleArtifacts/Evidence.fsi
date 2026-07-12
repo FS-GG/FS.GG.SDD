@@ -160,5 +160,43 @@ module Evidence =
     /// interpreted at the edge, and this fold reads its result (Constitution V, FR-003).
     val missingCitedArtifacts: exists: (string -> bool) -> declaration: EvidenceDeclaration -> string list
 
+    /// Does this declaration rest on a run the tool **observed**, rather than on the author's word?
+    /// (FS.GG.SDD#398, FR-001/FR-002.)
+    ///
+    /// Today this is `false` for every declaration, and that is the disclosure — not an oversight.
+    /// SDD invokes no test runner: `Process.Start` occurs once in `src/` (`CommandEffects.fs`),
+    /// serving `scaffold`'s provider and `upgrade`'s self-update, and no evidence field carries a run
+    /// receipt. So every obligation that reaches `supported` does so on an assertion by the same
+    /// agent that authored the work — which is what FS.GG.SDD#350 exists to fix.
+    ///
+    /// It is a **function over the declaration, not a constant**, so the counters that read it are
+    /// computed rather than hardcoded. When #350's observed-receipt model lands, this is the one
+    /// place that learns to say `true`, and `evidenceObservedCount` rises from `verify.json` all the
+    /// way to the committed `ship-verdict.json` without a schema, projection, or consumer changing.
+    ///
+    /// Total and I/O-free: reading a receipt would be an effect at the edge, and its *result* would
+    /// be threaded in here — exactly as `missingCitedArtifacts` takes an injected `exists`.
+    val isObserved: declaration: EvidenceDeclaration -> bool
+
+    /// Does this declaration claim a real pass — `result: pass`, not disclosed `synthetic`? The
+    /// satisfaction rule, named once because the attestation split below partitions exactly it.
+    val claimsRealPass: declaration: EvidenceDeclaration -> bool
+
+    /// Does this declaration discharge its obligation on the author's word alone? (FS.GG.SDD#398.)
+    ///
+    /// The exact complement of `isObserved` over the satisfaction rule, which is what makes
+    /// `supported = selfAttested + observed` hold by construction rather than by coincidence (FR-007).
+    val isSelfAttested: declaration: EvidenceDeclaration -> bool
+
+    /// Was an *obligation* — matched by these declarations — discharged by an observed run?
+    /// (FS.GG.SDD#398, FR-003.) The one rule `verify`, `ship`, and the committed verdict all read;
+    /// consuming it is what stops the three from drifting on what "observed" means.
+    ///
+    /// Consults only the declarations that claim a real pass (a `supported` obligation may carry a
+    /// deferral alongside), and requires **all** of them to be observed — one observed run must not
+    /// launder a hand-asserted pass sitting beside it. Both moot while `isObserved` is constantly
+    /// `false`; both load-bearing the day FS.GG.SDD#350 lands.
+    val obligationIsObserved: declarations: EvidenceDeclaration list -> bool
+
     val parseEvidenceArtifact: snapshot: FileSnapshot -> Result<EvidenceArtifact, Diagnostic list>
     val parseEvidence: snapshot: FileSnapshot -> Result<EvidenceDeclaration list, Diagnostic list>

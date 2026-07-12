@@ -29,26 +29,38 @@ module internal HandlersVerify =
 
 
     type VerifyEvidenceDispositionView =
-        { Id: string
-          ObligationId: string
-          State: string
-          EvidenceIds: string list
-          TaskIds: string list
-          SourceIds: string list
-          Severity: string
-          DiagnosticIds: string list
-          Correction: string }
+        {
+            Id: string
+            ObligationId: string
+            State: string
+            /// FS.GG.SDD#398 (FR-003): the attestation basis, carried from the draft so `ship` can
+            /// count it without re-deriving the rule. `false` for every obligation today.
+            Observed: bool
+            EvidenceIds: string list
+            TaskIds: string list
+            SourceIds: string list
+            Severity: string
+            DiagnosticIds: string list
+            Correction: string
+        }
 
     type VerifyTestDispositionView =
-        { Id: string
-          ObligationId: string
-          State: string
-          EvidenceIds: string list
-          TaskIds: string list
-          RequirementIds: string list
-          Severity: string
-          DiagnosticIds: string list
-          Correction: string }
+        {
+            Id: string
+            ObligationId: string
+            State: string
+            /// FS.GG.SDD#398. The `TD-` mirror of the `ED-` attestation basis. This one matters most:
+            /// the counter it feeds is called `verifyTestSatisfied`, and — despite the name — nothing
+            /// here ever observed a test. Same rule object (`obligationIsObserved`), so `ED-` and `TD-`
+            /// cannot drift on what "observed" means, exactly as #349 did for "cited".
+            Observed: bool
+            EvidenceIds: string list
+            TaskIds: string list
+            RequirementIds: string list
+            Severity: string
+            DiagnosticIds: string list
+            Correction: string
+        }
 
     type VerifySkillView =
         { Skill: string
@@ -179,6 +191,7 @@ module internal HandlersVerify =
             { Id = "ED-" + draft.ObligationId
               ObligationId = draft.ObligationId
               State = draft.State
+              Observed = draft.Observed
               EvidenceIds = draft.EvidenceIds
               TaskIds = draft.TaskIds
               SourceIds = affectedSourceIds draft.TaskIds
@@ -285,6 +298,7 @@ module internal HandlersVerify =
             { Id = "TD-" + obligationId
               ObligationId = obligationId
               State = state
+              Observed = state = "satisfied" && obligationIsObserved matches
               EvidenceIds =
                 matches
                 |> List.map (fun declaration -> declaration.Id.Value)
@@ -393,6 +407,7 @@ module internal HandlersVerify =
                 writer.WriteString("id", view.Id)
                 writer.WriteString("obligationId", view.ObligationId)
                 writer.WriteString("state", view.State)
+                writer.WriteBoolean("observed", view.Observed)
                 writeStringArray writer "evidenceIds" view.EvidenceIds
                 writeStringArray writer "affectedTaskIds" view.TaskIds
                 writeStringArray writer "affectedSourceIds" view.SourceIds
@@ -410,6 +425,7 @@ module internal HandlersVerify =
                 writer.WriteString("id", view.Id)
                 writer.WriteString("obligationId", view.ObligationId)
                 writer.WriteString("state", view.State)
+                writer.WriteBoolean("observed", view.Observed)
                 writeStringArray writer "evidenceIds" view.EvidenceIds
                 writeStringArray writer "affectedTaskIds" view.TaskIds
                 writeStringArray writer "affectedRequirementIds" view.RequirementIds
@@ -775,6 +791,25 @@ module internal HandlersVerify =
                             let testCount state =
                                 testViews |> List.filter (fun view -> view.State = state) |> List.length
 
+                            // #398: the attestation split, for BOTH disposition families. Each is
+                            // *derived* from the per-obligation `Observed` fact rather than asserted,
+                            // so the day #350 makes `Evidence.isObserved` say `true` they move on
+                            // their own. Bound once each, so `supported = selfAttested + observed`
+                            // (and its `satisfied` twin) is visible here rather than implied by two
+                            // independent expressions below.
+                            let evidenceSupported = evidenceCount "supported"
+                            let testSatisfied = testCount "satisfied"
+
+                            let evidenceObservedCount =
+                                evidenceViews
+                                |> List.filter (fun view -> view.State = "supported" && view.Observed)
+                                |> List.length
+
+                            let testObservedCount =
+                                testViews
+                                |> List.filter (fun view -> view.State = "satisfied" && view.Observed)
+                                |> List.length
+
                             let summary: VerificationSummary =
                                 { WorkId = workId
                                   Stage = "verify"
@@ -790,13 +825,17 @@ module internal HandlersVerify =
                                   WarningCount = findingCount "warning"
                                   BlockingCount = findingCount "blocking"
                                   ObligationCount = evidenceViews.Length + testViews.Length
-                                  EvidenceSupportedCount = evidenceCount "supported"
+                                  EvidenceSupportedCount = evidenceSupported
+                                  EvidenceSelfAttestedCount = evidenceSupported - evidenceObservedCount
+                                  EvidenceObservedCount = evidenceObservedCount
                                   EvidenceDeferredCount = evidenceCount "deferred"
                                   EvidenceMissingCount = evidenceCount "missing"
                                   EvidenceStaleCount = evidenceCount "stale"
                                   EvidenceSyntheticCount = evidenceCount "synthetic"
                                   EvidenceInvalidCount = evidenceCount "invalid"
-                                  TestSatisfiedCount = testCount "satisfied"
+                                  TestSatisfiedCount = testSatisfied
+                                  TestSelfAttestedCount = testSatisfied - testObservedCount
+                                  TestObservedCount = testObservedCount
                                   TestDeferredCount = testCount "deferred"
                                   TestMissingCount = testCount "missing"
                                   TestStaleCount = testCount "stale"

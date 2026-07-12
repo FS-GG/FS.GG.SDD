@@ -24,15 +24,22 @@ module Verify =
         | EvidenceBlocking
 
     type EvidenceDisposition =
-        { DispositionId: string
-          ObligationId: string
-          State: EvidenceDispositionState
-          EvidenceIds: EvidenceId list
-          AffectedTaskIds: TaskId list
-          AffectedSourceIds: string list
-          Severity: string
-          DiagnosticIds: string list
-          Correction: string }
+        {
+            DispositionId: string
+            ObligationId: string
+            State: EvidenceDispositionState
+            /// FS.GG.SDD#398 (FR-003): was this obligation discharged by a run the tool *observed*, or
+            /// only by the author's word? `false` for every obligation today — SDD invokes no test
+            /// runner — and that fact is carried here, per-obligation, so `ship` and the committed
+            /// verdict count it rather than assuming it. See `Evidence.isObserved`.
+            Observed: bool
+            EvidenceIds: EvidenceId list
+            AffectedTaskIds: TaskId list
+            AffectedSourceIds: string list
+            Severity: string
+            DiagnosticIds: string list
+            Correction: string
+        }
 
     type RequiredTestDispositionState =
         | TestSatisfied
@@ -45,15 +52,20 @@ module Verify =
         | TestBlocking
 
     type RequiredTestDisposition =
-        { DispositionId: string
-          ObligationId: string
-          State: RequiredTestDispositionState
-          EvidenceIds: EvidenceId list
-          AffectedTaskIds: TaskId list
-          AffectedRequirementIds: RequirementId list
-          Severity: string
-          DiagnosticIds: string list
-          Correction: string }
+        {
+            DispositionId: string
+            ObligationId: string
+            State: RequiredTestDispositionState
+            /// FS.GG.SDD#398: the `TD-` attestation basis. `false` for every obligation today — the
+            /// disposition is named for a test that nothing ran. See `Evidence.obligationIsObserved`.
+            Observed: bool
+            EvidenceIds: EvidenceId list
+            AffectedTaskIds: TaskId list
+            AffectedRequirementIds: RequirementId list
+            Severity: string
+            DiagnosticIds: string list
+            Correction: string
+        }
 
     type SkillVisibilityState =
         | SkillVisible
@@ -152,6 +164,10 @@ module Verify =
         { DispositionId = jsonRequiredString "id" element
           ObligationId = jsonRequiredString "obligationId" element
           State = jsonRequiredString "state" element |> evidenceDispositionStateFromString
+          // #398: a view written before this field existed parses to `false` — which is exactly what
+          // it meant, since nothing has ever been observed. Degrade, don't throw (Principle VIII),
+          // and no `schemaVersion` bump.
+          Observed = jsonBool "observed" element |> Option.defaultValue false
           EvidenceIds = evidenceIdsFromJson "evidenceIds" element
           AffectedTaskIds = taskIdsFromJson "affectedTaskIds" element
           AffectedSourceIds = jsonStringList "affectedSourceIds" element
@@ -163,6 +179,8 @@ module Verify =
         { DispositionId = jsonRequiredString "id" element
           ObligationId = jsonRequiredString "obligationId" element
           State = jsonRequiredString "state" element |> requiredTestDispositionStateFromString
+          // #398: absent in a pre-feature view, and `false` is what it meant. Tolerant, no bump.
+          Observed = jsonBool "observed" element |> Option.defaultValue false
           EvidenceIds = evidenceIdsFromJson "evidenceIds" element
           AffectedTaskIds = taskIdsFromJson "affectedTaskIds" element
           AffectedRequirementIds = requirementIdsFromJson "affectedRequirementIds" element

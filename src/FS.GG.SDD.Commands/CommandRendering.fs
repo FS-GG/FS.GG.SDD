@@ -182,6 +182,14 @@ module CommandRendering =
             builder.AppendLine($"verifyEvidenceSupported: {verification.EvidenceSupportedCount}")
             |> ignore
 
+            // #398: the green, and what it rests on. `observed: 0` is not a placeholder — SDD runs
+            // nothing — and it stays beside `supported` so the two are never read apart.
+            builder.AppendLine($"verifyEvidenceSelfAttested: {verification.EvidenceSelfAttestedCount}")
+            |> ignore
+
+            builder.AppendLine($"verifyEvidenceObserved: {verification.EvidenceObservedCount}")
+            |> ignore
+
             builder.AppendLine($"verifyEvidenceDeferred: {verification.EvidenceDeferredCount}")
             |> ignore
 
@@ -198,6 +206,14 @@ module CommandRendering =
             |> ignore
 
             builder.AppendLine($"verifyTestSatisfied: {verification.TestSatisfiedCount}")
+            |> ignore
+
+            // #398: `verifyTestSatisfied` is the single most misleading number the lifecycle prints —
+            // it names a test, and SDD has never run one. It does not get to stand alone.
+            builder.AppendLine($"verifyTestSelfAttested: {verification.TestSelfAttestedCount}")
+            |> ignore
+
+            builder.AppendLine($"verifyTestObserved: {verification.TestObservedCount}")
             |> ignore
 
             builder.AppendLine($"verifyTestDeferred: {verification.TestDeferredCount}")
@@ -237,6 +253,12 @@ module CommandRendering =
             |> List.iter (fun (stage, status) -> builder.AppendLine($"shipStage.{stage}: {status}") |> ignore)
 
             builder.AppendLine($"shipEvidenceSupported: {ship.EvidenceSupportedCount}")
+            |> ignore
+
+            builder.AppendLine($"shipEvidenceSelfAttested: {ship.EvidenceSelfAttestedCount}")
+            |> ignore
+
+            builder.AppendLine($"shipEvidenceObserved: {ship.EvidenceObservedCount}")
             |> ignore
 
             builder.AppendLine($"shipEvidenceDeferred: {ship.EvidenceDeferredCount}")
