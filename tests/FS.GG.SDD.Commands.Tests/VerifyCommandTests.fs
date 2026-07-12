@@ -536,6 +536,7 @@ tasks:
         let draft: HandlersEvidence.EvidenceDispositionDraft =
             { ObligationId = "EV001"
               State = "supported"
+              Observed = false
               EvidenceIds = [ "EV001" ]
               TaskIds = [ "T001"; "T002" ]
               DiagnosticIds = [] }
@@ -545,6 +546,8 @@ tasks:
         Assert.Equal(1, List.length views)
         let view = List.head views
         Assert.Equal("ED-EV001", view.Id)
+        // #398: the view carries the draft's attestation basis through untouched.
+        Assert.False view.Observed
         Assert.Equal<string list>([ "T001"; "T002" ], view.TaskIds |> List.sort)
         // The distinct, sorted union of T001's {AC-001, DEC-001, FR-001} and T002's {AC-002, DEC-002, FR-002}.
         Assert.Equal<string list>([ "AC-001"; "AC-002"; "DEC-001"; "DEC-002"; "FR-001"; "FR-002" ], view.SourceIds)
@@ -581,3 +584,34 @@ tasks:
         let drifted = TestSupport.runVerify root workId title
 
         Assert.Contains(drifted.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.staleEvidenceSource")
+
+    // --- Feature 101 (FS.GG.SDD#398), FR-011: the `TD-` mirror discloses too ---
+
+    /// `verifyTestSatisfied` is the single most misleading number the lifecycle prints: its NAME
+    /// asserts a test was satisfied, and `TD-` reaches `"satisfied"` from the identical `result: pass`
+    /// check as `ED-` — nothing ever ran a test (.github#417: "despite the name, it observes no test").
+    ///
+    /// Disclosing the evidence counters while leaving this one bare would print an honest line
+    /// directly above a dishonest one, which is worse than disclosing neither. Like its `ED-` twin,
+    /// this is written to fail — correctly — the day FS.GG.SDD#350 observes a run.
+    [<Fact>]
+    let ``nothing is observed - the TD- mirror discloses its basis too`` () =
+        let root = initializedEvidencedProject ()
+        let report = TestSupport.runVerify root workId title
+
+        match report.Verification with
+        | None -> failwith "verify produced no summary."
+        | Some verification ->
+            Assert.True(
+                verification.TestSatisfiedCount > 0,
+                "fixture must satisfy required-test obligations to be meaningful"
+            )
+
+            Assert.Equal(0, verification.TestObservedCount)
+            Assert.Equal(verification.TestSatisfiedCount, verification.TestSelfAttestedCount)
+
+            // FR-007, the `satisfied` twin of the evidence invariant.
+            Assert.Equal(
+                verification.TestSatisfiedCount,
+                verification.TestSelfAttestedCount + verification.TestObservedCount
+            )

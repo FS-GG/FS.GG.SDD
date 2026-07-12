@@ -51,7 +51,7 @@
       "kind": "source",
       "digest": {
         "algorithm": "sha256",
-        "value": "87e6f61fe4c607b93f889f2c7ac2700a5014ea4fca9f565480c79801de02906e"
+        "value": "5e12566e9d954dcb3021fe5d58426564badd33b516aba44ded57276e7d762485"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -168,6 +168,8 @@
     "status": "verificationReady",
     "blockingFindingIds": [],
     "evidenceSupportedCount": 5,
+    "evidenceSelfAttestedCount": 5,
+    "evidenceObservedCount": 0,
     "evidenceDeferredCount": 0,
     "evidenceMissingCount": 0,
     "evidenceStaleCount": 0,
@@ -179,6 +181,7 @@
       "id": "ED-EV001",
       "obligationId": "EV001",
       "state": "supported",
+      "observed": false,
       "severity": "ready",
       "diagnosticIds": []
     },
@@ -186,6 +189,7 @@
       "id": "ED-EV002",
       "obligationId": "EV002",
       "state": "supported",
+      "observed": false,
       "severity": "ready",
       "diagnosticIds": []
     },
@@ -193,6 +197,7 @@
       "id": "ED-EV003",
       "obligationId": "EV003",
       "state": "supported",
+      "observed": false,
       "severity": "ready",
       "diagnosticIds": []
     },
@@ -200,6 +205,7 @@
       "id": "ED-EV004",
       "obligationId": "EV004",
       "state": "supported",
+      "observed": false,
       "severity": "ready",
       "diagnosticIds": []
     },
@@ -207,6 +213,7 @@
       "id": "ED-EV005",
       "obligationId": "EV005",
       "state": "supported",
+      "observed": false,
       "severity": "ready",
       "diagnosticIds": []
     }

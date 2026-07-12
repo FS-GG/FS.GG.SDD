@@ -21,14 +21,25 @@ module Ship =
     type ShipLifecycleStageReadiness = { Stage: string; Status: string }
 
     type ShipVerificationReadinessSummary =
-        { Status: string
-          BlockingFindingIds: string list
-          EvidenceSupportedCount: int
-          EvidenceDeferredCount: int
-          EvidenceMissingCount: int
-          EvidenceStaleCount: int
-          EvidenceSyntheticCount: int
-          EvidenceInvalidCount: int }
+        {
+            Status: string
+            BlockingFindingIds: string list
+            EvidenceSupportedCount: int
+            /// FS.GG.SDD#398. The two halves of `EvidenceSupportedCount`, and the reason this record
+            /// carries them: `supported` alone is read as "5 obligations were proven" when it means
+            /// "5 obligations were asserted by whoever authored evidence.yml". The invariant
+            /// `supported = selfAttested + observed` (FR-007) makes that legible without a footnote.
+            ///
+            /// `EvidenceObservedCount` is `0` everywhere today — SDD invokes no test runner — and that
+            /// zero IS the disclosure. It rises when FS.GG.SDD#350 lands, with nothing here changing.
+            EvidenceSelfAttestedCount: int
+            EvidenceObservedCount: int
+            EvidenceDeferredCount: int
+            EvidenceMissingCount: int
+            EvidenceStaleCount: int
+            EvidenceSyntheticCount: int
+            EvidenceInvalidCount: int
+        }
 
     type ShipView =
         {

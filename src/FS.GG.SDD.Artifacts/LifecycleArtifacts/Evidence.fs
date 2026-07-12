@@ -238,6 +238,60 @@ module Evidence =
         else
             citedArtifactPaths declaration |> List.filter (exists >> not)
 
+    /// The attestation-basis rule (FS.GG.SDD#398, FR-001/FR-002), stated once for `verify`'s
+    /// dispositions, `ship`'s counters, and the committed `ship-verdict.json`.
+    ///
+    /// `false`, for every declaration, because SDD observes no run. #349 closed "cites a file that is
+    /// not there"; nothing closes "and nobody ran it". An obligation reaches `supported` on exactly
+    /// one condition — the author wrote `result: pass` and did not disclose it `synthetic` — so the
+    /// authoring agent is the sole source of truth for the merge-boundary verdict, against our own
+    /// Principle VII. That is FS.GG.SDD#350, it needs an ADR, and this feature does not pre-empt it.
+    ///
+    /// What this feature does is refuse to let the green be *silently* misread. The counters derived
+    /// from this function are what say so — in the console, and (the only one that outlives the
+    /// branch) in the committed verdict.
+    ///
+    /// Deliberately a function, not `let isObserved = false`: every counter downstream is then
+    /// *computed*, and #350 changes this body alone. A constant would let the disclosure calcify into
+    /// a lie the moment it stopped being true — worse than never having made it.
+    ///
+    /// The declaration is deliberately unread: nothing on it could carry a receipt. That is the
+    /// defect, stated in code — not an oversight here.
+    let isObserved (declaration: EvidenceDeclaration) =
+        ignore declaration
+        false
+
+    /// Does this declaration claim a real pass — `result: pass`, not disclosed `synthetic`? The
+    /// satisfaction rule, named once because the attestation split below partitions exactly it.
+    let claimsRealPass (declaration: EvidenceDeclaration) =
+        normalizedEvidenceResult declaration.Result = "pass"
+        && not declaration.Synthetic
+
+    /// Does this declaration discharge its obligation on the author's word alone? (FS.GG.SDD#398.)
+    /// The exact complement of `isObserved` over the satisfaction rule, so that
+    /// `supported = selfAttested + observed` holds by construction, not by coincidence (FR-007).
+    let isSelfAttested (declaration: EvidenceDeclaration) =
+        claimsRealPass declaration && not (isObserved declaration)
+
+    /// Was an *obligation* — matched by these declarations — discharged by an observed run?
+    /// (FS.GG.SDD#398, FR-003.) The one rule `verify`, `ship`, and the committed verdict all read.
+    ///
+    /// Two decisions are load-bearing, and both are moot today (`isObserved` is constantly `false`)
+    /// while being exactly what FS.GG.SDD#350 inherits:
+    ///
+    ///   * **Only the declarations that claim a real pass are consulted.** A `supported` obligation
+    ///     may also carry a deferral or an advisory alongside the pass that supports it; those say
+    ///     nothing about *how* it was supported, and folding them in would report every mixed
+    ///     obligation as self-attested regardless of what was run.
+    ///   * **`forall`, not `exists`.** An obligation backed by one observed run *and* one
+    ///     hand-asserted pass is NOT observed. `exists` would let the observed declaration launder
+    ///     the self-attested one out of the count — a disclosure that under-reports self-attestation
+    ///     fails open, which is precisely the defect class this feature sits in.
+    let obligationIsObserved (declarations: EvidenceDeclaration list) =
+        let passes = declarations |> List.filter claimsRealPass
+
+        not (List.isEmpty passes) && passes |> List.forall isObserved
+
     let parseArtifactRefs values =
         // Total: a rejected path is DROPPED here rather than raised, and is reported as malformed
         // user input from the raw YAML by `parseEvidenceArtifact` — so nothing is silently lost.

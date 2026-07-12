@@ -429,3 +429,80 @@ module ShipCommandTests =
         Assert.Contains("shipReadiness: shipReady", result.StdOut)
         Assert.Contains("nextAction: ship.next.protectedBoundary", result.StdOut)
         Assert.Equal("", result.StdErr)
+
+        // #398 / FR-006: the operator sees what the green rests on, beside the green itself. This
+        // also covers `--rich`, which is built by scraping this projection precisely so it can add
+        // and drop no facts.
+        Assert.Contains("shipEvidenceSupported: 5", result.StdOut)
+        Assert.Contains("shipEvidenceSelfAttested: 5", result.StdOut)
+        Assert.Contains("shipEvidenceObserved: 0", result.StdOut)
+
+    // --- Feature 101 (FS.GG.SDD#398): the verdict discloses its attestation basis ---
+
+    /// FR-009. The standing proof that SDD observes nothing. This repo's own dogfooded lifecycle
+    /// walks on hand-authored `evidence.yml`, reaches `shipReady`, and reports five supported
+    /// obligations — **none of which any tool ran**.
+    ///
+    /// It is written to FAIL, loudly and correctly, on the day FS.GG.SDD#350 lands an observed
+    /// receipt. That is the point: this assertion is the tripwire that says "the disclosure has
+    /// stopped being true — go make it true again", rather than letting a stale `0` calcify into
+    /// the exact false comfort the feature exists to prevent.
+    [<Fact>]
+    let ``nothing is observed - a green ship rests entirely on the author's word`` () =
+        let root = initializedVerifiedProject ()
+        let report = TestSupport.runShip root workId title
+
+        match report.Ship with
+        | None -> failwith "ship produced no summary."
+        | Some ship ->
+            Assert.Equal("shipReady", ship.Readiness)
+            Assert.True(ship.EvidenceSupportedCount > 0, "fixture must supply supported obligations to be meaningful")
+
+            // The whole finding, in two lines.
+            Assert.Equal(0, ship.EvidenceObservedCount)
+            Assert.Equal(ship.EvidenceSupportedCount, ship.EvidenceSelfAttestedCount)
+
+    /// FR-007. `supported = selfAttested + observed`, on every produced surface. Asserted rather
+    /// than assumed, because the two halves are computed independently (`ship` counts the basis
+    /// `verify` recorded per-obligation) and an arithmetic drift between them would silently
+    /// under-report self-attestation — failing open, which is the defect class this feature sits in.
+    [<Fact>]
+    let ``supported partitions exactly into selfAttested and observed`` () =
+        let root = initializedVerifiedProject ()
+        let report = TestSupport.runShip root workId title
+
+        match report.Ship with
+        | None -> failwith "ship produced no summary."
+        | Some ship ->
+            Assert.Equal(ship.EvidenceSupportedCount, ship.EvidenceSelfAttestedCount + ship.EvidenceObservedCount)
+
+        // …and the same invariant in the committed verdict, which is the only one that reaches git.
+        match
+            parseShipView
+                { Path = shipPath
+                  Text = TestSupport.readRelative root shipPath }
+        with
+        | Error diagnostics -> failwith $"ship.json did not parse: {diagnostics}."
+        | Ok view ->
+            let verdict = ShipVerdict.fromShipView view
+
+            Assert.Equal(
+                verdict.EvidenceSupportedCount,
+                verdict.EvidenceSelfAttestedCount + verdict.EvidenceObservedCount
+            )
+
+            Assert.Equal(0, verdict.EvidenceObservedCount)
+
+    /// FR-005. The disclosure has to survive into git, or it is not a disclosure. `ship.json` and
+    /// `verify.json` are gitignored (ADR-0018); `ship-verdict.json` is the one readiness artifact
+    /// committed, so it is the only one a reader in a year's time will ever see.
+    [<Fact>]
+    let ``the committed verdict carries the attestation counts`` () =
+        let root = initializedVerifiedProject ()
+        TestSupport.runShip root workId title |> ignore
+
+        let verdictJson = TestSupport.readRelative root shipVerdictPath
+
+        Assert.Contains("\"evidenceSupportedCount\"", verdictJson)
+        Assert.Contains("\"evidenceSelfAttestedCount\"", verdictJson)
+        Assert.Contains("\"evidenceObservedCount\": 0", verdictJson)

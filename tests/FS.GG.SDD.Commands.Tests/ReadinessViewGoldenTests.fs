@@ -68,10 +68,12 @@ module ReadinessViewGoldenTests =
             TestSupport.runShip root workId title |> ignore
             TestSupport.readRelative root $"readiness/{workId}/ship-verdict.json")
 
-    // FR-004: the compaction is the point. A ship-ready verdict is exactly 20 lines against
+    // FR-004: the compaction is the point. A ship-ready verdict is exactly 23 lines against
     // ship.json's 279 — assert it here, where the golden makes a regression obvious.
+    // (20 until #398 added the three attestation counts: the verdict is the only readiness view
+    // that reaches git, so it is the only one that can tell a future reader what the green means.)
     [<Fact>]
-    let ``ship-verdict.json is at most 20 lines for a ship-ready item`` () =
+    let ``ship-verdict.json is at most 23 lines for a ship-ready item`` () =
         let root = stableRoot ()
         TestSupport.initializeVerifiedProject root workId title
         TestSupport.runShip root workId title |> ignore
@@ -80,7 +82,7 @@ module ReadinessViewGoldenTests =
             (TestSupport.readRelative root $"readiness/{workId}/ship-verdict.json").Replace("\r\n", "\n").TrimEnd('\n')
 
         let lineCount = verdict.Split('\n').Length
-        Assert.True(lineCount <= 20, $"ship-verdict.json grew to {lineCount} lines:\n{verdict}")
+        Assert.True(lineCount <= 23, $"ship-verdict.json grew to {lineCount} lines:\n{verdict}")
 
     // Feature 068 / US2 sub-cluster 2b safety net: refresh's summary.md renders the perViewState
     // table and refreshDisposition — exactly the currency-string output the ViewCurrencyClass /

@@ -25,14 +25,25 @@ module Ship =
     type ShipLifecycleStageReadiness = { Stage: string; Status: string }
 
     type ShipVerificationReadinessSummary =
-        { Status: string
-          BlockingFindingIds: string list
-          EvidenceSupportedCount: int
-          EvidenceDeferredCount: int
-          EvidenceMissingCount: int
-          EvidenceStaleCount: int
-          EvidenceSyntheticCount: int
-          EvidenceInvalidCount: int }
+        {
+            Status: string
+            BlockingFindingIds: string list
+            EvidenceSupportedCount: int
+            /// FS.GG.SDD#398. The two halves of `EvidenceSupportedCount`, and the reason this record
+            /// carries them: `supported` alone is read as "5 obligations were proven" when it means
+            /// "5 obligations were asserted by whoever authored evidence.yml". The invariant
+            /// `supported = selfAttested + observed` (FR-007) makes that legible without a footnote.
+            ///
+            /// `EvidenceObservedCount` is `0` everywhere today — SDD invokes no test runner — and that
+            /// zero IS the disclosure. It rises when FS.GG.SDD#350 lands, with nothing here changing.
+            EvidenceSelfAttestedCount: int
+            EvidenceObservedCount: int
+            EvidenceDeferredCount: int
+            EvidenceMissingCount: int
+            EvidenceStaleCount: int
+            EvidenceSyntheticCount: int
+            EvidenceInvalidCount: int
+        }
 
     type ShipView =
         { SchemaVersion: SchemaVersion
@@ -69,6 +80,10 @@ module Ship =
         { Status = jsonString "status" element |> Option.defaultValue "needsVerificationCorrection"
           BlockingFindingIds = jsonStringList "blockingFindingIds" element
           EvidenceSupportedCount = jsonInt "evidenceSupportedCount" element |> Option.defaultValue 0
+          // #398: absent in a view written before this feature — and `0` is what it meant, since
+          // nothing was ever observed. Tolerant parse, so no `schemaVersion` bump.
+          EvidenceSelfAttestedCount = jsonInt "evidenceSelfAttestedCount" element |> Option.defaultValue 0
+          EvidenceObservedCount = jsonInt "evidenceObservedCount" element |> Option.defaultValue 0
           EvidenceDeferredCount = jsonInt "evidenceDeferredCount" element |> Option.defaultValue 0
           EvidenceMissingCount = jsonInt "evidenceMissingCount" element |> Option.defaultValue 0
           EvidenceStaleCount = jsonInt "evidenceStaleCount" element |> Option.defaultValue 0
@@ -98,6 +113,8 @@ module Ship =
                             { Status = "needsVerificationCorrection"
                               BlockingFindingIds = []
                               EvidenceSupportedCount = 0
+                              EvidenceSelfAttestedCount = 0
+                              EvidenceObservedCount = 0
                               EvidenceDeferredCount = 0
                               EvidenceMissingCount = 0
                               EvidenceStaleCount = 0

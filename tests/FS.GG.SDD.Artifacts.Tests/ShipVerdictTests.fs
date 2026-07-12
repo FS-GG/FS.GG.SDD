@@ -99,7 +99,7 @@ module ShipVerdictTests =
     // ---------- FR-002: every fact, and no other field ----------
 
     [<Fact>]
-    let ``the verdict carries exactly the eleven projected facts`` () =
+    let ``the verdict carries exactly the fourteen projected facts`` () =
         use doc = JsonDocument.Parse(jsonOf (shipJsonWith twoSources ""))
 
         let actual =
@@ -118,8 +118,8 @@ module ShipVerdictTests =
                   "disposition"
                   "readiness" ]
 
-        // Ten top-level keys; `disposition` carries the eleventh and twelfth facts as its two
-        // members, mirroring ship.json's nesting.
+        // Ten top-level keys; `disposition` carries two facts as its members and (since #398)
+        // `verificationReadiness` carries four, mirroring ship.json's nesting.
         Assert.Equal<Set<string>>(expected, actual)
 
         let disposition = doc.RootElement.GetProperty "disposition"
@@ -129,8 +129,14 @@ module ShipVerdictTests =
             disposition.EnumerateObject() |> Seq.map (fun p -> p.Name) |> Set.ofSeq
         )
 
+        // #398: the verdict is the ONLY committed readiness artifact, so it is the only place a
+        // future reader learns what the green rests on. `supported = selfAttested + observed`.
         Assert.Equal<Set<string>>(
-            Set.ofList [ "status" ],
+            Set.ofList
+                [ "status"
+                  "evidenceSupportedCount"
+                  "evidenceSelfAttestedCount"
+                  "evidenceObservedCount" ],
             (doc.RootElement.GetProperty "verificationReadiness").EnumerateObject()
             |> Seq.map (fun p -> p.Name)
             |> Set.ofSeq
@@ -226,22 +232,26 @@ module ShipVerdictTests =
     // ---------- FR-004 / FR-008: compact and byte-stable ----------
 
     [<Fact>]
-    let ``a ship-ready verdict renders in exactly 20 lines`` () =
+    let ``a ship-ready verdict renders in exactly 23 lines`` () =
+        // 20 before #398 added the three `verificationReadiness` attestation counts. Compaction is
+        // still the point — this is the one readiness view committed to git — but a verdict that
+        // records `shipReady` while omitting "0 of 5 obligations were observed" is compact about
+        // the wrong thing.
         let json = jsonOf (shipJsonWith twoSources "")
-        Assert.Equal(20, json.Replace("\r\n", "\n").TrimEnd('\n').Split('\n').Length)
+        Assert.Equal(23, json.Replace("\r\n", "\n").TrimEnd('\n').Split('\n').Length)
 
     [<Fact>]
-    let ``a non-empty blocking list expands the array - 21 lines plus one per id`` () =
+    let ``a non-empty blocking list expands the array - 24 lines plus one per id`` () =
         // `Utf8JsonWriter(Indented = true)` renders `[]` inline but expands a non-empty array over
-        // its own bracket lines, so the growth is 2 + n, not n. Pinned exactly, because "<= 20 lines"
+        // its own bracket lines, so the growth is 2 + n, not n. Pinned exactly, because "<= 23 lines"
         // is a contract claim and this is the shape that exceeds it.
         let lines (ids: string) =
             (jsonOf (shipJsonWith twoSources ids)).Split('\n').Length
 
-        Assert.Equal(20, lines "")
-        Assert.Equal(22, lines "\"SF001\"")
-        Assert.Equal(23, lines "\"SF001\", \"SF002\"")
-        Assert.Equal(24, lines "\"SF001\", \"SF002\", \"SF003\"")
+        Assert.Equal(23, lines "")
+        Assert.Equal(25, lines "\"SF001\"")
+        Assert.Equal(26, lines "\"SF001\", \"SF002\"")
+        Assert.Equal(27, lines "\"SF001\", \"SF002\", \"SF003\"")
 
     [<Fact>]
     let ``serialization is byte-stable across repeated projections`` () =

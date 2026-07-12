@@ -205,10 +205,32 @@ top-level fields only.
 - **`ship-verdict.json`** — `disposition`, `generator`, `readiness`,
   `schemaVersion` *(Stable)*, `sourcesDigest`, `stage`, `status`,
   `verificationReadiness`, `viewVersion`, `workId`. The **durable generated**
-  view (ADR-0026): a committed, ≤ 20-line projection of `ship.json` whose
+  view (ADR-0026): a committed, ≤ 23-line projection of `ship.json` whose
   `sourcesDigest` is one aggregate SHA-256 over the canonical `sources[]`
   path→digest pairing, replacing that inventory. See
   [`../reference/artifact-taxonomy.md`](../reference/artifact-taxonomy.md).
+
+### What a green verdict means (FS.GG.SDD#398)
+
+`ship-verdict.json` is the **only** readiness artifact committed to git — `verify.json` and
+`ship.json` are regenerable and gitignored (ADR-0018). So it is the only one a future reader finds,
+and its `verificationReadiness` carries the three counts that say what its green is worth:
+
+| Field | Meaning |
+|---|---|
+| `evidenceSupportedCount` | Obligations discharged by a passing, non-synthetic declaration. |
+| `evidenceSelfAttestedCount` | …of those, the ones resting on the **author's word**. |
+| `evidenceObservedCount` | …of those, the ones resting on a run the tool **observed**. |
+
+`supported == selfAttested + observed`, always. **`evidenceObservedCount` is `0` in every artifact
+this version can produce**: SDD invokes no test runner, so `result: pass` is an assertion by the same
+agent that authored the work. `shipReady` therefore means *"the paperwork is consistent"*, **not**
+*"this works"* — and these counters exist so that nobody, and no agent, has to take it for the latter.
+
+Making `ship` mean *"this works"* is [FS.GG.SDD#350](https://github.com/FS-GG/FS.GG.SDD/issues/350)
+(under `.github` epic #417); it needs an ADR, because who owns the run receipt — SDD or Governance —
+is a boundary question. When it lands, `evidenceObservedCount` rises and these fields keep their
+meaning unchanged.
 - **`governance-handoff.json`** — `contractVersion` *(Stable)*, `diagnostics`,
   `evidence`, `generatorVersion`, `governanceConfig`, `governedReferences`,
   `readiness`, `schemaVersion` *(Stable)*, `sources`, `workId`.

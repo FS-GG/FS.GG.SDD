@@ -83,11 +83,15 @@ FS.GG.SDD.Artifacts.Diagnostics.upgradeStepFailed
 FS.GG.SDD.Artifacts.Diagnostics.workModelInconsistent
 FS.GG.SDD.Artifacts.Evidence.citedArtifactPaths
 FS.GG.SDD.Artifacts.Evidence.citedPathIsContained
+FS.GG.SDD.Artifacts.Evidence.claimsRealPass
 FS.GG.SDD.Artifacts.Evidence.evidenceKindSourceValue
+FS.GG.SDD.Artifacts.Evidence.isObserved
+FS.GG.SDD.Artifacts.Evidence.isSelfAttested
 FS.GG.SDD.Artifacts.Evidence.isVisualInspectionTagged
 FS.GG.SDD.Artifacts.Evidence.missingCitedArtifacts
 FS.GG.SDD.Artifacts.Evidence.namesRenderedArtifact
 FS.GG.SDD.Artifacts.Evidence.normalizedEvidenceResult
+FS.GG.SDD.Artifacts.Evidence.obligationIsObserved
 FS.GG.SDD.Artifacts.Evidence.parseEvidence
 FS.GG.SDD.Artifacts.Evidence.parseEvidenceArtifact
 FS.GG.SDD.Artifacts.Evidence.passesWithoutRenderedArtifact
