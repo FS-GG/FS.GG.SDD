@@ -20,11 +20,21 @@ module ContractVersionTests =
     // fsproj <Version> moved and this constant did not, and NOTHING IN THIS REPO NOTICED: the
     // assertion lives DOWNSTREAM, in .github's contract-coherence gate, so SDD's main went green
     // and .github's went red, blocking every PR there (.github#386-class; FS.GG.SDD#386).
-    let ``contract version self-report matches 1_4_1`` () =
-        Assert.Equal("1.4.1", ContractVersion.value)
-        Assert.Equal(1, ContractVersion.major)
-        Assert.Equal(4, ContractVersion.minor)
-        Assert.Equal(1, ContractVersion.patch)
+    //
+    // 1.4.1 -> 2.0.0 (FS.GG.SDD#393): the SemVer MAJOR the repo had already decided on twice and
+    // never made. `ProviderDescriptor` gained `IdentifierParameter` mid-record in 4e6f8b7 (feature
+    // 080) with NO version bump; an F# record generates a positional primary constructor, so its
+    // arity went 11 -> 12 and the 11-arg .ctor CEASED TO EXIST. f18877f then shipped that binary
+    // break as a PATCH (1.4.1) and deleted the CompatibilitySuppressions.xml that recorded the debt
+    // — the file which said, verbatim, that the honest resolution is "a Contracts MAJOR bump
+    // (1.x -> 2.0.0) + republish". 2.0.0 is that bump. There is no additive way to add a field to an
+    // F# record: every field changes the generated ctor arity, so this is a major or it is a lie.
+    // The break is DECLARED (docs/release/contracts-2.0.0.md), not suppressed.
+    let ``contract version self-report matches 2_0_0`` () =
+        Assert.Equal("2.0.0", ContractVersion.value)
+        Assert.Equal(2, ContractVersion.major)
+        Assert.Equal(0, ContractVersion.minor)
+        Assert.Equal(0, ContractVersion.patch)
 
     // THE ASSERTION THAT WAS MISSING, AND THE ONLY ONE THAT WOULD HAVE CAUGHT IT.
     //
