@@ -17,7 +17,7 @@
       "fs.gg.sdd.artifacts": {
         "type": "Project",
         "dependencies": {
-          "FS.GG.Contracts": "[1.4.0, )",
+          "FS.GG.Contracts": "[1.4.1, )",
           "FSharp.Core": "[10.1.301, )",
           "YamlDotNet": "[18.1.0, )"
         }
@@ -25,7 +25,7 @@
       "fs.gg.sdd.commands": {
         "type": "Project",
         "dependencies": {
-          "FS.GG.Contracts": "[1.4.0, )",
+          "FS.GG.Contracts": "[1.4.1, )",
           "FS.GG.SDD.Artifacts": "[0.10.0, )",
           "FSharp.Core": "[10.1.301, )"
         }
