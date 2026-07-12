@@ -192,6 +192,7 @@ module SkillGateDoctestTests =
         assertClean "charter" (TestSupport.runCharter root workId title)
         assertClean "checklist" (TestSupport.runChecklist root workId title)
         assertClean "plan" (TestSupport.runPlan root workId title)
+        TestSupport.authorPlanProse root workId // #351
         assertClean "tasks" (TestSupport.runTasks root workId title)
         assertClean "analyze" (TestSupport.runAnalyze root workId title)
         assertClean "evidence" (TestSupport.runEvidence root workId title)

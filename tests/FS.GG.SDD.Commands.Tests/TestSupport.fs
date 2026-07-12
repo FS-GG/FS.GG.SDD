@@ -2,6 +2,7 @@ namespace FS.GG.SDD.Commands.Tests
 
 open System
 open System.Diagnostics
+open System.Text.RegularExpressions
 open System.IO
 open FS.GG.SDD.Commands.CommandEffects
 open FS.GG.SDD.Commands.CommandReports
@@ -224,6 +225,48 @@ module TestSupport =
             |> Option.defaultWith (fun () -> failwith $"Expected per-view state for {view}.")
         | None -> failwith "Expected refresh summary."
 
+    /// FS.GG.SDD#351: author the plan, the way a human would.
+    ///
+    /// `plan` scaffolds every entry — `- PD-001 [FR-001] [AC-001] complete: Plan requirement FR-001
+    /// through the plan command contract.` — and since #351 `analyze` BLOCKS while that prose is
+    /// still sitting there. It has to: a decision-shaped hole with an id is not a decision, and the
+    /// scaffold carries the refs by construction, so the traceability chain used to close with zero
+    /// human authorship.
+    ///
+    /// So the fixture must do what an author does: keep the id and the refs and the kind token — the
+    /// machine contract — and replace the *prose* after it, which is the part that requires judgement.
+    /// That is exactly what the regex preserves and replaces.
+    ///
+    /// Every `initialize*Project` fixture chains through here, which is why ~169 tests went green
+    /// again from this one edit rather than from 169.
+    let authorPlanProse root workId =
+        let path = $"work/{workId}/plan.md"
+
+        let prose =
+            "Authored by the test fixture: a real decision would say why, not restate the id."
+
+        let authored =
+            readRelative root path
+            |> fun text ->
+                Regex.Replace(
+                    text,
+                    @"(?m)^(- (?:PD|PC|VO|PM|GV)-\d+\b[^:\r\n]*: )(.+)$",
+                    fun m -> m.Groups[1].Value + prose
+                )
+            // The Accepted Deferrals section keys its rows on the SOURCE id (`- DEC-002
+            // acceptedDeferral: …`), not a `PD-###`, so the pattern above misses them and they stay
+            // scaffold — which `analyze` then, correctly, blocks on. Only the fixtures whose clarify
+            // carries an accepted deferral ever reach that line, which is why it surfaced in exactly
+            // three tests and not the other 160.
+            |> fun text ->
+                Regex.Replace(
+                    text,
+                    @"(?m)^(- [A-Z]{2,4}-\d+ acceptedDeferral: )(.+)$",
+                    fun m -> m.Groups[1].Value + prose
+                )
+
+        writeRelative root path authored
+
     let initializePlanReadyProject root workId title =
         initializeProject root
         runCharter root workId title |> ignore
@@ -236,6 +279,7 @@ module TestSupport =
 
         runChecklist root workId title |> ignore
         runPlan root workId title |> ignore
+        authorPlanProse root workId
 
     // The T001..T005 evidence ladder is derived once in TestShared (feature 067 / FR-011).
     // Five, not six: the plan scaffold derives `PD-001` mirroring `FR-001`'s own refs, and since
