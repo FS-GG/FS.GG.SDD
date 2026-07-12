@@ -631,6 +631,19 @@ module internal DiagnosticConstructors =
             message
             "Run fsgg-sdd analyze for the selected work item before recording evidence."
 
+    // FS-GG/FS.GG.SDD#351 (epic .github#417): a scaffolded plan entry is not a plan entry. `plan`
+    // seeds a decision per requirement carrying that requirement's own refs BY CONSTRUCTION, so the
+    // traceability chain closes with zero human authorship — the gates check that the ids line up,
+    // and the scaffold generates ids that line up. A plausible-looking filling is worse than an empty
+    // one because it does not itch. This blocks while the tool's own prose is still sitting there.
+    let unauthoredScaffoldContent path ids =
+        errorDiagnostic
+            "unauthoredScaffoldContent"
+            (Some path)
+            "Plan entries still hold the prose the scaffold wrote — an unauthored decision is a missing decision."
+            "Replace each listed entry's text with the real decision, contract, obligation, migration note, or generated-view impact. The scaffold gives you the id and the refs; the judgement is yours to write."
+            ids
+
     let analysisNotReady path readiness =
         errorForRef
             "evidence.analysisNotReady"
