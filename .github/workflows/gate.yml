@@ -112,14 +112,34 @@ jobs:
   #
   # ENFORCING (ratcheted from advisory, FS-GG/.github#20 resolved): a SEPARATE job whose run FAILS
   # on a real public-API break (Package Validation stays OFF in the normal build/release, so the
-  # required `gate`/`build-config-drift` jobs are unaffected). The detector script exits non-zero
-  # ONLY on a genuine CP#### break — NoBaselineYet / Indeterminate (e.g. a feed hiccup) do not fail
-  # it — so this is a robust hard gate, not a flaky one. It reads the feed with GITHUB_TOKEN
-  # (packages: read); on a fork PR (no token) the script degrades to clean (exit 0) so forks merge.
+  # required `gate`/`build-config-drift` jobs are unaffected).
   # (Branch protection is enabled on `main` (2026-07-09, #287): this job — alongside `gate` and
   # `build-config-drift` — is a REQUIRED status check, so a red run hard-blocks the merge button even
   # for admins (enforce_admins=true). Enforcement is therefore both at the workflow level and at the
   # merge boundary.)
+  #
+  # FAIL-CLOSED (#381). This comment used to say the script "exits non-zero ONLY on a genuine CP####
+  # break — NoBaselineYet / Indeterminate (e.g. a feed hiccup) do not fail it — so this is a robust
+  # hard gate, not a flaky one." That was exactly backwards, and it is worth keeping the epitaph:
+  #
+  #   `Indeterminate` means the pack, the tool, or the feed read FAILED — the API was never compared.
+  #   Exiting 0 there does not make the gate robust; it makes it BLIND, and indistinguishable from a
+  #   clean run. NU1403 (the pre-ADR-0032 lock bug) made this script's pack fail on EVERY run, so the
+  #   gate spent its entire life Indeterminate → exit 0 → `success`, having never once compared an
+  #   API, while sitting in the required set. A real removed-constructor break shipped through it.
+  #
+  # So: BREAK, Indeterminate, and an unallowlisted NoBaselineYet all exit non-zero now. A gate that
+  # could not run has not passed. If this job starts failing for an infrastructure reason, FIX THE
+  # INFRASTRUCTURE — do not restore the exit 0, and do not drop it from the required set (that is
+  # epic FS-GG/.github#266's entire subject).
+  #
+  # A missing/unusable feed token is likewise a hard failure, not a skip. The old code exited 0
+  # "advisory-clean" on no token, reasoning that fork PRs get none — but forks ARE given a
+  # GITHUB_TOKEN; it just cannot read the FS-GG feed, so forks fell through the NoBaselineYet hole
+  # and were waved through UNVERIFIED. This repo has 0 forks and has taken 0 fork PRs in 212, so
+  # nothing real depended on it. If fork PRs ever matter, make it a visible decision here (a
+  # conditional `continue-on-error` on `github.event.pull_request.head.repo.fork`), never a silent
+  # fallthrough in the script.
   api-compatibility-gate:
     name: API compatibility gate (breaking-change → SemVer major)
     runs-on: ubuntu-latest
@@ -144,6 +164,13 @@ jobs:
       # plausible-looking result, not an obvious error (see #90), so pin the selection.
       - name: Unit-test the baseline resolver
         run: bash scripts/tests/pick-latest-version.test.sh
+
+      # Guard the gate's own verdict logic (#381). Both defects it pins — Indeterminate/NoBaselineYet
+      # exiting 0, and the CP#### message truncated before `but not on …` — presented as a GREEN
+      # required check, so nothing downstream could have caught them. Neither needs the feed or the
+      # SDK to test, which is why they are unit-tested here rather than trusted.
+      - name: Unit-test the gate verdict + CP#### rendering
+        run: bash scripts/tests/apicompat-check.test.sh
 
       - name: ApiCompat vs feed baseline
         env:
