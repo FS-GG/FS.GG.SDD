@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# apicompat-check.sh — advisory breaking-change (ApiCompat / Package Validation) detector for the
-# SDD-owned cross-repo contract package FS.GG.Contracts. H3 / FS-GG/.github#20, epic #16 Pillar 5.
+# apicompat-check.sh — breaking-change (ApiCompat / Package Validation) detector for the SDD-owned
+# cross-repo contract package FS.GG.Contracts. H3 / FS-GG/.github#20, epic #16 Pillar 5.
+# A break found here BLOCKS the merge in this repo — see ENFORCING below before calling it advisory.
 #
 # WHAT IT DOES
 #   Packs FS.GG.Contracts Release with the .NET SDK's Package Validation enabled and compares the
@@ -21,12 +22,28 @@
 #   id `apicompat-publicapi-gate` (Governance spec 088 research D1). The source-level public-surface
 #   record stays the committed .fsi signatures.
 #
-# ADVISORY (mirrors FS.GG.Governance spec 088 D7 / FS.GG.Rendering)
-#   This runs as a SEPARATE step and never reddens the normal build/release pack (Package Validation
-#   is left OFF there). The script EXITS NON-ZERO when a real break is found, so the gate flips from
-#   advisory → required by dropping `continue-on-error` on the CI job — no script change. Fail-safe:
-#   no baseline on the feed is reported NoBaselineYet (NOT a silent pass); a pack/tool failure
-#   unrelated to API is reported Indeterminate.
+# ENFORCING — a break here HARD-BLOCKS the merge (do not call this advisory; FS.GG.SDD#384)
+#   The advisory → required ratchet has ALREADY HAPPENED (FS-GG/.github#20 resolved). The
+#   `api-compatibility-gate` job in .github/workflows/gate.yml carries no `continue-on-error`, and
+#   `API compatibility gate (breaking-change → SemVer major)` is a REQUIRED status check on `main`
+#   (#287, enforce_admins=true). A non-zero exit from this script therefore blocks the merge button
+#   for everyone, admins included.
+#
+#   This header used to describe the script as advisory while exiting 1 into that required gate. The
+#   contradiction is not cosmetic: it tells whoever is staring at a red gate that they are looking at
+#   a soft signal they can move past, when in fact nothing merges until the break is resolved — which
+#   is exactly the afternoon it cost in FS.GG.SDD#384. If the gate is ever ratcheted back down, change
+#   the CI job and this comment together.
+#
+#   The advisory/required choice lives ENTIRELY in the CI job + branch protection, never here: this
+#   script always exits non-zero on a real break and needs no edit to move either way. It also runs as
+#   a SEPARATE job and never reddens the normal build/release pack (Package Validation is left OFF
+#   there), so `gate` / `build-config-drift` are unaffected by it.
+#
+#   Fail-safe: it exits non-zero ONLY on a genuine CP#### break. No baseline on the feed is reported
+#   NoBaselineYet and a pack/tool failure unrelated to API is reported Indeterminate — neither is a
+#   silent pass, and neither reddens the gate. The one deliberate fail-OPEN is the no-token path (see
+#   AUTH): it exits 0 WITHOUT checking, so that fork PRs — which get no token — can still merge.
 #
 # AUTH
 #   Needs read access to https://nuget.pkg.github.com/FS-GG. Provide a token via NUGET_FEED_TOKEN
@@ -57,7 +74,7 @@ done
 
 token="${NUGET_FEED_TOKEN:-${GH_TOKEN:-${GITHUB_TOKEN:-}}}"
 if [ -z "$token" ]; then
-  echo "::warning::apicompat-check: no feed token (NUGET_FEED_TOKEN / GH_TOKEN / GITHUB_TOKEN) — cannot read baselines; exiting advisory-clean." >&2
+  echo "::warning::apicompat-check: no feed token (NUGET_FEED_TOKEN / GH_TOKEN / GITHUB_TOKEN) — cannot read baselines. SKIPPING the check and exiting 0 WITHOUT verifying the API surface (deliberate fail-open: a fork PR gets no token, and this gate is required, so failing here would block every fork)." >&2
   exit 0
 fi
 feed_user="${NUGET_FEED_USER:-${GITHUB_ACTOR:-x-access-token}}"
@@ -111,7 +128,8 @@ check_version() {
   printf '%s.%s.%s' "${major:-0}" "${minor:-0}" "$(( ${patch:-0} + 1 ))"
 }
 
-echo "apicompat-check — advisory ApiCompat/Package Validation vs the org feed baseline"
+echo "apicompat-check — ApiCompat/Package Validation vs the org feed baseline"
+echo "REQUIRED gate: a BREAK below exits non-zero and blocks the merge (this is not an advisory run)."
 echo "feed: $FEED_URL   projects: ${#PROJECTS[@]}"
 echo
 
