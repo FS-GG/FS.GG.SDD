@@ -160,3 +160,47 @@ module UnauthoredScaffoldTests =
         // Named by the id the PLAN carries, so the author can actually go and find the entry.
         Assert.Contains("PD-014", diagnostic.RelatedIds)
         Assert.DoesNotContain("PD-001", diagnostic.RelatedIds)
+
+    /// Whitespace is not authorship, and this is the failure leg that says so.
+    ///
+    /// The gate compares the scaffold's prose verbatim, so anything that perturbs a line's bytes
+    /// without a human reading it reopens the hole. Trailing whitespace is the cheap way in: a
+    /// `markdownlint --fix`, an editor that does not strip on save, a copy-paste out of a browser.
+    /// Nobody typed a decision — but every line differs, nothing matches, `analyze` writes
+    /// `analysis.json`, and a plan that is scaffold top to bottom walks to `ship`. Green, not red,
+    /// which is the shape of every defect epic #266 is chasing.
+    ///
+    /// So the comparison normalizes the ends of BOTH sides: same prose, stray space, still blocked.
+    [<Fact>]
+    let ``trailing whitespace is not authorship — the gate does not key on it`` () =
+        let root = scaffoldOnlyProject ()
+
+        let path = $"work/{workId}/plan.md"
+
+        // A whitespace-only pass over every scaffolded entry. Not one word has changed.
+        TestSupport.readRelative root path
+        |> fun text ->
+            text.Split '\n'
+            |> Array.map (fun line ->
+                if line.TrimStart().StartsWith "-" then
+                    line.TrimEnd() + "  "
+                else
+                    line)
+            |> String.concat "\n"
+        |> TestSupport.writeRelative root path
+
+        let report = TestSupport.runAnalyze root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+        let diagnostic =
+            report.Diagnostics
+            |> List.find (fun diagnostic -> diagnostic.Id = "unauthoredScaffoldContent")
+
+        Assert.Contains("PD-001", diagnostic.RelatedIds)
+        Assert.Contains("GV-001", diagnostic.RelatedIds)
+
+        Assert.False(
+            TestSupport.existsRelative root $"readiness/{workId}/analysis.json",
+            "analyze wrote analysis.json over scaffold content that only had whitespace added"
+        )

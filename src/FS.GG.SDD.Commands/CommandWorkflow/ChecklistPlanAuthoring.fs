@@ -956,8 +956,15 @@ Prose status: {status}
 
         // "- PD-001 [FR-001] complete: ..." -> "[FR-001] complete: ..." — everything the scaffold
         // wrote except the id it happened to number the entry with.
+        //
+        // TrimEnd is load-bearing, not tidiness: surrounding whitespace is not authorship. Both sides
+        // of the comparison are normalized here, so a scaffold line that picked up a trailing space —
+        // a markdownlint pass, an editor save, a copy-paste — still matches the line the tool wrote.
+        // Without it the gate fails OPEN on a whitespace-only edit: the plan is scaffold top to
+        // bottom, nothing matches, `analyze` writes analysis.json, and the lifecycle proceeds on
+        // prose no human ever read. That is the exact fail-open this gate exists to close.
         let bodyOf (line: string) =
-            let entry = line.TrimStart('-', ' ')
+            let entry = line.TrimStart('-', ' ').TrimEnd()
 
             match entry.IndexOf ' ' with
             | -1 -> entry
