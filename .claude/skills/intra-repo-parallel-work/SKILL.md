@@ -84,6 +84,30 @@ If the work is cross-repo (needs a change/release from *another* FS-GG repo), us
 
 ## The loop
 
+**Once per machine, first:** `dotnet tool install -g FS.GG.Coord.Cli`
+
+Optional, and safe to skip — `fsgg-coord` works exactly as before without it. What it buys is the
+**shadow** (ADR-0034): with an engine present, every `take`/`next`/`batch` is decided by *both* the
+bash client and the typed F# engine, **bash's answer is still the one you get**, and any disagreement
+is logged (`fsgg-coord divergence`). Your run does not change — not the answer, not the exit code.
+
+It is worth the one command because the shadow is how the port earns its cutover: bash stays
+authoritative until that log has been clean across the live fleet for three consecutive days, and the
+log only fills where an engine exists. A worker without one contributes no evidence, and the clock
+does not move.
+
+**And when your loop is done, publish what it saw — your local log is not evidence until you do:**
+
+```sh
+fsgg-coord divergence --publish                # one command, at the END of your run
+fsgg-coord divergence --fleet                  # where the FLEET stands: 0 green · 1 red · 3 no verdict
+```
+
+The log lives in a *cache dir* on one machine, which nothing collects and which dies with your
+container. `--publish` sends a per-day summary to the fleet ledger over REST (no GraphQL budget, and
+never one comment per call). The criterion is about the **live fleet**, and a worker who shadows but
+never publishes has moved the clock exactly as far as one who never shadowed at all (#634).
+
 ```sh
 eval "$(scripts/fsgg-coord whoami --mint)"     # MINT one; never invent or copy one (#419, #551)
 scripts/fsgg-coord take --repo <this-repo>     # pick + claim the next SCHEDULABLE item, retrying a lost race
