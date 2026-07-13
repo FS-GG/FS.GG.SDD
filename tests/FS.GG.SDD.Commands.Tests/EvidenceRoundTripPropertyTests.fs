@@ -185,6 +185,33 @@ module EvidenceRoundTripPropertyTests =
                             Reason = reason }
               } ]
 
+    // FS.GG.SDD#350: the receipt round-trips through the SAME shared field list as every other
+    // authored field, so it is held to the same property. A receipt the renderer emitted and the
+    // reader dropped would silently un-observe every obligation on the next `evidence` run — which is
+    // exactly the read/write asymmetry (#180/#181) the codec exists to make unrepresentable.
+    //
+    // The generator ranges over BOTH outcomes and over counts that are not all zero, so the property
+    // covers a failing receipt too — not just the shape the happy path records.
+    let private observedRun: Gen<ObservedRun option> =
+        Gen.oneof
+            [ Gen.constant None
+              gen {
+                  let! source = nonNullSafeToken
+                  let! hex = Gen.elements [ 'a' .. 'f' ] |> Gen.arrayOfLength 64
+                  let! passed = Gen.choose (0, 5000)
+                  let! failed = Gen.choose (0, 50)
+                  let! skipped = Gen.choose (0, 50)
+
+                  return
+                      Some
+                          { Source = source
+                            Digest = "sha256:" + System.String(hex)
+                            Outcome = (if failed = 0 then "passed" else "failed")
+                            Passed = passed
+                            Failed = failed
+                            Skipped = skipped }
+              } ]
+
     let private evidenceKind: Gen<EvidenceKind> =
         Gen.elements
             [ EvidenceKind.Implementation
@@ -233,6 +260,7 @@ module EvidenceRoundTripPropertyTests =
             let! result = evidenceResult
             let! synthetic = Gen.elements [ true; false ]
             let! syntheticDisclosure = disclosure
+            let! receipt = observedRun
             let! rationale = optScalar
             let! owner = optScalar
             let! scope = optScalar
@@ -255,6 +283,7 @@ module EvidenceRoundTripPropertyTests =
                   Result = result
                   Synthetic = synthetic
                   SyntheticDisclosure = syntheticDisclosure
+                  ObservedRun = receipt
                   Rationale = rationale
                   Owner = owner
                   Scope = scope
@@ -315,6 +344,7 @@ module EvidenceRoundTripPropertyTests =
            Result = declaration.Result
            Synthetic = declaration.Synthetic
            SyntheticDisclosure = declaration.SyntheticDisclosure
+           ObservedRun = declaration.ObservedRun
            Rationale = declaration.Rationale
            Owner = declaration.Owner
            Scope = declaration.Scope
@@ -372,6 +402,18 @@ module EvidenceRoundTripPropertyTests =
                 Some
                     { StandsInFor = "null"
                       Reason = "stub" }
+              // #350: the receipt is an authored field like any other AS FAR AS THE CODEC IS
+              // CONCERNED — it is recorded rather than typed, but it still has to survive
+              // render→parse, or the next `evidence` run drops it and silently un-observes the
+              // obligation.
+              ObservedRun =
+                Some
+                    { Source = "artifacts/test-results.trx"
+                      Digest = "sha256:" + String.replicate 64 "a"
+                      Outcome = "passed"
+                      Passed = 1630
+                      Failed = 0
+                      Skipped = 4 }
               Rationale = Some "why"
               Owner = Some "team"
               Scope = None

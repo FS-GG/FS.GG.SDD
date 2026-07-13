@@ -592,10 +592,17 @@ tasks:
     /// check as `ED-` — nothing ever ran a test (.github#417: "despite the name, it observes no test").
     ///
     /// Disclosing the evidence counters while leaving this one bare would print an honest line
-    /// directly above a dishonest one, which is worse than disclosing neither. Like its `ED-` twin,
-    /// this is written to fail — correctly — the day FS.GG.SDD#350 observes a run.
+    /// directly above a dishonest one, which is worse than disclosing neither.
+    ///
+    /// FS.GG.SDD#350 HAS NOW LANDED, and this assertion deliberately still holds. It was written as a
+    /// tripwire for "SDD can never observe a run"; what it actually pins now is narrower and still
+    /// worth pinning: **this fixture records no receipt**, so its obligations are self-attested. That
+    /// is FR-010 — a work item that declares no `observedRun` behaves exactly as it did before #350,
+    /// which is what makes the receipt a non-breaking addition rather than a fleet-wide stoppage.
+    ///
+    /// The positive half — a receipt makes `observed` rise — lives in `ObservedRunCommandTests`.
     [<Fact>]
-    let ``nothing is observed - the TD- mirror discloses its basis too`` () =
+    let ``an obligation with no receipt is self-attested - the TD- mirror discloses its basis too`` () =
         let root = initializedEvidencedProject ()
         let report = TestSupport.runVerify root workId title
 

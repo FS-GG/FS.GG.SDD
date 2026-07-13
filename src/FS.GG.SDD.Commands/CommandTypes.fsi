@@ -125,6 +125,13 @@ module CommandTypes =
           // (feature 077). Pre-maps each newly scaffolded obligation to a verification-kind source
           // pointing at this test path. `None` ⇒ inert (output byte-identical aside from refs).
           FromTests: string option
+          // Evidence input (`fsgg-sdd evidence --from-test-report <path>`); ignored by other commands
+          // (FS.GG.SDD#350, ADR-0035). A runner-produced TRX / JUnit report that SDD reads, parses,
+          // and hashes into an `observedRun` receipt. `None` ⇒ inert; no receipt is recorded and every
+          // obligation stays self-attested.
+          //
+          // Distinct from `FromTests`: that names where the tests LIVE, this names a REPORT OF A RUN.
+          FromTestReport: string option
           // Surface input (`fsgg-sdd surface --update`); ignored by other commands (feature 086).
           // `true` ⇒ refresh the `docs/api-surface/**` baselines from the authored `.fsi`
           // signatures; `false` (default, or `--check`) ⇒ read-only drift check.
@@ -286,8 +293,11 @@ module CommandTypes =
             ObligationCount: int
             EvidenceSupportedCount: int
             /// FS.GG.SDD#398: the two halves of `EvidenceSupportedCount`
-            /// (`supported = selfAttested + observed`). `EvidenceObservedCount` is `0` today — SDD
-            /// invokes no test runner — and saying so beside the green is the point.
+            /// (`supported = selfAttested + observed`). FS.GG.SDD#350 / ADR-0035 made
+            /// `EvidenceObservedCount` real: it counts the obligations discharged by a run SDD
+            /// *read* (an `observedRun` receipt), and `EvidenceSelfAttestedCount` the ones resting on
+            /// the author's word. A work item that records no receipt still reports
+            /// `selfAttested == supported, observed == 0` — which is the disclosure, not a bug.
             EvidenceSelfAttestedCount: int
             EvidenceObservedCount: int
             EvidenceDeferredCount: int
@@ -297,8 +307,8 @@ module CommandTypes =
             EvidenceInvalidCount: int
             TestSatisfiedCount: int
             /// FS.GG.SDD#398: the two halves of `TestSatisfiedCount`. The name says a test was
-            /// satisfied; nothing ever ran one. `TestObservedCount` is `0` today, and that is why
-            /// these exist beside it.
+            /// satisfied — and until FS.GG.SDD#350 nothing had ever run one. `TestObservedCount` now
+            /// counts the obligations backed by a receipt SDD parsed; the rest are self-attested.
             TestSelfAttestedCount: int
             TestObservedCount: int
             TestDeferredCount: int
@@ -327,8 +337,11 @@ module CommandTypes =
             VerificationReadiness: string
             EvidenceSupportedCount: int
             /// FS.GG.SDD#398: the two halves of `EvidenceSupportedCount`
-            /// (`supported = selfAttested + observed`). `EvidenceObservedCount` is `0` today — SDD
-            /// invokes no test runner — and saying so beside the green is the point.
+            /// (`supported = selfAttested + observed`). FS.GG.SDD#350 / ADR-0035 made
+            /// `EvidenceObservedCount` real: it counts the obligations discharged by a run SDD
+            /// *read* (an `observedRun` receipt), and `EvidenceSelfAttestedCount` the ones resting on
+            /// the author's word. A work item that records no receipt still reports
+            /// `selfAttested == supported, observed == 0` — which is the disclosure, not a bug.
             EvidenceSelfAttestedCount: int
             EvidenceObservedCount: int
             EvidenceDeferredCount: int

@@ -488,6 +488,14 @@ module ArtifactCodecTests =
                     Some
                         { StandsInFor = "standsval"
                           Reason = "reasonval" }
+                ObservedRun =
+                    Some
+                        { Source = "observedsourceval"
+                          Digest = "sha256:" + String.replicate 64 "b"
+                          Outcome = "passed"
+                          Passed = 7
+                          Failed = 0
+                          Skipped = 3 }
                 Rationale = Some "rationaleval"
                 Owner = Some "ownerval"
                 Scope = Some "scopeval"
@@ -514,6 +522,7 @@ module ArtifactCodecTests =
               "Result", [ "result", "result: advisory" ]
               "Synthetic", [ "synthetic", "synthetic: true" ]
               "SyntheticDisclosure", [ "syntheticDisclosure", "syntheticDisclosure:\n  standsInFor: standsval" ]
+              "ObservedRun", [ "observedRun", "observedRun:\n  source: observedsourceval" ]
               "Rationale", [ "rationale", "rationale: rationaleval" ]
               "Owner", [ "owner", "owner: ownerval" ]
               "Scope", [ "scope", "scope: scopeval" ]

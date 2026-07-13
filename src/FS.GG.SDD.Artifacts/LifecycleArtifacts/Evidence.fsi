@@ -40,29 +40,48 @@ module Evidence =
 
     type SyntheticDisclosure = { StandsInFor: string; Reason: string }
 
+    /// A run the tool **read**, rather than a `pass` an agent **typed** (FS.GG.SDD#350, ADR-0035).
+    /// Recorded by `evidence --from-test-report` from a TRX / JUnit report: every field is derived from the
+    /// report SDD opened, and `Digest` in particular cannot be authored.
+    ///
+    /// It does not make evidence unforgeable — it moves the bar from an assertion to an artifact of a
+    /// declared format, whose counts must agree and whose file must still be on disk at `verify`.
+    type ObservedRun =
+        { Source: string
+          Digest: string
+          Outcome: string
+          Passed: int
+          Failed: int
+          Skipped: int }
+
     type EvidenceDeclaration =
-        { Id: EvidenceId
-          Kind: EvidenceKind
-          Subject: EvidenceSubject
-          TaskRefs: TaskId list
-          RequirementRefs: RequirementId list
-          AcceptanceScenarioRefs: AcceptanceScenarioId list
-          ClarificationDecisionRefs: DecisionId list
-          ChecklistResultRefs: ChecklistResultId list
-          PlanDecisionRefs: PlanDecisionId list
-          ObligationRefs: string list
-          ArtifactRefs: ArtifactRef list
-          SourceRefs: EvidenceSourceReference list
-          Result: string
-          Synthetic: bool
-          SyntheticDisclosure: SyntheticDisclosure option
-          Rationale: string option
-          Owner: string option
-          Scope: string option
-          LaterLifecycleVisibility: string option
-          Notes: string list
-          Source: ArtifactRef
-          SourceLocation: SourceLocation option }
+        {
+            Id: EvidenceId
+            Kind: EvidenceKind
+            Subject: EvidenceSubject
+            TaskRefs: TaskId list
+            RequirementRefs: RequirementId list
+            AcceptanceScenarioRefs: AcceptanceScenarioId list
+            ClarificationDecisionRefs: DecisionId list
+            ChecklistResultRefs: ChecklistResultId list
+            PlanDecisionRefs: PlanDecisionId list
+            ObligationRefs: string list
+            ArtifactRefs: ArtifactRef list
+            SourceRefs: EvidenceSourceReference list
+            Result: string
+            Synthetic: bool
+            SyntheticDisclosure: SyntheticDisclosure option
+            /// FS.GG.SDD#350: the receipt, when a run was observed. `None` is the honest state for an
+            /// obligation discharged on the author's word — it is what `isSelfAttested` counts.
+            ObservedRun: ObservedRun option
+            Rationale: string option
+            Owner: string option
+            Scope: string option
+            LaterLifecycleVisibility: string option
+            Notes: string list
+            Source: ArtifactRef
+            SourceLocation: SourceLocation option
+        }
 
     type EvidenceObligation =
         { ObligationId: string
@@ -112,6 +131,26 @@ module Evidence =
         val disclosureDraftSeed: DisclosureDraft
         val disclosureFields: ArtifactCodec.FieldCodec<DisclosureDraft> list
 
+        /// FS.GG.SDD#350. The receipt's read draft: `source`/`digest`/`outcome` are null-aware, so a
+        /// partial or blank mapping lifts to `None` (no receipt) rather than to a receipt made of
+        /// empty strings. The counts are plain ints — a junk token reads as `0` and
+        /// `observedRunInconsistency` judges it, rather than the codec dropping the whole receipt.
+        type ObservedRunDraft =
+            { Source: string option
+              Digest: string option
+              Outcome: string option
+              Passed: int
+              Failed: int
+              Skipped: int }
+
+        val observedRunDraftSeed: ObservedRunDraft
+        val observedRunFields: ArtifactCodec.FieldCodec<ObservedRunDraft> list
+
+        /// A receipt exists only if it names BOTH what was read and the hash of what was read: a
+        /// source with no digest is a filename, a digest with no source is a number.
+        val liftObservedRun: draft: ObservedRunDraft -> ObservedRun option
+        val lowerObservedRun: run: ObservedRun -> ObservedRunDraft
+
         /// The whole authored evidence declaration as one shared field list — drives both the
         /// reader (`parseEvidenceArtifact`) and the renderer (`HandlersEvidence`). `id` is framed by
         /// the artifact-level renderer and read by the semantic layer, so it is not a field here.
@@ -143,9 +182,14 @@ module Evidence =
     /// artifact. A synthetic pass and a deferral both fall outside it.
     val passesWithoutRenderedArtifact: declaration: EvidenceDeclaration -> bool
 
-    /// Every locally-resolvable path this declaration cites: `artifactRefs` ∪ `sourceRefs[].path`
-    /// (FS.GG.SDD#349, FR-002). A `sourceRefs[].uri` is deliberately excluded — it is not a local
-    /// file and is never probed. Blanks are dropped; the result is deduplicated and sorted.
+    /// Every locally-resolvable path this declaration cites: `artifactRefs` ∪ `sourceRefs[].path` ∪
+    /// `observedRun.source` (FS.GG.SDD#349 FR-002; FS.GG.SDD#350 FR-009). A `sourceRefs[].uri` is
+    /// deliberately excluded — it is not a local file and is never probed. Blanks are dropped; the
+    /// result is deduplicated and sorted.
+    ///
+    /// Including the receipt's report here is what makes it *checked* rather than merely recorded: a
+    /// report deleted after recording turns its obligation `invalid` at `verify` through the existing
+    /// #349 cascade, with no new gate.
     val citedArtifactPaths: declaration: EvidenceDeclaration -> string list
 
     /// The cited-artifact existence rule, stated once for the `evidence` gate, the `ED-`
@@ -161,22 +205,25 @@ module Evidence =
     val missingCitedArtifacts: exists: (string -> bool) -> declaration: EvidenceDeclaration -> string list
 
     /// Does this declaration rest on a run the tool **observed**, rather than on the author's word?
-    /// (FS.GG.SDD#398, FR-001/FR-002.)
+    /// (FS.GG.SDD#398, FR-001/FR-002 — now answered by FS.GG.SDD#350 / ADR-0035.)
     ///
-    /// Today this is `false` for every declaration, and that is the disclosure — not an oversight.
-    /// SDD invokes no test runner: `Process.Start` occurs once in `src/` (`CommandEffects.fs`),
-    /// serving `scaffold`'s provider and `upgrade`'s self-update, and no evidence field carries a run
-    /// receipt. So every obligation that reaches `supported` does so on an assertion by the same
-    /// agent that authored the work — which is what FS.GG.SDD#350 exists to fix.
+    /// `true` exactly when the declaration carries an `ObservedRun` receipt whose run passed
+    /// (`outcome: passed` ∧ `failed = 0`). #398 wrote this as a function over the declaration rather
+    /// than the constant `false` it then returned, so that #350 could change **this body alone** —
+    /// and it did: `evidenceObservedCount` now rises from `verify.json` all the way to the committed
+    /// `ship-verdict.json` with no schema, projection, or consumer changed.
     ///
-    /// It is a **function over the declaration, not a constant**, so the counters that read it are
-    /// computed rather than hardcoded. When #350's observed-receipt model lands, this is the one
-    /// place that learns to say `true`, and `evidenceObservedCount` rises from `verify.json` all the
-    /// way to the committed `ship-verdict.json` without a schema, projection, or consumer changing.
-    ///
-    /// Total and I/O-free: reading a receipt would be an effect at the edge, and its *result* would
-    /// be threaded in here — exactly as `missingCitedArtifacts` takes an injected `exists`.
+    /// Total and I/O-free: the report was read at the effect edge, and only its *result* reaches
+    /// here — exactly as `missingCitedArtifacts` takes an injected `exists`.
     val isObserved: declaration: EvidenceDeclaration -> bool
+
+    /// The receipt's internal-consistency rule (FS.GG.SDD#350, FR-005). `TestReport.parse` derives
+    /// `Outcome` from the counts, so a *recorded* receipt cannot fail this — but an **authored** one
+    /// can, and `evidence.yml` is a text file. Rejecting an incoherent receipt is what stops it from
+    /// becoming a new place to type `pass`.
+    ///
+    /// Returns the reason, or `None` when the receipt is coherent.
+    val observedRunInconsistency: run: ObservedRun -> string option
 
     /// Does this declaration claim a real pass — `result: pass`, not disclosed `synthetic`? The
     /// satisfaction rule, named once because the attestation split below partitions exactly it.

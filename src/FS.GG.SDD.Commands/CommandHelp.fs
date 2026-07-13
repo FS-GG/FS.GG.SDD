@@ -84,6 +84,12 @@ module CommandHelp =
                   "--from-tests"
                   (Some "<path>")
                   "Seed each scaffolded obligation with a verification source pointing at this test path."
+              // FS.GG.SDD#350 / ADR-0035: record a receipt for a run SDD actually read. Note the two
+              // flags name DIFFERENT things — where the tests live, versus a report of a run.
+              flag
+                  "--from-test-report"
+                  (Some "<path>")
+                  "Record an observedRun receipt from a TRX or JUnit report: SDD parses it and hashes its bytes. SDD never runs the suite itself."
               dryRun ]
         | Plan ->
             [ work
