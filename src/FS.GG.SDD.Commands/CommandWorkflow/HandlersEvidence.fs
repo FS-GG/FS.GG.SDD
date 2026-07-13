@@ -162,6 +162,116 @@ module internal HandlersEvidence =
         |> List.sort
         |> List.map ReadFile
 
+    // ---- FS.GG.SDD#350 / ADR-0035: the observed run receipt ----
+
+    /// The raw, trimmed `--from-test-report` value, if the author gave one.
+    ///
+    /// NOT `--from-tests`. That flag (feature 077) names where the tests *live* — a project path
+    /// seeded onto scaffolded obligations — and committed tests pass it a directory. ADR-0035 assumed
+    /// the two were the same flag, having read `--from-tests` as already taking a report path; it does
+    /// not. Overloading it would turn a perfectly good feature-077 invocation into a blocking
+    /// "unparseable report" the moment it was pointed at the directory it is *documented* to take.
+    let private requestedTestReport (request: CommandRequest) =
+        request.FromTestReport
+        |> Option.map _.Trim()
+        |> Option.filter (fun path -> path <> "")
+
+    /// The contained, normalized report path — or `None` when the author gave none, or gave one that
+    /// escapes the repository.
+    ///
+    /// Containment is decided on the **raw** value, never the normalized one, because normalization
+    /// strips a leading `/` and would quietly turn an absolute path into a relative one. That is the
+    /// FS.GG.SDD#185 lesson (`surface`'s `rootEscape`), restated here rather than re-learned: an
+    /// escaping path is refused *lexically*, before any effect is planned for it, so a `..` chain is
+    /// never resolved at the edge.
+    let testReportPath (request: CommandRequest) : string option =
+        requestedTestReport request
+        |> Option.filter citedPathIsContained
+        |> Option.map normalizeRelativePath
+
+    /// FS.GG.SDD#350. Unlike #349's cited paths — which are *artifact* data, unknowable until
+    /// `evidence.yml` has been read — the report path is *request* data and could be planned in the
+    /// first wave. It rides the existing second wave anyway: the machinery is already there, the
+    /// guard against re-planning is already there, and one extra in-memory fold is cheaper than a
+    /// second way of doing the same thing.
+    ///
+    /// An escaping path yields **no effect at all** (`testReportPath` filtered it out). The refusal
+    /// is reported by `resolveObservedRun`, from the raw request — not from a read that never happened.
+    let testReportReadEffects (model: CommandModel) : CommandEffect list =
+        let alreadyPlanned = plannedReadPaths model |> Set.ofList
+
+        match testReportPath model.Request with
+        | Some path when not (Set.contains path alreadyPlanned) -> [ ReadFile path ]
+        | _ -> []
+
+    /// The declarations a suite run can discharge: a TEST obligation claiming a REAL pass.
+    ///
+    /// Named ONCE, because two call sites need it and they must never disagree. `resolveObservedRun`
+    /// asks "is anyone claiming a pass this failing run contradicts?"; `recordObservedRun` asks "whom
+    /// does this passing run discharge?". If those two answered over different sets, the blocking
+    /// diagnostic and the recording would be arguing about who claimed what.
+    ///
+    /// Judgement is not observable — a review, a deferral, or a disclosed synthetic says nothing about
+    /// what ran — so stamping those would manufacture the appearance of observation, the overclaim
+    /// ADR-0035 explicitly warns against.
+    let private dischargedByARun (declaration: EvidenceDeclaration) =
+        declaration.Kind = EvidenceKind.Verification && claimsRealPass declaration
+
+    /// Resolve the receipt from the interpreted effect log: the report SDD actually read, parsed, and
+    /// hashed. Returns the receipt (when there is one to record) and any blocking diagnostics.
+    ///
+    /// Every failure leg records **nothing** and blocks. A gate that degraded to "no receipt" on an
+    /// unreadable report would fail open in a brand-new place — the exact class .github#266 exists to
+    /// close — and it would do so silently, because "no receipt" is also the honest state of every
+    /// obligation that never asked for one.
+    let resolveObservedRun (workId: string) (model: CommandModel) (merged: EvidenceArtifact) =
+        let artifactPath = evidencePath workId
+
+        let claimants = merged.Evidence |> List.filter dischargedByARun
+
+        match requestedTestReport model.Request with
+        | None -> None, []
+        | Some raw ->
+            match testReportPath model.Request with
+            | None -> None, [ DiagnosticConstructors.testReportPathEscape artifactPath raw ]
+            | Some path ->
+                match snapshot path model with
+                | None -> None, [ DiagnosticConstructors.testReportNotFound artifactPath path ]
+                | Some report ->
+                    match TestReport.parse path report.Text with
+                    | Error reason -> None, [ DiagnosticConstructors.testReportUnparseable artifactPath reason ]
+                    | Ok run when run.Failed > 0 ->
+                        // The run is real and it FAILED, while an obligation claims a pass. Block, and
+                        // record nothing — see `observedRunFailed`. With no claimant there is nothing
+                        // to contradict, so a failing run is simply not a receipt: silent, not green.
+                        if List.isEmpty claimants then
+                            None, []
+                        else
+                            None,
+                            [ DiagnosticConstructors.observedRunFailed
+                                  artifactPath
+                                  path
+                                  run.Failed
+                                  (claimants |> List.map _.Id.Value |> List.sort) ]
+                    | Ok run -> Some run, []
+
+    /// Stamp the receipt onto every obligation the run discharges. Idempotent: re-running
+    /// `--from-test-report` over the same report rewrites the same bytes, because every field of the
+    /// receipt is derived from the report.
+    let recordObservedRun (run: ObservedRun option) (artifact: EvidenceArtifact) =
+        match run with
+        | None -> artifact
+        | Some run ->
+            { artifact with
+                Evidence =
+                    artifact.Evidence
+                    |> List.map (fun declaration ->
+                        if dischargedByARun declaration then
+                            { declaration with
+                                ObservedRun = Some run }
+                        else
+                            declaration) }
+
     /// The existence verdict, read back off the interpreted effect log. A path counts as present only
     /// when it was probed *and* the probe returned a snapshot; a path that was never probed is treated
     /// as present, so a planning bug degrades to today's behaviour rather than to a false refusal.
@@ -381,6 +491,11 @@ module internal HandlersEvidence =
           Result = "missing"
           Synthetic = false
           SyntheticDisclosure = None
+          // #350: a scaffolded obligation is `result: missing` — it claims nothing, so there is
+          // nothing for a run to have observed. The receipt is stamped by a LATER `--from-tests` run,
+          // once the author has flipped the result to a real pass. Seeding one here would record an
+          // observation of an obligation nobody has yet claimed to have discharged.
+          ObservedRun = None
           Rationale = None
           Owner = None
           Scope = None
@@ -651,6 +766,17 @@ module internal HandlersEvidence =
               missingVisualInspectionArtifact path missingVisualArtifacts
           if not (List.isEmpty missingArtifactPaths) then
               evidenceArtifactNotFound path missingArtifactPaths
+          // FS.GG.SDD#350 (FR-005). A receipt SDD recorded cannot reach here incoherent —
+          // `TestReport.parse` derives `outcome` from the counts. A receipt somebody TYPED can, and
+          // `evidence.yml` is a text file. Without this, `observedRun` would just be a new and more
+          // official-looking place to write `pass` by hand.
+          for declaration in artifact.Evidence do
+              match declaration.ObservedRun with
+              | Some run ->
+                  match observedRunInconsistency run with
+                  | Some reason -> observedRunInconsistent path [ declaration.Id.Value ] reason
+                  | None -> ()
+              | None -> ()
           if evidenceSourceSnapshotStale currentSnapshots artifact.SourceSnapshots then
               staleEvidenceSource
                   path
@@ -1000,13 +1126,22 @@ sourceAnalysis: {analysisPath workId}
 
                         let obligations = evidenceObligations taskFacts
 
-                        let merged, mergeDiagnostics =
+                        let mergedBeforeReceipt, mergeDiagnostics =
                             mergeEvidenceArtifacts
                                 workId
                                 model.Request.FromTests
                                 existingArtifact
                                 inputArtifact
                                 obligations
+
+                        // FS.GG.SDD#350 / ADR-0035. Record the receipt for the run SDD read — the one
+                        // step in this pipeline where a fact enters `evidence.yml` without an author
+                        // typing it. `resolveObservedRun` decides FROM the merged artifact (it needs to
+                        // know who is claiming a pass), and `recordObservedRun` stamps it back on.
+                        let observedRun, testReportDiagnostics =
+                            resolveObservedRun workId model mergedBeforeReceipt
+
+                        let merged = recordObservedRun observedRun mergedBeforeReceipt
 
                         // `artifact` re-stamps the snapshots to the sources as they are now; it is what
                         // gets written back. Validation must see `merged` — the artifact as recorded on
@@ -1040,7 +1175,10 @@ sourceAnalysis: {analysisPath workId}
                         let text = evidenceArtifactText workId artifact summary
 
                         Some artifact,
-                        mergeDiagnostics @ validationDiagnostics @ dispositionDiagnostics,
+                        mergeDiagnostics
+                        @ testReportDiagnostics
+                        @ validationDiagnostics
+                        @ dispositionDiagnostics,
                         Some text,
                         Some summary
                     | _ -> None, [], None, None

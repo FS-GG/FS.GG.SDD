@@ -61,6 +61,7 @@ let printUnknown commandValue =
           Artifact = None
           Explain = false
           FromTests = None
+          FromTestReport = None
           SurfaceUpdate = false
           AcceptUpstream = false }
 
@@ -181,6 +182,7 @@ let private helpRequest command format =
       Artifact = None
       Explain = false
       FromTests = None
+      FromTestReport = None
       SurfaceUpdate = false
       AcceptUpstream = false }
 
@@ -378,6 +380,9 @@ let run args =
                       // Feature 077: `evidence --from-tests <path>` pre-maps scaffolded obligations to
                       // a proving test file.
                       FromTests = optionValue "--from-tests" rest
+                      // FS.GG.SDD#350: the run receipt. A separate flag from `--from-tests`,
+                      // which names where the tests live rather than a report of a run.
+                      FromTestReport = optionValue "--from-test-report" rest
                       // Feature 086: `surface --update` refreshes the docs/api-surface baselines;
                       // default (or `--check`) is the read-only drift check.
                       SurfaceUpdate = hasFlag "--update" rest

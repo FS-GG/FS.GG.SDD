@@ -764,6 +764,72 @@ module internal DiagnosticConstructors =
             "Cite artifacts by a repository-relative path with no '..' segment. A path outside the workspace proves nothing, and is refused before it is ever read."
             values
 
+    // FS.GG.SDD#350 / ADR-0035. The three ways a run receipt can fail to be believable. All three are
+    // BLOCKING, and all three record nothing: a gate that degraded to "no receipt" on a malformed
+    // report would fail open in a brand-new place, which is the exact class epic .github#266 exists
+    // to close ("a gate must fail closed when its subject is absent, stale, or unreachable").
+
+    /// The report is there but SDD cannot get a believable run out of it: not XML, no root, a root
+    /// that is neither a TRX `<TestRun>` nor a JUnit `<testsuites>`/`<testsuite>` — or one that parsed
+    /// perfectly and records **no executed tests**, which is not a run and must never become a passing
+    /// receipt. The parser's own reason is carried through verbatim, because the author has to know
+    /// WHICH of those it was to fix it.
+    let testReportUnparseable path (reason: string) =
+        errorDiagnostic
+            "evidence.testReportUnparseable"
+            (Some path)
+            $"The test report yielded no usable run, so nothing was observed: {reason}"
+            "Point --from-test-report at a TRX or JUnit XML report from a run that actually executed tests. SDD records a receipt from a report it can read; it never runs the suite itself."
+            [ path ]
+
+    /// The report is not on disk. Deliberately NOT silent: `--from-tests` naming a report that is not
+    /// there is the author believing a run was observed when none was, and answering that with a
+    /// quiet no-op would leave the obligation self-attested while looking recorded.
+    let testReportNotFound path (report: string) =
+        errorDiagnostic
+            "evidence.testReportNotFound"
+            (Some path)
+            $"The test report '{report}' does not exist, so no run was observed."
+            "Run the suite to produce the report, or correct the --from-tests path. A report that is not on disk proves nothing."
+            [ report ]
+
+    /// The `--from-tests` path escapes the repository (absolute, or carrying a `..` segment). Refused
+    /// LEXICALLY, before any read effect is planned — the same rule, and the same reason, as #365:
+    /// a `..` chain resolved at the edge would let a report outside the workspace discharge the gate.
+    /// Nothing is read, so nothing can be recorded.
+    let testReportPathEscape path (report: string) =
+        errorDiagnostic
+            "evidence.testReportPathEscape"
+            (Some path)
+            $"The test report path '{report}' is not repository-relative — it must stay inside the repository and contain no '..' segment."
+            "Pass --from-tests a repository-relative path. A report outside the workspace proves nothing, and is refused before it is ever read."
+            [ report ]
+
+    /// The report parsed, and it records failures — while an obligation claims `result: pass`. The
+    /// artifact and the claim contradict each other, and the artifact is the one nobody typed.
+    ///
+    /// Nothing is recorded: a failing run is not a receipt anybody wants, and stamping it would leave
+    /// a declaration carrying a receipt that `isObserved` rejects — indistinguishable, downstream,
+    /// from having no receipt at all. The author fixes the suite and re-records.
+    let observedRunFailed path (report: string) (failed: int) (ids: string list) =
+        errorDiagnostic
+            "evidence.observedRunFailed"
+            (Some path)
+            $"The observed run in '{report}' recorded {failed} failing test(s), but evidence claims a pass."
+            "Fix the failing tests and re-run `evidence --from-test-report`, or stop claiming a pass. A run that failed does not support an obligation that says it passed."
+            ids
+
+    /// A receipt that contradicts itself. `TestReport.parse` DERIVES `outcome` from the counts, so it
+    /// cannot produce one of these — this is reserved for a receipt somebody hand-wrote into
+    /// `evidence.yml`, which is exactly the move the receipt exists to stop being worth making.
+    let observedRunInconsistent path (ids: string list) (reason: string) =
+        errorDiagnostic
+            "evidence.observedRunInconsistent"
+            (Some path)
+            $"An observedRun receipt contradicts itself: {reason}"
+            "Do not hand-write observedRun. Record it with `fsgg-sdd evidence --from-tests <report>`, which derives every field from a report it read."
+            ids
+
     let missingRequiredSkill path ids =
         errorDiagnostic
             "evidence.missingRequiredSkill"

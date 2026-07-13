@@ -44,29 +44,53 @@ module Evidence =
 
     type SyntheticDisclosure = { StandsInFor: string; Reason: string }
 
+    /// A run the tool **read**, rather than a `pass` an agent **typed** (FS.GG.SDD#350, ADR-0035).
+    ///
+    /// Recorded by `evidence --from-test-report` from a runner-produced report (TRX / JUnit XML): SDD opens
+    /// the file, parses it, and hashes its bytes. Every field here is derived from that report — none
+    /// is authored, and `Digest` in particular cannot be supplied by the author.
+    ///
+    /// This does NOT make evidence unforgeable, and must not be sold as if it did. It moves the bar
+    /// from an assertion to an artifact of a declared format, whose counts must agree and whose file
+    /// must still be on disk at `verify` (via `citedArtifactPaths` → the #349 cascade). Trusting the
+    /// receipt's *provenance* is CI's job; deciding what an unobserved obligation costs is
+    /// Governance's (ADR-0035 §3).
+    type ObservedRun =
+        { Source: string
+          Digest: string
+          Outcome: string
+          Passed: int
+          Failed: int
+          Skipped: int }
+
     type EvidenceDeclaration =
-        { Id: EvidenceId
-          Kind: EvidenceKind
-          Subject: EvidenceSubject
-          TaskRefs: TaskId list
-          RequirementRefs: RequirementId list
-          AcceptanceScenarioRefs: AcceptanceScenarioId list
-          ClarificationDecisionRefs: DecisionId list
-          ChecklistResultRefs: ChecklistResultId list
-          PlanDecisionRefs: PlanDecisionId list
-          ObligationRefs: string list
-          ArtifactRefs: ArtifactRef list
-          SourceRefs: EvidenceSourceReference list
-          Result: string
-          Synthetic: bool
-          SyntheticDisclosure: SyntheticDisclosure option
-          Rationale: string option
-          Owner: string option
-          Scope: string option
-          LaterLifecycleVisibility: string option
-          Notes: string list
-          Source: ArtifactRef
-          SourceLocation: SourceLocation option }
+        {
+            Id: EvidenceId
+            Kind: EvidenceKind
+            Subject: EvidenceSubject
+            TaskRefs: TaskId list
+            RequirementRefs: RequirementId list
+            AcceptanceScenarioRefs: AcceptanceScenarioId list
+            ClarificationDecisionRefs: DecisionId list
+            ChecklistResultRefs: ChecklistResultId list
+            PlanDecisionRefs: PlanDecisionId list
+            ObligationRefs: string list
+            ArtifactRefs: ArtifactRef list
+            SourceRefs: EvidenceSourceReference list
+            Result: string
+            Synthetic: bool
+            SyntheticDisclosure: SyntheticDisclosure option
+            /// FS.GG.SDD#350: the receipt, when a run was observed. `None` is the honest state for an
+            /// obligation discharged on the author's word — it is what `isSelfAttested` counts.
+            ObservedRun: ObservedRun option
+            Rationale: string option
+            Owner: string option
+            Scope: string option
+            LaterLifecycleVisibility: string option
+            Notes: string list
+            Source: ArtifactRef
+            SourceLocation: SourceLocation option
+        }
 
     type EvidenceObligation =
         { ObligationId: string
@@ -220,7 +244,15 @@ module Evidence =
           for source in declaration.SourceRefs do
               match source.Path with
               | Some path when named path && citedPathIsContained path -> path
-              | _ -> () ]
+              | _ -> ()
+          // FS.GG.SDD#350 (FR-009). The receipt's report IS a cited local path, so it belongs in the
+          // same bucket — and then the #349 cascade probes it for free. A report deleted *after* the
+          // receipt was recorded turns its obligation `invalid` at `verify`, the merge boundary,
+          // rather than only at authoring time. That is what "compare against reality, not against a
+          // record of reality" means for a receipt: the record is not self-certifying.
+          match declaration.ObservedRun with
+          | Some run when named run.Source && citedPathIsContained run.Source -> run.Source
+          | _ -> () ]
         |> List.distinct
         |> List.sort
 
@@ -241,25 +273,64 @@ module Evidence =
     /// The attestation-basis rule (FS.GG.SDD#398, FR-001/FR-002), stated once for `verify`'s
     /// dispositions, `ship`'s counters, and the committed `ship-verdict.json`.
     ///
-    /// `false`, for every declaration, because SDD observes no run. #349 closed "cites a file that is
-    /// not there"; nothing closes "and nobody ran it". An obligation reaches `supported` on exactly
-    /// one condition — the author wrote `result: pass` and did not disclose it `synthetic` — so the
-    /// authoring agent is the sole source of truth for the merge-boundary verdict, against our own
-    /// Principle VII. That is FS.GG.SDD#350, it needs an ADR, and this feature does not pre-empt it.
+    /// FS.GG.SDD#350 / ADR-0035: this now reads a **receipt** — a run `evidence --from-test-report` opened,
+    /// parsed, and hashed — rather than returning the constant `false` that #398 left as the seam.
+    /// It was written as a function precisely so that this body could change alone: every counter
+    /// downstream is computed from it, so `observed` rises and `selfAttested` falls with no schema,
+    /// projection, or consumer touched.
     ///
-    /// What this feature does is refuse to let the green be *silently* misread. The counters derived
-    /// from this function are what say so — in the console, and (the only one that outlives the
-    /// branch) in the committed verdict.
+    /// A receipt counts only when the run it records actually passed. `Failed = 0` is checked
+    /// alongside `Outcome`, so a receipt that says `passed` while carrying failures — which
+    /// `TestReport.parse` cannot produce, but a hand-authored evidence.yml can — never discharges an
+    /// obligation here. (It is also blocked outright, as `observedRunInconsistent`; this is the
+    /// belt to that braces, and it keeps the rule true when read in isolation.)
     ///
-    /// Deliberately a function, not `let isObserved = false`: every counter downstream is then
-    /// *computed*, and #350 changes this body alone. A constant would let the disclosure calcify into
-    /// a lie the moment it stopped being true — worse than never having made it.
-    ///
-    /// The declaration is deliberately unread: nothing on it could carry a receipt. That is the
-    /// defect, stated in code — not an oversight here.
+    /// Total and I/O-free: the read happened at the effect edge, and only its *result* reaches here.
     let isObserved (declaration: EvidenceDeclaration) =
-        ignore declaration
-        false
+        declaration.ObservedRun
+        |> Option.exists (fun run ->
+            // Normalised, NOT compared raw. `observedRunInconsistency` below trims and lowercases
+            // before judging the same field, so an authored `outcome: Passed` reads as coherent
+            // there. Comparing it raw here would then silently answer `false` — no diagnostic, no
+            // explanation, and an obligation quietly demoted to `selfAttested` despite carrying a
+            // receipt the tool just told the author was fine. Two rules over one field have to agree
+            // on what the field says.
+            let outcome = run.Outcome.Trim().ToLowerInvariant()
+
+            outcome = "passed" && run.Failed = 0 && run.Passed > 0)
+
+    /// The receipt's internal-consistency rule (FS.GG.SDD#350, FR-005). `TestReport.parse` derives
+    /// `Outcome` from the counts, so a *recorded* receipt cannot fail this. An **authored** one can:
+    /// `evidence.yml` is a text file, and a hand-written `observedRun` is user input like any other.
+    /// Rejecting it here is what stops the receipt from becoming a new place to type `pass`.
+    ///
+    /// Returns the reason, or `None` when the receipt is coherent.
+    let observedRunInconsistency (run: ObservedRun) : string option =
+        let normalizedOutcome = run.Outcome.Trim().ToLowerInvariant()
+
+        // The recorded form: `sha256:` + the 64-hex digest `SchemaVersion.sha256Text` produces.
+        let wellFormedDigest =
+            Regex.IsMatch(run.Digest, @"^sha256:[a-f0-9]{64}$", RegexOptions.CultureInvariant)
+
+        if run.Passed < 0 || run.Failed < 0 || run.Skipped < 0 then
+            Some "a run count is negative"
+        elif run.Passed + run.Failed = 0 then
+            // The authored twin of `TestReport.parse`'s no-executed-tests refusal. A receipt claiming a
+            // run in which nothing executed is not a receipt — and left unblocked it would be the
+            // cheapest possible forgery, needing no report at all. `skipped` is not execution.
+            Some $"the run executed no tests (passed: {run.Passed}, failed: {run.Failed})"
+        elif normalizedOutcome <> "passed" && normalizedOutcome <> "failed" then
+            Some $"outcome '{run.Outcome}' is not 'passed' or 'failed'"
+        elif normalizedOutcome = "passed" && run.Failed > 0 then
+            Some $"outcome 'passed' contradicts failed: {run.Failed}"
+        elif normalizedOutcome = "failed" && run.Failed = 0 then
+            Some "outcome 'failed' contradicts failed: 0"
+        elif not wellFormedDigest then
+            Some $"digest '{run.Digest}' is not a sha256:<hex> digest"
+        elif String.IsNullOrWhiteSpace run.Source then
+            Some "source names no report"
+        else
+            None
 
     /// Does this declaration claim a real pass — `result: pass`, not disclosed `synthetic`? The
     /// satisfaction rule, named once because the attestation split below partitions exactly it.
@@ -276,8 +347,8 @@ module Evidence =
     /// Was an *obligation* — matched by these declarations — discharged by an observed run?
     /// (FS.GG.SDD#398, FR-003.) The one rule `verify`, `ship`, and the committed verdict all read.
     ///
-    /// Two decisions are load-bearing, and both are moot today (`isObserved` is constantly `false`)
-    /// while being exactly what FS.GG.SDD#350 inherits:
+    /// Two decisions are load-bearing. They were written while `isObserved` was constantly `false`,
+    /// and were moot then; FS.GG.SDD#350 made them live, and both now do real work:
     ///
     ///   * **Only the declarations that claim a real pass are consulted.** A `supported` obligation
     ///     may also carry a deferral or an advisory alongside the pass that supports it; those say
@@ -388,6 +459,63 @@ module Evidence =
             { StandsInFor = Some d.StandsInFor
               Reason = Some d.Reason }
 
+        // FS.GG.SDD#350. The receipt reads through a draft for the same reason the disclosure does:
+        // its two identifying scalars are null-aware, and a partial/blank mapping must lift to `None`
+        // (no receipt) rather than to a receipt made of empty strings. An empty receipt that still
+        // said "observed" would be the fail-open this feature exists to close.
+        //
+        // The counts are NOT option-carrying: a receipt with a source and a digest but a junk count
+        // reads as `0`, and `observedRunInconsistency` then decides whether that is coherent —
+        // rather than the codec silently dropping the whole receipt over one bad token.
+        type ObservedRunDraft =
+            { Source: string option
+              Digest: string option
+              Outcome: string option
+              Passed: int
+              Failed: int
+              Skipped: int }
+
+        let observedRunDraftSeed =
+            { Source = None
+              Digest = None
+              Outcome = None
+              Passed = 0
+              Failed = 0
+              Skipped = 0 }
+
+        let observedRunFields: ArtifactCodec.FieldCodec<ObservedRunDraft> list =
+            [ ArtifactCodec.optionalScalar "source" (fun r -> r.Source) (fun v r -> { r with Source = v })
+              ArtifactCodec.optionalScalar "digest" (fun r -> r.Digest) (fun v r -> { r with Digest = v })
+              ArtifactCodec.optionalScalar "outcome" (fun r -> r.Outcome) (fun v r -> { r with Outcome = v })
+              ArtifactCodec.intScalar "passed" 0 (fun r -> r.Passed) (fun v r -> { r with Passed = v })
+              ArtifactCodec.intScalar "failed" 0 (fun r -> r.Failed) (fun v r -> { r with Failed = v })
+              ArtifactCodec.intScalar "skipped" 0 (fun r -> r.Skipped) (fun v r -> { r with Skipped = v }) ]
+
+        // A receipt exists only if it names BOTH what was read and the hash of what was read. Either
+        // one alone is not a receipt: a source with no digest is a filename, and a digest with no
+        // source is a number. Both blank/absent → `None`, and the obligation is self-attested.
+        let liftObservedRun (draft: ObservedRunDraft) : ObservedRun option =
+            match draft.Source, draft.Digest with
+            | Some source, Some digest when
+                not (String.IsNullOrWhiteSpace source) && not (String.IsNullOrWhiteSpace digest)
+                ->
+                Some
+                    { Source = source
+                      Digest = digest
+                      Outcome = draft.Outcome |> Option.defaultValue ""
+                      Passed = draft.Passed
+                      Failed = draft.Failed
+                      Skipped = draft.Skipped }
+            | _ -> None
+
+        let lowerObservedRun (run: ObservedRun) : ObservedRunDraft =
+            { Source = Some run.Source
+              Digest = Some run.Digest
+              Outcome = Some run.Outcome
+              Passed = run.Passed
+              Failed = run.Failed
+              Skipped = run.Skipped }
+
         let subjectSeed: EvidenceSubject = { SubjectType = "task"; Id = "" }
 
         let subjectFields: ArtifactCodec.FieldCodec<EvidenceSubject> list =
@@ -414,6 +542,7 @@ module Evidence =
               Result = "pending"
               Synthetic = false
               SyntheticDisclosure = None
+              ObservedRun = None
               Rationale = None
               Owner = None
               Scope = None
@@ -496,6 +625,18 @@ module Evidence =
                   lowerDisclosure
                   (fun d -> d.SyntheticDisclosure)
                   (fun v d -> { d with SyntheticDisclosure = v })
+              // FS.GG.SDD#350. Recorded by `evidence --from-test-report`, never authored — but it round-trips
+              // through the SAME shared field list as everything else, so it cannot be written without
+              // being read (ADR-0002 invariant 1). A receipt the renderer emitted and the reader
+              // dropped would silently un-observe every obligation on the next `evidence` run.
+              ArtifactCodec.optionalNestedVia
+                  "observedRun"
+                  observedRunFields
+                  observedRunDraftSeed
+                  liftObservedRun
+                  lowerObservedRun
+                  (fun d -> d.ObservedRun)
+                  (fun v d -> { d with ObservedRun = v })
               ArtifactCodec.optionalScalar "rationale" (fun d -> d.Rationale) (fun v d -> { d with Rationale = v })
               ArtifactCodec.optionalScalar "owner" (fun d -> d.Owner) (fun v d -> { d with Owner = v })
               ArtifactCodec.optionalScalar "scope" (fun d -> d.Scope) (fun v d -> { d with Scope = v })

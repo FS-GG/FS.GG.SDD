@@ -34,7 +34,8 @@ module internal HandlersVerify =
             ObligationId: string
             State: string
             /// FS.GG.SDD#398 (FR-003): the attestation basis, carried from the draft so `ship` can
-            /// count it without re-deriving the rule. `false` for every obligation today.
+            /// count it without re-deriving the rule. FS.GG.SDD#350 made it answerable — `true` when
+            /// the obligation is backed by an `observedRun` receipt SDD parsed from a runner's report.
             Observed: bool
             EvidenceIds: string list
             TaskIds: string list

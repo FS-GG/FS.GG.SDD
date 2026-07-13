@@ -25,9 +25,10 @@ module Verify =
             ObligationId: string
             State: EvidenceDispositionState
             /// FS.GG.SDD#398 (FR-003): was this obligation discharged by a run the tool *observed*, or
-            /// only by the author's word? `false` for every obligation today — SDD invokes no test
-            /// runner — and that fact is carried here, per-obligation, so `ship` and the committed
-            /// verdict count it rather than assuming it. See `Evidence.isObserved`.
+            /// only by the author's word? FS.GG.SDD#350 / ADR-0035 made this answerable: it is `true`
+            /// when the obligation is backed by an `observedRun` receipt SDD parsed from a runner's
+            /// report. Carried per-obligation, so `ship` and the committed verdict COUNT it rather
+            /// than assuming it. See `Evidence.isObserved`.
             Observed: bool
             EvidenceIds: EvidenceId list
             AffectedTaskIds: TaskId list
@@ -52,8 +53,8 @@ module Verify =
             DispositionId: string
             ObligationId: string
             State: RequiredTestDispositionState
-            /// FS.GG.SDD#398: the `TD-` attestation basis. `false` for every obligation today — the
-            /// disposition is named for a test that nothing ran. See `Evidence.obligationIsObserved`.
+            /// FS.GG.SDD#398: the `TD-` attestation basis — the disposition named for a test that,
+            /// until FS.GG.SDD#350, nothing had ever run. See `Evidence.obligationIsObserved`.
             Observed: bool
             EvidenceIds: EvidenceId list
             AffectedTaskIds: TaskId list

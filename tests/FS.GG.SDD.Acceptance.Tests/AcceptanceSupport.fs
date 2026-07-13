@@ -109,6 +109,7 @@ module AcceptanceSupport =
           Artifact = None
           Explain = false
           FromTests = None
+          FromTestReport = None
           SurfaceUpdate = false
           AcceptUpstream = false }
 

@@ -37,7 +37,7 @@ module Options =
         | Charter -> [ work; title ]
         | Specify
         | Clarify -> [ work; title; valued "--input" ]
-        | Evidence -> [ work; title; valued "--from-tests" ]
+        | Evidence -> [ work; title; valued "--from-tests"; valued "--from-test-report" ]
         | Plan -> [ work; title; flag "--accept-upstream" ]
         | Checklist
         | Tasks

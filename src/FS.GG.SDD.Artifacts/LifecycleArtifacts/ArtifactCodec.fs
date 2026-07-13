@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Artifacts
 
 open System
+open System.Globalization
 open YamlDotNet.RepresentationModel
 
 // Field-list-driven codec — the Gap-A invariant (FS.GG.SDD#201, ADR-0002).
@@ -144,6 +145,22 @@ module ArtifactCodec =
                 | Some value when value.Equals("false", StringComparison.OrdinalIgnoreCase) -> Ok(set false model)
                 | _ -> Ok(set fallback model)
           Write = fun model -> Some(sprintf "%s: %b" key (get model)) }
+
+    let intScalar (key: string) (fallback: int) (get: 'M -> int) (set: int -> 'M -> 'M) : FieldCodec<'M> =
+        // Mirrors `boolScalar`: only a well-formed invariant-culture integer is honoured; anything
+        // else (absent, null, junk, overflowing) reads as `fallback`. Always writes `key: N`.
+        // Invariant culture on both directions so a receipt's counts do not depend on the machine
+        // that rendered them.
+        { Key = key
+          Read =
+            fun mapping model ->
+                match tryScalarAt [ key ] (mapping :> YamlNode) with
+                | Some value ->
+                    match Int32.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture) with
+                    | true, parsed -> Ok(set parsed model)
+                    | _ -> Ok(set fallback model)
+                | None -> Ok(set fallback model)
+          Write = fun model -> Some(sprintf "%s: %d" key (get model)) }
 
     let scalarBlock (key: string) (get: 'M -> string list) (set: string list -> 'M -> 'M) : FieldCodec<'M> =
         { Key = key

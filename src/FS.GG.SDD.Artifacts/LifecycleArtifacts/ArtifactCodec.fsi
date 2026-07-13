@@ -71,6 +71,11 @@ module ArtifactCodec =
     /// `true`/`false` is honoured, anything else reads as `fallback`. Always writes.
     val boolScalar: key: string -> fallback: bool -> get: ('M -> bool) -> set: (bool -> 'M -> 'M) -> FieldCodec<'M>
 
+    /// A required `int` field. Mirrors `boolScalar`: only a well-formed invariant-culture integer is
+    /// honoured, anything else (absent, null, junk, overflowing) reads as `fallback`. Always writes.
+    /// Invariant culture both ways, so a count does not depend on the machine that rendered it.
+    val intScalar: key: string -> fallback: int -> get: ('M -> int) -> set: (int -> 'M -> 'M) -> FieldCodec<'M>
+
     /// A `string list` rendered as a YAML block sequence under `key:`. An empty
     /// list omits the line; absence reads as `[]`.
     val scalarBlock: key: string -> get: ('M -> string list) -> set: (string list -> 'M -> 'M) -> FieldCodec<'M>

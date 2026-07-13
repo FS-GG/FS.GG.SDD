@@ -56,6 +56,8 @@
     <Compile Include="LifecycleArtifacts/Analysis.fs" />
     <Compile Include="LifecycleArtifacts/Evidence.fsi" />
     <Compile Include="LifecycleArtifacts/Evidence.fs" />
+    <Compile Include="LifecycleArtifacts/TestReport.fsi" />
+    <Compile Include="LifecycleArtifacts/TestReport.fs" />
     <Compile Include="LifecycleArtifacts/Verify.fsi" />
     <Compile Include="LifecycleArtifacts/Verify.fs" />
     <Compile Include="LifecycleArtifacts/Ship.fsi" />

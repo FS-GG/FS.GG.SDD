@@ -439,16 +439,19 @@ module ShipCommandTests =
 
     // --- Feature 101 (FS.GG.SDD#398): the verdict discloses its attestation basis ---
 
-    /// FR-009. The standing proof that SDD observes nothing. This repo's own dogfooded lifecycle
-    /// walks on hand-authored `evidence.yml`, reaches `shipReady`, and reports five supported
-    /// obligations — **none of which any tool ran**.
+    /// FR-009 / FS.GG.SDD#350 FR-010. This fixture's lifecycle walks on hand-authored `evidence.yml`,
+    /// reaches `shipReady`, and reports five supported obligations — **none of which any tool ran**.
     ///
-    /// It is written to FAIL, loudly and correctly, on the day FS.GG.SDD#350 lands an observed
-    /// receipt. That is the point: this assertion is the tripwire that says "the disclosure has
-    /// stopped being true — go make it true again", rather than letting a stale `0` calcify into
-    /// the exact false comfort the feature exists to prevent.
+    /// #350 has landed, and this still holds, deliberately. The `0` is no longer a statement that SDD
+    /// *cannot* observe a run; it is a statement that **this work item never recorded a receipt**, and
+    /// so every one of its obligations rests on the author's word. That distinction is the whole
+    /// migration: ADR-0035 stages the receipt so that a work item which records nothing keeps behaving
+    /// exactly as it does today, rather than turning the whole fleet un-shippable overnight.
+    ///
+    /// The tripwire it used to be is now a real test: `ObservedRunCommandTests` records a receipt and
+    /// asserts `observed` rises and `selfAttested` falls, with the invariant holding throughout.
     [<Fact>]
-    let ``nothing is observed - a green ship rests entirely on the author's word`` () =
+    let ``with no receipt recorded, a green ship rests entirely on the author's word`` () =
         let root = initializedVerifiedProject ()
         let report = TestSupport.runShip root workId title
 

@@ -222,15 +222,58 @@ and its `verificationReadiness` carries the three counts that say what its green
 | `evidenceSelfAttestedCount` | …of those, the ones resting on the **author's word**. |
 | `evidenceObservedCount` | …of those, the ones resting on a run the tool **observed**. |
 
-`supported == selfAttested + observed`, always. **`evidenceObservedCount` is `0` in every artifact
-this version can produce**: SDD invokes no test runner, so `result: pass` is an assertion by the same
-agent that authored the work. `shipReady` therefore means *"the paperwork is consistent"*, **not**
-*"this works"* — and these counters exist so that nobody, and no agent, has to take it for the latter.
+`supported == selfAttested + observed`, always.
 
-Making `ship` mean *"this works"* is [FS.GG.SDD#350](https://github.com/FS-GG/FS.GG.SDD/issues/350)
-(under `.github` epic #417); it needs an ADR, because who owns the run receipt — SDD or Governance —
-is a boundary question. When it lands, `evidenceObservedCount` rises and these fields keep their
-meaning unchanged.
+### Observed run receipts (FS.GG.SDD#350, ADR-0035)
+
+`evidenceObservedCount` used to be `0` in every artifact SDD could produce: no test runner was ever
+invoked, so `result: pass` was an assertion by the same agent that authored the work, and `shipReady`
+meant *"the paperwork is consistent"* rather than *"this works"*.
+
+It is now a real number. `fsgg-sdd evidence --from-test-report <path>` **parses** a runner-produced
+report — **TRX** or **JUnit XML** — and records an **`observedRun` receipt** on each obligation the run
+discharges. Every field is derived from the report SDD read; none is authored:
+
+```yaml
+- id: EV001
+  kind: verification
+  result: pass
+  synthetic: false
+  observedRun:                                 # recorded by the tool, never typed
+    source: artifacts/test-results.trx         # cited: probed for existence at verify (#349)
+    digest: "sha256:9f2c…"                     # of the report's bytes, computed by SDD
+    outcome: passed                            # DERIVED from the counts, never copied
+    passed: 1630
+    failed: 0
+    skipped: 4
+```
+
+An obligation carrying a **passing** receipt counts as `observed`; one without counts as
+`selfAttested`. The report is a cited path, so a receipt whose report is later deleted turns its
+obligation `invalid` at `verify` through the existing `evidence.artifactNotFound` cascade.
+
+**SDD never runs a test.** ADR-0035 rejected shelling out to a runner: it would put toolchain
+knowledge inside a lifecycle tool that must also serve Rust, TypeScript, and Godot workspaces. SDD
+reads the artifact somebody else produced.
+
+**This does not make evidence unforgeable, and must not be read as if it did.** It moves the bar from
+an assertion to an artifact of a declared format, whose bytes are hashed, whose counts must agree, and
+whose file must exist. Trusting a receipt's *provenance* is CI's job; whether an unobserved obligation
+may cross a merge boundary is **Governance's** (ADR-0035 §3). SDD reports the fact; it does not enforce.
+
+**A pass with no receipt still satisfies.** ADR-0035 stages the migration deliberately — disclose
+(#398), then record (this), then fail closed. The fail-closed flip is a **breaking** change to the
+evidence contract and is gated on a schema major; until it lands, an obligation that records no
+receipt behaves exactly as it always has, and simply reports itself as `selfAttested`.
+
+A report recording **no executed tests** (`passed + failed = 0`) is refused rather than recorded: a
+run in which nothing executed proves nothing, and `failed = 0` would otherwise derive `outcome:
+passed` for an empty TRX or an all-skipped suite. `skipped` is not execution.
+
+Blocking diagnostics: `evidence.testReportUnparseable`, `evidence.testReportNotFound`,
+`evidence.testReportPathEscape`, `evidence.observedRunFailed`, `evidence.observedRunInconsistent`.
+Each records **nothing** — a gate that degraded to "no receipt" on an unreadable report would fail
+open in a new place.
 - **`governance-handoff.json`** — `contractVersion` *(Stable)*, `diagnostics`,
   `evidence`, `generatorVersion`, `governanceConfig`, `governedReferences`,
   `readiness`, `schemaVersion` *(Stable)*, `sources`, `workId`.

@@ -19,6 +19,7 @@
     <Compile Include="TasksCommandTests.fs" />
     <Compile Include="AnalyzeCommandTests.fs" />
     <Compile Include="EvidenceCommandTests.fs" />
+    <Compile Include="ObservedRunCommandTests.fs" />
     <Compile Include="UnauthoredScaffoldTests.fs" />
     <Compile Include="EvidenceCitedPathContainmentTests.fs" />
     <Compile Include="VerifyCommandTests.fs" />

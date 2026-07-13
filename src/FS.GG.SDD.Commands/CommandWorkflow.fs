@@ -96,6 +96,14 @@ module CommandWorkflow =
                            | Evidence
                            | Verify -> citedArtifactReadEffects workId model
                            | _ -> [])
+                        // FS.GG.SDD#350: the `--from-tests` report. `Evidence` only — it is the stage
+                        // that RECORDS the receipt. `Verify` re-reads the receipt's report through
+                        // `citedArtifactReadEffects` above (the receipt's `source` is a cited path),
+                        // so the deleted-report case is caught at the merge boundary without reading
+                        // the report's bytes a second time here.
+                        @ (match model.Request.Command with
+                           | Evidence -> testReportReadEffects model
+                           | _ -> [])
 
                     match candidateReads with
                     | _ :: _ ->
