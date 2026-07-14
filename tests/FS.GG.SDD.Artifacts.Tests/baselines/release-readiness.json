@@ -1534,7 +1534,7 @@
         "format": "json"
       },
       "schemaVersion": 1,
-      "contractVersion": "1.0.0",
+      "contractVersion": "1.1.0",
       "stability": "stable",
       "determinism": "byte-stable; canonical key order; no clock/path/ANSI",
       "inventory": [

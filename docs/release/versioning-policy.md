@@ -59,7 +59,7 @@ classed `Stable`.
 ## Schema-version vs contract-version divergence
 
 A generated view's internal `schemaVersion` and a cross-repo `contractVersion`
-(currently only `governance-handoff.json`, at `contractVersion` `1.0.0`) move
+(currently only `governance-handoff.json`, at `contractVersion` `1.1.0`) move
 **independently**:
 
 - A breaking change to **either** number ⇒ **major** package bump.

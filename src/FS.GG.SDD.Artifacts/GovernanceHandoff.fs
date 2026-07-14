@@ -257,8 +257,8 @@ module GovernanceHandoff =
 
         let diagnostics = model.Diagnostics @ staleDiagnostics |> Diagnostics.sort
 
-        { SchemaVersion = 1
-          ContractVersion = "1.0.0"
+        { SchemaVersion = Fsgg.Schemas.governanceHandoffVersion
+          ContractVersion = Fsgg.Schemas.governanceHandoffContractVersion
           GeneratorVersion = generator
           WorkId = model.WorkId
           Sources = sources |> List.sortBy (fun source -> source.Artifact.Path)

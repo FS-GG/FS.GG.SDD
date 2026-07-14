@@ -47,10 +47,15 @@ module SchemaVersionConstantTests =
         Assert.Equal(1, Schemas.agentsVersion)
         // SOURCE: src/FS.GG.SDD.Artifacts/ScaffoldProvenance.fs — ScaffoldProvenanceRecord.SchemaVersion = 1
         Assert.Equal(1, Schemas.scaffoldProvenanceVersion)
-        // SOURCE: src/FS.GG.SDD.Artifacts/GovernanceHandoff.fs — GovernanceHandoff.SchemaVersion = 1
+        // governance-handoff: every other site CONSUMES these constants (the emitter and the
+        // release-contract declaration both read them), so there is no second literal to drift
+        // against. This assertion is therefore not a mirror-check but the reviewed ANCHOR: the one
+        // place the intended values are pinned. Changing the contract version means changing the
+        // constant, and this line, deliberately — and in step with FS-GG/.github's registry.
         Assert.Equal(1, Schemas.governanceHandoffVersion)
-        // SOURCE: src/FS.GG.SDD.Artifacts/GovernanceHandoff.fs — GovernanceHandoff.ContractVersion = "1.0.0"
-        Assert.Equal("1.0.0", Schemas.governanceHandoffContractVersion)
+        // 1.1.0: ADR-0035 stage 3 / FS.GG.SDD#422 — `ship.unobservedEvidence` reachable in
+        // readiness.blockingDiagnosticIds[]. Additive ⇒ minor.
+        Assert.Equal("1.1.0", Schemas.governanceHandoffContractVersion)
         // Feature 057 / ADR-0014: the skill-manifest contract starts at schema version 1.
         Assert.Equal(1, Schemas.skillManifestVersion)
 
@@ -83,10 +88,13 @@ module SchemaVersionConstantTests =
         for name in [ "governance"; "policy"; "capabilities"; "tooling" ] do
             Assert.Equal(Schemas.Governance, ownerOf name)
 
+    // WIRING, not value: the entry must carry the declared constant rather than a literal of its
+    // own. The value itself is pinned once, in the anchor above — asserting it again here would
+    // re-create the hand-mirror this contract's 1.0.0/1.1.0 drift came from.
     [<Fact>]
-    let ``governance-handoff entry carries the string contract version`` () =
+    let ``governance-handoff entry carries the declared contract version`` () =
         let entry = Schemas.entries |> List.find (fun e -> e.Name = "governance-handoff")
-        Assert.Equal(Some "1.0.0", entry.ContractVersion)
+        Assert.Equal(Some Schemas.governanceHandoffContractVersion, entry.ContractVersion)
 
     // T007b (050 D3): the additive `effectiveParameters` field on scaffold-provenance.json is a
     // purely additive optional field (`tryParse` defaults it to []). It MUST NOT bump the
