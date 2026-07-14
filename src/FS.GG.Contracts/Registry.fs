@@ -20,6 +20,7 @@ module Registry =
         | MalformedVersion
         | DuplicateComponent
         | MalformedDocument
+        | MalformedField of fieldName: string
 
     type RegistryDiagnostic =
         { Entry: string
@@ -59,6 +60,29 @@ module Registry =
           Contracts: ContractEntry list
           Dependencies: DependencyEdge2 list
           Coherence: CoherenceEntry list }
+
+    // --- Skill-registry document model (feature 104, additive; `registry/skills.yml`). ---
+
+    /// THREE states, and the third is the point: `absent` is NOT `false`. See Registry.fsi
+    /// for why a two-state `bool` (or a `bool option`) cannot express this honestly.
+    type MirrorDeclaration =
+        | MirrorUnspecified
+        | MirrorDeclared of mirrored: bool
+        | MirrorMalformed of raw: string
+
+    type SkillRegistryEntry =
+        { Id: string
+          Scope: string
+          Owner: string
+          Source: string
+          Sha256: string
+          Mirrored: MirrorDeclaration
+          MaterializesWhen: string option }
+
+    type SkillRegistryDocument =
+        { SchemaVersion: int
+          Parameters: string list
+          Skills: SkillRegistryEntry list }
 
     // --- Internal BCL-only SemVer helper (research R5; no third-party package). ---
     // The grammar now lives in the shared `Fsgg.Version` module (feature 052 D3);
@@ -399,5 +423,112 @@ module Registry =
             @ dependencyDiagnostics
             @ coherenceDiagnostics
         with
+        | [] -> Valid
+        | diagnostics -> Invalid diagnostics
+
+    // --- The skill-registry pure validator (feature 104; `registry/skills.yml`). ---
+
+    /// A canonical-body digest: 64 lowercase hex, byte-equivalent to `sha256sum SKILL.md`.
+    /// Uppercase is rejected deliberately — the catalog is reconciled from producer
+    /// manifests that emit lowercase, so an uppercase digest is a hand-edit, and a
+    /// hand-edited digest is the one thing this catalog must never carry.
+    ///
+    /// Anchored with `\z`, not `$`: in .NET `$` ALSO matches immediately before a trailing
+    /// newline, so `^[0-9a-f]{64}$` would accept a 65-character digest ending in `\n` — a
+    /// digest that is not 64 hex characters, passing a check whose whole job is to say so.
+    let private sha256Regex = System.Text.RegularExpressions.Regex(@"\A[0-9a-f]{64}\z")
+
+    /// The declared skill scopes (`Fsgg.Schemas.SkillScope` rendered as catalog tokens).
+    let private skillScopes = Set.ofList [ "process"; "product" ]
+
+    let validateSkillRegistry (document: SkillRegistryDocument) : ValidationResult =
+        // root: a catalog with no skills is not a catalog. (`schemaVersion` is
+        // structurally an int via the typed model; a non-integer is rejected at the
+        // load edge. `parameters` may legitimately be empty.)
+        let rootDiagnostics =
+            [ if document.Skills.IsEmpty then
+                  { Entry = "<root>"
+                    Rule = MissingField "skills"
+                    Message = "Skill registry document has no 'skills'." } ]
+
+        // skills (file order). Duplicate detection walks in order, flagging the
+        // second+ occurrence of an id — same shape as `contracts` above.
+        let mutable seenIds = Set.empty
+
+        let skillDiagnostics =
+            document.Skills
+            |> List.collect (fun s ->
+                let entry = if isBlank s.Id then "<unnamed skill>" else s.Id
+
+                let duplicate = not (isBlank s.Id) && Set.contains s.Id seenIds
+
+                if not (isBlank s.Id) then
+                    seenIds <- Set.add s.Id seenIds
+
+                [ if isBlank s.Id then
+                      { Entry = entry
+                        Rule = MissingField "id"
+                        Message = "Skill entry is missing a non-blank 'id'." }
+                  if duplicate then
+                      { Entry = entry
+                        Rule = DuplicateComponent
+                        Message = $"Skill '{entry}' has a duplicate 'id'." }
+
+                  if isBlank s.Scope then
+                      { Entry = entry
+                        Rule = MissingField "scope"
+                        Message = $"Skill '{entry}' is missing a non-blank 'scope'." }
+                  elif not (Set.contains s.Scope skillScopes) then
+                      { Entry = entry
+                        Rule = UnknownComponent
+                        Message =
+                          $"Skill '{entry}' has an unknown 'scope': '{s.Scope}' (expected 'process' or 'product')." }
+
+                  if isBlank s.Owner then
+                      { Entry = entry
+                        Rule = MissingField "owner"
+                        Message = $"Skill '{entry}' is missing a non-blank 'owner'." }
+
+                  if isBlank s.Source then
+                      { Entry = entry
+                        Rule = MissingField "source"
+                        Message = $"Skill '{entry}' is missing a non-blank 'source'." }
+
+                  if isBlank s.Sha256 then
+                      { Entry = entry
+                        Rule = MissingField "sha256"
+                        Message = $"Skill '{entry}' is missing a non-blank 'sha256'." }
+                  elif not (sha256Regex.IsMatch s.Sha256) then
+                      { Entry = entry
+                        Rule = MalformedField "sha256"
+                        Message =
+                          $"Skill '{entry}' has a malformed 'sha256' (expected 64 lowercase hex): '{s.Sha256}'." }
+
+                  // `mirrored` — the three-state field this feature exists for.
+                  //
+                  // ONLY the malformed arm is a diagnostic. `MirrorUnspecified` is NOT a
+                  // fault: 33 of the catalog's rows legitimately carry no verdict, and
+                  // demanding one would be the mirror-image error of coercing absent to
+                  // `false` — inventing an answer where the owner gave none. What is
+                  // reported is an UNPARSEABLE answer, which is neither an answer nor an
+                  // absence, and which a `bool`-with-default would have silently swallowed.
+                  match s.Mirrored with
+                  | MirrorMalformed raw ->
+                      { Entry = entry
+                        Rule = MalformedField "mirrored"
+                        Message =
+                          $"Skill '{entry}' has a 'mirrored' that is present but not a boolean: '{raw}'. An unparseable verdict is not the same as an absent one — omit the key to leave the body unclassified, or declare true/false." }
+                  | MirrorUnspecified
+                  | MirrorDeclared _ -> ()
+
+                  match s.MaterializesWhen with
+                  | Some predicate when isBlank predicate ->
+                      { Entry = entry
+                        Rule = MalformedField "materializes-when"
+                        Message =
+                          $"Skill '{entry}' has a blank 'materializes-when'. Omit the key for the 'always' default rather than declaring an empty predicate." }
+                  | _ -> () ])
+
+        match rootDiagnostics @ skillDiagnostics with
         | [] -> Valid
         | diagnostics -> Invalid diagnostics

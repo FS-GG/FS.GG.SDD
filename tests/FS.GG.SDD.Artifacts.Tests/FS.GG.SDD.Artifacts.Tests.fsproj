@@ -38,6 +38,7 @@
     <Compile Include="MalformedReferenceTests.fs" />
     <Compile Include="ProviderRegistryParseTests.fs" />
     <Compile Include="RegistryDocumentParseTests.fs" />
+    <Compile Include="SkillRegistryDocumentParseTests.fs" />
     <Compile Include="TestReportTests.fs" />
     <Compile Include="SurfaceBaselineTests.fs" />
   </ItemGroup>
