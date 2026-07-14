@@ -116,6 +116,8 @@ FS.GG.SDD.Commands.CommandReports.unknownPlanSourceReference
 FS.GG.SDD.Commands.CommandReports.unknownSpecificationReference
 FS.GG.SDD.Commands.CommandReports.unknownTaskDependency
 FS.GG.SDD.Commands.CommandReports.unknownTaskSourceReference
+FS.GG.SDD.Commands.CommandReports.unobservedRequiredTest
+FS.GG.SDD.Commands.CommandReports.unobservedShipEvidence
 FS.GG.SDD.Commands.CommandReports.unresolvedBlockingAmbiguity
 FS.GG.SDD.Commands.CommandReports.unsafeDecisionChange
 FS.GG.SDD.Commands.CommandReports.unsafeEvidenceUpdate

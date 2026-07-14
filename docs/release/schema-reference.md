@@ -261,10 +261,31 @@ an assertion to an artifact of a declared format, whose bytes are hashed, whose 
 whose file must exist. Trusting a receipt's *provenance* is CI's job; whether an unobserved obligation
 may cross a merge boundary is **Governance's** (ADR-0035 §3). SDD reports the fact; it does not enforce.
 
-**A pass with no receipt still satisfies.** ADR-0035 stages the migration deliberately — disclose
-(#398), then record (this), then fail closed. The fail-closed flip is a **breaking** change to the
-evidence contract and is gated on a schema major; until it lands, an obligation that records no
-receipt behaves exactly as it always has, and simply reports itself as `selfAttested`.
+**A pass with no receipt still satisfies — unless you ask it not to.** ADR-0035 stages the migration
+deliberately: disclose (#398), record (#415), then fail closed. Stage 3 has landed as an **opt-in**
+gate, `--require-observed`, accepted by **both** `verify` and `ship`:
+
+```sh
+fsgg-sdd verify --work <id> --require-observed    # a pass with no receipt -> `unobserved`, and BLOCKS
+fsgg-sdd ship   --work <id> --require-observed    # refuses to certify what verify recorded unobserved
+```
+
+Under it, a test obligation whose `result: pass` carries no `observedRun` receipt reaches the
+non-satisfying disposition **`unobserved`** (`verify.unobservedRequiredTest`) instead of `satisfied`,
+and `ship` refuses the merge boundary (`ship.unobservedEvidence`). A disclosed `synthetic` pass and an
+honest deferral are untouched — neither claims a run, so neither can fail to evidence one.
+
+**Pass it to both stages.** This is not redundancy. A blocked `verify` writes nothing (an incomplete
+run never reports complete), so it leaves the *previous*, green, still-digest-current `verify.json` on
+disk — and a `ship` that trusted `verificationReady` alone would certify a lifecycle `verify` had just
+refused. `ship` therefore re-asserts the receipt against the record `verify` wrote.
+
+**The default is off, and stays off until a human flips it.** ADR-0035 gates the flip on *"once the
+fleet is green"*, and the fleet is not: no `evidence.yml` in this repo yet carries a receipt, so
+defaulting it on would turn every ship-ready work item in every FS-GG repo not-ship-ready at once,
+with no remedy available. With the flag absent, behavior is byte-for-byte what it was: the obligation
+satisfies and reports itself `selfAttested`. Flipping the default is a **breaking** change to the
+evidence contract and is gated on a schema major.
 
 A report recording **no executed tests** (`passed + failed = 0`) is refused rather than recorded: a
 run in which nothing executed proves nothing, and `failed = 0` would otherwise derive `outcome:

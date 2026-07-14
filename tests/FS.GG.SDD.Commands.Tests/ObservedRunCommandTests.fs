@@ -407,3 +407,180 @@ module ObservedRunCommandTests =
         match (TestSupport.runVerify root workId title).Verification with
         | Some verification -> Assert.True(verification.EvidenceObservedCount > 0)
         | None -> failwith "verify produced no summary."
+
+    // ---- US4 / ADR-0035 stage 3: `verify --require-observed` — the failure leg #266 demands ----
+    //
+    // Stage 2 (above) made a receipt RECORDABLE and provably changed no verdict. Stage 3 makes the
+    // absence of one COUNT — but only when asked, because ADR-0035 gates the default flip on "once
+    // the fleet is green" and no `evidence.yml` in this repo yet carries a receipt. So the mechanism
+    // and its proof land here, off by default; a human flips the default on a schema major.
+    //
+    // The four tests below are the whole contract, and each one fails a different way if it is wrong:
+    // the fabricated lifecycle must be REFUSED, an observed one must still PASS (or the flag is just a
+    // brick), the default must be UNCHANGED (or this is the breaking flip in disguise), and an honest
+    // deferral must not be PUNISHED (or the gate reads "no receipt" as "lying").
+
+    let private runVerifyRequiringObserved root =
+        { TestSupport.verifyRequest root workId title with
+            RequireObserved = true }
+        |> TestSupport.runRequest
+
+    let private runShipRequiringObserved root =
+        { TestSupport.shipRequest root workId title with
+            RequireObserved = true }
+        |> TestSupport.runRequest
+
+    /// **The FS.GG.SDD#350 failure leg, committed.** This is the boilerplate probe from the issue —
+    /// a lifecycle walked on pure scaffolding, `result: pass` / `synthetic: false` on every
+    /// obligation, and nothing ever run — and under `--require-observed` it must NOT reach
+    /// `shipReady`.
+    ///
+    /// #266's standing note is that a fix whose failure leg is untested is how this class of defect
+    /// survives: the gate is asserted to pass on good input and never asserted to *fail* on bad. So
+    /// the assertion that matters is the last one, and it is about `ship` — the merge boundary —
+    /// not about `verify`.
+    [<Fact>]
+    let ``a fabricated lifecycle cannot reach shipReady under --require-observed`` () =
+        let root = evidencedProjectClaimingPass ()
+
+        let verified = runVerifyRequiringObserved root
+
+        Assert.Contains(verified.Diagnostics, fun d -> d.Id = "verify.unobservedRequiredTest")
+
+        match verified.Verification with
+        | None -> failwith "verify produced no summary."
+        | Some verification ->
+            Assert.Equal("needsVerificationCorrection", verification.Readiness)
+            Assert.True(verification.BlockingCount > 0, "an unobserved pass must block, not merely warn")
+
+            // Not "some tests satisfied". NONE — every one of them was an authored word.
+            Assert.Equal(0, verification.TestSatisfiedCount)
+
+        // The one that closes the issue: paperwork alone does not cross the merge boundary.
+        match (runShipRequiringObserved root).Ship with
+        | None -> failwith "ship produced no summary."
+        | Some ship -> Assert.NotEqual<string>("shipReady", ship.Readiness)
+
+    /// The other half, and the one that makes the flag worth having rather than merely strict: work
+    /// that DID run its suite still ships. A gate that blocks everything is not a gate, it is an
+    /// outage — and it would be the fastest possible route to someone deleting this feature.
+    [<Fact>]
+    let ``an observed pass still reaches shipReady under --require-observed`` () =
+        let root = evidencedProjectClaimingPass ()
+        TestSupport.writeRelative root reportPath (trxWith 9 0)
+        runWithReport root (Some reportPath) |> ignore
+
+        let verified = runVerifyRequiringObserved root
+
+        Assert.DoesNotContain(verified.Diagnostics, fun d -> d.Id = "verify.unobservedRequiredTest")
+
+        match verified.Verification with
+        | None -> failwith "verify produced no summary."
+        | Some verification ->
+            Assert.Equal("verificationReady", verification.Readiness)
+            Assert.True(verification.TestSatisfiedCount > 0)
+
+        match (runShipRequiringObserved root).Ship with
+        | None -> failwith "ship produced no summary."
+        | Some ship -> Assert.Equal("shipReady", ship.Readiness)
+
+    /// **The fail-open a green test suite could not see, and a CLI walk caught in one command.**
+    ///
+    /// `verify --require-observed` blocks — and a blocked stage writes NOTHING, by constitutional
+    /// design. So the `verify.json` from the last *unflagged*, green run is still on disk, and every
+    /// source digest still matches it: nothing downstream can tell that the gate ever fired. `ship`
+    /// read that record and certified `shipReady` over a lifecycle `verify` had just refused.
+    ///
+    /// That is #266's own rule — *compare against reality, not a record of reality* — failing inside
+    /// the fix for #266. It is why `ship` re-asserts the receipt on the record rather than trusting
+    /// `verificationReady`, and why the flag is on BOTH stages instead of the one that "obviously"
+    /// needed it.
+    ///
+    /// The first line of this test is the entire bug: a plain, successful `verify`.
+    [<Fact>]
+    let ``a stale green verify.json does not launder an unobserved pass past ship`` () =
+        let root = evidencedProjectClaimingPass ()
+
+        // The green record. Written before anyone asked for a receipt, and never invalidated.
+        match (TestSupport.runVerify root workId title).Verification with
+        | Some verification -> Assert.Equal("verificationReady", verification.Readiness)
+        | None -> failwith "verify produced no summary."
+
+        // The gate fires, and writes nothing — so the green record above still stands.
+        Assert.Equal("needsVerificationCorrection", (runVerifyRequiringObserved root).Verification.Value.Readiness)
+
+        let shipped = runShipRequiringObserved root
+
+        Assert.Contains(shipped.Diagnostics, fun d -> d.Id = "ship.unobservedEvidence")
+
+        match shipped.Ship with
+        | None -> failwith "ship produced no summary."
+        | Some ship -> Assert.NotEqual<string>("shipReady", ship.Readiness)
+
+    /// FR-010, restated for stage 3 and load-bearing for the whole migration: the flag is OPT-IN.
+    /// The same fabricated work item that is refused above sails through when nobody asks — byte for
+    /// byte the pre-#350 behavior.
+    ///
+    /// This test asserts the defect still exists by default. That is uncomfortable, and it is the
+    /// point: ADR-0035 chose a staged migration precisely so the org is not stopped dead, and an
+    /// undeclared default flip would be exactly the breakage it staged around. When a human decides
+    /// the fleet is green and flips the default, THIS is the test that goes red — deliberately, and
+    /// with the whole decision written down beside it.
+    [<Fact>]
+    let ``--require-observed is opt-in - the default still satisfies an unobserved pass`` () =
+        let root = evidencedProjectClaimingPass ()
+
+        let verified = TestSupport.runVerify root workId title
+
+        Assert.DoesNotContain(verified.Diagnostics, fun d -> d.Id = "verify.unobservedRequiredTest")
+
+        match verified.Verification with
+        | None -> failwith "verify produced no summary."
+        | Some verification ->
+            Assert.Equal("verificationReady", verification.Readiness)
+            Assert.True(verification.TestSatisfiedCount > 0)
+
+            // Unchanged, and still honest about what it is worth (#398).
+            Assert.Equal(0, verification.EvidenceObservedCount)
+
+        match (TestSupport.runShip root workId title).Ship with
+        | None -> failwith "ship produced no summary."
+        | Some ship -> Assert.Equal("shipReady", ship.Readiness)
+
+    /// The gate says "no run was observed" — NOT "you are lying". A deferral claims no pass at all,
+    /// so it asserts no run and cannot be caught failing to evidence one. The ladder encodes that by
+    /// ORDERING (the deferral arms sit above `unobserved`), and ordering is exactly the kind of thing
+    /// that rots silently — so it is pinned here rather than left to the reader of an `elif` chain.
+    ///
+    /// The deferral is written out in full — all four of `rationale`/`owner`/`scope`/
+    /// `laterLifecycleVisibility` — on purpose. A bare `result: deferred` is REFUSED upstream as
+    /// `evidence.missingDeferralRationale`, so a lazier fixture would still not be flagged
+    /// `unobserved`, and this test would pass while proving nothing. It has to be an *honest*
+    /// deferral for its exemption to mean anything.
+    [<Fact>]
+    let ``--require-observed does not punish an honest deferral`` () =
+        let root = evidencedProjectClaimingPass ()
+
+        let deferral =
+            "result: deferred\n    rationale: The suite for this obligation lands with the follow-on work item.\n"
+            + "    owner: rook-bd94\n    scope: the deferred obligation\n"
+            + "    laterLifecycleVisibility: Re-open when the follow-on work item is specified."
+
+        TestSupport.readRelative root evidencePath
+        |> replaceFirst "result: pass" deferral
+        |> TestSupport.writeRelative root evidencePath
+
+        let deferredId =
+            (parsedEvidence root).Evidence
+            |> List.find (fun declaration -> normalizedEvidenceResult declaration.Result = "deferred")
+            |> _.Id
+            |> _.Value
+
+        // The other four obligations still claim an unobserved pass, so the diagnostic IS raised —
+        // and that is what makes the exemption legible: it names them, and it does not name this one.
+        let unobserved =
+            (runVerifyRequiringObserved root).Diagnostics
+            |> List.filter (fun d -> d.Id = "verify.unobservedRequiredTest")
+
+        Assert.NotEmpty unobserved
+        Assert.All(unobserved, (fun d -> Assert.DoesNotContain(deferredId, d.RelatedIds)))

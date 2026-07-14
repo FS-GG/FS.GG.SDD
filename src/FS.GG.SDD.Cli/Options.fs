@@ -39,11 +39,15 @@ module Options =
         | Clarify -> [ work; title; valued "--input" ]
         | Evidence -> [ work; title; valued "--from-tests"; valued "--from-test-report" ]
         | Plan -> [ work; title; flag "--accept-upstream" ]
+        // FS.GG.SDD#350 / ADR-0035: BOTH stages take the flag, and that is not redundancy.
+        // `verify` gates on the evidence; `ship` re-gates on the RECORD verify wrote, because a
+        // blocked verify writes nothing and therefore leaves the previous green verify.json standing
+        // (see `shipVerificationPrerequisite` — a CLI walk caught exactly that fail-open).
+        | Verify
+        | Ship -> [ work; title; flag "--require-observed" ]
         | Checklist
         | Tasks
         | Analyze
-        | Verify
-        | Ship
         | Agents
         | Refresh -> [ work; title ]
         | Scaffold -> [ valued "--provider"; valued "--param"; flag "--force"; flag "--no-update" ]

@@ -76,6 +76,11 @@ module internal HandlersVerify =
         match state with
         | "missing"
         | "blocking"
+        // FS.GG.SDD#350 / ADR-0035 stage 3. Reachable ONLY under `--require-observed`, so this arm
+        // is inert by default and changes no existing byte. It is `blocking` rather than `warning`
+        // deliberately: the whole point of the disposition is that an unobserved pass does not
+        // satisfy, and a warning that still satisfies is the disclosure we already shipped (#398).
+        | "unobserved"
         | "invalid" -> "blocking"
         | "stale" -> "warning"
         | "deferred"
@@ -212,6 +217,10 @@ module internal HandlersVerify =
         // must still be caught here — otherwise the check only ever fires at authoring time and a
         // stale citation walks straight past the boundary that matters (FR-004, US2).
         (artifactExists: string -> bool)
+        // FS.GG.SDD#350 / ADR-0035 stage 3: `verify --require-observed`. `false` (the default) leaves
+        // this function byte-for-byte what it was — the `unobserved` arm below is unreachable and a
+        // pass satisfies on the author's word, exactly as it does today.
+        (requireObserved: bool)
         (artifact: EvidenceArtifact)
         =
         taskFacts.Tasks
@@ -269,6 +278,26 @@ module internal HandlersVerify =
                         normalizedEvidenceResult declaration.Result = "pass" && declaration.Synthetic)
                 then
                     "synthetic", []
+                // FS.GG.SDD#350 / ADR-0035 stage 3 — the defect this whole issue names. It sits
+                // IMMEDIATELY above `satisfied` and intercepts exactly the passes that would have
+                // reached it, which is why the ordering is load-bearing rather than cosmetic.
+                //
+                // `obligationIsObserved` is `forall` over the real passes (see `Evidence.fs`), so an
+                // obligation backed by one observed run AND one hand-asserted pass is NOT observed —
+                // the receipt cannot launder the assertion beside it. Negating it here inherits that
+                // fail-closed reading for free, which is the reason to consume the shared rule rather
+                // than restate it: `ED-`, `TD-`, `ship`, and the committed verdict cannot drift on
+                // what "observed" means.
+                //
+                // A disclosed `synthetic` pass never arrives (the arm above took it), and a deferral
+                // never claims a pass at all — so neither is punished for a run it never asserted.
+                elif
+                    requireObserved
+                    && matches
+                       |> List.exists (fun declaration -> normalizedEvidenceResult declaration.Result = "pass")
+                    && not (obligationIsObserved matches)
+                then
+                    "unobserved", [ "verify.unobservedRequiredTest" ]
                 elif
                     matches
                     |> List.exists (fun declaration -> normalizedEvidenceResult declaration.Result = "pass")
@@ -568,7 +597,11 @@ module internal HandlersVerify =
                         let evidenceViews = verifyEvidenceDispositionViews taskFacts dispositions
 
                         let testViews =
-                            verifyTestDispositionViews taskFacts (citedArtifactExists model) artifact
+                            verifyTestDispositionViews
+                                taskFacts
+                                (citedArtifactExists model)
+                                model.Request.RequireObserved
+                                artifact
 
                         let skillViews = verifySkillViews workId taskFacts dispositions
 
@@ -585,8 +618,18 @@ module internal HandlersVerify =
                                 |> List.map _.ObligationId
                                 |> List.sort
 
+                            // FS.GG.SDD#350: empty unless `--require-observed` — the state is
+                            // unreachable without it, so this list is the flag's only blocking effect.
+                            let unobserved =
+                                testViews
+                                |> List.filter (fun view -> view.State = "unobserved")
+                                |> List.map _.ObligationId
+                                |> List.sort
+
                             [ if not (List.isEmpty missing) then
                                   missingRequiredTest (tasksPath workId) missing
+                              if not (List.isEmpty unobserved) then
+                                  unobservedRequiredTest (tasksPath workId) unobserved
                               if not (List.isEmpty stale) then
                                   staleRequiredTest (tasksPath workId) stale ]
 

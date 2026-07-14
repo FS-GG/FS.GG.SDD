@@ -218,7 +218,12 @@ module CommandTypes =
           // Feature 090: `fsgg-sdd plan --accept-upstream` re-baselines the plan's
           // `## Source Snapshot` against the current sources; default false (a moved digest blocks
           // with `stalePlanSnapshot` and writes nothing). Read only by `plan`.
-          AcceptUpstream: bool }
+          AcceptUpstream: bool
+          // FS.GG.SDD#350 / ADR-0035 stage 3: `fsgg-sdd verify --require-observed` makes a test
+          // obligation fail CLOSED — a `result: pass` carrying no `observedRun` receipt stops
+          // satisfying. Default false, which is byte-for-byte the pre-#350 behavior. Read only by
+          // `verify`; `ship` inherits it by refusing a verify.json that is not verificationReady.
+          RequireObserved: bool }
 
     type GeneratedViewSource =
         { Path: string

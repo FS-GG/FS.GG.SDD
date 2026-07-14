@@ -73,7 +73,8 @@ module ValidationRunner =
           FromTests = None
           FromTestReport = None
           SurfaceUpdate = false
-          AcceptUpstream = false }
+          AcceptUpstream = false
+          RequireObserved = false }
 
     let runRequest (request: CommandRequest) = driveToReport request
 
