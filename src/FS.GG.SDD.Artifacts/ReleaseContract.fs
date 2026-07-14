@@ -584,8 +584,12 @@ module ReleaseContract =
         let governanceHandoff =
             { Contract = "governance-handoff.json"
               Kind = GeneratedViewContract(GovernanceHandoff, Json)
-              SchemaVersion = 1
-              ContractVersion = Some "1.0.0"
+              // Both from the declared constants, NOT re-typed here. This declaration is what the
+              // release contract SAYS ship emits; GovernanceHandoff.fs is what it ACTUALLY emits.
+              // Nothing compares the two, so a literal here is a mirror that drifts silently — and
+              // it did: it still read "1.0.0" after the contract went to 1.1.0 (#427).
+              SchemaVersion = Fsgg.Schemas.governanceHandoffVersion
+              ContractVersion = Some Fsgg.Schemas.governanceHandoffContractVersion
               Stability = Stable
               Determinism = determinism
               Inventory =

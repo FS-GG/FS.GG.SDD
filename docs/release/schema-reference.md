@@ -158,7 +158,7 @@ twice over identical inputs yields byte-identical output. (FR-008)
 | `verify.json` | generated view (`verify`) / JSON | 1 | — | AdditiveOptional | byte-stable | `readiness/<id>/verify.json` |
 | `ship.json` | generated view (`ship`) / JSON | 1 | — | AdditiveOptional | byte-stable | `readiness/<id>/ship.json` |
 | `ship-verdict.json` | generated view (`shipVerdict`) / JSON — **durable generated** | 1 | — | AdditiveOptional | byte-stable | `readiness/<id>/ship-verdict.json` |
-| `governance-handoff.json` | generated view (`governance-handoff`) / JSON | 1 | **1.0.0** | **Stable** | byte-stable | `readiness/<id>/governance-handoff.json` |
+| `governance-handoff.json` | generated view (`governance-handoff`) / JSON | 1 | **1.1.0** | **Stable** | byte-stable | `readiness/<id>/governance-handoff.json` |
 | `summary.md` | generated view (`summary`) / Markdown projection | gen (`0.2.0`) | — | AdditiveOptional | byte-stable | `readiness/<id>/summary.md` |
 | `agent-commands/<target>/guidance.json` | generated view (`agentCommands`) / JSON | 1 | — | AdditiveOptional | byte-stable | `readiness/<id>/agent-commands/<target>/guidance.json` |
 | `agent-commands/<target>/commands.md` | generated view (`agentCommands`) / Markdown projection | gen (`0.2.0`) | — | AdditiveOptional | byte-stable | `readiness/<id>/agent-commands/<target>/commands.md` |
@@ -166,7 +166,11 @@ twice over identical inputs yields byte-identical output. (FR-008)
 | `command-report (--json)` | command output / JSON | 1 | — | AdditiveOptional | byte-stable | `src/FS.GG.SDD.Commands/CommandSerialization.fs` |
 
 > `governance-handoff.json` is the only contract carrying a cross-repo
-> `contractVersion` (`1.0.0`), which moves independently of its `schemaVersion`.
+> `contractVersion` (`1.1.0`), which moves independently of its `schemaVersion`.
+> The value is declared once, as `Fsgg.Schemas.governanceHandoffContractVersion`,
+> and the emitter stamps that constant — it is not mirrored by hand (#427).
+> `1.1.0` is ADR-0035 stage 3 (FS.GG.SDD#422): `ship.unobservedEvidence` became
+> reachable in `readiness.blockingDiagnosticIds[]` — additive, hence minor.
 > It is classed **Stable** (the envelope is frozen). All other contracts are
 > **AdditiveOptional** and may gain optional fields under a minor bump; consumers
 > MUST tolerate unknown fields.

@@ -164,14 +164,25 @@ module Schemas =
     // SDD-owned constants. Each equals today's emitted value, grounded in-repo:
     //   src/FS.GG.SDD.Artifacts/LifecycleArtifacts/Config.fs (parsers default to schemaVersion 1)
     //   src/FS.GG.SDD.Artifacts/ScaffoldProvenance.fs (provenance schema v1)
-    //   src/FS.GG.SDD.Artifacts/GovernanceHandoff.fs (handoff SchemaVersion=1, ContractVersion="1.0.0")
     let providersVersion = 1
     let projectVersion = 1
     let sddVersion = 1
     let agentsVersion = 1
     let scaffoldProvenanceVersion = 1
+    // governance-handoff: the SINGLE source of these two values. Every other site CONSUMES them —
+    // the emitter (src/FS.GG.SDD.Artifacts/GovernanceHandoff.fs) and the release-contract
+    // declaration (src/FS.GG.SDD.Artifacts/ReleaseContract.fs) both read them rather than
+    // re-typing them, so no site can self-declare a version this package never declared. They were
+    // hand-mirrored until #427, and all three had drifted apart.
+    //
+    // 1.1.0 (ADR-0035 stage 3, FS.GG.SDD#422): `ship.unobservedEvidence` became reachable in
+    // readiness.blockingDiagnosticIds[] — additive, so minor. Bumping this re-stamps the artifact.
+    // FS-GG/.github `registry/dependencies.yml` declares the same 1.1.0; the gate that COMPARES the
+    // two does not exist yet and is owed by that repo (its coherence row
+    // `governance-handoff-emitted-version` tracks it). Until it lands, the two are kept in step by
+    // hand — so change this value only alongside the registry.
     let governanceHandoffVersion = 1
-    let governanceHandoffContractVersion = "1.0.0"
+    let governanceHandoffContractVersion = "1.1.0"
     // SDD-owned skill-vendoring contract (ADR-0014). The manifest is the producer's
     // declarative skill set; the root set is a single declared constant.
     let skillManifestVersion = 1

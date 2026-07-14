@@ -123,8 +123,11 @@ module GovernanceHandoffTests =
         let root = shippedProject ()
         Assert.True(TestSupport.existsRelative root handoffPath)
         let doc = parse (readHandoff root)
-        Assert.Equal(1, (prop "schemaVersion" doc).GetInt32())
-        Assert.Equal("1.0.0", str "contractVersion" doc)
+        // END-TO-END: the bytes on disk must self-declare the version FS.GG.Contracts DECLARES.
+        // Asserted against the constant, not a literal — a literal here would be a third hand-copy
+        // of the value, which is exactly how the emitted 1.0.0 outlived the declared 1.1.0 (#427).
+        Assert.Equal(Fsgg.Schemas.governanceHandoffVersion, (prop "schemaVersion" doc).GetInt32())
+        Assert.Equal(Fsgg.Schemas.governanceHandoffContractVersion, str "contractVersion" doc)
         Assert.False(System.String.IsNullOrWhiteSpace(str "generatorVersion" doc))
         Assert.Equal(workId, str "workId" doc)
         let sources = arr "sources" doc
@@ -134,6 +137,24 @@ module GovernanceHandoffTests =
         |> List.iter (fun source ->
             Assert.StartsWith("sha256:", str "digest" source)
             Assert.False(System.String.IsNullOrWhiteSpace(str "path" source)))
+
+    // The gate that did not exist (#427). `ReleaseContract.fs` DECLARES what ship emits;
+    // `GovernanceHandoff.fs` is what it ACTUALLY emits. Nothing compared the two, so the
+    // declaration sat at "1.0.0" after the contract moved to 1.1.0 and the whole suite stayed
+    // green — a green tick over a divergence nobody declared. Both now read the same constant, so
+    // this asserts the INVARIANT (declared == emitted) rather than the wiring: re-hardcode either
+    // site and this reddens, over a real shipped artifact rather than a fixture.
+    [<Fact>]
+    let ``the release contract declares the version ship actually emits`` () =
+        let root = shippedProject ()
+        let doc = parse (readHandoff root)
+
+        let declared =
+            (FS.GG.SDD.Artifacts.ReleaseContract.currentRelease ()).Catalog
+            |> List.find (fun entry -> entry.Contract = "governance-handoff.json")
+
+        Assert.Equal(Some(str "contractVersion" doc), declared.ContractVersion)
+        Assert.Equal(declared.SchemaVersion, (prop "schemaVersion" doc).GetInt32())
 
     [<Fact>]
     let ``US1 ship reports the handoff as a generated view of kind governance-handoff`` () =

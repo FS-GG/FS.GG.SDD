@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "contractVersion": "1.0.0",
+  "contractVersion": "1.1.0",
   "generatorVersion": "FS.GG.SDD.Artifacts/0.11.0",
   "workId": "247-full-shape-golden",
   "sources": [
