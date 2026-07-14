@@ -161,9 +161,13 @@ module Registry =
     /// same tier `validateDocument` occupies for `dependencies.yml`. Deterministic:
     /// diagnostics in document order (root → skills). No I/O.
     ///
-    /// It deliberately does NOT attempt what `.github`'s `scripts/fsgg-skill-registry-check`
-    /// does — hashing producer bodies, walking Rendering's tree to test the mirror
+    /// It deliberately does NOT attempt what the org registry's own reconciling check does —
+    /// hashing producer bodies, walking the consumer repo's tree to test the mirror
     /// obligation, reconciling rows from producer manifests. Those need the filesystem of
     /// three repos and are structurally out of reach of a pure BCL leaf. The two are
     /// complementary; this one claims no authority over content the other verifies.
+    ///
+    /// Nor does it evaluate `materializes-when` predicates: the predicate DSL is the org
+    /// registry's, evaluated by its union gate against a scaffold's effective parameters.
+    /// This validator checks the predicate is PRESENT and non-blank, never what it MEANS.
     val validateSkillRegistry: document: SkillRegistryDocument -> ValidationResult

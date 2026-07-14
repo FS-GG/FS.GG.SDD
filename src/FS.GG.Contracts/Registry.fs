@@ -432,7 +432,11 @@ module Registry =
     /// Uppercase is rejected deliberately — the catalog is reconciled from producer
     /// manifests that emit lowercase, so an uppercase digest is a hand-edit, and a
     /// hand-edited digest is the one thing this catalog must never carry.
-    let private sha256Regex = System.Text.RegularExpressions.Regex(@"^[0-9a-f]{64}$")
+    ///
+    /// Anchored with `\z`, not `$`: in .NET `$` ALSO matches immediately before a trailing
+    /// newline, so `^[0-9a-f]{64}$` would accept a 65-character digest ending in `\n` — a
+    /// digest that is not 64 hex characters, passing a check whose whole job is to say so.
+    let private sha256Regex = System.Text.RegularExpressions.Regex(@"\A[0-9a-f]{64}\z")
 
     /// The declared skill scopes (`Fsgg.Schemas.SkillScope` rendered as catalog tokens).
     let private skillScopes = Set.ofList [ "process"; "product" ]

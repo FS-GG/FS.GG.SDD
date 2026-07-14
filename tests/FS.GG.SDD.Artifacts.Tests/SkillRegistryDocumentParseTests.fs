@@ -111,6 +111,18 @@ skills:
         | Registry.MirrorMalformed _ -> ()
         | other -> failwith $"a quoted boolean must not be read as a verdict, got {other}"
 
+    /// The raw text of a quoted verdict KEEPS its quotes, because the quoting is the whole
+    /// reason it was refused. Without this, the diagnostic reads `present but not a boolean:
+    /// 'true'` and the author cannot act on it — the message shows them the word `true` and
+    /// no hint of what is wrong with it.
+    [<Fact>]
+    let ``a quoted verdict keeps its quotes in the raw text, so the diagnostic is actionable`` () =
+        Assert.Equal(Registry.MirrorMalformed "\"true\"", mirroredOf (oneRow "    mirrored: \"true\""))
+
+        match Registry.validateSkillRegistry (loadOrFail (oneRow "    mirrored: \"true\"")) with
+        | Registry.Invalid [ d ] -> Assert.Contains("'\"true\"'", d.Message)
+        | other -> failwith $"expected one diagnostic disclosing the quoting, got {other}"
+
     [<Theory>]
     [<InlineData "    mirrored: yes">]
     [<InlineData "    mirrored: 1">]

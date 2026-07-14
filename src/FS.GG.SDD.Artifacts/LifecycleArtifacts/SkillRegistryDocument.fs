@@ -54,8 +54,15 @@ module SkillRegistryDocument =
                     Fsgg.Registry.MirrorDeclared true
                 elif isPlain && raw.Equals("false", StringComparison.OrdinalIgnoreCase) then
                     Fsgg.Registry.MirrorDeclared false
-                else
+                elif isPlain then
                     Fsgg.Registry.MirrorMalformed raw
+                else
+                    // A QUOTED scalar carries its quotes into the raw text, because otherwise
+                    // the diagnostic is unactionable: `mirrored: "true"` would report
+                    // `present but not a boolean: 'true'`, and the author would read the word
+                    // `true` back and have no idea what was wrong with it. The QUOTING is the
+                    // entire reason it was refused, so the quoting is what the message must show.
+                    Fsgg.Registry.MirrorMalformed $"\"{raw}\""
             // A sequence/mapping where a boolean belongs. Described by kind rather than
             // by its bytes, so the diagnostic stays deterministic and one-line.
             | :? YamlSequenceNode -> Fsgg.Registry.MirrorMalformed "<sequence>"

@@ -155,6 +155,19 @@ module SkillRegistryValidatorTests =
 
         Assert.Contains(Registry.MalformedField "sha256", rulesOf malformed)
 
+    /// `$` in .NET also matches before a TRAILING NEWLINE, so `^[0-9a-f]{64}$` would accept a
+    /// 65-character digest ending in `\n`. The regex is anchored with `\z` for exactly this.
+    [<Fact>]
+    let ``a sha256 with a trailing newline is malformed - the anchor is \z, not $`` () =
+        let result =
+            Registry.validateSkillRegistry (
+                doc
+                    [ { row "x" with
+                          Sha256 = String.replicate 64 "a" + "\n" } ]
+            )
+
+        Assert.Contains(Registry.MalformedField "sha256", rulesOf result)
+
     /// Uppercase hex is a hand-edit: the catalog is reconciled from producer manifests that
     /// emit lowercase, and a hand-edited digest is the one thing it must never carry.
     [<Fact>]
