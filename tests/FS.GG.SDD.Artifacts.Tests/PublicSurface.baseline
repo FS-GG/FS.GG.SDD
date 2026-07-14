@@ -205,6 +205,8 @@ FS.GG.SDD.Artifacts.ShipVerdict.fromShipView
 FS.GG.SDD.Artifacts.ShipVerdict.sourcesDigest
 FS.GG.SDD.Artifacts.ShipVerdict.toJson
 FS.GG.SDD.Artifacts.SkillManifestJson.serialize
+FS.GG.SDD.Artifacts.SkillRegistryDocument.detectKind
+FS.GG.SDD.Artifacts.SkillRegistryDocument.load
 FS.GG.SDD.Artifacts.Specification.parseSpecificationFacts
 FS.GG.SDD.Artifacts.Specification.specificationStandardSections
 FS.GG.SDD.Artifacts.Task.parseTaskFacts

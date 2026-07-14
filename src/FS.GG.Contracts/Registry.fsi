@@ -22,7 +22,10 @@ module Registry =
     /// The coherence/completeness rule a diagnostic reports as violated (FR-009).
     /// `DuplicateComponent` and `MalformedDocument` were added (additively, feature
     /// 042) for the real-schema `validateDocument`; the legacy `validate` emits only
-    /// the original four.
+    /// the original four. `MalformedField` was added (additively, feature 104) for
+    /// `validateSkillRegistry`: a field that is PRESENT but unparseable is a distinct
+    /// fault from one that is MISSING, and collapsing the two is what lets an
+    /// unreadable value pass as an unset one.
     type RegistryRule =
         | MissingField of fieldName: string
         | UnknownComponent
@@ -30,6 +33,7 @@ module Registry =
         | MalformedVersion
         | DuplicateComponent
         | MalformedDocument
+        | MalformedField of fieldName: string
 
     /// A single actionable diagnostic naming the offending entry and the rule.
     type RegistryDiagnostic =
@@ -94,3 +98,72 @@ module Registry =
     /// (SC-005). Deterministic: diagnostics in document order
     /// (root → repos → contracts → dependencies → coherence). No I/O.
     val validateDocument: document: RegistryDocument -> ValidationResult
+
+    // --- Skill-registry document model + pure validator (feature 104, additive). ---
+    // Models `FS-GG/.github` `registry/skills.yml`, the org's authoritative skill
+    // catalog (ADR-0017). Sibling of the dependency registry above, and a SEPARATE
+    // document: the two share this module and nothing else. The YAML `load` edge
+    // lives in FS.GG.SDD.Artifacts (Constitution V — I/O at the edge, not in this
+    // BCL-only leaf).
+
+    /// One owner's answer to ADR-0022 §6's frozen-mirror question for one skill body:
+    /// *"is a designated consumer repo required to ship a byte-identical copy of this
+    /// body?"* — an obligation the owner DECLARES, not an observation that a same-named
+    /// file happens to exist in two trees. WHICH repo carries the obligation is the org
+    /// registry's business and is deliberately not named here: generic SDD embeds no
+    /// provider identity (CLAUDE.md; the `ScaffoldGuardTests` deny-list enforces it).
+    ///
+    /// THREE states, and the third is the point. `absent` and `false` are DIFFERENT
+    /// CLAIMS — `false` says the owner considered this body and asserts no obligation;
+    /// absent says the question was never answered — and a two-state `bool` with a
+    /// default cannot tell them apart. That collapse is a live fail-open, not a
+    /// tidiness concern: `select(.mirrored == true)` reads an absent key as false
+    /// (`null == true` is false), so a catalog predating the field answers "not
+    /// mirrored" for EVERY body, confidently, and every real mirror goes unguarded —
+    /// the exact hole `.github#658` was opened to close. Modelled as a union so the
+    /// collapse is UNREPRESENTABLE rather than merely discouraged: there is no `false`
+    /// for an absent value to become.
+    ///
+    /// (`Fsgg` deliberately does NOT reuse the `bool option` the request suggested:
+    /// it has two states and nowhere to put a present-but-unparseable value, which
+    /// would then have to collapse into `None` — silently re-reading a malformed
+    /// verdict as "unanswered", which is the same bug one level down.)
+    type MirrorDeclaration =
+        /// No `mirrored:` key at all — the question has NOT been answered for this
+        /// body. This is not `false`, and must never be reported as one.
+        | MirrorUnspecified
+        /// The owner answered: `true` asserts the mirror obligation, `false` denies it.
+        | MirrorDeclared of mirrored: bool
+        /// Present but not a boolean (`yes`, `""`, a list…) — an unparseable verdict.
+        /// Carried with its raw text rather than dropped, so `validateSkillRegistry`
+        /// can REPORT it instead of silently re-reading it as `MirrorUnspecified`.
+        | MirrorMalformed of raw: string
+
+    /// One row of `registry/skills.yml`. `MaterializesWhen` is the ADR-0017
+    /// condition predicate; absent ⇒ `always` (the catalog's own rule), so it stays
+    /// an option rather than being defaulted here.
+    type SkillRegistryEntry =
+        { Id: string
+          Scope: string
+          Owner: string
+          Source: string
+          Sha256: string
+          Mirrored: MirrorDeclaration
+          MaterializesWhen: string option }
+
+    /// The typed model of the org skill catalog (`registry/skills.yml`).
+    type SkillRegistryDocument =
+        { SchemaVersion: int
+          Parameters: string list
+          Skills: SkillRegistryEntry list }
+
+    /// Pure validator over the skill-registry document — the DOCUMENT-SCHEMA tier, the
+    /// same tier `validateDocument` occupies for `dependencies.yml`. Deterministic:
+    /// diagnostics in document order (root → skills). No I/O.
+    ///
+    /// It deliberately does NOT attempt what `.github`'s `scripts/fsgg-skill-registry-check`
+    /// does — hashing producer bodies, walking Rendering's tree to test the mirror
+    /// obligation, reconciling rows from producer manifests. Those need the filesystem of
+    /// three repos and are structurally out of reach of a pure BCL leaf. The two are
+    /// complementary; this one claims no authority over content the other verifies.
+    val validateSkillRegistry: document: SkillRegistryDocument -> ValidationResult

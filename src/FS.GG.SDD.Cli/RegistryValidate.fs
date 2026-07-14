@@ -29,33 +29,48 @@ module RegistryValidate =
         | Registry.MalformedVersion -> "MalformedVersion"
         | Registry.DuplicateComponent -> "DuplicateComponent"
         | Registry.MalformedDocument -> "MalformedDocument"
+        | Registry.MalformedField _ -> "MalformedField"
 
-    let validate (path: string) : RegistryValidateReport =
-        match RegistryDocument.load path with
-        | Error error ->
-            // Load/parse failure: a single MalformedDocument-class diagnostic, distinct
-            // from content diagnostics (Constitution VIII), never a cascade or a crash.
+    /// A load/parse failure: a single MalformedDocument-class diagnostic, distinct from
+    /// content diagnostics (Constitution VIII), never a cascade or a crash.
+    let private loadFailure (path: string) (message: string) =
+        { Path = path
+          Valid = false
+          Diagnostics =
+            [ { Entry = path
+                Rule = "MalformedDocument"
+                Message = message } ] }
+
+    let private report (path: string) (result: Registry.ValidationResult) =
+        match result with
+        | Registry.Valid ->
+            { Path = path
+              Valid = true
+              Diagnostics = [] }
+        | Registry.Invalid diagnostics ->
             { Path = path
               Valid = false
               Diagnostics =
-                [ { Entry = path
-                    Rule = "MalformedDocument"
-                    Message = error.Message } ] }
-        | Ok document ->
-            match Registry.validateDocument document with
-            | Registry.Valid ->
-                { Path = path
-                  Valid = true
-                  Diagnostics = [] }
-            | Registry.Invalid diagnostics ->
-                { Path = path
-                  Valid = false
-                  Diagnostics =
-                    diagnostics
-                    |> List.map (fun d ->
-                        { Entry = d.Entry
-                          Rule = ruleName d.Rule
-                          Message = d.Message }) }
+                diagnostics
+                |> List.map (fun d ->
+                    { Entry = d.Entry
+                      Rule = ruleName d.Rule
+                      Message = d.Message }) }
+
+    /// Validate a registry document, dispatching on its SHAPE rather than its filename
+    /// (feature 104). A root `skills:` key selects the org skill catalog; EVERYTHING else
+    /// — including a malformed file — keeps the dependency-registry path it has always
+    /// taken, so no verdict this command gives today changes.
+    let validate (path: string) : RegistryValidateReport =
+        match SkillRegistryDocument.detectKind path with
+        | SkillRegistryDocument.SkillRegistry ->
+            match SkillRegistryDocument.load path with
+            | Error error -> loadFailure path error.Message
+            | Ok document -> report path (Registry.validateSkillRegistry document)
+        | SkillRegistryDocument.DependencyRegistry ->
+            match RegistryDocument.load path with
+            | Error error -> loadFailure path error.Message
+            | Ok document -> report path (Registry.validateDocument document)
 
     let exitCode (report: RegistryValidateReport) = if report.Valid then 0 else 1
 

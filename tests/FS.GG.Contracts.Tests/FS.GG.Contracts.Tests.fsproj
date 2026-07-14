@@ -12,6 +12,7 @@
     <Compile Include="VersionTests.fs" />
     <Compile Include="RegistryValidatorTests.fs" />
     <Compile Include="RegistryDocumentTests.fs" />
+    <Compile Include="SkillRegistryValidatorTests.fs" />
     <Compile Include="ContractVersionTests.fs" />
     <Compile Include="DependencyClosureTests.fs" />
     <Compile Include="PublicSurfaceTests.fs" />
