@@ -311,16 +311,30 @@ module internal HandlersShip =
                 // So the receipt is re-asserted at the boundary that actually matters. A supported
                 // obligation carrying no receipt is refused HERE even when the verify record says
                 // ready, because that record may predate the policy.
-                let unobserved =
+                //
+                // It reads the `ED-` dispositions rather than the `TD-` ones ON PURPOSE. `verify`'s
+                // gate reclassifies the *test* disposition (ADR-0035 §2 scopes `unobserved` to test
+                // obligations); `ED-` deliberately keeps saying `supported` and carries the basis in
+                // its `Observed` flag, which is the #398 disclosure split. `ship` gates on that flag —
+                // the attestation fact — so it needs no new persisted state, and the two ladders keep
+                // answering the two different questions they exist to answer: "is there evidence?"
+                // (`ED-`) versus "did an observed run discharge the required test?" (`TD-`).
+                let unobservedIds =
                     if requireObserved then
-                        let _, selfAttested, _ = shipEvidenceAttestationCounts (Some view)
-
-                        if selfAttested > 0 then
-                            [ unobservedShipEvidence path selfAttested ]
-                        else
-                            []
+                        view.EvidenceDispositions
+                        |> List.filter (fun disposition ->
+                            disposition.State = EvidenceSupported && not disposition.Observed)
+                        |> List.map _.ObligationId
+                        |> List.distinct
+                        |> List.sort
                     else
                         []
+
+                let unobserved =
+                    if List.isEmpty unobservedIds then
+                        []
+                    else
+                        [ unobservedShipEvidence path unobservedIds ]
 
                 notReady @ failed @ unobserved, Some view
 

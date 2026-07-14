@@ -219,10 +219,15 @@ module CommandTypes =
           // `## Source Snapshot` against the current sources; default false (a moved digest blocks
           // with `stalePlanSnapshot` and writes nothing). Read only by `plan`.
           AcceptUpstream: bool
-          // FS.GG.SDD#350 / ADR-0035 stage 3: `fsgg-sdd verify --require-observed` makes a test
-          // obligation fail CLOSED — a `result: pass` carrying no `observedRun` receipt stops
-          // satisfying. Default false, which is byte-for-byte the pre-#350 behavior. Read only by
-          // `verify`; `ship` inherits it by refusing a verify.json that is not verificationReady.
+          // FS.GG.SDD#350 / ADR-0035 stage 3: `--require-observed` makes an obligation fail CLOSED —
+          // a `result: pass` carrying no `observedRun` receipt stops satisfying. Default false, which
+          // is byte-for-byte the pre-#350 behavior.
+          //
+          // Read by BOTH `verify` and `ship`, and that is not redundancy. `ship` does NOT simply
+          // inherit the gate by refusing a non-`verificationReady` record: a blocked `verify` writes
+          // nothing, so it leaves the PREVIOUS green verify.json standing and still digest-current,
+          // and a `ship` that trusted `verificationReady` alone certified a lifecycle `verify` had
+          // just refused. Deleting the `ship` arm as redundant re-opens exactly that fail-open.
           RequireObserved: bool }
 
     type GeneratedViewSource =

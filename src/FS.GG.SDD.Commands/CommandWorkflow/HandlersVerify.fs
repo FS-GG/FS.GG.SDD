@@ -291,6 +291,17 @@ module internal HandlersVerify =
                 //
                 // A disclosed `synthetic` pass never arrives (the arm above took it), and a deferral
                 // never claims a pass at all — so neither is punished for a run it never asserted.
+                //
+                // The `ED-` ladder is deliberately NOT given this arm, and the asymmetry is the
+                // design rather than an oversight. ADR-0035 §2 scopes `unobserved` to a TEST
+                // obligation ("a test obligation cannot reach `satisfied` on `result: pass` alone"),
+                // and the two ladders answer two different questions: `ED-` asks "is there evidence
+                // for this obligation?" and keeps saying `supported`, carrying the basis in its
+                // `Observed` flag (the #398 disclosure split); `TD-` asks "did an observed run
+                // discharge the required test?" and is the one that gates. `ship` then re-asserts the
+                // receipt against that `Observed` flag. Giving `ED-` an `unobserved` STATE would
+                // instead change a persisted enum on the governance-handoff surface — a schema
+                // change this stage deliberately does not make.
                 elif
                     requireObserved
                     && matches

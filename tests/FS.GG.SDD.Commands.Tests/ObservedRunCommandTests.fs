@@ -507,11 +507,20 @@ module ObservedRunCommandTests =
         | None -> failwith "verify produced no summary."
 
         // The gate fires, and writes nothing — so the green record above still stands.
-        Assert.Equal("needsVerificationCorrection", (runVerifyRequiringObserved root).Verification.Value.Readiness)
+        match (runVerifyRequiringObserved root).Verification with
+        | Some verification -> Assert.Equal("needsVerificationCorrection", verification.Readiness)
+        | None -> failwith "verify produced no summary."
 
         let shipped = runShipRequiringObserved root
 
         Assert.Contains(shipped.Diagnostics, fun d -> d.Id = "ship.unobservedEvidence")
+
+        // It must NAME them. A blocking diagnostic that reports "3 obligations" and lists none sends
+        // the operator back to verify to diff for the ids the tool already had in hand.
+        Assert.All(
+            shipped.Diagnostics |> List.filter (fun d -> d.Id = "ship.unobservedEvidence"),
+            fun d -> Assert.NotEmpty d.RelatedIds
+        )
 
         match shipped.Ship with
         | None -> failwith "ship produced no summary."

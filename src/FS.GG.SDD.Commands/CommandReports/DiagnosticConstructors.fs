@@ -960,13 +960,13 @@ module internal DiagnosticConstructors =
     /// which is the whole point: a `verify.json` that went green BEFORE the receipt policy was asked
     /// for is still sitting on disk, still digest-current, and would otherwise certify a pass nobody
     /// observed. Ship refuses it rather than inheriting a verdict that predates the question.
-    let unobservedShipEvidence path (selfAttested: int) =
+    let unobservedShipEvidence path (ids: string list) =
         errorDiagnostic
             "ship.unobservedEvidence"
             (Some path)
-            $"{selfAttested} supported evidence obligation(s) carry no observedRun receipt — the recorded verification is a self-attestation, not an observed run."
+            $"{ids.Length} supported evidence obligation(s) carry no observedRun receipt — the recorded verification is a self-attestation, not an observed run."
             "Re-run 'fsgg-sdd verify --require-observed' after recording receipts with 'fsgg-sdd evidence --from-test-report <trx-or-junit>'. A verify.json produced before the receipt policy does not satisfy it."
-            []
+            ids
 
     let staleRequiredTest path ids =
         warningDiagnostic
