@@ -107,7 +107,10 @@ module internal RemediationPointers =
           "evidence.unsafeUpdate", at evidenceEx evidenceDecl
           "evidence.identityMismatch", at evidenceEx frontMatter
           // verify
-          "verify.missingRequiredTest", at evidenceEx evidenceDecl ]
+          "verify.missingRequiredTest", at evidenceEx evidenceDecl
+          "verify.unobservedRequiredTest", at evidenceEx evidenceDecl
+          // ship
+          "ship.unobservedEvidence", at evidenceEx evidenceDecl ]
         |> Map.ofList
 
     /// The deterministic pointer sentence appended to a covered diagnostic's Correction, or `""`

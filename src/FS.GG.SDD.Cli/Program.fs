@@ -63,7 +63,8 @@ let printUnknown commandValue =
           FromTests = None
           FromTestReport = None
           SurfaceUpdate = false
-          AcceptUpstream = false }
+          AcceptUpstream = false
+          RequireObserved = false }
 
     let model =
         { Request = request
@@ -184,7 +185,8 @@ let private helpRequest command format =
       FromTests = None
       FromTestReport = None
       SurfaceUpdate = false
-      AcceptUpstream = false }
+      AcceptUpstream = false
+      RequireObserved = false }
 
 // §3.5: project a help report through the standard three views to stdout. Help carries no
 // diagnostics and no changes → NoChange → exit 0 (never `unknownCommand`, FR-008/011).
@@ -388,7 +390,10 @@ let run args =
                       SurfaceUpdate = hasFlag "--update" rest
                       // Feature 090: `plan --accept-upstream` re-baselines the plan's `## Source
                       // Snapshot` against the current sources. Read only by `plan`.
-                      AcceptUpstream = hasFlag "--accept-upstream" rest }
+                      AcceptUpstream = hasFlag "--accept-upstream" rest
+                      // FS.GG.SDD#350 / ADR-0035: `verify --require-observed` fails an unobserved
+                      // pass closed. Default off — see `CommandRequest.RequireObserved`.
+                      RequireObserved = hasFlag "--require-observed" rest }
 
                 let report = driveToReport request
 

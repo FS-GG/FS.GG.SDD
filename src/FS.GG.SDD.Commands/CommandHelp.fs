@@ -101,11 +101,20 @@ module CommandHelp =
                   None
                   "Re-baseline the plan's Source Snapshot against the current spec, clarifications, and checklist."
               dryRun ]
+        // FS.GG.SDD#350 / ADR-0035: opt-in fail-closed. Off by default — the fleet does not record
+        // receipts yet, and flipping the default is a schema major a human takes.
+        | Verify
+        | Ship ->
+            [ work
+              title
+              flag
+                  "--require-observed"
+                  None
+                  "Fail closed on an unobserved pass: an obligation whose result:pass carries no observedRun receipt blocks instead of satisfying. Pass it to BOTH verify and ship."
+              dryRun ]
         | Checklist
         | Tasks
         | Analyze
-        | Verify
-        | Ship
         | Agents
         | Refresh -> [ work; title; dryRun ]
         | Scaffold ->

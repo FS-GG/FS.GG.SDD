@@ -142,7 +142,21 @@ module CommandTypes =
           // (default) ⇒ a plan whose recorded digests moved blocks with `stalePlanSnapshot` and
           // writes zero bytes. Never honored by `tasks`/`analyze`: accepting the upstream is the
           // operator's gesture at `plan`, not an implicit downstream one (FR-008).
-          AcceptUpstream: bool }
+          AcceptUpstream: bool
+          // Verify input (`fsgg-sdd verify --require-observed`); ignored by other commands
+          // (FS.GG.SDD#350, ADR-0035 stage 3 — "fail closed").
+          //
+          // `true` ⇒ a test obligation whose pass carries no `observedRun` receipt reaches the new
+          // non-satisfying disposition `unobserved` instead of `satisfied`: it is neither a lie nor a
+          // pass, and it BLOCKS. `false` (default) ⇒ pre-#350 behavior, byte for byte.
+          //
+          // The default is off DELIBERATELY, and that is the whole shape of this change. ADR-0035
+          // gates the flip on "once the fleet is green", and the fleet is not: no `evidence.yml` in
+          // this repo — let alone the org — yet carries a receipt, so flipping the default today
+          // would turn every ship-ready work item in every FS-GG repo not-ship-ready at once, with
+          // no remedy available. The flag lands the MECHANISM and the failure-leg proof; a human
+          // flips the default (a schema major) once receipts are actually being recorded.
+          RequireObserved: bool }
 
     type GeneratedViewSource =
         { Path: string

@@ -940,6 +940,34 @@ module internal DiagnosticConstructors =
             "Add verification evidence or an accepted deferral linked to the missing required test obligations."
             ids
 
+    /// FS.GG.SDD#350 / ADR-0035 stage 3, raised only under `verify --require-observed`.
+    ///
+    /// The obligation is not missing, not stale, and not a disclosed synthetic: someone wrote
+    /// `result: pass` and meant it. What is absent is any evidence that a run *happened* — so this
+    /// says exactly that, and nothing stronger. It is not an accusation of lying; it is the tool
+    /// declining to certify a pass it never observed.
+    let unobservedRequiredTest path ids =
+        errorDiagnostic
+            "verify.unobservedRequiredTest"
+            (Some path)
+            "One or more required test obligations are satisfied only by an authored 'result: pass' — no observedRun receipt records a run SDD actually read."
+            "Run the suite, then record the receipt with 'fsgg-sdd evidence --from-test-report <trx-or-junit>'. SDD never runs the suite itself; it reads the report a runner produced."
+            ids
+
+    /// FS.GG.SDD#350 / ADR-0035 stage 3, raised only under `ship --require-observed`.
+    ///
+    /// The merge-boundary twin of `unobservedRequiredTest`. It fires on the record `verify` wrote,
+    /// which is the whole point: a `verify.json` that went green BEFORE the receipt policy was asked
+    /// for is still sitting on disk, still digest-current, and would otherwise certify a pass nobody
+    /// observed. Ship refuses it rather than inheriting a verdict that predates the question.
+    let unobservedShipEvidence path (ids: string list) =
+        errorDiagnostic
+            "ship.unobservedEvidence"
+            (Some path)
+            $"{ids.Length} supported evidence obligation(s) carry no observedRun receipt — the recorded verification is a self-attestation, not an observed run."
+            "Re-run 'fsgg-sdd verify --require-observed' after recording receipts with 'fsgg-sdd evidence --from-test-report <trx-or-junit>'. A verify.json produced before the receipt policy does not satisfy it."
+            ids
+
     let staleRequiredTest path ids =
         warningDiagnostic
             "verify.staleRequiredTest"

@@ -111,7 +111,8 @@ module AcceptanceSupport =
           FromTests = None
           FromTestReport = None
           SurfaceUpdate = false
-          AcceptUpstream = false }
+          AcceptUpstream = false
+          RequireObserved = false }
 
     /// The acceptance's fixed composition request: `--provider rendering --param
     /// lifecycle=sdd`. `rendering` is the author-supplied provider *name* (a generic

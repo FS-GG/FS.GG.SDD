@@ -280,6 +280,12 @@ module CommandReports =
     let missingRequiredTest path ids =
         DiagnosticConstructors.missingRequiredTest path ids
 
+    let unobservedRequiredTest path ids =
+        DiagnosticConstructors.unobservedRequiredTest path ids
+
+    let unobservedShipEvidence path ids =
+        DiagnosticConstructors.unobservedShipEvidence path ids
+
     let staleRequiredTest path ids =
         DiagnosticConstructors.staleRequiredTest path ids
 

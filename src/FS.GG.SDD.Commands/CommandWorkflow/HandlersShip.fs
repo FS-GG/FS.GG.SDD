@@ -262,7 +262,7 @@ module internal HandlersShip =
                 Some(shipIdentityMismatch path workId view.WorkId.Value)
             | Ok _ -> None
 
-    let shipVerificationPrerequisite workId model =
+    let shipVerificationPrerequisite workId (requireObserved: bool) model =
         let path = verifyPath workId
 
         match snapshot path model with
@@ -295,7 +295,48 @@ module internal HandlersShip =
                     else
                         []
 
-                notReady @ failed, Some view
+                // FS.GG.SDD#350 / ADR-0035 stage 3. `ship` gates on the RECORD, not on a re-derivation
+                // — the `Observed` flag it reads is the one `verify` wrote — but it must gate, and a
+                // CLI walk is what proved it:
+                //
+                //   verify                        -> verificationReady, and writes verify.json
+                //   verify --require-observed     -> BLOCKED, and (correctly) writes nothing
+                //   ship                          -> read the STALE GREEN verify.json ... shipReady
+                //
+                // The blocked run leaves the previous green record standing, and every source digest
+                // still matches, so nothing downstream can see that the gate ever fired. That is
+                // #266's own rule — "compare against reality, not a record of reality" — failing in
+                // the fix for #266, which is precisely how this defect class survives.
+                //
+                // So the receipt is re-asserted at the boundary that actually matters. A supported
+                // obligation carrying no receipt is refused HERE even when the verify record says
+                // ready, because that record may predate the policy.
+                //
+                // It reads the `ED-` dispositions rather than the `TD-` ones ON PURPOSE. `verify`'s
+                // gate reclassifies the *test* disposition (ADR-0035 §2 scopes `unobserved` to test
+                // obligations); `ED-` deliberately keeps saying `supported` and carries the basis in
+                // its `Observed` flag, which is the #398 disclosure split. `ship` gates on that flag —
+                // the attestation fact — so it needs no new persisted state, and the two ladders keep
+                // answering the two different questions they exist to answer: "is there evidence?"
+                // (`ED-`) versus "did an observed run discharge the required test?" (`TD-`).
+                let unobservedIds =
+                    if requireObserved then
+                        view.EvidenceDispositions
+                        |> List.filter (fun disposition ->
+                            disposition.State = EvidenceSupported && not disposition.Observed)
+                        |> List.map _.ObligationId
+                        |> List.distinct
+                        |> List.sort
+                    else
+                        []
+
+                let unobserved =
+                    if List.isEmpty unobservedIds then
+                        []
+                    else
+                        [ unobservedShipEvidence path unobservedIds ]
+
+                notReady @ failed @ unobserved, Some view
 
     let shipJson
         (workId: string)
@@ -461,7 +502,7 @@ module internal HandlersShip =
                     | _ -> []
 
                 let verificationPrereqDiagnostics, verificationView =
-                    shipVerificationPrerequisite workId model
+                    shipVerificationPrerequisite workId model.Request.RequireObserved model
 
                 let shipViewDiagnostics = existingShipDiagnostic workId model |> Option.toList
 
