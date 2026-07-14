@@ -29,6 +29,7 @@ that line's bump rule; the policy's table does not reach it.
 |---|---|---|---|
 | **Add a field to a public record** | **Breaking** | **major** | **required** |
 | Remove/rename/retype a public member; change a signature | Breaking | major | required |
+| **Add a case to a public discriminated union** | Additive (binary); **source-breaking** | minor | none — but say so in the release notes |
 | Add a new module, type, or `val` | Additive | minor | none |
 | Behaviour change with no surface change; docs; internals | Clarifying | patch | none |
 
@@ -42,10 +43,36 @@ that line's bump rule; the policy's table does not reach it.
 > and then shipped as the `1.4.1` **patch**, forcing `2.0.0`. See the worked example,
 > [contracts-2.0.0.md](contracts-2.0.0.md).
 
+> **The DU row is the one the detector cannot help you with.** Adding a case to a public DU is
+> *binary*-compatible — every existing case constructor and tag survives — so it stays a
+> **minor**. But it is **source**-breaking: a
+> consumer whose `match` was exhaustive and carried no wildcard now gets `FS0025`
+> (*incomplete pattern matches*). That is a warning by default, and this repo promotes it to
+> an **error** (`Directory.Build.local.props` sets `TreatWarningsAsErrors` and names `FS0025`
+> explicitly). A consumer that does the same gets a **build break from a minor bump**.
+>
+> **This is observable, not theoretical.** When feature 104 added `MalformedField` to
+> `RegistryRule`, `src/FS.GG.SDD.Cli/RegistryValidate.fs` — which matches that DU exhaustively
+> and carries no wildcard — had to gain a matching arm *in the same commit*, or the build would
+> not have compiled. In-repo that is free: `ProjectReference`, so the break and its fix land
+> together. **The package consumers get no such lockstep** (`consumers: [sdd, governance,
+> templates]`): they meet the new case whenever they upgrade, and if they match exhaustively
+> the upgrade breaks them.
+>
+> Minor is still the standing precedent, not an invention here: `RegistryRule` grew
+> `DuplicateComponent` and `MalformedDocument` in feature 042 and shipped as the `1.1.0` minor.
+> Keep it — but keep it *knowing* what it costs: prefer a wildcard arm in consumers, and **say
+> so in the release notes**, since the bump number alone will not warn anyone.
+>
+> This row and the record row are **mirror images**, and neither is visible by reading the diff
+> and thinking "I only added something".
+
 The detector is `scripts/apicompat-check.sh` (ApiCompat / Package Validation vs the
 feed baseline) — but it can only catch a break **before** it is published, because it
 baselines against whatever is newest on the feed. Once a break ships, the gate is
-green against it forever. The table above is what you use *before* the gate runs.
+green against it forever. It also only sees **binary** breaks: the DU row above is
+invisible to it *even before publish*. The table is what you use *before* the gate
+runs, and for the DU row it is the **only** thing you have.
 
 ## The coherence invariant
 
@@ -112,3 +139,27 @@ enforces `registry.version == source` on `.github` PRs and `main`. Skipping the
 publish or the registry advance leaves the invariant broken: the source claims a
 version no consumer can resolve from the feed and no registry record reflects.
 Doing all three together keeps source, feed, and registry coherent on every bump.
+
+> **STOP — "together" is currently not something you can do, and following the three steps
+> above as written will wedge the org.** They span **two repos**, and no PR spans both.
+>
+> The `contract-coherence` gate does not read your PR. Its `contracts-ref` input defaults to
+> **`main`**, so it asserts, by strict string equality, that `registry.version` equals the
+> version in **`FS.GG.SDD@main`'s _source_** — an *unreleased branch*, not the published
+> package, though its own error message calls it "the actual FS.GG.Contracts package version".
+> That coupling makes both orderings red:
+>
+> - **Bump SDD first** — green on SDD's own PR (the gate still reads `main`'s old version),
+>   then **red in every calling repo** the moment it merges, until `.github` advances the pin.
+> - **Advance `.github` first** — the gate reads SDD `main`'s *old* version against the *new*
+>   pin. Red on every `.github` PR instead.
+>
+> **There is no ordering that avoids a red window**, because the assertion couples two repos'
+> `main` branches. **Do not start a bump until this is resolved.**
+>
+> Tracked at [FS.GG.SDD#432](https://github.com/FS-GG/FS.GG.SDD/issues/432), which also
+> carries the outstanding `2.0.0 -> 2.1.0` debt this blocks — feature 104 grew the public
+> surface *after* `2.0.0` was cut and published, so the source at `2.0.0` and the `.nupkg` at
+> `2.0.0` are already different artifacts. The agreed direction is to **fix the gate** — teach
+> it to accept `main` leading the registry while a publish is pending — so the window closes
+> permanently, rather than to schedule around it. Delete this block once #432 lands.
