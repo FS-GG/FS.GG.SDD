@@ -239,13 +239,13 @@ module ReleaseContract =
 
     let currentRelease () : ReleaseReadiness =
         let identity =
-            { Version = "0.10.0"
-              Channel = channelOfVersion "0.10.0"
+            { Version = "0.11.0"
+              Channel = channelOfVersion "0.11.0"
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "0.10.x"
+            [ { SddVersionLine = "0.11.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "1.x" } ]
 
@@ -915,27 +915,44 @@ module ReleaseContract =
               commandsMd
               skillsMd
               commandReport ]
-          // 0.10.0 is the first BREAKING release since 0.9.0. Two changes qualify under
-          // `versioning-policy.md` (a change to a public `--json` output shape AND a change
-          // to the derived task-graph shape are both Breaking; there are NO F# public-surface
-          // removals — `PublicSurface.baseline` had no deletions). Under the pre-1.0 `0.x`
-          // carve-out they land on a minor bump, but the migration note stays mandatory
-          // (FR-009 / FR-010; `migrationNoteRequired Breaking = true`). Enumerate EVERY
-          // breaking change: a note that under-reports is the failure mode the note prevents.
-          Migrations =
-            [ { Version = "0.10.0"
-                Path = "docs/release/migrations/0.10.0.md"
-                // Two constraints on this text, both enforced by tests:
-                //  1. Backtick-free: the default JavaScriptEncoder escapes U+0060 (as it
-                //     already escapes '>' in specKitRange), which would put ` noise in a
-                //     committed machine artifact.
-                //  2. No Governance gate-logic vocabulary (ReleaseBoundaryTests T024 bans
-                //     "gate"/"route"/"profile"/"freshness"/"publish"/"provenance"/"verdict"/
-                //     "enforce"). SDD reports blocking readiness; it never gates. Say
-                //     "blocks"/"blocking", never "gates"/"gating".
-                BreakingChanges =
-                  [ "the seven lifecycle artifacts in the --json command-report changedArtifacts now report kind hybridArtifact and ownership hybrid instead of authoredSource and authored (feature 312); a consumer matching lifecycle artifacts on kind authoredSource or ownership authored must now match hybridArtifact and hybrid"
-                    "the task graph now derives n implementation tasks from a work item with n requirements instead of 2n (feature 319): a plan-decision PD-### task whose refs are subsumed by a requirement task is folded into it, not dropped; re-run fsgg-sdd tasks to re-derive the graph, and remove any evidence.yml declaration whose subject.id names a folded task, since its obligation is now carried by the requirement task entry" ] } ] }
+          // 0.11.0 is ADDITIVE, so it carries NO migration note — `migrationNoteRequired
+          // Additive = false` (FR-009 / FR-010), and an EMPTY list is the honest encoding of
+          // that. This is not an omission, and the classification was not asserted: it was
+          // MEASURED against the released 0.10.0 tree, on the two surfaces the policy names.
+          //
+          //  1. F# public surface — `PublicSurface.baseline` diffs v0.10.0..HEAD are
+          //     INSERTIONS ONLY (43 added, 0 removed), across Contracts/Artifacts/Commands.
+          //     ApiCompat agrees, baselined against the published feed artifacts.
+          //  2. The public `--json` output shapes — the committed goldens gained exactly four
+          //     keys (`observed`, `evidenceObservedCount`, `evidenceSelfAttestedCount`,
+          //     `evidenceSupportedCount`; features 415/422) and LOST NONE. "Add an optional
+          //     report field" is the policy's Additive row.
+          //
+          // No command, flag, or exit-code contract was removed or retyped. `--require-observed`
+          // (feature 422) is a NEW flag whose default is OFF, so no existing invocation changes
+          // its exit code; flipping that default WOULD be breaking, and #422 deliberately left it
+          // to a human on a schema major. Nothing here flips it.
+          //
+          // The 0.10.0 note is NOT carried forward: `Migrations` is the note for THE RELEASE
+          // BEING CUT (T023 pins `Path` to `Identity.Version`), not a running history. The
+          // history lives in `docs/release/migrations/`, which keeps 0.10.0.md on disk.
+          //
+          // WHEN A NOTE COMES BACK, its `BreakingChanges` text has two constraints. They are
+          // kept here, with the empty list, because here is where the next author will be
+          // standing — and the first of them is enforced by NOTHING ELSE:
+          //
+          //  1. BACKTICK-FREE. The default JavaScriptEncoder escapes U+0060 (as it already
+          //     escapes '>' in specKitRange), so a backticked note lands in a committed machine
+          //     artifact as ``` noise. NO TEST CATCHES THIS — this comment is the whole
+          //     guard, which is exactly why deleting it along with the 0.10.0 note was wrong.
+          //  2. No Governance gate-logic vocabulary — "gate"/"route"/"profile"/"freshness"/
+          //     "publish"/"provenance"/"verdict"/"enforce". ReleaseBoundaryTests T024 scans the
+          //     SERIALIZED contract, so it does cover note text, and it will fail you. SDD
+          //     reports blocking readiness; it never gates. Say "blocks"/"blocking".
+          //
+          // And enumerate EVERY breaking change: a note that under-reports is the exact failure
+          // the note exists to prevent.
+          Migrations = [] }
 
     // ---- canonical serialization ----
 

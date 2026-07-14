@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "generatorVersion": {
     "id": "FS.GG.SDD.Artifacts",
-    "version": "0.10.0"
+    "version": "0.11.0"
   },
   "identity": {
-    "version": "0.10.0",
+    "version": "0.11.0",
     "channel": "preRelease",
     "packageIds": [
       "FS.GG.SDD.Artifacts",
@@ -16,7 +16,7 @@
   },
   "compatibility": [
     {
-      "sddVersionLine": "0.10.x",
+      "sddVersionLine": "0.11.x",
       "specKitRange": "\u003E=0.8.5",
       "governanceContractVersionRange": "1.x"
     }
@@ -3019,14 +3019,5 @@
       "durableGenerated": false
     }
   ],
-  "migrations": [
-    {
-      "version": "0.10.0",
-      "path": "docs/release/migrations/0.10.0.md",
-      "breakingChanges": [
-        "the seven lifecycle artifacts in the --json command-report changedArtifacts now report kind hybridArtifact and ownership hybrid instead of authoredSource and authored (feature 312); a consumer matching lifecycle artifacts on kind authoredSource or ownership authored must now match hybridArtifact and hybrid",
-        "the task graph now derives n implementation tasks from a work item with n requirements instead of 2n (feature 319): a plan-decision PD-### task whose refs are subsumed by a requirement task is folded into it, not dropped; re-run fsgg-sdd tasks to re-derive the graph, and remove any evidence.yml declaration whose subject.id names a folded task, since its obligation is now carried by the requirement task entry"
-      ]
-    }
-  ]
+  "migrations": []
 }

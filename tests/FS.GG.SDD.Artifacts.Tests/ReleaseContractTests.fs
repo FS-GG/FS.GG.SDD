@@ -103,8 +103,20 @@ module ReleaseContractTests =
     [<Fact>]
     let ``T011 the compatibility entry carries a Spec Kit range and tolerates a null Governance range`` () =
         let entry = List.exactlyOne release.Compatibility
-        Assert.Equal("0.10.x", entry.SddVersionLine)
+        Assert.Equal("0.11.x", entry.SddVersionLine)
         Assert.False(String.IsNullOrWhiteSpace entry.SpecKitRange)
+
+        // ...and the literal above is only half the guard. What makes a compatibility entry TRUE
+        // is that it names THIS release's line: `0.10.x` on an 0.11.0 release is not stale, it is
+        // a false compatibility claim, and a consumer resolving against it would take the wrong
+        // range. The two facts are derived from one `Identity.Version` here so they cannot drift
+        // apart the way the literal alone allowed (it survived the 0.10.0 -> 0.11.0 bump unchanged
+        // and nothing failed until this line was added).
+        let identityLine =
+            let parts = release.Identity.Version.Split('.')
+            $"{parts.[0]}.{parts.[1]}.x"
+
+        Assert.Equal(identityLine, entry.SddVersionLine)
 
         // a null Governance range is valid and must round-trip and not block readiness
         let withoutGovernance =
@@ -191,33 +203,84 @@ module ReleaseContractTests =
 
     // ===== US4 — migration-note obligation for this release (T023) =====
 
+    // 0.11.0 is ADDITIVE, so it carries NO migration note (`migrationNoteRequired Additive =
+    // false`). The obvious edit when 0.10.0's note came out was to swap `exactlyOne` for
+    // `Assert.Empty` — and that would have SILENTLY DELETED the only guard in the repo that says
+    // a note must be FOR this release and must EXIST ON DISK. Those checks were written against
+    // `exactlyOne`, so they die with it, and nothing would notice until the next BREAKING release
+    // shipped a note pointing at a file nobody wrote.
+    //
+    // So the well-formedness guard is stated as a PROPERTY over whatever `Migrations` holds. It is
+    // vacuous today — that is the point: it costs nothing now and is already standing, unedited,
+    // the moment a note comes back. A guard that has to be re-derived at exactly the moment it
+    // first matters is a guard that is not there.
+    /// The well-formedness obligation on a migration note, as a PREDICATE rather than a pile of
+    /// asserts — so it can be run against a release that HAS one. `Assert.All` over this release's
+    /// (empty) `Migrations` proves nothing, and a guard that is only ever evaluated vacuously is
+    /// indistinguishable from a guard that is wrong.
+    let private noteDefects (identityVersion: string) (note: MigrationNoteRef) =
+        [
+          // a note whose version drifts from identity advertises a migration that this artifact
+          // does not describe.
+          if note.Version <> identityVersion then
+              $"version {note.Version} does not match the release identity {identityVersion}"
+
+          if note.Path <> $"docs/release/migrations/{identityVersion}.md" then
+              $"path {note.Path} is not the note path for {identityVersion}"
+
+          // a note that enumerates nothing under-reports — the exact failure the obligation exists
+          // to prevent.
+          if List.isEmpty note.BreakingChanges then
+              $"note {note.Path} enumerates no breaking changes"
+
+          // the obligation is a FILE, not a claim.
+          if not (File.Exists(Path.Combine(TestSupport.repoRoot, note.Path))) then
+              $"note {note.Path} is referenced by release-readiness.json but absent from disk" ]
+
     [<Fact>]
-    let ``T023 this breaking release carries the obliged migration note`` () =
-        // An additive release still carries no note — the policy is unchanged.
-        Assert.False(migrationNoteRequired Additive)
+    let ``T023 every migration note this release declares is for this release and exists on disk`` () =
+        Assert.All(release.Migrations, fun note -> Assert.Empty(noteDefects release.Identity.Version note))
 
-        // 0.10.0 relabels the seven lifecycle artifacts in the `--json` command-report
-        // (`authoredSource`/`authored` → `hybridArtifact`/`hybrid`, feature 312) and folds
-        // the derived task graph from 2n to n tasks (feature 319) — Breaking ⇒ a note is
-        // owed (FS-GG/FS.GG.SDD#190). Pre-1.0 it rides a minor bump; the note is not optional.
-        Assert.True(migrationNoteRequired Breaking)
+    // GUARD THE GUARD. The assertion above is vacuous while `Migrations` is empty, so on its own it
+    // would happily still pass with a typo'd path format or a dropped disk check — and nobody would
+    // find out until a BREAKING release shipped a note pointing at a file nobody wrote, which is the
+    // precise moment the guard was supposed to matter. So the predicate is exercised here against a
+    // release that DOES carry a note: 0.10.0, whose note is still on disk.
+    [<Fact>]
+    let ``T023 the note obligation ACCEPTS a well-formed note and NAMES each way one can be wrong`` () =
+        let good: MigrationNoteRef =
+            { Version = "0.10.0"
+              Path = "docs/release/migrations/0.10.0.md"
+              BreakingChanges = [ "the seven lifecycle artifacts now report kind hybridArtifact" ] }
 
-        let note = List.exactlyOne release.Migrations
+        // the real, on-disk 0.10.0 note satisfies the obligation in full.
+        Assert.Empty(noteDefects "0.10.0" good)
 
-        // the note is *for this release*: a note whose version drifts from identity
-        // would advertise a migration that this artifact does not describe.
-        Assert.Equal(release.Identity.Version, note.Version)
-        Assert.Equal($"docs/release/migrations/{release.Identity.Version}.md", note.Path)
-        Assert.NotEmpty note.BreakingChanges
+        // ...and each failure leg fires. A leg that never fails is how this defect class survives.
+        Assert.NotEmpty(noteDefects "0.11.0" good) // version/path drift from identity
+        Assert.NotEmpty(noteDefects "0.10.0" { good with BreakingChanges = [] }) // under-reports
 
-        // the referenced note must actually exist — the obligation is a file, not a claim.
-        Assert.True(
-            File.Exists(Path.Combine(TestSupport.repoRoot, note.Path)),
-            $"migration note {note.Path} is referenced by release-readiness.json but absent from disk"
+        Assert.NotEmpty(
+            noteDefects
+                "9.9.9"
+                { good with
+                    Version = "9.9.9"
+                    Path = "docs/release/migrations/9.9.9.md" } // names a file nobody wrote
         )
 
-        // and it must name a stable marker of a 0.10.0 breaking change, so a consumer can grep for it.
-        Assert.Contains(note.BreakingChanges, fun change -> change.Contains "hybridArtifact")
+    // ...and the classification of THIS release, pinned separately, so the emptiness above is a
+    // MEASURED verdict rather than an absence nobody accounted for. Both surfaces the policy names
+    // were checked against the released 0.10.0 tree: the public F# surface gained 43 members and
+    // lost none, and the `--json` goldens gained four keys (`observed`, `evidenceObservedCount`,
+    // `evidenceSelfAttestedCount`, `evidenceSupportedCount`; features 415/422) and lost none.
+    // `--require-observed` (feature 422) is a new flag defaulting OFF, so no existing invocation
+    // changes its exit code.
+    [<Fact>]
+    let ``T023 this additive release declares no migration note`` () =
+        Assert.False(migrationNoteRequired Additive)
+        Assert.True(migrationNoteRequired Breaking)
+
+        Assert.Empty release.Migrations
 
     [<Fact>]
     let ``T023 a breaking release is obliged to carry a migration note`` () =
