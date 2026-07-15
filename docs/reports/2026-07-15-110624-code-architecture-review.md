@@ -577,9 +577,24 @@ individually shippable through the SDD lifecycle.
 
 ### Optional / defensive
 
-- [ ] **Widen the YAML catch to a defensive superclass (§2, Low)** so a future
+- [x] **Widen the YAML catch to a defensive superclass (§2, Low)** so a future
       non-`YamlException` construct degrades to a diagnostic rather than the
-      §2.1 crash outcome.
+      §2.1 crash outcome. ✅ *Done 2026-07-15.* The gap turned out to be **reproducible**,
+      not merely theoretical: three genuinely hand-authorable constructs make
+      YamlDotNet's `stream.Load` throw a framework exception that is *not* a
+      `YamlException` — an empty verbatim tag `!<>` (`ArgumentException`), an empty
+      `%TAG` directive prefix (`ArgumentNullException`), and a lone/over-sized surrogate
+      escape `"\uD800\uD800"` (`ArgumentOutOfRangeException`). Each previously escaped the
+      narrow `:? YamlException` catch in `parseYamlDocument` (`Internal.fs`) and reached
+      the top-level backstop as an `unhandledException` (exit 2, report routed to stderr) —
+      a direct malformed-authored-input → exit-1 doctrine violation, verified against the
+      pre-fix CLI. The catch now has a broad fallback arm (matching the codebase's existing
+      JSON-parse `with ex ->` convention) that degrades any other `stream.Load` exception to
+      the same positionless `YamlMalformed` diagnostic the depth/size pre-scan emits; the
+      positioned `YamlException` arm is unchanged, and StackOverflow stays the pre-scan's job.
+      A `[<Theory>]` in `AuthoredInputHardeningTests.fs` pins all three constructs to a
+      `malformedYaml` diagnostic; verified through the real CLI (`unhandledException` →
+      `lintUnparseableArtifact`).
 - [ ] **Add a one-line exit-code caveat (§3, Low)** noting `lint`'s bespoke
       `UnusableInput`=2 polarity.
 

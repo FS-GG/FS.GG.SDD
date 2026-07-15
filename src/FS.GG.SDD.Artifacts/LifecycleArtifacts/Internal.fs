@@ -183,10 +183,25 @@ module internal Internal =
                         YamlEmpty
                     else
                         YamlRoot stream.Documents.[0].RootNode
-                with :? YamlDotNet.Core.YamlException as ex ->
+                with
+                | :? YamlDotNet.Core.YamlException as ex ->
                     // YamlDotNet marks positions as int64; a source line/column that overflows
                     // int is not a document a human authored.
                     YamlMalformed(ex.Message, int ex.Start.Line, int ex.Start.Column)
+                | ex ->
+                    // Every authored-input error YamlDotNet *documents* derives from
+                    // YamlException and is caught above with its position. But `stream.Load`
+                    // still throws a few un-positioned framework exceptions on genuinely
+                    // hand-authored input — an empty verbatim tag `!<>`, an empty `%TAG`
+                    // prefix, and a lone/over-sized surrogate escape surface as
+                    // ArgumentException / ArgumentNullException / ArgumentOutOfRangeException,
+                    // not YamlException (review §2.2). Without this arm they escape the parser
+                    // and reach the top-level backstop as an `unhandledException` (exit 2),
+                    // violating the malformed-authored-input -> exit-1 diagnostic doctrine.
+                    // Degrade them to the same positionless malformed diagnostic the pre-scan
+                    // bounds emit. (A StackOverflow stays uncatchable — the depth/size pre-scan
+                    // above, not this arm, is its defense.)
+                    YamlMalformed(ex.Message, 0, 0)
 
     /// A lossy probe for the callers that answer a question about a document rather
     /// than diagnose it (a raw schemaVersion read for identity/digest purposes).
