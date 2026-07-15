@@ -1,7 +1,6 @@
 namespace FS.GG.SDD.Commands.Internal
 
 open System
-open System.IO
 open System.Text
 open System.Text.Json
 open System.Text.RegularExpressions
@@ -24,6 +23,10 @@ open FS.GG.SDD.Commands.Internal.HandlersEvidence
 open FS.GG.SDD.Commands.Internal.HandlersVerify
 
 module internal HandlersShip =
+    // Pure `Path` string ops only — the effectful `File`/`Directory` surface stays at the
+    // `CommandEffects` edge and is deliberately kept out of scope in the MVU pure core.
+    type private Path = System.IO.Path
+
     module DiagnosticsModule = FS.GG.SDD.Artifacts.Diagnostics
     module GenerationManifestModule = FS.GG.SDD.Artifacts.GenerationManifest
     module GovernanceHandoffModule = FS.GG.SDD.Artifacts.GovernanceHandoff

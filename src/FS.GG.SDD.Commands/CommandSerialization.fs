@@ -1,6 +1,5 @@
 namespace FS.GG.SDD.Commands
 
-open System.IO
 open System.Text
 open System.Text.Json
 open FS.GG.SDD.Artifacts.Diagnostics
@@ -9,6 +8,11 @@ open FS.GG.SDD.Artifacts.Json.JsonWriters
 open FS.GG.SDD.Commands.CommandTypes
 
 module CommandSerialization =
+    // Pure in-memory ops only (`Path` string ops; `MemoryStream` for JSON framing) — the effectful
+    // `File`/`Directory` surface stays at the `CommandEffects` edge, deliberately out of scope here.
+    type private Path = System.IO.Path
+    type private MemoryStream = System.IO.MemoryStream
+
     module DiagnosticsModule = FS.GG.SDD.Artifacts.Diagnostics
 
     let writeChange (writer: Utf8JsonWriter) (change: ArtifactChange) =

@@ -1,7 +1,6 @@
 namespace FS.GG.SDD.Commands.Internal
 
 open System
-open System.IO
 open System.Text
 open System.Text.Json
 open System.Text.RegularExpressions
@@ -17,6 +16,12 @@ open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 
 module internal Foundation =
+    // Pure path/string ops only (`Path`, and `DirectoryInfo(_).Name` to read the workspace-root
+    // name off a path) — the effectful `File`/`Directory` surface stays at the `CommandEffects`
+    // edge and is deliberately kept out of scope in the MVU pure core.
+    type private Path = System.IO.Path
+    type private DirectoryInfo = System.IO.DirectoryInfo
+
     module GenerationManifestModule = FS.GG.SDD.Artifacts.GenerationManifest
     module IdentifiersModule = FS.GG.SDD.Artifacts.Identifiers
 

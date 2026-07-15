@@ -1,6 +1,5 @@
 namespace FS.GG.SDD.Commands.Internal
 
-open System.IO
 open System.Reflection
 open FS.GG.SDD.Commands.CommandTypes
 
@@ -17,6 +16,10 @@ open FS.GG.SDD.Commands.CommandTypes
 /// the same no-clobber, authored-SDD-owned semantics as the seeded constitution and
 /// early-stage guidance — no new effect, no new schema (Principle IV/V).
 module internal SeededSkills =
+    // Pure ops only (`Path` string ops; `StreamReader` over an embedded-resource stream) — the
+    // effectful `File`/`Directory` surface stays at the `CommandEffects` edge, out of scope here.
+    type private Path = System.IO.Path
+    type private StreamReader = System.IO.StreamReader
 
     // The 16 in-scope skills (10 stage + 6 cross-cutting), sorted, excluding the
     // product-internal `fs-gg-sdd-project`. This list is the single in-code source of

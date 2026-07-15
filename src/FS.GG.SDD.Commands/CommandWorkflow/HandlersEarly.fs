@@ -1,7 +1,6 @@
 namespace FS.GG.SDD.Commands.Internal
 
 open System
-open System.IO
 open System.Text
 open System.Text.Json
 open System.Text.RegularExpressions
