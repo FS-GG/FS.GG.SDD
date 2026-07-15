@@ -411,11 +411,20 @@ individually shippable through the SDD lifecycle.
       outcome. Regression test in `ScaffoldCommandTests.fs` drives the real
       `RunProcess` edge with a reparented grandchild holding both pipes and
       asserts a bounded return (observed ~10 s vs the ~30 s unbounded wait).
-- [ ] **Replace `lint` prose-matching with a structured discriminator (§3,
-      Medium).** Have the lifecycle parsers emit a stable defect sub-id / typed
-      field; key `LintEngine.classify` (`LintEngine.fs:101-114`) on it instead
-      of English substrings. Add a regression test that rewording a parser
-      message does not drop the lint class.
+- [x] **Replace `lint` prose-matching with a structured discriminator (§3,
+      Medium).** ✅ *Done 2026-07-15.* `Diagnostic` gained a parser-owned,
+      non-serialized `DefectTag: string option` sub-classifier (`Diagnostics.fs`,
+      stamped via `withDefectTag`; stable tag constants in the `DefectTags`
+      module — `FrontMatterIncomplete`, `CoverageStableId`). The four md parsers
+      stamp the front-matter defect and Specification stamps the FR/AC
+      missing-stable-id defect; `LintEngine.classify` now keys on id + `DefectTag`
+      instead of substring-matching parser English across the assembly boundary.
+      Like `IsToolDefect`, the tag is not serialized — lint always classifies
+      freshly-built diagnostics. `classify` is exposed for a regression test that
+      proves a reworded message keeps its class and an untagged
+      `workModelInconsistent` is no longer classified by its prose
+      (`LintTests.fs`). Verified through the real CLI: `spec.md` → `coverageLine`,
+      `checklist-frontmatter.md` → `frontMatter`.
 - [ ] **Harden `answerKindValue` deferral classification (§3, Low).** Move
       `EarlyStageAuthoring.fs:849-857` to word-boundary matching (reuse
       `containsWord`) or an explicit decision tag; test "cannot defer" / "no

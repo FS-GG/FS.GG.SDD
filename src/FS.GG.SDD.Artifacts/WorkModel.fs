@@ -756,7 +756,10 @@ module WorkModel =
           RelatedIds = jmStringList "relatedIds" element
           // Round-tripped diagnostics carry no defect bit — it is not serialized and the
           // exit-code decision never reads parsed diagnostics (see feature 062 research).
-          IsToolDefect = false }
+          IsToolDefect = false
+          // Likewise the defect sub-classifier tag is not serialized; classification only ever
+          // keys on freshly-built diagnostics, never round-tripped ones.
+          DefectTag = None }
 
     // ---- FS-GG/FS.GG.SDD#266 (ADR-0002 Gap D, finding 2) round-trip helpers ----
     // `parseWorkModel` used to hardcode `Sources = []` and `GeneratedViews = []`, so a model rebuilt

@@ -89,29 +89,24 @@ module LintEngine =
     // ---- diagnostic classification (research D2/D3, I1 verified) ----
 
     // The parser-level ids are generic (`workModelInconsistent` covers both an incomplete
-    // front matter and a missing stable id; `duplicateIdentifier` covers every duplicate),
-    // so classification keys on id + message. Only the four load-bearing grammar classes are
-    // surfaced (feature 076 scope); other diagnostics are not lint's concern.
-    let private classify (diagnostic: Diagnostic) : LintDefectClass option =
+    // front matter and a missing stable id; `duplicateIdentifier` covers every duplicate), so
+    // classification keys on id + the parser-owned `DefectTag` sub-classifier — NOT the human
+    // `Message`. Keying on the tag means a parser author can reword a diagnostic message without
+    // silently dropping its lint class (the previous cross-assembly prose-match was the hazard
+    // this replaces). Only the four load-bearing grammar classes are surfaced (feature 076
+    // scope); an untagged / other diagnostic is not lint's concern.
+    let classify (diagnostic: Diagnostic) : LintDefectClass option =
         match diagnostic.Id with
         | "duplicateIdentifier" -> Some DuplicateId
         | "workModelInconsistent" ->
-            let msg = diagnostic.Message.ToLowerInvariant()
-
-            if msg.Contains "front matter is incomplete" then
-                Some FrontMatter
+            match diagnostic.DefectTag with
+            | Some tag when tag = Diagnostics.DefectTags.FrontMatterIncomplete -> Some FrontMatter
             // A Functional-Requirements / Acceptance-Scenarios list item missing its stable
-            // FR-###/AC-### id IS the coverage-line grammar defect (the FR bullet that should
-            // carry its id + acceptance coverage). Missing ids in other sections (user stories,
-            // ambiguities) are a different stable-id concern, outside the four load-bearing
-            // grammar classes, so lint does not surface them.
-            elif
-                msg.Contains "missing a required stable id"
-                && (msg.Contains "functional requirements" || msg.Contains "acceptance")
-            then
-                Some CoverageLine
-            else
-                None
+            // FR-###/AC-### id IS the coverage-line grammar defect. The parser stamps
+            // `CoverageStableId` only on those sections; missing ids elsewhere (user stories,
+            // ambiguities) carry no tag and are not surfaced.
+            | Some tag when tag = Diagnostics.DefectTags.CoverageStableId -> Some CoverageLine
+            | _ -> None
         | _ -> None
 
     // Route to the live parser; `Ok` surfaces the parser's `facts.Diagnostics`, `Error`

@@ -14,6 +14,12 @@ module LintEngine =
     /// structural classes `Parse`/`Unresolvable`, which are not grammar defects.
     val grammarPointer: cls: LintDefectClass -> GrammarPointer option
 
+    /// Classify a live parser diagnostic into a load-bearing grammar-defect class, or `None` when
+    /// it is not one of the four lint surfaces. Keys on the diagnostic id and the parser-owned
+    /// `DefectTag` sub-classifier — never the human message — so rewording a diagnostic message
+    /// cannot silently drop its lint class. Exposed for the coupling regression test.
+    val classify: diagnostic: Diagnostics.Diagnostic -> LintDefectClass option
+
     /// Auto-detect the artifact kind (FR-002): the front-matter `stage:` value first, then
     /// the filename/extension; `Unrecognized` when neither resolves.
     val detectKind: snapshot: Core.FileSnapshot -> LintArtifactKind

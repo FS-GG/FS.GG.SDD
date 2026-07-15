@@ -118,7 +118,8 @@ module Checklist =
                                 artifact
                                 "Checklist front matter is incomplete."
                                 "Add schemaVersion, workId, title, stage: checklist, changeTier, status, sourceSpec, and sourceClarifications to checklist.md."
-                                [] ]
+                                []
+                            |> Diagnostics.withDefectTag Diagnostics.DefectTags.FrontMatterIncomplete ]
                     )
 
     let checklistItemIdsInLine line =

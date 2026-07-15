@@ -134,7 +134,8 @@ module Clarification =
                                 artifact
                                 "Clarification front matter is incomplete."
                                 "Add schemaVersion, workId, title, stage: clarify, changeTier, status, and sourceSpec to clarifications.md."
-                                [] ]
+                                []
+                            |> Diagnostics.withDefectTag Diagnostics.DefectTags.FrontMatterIncomplete ]
                     )
 
     let questionIdsInLine line =

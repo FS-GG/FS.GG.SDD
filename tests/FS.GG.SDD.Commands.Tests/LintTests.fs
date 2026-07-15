@@ -2,6 +2,7 @@ namespace FS.GG.SDD.Commands.Tests
 
 open System.IO
 open System.Text.RegularExpressions
+open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.CommandWorkflow
@@ -80,6 +81,48 @@ module LintTests =
 
         for expected in [ "coverageLine"; "missingDecisionTag"; "frontMatter"; "duplicateId" ] do
             Assert.Contains(expected, caught)
+
+    // ---- §3 review fix: classification keys on the parser-owned DefectTag, not message prose ----
+    // Regression for the 2026-07-15 review's Medium finding: `LintEngine.classify` used to
+    // substring-match parser English across an assembly boundary, so a reworded diagnostic
+    // message silently dropped the defect and lint reported `Clean`. Classification now keys on
+    // the stable `DefectTag` the parser stamps; rewording the message must not change the class.
+
+    let private workModelDiag (message: string) (tag: string option) (relatedIds: string list) =
+        let d =
+            Diagnostics.create
+                "workModelInconsistent"
+                Diagnostics.DiagnosticError
+                None
+                None
+                message
+                "fix it"
+                relatedIds
+
+        match tag with
+        | Some t -> Diagnostics.withDefectTag t d
+        | None -> d
+
+    [<Fact>]
+    let ``front-matter defect classifies by tag even when the message is reworded`` () =
+        let reworded =
+            workModelDiag "totally different wording mentioning no known phrase" (Some Diagnostics.DefectTags.FrontMatterIncomplete) []
+
+        Assert.Equal(Some FrontMatter, LintEngine.classify reworded)
+
+    [<Fact>]
+    let ``coverage-line defect classifies by tag even when the message is reworded`` () =
+        let reworded =
+            workModelDiag "brand-new phrasing about requirement coverage" (Some Diagnostics.DefectTags.CoverageStableId) [ "FR-###" ]
+
+        Assert.Equal(Some CoverageLine, LintEngine.classify reworded)
+
+    [<Fact>]
+    let ``an untagged workModelInconsistent is not classified by its message prose`` () =
+        // The old prose match keyed on exactly this English. Without the tag it must NOT
+        // classify — proving the coupling is the tag, not the message.
+        let untagged = workModelDiag "front matter is incomplete." None []
+        Assert.Equal(None, LintEngine.classify untagged)
 
     // ---- SC-002 / FR-013: canonical examples lint clean (no false positives) ----
 
