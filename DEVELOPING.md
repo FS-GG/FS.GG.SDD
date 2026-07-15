@@ -81,8 +81,8 @@ Add `--no-build` to reuse existing binaries, and `-- <args>` to forward to `dotn
 wins over the tier's). `scripts/test.sh --help` prints the same table.
 
 **Tiering removes no CI coverage.** The per-PR gate (`.github/workflows/gate.yml`) runs
-`bash scripts/test.sh --no-build` — the same `full` tier defined here, looping every test
-project unfiltered — and is still required, so a `Commands`-layer regression is caught at
+`bash scripts/test.sh --no-build -c Debug` — the same `full` tier defined here, looping every
+test project unfiltered — and is still required, so a `Commands`-layer regression is caught at
 PR CI even if you only ran the fast tier locally, and the gate can't drift from the local
 `full` runner (nor reintroduce the solution-wide resource-exhaustion hazard the loop
 avoids). The tiers speed the *local* loop; the gate remains the backstop.

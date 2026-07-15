@@ -76,11 +76,13 @@ jobs:
       # gate must not reintroduce it. The `full` tier runs every project UNFILTERED, so it is the
       # gate's peer — the union of the tiers is the whole suite, no test is reachable only under a
       # filter — and sharing one runner keeps the gate from drifting from the local `full` loop.
-      # --no-build reuses the artifacts built above (same Debug config the Commands.Tests CLI smokes
-      # auto-detect and invoke). The network-gated composition-acceptance facts self-skip when
-      # FSGG_SDD_ACCEPTANCE_REGISTRY is unset, so this stays offline.
+      # --no-build reuses the artifacts built above; `-c Debug` is passed explicitly (not left to
+      # scripts/test.sh's default) so the test config stays locked to the build step's `-c Debug`
+      # above and cannot silently diverge if that default ever changes. It is the same Debug config
+      # the Commands.Tests CLI smokes auto-detect and invoke. The network-gated composition-acceptance
+      # facts self-skip when FSGG_SDD_ACCEPTANCE_REGISTRY is unset, so this stays offline.
       - name: Test (offline suite)
-        run: bash scripts/test.sh --no-build
+        run: bash scripts/test.sh --no-build -c Debug
 
   build-config-drift:
     name: Shared-build-config drift check
