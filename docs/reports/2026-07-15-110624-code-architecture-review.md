@@ -519,8 +519,23 @@ individually shippable through the SDD lifecycle.
       existing convention (public cross-assembly module ⇒ own `.fsi`; internal
       submodule ⇒ none) in `DEVELOPING.md`'s Conventions section. Docs-only, no
       `src/` or public-surface change.
-- [ ] **Scope `System.IO` out of the pure core (§1, Low)** — `open type
-      System.IO.Path` / `Path` alias in the workflow modules.
+- [x] **Scope `System.IO` out of the pure core (§1, Low)** — `open type
+      System.IO.Path` / `Path` alias in the workflow modules. ✅ *Done
+      2026-07-15.* The blanket namespace-scope `open System.IO` is gone from all
+      16 pure-core Commands modules; only the effect edge (`CommandEffects.fs`)
+      still opens it. Each pure-core module that touches a `System.IO` type now
+      declares a module-scoped, `private` type-abbreviation for exactly the pure
+      types it uses — `type private Path = System.IO.Path` (path *string* ops),
+      plus `MemoryStream`/`StreamReader`/`DirectoryInfo` where an in-memory or
+      path-name-only use exists — so `File`/`Directory` (the effectful surface)
+      are no longer one keystroke away in the module that must never call them.
+      Four modules whose `open System.IO` was already dead
+      (`CommandWorkflow`/`HandlersAnalyze`/`HandlersEarly`/`Prerequisites`) simply
+      drop it. Call sites are unchanged (the abbreviations keep `Path.Combine`
+      etc. readable) and the abbreviations emit no IL type, so the reflection
+      surface baselines are untouched. Output stays byte-identical — the full
+      suite (Contracts/Artifacts/Validation/Cli/Commands/Acceptance,
+      1,763 passed / 4 skipped) passes unchanged.
 - [ ] **Split the multi-stage authoring modules (§1/§3, Low)** —
       `ChecklistPlanAuthoring.fs` (two stages) and `EarlyStageAuthoring.fs`
       (three), if either grows further.
