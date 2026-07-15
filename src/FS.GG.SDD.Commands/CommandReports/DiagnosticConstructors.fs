@@ -45,6 +45,18 @@ module internal DiagnosticConstructors =
     let errorForRef id path message correction relatedId =
         errorDiagnostic id (Some path) message correction [ relatedId ]
 
+    // Work-id identity-mismatch family: every lifecycle artifact/view raises the same shape —
+    // an error over the artifact path whose message names the artifact `noun` and whose relatedIds
+    // are the expected/actual work ids. Only the `id`, the `noun`, and the `correction` vary per
+    // artifact, so the message wording and relatedIds order stay byte-identical across all callers.
+    let identityMismatch id noun correction path expectedWorkId actualWorkId =
+        errorDiagnostic
+            id
+            (Some path)
+            $"{noun} work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            correction
+            [ expectedWorkId; actualWorkId ]
+
     let unknownCommand (value: string) =
         errorDiagnostic
             "unknownCommand"
@@ -208,12 +220,13 @@ module internal DiagnosticConstructors =
             "Run fsgg-sdd charter for the selected work item before running fsgg-sdd specify."
 
     let charterIdentityMismatch path expectedWorkId actualWorkId =
-        errorDiagnostic
+        identityMismatch
             "charterIdentityMismatch"
-            (Some path)
-            $"Charter work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Charter"
             "Move the charter under the matching work id or update its front matter before rerunning."
-            [ expectedWorkId; actualWorkId ]
+            path
+            expectedWorkId
+            actualWorkId
 
     let malformedCharterFrontMatter path message =
         errorForPath
@@ -240,12 +253,13 @@ module internal DiagnosticConstructors =
             "Run fsgg-sdd specify for the selected work item before running fsgg-sdd clarify."
 
     let specificationIdentityMismatch path expectedWorkId actualWorkId =
-        errorDiagnostic
+        identityMismatch
             "specificationIdentityMismatch"
-            (Some path)
-            $"Specification work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Specification"
             "Move the specification under the matching work id or update its front matter before rerunning."
-            [ expectedWorkId; actualWorkId ]
+            path
+            expectedWorkId
+            actualWorkId
 
     let malformedSpecificationFrontMatter path message =
         errorForPath
@@ -303,12 +317,13 @@ module internal DiagnosticConstructors =
             "Run fsgg-sdd clarify for the selected work item before running fsgg-sdd checklist."
 
     let clarificationIdentityMismatch path expectedWorkId actualWorkId =
-        errorDiagnostic
+        identityMismatch
             "clarificationIdentityMismatch"
-            (Some path)
-            $"Clarification work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Clarification"
             "Move clarifications.md under the matching work id or update its front matter before rerunning."
-            [ expectedWorkId; actualWorkId ]
+            path
+            expectedWorkId
+            actualWorkId
 
     let malformedClarificationFrontMatter path message =
         errorForPath
@@ -358,12 +373,13 @@ module internal DiagnosticConstructors =
         warningDiagnostic "failedRequirementsQuality" (Some path) message correction relatedIds
 
     let checklistIdentityMismatch path expectedWorkId actualWorkId =
-        errorDiagnostic
+        identityMismatch
             "checklistIdentityMismatch"
-            (Some path)
-            $"Checklist work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Checklist"
             "Move checklist.md under the matching work id or update its front matter before rerunning."
-            [ expectedWorkId; actualWorkId ]
+            path
+            expectedWorkId
+            actualWorkId
 
     let malformedChecklistFrontMatter path message =
         errorForPath
@@ -426,12 +442,13 @@ module internal DiagnosticConstructors =
             relatedIds
 
     let planIdentityMismatch path expectedWorkId actualWorkId =
-        errorDiagnostic
+        identityMismatch
             "planIdentityMismatch"
-            (Some path)
-            $"Plan work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Plan"
             "Move plan.md under the matching work id or update its front matter before rerunning."
-            [ expectedWorkId; actualWorkId ]
+            path
+            expectedWorkId
+            actualWorkId
 
     let malformedPlanFrontMatter path message =
         errorForPath
@@ -522,12 +539,13 @@ module internal DiagnosticConstructors =
             relatedIds
 
     let tasksIdentityMismatch path expectedWorkId actualWorkId =
-        errorDiagnostic
+        identityMismatch
             "tasksIdentityMismatch"
-            (Some path)
-            $"Tasks work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Tasks"
             "Move tasks.yml under the matching work id or update its work.id before rerunning."
-            [ expectedWorkId; actualWorkId ]
+            path
+            expectedWorkId
+            actualWorkId
 
     let malformedTasksArtifact path message =
         errorForPath
@@ -610,12 +628,13 @@ module internal DiagnosticConstructors =
             relatedIds
 
     let analysisIdentityMismatch path expectedWorkId actualWorkId =
-        errorDiagnostic
+        identityMismatch
             "analysisIdentityMismatch"
-            (Some path)
-            $"Analysis view work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Analysis view"
             "Regenerate the analysis view for the selected work id."
-            [ expectedWorkId; actualWorkId ]
+            path
+            expectedWorkId
+            actualWorkId
 
     let malformedAnalysisView path message =
         warningForPath
@@ -653,12 +672,13 @@ module internal DiagnosticConstructors =
             readiness
 
     let evidenceIdentityMismatch path expectedWorkId actualWorkId =
-        errorDiagnostic
+        identityMismatch
             "evidence.identityMismatch"
-            (Some path)
-            $"Evidence work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Evidence"
             "Move evidence.yml under the matching work id or update its structured work id before rerunning."
-            [ expectedWorkId; actualWorkId ]
+            path
+            expectedWorkId
+            actualWorkId
 
     let malformedEvidenceArtifact path message =
         errorForPath
@@ -918,12 +938,13 @@ module internal DiagnosticConstructors =
             "Run fsgg-sdd evidence for the selected work item before running fsgg-sdd verify."
 
     let verifyIdentityMismatch path expectedWorkId actualWorkId =
-        errorDiagnostic
+        identityMismatch
             "verify.identityMismatch"
-            (Some path)
-            $"Verification view work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Verification view"
             "Regenerate the verification view for the selected work id."
-            [ expectedWorkId; actualWorkId ]
+            path
+            expectedWorkId
+            actualWorkId
 
     let malformedVerificationView path message =
         errorForPath
@@ -1008,12 +1029,13 @@ module internal DiagnosticConstructors =
             ids
 
     let shipIdentityMismatch path expectedWorkId actualWorkId =
-        errorDiagnostic
+        identityMismatch
             "ship.identityMismatch"
-            (Some path)
-            $"Ship view work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Ship view"
             "Regenerate the ship view for the selected work id."
-            [ expectedWorkId; actualWorkId ]
+            path
+            expectedWorkId
+            actualWorkId
 
     let malformedShipView path message =
         errorForPath
@@ -1038,12 +1060,13 @@ module internal DiagnosticConstructors =
             targetId
 
     let agentsWorkModelIdentityMismatch path expectedWorkId actualWorkId =
-        errorDiagnostic
+        identityMismatch
             "agents.workModelIdentityMismatch"
-            (Some path)
-            $"Work model work id '{actualWorkId}' does not match selected work id '{expectedWorkId}'."
+            "Work model"
             "Select the work id that matches the normalized work model, or regenerate the work model."
-            [ expectedWorkId; actualWorkId ]
+            path
+            expectedWorkId
+            actualWorkId
 
     // Early-stage (FR-010b): a *missing* work model at a pre-work-model stage is not a
     // defect — it is the expected early-stage state. This advisory (DiagnosticInfo, so it
