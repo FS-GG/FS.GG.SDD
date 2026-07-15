@@ -93,6 +93,17 @@ These are not lifecycle stages and never alter the `charter -> ship` ordering:
   matrices (determinism, degradation, release baseline-conformance, Governance-handoff
   compatibility) on demand or on a schedule, emitting one deterministic
   `validation-report`.
+- **`fsgg-sdd surface`** — enforce the API-surface convention: every authored `src/**/*.fsi`
+  signature has a byte-identical committed baseline under `docs/api-surface/`. `--check`
+  (default) is read-only and exits `1` on drift; `--update` refreshes the baselines.
+- **`fsgg-sdd lint <artifact>`** — statically pre-flight a single authored artifact for the
+  load-bearing authoring-grammar defects before a lifecycle stage would block on them.
+  Read-only; reuses the live stage parsers so it cannot diverge from what the stage
+  enforces. See [Lint](docs/reference/lint.md).
+- **`fsgg-sdd registry`** — validate a registry document against its schema
+  (`registry validate`), or emit/check SDD's process-skill producer manifest
+  (`registry skill-manifest`).
+- **`fsgg-sdd version`** — print the CLI/generator version.
 
 ## Output formats
 
