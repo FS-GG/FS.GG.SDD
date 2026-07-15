@@ -140,6 +140,15 @@ module CommandEffects =
     // process as a provider/step failure rather than mistaking it for success.
     let private processTimeoutExitCode = 124
 
+    // The bounded wait for reaping a killed child — its exit and its two drain tasks (§3).
+    // `Kill true` is swallowed on the vanishingly rare unkillable-process / permission fault,
+    // and `WaitForExit(int)` returns at child exit, not at pipe EOF, so a grandchild that
+    // inherited the write ends can leave both readers pending. Without a bound the follow-up
+    // reap would be the exact hang the timeout exists to prevent. A real kill completes in well
+    // under this budget, so the ordinary timeout path is unaffected; a stuck reap hits the bound
+    // and we still report the fail-closed timeout result.
+    let private postKillReapMs = 5_000
+
     let processTimeoutMs () =
         match Int32.TryParse(Environment.GetEnvironmentVariable "FSGG_SDD_PROCESS_TIMEOUT_MS") with
         | true, ms when ms > 0 -> ms
@@ -264,9 +273,21 @@ module CommandEffects =
                      with _ ->
                          ())
 
-                    proc.WaitForExit()
-                    let stdout, stdoutTruncated = stdoutTask.GetAwaiter().GetResult()
-                    let capturedErr, stderrTruncated = stderrTask.GetAwaiter().GetResult()
+                    // Bound every step of the reap. If `Kill` threw and was swallowed (unkillable
+                    // process / permission fault) or a grandchild still holds the pipes, an un-timed
+                    // wait here would relocate the hang from before the timeout to after it. A drain
+                    // task that has not completed within the budget yields ("", false), and we report
+                    // the fail-closed timeout result regardless of the `Kill` outcome.
+                    proc.WaitForExit postKillReapMs |> ignore
+
+                    let reap (readerTask: System.Threading.Tasks.Task<string * bool>) =
+                        if readerTask.Wait postKillReapMs then
+                            readerTask.Result
+                        else
+                            ("", false)
+
+                    let stdout, stdoutTruncated = reap stdoutTask
+                    let capturedErr, stderrTruncated = reap stderrTask
 
                     let timeoutNote =
                         $"fsgg-sdd: process timed out after {timeoutMs} ms and was terminated: {commandLine}"

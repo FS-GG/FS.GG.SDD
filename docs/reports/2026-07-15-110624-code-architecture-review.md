@@ -400,10 +400,17 @@ individually shippable through the SDD lifecycle.
       `AuthoredInputHardeningTests.fs` cover the `[[[[…` bomb, the `- - - …`
       bomb, the over-sized case, a long flat list, and a normally-nested doc;
       both bombs verified through the real CLI (exit 1, no SIGABRT).
-- [ ] **Bound the post-kill reap (§3, Low).** Replace the un-timed
-      `proc.WaitForExit()` at `CommandEffects.fs:267` with a bounded wait and
-      report the synthesized timeout result regardless of `Kill` outcome. Test
-      the `Kill`-throws path.
+- [x] **Bound the post-kill reap (§3, Low).** ✅ *Done 2026-07-15.* The timeout
+      branch in `runProcess` (`CommandEffects.fs`) now bounds every step of the
+      reap by `postKillReapMs` (5 s): the post-kill `proc.WaitForExit` takes the
+      bound, and each stdout/stderr drain task is reaped via `Task.Wait
+      postKillReapMs` — a task that has not completed yields `("", false)` — so a
+      swallowed `Kill` throw or a grandchild that escaped the tree-kill and still
+      holds the pipes can no longer relocate the hang past the timeout. The
+      fail-closed exit-124 timeout result is reported regardless of `Kill`
+      outcome. Regression test in `ScaffoldCommandTests.fs` drives the real
+      `RunProcess` edge with a reparented grandchild holding both pipes and
+      asserts a bounded return (observed ~10 s vs the ~30 s unbounded wait).
 - [ ] **Replace `lint` prose-matching with a structured discriminator (§3,
       Medium).** Have the lifecycle parsers emit a stable defect sub-id / typed
       field; key `LintEngine.classify` (`LintEngine.fs:101-114`) on it instead

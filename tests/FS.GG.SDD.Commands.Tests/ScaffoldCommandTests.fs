@@ -2176,6 +2176,55 @@ module ScaffoldCommandTests =
             finally
                 System.Environment.SetEnvironmentVariable("FSGG_SDD_PROCESS_TIMEOUT_MS", original)
 
+    // §3 (post-kill reap must be bounded): killing a timed-out child does not close a redirected
+    // pipe that a grandchild escaping the tree-kill still holds open, so the reader drains never
+    // reach EOF. An un-timed reap (`WaitForExit()` / `GetResult()`) would relocate the very hang the
+    // timeout exists to prevent from before the kill to after it. The child is killed at the tiny
+    // bound, the reparented grandchild survives holding the write ends, and `runProcess` must still
+    // return promptly with the fail-closed timeout result rather than waiting the grandchild out.
+    [<Fact; Trait("tier", "slow")>]
+    let ``a timed-out child whose grandchild still holds the pipes is reaped bounded, not waited out`` () =
+        if
+            System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform
+                System.Runtime.InteropServices.OSPlatform.Windows
+        then
+            () // The reparent-to-init escape is POSIX; the bounded-reap edge itself is OS-agnostic.
+        else
+            let root = TestSupport.tempDirectory ()
+
+            let original =
+                System.Environment.GetEnvironmentVariable "FSGG_SDD_PROCESS_TIMEOUT_MS"
+
+            try
+                System.Environment.SetEnvironmentVariable("FSGG_SDD_PROCESS_TIMEOUT_MS", "500")
+
+                // `(sleep 30 &)` backgrounds a sleep inside a subshell that exits at once, reparenting
+                // it to init (ppid 1) so it escapes `Kill(entireProcessTree=true)`; it inherits — and
+                // holds open — the child's redirected stdout+stderr. The trailing `sleep 30` keeps the
+                // direct child alive past the 500 ms bound so the kill path fires.
+                let script = "(sleep 30 &); sleep 30"
+
+                let stopwatch = System.Diagnostics.Stopwatch.StartNew()
+                let result = interpret root false (RunProcess("sh", [ "-c"; script ], ""))
+                stopwatch.Stop()
+
+                // Unbounded, the reap would wait the ~30 s grandchild out (or hang the whole run).
+                // Bounded, it returns within the reap budget plus the kill — comfortably under.
+                Assert.True(
+                    stopwatch.Elapsed.TotalSeconds < 20.0,
+                    $"expected a bounded reap; took {stopwatch.Elapsed.TotalSeconds}s"
+                )
+
+                let processResult =
+                    result.Process
+                    |> Option.defaultWith (fun () -> failwith "expected a process result")
+
+                Assert.True processResult.Started
+                Assert.Equal(124, processResult.ExitCode)
+                Assert.Contains("timed out", processResult.StandardError)
+            finally
+                System.Environment.SetEnvironmentVariable("FSGG_SDD_PROCESS_TIMEOUT_MS", original)
+
     // ---------- Feature 080 / US1,US2,US4: name → valid F# identifier ----------
 
     // T012 (US1 / FR-005): with a provider declaring `identifierParameter`, a hyphenated
