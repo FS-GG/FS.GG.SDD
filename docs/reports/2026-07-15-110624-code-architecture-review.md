@@ -572,8 +572,22 @@ individually shippable through the SDD lifecycle.
       `--check`/`--update`), `lint <artifact>` (read-only authoring pre-flight, linking
       `docs/reference/lint.md`), `registry` (`validate` / `skill-manifest`), and
       `version`. Docs-only; no `src/` or public-surface change.
-- [ ] **Add a few golden snapshots (§4, Low)** for representative command ×
-      `--json`/`--text` outputs to widen the determinism net.
+- [x] **Add a few golden snapshots (§4, Low)** for representative command ×
+      `--json`/`--text` outputs to widen the determinism net. ✅ *Done 2026-07-15.*
+      The `--json` axis already had full-shape byte-goldens (`FullShapeGoldenTests` /
+      `ReadinessViewGoldenTests`), but the `--text` projection (`CommandRendering.renderText`)
+      was guarded only by substring asserts (`TextProjectionTests`) — so a reordered/added/
+      dropped `key: value` line, a reworded footer, or a changed stage-table shape could ship
+      invisibly. Added `TextProjectionGoldenTests` with two byte-goldens under
+      `goldens/text-projection/`: `init.txt` (the deterministic, path-free Init dry-run report —
+      the same repeatable source as the `command-report.json` full-shape golden, rendered as
+      text) and `ship.txt` (a fully produced, ship-ready report — the richest text block: the
+      lifecycle stage table, evidence/test count fan-out, disposition, and the "done" footer).
+      Both are deterministic and portable — the text projection emits no absolute paths (every
+      path field is workspace-relative, e.g. `readiness/<id>/ship.json`, and the report never
+      contains the temp root) and no timestamps; the version-coupled `toolVersion` line re-pins
+      with the shared `FSGG_UPDATE_BASELINE=1` switch, exactly like every sibling golden. Captured
+      via the switch and verified to pass on a clean run; no `src/` or public-surface change.
 
 ### Optional / defensive
 
