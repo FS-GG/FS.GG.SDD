@@ -248,19 +248,14 @@ module internal HandlersShip =
             sprintf "SF%03d" (index + 1), diagnostic, verifyFindingSeverity diagnostic)
 
     let existingShipDiagnostic workId model =
-        let path = shipPath workId
-
-        match snapshot path model with
-        | None -> None
-        | Some existing ->
-            match parseShipView existing with
-            | Error diagnostics ->
-                diagnostics
-                |> List.tryHead
-                |> Option.map (fun diagnostic -> malformedShipView path diagnostic.Message)
-            | Ok view when not (String.Equals(view.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) ->
-                Some(shipIdentityMismatch path workId view.WorkId.Value)
-            | Ok _ -> None
+        existingViewIdentityDiagnostic
+            parseShipView
+            (fun view -> view.WorkId.Value)
+            malformedShipView
+            shipIdentityMismatch
+            (shipPath workId)
+            workId
+            model
 
     let shipVerificationPrerequisite workId (requireObserved: bool) model =
         let path = verifyPath workId

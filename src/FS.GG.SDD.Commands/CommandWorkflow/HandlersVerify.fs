@@ -397,19 +397,14 @@ module internal HandlersVerify =
         |> List.sortBy (fun view -> view.Skill)
 
     let existingVerifyDiagnostic workId model =
-        let path = verifyPath workId
-
-        match snapshot path model with
-        | None -> None
-        | Some existing ->
-            match parseVerificationView existing with
-            | Error diagnostics ->
-                diagnostics
-                |> List.tryHead
-                |> Option.map (fun diagnostic -> malformedVerificationView path diagnostic.Message)
-            | Ok view when not (String.Equals(view.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) ->
-                Some(verifyIdentityMismatch path workId view.WorkId.Value)
-            | Ok _ -> None
+        existingViewIdentityDiagnostic
+            parseVerificationView
+            (fun view -> view.WorkId.Value)
+            malformedVerificationView
+            verifyIdentityMismatch
+            (verifyPath workId)
+            workId
+            model
 
     let verifyJson
         (workId: string)

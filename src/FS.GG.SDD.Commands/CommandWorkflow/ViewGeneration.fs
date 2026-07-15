@@ -622,19 +622,14 @@ module internal ViewGeneration =
                 "Analysis found lifecycle diagnostics that must be corrected before implementation.")
 
     let existingAnalysisDiagnostic workId model =
-        let path = analysisPath workId
-
-        match snapshot path model with
-        | None -> None
-        | Some existing ->
-            match parseAnalysisView existing with
-            | Error diagnostics ->
-                diagnostics
-                |> List.tryHead
-                |> Option.map (fun diagnostic -> malformedAnalysisView path diagnostic.Message)
-            | Ok view when not (String.Equals(view.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) ->
-                Some(analysisIdentityMismatch path workId view.WorkId.Value)
-            | Ok _ -> None
+        existingViewIdentityDiagnostic
+            parseAnalysisView
+            (fun view -> view.WorkId.Value)
+            malformedAnalysisView
+            analysisIdentityMismatch
+            (analysisPath workId)
+            workId
+            model
 
     let analysisPlan
         (workId: string)
