@@ -25,13 +25,36 @@ module Diagnostics =
           // constructors via `markToolDefect`; replaces the old hand-maintained
           // `providerDefectIds` id set. Not serialized (round-tripped diagnostics carry
           // `false`); the exit-code decision only ever reads freshly-built diagnostics.
-          IsToolDefect: bool }
+          IsToolDefect: bool
+          // A stable, machine-readable defect sub-classifier owned by the producing parser (see
+          // `DefectTags`), used to disambiguate a generic diagnostic id without prose-matching the
+          // human `Message` across an assembly boundary. Set via `withDefectTag`; keyed on by
+          // `LintEngine.classify`. NOT serialized (round-tripped diagnostics carry `None`).
+          DefectTag: string option }
+
+    /// Stable defect sub-classifier tags — the contract between the lifecycle parsers that stamp
+    /// them (via `withDefectTag`) and `LintEngine.classify` that keys on them. Reword a diagnostic
+    /// `Message` freely without dropping its lint class.
+    [<RequireQualifiedAccess>]
+    module DefectTags =
+        /// A lifecycle artifact's required `---` front-matter block is missing a required field.
+        [<Literal>]
+        val FrontMatterIncomplete: string = "frontMatterIncomplete"
+
+        /// A Functional-Requirements / Acceptance-Scenarios list item is missing its stable
+        /// FR-###/AC-### id — the load-bearing coverage-line grammar defect.
+        [<Literal>]
+        val CoverageStableId: string = "coverageStableId"
 
     val severityValue: severity: DiagnosticSeverity -> string
     val severityRank: severity: DiagnosticSeverity -> int
 
     /// Mark a diagnostic as a tool/provider defect (escalates a blocked command to exit 2).
     val markToolDefect: diagnostic: Diagnostic -> Diagnostic
+
+    /// Stamp a stable defect sub-classifier tag (see `DefectTags`) that downstream classification
+    /// keys on instead of the message prose.
+    val withDefectTag: tag: string -> diagnostic: Diagnostic -> Diagnostic
 
     /// The single predicate deciding whether a diagnostic signals a stale generated view.
     /// Keyed on the id (the only field that survives a work-model round-trip), so it is

@@ -153,6 +153,7 @@ FS.GG.SDD.Commands.CommandWorkflow.update
 FS.GG.SDD.Commands.LifecycleFooter.plainLines
 FS.GG.SDD.Commands.LifecycleFooter.stageStateToken
 FS.GG.SDD.Commands.LifecycleFooter.view
+FS.GG.SDD.Commands.LintEngine.classify
 FS.GG.SDD.Commands.LintEngine.detectKind
 FS.GG.SDD.Commands.LintEngine.grammarPointer
 FS.GG.SDD.Commands.LintEngine.lint

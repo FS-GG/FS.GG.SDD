@@ -19,7 +19,28 @@ module Diagnostics =
           Message: string
           Correction: string
           RelatedIds: string list
-          IsToolDefect: bool }
+          IsToolDefect: bool
+          // A stable, machine-readable defect sub-classifier owned by the producing parser,
+          // used to disambiguate a generic diagnostic id (e.g. `workModelInconsistent`, which
+          // covers several distinct grammar defects) without cross-assembly prose-matching on
+          // the human `Message`. Set at construction via `withDefectTag`; keyed on by
+          // `LintEngine.classify`. Like `IsToolDefect`, NOT serialized (round-tripped
+          // diagnostics carry `None`) — every consumer classifies freshly-built diagnostics.
+          DefectTag: string option }
+
+    // Stable defect sub-classifier tags (see `Diagnostic.DefectTag`). These are the contract
+    // between the lifecycle parsers that stamp them and `LintEngine.classify` that keys on them;
+    // reword a diagnostic's `Message` freely without dropping its lint class.
+    [<RequireQualifiedAccess>]
+    module DefectTags =
+        /// A lifecycle artifact's required `---` front-matter block is missing a required field.
+        [<Literal>]
+        let FrontMatterIncomplete = "frontMatterIncomplete"
+
+        /// A Functional-Requirements / Acceptance-Scenarios list item is missing its stable
+        /// FR-###/AC-### id — the load-bearing coverage-line grammar defect.
+        [<Literal>]
+        let CoverageStableId = "coverageStableId"
 
     let severityValue severity =
         match severity with
@@ -41,9 +62,15 @@ module Diagnostics =
           Message = message
           Correction = correction
           RelatedIds = relatedIds
-          IsToolDefect = false }
+          IsToolDefect = false
+          DefectTag = None }
 
     let markToolDefect (diagnostic: Diagnostic) = { diagnostic with IsToolDefect = true }
+
+    /// Stamp a stable defect sub-classifier tag (see `DefectTags`) the producing parser owns
+    /// and downstream classification keys on — decoupling the lint class from the message prose.
+    let withDefectTag (tag: string) (diagnostic: Diagnostic) =
+        { diagnostic with DefectTag = Some tag }
 
     let signalsStaleView (diagnostic: Diagnostic) =
         diagnostic.Id.IndexOf("stale", System.StringComparison.OrdinalIgnoreCase) >= 0

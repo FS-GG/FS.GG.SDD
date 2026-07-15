@@ -92,14 +92,24 @@ module Specification =
                                 artifact
                                 "Specification front matter is incomplete."
                                 "Add schemaVersion, workId, title, stage, changeTier, and status to spec front matter."
-                                [] ]
+                                []
+                            |> Diagnostics.withDefectTag Diagnostics.DefectTags.FrontMatterIncomplete ]
                     )
 
     let missingIdDiagnostics artifact (text: string) =
         // §3.3: a "none outstanding" sentinel under `## Ambiguities` (prose or bullet) is
         // exempt from the "every bullet needs a stable id" rule — it carries no id and is
         // non-blocking. Other sections do not allow the sentinel exemption.
-        let missing (heading: string) (pattern: string) (relatedId: string) (allowSentinel: bool) =
+        // `isCoverageLine` marks the FR/AC sections whose missing-id defect IS the load-bearing
+        // coverage-line grammar defect (`lint` surfaces these as `CoverageLine`); US/AMB missing
+        // ids are a different stable-id concern lint does not surface, so they carry no tag.
+        let missing
+            (heading: string)
+            (pattern: string)
+            (relatedId: string)
+            (allowSentinel: bool)
+            (isCoverageLine: bool)
+            =
             sectionLines heading text
             |> List.choose (fun (lineNumber, line) ->
                 if
@@ -107,20 +117,26 @@ module Specification =
                     && not (Regex.IsMatch(line, pattern, RegexOptions.IgnoreCase))
                     && not (allowSentinel && isNoOutstandingSentinel line)
                 then
-                    Some(
+                    let diag =
                         Diagnostics.workModelInconsistent
                             artifact
                             $"Specification list item in '{heading}' is missing a required stable id."
                             $"Add a stable {relatedId} id to the list item before rerunning."
                             [ relatedId ]
+
+                    Some(
+                        if isCoverageLine then
+                            diag |> Diagnostics.withDefectTag Diagnostics.DefectTags.CoverageStableId
+                        else
+                            diag
                     )
                 else
                     None)
 
-        [ missing "User Stories" @"\bUS-\d{3,}\b" "US-###" false
-          missing "Acceptance Scenarios" @"\bAC-\d{3,}\b" "AC-###" false
-          missing "Functional Requirements" @"\bFR-\d{3,}\b" "FR-###" false
-          missing "Ambiguities" @"\bAMB-\d{3,}\b" "AMB-###" true ]
+        [ missing "User Stories" @"\bUS-\d{3,}\b" "US-###" false false
+          missing "Acceptance Scenarios" @"\bAC-\d{3,}\b" "AC-###" false true
+          missing "Functional Requirements" @"\bFR-\d{3,}\b" "FR-###" false true
+          missing "Ambiguities" @"\bAMB-\d{3,}\b" "AMB-###" true false ]
         |> List.concat
 
     let requirementReferences (text: string) : SpecificationRequirementReference list =

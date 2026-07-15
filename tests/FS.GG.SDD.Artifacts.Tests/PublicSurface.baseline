@@ -81,6 +81,7 @@ FS.GG.SDD.Artifacts.Diagnostics.upgradeNonInteractiveNoYes
 FS.GG.SDD.Artifacts.Diagnostics.upgradeResidualDrift
 FS.GG.SDD.Artifacts.Diagnostics.upgradeSelfUpdateFailed
 FS.GG.SDD.Artifacts.Diagnostics.upgradeStepFailed
+FS.GG.SDD.Artifacts.Diagnostics.withDefectTag
 FS.GG.SDD.Artifacts.Diagnostics.workModelInconsistent
 FS.GG.SDD.Artifacts.Evidence+EvidenceCodec.liftObservedRun
 FS.GG.SDD.Artifacts.Evidence+EvidenceCodec.lowerObservedRun

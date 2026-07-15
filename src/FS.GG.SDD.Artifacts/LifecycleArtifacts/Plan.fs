@@ -158,7 +158,8 @@ module Plan =
                                 artifact
                                 "Plan front matter is incomplete."
                                 "Add schemaVersion, workId, title, stage: plan, changeTier, status, sourceSpec, sourceClarifications, and sourceChecklist to plan.md."
-                                [] ]
+                                []
+                            |> Diagnostics.withDefectTag Diagnostics.DefectTags.FrontMatterIncomplete ]
                     )
 
     let planDecisionIdsInLine line =
