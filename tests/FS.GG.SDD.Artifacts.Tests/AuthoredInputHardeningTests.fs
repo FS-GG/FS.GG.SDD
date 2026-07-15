@@ -224,7 +224,10 @@ module AuthoredInputHardeningTests =
     [<Theory>]
     // Empty verbatim tag `!<>`  -> System.ArgumentException.
     [<InlineData("schemaVersion: 1\nnotes: !<> x\n")>]
-    // Empty `%TAG` directive prefix -> System.ArgumentNullException.
+    // Empty `%TAG` directive prefix -> System.ArgumentNullException. NB: the trailing
+    // space after `!` is load-bearing — it is the empty prefix. Trim it and YamlDotNet
+    // raises a YamlException instead, silently moving this case onto the *other* catch
+    // arm; keep the space (and out of reach of any whitespace-stripping formatter).
     [<InlineData("%TAG ! \n---\nschemaVersion: 1\n")>]
     // A lone/over-sized surrogate escape -> System.ArgumentOutOfRangeException.
     [<InlineData("schemaVersion: 1\nnotes: \"\\uD800\\uD800\"\n")>]
