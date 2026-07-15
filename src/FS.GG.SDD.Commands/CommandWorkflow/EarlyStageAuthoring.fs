@@ -857,8 +857,7 @@ Prose status: specified
         // `no longer still open`), so it does not select that state. The negation guard
         // is extra here because this reads freeform author prose, not an already-labelled
         // artifact line. `defer` is matched as a stem (defer/deferral/deferred).
-        let negators =
-            @"(?:not|no longer|cannot|can'?t|can not|never|won'?t|will not)"
+        let negators = @"(?:not|no longer|cannot|can'?t|can not|never|won'?t|will not)"
 
         let says (pattern: string) =
             Regex.IsMatch(lowered, @"\b" + pattern, RegexOptions.IgnoreCase)
