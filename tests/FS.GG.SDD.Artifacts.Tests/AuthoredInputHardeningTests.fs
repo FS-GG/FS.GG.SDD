@@ -143,3 +143,91 @@ module AuthoredInputHardeningTests =
 
         Assert.Equal("malformedYaml", diagnostic.Id)
         Assert.DoesNotContain("is empty", diagnostic.Message)
+
+    // --- §2.1 of the 2026-07-15 review: deeply-nested / over-sized YAML must diagnose,
+    // not abort. YamlDotNet parses nested flow collections recursively with no depth
+    // limit, so a `[[[[…` document overflows the CLR stack — an *uncatchable* crash
+    // (empirically exit 134/SIGABRT) that bypasses the parser's `try/with`. The
+    // pre-scan in `parseYamlDocument` must turn both vectors into a clean diagnostic.
+
+    [<Fact>]
+    let ``deeply nested flow collections diagnose instead of aborting the process`` () =
+        // ~50 KB of open brackets — the empirically-verified overflow input. Before the
+        // pre-scan this aborted the process; it must now be a positioned diagnostic.
+        let bomb = String.replicate 50_000 "[" + String.replicate 50_000 "]"
+
+        let snapshot: FileSnapshot =
+            { Path = "work/001-demo/evidence.yml"
+              Text = $"schemaVersion: 1\nnotes: {bomb}\n" }
+
+        let diagnostic =
+            theDiagnostic "a deeply-nested document" (parseEvidenceArtifact snapshot)
+
+        Assert.Equal("malformedYaml", diagnostic.Id)
+        Assert.Contains("nesting depth", diagnostic.Message)
+
+    [<Fact>]
+    let ``deeply nested compact block sequences diagnose instead of aborting the process`` () =
+        // `- - - - … x` — YAML compact block sequences nest recursively at ~2 chars per
+        // level, a second linear overflow vector (empirically exit 134) that a flow-only
+        // (`[`/`{`) scan would miss. The depth scan must count these too.
+        let bomb = String.replicate 40_000 "- " + "x"
+
+        let snapshot: FileSnapshot =
+            { Path = "work/001-demo/tasks.yml"
+              Text = $"schemaVersion: 1\ntasks: {bomb}\n" }
+
+        let diagnostic =
+            theDiagnostic "a compact-block-sequence bomb" (parseTaskFacts snapshot)
+
+        Assert.Equal("malformedYaml", diagnostic.Id)
+        Assert.Contains("nesting depth", diagnostic.Message)
+
+    [<Fact>]
+    let ``a long flat block sequence is not mistaken for deep nesting`` () =
+        // One `- ` per line is a flat list at depth 1, however many entries — the dash
+        // counter must reset each newline so a large but shallow list is never rejected.
+        let items = String.replicate 5_000 "  - a\n"
+
+        let snapshot: FileSnapshot =
+            { Path = "work/001-demo/evidence.yml"
+              Text = $"schemaVersion: 1\nnotes:\n{items}" }
+
+        match parseEvidenceArtifact snapshot with
+        | Ok _ -> ()
+        | Error diagnostics ->
+            for diagnostic in diagnostics do
+                Assert.DoesNotContain("nesting depth", diagnostic.Message)
+
+    [<Fact>]
+    let ``an over-sized YAML document diagnoses instead of parsing`` () =
+        // Past the char budget: refused before `stream.Load`, so no unbounded work runs.
+        let huge = "schemaVersion: 1\nnotes: " + String.replicate 2_100_000 "a" + "\n"
+
+        let snapshot: FileSnapshot =
+            { Path = "work/001-demo/evidence.yml"
+              Text = huge }
+
+        let diagnostic =
+            theDiagnostic "an over-sized document" (parseEvidenceArtifact snapshot)
+
+        Assert.Equal("malformedYaml", diagnostic.Id)
+        Assert.Contains("exceeding", diagnostic.Message)
+
+    [<Fact>]
+    let ``an ordinarily nested document still parses`` () =
+        // The bounds sit far above any real artifact: a normally-nested evidence file
+        // (flow sequences, a handful of levels) must be unaffected by the pre-scan.
+        let snapshot: FileSnapshot =
+            { Path = "work/001-demo/evidence.yml"
+              Text =
+                "schemaVersion: 1\nworkId: 001-demo\n"
+                + "obligations:\n  - id: OB-001\n    tags: [a, b, [c, d]]\n    result: pass\n" }
+
+        match parseEvidenceArtifact snapshot with
+        // Either it parses, or it is rejected for an ordinary reason — never for depth/size.
+        | Ok _ -> ()
+        | Error diagnostics ->
+            for diagnostic in diagnostics do
+                Assert.DoesNotContain("nesting depth", diagnostic.Message)
+                Assert.DoesNotContain("exceeding", diagnostic.Message)
