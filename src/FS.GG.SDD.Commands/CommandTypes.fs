@@ -64,6 +64,10 @@ module CommandTypes =
     /// the write the interpreter sees is the merge result, not a replacement. The `MergePolicy`
     /// payload names which regions those are (#309); `MergePolicies` holds the seven values.
     type ArtifactWriteKind =
+        /// Deliberately never constructed — no `WriteFile` in `src/` carries this tag, an invariant
+        /// pinned by the `no command plans a WriteFile tagged AuthoredSource` test. It is not dead
+        /// code: it gives a strictly authored path (`contracts/…`) the tool reads but never writes a
+        /// tag the interpreter refuses (`canOverwrite`), rather than borrowing a tool-owned kind.
         | AuthoredSource
         | HybridArtifact of policy: MergePolicy
         | StructuredSource
