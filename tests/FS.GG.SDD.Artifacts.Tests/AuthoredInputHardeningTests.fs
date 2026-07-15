@@ -166,6 +166,38 @@ module AuthoredInputHardeningTests =
         Assert.Contains("nesting depth", diagnostic.Message)
 
     [<Fact>]
+    let ``deeply nested compact block sequences diagnose instead of aborting the process`` () =
+        // `- - - - … x` — YAML compact block sequences nest recursively at ~2 chars per
+        // level, a second linear overflow vector (empirically exit 134) that a flow-only
+        // (`[`/`{`) scan would miss. The depth scan must count these too.
+        let bomb = String.replicate 40_000 "- " + "x"
+
+        let snapshot: FileSnapshot =
+            { Path = "work/001-demo/tasks.yml"
+              Text = $"schemaVersion: 1\ntasks: {bomb}\n" }
+
+        let diagnostic = theDiagnostic "a compact-block-sequence bomb" (parseTaskFacts snapshot)
+
+        Assert.Equal("malformedYaml", diagnostic.Id)
+        Assert.Contains("nesting depth", diagnostic.Message)
+
+    [<Fact>]
+    let ``a long flat block sequence is not mistaken for deep nesting`` () =
+        // One `- ` per line is a flat list at depth 1, however many entries — the dash
+        // counter must reset each newline so a large but shallow list is never rejected.
+        let items = String.replicate 5_000 "  - a\n"
+
+        let snapshot: FileSnapshot =
+            { Path = "work/001-demo/evidence.yml"
+              Text = $"schemaVersion: 1\nnotes:\n{items}" }
+
+        match parseEvidenceArtifact snapshot with
+        | Ok _ -> ()
+        | Error diagnostics ->
+            for diagnostic in diagnostics do
+                Assert.DoesNotContain("nesting depth", diagnostic.Message)
+
+    [<Fact>]
     let ``an over-sized YAML document diagnoses instead of parsing`` () =
         // Past the char budget: refused before `stream.Load`, so no unbounded work runs.
         let huge = "schemaVersion: 1\nnotes: " + String.replicate 2_100_000 "a" + "\n"

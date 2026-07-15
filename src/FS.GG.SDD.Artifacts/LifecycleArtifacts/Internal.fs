@@ -53,32 +53,44 @@ module internal Internal =
     // set far above any hand-authored lifecycle artifact (which nests a handful of
     // levels and is a few KB) and far below the depth that overflows the stack.
 
-    /// The most flow-collection indicators (`[`/`{`) that may be simultaneously open.
-    /// The linear (one byte per level) StackOverflow vector; a real document nests <10.
-    let private maxFlowDepth = 100
+    /// The most structural collections that may be simultaneously nested. Both linear
+    /// (one/two bytes per level) StackOverflow vectors are bounded by this: flow
+    /// indicators (`[`/`{`) and compact block-sequence indicators (`- - - …` on one
+    /// line). A real lifecycle artifact nests fewer than ten levels.
+    let private maxNestingDepth = 100
 
-    /// The largest authored YAML document accepted, in chars. Bounds the *block*-style
-    /// nesting vector, which is quadratic in bytes (depth D needs ~D²/2 chars of
-    /// indentation), so this ceiling keeps block recursion far below the overflow depth
-    /// while sitting orders of magnitude above any real lifecycle artifact.
+    /// The largest authored YAML document accepted, in chars. Bounds the remaining
+    /// *indentation*-based block-nesting vector, which is quadratic in bytes (depth D
+    /// needs ~D²/2 chars of indentation), so this ceiling keeps that recursion far below
+    /// the overflow depth while sitting orders of magnitude above any real lifecycle
+    /// artifact.
     let private maxYamlChars = 2_000_000
 
-    /// Scans for the first point at which open flow collections exceed `maxFlowDepth`,
-    /// returning its 1-based (line, column). Brackets inside single/double-quoted scalars
-    /// and `#` comments are skipped so they are not miscounted as structure; quote/comment
-    /// state resets at each newline, which bounds any divergence from YAML's own reading to
-    /// a single line — and the overflow vector is unquoted brackets, which are counted.
-    let private flowDepthViolation (text: string) =
+    /// Scans for the first point at which structural nesting exceeds `maxNestingDepth`,
+    /// returning its 1-based (line, column). Two linear recursion vectors are counted:
+    /// flow-collection indicators `[`/`{` (persistent across lines until closed), and
+    /// compact block-sequence indicators — a `-` that starts a token (preceded by
+    /// whitespace/line-start, followed by whitespace/line-end) in block context, which
+    /// nests when several appear on one line (`- - - x`). Dashes reset each newline, so
+    /// an ordinary flat list (one `- ` per line) never accrues depth; the *indentation*
+    /// form, which needs growing indent per level, is quadratic and left to the byte
+    /// budget. Indicators inside single/double-quoted scalars and `#` comments are
+    /// skipped; quote/comment state resets at each newline, bounding any divergence from
+    /// YAML's own reading to a single line.
+    let private nestingDepthViolation (text: string) =
         let n = text.Length
         let mutable i = 0
         let mutable line = 1
         let mutable column = 0
-        let mutable depth = 0
+        let mutable flowDepth = 0 // open `[`/`{`, persists across lines until closed
+        let mutable dashDepth = 0 // compact `- ` sequence indicators on the current line
         let mutable inSingle = false
         let mutable inDouble = false
         let mutable inComment = false
         let mutable prevWs = true // start of line counts as preceded by whitespace
         let mutable violation = None
+
+        let overLimit () = flowDepth + dashDepth > maxNestingDepth
 
         while i < n && violation.IsNone do
             let c = text.[i]
@@ -86,6 +98,7 @@ module internal Internal =
             if c = '\n' then
                 line <- line + 1
                 column <- 0
+                dashDepth <- 0
                 inSingle <- false
                 inDouble <- false
                 inComment <- false
@@ -115,12 +128,24 @@ module internal Internal =
                     | '"' -> inDouble <- true
                     | '['
                     | '{' ->
-                        depth <- depth + 1
+                        flowDepth <- flowDepth + 1
 
-                        if depth > maxFlowDepth then
+                        if overLimit () then
                             violation <- Some(line, column)
                     | ']'
-                    | '}' -> depth <- max 0 (depth - 1)
+                    | '}' -> flowDepth <- max 0 (flowDepth - 1)
+                    // A block-sequence entry indicator: `-` starting a token in block
+                    // context. Only in block context (flowDepth = 0), where `-` is
+                    // structure rather than scalar content.
+                    | '-' when
+                        flowDepth = 0
+                        && prevWs
+                        && (i + 1 >= n || text.[i + 1] = ' ' || text.[i + 1] = '\t' || text.[i + 1] = '\n')
+                        ->
+                        dashDepth <- dashDepth + 1
+
+                        if overLimit () then
+                            violation <- Some(line, column)
                     | _ -> ()
 
                 prevWs <- c = ' ' || c = '\t'
@@ -142,9 +167,9 @@ module internal Internal =
             )
         else
 
-        match flowDepthViolation source with
+        match nestingDepthViolation source with
         | Some(line, column) ->
-            YamlMalformed($"nesting depth exceeds the maximum supported depth of {maxFlowDepth}", line, column)
+            YamlMalformed($"nesting depth exceeds the maximum supported depth of {maxNestingDepth}", line, column)
         | None ->
 
         let stream = YamlStream()
