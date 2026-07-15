@@ -14,6 +14,7 @@
     <Compile Include="CharterCommandTests.fs" />
     <Compile Include="SpecifyCommandTests.fs" />
     <Compile Include="ClarifyCommandTests.fs" />
+    <Compile Include="AnswerKindClassificationTests.fs" />
     <Compile Include="ChecklistCommandTests.fs" />
     <Compile Include="PlanCommandTests.fs" />
     <Compile Include="TasksCommandTests.fs" />
