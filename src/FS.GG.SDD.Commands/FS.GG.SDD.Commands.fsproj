@@ -26,7 +26,11 @@
     <Compile Include="CommandWorkflow/LintEngine.fsi" />
     <Compile Include="CommandWorkflow/LintEngine.fs" />
     <Compile Include="CommandWorkflow/EarlyStageAuthoring.fs" />
-    <Compile Include="CommandWorkflow/ChecklistPlanAuthoring.fs" />
+    <Compile Include="CommandWorkflow/CharterAuthoring.fs" />
+    <Compile Include="CommandWorkflow/SpecifyAuthoring.fs" />
+    <Compile Include="CommandWorkflow/ClarifyAuthoring.fs" />
+    <Compile Include="CommandWorkflow/ChecklistAuthoring.fs" />
+    <Compile Include="CommandWorkflow/PlanAuthoring.fs" />
     <Compile Include="CommandWorkflow/TaskGraphAuthoring.fs" />
     <Compile Include="CommandWorkflow/ViewGeneration.fs" />
     <Compile Include="CommandWorkflow/Prerequisites.fs" />

@@ -163,7 +163,7 @@ module MarkdownArtifactRoundTripPropertyTests =
         { Name = "spec"
           Build = specBuild
           ParseIds = specParseIds
-          Ensure = EarlyStageAuthoring.ensureSpecificationSections
+          Ensure = SpecifyAuthoring.ensureSpecificationSections
           Expected = specExpected
           TrailingSection = "Lifecycle Notes" }
 
@@ -226,7 +226,7 @@ module MarkdownArtifactRoundTripPropertyTests =
         { Name = "clarifications"
           Build = clarBuild
           ParseIds = clarParseIds
-          Ensure = EarlyStageAuthoring.ensureClarificationSections clarWorkId
+          Ensure = ClarifyAuthoring.ensureClarificationSections clarWorkId
           Expected = clarExpected
           TrailingSection = "Lifecycle Notes" }
 
@@ -291,7 +291,7 @@ module MarkdownArtifactRoundTripPropertyTests =
         { Name = "checklist"
           Build = chkBuild
           ParseIds = chkParseIds
-          Ensure = ChecklistPlanAuthoring.ensureChecklistSections chkWorkId
+          Ensure = ChecklistAuthoring.ensureChecklistSections chkWorkId
           Expected = chkExpected
           TrailingSection = "Lifecycle Notes" }
 
@@ -355,7 +355,7 @@ module MarkdownArtifactRoundTripPropertyTests =
         { Name = "plan"
           Build = planBuild
           ParseIds = planParseIds
-          Ensure = ChecklistPlanAuthoring.ensurePlanSections planWorkId
+          Ensure = PlanAuthoring.ensurePlanSections planWorkId
           Expected = planExpected
           TrailingSection = "Lifecycle Notes" }
 
