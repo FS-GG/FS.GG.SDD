@@ -542,9 +542,20 @@ individually shippable through the SDD lifecycle.
 
 ### CI, build & docs
 
-- [ ] **Reconcile the gate `dotnet test` form with DEVELOPING.md (§4, Medium)** —
-      either loop the six projects in `gate.yml` (as `scripts/test.sh` does) or
-      update DEVELOPING.md's warning to note the gate's deliberate choice.
+- [x] **Reconcile the gate `dotnet test` form with DEVELOPING.md (§4, Medium).** ✅
+      *Done 2026-07-15.* Took the structural remediation, not the doc-note one: the gate's
+      test step (`gate.yml`) now runs `bash scripts/test.sh --no-build` (the `full` tier)
+      instead of `dotnet test FS.GG.SDD.sln`, so it LOOPS the six test projects exactly as
+      `scripts/test.sh` does locally — eliminating the resource-exhaustion hazard
+      (`HRESULT: 0x80070008` / 90s protocol-negotiation timeout) DEVELOPING.md warns the
+      solution-wide form hits, rather than documenting around it. The `full` tier runs every
+      project unfiltered (the gate's peer — the union of the tiers is the whole suite), so
+      coverage is byte-for-byte the same required set, and gate + local `full` now share one
+      runner and can't drift. `--no-build` reuses the artifacts the prior build step produced.
+      DEVELOPING.md's "Tiering removes no CI coverage" note is updated to state the gate runs
+      this same looped command. Verified end-to-end: `bash scripts/test.sh --no-build` after a
+      Debug build ran all six projects green (1,763 passed / 4 skipped, matching the baseline)
+      with the per-project timing table.
 - [ ] **Refresh DEVELOPING.md test counts (§4, Medium)** to ~1,767 (and the
       per-tier numbers).
 - [ ] **Add `surface`/`lint`/`registry`/`version` to the README command list
