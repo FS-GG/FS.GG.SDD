@@ -504,8 +504,21 @@ individually shippable through the SDD lifecycle.
       exit 2 a `toolDefect` yields), now with a comment explaining the deliberate choice.
       Output stays byte-identical — the full Commands (988), Cli (207), and Validation
       (26) suites pass.
-- [ ] **Pick one `.fsi` convention for internal submodules (§1, Low)** and
-      document it (drop the 3 stray `.fsi` or add the rest).
+- [x] **Pick one `.fsi` convention for internal submodules (§1, Low)** and
+      document it (drop the 3 stray `.fsi` or add the rest). ✅ *Done 2026-07-15.*
+      Investigation showed the "drift" is a principled two-tier split, not
+      per-file taste: the 3 submodules with a `.fsi` (`LifecycleFooter`,
+      `LintEngine`, `ProcessSkillManifest`) are **public** modules
+      (`namespace FS.GG.SDD.Commands`) consumed across the assembly boundary by
+      `Cli`/tests — their `.fsi` pins that public surface (dropping them would
+      widen the surface and break `PublicSurface.baseline`). The 22 without a
+      `.fsi` are `module internal` in `…Commands.Internal`, already closed by
+      `module internal` plus the aggregating `CommandReports.fsi` /
+      `CommandWorkflow.fsi` — a per-file `.fsi` there is redundant. Neither
+      "drop the 3" nor "add 22" is correct; the resolution is to **document** the
+      existing convention (public cross-assembly module ⇒ own `.fsi`; internal
+      submodule ⇒ none) in `DEVELOPING.md`'s Conventions section. Docs-only, no
+      `src/` or public-surface change.
 - [ ] **Scope `System.IO` out of the pure core (§1, Low)** — `open type
       System.IO.Path` / `Path` alias in the workflow modules.
 - [ ] **Split the multi-stage authoring modules (§1/§3, Low)** —

@@ -22,6 +22,23 @@ that define the artifact contract and verification plan. Follow the constitution
   workflow changes.
 - Do not add rendering-specific (or any provider-specific) package names, template
   ids, paths, or docs URLs to generic SDD behavior.
+- F# `.fsi` signature files for submodules under `CommandReports/` and
+  `CommandWorkflow/` follow a two-tier convention keyed on **module visibility**, not
+  per-file taste:
+  - A **public** submodule (`namespace FS.GG.SDD.Commands`, `module <Name>`) carries
+    its own paired `.fsi` to pin and document that public surface (today:
+    `LifecycleFooter`, `LintEngine`, `ProcessSkillManifest` — deliberately public so
+    `Cli` / a test project can reference them as ordinary public API, e.g.
+    `LintEngine.classify` for its coupling regression test).
+  - An **internal** implementation submodule (`namespace FS.GG.SDD.Commands.Internal`,
+    `module internal <Name>`) has **no** individual `.fsi`; its surface is already
+    closed by `module internal` plus the aggregating `CommandReports.fsi` /
+    `CommandWorkflow.fsi`. Adding a per-file `.fsi` here is redundant. (A test project
+    may still reach these via `InternalsVisibleTo` — that is *not* a reason to make
+    the module public or to add a `.fsi`.)
+
+  So a new submodule gets a `.fsi` iff it is declared a public
+  `namespace FS.GG.SDD.Commands` module.
 
 ## Build and test
 
