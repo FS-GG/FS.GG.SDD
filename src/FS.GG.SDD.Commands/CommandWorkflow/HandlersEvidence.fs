@@ -438,7 +438,11 @@ module internal HandlersEvidence =
                 SourceLocation = None } ]
         | _ -> []
 
-    let skeletonEvidenceDeclaration workId (fromTests: string option) (obligation: EvidenceObligation) =
+    // `source` is the pre-validated evidence `ArtifactRef` (built once by the caller from
+    // `evidencePath workId`), threaded in rather than re-created per obligation — the former
+    // per-declaration `ArtifactRef.create` re-validated a plan-validated path and `failwithf`'d on
+    // the impossible Error. The caller now owns that create and reports a `toolDefect` on failure.
+    let skeletonEvidenceDeclaration (source: ArtifactRef) (fromTests: string option) (obligation: EvidenceObligation) =
         let evidenceId =
             match IdentifiersModule.createEvidenceId obligation.ObligationId with
             | Ok id -> id
@@ -501,20 +505,7 @@ module internal HandlersEvidence =
           Scope = None
           LaterLifecycleVisibility = None
           Notes = [ "Evidence required before verify." ]
-          Source =
-            match
-                FS.GG.SDD.Artifacts.ArtifactRef.create
-                    (evidencePath workId)
-                    ArtifactKind.Evidence
-                    ArtifactOwner.Sdd
-                    true
-            with
-            | Ok artifact -> artifact
-            | Error message ->
-                failwithf
-                    "evidence obligation source: invariant violated — evidence artifact path %s rejected: %s"
-                    (evidencePath workId)
-                    message
+          Source = source
           SourceLocation = None }
 
     // The default next-action note a freshly-created evidence.yml carries. On a re-run the author's
@@ -528,7 +519,11 @@ module internal HandlersEvidence =
         (existing: EvidenceArtifact option)
         (input: EvidenceArtifact option)
         (obligations: EvidenceObligation list)
-        : EvidenceArtifact * Diagnostic list =
+        : EvidenceArtifact option * Diagnostic list =
+        // `None` (with a `toolDefect` diagnostic) means the fresh-skeleton path could not seed an
+        // artifact — an unreachable invariant, since `workIdDiagnostics` (Foundation) already
+        // validates the work id at plan time. The caller reports the diagnostic and produces no
+        // evidence, rather than the former `failwithf` that aborted with an opaque stack trace.
         match existing, input with
         | Some existingArtifact, Some inputArtifact ->
             let existingById =
@@ -556,46 +551,61 @@ module internal HandlersEvidence =
                 else
                     [ unsafeEvidenceUpdate (evidencePath workId) (unsafeIds |> List.distinct |> List.sort) ]
 
-            ({ existingArtifact with
-                Evidence =
-                    (existingArtifact.Evidence @ additions)
-                    |> List.sortBy (fun declaration -> declaration.Id.Value) }
-            : EvidenceArtifact),
+            Some(
+                { existingArtifact with
+                    Evidence =
+                        (existingArtifact.Evidence @ additions)
+                        |> List.sortBy (fun declaration -> declaration.Id.Value) }
+                : EvidenceArtifact
+            ),
             diagnostics
-        | Some existingArtifact, None -> existingArtifact, []
-        | None, Some inputArtifact -> inputArtifact, []
+        | Some existingArtifact, None -> Some existingArtifact, []
+        | None, Some inputArtifact -> Some inputArtifact, []
         | None, None ->
-            let workIdValue =
-                match IdentifiersModule.createWorkId workId with
-                | Ok value -> value
-                | Error message ->
-                    failwithf
-                        "mergeEvidenceArtifacts: invariant violated — pre-validated work id %s rejected: %s"
-                        workId
-                        message
-
-            ({ SchemaVersion = SchemaVersionModule.create 1
-               WorkId = workIdValue
-               Stage = LifecycleStage.Evidence
-               Status = "needsEvidence"
-               SourceSpec = specPath workId
-               SourceClarifications = clarificationPath workId
-               SourceChecklist = checklistPath workId
-               SourcePlan = planPath workId
-               SourceTasks = tasksPath workId
-               SourceAnalysis = analysisPath workId
-               SourceSnapshots = []
-               Evidence =
-                 obligations
-                 |> List.choose (fun obligation ->
-                     if obligation.ObligationId.StartsWith("EV", StringComparison.OrdinalIgnoreCase) then
-                         Some(skeletonEvidenceDeclaration workId fromTests obligation)
-                     else
-                         None)
-               LifecycleNotes = [ defaultEvidenceLifecycleNote ]
-               Diagnostics = [] }
-            : EvidenceArtifact),
-            []
+            // Both re-derivations are of a plan-validated work id, so both are guaranteed `Ok`;
+            // the `_ ->` arm is a defensive, unreachable `toolDefect` (exit 2 via `IsToolDefect`)
+            // rather than a throw. The evidence `ArtifactRef` is built once here and threaded into
+            // every skeleton declaration.
+            match
+                IdentifiersModule.createWorkId workId,
+                FS.GG.SDD.Artifacts.ArtifactRef.create
+                    (evidencePath workId)
+                    ArtifactKind.Evidence
+                    ArtifactOwner.Sdd
+                    true
+            with
+            | Ok workIdValue, Ok source ->
+                Some(
+                    { SchemaVersion = SchemaVersionModule.create 1
+                      WorkId = workIdValue
+                      Stage = LifecycleStage.Evidence
+                      Status = "needsEvidence"
+                      SourceSpec = specPath workId
+                      SourceClarifications = clarificationPath workId
+                      SourceChecklist = checklistPath workId
+                      SourcePlan = planPath workId
+                      SourceTasks = tasksPath workId
+                      SourceAnalysis = analysisPath workId
+                      SourceSnapshots = []
+                      Evidence =
+                        obligations
+                        |> List.choose (fun obligation ->
+                            if obligation.ObligationId.StartsWith("EV", StringComparison.OrdinalIgnoreCase) then
+                                Some(skeletonEvidenceDeclaration source fromTests obligation)
+                            else
+                                None)
+                      LifecycleNotes = [ defaultEvidenceLifecycleNote ]
+                      Diagnostics = [] }
+                    : EvidenceArtifact
+                ),
+                []
+            | _ ->
+                None,
+                [ DiagnosticConstructors.toolDefect
+                      (Some(evidencePath workId))
+                      $"Evidence skeleton for work id '{workId}' could not be seeded — the plan-validated \
+                        work id or evidence artifact path was rejected when constructing a fresh \
+                        evidence.yml. This is a tool defect, not authored input." ]
 
     /// `artifact` must be the artifact as **recorded** (parsed from disk / merged), never one whose
     /// `SourceSnapshots` have been re-stamped to `currentSnapshots` — the staleEvidenceSource check
@@ -1126,7 +1136,7 @@ sourceAnalysis: {analysisPath workId}
 
                         let obligations = evidenceObligations taskFacts
 
-                        let mergedBeforeReceipt, mergeDiagnostics =
+                        let mergedOption, mergeDiagnostics =
                             mergeEvidenceArtifacts
                                 workId
                                 model.Request.FromTests
@@ -1134,53 +1144,59 @@ sourceAnalysis: {analysisPath workId}
                                 inputArtifact
                                 obligations
 
-                        // FS.GG.SDD#350 / ADR-0035. Record the receipt for the run SDD read — the one
-                        // step in this pipeline where a fact enters `evidence.yml` without an author
-                        // typing it. `resolveObservedRun` decides FROM the merged artifact (it needs to
-                        // know who is claiming a pass), and `recordObservedRun` stamps it back on.
-                        let observedRun, testReportDiagnostics =
-                            resolveObservedRun workId model mergedBeforeReceipt
+                        match mergedOption with
+                        // Unreachable tool-defect guard (see `mergeEvidenceArtifacts`): the work id is
+                        // plan-validated, so the skeleton always seeds. Surface the diagnostic and
+                        // produce no evidence rather than a partial artifact.
+                        | None -> None, mergeDiagnostics, None, None
+                        | Some mergedBeforeReceipt ->
+                            // FS.GG.SDD#350 / ADR-0035. Record the receipt for the run SDD read — the one
+                            // step in this pipeline where a fact enters `evidence.yml` without an author
+                            // typing it. `resolveObservedRun` decides FROM the merged artifact (it needs to
+                            // know who is claiming a pass), and `recordObservedRun` stamps it back on.
+                            let observedRun, testReportDiagnostics =
+                                resolveObservedRun workId model mergedBeforeReceipt
 
-                        let merged = recordObservedRun observedRun mergedBeforeReceipt
+                            let merged = recordObservedRun observedRun mergedBeforeReceipt
 
-                        // `artifact` re-stamps the snapshots to the sources as they are now; it is what
-                        // gets written back. Validation must see `merged` — the artifact as recorded on
-                        // disk — because `evidenceSourceSnapshotStale` compares the recorded digests
-                        // against `currentSnapshots`. Passing `artifact` compares `currentSnapshots`
-                        // against itself and the staleEvidenceSource branch is dead (#216). The two
-                        // differ only in `SourceSnapshots`, so every other check is unaffected.
-                        let artifact =
-                            { merged with
-                                SourceSnapshots = currentSnapshots }
+                            // `artifact` re-stamps the snapshots to the sources as they are now; it is what
+                            // gets written back. Validation must see `merged` — the artifact as recorded on
+                            // disk — because `evidenceSourceSnapshotStale` compares the recorded digests
+                            // against `currentSnapshots`. Passing `artifact` compares `currentSnapshots`
+                            // against itself and the staleEvidenceSource branch is dead (#216). The two
+                            // differ only in `SourceSnapshots`, so every other check is unaffected.
+                            let artifact =
+                                { merged with
+                                    SourceSnapshots = currentSnapshots }
 
-                        let validationDiagnostics =
-                            evidenceValidationDiagnostics
-                                workId
-                                specFacts
-                                clarificationFacts
-                                checklistFacts
-                                planFacts
-                                taskFacts
-                                currentSnapshots
-                                (citedArtifactExists model)
-                                merged
+                            let validationDiagnostics =
+                                evidenceValidationDiagnostics
+                                    workId
+                                    specFacts
+                                    clarificationFacts
+                                    checklistFacts
+                                    planFacts
+                                    taskFacts
+                                    currentSnapshots
+                                    (citedArtifactExists model)
+                                    merged
 
-                        let dispositions =
-                            evidenceDispositions obligations (citedArtifactExists model) artifact
+                            let dispositions =
+                                evidenceDispositions obligations (citedArtifactExists model) artifact
 
-                        let dispositionDiagnostics =
-                            evidenceDispositionDiagnostics (evidencePath workId) dispositions
+                            let dispositionDiagnostics =
+                                evidenceDispositionDiagnostics (evidencePath workId) dispositions
 
-                        let summary = evidenceSummary workId artifact dispositions
-                        let text = evidenceArtifactText workId artifact summary
+                            let summary = evidenceSummary workId artifact dispositions
+                            let text = evidenceArtifactText workId artifact summary
 
-                        Some artifact,
-                        mergeDiagnostics
-                        @ testReportDiagnostics
-                        @ validationDiagnostics
-                        @ dispositionDiagnostics,
-                        Some text,
-                        Some summary
+                            Some artifact,
+                            mergeDiagnostics
+                            @ testReportDiagnostics
+                            @ validationDiagnostics
+                            @ dispositionDiagnostics,
+                            Some text,
+                            Some summary
                     | _ -> None, [], None, None
 
                 let commandDiagnostics =
