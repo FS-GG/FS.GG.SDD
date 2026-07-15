@@ -849,9 +849,23 @@ Prose status: specified
     let answerKindValue (line: string) =
         let lowered = line.ToLowerInvariant()
 
-        if lowered.Contains("accepted deferral") || lowered.Contains("defer") then
+        // Author `--input` is freeform, so the answer's kind is inferred from its words.
+        // Two rules keep that inference honest: a state word counts only as a whole
+        // word/phrase (so `still open` is not matched inside `distill opens`), mirroring
+        // the Artifacts `answerKind` parser's word-boundary discipline; and a word that
+        // is directly negated names the state only to reject it (`cannot defer`,
+        // `no longer still open`), so it does not select that state. The negation guard
+        // is extra here because this reads freeform author prose, not an already-labelled
+        // artifact line. `defer` is matched as a stem (defer/deferral/deferred).
+        let negators = @"(?:not|no longer|cannot|can'?t|can not|never|won'?t|will not)"
+
+        let says (pattern: string) =
+            Regex.IsMatch(lowered, @"\b" + pattern, RegexOptions.IgnoreCase)
+            && not (Regex.IsMatch(lowered, @"\b" + negators + @"\s+" + pattern, RegexOptions.IgnoreCase))
+
+        if says @"accepted deferral\b" || says "defer" then
             "acceptedDeferral"
-        elif lowered.Contains("still open") || lowered.Contains("unresolved") then
+        elif says @"still open\b" || says @"unresolved\b" then
             "stillOpen"
         else
             "decision"

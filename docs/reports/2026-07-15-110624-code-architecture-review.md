@@ -425,10 +425,19 @@ individually shippable through the SDD lifecycle.
       `workModelInconsistent` is no longer classified by its prose
       (`LintTests.fs`). Verified through the real CLI: `spec.md` → `coverageLine`,
       `checklist-frontmatter.md` → `frontMatter`.
-- [ ] **Harden `answerKindValue` deferral classification (§3, Low).** Move
-      `EarlyStageAuthoring.fs:849-857` to word-boundary matching (reuse
-      `containsWord`) or an explicit decision tag; test "cannot defer" / "no
-      longer still open".
+- [x] **Harden `answerKindValue` deferral classification (§3, Low).** ✅ *Done
+      2026-07-15.* `answerKindValue` (`EarlyStageAuthoring.fs`) no longer
+      substring-sniffs: it matches each state word/phrase on a `\b` word boundary
+      (so `still open` is not found inside `distill opens`), mirroring the
+      Artifacts `answerKind` parser's discipline, and skips a state word that is
+      **directly negated** by an adjacent negator (`cannot`/`no longer`/`not`/
+      `never`/`won't`/`will not`), so the reported misfires `cannot defer` and
+      `no longer still open` now read as a plain `decision`. `defer` still matches
+      as a stem (defer/deferral/deferred). A non-adjacent negator (`not sure, will
+      defer`) does not suppress the later keyword. Regression tests in
+      `AnswerKindClassificationTests.fs` (the classifier is
+      `InternalsVisibleTo`-reachable) pin the whole-word, negation, stem, and
+      embedded-substring cases.
 
 ### Maintainability
 
