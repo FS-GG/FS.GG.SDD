@@ -214,6 +214,34 @@ module AuthoredInputHardeningTests =
         Assert.Equal("malformedYaml", diagnostic.Id)
         Assert.Contains("exceeding", diagnostic.Message)
 
+    // --- §2.2 of the 2026-07-15 review: a handful of authored constructs make
+    // YamlDotNet's `stream.Load` throw a framework exception (ArgumentException,
+    // ArgumentNullException, ArgumentOutOfRangeException) that is NOT a YamlException
+    // and so used to escape the parser's narrow catch, reaching the top-level backstop
+    // as an `unhandledException` (exit 2) instead of the malformed-input -> exit-1
+    // diagnostic. The widened catch must degrade each to a malformedYaml diagnostic.
+
+    [<Theory>]
+    // Empty verbatim tag `!<>`  -> System.ArgumentException.
+    [<InlineData("schemaVersion: 1\nnotes: !<> x\n")>]
+    // Empty `%TAG` directive prefix -> System.ArgumentNullException. NB: the trailing
+    // space after `!` is load-bearing — it is the empty prefix. Trim it and YamlDotNet
+    // raises a YamlException instead, silently moving this case onto the *other* catch
+    // arm; keep the space (and out of reach of any whitespace-stripping formatter).
+    [<InlineData("%TAG ! \n---\nschemaVersion: 1\n")>]
+    // A lone/over-sized surrogate escape -> System.ArgumentOutOfRangeException.
+    [<InlineData("schemaVersion: 1\nnotes: \"\\uD800\\uD800\"\n")>]
+    let ``an authored construct that throws a non-YamlException diagnoses instead of escaping`` (text: string) =
+        let snapshot: FileSnapshot =
+            { Path = "work/001-demo/evidence.yml"
+              Text = text }
+
+        let diagnostic =
+            theDiagnostic "a non-YamlException authored construct" (parseEvidenceArtifact snapshot)
+
+        Assert.Equal("malformedYaml", diagnostic.Id)
+        Assert.DoesNotContain("is empty", diagnostic.Message)
+
     [<Fact>]
     let ``an ordinarily nested document still parses`` () =
         // The bounds sit far above any real artifact: a normally-nested evidence file
