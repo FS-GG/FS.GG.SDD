@@ -609,8 +609,18 @@ individually shippable through the SDD lifecycle.
       A `[<Theory>]` in `AuthoredInputHardeningTests.fs` pins all three constructs to a
       `malformedYaml` diagnostic; verified through the real CLI (`unhandledException` →
       `lintUnparseableArtifact`).
-- [ ] **Add a one-line exit-code caveat (§3, Low)** noting `lint`'s bespoke
-      `UnusableInput`=2 polarity.
+- [x] **Add a one-line exit-code caveat (§3, Low)** noting `lint`'s bespoke
+      `UnusableInput`=2 polarity. ✅ *Done 2026-07-15.* The user-facing
+      `docs/reference/lint.md` "Exit codes" section already documents lint's side
+      ("the opposite of the shared lifecycle exit mapping, where `2` is the tool-defect
+      class"); the missing half was on the shared-mapping side. Added a caveat comment at
+      the doctrine's authoritative statement — `exitCodeForReport` in
+      `CommandReports/ReportAssembly.fs`, the exact "tool-defect class used everywhere
+      else" site the finding cites — noting that the shared "exit 2 = tool defect" rule
+      holds for every command **except** `lint` / `<stage> --explain`, whose feature-076
+      bespoke polarity (applied in `Program.fs` ahead of this mapping) uses `2` for
+      unusable input, and cross-referencing `docs/reference/lint.md`. Comment-only — no
+      behavior, JSON, exit-code, or public-surface change.
 
 ---
 

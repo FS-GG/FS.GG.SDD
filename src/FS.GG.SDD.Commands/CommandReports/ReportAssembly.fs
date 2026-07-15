@@ -228,6 +228,10 @@ module internal ReportAssembly =
     // malformed user input stays at exit 1. This replaces the old hand-maintained
     // `providerDefectIds` id set, so a new defect diagnostic escalates without a second
     // registration (feature 062).
+    // Caveat: this shared "exit 2 = tool defect" doctrine holds for every command *except*
+    // `lint` / `<stage> --explain`, whose feature-076 pre-flight uses a bespoke polarity
+    // (0 clean / 1 defects / 2 unusable input) applied in `Program.fs` ahead of this
+    // mapping — there, exit 2 means unusable input, not a tool defect. See docs/reference/lint.md.
     let exitCodeForReport (report: CommandReport) =
         match report.Outcome with
         | CommandOutcome.Blocked ->
