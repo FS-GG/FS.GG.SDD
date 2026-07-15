@@ -56,11 +56,11 @@ Tier-1 change updates it). The `WarningsAsErrors` ratchet
 ### Testing tiers
 
 A whole-solution `dotnet test` takes minutes, which is too slow for a casual inner loop.
-The cost is **concentrated, not diffuse**: it lives in the ~140 tests that spawn a real
+The cost is **concentrated, not diffuse**: it lives in the ~150 tests that spawn a real
 `dotnet`/CLI/git subprocess (scaffold's real `dotnet new`, the CLI-raw smokes, the apphost
-help/validate/lint smokes, the git-backed gitignore checks). The other ~1,130 tests —
+help/validate/lint smokes, the git-backed gitignore checks). The other ~1,600 tests —
 parsers, codec, work model, serializers, command handlers, report projections — run
-in-process in seconds. But ~770 of those cheap tests live *inside* the `Commands.Tests` and
+in-process in seconds. But ~1,050 of those cheap tests live *inside* the `Commands.Tests` and
 `Cli.Tests` projects, next to their subprocess-spawning siblings, so project granularity
 alone cannot reach them cheaply. They are separated by a trait: the subprocess-spawning
 tests carry `[<Trait("tier", "slow")>]`, and the cheap tiers exclude them with
@@ -70,9 +70,9 @@ tests carry `[<Trait("tier", "slow")>]`, and the cheap tiers exclude them with
 
 | Tier | Command | Runs | Tests | Wall | Run it when |
 |---|---|---|---|---|---|
-| **fast** | `scripts/test.sh fast` | pure + `Commands`/`Cli` in-process (`tier!=slow`) | 1,132 | ~14s | every save — parser, work model, codec, handlers, report work |
-| **component** | `scripts/test.sh component` | + Validation + full `Cli` (incl. CLI process smokes) | 1,189 | ~25s | before pushing a CLI, report-projection, or validation change |
-| **full** | `scripts/test.sh` | every project, unfiltered | ~1,297 | ~2–3m | before push, and whenever you touched the scaffold/CLI subprocess tests |
+| **fast** | `scripts/test.sh fast` | pure + `Commands`/`Cli` in-process (`tier!=slow`) | 1,576 | ~20s | every save — parser, work model, codec, handlers, report work |
+| **component** | `scripts/test.sh component` | + Validation + full `Cli` (incl. CLI process smokes) | 1,637 | ~35s | before pushing a CLI, report-projection, or validation change |
+| **full** | `scripts/test.sh` | every project, unfiltered | ~1,787 | ~2–3m | before push, and whenever you touched the scaffold/CLI subprocess tests |
 
 The trait is deliberately **not** a CI filter: the PR gate runs every project unfiltered,
 so the union of the tiers is the whole suite and no test is reachable only under a filter.

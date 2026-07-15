@@ -4,11 +4,11 @@
 #
 # WHY THIS EXISTS
 #   `dotnet test FS.GG.SDD.sln` is the only obvious move, and it takes minutes. The cost is
-#   NOT diffuse: it is concentrated in the ~140 tests that spawn a real `dotnet`/CLI/git
+#   NOT diffuse: it is concentrated in the ~150 tests that spawn a real `dotnet`/CLI/git
 #   subprocess (scaffold's real `dotnet new`, the CLI-raw smokes, the apphost help/validate/lint
-#   smokes, the git-backed gitignore checks). The other ~1,130 tests — the parsers, codec, work
+#   smokes, the git-backed gitignore checks). The other ~1,600 tests — the parsers, codec, work
 #   model, serializers, command handlers, and report projections — run in-process in seconds.
-#   Project granularity alone could not separate them: ~770 of the cheap ones live inside the
+#   Project granularity alone could not separate them: ~1,050 of the cheap ones live inside the
 #   Commands + Cli test projects, alongside their subprocess-spawning siblings. So those siblings
 #   carry the `tier=slow` trait (FS.GG.SDD#209) and the cheap tiers filter them out with
 #   `--filter tier!=slow`, admitting the in-process majority without the subprocess tail.
@@ -16,11 +16,11 @@
 #   So: pick a tier matched to what you changed, and let the PR gate be the backstop.
 #
 # TIERS (cheapest first, so a failure surfaces fast). The `tier=slow` trait (FS.GG.SDD#209) marks
-# the ~140 tests that spawn a real dotnet/CLI/git subprocess; `tier!=slow` lets the cheap tiers
-# reach the ~770 in-process Commands+Cli tests without paying for their subprocess-spawning siblings.
-#   fast       pure + in-process Commands/Cli   1,132 tests, ~14s   — no subprocess: parser / model / codec / handlers / reports
-#   component  + Validation + full Cli          1,189 tests, ~25s   — adds validation + the CLI process smokes
-#   full       every project, unfiltered      ~1,297 tests, ~2-3m   — everything, no filter; parity with the PR gate
+# the ~150 tests that spawn a real dotnet/CLI/git subprocess; `tier!=slow` lets the cheap tiers
+# reach the ~1,050 in-process Commands+Cli tests without paying for their subprocess-spawning siblings.
+#   fast       pure + in-process Commands/Cli   1,576 tests, ~20s   — no subprocess: parser / model / codec / handlers / reports
+#   component  + Validation + full Cli          1,637 tests, ~35s   — adds validation + the CLI process smokes
+#   full       every project, unfiltered      ~1,787 tests, ~2-3m   — everything, no filter; parity with the PR gate
 #
 # THIS REMOVES NO CI COVERAGE. `.github/workflows/gate.yml` still runs the FULL suite on every
 # PR and is still required, so a Commands-layer regression is caught there even if you only ran
@@ -54,8 +54,8 @@ repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # self-skips when FSGG_SDD_ACCEPTANCE_REGISTRY is unset, so `full` stays offline by default.
 #
 # A `project::filter` entry runs that project with `dotnet test --filter <filter>`. The trait
-# `tier=slow` marks the ~140 tests that spawn a real `dotnet`/CLI/git subprocess (FS.GG.SDD#209),
-# so `tier!=slow` admits the ~770 in-process Commands+Cli tests into the cheap tiers WITHOUT their
+# `tier=slow` marks the ~150 tests that spawn a real `dotnet`/CLI/git subprocess (FS.GG.SDD#209),
+# so `tier!=slow` admits the ~1,050 in-process Commands+Cli tests into the cheap tiers WITHOUT their
 # subprocess-spawning siblings. `full` runs every project unfiltered, so it stays the gate's peer:
 # the union of the tiers is the whole suite — no test is reachable only under a filter.
 PURE_PROJECTS=(

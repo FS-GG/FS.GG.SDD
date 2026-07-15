@@ -556,8 +556,16 @@ individually shippable through the SDD lifecycle.
       this same looped command. Verified end-to-end: `bash scripts/test.sh --no-build` after a
       Debug build ran all six projects green (1,763 passed / 4 skipped, matching the baseline)
       with the per-project timing table.
-- [ ] **Refresh DEVELOPING.md test counts (§4, Medium)** to ~1,767 (and the
-      per-tier numbers).
+- [x] **Refresh DEVELOPING.md test counts (§4, Medium)** to ~1,767 (and the
+      per-tier numbers). ✅ *Done 2026-07-15.* Re-measured the live suite (the
+      counts had grown past the report's ~1,767 snapshot): **fast 1,576 /
+      component 1,637 / full 1,787 passed (+4 network-gated skips)**. Refreshed
+      the per-tier table and the concentrated-cost prose in **both**
+      `DEVELOPING.md` and `scripts/test.sh` (they mirror the same figures) — the
+      slow-tagged subprocess tier ~140→~150, the in-process majority ~1,130→~1,600,
+      and the Commands+Cli cheap-test share ~770→~1,050 — plus the wall-time
+      estimates (fast ~14s→~20s, component ~25s→~35s) that drifted with the ~40%
+      count growth. Docs-only; no `src/` or public-surface change.
 - [ ] **Add `surface`/`lint`/`registry`/`version` to the README command list
       (§4, Low).**
 - [ ] **Add a few golden snapshots (§4, Low)** for representative command ×
