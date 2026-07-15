@@ -387,11 +387,15 @@ individually shippable through the SDD lifecycle.
 
 ### Correctness (do first)
 
-- [ ] **Defend against uncatchable YAML StackOverflow (§2.1).** Add a
-      byte-budget + nesting-depth pre-scan in `parseYamlDocument`
-      (`Internal.fs:47`) *before* `stream.Load` — reject over-budget or
-      over-nested input with the existing `YamlMalformed` diagnostic (exit 1).
-      Add a test with a `[[[[…`-style document asserting exit 1, not abort.
+- [x] **Defend against uncatchable YAML StackOverflow (§2.1).** ✅ *Done
+      2026-07-15.* A byte-budget (`maxYamlChars = 2 MB`) + flow-nesting-depth
+      (`maxFlowDepth = 100`) pre-scan now runs in `parseYamlDocument`
+      (`Internal.fs`) *before* `stream.Load`; over-budget/over-nested input
+      yields the positioned `YamlMalformed` diagnostic (exit 1). The scanner
+      skips brackets inside quoted scalars and comments. Regression tests in
+      `AuthoredInputHardeningTests.fs` cover the `[[[[…` bomb, the over-sized
+      case, and a normally-nested doc; verified end-to-end through the real CLI
+      (`malformedYaml … nesting depth …`, exit 1, no SIGABRT).
 - [ ] **Bound the post-kill reap (§3, Low).** Replace the un-timed
       `proc.WaitForExit()` at `CommandEffects.fs:267` with a bounded wait and
       report the synthesized timeout result regardless of `Kill` outcome. Test

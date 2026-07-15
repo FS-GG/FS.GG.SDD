@@ -44,9 +44,111 @@ module internal Internal =
         | YamlMalformed of message: string * line: int * column: int
         | YamlRoot of YamlNode
 
+    // A hand-authored document of the form `[[[[…` blows the CLR stack: YamlDotNet
+    // parses nested flow collections recursively with no depth limit, and a
+    // StackOverflowException is uncatchable in .NET — it bypasses the `try/with`
+    // below and aborts the process (docs/reports/2026-07-15 review, §2.1).
+    // A wider `catch` cannot defend it; only refusing over-nested / over-sized input
+    // *before* `stream.Load` can. These bounds are a pre-scan, not a parse: they are
+    // set far above any hand-authored lifecycle artifact (which nests a handful of
+    // levels and is a few KB) and far below the depth that overflows the stack.
+
+    /// The most flow-collection indicators (`[`/`{`) that may be simultaneously open.
+    /// The linear (one byte per level) StackOverflow vector; a real document nests <10.
+    let private maxFlowDepth = 100
+
+    /// The largest authored YAML document accepted, in chars. Bounds the *block*-style
+    /// nesting vector, which is quadratic in bytes (depth D needs ~D²/2 chars of
+    /// indentation), so this ceiling keeps block recursion far below the overflow depth
+    /// while sitting orders of magnitude above any real lifecycle artifact.
+    let private maxYamlChars = 2_000_000
+
+    /// Scans for the first point at which open flow collections exceed `maxFlowDepth`,
+    /// returning its 1-based (line, column). Brackets inside single/double-quoted scalars
+    /// and `#` comments are skipped so they are not miscounted as structure; quote/comment
+    /// state resets at each newline, which bounds any divergence from YAML's own reading to
+    /// a single line — and the overflow vector is unquoted brackets, which are counted.
+    let private flowDepthViolation (text: string) =
+        let n = text.Length
+        let mutable i = 0
+        let mutable line = 1
+        let mutable column = 0
+        let mutable depth = 0
+        let mutable inSingle = false
+        let mutable inDouble = false
+        let mutable inComment = false
+        let mutable prevWs = true // start of line counts as preceded by whitespace
+        let mutable violation = None
+
+        while i < n && violation.IsNone do
+            let c = text.[i]
+
+            if c = '\n' then
+                line <- line + 1
+                column <- 0
+                inSingle <- false
+                inDouble <- false
+                inComment <- false
+                prevWs <- true
+            else
+                column <- column + 1
+
+                if inComment then ()
+                elif inSingle then
+                    // `''` is an escaped quote inside a single-quoted scalar.
+                    if c = '\'' then
+                        if i + 1 < n && text.[i + 1] = '\'' then
+                            i <- i + 1
+                            column <- column + 1
+                        else
+                            inSingle <- false
+                elif inDouble then
+                    if c = '\\' then
+                        i <- i + 1
+                        column <- column + 1
+                    elif c = '"' then
+                        inDouble <- false
+                else
+                    match c with
+                    | '#' when prevWs -> inComment <- true
+                    | '\'' -> inSingle <- true
+                    | '"' -> inDouble <- true
+                    | '['
+                    | '{' ->
+                        depth <- depth + 1
+
+                        if depth > maxFlowDepth then
+                            violation <- Some(line, column)
+                    | ']'
+                    | '}' -> depth <- max 0 (depth - 1)
+                    | _ -> ()
+
+                prevWs <- c = ' ' || c = '\t'
+
+            i <- i + 1
+
+        violation
+
     let parseYamlDocument (text: string | null) =
+        let source = Option.ofObj text |> Option.defaultValue ""
+
+        // Refuse the two unbounded-recursion vectors before handing the text to
+        // YamlDotNet, whose StackOverflow would be uncatchable (see above).
+        if source.Length > maxYamlChars then
+            YamlMalformed(
+                $"document is {source.Length} characters, exceeding the {maxYamlChars}-character limit",
+                0,
+                0
+            )
+        else
+
+        match flowDepthViolation source with
+        | Some(line, column) ->
+            YamlMalformed($"nesting depth exceeds the maximum supported depth of {maxFlowDepth}", line, column)
+        | None ->
+
         let stream = YamlStream()
-        use reader = new StringReader(Option.ofObj text |> Option.defaultValue "")
+        use reader = new StringReader(source)
 
         // A malformed authored document (tab indentation, a duplicate key, an
         // unescaped quote) makes YamlDotNet throw YamlException. Carrying its
