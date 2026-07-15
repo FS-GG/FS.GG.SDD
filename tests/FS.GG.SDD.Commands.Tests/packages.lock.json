@@ -13,9 +13,9 @@
       },
       "FSharp.Core": {
         "type": "Direct",
-        "requested": "[10.1.301, )",
-        "resolved": "10.1.301",
-        "contentHash": "excLf2zM/qUB3WhRUfI0xvOOaPwcRAEdYT/BXe9eiTKySnWVuIKMQTf5+6ETy5nsb1dpLp1s2j2yAM/XcRgFMg=="
+        "requested": "[10.1.302, )",
+        "resolved": "10.1.302",
+        "contentHash": "bN7XMQrAQg1dyHScJ7FcsznERBkvm74LtIo1O6C5mUzgbDqSwNbDpb3+nBGaJAjDmtC/suK5Vx5pFysKY6Hm+Q=="
       },
       "Microsoft.NET.Test.Sdk": {
         "type": "Direct",
@@ -116,42 +116,42 @@
       "fs.gg.contracts": {
         "type": "Project",
         "dependencies": {
-          "FSharp.Core": "[10.1.301, )"
+          "FSharp.Core": "[10.1.302, )"
         }
       },
       "fs.gg.sdd.artifacts": {
         "type": "Project",
         "dependencies": {
-          "FS.GG.Contracts": "[1.4.1, )",
-          "FSharp.Core": "[10.1.301, )",
+          "FS.GG.Contracts": "[2.0.0, )",
+          "FSharp.Core": "[10.1.302, )",
           "YamlDotNet": "[18.1.0, )"
         }
       },
       "fs.gg.sdd.cli": {
         "type": "Project",
         "dependencies": {
-          "FS.GG.Contracts": "[1.4.1, )",
-          "FS.GG.SDD.Artifacts": "[0.10.0, )",
-          "FS.GG.SDD.Commands": "[0.10.0, )",
-          "FS.GG.SDD.Validation": "[0.10.0, )",
-          "FSharp.Core": "[10.1.301, )",
+          "FS.GG.Contracts": "[2.0.0, )",
+          "FS.GG.SDD.Artifacts": "[0.11.0, )",
+          "FS.GG.SDD.Commands": "[0.11.0, )",
+          "FS.GG.SDD.Validation": "[0.11.0, )",
+          "FSharp.Core": "[10.1.302, )",
           "Spectre.Console": "[0.57.2, )"
         }
       },
       "fs.gg.sdd.commands": {
         "type": "Project",
         "dependencies": {
-          "FS.GG.Contracts": "[1.4.1, )",
-          "FS.GG.SDD.Artifacts": "[0.10.0, )",
-          "FSharp.Core": "[10.1.301, )"
+          "FS.GG.Contracts": "[2.0.0, )",
+          "FS.GG.SDD.Artifacts": "[0.11.0, )",
+          "FSharp.Core": "[10.1.302, )"
         }
       },
       "fs.gg.sdd.validation": {
         "type": "Project",
         "dependencies": {
-          "FS.GG.SDD.Artifacts": "[0.10.0, )",
-          "FS.GG.SDD.Commands": "[0.10.0, )",
-          "FSharp.Core": "[10.1.301, )"
+          "FS.GG.SDD.Artifacts": "[0.11.0, )",
+          "FS.GG.SDD.Commands": "[0.11.0, )",
+          "FSharp.Core": "[10.1.302, )"
         }
       },
       "Spectre.Console": {
