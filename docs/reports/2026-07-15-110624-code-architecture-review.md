@@ -453,9 +453,21 @@ individually shippable through the SDD lifecycle.
       correction)` triple, so a reworded message or a reordered relatedIds pair
       can no longer drift between them. Output stays byte-identical — the full
       suite (Commands/Cli golden + projection tests) passes unchanged.
-- [ ] **Extract the view-load/parse/identity combinator (§3, Medium)** shared by
+- [x] **Extract the view-load/parse/identity combinator (§3, Medium)** shared by
       `HandlersVerify`/`HandlersShip`/`HandlersEvidence`/`ViewGeneration`
-      (~5 copies).
+      (~5 copies). ✅ *Done 2026-07-15.* A single generic
+      `existingViewIdentityDiagnostic parse workIdOf malformed mismatch path workId
+      model` combinator in `Foundation.fs` now owns the "load snapshot → parse view →
+      Error⇒malformed / Ok+WorkId mismatch⇒identityMismatch / Ok⇒none" skeleton; the
+      three byte-identical `existing{Verify,Ship,Analysis}Diagnostic` functions each
+      reduce to one call passing the artifact-specific parser, `WorkId` accessor, and
+      the two diagnostic constructors, so a reworded shape can no longer drift between
+      the stages. The two divergent prerequisite variants
+      (`shipVerificationPrerequisite`, `analysisPrerequisiteDiagnosticsSummaryAndText`)
+      are deliberately left as-is — they return diagnostic *lists* plus extra
+      not-ready/summary payloads, so folding them would add callbacks without removing
+      duplication. Output stays byte-identical — the full Commands (986) and Cli (207)
+      suites pass unchanged.
 - [ ] **Resolve `ArtifactWriteKind.AuthoredSource` (§3, Low)** — annotate it as
       the never-constructed strict class, or delete it.
 - [ ] **Convert the invariant-guard `failwith`s (§3, Low)** in

@@ -886,6 +886,33 @@ nuget-cache/
             else
                 None)
 
+    /// Shared "load snapshot → parse view → Error⇒malformed / Ok+WorkId mismatch⇒identityMismatch /
+    /// Ok⇒none" skeleton behind the per-stage existing-view identity diagnostics
+    /// (verify/ship/analysis). Callers supply the artifact-specific parser, WorkId accessor, and the
+    /// two diagnostic constructors — `malformed path message` and `mismatch path expectedWorkId
+    /// actualWorkId` — so a reworded shape can no longer drift between the stages. Returns `None` when
+    /// the view is absent or coherent.
+    let existingViewIdentityDiagnostic
+        (parse: FileSnapshot -> Result<'view, Diagnostic list>)
+        (workIdOf: 'view -> string)
+        (malformed: string -> string -> Diagnostic)
+        (mismatch: string -> string -> string -> Diagnostic)
+        (path: string)
+        (workId: string)
+        model
+        : Diagnostic option =
+        match snapshot path model with
+        | None -> None
+        | Some existing ->
+            match parse existing with
+            | Error diagnostics ->
+                diagnostics
+                |> List.tryHead
+                |> Option.map (fun diagnostic -> malformed path diagnostic.Message)
+            | Ok view when not (String.Equals(workIdOf view, workId, StringComparison.OrdinalIgnoreCase)) ->
+                Some(mismatch path workId (workIdOf view))
+            | Ok _ -> None
+
     let directoryListing path model =
         let key = "enumerate:" + normalizeRelativePath path
 
