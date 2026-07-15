@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Commands.Tests
 
 open FS.GG.SDD.Commands.Internal.EarlyStageAuthoring
+open FS.GG.SDD.Commands.Internal.ClarifyAuthoring
 open Xunit
 
 /// `answerKindValue` classifies a freeform clarify `--input` line as a decision,

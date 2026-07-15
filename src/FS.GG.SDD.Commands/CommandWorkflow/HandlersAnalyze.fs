@@ -16,7 +16,8 @@ open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.Internal.Foundation
 open FS.GG.SDD.Commands.Internal.EarlyStageAuthoring
-open FS.GG.SDD.Commands.Internal.ChecklistPlanAuthoring
+open FS.GG.SDD.Commands.Internal.ChecklistAuthoring
+open FS.GG.SDD.Commands.Internal.PlanAuthoring
 open FS.GG.SDD.Commands.Internal.ViewGeneration
 open FS.GG.SDD.Commands.Internal.Prerequisites
 open FS.GG.SDD.Commands.Internal.HandlersEarly

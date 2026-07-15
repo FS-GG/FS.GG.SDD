@@ -106,9 +106,9 @@ module MergePolicyTests =
     let ``rederiveChecklist covers every section its policy declares`` () =
         let workId = "001-example"
 
-        let ensured = ChecklistPlanAuthoring.ensureChecklistSections workId "# Checklist\n"
+        let ensured = ChecklistAuthoring.ensureChecklistSections workId "# Checklist\n"
 
-        let text = ChecklistPlanAuthoring.rederiveChecklist workId "spec" "clar" [] ensured
+        let text = ChecklistAuthoring.rederiveChecklist workId "spec" "clar" [] ensured
 
         for heading in MergePolicy.rederivedSections MergePolicies.checklist do
             Assert.Contains($"## {heading}", text)
@@ -120,7 +120,7 @@ module MergePolicyTests =
         let workId = "001-example"
 
         let authored =
-            ChecklistPlanAuthoring.ensureChecklistSections workId "# Checklist\n"
+            ChecklistAuthoring.ensureChecklistSections workId "# Checklist\n"
             |> EarlyStageAuthoring.replaceSectionBody "Advisory Notes" [ "- Mine, and mine alone." ]
 
         Assert.DoesNotContain(
@@ -128,7 +128,7 @@ module MergePolicyTests =
             MergePolicy.rederivedSections MergePolicies.checklist |> String.concat "|"
         )
 
-        let text = ChecklistPlanAuthoring.rederiveChecklist workId "spec" "clar" [] authored
+        let text = ChecklistAuthoring.rederiveChecklist workId "spec" "clar" [] authored
 
         Assert.Contains("- Mine, and mine alone.", text)
 

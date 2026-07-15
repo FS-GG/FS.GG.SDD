@@ -536,9 +536,28 @@ individually shippable through the SDD lifecycle.
       surface baselines are untouched. Output stays byte-identical — the full
       suite (Contracts/Artifacts/Validation/Cli/Commands/Acceptance,
       1,763 passed / 4 skipped) passes unchanged.
-- [ ] **Split the multi-stage authoring modules (§1/§3, Low)** —
+- [x] **Split the multi-stage authoring modules (§1/§3, Low)** —
       `ChecklistPlanAuthoring.fs` (two stages) and `EarlyStageAuthoring.fs`
-      (three), if either grows further.
+      (three). ✅ *Done 2026-07-15.* Both giant multi-stage modules are split into
+      per-stage `module internal` files, byte-identically. `ChecklistPlanAuthoring.fs`
+      (1,584 lines) → `ChecklistAuthoring.fs` + `PlanAuthoring.fs`, cleanly seamed at the
+      checklist/plan boundary; the one cross-half helper (`sourceSnapshotLine`) stays in
+      `ChecklistAuthoring` and `PlanAuthoring` opens it. `EarlyStageAuthoring.fs`
+      (1,755 lines) decomposes along the seam the dependency graph actually supports —
+      **foundation vs per-stage pipelines**, not a naive charter/specify/clarify slice,
+      because the three stages share a large common foundation (section-merge machinery,
+      id allocators, title/scalar helpers, project/duplicate diagnostics) that is *also*
+      consumed by the downstream Checklist/Plan modules and the tests. The shared
+      foundation keeps the name `EarlyStageAuthoring` (363 lines) so every downstream
+      `open` and the `replaceSectionBody` test ref are untouched; the three stage
+      pipelines move to `CharterAuthoring.fs` (119), `SpecifyAuthoring.fs` (467), and
+      `ClarifyAuthoring.fs` (871), each `open`ing the foundation. The stage modules are
+      mutually independent (no charter→specify→clarify edges). Handler `open`s
+      (`HandlersEarly`, `Prerequisites`) and three test references were rewired; all 90
+      top-level bindings are accounted for (parity-checked, no drop/dup). Output stays
+      byte-identical — the full suite (Contracts/Artifacts/Validation/Cli/Commands/
+      Acceptance, 1,763 passed / 4 skipped) passes unchanged; the reflection
+      public-surface baselines are untouched (every new module is `module internal`).
 
 ### CI, build & docs
 
