@@ -1,0 +1,10 @@
+command: init
+toolVersion: 0.11.0
+outcome: succeeded
+changedArtifacts: 60
+generatedViews: 0
+diagnostics: 0
+nextAction: nextLifecycleCommand
+lifecycle: 0/10 done · work=none · outcome=succeeded · (init is not a lifecycle stage)
+stages: charter=next specify=pending clarify=pending checklist=pending plan=pending tasks=pending analyze=pending evidence=pending verify=pending ship=pending
+next: fsgg-sdd charter
