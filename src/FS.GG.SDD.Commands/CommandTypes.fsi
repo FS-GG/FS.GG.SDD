@@ -45,6 +45,9 @@ module CommandTypes =
     /// tool-owned regions — named by its `MergePolicy` — are re-derived and whose authored
     /// regions are preserved.
     type ArtifactWriteKind =
+        /// Deliberately never constructed: no `WriteFile` in `src/` carries this tag (pinned by the
+        /// `no command plans a WriteFile tagged AuthoredSource` test). It is the refused tag for a
+        /// strictly authored path (`contracts/…`) the tool reads but never writes — not dead code.
         | AuthoredSource
         | HybridArtifact of policy: MergePolicy
         | StructuredSource

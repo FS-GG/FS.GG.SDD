@@ -468,8 +468,18 @@ individually shippable through the SDD lifecycle.
       not-ready/summary payloads, so folding them would add callbacks without removing
       duplication. Output stays byte-identical — the full Commands (986) and Cli (207)
       suites pass unchanged.
-- [ ] **Resolve `ArtifactWriteKind.AuthoredSource` (§3, Low)** — annotate it as
-      the never-constructed strict class, or delete it.
+- [x] **Resolve `ArtifactWriteKind.AuthoredSource` (§3, Low)** — annotate it as
+      the never-constructed strict class, or delete it. ✅ *Done 2026-07-15.*
+      Annotated, not deleted: the case is a genuine contract surface — the refused
+      tag for a strictly authored path (`contracts/…`) the tool reads but never
+      writes (`docs/reference/artifact-taxonomy.md:43`), and the
+      `no command plans a WriteFile tagged AuthoredSource` test already pins the
+      never-constructed invariant. Added a case-level doc comment on
+      `| AuthoredSource` in both `CommandTypes.fsi` and `CommandTypes.fs` stating
+      it is deliberately never constructed (naming the pinning test) and *not* dead
+      code, so a reader at the DU no longer mistakes it for one. Comment-only —
+      no behavior, JSON, or public-surface change; the full Commands suite passes
+      unchanged.
 - [ ] **Convert the invariant-guard `failwith`s (§3, Low)** in
       `HandlersEvidence.fs`/`ValidationRunner.fs` to typed `toolDefect`
       diagnostics (optional hardening).
