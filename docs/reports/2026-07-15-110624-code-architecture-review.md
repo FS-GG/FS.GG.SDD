@@ -566,8 +566,12 @@ individually shippable through the SDD lifecycle.
       and the Commands+Cli cheap-test share ~770→~1,050 — plus the wall-time
       estimates (fast ~14s→~20s, component ~25s→~35s) that drifted with the ~40%
       count growth. Docs-only; no `src/` or public-surface change.
-- [ ] **Add `surface`/`lint`/`registry`/`version` to the README command list
-      (§4, Low).**
+- [x] **Add `surface`/`lint`/`registry`/`version` to the README command list
+      (§4, Low).** ✅ *Done 2026-07-15.* Added the four missing non-lifecycle verbs
+      to README's "Cross-cutting commands" list: `surface` (API-surface baseline
+      `--check`/`--update`), `lint <artifact>` (read-only authoring pre-flight, linking
+      `docs/reference/lint.md`), `registry` (`validate` / `skill-manifest`), and
+      `version`. Docs-only; no `src/` or public-surface change.
 - [ ] **Add a few golden snapshots (§4, Low)** for representative command ×
       `--json`/`--text` outputs to widen the determinism net.
 
