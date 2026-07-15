@@ -106,7 +106,8 @@ module internal Internal =
             else
                 column <- column + 1
 
-                if inComment then ()
+                if inComment then
+                    ()
                 elif inSingle then
                     // `''` is an escaped quote inside a single-quoted scalar.
                     if c = '\'' then
@@ -160,36 +161,32 @@ module internal Internal =
         // Refuse the two unbounded-recursion vectors before handing the text to
         // YamlDotNet, whose StackOverflow would be uncatchable (see above).
         if source.Length > maxYamlChars then
-            YamlMalformed(
-                $"document is {source.Length} characters, exceeding the {maxYamlChars}-character limit",
-                0,
-                0
-            )
+            YamlMalformed($"document is {source.Length} characters, exceeding the {maxYamlChars}-character limit", 0, 0)
         else
 
-        match nestingDepthViolation source with
-        | Some(line, column) ->
-            YamlMalformed($"nesting depth exceeds the maximum supported depth of {maxNestingDepth}", line, column)
-        | None ->
+            match nestingDepthViolation source with
+            | Some(line, column) ->
+                YamlMalformed($"nesting depth exceeds the maximum supported depth of {maxNestingDepth}", line, column)
+            | None ->
 
-        let stream = YamlStream()
-        use reader = new StringReader(source)
+                let stream = YamlStream()
+                use reader = new StringReader(source)
 
-        // A malformed authored document (tab indentation, a duplicate key, an
-        // unescaped quote) makes YamlDotNet throw YamlException. Carrying its
-        // Start mark and message out honors the malformed-input -> diagnostic
-        // doctrine instead of crashing through the parser.
-        try
-            stream.Load reader
+                // A malformed authored document (tab indentation, a duplicate key, an
+                // unescaped quote) makes YamlDotNet throw YamlException. Carrying its
+                // Start mark and message out honors the malformed-input -> diagnostic
+                // doctrine instead of crashing through the parser.
+                try
+                    stream.Load reader
 
-            if stream.Documents.Count = 0 then
-                YamlEmpty
-            else
-                YamlRoot stream.Documents.[0].RootNode
-        with :? YamlDotNet.Core.YamlException as ex ->
-            // YamlDotNet marks positions as int64; a source line/column that overflows
-            // int is not a document a human authored.
-            YamlMalformed(ex.Message, int ex.Start.Line, int ex.Start.Column)
+                    if stream.Documents.Count = 0 then
+                        YamlEmpty
+                    else
+                        YamlRoot stream.Documents.[0].RootNode
+                with :? YamlDotNet.Core.YamlException as ex ->
+                    // YamlDotNet marks positions as int64; a source line/column that overflows
+                    // int is not a document a human authored.
+                    YamlMalformed(ex.Message, int ex.Start.Line, int ex.Start.Column)
 
     /// A lossy probe for the callers that answer a question about a document rather
     /// than diagnose it (a raw schemaVersion read for identity/digest purposes).

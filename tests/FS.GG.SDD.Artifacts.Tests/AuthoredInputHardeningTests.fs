@@ -160,7 +160,8 @@ module AuthoredInputHardeningTests =
             { Path = "work/001-demo/evidence.yml"
               Text = $"schemaVersion: 1\nnotes: {bomb}\n" }
 
-        let diagnostic = theDiagnostic "a deeply-nested document" (parseEvidenceArtifact snapshot)
+        let diagnostic =
+            theDiagnostic "a deeply-nested document" (parseEvidenceArtifact snapshot)
 
         Assert.Equal("malformedYaml", diagnostic.Id)
         Assert.Contains("nesting depth", diagnostic.Message)
@@ -176,7 +177,8 @@ module AuthoredInputHardeningTests =
             { Path = "work/001-demo/tasks.yml"
               Text = $"schemaVersion: 1\ntasks: {bomb}\n" }
 
-        let diagnostic = theDiagnostic "a compact-block-sequence bomb" (parseTaskFacts snapshot)
+        let diagnostic =
+            theDiagnostic "a compact-block-sequence bomb" (parseTaskFacts snapshot)
 
         Assert.Equal("malformedYaml", diagnostic.Id)
         Assert.Contains("nesting depth", diagnostic.Message)
@@ -206,7 +208,8 @@ module AuthoredInputHardeningTests =
             { Path = "work/001-demo/evidence.yml"
               Text = huge }
 
-        let diagnostic = theDiagnostic "an over-sized document" (parseEvidenceArtifact snapshot)
+        let diagnostic =
+            theDiagnostic "an over-sized document" (parseEvidenceArtifact snapshot)
 
         Assert.Equal("malformedYaml", diagnostic.Id)
         Assert.Contains("exceeding", diagnostic.Message)
