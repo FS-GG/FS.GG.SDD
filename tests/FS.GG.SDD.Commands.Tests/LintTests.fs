@@ -90,14 +90,7 @@ module LintTests =
 
     let private workModelDiag (message: string) (tag: string option) (relatedIds: string list) =
         let d =
-            Diagnostics.create
-                "workModelInconsistent"
-                Diagnostics.DiagnosticError
-                None
-                None
-                message
-                "fix it"
-                relatedIds
+            Diagnostics.create "workModelInconsistent" Diagnostics.DiagnosticError None None message "fix it" relatedIds
 
         match tag with
         | Some t -> Diagnostics.withDefectTag t d
@@ -106,14 +99,20 @@ module LintTests =
     [<Fact>]
     let ``front-matter defect classifies by tag even when the message is reworded`` () =
         let reworded =
-            workModelDiag "totally different wording mentioning no known phrase" (Some Diagnostics.DefectTags.FrontMatterIncomplete) []
+            workModelDiag
+                "totally different wording mentioning no known phrase"
+                (Some Diagnostics.DefectTags.FrontMatterIncomplete)
+                []
 
         Assert.Equal(Some FrontMatter, LintEngine.classify reworded)
 
     [<Fact>]
     let ``coverage-line defect classifies by tag even when the message is reworded`` () =
         let reworded =
-            workModelDiag "brand-new phrasing about requirement coverage" (Some Diagnostics.DefectTags.CoverageStableId) [ "FR-###" ]
+            workModelDiag
+                "brand-new phrasing about requirement coverage"
+                (Some Diagnostics.DefectTags.CoverageStableId)
+                [ "FR-###" ]
 
         Assert.Equal(Some CoverageLine, LintEngine.classify reworded)
 

@@ -69,7 +69,8 @@ module Diagnostics =
 
     /// Stamp a stable defect sub-classifier tag (see `DefectTags`) the producing parser owns
     /// and downstream classification keys on — decoupling the lint class from the message prose.
-    let withDefectTag (tag: string) (diagnostic: Diagnostic) = { diagnostic with DefectTag = Some tag }
+    let withDefectTag (tag: string) (diagnostic: Diagnostic) =
+        { diagnostic with DefectTag = Some tag }
 
     let signalsStaleView (diagnostic: Diagnostic) =
         diagnostic.Id.IndexOf("stale", System.StringComparison.OrdinalIgnoreCase) >= 0

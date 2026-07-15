@@ -103,7 +103,13 @@ module Specification =
         // `isCoverageLine` marks the FR/AC sections whose missing-id defect IS the load-bearing
         // coverage-line grammar defect (`lint` surfaces these as `CoverageLine`); US/AMB missing
         // ids are a different stable-id concern lint does not surface, so they carry no tag.
-        let missing (heading: string) (pattern: string) (relatedId: string) (allowSentinel: bool) (isCoverageLine: bool) =
+        let missing
+            (heading: string)
+            (pattern: string)
+            (relatedId: string)
+            (allowSentinel: bool)
+            (isCoverageLine: bool)
+            =
             sectionLines heading text
             |> List.choose (fun (lineNumber, line) ->
                 if
