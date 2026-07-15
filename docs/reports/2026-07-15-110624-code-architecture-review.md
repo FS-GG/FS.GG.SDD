@@ -441,9 +441,18 @@ individually shippable through the SDD lifecycle.
 
 ### Maintainability
 
-- [ ] **Collapse the 11 `*IdentityMismatch` constructors (§3, Medium)** into one
+- [x] **Collapse the 11 `*IdentityMismatch` constructors (§3, Medium)** into one
       `identityMismatch id noun path expected actual` helper in
-      `DiagnosticConstructors.fs`.
+      `DiagnosticConstructors.fs`. ✅ *Done 2026-07-15.* A single
+      `identityMismatch id noun correction path expectedWorkId actualWorkId`
+      family-shape helper now owns the shared message wording
+      (`"{noun} work id '…' does not match selected work id '…'."`) and the
+      `[ expectedWorkId; actualWorkId ]` relatedIds order; all 11 constructors
+      (charter/specification/clarification/checklist/plan/tasks/analysis/evidence/
+      verify/ship/agents-work-model) reduce to a per-artifact `(id, noun,
+      correction)` triple, so a reworded message or a reordered relatedIds pair
+      can no longer drift between them. Output stays byte-identical — the full
+      suite (Commands/Cli golden + projection tests) passes unchanged.
 - [ ] **Extract the view-load/parse/identity combinator (§3, Medium)** shared by
       `HandlersVerify`/`HandlersShip`/`HandlersEvidence`/`ViewGeneration`
       (~5 copies).
