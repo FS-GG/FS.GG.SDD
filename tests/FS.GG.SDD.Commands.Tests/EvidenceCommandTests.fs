@@ -1514,3 +1514,49 @@ evidence:
 
         Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+
+    // Roadmap §3 Low (Maintainability): `mergeEvidenceArtifacts` seeds a fresh `evidence.yml` on the
+    // (None, None) path. It formerly `failwithf`'d if the plan-validated work id was somehow rejected
+    // when re-derived — an opaque `StackOverflow`-class process abort. It now returns `None` plus a
+    // typed `toolDefect` diagnostic, so a broken internal invariant degrades to a legible exit-2
+    // report rather than a crash. `workIdDiagnostics` (Foundation) makes the guard unreachable in
+    // production, so these unit tests bypass planning and call the internal helper directly.
+    let private evidenceObligation id : Evidence.EvidenceObligation =
+        { ObligationId = id
+          Kind = "test"
+          SourceArtifactPath = $"work/{workId}/tasks.yml"
+          SourceId = None
+          LinkedTaskIds = []
+          LinkedRequirementIds = []
+          LinkedDecisionIds = []
+          LinkedSourceIds = []
+          ExpectedEvidenceKinds = []
+          RequiredSkillOrCapabilityTags = []
+          Blocking = true
+          Correction = "" }
+
+    [<Fact>]
+    let ``mergeEvidenceArtifacts seeds a fresh evidence skeleton for a valid work id`` () =
+        let merged, diagnostics =
+            HandlersEvidence.mergeEvidenceArtifacts workId None None None [ evidenceObligation "EV-001" ]
+
+        Assert.Empty(diagnostics)
+
+        match merged with
+        | Some artifact ->
+            Assert.Equal(workId, artifact.WorkId.Value)
+            Assert.Equal(1, artifact.Evidence.Length)
+        | None -> Assert.Fail("expected a seeded evidence artifact for a valid work id")
+
+    [<Fact>]
+    let ``mergeEvidenceArtifacts reports a toolDefect instead of crashing on a rejected work id`` () =
+        // The malformed id (spaces) is rejected by `createWorkId`, driving the unreachable defect arm.
+        let merged, diagnostics =
+            HandlersEvidence.mergeEvidenceArtifacts "not a valid work id" None None None [ evidenceObligation "EV-001" ]
+
+        Assert.True(merged.IsNone)
+        Assert.Equal(1, List.length diagnostics)
+
+        let diagnostic = List.head diagnostics
+        Assert.Equal("toolDefect", diagnostic.Id)
+        Assert.True(diagnostic.IsToolDefect)

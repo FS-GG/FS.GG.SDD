@@ -936,10 +936,17 @@ module ValidationRunner =
 
         let reportModel, _ = update ValidationMsg.BuildReport reconciled
 
+        // `ValidationMsg.BuildReport` is a total pure fold that always sets `Report`, so this is a
+        // postcondition assertion that cannot fire. Unlike the pure Commands handlers, `run` returns
+        // the released, golden-tested `ValidationReport` contract (ValidationContracts.fsi) — which
+        // has no top-level diagnostic channel — so a `toolDefect` diagnostic cannot be threaded here
+        // without mutating that schema for an unreachable case. If the invariant ever broke, the
+        // top-level backstop (Program.fs) reclassifies the escape as `unhandledException` (exit 2),
+        // the same fail-closed exit code a `toolDefect` would produce.
         let report =
             reportModel.Report
             |> Option.defaultWith (fun () ->
-                failwith
-                    "ValidationRunner.run: invariant violated — validation report model has no Report after ValidationMsg.BuildReport")
+                invalidOp
+                    "ValidationRunner.run: invariant violated — validation report model has no Report after ValidationMsg.BuildReport (tool defect, not user input).")
 
         report

@@ -480,9 +480,30 @@ individually shippable through the SDD lifecycle.
       code, so a reader at the DU no longer mistakes it for one. Comment-only —
       no behavior, JSON, or public-surface change; the full Commands suite passes
       unchanged.
-- [ ] **Convert the invariant-guard `failwith`s (§3, Low)** in
+- [x] **Convert the invariant-guard `failwith`s (§3, Low)** in
       `HandlersEvidence.fs`/`ValidationRunner.fs` to typed `toolDefect`
-      diagnostics (optional hardening).
+      diagnostics (optional hardening). ✅ *Done 2026-07-15.* Both
+      `HandlersEvidence.fs` guards — the per-obligation evidence `ArtifactRef.create`
+      (§3 `:514`) and the fresh-skeleton `createWorkId` (§3 `:572`) — now flow through
+      the pure Commands diagnostic channel: `mergeEvidenceArtifacts` returns
+      `EvidenceArtifact option * Diagnostic list`, validating the work id and evidence
+      `ArtifactRef` **once** (the ref is threaded into every skeleton declaration rather
+      than re-created per obligation), and on the unreachable rejection returns `None`
+      plus a `DiagnosticConstructors.toolDefect` (exit 2 via `IsToolDefect`); the caller
+      surfaces the diagnostic and produces no evidence. `workIdDiagnostics`
+      (`Foundation.fs:756`) already validates the work id at plan time, so the guard
+      cannot fire in production — the tests bypass planning and call
+      `mergeEvidenceArtifacts` directly, pinning both the seeded-skeleton happy path and
+      the `toolDefect`-not-crash arm (`EvidenceCommandTests.fs`). The
+      `ValidationRunner.fs:942` site is left a documented hard invariant: `run` returns
+      the released, golden-tested `ValidationReport` contract, which has no top-level
+      diagnostic channel, and the guard is a pure-fold postcondition of
+      `ValidationMsg.BuildReport` that cannot fire; threading a diagnostic would mutate
+      the released schema for an unreachable case, so it stays an `invalidOp` assertion
+      (caught by the `Program.fs` backstop as `unhandledException`, the same fail-closed
+      exit 2 a `toolDefect` yields), now with a comment explaining the deliberate choice.
+      Output stays byte-identical — the full Commands (988), Cli (207), and Validation
+      (26) suites pass.
 - [ ] **Pick one `.fsi` convention for internal submodules (§1, Low)** and
       document it (drop the 3 stray `.fsi` or add the rest).
 - [ ] **Scope `System.IO` out of the pure core (§1, Low)** — `open type
