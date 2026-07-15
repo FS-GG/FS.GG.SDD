@@ -568,7 +568,11 @@ module internal HandlersEvidence =
             // every skeleton declaration.
             match
                 IdentifiersModule.createWorkId workId,
-                FS.GG.SDD.Artifacts.ArtifactRef.create (evidencePath workId) ArtifactKind.Evidence ArtifactOwner.Sdd true
+                FS.GG.SDD.Artifacts.ArtifactRef.create
+                    (evidencePath workId)
+                    ArtifactKind.Evidence
+                    ArtifactOwner.Sdd
+                    true
             with
             | Ok workIdValue, Ok source ->
                 Some(
