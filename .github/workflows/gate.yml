@@ -65,12 +65,22 @@ jobs:
 
       # The bulk of the suite (Artifacts / Commands / Validation / Contracts / Cli, plus the
       # offline acceptance facts) had no per-PR enforcement — only Contracts.Tests and Cli.Tests
-      # ran, and only on release events. Run the whole solution offline here so a red suite blocks
-      # the PR (review §5.1). --no-build reuses the artifacts built above (same Debug config the
-      # Commands.Tests CLI smokes auto-detect and invoke). The network-gated composition-acceptance
-      # facts self-skip when FSGG_SDD_ACCEPTANCE_REGISTRY is unset, so this stays offline.
+      # ran, and only on release events. Run the whole offline suite here so a red suite blocks
+      # the PR (review §5.1).
+      #
+      # This LOOPS the six test projects via scripts/test.sh (full tier) rather than
+      # `dotnet test FS.GG.SDD.sln`. The solution-wide form starts every test host at ONCE and can
+      # die of resource exhaustion (`Failed to create CoreCLR, HRESULT: 0x80070008`, or a 90s
+      # protocol-negotiation timeout — both misread as a red suite) on a constrained runner; that
+      # is the exact hazard scripts/test.sh exists to avoid and DEVELOPING.md warns against, so the
+      # gate must not reintroduce it. The `full` tier runs every project UNFILTERED, so it is the
+      # gate's peer — the union of the tiers is the whole suite, no test is reachable only under a
+      # filter — and sharing one runner keeps the gate from drifting from the local `full` loop.
+      # --no-build reuses the artifacts built above (same Debug config the Commands.Tests CLI smokes
+      # auto-detect and invoke). The network-gated composition-acceptance facts self-skip when
+      # FSGG_SDD_ACCEPTANCE_REGISTRY is unset, so this stays offline.
       - name: Test (offline suite)
-        run: dotnet test FS.GG.SDD.sln -c Debug --no-build
+        run: bash scripts/test.sh --no-build
 
   build-config-drift:
     name: Shared-build-config drift check
