@@ -30,11 +30,14 @@ module ContractVersionTests =
     // (1.x -> 2.0.0) + republish". 2.0.0 is that bump. There is no additive way to add a field to an
     // F# record: every field changes the generated ctor arity, so this is a major or it is a lie.
     // The break is DECLARED (docs/release/contracts-2.0.0.md), not suppressed.
-    let ``contract version self-report matches 2_0_0`` () =
-        Assert.Equal("2.0.0", ContractVersion.value)
+    // 2.0.0 -> 2.0.1 (full-platform release, 2026-07-16): a PATCH — the `governanceHandoffContractVersion`
+    // constant moved 1.0.0 -> 1.1.0 (reconciling three drifted hand-copies), the package API surface
+    // (Schemas.fsi) unchanged, so it is a value fix on the 2.x major, not a new break.
+    let ``contract version self-report matches 2_0_1`` () =
+        Assert.Equal("2.0.1", ContractVersion.value)
         Assert.Equal(2, ContractVersion.major)
         Assert.Equal(0, ContractVersion.minor)
-        Assert.Equal(0, ContractVersion.patch)
+        Assert.Equal(1, ContractVersion.patch)
 
     // THE ASSERTION THAT WAS MISSING, AND THE ONLY ONE THAT WOULD HAVE CAUGHT IT.
     //
