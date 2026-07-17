@@ -157,10 +157,16 @@ jobs:
       - name: Checkout (SDD)
         uses: actions/checkout@v4
 
-      # No org reusable coherence workflow exists yet (.github#18 is unbuilt), so check
-      # out the source of truth and run its drift gate directly. Track main rather than a
-      # pinned SHA: a pin would itself become silent drift from the org baseline (feature
-      # 037, research Decision 5). Revisit only if upstream churn causes flakiness.
+      # Check out FS-GG/.github to run its drift gate directly. `ref: main` is deliberate and
+      # required — it pulls two things at head: the current sync-build-config.sh script, and a full
+      # object store that necessarily contains the pinned commit as an ancestor of main.
+      #
+      # `ref: main` is NOT the comparison baseline. Since ADR-0036 / .github#592 the drift check
+      # compares the managed files against the commit pinned in .config/fsgg-build-config.sha, not
+      # against .github@main — so a change landing in .github can never red-light an open PR here, and
+      # the earlier "track main rather than a pin, a pin would become silent drift" rationale (feature
+      # 037) is superseded: the pin now IS the baseline, and being behind main is not a failure (the
+      # build-config-propagate bot, .github#626, rolls the files and the pin forward together).
       - name: Checkout (FS-GG/.github — shared-build-config source of truth)
         uses: actions/checkout@v4
         with:
