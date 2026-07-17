@@ -63,22 +63,27 @@ module RegistryDocument =
                 sequence.Children
                 |> Seq.map (fun child ->
                     match child with
-                    | :? YamlScalarNode as scalar -> Option.ofObj scalar.Value |> Option.defaultValue ""
+                    | :? YamlScalarNode as scalar -> (Option.ofObj scalar.Value |> Option.defaultValue "").Trim()
                     // A nested sequence/mapping where a repo id belongs. Rendered as a blank
                     // so the validator's `isBlank` arm reports it, rather than dropped — a
-                    // dropped entry would shorten the list and could empty it entirely.
+                    // dropped entry would shorten the list and could empty it entirely,
+                    // turning a malformed row into a deliberate "nothing consumes this".
                     | _ -> "")
-                |> Seq.map (fun value -> value.Trim())
                 |> Seq.toList
                 |> Fsgg.Registry.ConsumersDeclared
             // Described by kind rather than by its bytes where the value is structural, so the
             // diagnostic stays deterministic and one-line. A scalar carries its text, because
             // `consumers: sdd` is the likely typo and the author needs to see what was read.
             | :? YamlScalarNode as scalar ->
-                match Option.ofObj scalar.Value with
-                | None -> Fsgg.Registry.ConsumersMalformed "<null>"
-                | Some raw when String.IsNullOrWhiteSpace raw -> Fsgg.Registry.ConsumersMalformed "<null>"
-                | Some raw -> Fsgg.Registry.ConsumersMalformed $"'{raw}'"
+                // An absent value and a whitespace-only one are the same fault (`consumers:`
+                // with nothing after it), so they report identically rather than through two
+                // arms that happen to agree.
+                let raw = Option.ofObj scalar.Value |> Option.defaultValue ""
+
+                if String.IsNullOrWhiteSpace raw then
+                    Fsgg.Registry.ConsumersMalformed "<null>"
+                else
+                    Fsgg.Registry.ConsumersMalformed $"'{raw}'"
             | :? YamlMappingNode -> Fsgg.Registry.ConsumersMalformed "<mapping>"
             | _ -> Fsgg.Registry.ConsumersMalformed "<non-sequence>"
 

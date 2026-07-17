@@ -93,8 +93,8 @@ module Registry =
     /// that has two states and nowhere to put a present-but-unparseable value
     /// (`consumers: sdd`, `consumers:`), which would then have to collapse into `None` —
     /// silently re-reading a malformed declaration as "unanswered", the same bug one level
-    /// down. Sibling of [`MirrorDeclaration`](#MirrorDeclaration), decided the same way and
-    /// for the same reason.
+    /// down. Sibling of `MirrorDeclaration` below, decided the same way and for the same
+    /// reason.
     type ConsumerDeclaration =
         /// No `consumers:` key at all — the question has NOT been answered for this
         /// contract. This is not `[]`, and must never be reported as one.
