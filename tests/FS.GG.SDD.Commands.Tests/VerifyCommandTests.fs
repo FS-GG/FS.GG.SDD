@@ -37,7 +37,8 @@ module VerifyCommandTests =
     // ObservedRunCommandTests. Passing it here keeps these focused on what they actually assert.
     let runVerifyCli root extraArgs =
         let exitCode, stdout, stderr =
-            [ "verify"; "--root"; root; "--work"; workId; "--no-require-observed" ] @ extraArgs
+            [ "verify"; "--root"; root; "--work"; workId; "--no-require-observed" ]
+            @ extraArgs
             |> TestSupport.runCliRaw 30000
 
         { ExitCode = exitCode

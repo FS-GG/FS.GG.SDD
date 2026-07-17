@@ -553,8 +553,7 @@ module ObservedRunCommandTests =
         // report routes to STDERR by constitutional design (Program.fs), so that is where the
         // diagnostic lands — not stdout.
         let defaultExit, defaultStdout, defaultStderr =
-            [ "verify"; "--root"; root; "--work"; workId ]
-            |> TestSupport.runCliRaw 30000
+            [ "verify"; "--root"; root; "--work"; workId ] |> TestSupport.runCliRaw 30000
 
         Assert.NotEqual(0, defaultExit)
         Assert.Contains("verify.unobservedRequiredTest", defaultStderr)

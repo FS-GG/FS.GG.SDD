@@ -38,7 +38,8 @@ module ShipCommandTests =
     // ObservedRunCommandTests. Passing it here keeps these focused on what they actually assert.
     let runShipCli root extraArgs =
         let exitCode, stdout, stderr =
-            [ "ship"; "--root"; root; "--work"; workId; "--no-require-observed" ] @ extraArgs
+            [ "ship"; "--root"; root; "--work"; workId; "--no-require-observed" ]
+            @ extraArgs
             |> TestSupport.runCliRaw 60000
 
         { ExitCode = exitCode
