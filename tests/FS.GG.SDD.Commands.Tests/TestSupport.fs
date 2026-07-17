@@ -71,6 +71,13 @@ module TestSupport =
           FromTestReport = None
           SurfaceUpdate = false
           AcceptUpstream = false
+          // ADR-0035 stage 3b flipped the PRODUCT default (`fsgg-sdd verify`) to require an
+          // observed run (FS.GG.SDD#497). This in-process harness default is DELIBERATELY the
+          // opposite — the pre-flip opt-out — so the ~97 orthogonal `runVerify`/`runShip` fixtures
+          // that assert release/golden/refresh/agents behavior stay isolated from the receipt gate
+          // and do not each have to fabricate an observed run. The observation axis is exercised
+          // explicitly by the `RequireObserved = true` helpers in ObservedRunCommandTests, and the
+          // flipped default itself is pinned at the CLI boundary (see the tripwire there).
           RequireObserved = false }
 
     let readRelative (root: string) (path: string) =

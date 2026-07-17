@@ -32,9 +32,13 @@ module ShipCommandTests =
         TestSupport.initializeVerifiedProject root workId title
         root
 
+    // `--no-require-observed` restores the pre-ADR-0035-stage-3b default (FS.GG.SDD#497). These CLI
+    // smokes exercise rendering / JSON shape / dry-run over an UNOBSERVED fixture and are orthogonal
+    // to the receipt gate; the flipped default itself is pinned at the boundary in
+    // ObservedRunCommandTests. Passing it here keeps these focused on what they actually assert.
     let runShipCli root extraArgs =
         let exitCode, stdout, stderr =
-            [ "ship"; "--root"; root; "--work"; workId ] @ extraArgs
+            [ "ship"; "--root"; root; "--work"; workId; "--no-require-observed" ] @ extraArgs
             |> TestSupport.runCliRaw 60000
 
         { ExitCode = exitCode

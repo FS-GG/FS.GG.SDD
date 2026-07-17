@@ -239,13 +239,13 @@ module ReleaseContract =
 
     let currentRelease () : ReleaseReadiness =
         let identity =
-            { Version = "0.13.0"
-              Channel = channelOfVersion "0.13.0"
+            { Version = "0.14.0"
+              Channel = channelOfVersion "0.14.0"
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "0.13.x"
+            [ { SddVersionLine = "0.14.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "1.x" } ]
 
@@ -919,36 +919,36 @@ module ReleaseContract =
               commandsMd
               skillsMd
               commandReport ]
-          // 0.11.0 is ADDITIVE, so it carries NO migration note — `migrationNoteRequired
-          // Additive = false` (FR-009 / FR-010), and an EMPTY list is the honest encoding of
-          // that. This is not an omission, and the classification was not asserted: it was
-          // MEASURED against the released 0.10.0 tree, on the two surfaces the policy names.
+          // 0.14.0 is BREAKING and therefore MUST carry a migration note — `migrationNoteRequired
+          // Breaking = true` (FR-009 / FR-010). ADR-0035 stage 3b (FS.GG.SDD#497) flipped the
+          // default of requiring an observed run to ON: an unobserved `result: pass` test
+          // obligation, which reached `satisfied` on every prior release, no longer does, and
+          // `verify`/`ship` block it. That changes the EXIT-CODE contract of both commands for an
+          // existing invocation over existing evidence — the policy's Breaking row ("change an
+          // exit-code contract"). Under the pre-1.0 `0.x` carve-out it lands on a MINOR bump; the
+          // carve-out relaxes the bump, never the note.
           //
-          //  1. F# public surface — `PublicSurface.baseline` diffs v0.10.0..HEAD are
-          //     INSERTIONS ONLY (43 added, 0 removed), across Contracts/Artifacts/Commands.
-          //     ApiCompat agrees, baselined against the published feed artifacts.
-          //  2. The public `--json` output shapes — the committed goldens gained exactly four
-          //     keys (`observed`, `evidenceObservedCount`, `evidenceSelfAttestedCount`,
-          //     `evidenceSupportedCount`; features 415/422) and LOST NONE. "Add an optional
-          //     report field" is the policy's Additive row.
+          // The additive half rides along: `--no-require-observed` is a NEW opt-out flag that
+          // restores the prior behavior byte-for-byte, and the legacy `--require-observed` stays a
+          // recognized (now-redundant) accept. Adding flags is additive; the DEFAULT flip is the
+          // break, and it is what this note enumerates.
           //
-          // No command, flag, or exit-code contract was removed or retyped. `--require-observed`
-          // (feature 422) is a NEW flag whose default is OFF, so no existing invocation changes
-          // its exit code; flipping that default WOULD be breaking, and #422 deliberately left it
-          // to a human on a schema major. Nothing here flips it.
+          // The F# public surface diff v0.13.0..HEAD is EMPTY (the `--no-require-observed` opt-out
+          // is a value inside the internal-bodied `Options.commandOptions`, not a new signature
+          // member — `PublicSurface.baseline` is unchanged), and the `--json` output shapes are
+          // unchanged. The break is purely BEHAVIORAL, invisible to a surface/shape diff, which is
+          // exactly why ADR-0035 left it to a human rather than to the release classifier. Nothing
+          // detects it; the human encodes it, here.
           //
-          // The 0.10.0 note is NOT carried forward: `Migrations` is the note for THE RELEASE
-          // BEING CUT (T023 pins `Path` to `Identity.Version`), not a running history. The
-          // history lives in `docs/release/migrations/`, which keeps 0.10.0.md on disk.
+          // `Migrations` is the note for THE RELEASE BEING CUT (T023 pins `Path` to
+          // `Identity.Version`), not a running history — the 0.10.0/0.9.0 notes live on disk under
+          // `docs/release/migrations/` and are not carried here.
           //
-          // WHEN A NOTE COMES BACK, its `BreakingChanges` text has two constraints. They are
-          // kept here, with the empty list, because here is where the next author will be
-          // standing — and the first of them is enforced by NOTHING ELSE:
-          //
+          // The `BreakingChanges` text has two constraints, and the first is enforced by NOTHING
+          // ELSE:
           //  1. BACKTICK-FREE. The default JavaScriptEncoder escapes U+0060 (as it already
           //     escapes '>' in specKitRange), so a backticked note lands in a committed machine
-          //     artifact as ``` noise. NO TEST CATCHES THIS — this comment is the whole
-          //     guard, which is exactly why deleting it along with the 0.10.0 note was wrong.
+          //     artifact as ``` noise. NO TEST CATCHES THIS — this comment is the whole guard.
           //  2. No Governance gate-logic vocabulary — "gate"/"route"/"profile"/"freshness"/
           //     "publish"/"provenance"/"verdict"/"enforce". ReleaseBoundaryTests T024 scans the
           //     SERIALIZED contract, so it does cover note text, and it will fail you. SDD
@@ -956,7 +956,11 @@ module ReleaseContract =
           //
           // And enumerate EVERY breaking change: a note that under-reports is the exact failure
           // the note exists to prevent.
-          Migrations = [] }
+          Migrations =
+            [ { Version = "0.14.0"
+                Path = "docs/release/migrations/0.14.0.md"
+                BreakingChanges =
+                  [ "verify and ship now require an observed run receipt by default: an unobserved result pass test obligation no longer satisfies and both stages block it, where every prior release let it through. Pass --no-require-observed to restore the prior behavior, or record a receipt with evidence --from-test-report." ] } ] }
 
     // ---- canonical serialization ----
 

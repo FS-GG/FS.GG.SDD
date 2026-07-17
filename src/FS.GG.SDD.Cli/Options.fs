@@ -43,8 +43,11 @@ module Options =
         // `verify` gates on the evidence; `ship` re-gates on the RECORD verify wrote, because a
         // blocked verify writes nothing and therefore leaves the previous green verify.json standing
         // (see `shipVerificationPrerequisite` — a CLI walk caught exactly that fail-open).
+        // Stage 3b (FS.GG.SDD#497) flipped requiring an observed run to the DEFAULT, so the live
+        // opt-out is `--no-require-observed`; the legacy `--require-observed` stays recognized as a
+        // now-redundant explicit accept so pre-flip invocations do not become `unrecognized`.
         | Verify
-        | Ship -> [ work; title; flag "--require-observed" ]
+        | Ship -> [ work; title; flag "--require-observed"; flag "--no-require-observed" ]
         | Checklist
         | Tasks
         | Analyze

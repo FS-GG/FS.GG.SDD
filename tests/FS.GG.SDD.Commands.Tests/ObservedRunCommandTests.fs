@@ -417,8 +417,10 @@ module ObservedRunCommandTests =
     //
     // The four tests below are the whole contract, and each one fails a different way if it is wrong:
     // the fabricated lifecycle must be REFUSED, an observed one must still PASS (or the flag is just a
-    // brick), the default must be UNCHANGED (or this is the breaking flip in disguise), and an honest
-    // deferral must not be PUNISHED (or the gate reads "no receipt" as "lying").
+    // brick), the flipped DEFAULT must now block that fabricated pass while `--no-require-observed`
+    // restores it (ADR-0035 stage 3b / FS.GG.SDD#497 — this replaced the old "default unchanged"
+    // assertion), and an honest deferral must not be PUNISHED (or the gate reads "no receipt" as
+    // "lying").
 
     let private runVerifyRequiringObserved root =
         { TestSupport.verifyRequest root workId title with
@@ -526,35 +528,47 @@ module ObservedRunCommandTests =
         | None -> failwith "ship produced no summary."
         | Some ship -> Assert.NotEqual<string>("shipReady", ship.Readiness)
 
-    /// FR-010, restated for stage 3 and load-bearing for the whole migration: the flag is OPT-IN.
-    /// The same fabricated work item that is refused above sails through when nobody asks — byte for
-    /// byte the pre-#350 behavior.
+    /// **ADR-0035 stage 3b, the flip — this was the tripwire, and it has now been tripped.**
     ///
-    /// This test asserts the defect still exists by default. That is uncomfortable, and it is the
-    /// point: ADR-0035 chose a staged migration precisely so the org is not stopped dead, and an
-    /// undeclared default flip would be exactly the breakage it staged around. When a human decides
-    /// the fleet is green and flips the default, THIS is the test that goes red — deliberately, and
-    /// with the whole decision written down beside it.
-    [<Fact>]
-    let ``--require-observed is opt-in - the default still satisfies an unobserved pass`` () =
+    /// Until FS.GG.SDD#497, this test asserted the opposite: that the default was OPT-IN and a
+    /// fabricated `result: pass` still sailed through `verify`/`ship` when nobody passed
+    /// `--require-observed`. Its docstring named itself the executable marker — *"when a human
+    /// decides the fleet is green and flips the default, THIS is the test that goes red —
+    /// deliberately, and with the whole decision written down beside it."* A human decided
+    /// (EHotwagner, 2026-07-17) to flip **ahead** of the fleet being green — a deliberate override
+    /// of ADR-0035's second precondition, recorded in ADR-0035 § Migration and FS.GG.SDD#497. So
+    /// the marker is inverted here, on purpose.
+    ///
+    /// The flip lives in the CLI arg parse (`Program.fs`: `RequireObserved = not (hasFlag
+    /// "--no-require-observed" ...)`), NOT in the in-process harness default — which is left at the
+    /// pre-flip opt-out on purpose (see TestSupport.fs) so orthogonal fixtures stay isolated from the
+    /// gate. That is exactly why this test now drives the REAL CLI: it is the one place the flipped
+    /// default is observable. The pre-flip behavior is not gone — it is one `--no-require-observed`
+    /// away, which this test also pins so the migration escape hatch cannot silently rot.
+    [<Fact; Trait("tier", "slow")>]
+    let ``the flipped default blocks an unobserved pass - --no-require-observed restores it`` () =
         let root = evidencedProjectClaimingPass ()
 
-        let verified = TestSupport.runVerify root workId title
+        // The DEFAULT, at the real boundary: no flag. Post-#497 this must fail closed. A blocked
+        // report routes to STDERR by constitutional design (Program.fs), so that is where the
+        // diagnostic lands — not stdout.
+        let defaultExit, defaultStdout, defaultStderr =
+            [ "verify"; "--root"; root; "--work"; workId ]
+            |> TestSupport.runCliRaw 30000
 
-        Assert.DoesNotContain(verified.Diagnostics, fun d -> d.Id = "verify.unobservedRequiredTest")
+        Assert.NotEqual(0, defaultExit)
+        Assert.Contains("verify.unobservedRequiredTest", defaultStderr)
+        Assert.DoesNotContain("verificationReady", defaultStdout)
 
-        match verified.Verification with
-        | None -> failwith "verify produced no summary."
-        | Some verification ->
-            Assert.Equal("verificationReady", verification.Readiness)
-            Assert.True(verification.TestSatisfiedCount > 0)
+        // The escape hatch: `--no-require-observed` restores byte-for-byte the pre-flip opt-out,
+        // so a work item that has not yet adopted receipts is not stopped dead mid-migration.
+        let optOutExit, optOutStdout, _ =
+            [ "verify"; "--root"; root; "--work"; workId; "--no-require-observed" ]
+            |> TestSupport.runCliRaw 30000
 
-            // Unchanged, and still honest about what it is worth (#398).
-            Assert.Equal(0, verification.EvidenceObservedCount)
-
-        match (TestSupport.runShip root workId title).Ship with
-        | None -> failwith "ship produced no summary."
-        | Some ship -> Assert.Equal("shipReady", ship.Readiness)
+        Assert.Equal(0, optOutExit)
+        Assert.DoesNotContain("verify.unobservedRequiredTest", optOutStdout)
+        Assert.Contains("verificationReady", optOutStdout)
 
     /// The gate says "no run was observed" — NOT "you are lying". A deferral claims no pass at all,
     /// so it asserts no run and cannot be caught failing to evidence one. The ladder encodes that by

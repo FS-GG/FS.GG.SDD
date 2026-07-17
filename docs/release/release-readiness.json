@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "generatorVersion": {
     "id": "FS.GG.SDD.Artifacts",
-    "version": "0.13.0"
+    "version": "0.14.0"
   },
   "identity": {
-    "version": "0.13.0",
+    "version": "0.14.0",
     "channel": "preRelease",
     "packageIds": [
       "FS.GG.SDD.Artifacts",
@@ -16,7 +16,7 @@
   },
   "compatibility": [
     {
-      "sddVersionLine": "0.13.x",
+      "sddVersionLine": "0.14.x",
       "specKitRange": "\u003E=0.8.5",
       "governanceContractVersionRange": "1.x"
     }
@@ -3019,5 +3019,13 @@
       "durableGenerated": false
     }
   ],
-  "migrations": []
+  "migrations": [
+    {
+      "version": "0.14.0",
+      "path": "docs/release/migrations/0.14.0.md",
+      "breakingChanges": [
+        "verify and ship now require an observed run receipt by default: an unobserved result pass test obligation no longer satisfies and both stages block it, where every prior release let it through. Pass --no-require-observed to restore the prior behavior, or record a receipt with evidence --from-test-report."
+      ]
+    }
+  ]
 }

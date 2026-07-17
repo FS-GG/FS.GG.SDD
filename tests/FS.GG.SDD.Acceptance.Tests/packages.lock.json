@@ -111,7 +111,7 @@
         "type": "Project",
         "dependencies": {
           "FS.GG.Contracts": "[3.0.0, )",
-          "FS.GG.SDD.Artifacts": "[0.13.0, )",
+          "FS.GG.SDD.Artifacts": "[0.14.0, )",
           "FSharp.Core": "[10.1.302, )"
         }
       },

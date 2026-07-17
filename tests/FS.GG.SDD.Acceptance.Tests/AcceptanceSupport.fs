@@ -112,6 +112,9 @@ module AcceptanceSupport =
           FromTestReport = None
           SurfaceUpdate = false
           AcceptUpstream = false
+          // Deliberate opt-out — see the note in Commands.Tests/TestSupport.fs. The acceptance
+          // drives scaffold/composition, not the ADR-0035 receipt gate; requiring an observed run
+          // here would only make composition fixtures fabricate one. Flipped default lives at the CLI.
           RequireObserved = false }
 
     /// The acceptance's fixed composition request: `--provider rendering --param
