@@ -11,7 +11,6 @@ module ContractVersionTests =
     // version form — source behavior changes, no public surface change); additive minor
     // bump 1.1.1 → 1.2.0 (feature 052: new `Fsgg.Version` module + additive
     // `ProviderDescriptor.MinimumCliVersion` public surface).
-    [<Fact>]
     // Feature 057 / ADR-0014: additive minor bump 1.2.0 -> 1.3.0 (new skill-manifest types +
     // `agentSkillRoots` + additive `ScaffoldProducedPathEntry.Sha256` public surface).
     // Feature 058 / ADR-0014 P1: additive minor bump 1.3.0 -> 1.4.0 (new public `Fsgg.SkillMirror`
@@ -30,14 +29,36 @@ module ContractVersionTests =
     // (1.x -> 2.0.0) + republish". 2.0.0 is that bump. There is no additive way to add a field to an
     // F# record: every field changes the generated ctor arity, so this is a major or it is a lie.
     // The break is DECLARED (docs/release/contracts-2.0.0.md), not suppressed.
-    // 2.0.0 -> 2.0.1 (full-platform release, 2026-07-16): a PATCH — the `governanceHandoffContractVersion`
-    // constant moved 1.0.0 -> 1.1.0 (reconciling three drifted hand-copies), the package API surface
-    // (Schemas.fsi) unchanged, so it is a value fix on the 2.x major, not a new break.
-    let ``contract version self-report matches 2_0_1`` () =
-        Assert.Equal("2.0.1", ContractVersion.value)
+    // 2.0.0 -> 2.0.1 (full-platform release, 2026-07-16): shipped AS a PATCH — the
+    // `governanceHandoffContractVersion` constant moved 1.0.0 -> 1.1.0 (reconciling three drifted
+    // hand-copies). The justification recorded here was "the package API surface (Schemas.fsi)
+    // unchanged" — TRUE of Schemas.fsi, and the wrong file to have looked at. See below.
+    //
+    // 2.0.1 -> 2.1.0 (FS.GG.SDD#432): the additive MINOR that 2.0.1 should have been. #426
+    // (80d0c28, 07-14) grew `Registry.fsi` by +78 lines — `SkillRegistryEntry`,
+    // `SkillRegistryDocument`, `MirrorDeclaration`, `validateSkillRegistry`, and the
+    // `MalformedField` case on the public DU `RegistryRule` — and moved no version. Measured:
+    // the published 2.0.0 was cut at 04dd742 (07-12), which does NOT contain #426, so the feed's
+    // 2.0.0 -> 2.0.1 delta IS that surface growth. Per this repo's own rule ("add a new module,
+    // type, or `val`" -> additive -> minor) it owed 2.1.0 and shipped as a patch: the number
+    // understated the API.
+    //
+    // WHY IT WAS MISSED, because the shape recurs: the 2.0.1 classification was made against the
+    // wrong baseline. Diffed tag-to-tag (v0.11.0 -> v0.12.0) the `.fsi` surface really is
+    // unchanged — but Contracts 2.0.0 was PUBLISHED from 04dd742 two days BEFORE v0.11.0 was cut,
+    // so #426's growth landed in the gap between the publish point and the next tag, where a
+    // tag-to-tag diff cannot see it. ApiCompat passed too, correctly — additions are binary-
+    // compatible, and a DU case doubly so. Both detectors were looking somewhere true.
+    //
+    // The detector that sees it is the committed `.fsi` baseline (FS.GG.SDD#475, PR #484):
+    // `surface --check` classifies this delta `additive` and names 2.1.0 on sight. It is keyed on
+    // the baseline, not on a tag, which is exactly why it cannot be fooled the same way.
+    [<Fact>]
+    let ``contract version self-report matches 2_1_0`` () =
+        Assert.Equal("2.1.0", ContractVersion.value)
         Assert.Equal(2, ContractVersion.major)
-        Assert.Equal(0, ContractVersion.minor)
-        Assert.Equal(1, ContractVersion.patch)
+        Assert.Equal(1, ContractVersion.minor)
+        Assert.Equal(0, ContractVersion.patch)
 
     // THE ASSERTION THAT WAS MISSING, AND THE ONLY ONE THAT WOULD HAVE CAUGHT IT.
     //
