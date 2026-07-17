@@ -1,0 +1,249 @@
+namespace FS.GG.SDD.Artifacts
+
+open System.Text.Json
+open FS.GG.SDD.Artifacts.ArtifactRef
+open FS.GG.SDD.Artifacts.Diagnostics
+open FS.GG.SDD.Artifacts.GenerationManifest
+open FS.GG.SDD.Artifacts.Identifiers
+open FS.GG.SDD.Artifacts.SchemaVersion
+
+[<AutoOpen>]
+module Evidence =
+    type EvidenceKind =
+        | Implementation
+        | Verification
+        | Review
+        | GeneratedViewEvidence
+        | Synthetic
+        | Deferral
+        | Note
+        | Missing
+
+    type EvidenceSubject = { SubjectType: string; Id: string }
+
+    type EvidenceSourceSnapshot =
+        { Label: string
+          Path: string
+          Digest: string option
+          SchemaVersion: int option
+          SourceLocation: SourceLocation option }
+
+    type EvidenceSourceReference =
+        { ReferenceId: string option
+          Kind: string
+          Path: string option
+          Uri: string option
+          Digest: string option
+          RelatedSourceId: string option
+          Result: string option
+          SourceLocation: SourceLocation option }
+
+    type SyntheticDisclosure = { StandsInFor: string; Reason: string }
+
+    /// A run the tool **read**, rather than a `pass` an agent **typed** (FS.GG.SDD#350, ADR-0035).
+    /// Recorded by `evidence --from-test-report` from a TRX / JUnit report: every field is derived from the
+    /// report SDD opened, and `Digest` in particular cannot be authored.
+    ///
+    /// It does not make evidence unforgeable — it moves the bar from an assertion to an artifact of a
+    /// declared format, whose counts must agree and whose file must still be on disk at `verify`.
+    type ObservedRun =
+        { Source: string
+          Digest: string
+          Outcome: string
+          Passed: int
+          Failed: int
+          Skipped: int }
+
+    type EvidenceDeclaration =
+        {
+            Id: EvidenceId
+            Kind: EvidenceKind
+            Subject: EvidenceSubject
+            TaskRefs: TaskId list
+            RequirementRefs: RequirementId list
+            AcceptanceScenarioRefs: AcceptanceScenarioId list
+            ClarificationDecisionRefs: DecisionId list
+            ChecklistResultRefs: ChecklistResultId list
+            PlanDecisionRefs: PlanDecisionId list
+            ObligationRefs: string list
+            ArtifactRefs: ArtifactRef list
+            SourceRefs: EvidenceSourceReference list
+            Result: string
+            Synthetic: bool
+            SyntheticDisclosure: SyntheticDisclosure option
+            /// FS.GG.SDD#350: the receipt, when a run was observed. `None` is the honest state for an
+            /// obligation discharged on the author's word — it is what `isSelfAttested` counts.
+            ObservedRun: ObservedRun option
+            Rationale: string option
+            Owner: string option
+            Scope: string option
+            LaterLifecycleVisibility: string option
+            Notes: string list
+            Source: ArtifactRef
+            SourceLocation: SourceLocation option
+        }
+
+    type EvidenceObligation =
+        { ObligationId: string
+          Kind: string
+          SourceArtifactPath: string
+          SourceId: string option
+          LinkedTaskIds: TaskId list
+          LinkedRequirementIds: RequirementId list
+          LinkedDecisionIds: string list
+          // Feature 077: the originating task's full source-id lineage bag, carried verbatim so
+          // scaffolding can grammar-route it into the declaration's typed ref buckets. Recovers
+          // the plan-decision id (and any FR it traces to) that task.Requirements/task.Decisions
+          // drop for a plan-decision task.
+          LinkedSourceIds: string list
+          ExpectedEvidenceKinds: string list
+          RequiredSkillOrCapabilityTags: string list
+          Blocking: bool
+          Correction: string }
+
+    type EvidenceArtifact =
+        { SchemaVersion: SchemaVersion
+          WorkId: WorkId
+          Stage: LifecycleStage
+          Status: string
+          SourceSpec: string
+          SourceClarifications: string
+          SourceChecklist: string
+          SourcePlan: string
+          SourceTasks: string
+          SourceAnalysis: string
+          SourceSnapshots: EvidenceSourceSnapshot list
+          Evidence: EvidenceDeclaration list
+          LifecycleNotes: string list
+          Diagnostics: Diagnostic list }
+
+    /// Shared authored-record field lists (ADR-0002 invariant 1 / FR-007, FS.GG.SDD#201): one
+    /// `FieldCodec` list drives both the reader (here) and the renderer (`HandlersEvidence`) for each
+    /// record, so a field cannot be read without being written or vice versa (#180/#181).
+    module EvidenceCodec =
+        val sourceRefSeed: EvidenceSourceReference
+        val sourceRefFields: ArtifactCodec.FieldCodec<EvidenceSourceReference> list
+
+        type DisclosureDraft =
+            { StandsInFor: string option
+              Reason: string option }
+
+        val disclosureDraftSeed: DisclosureDraft
+        val disclosureFields: ArtifactCodec.FieldCodec<DisclosureDraft> list
+
+        /// FS.GG.SDD#350. The receipt's read draft: `source`/`digest`/`outcome` are null-aware, so a
+        /// partial or blank mapping lifts to `None` (no receipt) rather than to a receipt made of
+        /// empty strings. The counts are plain ints — a junk token reads as `0` and
+        /// `observedRunInconsistency` judges it, rather than the codec dropping the whole receipt.
+        type ObservedRunDraft =
+            { Source: string option
+              Digest: string option
+              Outcome: string option
+              Passed: int
+              Failed: int
+              Skipped: int }
+
+        val observedRunDraftSeed: ObservedRunDraft
+        val observedRunFields: ArtifactCodec.FieldCodec<ObservedRunDraft> list
+
+        /// A receipt exists only if it names BOTH what was read and the hash of what was read: a
+        /// source with no digest is a filename, a digest with no source is a number.
+        val liftObservedRun: draft: ObservedRunDraft -> ObservedRun option
+        val lowerObservedRun: run: ObservedRun -> ObservedRunDraft
+
+        /// The whole authored evidence declaration as one shared field list — drives both the
+        /// reader (`parseEvidenceArtifact`) and the renderer (`HandlersEvidence`). `id` is framed by
+        /// the artifact-level renderer and read by the semantic layer, so it is not a field here.
+        val declarationSeed: EvidenceDeclaration
+        val declarationFields: ArtifactCodec.FieldCodec<EvidenceDeclaration> list
+
+    /// Serialization mappings shared by the codec and the Commands validation/render (FS.GG.SDD#260).
+    val evidenceKindSourceValue: kind: EvidenceKind -> string
+    val allowedEvidenceResults: Set<string>
+    val normalizedEvidenceResult: result: string -> string
+
+    /// The skill tag marking a task, and the obligation minted from it, as discharged by rendering a
+    /// frame and looking at it (FS.GG.SDD#306).
+    val visualInspectionSkill: string
+
+    val isVisualInspectionTagged: tags: string list -> bool
+
+    /// Does this declaration name a rendered artifact — an `artifactRefs` entry, or a `sourceRefs[]`
+    /// entry carrying a `path` or a `uri`?
+    /// FS.GG.SDD#359 / #365. The one lexical containment rule for a CITED path (`artifacts:` and
+    /// `sourceRefs[].path` alike): repository-relative, no `..`. Total — it reports rather than
+    /// raising, so a malformed authored path is user input, not a tool defect.
+    val citedPathIsContained: path: string -> bool
+
+    val namesRenderedArtifact: declaration: EvidenceDeclaration -> bool
+
+    /// The visual-inspection artifact rule, stated once for the `evidence` gate, the `ED-`
+    /// disposition, and the `TD-` mirror: a real (non-synthetic) `pass` that names no rendered
+    /// artifact. A synthetic pass and a deferral both fall outside it.
+    val passesWithoutRenderedArtifact: declaration: EvidenceDeclaration -> bool
+
+    /// Every locally-resolvable path this declaration cites: `artifactRefs` ∪ `sourceRefs[].path` ∪
+    /// `observedRun.source` (FS.GG.SDD#349 FR-002; FS.GG.SDD#350 FR-009). A `sourceRefs[].uri` is
+    /// deliberately excluded — it is not a local file and is never probed. Blanks are dropped; the
+    /// result is deduplicated and sorted.
+    ///
+    /// Including the receipt's report here is what makes it *checked* rather than merely recorded: a
+    /// report deleted after recording turns its obligation `invalid` at `verify` through the existing
+    /// #349 cascade, with no new gate.
+    val citedArtifactPaths: declaration: EvidenceDeclaration -> string list
+
+    /// The cited-artifact existence rule, stated once for the `evidence` gate, the `ED-`
+    /// disposition, and the `TD-` mirror (FS.GG.SDD#349, FR-007): the cited paths of a *satisfying*
+    /// declaration that `exists` reports absent, sorted.
+    ///
+    /// Only `result: pass` ∧ `synthetic: false` — the satisfaction rule — is held to this. A
+    /// deferral, a disclosed synthetic pass, and any non-pass result may legitimately cite an
+    /// artifact that does not exist yet, and yield `[]` (FR-006).
+    ///
+    /// `exists` is injected so that `Artifacts` performs no I/O: the probe is a `ReadFile` effect
+    /// interpreted at the edge, and this fold reads its result (Constitution V, FR-003).
+    val missingCitedArtifacts: exists: (string -> bool) -> declaration: EvidenceDeclaration -> string list
+
+    /// Does this declaration rest on a run the tool **observed**, rather than on the author's word?
+    /// (FS.GG.SDD#398, FR-001/FR-002 — now answered by FS.GG.SDD#350 / ADR-0035.)
+    ///
+    /// `true` exactly when the declaration carries an `ObservedRun` receipt whose run passed
+    /// (`outcome: passed` ∧ `failed = 0`). #398 wrote this as a function over the declaration rather
+    /// than the constant `false` it then returned, so that #350 could change **this body alone** —
+    /// and it did: `evidenceObservedCount` now rises from `verify.json` all the way to the committed
+    /// `ship-verdict.json` with no schema, projection, or consumer changed.
+    ///
+    /// Total and I/O-free: the report was read at the effect edge, and only its *result* reaches
+    /// here — exactly as `missingCitedArtifacts` takes an injected `exists`.
+    val isObserved: declaration: EvidenceDeclaration -> bool
+
+    /// The receipt's internal-consistency rule (FS.GG.SDD#350, FR-005). `TestReport.parse` derives
+    /// `Outcome` from the counts, so a *recorded* receipt cannot fail this — but an **authored** one
+    /// can, and `evidence.yml` is a text file. Rejecting an incoherent receipt is what stops it from
+    /// becoming a new place to type `pass`.
+    ///
+    /// Returns the reason, or `None` when the receipt is coherent.
+    val observedRunInconsistency: run: ObservedRun -> string option
+
+    /// Does this declaration claim a real pass — `result: pass`, not disclosed `synthetic`? The
+    /// satisfaction rule, named once because the attestation split below partitions exactly it.
+    val claimsRealPass: declaration: EvidenceDeclaration -> bool
+
+    /// Does this declaration discharge its obligation on the author's word alone? (FS.GG.SDD#398.)
+    ///
+    /// The exact complement of `isObserved` over the satisfaction rule, which is what makes
+    /// `supported = selfAttested + observed` hold by construction rather than by coincidence (FR-007).
+    val isSelfAttested: declaration: EvidenceDeclaration -> bool
+
+    /// Was an *obligation* — matched by these declarations — discharged by an observed run?
+    /// (FS.GG.SDD#398, FR-003.) The one rule `verify`, `ship`, and the committed verdict all read;
+    /// consuming it is what stops the three from drifting on what "observed" means.
+    ///
+    /// Consults only the declarations that claim a real pass (a `supported` obligation may carry a
+    /// deferral alongside), and requires **all** of them to be observed — one observed run must not
+    /// launder a hand-asserted pass sitting beside it. Both moot while `isObserved` is constantly
+    /// `false`; both load-bearing the day FS.GG.SDD#350 lands.
+    val obligationIsObserved: declarations: EvidenceDeclaration list -> bool
+
+    val parseEvidenceArtifact: snapshot: FileSnapshot -> Result<EvidenceArtifact, Diagnostic list>
+    val parseEvidence: snapshot: FileSnapshot -> Result<EvidenceDeclaration list, Diagnostic list>
