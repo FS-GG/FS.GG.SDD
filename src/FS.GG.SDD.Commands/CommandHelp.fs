@@ -101,16 +101,21 @@ module CommandHelp =
                   None
                   "Re-baseline the plan's Source Snapshot against the current spec, clarifications, and checklist."
               dryRun ]
-        // FS.GG.SDD#350 / ADR-0035: opt-in fail-closed. Off by default — the fleet does not record
-        // receipts yet, and flipping the default is a schema major a human takes.
+        // FS.GG.SDD#350 / ADR-0035 stage 3b (FS.GG.SDD#497): fail-closed on an unobserved pass is
+        // now the DEFAULT. `--no-require-observed` is the opt-out for a migration window; the legacy
+        // `--require-observed` stays a recognized, now-redundant explicit accept.
         | Verify
         | Ship ->
             [ work
               title
               flag
+                  "--no-require-observed"
+                  None
+                  "Opt out of the default receipt requirement: let an obligation whose result:pass carries no observedRun receipt satisfy, as it did before the ADR-0035 stage 3b flip. Applies to BOTH verify and ship."
+              flag
                   "--require-observed"
                   None
-                  "Fail closed on an unobserved pass: an obligation whose result:pass carries no observedRun receipt blocks instead of satisfying. Pass it to BOTH verify and ship."
+                  "Now the default and redundant: fail closed on an unobserved pass. Kept recognized so pre-flip invocations that passed it still work."
               dryRun ]
         | Checklist
         | Tasks

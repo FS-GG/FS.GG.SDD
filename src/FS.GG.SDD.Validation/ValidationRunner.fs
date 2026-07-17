@@ -74,6 +74,12 @@ module ValidationRunner =
           FromTestReport = None
           SurfaceUpdate = false
           AcceptUpstream = false
+          // ADR-0035 stage 3b flipped the CLI default to require an observed run (FS.GG.SDD#497).
+          // The validate harness deliberately keeps the pre-flip opt-out: its matrix fixtures are
+          // unobserved by construction, so mirroring the flipped default would turn every verify/ship
+          // cell blocking and corrupt the deterministic validation-report against reality it does not
+          // measure. validate exercises command × projection × state; the receipt gate is a distinct
+          // axis covered where receipts are actually recorded.
           RequireObserved = false }
 
     let runRequest (request: CommandRequest) = driveToReport request

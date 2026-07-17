@@ -64,7 +64,9 @@ let printUnknown commandValue =
           FromTestReport = None
           SurfaceUpdate = false
           AcceptUpstream = false
-          RequireObserved = false }
+          // ADR-0035 stage 3b: default on. Inert here (unknownCommand carries no verify/ship),
+          // flipped only so this builder mirrors the dispatch default.
+          RequireObserved = true }
 
     let model =
         { Request = request
@@ -186,7 +188,9 @@ let private helpRequest command format =
       FromTestReport = None
       SurfaceUpdate = false
       AcceptUpstream = false
-      RequireObserved = false }
+      // ADR-0035 stage 3b: default on. Inert here (a help request carries no verify/ship),
+      // flipped only so this builder mirrors the dispatch default.
+      RequireObserved = true }
 
 // §3.5: project a help report through the standard three views to stdout. Help carries no
 // diagnostics and no changes → NoChange → exit 0 (never `unknownCommand`, FR-008/011).
@@ -391,9 +395,14 @@ let run args =
                       // Feature 090: `plan --accept-upstream` re-baselines the plan's `## Source
                       // Snapshot` against the current sources. Read only by `plan`.
                       AcceptUpstream = hasFlag "--accept-upstream" rest
-                      // FS.GG.SDD#350 / ADR-0035: `verify --require-observed` fails an unobserved
-                      // pass closed. Default off — see `CommandRequest.RequireObserved`.
-                      RequireObserved = hasFlag "--require-observed" rest }
+                      // FS.GG.SDD#350 / ADR-0035 stage 3b (the flip, FS.GG.SDD#497): requiring an
+                      // observed run is now the DEFAULT — an unobserved `result: pass` no longer
+                      // satisfies a test obligation. `--no-require-observed` restores the pre-flip
+                      // opt-out for a migration window; the legacy `--require-observed` stays a
+                      // no-op accept so existing invocations keep working. Flipped by explicit
+                      // human decision on a schema major, ahead of the fleet being green — a
+                      // deliberate override recorded in ADR-0035 § Migration and FS.GG.SDD#497.
+                      RequireObserved = not (hasFlag "--no-require-observed" rest) }
 
                 let report = driveToReport request
 
