@@ -81,8 +81,31 @@ jobs:
       # above and cannot silently diverge if that default ever changes. It is the same Debug config
       # the Commands.Tests CLI smokes auto-detect and invoke. The network-gated composition-acceptance
       # facts self-skip when FSGG_SDD_ACCEPTANCE_REGISTRY is unset, so this stays offline.
+      # `--results-dir` emits one TRX per project into a STABLE workspace path (ADR-0035 stage 3b,
+      # FS.GG.SDD#511). This is the runner-produced report an SDD work item records an observation
+      # receipt FROM (`fsgg-sdd evidence --from-test-report artifacts/test-results/<project>.trx`);
+      # before this the census of recorded receipts was structurally stuck at zero, because nothing
+      # in the repo emitted a report to record one from. It changes no test, filter, or exit code.
       - name: Test (offline suite)
-        run: bash scripts/test.sh --no-build -c Debug
+        id: test
+        run: bash scripts/test.sh --no-build -c Debug --results-dir artifacts/test-results
+
+      # Publish the TRX bundle so it outlives the run and a work item's `verify` can cite it.
+      # Uploaded whenever the suite actually RAN — a red suite still writes a per-project report,
+      # and a failing run is a receipt too (`evidence --from-test-report` blocks on it, ADR-0035),
+      # so its report is exactly the one to inspect. Gated on `steps.test.conclusion != 'skipped'`
+      # rather than a bare `always()`: if an upstream step (restore/build) fails, Test is skipped and
+      # emits nothing, and a bare `always()` upload would then hit `if-no-files-found: error` and add
+      # a second, misleading red to an already-red job. `if-no-files-found: error` stays, so the
+      # producer silently ceasing to emit reports — the exact regression #511 exists to close — is
+      # still loud when the suite DID run.
+      - name: Upload test reports (TRX)
+        if: ${{ !cancelled() && steps.test.conclusion != 'skipped' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-trx
+          path: artifacts/test-results/*.trx
+          if-no-files-found: error
 
       # ADR-0025 detect+classify, for FS.GG.Contracts (#475). Without a committed baseline every
       # `.fsi` is a `missing-baseline` — a *new* surface, which ADR-0025 puts explicitly out of
