@@ -372,8 +372,9 @@ module ScaffoldCommandTests =
         // Producing CLI version (generator) is present…
         Assert.Contains("\"generator\":", provenance)
         Assert.Contains("\"version\":", provenance)
-        // …alongside the provider-declared required minimum, recorded verbatim.
-        Assert.Contains("\"requiredMinimumCliVersion\": \"0.13.0\"", provenance)
+        // …alongside the provider-declared required minimum, recorded verbatim. min-behind declares
+        // one minor above the installed version, so it tracks the bump (installed 0.13.0 ⇒ 0.14.0).
+        Assert.Contains("\"requiredMinimumCliVersion\": \"0.14.0\"", provenance)
 
     // Feature 052 US1 scenario 2: no provider minimum ⇒ the field is recorded as null
     // (absent, not fabricated); the producing CLI version is still recorded.
