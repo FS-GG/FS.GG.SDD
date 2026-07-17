@@ -102,16 +102,18 @@ visible. `Acceptance.Tests` is network-gated and self-skips unless
 
 ### Test-report receipts (ADR-0035)
 
-An SDD work item's `verify` can *observe* that its tests actually ran, rather than trusting an
+An SDD work item's `verify` *observes* that its tests actually ran, rather than trusting an
 authored `result: pass`, by recording an **observation receipt** — a run that
 `fsgg-sdd evidence --from-test-report` parsed and hashed from a runner-produced report
 (ADR-0035; [#350](https://github.com/FS-GG/FS.GG.SDD/issues/350), shipped in
 [`specs/102-observed-run-receipts`](specs/102-observed-run-receipts/spec.md)). **SDD never
 invokes a runner** — it reads a report the test workflow already produced. So the report has to
-come from *here*, and until [#511](https://github.com/FS-GG/FS.GG.SDD/issues/511) nothing emitted
-one: the receipt census sat structurally at zero, with the recording mechanism shipped and green.
+come from *here*: [#519](https://github.com/FS-GG/FS.GG.SDD/pull/519) wired the gate to emit one,
+and as of **0.14.0** (ADR-0035 stage 3b, the flip — [#497](https://github.com/FS-GG/FS.GG.SDD/issues/497)
+/ [#526](https://github.com/FS-GG/FS.GG.SDD/pull/526)) requiring a receipt is the **default**, so a
+required-test obligation that records none no longer reaches `satisfied`.
 
-The convention that closes that gap:
+The convention that satisfies it:
 
 1. **The report is produced by the run that already ran the tests.** `scripts/test.sh --results-dir
    <dir>` emits one TRX per project into `<dir>` (`FS.GG.SDD.Commands.Tests.trx`, …). The per-PR
@@ -124,14 +126,24 @@ The convention that closes that gap:
 
    ```sh
    fsgg-sdd evidence --work <id> --from-test-report artifacts/test-results/<project>.trx
-   fsgg-sdd verify   --work <id> --require-observed
+   fsgg-sdd verify   --work <id>
    ```
 
    `--from-test-report` stamps the receipt onto every `kind: verification`, `result: pass`
    declaration (a `kind: test` or a disclosed `synthetic` one is never stamped — a receipt attests
-   what *ran*, not what was reviewed). `EvidenceObservedCount` then rises, and the opt-in
-   `verify --require-observed` turns an unobserved required-test pass into a blocking `unobserved`
-   disposition. The flag is **off by default**, so nothing is blocked until a work item opts in.
+   what *ran*, not what was reviewed). `EvidenceObservedCount` then rises. Since 0.14.0 `verify`
+   (and `ship`) require the receipt **by default**: an unobserved required-test pass is a blocking
+   `unobserved` disposition. A work item mid-migration that has not yet adopted receipts passes
+   `--no-require-observed` to restore the pre-flip behavior; the legacy `--require-observed` stays a
+   recognized, now-redundant explicit accept.
+
+   > **Note.** This repo self-develops with **Spec Kit**, not the `fsgg-sdd` lifecycle, so it has no
+   > `work/` items of its own to record onto — its `readiness/` bundles are pinned proof from
+   > already-merged features, whose frozen test counts a current run would not match. The org
+   > receipt census therefore first moves off zero on the first repo that runs an `fsgg-sdd`
+   > lifecycle under the flipped default. The recording path itself is proven end-to-end by the real
+   > CLI (`ObservedRunCommandTests`, "the real CLI accepts --from-test-report and records the
+   > receipt").
 
 3. **A failing run is a receipt too.** `evidence --from-test-report` refuses to stamp a report with
    any failure, and refuses a report in which nothing executed (a `--filter` typo, an all-skipped
