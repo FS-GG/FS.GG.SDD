@@ -63,14 +63,64 @@ module Registry =
           Name: string
           Role: string }
 
+    /// One owner's answer to *"which repos depend on this contract?"* — an obligation the
+    /// owner DECLARES, not a fact derived from the tree.
+    ///
+    /// THREE states, and the middle one is the point. `absent` and `[]` are DIFFERENT
+    /// CLAIMS — `[]` says the owner considered this contract and asserts that nothing
+    /// consumes it; absent says the question was never answered — and a bare `string list`
+    /// cannot tell them apart, because the YAML edge maps a missing key onto the same
+    /// empty list a present `[]` produces.
+    ///
+    /// That collapse is why a real package could not be registered. `FS.GG.NewSddWorkspace`
+    /// is a `dotnet new` template humans install: no repo restores it, so `[]` is its only
+    /// honest value — and a validator that reads absent and `[]` alike must reject both,
+    /// leaving only two moves, both of which corrupt the registry. Invent a consuming repo,
+    /// and the lie gets ENFORCED (`fsgg-surface-impact` reads `consumers` to decide who a
+    /// shipped-surface mutation must flag, so a fictional edge mails a real consumer-impact
+    /// issue to a repo that does not consume it). Or drop the row, which is how the org's
+    /// package inventory went off by two in the first place. See FS.GG.SDD#508 / ADR-0039 §5.
+    ///
+    /// The empty case stays SAFE only because absent is still refused. `consumers: []` is a
+    /// fail-open field — `fsgg-surface-impact` files ZERO consumer-impact issues for a
+    /// breaking change and prints "(none declared)" without complaint — which is correct for
+    /// a genuinely consumerless package and silent misrouting for a row that merely forgot.
+    /// Distinguishing the two is what keeps "nothing consumes this" an assertion somebody
+    /// made rather than a question nobody answered.
+    ///
+    /// Modelled as a union so the collapse is UNREPRESENTABLE rather than merely
+    /// discouraged, and deliberately NOT as the `string list option` the request suggested:
+    /// that has two states and nowhere to put a present-but-unparseable value
+    /// (`consumers: sdd`, `consumers:`), which would then have to collapse into `None` —
+    /// silently re-reading a malformed declaration as "unanswered", the same bug one level
+    /// down. Sibling of `MirrorDeclaration` below, decided the same way and for the same
+    /// reason.
+    type ConsumerDeclaration =
+        /// No `consumers:` key at all — the question has NOT been answered for this
+        /// contract. This is not `[]`, and must never be reported as one.
+        | ConsumersUnspecified
+        /// The owner answered. An EMPTY list is a real answer: "nothing consumes this."
+        | ConsumersDeclared of consumers: string list
+        /// Present but not a sequence (`consumers: sdd`, `consumers:` with no value…) —
+        /// an unparseable declaration. Carried with its raw text rather than dropped, so
+        /// `validateDocument` can REPORT it instead of silently re-reading it as
+        /// `ConsumersUnspecified` (which would be a phantom "you forgot") or as
+        /// `ConsumersDeclared []` (which, now that empty is legal, would be a phantom
+        /// "nothing consumes this" — a typo passing as a deliberate assertion).
+        | ConsumersMalformed of raw: string
+
     /// A versioned cross-repo contract (`contracts[]`). `PackageVersion`/`Range` are
     /// present only on some entries.
+    ///
+    /// `Consumers` is three-state as of 3.0.0 (FS.GG.SDD#508) — see `ConsumerDeclaration`.
+    /// Retyping a field on a public F# record is a BINARY BREAK, hence the major; there is
+    /// no additive spelling of this change (docs/release/contracts-version-bump-checklist.md).
     type ContractEntry =
         { Id: string
           Version: string
           Owner: string
           Surface: string
-          Consumers: string list
+          Consumers: ConsumerDeclaration
           PackageVersion: string option
           Range: string option }
 

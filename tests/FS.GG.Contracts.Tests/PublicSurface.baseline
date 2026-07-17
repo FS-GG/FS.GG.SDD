@@ -17,6 +17,12 @@ member Fsgg.Provider+ProviderParameterSpec.Key
 member Fsgg.Provider+ProviderParameterSpec.Required
 member Fsgg.Registry+CoherenceEntry.Coherent
 member Fsgg.Registry+CoherenceEntry.Id
+member Fsgg.Registry+ConsumerDeclaration+ConsumersDeclared.consumers
+member Fsgg.Registry+ConsumerDeclaration+ConsumersMalformed.raw
+member Fsgg.Registry+ConsumerDeclaration.IsConsumersDeclared
+member Fsgg.Registry+ConsumerDeclaration.IsConsumersMalformed
+member Fsgg.Registry+ConsumerDeclaration.IsConsumersUnspecified
+member Fsgg.Registry+ConsumerDeclaration.Tag
 member Fsgg.Registry+ContractEntry.Consumers
 member Fsgg.Registry+ContractEntry.Id
 member Fsgg.Registry+ContractEntry.Owner
@@ -208,6 +214,10 @@ type Fsgg.Provider+ProviderDescriptor
 type Fsgg.Provider+ProviderParameterSpec
 type Fsgg.Registry
 type Fsgg.Registry+CoherenceEntry
+type Fsgg.Registry+ConsumerDeclaration
+type Fsgg.Registry+ConsumerDeclaration+ConsumersDeclared
+type Fsgg.Registry+ConsumerDeclaration+ConsumersMalformed
+type Fsgg.Registry+ConsumerDeclaration+Tags
 type Fsgg.Registry+ContractEntry
 type Fsgg.Registry+DependencyEdge
 type Fsgg.Registry+DependencyEdge2
