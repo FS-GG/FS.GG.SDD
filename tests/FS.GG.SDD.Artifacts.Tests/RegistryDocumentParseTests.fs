@@ -123,7 +123,8 @@ module RegistryDocumentParseTests =
     /// Parses one contract's `consumers:` through the real YAML edge, in a document
     /// otherwise minimal. `body` is spliced in verbatim so each case names its own bytes.
     let private consumersOf (body: string) : Registry.ConsumerDeclaration =
-        let temp = Path.Combine(Path.GetTempPath(), $"fsgg-registry-consumers-{System.Guid.NewGuid():N}.yml")
+        let temp =
+            Path.Combine(Path.GetTempPath(), $"fsgg-registry-consumers-{System.Guid.NewGuid():N}.yml")
 
         let text =
             "schemaVersion: 1\n"
