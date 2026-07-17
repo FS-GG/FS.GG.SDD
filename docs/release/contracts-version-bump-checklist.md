@@ -11,8 +11,8 @@ description: The same-change checklist a FS.GG.Contracts source version bump mus
 This is the human-facing runbook for bumping the `FS.GG.Contracts` contract
 version. It is a **projection** of the process contract at
 `specs/043-publish-contracts-110/contracts/contracts-version-coherence.md`
-("Durable bump protocol"); the registry and the `contract-coherence` gate remain
-the authoritative sources of truth. Follow it on **every** `FS.GG.Contracts`
+("Durable bump protocol"); the registry and `.github`'s `source-coherence` gate
+remain the authoritative sources of truth. Follow it on **every** `FS.GG.Contracts`
 source bump so the failure mode of feature 042 — source bumped to `1.1.0` while
 the feed and registry still served `1.0.1` — cannot recur unnoticed.
 
@@ -43,7 +43,7 @@ that line's bump rule; the policy's table does not reach it.
 > and then shipped as the `1.4.1` **patch**, forcing `2.0.0`. See the worked example,
 > [contracts-2.0.0.md](contracts-2.0.0.md).
 
-> **The DU row is the one the detector cannot help you with.** Adding a case to a public DU is
+> **The DU row is the one ApiCompat cannot help you with — `surface --check` can.** Adding a case to a public DU is
 > *binary*-compatible — every existing case constructor and tag survives — so it stays a
 > **minor**. But it is **source**-breaking: a
 > consumer whose `match` was exhaustive and carried no wildcard now gets `FS0025`
@@ -67,12 +67,54 @@ that line's bump rule; the policy's table does not reach it.
 > This row and the record row are **mirror images**, and neither is visible by reading the diff
 > and thinking "I only added something".
 
-The detector is `scripts/apicompat-check.sh` (ApiCompat / Package Validation vs the
-feed baseline) — but it can only catch a break **before** it is published, because it
-baselines against whatever is newest on the feed. Once a break ships, the gate is
-green against it forever. It also only sees **binary** breaks: the DU row above is
-invisible to it *even before publish*. The table is what you use *before* the gate
-runs, and for the DU row it is the **only** thing you have.
+## The two detectors, and the class each one is blind to
+
+There are **two**, they fail in different directions, and neither one alone covers this table.
+
+| | `scripts/apicompat-check.sh` | `fsgg-sdd surface --check` |
+|---|---|---|
+| Compares | the built assembly vs the **newest feed baseline** | the authored `.fsi` vs its **committed baseline** under `docs/api-surface/` |
+| Sees a **break** (removed/retyped member) | **yes** — this is its job | yes (`breaking` → major) |
+| Sees **additive growth** (new type/`val`) | no — additions are binary-compatible, so it passes *correctly* | **yes** (`additive` → minor) |
+| Sees a **new DU case** | **no** — binary-compatible, invisible *even before publish* | **yes** — the case is a member token in the `.fsi` |
+| Sees a **behaviour/constant change** with no surface change | no | no — use the table's last row |
+| Runs | `api-compatibility-gate` job | `gate` job (both axes), and locally |
+
+**ApiCompat is a *break* detector.** It can only catch a break **before** it is published, because
+it baselines against whatever is newest on the feed — once a break ships, the gate is green against
+it forever. And it is structurally blind to every *additive* row of this table, which it passes
+**correctly**: additions really are binary-compatible.
+
+That blindness is not theoretical, and it is the whole reason `docs/api-surface/` exists.
+[#426](https://github.com/FS-GG/FS.GG.SDD/issues/426) grew this package's public surface —
+`SkillRegistryEntry`, `SkillRegistryDocument`, `MirrorDeclaration`, `validateSkillRegistry`, **and
+the `MalformedField` case on `RegistryRule`** — under an already-published `2.0.0`. ApiCompat passed
+(correctly), the version number never moved, and the `.nupkg` at `2.0.0` and the source at `2.0.0`
+became different artifacts. See [#432](https://github.com/FS-GG/FS.GG.SDD/issues/432).
+
+**`fsgg-sdd surface --check` is the one that sees that class**, because a committed `.fsi` baseline
+*is* the public surface, exactly and by construction — DU cases included. Replaying #426 against it
+classifies the delta `additive`, reads the axis at `2.0.1`, and names the bump:
+
+```text
+surfaceClassificationVerdict: additive
+surfaceVersionCurrent: 2.0.1
+surfaceVersionSuggested: 2.1.0
+```
+
+**Know exactly what it enforces.** `--check` **blocks** (exit 1) on baseline **drift** — a `.fsi`
+you changed without re-committing its baseline. The version half
+(`surface.versionBumpRequired`) is a **warning that never changes the exit code**, deliberately:
+per FS-GG/.github ADR-0025 §2 the classification is *"advisory-but-loud; the operator confirms"*,
+and SDD cannot see the previously *published* version, so it states an implication rather than an
+accusation — the bump may already be applied in the change under review. **So nothing will red your
+PR purely for growing the surface without bumping.** What the gate guarantees is that the growth
+cannot land **silently**: you must re-commit the baseline, and that commit prints the classification
+and the suggested version. **Reading it is still your job — this table is what you use to decide.**
+
+A surface with **no** committed baseline is a *new* surface, not a mutation, and is out of scope for
+the event (ADR-0025 step 1). That is why the baselines are committed: without them every file
+classifies as "new" forever and the event can never fire.
 
 ## The coherence invariant
 
@@ -125,7 +167,7 @@ coordinated change set:
 
 3. **Advance the `.github` registry.** In `FS-GG/.github`
    `registry/dependencies.yml`, advance `fsgg-contracts.version` so the
-   `contract-coherence` gate stays green, and — **only after step 2 confirms the
+   `source-coherence` gate goes green again, and — **only after step 2 confirms the
    feed serves `<new>`** — advance `fsgg-contracts.package-version`. The
    `package-version` must never run ahead of the feed. The registry advance is
    cross-repo: file or update the request via the `cross-repo-coordination`
@@ -134,32 +176,39 @@ coordinated change set:
 ## Why this is a single coordinated change
 
 Per **ADR-0001**, a `FS.GG.Contracts` version bump must update the `.github`
-registry in the same coordinated change, and the **`contract-coherence`** gate
-enforces `registry.version == source` on `.github` PRs and `main`. Skipping the
+registry in the same coordinated change, and `.github`'s **`source-coherence`** gate
+enforces `registry.version == source` on `.github` PRs and `main` (it was
+`contract-coherence` until FS-GG/.github#741 re-homed it). Skipping the
 publish or the registry advance leaves the invariant broken: the source claims a
 version no consumer can resolve from the feed and no registry record reflects.
 Doing all three together keeps source, feed, and registry coherent on every bump.
 
-> **STOP — "together" is currently not something you can do, and following the three steps
-> above as written will wedge the org.** They span **two repos**, and no PR spans both.
+> **The bump has a safe order again — this block used to say it did not.**
 >
-> The `contract-coherence` gate does not read your PR. Its `contracts-ref` input defaults to
-> **`main`**, so it asserts, by strict string equality, that `registry.version` equals the
-> version in **`FS.GG.SDD@main`'s _source_** — an *unreleased branch*, not the published
-> package, though its own error message calls it "the actual FS.GG.Contracts package version".
-> That coupling makes both orderings red:
+> Until **FS-GG/.github#741** (landed 2026-07-16) this section carried a STOP: the shared
+> `contract-coherence` gate took a `contracts-ref` input defaulting to **`main`** and asserted, by
+> strict string equality, that `registry.version` equalled the version in **`FS.GG.SDD@main`'s
+> _source_** — an *unreleased branch*, not the published package. That coupled two repos' `main`
+> branches, no PR spanned both, and so **both** orderings went red — including this repo's own
+> merges, since SDD is itself a *caller* of that gate and not merely its subject.
 >
-> - **Bump SDD first** — green on SDD's own PR (the gate still reads `main`'s old version),
->   then **red in every calling repo** the moment it merges, until `.github` advances the pin.
-> - **Advance `.github` first** — the gate reads SDD `main`'s *old* version against the *new*
->   pin. Red on every `.github` PR instead.
+> **#741 removed `contracts-ref` and the SDD-source assertion it fed.** The shared gate now asserts
+> only pure functions of committed files. The registry-vs-source equality did not vanish — it moved
+> to `source-coherence.yml`, which is **`.github`-local**. A disagreement now reds **`.github`
+> alone**: the repo that owns `registry/dependencies.yml` and the only one that can flip it.
 >
-> **There is no ordering that avoids a red window**, because the assertion couples two repos'
-> `main` branches. **Do not start a bump until this is resolved.**
+> So the order is simply:
 >
-> Tracked at [FS.GG.SDD#432](https://github.com/FS-GG/FS.GG.SDD/issues/432), which also
-> carries the outstanding `2.0.0 -> 2.1.0` debt this blocks — feature 104 grew the public
-> surface *after* `2.0.0` was cut and published, so the source at `2.0.0` and the `.nupkg` at
-> `2.0.0` are already different artifacts. The agreed direction is to **fix the gate** — teach
-> it to accept `main` leading the registry while a publish is pending — so the window closes
-> permanently, rather than to schedule around it. Delete this block once #432 lands.
+> 1. bump `<Version>` + `ContractVersion.fs` **here**, and publish `<new>` to the feed;
+> 2. flip `version` + `package-version` in `.github`'s registry.
+>
+> Between (1) and (2) `.github` is red and says exactly what is owed. **No other repo is affected,
+> and this repo's merges are no longer held by `.github`'s registry.**
+>
+> **The `2.0.0 -> 2.1.0` debt is still open** and is now landable:
+> [FS.GG.SDD#432](https://github.com/FS-GG/FS.GG.SDD/issues/432). #426 grew the public surface
+> *after* `2.0.0` was cut and published, so a `.nupkg` labelled `2.0.0` and the source labelled
+> `2.0.0` are different artifacts. Note `2.0.1` shipped 2026-07-16, so `source == feed ==
+> registry.version == registry.package-version == 2.0.1` holds numerically **and** materially
+> today; what remains owed is the **surface growth** shipped under a number that never moved.
+> Delete this block once #432 lands.

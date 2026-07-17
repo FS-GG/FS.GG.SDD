@@ -84,6 +84,46 @@ jobs:
       - name: Test (offline suite)
         run: bash scripts/test.sh --no-build -c Debug
 
+      # ADR-0025 detect+classify, for FS.GG.Contracts (#475). Without a committed baseline every
+      # `.fsi` is a `missing-baseline` — a *new* surface, which ADR-0025 puts explicitly out of
+      # scope — so the shipped-surface-mutation event could never fire here. Measured before this
+      # landed: `checkedCount: 59, missing: 59, drifted: 0` ⇒ `classification.verdict: "none"`,
+      # entries `[]`. That silence is why #426 (80d0c28) grew the public Contracts surface under an
+      # already-published 2.0.0 with nothing red. The reflection `PublicSurface.baseline` test DID
+      # see the change (#426 re-captured it, +26 lines) — it just has no opinion about the VERSION,
+      # which is the half that was missing.
+      #
+      # Contracts is checked FIRST, scoped, and on its own axis: it is the one PUBLISHED package the
+      # org's registry coherence invariant hangs on, and it pins <Version> in its own .fsproj while
+      # every FS.GG.SDD.* package takes the coherent-set axis from Directory.Build.local.props
+      # (which that file's own comment calls out as the ONE exception). A single shared axis cannot
+      # describe both, and pointing one run at the wrong axis would print a confidently wrong number.
+      - name: API-surface baselines — FS.GG.Contracts (surface --check)
+        run: >
+          dotnet run --project src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj -c Debug --no-build --
+          surface --check --text
+          --param sourceRoot=src/FS.GG.Contracts
+          --param baselineRoot=docs/api-surface/FS.GG.Contracts
+          --param versionAxisFile=src/FS.GG.Contracts/FS.GG.Contracts.fsproj
+
+      # The whole authored tree (all 59 `.fsi`), on the FS.GG.SDD.* coherent-set axis.
+      # `if: always()` so a Contracts drift above cannot hide a second drift here — both are
+      # reported in one run rather than one round-trip each.
+      #
+      # NOTE what this step does and does NOT enforce. `--check` blocks (exit 1) on baseline DRIFT.
+      # The version half — `surface.versionBumpRequired` — is a WARNING that never changes the exit
+      # code, by design (ADR-0025 §2: "advisory-but-loud; the operator confirms"; SDD cannot see the
+      # previously published version, so it states an implication, not an accusation). So this gate
+      # does not, and cannot, red a PR purely for growing the surface without bumping. What it does
+      # is make the growth impossible to land SILENTLY: the baseline must be re-committed, and that
+      # commit prints the classification and the exact suggested version in the log.
+      - name: API-surface baselines — whole tree (surface --check)
+        if: always()
+        run: >
+          dotnet run --project src/FS.GG.SDD.Cli/FS.GG.SDD.Cli.fsproj -c Debug --no-build --
+          surface --check --text
+          --param versionAxisFile=Directory.Build.local.props
+
   build-config-drift:
     name: Shared-build-config drift check
     runs-on: ubuntu-latest

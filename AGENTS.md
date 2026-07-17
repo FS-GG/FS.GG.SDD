@@ -167,9 +167,19 @@ Core boundary:
   guard, not a filesystem one: a symlink under the root still resolves wherever it points, so the
   invariant is "no `--param` names a path outside the root", not "no effect can ever leave the root"
   (the effect-edge containment primitive is FS.GG.SDD#203 / ADR-0002). It adds an
-  additive `surface` `CommandReport` block (json/text/rich) and no persisted schema change. This is
-  a **workspace** gate — the SDD component repo itself uses hand-authored `.fsi` + the internal
-  reflection `PublicSurface.baseline` test, a separate mechanism `surface` does not replace.
+  additive `surface` `CommandReport` block (json/text/rich) and no persisted schema change. It is a
+  **workspace** gate that **this repo also runs on itself** (FS.GG.SDD#475): `docs/api-surface/**`
+  is committed here and `gate.yml` runs `surface --check` twice — scoped to `src/FS.GG.Contracts`
+  on its own `.fsproj` axis, and over the whole tree on the `Directory.Build.local.props` axis.
+  Two axes, because `Directory.Build.local.props` versions every `FS.GG.SDD.*` package while
+  `FS.GG.Contracts` is the one exception carrying its own `<Version>`; one shared axis would name a
+  confidently wrong number. Committing the baselines is what makes the ADR-0025 shipped-surface
+  mutation event *able to fire at all* — a file with no committed baseline is a **new** surface,
+  which ADR-0025 puts out of scope, so an empty `docs/api-surface/` silently classified every change
+  as out-of-scope forever. It **coexists with, and does not replace**, the internal reflection
+  `PublicSurface.baseline` tests over hand-authored `.fsi`: the reflection tests assert the *built*
+  surface and have no opinion about the version, while `surface` diffs the `.fsi` **text** and
+  classifies additive-vs-breaking to prompt the bump. Both must stay green.
 - FS.GG.Governance owns rule evaluation, evidence freshness, routing, profiles,
   and gate enforcement.
 - Integrations between them must be explicit, versioned, and optional until
