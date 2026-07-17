@@ -7,45 +7,34 @@
 # `scripts/coordination-sync --check`, failing CI if this repo's copy drifts from — or is missing
 # against — canonical. A non-receiver would pass trivially; this repo is a receiver, so it is
 # enforced. Kit changes arrive via the auto-sync PR the `coordination-propagate` workflow opens.
+# Fix drift by running `scripts/coordination-sync <this-checkout>` from a FS-GG/.github checkout.
 #
 # All mechanics + rationale live in the reusable workflow:
 #   FS-GG/.github .github/workflows/coordination-coherence.yml
 name: coordination-coherence
 
-# The PR run is scoped to the kit's own files (#370). The gate compares this repo's vendored kit
-# against FS-GG/.github@main — a MOVING TARGET this repo does not control. Whenever upstream
-# publishes a kit change, there is a window before the auto-sync PR lands here in which the kit IS
-# genuinely stale, so the gate goes red on EVERY open PR at once, naming files the PR never touched.
-# The author's only "fix" is to rebase onto a sync that has not happened yet — and with two syncs
-# inside twenty minutes (#363, #367), rebasing races the next one. PR #366 went red on a diff of one
-# F# test file for exactly this reason.
+# The PR trigger is UNSCOPED — it runs on every PR, matching all five sibling receivers. It once
+# carried a `paths:` filter (#370) so it fired only on PRs that touched a kit file, because the gate
+# compares this repo's vendored kit against FS-GG/.github@main — a MOVING TARGET — and in the window
+# before the auto-sync PR lands, main is genuinely stale, so the strict compare went red on EVERY
+# open PR at once, naming files the PR never touched (PR #366 reddened on a one-line F# test change).
 #
-# Note the obvious fix does NOT work: checking `refs/pull/<n>/merge` instead of the branch changes
-# nothing, because a PR that does not touch the kit inherits main's kit in the merge result — so if
-# main is stale against upstream, the merge result is stale too and the PR still reds. The red is not
-# a property of the PR at all, which is precisely why no PR-side check can clear it.
+# That workaround is now REDUNDANT and has been REMOVED (#525). FS-GG/.github#450 (landed
+# the same day, hours after #370) taught the reusable gate to ATTRIBUTE drift on a `pull_request`: it
+# hands the script the base branch's CURRENT tip and reports only the drift the BRANCH AUTHORED
+# (merge-base-relative). A PR that touches no kit file authors no drift, so it stays green even
+# mid-sync-window; inherited staleness becomes a non-blocking advisory that names coordination-propagate
+# as the owner. The strict compare — the verdict of record on this repo's kit — still runs on
+# `push: branches: [main]`, unchanged, including on the sync bot's own PR when it merges.
 #
-# So: only run on PRs that can actually CHANGE the kit. A PR touching no kit file cannot make the
-# repo's copy any more or less coherent than main already is, and `push: branches: [main]` still
-# enforces the invariant that matters — "main's vendored kit matches upstream" — on every merge,
-# including the sync bot's own PR (which touches these paths and is therefore still gated).
-#
-# The path list must stay a SUPERSET of what `coordination-sync` materializes (scripts/fsgg-coord,
-# plus <skill-root>/<name>/SKILL.md for each kit skill and each root in AGENT_SKILL_ROOTS). Over-
-# matching only costs a redundant green run; under-matching would let a real kit edit through
-# unchecked, so it is deliberately generous — whole roots rather than individual files.
-#
-# This workflow file is deliberately NOT in the list. Editing the caller cannot change the vendored
-# kit, so gating on it would re-create the very false-red this scoping removes (a PR touching only
-# this file would go red for an upstream drift it did not cause). The `push: branches: [main]` run
-# re-verifies the gate the moment such a change merges.
+# The filter HAD to go: a `paths:`-scoped workflow does not run on a non-kit PR, so its check context
+# never posts — and a REQUIRED context that never posts wedges every such PR at `Expected` forever.
+# Dropping the filter makes `kit / coordination-kit` report a concluded status on every PR, which is
+# the precondition FS-GG/.github#490 needs to mark it required across the receivers. #450 is what makes
+# always-running safe: the two changes compose exactly, so re-adding a `paths:` filter here would
+# re-wedge the required context — do not.
 on:
   pull_request:
-    paths:
-      - "scripts/**"
-      - ".claude/skills/**"
-      - ".agents/skills/**"
-      - ".codex/skills/**"
   push:
     branches: [main]
 
