@@ -53,11 +53,36 @@ module ContractVersionTests =
     // The detector that sees it is the committed `.fsi` baseline (FS.GG.SDD#475, PR #484):
     // `surface --check` classifies this delta `additive` and names 2.1.0 on sight. It is keyed on
     // the baseline, not on a tag, which is exactly why it cannot be fooled the same way.
+    //
+    // 2.1.0 -> 3.0.0 (FS.GG.SDD#508): a DECLARED break, and the same record row that produced
+    // 2.0.0 — `ContractEntry.Consumers` is RETYPED `string list` -> `ConsumerDeclaration`, so the
+    // generated positional ctor's signature changes and the old one ceases to exist. The rule is
+    // this repo's own ("remove/rename/RETYPE a public member; change a signature" -> breaking ->
+    // major, docs/release/contracts-version-bump-checklist.md), and there is no additive spelling:
+    // a parallel field would be a new field on a public record, which that same table's first row
+    // calls a break for the identical reason. The break is DECLARED
+    // (docs/release/contracts-3.0.0.md), not suppressed.
+    //
+    // WHY A MAJOR WAS SPENT ON IT: the two-state `string list` could not tell an ABSENT
+    // `consumers:` from an explicitly EMPTY one — the YAML edge mapped both onto `[]` — so a
+    // producer whose package nothing restores had no honest row, and `FS.GG.NewSddWorkspace` sat
+    // unregistered while the org's package inventory read "off by two" (ADR-0039 §5). The
+    // three-state model is the `MirrorDeclaration` precedent applied to the same question; what it
+    // does NOT inherit is that feature's change class, because #426 ADDED types (additive -> minor)
+    // where this one MUTATES a shipped record. Same shape, different bump — and it is worth being
+    // explicit about that, since "we did this before as a minor" is exactly the reasoning that
+    // shipped 2.0.1 understated.
+    //
+    // Blast radius, MEASURED rather than assumed (both declared consumers, 2026-07-17): neither
+    // FS.GG.Governance nor FS.GG.Templates references `Fsgg.Registry` at all — Governance's own
+    // `ContractEntry` is an unrelated domain type in its `Route.fsi`. So, as with 2.0.0, for a
+    // consumer already on 2.1.0 this is a version-number change and no source edit. That does not
+    // make it a minor: the surface broke, and the number says so.
     [<Fact>]
-    let ``contract version self-report matches 2_1_0`` () =
-        Assert.Equal("2.1.0", ContractVersion.value)
-        Assert.Equal(2, ContractVersion.major)
-        Assert.Equal(1, ContractVersion.minor)
+    let ``contract version self-report matches 3_0_0`` () =
+        Assert.Equal("3.0.0", ContractVersion.value)
+        Assert.Equal(3, ContractVersion.major)
+        Assert.Equal(0, ContractVersion.minor)
         Assert.Equal(0, ContractVersion.patch)
 
     // THE ASSERTION THAT WAS MISSING, AND THE ONLY ONE THAT WOULD HAVE CAUGHT IT.

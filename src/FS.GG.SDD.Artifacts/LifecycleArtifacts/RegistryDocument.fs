@@ -29,6 +29,59 @@ module RegistryDocument =
                 | _ -> None)
             |> Seq.toList
 
+    /// The three-state `consumers` read (FS.GG.SDD#508). THIS is the field the major exists
+    /// for, so it is spelled out rather than routed through `Internal.scalarList`: that
+    /// helper ends in `Option.defaultValue []`, which maps an ABSENT key and a present `[]`
+    /// onto the same empty list — and once an empty declaration is LEGAL, that collapse
+    /// stops being merely lossy and starts silently accepting rows nobody declared.
+    ///
+    /// `scalarList` is left alone on purpose: every list field in `LifecycleArtifacts` shares
+    /// it, and making it three-state would ripple through parsers that have no such question.
+    ///
+    /// Presence is decided on the KEY (`tryNodeAt`), not on whether a sequence could be read,
+    /// because a present-but-non-sequence value (`consumers: sdd`) must report as MALFORMED
+    /// rather than as absent — reading a typo as "you forgot to declare" sends the author
+    /// hunting for a missing line that is right there.
+    ///
+    /// An explicit `consumers:` with no value (YAML null) is MALFORMED, not an empty
+    /// declaration. The key is there; the list is not. The honest empty is `[]`, and
+    /// requiring it to be written is the whole point — a deliberate, machine-readable
+    /// nothing beats an omission that renders identically. (Same call `parseMirrored` makes
+    /// for a null verdict, for the same reason.)
+    ///
+    /// Blank entries are NOT filtered here, unlike `scalarListFromNode`. `validateDocument`
+    /// has always carried an `isBlank` arm for them that the filter made unreachable; now
+    /// that `[]` is a valid answer, filtering `consumers: [""]` down to `[]` would promote a
+    /// blank entry into a deliberate "nothing consumes this". The blanks are passed through
+    /// so the validator can report them, which is what that arm was written to do.
+    let private parseConsumers (item: YamlNode) : Fsgg.Registry.ConsumerDeclaration =
+        match tryNodeAt [ "consumers" ] item with
+        | None -> Fsgg.Registry.ConsumersUnspecified
+        | Some node ->
+            match node with
+            | :? YamlSequenceNode as sequence ->
+                sequence.Children
+                |> Seq.map (fun child ->
+                    match child with
+                    | :? YamlScalarNode as scalar -> Option.ofObj scalar.Value |> Option.defaultValue ""
+                    // A nested sequence/mapping where a repo id belongs. Rendered as a blank
+                    // so the validator's `isBlank` arm reports it, rather than dropped — a
+                    // dropped entry would shorten the list and could empty it entirely.
+                    | _ -> "")
+                |> Seq.map (fun value -> value.Trim())
+                |> Seq.toList
+                |> Fsgg.Registry.ConsumersDeclared
+            // Described by kind rather than by its bytes where the value is structural, so the
+            // diagnostic stays deterministic and one-line. A scalar carries its text, because
+            // `consumers: sdd` is the likely typo and the author needs to see what was read.
+            | :? YamlScalarNode as scalar ->
+                match Option.ofObj scalar.Value with
+                | None -> Fsgg.Registry.ConsumersMalformed "<null>"
+                | Some raw when String.IsNullOrWhiteSpace raw -> Fsgg.Registry.ConsumersMalformed "<null>"
+                | Some raw -> Fsgg.Registry.ConsumersMalformed $"'{raw}'"
+            | :? YamlMappingNode -> Fsgg.Registry.ConsumersMalformed "<mapping>"
+            | _ -> Fsgg.Registry.ConsumersMalformed "<non-sequence>"
+
     let private parseContracts (node: YamlNode) : Fsgg.Registry.ContractEntry list =
         match trySequence node with
         | None -> []
@@ -49,7 +102,7 @@ module RegistryDocument =
                           Version = scalar "version"
                           Owner = scalar "owner"
                           Surface = scalar "surface"
-                          Consumers = scalarList [ "consumers" ] item
+                          Consumers = parseConsumers item
                           PackageVersion = optScalar "package-version"
                           Range = optScalar "range" }
                         : Fsgg.Registry.ContractEntry

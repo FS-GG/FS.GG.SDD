@@ -38,12 +38,19 @@ module Registry =
           Name: string
           Role: string }
 
+    /// THREE states, and the middle one is the point: `absent` is NOT `[]`. See Registry.fsi
+    /// for why a bare `string list` (or a `string list option`) cannot express this honestly.
+    type ConsumerDeclaration =
+        | ConsumersUnspecified
+        | ConsumersDeclared of consumers: string list
+        | ConsumersMalformed of raw: string
+
     type ContractEntry =
         { Id: string
           Version: string
           Owner: string
           Surface: string
-          Consumers: string list
+          Consumers: ConsumerDeclaration
           PackageVersion: string option
           Range: string option }
 
@@ -345,12 +352,32 @@ module Registry =
                         Rule = MissingField "surface"
                         Message = $"Contract '{entry}' is missing a non-blank 'surface'." }
 
-                  if c.Consumers.IsEmpty then
+                  // FS.GG.SDD#508: an EMPTY declaration is valid and an ABSENT one is not.
+                  // `ConsumersDeclared []` asserts "nothing consumes this" — the only honest
+                  // row for a producer whose package no repo restores (ADR-0039 §5) — while
+                  // `ConsumersUnspecified` is still the unanswered question it always was.
+                  // The distinction is the entire feature; before it, the YAML edge collapsed
+                  // both onto `[]` and this branch had to refuse the pair.
+                  //
+                  // Deliberately NOT gated on `PackageVersion.IsSome`, though the request
+                  // proposed that: `package-version` (inventory — who is held to the feed,
+                  // `check-feed-coherence.py`) and `consumers` (graph — who a surface mutation
+                  // must flag, `fsgg-surface-impact`) are orthogonal in every gate that exists,
+                  // and coupling them would invent a rule nothing enforces. "Nothing consumes
+                  // this" is an honest claim for ANY contract; the three-state read is what
+                  // makes it safe, not the package coupling.
+                  match c.Consumers with
+                  | ConsumersUnspecified ->
                       { Entry = entry
                         Rule = MissingField "consumers"
-                        Message = $"Contract '{entry}' is missing a non-empty 'consumers'." }
-                  else
-                      for consumer in c.Consumers do
+                        Message =
+                          $"Contract '{entry}' is missing 'consumers'. Declare it — use an explicit '[]' to assert that nothing consumes this contract." }
+                  | ConsumersMalformed raw ->
+                      { Entry = entry
+                        Rule = MalformedField "consumers"
+                        Message = $"Contract '{entry}' has a 'consumers' that is not a list: {raw}." }
+                  | ConsumersDeclared consumers ->
+                      for consumer in consumers do
                           if isBlank consumer then
                               { Entry = entry
                                 Rule = MissingField "consumers"

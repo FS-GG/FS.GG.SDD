@@ -20,7 +20,7 @@ module RegistryDocumentTests =
           Version = "1.0.0"
           Owner = "sdd"
           Surface = "surface"
-          Consumers = [ "templates" ]
+          Consumers = Registry.ConsumersDeclared [ "templates" ]
           PackageVersion = None
           Range = None }
 
@@ -99,9 +99,106 @@ module RegistryDocumentTests =
             { baseDoc with
                 Contracts =
                     [ { contract "alpha" with
-                          Consumers = [ "ghost" ] } ] }
+                          Consumers = Registry.ConsumersDeclared [ "ghost" ] } ] }
 
         Assert.Contains(Registry.UnknownComponent, rules (Registry.validateDocument doc))
+
+    // --- The three-state `consumers` declaration (FS.GG.SDD#508) ---
+    //
+    // The rule these cover had NO test in either direction before this feature: the
+    // `MissingField "consumers"` branch was unexercised code, and the `isBlank` arm beside
+    // it was unreachable through the YAML edge. They are the first coverage it has ever had.
+
+    /// The case the major exists for. `[]` is a real answer — "nothing consumes this" — and
+    /// a producer whose package no repo restores (ADR-0039 §5) has no other honest row.
+    [<Fact>]
+    let ``US2: an explicitly EMPTY consumers is Valid - nothing consumes this is an answer`` () =
+        let doc =
+            { baseDoc with
+                Contracts =
+                    [ { contract "alpha" with
+                          Consumers = Registry.ConsumersDeclared [] } ] }
+
+        Assert.Equal(Registry.Valid, Registry.validateDocument doc)
+
+    /// …and it stays Valid with a `package-version`, which is the actual shipping case
+    /// (`new-sdd-workspace`). Deliberately NOT coupled: the request proposed allowing empty
+    /// only for package-bearing contracts, but `package-version` (inventory) and `consumers`
+    /// (graph) are orthogonal in every gate that exists, so no rule keys on the pair.
+    [<Fact>]
+    let ``US2: an empty consumers is Valid on a package-bearing contract too`` () =
+        let doc =
+            { baseDoc with
+                Contracts =
+                    [ { contract "alpha" with
+                          Consumers = Registry.ConsumersDeclared []
+                          PackageVersion = Some "1.2.3" } ] }
+
+        Assert.Equal(Registry.Valid, Registry.validateDocument doc)
+
+    /// The other half, and the half that keeps the first one safe: ABSENT is still refused.
+    /// If this ever goes green, a row that simply forgot `consumers:` validates as one that
+    /// deliberately has none — and `fsgg-surface-impact` then routes zero consumer-impact
+    /// issues for a breaking change while printing "(none declared)".
+    [<Fact>]
+    let ``US2: an ABSENT consumers still reports MissingField - absent is not empty`` () =
+        let doc =
+            { baseDoc with
+                Contracts =
+                    [ { contract "alpha" with
+                          Consumers = Registry.ConsumersUnspecified } ] }
+
+        Assert.Contains(Registry.MissingField "consumers", rules (Registry.validateDocument doc))
+
+    /// The pair, asserted together on one document. This is the feature in one line: the two
+    /// states must not collapse, and a test that only checked them apart would pass under a
+    /// validator that had merged them.
+    [<Fact>]
+    let ``US2: absent and empty consumers are DIFFERENT verdicts on the same document`` () =
+        let withEmpty =
+            { baseDoc with
+                Contracts =
+                    [ { contract "alpha" with
+                          Consumers = Registry.ConsumersDeclared [] } ] }
+
+        let withAbsent =
+            { baseDoc with
+                Contracts =
+                    [ { contract "alpha" with
+                          Consumers = Registry.ConsumersUnspecified } ] }
+
+        Assert.Equal(Registry.Valid, Registry.validateDocument withEmpty)
+        Assert.NotEqual(Registry.validateDocument withEmpty, Registry.validateDocument withAbsent)
+
+    /// A present-but-unparseable declaration is its OWN fault, reported as `MalformedField`
+    /// rather than collapsed into either neighbour. Collapsing it into `Unspecified` would
+    /// tell the author they forgot a line that is right there; collapsing it into
+    /// `Declared []` would — now that empty is legal — pass a typo off as a deliberate
+    /// "nothing consumes this".
+    [<Fact>]
+    let ``US2: a malformed consumers reports MalformedField, not Missing and not Valid`` () =
+        let doc =
+            { baseDoc with
+                Contracts =
+                    [ { contract "alpha" with
+                          Consumers = Registry.ConsumersMalformed "'sdd'" } ] }
+
+        let reported = rules (Registry.validateDocument doc)
+
+        Assert.Contains(Registry.MalformedField "consumers", reported)
+        Assert.DoesNotContain(Registry.MissingField "consumers", reported)
+
+    /// The `isBlank` arm, reachable for the first time. It has been in `validateDocument`
+    /// since feature 042 and the YAML edge filtered blanks before it could ever fire.
+    [<Fact>]
+    let ``US2: a blank consumers entry reports MissingField, and does not read as empty`` () =
+        let doc =
+            { baseDoc with
+                Contracts =
+                    [ { contract "alpha" with
+                          Consumers = Registry.ConsumersDeclared [ "" ] } ] }
+
+        Assert.Contains(Registry.MissingField "consumers", rules (Registry.validateDocument doc))
 
     [<Fact>]
     let ``US2: dropped owner reports MissingField`` () =
