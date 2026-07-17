@@ -116,7 +116,7 @@
       "fs.gg.sdd.artifacts": {
         "type": "Project",
         "dependencies": {
-          "FS.GG.Contracts": "[2.0.1, )",
+          "FS.GG.Contracts": "[2.1.0, )",
           "FSharp.Core": "[10.1.302, )",
           "YamlDotNet": "[18.1.0, )"
         }
@@ -124,7 +124,7 @@
       "fs.gg.sdd.cli": {
         "type": "Project",
         "dependencies": {
-          "FS.GG.Contracts": "[2.0.1, )",
+          "FS.GG.Contracts": "[2.1.0, )",
           "FS.GG.SDD.Artifacts": "[0.12.0, )",
           "FS.GG.SDD.Commands": "[0.12.0, )",
           "FS.GG.SDD.Validation": "[0.12.0, )",
@@ -135,7 +135,7 @@
       "fs.gg.sdd.commands": {
         "type": "Project",
         "dependencies": {
-          "FS.GG.Contracts": "[2.0.1, )",
+          "FS.GG.Contracts": "[2.1.0, )",
           "FS.GG.SDD.Artifacts": "[0.12.0, )",
           "FSharp.Core": "[10.1.302, )"
         }
