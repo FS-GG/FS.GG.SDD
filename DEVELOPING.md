@@ -100,6 +100,45 @@ visible. `Acceptance.Tests` is network-gated and self-skips unless
 > and its own timeout cannot fire. Check with `ps -o pcpu -p <pid>` — 0% CPU means wedged, not
 > working. Wrapping a long run in `timeout -k 10 900 …` keeps a wedge from eating the session.
 
+### Test-report receipts (ADR-0035)
+
+An SDD work item's `verify` can *observe* that its tests actually ran, rather than trusting an
+authored `result: pass`, by recording an **observation receipt** — a run that
+`fsgg-sdd evidence --from-test-report` parsed and hashed from a runner-produced report
+(ADR-0035; [#350](https://github.com/FS-GG/FS.GG.SDD/issues/350), shipped in
+[`specs/102-observed-run-receipts`](specs/102-observed-run-receipts/spec.md)). **SDD never
+invokes a runner** — it reads a report the test workflow already produced. So the report has to
+come from *here*, and until [#511](https://github.com/FS-GG/FS.GG.SDD/issues/511) nothing emitted
+one: the receipt census sat structurally at zero, with the recording mechanism shipped and green.
+
+The convention that closes that gap:
+
+1. **The report is produced by the run that already ran the tests.** `scripts/test.sh --results-dir
+   <dir>` emits one TRX per project into `<dir>` (`FS.GG.SDD.Commands.Tests.trx`, …). The per-PR
+   gate (`.github/workflows/gate.yml`) runs it into `artifacts/test-results/` and uploads the bundle
+   as the `test-results-trx` artifact, so every green `main` has a downloadable report. `artifacts/`
+   is git-ignored — the report is CI output, never a committed artifact.
+
+2. **A work item records a receipt from it, during `verify`.** Point `evidence` at the TRX for the
+   project whose tests discharge a *verification* obligation:
+
+   ```sh
+   fsgg-sdd evidence --work <id> --from-test-report artifacts/test-results/<project>.trx
+   fsgg-sdd verify   --work <id> --require-observed
+   ```
+
+   `--from-test-report` stamps the receipt onto every `kind: verification`, `result: pass`
+   declaration (a `kind: test` or a disclosed `synthetic` one is never stamped — a receipt attests
+   what *ran*, not what was reviewed). `EvidenceObservedCount` then rises, and the opt-in
+   `verify --require-observed` turns an unobserved required-test pass into a blocking `unobserved`
+   disposition. The flag is **off by default**, so nothing is blocked until a work item opts in.
+
+3. **A failing run is a receipt too.** `evidence --from-test-report` refuses to stamp a report with
+   any failure, and refuses a report in which nothing executed (a `--filter` typo, an all-skipped
+   suite) — so a receipt can only ever record a real, green run. That is why the gate uploads the
+   TRX whenever the suite *ran* (pass or fail), not only when it was green: the report you most want
+   to read is the one from the run that went red.
+
 ## Formatting
 
 F# formatting is enforced by [Fantomas](https://fsprojects.github.io/fantomas/),

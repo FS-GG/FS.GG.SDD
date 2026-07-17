@@ -32,11 +32,21 @@
 #   scripts/test.sh component       # ~25s  + Validation + the CLI process smokes
 #   scripts/test.sh fast --no-build # skip the build when only the test assertions changed
 #   scripts/test.sh fast -- --filter 'FullyQualifiedName~Codec'   # narrow further (a user --filter wins)
+#   scripts/test.sh --results-dir artifacts/test-results   # emit one TRX per project (see below)
 #
 # OPTIONS
 #   --no-build      reuse existing binaries (implies --no-restore)
 #   -c <config>     build configuration (default: Debug — the config the gate tests, and the one
 #                   the Commands.Tests CLI smokes auto-detect and invoke)
+#   --results-dir <dir>
+#                   emit a TRX report per project into <dir>, named for the project
+#                   (FS.GG.SDD.Commands.Tests.trx, …). This is the runner-produced report an SDD
+#                   work item records an ADR-0035 observation receipt FROM, via
+#                   `fsgg-sdd evidence --from-test-report <dir>/<project>.trx` (see DEVELOPING.md).
+#                   The filename is per-project ON PURPOSE: a single shared `LogFileName` would be
+#                   overwritten by each looped `dotnet test`, leaving only the last project's run —
+#                   a green-looking report missing five sixths of the suite. The reports are written
+#                   IN ADDITION to any `--logger` you pass after `--`; they change no exit code.
 #   --              everything after this is forwarded verbatim to each `dotnet test`
 #
 # WHY PER-PROJECT AND NOT `dotnet test FS.GG.SDD.sln`
@@ -84,6 +94,7 @@ FULL_PROJECTS=(
 tier="full"
 config="Debug"
 build=1
+results_dir=""
 passthrough=()
 
 while [ $# -gt 0 ]; do
@@ -100,6 +111,10 @@ while [ $# -gt 0 ]; do
       config="${2:?-c requires a configuration}"
       shift 2
       ;;
+    --results-dir)
+      results_dir="${2:?--results-dir requires a directory}"
+      shift 2
+      ;;
     --)
       shift
       passthrough=("$@")
@@ -113,7 +128,7 @@ while [ $# -gt 0 ]; do
       exit 0
       ;;
     *)
-      echo "test.sh: unknown argument '$1' (expected: fast|component|full, --no-build, -c <config>, -- <dotnet test args>)" >&2
+      echo "test.sh: unknown argument '$1' (expected: fast|component|full, --no-build, -c <config>, --results-dir <dir>, -- <dotnet test args>)" >&2
       exit 2
       ;;
   esac
@@ -126,6 +141,14 @@ case "$tier" in
 esac
 
 cd "$repo_root"
+
+# Resolve --results-dir to an absolute path and create it. dotnet's `--results-directory` is
+# interpreted relative to each `dotnet test`'s cwd (repo_root here); an absolute path removes all
+# doubt and lets a caller pass a workspace-relative dir without it landing per-project.
+if [ -n "$results_dir" ]; then
+  mkdir -p "$results_dir"
+  results_dir="$(cd "$results_dir" && pwd)"
+fi
 
 test_args=(-c "$config")
 if [ "$build" -eq 0 ]; then
@@ -158,9 +181,19 @@ for entry in "${projects[@]}"; do
   else
     label="$project"
   fi
+
+  # One TRX per project when --results-dir is set, named for the project so no run overwrites
+  # another (a shared LogFileName loses five sixths of the suite — the whole reason this is not just
+  # `-- --logger trx`). Emitted BEFORE the passthrough so a user `-- --logger …` is additive, not a
+  # replacement. `${project##*/}` is the project directory's basename, e.g. FS.GG.SDD.Commands.Tests.
+  results_args=()
+  if [ -n "$results_dir" ]; then
+    results_args=(--logger "trx;LogFileName=${project##*/}.trx" --results-directory "$results_dir")
+  fi
+
   echo "── $label"
   start=$SECONDS
-  if dotnet test "$project" "${test_args[@]}" "${filter_args[@]+"${filter_args[@]}"}" "${passthrough[@]+"${passthrough[@]}"}"; then
+  if dotnet test "$project" "${test_args[@]}" "${filter_args[@]+"${filter_args[@]}"}" "${results_args[@]+"${results_args[@]}"}" "${passthrough[@]+"${passthrough[@]}"}"; then
     status="ok"
   else
     status="FAILED"
@@ -173,5 +206,10 @@ done
 echo "── summary (tier: $tier)"
 printf '%s\n' "${timings[@]}"
 printf '%6ss  total\n' "$((SECONDS - overall_start))"
+
+if [ -n "$results_dir" ]; then
+  echo
+  echo "TRX reports written to: $results_dir"
+fi
 
 exit "$failed"
