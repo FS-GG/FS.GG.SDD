@@ -110,6 +110,24 @@ These are the load-bearing authoring contracts. The full reference is
   synthetic pass discloses a stand-in and does **not** satisfy; a deferral does
   not satisfy. See [[fs-gg-sdd-evidence]].
 
+> **Deferral closure — a second sense of "deferral" the lifecycle does NOT gate
+> for you.** The evidence rule above is *within* a work item. A `DEC` /
+> clarification that defers a seam to a **later milestone** ("input routing
+> deferred to M4", "persistence launch deferred to M6") is different: it hands
+> real work forward, and nothing automatically re-surfaces it when that milestone
+> arrives. So close the loop by hand:
+> - **When you defer to milestone Mx, that milestone's `charter` must list picking
+>   it up.** A deferral with no obligation recorded on its target is a dropped
+>   thread — the deferring stage is honest, but the receiving stage never hears of
+>   it.
+> - **When Mx ships, verify every deferral aimed at Mx was discharged**, not just
+>   that Mx's own new ACs are green.
+> - **A deferral whose target milestone is complete but whose work is not is a
+>   smell** — it is the exact shape by which a seam that was *stood up but never
+>   wired* reaches ship AC-green: each milestone's checklist passes while the
+>   handed-forward wiring quietly never lands. Treat an open deferral pointing at
+>   an already-shipped target as a blocking finding, not a note.
+
 ## How gates work
 
 A single prerequisite cascade builds facts in strict order
