@@ -1,9 +1,14 @@
 namespace FS.GG.SDD.Commands.Tests
 
+open System.Text.Json
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
 open Xunit
 
+// Joins ProcessGlobalEnv (FS.GG.SDD#538): the `--input` CLI-boundary regression below spawns a
+// PATH-resolved process (`runCliRaw`), so it must not run while a sibling mutates process-global
+// PATH (feature 067 / FR-001).
+[<Collection("ProcessGlobalEnv")>]
 module SpecifyCommandTests =
     let workId = "005-specify-command"
     let title = "Specify Command"
@@ -485,3 +490,38 @@ No material ambiguities recorded.
         Assert.DoesNotContain("Amb-001", story)
         Assert.DoesNotContain("amb-001", story)
         Assert.Contains("amb 001", story)
+
+    /// FS.GG.SDD#538: `--input` is repeatable and newline-joined, so the intuitive
+    /// one-flag-per-labeled-fact form (`--input "value: …" --input "scope: …" --input
+    /// "requirement: …"`) composes instead of silently keeping one occurrence and dropping the
+    /// rest — which blocked on "missing required facts: scope, measurable requirement". Driven
+    /// through the REAL host (`runCliRaw`), because the join lives in the CLI argv→request mapping
+    /// (`Program.fs`), not the in-process request builder the other specify tests use.
+    [<Fact; Trait("tier", "slow")>]
+    let ``specify CLI newline-joins repeated --input flags into one intent`` () =
+        let root = initializedCharteredProject ()
+
+        let exitCode, stdout, _ =
+            TestSupport.runCliRaw
+                30000
+                [ "specify"
+                  "--root"
+                  root
+                  "--work"
+                  workId
+                  "--title"
+                  title
+                  "--input"
+                  "value: create a native specify command"
+                  "--input"
+                  "scope: one chartered work item"
+                  "--input"
+                  "requirement: create a specification artifact with stable ids" ]
+
+        // All three labeled facts were seen: the run succeeded rather than blocking on missing
+        // facts, and the spec was authored. (The exit code, and the report on stdout — the
+        // FS.GG.SDD#535 automation contract — agree.)
+        Assert.Equal(0, exitCode)
+        use document = JsonDocument.Parse stdout
+        Assert.Equal("succeeded", document.RootElement.GetProperty("outcome").GetString())
+        Assert.True(TestSupport.existsRelative root specPath)
