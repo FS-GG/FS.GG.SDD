@@ -434,6 +434,48 @@ placeholder is silently ignored, never a blocking error, and a real digest is
 never required to author a stage. The tool writes real digests; you are not
 obligated to.
 
+## Framework-API references (`plan` / `analyze`)
+
+Feature 105 (design of record ADR-0004) turns a framework-package API citation from
+an un-checked backtick token into a **resolvable** reference the tool can check at
+plan time. On a `## Contract Impact` line a `framework:` token declares a **use**; on
+an `## Accepted Deferrals` line a `blocked-on-framework:` token declares an **absence
+claim**:
+
+```
+- framework: <PackageId>[@<version>]#<symbol>
+- CR-003 blocked-on-framework: <PackageId>[@<version>]#<symbol>
+```
+
+- `<PackageId>` is the NuGet id (e.g. `FS.GG.UI.SkiaViewer`); `#<symbol>` is the
+  module-qualified `val`/member (e.g. `SkiaViewer.runAppWithPersistence`); `@<version>`
+  is **optional** and, when omitted, defaults to the Central Package Management pin in
+  `Directory.Packages*.props`. The version is single-sourced from the pin so a reference
+  never duplicates (nor drifts from) the pinned version.
+- A `framework:`/`blocked-on-framework:` keyword present with a token that is **not**
+  this grammar — no `#symbol`, or an empty `PackageId` — is a **blocking**
+  `malformedFrameworkReference` at `plan`, never a silent non-match. A mis-typed
+  reference reading as "no reference" is exactly the failure mode this defeats.
+
+`analyze` resolves each reference against the pinned package's **committed captured
+surface** — `docs/dependency-surface/<PackageId>/<version>.json`, produced by
+`fsgg-sdd dependency-surface --update` from the real restored package (never a vendored
+`.fsi` snapshot). The verdicts are symmetric, and fail-open:
+
+| reference | symbol in the real surface? | verdict |
+|---|---|---|
+| a `framework:` **use** | yes | passes |
+| a `framework:` **use** | no | **blocks** — `frameworkApiDangling` (blocked on a framework change) |
+| a `blocked-on-framework:` **deferral** | yes | **blocks** — `frameworkApiDeferralContradicted` (the deferral's premise is false) |
+| a `blocked-on-framework:` **deferral** | no | passes — the deferral is legitimate |
+| any | no capture / unresolvable version | **advisory** — `frameworkApiSurfaceUnavailable` (exit 0) |
+
+The last row is the settled severity policy: **block on real contradictions, advise
+when blind.** "Could not look" — no capture committed, or the run cannot resolve the
+version — is never rendered as a negative verdict (org ADR-0002 / #266). This defeats
+both the genuinely dangling reference and the inverse false alarm (a real API mis-read
+as absent from a stale local view — the RM2 incident this feature was filed for).
+
 ## Provider default-starter selection
 
 `fsgg-sdd scaffold` selects a product *starter* through a provider-declared scaffold

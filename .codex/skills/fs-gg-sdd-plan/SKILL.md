@@ -67,7 +67,12 @@ For a lifecycle/contracted (Tier 1) change, the plan identifies:
 - the **public surface** to declare (signatures first — `.fsi` where the language
   supports it) and the surface baseline to maintain;
 - the **structured contracts** (under `contracts/`) and their schema/migration
-  posture;
+  posture — and, when the change builds against a framework package's API, cite it
+  resolvably on a `## Contract Impact` line as `framework: <PackageId>[@<version>]#<symbol>`
+  (or, when deferring because you believe the API is absent, as
+  `blocked-on-framework:` on an `## Accepted Deferrals` line). `analyze` resolves the
+  reference against the pinned package's committed captured surface and blocks a dangling
+  use or a contradicted deferral at plan time — see [[fs-gg-sdd-authoring-contracts]] §6;
 - the **generated views** the change touches and their currency/stale behavior;
 - the **agent-facing behavior**, keeping Claude and Codex equivalent;
 - any optional **Governance** integration;

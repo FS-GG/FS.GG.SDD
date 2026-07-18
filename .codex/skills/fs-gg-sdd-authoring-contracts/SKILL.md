@@ -1,6 +1,6 @@
 ---
 name: fs-gg-sdd-authoring-contracts
-description: Reference for the load-bearing FS.GG SDD authoring grammars that silently block a stage if mis-formatted — the FR→AC checklist coverage line, the evidence.yml kind/result/synthetic satisfaction rule, the specify --input intent facts, the clarify [AMB:AMB-###] decision-tag resolution rule, and the per-stage front-matter required-field sets. Use when a checklist/evidence/specify/clarify stage blocks unexpectedly or a front-matter block reports "incomplete".
+description: Reference for the load-bearing FS.GG SDD authoring grammars that silently block a stage if mis-formatted — the FR→AC checklist coverage line, the evidence.yml kind/result/synthetic satisfaction rule, the specify --input intent facts, the clarify [AMB:AMB-###] decision-tag resolution rule, the per-stage front-matter required-field sets, and the plan framework:/blocked-on-framework: API-reference grammar. Use when a checklist/evidence/specify/clarify/plan stage blocks unexpectedly or a front-matter block reports "incomplete".
 ---
 
 # Authoring Contracts (the gating grammars)
@@ -13,8 +13,9 @@ skill is the quick reference; the durable, drift-guarded source is
 
 The three body grammars — the checklist **coverage line** (§1), the `evidence.yml`
 **satisfaction rule** (§2), and the `specify --input` **intent facts** (§3) — plus
-two cross-cutting ones: the **clarify decision-tag** resolution (§4) and the
-**per-stage front matter** required-field sets (§5). If a stage blocks and you
+three cross-cutting ones: the **clarify decision-tag** resolution (§4), the
+**per-stage front matter** required-field sets (§5), and the plan
+**framework-API reference** grammar (§6). If a stage blocks and you
 "know" the content is right, it is almost always one of these.
 
 ## 1. Checklist coverage line (used by `checklist`)
@@ -144,6 +145,42 @@ a field it **gates on** is absent; other template fields are **defaulted**.
   **optional**, format-checked (64 hex) only when present, used only for staleness
   detection — a placeholder is silently ignored and a real digest is never required
   to author.
+
+## 6. Framework-API reference (used by `plan`/`analyze`)
+
+A plan may cite a framework package's API in a **resolvable** form (feature 105,
+ADR-0004) rather than an un-checked backtick token. On a `## Contract Impact` line a
+`framework:` token declares a **use**; on an `## Accepted Deferrals` line a
+`blocked-on-framework:` token declares an **absence claim**:
+
+```
+- framework: <PackageId>[@<version>]#<symbol>              (a USE, on Contract Impact)
+- CR-003 blocked-on-framework: <PackageId>[@<version>]#<symbol>   (an ABSENCE claim, on a deferral)
+```
+
+- `<PackageId>` is the NuGet id (e.g. `FS.GG.UI.SkiaViewer`); `#<symbol>` is the
+  module-qualified `val`/member (e.g. `SkiaViewer.runAppWithPersistence`); `@<version>`
+  is **optional** and defaults to the Central Package Management pin
+  (`Directory.Packages*.props`), so a reference never duplicates the pinned version.
+- A keyword present with a token that is **not** this grammar (no `#symbol`, empty
+  `PackageId`) **blocks** at `plan` with `malformedFrameworkReference` — never a silent
+  non-match. (A mis-typed reference reading as "no reference" is exactly the failure this
+  defeats, one level up.)
+- `analyze` resolves each reference against the pinned package's **committed captured
+  surface** — `docs/dependency-surface/<PackageId>/<version>.json`, produced by
+  `fsgg-sdd dependency-surface --update` (never a vendored `.fsi` snapshot):
+  - a **use** whose symbol is **absent** from the real surface → **blocks**
+    (`frameworkApiDangling`), surfaced at plan time as blocked-on-a-framework-change;
+  - a **`blocked-on`** deferral whose symbol **is present** → **blocks**
+    (`frameworkApiDeferralContradicted`) — the deferral's premise is contradicted;
+  - a use present / a deferral absent → passes;
+  - no capture committed, or the version cannot be resolved → **advisory**
+    (`frameworkApiSurfaceUnavailable`, exit 0) — "could not look" is never a negative
+    verdict.
+
+That is what a plain backtick citation cannot give you: a reference the tool resolves
+against the **real** package, defeating both a genuinely dangling reference and the
+inverse false alarm (a real API mis-read as absent from a stale local view).
 
 ## Why these are strict
 
