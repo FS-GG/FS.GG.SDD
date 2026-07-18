@@ -100,9 +100,10 @@ These are the load-bearing authoring contracts. The full reference is
 [[fs-gg-sdd-authoring-contracts]]; in short:
 
 - **Checklist coverage:** a requirement is *covered* only when a list item leads
-  with `- FR-###:` and carries its acceptance reference **on the same line**:
-  `- FR-001: W/S move the left paddle. (covers AC-002)`. A bold `**FR-001**`, a
-  missing colon, or a separate-line `(covers AC-###)` is **counted but
+  with `- FR-###:` and carries its acceptance reference **on the same physical
+  line**: `- FR-001: W/S move the left paddle. (covers AC-002)`. A bold
+  `**FR-001**`, a missing colon, or a separate-line `(covers AC-###)` — including a
+  **soft-wrapped** bullet whose marker wrapped to the next line — is **counted but
   uncovered**. See [[fs-gg-sdd-checklist]].
 - **Evidence satisfaction:** an obligation is satisfied **only** by a matching
   `evidence.yml` declaration with `result: pass` **and** `synthetic: false`. A

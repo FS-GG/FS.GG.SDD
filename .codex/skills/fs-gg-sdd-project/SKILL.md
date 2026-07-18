@@ -51,10 +51,11 @@ and a drift guard) is `docs/reference/authoring-contracts.md`. Summary:
 
 - **Acceptance coverage line.** `checklist` marks `FR-###` covered only when a
   list item leads with `- FR-###:` and carries the acceptance reference (`AC-###`,
-  optional `US-###`) **on the same line** (e.g.
+  optional `US-###`) **on the same physical line** (e.g.
   `- FR-001: W/S move the left paddle. (covers AC-002)`). A bold `**FR-001**`, a
-  colon-less line, or a separate `(covers AC-###)` line is counted by the loose
-  scan but **not** covered.
+  colon-less line, or a separate `(covers AC-###)` line — including a
+  **soft-wrapped** bullet whose marker wrapped to the next physical line — is
+  counted by the loose scan but **not** covered.
 - **`evidence.yml` satisfaction.** `kind` ∈ `implementation · verification ·
   review · generated-view · synthetic · deferral · note · missing` (an unknown
   kind silently becomes `verification`); `result` ∈ `pass · fail · deferred ·
