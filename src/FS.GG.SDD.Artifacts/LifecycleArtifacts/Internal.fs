@@ -155,6 +155,24 @@ module internal Internal =
 
         violation
 
+    // FS.GG.SDD#567: the raw YamlDotNet message names the SYMPTOM ("did not find expected key"),
+    // not the CAUSE. In a machine-generated evidence.yml — the artifact most often authored with
+    // free-text prose — the most common cause is an unescaped quote in a scalar: an apostrophe in a
+    // single-quoted scalar (`RM1's`) or a nested double-quote (`"he said "hi""`). YamlDotNet marks
+    // the failure on the offending line, so ONLY when that line actually carries a quote do we name
+    // the cause; a quote-free failure (tab indent, duplicate key) keeps the raw message unchanged.
+    let private quoteCauseHint =
+        " An unescaped quote in a scalar is the most common cause here: double a single-quote inside a '…' scalar (''), or backslash-escape a double-quote inside a \"…\" scalar."
+
+    let private offendingLineHasQuote (source: string) (line: int) =
+        if line <= 0 then
+            false
+        else
+            let lines = source.Replace("\r\n", "\n").Split('\n')
+
+            line <= lines.Length
+            && (lines.[line - 1].Contains("'") || lines.[line - 1].Contains("\""))
+
     let parseYamlDocument (text: string | null) =
         let source = Option.ofObj text |> Option.defaultValue ""
 
@@ -187,7 +205,15 @@ module internal Internal =
                 | :? YamlDotNet.Core.YamlException as ex ->
                     // YamlDotNet marks positions as int64; a source line/column that overflows
                     // int is not a document a human authored.
-                    YamlMalformed(ex.Message, int ex.Start.Line, int ex.Start.Column)
+                    let line, column = int ex.Start.Line, int ex.Start.Column
+
+                    let message =
+                        if offendingLineHasQuote source line then
+                            ex.Message + quoteCauseHint
+                        else
+                            ex.Message
+
+                    YamlMalformed(message, line, column)
                 | ex ->
                     // Every authored-input error YamlDotNet *documents* derives from
                     // YamlException and is caught above with its position. But `stream.Load`

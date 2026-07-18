@@ -77,6 +77,15 @@ evidence:
     synthetic: false
 ```
 
+**Free-text prose (`notes`, `rationale`): mind the quotes.** `evidence.yml` is the
+lifecycle artifact most often machine-generated with prose, so it collects apostrophes and
+quotes — and an unescaped one is a **YAML syntax error** that blocks the stage, not a
+satisfaction failure. Inside a **single-quoted** scalar, **double** an apostrophe
+(`'RM1''s shell'`, not `'RM1's shell'`); inside a **double-quoted** scalar, backslash-escape
+an inner double-quote (`"he said \"hi\""`); a plain (unquoted) scalar needs neither. When the
+parse fails on a line that carries a quote, `evidence` names the unescaped quote as the likely
+cause rather than only echoing the parser's position.
+
 See [[fs-gg-sdd-evidence]].
 
 ## 3. `specify --input` intent facts (used by `specify`)

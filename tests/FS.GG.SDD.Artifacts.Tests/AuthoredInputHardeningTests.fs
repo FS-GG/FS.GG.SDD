@@ -94,6 +94,39 @@ module AuthoredInputHardeningTests =
 
         Assert.Contains("line 3", diagnostic.Message)
         Assert.DoesNotContain("is empty", diagnostic.Message)
+        // FS.GG.SDD#567: the offending line carries a quote, so the message names the cause.
+        Assert.Contains("unescaped quote", diagnostic.Message)
+
+    /// FS.GG.SDD#567's primary case: an apostrophe closes a single-quoted scalar early
+    /// (`'RM1's shell'`). evidence.yml is machine-generated with free-text prose, so this is the
+    /// common shape — the message must name the cause, not just the parser's "expected key".
+    [<Fact>]
+    let ``an apostrophe in a single-quoted scalar reports the quote as the cause`` () =
+        let snapshot: FileSnapshot =
+            { Path = "work/001-demo/evidence.yml"
+              Text = "schemaVersion: 1\nworkId: 001-demo\nnotes: 'RM1's shell scope'\n" }
+
+        let diagnostic =
+            theDiagnostic "an apostrophe in a single-quoted scalar" (parseEvidenceArtifact snapshot)
+
+        Assert.Equal("malformedYaml", diagnostic.Id)
+        Assert.Contains("unescaped quote", diagnostic.Message)
+        // The remedy is named specifically for a single-quoted scalar.
+        Assert.Contains("double a single-quote", diagnostic.Message)
+
+    /// The hint is grounded in the source, not guessed from the parser message: a quote-free
+    /// failure (tab indentation) must NOT get the quote hint, or the advice would mislead.
+    [<Fact>]
+    let ``a quote-free malformed document does not get the quote hint`` () =
+        let snapshot: FileSnapshot =
+            { Path = "work/001-demo/evidence.yml"
+              Text = "schemaVersion: 1\nworkId: 001-demo\ntasks:\n\t- id: T001\n" }
+
+        let diagnostic =
+            theDiagnostic "a tab-indented document" (parseEvidenceArtifact snapshot)
+
+        Assert.Equal("malformedYaml", diagnostic.Id)
+        Assert.DoesNotContain("unescaped quote", diagnostic.Message)
 
     [<Fact>]
     let ``a genuinely empty evidence document still reports that it is empty`` () =

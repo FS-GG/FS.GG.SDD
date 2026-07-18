@@ -400,6 +400,11 @@ masquerade as proof.
 - A typo in `kind` (e.g. `test`) silently becomes `verification` — your declared
   kind is lost. Use the exact vocabulary.
 - Marking work `synthetic: true` and expecting it to satisfy — it never does.
+- **An unescaped quote in free-text prose blocks the stage as a YAML syntax error.**
+  `evidence.yml` is machine-generated with `notes`/`rationale`, so an apostrophe in a
+  single-quoted scalar (`'RM1's shell'`) closes it early. Double it (`'RM1''s shell'`), or
+  backslash-escape an inner `"` in a double-quoted scalar. `evidence` names the quote as the
+  likely cause when a parse fails on a quoted line — see [[fs-gg-sdd-authoring-contracts]] §2.
 
 ## Next
 
