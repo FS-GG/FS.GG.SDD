@@ -38,6 +38,7 @@ FS.GG.SDD.Artifacts.Diagnostics.futureSchemaVersion
 FS.GG.SDD.Artifacts.Diagnostics.hasBlocking
 FS.GG.SDD.Artifacts.Diagnostics.malformedArtifactPath
 FS.GG.SDD.Artifacts.Diagnostics.malformedDigest
+FS.GG.SDD.Artifacts.Diagnostics.malformedFrameworkReference
 FS.GG.SDD.Artifacts.Diagnostics.malformedReference
 FS.GG.SDD.Artifacts.Diagnostics.malformedSchemaVersion
 FS.GG.SDD.Artifacts.Diagnostics.malformedYaml

@@ -197,6 +197,21 @@ module Diagnostics =
             "Cite the artifact by its repository-relative path, or remove the reference. A path outside the workspace proves nothing and is never read."
             [ value ]
 
+    /// FS.GG.SDD#569 (feature 105). A `framework:` / `blocked-on-framework:` reference whose token
+    /// is not the well-formed `<PackageId>[@<version>]#<symbol>` grammar. This is MALFORMED USER
+    /// INPUT — the author wrote the token — so it is a `DiagnosticError` naming the offending value
+    /// (never a silent non-match, which would let a mis-typed reference read as "no reference at all"
+    /// and pass plan-time resolution unchecked, FR-003).
+    let malformedFrameworkReference artifact (value: string) =
+        create
+            "malformedFrameworkReference"
+            DiagnosticError
+            (Some artifact)
+            None
+            $"Framework reference '{value}' is not well-formed — expected '<PackageId>[@<version>]#<symbol>'."
+            "Write the reference as '<PackageId>[@<version>]#<symbol>' (version optional; it defaults to the pinned package version), or remove it."
+            [ value ]
+
     let requirementNotTyped artifact id correction =
         create
             "requirementNotTyped"

@@ -74,6 +74,26 @@ module Plan =
           SourceIds: string list
           SourceLocation: SourceLocation option }
 
+    /// FS.GG.SDD#569 (feature 105). Whether a framework-API reference is a USE (the plan intends to
+    /// build against it, cited on a Contract Impact line) or an ABSENCE claim (a deferral asserts it
+    /// is missing, cited as `blocked-on-framework:`). The two carry opposite plan-time verdicts when
+    /// resolved against the pinned package's real surface (ADR-0004 D3).
+    type FrameworkReferenceKind =
+        | FrameworkUse
+        | FrameworkBlockedOn
+
+    /// FS.GG.SDD#569 (feature 105). A structured framework-API reference parsed from a
+    /// `framework:` / `blocked-on-framework:` token: `<PackageId>[@<version>]#<symbol>`. `Version` is
+    /// `None` when the token omits `@<version>`, in which case the pinned package version is the
+    /// resolved version (ADR-0004 D1). This is authored data only — it is not resolved here.
+    type FrameworkApiReference =
+        { PackageId: string
+          Version: string option
+          Symbol: string
+          Kind: FrameworkReferenceKind
+          SourceIds: string list
+          SourceLocation: SourceLocation option }
+
     type PlanFacts =
         { FrontMatter: PlanFrontMatter
           StandardSections: string list
@@ -85,6 +105,7 @@ module Plan =
           MigrationNotes: PlanMigrationNote list
           GeneratedViewImpacts: GeneratedViewImpact list
           AcceptedDeferrals: AcceptedPlanDeferral list
+          FrameworkApiReferences: FrameworkApiReference list
           BlockingFindings: string list
           AdvisoryNotes: string list
           LifecycleNotes: string list
@@ -382,6 +403,80 @@ module Plan =
                       SourceIds = sourceIds
                       SourceLocation = sourceLocation lineNumber })
 
+    // FS.GG.SDD#569 (feature 105). The framework-API reference grammar (ADR-0004 D1):
+    //   framework: <PackageId>[@<version>]#<symbol>            on a Contract Impact line (a USE)
+    //   blocked-on-framework: <PackageId>[@<version>]#<symbol> on an Accepted Deferral (an ABSENCE claim)
+    // A keyword present with a token that is NOT this grammar is a blocking diagnostic (FR-003), never a
+    // silent non-match — a mis-typed reference reading as "no reference" is exactly the RM2 failure mode
+    // one level up. The reference is authored data; nothing is resolved against a package here.
+    let private frameworkTokenRegex =
+        Regex(@"^(?<pkg>[^@#\s]+)(?:@(?<ver>[^#\s]+))?#(?<sym>[^\s]+)$", RegexOptions.Compiled)
+
+    // Find "<keyword>: <token>" in a line. `guardLeadingHyphen` keeps the bare `framework:` from
+    // matching the tail of `blocked-on-framework:` (the char before "framework" there is '-').
+    let private frameworkKeywordToken (keyword: string) (guardLeadingHyphen: bool) (line: string) =
+        let lookbehind = if guardLeadingHyphen then "(?<![\\w-])" else ""
+
+        let m =
+            Regex.Match(line, lookbehind + Regex.Escape(keyword) + @"\s*:\s*(\S+)", RegexOptions.IgnoreCase)
+
+        if m.Success then Some(m.Groups.[1].Value) else None
+
+    let private parseFrameworkReferencesInSection
+        artifact
+        (section: string)
+        (keyword: string)
+        (guardLeadingHyphen: bool)
+        (kind: FrameworkReferenceKind)
+        text
+        =
+        sectionLines section text
+        |> List.collect (fun (lineNumber, line) ->
+            match frameworkKeywordToken keyword guardLeadingHyphen line with
+            | None -> []
+            | Some token ->
+                let m = frameworkTokenRegex.Match token
+
+                if m.Success then
+                    [ Ok
+                          { PackageId = m.Groups.["pkg"].Value
+                            Version =
+                              (if m.Groups.["ver"].Success then
+                                   Some m.Groups.["ver"].Value
+                               else
+                                   None)
+                            Symbol = m.Groups.["sym"].Value
+                            Kind = kind
+                            SourceIds = planSourceIdsInLine line
+                            SourceLocation = sourceLocation lineNumber } ]
+                else
+                    [ Error(Diagnostics.malformedFrameworkReference artifact token) ])
+
+    let parseFrameworkApiReferences artifact text =
+        let results =
+            parseFrameworkReferencesInSection artifact "Contract Impact" "framework" true FrameworkUse text
+            @ parseFrameworkReferencesInSection
+                artifact
+                "Accepted Deferrals"
+                "blocked-on-framework"
+                false
+                FrameworkBlockedOn
+                text
+
+        let references =
+            results
+            |> List.choose (function
+                | Ok reference -> Some reference
+                | Error _ -> None)
+
+        let diagnostics =
+            results
+            |> List.choose (function
+                | Error diagnostic -> Some diagnostic
+                | Ok _ -> None)
+
+        references, diagnostics
+
     let parsePlanFacts (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Plan
 
@@ -407,6 +502,10 @@ module Plan =
             let migrations = parsePlanMigrationNotes text
             let impacts = parseGeneratedViewImpacts text
             let deferrals = parseAcceptedPlanDeferrals text
+
+            let frameworkReferences, frameworkReferenceDiagnostics =
+                parseFrameworkApiReferences artifact text
+
             let blockingFindings = parseNonEmptySectionLines "Planning Findings" text
             let advisoryNotes = parseNonEmptySectionLines "Advisory Notes" text
             let lifecycleNotes = parseNonEmptySectionLines "Lifecycle Notes" text
@@ -442,7 +541,8 @@ module Plan =
                           artifact
                           $"Plan artifact is missing the '{heading}' section."
                           $"Add a '## {heading}' section to plan.md before relying on parsed planning facts."
-                          [ heading ]) ]
+                          [ heading ])
+                  frameworkReferenceDiagnostics ]
                 |> List.concat
                 |> Diagnostics.sort
 
@@ -457,6 +557,9 @@ module Plan =
                   MigrationNotes = migrations |> List.sortBy (fun migration -> migration.MigrationId.Value)
                   GeneratedViewImpacts = impacts |> List.sortBy (fun impact -> impact.ImpactId.Value)
                   AcceptedDeferrals = deferrals |> List.sortBy (fun deferral -> deferral.Id)
+                  FrameworkApiReferences =
+                    frameworkReferences
+                    |> List.sortBy (fun reference -> reference.PackageId, reference.Version, reference.Symbol)
                   BlockingFindings = blockingFindings |> List.sort
                   AdvisoryNotes = advisoryNotes |> List.sort
                   LifecycleNotes = lifecycleNotes

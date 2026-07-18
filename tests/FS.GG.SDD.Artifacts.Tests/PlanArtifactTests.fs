@@ -105,6 +105,67 @@ No blocking planning findings recorded.
             Assert.Equal(1, facts.AcceptedDeferrals.Length)
             Assert.Equal(1, facts.StaleDecisionCount)
 
+    // FS.GG.SDD#569 (feature 105) — the framework-API reference grammar (Phase 1).
+
+    [<Fact>]
+    let ``Plan parser extracts framework-API references from both grammars`` () =
+        let text =
+            planText
+                .Replace(
+                    "## Verification Obligations",
+                    "- framework: FS.GG.UI.SkiaViewer@0.12.0#runAppWithAudioAndPersistence — the persistence host.\n\n## Verification Obligations"
+                )
+                .Replace(
+                    "- CR-002 acceptedDeferral: Deferral remains visible to tasks and evidence.",
+                    "- CR-002 acceptedDeferral: Deferral remains visible to tasks and evidence.\n- CR-003 blocked-on-framework: FS.GG.UI.SkiaViewer#missingSymbol — believed absent."
+                )
+
+        match parsePlanFacts (snapshot text) with
+        | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
+        | Ok facts ->
+            Assert.DoesNotContain(facts.Diagnostics, (fun diagnostic -> diagnostic.Id = "malformedFrameworkReference"))
+
+            let uses =
+                facts.FrameworkApiReferences
+                |> List.filter (fun reference -> reference.Kind = FrameworkUse)
+
+            let blocked =
+                facts.FrameworkApiReferences
+                |> List.filter (fun reference -> reference.Kind = FrameworkBlockedOn)
+
+            Assert.Equal(1, uses.Length)
+            Assert.Equal("FS.GG.UI.SkiaViewer", uses.Head.PackageId)
+            Assert.Equal<string option>(Some "0.12.0", uses.Head.Version)
+            Assert.Equal("runAppWithAudioAndPersistence", uses.Head.Symbol)
+
+            Assert.Equal(1, blocked.Length)
+            Assert.Equal("FS.GG.UI.SkiaViewer", blocked.Head.PackageId)
+            Assert.Equal<string option>(None, blocked.Head.Version)
+            Assert.Equal("missingSymbol", blocked.Head.Symbol)
+
+    [<Fact>]
+    let ``Plan parser diagnoses a malformed framework reference and drops it`` () =
+        // No '#symbol' — the token is not the grammar, so it must NOT silently parse as "no reference".
+        let text =
+            planText.Replace(
+                "## Verification Obligations",
+                "- framework: FS.GG.UI.SkiaViewer.runAppWithAudioAndPersistence\n\n## Verification Obligations"
+            )
+
+        match parsePlanFacts (snapshot text) with
+        | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
+        | Ok facts ->
+            Assert.Contains(facts.Diagnostics, (fun diagnostic -> diagnostic.Id = "malformedFrameworkReference"))
+            Assert.Empty(facts.FrameworkApiReferences)
+
+    [<Fact>]
+    let ``Plan parser yields no framework references when none are cited`` () =
+        match parsePlanFacts (snapshot planText) with
+        | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
+        | Ok facts ->
+            Assert.Empty(facts.FrameworkApiReferences)
+            Assert.DoesNotContain(facts.Diagnostics, (fun diagnostic -> diagnostic.Id = "malformedFrameworkReference"))
+
     [<Fact>]
     let ``Plan parser reports duplicate plan ids`` () =
         let broken =
