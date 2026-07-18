@@ -340,15 +340,19 @@ CR
 
 `fsgg-sdd checklist` marks a functional requirement **covered** only when a strict-scan
 parser finds a list item that leads with `- FR-###:` and carries an acceptance reference
-(`AC-###`) **on the same line**:
+(`AC-###`) **on the same physical line**:
 
 - the item starts with a literal `- `, then the id, then a literal `:`;
 - the requirement id is `FR-` followed by three or more digits (case-insensitive);
-- the acceptance reference(s) sit on that same line;
+- the acceptance reference(s) sit on that same physical line;
 - there is prose after the colon.
 
 A bold id (`**FR-001**`), a colon-less id (`- FR-001 — …`), or an acceptance reference on
-a different line does **not** establish coverage.
+a different line does **not** establish coverage. The scan reads a single physical line,
+so a **soft-wrapped** requirement bullet whose `(covers AC-###)` marker wrapped onto the
+next line is reported uncovered — keep the whole `- FR-###: … (covers AC-###)` on one
+physical line. And fix a "missing acceptance coverage" verdict in `spec.md`, never in the
+regenerated `checklist.md`.
 
 The word `covers` is **decoration, not a magic token** — the scan looks for an `AC-###` on
 the line and nothing else. How you word the reference is up to you. Both of these
