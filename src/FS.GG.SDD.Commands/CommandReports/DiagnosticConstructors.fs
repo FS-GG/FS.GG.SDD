@@ -519,8 +519,8 @@ module internal DiagnosticConstructors =
             "planAuthoringWindow"
             DiagnosticSeverity.DiagnosticInfo
             (Some path)
-            "Plan snapshotted its sources; later edits to them require a re-baseline."
-            "Re-run fsgg-sdd plan --accept-upstream after editing the specification, clarifications, or checklist."
+            "Plan snapshotted its upstream sources (spec, clarifications, checklist). Editing plan.md itself — resolving the PD-###/PC-###/VO-### lines — is expected and needs no re-baseline; only a later edit to one of those upstream sources does."
+            "Re-run fsgg-sdd plan --accept-upstream only after editing the specification, clarifications, or checklist — not after editing plan.md."
             snapshottedSources
 
     let missingPlanPrerequisite path message =
