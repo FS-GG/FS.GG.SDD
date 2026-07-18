@@ -385,18 +385,26 @@ module internal Internal =
             |> Array.toList
 
     let scopedIdLocations (pattern: string) (createId: string -> Result<'id, string>) (lines: (int * string) list) =
+        // A stable id is DECLARED at the list-leading position — the first id of its family on a
+        // markdown list item (`- FR-001: …`, `- **US-001**:`, `- AC-001 [US-001] [FR-001]:`,
+        // `- AMB-001 open:`). A later occurrence of the same family — in that item's prose or on a
+        // plain line — is a REFERENCE, not a declaration, so a requirement that names another by id
+        // ("… the same gate as FR-003") no longer counts as a second declaration and triggers a
+        // spurious duplicate (FS.GG.SDD#541). This mirrors the list-leading anchoring that
+        // `requirementReferences` and `missingIdDiagnostics` already apply to the same lines.
         lines
-        |> List.toArray
-        |> Array.mapi (fun index line -> index + 1, line)
-        |> Array.collect (fun (_, (lineNumber, line)) ->
-            Regex.Matches(line, pattern, RegexOptions.IgnoreCase)
-            |> Seq.cast<Match>
-            |> Seq.choose (fun m ->
+        |> List.choose (fun (lineNumber, line) ->
+            let m = Regex.Match(line, pattern, RegexOptions.IgnoreCase)
+
+            if
+                m.Success
+                && Regex.IsMatch(line.Substring(0, m.Index), @"^\s*-\s*(?:\*\*|__|\*|_)?\s*$")
+            then
                 match createId m.Value with
                 | Ok id -> Some(id, sourceLocation lineNumber)
-                | Error _ -> None)
-            |> Seq.toArray)
-        |> Array.toList
+                | Error _ -> None
+            else
+                None)
 
     let scopedIdLocationsInSections headings pattern createId text =
         headings

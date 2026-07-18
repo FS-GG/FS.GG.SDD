@@ -166,6 +166,28 @@ No material ambiguities recorded.
             Assert.Equal<string list>([ "AMB-001" ], facts.AmbiguityIds |> List.map Identifiers.ambiguityIdValue)
             Assert.False(ambiguityMissingId facts)
 
+    // FS.GG.SDD#541: a requirement that names another requirement by id in its prose ("… under the
+    // same gate as FR-001") is a REFERENCE, not a second declaration. Only the list-leading
+    // `- FR-###:` token declares; the in-prose mention must not trigger a spurious duplicate.
+    [<Fact>]
+    let ``Specification requirement referencing another requirement by id is not a duplicate`` () =
+        let crossReferenced =
+            specificationText.Replace(
+                "- FR-001: The specify command creates spec.md. (Stories: US-001; Acceptance: AC-001)",
+                "- FR-001: The specify command creates spec.md. (Stories: US-001; Acceptance: AC-001)\n"
+                + "- FR-002: Regeneration is gated the same way as FR-001. (Stories: US-001; Acceptance: AC-001)"
+            )
+
+        match parseSpecificationFacts (snapshot crossReferenced) with
+        | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
+        | Ok facts ->
+            Assert.Equal<string list>(
+                [ "FR-001"; "FR-002" ],
+                facts.RequirementIds |> List.map Identifiers.requirementIdValue
+            )
+
+            Assert.DoesNotContain("duplicateIdentifier", facts.Diagnostics |> List.map _.Id)
+
     [<Fact>]
     let ``Specification parser reports duplicate ids and unknown references`` () =
         let broken =
