@@ -389,6 +389,7 @@ module internal PlanAuthoring =
     let planTemplate
         (request: CommandRequest)
         (workId: string)
+        (changeTier: string)
         (specText: string)
         (clarificationText: string)
         (checklistText: string)
@@ -442,7 +443,7 @@ schemaVersion: 1
 workId: {workId}
 title: {title}
 stage: plan
-changeTier: tier1
+changeTier: {changeTier}
 status: planned
 sourceSpec: {specPath workId}
 sourceClarifications: {clarificationPath workId}
@@ -640,6 +641,7 @@ No blocking planning findings recorded.
                 planTemplate
                     request
                     workId
+                    (charteredChangeTier workId model)
                     specText
                     clarificationText
                     checklistText
