@@ -29,28 +29,31 @@ example + the decision-tag grammar (US1 scenario 1, SC-004):
 fsgg-sdd clarify --work <id> --json | jq -r '.diagnostics[] | select(.id=="missingClarificationAnswer") | .correction'
 ```
 
-Expected substring:
-`… See the shipped example docs/examples/lifecycle-artifacts/clarifications.md and the grammar at docs/reference/authoring-contracts.md#clarify-decision-tag-resolution.`
+Expected substring (repointed to the vendored skills — FS.GG.SDD#539):
+`… See the fs-gg-sdd-clarify skill and the grammar under the fs-gg-sdd-authoring-contracts skill (#4-clarify-decision-tag-resolution-used-by-clarify).`
 
 ## 3. Coherent with the lint pre-flight (FR-009)
 
 The pointer lives in the `--json` correction (step 2). `--text`/`--rich` are summaries that do not
-print per-diagnostic corrections. The human pre-flight `lint` (076) independently cites the SAME
-grammar anchor:
+print per-diagnostic corrections. The human pre-flight `lint` (076) independently cites the same
+grammar **section** — though, as of FS.GG.SDD#539, the remediation pointer names the vendored
+`fs-gg-sdd-authoring-contracts` skill while lint's pointer still names `docs/reference/…` (a
+separately-tracked follow-up):
 
 ```sh
-# lint carries its OWN 076 grammar pointer to the SAME anchor (coherence, not the same string):
-fsgg-sdd lint work/<id>/clarifications.md --text | grep -F 'authoring-contracts.md#clarify-decision-tag-resolution'
+# lint carries its OWN 076 grammar pointer to the corresponding section (coherence, not one string):
+fsgg-sdd lint work/<id>/clarifications.md --text | grep -F 'clarify-decision-tag-resolution'
 ```
 
-Expected: `lint` shows its own defect fix whose grammar pointer cites the identical
-`authoring-contracts.md` anchor the covered diagnostic's `--json` correction cites.
+Expected: `lint` shows its own defect fix whose grammar pointer cites the corresponding
+decision-tag-resolution section.
 
 ## 4. Follow the pointer — it resolves (US3)
 
 ```sh
-test -f docs/examples/lifecycle-artifacts/clarifications.md && echo "example OK"
-grep -n '^## Clarify decision-tag resolution' docs/reference/authoring-contracts.md && echo "anchor OK"
+# the cited skills are vendored in every scaffold (and in this tool repo) under .claude/.codex/.agents:
+ls .claude/skills/fs-gg-sdd-clarify/SKILL.md && echo "skill OK"
+grep -n '^## 4\. Clarify decision-tag resolution' .claude/skills/fs-gg-sdd-authoring-contracts/SKILL.md && echo "anchor OK"
 ```
 
 Expected: both `OK`. (The guard test automates this over the whole covered set.)
