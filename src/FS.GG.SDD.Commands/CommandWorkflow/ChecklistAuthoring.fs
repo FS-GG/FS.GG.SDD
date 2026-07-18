@@ -459,8 +459,19 @@ Prose status: {status}
             if existing.Text.Contains("<!-- fsgg-sdd: unsafe-overwrite -->", StringComparison.OrdinalIgnoreCase) then
                 [ unsafeOverwrite path ], Some existing.Text, None
             else
-                match parseChecklistForCommand path existing.Text with
-                | Error diagnostics -> diagnostics, Some existing.Text, None
+                // FS.GG.SDD#572. Scaffold any missing machine-derived section HEADING before the
+                // blocking parse, rather than blocking on it: `checklist` re-derives those sections'
+                // CONTENT wholesale on every run and already carries `ensureChecklistSections` for
+                // exactly that — so a missing `## Accepted Deferrals` heading (etc.) it is about to
+                // populate must not be a `workModelInconsistent` block. Ensuring is idempotent and
+                // touches neither front matter nor authored content, so every real diagnostic
+                // (identity, duplicate ids, unknown refs) still fires; only the missing-heading
+                // blocker dissolves. Downstream stages keep the strict parse (they consume, not
+                // regenerate), so a hand-mangled checklist reaching `plan` still blocks there.
+                let ensuredText = ensureChecklistSections workId existing.Text
+
+                match parseChecklistForCommand path ensuredText with
+                | Error diagnostics -> diagnostics, Some ensuredText, None
                 | Ok(existingFacts, existingDiagnostics) ->
                     let identityDiagnostics =
                         frontMatterIdentityDiagnostics
@@ -514,7 +525,8 @@ Prose status: {status}
                     if hasBlockingParserDiagnostics then
                         blockingParserDiagnostics, Some existing.Text, None
                     else
-                        let ensuredText = ensureChecklistSections workId existing.Text
+                        // `ensuredText` was scaffolded above (FS.GG.SDD#572), so the missing-heading
+                        // block can no longer reach here; the re-derive works from it directly.
 
                         // §3.1 (082, #146): re-derive the machine-derived sections from the
                         // current sources on EVERY run — never re-ingest prior CHK/CR rows as

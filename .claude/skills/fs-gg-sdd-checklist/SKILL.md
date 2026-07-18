@@ -86,6 +86,10 @@ and `clarifications.md`, discarding whatever was there:
 **Source Snapshot, Checklist Items, Review Results, Accepted Deferrals, Blocking
 Findings.**
 
+You do **not** need to pre-create these headings: a run **scaffolds** any that are
+missing and then fills them (FS.GG.SDD#572), so "re-derived wholesale" means created-if-absent
+too — a deleted `## Accepted Deferrals` heading comes back rather than blocking.
+
 Hand-writing a review into any of them is work the next run erases — the reviews
 come from `--input`. What is left to you is **Source Specification, Source
 Clarifications, Advisory Notes, Lifecycle Notes**, and the front matter:

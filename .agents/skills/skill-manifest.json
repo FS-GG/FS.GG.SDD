@@ -25,7 +25,7 @@
     {
       "id": "fs-gg-sdd-checklist",
       "scope": "process",
-      "sha256": "18f8c91f9a9e793cc3b359280674edd5872b93403f090e275b23fb737f4b300f",
+      "sha256": "8471d642d6c7e45459d6fa8e5d2c75f7c426185ac1b8b94659871c9e6ffdf766",
       "resolvablePath": ".agents/skills/fs-gg-sdd-checklist/SKILL.md",
       "materializes-when": "always"
     },
