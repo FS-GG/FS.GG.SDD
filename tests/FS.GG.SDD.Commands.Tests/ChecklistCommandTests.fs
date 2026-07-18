@@ -609,3 +609,31 @@ No blocking ambiguity remains.
         let report = TestSupport.runChecklist root workId title
         Assert.Equal(CommandOutcome.NoChange, report.Outcome)
         Assert.Equal(first, TestSupport.readRelative root checklistPath)
+
+    // FS.GG.SDD#572. A machine-derived section whose HEADING is absent is SCAFFOLDED, not blocked:
+    // `checklist` re-derives those sections' content wholesale, so a missing `## Accepted Deferrals`
+    // heading it is about to populate must not be a `workModelInconsistent` block. (Before the fix,
+    // the author had to hand-add empty headings for the tool to fill — the papercut this closes.)
+    [<Fact>]
+    let ``checklist scaffolds a missing derived-section heading instead of blocking`` () =
+        let root = initializedClarifiedProject ()
+        TestSupport.runChecklist root workId title |> ignore
+
+        // Delete the whole `## Accepted Deferrals` section (heading + body up to the next heading),
+        // exactly the state an author reaches by removing a section they thought was tool-owned.
+        let withoutSection =
+            System.Text.RegularExpressions.Regex.Replace(
+                TestSupport.readRelative root checklistPath,
+                @"## Accepted Deferrals\n(?:(?!## ).*\n)*",
+                ""
+            )
+
+        Assert.DoesNotContain("## Accepted Deferrals", withoutSection)
+        TestSupport.writeRelative root checklistPath withoutSection
+
+        let report = TestSupport.runChecklist root workId title
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.DoesNotContain(report.Diagnostics, fun d -> d.Id = "workModelInconsistent")
+        // The heading is scaffolded back, ready to be (and re-derived as) populated.
+        Assert.Contains("## Accepted Deferrals", TestSupport.readRelative root checklistPath)
