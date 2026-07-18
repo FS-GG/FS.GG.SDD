@@ -133,7 +133,9 @@ evidence:
         match parseEvidenceArtifact (evidenceSnapshot (evidenceYamlClarification "[DEC1]")) with
         | Error diagnostics -> failwith $"Evidence should parse: {diagnostics}"
         | Ok facts ->
-            let d = facts.Diagnostics |> List.find (fun d -> d.RelatedIds |> List.contains "DEC1")
+            let d =
+                facts.Diagnostics |> List.find (fun d -> d.RelatedIds |> List.contains "DEC1")
+
             Assert.Equal("malformedReference", d.Id)
             Assert.Contains("not a well-formed decision id", d.Message)
 
