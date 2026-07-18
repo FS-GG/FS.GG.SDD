@@ -294,6 +294,103 @@ module internal HandlersEvidence =
                         else
                             declaration) }
 
+    // ---- FS.GG.SDD#550: re-sync observed-run receipts when a TRX is regenerated ----
+
+    /// The raw, trimmed `--sync-observed-run` value, if the author gave one. The maintenance complement
+    /// to `--from-test-report`: it names a report whose receipts are already on disk and need refreshing,
+    /// not one to stamp for the first time.
+    let private requestedSyncReport (request: CommandRequest) =
+        request.SyncObservedRun
+        |> Option.map _.Trim()
+        |> Option.filter (fun path -> path <> "")
+
+    /// The contained, normalized sync-report path — or `None` when the author gave none, or gave one that
+    /// escapes the repository. Containment is decided on the **raw** value, never the normalized one, for
+    /// the same #185 reason `testReportPath` documents: normalization strips a leading `/` and would
+    /// quietly turn an absolute path into a relative one.
+    let syncReportPath (request: CommandRequest) : string option =
+        requestedSyncReport request
+        |> Option.filter citedPathIsContained
+        |> Option.map normalizeRelativePath
+
+    /// The second-wave `ReadFile` planner for the sync report, guarded against re-planning — mirrors
+    /// `testReportReadEffects`. An escaping path yields no effect at all; the refusal is reported by
+    /// `resolveSyncObservedRun` from the raw request, not from a read that never happened.
+    let syncReportReadEffects (model: CommandModel) : CommandEffect list =
+        let alreadyPlanned = plannedReadPaths model |> Set.ofList
+
+        match syncReportPath model.Request with
+        | Some path when not (Set.contains path alreadyPlanned) -> [ ReadFile path ]
+        | _ -> []
+
+    /// A declaration whose CURRENT receipt is sourced from `reportPath` — the ones `--sync-observed-run`
+    /// re-stamps. A receipt pointing at a DIFFERENT report is not one this TRX regenerated, so syncing
+    /// one report must never rewrite another's receipt. Named once, because `resolveSyncObservedRun` (who
+    /// is there to sync?) and `recordSyncObservedRun` (whom do I re-stamp?) must answer over the same set.
+    let private syncedByReport (reportPath: string) (declaration: EvidenceDeclaration) =
+        match declaration.ObservedRun with
+        | Some run -> run.Source = reportPath
+        | None -> false
+
+    /// Resolve the re-synced receipt from the interpreted effect log: the report SDD actually re-read,
+    /// parsed, and re-hashed. Returns the recomputed receipt (when there is one to record) and any
+    /// diagnostics.
+    ///
+    /// When some obligation carries a receipt sourced from this report, every failure leg records
+    /// **nothing** and blocks — the same #266 fail-closed discipline as `resolveObservedRun`, because a
+    /// sync that degraded to "no change" on an unreadable report would leave a stale receipt looking
+    /// fresh. When NO obligation references the report, there is nothing to sync: a non-blocking advisory,
+    /// and the report's readability is moot (we do not block on a report nothing depends on).
+    let resolveSyncObservedRun (workId: string) (model: CommandModel) (merged: EvidenceArtifact) =
+        let artifactPath = evidencePath workId
+
+        match requestedSyncReport model.Request with
+        | None -> None, []
+        | Some raw ->
+            match syncReportPath model.Request with
+            | None -> None, [ DiagnosticConstructors.testReportPathEscape artifactPath raw ]
+            | Some path ->
+                let holders = merged.Evidence |> List.filter (syncedByReport path)
+
+                if List.isEmpty holders then
+                    None, [ DiagnosticConstructors.syncObservedRunNothingToSync artifactPath path ]
+                else
+                    match snapshot path model with
+                    | None -> None, [ DiagnosticConstructors.testReportNotFound artifactPath path ]
+                    | Some report ->
+                        match TestReport.parse path report.Text with
+                        | Error reason -> None, [ DiagnosticConstructors.testReportUnparseable artifactPath reason ]
+                        | Ok run when run.Failed > 0 ->
+                            // The regenerated run now FAILS, while these obligations claim a pass. Block
+                            // and record nothing — the same precedent as `observedRunFailed`: re-stamping a
+                            // failing receipt would leave one `isObserved` rejects, indistinguishable from
+                            // no receipt, and silently turn the evidence red. The author fixes the suite.
+                            None,
+                            [ DiagnosticConstructors.observedRunFailed
+                                  artifactPath
+                                  path
+                                  run.Failed
+                                  (holders |> List.map _.Id.Value |> List.sort) ]
+                        | Ok run -> Some run, []
+
+    /// Re-stamp the recomputed receipt onto every obligation whose current receipt is sourced from the
+    /// synced report — and only those. Idempotent: syncing an unchanged TRX rewrites the same bytes,
+    /// because every field of the receipt is derived from the report. `run.Source` is the normalized
+    /// report path, the same value `holders` matched on in `resolveSyncObservedRun`.
+    let recordSyncObservedRun (run: ObservedRun option) (artifact: EvidenceArtifact) =
+        match run with
+        | None -> artifact
+        | Some run ->
+            { artifact with
+                Evidence =
+                    artifact.Evidence
+                    |> List.map (fun declaration ->
+                        if syncedByReport run.Source declaration then
+                            { declaration with
+                                ObservedRun = Some run }
+                        else
+                            declaration) }
+
     /// The existence verdict, read back off the interpreted effect log. A path counts as present only
     /// when it was probed *and* the probe returned a snapshot; a path that was never probed is treated
     /// as present, so a planning bug degrades to today's behaviour rather than to a false refusal.
@@ -1172,14 +1269,34 @@ sourceAnalysis: {analysisPath workId}
                         // produce no evidence rather than a partial artifact.
                         | None -> None, mergeDiagnostics, None, None
                         | Some mergedBeforeReceipt ->
-                            // FS.GG.SDD#350 / ADR-0035. Record the receipt for the run SDD read — the one
-                            // step in this pipeline where a fact enters `evidence.yml` without an author
-                            // typing it. `resolveObservedRun` decides FROM the merged artifact (it needs to
-                            // know who is claiming a pass), and `recordObservedRun` stamps it back on.
-                            let observedRun, testReportDiagnostics =
-                                resolveObservedRun workId model mergedBeforeReceipt
+                            // FS.GG.SDD#350 / ADR-0035 + #550. Record the receipt for the run SDD read —
+                            // the one step in this pipeline where a fact enters `evidence.yml` without an
+                            // author typing it. `--from-test-report` STAMPS a run onto typed pass-claiming
+                            // obligations; `--sync-observed-run` RE-STAMPS receipts already sourced from a
+                            // regenerated report. Both write receipts and would fight over the same field,
+                            // so they are mutually exclusive — applying both in one pass is refused.
+                            //
+                            // When only one (or neither) is given this is byte-identical to the pre-#550
+                            // behaviour: `resolveSyncObservedRun`/`recordSyncObservedRun` are inert on a
+                            // `None` request, and their diagnostics are empty.
+                            let merged, testReportDiagnostics =
+                                match
+                                    (requestedTestReport model.Request).IsSome,
+                                    (requestedSyncReport model.Request).IsSome
+                                with
+                                | true, true ->
+                                    mergedBeforeReceipt,
+                                    [ DiagnosticConstructors.evidenceReceiptModeConflict (evidencePath workId) ]
+                                | _ ->
+                                    let observedRun, fromReportDiagnostics =
+                                        resolveObservedRun workId model mergedBeforeReceipt
 
-                            let merged = recordObservedRun observedRun mergedBeforeReceipt
+                                    let withReceipt = recordObservedRun observedRun mergedBeforeReceipt
+
+                                    let syncedRun, syncDiagnostics = resolveSyncObservedRun workId model withReceipt
+
+                                    recordSyncObservedRun syncedRun withReceipt,
+                                    fromReportDiagnostics @ syncDiagnostics
 
                             // `artifact` re-stamps the snapshots to the sources as they are now; it is what
                             // gets written back. Validation must see `merged` — the artifact as recorded on

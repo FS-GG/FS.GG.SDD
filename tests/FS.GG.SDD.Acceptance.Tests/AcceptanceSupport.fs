@@ -110,6 +110,7 @@ module AcceptanceSupport =
           Explain = false
           FromTests = None
           FromTestReport = None
+          SyncObservedRun = None
           SurfaceUpdate = false
           AcceptUpstream = false
           // Deliberate opt-out — see the note in Commands.Tests/TestSupport.fs. The acceptance

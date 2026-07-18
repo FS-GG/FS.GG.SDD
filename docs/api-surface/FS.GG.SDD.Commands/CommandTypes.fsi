@@ -135,6 +135,12 @@ module CommandTypes =
           //
           // Distinct from `FromTests`: that names where the tests LIVE, this names a REPORT OF A RUN.
           FromTestReport: string option
+          // Evidence input (`fsgg-sdd evidence --sync-observed-run <trx>`); ignored by other commands
+          // (FS.GG.SDD#550). Re-stamps obligations already carrying an `observedRun` receipt sourced from
+          // this report, recomputing digest + counts from its current bytes. The maintenance complement to
+          // `--from-test-report`, for a regenerated TRX. `None` ⇒ inert. Mutually exclusive with
+          // `--from-test-report`.
+          SyncObservedRun: string option
           // Surface input (`fsgg-sdd surface --update`); ignored by other commands (feature 086).
           // `true` ⇒ refresh the `docs/api-surface/**` baselines from the authored `.fsi`
           // signatures; `false` (default, or `--check`) ⇒ read-only drift check.

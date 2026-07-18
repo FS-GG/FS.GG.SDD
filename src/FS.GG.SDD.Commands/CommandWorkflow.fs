@@ -103,6 +103,13 @@ module CommandWorkflow =
                         @ (match model.Request.Command with
                            | Evidence -> testReportReadEffects model
                            | _ -> [])
+                        // FS.GG.SDD#550: the `--sync-observed-run` report. `Evidence` only — it is the
+                        // stage that re-stamps the receipt. `Verify` re-reads the receipt's report through
+                        // `citedArtifactReadEffects` (the receipt's `source` is a cited path), so a synced
+                        // report gone missing is caught at the merge boundary without a second read here.
+                        @ (match model.Request.Command with
+                           | Evidence -> syncReportReadEffects model
+                           | _ -> [])
 
                     match candidateReads with
                     | _ :: _ ->

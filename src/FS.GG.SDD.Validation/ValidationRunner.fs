@@ -72,6 +72,7 @@ module ValidationRunner =
           Explain = false
           FromTests = None
           FromTestReport = None
+          SyncObservedRun = None
           SurfaceUpdate = false
           AcceptUpstream = false
           // ADR-0035 stage 3b flipped the CLI default to require an observed run (FS.GG.SDD#497).

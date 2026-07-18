@@ -62,6 +62,7 @@ let printUnknown commandValue =
           Explain = false
           FromTests = None
           FromTestReport = None
+          SyncObservedRun = None
           SurfaceUpdate = false
           AcceptUpstream = false
           // ADR-0035 stage 3b: default on. Inert here (unknownCommand carries no verify/ship),
@@ -186,6 +187,7 @@ let private helpRequest command format =
       Explain = false
       FromTests = None
       FromTestReport = None
+      SyncObservedRun = None
       SurfaceUpdate = false
       AcceptUpstream = false
       // ADR-0035 stage 3b: default on. Inert here (a help request carries no verify/ship),
@@ -398,6 +400,8 @@ let run args =
                       // FS.GG.SDD#350: the run receipt. A separate flag from `--from-tests`,
                       // which names where the tests live rather than a report of a run.
                       FromTestReport = optionValue "--from-test-report" rest
+                      // FS.GG.SDD#550: re-sync receipts already sourced from a regenerated report.
+                      SyncObservedRun = optionValue "--sync-observed-run" rest
                       // Feature 086: `surface --update` refreshes the docs/api-surface baselines;
                       // default (or `--check`) is the read-only drift check.
                       SurfaceUpdate = hasFlag "--update" rest

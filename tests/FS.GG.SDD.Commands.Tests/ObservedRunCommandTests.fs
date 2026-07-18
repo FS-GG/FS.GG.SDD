@@ -644,3 +644,221 @@ module ObservedRunCommandTests =
 
         Assert.NotEmpty unobserved
         Assert.All(unobserved, (fun d -> Assert.DoesNotContain(deferredId, d.RelatedIds)))
+
+    // ---- FS.GG.SDD#550: `evidence --sync-observed-run <trx>` re-stamps stale receipts ----
+    //
+    // The maintenance half of the observed-run receipt. `--from-test-report` STAMPS a receipt onto a
+    // typed pass-claiming obligation. But an authored `evidence.yml` pins each receipt's digest and
+    // counts to a SPECIFIC TRX, and when that TRX is regenerated — a test added late in the cycle — every
+    // receipt goes stale with no tool to reconcile it (the M5 retrospective: a manual `sed` over 16
+    // obligations). `--sync-observed-run` recomputes the digest + counts in place for every obligation
+    // already sourced from the report, and only those.
+
+    /// A work item whose verification obligations carry a real receipt sourced from `reportPath`,
+    /// recording `passed` passing tests. The starting state `--sync-observed-run` maintains.
+    let private receiptedProject passed =
+        let root = evidencedProjectClaimingPass ()
+        TestSupport.writeRelative root reportPath (trxWith passed 0)
+        runWithReport root (Some reportPath) |> ignore
+        root
+
+    let private runWithSync root report =
+        { TestSupport.evidenceRequest root workId title with
+            SyncObservedRun = report }
+        |> TestSupport.runRequest
+
+    let private digestOf text =
+        $"sha256:{(SchemaVersion.sha256Text text).Value}"
+
+    [<Fact>]
+    let ``sync recomputes the digest and counts in place after a TRX is regenerated`` () =
+        // The M5 scenario, exactly: a receipt recorded against a five-test run, then the suite grows a
+        // sixth test and the TRX is regenerated. Every receipt is now stale — and one command reconciles
+        // them, without re-typing a single obligation.
+        let root = receiptedProject 5
+
+        let receiptedIds =
+            (parsedEvidence root).Evidence
+            |> List.filter (fun d -> d.ObservedRun.IsSome)
+            |> List.map _.Id.Value
+
+        Assert.NotEmpty receiptedIds
+
+        // The regenerated report: more tests, still green.
+        TestSupport.writeRelative root reportPath (trxWith 6 0)
+        let report = runWithSync root (Some reportPath)
+        Assert.DoesNotContain(report.Diagnostics, fun d -> d.Severity = Diagnostics.DiagnosticError)
+
+        let byId =
+            parsedEvidence root
+            |> _.Evidence
+            |> List.map (fun d -> d.Id.Value, d)
+            |> Map.ofList
+
+        for id in receiptedIds do
+            match byId[id].ObservedRun with
+            | None -> failwithf "%s lost its receipt across a sync" id
+            | Some run ->
+                Assert.Equal(reportPath, run.Source)
+                Assert.Equal(6, run.Passed)
+                Assert.Equal(0, run.Failed)
+                Assert.Equal(digestOf (trxWith 6 0), run.Digest)
+
+    [<Fact>]
+    let ``sync is idempotent`` () =
+        // Every field is derived from the report, so syncing an unchanged TRX must rewrite the same bytes
+        // — or `evidence` would be non-deterministic and defeat the no-clobber merge.
+        let root = receiptedProject 5
+        TestSupport.writeRelative root reportPath (trxWith 6 0)
+
+        runWithSync root (Some reportPath) |> ignore
+        let first = TestSupport.readRelative root evidencePath
+
+        runWithSync root (Some reportPath) |> ignore
+        Assert.Equal(first, TestSupport.readRelative root evidencePath)
+
+    [<Fact>]
+    let ``no --sync-observed-run is inert - the artifact is byte-identical`` () =
+        // FR-010's discipline, restated for the maintenance flag: a work item that does not ask for a
+        // sync pays exactly nothing, receipts and all.
+        let root = receiptedProject 5
+
+        let before = TestSupport.readRelative root evidencePath
+        runWithSync root None |> ignore
+        Assert.Equal(before, TestSupport.readRelative root evidencePath)
+
+    [<Fact>]
+    let ``sync re-stamps ONLY receipts sourced from the named report`` () =
+        // Syncing one TRX must never rewrite a receipt some other run produced. One obligation is
+        // re-pointed at a different source; syncing `reportPath` updates the rest and leaves it alone.
+        let root = receiptedProject 5
+
+        // A second report with the SAME five-test content, so the re-pointed receipt stays coherent
+        // (same digest), and re-point the FIRST receipt at it.
+        TestSupport.writeRelative root "artifacts/other.trx" (trxWith 5 0)
+
+        TestSupport.readRelative root evidencePath
+        |> replaceFirst $"source: {reportPath}" "source: artifacts/other.trx"
+        |> TestSupport.writeRelative root evidencePath
+
+        TestSupport.writeRelative root reportPath (trxWith 77 0)
+        runWithSync root (Some reportPath) |> ignore
+
+        let receipts = (parsedEvidence root).Evidence |> List.choose _.ObservedRun
+
+        let repointed = receipts |> List.filter (fun r -> r.Source = "artifacts/other.trx")
+        let synced = receipts |> List.filter (fun r -> r.Source = reportPath)
+
+        // The re-pointed receipt kept its original counts; every reportPath receipt moved to 77.
+        Assert.All(repointed, fun r -> Assert.Equal(5, r.Passed))
+        Assert.NotEmpty synced
+        Assert.All(synced, fun r -> Assert.Equal(77, r.Passed))
+
+    [<Fact>]
+    let ``sync of a report no receipt references advises and changes nothing`` () =
+        // Not a defect: the author pointed at a report that discharges none of the obligations. A
+        // non-blocking advisory says so, and nothing is rewritten — including when the report exists and
+        // parses perfectly, because the readability of a report nothing depends on is moot.
+        let root = receiptedProject 5
+        TestSupport.writeRelative root "artifacts/other.trx" (trxWith 3 0)
+
+        let before = TestSupport.readRelative root evidencePath
+        let report = runWithSync root (Some "artifacts/other.trx")
+
+        match
+            report.Diagnostics
+            |> List.tryFind (fun d -> d.Id = "evidence.syncObservedRunNothingToSync")
+        with
+        | None -> failwith "expected the evidence.syncObservedRunNothingToSync advisory"
+        | Some d -> Assert.Equal(Diagnostics.DiagnosticInfo, d.Severity)
+
+        Assert.DoesNotContain(report.Diagnostics, fun d -> d.Severity = Diagnostics.DiagnosticError)
+        Assert.Equal(before, TestSupport.readRelative root evidencePath)
+
+    // ---- A regenerated report that cannot be believed is REFUSED, and the old receipts STAND ----
+    //
+    // Unlike `--from-test-report` (which records nothing onto an obligation that had nothing), a blocked
+    // sync must leave the EXISTING receipts exactly as they were — a half-rewrite is the one outcome
+    // worse than a stale receipt, because it desyncs silently.
+
+    let private assertSyncBlockedLeavingReceipts root diagnosticId report =
+        let before = TestSupport.readRelative root evidencePath
+        let result = runWithSync root report
+        Assert.Contains(result.Diagnostics, fun d -> d.Id = diagnosticId)
+        Assert.Equal(before, TestSupport.readRelative root evidencePath)
+
+    [<Fact>]
+    let ``a regenerated report that now FAILS blocks the sync and leaves the receipts`` () =
+        let root = receiptedProject 5
+        TestSupport.writeRelative root reportPath (trxWith 5 2)
+
+        assertSyncBlockedLeavingReceipts root "evidence.observedRunFailed" (Some reportPath)
+
+    [<Fact>]
+    let ``a regenerated report that no longer parses blocks the sync and leaves the receipts`` () =
+        let root = receiptedProject 5
+        TestSupport.writeRelative root reportPath "this is not a test report"
+
+        assertSyncBlockedLeavingReceipts root "evidence.testReportUnparseable" (Some reportPath)
+
+    [<Fact>]
+    let ``a referenced report gone from disk blocks the sync and leaves the receipts`` () =
+        // The receipts point at `reportPath`; deleting it is exactly the fail-closed case #266 exists for
+        // — a sync that degraded to "no change" would leave a receipt looking fresh over a report that is
+        // gone. Distinct from `nothingToSync`: here an obligation DOES reference the missing report.
+        let root = receiptedProject 5
+        System.IO.File.Delete(System.IO.Path.Combine(root, reportPath))
+
+        assertSyncBlockedLeavingReceipts root "evidence.testReportNotFound" (Some reportPath)
+
+    [<Fact>]
+    let ``a sync report path escaping the repository blocks and leaves the receipts`` () =
+        // Lexical containment on the RAW value, before any read effect is planned (FS.GG.SDD#185/#365).
+        let root = receiptedProject 5
+
+        assertSyncBlockedLeavingReceipts root "evidence.testReportPathEscape" (Some "../../etc/passwd")
+
+    [<Fact>]
+    let ``--from-test-report and --sync-observed-run together are refused`` () =
+        // Both write the observedRun receipt and would fight over the same field. Refused, so neither
+        // runs — rather than silently letting whichever applied second clobber the first.
+        let root = evidencedProjectClaimingPass ()
+        TestSupport.writeRelative root reportPath (trxWith 5 0)
+
+        let result =
+            { TestSupport.evidenceRequest root workId title with
+                FromTestReport = Some reportPath
+                SyncObservedRun = Some reportPath }
+            |> TestSupport.runRequest
+
+        Assert.Contains(result.Diagnostics, fun d -> d.Id = "evidence.receiptModeConflict")
+
+        // Neither mode ran: nothing was recorded.
+        Assert.All(parsedEvidence root |> _.Evidence, fun d -> Assert.True(d.ObservedRun.IsNone))
+
+    /// The in-process tests above build the `CommandRequest` themselves and never touch argument parsing.
+    /// If `--sync-observed-run` were not registered as a valued option, they would all still pass while
+    /// the shipped binary ignored the flag. This is the only test that would catch that.
+    [<Fact; Trait("tier", "slow")>]
+    let ``the real CLI accepts --sync-observed-run and re-stamps the receipt`` () =
+        let root = receiptedProject 5
+        TestSupport.writeRelative root reportPath (trxWith 6 0)
+
+        let exitCode, stdout, stderr =
+            [ "evidence"
+              "--root"
+              root
+              "--work"
+              workId
+              "--sync-observed-run"
+              reportPath
+              "--text" ]
+            |> TestSupport.runCliRaw 30000
+
+        Assert.Equal("", stderr)
+        Assert.Equal(0, exitCode)
+        Assert.Contains("command: evidence", stdout)
+
+        let evidence = TestSupport.readRelative root evidencePath
+        Assert.Contains("passed: 6", evidence)
+        Assert.DoesNotContain("passed: 5", evidence)

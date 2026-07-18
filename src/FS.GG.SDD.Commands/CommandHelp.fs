@@ -93,6 +93,12 @@ module CommandHelp =
                   "--from-test-report"
                   (Some "<path>")
                   "Record an observedRun receipt from a TRX or JUnit report onto obligations already typed kind: verification: SDD parses it and hashes its bytes. It enriches typed obligations only — it does not type or bootstrap a freshly-scaffolded obligation (kind: missing) — and never runs the suite itself."
+              // FS.GG.SDD#550: the maintenance complement to --from-test-report. When a TRX is
+              // regenerated, receipts pinned to it go stale; this re-stamps them in place.
+              flag
+                  "--sync-observed-run"
+                  (Some "<trx>")
+                  "Re-stamp every obligation already carrying an observedRun receipt sourced from this report, recomputing its digest and passed/failed/skipped counts from the report's current bytes. The maintenance complement to --from-test-report for a regenerated TRX; receipts sourced from another report are left untouched. Mutually exclusive with --from-test-report."
               dryRun ]
         | Plan ->
             [ work
