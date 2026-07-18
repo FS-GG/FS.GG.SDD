@@ -657,6 +657,40 @@ module Evidence =
         else
             "unknown-work"
 
+    // FS.GG.SDD#560: an evidence ref whose value fails ITS field's id class but is a well-formed id
+    // of ANOTHER class is MISFILED, not malformed — the prefix already names the field it belongs in.
+    // The retrospective's case: `tasks.yml` lists `sourceIds: [CR-008, PD-010]` together, so the
+    // author copied CR-### checklist-result ids into `clarificationDecisionRefs` and got a generic
+    // "not a well-formed decision id" that named neither the id class nor the field it belonged in.
+    // Classify the raw value against every id class that HAS an evidence ref field; a match to a
+    // DIFFERENT field is the misfile.
+    let private evidenceRefField (value: string) =
+        // Each row collapses its `Result<'a, _>` to a bool so the list is homogeneous — the id classes
+        // are distinct types, but here we only care whether the value parses as that class.
+        [ Identifiers.createTaskId value |> Result.isOk, "task", "taskRefs"
+          Identifiers.createRequirementId value |> Result.isOk, "requirement", "requirementRefs"
+          Identifiers.createAcceptanceScenarioId value |> Result.isOk, "acceptance-scenario", "acceptanceScenarioRefs"
+          Identifiers.createDecisionId value |> Result.isOk, "clarification decision", "clarificationDecisionRefs"
+          Identifiers.createChecklistResultId value |> Result.isOk, "checklist-result", "checklistResultRefs"
+          Identifiers.createPlanDecisionId value |> Result.isOk, "plan-decision", "planDecisionRefs" ]
+        |> List.tryPick (fun (parses, kind, field) -> if parses then Some(kind, field) else None)
+
+    // Emit `misfiledReference` naming the right field when the value is a well-formed id of another
+    // evidence-ref class; otherwise the generic `malformedReference` (a genuine typo, not a misfile,
+    // so the message stays byte-identical for those).
+    let private evidenceRefDiagnostic artifact (expectedKind: string) (expectedField: string) (value: string) =
+        match evidenceRefField value with
+        | Some(actualKind, actualField) when actualField <> expectedField ->
+            Diagnostics.create
+                "misfiledReference"
+                DiagnosticError
+                (Some artifact)
+                None
+                $"Reference '{value}' is a {actualKind} id; put it in `{actualField}`, not `{expectedField}`."
+                $"Move '{value}' to `{actualField}`, or remove the reference."
+                [ value ]
+        | _ -> Diagnostics.malformedReference artifact expectedKind value
+
     let parseEvidenceArtifact (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Evidence
 
@@ -705,13 +739,13 @@ module Evidence =
                                 let refDiagnostics =
                                     [ scalarList [ "taskRefs" ] mapping
                                       |> malformedRefs Identifiers.createTaskId
-                                      |> List.map (Diagnostics.malformedReference artifact "task")
+                                      |> List.map (evidenceRefDiagnostic artifact "task" "taskRefs")
                                       scalarList [ "requirementRefs" ] mapping
                                       |> malformedRefs Identifiers.createRequirementId
-                                      |> List.map (Diagnostics.malformedReference artifact "requirement")
+                                      |> List.map (evidenceRefDiagnostic artifact "requirement" "requirementRefs")
                                       scalarList [ "clarificationDecisionRefs" ] mapping
                                       |> malformedRefs Identifiers.createDecisionId
-                                      |> List.map (Diagnostics.malformedReference artifact "decision")
+                                      |> List.map (evidenceRefDiagnostic artifact "decision" "clarificationDecisionRefs")
                                       citedPathDiagnostics ]
                                     |> List.concat
 

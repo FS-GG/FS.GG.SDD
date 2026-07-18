@@ -44,6 +44,23 @@ obligation carries its `PD-###` **and** the `FR-###` it traces to). You can clas
 obligation honestly from its `evidence.yml` entry alone, with **no join back to `tasks.yml` by
 task title**. (Other ref buckets stay empty on scaffolds; add them by hand if you want.)
 
+Each ref bucket holds **one id class**, keyed by prefix — put an id in the list its prefix names:
+
+| id prefix   | ref field                  |
+|-------------|----------------------------|
+| `T###`      | `taskRefs`                 |
+| `FR-###`    | `requirementRefs`          |
+| `AC-###`    | `acceptanceScenarioRefs`   |
+| `DEC-###`   | `clarificationDecisionRefs`|
+| `CR-###`    | `checklistResultRefs`      |
+| `PD-###`    | `planDecisionRefs`         |
+
+A generated `tasks.yml` lists a task's `sourceIds` together (e.g. `[CR-008, PD-010]`), so it is
+easy to copy a `CR-###` checklist-result id into `clarificationDecisionRefs` by mistake.
+`evidence` names that specifically — `Reference 'CR-008' is a checklist-result id; put it in
+checklistResultRefs, not clarificationDecisionRefs` — rather than reporting a well-formed id as
+malformed. Move the ref to the field its prefix names.
+
 `--from-tests <path>` additionally seeds each **newly scaffolded** obligation with a
 verification-kind source pointing at `<path>` (a declared pointer; its existence is checked at
 `verify`). It is inert without the flag. Neither behavior overwrites an obligation you have

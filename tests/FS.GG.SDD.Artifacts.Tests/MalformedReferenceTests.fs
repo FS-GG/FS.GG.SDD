@@ -106,6 +106,37 @@ evidence:
         | Error diagnostics -> failwith $"Evidence should parse: {diagnostics}"
         | Ok facts -> Assert.DoesNotContain(facts.Diagnostics, fun d -> d.Id = "malformedReference")
 
+    // FS.GG.SDD#560: a value in the wrong ref list that is a WELL-FORMED id of another class is
+    // misfiled, not malformed — the prefix already names the field it belongs in.
+    let private evidenceYamlClarification decisionRefs =
+        (evidenceYaml "[FR-001]").Replace("clarificationDecisionRefs: []", $"clarificationDecisionRefs: {decisionRefs}")
+
+    [<Fact>]
+    let ``a checklist-result id in clarificationDecisionRefs is reported as misfiled, naming the right field`` () =
+        match parseEvidenceArtifact (evidenceSnapshot (evidenceYamlClarification "[CR-008]")) with
+        | Error diagnostics -> failwith $"Evidence should parse: {diagnostics}"
+        | Ok facts ->
+            let d =
+                facts.Diagnostics |> List.find (fun d -> d.RelatedIds |> List.contains "CR-008")
+
+            Assert.Equal("misfiledReference", d.Id)
+            Assert.Contains("checklist-result", d.Message)
+            Assert.Contains("checklistResultRefs", d.Message)
+            Assert.Contains("clarificationDecisionRefs", d.Message)
+            // Not the generic "not a well-formed decision id" — the value IS well-formed.
+            Assert.DoesNotContain("well-formed", d.Message)
+
+    [<Fact>]
+    let ``a genuinely malformed clarification decision ref still yields malformedReference`` () =
+        // DEC1 is not a well-formed id of ANY class, so it is malformed, not misfiled — the generic
+        // message is preserved byte-for-byte for a real typo.
+        match parseEvidenceArtifact (evidenceSnapshot (evidenceYamlClarification "[DEC1]")) with
+        | Error diagnostics -> failwith $"Evidence should parse: {diagnostics}"
+        | Ok facts ->
+            let d = facts.Diagnostics |> List.find (fun d -> d.RelatedIds |> List.contains "DEC1")
+            Assert.Equal("malformedReference", d.Id)
+            Assert.Contains("not a well-formed decision id", d.Message)
+
     // ----- US2: one schema-version policy governs generated artifacts too -----
 
     let private workModelJson schemaVersion =
