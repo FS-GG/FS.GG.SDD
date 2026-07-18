@@ -232,6 +232,24 @@ module internal HandlersEvidence =
 
         let claimants = merged.Evidence |> List.filter dischargedByARun
 
+        // FS.GG.SDD#542: obligations still typed `kind: missing` when a run is handed in. The receipt
+        // enriches typed verification obligations only (`dischargedByARun`), so these get nothing.
+        // Surfaced as a non-blocking advisory once the report has actually been read, so
+        // `evidenceBlocking: N` does not read as "the tool didn't see my tests" when it means "the
+        // obligations aren't typed yet." Only appended on the legs where a run was parsed — an
+        // unreadable/absent/escaping report has its own blocking diagnostic, and the untyped count is
+        // orthogonal noise there.
+        let untypedAdvisory =
+            let untyped =
+                merged.Evidence
+                |> List.filter (fun declaration -> declaration.Kind = EvidenceKind.Missing)
+                |> List.length
+
+            if untyped > 0 then
+                [ DiagnosticConstructors.testReportUntypedObligations artifactPath untyped ]
+            else
+                []
+
         match requestedTestReport model.Request with
         | None -> None, []
         | Some raw ->
@@ -248,15 +266,16 @@ module internal HandlersEvidence =
                         // record nothing — see `observedRunFailed`. With no claimant there is nothing
                         // to contradict, so a failing run is simply not a receipt: silent, not green.
                         if List.isEmpty claimants then
-                            None, []
+                            None, untypedAdvisory
                         else
                             None,
-                            [ DiagnosticConstructors.observedRunFailed
-                                  artifactPath
-                                  path
-                                  run.Failed
-                                  (claimants |> List.map _.Id.Value |> List.sort) ]
-                    | Ok run -> Some run, []
+                            DiagnosticConstructors.observedRunFailed
+                                artifactPath
+                                path
+                                run.Failed
+                                (claimants |> List.map _.Id.Value |> List.sort)
+                            :: untypedAdvisory
+                    | Ok run -> Some run, untypedAdvisory
 
     /// Stamp the receipt onto every obligation the run discharges. Idempotent: re-running
     /// `--from-test-report` over the same report rewrites the same bytes, because every field of the

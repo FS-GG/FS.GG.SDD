@@ -839,6 +839,22 @@ module internal DiagnosticConstructors =
             "Fix the failing tests and re-run `evidence --from-test-report`, or stop claiming a pass. A run that failed does not support an obligation that says it passed."
             ids
 
+    /// FS.GG.SDD#542. A run was handed to `--from-test-report`, but N obligations are still UNTYPED
+    /// (`kind: missing`). The flag stamps a receipt only onto obligations already typed
+    /// `kind: verification` that claim a pass; it does not type or bootstrap the freshly-scaffolded
+    /// obligations, so on the initial scaffold it attaches nothing. Non-blocking (DiagnosticInfo, so
+    /// `ReportAssembly.outcome` ignores it): this is discoverability, not a defect. The
+    /// `evidenceBlocking` count already reflects the untyped obligations; this line stops that count
+    /// from reading as "the tool didn't see my tests" when it means "the obligations aren't typed yet."
+    let testReportUntypedObligations path (untyped: int) =
+        commandDiagnostic
+            "evidence.testReportUntypedObligations"
+            DiagnosticSeverity.DiagnosticInfo
+            (Some path)
+            $"{untyped} obligation(s) are untyped (kind: missing); --from-test-report enriches already-typed verification obligations and does not bootstrap the scaffold, so it attached no receipt to them."
+            "Type each obligation's kind and result (e.g. kind: verification with a claimed pass) before rerunning --from-test-report, or author the observedRun receipts by hand."
+            [ string untyped ]
+
     /// A receipt that contradicts itself. `TestReport.parse` DERIVES `outcome` from the counts, so it
     /// cannot produce one of these — this is reserved for a receipt somebody hand-wrote into
     /// `evidence.yml`, which is exactly the move the receipt exists to stop being worth making.
