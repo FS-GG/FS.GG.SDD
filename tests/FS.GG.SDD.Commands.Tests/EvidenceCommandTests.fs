@@ -734,6 +734,48 @@ evidence:
         Assert.Contains("    laterLifecycleVisibility: verify", evidence)
 
     [<Fact>]
+    let ``evidence deferral diagnostic names the top-level shape when the four fields are nested`` () =
+        // FS-GG/FS.GG.SDD#574 (RM4 retrospective). The four required fields belong FLAT on the
+        // obligation, peers of `result`/`synthetic`. Authored under a reasonable-guess `deferral:`
+        // key they are nested, the codec drops what it cannot contain, the top-level scalars read
+        // `None`, and the gate blocks — correctly, but the old message named only the fields
+        // ("missing rationale, owner, scope, …"), which is unactionable when they are present-but-
+        // nested. This is the issue's falsifiable check: nest the four fields, run evidence, and the
+        // diagnostic must name that they belong TOP-LEVEL, not nested.
+        let root = initializedAnalyzedProject ()
+
+        let nested =
+            [ "    deferral:"
+              "      rationale: no GPU on the CI runner"
+              "      owner: platform"
+              "      scope: the headless render check"
+              "      laterLifecycleVisibility: verify" ]
+
+        TestSupport.runEvidence root workId title |> ignore
+
+        TestSupport.readRelative root evidencePath
+        |> replaceFirst "    kind: verification\n" "    kind: deferral\n"
+        |> replaceFirst "    result: pass\n" "    result: deferred\n"
+        |> replaceFirst
+            "    synthetic: false\n"
+            ("    synthetic: false\n"
+             + (nested |> List.map (sprintf "%s\n") |> String.concat ""))
+        |> TestSupport.writeRelative root evidencePath
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+        let diagnostic =
+            report.Diagnostics
+            |> List.find (fun d -> d.Id = "evidence.missingDeferralRationale")
+
+        // The shape, not just the field names — the actionable fact the author was missing.
+        Assert.Contains("top-level", diagnostic.Message)
+        Assert.Contains("top-level", diagnostic.Correction)
+        Assert.Contains("nested", diagnostic.Correction)
+
+    [<Fact>]
     let ``evidence normalizes an authored bare-null declaration to the slim shape, then settles`` () =
         // FR-005 + FR-007 + research.md R5: an evidence.yml written by an older CLI (explicit
         // `null` lines) parses, is rewritten once in the slim form, and is byte-stable thereafter.

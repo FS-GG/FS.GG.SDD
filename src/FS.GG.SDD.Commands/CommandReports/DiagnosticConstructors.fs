@@ -743,12 +743,18 @@ module internal DiagnosticConstructors =
             "Add syntheticDisclosure.standsInFor and syntheticDisclosure.reason to every synthetic declaration."
             ids
 
+    // FS-GG/FS.GG.SDD#574: the four required fields belong FLAT on the obligation, peers of `result`
+    // and `synthetic`. Authored under a reasonable-guess `deferral:` (or any) key they are nested, the
+    // codec drops what it cannot contain, and the top-level scalars read `None` — so the gate fires with
+    // the fields "missing". Naming only the fields was true but unactionable (they were present, just
+    // nested); the diagnostic now names the SHAPE, which is correct whether the fields are nested or
+    // genuinely absent.
     let missingDeferralRationale path ids =
         errorDiagnostic
             "evidence.missingDeferralRationale"
             (Some path)
-            "Accepted deferral evidence is missing rationale, owner, scope, or later lifecycle visibility."
-            "Add rationale, owner, scope, and laterLifecycleVisibility to every deferral declaration."
+            "Accepted deferral evidence is missing rationale, owner, scope, or later lifecycle visibility as top-level obligation fields."
+            "Add rationale, owner, scope, and laterLifecycleVisibility as top-level fields on the deferral obligation — not nested under a `deferral:` (or any other) key."
             ids
 
     // FS-GG/FS.GG.SDD#306: a visual-inspection obligation is discharged by a rendered artifact plus an
