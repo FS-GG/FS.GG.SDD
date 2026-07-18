@@ -166,7 +166,7 @@ module internal SpecifyAuthoring =
     let seedCapability (userValue: string) =
         userValue |> trimTrailingPeriod |> neutralizeIds |> decapitalizeFirst
 
-    let specificationTemplate request workId intent =
+    let specificationTemplate request workId changeTier intent =
         let title = requestTitle request workId
 
         let userValue =
@@ -264,7 +264,7 @@ schemaVersion: 1
 workId: {workId}
 title: {yamlFrontMatterScalar title}
 stage: specify
-changeTier: tier1
+changeTier: {changeTier}
 status: specified
 publicOrToolFacingImpact: true
 ---
@@ -355,7 +355,8 @@ Prose status: specified
             if not (List.isEmpty missingFacts) then
                 [ missingSpecificationIntent path missingFacts ], None, None
             else
-                let text = specificationTemplate request workId intent
+                let text =
+                    specificationTemplate request workId (charteredChangeTier workId model) intent
 
                 match parseSpecificationForCommand path text with
                 | Error diagnostics -> diagnostics, Some text, None

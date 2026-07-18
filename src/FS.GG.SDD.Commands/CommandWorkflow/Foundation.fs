@@ -919,6 +919,20 @@ nuget-cache/
             else
                 None)
 
+    /// FS.GG.SDD#573. The `changeTier` established at charter, for a stage that re-scaffolds a
+    /// front matter whose tier it does not own (`specify`/`plan`) to CARRY rather than reset it.
+    /// `changeTier` is a free string the parser does not validate (authoring-contracts §5), so
+    /// whatever the charter authored is honored verbatim. Falls back to the `tier1` template
+    /// default only when the charter is absent, unparseable, or leaves the tier blank — preserving
+    /// prior behavior on the no-charter edge.
+    let charteredChangeTier workId model =
+        match snapshot (charterPath workId) model with
+        | Some charter ->
+            match WorkItemMetadata.parseWorkItemMetadata charter with
+            | Ok metadata when not (String.IsNullOrWhiteSpace metadata.ChangeTier) -> metadata.ChangeTier
+            | _ -> "tier1"
+        | None -> "tier1"
+
     /// Shared "load snapshot → parse view → Error⇒malformed / Ok+WorkId mismatch⇒identityMismatch /
     /// Ok⇒none" skeleton behind the per-stage existing-view identity diagnostics
     /// (verify/ship/analysis). Callers supply the artifact-specific parser, WorkId accessor, and the
