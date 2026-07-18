@@ -853,6 +853,11 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "dependencySurface",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "diagnostics",
           "kind": "jsonField",
           "stability": "additiveOptional"

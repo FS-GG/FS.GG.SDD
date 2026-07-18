@@ -130,8 +130,8 @@ module internal ReportAssembly =
           // 2.2.0 adds the top-level `coherent` fact (FS-GG/FS.GG.SDD#183). 2.3.0 adds the top-level
           // `toolVersion` fact (FS-GG/FS.GG.SDD#305). 2.4.0 adds `scaffold.toolManifestOutcome`
           // (FS-GG/FS.GG.SDD#315). 2.5.0 adds `doctor.requiredMinimumCliVersionSource`
-          // (FS-GG/FS.GG.SDD#313).
-          ReportVersion = "2.5.0"
+          // (FS-GG/FS.GG.SDD#313). 2.6.0 adds `dependencySurface` (feature 105, FS.GG.SDD#569).
+          ReportVersion = "2.6.0"
           // The version of the CLI that produced this report, so a stale toolchain is legible in the
           // artifact rather than only in the shell that ran it (FS-GG/FS.GG.SDD#305). Same source as
           // `fsgg-sdd --version`, injected into the request at the CLI edge.

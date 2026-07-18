@@ -753,6 +753,7 @@ module ReleaseContract =
                       "context"
                       "context.projectRoot"
                       "context.workId"
+                      "dependencySurface"
                       "diagnostics"
                       "doctor"
                       "evidence"
