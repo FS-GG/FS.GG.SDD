@@ -59,9 +59,12 @@ module Rendering =
         forceColorEnv () || List.contains "--force-color" args
 
     // Sense the terminal for the stream a report will actually be written to. `outputRedirected`
-    // is that sink's redirection state — `Console.IsOutputRedirected` for stdout-routed reports
-    // and `Console.IsErrorRedirected` for the stderr-routed Blocked path — so `--rich 2>err.log`
-    // degrades to zero-ANSI plain text instead of leaking escapes into the redirected file (#68).
+    // is that sink's redirection state — `Console.IsOutputRedirected` for the CommandReport, which
+    // always routes to stdout including a Blocked outcome (FS.GG.SDD#535), and
+    // `Console.IsErrorRedirected` for the CLI-edge diagnostic paths that keep stdout clean:
+    // malformed invocation (`printArgvErrors`) and tool defects (`printUnhandled`). Sensing the
+    // right sink means `--rich 2>err.log` degrades to zero-ANSI plain text instead of leaking
+    // escapes into the redirected file (#68).
     // `forceColor` (FORCE_COLOR / --force-color) re-enables rich ANSI over a redirected sink or
     // `TERM=dumb`, but never over `NO_COLOR`: precedence is NO_COLOR > force-color > sensing (#172).
     let detectCapabilities (forceColor: bool) (outputRedirected: bool) : TerminalCapabilities =

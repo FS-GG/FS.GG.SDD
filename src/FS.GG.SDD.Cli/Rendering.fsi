@@ -48,8 +48,10 @@ module Rendering =
 
     /// Detect capabilities from the process environment for the stream a report will be
     /// written to (impure edge step). `outputRedirected` is that sink's redirection state
-    /// (`Console.IsOutputRedirected` for stdout-routed reports, `Console.IsErrorRedirected`
-    /// for the stderr-routed Blocked path) so Rich degrades to plain text on redirect.
+    /// (`Console.IsOutputRedirected` for the CommandReport, which always routes to stdout
+    /// including a Blocked outcome per FS.GG.SDD#535, and `Console.IsErrorRedirected` for the
+    /// stderr-routed CLI-edge diagnostics — malformed invocation and tool defects) so Rich
+    /// degrades to plain text on redirect.
     /// `forceColor` re-enables rich ANSI over a redirected sink or `TERM=dumb`, but never
     /// over `NO_COLOR`: precedence is `NO_COLOR` > force-color > capability sensing (#172).
     val detectCapabilities: forceColor: bool -> outputRedirected: bool -> TerminalCapabilities

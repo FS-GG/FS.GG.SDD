@@ -406,28 +406,21 @@ let run args =
 
                 let report = driveToReport request
 
-                // Resolve the effective rendering against the stream this report actually routes
-                // to — Blocked reports go to stderr, everything else to stdout — so Rich degrades
-                // to plain text when *that* sink is redirected or color-disabled (#68). Stream
-                // routing and exit code are unchanged across formats. Lint / `<stage> --explain`
-                // reports (feature 076) are a successful read-only result even when they report
-                // defects, so they always route to stdout — the `--json` contract must not land on
-                // stderr just because the artifact has defects.
-                let routesToStderr = report.Outcome = Blocked && Option.isNone report.Lint
-
-                let sinkRedirected =
-                    if routesToStderr then
-                        Console.IsErrorRedirected
-                    else
-                        Console.IsOutputRedirected
-
+                // FS.GG.SDD#535: the CommandReport is the automation contract and always routes to
+                // stdout — a Blocked outcome included. A blocked stage's structured verdict (which
+                // obligations blocked, and why) must be scriptable — `verify | jq` — rather than
+                // suppressed onto stderr, where the nonzero exit made a naive read see an empty
+                // stdout. The exit code, not the stream, signals blocked (unchanged). Malformed
+                // invocation (`printArgvErrors`) and tool defects (`printUnhandled`) keep stdout
+                // clean through their own CLI-edge helpers, so stdout carries stage outcomes only:
+                // an empty stdout with a nonzero exit means the report never ran, and stderr says
+                // why. Rich still degrades to plain text when stdout is redirected or color-disabled
+                // (#68), and all three projections route identically (stream routing unchanged
+                // across formats).
                 let rendered =
-                    (resolve format (detectCapabilities forceColor sinkRedirected) report).Text
+                    (resolve format (detectCapabilities forceColor Console.IsOutputRedirected) report).Text
 
-                if routesToStderr then
-                    Console.Error.WriteLine(rendered)
-                else
-                    Console.Out.WriteLine(rendered)
+                Console.Out.WriteLine(rendered)
 
                 // Feature 076: any report carrying a lint summary — `fsgg-sdd lint` OR
                 // `<stage> --explain` — uses the bespoke 0/1/2 exit polarity (clean / defects /

@@ -144,12 +144,12 @@ module DegradationTests =
         | Stdout
         | Stderr
 
-    /// The routing rule that backs Program.fs: Blocked -> stderr, else stdout.
-    let streamFor (report: CommandReport) =
-        if report.Outcome = CommandOutcome.Blocked then
-            Stderr
-        else
-            Stdout
+    /// The routing rule that backs Program.fs (FS.GG.SDD#535): the CommandReport is the
+    /// automation contract and always routes to stdout — a Blocked outcome included, so a
+    /// blocked stage's verdict is scriptable (`verify | jq`). The exit code, not the stream,
+    /// signals blocked. (Malformed invocation and tool defects keep stdout clean via separate
+    /// CLI-edge helpers; those are not CommandReport-path outcomes.)
+    let streamFor (_report: CommandReport) = Stdout
 
     let blocked =
         { sample with
@@ -169,8 +169,10 @@ module DegradationTests =
             Assert.Equal(viaText, viaRich)
 
     [<Fact>]
-    let ``T016 blocked routes to stderr and others to stdout`` () =
-        Assert.Equal(Stderr, streamFor blocked)
+    let ``T016 blocked and others both route to stdout`` () =
+        // FS.GG.SDD#535: the CommandReport (blocked or succeeding) always routes to stdout so a
+        // blocked stage's structured verdict is scriptable; the exit code signals blocked.
+        Assert.Equal(Stdout, streamFor blocked)
         Assert.Equal(Stdout, streamFor succeeding)
 
     [<Fact>]
