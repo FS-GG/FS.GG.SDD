@@ -943,6 +943,45 @@ module internal DiagnosticConstructors =
             "Tag a plan.md '## Plan Decisions' line with each id so fsgg-sdd tasks derives a disposing task, for example '- PD-005 [AC-012] [DEC-003] complete: ...'; an orphan AC-### may instead be referenced from a spec.md requirement. Editing tasks.yml has no effect, because tasks regenerates it."
             ids
 
+    // Feature 105, Phase 3 (ADR-0004 D3). The three plan-time framework-API reference verdicts.
+    // Resolved against the pinned package's *committed captured* surface (feature 105 Phase 2), so
+    // both symmetric failure modes of the RM2 incident are caught at plan time.
+    let private frameworkRefToken packageId version symbol = $"{packageId}@{version}#{symbol}"
+
+    // A `framework:` USE reference whose symbol is ABSENT from the pinned package's real surface —
+    // genuinely dangling. Blocks (DiagnosticError): the work is blocked on a framework change, and
+    // that should surface at plan time, not mid-implementation.
+    let frameworkApiDangling path packageId version symbol =
+        errorDiagnostic
+            "frameworkApiDangling"
+            (Some path)
+            $"Plan cites framework API `{packageId}@{version}#{symbol}`, but `{symbol}` has no matching member in the pinned package's captured surface — the reference is dangling."
+            $"Treat this as blocked on a framework change to `{packageId}`, or correct the reference. If `{packageId}` was recently updated, refresh its capture with `fsgg-sdd dependency-surface --update`."
+            [ frameworkRefToken packageId version symbol ]
+
+    // A `blocked-on-framework:` deferral asserting the API is ABSENT, contradicted by the real
+    // surface (the symbol is present). Blocks (DiagnosticError): this is the RM2 incident — work
+    // mis-scoped as blocked when the API exists. The deferral's premise is false.
+    let frameworkApiDeferralContradicted path packageId version symbol =
+        errorDiagnostic
+            "frameworkApiDeferralContradicted"
+            (Some path)
+            $"Plan defers work as blocked on absent framework API `{packageId}@{version}#{symbol}`, but `{symbol}` IS present in the pinned package's captured surface — the deferral's premise is contradicted."
+            $"The API exists at the pinned version; wire the work against it rather than deferring. If you meant a different version, pin it explicitly as `{packageId}@<version>#{symbol}`."
+            [ frameworkRefToken packageId version symbol ]
+
+    // A framework reference that could not be resolved because no captured surface was available for
+    // the pinned package (no capture committed, or the version could not be pinned). Advisory
+    // (DiagnosticInfo, exit 0): "could not look" is never a negative verdict (ADR-0002 / #266).
+    let frameworkApiSurfaceUnavailable path packageId version symbol =
+        commandDiagnostic
+            "frameworkApiSurfaceUnavailable"
+            DiagnosticSeverity.DiagnosticInfo
+            (Some path)
+            $"Framework API reference `{packageId}@{version}#{symbol}` was not resolved: no captured surface is available for `{packageId}@{version}`, so it was neither confirmed nor refuted."
+            $"Commit a capture with `fsgg-sdd dependency-surface --update --param packageId={packageId} --param version={version}` so plan-time resolution can confirm the reference."
+            [ frameworkRefToken packageId version symbol ]
+
     let unsafeOverwrite (path: string) =
         errorForPath
             "unsafeOverwrite"

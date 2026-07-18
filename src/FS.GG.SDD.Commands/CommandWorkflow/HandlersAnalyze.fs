@@ -25,6 +25,41 @@ open FS.GG.SDD.Commands.Internal.HandlersEarly
 module internal HandlersAnalyze =
     module DiagnosticsModule = FS.GG.SDD.Artifacts.Diagnostics
 
+    // Feature 105, Phase 3 (ADR-0004 D2/D3). The second-wave reads the framework-reference check
+    // needs: the committed capture for each `framework:` reference the plan cites, keyed by the
+    // resolved `<PackageId>@<version>` (explicit `@version`, else the CPM pin read in the first
+    // wave). Mirrors `citedArtifactReadEffects` — the paths only become known once `plan.md` has
+    // been read, so they join the existing second wave. A missing capture reads to `Snapshot = None`,
+    // which the oracle treats as "unavailable" (advisory), so no probe is needed.
+    let frameworkCaptureReadEffects workId (model: CommandModel) : CommandEffect list =
+        match snapshot (planPath workId) model with
+        | None -> []
+        | Some planSnapshot ->
+            match parsePlanFacts planSnapshot with
+            | Error _ -> []
+            | Ok planFacts ->
+                // Reads already planned drop out, so once the captures are in this returns `[]` and
+                // the second-wave loop proceeds to `computeAnalyzePlan` (mirrors
+                // `citedArtifactReadEffects`). Without this the candidate list never empties.
+                let alreadyPlanned = plannedReadPaths model |> Set.ofList
+
+                let pinTexts =
+                    [ "Directory.Packages.local.props"; "Directory.Packages.props" ]
+                    |> List.choose (fun path -> snapshot path model |> Option.map (fun snap -> snap.Text))
+
+                planFacts.FrameworkApiReferences
+                |> List.choose (fun reference ->
+                    resolveFrameworkVersion reference pinTexts
+                    |> Option.map (fun version ->
+                        DependencySurface.capturePath
+                            DependencySurface.defaultBaselineRoot
+                            reference.PackageId
+                            version))
+                |> List.map normalizeRelativePath
+                |> List.filter (fun path -> not (Set.contains path alreadyPlanned))
+                |> List.distinct
+                |> List.map ReadFile
+
     let computeAnalyzePlan model =
         let ((specification, clarification, checklist, plan, tasks, analysisSummary),
              diagnostics,
@@ -71,6 +106,40 @@ module internal HandlersAnalyze =
                 let analysisViewDiagnostics =
                     existingAnalysisDiagnostic workId model |> Option.toList
 
+                // Feature 105, Phase 3 (ADR-0004 D3). Resolve each plan `framework:` reference against
+                // the pinned package's COMMITTED captured surface (feature 105 Phase 2). The oracle is
+                // bound here at the edge — it reads only the committed capture (already interpreted in
+                // the second read wave) and the CPM pin — while the verdict rule stays pure. Fail-open:
+                // no capture ⇒ advisory, never a false block (ADR-0002 / #266).
+                let frameworkReferenceDiagnostics =
+                    match planFacts with
+                    | Some planFacts ->
+                        let pinTexts =
+                            [ "Directory.Packages.local.props"; "Directory.Packages.props" ]
+                            |> List.choose (fun path -> snapshot path model |> Option.map (fun snap -> snap.Text))
+
+                        let resolve (reference: FrameworkApiReference) =
+                            let resolvedVersion = resolveFrameworkVersion reference pinTexts
+
+                            let symbols =
+                                resolvedVersion
+                                |> Option.bind (fun version ->
+                                    snapshot
+                                        (DependencySurface.capturePath
+                                            DependencySurface.defaultBaselineRoot
+                                            reference.PackageId
+                                            version)
+                                        model)
+                                |> Option.bind (fun snap ->
+                                    match DependencySurface.tryParse snap.Text with
+                                    | Ok capture -> Some(DependencySurface.symbolSet capture)
+                                    | Error _ -> None)
+
+                            (resolvedVersion |> Option.defaultValue "unresolved"), symbols
+
+                        ViewGeneration.frameworkReferenceDiagnostics resolve (planPath workId) planFacts
+                    | None -> []
+
                 // FS.GG.SDD#351. `analyze` is the right and only place for this: it is the last gate
                 // before implementation, it already holds every authored artifact, and one
                 // `DiagnosticError` here means no `analysis.json` is written — so `evidence` refuses
@@ -95,6 +164,7 @@ module internal HandlersAnalyze =
                     @ planDiagnostics
                     @ taskDiagnostics
                     @ dispositionDiagnostics
+                    @ frameworkReferenceDiagnostics
                     @ analysisViewDiagnostics
                     |> DiagnosticsModule.sort
 
