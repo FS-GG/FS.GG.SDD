@@ -31,7 +31,7 @@
       "kind": "sddConfig",
       "digest": {
         "algorithm": "sha256",
-        "value": "05deb1b6ae6632aed6ad2bcaaf70e3dee66889e64a1e076cf633f570802720de"
+        "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -41,7 +41,7 @@
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "c444ea0a75106ac3ec9583f5e1b47d0a99e280511f5deb94ff29ca197c9f931a"
+        "value": "a9c50427c5e096246c9053664ad997df34c6a78f4c3cada2a2844fc00a7262d9"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
