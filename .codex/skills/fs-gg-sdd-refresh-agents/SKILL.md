@@ -10,6 +10,15 @@ to currency and emit no next-stage action. Run them whenever authored sources
 change, because in SDD **presence is not currency**: a generated view on disk that
 has not been re-derived from its current sources is stale.
 
+Both are **per-work-item**: each takes a **required** `--work <id>` and operates on
+that one work item's generated views. "Cross-cutting" here means *not a lifecycle
+stage* — they emit no next-stage action and can run at any point — **not** "operates
+across every work item at once". There is no "refresh all" form: an argless
+`fsgg-sdd refresh` does **not** refresh every work item, it blocks with
+`missingWorkId` (`Command 'refresh' requires --work.`). Pass `--work <id>`; to bring
+several work items to currency, invoke it once per id. The same is true of
+`fsgg-sdd agents`.
+
 ## `fsgg-sdd refresh --work <id>`
 
 Regenerates the SDD-owned generated views to currency:
