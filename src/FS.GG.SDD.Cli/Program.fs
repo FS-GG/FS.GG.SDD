@@ -372,9 +372,9 @@ let run args =
                       // and none stays `None`. The labels join with `\n` — the exact shape the intent
                       // parser accepts from a single newline-separated value.
                       InputText =
-                          match collectOptions "--input" rest with
-                          | [] -> None
-                          | values -> Some(String.concat "\n" values)
+                        match collectOptions "--input" rest with
+                        | [] -> None
+                        | values -> Some(String.concat "\n" values)
                       OutputFormat = format
                       DryRun = hasFlag "--dry-run" rest
                       GeneratorVersion = SchemaVersionModule.currentGeneratorVersion ()

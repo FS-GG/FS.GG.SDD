@@ -5,6 +5,10 @@ open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
 open Xunit
 
+// Joins ProcessGlobalEnv (FS.GG.SDD#538): the `--input` CLI-boundary regression below spawns a
+// PATH-resolved process (`runCliRaw`), so it must not run while a sibling mutates process-global
+// PATH (feature 067 / FR-001).
+[<Collection("ProcessGlobalEnv")>]
 module SpecifyCommandTests =
     let workId = "005-specify-command"
     let title = "Specify Command"
