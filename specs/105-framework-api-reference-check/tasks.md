@@ -46,9 +46,18 @@ Touch-set declared on #569, confirmed DISJOINT from every live claim.
 
 ## Phase 2: `dependency-surface` capture verb + drift-guard
 
-- [ ] T007 Capture artifact model: schema v1 record (`schemaVersion`, `packageId`,
+Split into two reviewable PRs: **2a** the capture artifact model + surface-read
+extraction (T007 + the pure surface-read that T008's edge calls), landed with no
+verb yet — same "foundation ahead of its consumer" shape as Phase 1's grammar;
+**2b** the `dependency-surface` verb, CLI, projections, drift-guard, and CI (T008–T012).
+
+- [X] T007 Capture artifact model: schema v1 record (`schemaVersion`, `packageId`,
   `version`, `capturedFrom`, `sha256`, `symbols[]`) + serialize/parse in `Artifacts`
-  — FR-004
+  (`DependencySurface.fs(i)`), content-addressed by a canonical symbol digest, plus the
+  reflection-tolerant `symbolsFromAssembly` surface-read extraction the verb's edge calls
+  (kept in `Artifacts`, single-sourced and unit-tested against a loaded assembly). Public
+  surface additive; `PublicSurface.baseline` + `docs/api-surface` mirror regenerated;
+  `surface --check` coherent — FR-004 (PR 2a)
 - [ ] T008 `dependency-surface` handler: `--update` plans `RunProcess "dotnet restore"`
   + a surface read of the restored package (reflection over the ref assembly, per
   ADR-0004), then `WriteFile` the capture only on content change; `--check` (default)
