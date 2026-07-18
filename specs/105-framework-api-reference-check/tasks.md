@@ -58,19 +58,28 @@ verb yet — same "foundation ahead of its consumer" shape as Phase 1's grammar;
   (kept in `Artifacts`, single-sourced and unit-tested against a loaded assembly). Public
   surface additive; `PublicSurface.baseline` + `docs/api-surface` mirror regenerated;
   `surface --check` coherent — FR-004 (PR 2a)
-- [ ] T008 `dependency-surface` handler: `--update` plans `RunProcess "dotnet restore"`
-  + a surface read of the restored package (reflection over the ref assembly, per
-  ADR-0004), then `WriteFile` the capture only on content change; `--check` (default)
-  re-reads + diffs, blocking on drift (`CommandWorkflow`) — FR-004, FR-005, FR-006
-- [ ] T009 [P] CLI surface + report block for `dependency-surface` (`FS.GG.SDD.Cli`),
-  json/text/rich projections — FR-004, FR-005
-- [ ] T010 CI drift-guard job running `dependency-surface --check` over committed
-  captures; fail on drift — FR-005
-- [ ] T011 Tests: `--update` writes a provenance-stamped capture; `--check` on a
-  fresh capture exits 0 writing nothing; on a stale capture exits 1 naming the drift
-  — SC-004
-- [ ] T012 [P] Value-agnostic guard: assert no package id / feed / symbol literal in
-  generic SDD source (grep-clean test) — FR-009, SC-005
+- [X] T008 `dependency-surface` handler (`HandlersDependencySurface.fs`): a new
+  `ReadPackageSurface` effect reads the package's real surface at the edge by loading its
+  restored assembly from the global packages cache and reflecting it (settling the ADR-0004
+  open decision toward reflection). `--update` `WriteFile`s a canonical capture for every
+  reconciled target (drifted/new); `--check` (default) re-reads + diffs the committed digest
+  against the real surface, blocking on drift, advising (never blocking) when the surface is
+  unreadable. Restore is the workspace's own (a consumer references the package); the verb reads
+  what restore left behind — recorded here as the settled v1 mechanism (a verb-owned
+  `dotnet restore` is a follow-up) — FR-004, FR-005, FR-006
+- [X] T009 [P] CLI surface + report block for `dependency-surface` (`FS.GG.SDD.Cli`
+  `Options`/help; `CommandTypes` DU + summary; json/text/rich projections; `dependencySurface.*`
+  diagnostics incl. a `rootEscape` containment guard) — FR-004, FR-005
+- [X] T010 CI drift-guard step running `dependency-surface --check` in `gate.yml` (inert in
+  FS.GG.SDD itself, which commits no captures; fires the moment one is committed and a consumer
+  inherits it) — FR-005
+- [X] T011 Tests (`DependencySurfaceCommandTests`, real edge over the restored `Spectre.Console`):
+  `--update` writes a content-addressed capture; `--check` on a fresh capture matches (exit 0); a
+  stale committed digest drifts (exit 1, `dependencySurface.drift`); `--update` reconciles it; an
+  uncached package is advisory (exit 0); an escaping `baselineRoot` blocks with no write. Plus
+  projection parity (`DependencySurfaceProjectionTests`) — SC-004
+- [X] T012 [P] Value-agnostic guard (`DependencySurfaceGuardTests`): no package id / feed / symbol
+  literal in the dependency-surface source, with a planted-violation proof — FR-009, SC-005
 
 ## Phase 3: `analyze` check
 

@@ -162,6 +162,7 @@ module ValidationRunner =
         | Upgrade -> 0
         | Lint -> 0
         | Surface -> 0
+        | DependencySurface -> 0
         | Help -> 0
 
     /// FS.GG.SDD#351. Author the fixture's plan the way a human would: keep the id, the refs, and the
@@ -637,6 +638,7 @@ module ValidationRunner =
             | Upgrade -> "upgrade"
             | Lint -> "lint"
             | Surface -> "surface"
+            | DependencySurface -> "dependency-surface"
             | Help -> "help"
 
         // `scaffold` (and, feature 053, `doctor`/`upgrade`) are deliberately excluded from
@@ -667,7 +669,9 @@ module ValidationRunner =
         // an `<artifact>` argument and is covered by its own read-only semantic suite (feature 076).
         // `surface` (feature 086) is likewise excluded — a cross-cutting API-surface baseline verb
         // covered by its own semantic suite (its enumerate/read/write over a workspace tree is not a
-        // determinism-matrix stage).
+        // determinism-matrix stage). `dependency-surface` (feature 105) is excluded for the same
+        // reason and more so — it reflects over a real *restored* package, so it is environment-
+        // sensed, not byte-deterministic; its own semantic suite covers it.
         |> List.map token
 
     /// Map a produced readiness file to its catalogued generated-view name, or `None`

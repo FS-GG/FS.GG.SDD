@@ -1325,6 +1325,7 @@ module internal DiagnosticConstructors =
         | ReadFile _
         | EnumerateDirectory _
         | RunProcess _
+        | ReadPackageSurface _
         | SetExecutable _
         | Confirm _ -> None
 

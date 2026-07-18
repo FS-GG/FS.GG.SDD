@@ -163,6 +163,7 @@ module internal ReportAssembly =
           Upgrade = model.Upgrade
           Lint = model.Lint
           Surface = model.Surface
+          DependencySurface = model.DependencySurface
           GeneratedViews = model.GeneratedViews |> List.sortBy (fun view -> view.Path)
           Diagnostics = diagnostics
           GovernanceCompatibility = sortGovernance governanceCompatibility
@@ -216,6 +217,7 @@ module internal ReportAssembly =
               Upgrade = None
               Lint = None
               Surface = None
+              DependencySurface = None
               GeneratedViews = []
               Report = None }
 

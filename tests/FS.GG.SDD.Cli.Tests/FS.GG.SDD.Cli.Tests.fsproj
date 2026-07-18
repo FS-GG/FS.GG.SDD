@@ -13,6 +13,7 @@
     <Compile Include="ScaffoldParityTests.fs" />
     <Compile Include="RemediationProjectionTests.fs" />
     <Compile Include="SurfaceProjectionTests.fs" />
+    <Compile Include="DependencySurfaceProjectionTests.fs" />
     <Compile Include="DegradationTests.fs" />
     <Compile Include="FormatSelectionTests.fs" />
     <Compile Include="ForceColorTests.fs" />

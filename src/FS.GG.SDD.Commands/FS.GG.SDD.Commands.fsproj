@@ -46,6 +46,7 @@
     <Compile Include="CommandWorkflow/HandlersUpgrade.fs" />
     <Compile Include="CommandWorkflow/HandlersLint.fs" />
     <Compile Include="CommandWorkflow/HandlersSurface.fs" />
+    <Compile Include="CommandWorkflow/HandlersDependencySurface.fs" />
     <Compile Include="CommandWorkflow.fsi" />
     <Compile Include="CommandWorkflow.fs" />
     <Compile Include="CommandEffects.fsi" />

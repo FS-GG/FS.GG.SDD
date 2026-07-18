@@ -688,6 +688,15 @@ nuget-cache/
 
     let surfaceSourceRoot request = surfaceParam "sourceRoot" "src" request
 
+    // Feature 105, Phase 2: `dependency-surface` roots/targets. `baselineRoot` is where captures are
+    // committed; `packageId`/`version` name an explicit `--update` target (both empty ⇒ operate over
+    // the committed set only). Generic SDD embeds no package literal — the default is a directory.
+    let dependencySurfaceBaselineRoot request =
+        surfaceParam "baselineRoot" "docs/dependency-surface" request
+
+    let dependencySurfacePackageId request = surfaceParam "packageId" "" request
+    let dependencySurfaceVersion request = surfaceParam "version" "" request
+
     let surfaceBaselineRoot request =
         surfaceParam "baselineRoot" "docs/api-surface" request
 
@@ -753,13 +762,14 @@ nuget-cache/
     let workIdDiagnostics (request: CommandRequest) =
         match request.Command, request.WorkId with
         | Init, _ -> []
-        // Scaffold/doctor/upgrade/lint/surface are cross-cutting and operate on --root/--artifact,
-        // not a work item.
+        // Scaffold/doctor/upgrade/lint/surface/dependency-surface are cross-cutting and operate on
+        // --root/--param, not a work item.
         | Scaffold, _
         | Doctor, _
         | Upgrade, _
         | Lint, _
-        | Surface, _ -> []
+        | Surface, _
+        | DependencySurface, _ -> []
         | _, None -> [ missingWorkId request.Command ]
         | _, Some value ->
             match IdentifiersModule.createWorkId value with
@@ -836,6 +846,15 @@ nuget-cache/
                     match surfaceRootEscapeDiagnostics request with
                     | [] -> [], surfaceReadEffects request
                     | escapes -> escapes, []
+                // Feature 105, Phase 2: enumerate the committed capture root so the handler can
+                // discover committed captures; an escaping root plans nothing at all (FS.GG.SDD#185).
+                | DependencySurface, _ ->
+                    let baselineRoot = dependencySurfaceBaselineRoot request
+
+                    if escapesRoot baselineRoot then
+                        [ dependencySurfaceRootEscape baselineRoot ], []
+                    else
+                        [], [ EnumerateDirectory baselineRoot ]
                 // Lint reads the single `<artifact>` (feature 076); a missing path is a plan-time
                 // user error (nothing for the effect loop to read) surfaced as unusable input.
                 | Lint, _ ->
@@ -861,6 +880,7 @@ nuget-cache/
             let renderedArgs = String.concat " " args
             $"run:{command} {renderedArgs}@{normalizeRelativePath workingDir}"
         | SetExecutable path -> "setexec:" + normalizeRelativePath path
+        | ReadPackageSurface(packageId, version) -> $"read-package-surface:{packageId}@{version}"
         | Confirm(stepId, _) -> "confirm:" + stepId
 
     let readEffectKey path = "read:" + normalizeRelativePath path

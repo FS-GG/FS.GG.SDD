@@ -480,6 +480,40 @@ module CommandSerialization =
             writer.WriteEndObject()
         | None -> writer.WriteNull "surface"
 
+    let writeDependencySurface (writer: Utf8JsonWriter) (summary: DependencySurfaceSummary option) =
+        match summary with
+        | Some summary ->
+            writer.WriteStartObject("dependencySurface")
+            writer.WriteString("baselineRoot", summary.BaselineRoot)
+            writer.WriteString("mode", summary.Mode)
+            writer.WriteNumber("checkedCount", summary.CheckedCount)
+            writer.WriteStartArray("entries")
+
+            for entry in summary.Entries |> List.sortBy (fun entry -> entry.PackageId, entry.Version) do
+                writer.WriteStartObject()
+                writer.WriteString("packageId", entry.PackageId)
+                writer.WriteString("version", entry.Version)
+                writer.WriteString("status", entry.Status)
+
+                match entry.CommittedSha256 with
+                | Some sha -> writer.WriteString("committedSha256", sha)
+                | None -> writer.WriteNull "committedSha256"
+
+                match entry.ObservedSha256 with
+                | Some sha -> writer.WriteString("observedSha256", sha)
+                | None -> writer.WriteNull "observedSha256"
+
+                writer.WriteNumber("observedSymbolCount", entry.ObservedSymbolCount)
+                writer.WriteEndObject()
+
+            writer.WriteEndArray()
+            writeStringList writer Sorted "driftedPackages" summary.DriftedPackages
+            writeStringList writer Sorted "unavailablePackages" summary.UnavailablePackages
+            writeStringList writer Sorted "updatedPackages" summary.UpdatedPackages
+            writer.WriteBoolean("isCoherent", summary.IsCoherent)
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "dependencySurface"
+
     let writeUpgrade (writer: Utf8JsonWriter) (summary: UpgradeSummary option) =
         match summary with
         | Some summary ->
@@ -777,6 +811,7 @@ module CommandSerialization =
         writeUpgrade writer report.Upgrade
         writeLint writer report.Lint
         writeSurface writer report.Surface
+        writeDependencySurface writer report.DependencySurface
         writer.WriteStartArray("generatedViews")
 
         report.GeneratedViews
