@@ -71,6 +71,7 @@
     <Compile Include="EvidenceRoundTripPropertyTests.fs" />
     <Compile Include="TasksRoundTripPropertyTests.fs" />
     <Compile Include="MarkdownArtifactRoundTripPropertyTests.fs" />
+    <Compile Include="AdvisoryOutcomeTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
