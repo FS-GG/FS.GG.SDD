@@ -29,6 +29,22 @@ then **blocks** with `stalePlanSnapshot` and writes nothing (it never edits your
 Review the recorded `PD-###` decisions against the change, then re-run with
 `--accept-upstream` to re-baseline the snapshot. See [[fs-gg-sdd-troubleshooting]].
 
+## A clean `plan` run is not an authored plan
+
+`plan` seeds a scaffold — one `PD`/`PC`/`VO`/`PM`/`GV` line per requirement — and its
+success predicate is **structural**: it checks that the sections are present and the ids
+line up, which the scaffold satisfies by construction. It does **not** check that you
+replaced the seeded prose. So a run that reports `outcome: succeeded` / `coherent: true` /
+`planBlockingFindings: 0` can still carry the generator's stub sentences verbatim —
+`- PD-001 [FR-001] complete: Plan requirement FR-001 through the plan command contract.`,
+`- VO-001 [PD-001] test: Run focused command tests before tasks.`, and the rest.
+
+The un-authored-content gate lives **downstream at `analyze`** (`unauthoredScaffoldContent`),
+which blocks until the stub prose is rewritten. So **rewrite every `PD`/`PC`/`VO`/`PM`/`GV`
+line into the real plan before you run `analyze`** — leaving the scaffold prose in place does
+not fail `plan`; it fails `analyze` two stages later and costs a full plan→tasks→analyze
+re-run. See [[fs-gg-sdd-analyze]] and [[fs-gg-sdd-troubleshooting]].
+
 ## Produces / consumes
 
 - **Consumes:** `spec.md` + `clarifications.md` + `checklist.md` (the upstream
@@ -103,6 +119,10 @@ references, which otherwise blocks `tasks` with `missingDisposition`.
   Neither works: `tasks` regenerates `tasks.yml` from the authored sources. Tag
   the stranded id on a `PD-###` line here instead (or, for an orphan `AC-###`,
   reference it from a `spec.md` requirement).
+- Treating a clean `plan` run as a finished plan. Success is structural and does not
+  detect un-edited scaffold prose; the `unauthoredScaffoldContent` gate is at `analyze`.
+  Rewrite the `PD`/`PC`/`VO`/`PM`/`GV` lines before `analyze` (see "A clean `plan` run is
+  not an authored plan" above).
 
 ## Next
 
