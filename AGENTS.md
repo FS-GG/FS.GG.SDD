@@ -180,6 +180,23 @@ Core boundary:
   `PublicSurface.baseline` tests over hand-authored `.fsi`: the reflection tests assert the *built*
   surface and have no opinion about the version, while `surface` diffs the `.fsi` **text** and
   classifies additive-vs-breaking to prompt the bump. Both must stay green.
+- `fsgg-sdd dependency-surface` is a cross-cutting capture verb (not a lifecycle stage;
+  `nextLifecycleCommand DependencySurface = None`, feature 105 / ADR-0004 D2) that snapshots a
+  pinned **framework** package's authoritative public surface into a committed, content-addressed
+  capture under `docs/dependency-surface/<PackageId>/<Version>.json` (schema v1), so a plan's
+  `framework:` references can be resolved (by the Phase-3 `analyze` check) against the **real
+  restored package** rather than a stale vendored `.fsi` — the RM2 incident. `--update` reads the
+  real surface (a new `ReadPackageSurface` effect loads the restored assembly from the nuget cache
+  and reflects it — the one deliberate divergence from spec 086's "surface is `.fsi` text, never
+  reflection", recorded in ADR-0004) and writes/refreshes the capture; `--check` (default) re-reads
+  and blocks (`dependencySurface.drift`, exit 1) when a committed digest disagrees with the real
+  surface, while an **unreadable** surface is advisory (`dependencySurface.unavailable`, exit 0) —
+  "could not look" is never a negative verdict (ADR-0002 / #266). It reads what the workspace's own
+  restore left behind; generic SDD embeds no package/feed/symbol literal (the target is a `--param`
+  or a committed capture path), the `baselineRoot` is convention-default with a `--param` override
+  that must stay lexically contained (`dependencySurface.rootEscape`), and it adds an additive
+  `dependencySurface` `CommandReport` block (json/text/rich) with no persisted schema change beyond
+  the capture artifact itself. The `analyze` check that consumes the capture is Phase 3.
 - FS.GG.Governance owns rule evaluation, evidence freshness, routing, profiles,
   and gate enforcement.
 - Integrations between them must be explicit, versioned, and optional until

@@ -307,7 +307,8 @@ open in a new place.
   `schemaVersion` *(Stable)*, `skills`, `sources`, `targetId`, `viewVersion`,
   `workId`.
 - **`command-report (--json)`** — `agentGuidance`, `analysis`, `changedArtifacts`,
-  `checklist`, `clarification`, `coherent`, `command`, `context`, `diagnostics`, `doctor`, `evidence`,
+  `checklist`, `clarification`, `coherent`, `command`, `context`, `dependencySurface`, `diagnostics`,
+  `doctor`, `evidence`,
   `generatedViews`, `governanceCompatibility`, `help` *(present on `--help`/`-h`/`help`
   invocations; `null` otherwise)*, `invocation`, `lifecycleStatus`, `lint`, `nextAction`,
   `outcome`, `plan`, `refresh`, `reportVersion`, `scaffold`, `schemaVersion` *(Stable)*, `ship`,
@@ -422,6 +423,20 @@ open in a new place.
   is the change that moved `reportVersion` to `1.1.0` (a semantic minor); `schemaVersion` stays
   `1` (Stable) per the additive-optional policy. The failure explanation/options rendered on a
   blocked outcome are projected from the existing `diagnostics`/`nextAction` — not new fields.
+  The additive `dependencySurface` field is present on `fsgg-sdd dependency-surface` (`null`
+  otherwise) — feature 105 (FS-GG/FS.GG.SDD#569, ADR-0004 D2); it carries `baselineRoot`, `mode`
+  (`check`/`update`), `checkedCount`, `entries[]` (one per examined package, each with `packageId`,
+  `version`, `status` ∈ `matched`/`drifted`/`unavailable`/`written`/`new`, `committedSha256`,
+  `observedSha256`, `observedSymbolCount`), `driftedPackages[]`, `unavailablePackages[]`,
+  `updatedPackages[]`, and `isCoherent`. `--check` blocks (exit 1) with a `dependencySurface.drift`
+  `DiagnosticError` when a committed capture's digest disagrees with the package's real restored
+  surface; an unreadable surface is advisory (`dependencySurface.unavailable`, exit 0) — "could not
+  look" is never a negative verdict (ADR-0002 / #266). A `--param baselineRoot` escaping the
+  workspace root plans no effect and blocks with `dependencySurface.rootEscape`. The committed
+  capture artifact it produces (`docs/dependency-surface/<PackageId>/<Version>.json`, schema v1) is
+  workspace-owned and, like `docs/api-surface/**`, is a committed baseline rather than a produced
+  lifecycle view — it is not added to the `release-readiness.json` catalog. This additive-optional
+  field moved `reportVersion` to `2.6.0` (a semantic minor); `schemaVersion` stays `1`.
 
 ### Markdown projections (sections)
 

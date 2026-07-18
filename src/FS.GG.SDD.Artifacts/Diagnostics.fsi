@@ -188,6 +188,23 @@ module Diagnostics =
         suggestedVersion: string option ->
             Diagnostic
 
+    /// Feature 105, Phase 2 (ADR-0004 D2): a committed `dependency-surface` capture disagrees with
+    /// the package's freshly-read real surface. `DiagnosticError` so `dependency-surface --check`
+    /// exits 1 and fails CI; `--update` reconciles instead. `packages` are the drifted
+    /// `<PackageId>@<Version>` ids.
+    val dependencySurfaceDrift: packages: string list -> Diagnostic
+
+    /// Feature 105, Phase 2 (ADR-0004 D3): a package's real surface could not be read (not restored,
+    /// or the assembly could not be loaded), so drift cannot be judged. Advisory
+    /// (`DiagnosticWarning`, exit 0) — "could not look" is never a negative verdict (ADR-0002 /
+    /// #266). `packages` are the affected `<PackageId>@<Version>` ids.
+    val dependencySurfaceUnavailable: packages: string list -> Diagnostic
+
+    /// Feature 105, Phase 2 (FS.GG.SDD#185 discipline): the `dependency-surface` `--param
+    /// baselineRoot` resolves outside the workspace root. `DiagnosticError` (exit 1); planning is
+    /// refused wholesale so nothing outside the root is read or written. `value` is the RAW param.
+    val dependencySurfaceRootEscape: value: string -> Diagnostic
+
     /// The canonical diagnostic ordering — and the set seam. Structurally identical diagnostics
     /// are collapsed to one (#193): a diagnostic with both a prereq producer and a downstream
     /// backstop producer would otherwise appear twice, indistinguishable in every projection.

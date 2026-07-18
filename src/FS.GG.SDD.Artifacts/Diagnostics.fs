@@ -640,6 +640,45 @@ module Diagnostics =
 
         create "surface.versionBumpRequired" DiagnosticWarning None None message remediation []
 
+    // Feature 105, Phase 2 (ADR-0004 D2): a committed dependency-surface capture disagrees with the
+    // package's real restored surface. `DiagnosticError` so `dependency-surface --check` exits 1 and
+    // fails CI; `--update` reconciles instead. RelatedIds carry the drifted `<Pkg>@<ver>` ids.
+    let dependencySurfaceDrift (packages: string list) =
+        create
+            "dependencySurface.drift"
+            DiagnosticError
+            None
+            None
+            $"{List.length packages} committed dependency-surface capture(s) disagree with the package's real restored surface."
+            "Run `fsgg-sdd dependency-surface --update` to refresh the `docs/dependency-surface/**` captures from the restored packages, then commit."
+            (packages |> List.sort)
+
+    // Feature 105, Phase 2 (ADR-0004 D3): a package's real surface could not be read (not restored,
+    // or the assembly could not be loaded). Advisory (`DiagnosticWarning`, exit 0) — "could not
+    // look" is never a negative verdict (ADR-0002 / #266). RelatedIds carry the affected ids.
+    let dependencySurfaceUnavailable (packages: string list) =
+        create
+            "dependencySurface.unavailable"
+            DiagnosticWarning
+            None
+            None
+            $"{List.length packages} dependency-surface package(s) could not be read from the restored surface; drift was not judged for them."
+            "Restore the package(s) (a normal `dotnet restore`/build) so the real surface is present, then re-run `fsgg-sdd dependency-surface`."
+            (packages |> List.sort)
+
+    // Feature 105, Phase 2 (FS.GG.SDD#185 discipline): `--param baselineRoot` resolves outside the
+    // workspace root (absolute, or a `..` segment). `DiagnosticError` (exit 1). `value` is the RAW
+    // param, never normalized — normalization strips a leading `/` and would hide the escape.
+    let dependencySurfaceRootEscape (value: string) =
+        create
+            "dependencySurface.rootEscape"
+            DiagnosticError
+            None
+            None
+            $"`--param baselineRoot={value}` resolves outside the workspace root. `dependency-surface` reads and writes only within the root it was given."
+            "Point `baselineRoot` at a path inside the workspace root — no leading `/` and no `..` segment."
+            []
+
     let locationKey location =
         match location with
         | Some loc -> defaultArg loc.Line 0, defaultArg loc.Column 0

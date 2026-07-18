@@ -36,6 +36,7 @@ module NextActionRoutingTests =
           Upgrade = None
           Lint = None
           Surface = None
+          DependencySurface = None
           GeneratedViews = []
           Report = None }
 

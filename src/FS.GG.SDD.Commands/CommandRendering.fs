@@ -557,6 +557,48 @@ module CommandRendering =
             builder.AppendLine($"surfaceVersionSuggested: {suggestedVersion}") |> ignore
         | None -> ()
 
+        // Feature 105, Phase 2: `dependency-surface` — one `key: value` line per fact; `--rich`
+        // derives its table from these lines, so no bespoke rich block is needed.
+        match report.DependencySurface with
+        | Some depSurface ->
+            builder.AppendLine($"dependencySurfaceMode: {depSurface.Mode}") |> ignore
+
+            builder.AppendLine($"dependencySurfaceBaselineRoot: {depSurface.BaselineRoot}")
+            |> ignore
+
+            builder.AppendLine($"dependencySurfaceChecked: {depSurface.CheckedCount}")
+            |> ignore
+
+            depSurface.Entries
+            |> List.sortBy (fun entry -> entry.PackageId, entry.Version)
+            |> List.iter (fun entry ->
+                builder.AppendLine(
+                    $"dependencySurfaceEntry: {entry.PackageId}@{entry.Version}={entry.Status} ({entry.ObservedSymbolCount} symbols)"
+                )
+                |> ignore)
+
+            builder.AppendLine($"dependencySurfaceDrifted: {List.length depSurface.DriftedPackages}")
+            |> ignore
+
+            depSurface.DriftedPackages
+            |> List.iter (fun id -> builder.AppendLine($"dependencySurfaceDrifted: {id}") |> ignore)
+
+            builder.AppendLine($"dependencySurfaceUnavailable: {List.length depSurface.UnavailablePackages}")
+            |> ignore
+
+            depSurface.UnavailablePackages
+            |> List.iter (fun id -> builder.AppendLine($"dependencySurfaceUnavailable: {id}") |> ignore)
+
+            builder.AppendLine($"dependencySurfaceUpdated: {List.length depSurface.UpdatedPackages}")
+            |> ignore
+
+            depSurface.UpdatedPackages
+            |> List.iter (fun id -> builder.AppendLine($"dependencySurfaceUpdated: {id}") |> ignore)
+
+            builder.AppendLine($"dependencySurfaceCoherent: {depSurface.IsCoherent}")
+            |> ignore
+        | None -> ()
+
         match report.Upgrade with
         | Some upgrade ->
             builder.AppendLine($"upgradeHasProvenance: {upgrade.HasProvenance}") |> ignore

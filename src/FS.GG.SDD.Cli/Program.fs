@@ -90,6 +90,7 @@ let printUnknown commandValue =
           Upgrade = None
           Lint = None
           Surface = None
+          DependencySurface = None
           GeneratedViews = []
           Report = None }
 
@@ -237,6 +238,7 @@ let private printArgvErrors format forceColor command diagnostics =
           Upgrade = None
           Lint = None
           Surface = None
+          DependencySurface = None
           GeneratedViews = []
           Report = None }
 
@@ -276,6 +278,7 @@ let private printUnhandled (args: string list) (ex: exn) =
           Upgrade = None
           Lint = None
           Surface = None
+          DependencySurface = None
           GeneratedViews = []
           Report = None }
 

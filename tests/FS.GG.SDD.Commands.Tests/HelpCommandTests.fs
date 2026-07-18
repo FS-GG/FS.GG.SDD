@@ -98,6 +98,7 @@ module HelpCommandTests =
               Upgrade = None
               Lint = None
               Surface = None
+              DependencySurface = None
               GeneratedViews = []
               Report = None }
 
@@ -163,6 +164,7 @@ module HelpCommandTests =
               Upgrade = None
               Lint = None
               Surface = None
+              DependencySurface = None
               GeneratedViews = []
               Report = None }
 

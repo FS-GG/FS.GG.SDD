@@ -24,6 +24,11 @@ module CommandTypes =
         | Upgrade
         | Lint
         | Surface
+        /// `fsgg-sdd dependency-surface` (feature 105, Phase 2; ADR-0004 D2): capture/check a pinned
+        /// framework package's authoritative public surface against a committed
+        /// `docs/dependency-surface/**` baseline. Cross-cutting, not a lifecycle stage
+        /// (`nextLifecycleCommand = None`).
+        | DependencySurface
         /// The scope a `--help` report is stamped with. Not an invocable command — `parseCommand`
         /// never yields it, so `fsgg-sdd help` stays an unknown command.
         | Help
@@ -683,6 +688,54 @@ module CommandTypes =
             VersionBump: VersionBumpPrompt
         }
 
+    /// One package's verdict in a `dependency-surface` run (feature 105, Phase 2). The committed
+    /// capture's content digest (when present) versus the freshly-read real surface's digest.
+    type DependencySurfaceEntry =
+        {
+            PackageId: string
+            Version: string
+            /// `matched` (committed digest = observed) | `drifted` (committed ≠ observed) |
+            /// `unavailable` (the real surface could not be read — advisory) | `written`
+            /// (`--update` refreshed or created the capture) | `new` (`--check` found an
+            /// uncommitted target — advisory, cannot judge drift).
+            Status: string
+            /// The content digest recorded in the committed capture, when one exists.
+            CommittedSha256: string option
+            /// The digest of the freshly-read real surface, when it could be read.
+            ObservedSha256: string option
+            /// Number of symbols in the freshly-read surface (0 when unavailable).
+            ObservedSymbolCount: int
+        }
+
+    /// The read-only (or, under `--update`, reconciling) dependency-surface picture
+    /// `dependency-surface` emits (feature 105, Phase 2; ADR-0004 D2). Each committed capture under
+    /// `docs/dependency-surface/<PackageId>/<Version>.json` is compared to the package's real
+    /// restored surface. `--check` blocks on drift (a committed digest disagreeing with the real
+    /// surface); an unreadable surface is advisory, never a block. `--update` refreshes/creates the
+    /// captures.
+    type DependencySurfaceSummary =
+        {
+            BaselineRoot: string
+            /// `check` (read-only, blocks on drift) or `update` (refresh captures).
+            Mode: string
+            /// Count of packages examined this run (committed captures ∪ an explicit `--param`
+            /// target).
+            CheckedCount: int
+            /// One entry per examined package, sorted by `<PackageId>@<Version>`.
+            Entries: DependencySurfaceEntry list
+            /// `<PackageId>@<Version>` of every package whose committed capture drifted from the
+            /// real surface. Sorted. Non-empty ⇒ `--check` blocks.
+            DriftedPackages: string list
+            /// `<PackageId>@<Version>` of every package whose real surface could not be read.
+            /// Sorted. Advisory — never blocks (fail-open, ADR-0002 / #266).
+            UnavailablePackages: string list
+            /// `<PackageId>@<Version>` of every capture written this run (`--update` only). Sorted.
+            UpdatedPackages: string list
+            /// True when no committed capture drifted from a readable real surface. An unavailable
+            /// surface does not affect coherence.
+            IsCoherent: bool
+        }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -839,6 +892,7 @@ module CommandTypes =
           Upgrade: UpgradeSummary option
           Lint: LintSummary option
           Surface: SurfaceSummary option
+          DependencySurface: DependencySurfaceSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -852,6 +906,13 @@ module CommandTypes =
         | CreateDirectory of path: string
         | WriteFile of path: string * text: string * kind: ArtifactWriteKind
         | RunProcess of command: string * args: string list * workingDir: string
+        /// Read the authoritative public surface of a restored framework package (feature 105,
+        /// Phase 2; ADR-0004 D2). Interpreted at the edge by loading the package's restored
+        /// assembly from the global packages cache and reflecting it (`DependencySurface.
+        /// symbolsFromAssembly`). The interpreted `Snapshot` carries the `\n`-joined symbols when
+        /// the surface is readable; `Snapshot = None` means the package is not restored / could not
+        /// be read — an advisory, never a false drift (ADR-0002 / #266).
+        | ReadPackageSurface of packageId: string * version: string
         | SetExecutable of path: string
         /// Requests per-step confirmation for one reconciliation step (R7). Interpreted
         /// at the edge by a stdin read when `IsInteractive`; the pure `update` re-derives
@@ -910,6 +971,7 @@ module CommandTypes =
           Upgrade: UpgradeSummary option
           Lint: LintSummary option
           Surface: SurfaceSummary option
+          DependencySurface: DependencySurfaceSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 

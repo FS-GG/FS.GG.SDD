@@ -25,6 +25,7 @@ module CommandTypes =
         | Upgrade
         | Lint
         | Surface
+        | DependencySurface
         /// The scope a `--help` report is stamped with. Not an invocable command — `parseCommand`
         /// never yields it, so `fsgg-sdd help` stays an unknown command. It exists so a help
         /// report can carry its own identity instead of masquerading as `init` (FS.GG.SDD#352).
@@ -629,6 +630,24 @@ module CommandTypes =
           Classification: SurfaceClassification
           VersionBump: VersionBumpPrompt }
 
+    type DependencySurfaceEntry =
+        { PackageId: string
+          Version: string
+          Status: string
+          CommittedSha256: string option
+          ObservedSha256: string option
+          ObservedSymbolCount: int }
+
+    type DependencySurfaceSummary =
+        { BaselineRoot: string
+          Mode: string
+          CheckedCount: int
+          Entries: DependencySurfaceEntry list
+          DriftedPackages: string list
+          UnavailablePackages: string list
+          UpdatedPackages: string list
+          IsCoherent: bool }
+
     type GovernanceCompatibilityFact =
         { Path: string
           Relationship: string
@@ -763,6 +782,7 @@ module CommandTypes =
           Upgrade: UpgradeSummary option
           Lint: LintSummary option
           Surface: SurfaceSummary option
+          DependencySurface: DependencySurfaceSummary option
           GeneratedViews: GeneratedViewState list
           Diagnostics: Diagnostic list
           GovernanceCompatibility: GovernanceCompatibilityFact list
@@ -776,6 +796,7 @@ module CommandTypes =
         | CreateDirectory of path: string
         | WriteFile of path: string * text: string * kind: ArtifactWriteKind
         | RunProcess of command: string * args: string list * workingDir: string
+        | ReadPackageSurface of packageId: string * version: string
         | SetExecutable of path: string
         | Confirm of stepId: string * prompt: string
 
@@ -817,6 +838,7 @@ module CommandTypes =
           Upgrade: UpgradeSummary option
           Lint: LintSummary option
           Surface: SurfaceSummary option
+          DependencySurface: DependencySurfaceSummary option
           GeneratedViews: GeneratedViewState list
           Report: CommandReport option }
 
@@ -844,6 +866,7 @@ module CommandTypes =
         | Upgrade -> "upgrade"
         | Lint -> "lint"
         | Surface -> "surface"
+        | DependencySurface -> "dependency-surface"
         | Help -> "help"
 
     let commandStage (command: SddCommand) =
@@ -871,6 +894,7 @@ module CommandTypes =
         | "upgrade" -> Ok Upgrade
         | "lint" -> Ok Lint
         | "surface" -> Ok Surface
+        | "dependency-surface" -> Ok DependencySurface
         | other -> Error $"Unknown SDD command '{other}'."
 
     let outputFormatValue (format: OutputFormat) =
@@ -994,6 +1018,7 @@ module CommandTypes =
         | Upgrade -> None
         | Lint -> None
         | Surface -> None
+        | DependencySurface -> None
         | Help -> None
 
     let effectPath (effect: CommandEffect) =
@@ -1004,4 +1029,5 @@ module CommandTypes =
         | WriteFile(path, _, _) -> Some path
         | RunProcess(_, _, workingDir) -> Some workingDir
         | SetExecutable path -> Some path
+        | ReadPackageSurface _ -> None
         | Confirm _ -> None

@@ -63,6 +63,8 @@ module Options =
         // `lint` takes its artifact as a positional; `--explain` is global.
         | Lint -> []
         | Surface -> [ flag "--check"; flag "--update"; valued "--param" ]
+        // Feature 105, Phase 2: `--check`/`--update`, with `--param packageId=/version=/baselineRoot=`.
+        | DependencySurface -> [ flag "--check"; flag "--update"; valued "--param" ]
         // `Help` is a report scope, not an invocable command — argv never routes to it.
         | Help -> []
 

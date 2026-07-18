@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "reportVersion": "2.5.0",
+  "reportVersion": "2.6.0",
   "toolVersion": "0.14.0",
   "command": {
     "name": "init",
@@ -805,6 +805,7 @@
   "upgrade": null,
   "lint": null,
   "surface": null,
+  "dependencySurface": null,
   "generatedViews": [],
   "diagnostics": [],
   "governanceCompatibility": [

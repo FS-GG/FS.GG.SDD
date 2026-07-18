@@ -38,6 +38,9 @@ FS.GG.SDD.Artifacts.DependencySurface.symbolSet
 FS.GG.SDD.Artifacts.DependencySurface.symbolsFromAssembly
 FS.GG.SDD.Artifacts.DependencySurface.tryParse
 FS.GG.SDD.Artifacts.Diagnostics.create
+FS.GG.SDD.Artifacts.Diagnostics.dependencySurfaceDrift
+FS.GG.SDD.Artifacts.Diagnostics.dependencySurfaceRootEscape
+FS.GG.SDD.Artifacts.Diagnostics.dependencySurfaceUnavailable
 FS.GG.SDD.Artifacts.Diagnostics.deprecatedSchemaVersion
 FS.GG.SDD.Artifacts.Diagnostics.doctorDriftDetected
 FS.GG.SDD.Artifacts.Diagnostics.duplicateIdentifier

@@ -2,7 +2,9 @@ namespace FS.GG.SDD.Commands
 
 open System
 open System.Diagnostics
+open System.Globalization
 open System.IO
+open System.Reflection
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
@@ -331,6 +333,111 @@ module CommandEffects =
               Confirmed = None
               Diagnostic = None }
 
+    // Edge interpreter for `ReadPackageSurface` (feature 105, Phase 2; ADR-0004 D2). Reads the
+    // AUTHORITATIVE public surface of a restored framework package by loading its restored assembly
+    // from the global packages cache and reflecting it. Deliberately reflection, not `.fsi` text
+    // (spec 086's stance) — defeating a stale vendored text is the whole point (ADR-0004
+    // §Consequences). Confined to this edge; `analyze` (Phase 3) reads only the committed capture.
+    //
+    // Fail-open by construction: an uncached/unreadable package yields `None`, which the handler
+    // reports as `unavailable` (advisory), never a false drift — "could not look" is not a negative
+    // verdict (ADR-0002 / #266). The restore that populates the cache is the workspace's own
+    // (a consumer product references the package); this verb reads what restore left behind.
+
+    // Rank a target-framework folder so the richest modern surface wins: modern `netX.Y` over
+    // `netcoreappX.Y` over `netstandardX.Y` over legacy framework `net4x`. Deterministic.
+    let private targetFrameworkScore (tfm: string) =
+        let lower = tfm.ToLowerInvariant()
+
+        let numericTail (prefix: string) =
+            let rest = lower.Substring(prefix.Length)
+
+            match Double.TryParse(rest, NumberStyles.Float, CultureInfo.InvariantCulture) with
+            | true, value -> value
+            | _ -> 0.0
+
+        if lower.StartsWith "netstandard" then
+            200.0 + numericTail "netstandard"
+        elif lower.StartsWith "netcoreapp" then
+            500.0 + numericTail "netcoreapp"
+        elif lower.StartsWith "net" then
+            let rest = lower.Substring 3
+            // A modern TFM carries a dotted version (`net8.0`); a legacy framework one does not
+            // (`net47`). The modern surface is preferred, so it scores far higher.
+            if rest.Contains "." then
+                1000.0 + numericTail "net"
+            else
+                100.0 + numericTail "net"
+        else
+            0.0
+
+    let private globalPackagesRoot () =
+        match Environment.GetEnvironmentVariable "NUGET_PACKAGES" with
+        | null
+        | "" -> Path.Combine(Environment.GetFolderPath Environment.SpecialFolder.UserProfile, ".nuget", "packages")
+        | configured -> configured
+
+    // Pick the best restored assembly for a package: the `<Pkg>.dll` under the highest-scoring
+    // `lib`/`ref` target-framework folder (preferring `lib`). `None` when nothing plausible exists.
+    let private selectPackageAssembly (packageDir: string) (packageId: string) =
+        let expectedName = packageId + ".dll"
+
+        [ "lib"; "ref" ]
+        |> List.collect (fun kind ->
+            let kindDir = Path.Combine(packageDir, kind)
+
+            if not (Directory.Exists kindDir) then
+                []
+            else
+                Directory.EnumerateDirectories kindDir
+                |> Seq.collect (fun tfmDir ->
+                    let tfmName = Path.GetFileName tfmDir |> Option.ofObj |> Option.defaultValue ""
+
+                    Directory.EnumerateFiles(tfmDir, "*.dll")
+                    |> Seq.map (fun dll ->
+                        let fileName = Path.GetFileName dll |> Option.ofObj |> Option.defaultValue ""
+
+                        let nameMatches =
+                            String.Equals(fileName, expectedName, StringComparison.OrdinalIgnoreCase)
+
+                        // `lib` wins ties over `ref` (the runtime surface); name-match wins over any.
+                        let kindBonus = if kind = "lib" then 0.5 else 0.0
+                        (nameMatches, targetFrameworkScore tfmName + kindBonus, dll)))
+                |> Seq.toList)
+        |> List.sortByDescending (fun (nameMatches, score, _) -> (nameMatches, score))
+        |> List.tryHead
+        |> Option.map (fun (_, _, dll) -> dll)
+
+    let readPackageSurface (effect: CommandEffect) (packageId: string) (version: string) =
+        try
+            let packageDir =
+                Path.Combine(globalPackagesRoot (), packageId.ToLowerInvariant(), version)
+
+            match
+                (if Directory.Exists packageDir then
+                     selectPackageAssembly packageDir packageId
+                 else
+                     None)
+            with
+            | None -> success effect None // not restored / no assembly ⇒ unavailable (advisory)
+            | Some assemblyPath ->
+                // Load into a fresh context is unnecessary for name-only reflection; `LoadFrom`
+                // is enough and `symbolsFromAssembly` tolerates partial type loads. Any failure
+                // (bad image, load conflict) is caught below and reported as unavailable.
+                let assembly = Assembly.LoadFrom assemblyPath
+                let symbols = DependencySurface.symbolsFromAssembly assembly
+
+                success
+                    effect
+                    (Some(
+                        { Path = $"{packageId}@{version}"
+                          Text = String.concat "\n" symbols }
+                        : FileSnapshot
+                    ))
+        with _ ->
+            // Fail-open: an unreadable surface is advisory, never a tool defect and never a drift.
+            success effect None
+
     // Edge interpreter for `Confirm` (feature 053, confirm-effect contract). Under `DryRun`
     // it never mutates and never reads stdin (`Some false`). Otherwise it writes the step
     // diff/prompt and reads one line from `Console.In` (`y`/`yes`, case-insensitive →
@@ -415,6 +522,10 @@ module CommandEffects =
                     success effect None
                 else
                     runProcess projectRoot effect command args workingDir
+            | ReadPackageSurface(packageId, version) ->
+                // Read-only reflection over the restored package; safe under `--dry-run` too, since
+                // it mutates nothing. `--check`/`--update` both need the real surface to compare.
+                readPackageSurface effect packageId version
             | SetExecutable path ->
                 if dryRun then
                     success effect None

@@ -160,6 +160,26 @@ module CommandHelp =
                   "--param"
                   (Some "versionAxisProperty=<name>")
                   "MSBuild property holding the coherent-set version (default Version)." ]
+        // Feature 105, Phase 2: capture/check a framework package's real restored surface against a
+        // committed docs/dependency-surface/** baseline. baselineRoot defaults, no package literal.
+        | DependencySurface ->
+            [ flag
+                  "--check"
+                  None
+                  "Report dependency-surface capture drift vs the real restored surface; read-only, exits 1 on drift (default)."
+              flag
+                  "--update"
+                  None
+                  "Refresh/create the docs/dependency-surface captures from the restored packages (takes precedence)."
+              flag
+                  "--param"
+                  (Some "packageId=<id>")
+                  "Explicit capture target package id (with version=); default operates over the committed captures."
+              flag "--param" (Some "version=<ver>") "Explicit capture target version (with packageId=)."
+              flag
+                  "--param"
+                  (Some "baselineRoot=<dir>")
+                  "Committed-capture root override (default docs/dependency-surface)." ]
         // `Help` is the scope a help report is stamped with, not an invocable command, so it has
         // no flags of its own — `commandHelp Help` is unreachable from argv.
         | Help -> []

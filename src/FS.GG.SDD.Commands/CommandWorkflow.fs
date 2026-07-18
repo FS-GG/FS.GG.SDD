@@ -27,6 +27,7 @@ open FS.GG.SDD.Commands.Internal.HandlersDoctor
 open FS.GG.SDD.Commands.Internal.HandlersUpgrade
 open FS.GG.SDD.Commands.Internal.HandlersLint
 open FS.GG.SDD.Commands.Internal.HandlersSurface
+open FS.GG.SDD.Commands.Internal.HandlersDependencySurface
 
 module CommandWorkflow =
     // The per-stage summaries a lifecycle command's plan feeds into the command model.
@@ -409,6 +410,14 @@ module CommandWorkflow =
                     model, []
                 else
                     computeSurfaceNext model
+            | DependencySurface, _ ->
+                // Dependency-surface capture drift (feature 105, Phase 2): once the enumerated root
+                // is in, the handler gates its own per-target reads (the committed capture + the
+                // real restored surface), then computes drift; `--update` emits capture writes.
+                if not (allPlannedReadsInterpreted model) then
+                    model, []
+                else
+                    computeDependencySurfaceNext model
             | _ -> model, []
 
     let init (request: CommandRequest) =
@@ -439,6 +448,7 @@ module CommandWorkflow =
               Upgrade = None
               Lint = None
               Surface = None
+              DependencySurface = None
               GeneratedViews = []
               Report = None }
 

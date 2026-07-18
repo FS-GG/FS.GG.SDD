@@ -15,7 +15,7 @@ namespace FS.GG.SDD.Artifacts
 module DependencySurface =
 
     /// One captured public API symbol — a module-qualified value/member name, e.g.
-    /// `SkiaViewer.runAppWithPersistence`. Opaque text; the capture never interprets it.
+    /// `<Module>.<member>`. Opaque text; the capture never interprets it.
     type CapturedSymbol = string
 
     /// A `dependency-surface` capture (schema v1): the authoritative public surface of

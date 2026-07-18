@@ -68,6 +68,8 @@
     <Compile Include="RequiredFieldContractTests.fs" />
     <Compile Include="LifecycleStatusTests.fs" />
     <Compile Include="SurfaceCommandTests.fs" />
+    <Compile Include="DependencySurfaceCommandTests.fs" />
+    <Compile Include="DependencySurfaceGuardTests.fs" />
     <Compile Include="EvidenceRoundTripPropertyTests.fs" />
     <Compile Include="TasksRoundTripPropertyTests.fs" />
     <Compile Include="MarkdownArtifactRoundTripPropertyTests.fs" />

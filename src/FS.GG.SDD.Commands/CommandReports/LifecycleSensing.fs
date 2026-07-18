@@ -59,6 +59,7 @@ module internal LifecycleSensing =
         | Upgrade
         | Lint
         | Surface
+        | DependencySurface
         | Help -> false
 
     /// The sensing effects: recursive enumerations of `work/` and `readiness/`. Deliberately NOT
