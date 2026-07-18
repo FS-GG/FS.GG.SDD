@@ -178,6 +178,18 @@ authority in a product. Core principles:
    malformed input from tool defects; critical paths fail fast, optional
    integrations degrade explicitly.
 
+> **Regression scope: a behavior-changing feature can invalidate *existing*
+> tests, not only demand new ones (principle 6).** Watch especially for a change
+> that adds a **terminal transition** — death, timeout, defeat, victory, any first
+> way for a long-running process to *end*. Earlier tests written when the process
+> never terminated may assume it stays alive (asserting on state that is only
+> populated while it runs, driving a passive actor over many steps), and the new
+> terminal path can make that assumption false — surfacing as a crash or a
+> null-reference rather than a clear failure. When your change introduces a first
+> terminal transition, re-run the **whole** suite and expect to update the
+> long-running/integration tests that assumed non-termination, not just to add
+> tests for the new behavior.
+
 Every change also declares a **tier**: Tier 1 (contracted — public surface,
 schema, command, artifact layout, integration; needs spec+plan+tasks+signatures+
 tests+docs) or Tier 2 (internal cleanup — needs spec+tests, baselines unchanged).
