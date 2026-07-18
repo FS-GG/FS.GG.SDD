@@ -745,7 +745,9 @@ module Evidence =
                                       |> List.map (evidenceRefDiagnostic artifact "requirement" "requirementRefs")
                                       scalarList [ "clarificationDecisionRefs" ] mapping
                                       |> malformedRefs Identifiers.createDecisionId
-                                      |> List.map (evidenceRefDiagnostic artifact "decision" "clarificationDecisionRefs")
+                                      |> List.map (
+                                          evidenceRefDiagnostic artifact "decision" "clarificationDecisionRefs"
+                                      )
                                       citedPathDiagnostics ]
                                     |> List.concat
 
