@@ -855,6 +855,33 @@ module internal DiagnosticConstructors =
             "Type each obligation's kind and result (e.g. kind: verification with a claimed pass) before rerunning --from-test-report, or author the observedRun receipts by hand."
             [ string untyped ]
 
+    /// FS.GG.SDD#550. `--sync-observed-run` was pointed at a report that NO obligation carries a receipt
+    /// from, so there was nothing to re-stamp. Non-blocking (DiagnosticInfo): the author asked to refresh
+    /// receipts sourced from a report that discharges none of them — discoverability, not a defect. A
+    /// receipt from a *different* report is deliberately left alone, so this is also how "I typo'd the
+    /// path" surfaces, distinct from a receipt-bearing report gone missing (`testReportNotFound`).
+    let syncObservedRunNothingToSync path (report: string) =
+        commandDiagnostic
+            "evidence.syncObservedRunNothingToSync"
+            DiagnosticSeverity.DiagnosticInfo
+            (Some path)
+            $"No obligation carries an observedRun receipt sourced from '{report}', so --sync-observed-run re-stamped nothing."
+            "Point --sync-observed-run at the report an existing receipt names as its source, or record a receipt first with --from-test-report."
+            [ report ]
+
+    /// FS.GG.SDD#550. Both `--from-test-report` and `--sync-observed-run` were given in one run. They
+    /// both write observedRun receipts but mean different things — one STAMPS a run onto typed
+    /// pass-claiming obligations, the other RE-STAMPS receipts already sourced from a regenerated report
+    /// — and applying both in a single pass makes the result order-dependent (whichever ran second could
+    /// clobber the first). Refused, so neither runs, rather than silently picking a winner.
+    let evidenceReceiptModeConflict path =
+        errorDiagnostic
+            "evidence.receiptModeConflict"
+            (Some path)
+            "Both --from-test-report and --sync-observed-run were given; they both record observedRun receipts and cannot be combined in one run."
+            "Run one at a time: --from-test-report to record receipts onto typed obligations, or --sync-observed-run to refresh receipts already sourced from a regenerated report."
+            []
+
     /// A receipt that contradicts itself. `TestReport.parse` DERIVES `outcome` from the counts, so it
     /// cannot produce one of these — this is reserved for a receipt somebody hand-wrote into
     /// `evidence.yml`, which is exactly the move the receipt exists to stop being worth making.

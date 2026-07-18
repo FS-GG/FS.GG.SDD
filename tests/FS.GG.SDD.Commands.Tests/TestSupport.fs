@@ -69,6 +69,7 @@ module TestSupport =
           Explain = false
           FromTests = None
           FromTestReport = None
+          SyncObservedRun = None
           SurfaceUpdate = false
           AcceptUpstream = false
           // ADR-0035 stage 3b flipped the PRODUCT default (`fsgg-sdd verify`) to require an

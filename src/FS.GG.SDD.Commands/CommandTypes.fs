@@ -216,6 +216,14 @@ module CommandTypes =
           // three committed tests pass it a project directory. Overloading one flag with both meanings
           // would make an unparseable *directory* a blocking error on the feature-077 path.
           FromTestReport: string option
+          // Evidence input (`fsgg-sdd evidence --sync-observed-run <trx>`); ignored by other commands
+          // (FS.GG.SDD#550). Re-stamps every obligation that ALREADY carries an `observedRun` receipt
+          // sourced from this report, recomputing the digest and the passed/failed/skipped counts from
+          // the report's current bytes. The maintenance complement to `--from-test-report`: when a TRX is
+          // regenerated (e.g. a test is added late), the authored receipts pinned to it go stale, and this
+          // reconciles them in place without re-typing. Receipts sourced from a DIFFERENT report are left
+          // untouched. `None` ⇒ inert. Mutually exclusive with `--from-test-report`.
+          SyncObservedRun: string option
           // Feature 086: `fsgg-sdd surface --update` refreshes the `docs/api-surface/**` baselines
           // from the authored `.fsi` signatures; default false (read-only `--check`).
           SurfaceUpdate: bool

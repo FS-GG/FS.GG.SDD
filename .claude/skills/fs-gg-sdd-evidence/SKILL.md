@@ -22,6 +22,7 @@ prose below and the example disagree, the example is the authority.
 fsgg-sdd evidence --work <id>
 fsgg-sdd evidence --work <id> --from-tests <path>        # pre-map new obligations to a proving test file
 fsgg-sdd evidence --work <id> --from-test-report <trx>   # register an observed-run receipt (verify needs it)
+fsgg-sdd evidence --work <id> --sync-observed-run <trx>  # re-stamp existing receipts after the TRX is regenerated
 ```
 
 `--from-tests` and `--from-test-report` are **different flags** — a source *pointer*
@@ -110,6 +111,37 @@ obligations are still untyped.
 
 Pointing at where tests *live* is not the same as proving they *ran*. `--from-tests`
 alone never makes an obligation observed.
+
+**Keep receipts honest when the TRX is regenerated: `--sync-observed-run <trx>`.** A
+receipt pins each obligation to a *specific* report — its `digest` and its
+`passed`/`failed`/`skipped` counts. When you regenerate that report (a test added late in
+the cycle, a re-run), every already-authored receipt goes **stale**: the digest no longer
+matches the bytes, and the counts no longer match the run. `--sync-observed-run` reconciles
+them in place — it recomputes the digest and re-reads the counts for **every obligation
+already carrying a receipt sourced from `<trx>`**, and only those:
+
+```text
+fsgg-sdd evidence --work <id> --sync-observed-run <path/to/report.trx>
+```
+
+It is the **maintenance** complement to `--from-test-report`'s **bootstrap**: that flag
+*stamps* a receipt onto a typed pass, this one *re-stamps* receipts the regeneration
+staled. It re-authors nothing — no `kind`, no `result`, no obligation you did not already
+receipt — so it is the alternative to `sed`-ing a new sha256 across every obligation by
+hand and silently desyncing the one you miss.
+
+- Idempotent: syncing an unchanged TRX rewrites the same bytes.
+- **Source-scoped.** A receipt sourced from a *different* report is left byte-for-byte
+  alone — syncing one TRX never rewrites another's receipt.
+- **Nothing to sync is not an error.** Point it at a report no obligation references and
+  you get a non-blocking `evidence.syncObservedRunNothingToSync` advisory, and nothing is
+  rewritten.
+- **A regenerated run that now FAILS blocks** with `evidence.observedRunFailed`, and the
+  old receipts **stand** — a blocked sync never half-rewrites (a missing or unparseable
+  report blocks the same way). Fix the suite, then sync.
+- **Mutually exclusive with `--from-test-report`.** Both write the receipt; giving both in
+  one run is refused with `evidence.receiptModeConflict`. Bootstrap with one, maintain with
+  the other — one at a time.
 
 **How each kind reaches a green `verify`.** Only a `verification`-kind pass can receive
 a receipt, so the observed rule lands differently per kind:
