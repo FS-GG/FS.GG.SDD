@@ -667,7 +667,8 @@ module ObservedRunCommandTests =
             SyncObservedRun = report }
         |> TestSupport.runRequest
 
-    let private digestOf text = $"sha256:{(SchemaVersion.sha256Text text).Value}"
+    let private digestOf text =
+        $"sha256:{(SchemaVersion.sha256Text text).Value}"
 
     [<Fact>]
     let ``sync recomputes the digest and counts in place after a TRX is regenerated`` () =
@@ -689,7 +690,10 @@ module ObservedRunCommandTests =
         Assert.DoesNotContain(report.Diagnostics, fun d -> d.Severity = Diagnostics.DiagnosticError)
 
         let byId =
-            parsedEvidence root |> _.Evidence |> List.map (fun d -> d.Id.Value, d) |> Map.ofList
+            parsedEvidence root
+            |> _.Evidence
+            |> List.map (fun d -> d.Id.Value, d)
+            |> Map.ofList
 
         for id in receiptedIds do
             match byId[id].ObservedRun with
@@ -740,8 +744,7 @@ module ObservedRunCommandTests =
         TestSupport.writeRelative root reportPath (trxWith 77 0)
         runWithSync root (Some reportPath) |> ignore
 
-        let receipts =
-            (parsedEvidence root).Evidence |> List.choose _.ObservedRun
+        let receipts = (parsedEvidence root).Evidence |> List.choose _.ObservedRun
 
         let repointed = receipts |> List.filter (fun r -> r.Source = "artifacts/other.trx")
         let synced = receipts |> List.filter (fun r -> r.Source = reportPath)

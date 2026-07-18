@@ -1293,8 +1293,7 @@ sourceAnalysis: {analysisPath workId}
 
                                     let withReceipt = recordObservedRun observedRun mergedBeforeReceipt
 
-                                    let syncedRun, syncDiagnostics =
-                                        resolveSyncObservedRun workId model withReceipt
+                                    let syncedRun, syncDiagnostics = resolveSyncObservedRun workId model withReceipt
 
                                     recordSyncObservedRun syncedRun withReceipt,
                                     fromReportDiagnostics @ syncDiagnostics
