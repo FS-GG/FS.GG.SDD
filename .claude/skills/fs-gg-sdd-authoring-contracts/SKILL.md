@@ -21,10 +21,14 @@ two cross-cutting ones: the **clarify decision-tag** resolution (§4) and the
 
 A functional requirement is **covered** only when a strict-scan parser finds a list
 item that leads with `- FR-###:` and carries its acceptance reference **on the same
-line**:
+physical line**:
 
 - literal `- `, then `FR-` + **three or more digits** (case-insensitive), then a
-  literal `:`, then prose, with `AC-###` (optionally `US-###`) on the same line.
+  literal `:`, then prose, with `AC-###` (optionally `US-###`) on the same physical
+  line. The scan reads one physical line and does not join continuation lines, so a
+  **soft-wrapped** bullet whose `(covers AC-###)` marker wrapped to the next line
+  reads as uncovered — keep the whole line unwrapped. Fix a "missing acceptance
+  coverage" verdict in `spec.md`, not the regenerated `checklist.md`.
 
 **Accepted:**
 
@@ -40,6 +44,8 @@ present but establishes no coverage):
 **FR-001** W/S move the left paddle. (AC-002)     ← bold id, not a "- FR-001:" item
 - FR-001 — moves the paddle (AC-002)              ← no colon after the id
 (covers AC-002)                                    ← AC ref on its own line
+- FR-001: a long requirement whose marker         ← soft-wrapped: marker on line two
+  wrapped to the next line. (covers AC-002)
 ```
 
 See [[fs-gg-sdd-checklist]].

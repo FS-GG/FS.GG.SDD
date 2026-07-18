@@ -28,14 +28,24 @@ disagree, the build fails — these contracts cannot silently drift.
 
 `fsgg-sdd checklist` marks a functional requirement **covered** only when a
 *strict-scan* parser finds a list item that leads with `- FR-###:` and carries an
-acceptance reference (`AC-###`, and optionally a `US-###`) **on the same line**.
+acceptance reference (`AC-###`, and optionally a `US-###`) **on the same physical
+line**.
 
 - The list item must start with a literal `- `, then the id, then a literal `:`.
 - The requirement id is `FR-` followed by **three or more digits**; matching is
   case-insensitive.
-- The acceptance reference(s) must sit on that same line. They are collected as
-  the requirement's coverage.
+- The acceptance reference(s) must sit on that same **physical** line. They are
+  collected as the requirement's coverage.
 - There must be prose after the colon.
+
+> **Keep the whole `- FR-###: … (covers AC-###)` on one physical line.** The scan
+> reads a single line — it does not join a soft-wrapped bullet's continuation lines.
+> If your editor wraps a long requirement across several physical lines and the
+> `(covers AC-###)` marker lands on line two, the FR is reported **uncovered** even
+> though the marker is right there. This is deliberate: coverage is an *explicit
+> declaration on the FR line*, not an `AC-###` inferred from anywhere in the
+> requirement's prose. Disable soft-wrap (or turn off "reflow paragraph") for the
+> requirement line, or write the reference immediately after the id.
 
 A separate *loose scan* (`\bFR-\d{3,}\b`) lists the requirement as an item, which
 is why a requirement written in a non-matching form is **counted but reported
@@ -55,12 +65,19 @@ the strict scan):
 **FR-001** W/S move the left paddle. (AC-002)
 - FR-001 — moves the paddle (AC-002)
 (covers AC-002)
+- FR-001: W/S move the left paddle, and the ball serves
+  toward the loser when a point is scored. (covers AC-002)
 ```
 
 - `**FR-001** …` — a **bold** id is not the required `- FR-001:` list item.
 - `- FR-001 — moves the paddle …` — no **colon** after the id.
 - `(covers AC-002)` on its own line — the acceptance reference is not on the
   `- FR-001:` line.
+- The last two lines are **one soft-wrapped bullet**: a `- FR-001:` line whose
+  `(covers AC-002)` marker wrapped onto the continuation line. Neither physical
+  line establishes coverage — the first has no `AC-###`, the second is not a
+  `- FR-###:` item — so the FR is reported uncovered. Keep the marker on the same
+  physical line as the id.
 
 ## `evidence.yml` declarations
 

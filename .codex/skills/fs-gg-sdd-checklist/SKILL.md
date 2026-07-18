@@ -38,7 +38,13 @@ finds a list item that:
 3. then a literal `:`,
 4. then prose,
 5. with the acceptance reference (`AC-###`, optionally `US-###`) **on the same
-   line.**
+   physical line.**
+
+The scan reads a **single physical line** — it does not join continuation lines. So
+a long requirement that your editor **soft-wraps** across several physical lines,
+with `(covers AC-###)` landing on line two, is reported uncovered even though the
+marker is right there. Keep the whole `- FR-###: … (covers AC-###)` on one physical
+line (disable soft-wrap / "reflow paragraph" for that line if you must).
 
 **Accepted** (each line establishes coverage):
 
@@ -54,10 +60,14 @@ requirement, so it *looks* present but establishes no coverage):
 **FR-001** W/S move the left paddle. (AC-002)     ← bold id, not a "- FR-001:" item
 - FR-001 — moves the paddle (AC-002)              ← no colon after the id
 (covers AC-002)                                    ← AC ref on its own line
+- FR-001: a long requirement whose marker         ← soft-wrapped: the marker
+  wrapped to the next line. (covers AC-002)          landed on line two
 ```
 
 If `checklist` reports a requirement uncovered that you "know" you wrote, it is
-almost always one of these three form errors.
+almost always one of these four form errors — and the last one, a soft-wrapped
+bullet, is the sneakiest because the marker *is* present, just on the wrong physical
+line.
 
 ## Required headings and id prefixes
 
