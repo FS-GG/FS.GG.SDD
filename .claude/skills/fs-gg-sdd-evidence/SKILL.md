@@ -20,8 +20,13 @@ prose below and the example disagree, the example is the authority.
 
 ```text
 fsgg-sdd evidence --work <id>
-fsgg-sdd evidence --work <id> --from-tests <path>   # pre-map new obligations to a proving test file
+fsgg-sdd evidence --work <id> --from-tests <path>        # pre-map new obligations to a proving test file
+fsgg-sdd evidence --work <id> --from-test-report <trx>   # register an observed-run receipt (verify needs it)
 ```
+
+`--from-tests` and `--from-test-report` are **different flags** — a source *pointer*
+versus an observed-run *receipt* — and one does not do the other's job. See "Satisfied
+here is not observed at verify" below.
 
 ## Produces / consumes
 
@@ -53,6 +58,71 @@ already authored (no-clobber).
 - `result: deferred` (or `kind: deferral`) → an accepted **deferral**, not a
   satisfaction.
 - `result: fail | missing | stale | blocked` → not satisfied.
+
+That rule is what **`evidence`** checks — necessary and sufficient *here*, and clearing
+it earns `evidenceReady`. It is **not** sufficient at **`verify`**: an obligation you
+satisfy with a real pass must additionally be *observed*. Read the next section before
+you author a run of `pass`/`false` and assume `verify` will be green.
+
+## Satisfied here is not observed at verify (the observed-run receipt)
+
+`evidenceReady` is not `verifyReady`. The satisfaction rule above (`result: pass ∧
+synthetic: false`) is *necessary but not sufficient* at `verify`: an obligation
+satisfied by a real pass must **also carry an `observedRun` receipt** — proof that a
+suite actually ran — or `verify` blocks with **`verify.unobservedRequiredTest`**. This
+gate is **on by default** (the ADR-0035 stage-3b flip, since 0.14.0); `--no-require-observed`
+is the migration-window opt-out, not the normal path.
+
+So the common failure is real: author every obligation to `pass`/`false`, get
+`evidenceReady`, then watch `verify` block on obligations you thought were done. The
+satisfaction rule is where that pass is *declared*; the observed-run receipt is what
+makes it *count* at the merge boundary.
+
+**Earn the receipt.** Run your suite to a machine-readable report (a `.trx`), then
+register it — a *separate* `evidence` invocation:
+
+```text
+fsgg-sdd evidence --work <id> --from-test-report <path/to/report.trx>
+```
+
+It parses the report and stamps an `observedRun` onto every **`verification`-kind**
+declaration that claims a real pass (idempotent — re-running rewrites the same bytes).
+A report whose run **failed** blocks with `evidence.observedRunFailed` rather than
+becoming a silent receipt; a report that is missing or unparseable blocks too. Nothing
+degrades to "no receipt".
+
+**`--from-test-report` is not `--from-tests`.** They look alike and do opposite jobs:
+
+| flag | what it does | when |
+| --- | --- | --- |
+| `--from-tests <path>` | seeds a verification-kind **source pointer** onto *newly scaffolded* obligations (a declared path, existence checked at `verify`) | pre-mapping a fresh obligation set |
+| `--from-test-report <trx>` | registers an observed-run **receipt** from a report SDD reads, parses, and hashes | after the suite has run, so `verify` passes |
+
+Pointing at where tests *live* is not the same as proving they *ran*. `--from-tests`
+alone never makes an obligation observed.
+
+**How each kind reaches a green `verify`.** Only a `verification`-kind pass can receive
+a receipt, so the observed rule lands differently per kind:
+
+- **`verification` (a test).** Real `pass` + `synthetic: false` **plus** an
+  `observedRun` from `--from-test-report`. This is the only kind a suite run can
+  discharge, and the only kind that satisfies `verify` on a pass.
+- **`generated-view`.** Its currency is established by the **generators**, not by a test
+  run — so it has *no honest observed run*, and a bare `result: pass` on it is
+  `unobserved` forever. Declare it a first-class **deferral** (the four fields below),
+  not a pass. That is the honest disposition, not a workaround.
+- **Any other non-`verification` obligation you were about to mark with a bare `pass`**
+  (e.g. `kind: implementation`). Same trap: there is no receipt a suite run can attach
+  to it, so it stays `unobserved`. Either back the work with a `verification` obligation
+  that a real run discharges, or **defer** the non-test obligation honestly.
+- **`review`, disclosed `synthetic`, `deferral`.** These make no real-pass claim (or
+  disclose a stand-in), so they never reach the `unobserved` arm and are never punished
+  for a run they did not assert.
+
+The rule of thumb: if an obligation's proof is a **test that runs**, it is a
+`verification` pass with a receipt; if its proof is anything a run cannot observe
+(a generated view's currency, an out-of-scope cut), it is a **deferral**. A bare
+non-`verification` `pass` is the state that surprises authors at `verify`.
 
 ## Deferrals are first-class, not failures
 
