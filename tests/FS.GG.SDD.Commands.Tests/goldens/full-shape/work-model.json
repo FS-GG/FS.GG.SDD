@@ -40,7 +40,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "05deb1b6ae6632aed6ad2bcaaf70e3dee66889e64a1e076cf633f570802720de"
+        "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
       }
     },
     {
@@ -76,7 +76,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "e3ad09138f99d8d4858d17982bf117d7b4b312bb9f3f4c9d06411e045cb939b1"
+        "value": "52b18503696dcff85ea6d7cab2a2540907c55357616e41598ec18b224919e68a"
       }
     },
     {
@@ -417,7 +417,7 @@
           "path": ".fsgg/sdd.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "05deb1b6ae6632aed6ad2bcaaf70e3dee66889e64a1e076cf633f570802720de"
+            "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
           },
           "schemaVersion": 1
         },
@@ -441,7 +441,7 @@
           "path": "work/247-full-shape-golden/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "e3ad09138f99d8d4858d17982bf117d7b4b312bb9f3f4c9d06411e045cb939b1"
+            "value": "52b18503696dcff85ea6d7cab2a2540907c55357616e41598ec18b224919e68a"
           },
           "schemaVersion": 1
         },
@@ -472,7 +472,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "5ba0305a45865372c6a0778f4540d693ae9e2d10ad6cbff364893bee430a5373"
+        "value": "6c74d63608ccac514076b45cdf7420ee58cfc8c957cca7c2c8f41cd6fcad59e9"
       },
       "currency": "current"
     }
