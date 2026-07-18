@@ -365,7 +365,16 @@ let run args =
                       ProjectRoot = optionValue "--root" rest |> Option.defaultValue "."
                       WorkId = optionValue "--work" rest
                       Title = optionValue "--title" rest
-                      InputText = optionValue "--input" rest
+                      // FS.GG.SDD#538: `--input` is repeatable and newline-joined, so the intuitive
+                      // one-flag-per-labeled-fact form (`--input "value: …" --input "scope: …"
+                      // --input "requirement: …"`) composes instead of silently keeping one occurrence
+                      // and dropping the rest. A single `--input` is unchanged (join of one element),
+                      // and none stays `None`. The labels join with `\n` — the exact shape the intent
+                      // parser accepts from a single newline-separated value.
+                      InputText =
+                          match collectOptions "--input" rest with
+                          | [] -> None
+                          | values -> Some(String.concat "\n" values)
                       OutputFormat = format
                       DryRun = hasFlag "--dry-run" rest
                       GeneratorVersion = SchemaVersionModule.currentGeneratorVersion ()
