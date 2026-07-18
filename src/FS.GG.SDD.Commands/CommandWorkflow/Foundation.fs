@@ -66,7 +66,7 @@ sdd:
     let sddConfigText =
         """schemaVersion: 1
 lifecycle:
-  stages: [charter, specify, clarify, checklist, plan, tasks, analyze]
+  stages: [charter, specify, clarify, checklist, plan, tasks, analyze, evidence, verify, ship]
 artifacts:
   workRoot: work
   readinessRoot: readiness
