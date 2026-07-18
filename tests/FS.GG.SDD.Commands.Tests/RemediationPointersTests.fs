@@ -1,17 +1,41 @@
 namespace FS.GG.SDD.Commands.Tests
 
 open System
-open System.IO
 open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Commands.Internal
 open Xunit
 
 /// Feature 078 (#125) guard: every authoring-grammar blocking diagnostic carries a *resolving*
-/// remediation pointer, and no pointer dangles. Encodes contract invariants 1–6 from
+/// remediation pointer, and no pointer dangles. Encodes contract invariants 1–7 from
 /// specs/078-diagnostic-remediation-pointers/contracts/remediation-pointer.md over the live
-/// `RemediationPointers.registry` and the on-disk example/anchor targets. If a grammar heading is
-/// renamed or an example file is moved, this fails until the citation (or the target) is fixed.
+/// `RemediationPointers.registry` and the on-disk vendored skills the pointers cite. If a grammar
+/// section in the fs-gg-sdd-authoring-contracts skill is renamed or a stage skill is removed, this
+/// fails until the citation (or the target) is fixed.
+///
+/// The pointer targets the vendored `fs-gg-sdd-*` process skills (present in every scaffold and in
+/// this tool repo) rather than tool-repo-only docs (FS.GG.SDD#539) — so resolution here checks the
+/// on-disk skill trees, not `docs/`.
 module RemediationPointersTests =
+
+    /// The agent-skill roots a scaffold vendors byte-identically (drift-guarded). A cited skill
+    /// resolves when its SKILL.md is present under any one of them: this tool repo carries the
+    /// `.claude`/`.codex` roots; a scaffold additionally carries the neutral `.agents` root.
+    let private skillRoots = [ ".claude"; ".codex"; ".agents" ]
+
+    let private skillRelPath (root: string) (name: string) = $"{root}/skills/{name}/SKILL.md"
+
+    let private skillExists (name: string) : bool =
+        skillRoots
+        |> List.exists (fun root -> TestSupport.existsRelative TestSupport.repoRoot (skillRelPath root name))
+
+    /// The cross-cutting skill whose numbered `## N. …` section anchors the grammar pointers cite,
+    /// resolved from whichever vendored root is present (the roots are byte-identical). Root-agnostic
+    /// like `skillExists`, so removing one root does not turn a resolvable anchor into a crash.
+    let private authoringContractsSkill =
+        skillRoots
+        |> List.map (fun root -> skillRelPath root "fs-gg-sdd-authoring-contracts")
+        |> List.tryFind (TestSupport.existsRelative TestSupport.repoRoot)
+        |> Option.defaultWith (fun () -> failwith "fs-gg-sdd-authoring-contracts skill present under no agent-skill root")
 
     /// GitHub heading-slug algorithm: lowercase, drop everything that is not alphanumeric, space,
     /// or hyphen (so backticks and periods vanish), then spaces → hyphens (consecutive hyphens are
@@ -23,13 +47,12 @@ module RemediationPointersTests =
         |> Seq.toArray
         |> String
 
-    /// The set of anchor slugs the live authoring-contracts.md actually renders. `#` lines inside
-    /// fenced code blocks are skipped — the doc embeds example artifacts whose `## Decisions` etc.
-    /// are prose, not clickable GitHub anchors, so counting them would let a registry anchor
-    /// "resolve" against a heading that does not exist in the rendered doc.
+    /// The set of anchor slugs the live fs-gg-sdd-authoring-contracts skill actually renders. `#`
+    /// lines inside fenced code blocks are skipped — the skill embeds example artifacts whose
+    /// `## Decisions` etc. are prose, not clickable GitHub anchors, so counting them would let a
+    /// registry anchor "resolve" against a heading that does not exist in the rendered doc.
     let private liveAnchorSlugs () : Set<string> =
-        let markdown =
-            TestSupport.readRelative TestSupport.repoRoot "docs/reference/authoring-contracts.md"
+        let markdown = TestSupport.readRelative TestSupport.repoRoot authoringContractsSkill
 
         let mutable inFence = false
 
@@ -46,9 +69,6 @@ module RemediationPointersTests =
                 None)
         |> Set.ofArray
 
-    let private anchorSlug (anchor: string) =
-        anchor.Substring(anchor.IndexOf('#') + 1)
-
     // --- Invariant 1: coverage — every covered id renders a non-empty suffix ---
 
     [<Fact>]
@@ -61,33 +81,27 @@ module RemediationPointersTests =
                 $"covered id '{id}' renders an empty pointer suffix"
             )
 
-    // --- Invariant 2: every cited example path exists on disk ---
+    // --- Invariant 2: every cited skill is present on disk under some agent-skill root ---
 
     [<Fact>]
-    let ``every cited example path resolves on disk`` () =
+    let ``every cited skill resolves on disk`` () =
         for KeyValue(id, pointer) in RemediationPointers.registry do
-            match pointer.Example with
-            | Some relative ->
-                let full =
-                    Path.Combine(TestSupport.repoRoot, relative.Replace('/', Path.DirectorySeparatorChar))
-
-                Assert.True(File.Exists full, $"covered id '{id}' cites missing example '{relative}'")
+            match pointer.Skill with
+            | Some name -> Assert.True(skillExists name, $"covered id '{id}' cites missing skill '{name}'")
             | None -> ()
 
-    // --- Invariant 3: every cited anchor resolves to a real authoring-contracts.md heading ---
+    // --- Invariant 3: every cited grammar anchor resolves to a real authoring-contracts skill heading ---
 
     [<Fact>]
     let ``every cited grammar anchor resolves to a live heading`` () =
         let slugs = liveAnchorSlugs ()
 
         for KeyValue(id, pointer) in RemediationPointers.registry do
-            match pointer.Anchor with
-            | Some anchor ->
-                Assert.Contains("docs/reference/authoring-contracts.md#", anchor)
-
+            match pointer.Grammar with
+            | Some slug ->
                 Assert.True(
-                    Set.contains (anchorSlug anchor) slugs,
-                    $"covered id '{id}' cites anchor '{anchor}' with no matching heading in authoring-contracts.md"
+                    Set.contains slug slugs,
+                    $"covered id '{id}' cites grammar anchor '{slug}' with no matching heading in the fs-gg-sdd-authoring-contracts skill"
                 )
             | None -> ()
 
@@ -95,11 +109,14 @@ module RemediationPointersTests =
     let ``every registry entry cites at least one target`` () =
         for KeyValue(id, pointer) in RemediationPointers.registry do
             Assert.True(
-                pointer.Example.IsSome || pointer.Anchor.IsSome,
-                $"covered id '{id}' cites neither an example nor an anchor"
+                pointer.Skill.IsSome || pointer.Grammar.IsSome,
+                $"covered id '{id}' cites neither a skill nor a grammar anchor"
             )
 
-    // --- Invariant 4: determinism — no absolute path / timestamp / env content ---
+    // --- Invariant 4: determinism — no absolute path, backslash, or other env-dependent content ---
+    // A grammar anchor legitimately carries a section number (e.g. "3-specify---input-…"), so the
+    // suffix is NOT digit-free; determinism instead means the suffix is a pure function of the
+    // static registry — no absolute path, machine name, or timestamp, and POSIX separators only.
 
     [<Fact>]
     let ``pointer suffixes are deterministic and environment-independent`` () =
@@ -107,11 +124,6 @@ module RemediationPointersTests =
             let suffix = RemediationPointers.suffixFor id
             Assert.DoesNotContain(TestSupport.repoRoot, suffix) // no absolute path
             Assert.DoesNotContain("\\", suffix) // POSIX separators only
-
-            Assert.False(
-                Seq.exists Char.IsDigit suffix,
-                $"pointer for '{id}' contains a digit (possible timestamp/version)"
-            )
 
     // --- Registry keys are real diagnostic ids ---
     // The suffix is appended in the shared `commandDiagnostic` keyed on the diagnostic id string, so
@@ -154,8 +166,9 @@ module RemediationPointersTests =
                 $"correction for '{diagnostic.Id}' does not end with its pointer: {diagnostic.Correction}"
             )
 
-            Assert.Contains("docs/examples/lifecycle-artifacts/", diagnostic.Correction)
-            Assert.Contains("docs/reference/authoring-contracts.md#", diagnostic.Correction)
+            // The pointer names a vendored skill (never a `.claude`/`.codex`/`.agents` path).
+            Assert.Contains("fs-gg-sdd-", diagnostic.Correction)
+            Assert.Contains(" skill", diagnostic.Correction)
 
     // --- Invariant 6: non-interference — non-covered corrections carry no pointer ---
 
@@ -169,5 +182,4 @@ module RemediationPointersTests =
     let ``non-covered diagnostics carry no remediation pointer`` () =
         for diagnostic in representativeNonCovered do
             Assert.Equal("", RemediationPointers.suffixFor diagnostic.Id)
-            Assert.DoesNotContain("docs/examples/lifecycle-artifacts/", diagnostic.Correction)
-            Assert.DoesNotContain("docs/reference/authoring-contracts.md#", diagnostic.Correction)
+            Assert.DoesNotContain("fs-gg-sdd-", diagnostic.Correction)

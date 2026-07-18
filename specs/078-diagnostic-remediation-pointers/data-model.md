@@ -3,6 +3,14 @@
 No persisted schema changes. This models the **in-memory registry** and the **pointer mapping**
 that drive construction and the guard. Nothing here is serialized to disk.
 
+> **Superseded by FS.GG.SDD#539.** The `Example`/`Anchor` fields below (tool-repo-only `docs/`
+> paths) were repointed to the vendored `fs-gg-sdd-*` skills: the record is now
+> `{ Skill: string option; Grammar: string option }`, where `Skill` is a `fs-gg-sdd-<stage>` name
+> and `Grammar` is a section-anchor slug into the `fs-gg-sdd-authoring-contracts` skill. Stable-id
+> blocks now carry `Grammar = None` and cite the stage skill alone. The authoritative, guard-pinned
+> spec is `contracts/remediation-pointer.md`; the tables in this design-time doc are retained as
+> history.
+
 ## Entity: `RemediationPointer`
 
 An in-memory record (module `RemediationPointers`, internal to `FS.GG.SDD.Commands`) describing
