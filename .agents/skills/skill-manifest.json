@@ -53,7 +53,7 @@
     {
       "id": "fs-gg-sdd-lifecycle",
       "scope": "process",
-      "sha256": "43e5db75b6d74d7d26f67fc22915d13536db049cb073184a6cff78caa595abe8",
+      "sha256": "7f06d53da3cfac6756d2ce1e36d916442911370b65cf3726dae213ec24bb671c",
       "resolvablePath": ".agents/skills/fs-gg-sdd-lifecycle/SKILL.md",
       "materializes-when": "always"
     },
