@@ -120,6 +120,43 @@ module ObservedRunCommandTests =
         Assert.Equal(before, after)
         Assert.All(parsedEvidence root |> _.Evidence, fun d -> Assert.True(d.ObservedRun.IsNone))
 
+    // FS.GG.SDD#542: a run handed to a FRESH, all-missing scaffold enriches nothing — the receipt
+    // stamps typed verification obligations only. On the initial scaffold every obligation is
+    // `kind: missing`, so the receipt attaches nothing and `evidenceBlocking` reads (correctly) high.
+    // A NON-BLOCKING advisory names how many obligations are still untyped, so that count is not
+    // mistaken for "the tool didn't see my tests", and no receipt lands on an untyped obligation.
+    [<Fact>]
+    let ``a passing report over an untyped scaffold advises and records no receipt`` () =
+        let root = evidencedProjectClaimingPass ()
+
+        // Reproduce the fresh-scaffold shape: every obligation UNTYPED (`kind: missing`,
+        // `result: missing`), as `evidence` seeds them before the author types anything.
+        TestSupport.readRelative root evidencePath
+        |> fun text -> text.Replace("kind: verification", "kind: missing").Replace("result: pass", "result: missing")
+        |> TestSupport.writeRelative root evidencePath
+
+        let missingBefore =
+            (parsedEvidence root).Evidence
+            |> List.filter (fun d -> d.Kind = EvidenceKind.Missing)
+
+        Assert.NotEmpty missingBefore
+
+        TestSupport.writeRelative root reportPath (trxWith 54 0)
+        let report = runWithReport root (Some reportPath)
+
+        // The advisory is present, non-blocking (DiagnosticInfo), and names the untyped count.
+        match
+            report.Diagnostics
+            |> List.tryFind (fun d -> d.Id = "evidence.testReportUntypedObligations")
+        with
+        | None -> failwith "expected the evidence.testReportUntypedObligations advisory"
+        | Some d ->
+            Assert.Equal(Diagnostics.DiagnosticInfo, d.Severity)
+            Assert.Contains(string (List.length missingBefore), d.RelatedIds)
+
+        // The receipt attached nothing: no untyped obligation carries an observedRun.
+        Assert.All(parsedEvidence root |> _.Evidence, fun d -> Assert.True(d.ObservedRun.IsNone))
+
     [<Fact>]
     let ``the receipt is recorded ONLY on a verification obligation, never on a judgement`` () =
         // A suite run discharges a TEST obligation. It says nothing about a review, a deferral, or any

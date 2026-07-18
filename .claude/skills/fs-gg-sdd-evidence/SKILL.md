@@ -91,6 +91,16 @@ A report whose run **failed** blocks with `evidence.observedRunFailed` rather th
 becoming a silent receipt; a report that is missing or unparseable blocks too. Nothing
 degrades to "no receipt".
 
+**It enriches typed obligations; it does not bootstrap the scaffold.** The receipt only
+lands on an obligation **already typed** `kind: verification` that claims a pass. A
+freshly-scaffolded obligation starts `kind: missing` / `result: missing`, so on the
+initial scaffold `--from-test-report` attaches **nothing** — author each obligation's
+`kind`/`result` first. Handed a passing report over an all-missing obligation set, the
+report shows a high `evidenceBlocking` count with no receipt attached; that means "the
+obligations aren't typed yet", **not** "the tool didn't see your tests". `evidence` says
+so with a non-blocking `evidence.testReportUntypedObligations` advisory naming how many
+obligations are still untyped.
+
 **`--from-test-report` is not `--from-tests`.** They look alike and do opposite jobs:
 
 | flag | what it does | when |
