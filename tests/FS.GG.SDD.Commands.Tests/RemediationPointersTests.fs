@@ -35,7 +35,8 @@ module RemediationPointersTests =
         skillRoots
         |> List.map (fun root -> skillRelPath root "fs-gg-sdd-authoring-contracts")
         |> List.tryFind (TestSupport.existsRelative TestSupport.repoRoot)
-        |> Option.defaultWith (fun () -> failwith "fs-gg-sdd-authoring-contracts skill present under no agent-skill root")
+        |> Option.defaultWith (fun () ->
+            failwith "fs-gg-sdd-authoring-contracts skill present under no agent-skill root")
 
     /// GitHub heading-slug algorithm: lowercase, drop everything that is not alphanumeric, space,
     /// or hyphen (so backticks and periods vanish), then spaces → hyphens (consecutive hyphens are
