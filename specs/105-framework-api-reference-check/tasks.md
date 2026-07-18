@@ -37,12 +37,13 @@ Touch-set declared on #569, confirmed DISJOINT from every live claim.
   triple (with and without `@version`); a `blocked-on-framework:` deferral parses;
   a malformed token blocks and is dropped; a plain prose plan yields no reference
   (`tests/FS.GG.SDD.Artifacts.Tests/PlanArtifactTests.fs`) — FR-001..003
-- [ ] T006 [P] Authoring docs for the grammar (`.claude/skills/fs-gg-sdd-plan/`,
-  `.claude/skills/fs-gg-sdd-authoring-contracts/`, `docs/reference/authoring-contracts.md`).
-  **Deferred to Phase 3**: documenting a `framework:` reference before the analyze
-  check exists would teach authors a grammar nothing yet resolves; the plan skill is
-  a *seeded* skill (lockstep `.codex`/`.agents` mirror + `skill-manifest` + golden
-  re-pin), so it lands with the check that gives the grammar meaning — Constitution II
+- [X] T006 [P] Authoring docs for the grammar (`.claude/skills/fs-gg-sdd-plan/` §What a
+  plan covers, `.claude/skills/fs-gg-sdd-authoring-contracts/` new §6,
+  `docs/reference/authoring-contracts.md` new §Framework-API references). Landed as Phase
+  3b once the analyze check gives the grammar meaning: the two seeded skills mirrored
+  byte-identically to `.codex`, the `.agents/skills/skill-manifest.json` regenerated
+  (`registry skill-manifest --write`), and the full-shape golden re-pinned (the two
+  skills' digests) — Constitution II (PR 3b)
 
 ## Phase 2: `dependency-surface` capture verb + drift-guard
 
