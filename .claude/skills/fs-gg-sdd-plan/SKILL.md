@@ -43,7 +43,13 @@ The un-authored-content gate lives **downstream at `analyze`** (`unauthoredScaff
 which blocks until the stub prose is rewritten. So **rewrite every `PD`/`PC`/`VO`/`PM`/`GV`
 line into the real plan before you run `analyze`** — leaving the scaffold prose in place does
 not fail `plan`; it fails `analyze` two stages later and costs a full plan→tasks→analyze
-re-run. See [[fs-gg-sdd-analyze]] and [[fs-gg-sdd-troubleshooting]].
+re-run. The scan covers **every** scaffolded entry, including the `acceptedDeferral` `PD-###`
+decision lines **and** the bottom `## Accepted Deferrals` section — a deferral left as the
+seeded `Accepted deferral … remains visible to task generation.` or `Deferral remains visible
+to tasks and evidence.` blocks exactly like an un-rewritten decision. It compares each entry's
+body verbatim against what the scaffold would have written, and `analyze` names the offending
+ids in the diagnostic message, so you no longer have to grep `plan.md` for the stub phrases.
+See [[fs-gg-sdd-analyze]] and [[fs-gg-sdd-troubleshooting]].
 
 ## Produces / consumes
 

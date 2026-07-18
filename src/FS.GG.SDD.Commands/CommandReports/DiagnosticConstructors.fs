@@ -656,10 +656,18 @@ module internal DiagnosticConstructors =
     // and the scaffold generates ids that line up. A plausible-looking filling is worse than an empty
     // one because it does not itch. This blocks while the tool's own prose is still sitting there.
     let unauthoredScaffoldContent path ids =
+        // FS.GG.SDD#559: name the offending entry ids IN THE MESSAGE, not only in relatedIds. The
+        // `--text` projection (LifecycleFooter) renders only `why:`/`fix:` and never relatedIds, so
+        // an author reading a blocked `analyze` was told prose was unauthored but never which entries
+        // — and had to grep plan.md for the scaffold phrases to find them. Same treatment #359 gave
+        // `malformedCitedArtifactPath` and the sibling #311 gave `missingDisposition`; the ids are
+        // the ones the PLAN carries, so the text names each entry the author must go and rewrite.
+        let named = ids |> String.concat ", "
+
         errorDiagnostic
             "unauthoredScaffoldContent"
             (Some path)
-            "Plan entries still hold the prose the scaffold wrote — an unauthored decision is a missing decision."
+            $"Plan entries still hold the prose the scaffold wrote — an unauthored decision is a missing decision: {named}."
             "Replace each listed entry's text with the real decision, contract, obligation, migration note, or generated-view impact. The scaffold gives you the id and the refs; the judgement is yours to write."
             ids
 

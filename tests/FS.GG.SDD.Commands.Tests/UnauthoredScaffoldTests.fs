@@ -59,6 +59,12 @@ module UnauthoredScaffoldTests =
         Assert.Contains("PM-001", diagnostic.RelatedIds)
         Assert.Contains("GV-001", diagnostic.RelatedIds)
 
+        // FS.GG.SDD#559: and it names them IN THE MESSAGE too, because the `--text` projection renders
+        // only the message and correction — never relatedIds — so an author on `--text` would otherwise
+        // have to grep plan.md for the scaffold phrases to find which entries are still boilerplate.
+        Assert.Contains("PD-001", diagnostic.Message)
+        Assert.Contains("GV-001", diagnostic.Message)
+
     /// SC-001 / FR-003. The acceptance criterion in full: it cannot reach `shipReady`.
     ///
     /// One `DiagnosticError` at `analyze` means no `readiness/<id>/analysis.json` is written (H-4:
