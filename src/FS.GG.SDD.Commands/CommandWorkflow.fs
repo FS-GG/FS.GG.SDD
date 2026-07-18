@@ -111,6 +111,12 @@ module CommandWorkflow =
                         @ (match model.Request.Command with
                            | Evidence -> syncReportReadEffects model
                            | _ -> [])
+                        // Feature 105, Phase 3: the committed captures the framework-reference check
+                        // resolves against. `Analyze` only — the paths become known once plan.md is
+                        // read, so they join the same second wave as the cited-artifact probes.
+                        @ (match model.Request.Command with
+                           | Analyze -> frameworkCaptureReadEffects workId model
+                           | _ -> [])
 
                     match candidateReads with
                     | _ :: _ ->

@@ -4,6 +4,7 @@ open System
 open System.Text
 open System.Text.Json
 open System.Text.RegularExpressions
+open System.Xml.Linq
 open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Artifacts.GenerationManifest
@@ -48,6 +49,62 @@ module internal ViewGeneration =
         with
         | [] -> []
         | missing -> [ missingDisposition (tasksPath workId) missing ]
+
+    // Feature 105, Phase 3 (ADR-0004 D1/D4). Resolve a framework reference's version: the explicit
+    // `@version`, else the Central Package Management pin. Single-sourced from the pin so a reference
+    // never duplicates (nor drifts from) the pinned version. MSBuild is NOT evaluated — a
+    // `<PackageVersion Include="…" Version="…" />` item is read structurally; a malformed pin file is
+    // `None`, never an exception. Matched on `LocalName` for the legacy MSBuild-2003 namespace.
+    let frameworkPinnedVersion (packageId: string) (pinTexts: string list) : string option =
+        pinTexts
+        |> List.tryPick (fun text ->
+            try
+                XDocument.Parse(text).Descendants()
+                |> Seq.tryPick (fun element ->
+                    if element.Name.LocalName = "PackageVersion" then
+                        let includeAttr = element.Attribute(XName.Get "Include") |> Option.ofObj
+                        let versionAttr = element.Attribute(XName.Get "Version") |> Option.ofObj
+
+                        match includeAttr, versionAttr with
+                        | Some inc, Some ver when
+                            String.Equals(inc.Value, packageId, StringComparison.OrdinalIgnoreCase)
+                            ->
+                            Some ver.Value
+                        | _ -> None
+                    else
+                        None)
+            with _ ->
+                None)
+
+    let resolveFrameworkVersion (reference: FrameworkApiReference) (pinTexts: string list) : string option =
+        match reference.Version with
+        | Some version -> Some version
+        | None -> frameworkPinnedVersion reference.PackageId pinTexts
+
+    // Feature 105, Phase 3 (ADR-0004 D3). The symmetric plan-time framework-API check, modeled on
+    // `Evidence.missingCitedArtifacts`: an INJECTED oracle `resolve` returns the resolved version and
+    // the pinned package's captured symbol set (`None` = no capture / could not look). The verdict is
+    // symmetric — a USE must be present, a `blocked-on` deferral must be absent — and fail-open: an
+    // unavailable surface is advisory, never a block (ADR-0002 / #266). Pure and I/O-free: the oracle
+    // is bound at the edge to the committed capture.
+    let frameworkReferenceDiagnostics
+        (resolve: FrameworkApiReference -> string * Set<string> option)
+        (planPath: string)
+        (planFacts: PlanFacts)
+        : Diagnostic list =
+        planFacts.FrameworkApiReferences
+        |> List.collect (fun reference ->
+            let version, symbols = resolve reference
+
+            match symbols with
+            | None -> [ frameworkApiSurfaceUnavailable planPath reference.PackageId version reference.Symbol ]
+            | Some available ->
+                match reference.Kind, Set.contains reference.Symbol available with
+                | FrameworkUse, true -> []
+                | FrameworkUse, false -> [ frameworkApiDangling planPath reference.PackageId version reference.Symbol ]
+                | FrameworkBlockedOn, true ->
+                    [ frameworkApiDeferralContradicted planPath reference.PackageId version reference.Symbol ]
+                | FrameworkBlockedOn, false -> [])
 
     type AnalysisRelationshipDraft =
         { SourcePath: string

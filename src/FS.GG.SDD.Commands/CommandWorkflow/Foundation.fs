@@ -563,6 +563,10 @@ nuget-cache/
           ReadFile(evidencePath workId)
           ReadFile(workModelPath workId)
           ReadFile(analysisPath workId)
+          // Feature 105, Phase 3: the CPM pins, so an unversioned `framework:` reference resolves to
+          // the pinned version in the second wave (`frameworkCaptureReadEffects`).
+          ReadFile "Directory.Packages.local.props"
+          ReadFile "Directory.Packages.props"
           EnumerateDirectory "work" ]
 
     let evidenceReadEffects workId =

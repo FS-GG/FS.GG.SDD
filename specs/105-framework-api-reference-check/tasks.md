@@ -83,19 +83,27 @@ verb yet — same "foundation ahead of its consumer" shape as Phase 1's grammar;
 
 ## Phase 3: `analyze` check
 
-- [ ] T013 Diagnostic constructors `frameworkApiDangling` /
+Split into 3a (the check — T013–T016) and 3b (the grammar authoring docs — T006, a
+seeded-skill lockstep, its own reviewable PR).
+
+- [X] T013 Diagnostic constructors `frameworkApiDangling` /
   `frameworkApiDeferralContradicted` (`DiagnosticError`) and
   `frameworkApiSurfaceUnavailable` (advisory `Info`) in
-  `CommandReports/DiagnosticConstructors.fs` + remediation pointers — FR-007, FR-008
-- [ ] T014 Pure rule `frameworkReferenceDiagnostics (resolve: PackageId -> version ->
-  SymbolSet option) planFacts` in `ViewGeneration.fs` with the five verdicts;
-  classify the new ids in `analysisFindingSeverity` — FR-007, FR-008
-- [ ] T015 Wire the rule into `HandlersAnalyze` `commandDiagnostics` (guarded on
-  `planFacts`); bind the oracle at the edge to the committed capture — FR-006, FR-007
-- [ ] T016 Fixtures + tests: dangling (block), contradicted deferral (block), clean
-  (pass), no-capture (advisory, `analysis.json` still written), asserted by
-  diagnostic id (`tests/FS.GG.SDD.Commands.Tests/AnalyzeCommandTests.fs`) — SC-001,
-  SC-002, SC-003
+  `CommandReports/DiagnosticConstructors.fs` + remediation pointers — FR-007, FR-008 (PR 3a)
+- [X] T014 Pure rule `frameworkReferenceDiagnostics (resolve: FrameworkApiReference ->
+  string * SymbolSet option) planPath planFacts` in `ViewGeneration.fs` with the five
+  verdicts (plus `resolveFrameworkVersion`/`frameworkPinnedVersion`). No
+  `analysisFindingSeverity` arm needed — Error→blocking / Info→advisory via the existing
+  fallback IS the ADR-0004 D3 semantics, and a new category would churn the analysis.json
+  schema — FR-007, FR-008 (PR 3a)
+- [X] T015 Wire the rule into `HandlersAnalyze` `commandDiagnostics` (guarded on
+  `planFacts`); bind the oracle at the edge to the committed capture, with the second-wave
+  `frameworkCaptureReadEffects` joining the generic `candidateReads` loop and the CPM pins
+  read in the first wave for version resolution — FR-006, FR-007 (PR 3a)
+- [X] T016 Fixtures + tests (`FrameworkReferenceCheckTests`): 8 pure-rule tests over all
+  five verdicts + version resolution, and 3 end-to-end through real `analyze` (dangling
+  blocks, present passes, no-capture advisory) over a genuinely restored fixture — SC-001,
+  SC-002, SC-003 (PR 3a)
 
 ## Phase 4 (optional): reconcile the vendored orphan
 
