@@ -537,8 +537,11 @@ module CommandSerialization =
         match defect.GrammarPointer with
         | Some pointer ->
             writer.WriteStartObject("grammarPointer")
-            writer.WriteString("doc", pointer.Doc)
-            writer.WriteString("anchor", pointer.Anchor)
+            writer.WriteString("skill", pointer.Skill)
+
+            match pointer.Section with
+            | Some section -> writer.WriteString("section", section)
+            | None -> writer.WriteNull "section"
 
             match pointer.ExampleTag with
             | Some tag -> writer.WriteString("exampleTag", tag)

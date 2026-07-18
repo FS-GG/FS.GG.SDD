@@ -4,24 +4,32 @@ open System.Text.RegularExpressions
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Commands.Internal
 
 module LintEngine =
 
+    // FS.GG.SDD#545: the grammar of record is the vendored `fs-gg-sdd-authoring-contracts` skill (by
+    // name, no agent-root literal), present in every scaffolded product — not the tool-repo-only
+    // `docs/reference/authoring-contracts.md`, which is a dead end there. The section slugs are reused
+    // from `RemediationPointers` (the sibling #539 pointer set), so lint and the diagnostic-correction
+    // pointers stay coherent by construction rather than by two hand-copied lists that drifted apart.
     [<Literal>]
-    let private grammarDoc = "docs/reference/authoring-contracts.md"
+    let private grammarSkill = "fs-gg-sdd-authoring-contracts"
 
     let grammarPointer (cls: LintDefectClass) : GrammarPointer option =
-        let pointer anchor tag =
+        let pointer section tag =
             Some
-                { Doc = grammarDoc
-                  Anchor = anchor
+                { Skill = grammarSkill
+                  Section = section
                   ExampleTag = tag }
 
         match cls with
-        | CoverageLine -> pointer "acceptance-coverage-line" (Some "coverage:accepted")
-        | MissingDecisionTag -> pointer "clarify-decision-tag-resolution" (Some "clarify-decision:resolved")
-        | FrontMatter -> pointer "per-stage-front-matter" None
-        | DuplicateId -> pointer "stable-id-declarations" None
+        | CoverageLine -> pointer RemediationPointers.coverageLine (Some "coverage:accepted")
+        | MissingDecisionTag -> pointer RemediationPointers.decisionTag (Some "clarify-decision:resolved")
+        | FrontMatter -> pointer RemediationPointers.frontMatter None
+        // Stable-id defects have no cross-cutting authoring-contracts section (they are stage-specific,
+        // #539) — cite the grammar skill alone, with no section.
+        | DuplicateId -> pointer None None
         | Parse
         | Unresolvable -> None
 
