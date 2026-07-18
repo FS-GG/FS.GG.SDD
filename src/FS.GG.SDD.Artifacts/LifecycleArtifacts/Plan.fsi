@@ -70,6 +70,22 @@ module Plan =
           SourceIds: string list
           SourceLocation: SourceLocation option }
 
+    /// FS.GG.SDD#569 (feature 105): whether a framework-API reference is a USE (Contract Impact) or an
+    /// ABSENCE claim (`blocked-on-framework:` on a deferral). See ADR-0004 D3.
+    type FrameworkReferenceKind =
+        | FrameworkUse
+        | FrameworkBlockedOn
+
+    /// FS.GG.SDD#569 (feature 105): a structured framework-API reference
+    /// `<PackageId>[@<version>]#<symbol>`. `Version = None` means the pinned package version applies.
+    type FrameworkApiReference =
+        { PackageId: string
+          Version: string option
+          Symbol: string
+          Kind: FrameworkReferenceKind
+          SourceIds: string list
+          SourceLocation: SourceLocation option }
+
     type PlanFacts =
         { FrontMatter: PlanFrontMatter
           StandardSections: string list
@@ -81,6 +97,7 @@ module Plan =
           MigrationNotes: PlanMigrationNote list
           GeneratedViewImpacts: GeneratedViewImpact list
           AcceptedDeferrals: AcceptedPlanDeferral list
+          FrameworkApiReferences: FrameworkApiReference list
           BlockingFindings: string list
           AdvisoryNotes: string list
           LifecycleNotes: string list

@@ -89,6 +89,10 @@ module Diagnostics =
     /// FS.GG.SDD#359 / #365: a cited artifact path that escapes the repository. Malformed user
     /// input (`IsToolDefect = false`), never a tool defect.
     val malformedArtifactPath: artifact: ArtifactRef -> value: string -> Diagnostic
+
+    /// FS.GG.SDD#569 (feature 105): a `framework:` / `blocked-on-framework:` reference token that is
+    /// not the `<PackageId>[@<version>]#<symbol>` grammar. Malformed user input, blocking.
+    val malformedFrameworkReference: artifact: ArtifactRef -> value: string -> Diagnostic
     val requirementNotTyped: artifact: ArtifactRef -> id: string -> correction: string -> Diagnostic
 
     val workModelInconsistent:
