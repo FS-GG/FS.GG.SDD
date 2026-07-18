@@ -103,7 +103,7 @@ module ReleaseContractTests =
     [<Fact>]
     let ``T011 the compatibility entry carries a Spec Kit range and tolerates a null Governance range`` () =
         let entry = List.exactlyOne release.Compatibility
-        Assert.Equal("0.14.x", entry.SddVersionLine)
+        Assert.Equal("0.15.x", entry.SddVersionLine)
         Assert.False(String.IsNullOrWhiteSpace entry.SpecKitRange)
 
         // ...and the literal above is only half the guard. What makes a compatibility entry TRUE
@@ -268,24 +268,21 @@ module ReleaseContractTests =
                     Path = "docs/release/migrations/9.9.9.md" } // names a file nobody wrote
         )
 
-    // ...and the classification of THIS release, pinned separately, so the note above is a MEASURED
-    // verdict rather than a presence nobody accounted for. 0.14.0 is BREAKING: ADR-0035 stage 3b
-    // (FS.GG.SDD#497) flipped requiring an observed run to the DEFAULT, so an unobserved `result:
-    // pass` test obligation that reached `satisfied` on every prior release no longer does and
-    // `verify`/`ship` block it — a change to their exit-code contract. The break is BEHAVIORAL, so
-    // the F# surface diff v0.13.0..HEAD is EMPTY (the `--no-require-observed` opt-out lives in the
-    // internal-bodied `Options.commandOptions`, not a signature member) and the `--json` shapes are
-    // unchanged; the classifier cannot see it, which is why ADR-0035 left it to a human. The
-    // migration note is the human's encoding of that break.
+    // ...and the classification of THIS release, pinned separately, so the vacuous guard above is a
+    // MEASURED verdict rather than a presence nobody accounted for. 0.15.0 is ADDITIVE: feature 105
+    // (plan-time framework-API resolution) plus the evidence/lint/checklist fixes ADD public members
+    // and remove none (the F# surface diff v0.14.0..HEAD is additive), no command or flag is removed,
+    // and no exit-code contract changes — so `migrationNoteRequired Additive = false` and the release
+    // carries no note. (0.14.0 was the BREAKING one — ADR-0035 stage 3b's observed-run default flip;
+    // its note lives on disk at docs/release/migrations/0.14.0.md and is exercised by the on-disk
+    // 0.10.0 predicate above, so dropping the note here does not silently delete the guard — the
+    // lesson recorded in the US4 header.)
     [<Fact>]
-    let ``T023 this breaking release declares its well-formed migration note`` () =
-        Assert.True(migrationNoteRequired Breaking)
+    let ``T023 this additive release carries no migration note`` () =
+        Assert.False(migrationNoteRequired Additive)
 
-        // Not additive-empty any more: the release carries exactly its own note, for this version,
-        // enumerating the flip, and the note file exists on disk (every noteDefects leg satisfied).
-        Assert.NotEmpty release.Migrations
-        Assert.All(release.Migrations, fun note -> Assert.Empty(noteDefects release.Identity.Version note))
-        Assert.All(release.Migrations, fun note -> Assert.NotEmpty note.BreakingChanges)
+        // Additive-empty: an additive release is obliged to carry NO note, and this one carries none.
+        Assert.Empty release.Migrations
 
     [<Fact>]
     let ``T023 a breaking release is obliged to carry a migration note`` () =

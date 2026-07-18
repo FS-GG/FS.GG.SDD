@@ -239,13 +239,13 @@ module ReleaseContract =
 
     let currentRelease () : ReleaseReadiness =
         let identity =
-            { Version = "0.14.0"
-              Channel = channelOfVersion "0.14.0"
+            { Version = "0.15.0"
+              Channel = channelOfVersion "0.15.0"
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "0.14.x"
+            [ { SddVersionLine = "0.15.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "1.x" } ]
 
@@ -957,11 +957,11 @@ module ReleaseContract =
           //
           // And enumerate EVERY breaking change: a note that under-reports is the exact failure
           // the note exists to prevent.
-          Migrations =
-            [ { Version = "0.14.0"
-                Path = "docs/release/migrations/0.14.0.md"
-                BreakingChanges =
-                  [ "verify and ship now require an observed run receipt by default: an unobserved result pass test obligation no longer satisfies and both stages block it, where every prior release let it through. Pass --no-require-observed to restore the prior behavior, or record a receipt with evidence --from-test-report." ] } ] }
+          // 0.15.0 is ADDITIVE (feature 105 plan-time framework-API resolution + evidence/lint
+          // fixes; F# surface diff v0.14.0..HEAD adds members, removes none). An additive release
+          // carries NO migration note (`migrationNoteRequired Additive = false`); the 0.14.0 note
+          // lives on disk under docs/release/migrations/ and is not carried here.
+          Migrations = [] }
 
     // ---- canonical serialization ----
 
