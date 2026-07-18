@@ -549,15 +549,16 @@ module ObservedRunCommandTests =
     let ``the flipped default blocks an unobserved pass - --no-require-observed restores it`` () =
         let root = evidencedProjectClaimingPass ()
 
-        // The DEFAULT, at the real boundary: no flag. Post-#497 this must fail closed. A blocked
-        // report routes to STDERR by constitutional design (Program.fs), so that is where the
-        // diagnostic lands — not stdout.
+        // The DEFAULT, at the real boundary: no flag. Post-#497 this must fail closed. Per
+        // FS.GG.SDD#535 a blocked report routes to STDOUT (the automation contract), so the
+        // diagnostic lands there; stderr stays empty and the exit code alone signals blocked.
         let defaultExit, defaultStdout, defaultStderr =
             [ "verify"; "--root"; root; "--work"; workId ] |> TestSupport.runCliRaw 30000
 
         Assert.NotEqual(0, defaultExit)
-        Assert.Contains("verify.unobservedRequiredTest", defaultStderr)
+        Assert.Contains("verify.unobservedRequiredTest", defaultStdout)
         Assert.DoesNotContain("verificationReady", defaultStdout)
+        Assert.Equal("", defaultStderr.Trim())
 
         // The escape hatch: `--no-require-observed` restores byte-for-byte the pre-flip opt-out,
         // so a work item that has not yet adopted receipts is not stopped dead mid-migration.

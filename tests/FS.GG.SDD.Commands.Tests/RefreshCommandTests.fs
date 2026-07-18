@@ -800,11 +800,13 @@ module RefreshCommandTests =
         // The exit code did not move (FR-007): the run always failed, it just blamed the wrong file.
         Assert.Equal(1, exitCode)
 
-        // A `Blocked` report routes to stderr, not stdout (Cli/Program.fs). Unchanged by feature 095,
-        // and asserted here so the stream routing stays part of what this smoke pins (FR-015).
-        Assert.Equal("", stdout.Trim())
+        // A `Blocked` report routes to STDOUT — the automation contract — not stderr, per
+        // FS.GG.SDD#535, so an operator can `refresh | jq` a blocked run; stderr stays empty and the
+        // exit code signals blocked. Asserted here so the stream routing stays part of what this smoke
+        // pins (FR-015).
+        Assert.Equal("", stderr.Trim())
 
-        use document = JsonDocument.Parse stderr
+        use document = JsonDocument.Parse stdout
 
         // `generatedViews[]` is keyed by `kind`, not by a `viewId` field.
         let currencyOf kind =
