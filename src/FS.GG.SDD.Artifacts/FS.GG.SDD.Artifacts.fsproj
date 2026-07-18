@@ -40,6 +40,8 @@
     <Compile Include="ScaffoldProvenance.fs" />
     <Compile Include="SkillManifestJson.fsi" />
     <Compile Include="SkillManifestJson.fs" />
+    <Compile Include="DependencySurface.fsi" />
+    <Compile Include="DependencySurface.fs" />
     <Compile Include="LifecycleArtifacts/WorkItemMetadata.fsi" />
     <Compile Include="LifecycleArtifacts/WorkItemMetadata.fs" />
     <Compile Include="LifecycleArtifacts/Specification.fsi" />

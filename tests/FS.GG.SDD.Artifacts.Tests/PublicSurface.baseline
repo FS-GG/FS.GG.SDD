@@ -30,6 +30,13 @@ FS.GG.SDD.Artifacts.Config.parseProjectConfig
 FS.GG.SDD.Artifacts.Config.parseProviderRegistry
 FS.GG.SDD.Artifacts.Config.parseSddLifecyclePolicy
 FS.GG.SDD.Artifacts.Core.standardArtifactContracts
+FS.GG.SDD.Artifacts.DependencySurface.capturePath
+FS.GG.SDD.Artifacts.DependencySurface.create
+FS.GG.SDD.Artifacts.DependencySurface.serialize
+FS.GG.SDD.Artifacts.DependencySurface.symbolDigest
+FS.GG.SDD.Artifacts.DependencySurface.symbolSet
+FS.GG.SDD.Artifacts.DependencySurface.symbolsFromAssembly
+FS.GG.SDD.Artifacts.DependencySurface.tryParse
 FS.GG.SDD.Artifacts.Diagnostics.create
 FS.GG.SDD.Artifacts.Diagnostics.deprecatedSchemaVersion
 FS.GG.SDD.Artifacts.Diagnostics.doctorDriftDetected
