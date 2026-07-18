@@ -653,8 +653,8 @@ module CommandTypes =
         | UnusableInput
 
     type GrammarPointer =
-        { Doc: string
-          Anchor: string
+        { Skill: string
+          Section: string option
           ExampleTag: string option }
 
     type LintDefect =

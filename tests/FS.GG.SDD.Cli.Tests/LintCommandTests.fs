@@ -80,6 +80,11 @@ module LintCommandTests =
         Assert.Contains("\"lint\"", stdout)
         Assert.Contains("duplicateId", stdout)
         Assert.Contains("grammarPointer", stdout)
+        // FS.GG.SDD#545: the pointer targets the vendored skill by name; the old doc/anchor keys of
+        // the --explain --json contract are gone (a deliberate, user-approved breaking rename).
+        Assert.Contains("\"skill\"", stdout)
+        Assert.Contains("fs-gg-sdd-authoring-contracts", stdout)
+        Assert.DoesNotContain("\"anchor\"", stdout)
 
     [<Fact; Trait("tier", "slow")>]
     let ``FR-010 text projection carries the lint facts (kind, outcome, pointer)`` () =

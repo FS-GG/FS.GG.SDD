@@ -612,7 +612,10 @@ module CommandRendering =
             |> List.iter (fun defect ->
                 let pointer =
                     match defect.GrammarPointer with
-                    | Some p -> $" -> {p.Doc}#{p.Anchor}"
+                    | Some p ->
+                        match p.Section with
+                        | Some section -> $" -> {p.Skill}#{section}"
+                        | None -> $" -> {p.Skill}"
                     | None -> ""
 
                 builder.AppendLine(

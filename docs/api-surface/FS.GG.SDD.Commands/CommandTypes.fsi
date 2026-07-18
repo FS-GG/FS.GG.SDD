@@ -718,13 +718,16 @@ module CommandTypes =
         | DefectsFound
         | UnusableInput
 
-    /// A stable pointer from a defect to the grammar of record
-    /// (`docs/reference/authoring-contracts.md`) — the anchor is drift-guarded to
-    /// resolve to a real heading; `ExampleTag` names a tagged fenced example when one
-    /// exists (FR-007b).
+    /// A stable pointer from a defect to the grammar of record — the vendored
+    /// `fs-gg-sdd-authoring-contracts` skill, present in every scaffolded product
+    /// (FS.GG.SDD#545, coherent with #539's remediation pointers). `Skill` names it
+    /// (no agent-root literal); `Section` is a drift-guarded heading slug within it,
+    /// or `None` for stable-id defects, which have no cross-cutting section and cite
+    /// the skill alone. `ExampleTag` names a tagged fenced example when one exists
+    /// (FR-007b).
     type GrammarPointer =
-        { Doc: string
-          Anchor: string
+        { Skill: string
+          Section: string option
           ExampleTag: string option }
 
     /// One reported lint defect: the reused parser `Diagnostic` plus its lint

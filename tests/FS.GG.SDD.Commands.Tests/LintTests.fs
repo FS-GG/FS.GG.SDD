@@ -154,27 +154,61 @@ module LintTests =
             Assert.False(System.String.IsNullOrWhiteSpace d.Diagnostic.Correction)
             Assert.True(Option.isSome d.GrammarPointer)
 
-    // ---- FR-007 drift guard (T008): every pointer anchor resolves in the grammar-of-record ----
+    // ---- FR-007 drift guard (T008 / FS.GG.SDD#545): every pointer's section resolves in the
+    // vendored fs-gg-sdd-authoring-contracts skill — the grammar of record after #545, present in
+    // every scaffolded product, not the tool-repo-only docs/ tree. Mirrors the live-heading check
+    // RemediationPointersTests runs over the sibling #539 pointers, so both stay guarded against a
+    // renamed skill heading.
 
+    // GitHub heading-slug algorithm: lowercase; keep only alphanumerics, spaces, and hyphens (so
+    // backticks and periods vanish); spaces → hyphens, WITHOUT collapsing consecutive hyphens.
     let private slug (heading: string) =
-        let lowered = heading.TrimStart('#', ' ').Trim().ToLowerInvariant()
-        let hyphenated = Regex.Replace(lowered, @"[^a-z0-9]+", "-")
-        hyphenated.Trim('-')
+        heading.ToLowerInvariant()
+        |> Seq.filter (fun c -> System.Char.IsLetterOrDigit c || c = ' ' || c = '-')
+        |> Seq.map (fun c -> if c = ' ' then '-' else c)
+        |> Seq.toArray
+        |> System.String
+
+    // The anchor slugs the live authoring-contracts skill renders, resolved from whichever vendored
+    // root is present (byte-identical). `#` lines inside fenced code are skipped — the skill embeds
+    // example artifacts whose `## …` lines are prose, not clickable GitHub anchors.
+    let private authoringContractsHeadingSlugs () =
+        let relPath =
+            [ ".claude"; ".codex"; ".agents" ]
+            |> List.map (fun r -> $"{r}/skills/fs-gg-sdd-authoring-contracts/SKILL.md")
+            |> List.tryFind (TestSupport.existsRelative root)
+            |> Option.defaultWith (fun () ->
+                failwith "fs-gg-sdd-authoring-contracts skill present under no agent-skill root")
+
+        let markdown = (TestSupport.readRelative root relPath).Replace("\r\n", "\n")
+        let mutable inFence = false
+
+        markdown.Split('\n')
+        |> Array.choose (fun line ->
+            let trimmed = line.TrimStart()
+
+            if trimmed.StartsWith "```" || trimmed.StartsWith "~~~" then
+                inFence <- not inFence
+                None
+            elif (not inFence) && trimmed.StartsWith "#" then
+                Some(slug (trimmed.TrimStart('#').Trim()))
+            else
+                None)
+        |> Set.ofArray
 
     [<Fact>]
-    let ``FR-007 every grammar pointer anchor is a real heading in authoring-contracts`` () =
-        let doc =
-            File.ReadAllText(Path.Combine(root, "docs", "reference", "authoring-contracts.md"))
-
-        let headingSlugs =
-            doc.Split('\n')
-            |> Array.filter (fun l -> l.TrimStart().StartsWith "#")
-            |> Array.map slug
-            |> Set.ofArray
+    let ``FR-007 every grammar pointer section resolves to a live authoring-contracts skill heading`` () =
+        let headingSlugs = authoringContractsHeadingSlugs ()
 
         for cls in [ CoverageLine; MissingDecisionTag; FrontMatter; DuplicateId ] do
             match LintEngine.grammarPointer cls with
-            | Some pointer -> Assert.Contains(pointer.Anchor, headingSlugs)
+            | Some pointer ->
+                Assert.Equal("fs-gg-sdd-authoring-contracts", pointer.Skill)
+
+                match pointer.Section with
+                | Some section -> Assert.Contains(section, headingSlugs)
+                // Stable-id (DuplicateId) cites the skill alone — no cross-cutting section (#539).
+                | None -> ()
             | None -> failwith $"grammar class {lintDefectClassValue cls} must carry a pointer"
 
     // ---- FR-017: every reported defect is an Error ----
