@@ -8,7 +8,8 @@ open Xunit
 /// unrecognized brace token is ignored so every pre-ADR-0048 specification stays valid.
 module RequirementClassificationTests =
 
-    let private classificationOf line = RequirementModel.requirementClassification line
+    let private classificationOf line =
+        RequirementModel.requirementClassification line
 
     [<Fact>]
     let ``recognizedRequirementClasses is the closed set, initially just gameplay`` () =
@@ -58,7 +59,9 @@ module RequirementClassificationTests =
                   Text = text }
 
         let classificationFor id =
-            requirements |> List.find (fun r -> r.Id.Value = id) |> (fun r -> r.Classification)
+            requirements
+            |> List.find (fun r -> r.Id.Value = id)
+            |> (fun r -> r.Classification)
 
         Assert.Equal<string list>([ "gameplay" ], classificationFor "FR-001")
         Assert.Empty(classificationFor "FR-002")

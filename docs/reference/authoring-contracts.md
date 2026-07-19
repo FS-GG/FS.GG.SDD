@@ -94,6 +94,10 @@ downstream per-requirement gate and Governance select on it. An unannotated FR i
 - Write the token on the FR line, after the colon, alongside the coverage marker.
   Classification is **orthogonal to coverage**: the token does not change whether the
   line establishes coverage, and the coverage marker does not change the class.
+  > **Keep it after the colon.** The `- FR-###:` grammar requires the colon
+  > immediately after the id (see *Acceptance coverage line* above), so a token placed
+  > *before* the colon (`- FR-001 {gameplay}: …`) makes the line parse as no
+  > requirement at all — the FR then reports **uncovered**, not merely unclassified.
 - The facet is **additive and non-blocking**, so every pre-ADR-0048 specification
   stays valid unchanged: an FR with no recognized token is unclassified, and a brace
   token that is **not** in the closed set (a typo, or braces used incidentally in

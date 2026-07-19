@@ -10,18 +10,20 @@ open FS.GG.SDD.Artifacts.SchemaVersion
 [<AutoOpen>]
 module RequirementModel =
     type Requirement =
-        { Id: RequirementId
-          Title: string
-          Text: string
-          AcceptanceCriteria: string list
-          Priority: string option
-          /// The classification facets declared on the requirement's coverage line (ADR-0048),
-          /// sorted and deduplicated. An unannotated FR carries the empty list — it is
-          /// *unclassified*. Opt-in and additive: the facet is populated only from a recognized
-          /// brace token (`{gameplay}`) on the FR line, so every existing spec stays valid.
-          Classification: string list
-          Source: ArtifactRef
-          SourceLocation: SourceLocation option }
+        {
+            Id: RequirementId
+            Title: string
+            Text: string
+            AcceptanceCriteria: string list
+            Priority: string option
+            /// The classification facets declared on the requirement's coverage line (ADR-0048),
+            /// sorted and deduplicated. An unannotated FR carries the empty list — it is
+            /// *unclassified*. Opt-in and additive: the facet is populated only from a recognized
+            /// brace token (`{gameplay}`) on the FR line, so every existing spec stays valid.
+            Classification: string list
+            Source: ArtifactRef
+            SourceLocation: SourceLocation option
+        }
 
     type Decision =
         {

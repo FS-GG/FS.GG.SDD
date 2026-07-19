@@ -138,7 +138,8 @@ module AuthoringDocsContractTests =
     [<Fact>]
     let ``Documented gameplay-classified lines carry the gameplay facet in the live parser`` () =
         let lines =
-            taggedBlocks "classification:gameplay" referenceDoc |> List.collect nonBlankLines
+            taggedBlocks "classification:gameplay" referenceDoc
+            |> List.collect nonBlankLines
 
         Assert.NotEmpty lines
 
@@ -151,7 +152,8 @@ module AuthoringDocsContractTests =
     [<Fact>]
     let ``Documented unclassified lines carry no classification in the live parser`` () =
         let lines =
-            taggedBlocks "classification:unclassified" referenceDoc |> List.collect nonBlankLines
+            taggedBlocks "classification:unclassified" referenceDoc
+            |> List.collect nonBlankLines
 
         Assert.NotEmpty lines
 
