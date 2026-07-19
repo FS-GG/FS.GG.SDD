@@ -79,6 +79,45 @@ the strict scan):
   `- FR-###:` item — so the FR is reported uncovered. Keep the marker on the same
   physical line as the id.
 
+## Functional-requirement classification
+
+`fsgg-sdd` reads an **opt-in classification facet** off the functional-requirement
+line (ADR-0048). A brace-delimited token from a **closed set** — currently just
+`{gameplay}` — on the `- FR-###:` line tags that requirement with the class, and the
+generated work model carries it as `requirements[].classification`, where the
+downstream per-requirement gate and Governance select on it. An unannotated FR is
+*unclassified* (the empty set).
+
+- The vocabulary is a **closed set**: `{gameplay}`. It is **case-insensitive**
+  (`{Gameplay}` is the same facet) and recognized only in **brace form** — a bare
+  `gameplay` in prose is not an annotation.
+- Write the token on the FR line, after the colon, alongside the coverage marker.
+  Classification is **orthogonal to coverage**: the token does not change whether the
+  line establishes coverage, and the coverage marker does not change the class.
+- The facet is **additive and non-blocking**, so every pre-ADR-0048 specification
+  stays valid unchanged: an FR with no recognized token is unclassified, and a brace
+  token that is **not** in the closed set (a typo, or braces used incidentally in
+  prose) is **ignored**, never an error.
+
+Copyable forms that classify the requirement `{gameplay}` (each also establishes its
+coverage):
+
+```text classification:gameplay
+- FR-001: W/S move the left paddle. {gameplay} (covers AC-002)
+- FR-014: Ball serves toward the loser. {gameplay} (Stories: US-003; Acceptance: AC-009)
+```
+
+Forms that leave the requirement **unclassified**:
+
+```text classification:unclassified
+- FR-002: The main menu lists saved games. (covers AC-003)
+- FR-003: Difficulty is configurable. {difficulty} (covers AC-004)
+```
+
+- `- FR-002: …` names no brace token → unclassified.
+- `- FR-003: … {difficulty} …` names a brace token that is **not** in the closed set
+  → ignored, so the requirement stays unclassified.
+
 ## `evidence.yml` declarations
 
 > **Disambiguation.** This `evidence.yml` is the SDD **lifecycle** evidence

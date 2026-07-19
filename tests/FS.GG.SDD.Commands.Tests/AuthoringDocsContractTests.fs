@@ -108,6 +108,59 @@ module AuthoringDocsContractTests =
                 $"Doc lists this line as REJECTED coverage, but the parser covered it: {line}"
             )
 
+    // --- Classification (ADR-0048) -------------------------------------------
+
+    /// Wrap a single documented FR line in a minimal specification snapshot and return the
+    /// classification the live `RequirementModel.parseRequirements` captured for it — the same
+    /// facet that reaches the work model's `requirements[].classification`.
+    let private lineClassification (line: string) =
+        let text =
+            String.concat
+                "\n"
+                [ "---"
+                  "schemaVersion: 1"
+                  "workId: 001-authoring-contracts-guard"
+                  "stage: specify"
+                  "---"
+                  ""
+                  "## Functional Requirements"
+                  ""
+                  line ]
+
+        RequirementModel.parseRequirements
+            { Path = "work/001-authoring-contracts-guard/spec.md"
+              Text = text }
+        |> List.tryHead
+        |> Option.map (fun requirement -> requirement.Classification)
+        |> Option.defaultWith (fun () ->
+            failwith $"Documented classification line did not parse as a requirement: {line}")
+
+    [<Fact>]
+    let ``Documented gameplay-classified lines carry the gameplay facet in the live parser`` () =
+        let lines =
+            taggedBlocks "classification:gameplay" referenceDoc |> List.collect nonBlankLines
+
+        Assert.NotEmpty lines
+
+        for line in lines do
+            Assert.True(
+                List.contains "gameplay" (lineClassification line),
+                $"Doc lists this line as gameplay-classified, but the parser did not classify it: {line}"
+            )
+
+    [<Fact>]
+    let ``Documented unclassified lines carry no classification in the live parser`` () =
+        let lines =
+            taggedBlocks "classification:unclassified" referenceDoc |> List.collect nonBlankLines
+
+        Assert.NotEmpty lines
+
+        for line in lines do
+            Assert.True(
+                List.isEmpty (lineClassification line),
+                $"Doc lists this line as UNCLASSIFIED, but the parser classified it: {line}"
+            )
+
     // --- Evidence ------------------------------------------------------------
 
     let private declarations (block: string list) =

@@ -34,6 +34,7 @@ module WorkModel =
           Text: string
           AcceptanceCriteria: string list
           Priority: string option
+          Classification: string list
           Source: string
           SourceLocation: SourceLocation option
           LinkedTaskIds: string list
@@ -544,7 +545,10 @@ module WorkModel =
             parsed.Diagnostics @ validationDiagnostics parsed |> Diagnostics.sort
 
         { SchemaVersion = 1
-          ModelVersion = "1.0.0"
+          // 1.1.0: additive `requirements[].classification` facet (ADR-0048, feature WI-3). The
+          // schema major stays 1 — the field is additive and optional-valued (empty = unclassified)
+          // — so the change bumps the model's minor per docs/release/versioning-policy.md.
+          ModelVersion = "1.1.0"
           WorkId = parsed.WorkId.Value
           Project =
             { Id =
@@ -585,6 +589,7 @@ module WorkModel =
                   Text = requirement.Text
                   AcceptanceCriteria = requirement.AcceptanceCriteria
                   Priority = requirement.Priority
+                  Classification = requirement.Classification
                   Source = requirement.Source.Path
                   SourceLocation = requirement.SourceLocation
                   LinkedTaskIds = linkedTaskIds
@@ -945,6 +950,9 @@ module WorkModel =
                                     (match jmString "priority" item with
                                      | "" -> None
                                      | value -> Some value)
+                                  // Absent on a pre-1.1.0 model → empty (unclassified), which is the
+                                  // correct read of an FR that predates the facet.
+                                  Classification = jmStringList "classification" item
                                   Source = jmString "source" item
                                   SourceLocation = jmLocation "sourceLocation" item
                                   LinkedTaskIds = jmStringList "linkedTaskIds" item |> List.sort

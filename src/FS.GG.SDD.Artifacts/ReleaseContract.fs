@@ -296,6 +296,7 @@ module ReleaseContract =
                   "project.id"
                   "requirements"
                   "requirements[].acceptanceCriteria"
+                  "requirements[].classification"
                   "requirements[].id"
                   "requirements[].linkedEvidenceIds"
                   "requirements[].linkedTaskIds"

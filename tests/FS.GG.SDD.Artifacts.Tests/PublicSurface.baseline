@@ -189,6 +189,7 @@ FS.GG.SDD.Artifacts.ReleaseContract.stabilityClassValue
 FS.GG.SDD.Artifacts.RequiredKeys.requiredFrontMatterKeys
 FS.GG.SDD.Artifacts.RequirementModel.parseDecisions
 FS.GG.SDD.Artifacts.RequirementModel.parseRequirements
+FS.GG.SDD.Artifacts.RequirementModel.requirementClassification
 FS.GG.SDD.Artifacts.ScaffoldProvenance.devRepoRecord
 FS.GG.SDD.Artifacts.ScaffoldProvenance.isDevRepo
 FS.GG.SDD.Artifacts.ScaffoldProvenance.serialize

@@ -19,6 +19,7 @@ module RequirementModel =
           Text: string
           AcceptanceCriteria: string list
           Priority: string option
+          Classification: string list
           Source: ArtifactRef
           SourceLocation: SourceLocation option }
 
@@ -36,6 +37,28 @@ module RequirementModel =
         { Id: string
           Source: ArtifactRef
           SourceLocation: SourceLocation option }
+
+    // The closed set of recognized FR classification facets (ADR-0048), lowercased. Initially just
+    // `gameplay`. Single source of truth for the coverage-line `{…}` annotation vocabulary.
+    let recognizedRequirementClasses = [ "gameplay" ]
+
+    let private recognizedRequirementClassSet =
+        recognizedRequirementClasses
+        |> List.map (fun cls -> cls.ToLowerInvariant())
+        |> Set.ofList
+
+    let requirementClassification (line: string) : string list =
+        // Opt-in and additive: collect only brace tokens whose lowercased value is a recognized
+        // class. An unrecognized `{…}` token (or braces used incidentally in prose) is ignored — it
+        // never blocks, so a line with no recognized token stays unclassified. This is why every
+        // pre-ADR-0048 spec remains valid.
+        Regex.Matches(line, @"\{\s*([A-Za-z][A-Za-z0-9-]*)\s*\}")
+        |> Seq.cast<Match>
+        |> Seq.map (fun m -> m.Groups.[1].Value.ToLowerInvariant())
+        |> Seq.filter (fun token -> Set.contains token recognizedRequirementClassSet)
+        |> Seq.distinct
+        |> Seq.sort
+        |> Seq.toList
 
     let parseRequirements (snapshot: FileSnapshot) =
         let artifact = sourceArtifact snapshot.Path ArtifactKind.Spec
@@ -69,6 +92,7 @@ module RequirementModel =
                           Text = m.Groups.[2].Value.Trim()
                           AcceptanceCriteria = acceptanceCriteria
                           Priority = None
+                          Classification = requirementClassification line
                           Source = artifact
                           SourceLocation = sourceLocation lineNumber }
                 | Error _ -> None
