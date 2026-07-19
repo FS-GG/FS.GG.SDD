@@ -21,6 +21,7 @@ module RegistryDocumentTests =
           Owner = "sdd"
           Surface = "surface"
           Consumers = Registry.ConsumersDeclared [ "templates" ]
+          WireContract = Registry.WireUnspecified
           PackageVersion = None
           Range = None }
 
@@ -280,3 +281,85 @@ module RegistryDocumentTests =
                 Contracts = [ { contract "a" with Range = Some "??" } ] }
 
         Assert.Contains(Registry.MalformedVersion, rules (Registry.validateDocument doc))
+
+    // --- The three-state `wire-contract` dimension (FS.GG.SDD#589 / ADR-0052) ---
+    //
+    // Each arm below goes red if its diagnostic branch in `validateDocument` is disabled
+    // (SC / FR: every rule has a test that fails when its arm is removed). The `contract`
+    // helper declares `WireUnspecified`, so the base document already covers "absent is not
+    // a fault"; the coherent-document test above is that arm's red-when-broken guard.
+
+    let private withWire wire =
+        { baseDoc with
+            Contracts = [ { contract "alpha" with Registry.WireContract = wire } ] }
+
+    /// Absent wire contract: NOT a fault. Most contracts have no wire dimension.
+    [<Fact>]
+    let ``wire: an absent wire-contract is Valid - most contracts are not networked`` () =
+        Assert.Equal(Registry.Valid, Registry.validateDocument (withWire Registry.WireUnspecified))
+
+    /// Provenance 1 — vendored external `.proto`, versioned independently of the source.
+    [<Fact>]
+    let ``wire: a well-formed vendored-proto is Valid`` () =
+        let doc =
+            withWire (Registry.WireDeclared(Registry.VendoredProto("Blizzard/s2client-proto", "5.0.12")))
+
+        Assert.Equal(Registry.Valid, Registry.validateDocument doc)
+
+    [<Fact>]
+    let ``wire: vendored-proto missing upstream reports MissingField naming the field`` () =
+        let doc = withWire (Registry.WireDeclared(Registry.VendoredProto("", "5.0.12")))
+        Assert.Contains(Registry.MissingField "wire-contract.upstream", rules (Registry.validateDocument doc))
+
+    [<Fact>]
+    let ``wire: vendored-proto missing upstream-version reports MissingField`` () =
+        let doc = withWire (Registry.WireDeclared(Registry.VendoredProto("Blizzard/s2client-proto", "")))
+
+        Assert.Contains(
+            Registry.MissingField "wire-contract.upstream-version",
+            rules (Registry.validateDocument doc)
+        )
+
+    /// The independent version is a version, so a non-SemVer one is MalformedVersion — the
+    /// same grammar `version` / `package-version` are held to.
+    [<Fact>]
+    let ``wire: vendored-proto with a non-SemVer upstream-version reports MalformedVersion`` () =
+        let doc =
+            withWire (Registry.WireDeclared(Registry.VendoredProto("Blizzard/s2client-proto", "not-a-version")))
+
+        Assert.Contains(Registry.MalformedVersion, rules (Registry.validateDocument doc))
+
+    /// Provenance 2 — owned `.proto`; the file is the compatibility surface.
+    [<Fact>]
+    let ``wire: a well-formed owned-proto is Valid`` () =
+        let doc = withWire (Registry.WireDeclared(Registry.OwnedProto("protos/bar.proto")))
+        Assert.Equal(Registry.Valid, Registry.validateDocument doc)
+
+    [<Fact>]
+    let ``wire: owned-proto missing proto reports MissingField naming the field`` () =
+        let doc = withWire (Registry.WireDeclared(Registry.OwnedProto("")))
+        Assert.Contains(Registry.MissingField "wire-contract.proto", rules (Registry.validateDocument doc))
+
+    /// Provenance 3 — code-first protobuf-net; no `.proto`, the F# types are the contract.
+    [<Fact>]
+    let ``wire: a well-formed code-first-protobuf-net is Valid`` () =
+        let doc =
+            withWire (Registry.WireDeclared(Registry.CodeFirstProtobufNet("src/FS.GG.Net/Wire.fsi")))
+
+        Assert.Equal(Registry.Valid, Registry.validateDocument doc)
+
+    [<Fact>]
+    let ``wire: code-first-protobuf-net missing surface reports MissingField naming the field`` () =
+        let doc = withWire (Registry.WireDeclared(Registry.CodeFirstProtobufNet("")))
+        Assert.Contains(Registry.MissingField "wire-contract.surface", rules (Registry.validateDocument doc))
+
+    /// A present-but-unparseable declaration is its OWN fault — reported as `MalformedField`,
+    /// never collapsed into `WireUnspecified` (a phantom "no wire contract") or a guessed
+    /// provenance. Mirror of the `consumers` malformed case.
+    [<Fact>]
+    let ``wire: a malformed wire-contract reports MalformedField, not Missing and not Valid`` () =
+        let doc = withWire (Registry.WireMalformed "unknown provenance 'grpc'")
+        let reported = rules (Registry.validateDocument doc)
+
+        Assert.Contains(Registry.MalformedField "wire-contract", reported)
+        Assert.NotEqual(Registry.Valid, Registry.validateDocument doc)

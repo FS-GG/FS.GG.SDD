@@ -45,12 +45,28 @@ module Registry =
         | ConsumersDeclared of consumers: string list
         | ConsumersMalformed of raw: string
 
+    /// Three PROVENANCES of a wire contract (ADR-0052). See Registry.fsi for why the
+    /// union is closed and an unknown provenance is `WireMalformed`, not a fourth case.
+    type WireContract =
+        | VendoredProto of upstream: string * upstreamVersion: string
+        | OwnedProto of proto: string
+        | CodeFirstProtobufNet of surface: string
+
+    /// THREE states, and the reasons mirror `ConsumerDeclaration`: `absent` is NOT a
+    /// declaration and a typo is NEITHER. See Registry.fsi for why a `WireContract option`
+    /// cannot express this honestly.
+    type WireContractDeclaration =
+        | WireUnspecified
+        | WireDeclared of WireContract
+        | WireMalformed of raw: string
+
     type ContractEntry =
         { Id: string
           Version: string
           Owner: string
           Surface: string
           Consumers: ConsumerDeclaration
+          WireContract: WireContractDeclaration
           PackageVersion: string option
           Range: string option }
 
@@ -399,7 +415,58 @@ module Registry =
                       { Entry = entry
                         Rule = MalformedVersion
                         Message = $"Contract '{entry}' has a malformed 'range': '{range}'." }
-                  | _ -> () ])
+                  | _ -> ()
+
+                  // FS.GG.SDD#589 / ADR-0052: the optional wire-contract dimension. Three
+                  // provenances, each with its own required fields, and the same three-state
+                  // read `consumers` uses: absent is NOT a fault (most contracts have no wire
+                  // dimension), a present-but-unparseable declaration IS one, and a declared
+                  // provenance is checked for the fields that provenance makes load-bearing.
+                  // `WireUnspecified` yields nothing, exactly as an absent `range` does.
+                  match c.WireContract with
+                  | WireUnspecified -> ()
+                  | WireMalformed raw ->
+                      { Entry = entry
+                        Rule = MalformedField "wire-contract"
+                        Message =
+                          $"Contract '{entry}' has a 'wire-contract' that is present but unparseable: {raw}. Declare a 'provenance' of 'vendored-proto', 'owned-proto', or 'code-first-protobuf-net'." }
+                  | WireDeclared(VendoredProto(upstream, upstreamVersion)) ->
+                      // The vendored upstream ref and its OWN version — both load-bearing:
+                      // the ref says which upstream the bytes match, the version pins it,
+                      // and it is validated as a version because it is one (independent of
+                      // the component's `version`).
+                      if isBlank upstream then
+                          { Entry = entry
+                            Rule = MissingField "wire-contract.upstream"
+                            Message =
+                              $"Contract '{entry}' declares a vendored-proto wire contract but is missing a non-blank 'upstream'." }
+
+                      if isBlank upstreamVersion then
+                          { Entry = entry
+                            Rule = MissingField "wire-contract.upstream-version"
+                            Message =
+                              $"Contract '{entry}' declares a vendored-proto wire contract but is missing a non-blank 'upstream-version'." }
+                      elif not (isValidVersion upstreamVersion) then
+                          { Entry = entry
+                            Rule = MalformedVersion
+                            Message =
+                              $"Contract '{entry}' has a malformed vendored-proto 'upstream-version': '{upstreamVersion}'." }
+                  | WireDeclared(OwnedProto proto) ->
+                      // The owned `.proto` file IS the compatibility surface (field-number /
+                      // `reserved` discipline), so its path must be named.
+                      if isBlank proto then
+                          { Entry = entry
+                            Rule = MissingField "wire-contract.proto"
+                            Message =
+                              $"Contract '{entry}' declares an owned-proto wire contract but is missing a non-blank 'proto'." }
+                  | WireDeclared(CodeFirstProtobufNet surface) ->
+                      // No `.proto`: the F# `[<ProtoContract>]` types are the contract, so the
+                      // type surface that carries the field numbers must be named.
+                      if isBlank surface then
+                          { Entry = entry
+                            Rule = MissingField "wire-contract.surface"
+                            Message =
+                              $"Contract '{entry}' declares a code-first-protobuf-net wire contract but is missing a non-blank 'surface'." } ])
 
         // dependencies (file order): from/to must be present repo ids. `via` is
         // free-text and is NOT contract-checked (research R4).

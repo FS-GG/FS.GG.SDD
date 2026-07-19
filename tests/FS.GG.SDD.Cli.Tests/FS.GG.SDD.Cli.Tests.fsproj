@@ -23,6 +23,7 @@
     <Compile Include="LintCommandTests.fs" />
     <Compile Include="RegistrySkillManifestContainmentTests.fs" />
     <Compile Include="RegistryValidateContainmentTests.fs" />
+    <Compile Include="RegistryValidateWireContractTests.fs" />
     <Compile Include="RegistryUnknownFlagTests.fs" />
     <Compile Include="UnknownOptionTests.fs" />
     <Compile Include="MissingOptionValueTests.fs" />

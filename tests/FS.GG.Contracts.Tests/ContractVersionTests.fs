@@ -78,10 +78,30 @@ module ContractVersionTests =
     // `ContractEntry` is an unrelated domain type in its `Route.fsi`. So, as with 2.0.0, for a
     // consumer already on 2.1.0 this is a version-number change and no source edit. That does not
     // make it a minor: the surface broke, and the number says so.
+    //
+    // 3.0.0 -> 4.0.0 (FS.GG.SDD#589, ADR-0052): a DECLARED break, and the SAME record row that
+    // produced 2.0.0 and 3.0.0 — `ContractEntry` gains a `WireContract: WireContractDeclaration`
+    // field (the optional wire-contract dimension: three provenances — vendored `.proto`, owned
+    // `.proto`, code-first protobuf-net). Adding a field to a public F# record generates a new
+    // positional ctor and DELETES the old one, so it is breaking for the identical reason the
+    // version-bump checklist's first row states, and there is NO additive spelling: a parallel
+    // record (`RegistryDocument` gaining a `WireContracts` list) is a new field on a public record
+    // too. The new union types (`WireContract`, `WireContractDeclaration`) are themselves additive;
+    // the record field is what forces the major. The break is DECLARED
+    // (docs/release/contracts-4.0.0.md), not suppressed.
+    //
+    // WHY THE MAJOR IS SPENT: a networked component's compatibility surface is often its wire
+    // bytes, which the source `.fsi` `Surface` cannot express, and `.github`'s registry could not
+    // record them at all (blocking FS.GG.Net's SC2/BAR contracts under ADR-0052). This is the SDD
+    // half of the two ordered PRs (ADR-0037); `.github` bumps `schemaVersion` + the validator pin
+    // after this publishes. Blast radius (both declared `Fsgg.Registry` consumers, unchanged from
+    // 3.0.0): neither Governance nor Templates references `Fsgg.Registry`, so for a consumer on
+    // 3.0.0 this is a version-number change and no source edit. That does not make it a minor: the
+    // record surface broke, and the number says so.
     [<Fact>]
-    let ``contract version self-report matches 3_0_0`` () =
-        Assert.Equal("3.0.0", ContractVersion.value)
-        Assert.Equal(3, ContractVersion.major)
+    let ``contract version self-report matches 4_0_0`` () =
+        Assert.Equal("4.0.0", ContractVersion.value)
+        Assert.Equal(4, ContractVersion.major)
         Assert.Equal(0, ContractVersion.minor)
         Assert.Equal(0, ContractVersion.patch)
 
