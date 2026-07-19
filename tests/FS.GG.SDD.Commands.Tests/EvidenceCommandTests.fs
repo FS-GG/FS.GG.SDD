@@ -1573,6 +1573,7 @@ evidence:
           LinkedDecisionIds = []
           LinkedSourceIds = []
           ExpectedEvidenceKinds = []
+          RequiredEvidenceKinds = []
           RequiredSkillOrCapabilityTags = []
           Blocking = true
           Correction = "" }
@@ -1602,3 +1603,70 @@ evidence:
         let diagnostic = List.head diagnostics
         Assert.Equal("toolDefect", diagnostic.Id)
         Assert.True(diagnostic.IsToolDefect)
+
+    // ---- WI-4 (ADR-0048): the per-classified-FR gameplay obligation ------------------------------
+    //
+    // A classified `{gameplay}` FR mints an obligation carrying the gameplay-test tag and
+    // `RequiredEvidenceKinds = [verification]`. It is discharged only by a real (non-synthetic) test
+    // KIND; a synthetic pass or a non-test-kind pass leaves it unmet, and the count Governance binds
+    // reflects that. An accepted deferral is a first-class outcome, as for visualSurface.
+
+    let private gameplayObligation id : Evidence.EvidenceObligation =
+        { evidenceObligation id with
+            RequiredEvidenceKinds = Evidence.realTestEvidenceKinds
+            RequiredSkillOrCapabilityTags = [ Evidence.gameplayTestCapability ] }
+
+    let private gameplayDisposition (declaration: string) =
+        let artifact = evidenceArtifactWith declaration
+
+        HandlersEvidence.evidenceDispositions [ gameplayObligation "EV001" ] (fun _ -> true) artifact
+        |> List.find (fun disposition -> disposition.ObligationId = "EV001")
+
+    let private declarationOfKind (kind: string) (synthetic: bool) =
+        $"""  - id: EV001
+    kind: {kind}
+    subject:
+      type: task
+      id: T001
+    obligationRefs: [EV001]
+    result: pass
+    synthetic: {(if synthetic then "true" else "false")}"""
+
+    [<Fact>]
+    let ``a gameplay obligation is supported by a non-synthetic verification pass`` () =
+        let disposition = gameplayDisposition (declarationOfKind "verification" false)
+        Assert.Equal("supported", disposition.State)
+        Assert.True(disposition.ClassifiedRequirement)
+        Assert.Equal(0, HandlersEvidence.classifiedObligationsUnmetCount [ disposition ])
+
+    [<Fact>]
+    let ``a gameplay obligation is unmet by a non-test-kind pass`` () =
+        // An `implementation` pass discharges any ordinary obligation, but not a gameplay one — only a
+        // real test kind does. This is the injected `ED-` arm.
+        let disposition = gameplayDisposition (declarationOfKind "implementation" false)
+        Assert.Equal("invalid", disposition.State)
+        Assert.Contains("evidence.classifiedRequirementTestObligationUnmet", disposition.DiagnosticIds)
+        Assert.Equal(1, HandlersEvidence.classifiedObligationsUnmetCount [ disposition ])
+
+    [<Fact>]
+    let ``a gameplay obligation is unmet by a synthetic pass`` () =
+        // Synthetic state can never discharge a gameplay obligation (the epic's core rule).
+        let disposition = gameplayDisposition (declarationOfKind "verification" true)
+        Assert.NotEqual("supported", disposition.State)
+        Assert.Equal(1, HandlersEvidence.classifiedObligationsUnmetCount [ disposition ])
+
+    [<Fact>]
+    let ``classifiedObligationsUnmetCount counts the unmet classified obligation and not the supported one`` () =
+        let supported = gameplayDisposition (declarationOfKind "verification" false)
+        let unmet = gameplayDisposition (declarationOfKind "implementation" false)
+
+        // An unclassified obligation left unmet must NOT contribute — the count is gameplay-specific.
+        let unclassifiedUnmet =
+            HandlersEvidence.evidenceDispositions
+                [ evidenceObligation "EV001" ]
+                (fun _ -> true)
+                (evidenceArtifactWith (declarationOfKind "implementation" false))
+            |> List.find (fun disposition -> disposition.ObligationId = "EV001")
+
+        Assert.False(unclassifiedUnmet.ClassifiedRequirement)
+        Assert.Equal(1, HandlersEvidence.classifiedObligationsUnmetCount [ supported; unmet; unclassifiedUnmet ])

@@ -38,6 +38,11 @@ module internal HandlersEvidence =
             /// so `verify`, `ship`, and the committed verdict cannot drift on it, and so no consumer
             /// can hardcode the `false` it reads today. Always `false` until FS.GG.SDD#350 lands.
             Observed: bool
+            /// WI-4 (ADR-0048): is this the obligation of a classified `{gameplay}` FR — the per-FR
+            /// obligation that only a real, non-synthetic test discharges? Carried per-disposition so
+            /// `evidence`/`verify`/`ship` count "classified-FR obligations unmet" identically without
+            /// re-correlating each disposition back to its obligation's tags.
+            ClassifiedRequirement: bool
             EvidenceIds: string list
             TaskIds: string list
             DiagnosticIds: string list
@@ -489,6 +494,15 @@ module internal HandlersEvidence =
                   // at their own seams; `evidence` was never blind.
                   LinkedSourceIds = task.SourceIds
                   ExpectedEvidenceKinds = [ "implementation"; "verification"; "deferral"; "synthetic" ]
+                  // WI-4 (ADR-0048): a task carrying the gameplay-test capability (the per-classified-FR
+                  // obligation derived in TaskGraphAuthoring) is discharged only by a real, non-synthetic
+                  // test — so its obligation restricts the satisfying kind. Every other task leaves this
+                  // empty (no restriction), which is why the change is additive and backward-compatible.
+                  RequiredEvidenceKinds =
+                    if isGameplayTestTagged task.RequiredSkills then
+                        realTestEvidenceKinds
+                    else
+                        []
                   RequiredSkillOrCapabilityTags = task.RequiredSkills
                   Blocking = true
                   Correction =
@@ -1015,6 +1029,24 @@ module internal HandlersEvidence =
                         normalizedEvidenceResult declaration.Result = "pass" && declaration.Synthetic)
                 then
                     "synthetic", []
+                // WI-4 (ADR-0048): a classified {gameplay} FR obligation is satisfied only by a real,
+                // non-synthetic test kind. A non-synthetic pass whose KIND is not a real test (e.g. an
+                // `implementation` pass) must not register as "supported" for such an obligation — that
+                // is the gate the epic requires (a headless test, never mere implementation or synthetic
+                // state). A synthetic-only pass already fell to "synthetic" above, and a deferral/missing
+                // to their own arms, so this fires only on a real pass of the wrong kind.
+                elif
+                    not (List.isEmpty obligation.RequiredEvidenceKinds)
+                    && matches
+                       |> List.exists (fun declaration ->
+                           normalizedEvidenceResult declaration.Result = "pass"
+                           && not declaration.Synthetic)
+                    && not (
+                        matches
+                        |> List.exists (satisfiesRequiredEvidenceKinds obligation.RequiredEvidenceKinds)
+                    )
+                then
+                    "invalid", [ "evidence.classifiedRequirementTestObligationUnmet" ]
                 elif
                     matches
                     |> List.exists (fun declaration -> normalizedEvidenceResult declaration.Result = "pass")
@@ -1053,6 +1085,7 @@ module internal HandlersEvidence =
                // imposed on what "cited" means. Today it is false for everything, and saying so out
                // loud — in the console and in the committed verdict — is the feature.
                Observed = state = "supported" && obligationIsObserved matches
+               ClassifiedRequirement = isGameplayTestTagged obligation.RequiredSkillOrCapabilityTags
                EvidenceIds =
                  matches
                  |> List.map (fun declaration -> declaration.Id.Value)
@@ -1079,6 +1112,18 @@ module internal HandlersEvidence =
 
           if not (List.isEmpty stale) then
               staleEvidence path stale ]
+
+    /// WI-4 (ADR-0048): a classified `{gameplay}` FR obligation is UNMET unless discharged by a real
+    /// non-synthetic test (`"supported"`) or an accepted deferral (`"deferred"`, a first-class outcome
+    /// as for visualSurface). Every other state — synthetic, invalid, missing, stale, advisory,
+    /// blocking — leaves the per-FR test obligation unmet, and that is the count Governance binds to.
+    let classifiedObligationUnmet (disposition: EvidenceDispositionDraft) =
+        disposition.ClassifiedRequirement
+        && disposition.State <> "supported"
+        && disposition.State <> "deferred"
+
+    let classifiedObligationsUnmetCount (dispositions: EvidenceDispositionDraft list) =
+        dispositions |> List.filter classifiedObligationUnmet |> List.length
 
     let evidenceSummary
         workId
@@ -1117,6 +1162,7 @@ module internal HandlersEvidence =
           InvalidCount = count "invalid"
           AdvisoryCount = count "advisory"
           BlockingCount = blockingCount
+          ClassifiedObligationsUnmetCount = classifiedObligationsUnmetCount dispositions
           SourceSnapshotCount = artifact.SourceSnapshots.Length
           Readiness = readiness }
 

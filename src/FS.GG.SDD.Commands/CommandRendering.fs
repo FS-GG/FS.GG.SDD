@@ -161,6 +161,9 @@ module CommandRendering =
             builder.AppendLine($"evidenceSynthetic: {evidence.SyntheticCount}") |> ignore
             builder.AppendLine($"evidenceInvalid: {evidence.InvalidCount}") |> ignore
             builder.AppendLine($"evidenceBlocking: {evidence.BlockingCount}") |> ignore
+
+            builder.AppendLine($"evidenceClassifiedObligationsUnmet: {evidence.ClassifiedObligationsUnmetCount}")
+            |> ignore
         | None -> ()
 
         match report.Verification with
@@ -203,6 +206,9 @@ module CommandRendering =
             |> ignore
 
             builder.AppendLine($"verifyEvidenceInvalid: {verification.EvidenceInvalidCount}")
+            |> ignore
+
+            builder.AppendLine($"verifyClassifiedObligationsUnmet: {verification.ClassifiedObligationsUnmetCount}")
             |> ignore
 
             builder.AppendLine($"verifyTestSatisfied: {verification.TestSatisfiedCount}")
@@ -273,6 +279,9 @@ module CommandRendering =
             |> ignore
 
             builder.AppendLine($"shipEvidenceInvalid: {ship.EvidenceInvalidCount}")
+            |> ignore
+
+            builder.AppendLine($"shipClassifiedObligationsUnmet: {ship.ClassifiedObligationsUnmetCount}")
             |> ignore
 
             builder.AppendLine($"shipGeneratedViewState: {ship.GeneratedViewState}")

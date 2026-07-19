@@ -84,22 +84,30 @@ module Evidence =
         }
 
     type EvidenceObligation =
-        { ObligationId: string
-          Kind: string
-          SourceArtifactPath: string
-          SourceId: string option
-          LinkedTaskIds: TaskId list
-          LinkedRequirementIds: RequirementId list
-          LinkedDecisionIds: string list
-          // Feature 077: the originating task's full source-id lineage bag, carried verbatim so
-          // scaffolding can grammar-route it into the declaration's typed ref buckets. Recovers
-          // the plan-decision id (and any FR it traces to) that task.Requirements/task.Decisions
-          // drop for a plan-decision task.
-          LinkedSourceIds: string list
-          ExpectedEvidenceKinds: string list
-          RequiredSkillOrCapabilityTags: string list
-          Blocking: bool
-          Correction: string }
+        {
+            ObligationId: string
+            Kind: string
+            SourceArtifactPath: string
+            SourceId: string option
+            LinkedTaskIds: TaskId list
+            LinkedRequirementIds: RequirementId list
+            LinkedDecisionIds: string list
+            // Feature 077: the originating task's full source-id lineage bag, carried verbatim so
+            // scaffolding can grammar-route it into the declaration's typed ref buckets. Recovers
+            // the plan-decision id (and any FR it traces to) that task.Requirements/task.Decisions
+            // drop for a plan-decision task.
+            LinkedSourceIds: string list
+            ExpectedEvidenceKinds: string list
+            /// WI-4 (ADR-0048): when non-empty, the obligation is satisfied only by a matching
+            /// declaration whose kind is one of these AND is a non-synthetic pass — the "real test
+            /// kind ∧ synthetic:false" gate a classified `{gameplay}` FR carries. Empty (the default
+            /// for every other obligation) imposes no kind restriction, so this is additive and
+            /// backward-compatible.
+            RequiredEvidenceKinds: string list
+            RequiredSkillOrCapabilityTags: string list
+            Blocking: bool
+            Correction: string
+        }
 
     type EvidenceArtifact =
         { SchemaVersion: SchemaVersion
@@ -168,6 +176,21 @@ module Evidence =
 
     val isVisualInspectionTagged: tags: string list -> bool
 
+    /// The FR classification facet (ADR-0048) that carries the per-FR non-synthetic test obligation —
+    /// one of `RequirementModel.recognizedRequirementClasses`, named because it is this class the task
+    /// generator maps to a gameplay-test obligation.
+    val gameplayClassification: string
+
+    /// The capability tag marking a task, and the obligation minted from it, as a per-classified-FR
+    /// gameplay test obligation discharged only by a real, non-synthetic test (ADR-0048, WI-4).
+    val gameplayTestCapability: string
+
+    /// The evidence kinds that count as a *real test* for a classified-FR obligation (ADR-0048) — the
+    /// single source of truth for the derived obligation's `RequiredEvidenceKinds`.
+    val realTestEvidenceKinds: string list
+
+    val isGameplayTestTagged: tags: string list -> bool
+
     /// Does this declaration name a rendered artifact — an `artifactRefs` entry, or a `sourceRefs[]`
     /// entry carrying a `path` or a `uri`?
     /// FS.GG.SDD#359 / #365. The one lexical containment rule for a CITED path (`artifacts:` and
@@ -181,6 +204,11 @@ module Evidence =
     /// disposition, and the `TD-` mirror: a real (non-synthetic) `pass` that names no rendered
     /// artifact. A synthetic pass and a deferral both fall outside it.
     val passesWithoutRenderedArtifact: declaration: EvidenceDeclaration -> bool
+
+    /// The classified-FR (`{gameplay}`) required-evidence-kind rule (ADR-0048, WI-4), stated once for
+    /// the `ED-` disposition and its `TD-` mirror: a real (non-synthetic) `pass` whose kind is one of
+    /// `requiredKinds`. A synthetic pass and a non-test kind both fall outside it.
+    val satisfiesRequiredEvidenceKinds: requiredKinds: string list -> declaration: EvidenceDeclaration -> bool
 
     /// Every locally-resolvable path this declaration cites: `artifactRefs` ∪ `sourceRefs[].path` ∪
     /// `observedRun.source` (FS.GG.SDD#349 FR-002; FS.GG.SDD#350 FR-009). A `sourceRefs[].uri` is

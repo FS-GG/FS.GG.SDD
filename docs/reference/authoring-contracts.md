@@ -122,6 +122,28 @@ Forms that leave the requirement **unclassified**:
 - `- FR-003: … {difficulty} …` names a brace token that is **not** in the closed set
   → ignored, so the requirement stays unclassified.
 
+### The per-classified-FR test obligation
+
+Classifying an FR `{gameplay}` (ADR-0048) is not a label alone — it derives a **per-FR
+test obligation**, one granularity finer than the project-wide visual-inspection obligation
+below. It is satisfied **only by a real, non-synthetic test**:
+
+| Stage | Effect |
+| --- | --- |
+| `tasks` | one derived task per classified FR, `Cover gameplay requirement FR-### with a non-synthetic test`, carrying the `gameplay-test` capability, `requirements: [FR-###]`, and its own `requiredEvidence` obligation |
+| `evidence` / `verify` | that obligation is satisfied only by `result: pass` ∧ `synthetic: false` ∧ a **real test kind** (`kind: verification`). A synthetic pass never satisfies it, and neither does a non-test kind (e.g. `implementation`) — an `implementation` pass that discharges an ordinary requirement leaves a gameplay one **unmet** |
+| `verify` / `ship` | a per-FR disposition, plus an aggregate **`classifiedObligationsUnmet`** count — surfaced in `verify.json`, `ship.json`, and the `governance-handoff.json` (`readiness.counts.classifiedObligationsUnmet`) — that a Governance gate binds to block-on-ship |
+
+An **accepted deferral** (with all four deferral fields) is a first-class outcome that the
+count does not touch, exactly as for the visual-inspection obligation. SDD owns the
+obligation and the count; it never runs the test — how a `verification` is produced is the
+workspace's concern.
+
+**Migration.** Additive and opt-in; the schema stays v1. A workspace that classifies no FR
+sees no change to any artifact, and the count is `0`. Withdrawing a `{gameplay}` annotation
+drops the derived task under the existing orphan rule (remove its `evidence.yml` entry, as for
+any folded task).
+
 ## `evidence.yml` declarations
 
 > **Disambiguation.** This `evidence.yml` is the SDD **lifecycle** evidence

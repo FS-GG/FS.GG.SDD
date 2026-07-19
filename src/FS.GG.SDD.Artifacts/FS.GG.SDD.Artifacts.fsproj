@@ -30,6 +30,11 @@
     <Compile Include="LifecycleArtifacts/ArtifactCodec.fs" />
     <Compile Include="LifecycleArtifacts/Core.fsi" />
     <Compile Include="LifecycleArtifacts/Core.fs" />
+    <!-- RequirementModel is ordered here (before Specification) so Specification's coverage-line
+         parser can reuse RequirementModel.requirementClassification for the ADR-0048 facet. It
+         depends only on Internal/Core and root modules, all compiled above. -->
+    <Compile Include="LifecycleArtifacts/RequirementModel.fsi" />
+    <Compile Include="LifecycleArtifacts/RequirementModel.fs" />
     <Compile Include="LifecycleArtifacts/RegistryDocument.fsi" />
     <Compile Include="LifecycleArtifacts/RegistryDocument.fs" />
     <Compile Include="LifecycleArtifacts/SkillRegistryDocument.fsi" />
@@ -52,8 +57,6 @@
     <Compile Include="LifecycleArtifacts/Checklist.fs" />
     <Compile Include="LifecycleArtifacts/Plan.fsi" />
     <Compile Include="LifecycleArtifacts/Plan.fs" />
-    <Compile Include="LifecycleArtifacts/RequirementModel.fsi" />
-    <Compile Include="LifecycleArtifacts/RequirementModel.fs" />
     <Compile Include="LifecycleArtifacts/Task.fsi" />
     <Compile Include="LifecycleArtifacts/Task.fs" />
     <Compile Include="LifecycleArtifacts/Analysis.fsi" />

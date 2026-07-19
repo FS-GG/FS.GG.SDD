@@ -542,6 +542,7 @@ tasks:
             { ObligationId = "EV001"
               State = "supported"
               Observed = false
+              ClassifiedRequirement = false
               EvidenceIds = [ "EV001" ]
               TaskIds = [ "T001"; "T002" ]
               DiagnosticIds = [] }

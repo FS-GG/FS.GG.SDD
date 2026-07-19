@@ -19,10 +19,15 @@ module Specification =
           PublicOrToolFacingImpact: bool option }
 
     type SpecificationRequirementReference =
-        { RequirementId: RequirementId
-          StoryIds: UserStoryId list
-          AcceptanceScenarioIds: AcceptanceScenarioId list
-          SourceLocation: SourceLocation option }
+        {
+            RequirementId: RequirementId
+            StoryIds: UserStoryId list
+            AcceptanceScenarioIds: AcceptanceScenarioId list
+            /// The classification facets declared on the requirement's coverage line (ADR-0048), so the
+            /// task graph can derive the per-classified-FR gameplay obligation (WI-4). Empty ⇒ unclassified.
+            Classification: string list
+            SourceLocation: SourceLocation option
+        }
 
     type SpecificationFacts =
         { FrontMatter: SpecificationFrontMatter

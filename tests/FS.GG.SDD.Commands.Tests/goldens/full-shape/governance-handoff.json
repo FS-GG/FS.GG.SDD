@@ -6,12 +6,12 @@
   "sources": [
     {
       "path": "readiness/247-full-shape-golden/ship.json",
-      "digest": "sha256:98cc70337985419dbe452bc65b7cc3d33ce7c509a0023612da8b003eaec64a1d",
+      "digest": "sha256:ab452632dbcbe69fc7b636fe38fe55581dc31a51c4c1a0b55c5588ddbe699747",
       "schemaVersion": 1
     },
     {
       "path": "readiness/247-full-shape-golden/verify.json",
-      "digest": "sha256:99782828102069cefed5669d335116de354d7e06f94ace9ab60e648a531c1feb",
+      "digest": "sha256:a8230933f36074695e4377bcdc88e309f0567d9efb800d76fd483c189b0d8157",
       "schemaVersion": 1
     },
     {
@@ -144,7 +144,8 @@
     "counts": {
       "advisory": 0,
       "warning": 0,
-      "blocking": 0
+      "blocking": 0,
+      "classifiedObligationsUnmet": 0
     },
     "blockingDiagnosticIds": [],
     "perViewState": [

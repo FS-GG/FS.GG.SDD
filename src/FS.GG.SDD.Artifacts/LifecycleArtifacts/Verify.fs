@@ -34,6 +34,11 @@ module Verify =
             /// report. Carried per-obligation, so `ship` and the committed verdict COUNT it rather
             /// than assuming it. See `Evidence.isObserved`.
             Observed: bool
+            /// WI-4 (ADR-0048): is this the disposition of a classified `{gameplay}` FR obligation —
+            /// the per-FR obligation only a real, non-synthetic test discharges? Carried per-disposition
+            /// so `ship` and the Governance handoff count "classified-FR obligations unmet" over the
+            /// committed verify view without re-deriving it. Absent in a pre-WI-4 view ⇒ `false`.
+            ClassifiedRequirement: bool
             EvidenceIds: EvidenceId list
             AffectedTaskIds: TaskId list
             AffectedSourceIds: string list
@@ -169,6 +174,9 @@ module Verify =
           // it meant, since nothing has ever been observed. Degrade, don't throw (Principle VIII),
           // and no `schemaVersion` bump.
           Observed = jsonBool "observed" element |> Option.defaultValue false
+          // WI-4: absent in a pre-WI-4 view parses to `false` (no FR was classified). Degrade, don't
+          // throw (Principle VIII), and no `schemaVersion` bump.
+          ClassifiedRequirement = jsonBool "classifiedRequirement" element |> Option.defaultValue false
           EvidenceIds = evidenceIdsFromJson "evidenceIds" element
           AffectedTaskIds = taskIdsFromJson "affectedTaskIds" element
           AffectedSourceIds = jsonStringList "affectedSourceIds" element
