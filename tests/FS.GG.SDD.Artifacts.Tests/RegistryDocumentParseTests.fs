@@ -225,10 +225,7 @@ module RegistryDocumentParseTests =
             + "      upstream: Blizzard/s2client-proto\n"
             + "      upstream-version: \"5.0.12\"\n"
 
-        Assert.Equal(
-            Registry.WireDeclared(Registry.VendoredProto("Blizzard/s2client-proto", "5.0.12")),
-            wireOf body
-        )
+        Assert.Equal(Registry.WireDeclared(Registry.VendoredProto("Blizzard/s2client-proto", "5.0.12")), wireOf body)
 
     [<Fact>]
     let ``an owned-proto parses into OwnedProto carrying the proto path`` () =

@@ -122,13 +122,12 @@ module RegistryDocument =
                 | :? YamlSequenceNode -> Fsgg.Registry.WireMalformed "<sequence>"
                 | _ -> Fsgg.Registry.WireMalformed "<non-mapping>"
             | Some _ ->
-                let field key = tryScalarAt [ key ] node |> Option.defaultValue ""
+                let field key =
+                    tryScalarAt [ key ] node |> Option.defaultValue ""
 
                 match (field "provenance").Trim() with
                 | "vendored-proto" ->
-                    Fsgg.Registry.WireDeclared(
-                        Fsgg.Registry.VendoredProto(field "upstream", field "upstream-version")
-                    )
+                    Fsgg.Registry.WireDeclared(Fsgg.Registry.VendoredProto(field "upstream", field "upstream-version"))
                 | "owned-proto" -> Fsgg.Registry.WireDeclared(Fsgg.Registry.OwnedProto(field "proto"))
                 | "code-first-protobuf-net" ->
                     Fsgg.Registry.WireDeclared(Fsgg.Registry.CodeFirstProtobufNet(field "surface"))

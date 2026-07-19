@@ -291,7 +291,9 @@ module RegistryDocumentTests =
 
     let private withWire wire =
         { baseDoc with
-            Contracts = [ { contract "alpha" with Registry.WireContract = wire } ] }
+            Contracts =
+                [ { contract "alpha" with
+                      Registry.WireContract = wire } ] }
 
     /// Absent wire contract: NOT a fault. Most contracts have no wire dimension.
     [<Fact>]
@@ -313,12 +315,10 @@ module RegistryDocumentTests =
 
     [<Fact>]
     let ``wire: vendored-proto missing upstream-version reports MissingField`` () =
-        let doc = withWire (Registry.WireDeclared(Registry.VendoredProto("Blizzard/s2client-proto", "")))
+        let doc =
+            withWire (Registry.WireDeclared(Registry.VendoredProto("Blizzard/s2client-proto", "")))
 
-        Assert.Contains(
-            Registry.MissingField "wire-contract.upstream-version",
-            rules (Registry.validateDocument doc)
-        )
+        Assert.Contains(Registry.MissingField "wire-contract.upstream-version", rules (Registry.validateDocument doc))
 
     /// The independent version is a version, so a non-SemVer one is MalformedVersion — the
     /// same grammar `version` / `package-version` are held to.
