@@ -42,6 +42,7 @@ module Serialization =
         | Some priority -> writer.WriteString("priority", priority)
         | None -> writer.WriteNull "priority"
 
+        writeStringList writer SourceOrder "classification" requirement.Classification
         writer.WriteString("source", requirement.Source)
         writeLocation writer "sourceLocation" requirement.SourceLocation
         writeStringList writer SourceOrder "linkedTaskIds" requirement.LinkedTaskIds

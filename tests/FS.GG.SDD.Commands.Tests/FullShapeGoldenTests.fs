@@ -101,7 +101,7 @@ module FullShapeGoldenTests =
     let ``work-model modelVersion is pinned to its current contract value`` () =
         let root = producedRoot ()
         let json = TestSupport.readRelative root $"readiness/{workId}/work-model.json"
-        Assert.Contains("\"modelVersion\": \"1.0.0\"", json)
+        Assert.Contains("\"modelVersion\": \"1.1.0\"", json)
 
     [<Fact>]
     let ``guidance viewVersion is pinned to its current contract value`` () =

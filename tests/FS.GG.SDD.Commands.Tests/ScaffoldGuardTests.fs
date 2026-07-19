@@ -149,10 +149,31 @@ module ScaffoldGuardTests =
     // guard file names the deny-list tokens, so (as above) it is excluded from every scan.
     // ===================================================================
 
-    // The bare starter value `game` never appears legitimately in this codebase. (`app` is NOT
-    // a bare-word token here — it legitimately suffixes `fsgg-fixture-app` and names `App.fsproj`
-    // — so `app`-as-starter is caught by the registry starter-value pattern below, not a word scan.)
+    // The bare starter value `game` never appears legitimately in this codebase AS A WHOLE WORD.
+    // (`app` is NOT a bare-word token here — it legitimately suffixes `fsgg-fixture-app` and names
+    // `App.fsproj` — so `app`-as-starter is caught by the registry starter-value pattern below, not
+    // a word scan.) The scan is deliberately WORD-BOUNDARY, not substring: a generic SDD term that
+    // merely CONTAINS the token — the ADR-0048 requirement classification facet `gameplay`, which is
+    // SDD's own vocabulary and not a provider/template starter — is not a false positive.
     let private starterValueTokens = [ "ga" + "me" ]
+
+    /// Every starter-value token present in `text` as a WHOLE WORD (so `game` matches the bare
+    /// starter value and `game-app`/`"game"` but never the substring inside `gameplay`), located as
+    /// the SC-005 `"{location}: {token}"` shape. This is the starter-value counterpart to the shared
+    /// substring `offenders`; it stays word-bounded on purpose (see the note above).
+    let private starterWordOffenders (location: string) (text: string) =
+        starterValueTokens
+        |> List.filter (fun token ->
+            System.Text.RegularExpressions.Regex.IsMatch(
+                text,
+                "\\b" + System.Text.RegularExpressions.Regex.Escape token + "\\b",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase
+            ))
+        |> List.map (fun token -> $"{location}: {token}")
+
+    let private scanFilesWord (paths: string list) =
+        paths
+        |> List.collect (fun path -> starterWordOffenders path (File.ReadAllText path))
 
     /// The SDD-owned scaffold-provider fixtures (registries + templates). These committed
     /// FIXTURES are SDD-owned and must carry no provider-specific starter value (FR-004).
@@ -188,7 +209,7 @@ module ScaffoldGuardTests =
 
     [<Fact>]
     let ``generic SDD source contains no provider-specific starter value`` () =
-        let found = scanFiles starterValueTokens (sourceFiles ())
+        let found = scanFilesWord (sourceFiles ())
 
         Assert.True(
             List.isEmpty found,
@@ -198,7 +219,7 @@ module ScaffoldGuardTests =
 
     [<Fact>]
     let ``generic scaffold contract tests contain no provider-specific starter value`` () =
-        let found = scanFiles starterValueTokens (genericContractTestFiles ())
+        let found = scanFilesWord (genericContractTestFiles ())
 
         Assert.True(
             List.isEmpty found,
@@ -208,7 +229,7 @@ module ScaffoldGuardTests =
 
     [<Fact>]
     let ``SDD-owned scaffold fixtures carry no provider-specific starter value`` () =
-        let bareWord = scanFiles starterValueTokens (scaffoldFixtureFiles ())
+        let bareWord = scanFilesWord (scaffoldFixtureFiles ())
 
         let asValue =
             scaffoldFixtureFiles ()
@@ -226,9 +247,13 @@ module ScaffoldGuardTests =
 
     [<Fact>]
     let ``starter-value scan catches a planted bare token and a planted registry default`` () =
-        // A bare-word starter token leaking into generic source.
+        // A bare-word starter token leaking into generic source. Exercises the same word-boundary
+        // scan the facts use, so this proof stays honest about what actually guards the tree.
         let plantedWord = "let defaultStarter = \"" + "ga" + "me\""
-        Assert.NotEmpty(offenders starterValueTokens "planted-source.fs" plantedWord)
+        Assert.NotEmpty(starterWordOffenders "planted-source.fs" plantedWord)
+        // ...and the word-boundary scan does NOT fire on a generic term that merely contains the
+        // token — the ADR-0048 `gameplay` classification facet is not a starter value.
+        Assert.Empty(starterWordOffenders "ok-source.fs" "let recognizedRequirementClasses = [ \"gameplay\" ]")
 
         // A registry declaring a provider-specific default starter (the literal #44 flip,
         // redirected to FS.GG.Templates — out of scope for SDD-owned fixtures).

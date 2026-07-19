@@ -12,7 +12,7 @@ module NormalizedWorkModelTests =
         Assert.Equal("002-normalized-work-model", result.WorkId)
         Assert.Equal("readiness/002-normalized-work-model/work-model.json", result.OutputPath)
         Assert.Equal("002-normalized-work-model", result.Model.WorkId)
-        Assert.Contains("\"modelVersion\": \"1.0.0\"", result.Json)
+        Assert.Contains("\"modelVersion\": \"1.1.0\"", result.Json)
         Assert.Equal("sha256", result.OutputDigest.Algorithm)
         Assert.Empty(WorkModel.blockingDiagnostics result.Model)
 

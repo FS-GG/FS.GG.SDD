@@ -13,6 +13,7 @@
     <Compile Include="SchemaContractTests.fs" />
     <Compile Include="AuthoredInputHardeningTests.fs" />
     <Compile Include="SpecificationArtifactTests.fs" />
+    <Compile Include="RequirementClassificationTests.fs" />
     <Compile Include="ClarificationArtifactTests.fs" />
     <Compile Include="ChecklistArtifactTests.fs" />
     <Compile Include="PlanArtifactTests.fs" />

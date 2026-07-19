@@ -25,15 +25,21 @@ module WorkModel =
           Status: string }
 
     type RequirementEntry =
-        { Id: string
-          Title: string
-          Text: string
-          AcceptanceCriteria: string list
-          Priority: string option
-          Source: string
-          SourceLocation: SourceLocation option
-          LinkedTaskIds: string list
-          LinkedEvidenceIds: string list }
+        {
+            Id: string
+            Title: string
+            Text: string
+            AcceptanceCriteria: string list
+            Priority: string option
+            /// The requirement's classification facets (ADR-0048), sorted and deduplicated; the
+            /// empty list means *unclassified*. Carried through from the coverage-line `{…}`
+            /// annotation so downstream per-FR gates (WI-4) and Governance can bind to it.
+            Classification: string list
+            Source: string
+            SourceLocation: SourceLocation option
+            LinkedTaskIds: string list
+            LinkedEvidenceIds: string list
+        }
 
     type DecisionEntry =
         { Id: string
