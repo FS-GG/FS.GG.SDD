@@ -124,6 +124,14 @@ module internal HandlersShip =
                     | _ -> []
                 | None -> []
 
+            let intField (element: System.Text.Json.JsonElement option) (name: string) =
+                match element with
+                | Some e ->
+                    match e.TryGetProperty name with
+                    | true, value when value.ValueKind = System.Text.Json.JsonValueKind.Number -> value.GetInt32()
+                    | _ -> 0
+                | None -> 0
+
             let dispositionEl = tryObj root "disposition"
             let verificationEl = tryObj root "verificationReadiness"
             let blocking = idsField dispositionEl "blockingFindingIds"
@@ -133,6 +141,8 @@ module internal HandlersShip =
               AdvisoryCount = (idsField dispositionEl "advisoryFindingIds").Length
               WarningCount = (idsField dispositionEl "warningFindingIds").Length
               BlockingCount = blocking.Length
+              // WI-4: absent in a pre-WI-4 ship.json ⇒ 0 (no FR was classified). Degrade, don't throw.
+              ClassifiedObligationsUnmet = intField dispositionEl "classifiedObligationsUnmetCount"
               BlockingDiagnosticIds = blocking |> List.sort
               PerViewState = perViewState }
         with _ ->
@@ -141,6 +151,7 @@ module internal HandlersShip =
               AdvisoryCount = 0
               WarningCount = 0
               BlockingCount = 0
+              ClassifiedObligationsUnmet = 0
               BlockingDiagnosticIds = []
               PerViewState = perViewState }
 
@@ -362,6 +373,20 @@ module internal HandlersShip =
         let _, evidenceSelfAttestedCount, evidenceObservedCount =
             shipEvidenceAttestationCounts verificationView
 
+        // WI-4 (ADR-0048): the merge-boundary aggregate Governance binds — classified {gameplay} FR
+        // obligations left unmet (not discharged by a real non-synthetic test nor an accepted deferral).
+        // Serialized into ship.json so `parseShipReadinessFacts` can lift it into the handoff.
+        let classifiedObligationsUnmet =
+            match verificationView with
+            | Some view ->
+                view.EvidenceDispositions
+                |> List.filter (fun disposition ->
+                    disposition.ClassifiedRequirement
+                    && disposition.State <> EvidenceSupported
+                    && disposition.State <> EvidenceDeferred)
+                |> List.length
+            | None -> 0
+
         writeReadinessEnvelope workId "ship" readiness generator verifySourceKind sources (fun writer ->
             writeLifecycleReadiness writer lifecycleStatus lifecycleStages
             writer.WriteStartObject("verificationReadiness")
@@ -435,6 +460,8 @@ module internal HandlersShip =
                 (lifecycleStages
                  |> List.filter (fun (_, status) -> status <> "ready")
                  |> List.map fst)
+
+            writer.WriteNumber("classifiedObligationsUnmetCount", classifiedObligationsUnmet)
 
             writer.WriteString(
                 "correction",
@@ -691,6 +718,20 @@ module internal HandlersShip =
                                     |> List.length
                                 | None -> 0
 
+                            // WI-4 (ADR-0048): the merge-boundary aggregate Governance binds — classified
+                            // {gameplay} FR obligations left unmet, i.e. not discharged by a real
+                            // non-synthetic test ("supported") nor an accepted deferral ("deferred").
+                            let classifiedObligationsUnmet =
+                                match verificationView with
+                                | Some v ->
+                                    v.EvidenceDispositions
+                                    |> List.filter (fun disposition ->
+                                        disposition.ClassifiedRequirement
+                                        && disposition.State <> EvidenceSupported
+                                        && disposition.State <> EvidenceDeferred)
+                                    |> List.length
+                                | None -> 0
+
                             let _, evidenceSelfAttestedCount, evidenceObservedCount =
                                 shipEvidenceAttestationCounts verificationView
 
@@ -715,6 +756,7 @@ module internal HandlersShip =
                                   EvidenceStaleCount = evidenceCount EvidenceStale
                                   EvidenceSyntheticCount = evidenceCount EvidenceSyntheticDisposition
                                   EvidenceInvalidCount = evidenceCount EvidenceInvalid
+                                  ClassifiedObligationsUnmetCount = classifiedObligationsUnmet
                                   GeneratedViewState = (if hasBlocking then "blocked" else "current")
                                   SourceSnapshotCount = sources.Length
                                   Readiness = readiness }

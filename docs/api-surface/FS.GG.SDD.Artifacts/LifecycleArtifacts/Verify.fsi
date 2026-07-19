@@ -30,6 +30,10 @@ module Verify =
             /// report. Carried per-obligation, so `ship` and the committed verdict COUNT it rather
             /// than assuming it. See `Evidence.isObserved`.
             Observed: bool
+            /// WI-4 (ADR-0048): is this the disposition of a classified `{gameplay}` FR obligation?
+            /// Carried per-disposition so `ship` and the Governance handoff count "classified-FR
+            /// obligations unmet" over the committed verify view. Absent in a pre-WI-4 view ⇒ `false`.
+            ClassifiedRequirement: bool
             EvidenceIds: EvidenceId list
             AffectedTaskIds: TaskId list
             AffectedSourceIds: string list

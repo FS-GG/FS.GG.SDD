@@ -51,7 +51,7 @@
       "kind": "source",
       "digest": {
         "algorithm": "sha256",
-        "value": "7f8df0be6a650dd9038797fde1ca45e81b25168b7a617e9aba4e7ef1047869ee"
+        "value": "8e3a03f4a1312ca9269307b96ed2f71a3a29a5d3e85ffbac82b8fbfa2eadce3b"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -244,6 +244,7 @@
     "warningFindingIds": [],
     "advisoryFindingIds": [],
     "contributingStages": [],
+    "classifiedObligationsUnmetCount": 0,
     "correction": ""
   },
   "findings": [],

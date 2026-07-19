@@ -360,23 +360,29 @@ module CommandTypes =
           Readiness: string }
 
     type EvidenceSummary =
-        { WorkId: string
-          Stage: string
-          Status: string
-          EvidencePath: string
-          DeclarationIds: string list
-          DeclarationCount: int
-          ObligationCount: int
-          SupportedCount: int
-          DeferredCount: int
-          MissingCount: int
-          StaleCount: int
-          SyntheticCount: int
-          InvalidCount: int
-          AdvisoryCount: int
-          BlockingCount: int
-          SourceSnapshotCount: int
-          Readiness: string }
+        {
+            WorkId: string
+            Stage: string
+            Status: string
+            EvidencePath: string
+            DeclarationIds: string list
+            DeclarationCount: int
+            ObligationCount: int
+            SupportedCount: int
+            DeferredCount: int
+            MissingCount: int
+            StaleCount: int
+            SyntheticCount: int
+            InvalidCount: int
+            AdvisoryCount: int
+            BlockingCount: int
+            /// WI-4 (ADR-0048): classified `{gameplay}` FR obligations left unmet — not discharged by a
+            /// real non-synthetic test (nor an accepted deferral). The aggregate Governance binds to
+            /// block-on-ship. `0` for every work item that classifies no FR (additive, backward-compatible).
+            ClassifiedObligationsUnmetCount: int
+            SourceSnapshotCount: int
+            Readiness: string
+        }
 
     type VerificationSummary =
         {
@@ -414,6 +420,9 @@ module CommandTypes =
             TestMissingCount: int
             TestStaleCount: int
             TestInvalidCount: int
+            /// WI-4 (ADR-0048): classified `{gameplay}` FR obligations left unmet — carried through
+            /// from the evidence dispositions so verify reports the same aggregate ship binds to.
+            ClassifiedObligationsUnmetCount: int
             SkillVisibleCount: int
             SkillMissingCount: int
             SourceSnapshotCount: int
@@ -448,6 +457,9 @@ module CommandTypes =
             EvidenceStaleCount: int
             EvidenceSyntheticCount: int
             EvidenceInvalidCount: int
+            /// WI-4 (ADR-0048): classified `{gameplay}` FR obligations left unmet — the merge-boundary
+            /// aggregate Governance binds to block-on-ship. `0` when no FR is classified.
+            ClassifiedObligationsUnmetCount: int
             GeneratedViewState: string
             SourceSnapshotCount: int
             Readiness: string

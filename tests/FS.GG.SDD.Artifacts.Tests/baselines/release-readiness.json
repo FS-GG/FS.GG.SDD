@@ -1218,6 +1218,11 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "ship.classifiedObligationsUnmetCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "ship.disposition",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -1649,6 +1654,11 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "readiness.counts.classifiedObligationsUnmet",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "readiness.counts.warning",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -1857,6 +1867,11 @@
         },
         {
           "name": "disposition.blockingFindingIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "disposition.classifiedObligationsUnmetCount",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -2224,6 +2239,11 @@
         },
         {
           "name": "evidenceDispositions[].affectedTaskIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions[].classifiedRequirement",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },

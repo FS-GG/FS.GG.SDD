@@ -1573,6 +1573,7 @@ evidence:
           LinkedDecisionIds = []
           LinkedSourceIds = []
           ExpectedEvidenceKinds = []
+          RequiredEvidenceKinds = []
           RequiredSkillOrCapabilityTags = []
           Blocking = true
           Correction = "" }
@@ -1602,3 +1603,159 @@ evidence:
         let diagnostic = List.head diagnostics
         Assert.Equal("toolDefect", diagnostic.Id)
         Assert.True(diagnostic.IsToolDefect)
+
+    // ---- WI-4 (ADR-0048): the per-classified-FR gameplay obligation ------------------------------
+    //
+    // A classified `{gameplay}` FR mints an obligation carrying the gameplay-test tag and
+    // `RequiredEvidenceKinds = [verification]`. It is discharged only by a real (non-synthetic) test
+    // KIND; a synthetic pass or a non-test-kind pass leaves it unmet, and the count Governance binds
+    // reflects that. An accepted deferral is a first-class outcome, as for visualSurface.
+
+    let private gameplayObligation id : Evidence.EvidenceObligation =
+        { evidenceObligation id with
+            RequiredEvidenceKinds = Evidence.realTestEvidenceKinds
+            RequiredSkillOrCapabilityTags = [ Evidence.gameplayTestCapability ] }
+
+    let private gameplayDisposition (declaration: string) =
+        let artifact = evidenceArtifactWith declaration
+
+        HandlersEvidence.evidenceDispositions [ gameplayObligation "EV001" ] (fun _ -> true) artifact
+        |> List.find (fun disposition -> disposition.ObligationId = "EV001")
+
+    let private declarationOfKind (kind: string) (synthetic: bool) =
+        $"""  - id: EV001
+    kind: {kind}
+    subject:
+      type: task
+      id: T001
+    obligationRefs: [EV001]
+    result: pass
+    synthetic: {(if synthetic then "true" else "false")}"""
+
+    [<Fact>]
+    let ``a gameplay obligation is supported by a non-synthetic verification pass`` () =
+        let disposition = gameplayDisposition (declarationOfKind "verification" false)
+        Assert.Equal("supported", disposition.State)
+        Assert.True(disposition.ClassifiedRequirement)
+        Assert.Equal(0, HandlersEvidence.classifiedObligationsUnmetCount [ disposition ])
+
+    [<Fact>]
+    let ``a gameplay obligation is unmet by a non-test-kind pass`` () =
+        // An `implementation` pass discharges any ordinary obligation, but not a gameplay one — only a
+        // real test kind does. This is the injected `ED-` arm.
+        let disposition = gameplayDisposition (declarationOfKind "implementation" false)
+        Assert.Equal("invalid", disposition.State)
+        Assert.Contains("evidence.classifiedRequirementTestObligationUnmet", disposition.DiagnosticIds)
+        Assert.Equal(1, HandlersEvidence.classifiedObligationsUnmetCount [ disposition ])
+
+    [<Fact>]
+    let ``a gameplay obligation is unmet by a synthetic pass`` () =
+        // Synthetic state can never discharge a gameplay obligation (the epic's core rule).
+        let disposition = gameplayDisposition (declarationOfKind "verification" true)
+        Assert.NotEqual("supported", disposition.State)
+        Assert.Equal(1, HandlersEvidence.classifiedObligationsUnmetCount [ disposition ])
+
+    [<Fact>]
+    let ``classifiedObligationsUnmetCount counts the unmet classified obligation and not the supported one`` () =
+        let supported = gameplayDisposition (declarationOfKind "verification" false)
+        let unmet = gameplayDisposition (declarationOfKind "implementation" false)
+
+        // An unclassified obligation left unmet must NOT contribute — the count is gameplay-specific.
+        let unclassifiedUnmet =
+            HandlersEvidence.evidenceDispositions
+                [ evidenceObligation "EV001" ]
+                (fun _ -> true)
+                (evidenceArtifactWith (declarationOfKind "implementation" false))
+            |> List.find (fun disposition -> disposition.ObligationId = "EV001")
+
+        Assert.False(unclassifiedUnmet.ClassifiedRequirement)
+        Assert.Equal(1, HandlersEvidence.classifiedObligationsUnmetCount [ supported; unmet; unclassifiedUnmet ])
+
+    [<Fact>]
+    let ``an accepted deferral leaves a gameplay obligation deferred, not counted`` () =
+        // A deferral (with all four fields) is a first-class outcome the count does not touch, exactly
+        // as for the visual-inspection obligation.
+        let disposition =
+            gameplayDisposition
+                """  - id: EV001
+    kind: deferral
+    subject:
+      type: task
+      id: T001
+    obligationRefs: [EV001]
+    result: deferred
+    rationale: covered by a follow-up work item
+    owner: codex
+    scope: this work item
+    laterLifecycleVisibility: verify"""
+
+        Assert.Equal("deferred", disposition.State)
+        Assert.Equal(0, HandlersEvidence.classifiedObligationsUnmetCount [ disposition ])
+
+    /// A gameplay task's obligation carries the real-test-kind restriction (the mint), even when a
+    /// non-gameplay task shares the obligation id (Finding 2: the group-merge unions it).
+    let private gameplayTaskFacts () =
+        let text =
+            """schemaVersion: 1
+tasks:
+  - id: T001
+    title: Implement requirement FR-001
+    status: pending
+    owner: codex
+    requirements: [FR-001]
+    decisions: []
+    sourceIds: [AC-001]
+    dependencies: []
+    requiredSkills: [fsharp]
+    requiredEvidence: [EV001]
+  - id: T002
+    title: Cover gameplay requirement FR-001 with a non-synthetic test
+    status: pending
+    owner: codex
+    requirements: [FR-001]
+    decisions: []
+    sourceIds: []
+    dependencies: [T001]
+    requiredSkills: [gameplay-test, automated-tests]
+    requiredEvidence: [EV001]
+"""
+
+        match
+            Task.parseTaskFacts
+                { Path = $"work/{workId}/tasks.yml"
+                  Text = text }
+        with
+        | Ok facts -> facts
+        | Error diagnostics -> failwith $"gameplay task facts did not parse: {diagnostics}"
+
+    [<Fact>]
+    let ``evidenceObligations mints the real-test-kind restriction for a shared gameplay obligation`` () =
+        let obligation =
+            HandlersEvidence.evidenceObligations (gameplayTaskFacts ())
+            |> List.find (fun obligation -> obligation.ObligationId = "EV001")
+
+        // The gameplay task is listed SECOND, so head-winning would drop the restriction (Finding 2).
+        Assert.Equal<string list>(Evidence.realTestEvidenceKinds, obligation.RequiredEvidenceKinds)
+        Assert.True(Evidence.isGameplayTestTagged obligation.RequiredSkillOrCapabilityTags)
+
+    [<Fact>]
+    let ``verifyTestDispositionViews marks a gameplay obligation invalid for a non-test pass`` () =
+        // Finding 1: the TD- cascade must mirror ED- — an implementation pass does not satisfy the
+        // required gameplay test.
+        let artifact =
+            evidenceArtifactWith
+                """  - id: EV001
+    kind: implementation
+    subject:
+      type: task
+      id: T001
+    obligationRefs: [EV001]
+    result: pass
+    synthetic: false"""
+
+        let view =
+            HandlersVerify.verifyTestDispositionViews (gameplayTaskFacts ()) (fun _ -> true) false artifact
+            |> List.find (fun view -> view.ObligationId = "EV001")
+
+        Assert.Equal("invalid", view.State)
+        Assert.Contains("evidence.classifiedRequirementTestObligationUnmet", view.DiagnosticIds)

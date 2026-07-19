@@ -106,6 +106,11 @@ module Evidence =
           // drop for a plan-decision task.
           LinkedSourceIds: string list
           ExpectedEvidenceKinds: string list
+          // WI-4 (ADR-0048): the "real test kind ∧ synthetic:false" gate a classified {gameplay}
+          // FR obligation carries. Non-empty ⇒ satisfied only by a non-synthetic pass whose kind is
+          // one of these. Empty (every other obligation) ⇒ no kind restriction — additive and
+          // backward-compatible.
+          RequiredEvidenceKinds: string list
           RequiredSkillOrCapabilityTags: string list
           Blocking: bool
           Correction: string }
@@ -173,6 +178,29 @@ module Evidence =
         tags
         |> List.exists (fun tag -> String.Equals(tag, visualInspectionSkill, StringComparison.OrdinalIgnoreCase))
 
+    // WI-4 (ADR-0048): the FR classification facet that carries the per-FR non-synthetic test
+    // obligation. It is one of `RequirementModel.recognizedRequirementClasses` (currently the only
+    // one); named here because it is *this* class — not the vocabulary at large — that the task
+    // generator maps to a gameplay-test obligation.
+    let gameplayClassification = "gameplay"
+
+    // WI-4 (ADR-0048): the capability tag marking a task — and the obligation minted from it — as a
+    // per-classified-FR gameplay test obligation, discharged only by a real, non-synthetic test. It
+    // lives here, in Artifacts, for the same reason as `visualInspectionSkill`: the task generator
+    // that stamps it and the evidence/verify handlers that read it back off the obligation sit in
+    // different modules of `Commands` and must agree on one literal.
+    let gameplayTestCapability = "gameplay-test"
+
+    /// The evidence kinds that count as a *real test* for a classified-FR obligation (ADR-0048). A
+    /// gameplay obligation is satisfied only by one of these kinds with a non-synthetic pass — the
+    /// single source of truth for the derived obligation's `RequiredEvidenceKinds`.
+    let realTestEvidenceKinds = [ "verification" ]
+
+    /// Does this obligation's skill/capability tag set mark it a classified-FR gameplay obligation?
+    let isGameplayTestTagged (tags: string list) =
+        tags
+        |> List.exists (fun tag -> String.Equals(tag, gameplayTestCapability, StringComparison.OrdinalIgnoreCase))
+
     let private evidenceArtifactRef path =
         tryArtifact path (ArtifactKind.Other "evidenceArtifact") ArtifactOwner.Sdd false
 
@@ -225,6 +253,16 @@ module Evidence =
         normalizedEvidenceResult declaration.Result = "pass"
         && not declaration.Synthetic
         && not (namesRenderedArtifact declaration)
+
+    /// WI-4 (ADR-0048): does this declaration satisfy a required-evidence-kind gate — a real,
+    /// non-synthetic pass whose kind is one of `requiredKinds`? A synthetic pass never satisfies (the
+    /// epic's core rule: synthetic state can never discharge a gameplay obligation), and neither does
+    /// a non-test kind (e.g. `implementation`). Stated once so the `ED-` disposition cascade and its
+    /// `TD-` verify mirror cannot drift on what discharges a classified-FR obligation.
+    let satisfiesRequiredEvidenceKinds (requiredKinds: string list) (declaration: EvidenceDeclaration) =
+        normalizedEvidenceResult declaration.Result = "pass"
+        && not declaration.Synthetic
+        && List.contains (evidenceKindSourceValue declaration.Kind) requiredKinds
 
     /// FS.GG.SDD#349 (FR-002). Both path-bearing buckets, because `namesRenderedArtifact` above
     /// discharges an obligation from either one: checking only `artifacts:` would leave the

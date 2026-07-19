@@ -468,6 +468,26 @@ module internal TaskGraphAuthoring =
                       [ visualInspectionSkill; skills.ImplementSkill ] ]
                 |> List.choose id
 
+        // WI-4 (ADR-0048): the per-classified-FR gameplay obligation, one granularity finer than the
+        // project-wide visual task. Every FR annotated `{gameplay}` earns a task discharged only by a
+        // real, non-synthetic test — the `gameplayTestCapability` tag makes the minted obligation carry
+        // `RequiredEvidenceKinds` (see HandlersEvidence). Its `sourceIds` are empty for the same reason
+        // the visual task's are (an invented id would fail `unknownSources`); it links the FR through
+        // `requirements`, and its title carries the FR number so re-derivation merges it stably. Emitted
+        // last so the ids of the families above are unperturbed.
+        let classifiedRequirementTasks =
+            specFacts.RequirementReferences
+            |> List.filter (fun reference -> reference.Classification |> List.contains gameplayClassification)
+            |> List.sortBy (fun reference -> reference.RequirementId.Value)
+            |> List.choose (fun reference ->
+                maybeTask
+                    []
+                    $"Cover gameplay requirement {reference.RequirementId.Value} with a non-synthetic test"
+                    [ reference.RequirementId ]
+                    []
+                    primaryDependency
+                    [ gameplayTestCapability; skills.TestSkill ])
+
         requirementTasksWithFoldedDecisions
         @ clarificationDecisionTasks
         @ planDecisionTasks
@@ -477,6 +497,7 @@ module internal TaskGraphAuthoring =
         @ generatedViewTasks
         @ deferralTasks
         @ visualInspectionTasks
+        @ classifiedRequirementTasks
 
     let currentTaskSourceDigests workId specText clarificationText checklistText planText =
         [ "spec", specPath workId, specText

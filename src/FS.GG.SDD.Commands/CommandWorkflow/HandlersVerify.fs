@@ -40,6 +40,10 @@ module internal HandlersVerify =
             /// count it without re-deriving the rule. FS.GG.SDD#350 made it answerable — `true` when
             /// the obligation is backed by an `observedRun` receipt SDD parsed from a runner's report.
             Observed: bool
+            /// WI-4 (ADR-0048): is this the disposition of a classified `{gameplay}` FR obligation?
+            /// Carried from the draft and serialized into verify.json so `ship` and Governance count
+            /// "classified-FR obligations unmet" over the committed dispositions without re-deriving it.
+            ClassifiedRequirement: bool
             EvidenceIds: string list
             TaskIds: string list
             SourceIds: string list
@@ -201,6 +205,7 @@ module internal HandlersVerify =
               ObligationId = draft.ObligationId
               State = draft.State
               Observed = draft.Observed
+              ClassifiedRequirement = draft.ClassifiedRequirement
               EvidenceIds = draft.EvidenceIds
               TaskIds = draft.TaskIds
               SourceIds = affectedSourceIds draft.TaskIds
@@ -281,6 +286,20 @@ module internal HandlersVerify =
                         normalizedEvidenceResult declaration.Result = "pass" && declaration.Synthetic)
                 then
                     "synthetic", []
+                // WI-4 (ADR-0048): mirror the `ED-` cascade — a classified {gameplay} FR obligation is
+                // satisfied only by a real, non-synthetic test KIND. A non-synthetic pass of a non-test
+                // kind (e.g. `implementation`) leaves the required test UNMET, not satisfied, so `ED-`
+                // and `TD-` cannot drift on what discharges a gameplay obligation (as for the #306
+                // visual arm above). A synthetic-only pass already fell to `synthetic`.
+                elif
+                    isGameplayTestTagged (tasks |> List.collect (fun task -> task.RequiredSkills))
+                    && matches
+                       |> List.exists (fun declaration ->
+                           normalizedEvidenceResult declaration.Result = "pass"
+                           && not declaration.Synthetic)
+                    && not (matches |> List.exists (satisfiesRequiredEvidenceKinds realTestEvidenceKinds))
+                then
+                    "invalid", [ "evidence.classifiedRequirementTestObligationUnmet" ]
                 // FS.GG.SDD#350 / ADR-0035 stage 3 — the defect this whole issue names. It sits
                 // IMMEDIATELY above `satisfied` and intercepts exactly the passes that would have
                 // reached it, which is why the ordering is load-bearing rather than cosmetic.
@@ -447,6 +466,7 @@ module internal HandlersVerify =
                 writer.WriteString("obligationId", view.ObligationId)
                 writer.WriteString("state", view.State)
                 writer.WriteBoolean("observed", view.Observed)
+                writer.WriteBoolean("classifiedRequirement", view.ClassifiedRequirement)
                 writeStringArray writer "evidenceIds" view.EvidenceIds
                 writeStringArray writer "affectedTaskIds" view.TaskIds
                 writeStringArray writer "affectedSourceIds" view.SourceIds
@@ -893,6 +913,12 @@ module internal HandlersVerify =
                                   TestMissingCount = testCount "missing"
                                   TestStaleCount = testCount "stale"
                                   TestInvalidCount = testCount "invalid"
+                                  // WI-4 (ADR-0048): carry the evidence stage's classified-FR unmet
+                                  // aggregate through unchanged — verify reports the same number ship binds.
+                                  ClassifiedObligationsUnmetCount =
+                                    evidenceSummaryOpt
+                                    |> Option.map (fun summary -> summary.ClassifiedObligationsUnmetCount)
+                                    |> Option.defaultValue 0
                                   SkillVisibleCount =
                                     skillViews
                                     |> List.filter (fun view -> view.Visibility = "visible")

@@ -834,3 +834,58 @@ module TasksCommandTests =
 
         TestSupport.runTasks root workId title |> ignore
         Assert.DoesNotContain(visualInspectionTaskTitle, TestSupport.readRelative root tasksPath)
+
+    // ---- WI-4 (ADR-0048): the per-classified-FR gameplay obligation --------------------------------
+
+    /// A plan-ready project whose FR-001 coverage line is annotated `{gameplay}` (the facet is scanned
+    /// anywhere on the FR line, so appending it preserves the line's coverage).
+    let private gameplayClassifiedProject () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+        TestSupport.runCharter root workId title |> ignore
+        TestSupport.runSpecify root workId title |> ignore
+
+        let annotated =
+            TestSupport.readRelative root specPath
+            |> fun spec -> spec.Replace("\r\n", "\n").Split('\n')
+            |> Array.map (fun line ->
+                if line.StartsWith("- FR-001:") then
+                    line + " {gameplay}"
+                else
+                    line)
+            |> String.concat "\n"
+
+        TestSupport.writeRelative root specPath annotated
+
+        TestSupport.runRequest
+            { TestSupport.clarifyRequest root workId title with
+                InputText = None }
+        |> ignore
+
+        TestSupport.runChecklist root workId title |> ignore
+        TestSupport.runPlan root workId title |> ignore
+        root
+
+    /// WI-4 one granularity finer than the visual task: a `{gameplay}`-classified FR derives a task
+    /// carrying the `gameplay-test` capability (which makes its obligation require a real test kind).
+    [<Fact>]
+    let ``tasks derives a gameplay-test task for a classified FR`` () =
+        let root = gameplayClassifiedProject ()
+
+        let report = TestSupport.runTasks root workId title
+        let tasks = TestSupport.readRelative root tasksPath
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains("Cover gameplay requirement FR-001 with a non-synthetic test", tasks)
+        Assert.Contains("gameplay-test", tasks)
+
+    /// SC-001 at the tasks seam: an unclassified workspace's graph gains no gameplay task.
+    [<Fact>]
+    let ``tasks derives no gameplay-test task when no FR is classified`` () =
+        let root = initializedPlanReadyProject ()
+
+        TestSupport.runTasks root workId title |> ignore
+        let tasks = TestSupport.readRelative root tasksPath
+
+        Assert.DoesNotContain("Cover gameplay requirement", tasks)
+        Assert.DoesNotContain("gameplay-test", tasks)
