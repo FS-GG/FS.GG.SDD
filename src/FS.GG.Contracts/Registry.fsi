@@ -109,18 +109,75 @@ module Registry =
         /// "nothing consumes this" — a typo passing as a deliberate assertion).
         | ConsumersMalformed of raw: string
 
+    /// One of three PROVENANCES a wire contract can have (ADR-0052). A networked
+    /// component's wire surface — the protobuf/gRPC bytes it exchanges — is often the
+    /// contract that matters most, and it is compatible-or-not on rules the source
+    /// `.fsi` surface (`Surface` above) cannot express. The provenance decides WHICH
+    /// artifact is the compatibility surface, and each case carries only the facts that
+    /// provenance needs.
+    ///
+    /// Modelled as a closed union so an unrecognised provenance is UNREPRESENTABLE here
+    /// and must be rejected at the parse edge (as `WireMalformed`) rather than silently
+    /// constructed — the same discipline `ConsumerDeclaration` applies to a
+    /// present-but-unparseable list.
+    type WireContract =
+        /// A `.proto` FS-GG does NOT own — e.g. StarCraft II's Blizzard-owned
+        /// `s2clientprotocol`. Carries the vendored upstream ref and its OWN version,
+        /// versioned INDEPENDENTLY of the component's source `Version`: upstream moves on
+        /// its own cadence, so pinning the two together would force a component bump on
+        /// every upstream tag and lose the fact of which upstream the bytes match.
+        | VendoredProto of upstream: string * upstreamVersion: string
+        /// A `.proto` FS-GG OWNS. The file's field-number / `reserved` discipline IS the
+        /// compatibility surface; `proto` names the owned artifact.
+        | OwnedProto of proto: string
+        /// No `.proto` artifact at all: the F# `[<ProtoContract>]` types ARE the wire
+        /// contract (code-first protobuf-net). `surface` names the type surface that
+        /// carries the field numbers.
+        | CodeFirstProtobufNet of surface: string
+
+    /// A contract entry's answer to *"does this component expose a wire contract, and of
+    /// what provenance?"* — an obligation the owner DECLARES, not a fact derived from the
+    /// tree.
+    ///
+    /// THREE states, and the reasons mirror `ConsumerDeclaration` / `MirrorDeclaration`
+    /// exactly. `absent` and a declared provenance are DIFFERENT CLAIMS — absent says
+    /// this contract has no wire dimension (the common case, and NOT a fault), a
+    /// declaration says it does — and a present-but-unparseable `wire-contract:` (an
+    /// unknown/blank provenance, a value that is not a mapping) is a THIRD, distinct
+    /// fault carried with its raw text so `validateDocument` can REPORT it rather than
+    /// silently re-reading it as "no wire contract" (a phantom absence) or guessing a
+    /// provenance (a phantom declaration).
+    ///
+    /// Modelled as a union so the collapse is UNREPRESENTABLE, and deliberately NOT the
+    /// `WireContract option` the two-state instinct suggests: that has nowhere to put the
+    /// malformed case, which would then collapse into `None` — the same absent/typo merge
+    /// one level down. Sibling of `ConsumerDeclaration` / `MirrorDeclaration`, decided the
+    /// same way and for the same reason.
+    type WireContractDeclaration =
+        /// No `wire-contract:` key at all — this contract has no wire dimension. NOT a
+        /// fault: most contracts are not networked.
+        | WireUnspecified
+        /// The owner declared a well-formed provenance.
+        | WireDeclared of WireContract
+        /// Present but unparseable — an unknown/blank provenance, or a value that is not a
+        /// mapping. Carried with its raw text so it REPORTS rather than vanishing.
+        | WireMalformed of raw: string
+
     /// A versioned cross-repo contract (`contracts[]`). `PackageVersion`/`Range` are
     /// present only on some entries.
     ///
     /// `Consumers` is three-state as of 3.0.0 (FS.GG.SDD#508) — see `ConsumerDeclaration`.
-    /// Retyping a field on a public F# record is a BINARY BREAK, hence the major; there is
-    /// no additive spelling of this change (docs/release/contracts-version-bump-checklist.md).
+    /// `WireContract` is three-state as of 4.0.0 (FS.GG.SDD#589, ADR-0052) — see
+    /// `WireContractDeclaration`. Adding a field to a public F# record is a BINARY BREAK
+    /// (the positional ctor's arity changes), hence the major; there is no additive
+    /// spelling of this change (docs/release/contracts-version-bump-checklist.md).
     type ContractEntry =
         { Id: string
           Version: string
           Owner: string
           Surface: string
           Consumers: ConsumerDeclaration
+          WireContract: WireContractDeclaration
           PackageVersion: string option
           Range: string option }
 

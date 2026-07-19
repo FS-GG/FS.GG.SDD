@@ -87,6 +87,53 @@ module RegistryDocument =
             | :? YamlMappingNode -> Fsgg.Registry.ConsumersMalformed "<mapping>"
             | _ -> Fsgg.Registry.ConsumersMalformed "<non-sequence>"
 
+    /// The three-state `wire-contract` read (FS.GG.SDD#589 / ADR-0052), spelled out for the
+    /// same reasons `parseConsumers` is:
+    ///
+    /// Presence is decided on the KEY (`tryNodeAt`): an absent `wire-contract:` is
+    /// `WireUnspecified` (this contract has no wire dimension — the common case), never a
+    /// malformed one.
+    ///
+    /// A present value that is not a MAPPING cannot carry a provenance, so it is MALFORMED
+    /// rather than absent — reading a scalar/sequence as "no wire contract" would silence a
+    /// real typo. It is described by KIND (`<null>`, `<sequence>`, …) where structural, so
+    /// the diagnostic stays deterministic and one-line; a scalar carries its text, because
+    /// `wire-contract: sc2` is the likely mistake and the author needs to see what was read.
+    ///
+    /// A mapping with an UNKNOWN or blank `provenance:` is MALFORMED, not silently dropped and
+    /// not guessed: the union is closed (Registry.fsi), so an unrecognised provenance has no
+    /// honest declared value. Each known provenance carries only its own fields, read as-is;
+    /// the pure validator (`validateDocument`) reports any that are blank, exactly as it does
+    /// for a blank `consumers` entry — this edge classifies, it does not judge completeness.
+    let private parseWireContract (item: YamlNode) : Fsgg.Registry.WireContractDeclaration =
+        match tryNodeAt [ "wire-contract" ] item with
+        | None -> Fsgg.Registry.WireUnspecified
+        | Some node ->
+            match tryMapping node with
+            | None ->
+                match node with
+                | :? YamlScalarNode as scalar ->
+                    let raw = Option.ofObj scalar.Value |> Option.defaultValue ""
+
+                    if String.IsNullOrWhiteSpace raw then
+                        Fsgg.Registry.WireMalformed "<null>"
+                    else
+                        Fsgg.Registry.WireMalformed $"'{raw}'"
+                | :? YamlSequenceNode -> Fsgg.Registry.WireMalformed "<sequence>"
+                | _ -> Fsgg.Registry.WireMalformed "<non-mapping>"
+            | Some _ ->
+                let field key =
+                    tryScalarAt [ key ] node |> Option.defaultValue ""
+
+                match (field "provenance").Trim() with
+                | "vendored-proto" ->
+                    Fsgg.Registry.WireDeclared(Fsgg.Registry.VendoredProto(field "upstream", field "upstream-version"))
+                | "owned-proto" -> Fsgg.Registry.WireDeclared(Fsgg.Registry.OwnedProto(field "proto"))
+                | "code-first-protobuf-net" ->
+                    Fsgg.Registry.WireDeclared(Fsgg.Registry.CodeFirstProtobufNet(field "surface"))
+                | "" -> Fsgg.Registry.WireMalformed "<no provenance>"
+                | other -> Fsgg.Registry.WireMalformed $"unknown provenance '{other}'"
+
     let private parseContracts (node: YamlNode) : Fsgg.Registry.ContractEntry list =
         match trySequence node with
         | None -> []
@@ -108,6 +155,7 @@ module RegistryDocument =
                           Owner = scalar "owner"
                           Surface = scalar "surface"
                           Consumers = parseConsumers item
+                          WireContract = parseWireContract item
                           PackageVersion = optScalar "package-version"
                           Range = optScalar "range" }
                         : Fsgg.Registry.ContractEntry

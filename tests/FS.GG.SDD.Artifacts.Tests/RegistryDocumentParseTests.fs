@@ -183,3 +183,97 @@ module RegistryDocumentParseTests =
     [<Fact>]
     let ``a blank consumers entry survives the edge for the validator to report`` () =
         Assert.Equal(Registry.ConsumersDeclared [ "" ], consumersOf "    consumers: [\"\"]\n")
+
+    // --- The three-state `wire-contract` read (FS.GG.SDD#589 / ADR-0052) ---
+    //
+    // Same shape as `consumers`: presence on the KEY, an unknown/blank provenance and a
+    // non-mapping value are MALFORMED (each its own text), and the three known provenances
+    // parse into their `WireContract` cases carrying their fields verbatim for the validator.
+
+    /// Parses one contract's `wire-contract:` through the real YAML edge. `body` is a
+    /// `consumers` line plus whatever wire block the case declares, spliced verbatim so each
+    /// case names its own bytes. (`consumers: []` keeps the doc otherwise coherent.)
+    let private wireOf (body: string) : Registry.WireContractDeclaration =
+        let temp =
+            Path.Combine(Path.GetTempPath(), $"fsgg-registry-wire-{System.Guid.NewGuid():N}.yml")
+
+        let text =
+            "schemaVersion: 1\n"
+            + "repos:\n  sdd:\n    name: FS.GG.SDD\n    role: r\n"
+            + "contracts:\n"
+            + "  - id: alpha\n    version: \"1.0.0\"\n    owner: sdd\n    surface: s\n    consumers: []\n"
+            + body
+
+        File.WriteAllText(temp, text)
+
+        try
+            match RegistryDocument.load temp with
+            | Ok document -> (document.Contracts |> List.find (fun c -> c.Id = "alpha")).WireContract
+            | Error error -> failwith $"Expected Ok, got Error: {error.Message}"
+        finally
+            File.Delete temp
+
+    [<Fact>]
+    let ``an ABSENT wire-contract parses as Unspecified`` () =
+        Assert.Equal(Registry.WireUnspecified, wireOf "")
+
+    [<Fact>]
+    let ``a vendored-proto parses into VendoredProto carrying upstream and its own version`` () =
+        let body =
+            "    wire-contract:\n"
+            + "      provenance: vendored-proto\n"
+            + "      upstream: Blizzard/s2client-proto\n"
+            + "      upstream-version: \"5.0.12\"\n"
+
+        Assert.Equal(Registry.WireDeclared(Registry.VendoredProto("Blizzard/s2client-proto", "5.0.12")), wireOf body)
+
+    [<Fact>]
+    let ``an owned-proto parses into OwnedProto carrying the proto path`` () =
+        let body =
+            "    wire-contract:\n      provenance: owned-proto\n      proto: protos/bar.proto\n"
+
+        Assert.Equal(Registry.WireDeclared(Registry.OwnedProto "protos/bar.proto"), wireOf body)
+
+    [<Fact>]
+    let ``a code-first-protobuf-net parses into CodeFirstProtobufNet carrying the surface`` () =
+        let body =
+            "    wire-contract:\n      provenance: code-first-protobuf-net\n      surface: src/FS.GG.Net/Wire.fsi\n"
+
+        Assert.Equal(Registry.WireDeclared(Registry.CodeFirstProtobufNet "src/FS.GG.Net/Wire.fsi"), wireOf body)
+
+    /// An unknown provenance has no honest declared value (the union is closed), so it is
+    /// Malformed carrying the offending token — never guessed, never dropped.
+    [<Fact>]
+    let ``an unknown provenance parses as Malformed, carrying the token`` () =
+        let body = "    wire-contract:\n      provenance: grpc\n"
+        Assert.Equal(Registry.WireMalformed "unknown provenance 'grpc'", wireOf body)
+
+    /// A mapping with no `provenance:` — the key is there, the discriminator is not.
+    [<Fact>]
+    let ``a wire-contract with no provenance parses as Malformed`` () =
+        let body = "    wire-contract:\n      upstream: x\n"
+        Assert.Equal(Registry.WireMalformed "<no provenance>", wireOf body)
+
+    /// A scalar where a mapping belongs — the likely typo. Must not read as absent.
+    [<Fact>]
+    let ``a scalar wire-contract parses as Malformed, carrying its text`` () =
+        Assert.Equal(Registry.WireMalformed "'sc2'", wireOf "    wire-contract: sc2\n")
+
+    /// An explicit key with no value.
+    [<Fact>]
+    let ``a null wire-contract parses as Malformed, not as absent`` () =
+        Assert.Equal(Registry.WireMalformed "<null>", wireOf "    wire-contract:\n")
+
+    /// A sequence where a mapping belongs.
+    [<Fact>]
+    let ``a sequence wire-contract parses as Malformed, described by kind`` () =
+        Assert.Equal(Registry.WireMalformed "<sequence>", wireOf "    wire-contract: [a, b]\n")
+
+    /// Absent and a declared provenance do NOT parse to the same value — the collapse this
+    /// three-state model makes unrepresentable.
+    [<Fact>]
+    let ``absent and a declared wire-contract do NOT parse to the same value`` () =
+        let declared =
+            "    wire-contract:\n      provenance: owned-proto\n      proto: p.proto\n"
+
+        Assert.NotEqual(wireOf "", wireOf declared)
