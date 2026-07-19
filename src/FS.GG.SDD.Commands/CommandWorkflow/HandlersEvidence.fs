@@ -525,7 +525,12 @@ module internal HandlersEvidence =
                 LinkedRequirementIds = group |> List.collect _.LinkedRequirementIds |> List.distinct
                 LinkedDecisionIds = group |> List.collect _.LinkedDecisionIds |> List.distinct
                 LinkedSourceIds = group |> List.collect _.LinkedSourceIds |> List.distinct
-                RequiredSkillOrCapabilityTags = group |> List.collect _.RequiredSkillOrCapabilityTags |> List.distinct })
+                RequiredSkillOrCapabilityTags = group |> List.collect _.RequiredSkillOrCapabilityTags |> List.distinct
+                // WI-4 (ADR-0048): union the required kinds alongside the tags they are derived from.
+                // The tag set decides `ClassifiedRequirement`; if a gameplay task shares an obligation
+                // id with a non-gameplay task listed first, head-winning `RequiredEvidenceKinds` would
+                // leave it empty and silently disable the real-test gate for that obligation.
+                RequiredEvidenceKinds = group |> List.collect _.RequiredEvidenceKinds |> List.distinct })
 
     // Feature 077 (issue #124): route an obligation's origin lineage into the declaration's
     // `requirementRefs` / `planDecisionRefs` buckets by the shared id grammar

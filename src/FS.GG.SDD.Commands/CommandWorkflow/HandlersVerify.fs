@@ -286,6 +286,20 @@ module internal HandlersVerify =
                         normalizedEvidenceResult declaration.Result = "pass" && declaration.Synthetic)
                 then
                     "synthetic", []
+                // WI-4 (ADR-0048): mirror the `ED-` cascade — a classified {gameplay} FR obligation is
+                // satisfied only by a real, non-synthetic test KIND. A non-synthetic pass of a non-test
+                // kind (e.g. `implementation`) leaves the required test UNMET, not satisfied, so `ED-`
+                // and `TD-` cannot drift on what discharges a gameplay obligation (as for the #306
+                // visual arm above). A synthetic-only pass already fell to `synthetic`.
+                elif
+                    isGameplayTestTagged (tasks |> List.collect (fun task -> task.RequiredSkills))
+                    && matches
+                       |> List.exists (fun declaration ->
+                           normalizedEvidenceResult declaration.Result = "pass"
+                           && not declaration.Synthetic)
+                    && not (matches |> List.exists (satisfiesRequiredEvidenceKinds realTestEvidenceKinds))
+                then
+                    "invalid", [ "evidence.classifiedRequirementTestObligationUnmet" ]
                 // FS.GG.SDD#350 / ADR-0035 stage 3 — the defect this whole issue names. It sits
                 // IMMEDIATELY above `satisfied` and intercepts exactly the passes that would have
                 // reached it, which is why the ordering is load-bearing rather than cosmetic.

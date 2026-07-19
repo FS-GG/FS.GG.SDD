@@ -1670,3 +1670,92 @@ evidence:
 
         Assert.False(unclassifiedUnmet.ClassifiedRequirement)
         Assert.Equal(1, HandlersEvidence.classifiedObligationsUnmetCount [ supported; unmet; unclassifiedUnmet ])
+
+    [<Fact>]
+    let ``an accepted deferral leaves a gameplay obligation deferred, not counted`` () =
+        // A deferral (with all four fields) is a first-class outcome the count does not touch, exactly
+        // as for the visual-inspection obligation.
+        let disposition =
+            gameplayDisposition
+                """  - id: EV001
+    kind: deferral
+    subject:
+      type: task
+      id: T001
+    obligationRefs: [EV001]
+    result: deferred
+    rationale: covered by a follow-up work item
+    owner: codex
+    scope: this work item
+    laterLifecycleVisibility: verify"""
+
+        Assert.Equal("deferred", disposition.State)
+        Assert.Equal(0, HandlersEvidence.classifiedObligationsUnmetCount [ disposition ])
+
+    /// A gameplay task's obligation carries the real-test-kind restriction (the mint), even when a
+    /// non-gameplay task shares the obligation id (Finding 2: the group-merge unions it).
+    let private gameplayTaskFacts () =
+        let text =
+            """schemaVersion: 1
+tasks:
+  - id: T001
+    title: Implement requirement FR-001
+    status: pending
+    owner: codex
+    requirements: [FR-001]
+    decisions: []
+    sourceIds: [AC-001]
+    dependencies: []
+    requiredSkills: [fsharp]
+    requiredEvidence: [EV001]
+  - id: T002
+    title: Cover gameplay requirement FR-001 with a non-synthetic test
+    status: pending
+    owner: codex
+    requirements: [FR-001]
+    decisions: []
+    sourceIds: []
+    dependencies: [T001]
+    requiredSkills: [gameplay-test, automated-tests]
+    requiredEvidence: [EV001]
+"""
+
+        match
+            Task.parseTaskFacts
+                { Path = $"work/{workId}/tasks.yml"
+                  Text = text }
+        with
+        | Ok facts -> facts
+        | Error diagnostics -> failwith $"gameplay task facts did not parse: {diagnostics}"
+
+    [<Fact>]
+    let ``evidenceObligations mints the real-test-kind restriction for a shared gameplay obligation`` () =
+        let obligation =
+            HandlersEvidence.evidenceObligations (gameplayTaskFacts ())
+            |> List.find (fun obligation -> obligation.ObligationId = "EV001")
+
+        // The gameplay task is listed SECOND, so head-winning would drop the restriction (Finding 2).
+        Assert.Equal<string list>(Evidence.realTestEvidenceKinds, obligation.RequiredEvidenceKinds)
+        Assert.True(Evidence.isGameplayTestTagged obligation.RequiredSkillOrCapabilityTags)
+
+    [<Fact>]
+    let ``verifyTestDispositionViews marks a gameplay obligation invalid for a non-test pass`` () =
+        // Finding 1: the TD- cascade must mirror ED- — an implementation pass does not satisfy the
+        // required gameplay test.
+        let artifact =
+            evidenceArtifactWith
+                """  - id: EV001
+    kind: implementation
+    subject:
+      type: task
+      id: T001
+    obligationRefs: [EV001]
+    result: pass
+    synthetic: false"""
+
+        let view =
+            HandlersVerify.verifyTestDispositionViews (gameplayTaskFacts ()) (fun _ -> true) false artifact
+            |> List.find (fun view -> view.ObligationId = "EV001")
+
+        Assert.Equal("invalid", view.State)
+        Assert.Contains("evidence.classifiedRequirementTestObligationUnmet", view.DiagnosticIds)
