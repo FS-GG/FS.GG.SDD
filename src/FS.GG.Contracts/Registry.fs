@@ -532,8 +532,15 @@ module Registry =
     /// digest that is not 64 hex characters, passing a check whose whole job is to say so.
     let private sha256Regex = System.Text.RegularExpressions.Regex(@"\A[0-9a-f]{64}\z")
 
-    /// The declared skill scopes (`Fsgg.Schemas.SkillScope` rendered as catalog tokens).
-    let private skillScopes = Set.ofList [ "process"; "product" ]
+    /// The declared skill scopes accepted in the catalog. `process`/`product` are the
+    /// `Fsgg.Schemas.SkillScope` cases rendered as catalog tokens; `driver` (ADR-0054) is
+    /// KNOWN here — a `scope: driver` row validates — but is deliberately AHEAD of a
+    /// `Schemas.SkillScope.Driver` case, which the materialization side does not yet carry.
+    /// This is ADR-0037 §3 "known, not enforced": step 1 only LOOSENS what the validator
+    /// accepts (so it still accepts `.github` HEAD verbatim), and the driver-shape ENFORCEMENT
+    /// — a `driver` row MUST carry a composed predicate / `.github` owner — lands in step 2
+    /// against the bumped `schemaVersion`, not here.
+    let private skillScopes = Set.ofList [ "process"; "product"; "driver" ]
 
     let validateSkillRegistry (document: SkillRegistryDocument) : ValidationResult =
         // root: a catalog with no skills is not a catalog. (`schemaVersion` is
@@ -576,7 +583,7 @@ module Registry =
                       { Entry = entry
                         Rule = UnknownComponent
                         Message =
-                          $"Skill '{entry}' has an unknown 'scope': '{s.Scope}' (expected 'process' or 'product')." }
+                          $"Skill '{entry}' has an unknown 'scope': '{s.Scope}' (expected 'process', 'product', or 'driver')." }
 
                   if isBlank s.Owner then
                       { Entry = entry
