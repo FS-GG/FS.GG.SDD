@@ -124,17 +124,44 @@ module SkillRegistryValidatorTests =
         | other -> failwith $"expected exactly one duplicate diagnostic, got {List.length other}"
 
     [<Fact>]
-    let ``an unknown scope is an UnknownComponent`` () =
+    let ``an unknown scope is an UnknownComponent, and its message names driver`` () =
+        // FR-004 / AC-003: an unrecognized scope still fails, and the message enumerates all
+        // three accepted scopes — including the one this feature adds. Naming `driver` in the
+        // message is the reader-facing half of teaching the vocabulary; drop it from the
+        // enumeration and this test goes red.
         let result =
             Registry.validateSkillRegistry (doc [ { row "x" with Scope = "nonsense" } ])
 
-        Assert.Contains(Registry.UnknownComponent, rulesOf result)
+        match diagnosticsOf result with
+        | [ d ] ->
+            Assert.Equal(Registry.UnknownComponent, d.Rule)
+            Assert.Contains("'driver'", d.Message)
+        | other -> failwith $"expected exactly one UnknownComponent diagnostic, got {List.length other}"
+
+    // --- FR-001/FR-002/AC-001/AC-004: the driver class is KNOWN. Adding it is a monotone
+    // loosening — `process`/`product` still pass, and `driver` now joins them. ---
 
     [<Theory>]
     [<InlineData "process">]
     [<InlineData "product">]
+    [<InlineData "driver">]
     let ``the declared scopes are accepted`` (scope: string) =
         Assert.Equal(Registry.Valid, Registry.validateSkillRegistry (doc [ { row "x" with Scope = scope } ]))
+
+    /// FR-003 / AC-002: the full driver SHAPE ADR-0054 describes — `scope: driver`, a
+    /// NON-PRODUCER owner (`.github`), and a COMPOSED `materializes-when` (the AND of two
+    /// producer predicates) — validates in step 1. Nothing here is *enforced* (a `driver`
+    /// row is not REQUIRED to look like this yet, ADR-0037 §3); the point is that this shape,
+    /// which is what `.github` will emit in step 2, is accepted rather than rejected.
+    [<Fact>]
+    let ``a driver row with a .github owner and a composed materializes-when is valid`` () =
+        let driverRow =
+            { row "fs-gg-sdd-driver" with
+                Scope = "driver"
+                Owner = ".github"
+                MaterializesWhen = Some "has fs-gg-sdd-* and has fs-gg-feedback-*" }
+
+        Assert.Equal(Registry.Valid, Registry.validateSkillRegistry (doc [ driverRow ]))
 
     [<Fact>]
     let ``a missing owner and a missing source are each a MissingField`` () =
