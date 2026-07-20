@@ -118,12 +118,16 @@ is.
 
 ### Acceptance Criteria
 
-- **AC-001**: A `scaffold` run against a **synthetic** provider that declares `lifecycle` with
-  `default: sdd` and no `--param` override records `lifecycle=sdd` in `effectiveParameters` (json/text/
-  rich) and in `scaffold-provenance.json`. (Mechanism witness — names no real provider; **unblocked**.)
-- **AC-002**: The same synthetic provider with `default: spec-kit` records `lifecycle=spec-kit`, and with
-  `--param lifecycle=none` records `lifecycle=none` — proving the value is forwarded, never chosen, and
-  the override still wins (FR-002 / FR-003).
+- **AC-001**: A `scaffold` run against a provider that declares a parameter with a **default** and no
+  `--param` override records that default verbatim in `effectiveParameters` (json/text/rich) and in
+  `scaffold-provenance.json`. **Already discharged** — `ScaffoldCommandTests` feature-050 `T008`/`T009`
+  pin exactly this over a value-agnostic `variant` `default: alpha`: the default is forwarded to the
+  provider and recorded in `summary.EffectiveParameters`, provenance, and the json/text projections.
+- **AC-002**: The forwarding is value-agnostic and an author `--param` override wins. **Already
+  discharged** — feature-031 `T010`–`T014` pin `lifecycle`-keyed forwarding, an arbitrary-nonce lifecycle
+  value behaving identically to `sdd`, and override/order-independence (FR-002 / FR-003). Adding a
+  `lifecycle`-keyed *default* clone would only re-assert the same key-agnostic code path and would imply
+  `lifecycle` is special, contradicting FR-001 — so this feature adds **no** new mechanism test.
 - **AC-003**: `scaffold` with `--provider` omitted still blocks with `scaffold.providerMissing` (exit 1),
   unchanged — no default provider is introduced (FR-004).
 - **AC-004** *(gated on `.github#1246`; follow-up PR)*: An override-free `fsgg-sdd scaffold --provider

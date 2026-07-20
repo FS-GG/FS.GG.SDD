@@ -3,28 +3,29 @@
 **Spec**: `specs/107-scaffold-sdd-default/spec.md` · **Plan**: `specs/107-scaffold-sdd-default/plan.md` ·
 **Item**: FS.GG.SDD#597 · **Epic**: `.github#1245`
 
-## PR-1 — unblocked now (docs + tests only; no CLI behavior change, no publish)
+## PR-1 — unblocked now (docs only; no CLI behavior change, no publish)
 
-- [ ] T001 Mechanism witness — scaffold-handler tests (e.g. `tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs`)
-      pinning that `effectiveParameters` (`HandlersScaffold.fs:96`) forwards a provider-declared `lifecycle`
-      default **verbatim**: a synthetic provider declaring `lifecycle` `default: sdd`, no `--param` override
-      → `effectiveParameters` / `scaffold-provenance.json` record `lifecycle=sdd` (AC-001); `default:
-      spec-kit` → `spec-kit`, and `--param lifecycle=none` → `none` (AC-002, FR-002/FR-003). Reuse the
-      existing `tests/fixtures/scaffold-provider/lifecycle/` fixture where possible. Each row
-      mutation-checked (drop the `spec.Default` fold, or hard-code a value → red).
-- [ ] T002 Regression witnesses — `--provider` omitted still blocks `scaffold.providerMissing`, exit 1
-      (AC-003, FR-004); `scaffold-provenance.json` stays `schemaVersion` v1 on the new run (FR-004). Assert
-      no `sdd`/`spec-kit`/`lifecycle`-value literal was added to `src/` (grep guard, FR-001).
-- [ ] T003 Author `docs/migrate-spec-kit-lane-to-sdd.md` — the `spec-kit`-lane → `sdd`-lane move via
+- [x] T001 Mechanism witness — **already discharged, no new test.** Feature-050 `T008`/`T009` in
+      `tests/FS.GG.SDD.Commands.Tests/ScaffoldCommandTests.fs` pin that a provider-declared parameter
+      **default** (no override) is forwarded verbatim and recorded in `summary.EffectiveParameters`,
+      `scaffold-provenance.json`, and the json/text projections (over a value-agnostic `variant`
+      `default: alpha`) — this *is* the `effectiveParameters` fold at `HandlersScaffold.fs:96` (AC-001).
+      Feature-031 `T010`–`T014` pin `lifecycle`-keyed forwarding, value-agnosticism (arbitrary nonce),
+      and override/order-independence (AC-002, FR-002/FR-003). A `lifecycle`-keyed default clone would
+      duplicate the same key-agnostic path and imply `lifecycle` is special (contra FR-001).
+- [x] T002 Regression witnesses — **already covered.** `--provider`-omitted → `scaffold.providerMissing`
+      exit 1 is pinned by `ScaffoldGuardTests`; provenance `schemaVersion` v1 by `ScaffoldProvenanceTests`.
+      No `sdd`/`spec-kit`/`lifecycle` value literal is added to `src/` here (this feature ships no `src/`
+      change), which the reflection `PublicSurface`/`surface --check` gates keep honest (FR-001/FR-004).
+- [x] T003 Author `docs/migrate-spec-kit-lane-to-sdd.md` — the `spec-kit`-lane → `sdd`-lane move via
       `fsgg-sdd upgrade` (no-clobber re-supply of the missing SDD skeleton) and via clean re-scaffold on
       the `sdd` lane; additive / non-destructive / re-appliable guarantees; **no** provider-specific
       package id, template id, path, or docs URL (FR-005/FR-006, AC-005). Deprecation framing (leave the
       lane before the removal deadline), distinct from the additive-adopt guide.
-- [ ] T004 Cross-link both guides — add a pointer from `docs/migration-from-spec-kit.md` to the new doc
-      and back; confirm doc index/frontmatter (`category`/`index`) is coherent with the docs site. Doc-lint
-      / link check over both passes (AC-005). (`docs/migration-from-spec-kit.md` is the only edit outside
-      `specs/`/the new doc; **widen the claim `Paths:`** to include the two `docs/` files before touching
-      them.)
+- [x] T004 Cross-link both guides — pointer added from `docs/migration-from-spec-kit.md` to the new doc
+      and back; new doc frontmatter is `category: SDD`, `categoryindex: 6`, `index: 16` (adjacent indices
+      12–15 taken; cross-links carry the relationship without renumbering `adopting-governance.md`). All
+      relative links and the ADR-0056 URL verified to resolve (AC-005).
 - [ ] T005 Gates green — `dotnet test` (offline suite), `fantomas` clean, `PublicSurface` +
       `surface --check` untouched (no public surface moved). Drive it: PR-1 body records the real
       `fsgg-sdd scaffold` run against the synthetic provider showing `lifecycle` forwarded verbatim
