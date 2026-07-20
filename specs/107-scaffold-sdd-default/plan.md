@@ -26,7 +26,7 @@ migration guide.
 | Layer | Project / path | Adds | Why here |
 |---|---|---|---|
 | Mechanism witness | `tests/…` (scaffold handler tests) | Synthetic-provider tests pinning `lifecycle` default forwarding + override precedence | The forwarding is the contract behavior ADR-0056 relies on; pin it so a future edit to `effectiveParameters` reddens (defect class #266 — a gate that cannot fail). |
-| Migration guide | `docs/` (new `spec-kit`-lane→`sdd`-lane guide, sibling to `docs/migration-from-spec-kit.md`) | The `upgrade`-re-supply / re-scaffold move, additive + non-destructive | SDD owns the lifecycle-lane migration narrative; the tool primitive (`upgrade` `artifactReSeed`) already exists (`docs/reference/doctor-upgrade.md`). |
+| Migration guide | `docs/migrate-spec-kit-lane-to-sdd.md` (new sibling doc, cross-linked with `docs/migration-from-spec-kit.md` — clarify Q2) | The `upgrade`-re-supply / re-scaffold move, additive + non-destructive | SDD owns the lifecycle-lane migration narrative; the tool primitive (`upgrade` `artifactReSeed`) already exists (`docs/reference/doctor-upgrade.md`). A sibling doc keeps the deprecation framing from contradicting the existing additive-adopt guide. |
 
 Nothing else moves: **no `.fsi` change** (the `ProviderDescriptor`/`effectiveParameters` surface is
 unchanged), **no `scaffold-provenance` schema bump** (stays v1), **no `scaffold.providerMissing` relaxation**
@@ -78,16 +78,15 @@ Driven, not just asserted: PR-1's body records the real `fsgg-sdd scaffold` run 
 provider showing `lifecycle` forwarded verbatim, and (once unblocked) PR-2's body records the real
 `fs-gg-ui` end-to-end `lifecycle: sdd` verdict.
 
-## Open questions for clarify
+## Clarifications resolved (2026-07-20)
 
-- **Doctor guard scope.** ADR-0056's "fail-closed readiness/doctor check on the `sdd` lane" is described
-  for the raw-`dotnet new` standalone consumer (template-side notice). Whether `fsgg-sdd doctor` should
-  *additionally* fail-closed on an `sdd`-lane tree lacking the SDD skeleton is deferred to clarify — an
-  `fsgg-sdd scaffold`-produced `sdd`-lane tree is never lifecycle-less, so the guard may be entirely
-  template-side. Resolve before plan is final.
-- **Migration guide home.** New standalone doc vs. a lane-migration section folded into
-  `docs/migration-from-spec-kit.md`. The scenarios differ (additive-adopt vs. lane-move), which argues
-  for a sibling doc; confirm at clarify.
+Both plan-time open questions are settled (spec `## Clarifications`, Session 2026-07-20):
+
+- **Doctor-guard scope → template-side only.** No new `fsgg-sdd doctor` check. The raw-`dotnet new`
+  consumer's notice/readiness guard is template-side (`.github#1246`); a `doctor` lane check would embed
+  lane knowledge into generic SDD (FR-001/FR-004). Recorded in spec Out of Scope.
+- **Migration-guide home → new sibling doc** `docs/migrate-spec-kit-lane-to-sdd.md`, cross-linked with
+  the existing additive-adopt guide (FR-005 / AC-005), so the deprecation framing does not contradict it.
 
 ## Release
 
