@@ -149,16 +149,20 @@ module RegistryDocument =
                     let optScalar key =
                         tryScalarAt [ key ] item |> Option.filter (String.IsNullOrWhiteSpace >> not)
 
+                    // FS.GG.SDD#610: ContractEntry is a class — object-initializer, not a
+                    // record literal. A future field is an added named argument here, and an
+                    // added property there, with no positional-ctor break in between.
                     Some(
-                        { Id = scalar "id"
-                          Version = scalar "version"
-                          Owner = scalar "owner"
-                          Surface = scalar "surface"
-                          Consumers = parseConsumers item
-                          WireContract = parseWireContract item
-                          PackageVersion = optScalar "package-version"
-                          Range = optScalar "range" }
-                        : Fsgg.Registry.ContractEntry
+                        Fsgg.Registry.ContractEntry(
+                            Id = scalar "id",
+                            Version = scalar "version",
+                            Owner = scalar "owner",
+                            Surface = scalar "surface",
+                            Consumers = parseConsumers item,
+                            WireContract = parseWireContract item,
+                            PackageVersion = optScalar "package-version",
+                            Range = optScalar "range"
+                        )
                     ))
             |> Seq.toList
 

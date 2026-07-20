@@ -168,18 +168,33 @@ module Registry =
     ///
     /// `Consumers` is three-state as of 3.0.0 (FS.GG.SDD#508) — see `ConsumerDeclaration`.
     /// `WireContract` is three-state as of 4.0.0 (FS.GG.SDD#589, ADR-0052) — see
-    /// `WireContractDeclaration`. Adding a field to a public F# record is a BINARY BREAK
-    /// (the positional ctor's arity changes), hence the major; there is no additive
-    /// spelling of this change (docs/release/contracts-version-bump-checklist.md).
+    /// `WireContractDeclaration`.
+    ///
+    /// A CLASS, not a record, as of 5.0.0 (FS.GG.SDD#610). This is the change that KILLS the
+    /// ABI tax those three prior fields each cost. A public F# *record* compiles its fields
+    /// into a positional primary constructor, so adding one — anywhere — changes the ctor's
+    /// arity, deletes the old ctor, and ApiCompat reports a `CP0002` BINARY BREAK: a forced
+    /// SemVer major (2.0.0/3.0.0/4.0.0 all landed exactly this way). `[<CLIMutable>]` does NOT
+    /// fix it — the record still emits the positional ctor. A non-positional class does: it has
+    /// a single parameterless constructor whose arity never moves, and each field is a settable
+    /// property. **Adding a new typed property is now purely additive — a minor bump, no fleet
+    /// adopt round, no registry flip** — while the strong typing is fully preserved (a new field
+    /// is still its own typed union, e.g. `Consumers`/`WireContract`). Construction moves from
+    /// record `{ Id = …; … }` to object-initializer `ContractEntry(Id = …, … )`; the type keeps
+    /// record-like value semantics via a structural-equality override over its members. The one
+    /// cost is that record copy-update (`{ e with F = v }`) and structural comparison are gone.
+    /// See docs/release/contracts-5.0.0.md and docs/release/contracts-version-bump-checklist.md.
+    [<Sealed>]
     type ContractEntry =
-        { Id: string
-          Version: string
-          Owner: string
-          Surface: string
-          Consumers: ConsumerDeclaration
-          WireContract: WireContractDeclaration
-          PackageVersion: string option
-          Range: string option }
+        new: unit -> ContractEntry
+        member Id: string with get, set
+        member Version: string with get, set
+        member Owner: string with get, set
+        member Surface: string with get, set
+        member Consumers: ConsumerDeclaration with get, set
+        member WireContract: WireContractDeclaration with get, set
+        member PackageVersion: string option with get, set
+        member Range: string option with get, set
 
     /// A hard dependency edge over repos (`dependencies[]`). `From`/`To` are repo
     /// ids; `Via` is free-text and is NOT contract-checked (parity with the Python
