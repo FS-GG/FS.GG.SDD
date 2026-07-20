@@ -6,6 +6,10 @@
        NU1504/NU1011 on a duplicate PackageVersion). ManagePackageVersionsCentrally
        is owned by the canonical file and is intentionally not re-set here. -->
   <ItemGroup>
+    <!-- The coordination kit as a versioned package (ADR-0062, .github#1262). Referenced by
+         .config/kit/FS.GG.Kit.receiver.proj, which materializes the kit onto disk; Renovate bumps
+         this pin and kit-materialize.yml refreshes the committed kit on that PR. -->
+    <PackageVersion Include="FS.GG.Kit" Version="0.1.0" />
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.9" />
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
