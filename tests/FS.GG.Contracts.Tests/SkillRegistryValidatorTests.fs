@@ -260,9 +260,7 @@ module SkillRegistryValidatorTests =
     let ``diagnostics are reported in document order`` () =
         let result =
             Registry.validateSkillRegistry (
-                doc
-                    [ { row "first" with Scope = "" }
-                      { row "second" with Sha256 = "NOTHEX" } ]
+                doc [ { row "first" with Scope = "" }; { row "second" with Sha256 = "NOTHEX" } ]
             )
 
         Assert.Equal<string list>([ "first"; "second" ], diagnosticsOf result |> List.map (fun d -> d.Entry))
