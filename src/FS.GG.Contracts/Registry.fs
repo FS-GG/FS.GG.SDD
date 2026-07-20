@@ -561,17 +561,19 @@ module Registry =
     /// digest that is not 64 hex characters, passing a check whose whole job is to say so.
     let private sha256Regex = System.Text.RegularExpressions.Regex(@"\A[0-9a-f]{64}\z")
 
-    /// The declared skill scopes accepted in the catalog. `process`/`product` are the
-    /// `Fsgg.Schemas.SkillScope` cases rendered as catalog tokens; `driver` (ADR-0054) and
-    /// `operator` (ADR-0057) are KNOWN here — a `scope: driver` / `scope: operator` row
-    /// validates — but are deliberately AHEAD of `Schemas.SkillScope` cases, which the
-    /// materialization side does not yet carry.
-    /// This is ADR-0037 §3 "known, not enforced": step 1 only LOOSENS what the validator
-    /// accepts (so it still accepts `.github` HEAD verbatim), and the shape ENFORCEMENT
-    /// — a `driver` row MUST carry a composed predicate / `.github` owner; an `operator` row
-    /// MUST carry `materializes-when: "false"` and `.github` owner (it is never materialized,
-    /// ADR-0057) — lands in step 2 against the bumped `schemaVersion`, not here.
-    let private skillScopes = Set.ofList [ "process"; "product"; "driver"; "operator" ]
+    // `scope` is validated STRUCTURALLY, not against a compiled-in vocabulary (ADR-0061,
+    // Option (b)). A non-blank `scope` token is a well-formed opaque string; adding a scope
+    // value (`driver` — ADR-0054; `operator` — ADR-0057; whatever comes next) is no longer
+    // "schema growth" — it needs no CLI republish, no `schemaVersion` bump, and no pin
+    // advance. This retired the ADR-0037 §3 "known, not enforced" rail whose exhaustive enum
+    // cost an ADR + a step-1 teach-and-publish + a step-2 `.github` bump+pin per new value.
+    //
+    // The fail-closed discipline that earns its keep stays: a BLANK scope is still an error
+    // (the `isBlank` branch below), as is every other structural/malformed check. What stops
+    // being an error is a token this validator was not recompiled to know. SEMANTIC
+    // enforcement — that a given scope's row carries the shape its meaning requires — moves
+    // to the consumer that materializes the token, where its meaning lives (ADR-0061
+    // trade-off; ADR-0058 "gate the capability, not the declaration").
 
     let validateSkillRegistry (document: SkillRegistryDocument) : ValidationResult =
         // root: a catalog with no skills is not a catalog. (`schemaVersion` is
@@ -610,11 +612,6 @@ module Registry =
                       { Entry = entry
                         Rule = MissingField "scope"
                         Message = $"Skill '{entry}' is missing a non-blank 'scope'." }
-                  elif not (Set.contains s.Scope skillScopes) then
-                      { Entry = entry
-                        Rule = UnknownComponent
-                        Message =
-                          $"Skill '{entry}' has an unknown 'scope': '{s.Scope}' (expected 'process', 'product', 'driver', or 'operator')." }
 
                   if isBlank s.Owner then
                       { Entry = entry

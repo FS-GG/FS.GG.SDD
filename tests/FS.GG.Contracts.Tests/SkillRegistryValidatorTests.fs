@@ -123,32 +123,38 @@ module SkillRegistryValidatorTests =
             Assert.Equal("fs-gg-ai", d.Entry)
         | other -> failwith $"expected exactly one duplicate diagnostic, got {List.length other}"
 
+    /// ADR-0061 Option (b): `scope` is validated STRUCTURALLY, not against a compiled-in
+    /// enum. A non-blank token this validator was never recompiled to know now VALIDATES —
+    /// the whole point of the change, which retires the ADR-0037 §3 "known, not enforced" rail
+    /// (every new scope value used to cost an ADR + a step-1 republish + a step-2 bump+pin).
+    /// The inverse of the old `an unknown scope is an UnknownComponent` test.
     [<Fact>]
-    let ``an unknown scope is an UnknownComponent, and its message names driver and operator`` () =
-        // FR-004 / AC-003: an unrecognized scope still fails, and the message enumerates all
-        // accepted scopes — including the ones the driver (ADR-0054) and operator (ADR-0057)
-        // features add. Naming them in the message is the reader-facing half of teaching the
-        // vocabulary; drop one from the enumeration and this test goes red.
-        let result =
-            Registry.validateSkillRegistry (doc [ { row "x" with Scope = "nonsense" } ])
+    let ``an unknown but non-blank scope now validates - scope is structural, not an enum`` () =
+        Assert.Equal(Registry.Valid, Registry.validateSkillRegistry (doc [ { row "x" with Scope = "nonsense" } ]))
+
+    /// The fail-closed discipline that earns its keep STAYS (ADR-0061 "Consequences"): what
+    /// stopped being an error is an unknown token, NOT a blank one. A blank scope is the
+    /// absence of a declaration and is still a `MissingField`.
+    [<Fact>]
+    let ``a blank scope is still a MissingField`` () =
+        let result = Registry.validateSkillRegistry (doc [ { row "x" with Scope = "" } ])
 
         match diagnosticsOf result with
         | [ d ] ->
-            Assert.Equal(Registry.UnknownComponent, d.Rule)
-            Assert.Contains("'driver'", d.Message)
-            Assert.Contains("'operator'", d.Message)
-        | other -> failwith $"expected exactly one UnknownComponent diagnostic, got {List.length other}"
+            Assert.Equal(Registry.MissingField "scope", d.Rule)
+            Assert.Equal("x", d.Entry)
+        | other -> failwith $"expected exactly one MissingField 'scope' diagnostic, got {List.length other}"
 
-    // --- FR-001/FR-002/AC-001/AC-004: the driver (ADR-0054) and operator (ADR-0057) classes are
-    // KNOWN. Adding each is a monotone loosening — `process`/`product` still pass, and the new
-    // token now joins them. ---
+    // --- The previously enum-gated scopes still validate (they are non-blank tokens); driver
+    // (ADR-0054) and operator (ADR-0057) are now just two such tokens, no longer a hard-coded
+    // set the validator has to be taught. ---
 
     [<Theory>]
     [<InlineData "process">]
     [<InlineData "product">]
     [<InlineData "driver">]
     [<InlineData "operator">]
-    let ``the declared scopes are accepted`` (scope: string) =
+    let ``the previously declared scopes still validate`` (scope: string) =
         Assert.Equal(Registry.Valid, Registry.validateSkillRegistry (doc [ { row "x" with Scope = scope } ]))
 
     /// FR-003 / AC-002: the full driver SHAPE ADR-0054 describes — `scope: driver`, a
@@ -255,7 +261,7 @@ module SkillRegistryValidatorTests =
         let result =
             Registry.validateSkillRegistry (
                 doc
-                    [ { row "first" with Scope = "nonsense" }
+                    [ { row "first" with Scope = "" }
                       { row "second" with Sha256 = "NOTHEX" } ]
             )
 

@@ -116,12 +116,25 @@ module ContractVersionTests =
     // Governance nor Templates references `Fsgg.Registry`, so for a consumer already on 4.0.0 this
     // is a version-number change and no source edit. That does not make it a minor — the record
     // surface was replaced — but it does make it the cheapest possible time to spend this last major.
+    //
+    // 5.0.0 -> 5.0.1 (FS.GG.SDD#612, ADR-0061 Option (b) step 1): a PATCH — the version-bump
+    // checklist's last row, "behaviour change with no surface change". `validateSkillRegistry`'s
+    // skill-`scope` check stopped rejecting a non-blank token that is not in a compiled-in enum
+    // (`skillScopes` — a private binding, now deleted); a blank scope is still a `MissingField`, and
+    // every other structural/malformed check is unchanged. Nothing in `Registry.fsi` moved — no
+    // member added/removed/retyped, no DU case added (`UnknownComponent` stays, still raised by the
+    // dependency-document validator) — so both detectors pass correctly: ApiCompat sees no break
+    // (a loosening removes no member), and `surface --check` sees no `.fsi` drift. The behaviour
+    // LOOSENED (strictly more inputs pass), which is why the number moves at all. This is step 1 of
+    // the two-PR ADR-0061 flow; `.github#1261` (step 2) pins this published version and flips the
+    // registry, retiring the ADR-0037 §3 "known, not enforced" rail that cost an ADR + republish +
+    // bump+pin per new scope value.
     [<Fact>]
-    let ``contract version self-report matches 5_0_0`` () =
-        Assert.Equal("5.0.0", ContractVersion.value)
+    let ``contract version self-report matches 5_0_1`` () =
+        Assert.Equal("5.0.1", ContractVersion.value)
         Assert.Equal(5, ContractVersion.major)
         Assert.Equal(0, ContractVersion.minor)
-        Assert.Equal(0, ContractVersion.patch)
+        Assert.Equal(1, ContractVersion.patch)
 
     // THE ASSERTION THAT WAS MISSING, AND THE ONLY ONE THAT WOULD HAVE CAUGHT IT.
     //
