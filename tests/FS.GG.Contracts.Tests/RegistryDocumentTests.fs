@@ -267,8 +267,7 @@ module RegistryDocumentTests =
     let ``US3-045: 4-segment version composes with a prerelease tag (1.2.1.1-preview.1)`` () =
         let doc =
             { baseDoc with
-                Contracts =
-                    [ contract "a" |> editContract (fun c -> c.Version <- "1.2.1.1-preview.1") ] }
+                Contracts = [ contract "a" |> editContract (fun c -> c.Version <- "1.2.1.1-preview.1") ] }
 
         Assert.Equal(Registry.Valid, Registry.validateDocument doc)
 
@@ -300,8 +299,7 @@ module RegistryDocumentTests =
 
     let private withWire wire =
         { baseDoc with
-            Contracts =
-                [ contract "alpha" |> editContract (fun c -> c.WireContract <- wire) ] }
+            Contracts = [ contract "alpha" |> editContract (fun c -> c.WireContract <- wire) ] }
 
     /// Absent wire contract: NOT a fault. Most contracts have no wire dimension.
     [<Fact>]
