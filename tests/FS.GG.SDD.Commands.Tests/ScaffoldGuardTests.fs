@@ -11,7 +11,13 @@ open Xunit
 /// planted-violation literals, so it is intentionally excluded from every scanned surface.
 module ScaffoldGuardTests =
     // C1: tokens that would only appear if a specific provider leaked into generic SDD.
-    let private forbiddenTokens = [ "fs-gg-ui"; "FS.GG.Rendering" ]
+    // `fs-gg-ui` is the template short-id and `FS.GG.Rendering` the provider repo; `FS.GG.UI` is
+    // the provider's .NET package / assembly id (subsuming `FS.GG.UI.Template`, `FS.GG.UI.*`).
+    // The short-id and the package-id are DIFFERENT strings — `fs-gg-ui` (hyphens) does not match
+    // `FS.GG.UI.Template` (dots) — so both are required for FR-009 to actually be "provably free of
+    // any rendering package id / template id" (#607): a precise package-id embed slips past a
+    // short-id-only deny-list, as #601's near-miss demonstrated.
+    let private forbiddenTokens = [ "fs-gg-ui"; "FS.GG.Rendering"; "FS.GG.UI" ]
 
     // C2: the one collision-free lifecycle-*value* token. `spec-kit` never appears in clean
     // SDD source; the values `sdd`/`none` are rejected (they collide with `Ownership = "sdd"`,
@@ -128,6 +134,16 @@ module ScaffoldGuardTests =
         let found = offenders forbiddenTokens "planted-source.fs" planted
         Assert.NotEmpty(found)
         Assert.Contains("planted-source.fs: FS.GG.Rendering", found)
+
+    [<Fact>]
+    let ``leak scan catches and locates a planted provider package id`` () =
+        // #607: a precise provider PACKAGE id (`FS.GG.UI.Template`) — the form that slips past a
+        // short-id-only (`fs-gg-ui`) deny-list, because the hyphenated short-id never matches the
+        // dotted package id. The `FS.GG.UI` token must catch it for FR-009 to hold.
+        let planted = "let templatePackage = \"" + "FS.GG." + "UI.Template\""
+        let found = offenders forbiddenTokens "planted-source.fs" planted
+        Assert.NotEmpty(found)
+        Assert.Contains("planted-source.fs: FS.GG.UI", found)
 
     [<Fact>]
     let ``leak scan catches and locates a planted lifecycle-value special-case`` () =
