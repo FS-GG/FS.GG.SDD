@@ -98,10 +98,28 @@ module ContractVersionTests =
     // 3.0.0): neither Governance nor Templates references `Fsgg.Registry`, so for a consumer on
     // 3.0.0 this is a version-number change and no source edit. That does not make it a minor: the
     // record surface broke, and the number says so.
+    // 4.0.0 -> 5.0.0 (FS.GG.SDD#610): a DECLARED break, and the LAST one this record row will ever
+    // force. 2.0.0/3.0.0/4.0.0 were each `ContractEntry` — a public F# RECORD — changing, and each
+    // was major for the one reason the version-bump checklist's first row states: a record compiles
+    // its fields into a positional primary constructor, so any field add/retype changes the ctor's
+    // arity and deletes the old one (`CP0002`). This bump changes the SHAPE, not the fields:
+    // `ContractEntry` becomes a non-positional CLASS (parameterless ctor + settable typed
+    // properties). The one-time cost is a break (the record ctor and get-only properties are gone,
+    // construction moves to object-initializer, and `{ e with … }` copy-update / structural
+    // comparison are lost). The payoff is that from here a NEW field is an additive property — a
+    // MINOR, no fleet adopt round, no registry flip — while the typed unions the prior three majors
+    // bought are fully preserved. `[<CLIMutable>]` was NOT the fix: it keeps the positional ctor and
+    // would have re-broken on the next field. The break is DECLARED
+    // (docs/release/contracts-5.0.0.md), not suppressed.
+    //
+    // Blast radius (both declared `Fsgg.Registry` consumers, unchanged from 3.0.0/4.0.0): neither
+    // Governance nor Templates references `Fsgg.Registry`, so for a consumer already on 4.0.0 this
+    // is a version-number change and no source edit. That does not make it a minor — the record
+    // surface was replaced — but it does make it the cheapest possible time to spend this last major.
     [<Fact>]
-    let ``contract version self-report matches 4_0_0`` () =
-        Assert.Equal("4.0.0", ContractVersion.value)
-        Assert.Equal(4, ContractVersion.major)
+    let ``contract version self-report matches 5_0_0`` () =
+        Assert.Equal("5.0.0", ContractVersion.value)
+        Assert.Equal(5, ContractVersion.major)
         Assert.Equal(0, ContractVersion.minor)
         Assert.Equal(0, ContractVersion.patch)
 

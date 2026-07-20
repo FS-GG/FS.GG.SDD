@@ -60,15 +60,44 @@ module Registry =
         | WireDeclared of WireContract
         | WireMalformed of raw: string
 
-    type ContractEntry =
-        { Id: string
-          Version: string
-          Owner: string
-          Surface: string
-          Consumers: ConsumerDeclaration
-          WireContract: WireContractDeclaration
-          PackageVersion: string option
-          Range: string option }
+    /// FS.GG.SDD#610: a CLASS, not a record, so a NEW field is an additive property rather
+    /// than a positional-ctor arity change. See Registry.fsi for the full rationale. It keeps
+    /// record-like value semantics by overriding structural equality over its eight members.
+    [<Sealed>]
+    type ContractEntry() =
+        member val Id: string = "" with get, set
+        member val Version: string = "" with get, set
+        member val Owner: string = "" with get, set
+        member val Surface: string = "" with get, set
+        member val Consumers: ConsumerDeclaration = ConsumersUnspecified with get, set
+        member val WireContract: WireContractDeclaration = WireUnspecified with get, set
+        member val PackageVersion: string option = None with get, set
+        member val Range: string option = None with get, set
+
+        override this.Equals(other: obj) =
+            match other with
+            | :? ContractEntry as o ->
+                this.Id = o.Id
+                && this.Version = o.Version
+                && this.Owner = o.Owner
+                && this.Surface = o.Surface
+                && this.Consumers = o.Consumers
+                && this.WireContract = o.WireContract
+                && this.PackageVersion = o.PackageVersion
+                && this.Range = o.Range
+            | _ -> false
+
+        override this.GetHashCode() =
+            hash (
+                this.Id,
+                this.Version,
+                this.Owner,
+                this.Surface,
+                this.Consumers,
+                this.WireContract,
+                this.PackageVersion,
+                this.Range
+            )
 
     type DependencyEdge2 =
         { From: string

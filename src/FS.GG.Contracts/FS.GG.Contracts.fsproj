@@ -6,7 +6,7 @@
          v1.1.0 and justified in plan.md Complexity Tracking. -->
     <PackageId>FS.GG.Contracts</PackageId>
     <Description>Shared, BCL-only typed source of truth for every FS.GG `.fsgg` schema, the extended template-provider descriptor, and the cross-repo dependency registry with a pure validator.</Description>
-    <Version>4.0.0</Version>
+    <Version>5.0.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IsPackable>true</IsPackable>
     <!-- nuget.org listing metadata (ADR-0012 §5). License + RepositoryUrl come from

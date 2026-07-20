@@ -42,6 +42,16 @@ that line's bump rule; the policy's table does not reach it.
 > This is not hypothetical: it is exactly how `IdentifierParameter` landed with no bump
 > and then shipped as the `1.4.1` **patch**, forcing `2.0.0`. See the worked example,
 > [contracts-2.0.0.md](contracts-2.0.0.md).
+>
+> **The escape hatch, and where it already applies.** The tax is the *positional
+> constructor*, not "public data types" — so a type that is **not** a positional record
+> does not pay it. As of `5.0.0` (FS.GG.SDD#610), `Fsgg.Registry.ContractEntry` is a
+> non-positional **class** (parameterless ctor + settable typed properties), so **adding a
+> field to it is a new property — additive, a minor, this table's fourth row, not its
+> first.** See [contracts-5.0.0.md](contracts-5.0.0.md). The row above still governs
+> every type that is *still* a positional record — `ProviderDescriptor`, `RegistryDocument`,
+> and the rest — so read "public record" literally: it means the record shape, and the way
+> off it is to change the shape (a one-time major) rather than to keep paying the field tax.
 
 > **The DU row is the one ApiCompat cannot help you with — `surface --check` can.** Adding a case to a public DU is
 > *binary*-compatible — every existing case constructor and tag survives — so it stays a
