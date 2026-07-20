@@ -26,16 +26,24 @@
       and back; new doc frontmatter is `category: SDD`, `categoryindex: 6`, `index: 16` (adjacent indices
       12–15 taken; cross-links carry the relationship without renumbering `adopting-governance.md`). All
       relative links and the ADR-0056 URL verified to resolve (AC-005).
-- [ ] T005 Gates green — `dotnet test` (offline suite), `fantomas` clean, `PublicSurface` +
-      `surface --check` untouched (no public surface moved). Drive it: PR-1 body records the real
-      `fsgg-sdd scaffold` run against the synthetic provider showing `lifecycle` forwarded verbatim
-      (plan §Verification — driven, not just asserted). **No** `Directory.Build.local.props` bump, **no**
-      publish.
+- [x] T005 Gates green — offline `dotnet test` green (incl. the driven `ScaffoldCommandTests`
+      default-applied + value-agnostic `lifecycle` cases, which run a real `dotnet new` against a
+      synthetic provider and show a provider-declared default forwarded verbatim — the AC-001/002
+      mechanism, driven not just asserted), `fantomas` clean, `PublicSurface` + `surface --check`
+      untouched (this feature ships **no** `src/` change, so no public surface moved). **No**
+      `Directory.Build.local.props` bump, **no** publish.
 
-## PR-2 — gated on `.github#1246` publishing (publish-before-flip)
+## PR-2 — carved to follow-up `FS.GG.SDD#601` (publish-before-flip)
 
-- [ ] T006 [after `.github#1246` publishes] End-to-end value witness — an override-free
-      `fsgg-sdd scaffold --provider <fs-gg-ui>` against the **published, flipped** template records
-      `lifecycle=sdd` (AC-004). Assert only once the flipped provider version is public; do **not** carry
-      an `sdd` expectation ahead of the provider that owns it. Publish only if a real behavior/test that
-      must ship warrants it.
+Item #597 completes as an independent **producer** the moment PR-1 lands: the scaffolder-default
+*mechanism* (AC-001–003, discharged by the existing value-agnostic tests) and the *migration path*
+(AC-005, #600) are done, and #597 is the producer that unblocks the flip `.github#1246`. AC-004 is
+the one criterion that **cannot** be satisfied before that flip publishes, and #1246 is itself blocked
+by #597 — so AC-004 stays in #597 only by re-forming the deadlock `/check-board` broke. It is therefore
+tracked as a follow-up, **blocked by `.github#1246`**, popping when the flip publishes:
+
+- [ ] T006 → **`FS.GG.SDD#601`** (blocked by `.github#1246`). End-to-end value witness — an
+      override-free `fsgg-sdd scaffold --provider <fs-gg-ui>` against the **published, flipped** template
+      records `lifecycle=sdd` (AC-004). Realize via the network-gated composition-acceptance suite so it
+      drives the **real** published provider; do **not** carry an `sdd` expectation ahead of the provider
+      that owns it (FR-001). Publish only if a real behavior/test that must ship warrants it.
