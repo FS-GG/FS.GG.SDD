@@ -68,6 +68,22 @@ clean **re-scaffold** on the `sdd` lane), authored as an SDD-owned guide — not
 content is deleted or rewritten; the move is additive and safe to re-apply, exactly as the existing guide
 is.
 
+## Clarifications
+
+### Session 2026-07-20
+
+- **Q1 — Doctor-guard scope.** Should `fsgg-sdd doctor` gain a fail-closed "`sdd`-lane, no skeleton"
+  check, or is that guard entirely template-side? → **Template-side only.** An `fsgg-sdd scaffold`-produced
+  `sdd`-lane tree is never lifecycle-less (skeleton always seeded), and a `doctor` lane check would have
+  to read a template/lifecycle marker — embedding lane knowledge into generic SDD, which FR-001/FR-004
+  forbid. The raw-`dotnet new` consumer's notice/readiness guard lives in the `fs-gg-ui` template
+  (`.github#1246`). Recorded in Out of Scope.
+- **Q2 — Migration-guide home.** New sibling doc, or a section in `docs/migration-from-spec-kit.md`? →
+  **New sibling doc** (`docs/migrate-spec-kit-lane-to-sdd.md`), cross-linked with the existing guide. The
+  lane-switch narrative ("leave the removed lane before the deadline") contradicts the existing guide's
+  additive framing ("Spec Kit remains a valid workflow"); one file cannot carry both without confusing
+  the reader. Recorded in FR-005 / AC-005.
+
 ## Requirements
 
 ### Functional
@@ -88,11 +104,14 @@ is.
   `scaffold-provenance` schema bump (stays v1), and no scaffold invocation valid before this feature may
   become invalid after it. `--provider` remains **required**; this feature adds no default *provider*
   and does not relax `scaffold.providerMissing`.
-- **FR-005**: SDD MUST ship a **migration guide** for moving a `spec-kit`-lane scaffolded tree onto the
-  `sdd` lane, grounded in the existing tool primitives — `fsgg-sdd upgrade` (no-clobber re-supply of the
-  missing SDD skeleton) or a clean re-scaffold on the `sdd` lane. The guide MUST be **additive and
-  non-destructive** (no deletion/rewrite of existing `specs/`/`.specify/` or authored content) and safe
-  to re-apply, consistent with `docs/migration-from-spec-kit.md`.
+- **FR-005**: SDD MUST ship a **new, standalone migration guide** — `docs/migrate-spec-kit-lane-to-sdd.md`,
+  a sibling of `docs/migration-from-spec-kit.md` (not a section folded into it, per Clarification Q2) —
+  for moving a `spec-kit`-lane scaffolded tree onto the `sdd` lane, grounded in the existing tool
+  primitives: `fsgg-sdd upgrade` (no-clobber re-supply of the missing SDD skeleton) or a clean re-scaffold
+  on the `sdd` lane. The guide MUST be **additive and non-destructive** (no deletion/rewrite of existing
+  `specs/`/`.specify/` or authored content) and safe to re-apply. The two guides MUST **cross-link**: the
+  lane-switch guide keeps the deprecation framing (leave the removed lane before the deadline) distinct
+  from the additive-adopt framing (Spec Kit remains valid) that would contradict it if merged.
 - **FR-006**: The migration guide MUST embed no provider-specific package id, template id, path, or docs
   URL (the same generic-SDD constraint as the scaffold contract); it refers to lifecycle **lanes** and
   the generic `upgrade`/`scaffold`/`init` verbs, not to `fs-gg-ui` or any Rendering artifact.
@@ -110,21 +129,24 @@ is.
 - **AC-004** *(gated on `.github#1246`; follow-up PR)*: An override-free `fsgg-sdd scaffold --provider
   <fs-gg-ui>` against the **published, flipped** template records `lifecycle=sdd`. This is the end-to-end
   value witness and is asserted only once the provider flip has published (publish-before-flip).
-- **AC-005**: The migration guide documents the `spec-kit`-lane → `sdd`-lane move via `upgrade`
-  re-supply and via re-scaffold, states the additive/non-destructive/re-appliable guarantees, and names
-  no provider-specific literal. A doc-lint / link check over it passes.
+- **AC-005**: `docs/migrate-spec-kit-lane-to-sdd.md` exists, documents the `spec-kit`-lane → `sdd`-lane
+  move via `upgrade` re-supply and via re-scaffold, states the additive/non-destructive/re-appliable
+  guarantees, names no provider-specific literal, and cross-links `docs/migration-from-spec-kit.md` (and
+  vice versa). A doc-lint / link check over both passes.
 
 ## Out of Scope
 
 - **The `fs-gg-ui` `template.json` `lifecycle.defaultValue` flip** — Templates repo, `.github#1246`
   (publish-before-flip). SDD forwards the flipped default; it does not author it.
 - **`skills.yml` / `driver-skill-manifest.json` / `workRoadmap` predicate widening** — `.github#1247`.
-- **The raw-`dotnet new fs-gg-ui` standalone-consumer guard** (post-scaffold notice on the `sdd` lane so
-  a lifecycle-less tree is not produced silently) — that notice is template-side. Whether `fsgg-sdd
-  doctor` should additionally fail-closed on an `sdd`-lane tree lacking the SDD skeleton is a **candidate
-  follow-up** and is deliberately deferred to clarify/plan; an `fsgg-sdd scaffold`-produced `sdd`-lane
-  tree is never lifecycle-less (the SDD skeleton is always seeded via `init`'s effects), so no guard is
-  needed on the `fsgg-sdd` path.
+- **The lifecycle-less-tree guard is entirely template-side** (resolved, Clarification Q1). The
+  post-scaffold notice + readiness check that keeps a raw-`dotnet new fs-gg-ui` standalone consumer from
+  silently getting a lifecycle-less `sdd`-lane tree lives in the `fs-gg-ui` template (`.github#1246`). No
+  new `fsgg-sdd doctor` check is added: an `fsgg-sdd scaffold`-produced `sdd`-lane tree is **never**
+  lifecycle-less (the SDD skeleton is always seeded via `init`'s effects), and for `doctor` to guard the
+  raw-template consumer it would have to detect the "`sdd` lane" from a template marker — embedding lane
+  knowledge into generic SDD, the exact coupling FR-001/FR-004 forbid. Should such a check ever be
+  wanted, it is a separate feature, not this one.
 - **The `spec-kit` lane removal itself, its removal `Target` date, and the capture-removal work** — the
   date is a human-set board field on the removal epic; removal is downstream of and blocked by this item.
 - **Any `scaffold-provenance` schema change** — the design is additive over v1.
