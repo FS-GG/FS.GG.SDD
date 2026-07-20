@@ -132,6 +132,18 @@ module AcceptanceSupport =
             Provider = Some "rendering"
             Parameters = [ "lifecycle", "sdd" ] }
 
+    /// AC-004 (feature 107, gated on `.github#1246`): the **override-free** composition request —
+    /// `--provider rendering` with NO `--param` at all. The lifecycle default is the provider's to
+    /// declare (in its template descriptor), never SDD's to carry ahead of it (FR-001). Against a
+    /// provider whose published descriptor declares a `lifecycle` default, this records that default
+    /// verbatim in `effectiveParameters` / `scaffold-provenance.json` — the end-to-end value witness
+    /// asserted by the network-gated fact. `request Scaffold root` already carries an empty
+    /// `Parameters`, so this only names the provider; no lifecycle value appears here, and the real
+    /// provider identity is reached only through the external registry (FR-009).
+    let overrideFreeRequest (root: string) =
+        { request Scaffold root with
+            Provider = Some "rendering" }
+
     /// Drive the `init`→…→Scaffold MVU loop to quiescence and return the `--json`
     /// `CommandReport` (mirrors `TestSupport.runRequest`).
     let runRequest request =

@@ -247,6 +247,67 @@ module CompositionAcceptanceTests =
             Assert.Fail
                 $"Composition acceptance failed: %A{reason} (outcome={record.ScaffoldOutcome}, diagnostic=%A{record.ScaffoldDiagnostic})."
 
+    // ---------- feature 107 AC-004: the override-free end-to-end value witness ----------
+
+    // 107 T006 (AC-004 / FR-001, OFFLINE shape lock): the override-free composition request carries
+    // NO parameter at all — not even the `lifecycle` marker. The `sdd` default is the flipped
+    // provider's to declare, never SDD's to assert ahead of the provider that owns it (FR-001), so
+    // the request is deliberately empty and the value is left to be *witnessed* by the network-gated
+    // fact below. Deterministic; names no real template and no `sdd` literal.
+    [<Fact>]
+    let ``the override-free composition request carries no parameter`` () =
+        let root = newProductRoot ()
+        let request = overrideFreeRequest root
+        Assert.Equal<(string * string) list>([], request.Parameters)
+
+    // 107 T006 (AC-004 / FR-002, network-gated): the end-to-end value witness. An override-free
+    // `fsgg-sdd scaffold` (provider named only by the generic author token, no `--param`) against the
+    // PUBLISHED, FLIPPED provider — the one whose descriptor now declares `lifecycle` default `sdd`
+    // (the flip is `.github#1246`; the provider identity/version lives only in the external registry,
+    // FR-009) — must forward that provider-declared default verbatim into `effectiveParameters` and
+    // `scaffold-provenance.json`, proving the flip plus SDD's faithful forwarding delivers the
+    // ADR-0056 `sdd` default without SDD embedding the value. A regression that dropped or overrode
+    // the forwarding goes red here. An unreachable provider is skip-unavailable (SC-004 / FR-005) —
+    // never a false PASS, never a FAIL of SDD. Self-skips offline; the scheduled acceptance run sets
+    // the registry env.
+    [<Trait("kind", "composition-acceptance")>]
+    [<RequiresRegistryFact>]
+    let ``override-free composition records the provider's sdd lifecycle default`` () =
+        let registry = requireRegistry ()
+        let root = newProductRoot ()
+        copyRegistry registry root
+
+        let report = overrideFreeRequest root |> runRequest
+        let summary = scaffoldSummary report
+        let diagnostic = scaffoldDiagnostic report
+
+        if summary.Outcome = "providerSucceeded" then
+            // The persisted provenance artifact AC-004 names records the forwarded default...
+            let effective =
+                provenanceRecord root
+                |> Option.map (fun record -> record.EffectiveParameters)
+                |> Option.defaultValue []
+
+            Assert.True(
+                List.contains ("lifecycle", "sdd") effective,
+                $"An override-free scaffold against the flipped provider did not record lifecycle=sdd in scaffold-provenance.json effectiveParameters (got {effective}). Either the provider default did not publish or scaffold dropped the forwarding."
+            )
+
+            // ...and the report summary the three projections render carries it too. FR-002 names
+            // BOTH surfaces (provenance AND the report), so both are asserted; they share one
+            // `effective` map in the handler, so this pins the report surface's obligation rather
+            // than detecting a divergence the implementation cannot currently produce.
+            Assert.True(
+                List.contains ("lifecycle", "sdd") summary.EffectiveParameters,
+                $"the report summary did not carry the recorded lifecycle=sdd (got {summary.EffectiveParameters})."
+            )
+        else
+            match resolveVerdict summary.Outcome diagnostic "" noFacts with
+            | SkipUnavailable -> ()
+            | other ->
+                Assert.Fail
+                    $"Expected providerSucceeded or skip-unavailable, got outcome={summary.Outcome} diagnostic=%A{diagnostic} verdict=%A{other}."
+
     // ---------- feature 083 (implements 080 FR-011 / #150): hyphenated-name guard ----------
 
     // The Hollow Depths name the report used verbatim: a legal product name that is an ILLEGAL

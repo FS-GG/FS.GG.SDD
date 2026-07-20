@@ -42,8 +42,13 @@ the one criterion that **cannot** be satisfied before that flip publishes, and #
 by #597 — so AC-004 stays in #597 only by re-forming the deadlock `/check-board` broke. It is therefore
 tracked as a follow-up, **blocked by `.github#1246`**, popping when the flip publishes:
 
-- [ ] T006 → **`FS.GG.SDD#601`** (blocked by `.github#1246`). End-to-end value witness — an
-      override-free `fsgg-sdd scaffold --provider <fs-gg-ui>` against the **published, flipped** template
-      records `lifecycle=sdd` (AC-004). Realize via the network-gated composition-acceptance suite so it
-      drives the **real** published provider; do **not** carry an `sdd` expectation ahead of the provider
-      that owns it (FR-001). Publish only if a real behavior/test that must ship warrants it.
+- [x] T006 → **`FS.GG.SDD#601`** (`.github#1246` published `FS.GG.UI.Template` 0.15.0 with
+      `lifecycle.defaultValue: sdd` @ 2026-07-20T07:19:58Z). End-to-end value witness — an override-free
+      `fsgg-sdd scaffold --provider <fs-gg-ui>` against the **published, flipped** template records
+      `lifecycle=sdd` (AC-004). Realized in `CompositionAcceptanceTests.fs` as the network-gated
+      `override-free composition records the provider's sdd lifecycle default`, which drives the **real**
+      published provider (`overrideFreeRequest`, no `--param`) and asserts `("lifecycle", "sdd")` in both
+      `scaffold-provenance.json` `effectiveParameters` and the report summary — witnessing the value, not
+      carrying it ahead of the provider that owns it (FR-001). Its offline sibling
+      `the override-free composition request carries no parameter` locks the FR-001-safe empty-request
+      shape. Test-only: **no** `src/` change, **no** publish (no CLI behavior warranted one).

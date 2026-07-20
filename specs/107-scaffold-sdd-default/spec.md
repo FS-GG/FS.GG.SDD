@@ -130,9 +130,15 @@ is.
   `lifecycle` is special, contradicting FR-001 — so this feature adds **no** new mechanism test.
 - **AC-003**: `scaffold` with `--provider` omitted still blocks with `scaffold.providerMissing` (exit 1),
   unchanged — no default provider is introduced (FR-004).
-- **AC-004** *(gated on `.github#1246`; follow-up PR)*: An override-free `fsgg-sdd scaffold --provider
-  <fs-gg-ui>` against the **published, flipped** template records `lifecycle=sdd`. This is the end-to-end
-  value witness and is asserted only once the provider flip has published (publish-before-flip).
+- **AC-004** *(discharged in `FS.GG.SDD#601` once `.github#1246` published `FS.GG.UI.Template` 0.15.0
+  with `lifecycle.defaultValue: sdd`)*: An override-free `fsgg-sdd scaffold --provider <fs-gg-ui>`
+  against the **published, flipped** template records `lifecycle=sdd`. This is the end-to-end value
+  witness and is asserted only once the provider flip has published (publish-before-flip). Realized as
+  the network-gated `override-free composition records the provider's sdd lifecycle default` in
+  `tests/FS.GG.SDD.Acceptance.Tests/CompositionAcceptanceTests.fs`, which drives the real published
+  provider with **no** `--param` override and asserts `("lifecycle", "sdd")` in
+  `scaffold-provenance.json` `effectiveParameters` and the report summary — witnessing the provider's
+  value, never carrying an `sdd` expectation ahead of it (FR-001).
 - **AC-005**: `docs/migrate-spec-kit-lane-to-sdd.md` exists, documents the `spec-kit`-lane → `sdd`-lane
   move via `upgrade` re-supply and via re-scaffold, states the additive/non-destructive/re-appliable
   guarantees, names no provider-specific literal, and cross-links `docs/migration-from-spec-kit.md` (and
