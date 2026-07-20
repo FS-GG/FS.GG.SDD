@@ -3,7 +3,7 @@
   "viewVersion": "1.0",
   "workId": "247-full-shape-golden",
   "targetId": "claude",
-  "generator": "FS.GG.SDD.Artifacts/0.17.0",
+  "generator": "FS.GG.SDD.Artifacts/0.18.0",
   "generated": true,
   "sources": [
     {
@@ -11,7 +11,7 @@
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "d44f025f9585cf025b043f3cd96f27f7aa49c8a41c26f5a441ce8db994268dc6"
+        "value": "7713ce6dfe06cfe8f33fdf4148fabbb0e0264f9a505801319e2d531302767c7c"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"

@@ -12,7 +12,7 @@ open Xunit
 
 /// Feature 052 (US2): the non-blocking CLI-coherence advisory, exercised end-to-end
 /// over the real `dotnet new` provider (no mocks). Installed CLI version is the test
-/// build's generator version (0.17.0); fixtures declare minimums above/at/below it.
+/// build's generator version (0.18.0); fixtures declare minimums above/at/below it.
 [<Collection("ProcessGlobalEnv")>]
 module ScaffoldCliCoherenceTests =
     let private fixturesRoot =
@@ -60,11 +60,11 @@ module ScaffoldCliCoherenceTests =
     let private cliBehind (report: CommandReport) =
         report.Diagnostics |> List.filter (fun d -> d.Id = "scaffold.cliBehindMinimum")
 
-    // US2 scenario 1 (SC-002): installed 0.17.0 < declared 0.18.0 ⇒ exactly one
+    // US2 scenario 1 (SC-002): installed 0.18.0 < declared 0.19.0 ⇒ exactly one
     // scaffold.cliBehindMinimum (info) naming installed, minimum, and the gap.
     // The minimum tracks the installed version by exactly one minor, so the "behind by
     // 1 minor version" assertion keeps testing the gap arithmetic and not a constant.
-    // 0.18.0 > 0.17.0 numerically (components are ints, not strings) — see Fsgg.Version.
+    // 0.19.0 > 0.18.0 numerically (components are ints, not strings) — see Fsgg.Version.
     [<Fact; Trait("tier", "slow")>]
     let ``behind minimum emits exactly one cliBehindMinimum advisory naming installed minimum and gap`` () =
         let root = TestSupport.tempDirectory ()
@@ -74,8 +74,8 @@ module ScaffoldCliCoherenceTests =
         match cliBehind report with
         | [ diagnostic ] ->
             Assert.Equal("info", severityValue diagnostic.Severity)
-            Assert.Contains("0.17.0", diagnostic.Message)
             Assert.Contains("0.18.0", diagnostic.Message)
+            Assert.Contains("0.19.0", diagnostic.Message)
             Assert.Contains("behind by 1 minor version", diagnostic.Message)
         | other -> Assert.True(false, $"expected exactly one cliBehindMinimum, got {List.length other}")
 
