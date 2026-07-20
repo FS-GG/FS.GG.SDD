@@ -124,11 +124,11 @@ module SkillRegistryValidatorTests =
         | other -> failwith $"expected exactly one duplicate diagnostic, got {List.length other}"
 
     [<Fact>]
-    let ``an unknown scope is an UnknownComponent, and its message names driver`` () =
+    let ``an unknown scope is an UnknownComponent, and its message names driver and operator`` () =
         // FR-004 / AC-003: an unrecognized scope still fails, and the message enumerates all
-        // three accepted scopes — including the one this feature adds. Naming `driver` in the
-        // message is the reader-facing half of teaching the vocabulary; drop it from the
-        // enumeration and this test goes red.
+        // accepted scopes — including the ones the driver (ADR-0054) and operator (ADR-0057)
+        // features add. Naming them in the message is the reader-facing half of teaching the
+        // vocabulary; drop one from the enumeration and this test goes red.
         let result =
             Registry.validateSkillRegistry (doc [ { row "x" with Scope = "nonsense" } ])
 
@@ -136,15 +136,18 @@ module SkillRegistryValidatorTests =
         | [ d ] ->
             Assert.Equal(Registry.UnknownComponent, d.Rule)
             Assert.Contains("'driver'", d.Message)
+            Assert.Contains("'operator'", d.Message)
         | other -> failwith $"expected exactly one UnknownComponent diagnostic, got {List.length other}"
 
-    // --- FR-001/FR-002/AC-001/AC-004: the driver class is KNOWN. Adding it is a monotone
-    // loosening — `process`/`product` still pass, and `driver` now joins them. ---
+    // --- FR-001/FR-002/AC-001/AC-004: the driver (ADR-0054) and operator (ADR-0057) classes are
+    // KNOWN. Adding each is a monotone loosening — `process`/`product` still pass, and the new
+    // token now joins them. ---
 
     [<Theory>]
     [<InlineData "process">]
     [<InlineData "product">]
     [<InlineData "driver">]
+    [<InlineData "operator">]
     let ``the declared scopes are accepted`` (scope: string) =
         Assert.Equal(Registry.Valid, Registry.validateSkillRegistry (doc [ { row "x" with Scope = scope } ]))
 
@@ -162,6 +165,20 @@ module SkillRegistryValidatorTests =
                 MaterializesWhen = Some "has fs-gg-sdd-* and has fs-gg-feedback-*" }
 
         Assert.Equal(Registry.Valid, Registry.validateSkillRegistry (doc [ driverRow ]))
+
+    /// ADR-0057: the operator SHAPE — `scope: operator`, a `.github` owner, and the never-true
+    /// `materializes-when: "false"` (the skill is authored in `.github` and materialized nowhere).
+    /// As with driver, nothing here is *enforced* in step 1 (ADR-0037 §3); the point is that the
+    /// shape `.github` will emit in step 2 for `drive-board` is accepted rather than rejected.
+    [<Fact>]
+    let ``an operator row with a .github owner and a false materializes-when is valid`` () =
+        let operatorRow =
+            { row "drive-board" with
+                Scope = "operator"
+                Owner = ".github"
+                MaterializesWhen = Some "false" }
+
+        Assert.Equal(Registry.Valid, Registry.validateSkillRegistry (doc [ operatorRow ]))
 
     [<Fact>]
     let ``a missing owner and a missing source are each a MissingField`` () =
