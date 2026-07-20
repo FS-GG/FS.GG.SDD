@@ -17,6 +17,12 @@ remains a valid workflow after migration, and every step is safe to re-apply.
 There is **no migration command**. Migration is `fsgg-sdd init` plus authoring
 the native sources through the ordinary lifecycle commands.
 
+> Looking to move a workspace **off** the retiring `spec-kit` lifecycle lane onto
+> the `sdd` lane before it is removed (ADR-0056)? That is a different task — see
+> [Migrate the spec-kit lane to sdd](migrate-spec-kit-lane-to-sdd.md). This guide
+> keeps Spec Kit as a valid workflow; that one is about leaving the deprecated
+> lane before a deadline.
+
 ## Starting point
 
 An existing Spec Kit project with:
