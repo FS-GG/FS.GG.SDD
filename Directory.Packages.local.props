@@ -15,7 +15,7 @@
          package (ADR-0063 owner-repo byte source / ADR-0062 substrate / ADR-0014 verify;
          FS.GG.Game#449, FS.GG.SDD#623). Pinned + restored at CLI build time, its bytes embedded
          and materialized at scaffold time (offline). Its own version cadence — first release 0.1.0. -->
-    <PackageVersion Include="FS.GG.Game.Skills" Version="0.1.0" />
+    <PackageVersion Include="FS.GG.Game.Skills" Version="0.2.0" />
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.9" />
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
