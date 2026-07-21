@@ -18,7 +18,7 @@
          has its own SemVer and its own bump rule
          (docs/release/contracts-version-bump-checklist.md). Both lines are published
          by the same release.yml run, each at its own evaluated <Version>. -->
-    <Version>0.20.0</Version>
+    <Version>0.21.0</Version>
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>preview</LangVersion>
     <!-- Not in the org canonical: SDD forces CIB=true unconditionally for
