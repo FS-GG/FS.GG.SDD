@@ -978,7 +978,17 @@ module internal HandlersScaffold =
                   ProviderInvocation = None }
 
             let provenanceEffects =
-                provenanceWriteEffect model.Request descriptor ProviderFailed producedPaths [] [] [] [] Map.empty effective
+                provenanceWriteEffect
+                    model.Request
+                    descriptor
+                    ProviderFailed
+                    producedPaths
+                    []
+                    []
+                    []
+                    []
+                    Map.empty
+                    effective
 
             { model with
                 PendingEffects = model.PendingEffects @ provenanceEffects

@@ -68,7 +68,9 @@ module ProductPredicate =
     // `<key> != v` is `true` — an unspecified parameter simply matches no declared value.
     let private evaluateAtom (parameters: Map<string, string>) (atom: string) : bool option =
         let atom = atom.Trim()
-        let valueOf key = Map.tryFind key parameters |> Option.defaultValue ""
+
+        let valueOf key =
+            Map.tryFind key parameters |> Option.defaultValue ""
 
         if atom = "always" then
             Some true

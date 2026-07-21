@@ -42,7 +42,7 @@
         "type": "CentralTransitive",
         "requested": "[0.1.0, )",
         "resolved": "0.1.0",
-        "contentHash": "CcgEUeguTZj5DGyQUncwzMdMsFvuL7pLtUFR933TzwIZFk8jOP+4XOWSfLZp6oePXf+Azpl33I+moZH6YEKARQ=="
+        "contentHash": "ic2m7ER6KQoY5T09bwwHodMm9nB6eN2CPPhz0q4QfvOes2R5FTM/iQSiSdXcWh/cEfnKJuUHCE6WUtxs/Qr09w=="
       },
       "YamlDotNet": {
         "type": "CentralTransitive",

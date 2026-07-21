@@ -187,10 +187,18 @@ module GameSkillsTests =
     // ---------- the scaffold seam: no-clobber honesty against provider output ----------
 
     [<Fact>]
-    let ``plannedGameSkillOutcome materializes fs-gg-playtest on the game profile when the provider produced no such skill`` () =
+    let ``plannedGameSkillOutcome materializes fs-gg-playtest on the game profile when the provider produced no such skill``
+        ()
+        =
         let outcome = HandlersScaffold.plannedGameSkillOutcome [] gameProfile
         Assert.Contains("fs-gg-playtest", outcome.MaterializedIds)
-        Assert.Equal(3, outcome.ProvenancePaths |> List.filter (fun (p, _) -> p.Contains "fs-gg-playtest") |> List.length)
+
+        Assert.Equal(
+            3,
+            outcome.ProvenancePaths
+            |> List.filter (fun (p, _) -> p.Contains "fs-gg-playtest")
+            |> List.length
+        )
 
     [<Fact>]
     let ``plannedGameSkillOutcome does not over-claim an id the provider already produced`` () =
@@ -201,6 +209,8 @@ module GameSkillsTests =
 
     [<Fact>]
     let ``plannedGameSkillOutcome materializes nothing off the game profile`` () =
-        let outcome = HandlersScaffold.plannedGameSkillOutcome [] (Map.ofList [ "profile", "app" ])
+        let outcome =
+            HandlersScaffold.plannedGameSkillOutcome [] (Map.ofList [ "profile", "app" ])
+
         Assert.Empty outcome.MaterializedIds
         Assert.Empty outcome.Writes

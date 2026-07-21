@@ -96,9 +96,20 @@ module GameSkillManifestTests =
 
     [<Fact>]
     let ``evaluate resolves an in-list membership over the parameter set`` () =
-        Assert.Equal(Some true, ProductPredicate.evaluate "profile in [game, sample-pack]" (paramsOf [ "profile", "game" ]))
-        Assert.Equal(Some true, ProductPredicate.evaluate "profile in [game, sample-pack]" (paramsOf [ "profile", "sample-pack" ]))
-        Assert.Equal(Some false, ProductPredicate.evaluate "profile in [game, sample-pack]" (paramsOf [ "profile", "app" ]))
+        Assert.Equal(
+            Some true,
+            ProductPredicate.evaluate "profile in [game, sample-pack]" (paramsOf [ "profile", "game" ])
+        )
+
+        Assert.Equal(
+            Some true,
+            ProductPredicate.evaluate "profile in [game, sample-pack]" (paramsOf [ "profile", "sample-pack" ])
+        )
+
+        Assert.Equal(
+            Some false,
+            ProductPredicate.evaluate "profile in [game, sample-pack]" (paramsOf [ "profile", "app" ])
+        )
 
     [<Fact>]
     let ``evaluate treats an unset parameter as matching no declared value`` () =
