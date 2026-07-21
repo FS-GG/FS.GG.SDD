@@ -7,11 +7,12 @@ evidence, verification, and ship — giving humans, agents, CLI automation, and 
 Governance gates the same machine contract. Markdown is the authoring surface;
 schema-versioned structured artifacts are the machine contract.
 
-> **Platform vs. workspace.** FS-GG is a **platform** — five repositories (the
-> `fsgg-sdd` lifecycle CLI is one **component** of it). What you scaffold *with* the
-> platform is a **workspace**: a generated repo with a runnable app, the `.fsgg/`
-> lifecycle, skills, and optional governance. See the
-> [vocabulary](https://github.com/FS-GG/.github/blob/main/docs/adr/0020-platform-workspace-component-vocabulary.md).
+> **Platform vs. workspace.** FS-GG is a **platform**, and the `fsgg-sdd` lifecycle
+> CLI is one **component** of it. What you scaffold *with* the platform is a
+> **workspace**: a generated repo with a runnable app, the `.fsgg/` lifecycle, skills,
+> and optional governance. For how the whole platform fits together, see the
+> [platform vocabulary (ADR-0020)](https://github.com/FS-GG/.github/blob/main/docs/adr/0020-platform-workspace-component-vocabulary.md)
+> and [`docs/architecture.md`](https://github.com/FS-GG/.github/blob/main/docs/architecture.md).
 
 ## Install
 
