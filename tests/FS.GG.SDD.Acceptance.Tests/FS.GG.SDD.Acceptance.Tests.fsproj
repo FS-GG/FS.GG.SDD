@@ -11,6 +11,7 @@
     <Compile Include="RegistryResolverTests.fs" />
     <Compile Include="CompositionResult.fs" />
     <Compile Include="CompositionAcceptanceTests.fs" />
+    <Compile Include="WorkBoardScaffoldAcceptanceTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
