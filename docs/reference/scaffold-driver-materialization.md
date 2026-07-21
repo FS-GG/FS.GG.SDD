@@ -68,10 +68,43 @@ The embedded manifest and bodies are pinned by a content-addressed drift guard
 out-of-band edit is caught before release. The API surface is captured under
 `docs/api-surface/**` and gated by `surface --check`.
 
+## Backfilling an existing scaffold (`upgrade` / `doctor`)
+
+*ADR-0063 (Consequences: "Existing scaffolds need a backfill") · FS.GG.SDD#624.*
+
+A tree scaffolded **before** owner-sourced delivery is missing the owner-sourced skills — a shipped
+`sdd`-lane tree with no `workRoadmap`, a `--profile game` tree with no `fs-gg-playtest`. The
+decision, settled once for the driver and product classes alike (ADR-0063; FS.GG.SDD#620 asked the
+same question):
+
+- **`fsgg-sdd upgrade` backfills them** — no re-scaffold required. It is the additive, non-destructive
+  path, and it is the **recommended** one.
+- **Re-vendor (re-scaffold) also backfills** by construction, since `scaffold` materializes the same
+  set; it is the heavier path, for a tree being regenerated anyway.
+
+`upgrade` treats a missing owner-sourced skill as a **missing expected artifact** and folds it into
+the same no-clobber `artifactReSeed` reconciliation step that already re-seeds the SDD skeleton. The
+bytes come from the **same embedded, content-addressed materialize-and-verify plan** `scaffold` runs
+(`DriverSkills.plan` / `GameSkills.plan`) — so a backfill is offline, reproducible, and can never lay
+down an unverified body (ADR-0014 preserved; only the byte *source* changed — ADR-0063). The plan is
+fed from the recorded provenance rather than a live scaffold: the driver `has …` grammar reads the
+present-skill set (seeded ∪ the product ids recorded in provenance), and the product
+`materializes-when` predicate reads the recorded `effectiveParameters` (`profile`, …). Writes are
+no-clobber `AgentGuidanceTarget`, so an author-edited or already-present copy is preserved and only
+the missing roots are filled.
+
+`fsgg-sdd doctor` reports the same gap read-only: a scaffold missing an owner-sourced skill it should
+carry is **not coherent**, and the missing copies are previewed under the `artifactReSeed` step (they
+are kept out of the seeded-skeleton `missingArtifacts`/`expectedArtifactCount` axis, which is
+unchanged). Provenance is **not** rewritten by a backfill — the owner-sourced expectation is
+re-derived from the plan each run, exactly as `scaffold` re-derives it per tick — so the seeded
+`refresh`/provenance contracts are untouched.
+
 ## Not covered here
 
-- Backfilling a **pre-existing** scaffold (before this feature) with a missing driver via
-  `fsgg-sdd upgrade` / reporting it via `fsgg-sdd doctor` — the existing-scaffold transition path,
-  carved to a follow-up item.
 - Authoring or editing driver skill **content** — owned by `.github`; SDD lays the bytes down
   verbatim and verifies them.
+- **Content** drift of an owner-sourced copy (a tampered `workRoadmap` body) — `upgrade`/`doctor`
+  reconcile owner-sourced skills by **presence** (backfill), not against a recorded digest the way
+  provider *product* skills are content-verified; the materialize-time content-addressed verify still
+  guards what a backfill writes.

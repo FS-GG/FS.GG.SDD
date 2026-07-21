@@ -76,10 +76,33 @@ module DriftTests =
 
     [<Fact>]
     let ``an at-or-above scaffold with all artifacts present is coherent`` () =
-        let report =
-            drift (Some farBehindMinimum) installedVersion Drift.expectedArtifactPaths
+        // #624: "all artifacts present" now includes the owner-sourced skills (`coherentPresent`).
+        let report = drift (Some farBehindMinimum) installedVersion coherentPresent
 
         Assert.True report.IsCoherent
+
+    // ADR-0063 / FS-GG/FS.GG.SDD#624: a seeded-coherent scaffold whose owner-sourced skills were
+    // never delivered names them for backfill and folds them into the actionable re-seed step.
+    [<Fact>]
+    let ``a missing owner-sourced skill is named for backfill and makes re-seed actionable`` () =
+        // Seeded skeleton fully present, CLI at/above minimum — but no owner-sourced copies.
+        let report = drift (Some farBehindMinimum) installedVersion Drift.expectedArtifactPaths
+
+        Assert.NotEmpty report.OwnerSkillBackfillPaths
+        Assert.Contains(report.OwnerSkillBackfillPaths, fun (p: string) -> p.Contains "workRoadmap")
+        // The seeded axis is clean — backfill paths are NOT double-counted as missing seeded artifacts.
+        Assert.Empty report.MissingArtifactPaths
+
+        let reSeed =
+            report.Steps
+            |> List.find (fun s -> s.StepId = ReconciliationStepId.ArtifactReSeed)
+
+        Assert.Equal(ReconciliationOutcome.WouldApply, reSeed.Outcome)
+
+        for path in report.OwnerSkillBackfillPaths do
+            Assert.Contains(path, reSeed.TargetPaths)
+
+        Assert.False report.IsCoherent
 
     [<Fact>]
     let ``no provenance yields HasProvenance false, no steps, coherent-degradation`` () =
@@ -113,7 +136,8 @@ module DriftTests =
                 None
                 None
                 installedVersion
-                (Set.ofList Drift.expectedArtifactPaths)
+                // #624: owner-sourced skills are part of the coherent skeleton a dev-repo carries too.
+                (Set.ofList coherentPresent)
                 (skillBodiesFor Drift.expectedArtifactPaths)
 
         // Not the "no provenance — nothing to reconcile" hole: doctor/upgrade engage...
@@ -259,6 +283,73 @@ module UpgradeCommandTests =
             | Some d -> d.IsCoherent
             | None -> false
         )
+
+    // ADR-0063 / FS-GG/FS.GG.SDD#624: `upgrade` backfills a missing owner-sourced skill into every
+    // declared root, no-clobber, from the CLI's embedded verified bytes — a pre-#624 tree becomes
+    // coherent without a re-scaffold.
+    [<Fact>]
+    let ``--yes backfills a missing owner-sourced skill into all three roots, coherent afterward`` () =
+        let root = ownerMissingFixture ()
+        // Precondition: the always-on driver skill is absent from a pre-#624 tree.
+        Assert.False(TestSupport.existsRelative root ".agents/skills/workRoadmap/SKILL.md")
+
+        let report = upgradeYes root
+        let summary = upgrade report
+        Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.AppliedStepIds)
+        Assert.False summary.ResidualDrift
+        Assert.Equal(0, exitCode report)
+
+        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+            Assert.True(
+                TestSupport.existsRelative root $"{skillRoot}/skills/workRoadmap/SKILL.md",
+                $"expected the {skillRoot} backfill of workRoadmap"
+            )
+
+        Assert.True(
+            match (doctorReport root).Doctor with
+            | Some d -> d.IsCoherent
+            | None -> false
+        )
+
+    // 624: the backfill is no-clobber — an author who already placed one root's copy keeps it, and
+    // only the missing roots are materialized.
+    [<Fact>]
+    let ``owner-sourced backfill preserves a present author-edited copy and fills only the missing roots`` () =
+        let root = ownerMissingFixture ()
+        TestSupport.writeRelative root ".claude/skills/workRoadmap/SKILL.md" "AUTHOR EDIT\n"
+
+        upgradeYes root |> ignore
+
+        // The present copy is byte-unchanged...
+        Assert.Equal("AUTHOR EDIT\n", TestSupport.readRelative root ".claude/skills/workRoadmap/SKILL.md")
+        // ...and the roots that were missing are backfilled.
+        Assert.True(TestSupport.existsRelative root ".agents/skills/workRoadmap/SKILL.md")
+        Assert.True(TestSupport.existsRelative root ".codex/skills/workRoadmap/SKILL.md")
+
+    // 624: doctor is read-only but must SURFACE the owner-sourced gap so an operator knows to upgrade.
+    [<Fact>]
+    let ``doctor reports a missing owner-sourced skill as drift and previews the re-seed, read-only`` () =
+        let root = ownerMissingFixture ()
+        let before = treeHash root
+        let report = doctorReport root
+
+        match report.Doctor with
+        | Some summary ->
+            Assert.False summary.IsCoherent
+
+            Assert.Contains(
+                summary.PreviewSteps,
+                fun s ->
+                    s.StepId = ReconciliationStepId.ArtifactReSeed
+                    && s.Outcome = ReconciliationOutcome.WouldApply
+                    && s.TargetPaths |> List.exists (fun p -> p.Contains "workRoadmap")
+            )
+        | None -> failwith "expected a doctor summary"
+
+        // Strictly read-only.
+        Assert.Empty report.ChangedArtifacts
+        Assert.Equal(before, treeHash root)
+        Assert.Equal(0, exitCode report)
 
     [<Fact>]
     let ``non-interactive without --yes refuses with zero writes, no hang, exit 1`` () =
