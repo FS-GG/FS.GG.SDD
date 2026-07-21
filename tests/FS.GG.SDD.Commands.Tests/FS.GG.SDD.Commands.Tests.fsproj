@@ -52,6 +52,7 @@
     <Compile Include="RemediationCommandTests.fs" />
     <Compile Include="SeededSkillsTests.fs" />
     <Compile Include="DriverSkillsTests.fs" />
+    <Compile Include="GameSkillsTests.fs" />
     <Compile Include="ProcessSkillManifestTests.fs" />
     <Compile Include="HelpCommandTests.fs" />
     <Compile Include="NextActionRoutingTests.fs" />

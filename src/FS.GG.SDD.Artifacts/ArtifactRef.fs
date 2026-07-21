@@ -18,6 +18,13 @@ module ArtifactRef =
         // `GeneratedProduct`), so `refresh` never regenerates it; recorded only in
         // `ScaffoldProvenanceRecord.DriverPaths`. Serialized `"driver"`.
         | Driver
+        // ADR-0063 / FS.GG.SDD#623: an owner-authored **product** skill (e.g.
+        // `fs-gg-playtest`) whose bytes are `mirrored: false` (no frozen provider mirror),
+        // delivered in the pinned the owner-skills package and materialized by the SDD
+        // scaffolder into a product's skill roots. Externally owned (like `Driver`/`Mirrored`),
+        // so `refresh` never regenerates it; recorded only in
+        // `ScaffoldProvenanceRecord.GameSkillPaths`. Serialized `"gameSkill"`.
+        | GameSkill
 
     type ArtifactKind =
         | ProjectConfig
@@ -72,6 +79,7 @@ module ArtifactRef =
         | GeneratedProduct -> "generatedProduct"
         | Mirrored -> "mirrored"
         | Driver -> "driver"
+        | GameSkill -> "gameSkill"
 
     let kindValue kind =
         match kind with

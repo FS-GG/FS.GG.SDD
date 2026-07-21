@@ -191,6 +191,7 @@ module internal HandlersScaffold =
           ProducedPaths = []
           MirroredPaths = []
           MaterializedDriverPaths = []
+          MaterializedGameSkillPaths = []
           EffectiveParameters = []
           RepoInitOutcome = "notApplicable"
           ToolManifestOutcome = "notApplicable"
@@ -503,6 +504,57 @@ module internal HandlersScaffold =
           if not (List.isEmpty outcome.PredicateUnevaluatedIds) then
               yield DiagnosticsModule.scaffoldDriverPredicateUnevaluated outcome.PredicateUnevaluatedIds ]
 
+    // ADR-0063 / FS.GG.SDD#623: the owner-skill materialization planned from the CLI's embedded
+    // the owner-skills package bytes, gated by the effective scaffold parameter set (`profile in [..
+    // ..]`, …) for `materializes-when` evaluation. Pure & deterministic (reads only
+    // compiled-in resources + `producedPaths` + `effective`), re-derivable each tick like
+    // `plannedDriverOutcome`, so both the TICK-A write/provenance and the finalize summary draw
+    // from the same plan without a new model field.
+    let plannedGameSkillOutcome (producedPaths: string list) (effective: Map<string, string>) =
+        let outcome = GameSkills.plan effective
+
+        // No-clobber honesty: a owner-skill target already occupied by the provider's own output —
+        // its `.agents/skills/<id>` skill, or the `.claude`/`.codex` mirror copies of it — is
+        // *preserved* by the `AgentGuidanceTarget` write, not materialized by us; claiming it would
+        // double-own the path. A delivered (`mirrored: false`) owner skill has no provider copy by
+        // construction (ADR-0022 §6), so this normally drops nothing — but it keeps the summary and
+        // provenance from over-claiming a refused write should a provider ship a same-named skill.
+        let occupied = Set.ofList (producedPaths @ plannedMirroredPaths producedPaths)
+
+        let kept =
+            outcome.ProvenancePaths
+            |> List.filter (fun (path, _) -> not (occupied.Contains path))
+
+        let keptPaths = kept |> List.map fst |> Set.ofList
+
+        { outcome with
+            Writes =
+                outcome.Writes
+                |> List.filter (fun effect ->
+                    match effectPath effect with
+                    | Some path -> keptPaths.Contains path
+                    | None -> true)
+            ProvenancePaths = kept
+            MaterializedIds =
+                kept
+                |> List.choose (fun (path, _) -> Fsgg.SkillMirror.skillIdOfPath path)
+                |> List.distinct }
+
+    // The fail-closed owner-skill diagnostics for a planned outcome (empty on a clean plan). Same
+    // classes as the driver seam: manifest defect / namespace collision / verify failure are
+    // tool-defect errors; an unevaluable predicate is a non-blocking advisory (FR-004).
+    let gameSkillDiagnostics (outcome: GameSkills.GameSkillOutcome) : Diagnostic list =
+        [ yield!
+              outcome.ManifestError
+              |> Option.map DiagnosticsModule.scaffoldGameSkillManifestMalformed
+              |> Option.toList
+          if not (List.isEmpty outcome.NamespaceCollisionIds) then
+              yield DiagnosticsModule.scaffoldGameSkillNamespaceCollision outcome.NamespaceCollisionIds
+          if not (List.isEmpty outcome.VerifyFailedIds) then
+              yield DiagnosticsModule.scaffoldGameSkillVerifyFailed outcome.VerifyFailedIds
+          if not (List.isEmpty outcome.PredicateUnevaluatedIds) then
+              yield DiagnosticsModule.scaffoldGameSkillPredicateUnevaluated outcome.PredicateUnevaluatedIds ]
+
     // ----- finalization (stage 3) -----
 
     let provenanceWriteEffect
@@ -513,6 +565,7 @@ module internal HandlersScaffold =
         (mirroredPaths: string list)
         (sddOwnedPaths: string list)
         (driverPaths: (string * string) list)
+        (gameSkillPaths: (string * string) list)
         (skillDigests: Map<string, string>)
         (effective: Map<string, string>)
         =
@@ -559,6 +612,19 @@ module internal HandlersScaffold =
                 |> List.map (fun (path, sha256) ->
                     { Path = path
                       Owner = ArtifactOwner.Driver
+                      Sha256 =
+                        (if String.IsNullOrWhiteSpace sha256 then
+                             None
+                         else
+                             Some sha256) })
+              // ADR-0063 / FS.GG.SDD#623: the owner-authored product skill copies materialized
+              // from the pinned the owner-skills package, owner `GameSkill`, each carrying the
+              // manifest `sha256` it was content-verified against. Empty on every non-success path.
+              GameSkillPaths =
+                gameSkillPaths
+                |> List.map (fun (path, sha256) ->
+                    { Path = path
+                      Owner = ArtifactOwner.GameSkill
                       Sha256 =
                         (if String.IsNullOrWhiteSpace sha256 then
                              None
@@ -624,6 +690,8 @@ module internal HandlersScaffold =
               MirroredPaths = []
               // Terminal paths materialize no driver either (108).
               MaterializedDriverPaths = []
+              // ...and no owner-sourced skill either (ADR-0063 / FS.GG.SDD#623).
+              MaterializedGameSkillPaths = []
               EffectiveParameters = Map.toList effective
               RepoInitOutcome = "notApplicable"
               ToolManifestOutcome = "notApplicable"
@@ -646,6 +714,7 @@ module internal HandlersScaffold =
                   ProducedPaths = []
                   MirroredPaths = []
                   MaterializedDriverPaths = []
+                  MaterializedGameSkillPaths = []
                   // The dry-run preview records exactly what would be forwarded
                   // (FR-003 audit preview): the resolved effective set.
                   EffectiveParameters = Map.toList effective
@@ -713,6 +782,7 @@ module internal HandlersScaffold =
                             []
                             []
                             []
+                            []
                             Map.empty
                             effective
                     )
@@ -731,6 +801,7 @@ module internal HandlersScaffold =
                             descriptor
                             ProviderFailed
                             producedPaths
+                            []
                             []
                             []
                             []
@@ -825,6 +896,10 @@ module internal HandlersScaffold =
         // the summary's materialized set and the fail-closed diagnostics agree with what was
         // written and recorded in provenance.
         let driverOutcome = plannedDriverOutcome producedPaths
+        // ADR-0063 / FS.GG.SDD#623: re-derived (pure) from the same plan TICK A emitted the owner-skill
+        // writes from, so the summary's materialized set and the fail-closed diagnostics agree with
+        // what was written and recorded under `gameSkillPaths` in provenance.
+        let gameSkillOutcome = plannedGameSkillOutcome producedPaths effective
 
         let summary: ScaffoldSummary =
             { ProviderName = Some descriptor.Name
@@ -837,6 +912,7 @@ module internal HandlersScaffold =
               ProducedPaths = producedPaths
               MirroredPaths = mirroredPaths
               MaterializedDriverPaths = driverOutcome.ProvenancePaths |> List.map fst |> List.sort
+              MaterializedGameSkillPaths = gameSkillOutcome.ProvenancePaths |> List.map fst |> List.sort
               EffectiveParameters = Map.toList effective
               RepoInitOutcome = repoInitOutcome
               ToolManifestOutcome = toolManifestOutcome
@@ -851,6 +927,7 @@ module internal HandlersScaffold =
         @ toolManifestDiagnostics
         @ execDiagnostics
         @ driverDiagnostics driverOutcome
+        @ gameSkillDiagnostics gameSkillOutcome
 
     // The post-instantiation machine, re-derived from the interpreted-effect log each tick
     // (no new model field). Reached only on a success create outcome. 056 prepends a MIRROR
@@ -890,6 +967,7 @@ module internal HandlersScaffold =
                   ProducedPaths = producedPaths
                   MirroredPaths = []
                   MaterializedDriverPaths = []
+                  MaterializedGameSkillPaths = []
                   EffectiveParameters = Map.toList effective
                   RepoInitOutcome = "notApplicable"
                   ToolManifestOutcome = "notApplicable"
@@ -900,7 +978,17 @@ module internal HandlersScaffold =
                   ProviderInvocation = None }
 
             let provenanceEffects =
-                provenanceWriteEffect model.Request descriptor ProviderFailed producedPaths [] [] [] Map.empty effective
+                provenanceWriteEffect
+                    model.Request
+                    descriptor
+                    ProviderFailed
+                    producedPaths
+                    []
+                    []
+                    []
+                    []
+                    Map.empty
+                    effective
 
             { model with
                 PendingEffects = model.PendingEffects @ provenanceEffects
@@ -1078,8 +1166,15 @@ module internal HandlersScaffold =
                 // this same batch as the probe, so they are interpreted before finalize (TICK C).
                 let driverOutcome = plannedDriverOutcome producedPaths
 
+                // ADR-0063 / FS.GG.SDD#623: the owner-skill materialization — the same no-clobber
+                // embedded-bytes plan as the driver, gated by the effective scaffold parameters, its
+                // content-verified paths recorded in provenance under `gameSkillPaths`. Emitted in
+                // this same batch so they are interpreted before finalize (TICK C).
+                let gameSkillOutcome = plannedGameSkillOutcome producedPaths effective
+
                 let effects =
                     driverOutcome.Writes
+                    @ gameSkillOutcome.Writes
                     @ provenanceWriteEffect
                         model.Request
                         descriptor
@@ -1088,6 +1183,7 @@ module internal HandlersScaffold =
                         mirroredPaths
                         sddOwnedPaths
                         driverOutcome.ProvenancePaths
+                        gameSkillOutcome.ProvenancePaths
                         skillDigests
                         effective
                     @ [ RunProcess("git", [ "rev-parse"; "--is-inside-work-tree" ], "") ]

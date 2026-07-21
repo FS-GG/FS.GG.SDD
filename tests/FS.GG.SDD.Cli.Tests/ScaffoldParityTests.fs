@@ -37,6 +37,10 @@ module ScaffoldParityTests =
             [ ".agents/skills/workRoadmap/SKILL.md"
               ".claude/skills/workRoadmap/SKILL.md"
               ".codex/skills/workRoadmap/SKILL.md" ]
+          MaterializedGameSkillPaths =
+            [ ".agents/skills/fs-gg-playtest/SKILL.md"
+              ".claude/skills/fs-gg-playtest/SKILL.md"
+              ".codex/skills/fs-gg-playtest/SKILL.md" ]
           EffectiveParameters = [ "productName", "Acme"; "variant", "alpha" ]
           RepoInitOutcome = "initialized"
           ToolManifestOutcome = "pinned"
