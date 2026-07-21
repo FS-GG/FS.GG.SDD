@@ -239,13 +239,13 @@ module ReleaseContract =
 
     let currentRelease () : ReleaseReadiness =
         let identity =
-            { Version = "0.19.0"
-              Channel = channelOfVersion "0.19.0"
+            { Version = "0.20.0"
+              Channel = channelOfVersion "0.20.0"
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "0.19.x"
+            [ { SddVersionLine = "0.20.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "1.x" } ]
 

@@ -10,7 +10,7 @@
          .config/kit/FS.GG.Kit.receiver.proj, which materializes the kit onto disk; Renovate bumps
          this pin and kit-materialize.yml refreshes the committed kit on that PR. -->
     <PackageVersion Include="FS.GG.Kit" Version="0.1.0" />
-    <PackageVersion Include="FS.GG.Drivers" Version="0.1.0" />
+    <PackageVersion Include="FS.GG.Drivers" Version="0.2.0" />
     <!-- FS.GG.Game's owner-authored `mirrored: false` product skill bytes as one versioned
          package (ADR-0063 owner-repo byte source / ADR-0062 substrate / ADR-0014 verify;
          FS.GG.Game#449, FS.GG.SDD#623). Pinned + restored at CLI build time, its bytes embedded
