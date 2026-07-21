@@ -39,7 +39,8 @@ module ProductSkillManifestTests =
         let amended =
             ProductSkillManifest.amend
                 providerManifest
-                [ addition "workRoadmap" "process" "bbbb"; addition "fs-gg-playtest" "product" "cccc" ]
+                [ addition "workRoadmap" "process" "bbbb"
+                  addition "fs-gg-playtest" "product" "cccc" ]
 
         match amended with
         | None -> failwith "Expected the amend to succeed on a well-formed provider manifest."

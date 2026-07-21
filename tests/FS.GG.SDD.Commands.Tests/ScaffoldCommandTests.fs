@@ -1086,7 +1086,8 @@ module ScaffoldCommandTests =
         let summary = scaffoldSummary report
 
         // The on-disk product manifest the consumer skill-union gate reads (`--manifest`).
-        let manifestText = TestSupport.readRelative root ".agents/skills/skill-manifest.json"
+        let manifestText =
+            TestSupport.readRelative root ".agents/skills/skill-manifest.json"
 
         let _, entries =
             match ProductSkillManifest.tryParse manifestText with
@@ -1094,7 +1095,9 @@ module ScaffoldCommandTests =
             | Error message -> failwith $"Expected the amended product manifest to parse: {message}"
 
         let declaredIds =
-            entries |> List.map (fun (e: ProductSkillManifest.ProductManifestEntry) -> e.Id) |> Set.ofList
+            entries
+            |> List.map (fun (e: ProductSkillManifest.ProductManifestEntry) -> e.Id)
+            |> Set.ofList
 
         // The provider's own declaration is preserved (existing declaration wins).
         Assert.Contains("fs-gg-elmish", declaredIds)
@@ -1118,7 +1121,8 @@ module ScaffoldCommandTests =
             // The declared digest is the canonical body digest on disk — the value the gate's
             // check-3 cross-verifies (declared ∧ present ⇒ digest must match).
             let entry =
-                entries |> List.find (fun (e: ProductSkillManifest.ProductManifestEntry) -> e.Id = id)
+                entries
+                |> List.find (fun (e: ProductSkillManifest.ProductManifestEntry) -> e.Id = id)
 
             let bodyDigest =
                 Fsgg.SkillMirror.sha256 (

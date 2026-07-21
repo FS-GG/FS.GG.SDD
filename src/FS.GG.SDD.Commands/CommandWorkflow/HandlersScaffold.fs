@@ -576,12 +576,15 @@ module internal HandlersScaffold =
     // resolvable path. `materializes-when` is the canonical `always` — the manifest is per-product and
     // declares only what THIS product actually materialized (so the skill is present, and `always`
     // stays inside the shell gate's grammar; a driver `has …` predicate would not be evaluable there).
-    let private manifestEntriesOf (provenancePaths: (string * string) list) (materializedScopes: Map<string, string>) (fallbackScope: string) =
+    let private manifestEntriesOf
+        (provenancePaths: (string * string) list)
+        (materializedScopes: Map<string, string>)
+        (fallbackScope: string)
+        =
         let shaById =
             provenancePaths
             |> List.choose (fun (path, sha256) ->
-                Fsgg.SkillMirror.skillIdOfPath path
-                |> Option.map (fun id -> id, sha256))
+                Fsgg.SkillMirror.skillIdOfPath path |> Option.map (fun id -> id, sha256))
             |> Map.ofList
 
         shaById
@@ -590,13 +593,17 @@ module internal HandlersScaffold =
             { ProductSkillManifest.Id = id
               ProductSkillManifest.Scope = materializedScopes |> Map.tryFind id |> Option.defaultValue fallbackScope
               ProductSkillManifest.Sha256 = sha256
-              ProductSkillManifest.ResolvablePath = Some(Fsgg.SkillMirror.skillPath Fsgg.SkillMirror.providerSourceRoot id)
+              ProductSkillManifest.ResolvablePath =
+                Some(Fsgg.SkillMirror.skillPath Fsgg.SkillMirror.providerSourceRoot id)
               ProductSkillManifest.MaterializesWhen = "always"
               ProductSkillManifest.SuppliedBy = None })
 
     // All manifest additions for a scaffold: the drivers (scope from their manifest, `process`
     // fallback) unioned with the owner-sourced skills (scope `product` fallback), id-deduped.
-    let productManifestAdditions (driverOutcome: DriverSkills.DriverOutcome) (gameSkillOutcome: GameSkills.GameSkillOutcome) =
+    let productManifestAdditions
+        (driverOutcome: DriverSkills.DriverOutcome)
+        (gameSkillOutcome: GameSkills.GameSkillOutcome)
+        =
         manifestEntriesOf driverOutcome.ProvenancePaths driverOutcome.MaterializedScopes "process"
         @ manifestEntriesOf gameSkillOutcome.ProvenancePaths gameSkillOutcome.MaterializedScopes "product"
         |> List.distinctBy (fun (entry: ProductSkillManifest.ProductManifestEntry) -> entry.Id)
@@ -1241,7 +1248,8 @@ module internal HandlersScaffold =
                     | Some text ->
                         let digest = Fsgg.SkillMirror.sha256 text
 
-                        productSkillManifestPaths |> List.map (fun path -> WriteFile(path, text, GeneratedView)),
+                        productSkillManifestPaths
+                        |> List.map (fun path -> WriteFile(path, text, GeneratedView)),
                         productSkillManifestPaths
                         |> List.fold (fun acc path -> Map.add path digest acc) skillDigests
 
