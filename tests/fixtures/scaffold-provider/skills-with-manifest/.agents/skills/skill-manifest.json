@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "skills": [
+    {
+      "id": "fs-gg-elmish",
+      "scope": "product",
+      "sha256": "a219b330279fef3d090a6906b763f0d616962ed8cebc6434e7a38e3baa1f6ab0",
+      "resolvablePath": ".agents/skills/fs-gg-elmish/SKILL.md",
+      "materializes-when": "always",
+      "supplied-by": "template/product-skills/fs-gg-elmish/"
+    }
+  ]
+}
