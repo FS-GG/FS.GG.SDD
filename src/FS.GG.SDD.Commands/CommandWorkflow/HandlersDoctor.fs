@@ -30,8 +30,18 @@ module internal HandlersDoctor =
             |> List.tryFind (fun descriptor -> descriptor.Name = record.ProviderName)
         | None -> None
 
+    // ADR-0063 / FS-GG/FS.GG.SDD#624: the owner-sourced skill copies (driver + product classes) this
+    // scaffold is expected to carry, derived from the recorded provenance by the same embedded
+    // materialize-and-verify plan `scaffold` runs. These are NOT in `Drift.expectedArtifactPaths`
+    // (the seeded set), so — like the product-skill copies — they are read in the provenance-driven
+    // second pass so their presence/absence is known before the backfill drift is computed.
+    let ownerSkillTargetPaths model =
+        match resolveProvenance model with
+        | Some record -> Drift.ownerSourcedBackfill record |> List.map fst |> List.distinct |> List.sort
+        | None -> []
+
     let presentArtifacts model =
-        Drift.expectedArtifactPaths
+        (Drift.expectedArtifactPaths @ ownerSkillTargetPaths model)
         |> List.filter (fun path -> snapshot path model |> Option.isSome)
         |> Set.ofList
 
@@ -54,7 +64,10 @@ module internal HandlersDoctor =
     // while awaiting their interpretation). A missing copy stays absent after its read, so the
     // gate resolves on read *interpretation*, not snapshot presence (else a deleted copy loops).
     let skillReadGate model =
-        let reads = productSkillCopyPaths model |> List.map ReadFile
+        let reads =
+            (productSkillCopyPaths model @ ownerSkillTargetPaths model)
+            |> List.distinct
+            |> List.map ReadFile
 
         let allInterpreted =
             reads |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)

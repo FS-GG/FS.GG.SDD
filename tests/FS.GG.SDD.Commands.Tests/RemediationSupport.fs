@@ -23,6 +23,28 @@ module RemediationSupport =
     /// A minimum well below any real installed version (`cliAxis = atOrAbove`).
     let farBehindMinimum = "0.0.1"
 
+    /// ADR-0063 / FS-GG/FS.GG.SDD#624: the owner-sourced skill copies a scaffold at the CURRENT
+    /// generator carries — the same embedded, content-addressed plan `doctor`/`upgrade` reconcile
+    /// against (`DriverSkills.plan` for the always-on `workRoadmap`, `GameSkills.plan` for the
+    /// profile-gated `fs-gg-playtest`). Returned as `(path, verified-body)`. A fixture that means to
+    /// be COHERENT materializes these too; a fixture proving BACKFILL omits them. `parameters` gates
+    /// the product predicate; the driver is present regardless of profile.
+    let ownerSourcedCopies (parameters: (string * string) list) : (string * string) list =
+        let presentIds = Set.ofList SeededSkills.skillNames
+        let driver = DriverSkills.plan presentIds
+        let game = GameSkills.plan (Map.ofList parameters)
+
+        (driver.Writes @ game.Writes)
+        |> List.choose (fun effect ->
+            match effect with
+            | WriteFile(path, body, _) -> Some(path, body)
+            | _ -> None)
+
+    /// The seeded skeleton PLUS the owner-sourced copies — the present-set a pure `Drift.compute`
+    /// test passes to assert a fully coherent scaffold now that owner-sourced skills are expected.
+    let coherentPresent =
+        Drift.expectedArtifactPaths @ (ownerSourcedCopies [] |> List.map fst)
+
     let private providersYml (minimum: string option) =
         let minBlock =
             match minimum with
@@ -97,6 +119,11 @@ sdd:
 
         if withProvenance then
             TestSupport.writeRelative root ".fsgg/scaffold-provenance.json" (provenanceJson minimum)
+            // #624: a scaffold at the current generator also carries the owner-sourced skills, so the
+            // seeded-axis coherence fixtures materialize them present (their absence is drift now).
+            // A tree that predates owner-sourced delivery is modelled by `ownerMissingFixture`.
+            for path, body in ownerSourcedCopies [] do
+                TestSupport.writeRelative root path body
 
         for path in presentArtifacts do
             let body = canonicalSkillBody path |> Option.defaultValue "present\n"
@@ -126,6 +153,21 @@ sdd:
     /// A bare skeleton with no scaffold provenance (FR-015 degradation).
     let noProvenanceFixture () =
         makeFixture (Some farBehindMinimum) [] false
+
+    /// ADR-0063 / FS-GG/FS.GG.SDD#624: a pre-#624 tree — seeded skeleton fully present and CLI
+    /// at/above minimum, so the seeded axis is coherent, but the owner-sourced skills (`workRoadmap`,
+    /// …) were never delivered. The exact shape `upgrade` must backfill. Owner copies are
+    /// DELIBERATELY not written (so this bypasses `makeFixture`, which now materializes them).
+    let ownerMissingFixture () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.writeRelative root ".fsgg/providers.yml" (providersYml (Some farBehindMinimum))
+        TestSupport.writeRelative root ".fsgg/scaffold-provenance.json" (provenanceJson (Some farBehindMinimum))
+
+        for path in Drift.expectedArtifactPaths do
+            let body = canonicalSkillBody path |> Option.defaultValue "present\n"
+            TestSupport.writeRelative root path body
+
+        root
 
     /// 056: a pre-056 product — the `.claude`/`.codex` seeded copies present, but the third
     /// `.agents/skills/` root entirely missing (scaffolded by a two-root CLI). CLI at/above
@@ -180,6 +222,10 @@ sdd:
 
         for path in Drift.expectedArtifactPaths do
             let body = canonicalSkillBody path |> Option.defaultValue "present\n"
+            TestSupport.writeRelative root path body
+
+        // #624: the owner-sourced skills are part of a current-generator scaffold's coherent set.
+        for path, body in ownerSourcedCopies [] do
             TestSupport.writeRelative root path body
 
         for path in productSkillCopies do

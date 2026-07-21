@@ -52,6 +52,12 @@ module internal Drift =
           // root, byte-divergent across roots, or hash-mismatched against its canonical digest.
           // Sorted, deduped. Non-empty ⇒ not coherent (advisory; `doctor` still exits 0).
           SkillDriftPaths: string list
+          // ADR-0063 / FS-GG/FS.GG.SDD#624: the owner-sourced skill copies (driver + product classes)
+          // this scaffold is EXPECTED to carry — per the recorded parameters + present-skill set —
+          // but is missing on disk. These are backfilled no-clobber by the `artifactReSeed` step,
+          // so they are folded into that step's `TargetPaths`; the field names them on their own for
+          // observability. Sorted, deduped. Non-empty ⇒ actionable (re-seed WouldApply, not coherent).
+          OwnerSkillBackfillPaths: string list
           Steps: ReconciliationStep list
           IsCoherent: bool }
 
@@ -77,6 +83,31 @@ module internal Drift =
                     None)
             |> List.filter (fun (id, _) -> not (id.StartsWith("fs-gg-sdd-", System.StringComparison.Ordinal)))
             |> List.distinct
+
+    /// ADR-0063 / FS-GG/FS.GG.SDD#624: the owner-sourced (driver + product classes) skill copies a
+    /// scaffold with this provenance is EXPECTED to carry, as `(path, verified-body)` pairs. This is
+    /// the SAME embedded, content-addressed materialize-and-verify plan `scaffold` runs
+    /// (`DriverSkills.plan` / `GameSkills.plan`), fed from the recorded provenance instead of a live
+    /// scaffold: the driver `has …` grammar reads the present-skill set (the SDD-seeded process
+    /// skills ∪ the product ids recorded in provenance), and the product `materializes-when`
+    /// predicate reads the recorded `EffectiveParameters`. Each body has already been hashed against
+    /// its manifest `sha256` inside `plan` (a verify failure writes nothing), so a backfill can never
+    /// materialize an unverified body (ADR-0014 preserved; only the byte SOURCE changed — ADR-0063).
+    /// Pure: reads only the CLI's compiled-in package bytes + `record`, so it stays offline
+    /// (FR-002). Empty when no owner-skill package is embedded (a build without the pin), so the
+    /// backfill degrades to the pre-#624 shape rather than failing.
+    let ownerSourcedBackfill (record: ScaffoldProvenanceRecord) : (string * string) list =
+        let presentIds =
+            Set.ofList (SeededSkills.skillNames @ (productSkillEntries (Some record) |> List.map fst))
+
+        let driver = DriverSkills.plan presentIds
+        let product = GameSkills.plan (record.EffectiveParameters |> Map.ofList)
+
+        (driver.Writes @ product.Writes)
+        |> List.choose (fun effect ->
+            match effect with
+            | WriteFile(path, body, _) -> Some(path, body)
+            | _ -> None)
 
     let private expectedSkills (provenance: ScaffoldProvenanceRecord option) : SkillMirror.ExpectedSkill list =
         // Process (SDD-seeded) skills verify by presence + cross-root byte-identity ONLY — an
@@ -243,6 +274,8 @@ module internal Drift =
               ExpectedArtifactCount = expectedArtifactCount
               MissingArtifactPaths = []
               SkillDriftPaths = []
+              // No provenance ⇒ not a scaffold ⇒ nothing to backfill (#624).
+              OwnerSkillBackfillPaths = []
               Steps = steps
               IsCoherent = List.isEmpty steps }
         | Some record ->
@@ -268,6 +301,20 @@ module internal Drift =
                 |> List.filter (fun path -> not (Set.contains path presentArtifacts))
                 |> List.sort
 
+            // ADR-0063 / #624: the owner-sourced skill copies this scaffold should carry but is
+            // missing — kept OUT of `MissingArtifactPaths`/`ExpectedArtifactCount` (which are the
+            // SEEDED-skeleton axis) so those report facts and their goldens are undisturbed. A
+            // missing owner skill is still a missing expected artifact, so it is reconciled by the
+            // same no-clobber `artifactReSeed` step (its `TargetPaths` union, below).
+            let ownerBackfillMissing =
+                ownerSourcedBackfill record
+                |> List.map fst
+                |> List.filter (fun path -> not (Set.contains path presentArtifacts))
+                |> List.distinct
+                |> List.sort
+
+            let reSeedTargets = missing @ ownerBackfillMissing |> List.distinct |> List.sort
+
             let minimumText = Option.defaultValue "" validMinimum
 
             let cliStep =
@@ -282,14 +329,14 @@ module internal Drift =
             let rePinStep = noTargetStep ReconciliationStepId.TemplateRePin "no re-pin target"
 
             let reSeedStep =
-                if List.isEmpty missing then
+                if List.isEmpty reSeedTargets then
                     noTargetStep ReconciliationStepId.ArtifactReSeed "no missing artifacts"
                 else
                     { StepId = ReconciliationStepId.ArtifactReSeed
                       Kind = ReconciliationStepId.ArtifactReSeed
-                      DiffPreview = missing |> List.map (fun path -> $"+ {path} (new)") |> String.concat "\n"
+                      DiffPreview = reSeedTargets |> List.map (fun path -> $"+ {path} (new)") |> String.concat "\n"
                       Outcome = ReconciliationOutcome.WouldApply
-                      TargetPaths = missing }
+                      TargetPaths = reSeedTargets }
 
             let steps = [ cliStep; rePinStep; reSeedStep ]
 
@@ -317,5 +364,6 @@ module internal Drift =
               ExpectedArtifactCount = expectedArtifactCount
               MissingArtifactPaths = missing
               SkillDriftPaths = skillDriftPaths
+              OwnerSkillBackfillPaths = ownerBackfillMissing
               Steps = steps
               IsCoherent = not hasActionableWork && List.isEmpty skillDriftPaths }

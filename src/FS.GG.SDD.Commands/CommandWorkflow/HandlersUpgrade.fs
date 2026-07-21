@@ -41,10 +41,27 @@ module internal HandlersUpgrade =
             | WriteFile(path, _, _) -> Set.contains (normalizeRelativePath path) missingSet
             | _ -> false)
 
-    let applyEffectsFor (request: CommandRequest) (step: ReconciliationStep) =
+    // ADR-0063 / FS-GG/FS.GG.SDD#624: the owner-sourced (driver + product classes) skill copies among a
+    // re-seed step's targets, reconstructed as no-clobber writes from the SAME embedded, content-
+    // addressed plan the drift preview used (`Drift.ownerSourcedBackfill`, filtered to the step's
+    // declared targets), so the applied bytes are exactly the verified bytes previewed — a backfill
+    // can never write an unverified body (ADR-0014). Empty when the scaffold has no provenance or no
+    // owner package is embedded. These are disjoint from `reSeedEffects` (which reconstructs only the
+    // SEEDED init writes among the targets), so the two together cover every re-seed target once.
+    let ownerBackfillEffects model (targets: string list) =
+        match resolveProvenance model with
+        | Some record ->
+            Drift.ownerSourcedBackfill record
+            |> List.filter (fun (path, _) -> List.contains path targets)
+            |> List.map (fun (path, body) -> WriteFile(path, body, AgentGuidanceTarget))
+        | None -> []
+
+    let applyEffectsFor model (request: CommandRequest) (step: ReconciliationStep) =
         match step.StepId with
         | ReconciliationStepId.CliSelfUpdate -> [ selfUpdateEffect ]
-        | ReconciliationStepId.ArtifactReSeed -> reSeedEffects request step.TargetPaths
+        | ReconciliationStepId.ArtifactReSeed ->
+            reSeedEffects request step.TargetPaths
+            @ ownerBackfillEffects model step.TargetPaths
         // templateRePin is `noTarget` in this feature (R6) and never actionable.
         | ReconciliationStepId.TemplateRePin -> []
 
@@ -97,7 +114,7 @@ module internal HandlersUpgrade =
         | Awaiting
 
     let private applyStage model (request: CommandRequest) (step: ReconciliationStep) =
-        let effects = applyEffectsFor request step
+        let effects = applyEffectsFor model request step
 
         let allInterpreted =
             effects |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
