@@ -12,29 +12,41 @@ open Xunit
 /// the `planFrom` tests inject synthetic manifests to cover the fail-closed classes.
 module DriverSkillsTests =
 
-    // The pinned digest of the delivered workRoadmap body (the drift-guard golden).
+    // The pinned digests of the delivered driver bodies (the drift-guard goldens).
     let private workRoadmapSha256 =
         "2b9313bf960ba6df3f5634ba19919f9013a9f6e58d83734f102bfa4705b06812"
+
+    // workBoard ships in FS.GG.Drivers 0.2.0 (#632), `materializes-when: always` like workRoadmap.
+    let private workBoardSha256 =
+        "02ccd2a602bc3a0bcca453901b77bcf7085c3d656807494bbcec2077ec3ec665"
 
     let private roots = [ ".agents"; ".claude"; ".codex" ]
 
     let private driverPathFor id =
         roots |> List.map (fun root -> $"{root}/skills/{id}/SKILL.md") |> List.sort
 
+    // The union of driver targets across ids, id-sorted then root-sorted — the deterministic
+    // shape both `MaterializedIds` (id-sorted) and the mirrored provenance paths take.
+    let private driverPathsFor ids =
+        ids |> List.collect driverPathFor |> List.sort
+
     // ---------- the embedded delivery (real bytes) ----------
 
+    // Both `always` driver rows FS.GG.Drivers 0.2.0 ships (#632) materialize; the operator-scoped
+    // `drive-board` row (materializes-when: false) does not — asserted separately below.
     [<Fact>]
-    let ``plan materializes the delivered workRoadmap driver into all three roots`` () =
+    let ``plan materializes the delivered always-on drivers into all three roots`` () =
         let outcome = DriverSkills.plan Set.empty
 
-        Assert.Equal<string list>([ "workRoadmap" ], outcome.MaterializedIds)
+        // id-sorted: "workBoard" < "workRoadmap".
+        Assert.Equal<string list>([ "workBoard"; "workRoadmap" ], outcome.MaterializedIds)
         Assert.Empty outcome.VerifyFailedIds
         Assert.Empty outcome.PredicateUnevaluatedIds
         Assert.Empty outcome.NamespaceCollisionIds
         Assert.Equal(None, outcome.ManifestError)
 
         let writtenPaths = outcome.ProvenancePaths |> List.map fst |> List.sort
-        Assert.Equal<string list>(driverPathFor "workRoadmap", writtenPaths)
+        Assert.Equal<string list>(driverPathsFor [ "workBoard"; "workRoadmap" ], writtenPaths)
 
     [<Fact>]
     let ``plan does not materialize the drive-board operator row (materializes-when false)`` () =
@@ -74,10 +86,11 @@ module DriverSkillsTests =
             | None -> () // a row whose bytes are not shipped (e.g. drive-board) is not verifiable here
 
     [<Fact>]
-    let ``the delivered workRoadmap digest is pinned to the golden`` () =
+    let ``the delivered driver digests are pinned to the goldens`` () =
         let outcome = DriverSkills.plan Set.empty
-        let shas = outcome.ProvenancePaths |> List.map snd |> List.distinct
-        Assert.Equal<string list>([ workRoadmapSha256 ], shas)
+        let shas = outcome.ProvenancePaths |> List.map snd |> List.distinct |> List.sort
+        // sorted hex: "02cc…" (workBoard) < "2b93…" (workRoadmap).
+        Assert.Equal<string list>([ workBoardSha256; workRoadmapSha256 ], shas)
 
     // ---------- the fail-closed classes (planFrom, synthetic) ----------
 
@@ -159,20 +172,26 @@ module DriverSkillsTests =
     // ---------- the scaffold seam: no-clobber honesty against provider output ----------
 
     [<Fact>]
-    let ``plannedDriverOutcome materializes workRoadmap when the provider produced no such skill`` () =
+    let ``plannedDriverOutcome materializes the always-on drivers when the provider produced none`` () =
         let outcome = HandlersScaffold.plannedDriverOutcome []
+        Assert.Contains("workBoard", outcome.MaterializedIds)
         Assert.Contains("workRoadmap", outcome.MaterializedIds)
-        Assert.Equal(3, outcome.ProvenancePaths |> List.length)
+        // two `always` drivers × three roots.
+        Assert.Equal(6, outcome.ProvenancePaths |> List.length)
 
     // FR-005/FR-009: a provider that shipped its own `workRoadmap` (its `.agents` skill, mirrored to
-    // the other roots by the preceding tick) already occupies every driver target — the no-clobber
+    // the other roots by the preceding tick) already occupies that driver's targets — the no-clobber
     // write preserves the provider's, so the driver must not claim those paths (no over-claim, no
-    // double owner-claim).
+    // double owner-claim). The OTHER always-on driver (workBoard) the provider did NOT ship still
+    // materializes into all three roots — no-clobber is per-id, not all-or-nothing.
     [<Fact>]
     let ``plannedDriverOutcome does not over-claim a driver id the provider already produced`` () =
         let outcome =
             HandlersScaffold.plannedDriverOutcome [ ".agents/skills/workRoadmap/SKILL.md" ]
 
         Assert.DoesNotContain("workRoadmap", outcome.MaterializedIds)
-        Assert.Empty outcome.ProvenancePaths
-        Assert.Empty outcome.Writes
+        Assert.Equal<string list>([ "workBoard" ], outcome.MaterializedIds)
+
+        let writtenPaths = outcome.ProvenancePaths |> List.map fst |> List.sort
+        Assert.Equal<string list>(driverPathFor "workBoard", writtenPaths)
+        Assert.Equal(3, outcome.Writes |> List.length)

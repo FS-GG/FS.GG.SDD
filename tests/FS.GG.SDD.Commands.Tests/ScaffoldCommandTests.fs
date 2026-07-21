@@ -373,8 +373,8 @@ module ScaffoldCommandTests =
         Assert.Contains("\"generator\":", provenance)
         Assert.Contains("\"version\":", provenance)
         // …alongside the provider-declared required minimum, recorded verbatim. min-behind declares
-        // one minor above the installed version, so it tracks the bump (installed 0.19.0 ⇒ 0.20.0).
-        Assert.Contains("\"requiredMinimumCliVersion\": \"0.20.0\"", provenance)
+        // one minor above the installed version, so it tracks the bump (installed 0.20.0 ⇒ 0.21.0).
+        Assert.Contains("\"requiredMinimumCliVersion\": \"0.21.0\"", provenance)
 
     // Feature 052 US1 scenario 2: no provider minimum ⇒ the field is recorded as null
     // (absent, not fabricated); the producing CLI version is still recorded.
@@ -646,12 +646,16 @@ module ScaffoldCommandTests =
         // SDD-owned post-instantiation step (FS.GG.SDD#315 — SDD's file, not the provider's),
         // and the `.fsgg/providers.yml` registry the test pre-planted (an author input, not
         // provider output).
-        // 108 / ADR-0054: the workRoadmap driver skill scaffold materializes into all three roots
-        // is SDD-owned (owner `driver`), not the provider's — excluded from the app-only diff
-        // exactly as the provenance/tool-manifest SDD writes are.
+        // 108 / ADR-0054: the always-on driver skills scaffold materializes into all three roots
+        // are SDD-owned (owner `driver`), not the provider's — excluded from the app-only diff
+        // exactly as the provenance/tool-manifest SDD writes are. FS.GG.Drivers 0.2.0 (#632) ships
+        // two `always` drivers, workBoard and workRoadmap; the list is id-then-root sorted.
         let driverPaths =
-            [ ".agents/skills/workRoadmap/SKILL.md"
+            [ ".agents/skills/workBoard/SKILL.md"
+              ".agents/skills/workRoadmap/SKILL.md"
+              ".claude/skills/workBoard/SKILL.md"
               ".claude/skills/workRoadmap/SKILL.md"
+              ".codex/skills/workBoard/SKILL.md"
               ".codex/skills/workRoadmap/SKILL.md" ]
 
         let preexisting =
@@ -1035,6 +1039,32 @@ module ScaffoldCommandTests =
         Assert.Contains(".agents/skills/workRoadmap/SKILL.md", summary.MaterializedDriverPaths)
         Assert.Contains(".claude/skills/workRoadmap/SKILL.md", summary.MaterializedDriverPaths)
         Assert.Contains(".codex/skills/workRoadmap/SKILL.md", summary.MaterializedDriverPaths)
+
+    // 108 / ADR-0054 / FS.GG.SDD#632: FS.GG.Drivers 0.2.0 ships a second `always` driver, workBoard.
+    // It materializes byte-identically into all three agent roots on every scaffold from the CLI's
+    // embedded package bytes — the generic materializer picks it up with no code change, exactly the
+    // workRoadmap seam. This is the end-to-end acceptance for #632 (a fresh scaffold delivers workBoard).
+    [<Fact; Trait("tier", "slow")>]
+    let ``scaffold materializes the workBoard driver byte-identically into all three roots`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "lifecycle.providers.yml"
+
+        let report =
+            runScaffold (
+                scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false
+            )
+
+        Assert.Equal(0, exitCodeForReport report)
+
+        for path in threeRoots "workBoard" do
+            Assert.True(TestSupport.existsRelative root path, $"expected {path} to exist")
+
+        assertByteIdenticalAcrossRoots root "workBoard"
+
+        let summary = scaffoldSummary report
+        Assert.Contains(".agents/skills/workBoard/SKILL.md", summary.MaterializedDriverPaths)
+        Assert.Contains(".claude/skills/workBoard/SKILL.md", summary.MaterializedDriverPaths)
+        Assert.Contains(".codex/skills/workBoard/SKILL.md", summary.MaterializedDriverPaths)
 
     // 056 T018 (US1 acceptance #3): a provider that produces NO skills leaves all three roots
     // with the seeded fs-gg-sdd-* set byte-identical and mirroredPaths empty.

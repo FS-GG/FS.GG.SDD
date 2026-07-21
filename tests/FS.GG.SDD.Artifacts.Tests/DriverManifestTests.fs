@@ -8,7 +8,8 @@ open Xunit
 /// predicate this CLI cannot evaluate yields `None` (skip), never a default materialize.
 module DriverManifestTests =
 
-    // The delivered FS.GG.Drivers 0.1.0 manifest (verbatim shape), used as the parse fixture.
+    // The delivered FS.GG.Drivers 0.2.0 manifest (verbatim shape), used as the parse fixture.
+    // 0.2.0 (#632) adds the second `always` driver, workBoard, alongside workRoadmap.
     let private deliveredManifest =
         """{
   "schemaVersion": 1,
@@ -18,6 +19,13 @@ module DriverManifestTests =
       "scope": "driver",
       "sha256": "2b9313bf960ba6df3f5634ba19919f9013a9f6e58d83734f102bfa4705b06812",
       "supplied-by": ".claude/skills/workRoadmap",
+      "materializes-when": "always"
+    },
+    {
+      "id": "workBoard",
+      "scope": "driver",
+      "sha256": "02ccd2a602bc3a0bcca453901b77bcf7085c3d656807494bbcec2077ec3ec665",
+      "supplied-by": ".claude/skills/workBoard",
       "materializes-when": "always"
     },
     {
@@ -36,13 +44,20 @@ module DriverManifestTests =
         | Error message -> failwithf "expected Ok, got Error %s" message
         | Ok manifest ->
             Assert.Equal(1, manifest.SchemaVersion)
-            Assert.Equal(2, List.length manifest.Skills)
+            Assert.Equal(3, List.length manifest.Skills)
 
             let workRoadmap = manifest.Skills |> List.find (fun s -> s.Id = "workRoadmap")
             Assert.Equal("driver", workRoadmap.Scope)
             Assert.Equal("always", workRoadmap.MaterializesWhen)
             Assert.Equal("2b9313bf960ba6df3f5634ba19919f9013a9f6e58d83734f102bfa4705b06812", workRoadmap.Sha256)
             Assert.Equal(Some ".claude/skills/workRoadmap", workRoadmap.SuppliedBy)
+
+            // #632: workBoard is the second always-on driver 0.2.0 delivers.
+            let workBoard = manifest.Skills |> List.find (fun s -> s.Id = "workBoard")
+            Assert.Equal("driver", workBoard.Scope)
+            Assert.Equal("always", workBoard.MaterializesWhen)
+            Assert.Equal("02ccd2a602bc3a0bcca453901b77bcf7085c3d656807494bbcec2077ec3ec665", workBoard.Sha256)
+            Assert.Equal(Some ".claude/skills/workBoard", workBoard.SuppliedBy)
 
             let driveBoard = manifest.Skills |> List.find (fun s -> s.Id = "drive-board")
             Assert.Equal("false", driveBoard.MaterializesWhen)
