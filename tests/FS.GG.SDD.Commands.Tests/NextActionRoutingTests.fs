@@ -117,7 +117,9 @@ module NextActionRoutingTests =
         let baseModel = modelWith command diagnostics
 
         { baseModel with
-            Request = { baseModel.Request with WorkId = Some workId }
+            Request =
+                { baseModel.Request with
+                    WorkId = Some workId }
             InterpretedEffects = [ enumResult "work"; enumResult "readiness" ] }
 
     [<Fact>]
@@ -170,4 +172,8 @@ module NextActionRoutingTests =
 
         let action = report.NextAction.Value
         Assert.Equal("plan.acceptUpstream", action.ActionId)
-        Assert.Contains("re-run the recorded downstream stages in order: plan, then tasks, then evidence", action.Reason)
+
+        Assert.Contains(
+            "re-run the recorded downstream stages in order: plan, then tasks, then evidence",
+            action.Reason
+        )

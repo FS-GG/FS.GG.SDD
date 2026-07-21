@@ -32,7 +32,10 @@ module internal NextActionRouting =
         let doneStages =
             lifecycle.Stages
             |> List.choose (fun entry ->
-                if entry.State = StageState.Done then Some entry.Command else None)
+                if entry.State = StageState.Done then
+                    Some entry.Command
+                else
+                    None)
             |> Set.ofList
 
         let materializedDownstream =
@@ -47,8 +50,7 @@ module internal NextActionRouting =
                 |> List.map commandName
                 |> String.concat ", then "
 
-            Some
-                $"To reconcile the stale source digest, re-run the recorded downstream stages in order: {ordered}."
+            Some $"To reconcile the stale source digest, re-run the recorded downstream stages in order: {ordered}."
 
     let nextAction
         (diagnostics: Diagnostic list)
