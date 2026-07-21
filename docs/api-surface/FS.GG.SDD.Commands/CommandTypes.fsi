@@ -1019,6 +1019,12 @@ module CommandTypes =
     val stageStateName: state: StageState -> string
 
     val nextLifecycleCommand: command: SddCommand -> SddCommand option
+
+    /// FS.GG.SDD#642: the lifecycle stages strictly downstream of `command`, in canonical order
+    /// (walking `nextLifecycleCommand`). Empty for `Ship` and every cross-cutting command. Names
+    /// the re-run set an upstream artifact edit stales.
+    val downstreamLifecycleStages: command: SddCommand -> SddCommand list
+
     val effectPath: effect: CommandEffect -> string option
 
     /// The canonical lowercase name of a lint artifact kind (feature 076), used in the

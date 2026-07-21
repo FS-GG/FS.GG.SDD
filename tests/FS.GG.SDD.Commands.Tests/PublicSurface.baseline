@@ -133,6 +133,7 @@ FS.GG.SDD.Commands.CommandTypes+MergePolicyModule.rederivedSections
 FS.GG.SDD.Commands.CommandTypes.artifactOperationValue
 FS.GG.SDD.Commands.CommandTypes.commandName
 FS.GG.SDD.Commands.CommandTypes.commandStage
+FS.GG.SDD.Commands.CommandTypes.downstreamLifecycleStages
 FS.GG.SDD.Commands.CommandTypes.effectPath
 FS.GG.SDD.Commands.CommandTypes.generatedViewCurrencyValue
 FS.GG.SDD.Commands.CommandTypes.guidanceDispositionValue

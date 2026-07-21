@@ -21,9 +21,41 @@ module internal NextActionRouting =
         elif present "charter" then Specify
         else Charter
 
+    // FS.GG.SDD#642: an upstream artifact edit stales a downstream stage's recorded source digest,
+    // and the reconcile ORDER — which stages to re-run, and in what sequence — was previously learned
+    // by trial rather than surfaced. Given the stale stage, name the ordered re-run set: the stale
+    // stage itself, then each MATERIALIZED downstream stage in canonical order. Downstream stages
+    // that were never run carry no recorded digest to stale, so they are omitted — sensed from the
+    // lifecycle rail's `Done` state (the same presence sensing the status footer already runs). Empty
+    // downstream ⇒ `None`, so the caller leaves its base reason unchanged.
+    let rerunOrderClause (staleStage: SddCommand) (lifecycle: LifecycleStatus) : string option =
+        let doneStages =
+            lifecycle.Stages
+            |> List.choose (fun entry ->
+                if entry.State = StageState.Done then
+                    Some entry.Command
+                else
+                    None)
+            |> Set.ofList
+
+        let materializedDownstream =
+            downstreamLifecycleStages staleStage
+            |> List.filter (fun stage -> Set.contains stage doneStages)
+
+        match materializedDownstream with
+        | [] -> None
+        | _ ->
+            let ordered =
+                staleStage :: materializedDownstream
+                |> List.map commandName
+                |> String.concat ", then "
+
+            Some $"To reconcile the stale source digest, re-run the recorded downstream stages in order: {ordered}."
+
     let nextAction
         (diagnostics: Diagnostic list)
         (reportOutcome: CommandOutcome)
+        (lifecycle: LifecycleStatus)
         (request: CommandRequest)
         (checklist: ChecklistSummary option)
         (plan: PlanSummary option)
@@ -90,12 +122,21 @@ module internal NextActionRouting =
                         |> Option.map (fun diagnostic -> diagnostic.RelatedIds)
                         |> Option.defaultValue []
 
+                    // #642: re-baselining the plan re-stamps plan.md's digest, which in turn stales
+                    // every downstream stage recorded against it. Name that ordered re-run set so the
+                    // author does not rediscover it stage by stage.
+                    let rerunClause =
+                        rerunOrderClause Plan lifecycle
+                        |> Option.map (fun clause -> " " + clause)
+                        |> Option.defaultValue ""
+
                     Some
                         { ActionId = "plan.acceptUpstream"
                           Command = Some Plan
                           WorkId = request.WorkId
                           Reason =
                             "The plan's recorded source snapshot is stale. Review the recorded plan decisions against the changed sources, then re-run fsgg-sdd plan --accept-upstream."
+                            + rerunClause
                           RequiredArtifacts =
                             (plan
                              |> Option.map (fun summary -> [ $"work/{summary.WorkId}/plan.md" ])
@@ -230,11 +271,18 @@ module internal NextActionRouting =
                 request.Command = Tasks
                 && diagnostics |> List.exists (fun diagnostic -> diagnostic.Id = "staleTask")
             then
+                // #642: re-running `tasks` re-stamps its recorded upstream digests, staling every
+                // downstream stage recorded against tasks.yml. Name that ordered re-run set.
+                let rerunClause =
+                    rerunOrderClause Tasks lifecycle
+                    |> Option.map (fun clause -> " " + clause)
+                    |> Option.defaultValue ""
+
                 Some
                     { ActionId = "tasks.correctStaleTasks"
                       Command = Some Tasks
                       WorkId = request.WorkId
-                      Reason = "Task source links need review before analysis."
+                      Reason = "Task source links need review before analysis." + rerunClause
                       RequiredArtifacts =
                         tasks
                         |> Option.map (fun summary -> [ $"work/{summary.WorkId}/tasks.yml" ])

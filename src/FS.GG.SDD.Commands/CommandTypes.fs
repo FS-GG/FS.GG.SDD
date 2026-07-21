@@ -1035,6 +1035,16 @@ module CommandTypes =
         | DependencySurface -> None
         | Help -> None
 
+    /// FS.GG.SDD#642: the lifecycle stages strictly downstream of `command`, in canonical order,
+    /// derived by walking `nextLifecycleCommand`. Used to name the ordered re-run set an author must
+    /// execute after an upstream artifact edit stales a downstream stage's recorded source digest —
+    /// the order that was previously learned by trial rather than surfaced. Empty for `Ship` and for
+    /// every cross-cutting command (their `nextLifecycleCommand` is `None`).
+    let rec downstreamLifecycleStages (command: SddCommand) : SddCommand list =
+        match nextLifecycleCommand command with
+        | Some successor -> successor :: downstreamLifecycleStages successor
+        | None -> []
+
     let effectPath (effect: CommandEffect) =
         match effect with
         | ReadFile path
