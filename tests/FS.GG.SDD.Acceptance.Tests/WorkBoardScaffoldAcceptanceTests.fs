@@ -176,7 +176,11 @@ module WorkBoardScaffoldAcceptanceTests =
         let shim = Path.Combine(root, "scripts", "fsgg-coord")
         File.SetUnixFileMode(shim, File.GetUnixFileMode shim ||| UnixFileMode.UserExecute)
 
-        for skill in [ "check-board"; "pnext-item"; "intra-repo-parallel-work"; "cross-repo-coordination" ] do
+        for skill in
+            [ "check-board"
+              "pnext-item"
+              "intra-repo-parallel-work"
+              "cross-repo-coordination" ] do
             writeRelative root $".claude/skills/{skill}/SKILL.md" $"---\nname: {skill}\n---\n"
 
     // ----- the shipped skill's own bytes: the documented-message ground truth -----
@@ -244,7 +248,10 @@ module WorkBoardScaffoldAcceptanceTests =
             let body = shippedWorkBoardBody ()
 
             for clause in documentedMessageClauses do
-                Assert.True(body.Contains clause, $"the stop message clause \"{clause}\" is not documented by the shipped skill.")
+                Assert.True(
+                    body.Contains clause,
+                    $"the stop message clause \"{clause}\" is not documented by the shipped skill."
+                )
         | Drives ->
             Assert.Fail
                 "a --no-coordination workspace (no FSGG_COORD_* env, no kit) must make workBoard stop cleanly, not drive — the graceful-fail path (design §9) did not fire."
