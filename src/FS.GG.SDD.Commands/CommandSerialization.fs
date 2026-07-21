@@ -330,6 +330,9 @@ module CommandSerialization =
             // 056: the `.claude`/`.codex` fan-out mirror copies (owner `mirrored` in
             // provenance), sorted; `[]` when the provider produced no skills.
             writeStringList writer Sorted "mirroredPaths" summary.MirroredPaths
+            // 108 / ADR-0054: the `.github`-authored driver skill copies materialized from the
+            // pinned package (owner `driver` in provenance), sorted; `[]` when none materialized.
+            writeStringList writer Sorted "materializedDriverPaths" summary.MaterializedDriverPaths
             writer.WriteStartArray("effectiveParameters")
 
             summary.EffectiveParameters

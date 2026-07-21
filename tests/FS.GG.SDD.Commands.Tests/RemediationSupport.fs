@@ -239,6 +239,7 @@ sdd:
           ProducedPaths = []
           MirroredPaths = []
           SddOwnedPaths = []
+          DriverPaths = []
           EffectiveParameters = [] }
 
     let descriptor (minimum: string option) : ProviderDescriptor =

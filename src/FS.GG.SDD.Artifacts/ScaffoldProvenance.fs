@@ -27,6 +27,11 @@ module ScaffoldProvenance =
           ProducedPaths: ScaffoldProducedPath list
           MirroredPaths: ScaffoldProducedPath list
           SddOwnedPaths: ScaffoldProducedPath list
+          // 108 / ADR-0054: the `.github`-authored driver skills materialized from the pinned
+          // `FS.GG.Drivers` package into the product's skill roots (owner `Driver`), each with
+          // its content `sha256`. Externally owned like `MirroredPaths`, so `refresh` excludes
+          // them. Additive; empty when no driver materialized (schema stays v1).
+          DriverPaths: ScaffoldProducedPath list
           EffectiveParameters: (string * string) list }
 
     let provenancePath = ".fsgg/scaffold-provenance.json"
@@ -54,6 +59,7 @@ module ScaffoldProvenance =
           ProducedPaths = producedPaths
           MirroredPaths = []
           SddOwnedPaths = []
+          DriverPaths = []
           EffectiveParameters = [] }
 
     let ownerFromValue (value: string) =
@@ -62,6 +68,7 @@ module ScaffoldProvenance =
         | "governance" -> ArtifactOwner.Governance
         | "rendering" -> ArtifactOwner.Rendering
         | "mirrored" -> ArtifactOwner.Mirrored
+        | "driver" -> ArtifactOwner.Driver
         | _ -> ArtifactOwner.GeneratedProduct
 
     // Additive (contract 1.1.0, ADR-0014): emit `sha256` only when a digest was
@@ -144,6 +151,23 @@ module ScaffoldProvenance =
             writer.WriteString("path", owned.Path)
             writer.WriteString("owner", ownerValue owned.Owner)
             writeSha256 writer owned.Sha256
+            writer.WriteEndObject())
+
+        writer.WriteEndArray()
+
+        // 108 / ADR-0054: additive driver record — the `.github`-authored driver skills
+        // materialized from the pinned package, owner `driver`, each with its content `sha256`.
+        // Sorted by path, immediately after `sddOwnedPaths`; empty array when none (schema stays
+        // v1). `"driver"` appears only inside this array.
+        writer.WriteStartArray("driverPaths")
+
+        record.DriverPaths
+        |> List.sortBy (fun driver -> driver.Path)
+        |> List.iter (fun driver ->
+            writer.WriteStartObject()
+            writer.WriteString("path", driver.Path)
+            writer.WriteString("owner", ownerValue driver.Owner)
+            writeSha256 writer driver.Sha256
             writer.WriteEndObject())
 
         writer.WriteEndArray()
@@ -236,6 +260,22 @@ module ScaffoldProvenance =
                                           Sha256 = readSha256 element }
                                 | _ -> None)
 
+                        // 108 / ADR-0054: additive driver record. Absent/null ⇒ `[]`, so
+                        // provenance written before this field still parses (schema stays v1).
+                        let driverPaths =
+                            jsonArray "driverPaths" root
+                            |> List.choose (fun element ->
+                                match jsonString "path" element with
+                                | Some path when not (String.IsNullOrWhiteSpace path) ->
+                                    Some
+                                        { Path = path
+                                          Owner =
+                                            jsonString "owner" element
+                                            |> Option.map ownerFromValue
+                                            |> Option.defaultValue ArtifactOwner.Driver
+                                          Sha256 = readSha256 element }
+                                | _ -> None)
+
                         // Additive optional field (D3): absent ⇒ `[]`, so provenance
                         // written before `effectiveParameters` still parses.
                         let effectiveParameters =
@@ -263,6 +303,7 @@ module ScaffoldProvenance =
                               ProducedPaths = producedPaths
                               MirroredPaths = mirroredPaths
                               SddOwnedPaths = sddOwnedPaths
+                              DriverPaths = driverPaths
                               EffectiveParameters = effectiveParameters }
                     | _ -> None
                 | None -> None

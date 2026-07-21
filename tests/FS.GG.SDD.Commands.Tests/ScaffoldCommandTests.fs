@@ -646,8 +646,16 @@ module ScaffoldCommandTests =
         // SDD-owned post-instantiation step (FS.GG.SDD#315 — SDD's file, not the provider's),
         // and the `.fsgg/providers.yml` registry the test pre-planted (an author input, not
         // provider output).
+        // 108 / ADR-0054: the workRoadmap driver skill scaffold materializes into all three roots
+        // is SDD-owned (owner `driver`), not the provider's — excluded from the app-only diff
+        // exactly as the provenance/tool-manifest SDD writes are.
+        let driverPaths =
+            [ ".agents/skills/workRoadmap/SKILL.md"
+              ".claude/skills/workRoadmap/SKILL.md"
+              ".codex/skills/workRoadmap/SKILL.md" ]
+
         let preexisting =
-            Set.ofList [ provenancePath; toolManifestPath; ".fsgg/providers.yml" ]
+            Set.ofList ([ provenancePath; toolManifestPath; ".fsgg/providers.yml" ] @ driverPaths)
 
         let producedExpected =
             relativeFiles appRoot
@@ -669,7 +677,9 @@ module ScaffoldCommandTests =
 
         Assert.Equal(producedExpected.Length, countOf "\"owner\": \"generatedProduct\"")
         Assert.Equal(1, countOf "\"owner\": \"sdd\"")
-        Assert.Equal(countOf "\"owner\":", producedExpected.Length + 1)
+        // 108: the workRoadmap driver, materialized into all three roots (owner `driver`).
+        Assert.Equal(driverPaths.Length, countOf "\"owner\": \"driver\"")
+        Assert.Equal(countOf "\"owner\":", producedExpected.Length + 1 + driverPaths.Length)
 
         let parsed =
             ScaffoldProvenance.tryParse provenance
@@ -678,6 +688,12 @@ module ScaffoldCommandTests =
         Assert.Equal<string list>([ toolManifestPath ], parsed.SddOwnedPaths |> List.map (fun p -> p.Path))
         Assert.All(parsed.ProducedPaths, fun p -> Assert.Equal(ArtifactOwner.GeneratedProduct, p.Owner))
         Assert.All(parsed.SddOwnedPaths, fun p -> Assert.Equal(ArtifactOwner.Sdd, p.Owner))
+
+        // 108 / ADR-0054: the driver skill is recorded under `driverPaths`, owner `driver`, each
+        // carrying the manifest sha256 it was content-verified against, in all three roots.
+        Assert.Equal<string list>(driverPaths, parsed.DriverPaths |> List.map (fun p -> p.Path) |> List.sort)
+        Assert.All(parsed.DriverPaths, fun p -> Assert.Equal(ArtifactOwner.Driver, p.Owner))
+        Assert.All(parsed.DriverPaths, fun p -> Assert.True(Option.isSome p.Sha256))
 
         // P3 restated against the new list: SDD's own writes never leak into producedPaths.
         Assert.DoesNotContain(toolManifestPath, parsed.ProducedPaths |> List.map (fun p -> p.Path))
@@ -993,6 +1009,32 @@ module ScaffoldCommandTests =
             Assert.DoesNotContain(producedPaths, fun (p: string) -> p.Contains "fs-gg-sdd-")
             Assert.DoesNotContain(mirroredPaths, fun (p: string) -> p.Contains "fs-gg-sdd-")
         | None -> failwith "Expected the scaffold provenance to parse."
+
+    // 108 / ADR-0054 (AC-001/AC-006): the `.github`-authored workRoadmap driver skill materializes
+    // byte-identically into all three agent roots on every scaffold (`materializes-when: always`),
+    // from the CLI's embedded package bytes — no NuGet cache or network at scaffold time (AC-004).
+    [<Fact; Trait("tier", "slow")>]
+    let ``scaffold materializes the workRoadmap driver byte-identically into all three roots`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "lifecycle.providers.yml"
+
+        let report =
+            runScaffold (
+                scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false
+            )
+
+        Assert.Equal(0, exitCodeForReport report)
+
+        for path in threeRoots "workRoadmap" do
+            Assert.True(TestSupport.existsRelative root path, $"expected {path} to exist")
+
+        assertByteIdenticalAcrossRoots root "workRoadmap"
+
+        // The scaffold report names the materialized driver copies (FR-009).
+        let summary = scaffoldSummary report
+        Assert.Contains(".agents/skills/workRoadmap/SKILL.md", summary.MaterializedDriverPaths)
+        Assert.Contains(".claude/skills/workRoadmap/SKILL.md", summary.MaterializedDriverPaths)
+        Assert.Contains(".codex/skills/workRoadmap/SKILL.md", summary.MaterializedDriverPaths)
 
     // 056 T018 (US1 acceptance #3): a provider that produces NO skills leaves all three roots
     // with the seeded fs-gg-sdd-* set byte-identical and mirroredPaths empty.

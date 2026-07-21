@@ -48,6 +48,13 @@ module ScaffoldProvenance =
             /// immediately after `mirroredPaths`; `tryParse` defaults absent/null to `[]`
             /// (schema stays v1, additive). Empty when the step was skipped or preserved.
             SddOwnedPaths: ScaffoldProducedPath list
+            /// 108 / ADR-0054: the `.github`-authored **driver** skills (e.g. `workRoadmap`)
+            /// materialized from the pinned `FS.GG.Drivers` package into the product's skill
+            /// roots (owner `Driver`), each with its content `sha256`. Externally owned like
+            /// `MirroredPaths` — `refresh` excludes them (never regenerated). Sorted ascending
+            /// by path, serialized immediately after `sddOwnedPaths`; `tryParse` defaults
+            /// absent/null to `[]` (schema stays v1, additive). Empty when none materialized.
+            DriverPaths: ScaffoldProducedPath list
             /// The effective `key → value` parameters forwarded to the provider —
             /// provider-declared `default`s overlaid by author `--param` overrides
             /// (author wins). Sorted ascending by key; `[]` when none. Records the

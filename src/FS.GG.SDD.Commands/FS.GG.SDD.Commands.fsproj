@@ -19,6 +19,7 @@
     <Compile Include="CommandHelp.fsi" />
     <Compile Include="CommandHelp.fs" />
     <Compile Include="CommandWorkflow/SeededSkills.fs" />
+    <Compile Include="CommandWorkflow/DriverSkills.fs" />
     <Compile Include="CommandWorkflow/ProcessSkillManifest.fsi" />
     <Compile Include="CommandWorkflow/ProcessSkillManifest.fs" />
     <Compile Include="CommandWorkflow/Drift.fs" />
@@ -82,6 +83,19 @@
     <EmbeddedResource Include="../../.claude/skills/fs-gg-sdd-validate/SKILL.md" LogicalName="SeededSkill.fs-gg-sdd-validate" />
   </ItemGroup>
 
+  <!-- 108 / ADR-0054 §Byte-transport: the delivered `FS.GG.Drivers` bytes — the
+       `driver-skill-manifest.json` and each `skills/<id>/SKILL.md` — linked from the pinned
+       package's restored content ($(FsggDriversContentDir)) as embedded resources, so the
+       scaffold materializer reads compiled-in bytes at scaffold time (offline; FR-002). The
+       glob names no specific skill id, so no `.github`/provider literal enters generic SDD:
+       whatever driver skills the pinned package ships are embedded (FR-002/SC-002). -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(FsggDriversContentDir)/driver-skill-manifest.json" LogicalName="Driver.manifest" />
+    <EmbeddedResource Include="$(FsggDriversContentDir)/skills/**/SKILL.md">
+      <LogicalName>Driver.skill/%(RecursiveDir)SKILL.md</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="FS.GG.SDD.Commands.Tests" />
   </ItemGroup>
@@ -90,5 +104,6 @@
     <ProjectReference Include="../FS.GG.Contracts/FS.GG.Contracts.fsproj" />
     <ProjectReference Include="../FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj" />
     <PackageReference Include="FSharp.Core" />
+    <PackageReference Include="FS.GG.Drivers" GeneratePathProperty="true" />
   </ItemGroup>
 </Project>

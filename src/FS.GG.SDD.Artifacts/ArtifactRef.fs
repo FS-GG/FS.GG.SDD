@@ -12,6 +12,12 @@ module ArtifactRef =
         // provider-produced `.agents/skills/*` skill that SDD fanned out (never the
         // provider's canonical `.agents` product, which stays `generatedProduct`).
         | Mirrored
+        // 108 / ADR-0054: a `.github`-authored driver skill (e.g. `workRoadmap`) delivered
+        // as bytes in the pinned `FS.GG.Drivers` package and materialized by the SDD
+        // scaffolder into a product's skill roots. Externally owned (like `Mirrored`/
+        // `GeneratedProduct`), so `refresh` never regenerates it; recorded only in
+        // `ScaffoldProvenanceRecord.DriverPaths`. Serialized `"driver"`.
+        | Driver
 
     type ArtifactKind =
         | ProjectConfig
@@ -65,6 +71,7 @@ module ArtifactRef =
         | Rendering -> "rendering"
         | GeneratedProduct -> "generatedProduct"
         | Mirrored -> "mirrored"
+        | Driver -> "driver"
 
     let kindValue kind =
         match kind with

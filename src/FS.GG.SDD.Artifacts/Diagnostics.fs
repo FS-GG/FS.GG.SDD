@@ -410,6 +410,68 @@ module Diagnostics =
             ordered
         |> markToolDefect
 
+    // 108 / ADR-0054 (FR-003): a delivered driver body failed its content-addressed check (its
+    // `sha256` disagreed with the manifest, or its body was absent). Fail closed — the driver is
+    // not written. A corrupt embedded set is a CLI build/packaging defect (the drift guard,
+    // FR-008, is the release-time gate), so this is the tool-defect class.
+    let scaffoldDriverVerifyFailed (ids: string list) =
+        let ordered = ids |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.driverVerifyFailed"
+            DiagnosticError
+            None
+            None
+            $"Driver skill(s) failed the content-addressed verify and were not materialized: {rendered}."
+            "The embedded driver bytes do not match their manifest sha256 (a CLI packaging defect). Rebuild/republish the CLI from a coherent `FS.GG.Drivers` pin; the driver was not written and was not recorded as materialized."
+            ordered
+        |> markToolDefect
+
+    // 108 / ADR-0054 (FR-004): a driver row's `materializes-when` predicate is a form the
+    // materializer does not evaluate, so the row is skipped (never materialized by default).
+    // Non-blocking advisory — the scaffold otherwise succeeds.
+    let scaffoldDriverPredicateUnevaluated (ids: string list) =
+        let ordered = ids |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.driverPredicateUnevaluated"
+            DiagnosticWarning
+            None
+            None
+            $"Driver skill(s) skipped — their `materializes-when` predicate was not evaluable by this CLI: {rendered}."
+            "Upgrade `fsgg-sdd` to a version that understands the predicate, or adjust the delivered manifest; the row was skipped (fail-closed), not materialized."
+            ordered
+
+    // 108 / ADR-0054 (FR-007): a driver row's id collides with the reserved seeded `fs-gg-sdd-*`
+    // namespace. Rejected so a driver can never shadow the SDD-owned skeleton. Tool-defect class.
+    let scaffoldDriverNamespaceCollision (ids: string list) =
+        let ordered = ids |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.driverNamespaceCollision"
+            DiagnosticError
+            None
+            None
+            $"Driver skill(s) rejected — their id collides with the reserved seeded `fs-gg-sdd-*` namespace: {rendered}."
+            "A driver skill may not shadow an SDD-owned seeded skill. Fix the delivered `FS.GG.Drivers` manifest to use a non-reserved id; the row was not materialized."
+            ordered
+        |> markToolDefect
+
+    // 108 / ADR-0054: the embedded driver manifest could not be parsed — a CLI packaging defect.
+    let scaffoldDriverManifestMalformed (message: string) =
+        create
+            "scaffold.driverManifestMalformed"
+            DiagnosticError
+            None
+            None
+            $"The embedded driver manifest is malformed: {message}."
+            "Rebuild/republish the CLI from a coherent `FS.GG.Drivers` pin; no driver was materialized."
+            [ message ]
+        |> markToolDefect
+
     let scaffoldProvenanceMalformed path =
         create
             "scaffold.provenanceMalformed"

@@ -59,6 +59,10 @@ FS.GG.SDD.Artifacts.Diagnostics.missingGeneratedWorkModel
 FS.GG.SDD.Artifacts.Diagnostics.proseStructuredMismatch
 FS.GG.SDD.Artifacts.Diagnostics.requirementNotTyped
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldCliBehindMinimum
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldDriverManifestMalformed
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldDriverNamespaceCollision
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldDriverPredicateUnevaluated
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldDriverVerifyFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldInvalidParamKey
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldMirrorFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldNameUnrepresentable
@@ -94,6 +98,8 @@ FS.GG.SDD.Artifacts.Diagnostics.upgradeSelfUpdateFailed
 FS.GG.SDD.Artifacts.Diagnostics.upgradeStepFailed
 FS.GG.SDD.Artifacts.Diagnostics.withDefectTag
 FS.GG.SDD.Artifacts.Diagnostics.workModelInconsistent
+FS.GG.SDD.Artifacts.DriverManifest.tryParse
+FS.GG.SDD.Artifacts.DriverPredicate.evaluate
 FS.GG.SDD.Artifacts.Evidence+EvidenceCodec.liftObservedRun
 FS.GG.SDD.Artifacts.Evidence+EvidenceCodec.lowerObservedRun
 FS.GG.SDD.Artifacts.Evidence.citedArtifactPaths

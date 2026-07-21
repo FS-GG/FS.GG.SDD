@@ -144,6 +144,7 @@ providers:
                 Sha256 = None } ]
           MirroredPaths = []
           SddOwnedPaths = []
+          DriverPaths = []
           EffectiveParameters = [ "variant", "alpha"; "productName", "Demo" ] }
 
     [<Fact>]

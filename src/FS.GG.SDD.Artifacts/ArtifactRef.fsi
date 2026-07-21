@@ -10,6 +10,12 @@ module ArtifactRef =
         /// provider-produced `.agents/skills/*` skill that SDD fanned out. Serialized
         /// `"mirrored"`; appears only in `ScaffoldProvenanceRecord.MirroredPaths`.
         | Mirrored
+        /// 108 / ADR-0054: a `.github`-authored **driver** skill (e.g. `workRoadmap`)
+        /// delivered as bytes in the pinned `FS.GG.Drivers` package and materialized by
+        /// the SDD scaffolder into a product's skill roots. Externally owned, so `refresh`
+        /// never regenerates it. Serialized `"driver"`; appears only in
+        /// `ScaffoldProvenanceRecord.DriverPaths`.
+        | Driver
 
     type ArtifactKind =
         | ProjectConfig
