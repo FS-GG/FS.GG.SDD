@@ -190,6 +190,7 @@ module internal HandlersScaffold =
           ProducedPathCount = 0
           ProducedPaths = []
           MirroredPaths = []
+          MaterializedDriverPaths = []
           EffectiveParameters = []
           RepoInitOutcome = "notApplicable"
           ToolManifestOutcome = "notApplicable"
@@ -447,6 +448,61 @@ module internal HandlersScaffold =
     let plannedMirroredPaths (producedPaths: string list) =
         providerSkillFiles producedPaths |> List.collect mirrorTargetsFor |> List.sort
 
+    // 108 / ADR-0054: the driver materialization planned from the CLI's embedded `FS.GG.Drivers`
+    // bytes, gated by the skill ids present in the workspace (seeded ∪ provider) for `has …`
+    // predicate evaluation. Pure & deterministic (reads only compiled-in resources + `producedPaths`),
+    // re-derivable each tick like `plannedMirroredPaths`, so both the TICK-A write/provenance and the
+    // finalize summary/diagnostics draw from the same plan without a new model field.
+    let plannedDriverOutcome (producedPaths: string list) =
+        let providerIds =
+            providerSkillFiles producedPaths |> List.choose Fsgg.SkillMirror.skillIdOfPath
+
+        let presentIds = Set.ofList (SeededSkills.skillNames @ providerIds)
+        let outcome = DriverSkills.plan presentIds
+
+        // No-clobber honesty (FR-005/FR-009): a driver target already occupied by the provider's own
+        // output — its `.agents/skills/<id>` skill, or the `.claude`/`.codex` mirror copies of it the
+        // preceding TICK-MIRROR fanned out — is *preserved* by the `AgentGuidanceTarget` write, not
+        // materialized by us; claiming it would double-own the path (`mirrored` + `driver`) with a
+        // possibly-different digest. `occupied` is a pure function of `producedPaths` (never our own
+        // just-written driver files), so it is identical at the TICK-A write and the finalize summary
+        // — dropping such paths keeps both, and provenance, from over-claiming a refused write.
+        let occupied = Set.ofList (producedPaths @ plannedMirroredPaths producedPaths)
+
+        let kept =
+            outcome.ProvenancePaths
+            |> List.filter (fun (path, _) -> not (occupied.Contains path))
+
+        let keptPaths = kept |> List.map fst |> Set.ofList
+
+        { outcome with
+            Writes =
+                outcome.Writes
+                |> List.filter (fun effect ->
+                    match effectPath effect with
+                    | Some path -> keptPaths.Contains path
+                    | None -> true)
+            ProvenancePaths = kept
+            MaterializedIds =
+                kept
+                |> List.choose (fun (path, _) -> Fsgg.SkillMirror.skillIdOfPath path)
+                |> List.distinct }
+
+    // The fail-closed driver diagnostics for a planned outcome (empty on a clean plan). Manifest
+    // defect and namespace-collision/verify failures are tool-defect errors; an unevaluable
+    // predicate is a non-blocking advisory (FR-004).
+    let driverDiagnostics (outcome: DriverSkills.DriverOutcome) : Diagnostic list =
+        [ yield!
+              outcome.ManifestError
+              |> Option.map DiagnosticsModule.scaffoldDriverManifestMalformed
+              |> Option.toList
+          if not (List.isEmpty outcome.NamespaceCollisionIds) then
+              yield DiagnosticsModule.scaffoldDriverNamespaceCollision outcome.NamespaceCollisionIds
+          if not (List.isEmpty outcome.VerifyFailedIds) then
+              yield DiagnosticsModule.scaffoldDriverVerifyFailed outcome.VerifyFailedIds
+          if not (List.isEmpty outcome.PredicateUnevaluatedIds) then
+              yield DiagnosticsModule.scaffoldDriverPredicateUnevaluated outcome.PredicateUnevaluatedIds ]
+
     // ----- finalization (stage 3) -----
 
     let provenanceWriteEffect
@@ -456,6 +512,7 @@ module internal HandlersScaffold =
         (producedPaths: string list)
         (mirroredPaths: string list)
         (sddOwnedPaths: string list)
+        (driverPaths: (string * string) list)
         (skillDigests: Map<string, string>)
         (effective: Map<string, string>)
         =
@@ -494,6 +551,19 @@ module internal HandlersScaffold =
                     { Path = path
                       Owner = ArtifactOwner.Sdd
                       Sha256 = None })
+              // 108 / ADR-0054: the `.github`-authored driver skill copies materialized from the
+              // pinned package, owner `Driver`, each carrying the manifest `sha256` it was
+              // content-verified against. Empty on every non-success/terminal path.
+              DriverPaths =
+                driverPaths
+                |> List.map (fun (path, sha256) ->
+                    { Path = path
+                      Owner = ArtifactOwner.Driver
+                      Sha256 =
+                        (if String.IsNullOrWhiteSpace sha256 then
+                             None
+                         else
+                             Some sha256) })
               // `Map.toList` is already ascending by key — the FR-003 effective set
               // (declared defaults overlaid by `--param` overrides) forwarded verbatim.
               EffectiveParameters = Map.toList effective }
@@ -552,6 +622,8 @@ module internal HandlersScaffold =
               ProducedPaths = producedPaths
               // Terminal (non-success) paths perform no fan-out (FR-012).
               MirroredPaths = []
+              // Terminal paths materialize no driver either (108).
+              MaterializedDriverPaths = []
               EffectiveParameters = Map.toList effective
               RepoInitOutcome = "notApplicable"
               ToolManifestOutcome = "notApplicable"
@@ -573,6 +645,7 @@ module internal HandlersScaffold =
                   ProducedPathCount = 0
                   ProducedPaths = []
                   MirroredPaths = []
+                  MaterializedDriverPaths = []
                   // The dry-run preview records exactly what would be forwarded
                   // (FR-003 audit preview): the resolved effective set.
                   EffectiveParameters = Map.toList effective
@@ -632,7 +705,16 @@ module internal HandlersScaffold =
                             "Fix the provider; it wrote into SDD-owned trees."
                             (Some(providerInvocationOf processResult)),
                         [ DiagnosticsModule.scaffoldProviderWroteSddTree intrusions ],
-                        provenanceWriteEffect request descriptor ProviderFailed producedPaths [] [] Map.empty effective
+                        provenanceWriteEffect
+                            request
+                            descriptor
+                            ProviderFailed
+                            producedPaths
+                            []
+                            []
+                            []
+                            Map.empty
+                            effective
                     )
                 elif processResult.ExitCode <> 0 then
                     FinalizeTerminal(
@@ -644,7 +726,16 @@ module internal HandlersScaffold =
                             "Inspect the provider failure, then re-run scaffold."
                             (Some(providerInvocationOf processResult)),
                         [ DiagnosticsModule.scaffoldProviderFailed name processResult.ExitCode ],
-                        provenanceWriteEffect request descriptor ProviderFailed producedPaths [] [] Map.empty effective
+                        provenanceWriteEffect
+                            request
+                            descriptor
+                            ProviderFailed
+                            producedPaths
+                            []
+                            []
+                            []
+                            Map.empty
+                            effective
                     )
                 elif List.isEmpty producedPaths then
                     FinalizeSuccess(ProviderSucceededEmpty, [])
@@ -730,6 +821,11 @@ module internal HandlersScaffold =
             | ProviderSucceededEmpty -> "Provider produced no files; begin the lifecycle at `charter`."
             | _ -> "SDD skeleton ready; begin the lifecycle at `charter`."
 
+        // 108 / ADR-0054: re-derived (pure) from the same plan TICK A emitted the writes from, so
+        // the summary's materialized set and the fail-closed diagnostics agree with what was
+        // written and recorded in provenance.
+        let driverOutcome = plannedDriverOutcome producedPaths
+
         let summary: ScaffoldSummary =
             { ProviderName = Some descriptor.Name
               ProviderContractVersion = Some descriptor.ContractVersion
@@ -740,6 +836,7 @@ module internal HandlersScaffold =
               ProducedPathCount = List.length producedPaths
               ProducedPaths = producedPaths
               MirroredPaths = mirroredPaths
+              MaterializedDriverPaths = driverOutcome.ProvenancePaths |> List.map fst |> List.sort
               EffectiveParameters = Map.toList effective
               RepoInitOutcome = repoInitOutcome
               ToolManifestOutcome = toolManifestOutcome
@@ -753,6 +850,7 @@ module internal HandlersScaffold =
         @ repoInitDiagnostics
         @ toolManifestDiagnostics
         @ execDiagnostics
+        @ driverDiagnostics driverOutcome
 
     // The post-instantiation machine, re-derived from the interpreted-effect log each tick
     // (no new model field). Reached only on a success create outcome. 056 prepends a MIRROR
@@ -791,6 +889,7 @@ module internal HandlersScaffold =
                   ProducedPathCount = List.length producedPaths
                   ProducedPaths = producedPaths
                   MirroredPaths = []
+                  MaterializedDriverPaths = []
                   EffectiveParameters = Map.toList effective
                   RepoInitOutcome = "notApplicable"
                   ToolManifestOutcome = "notApplicable"
@@ -801,7 +900,7 @@ module internal HandlersScaffold =
                   ProviderInvocation = None }
 
             let provenanceEffects =
-                provenanceWriteEffect model.Request descriptor ProviderFailed producedPaths [] [] Map.empty effective
+                provenanceWriteEffect model.Request descriptor ProviderFailed producedPaths [] [] [] Map.empty effective
 
             { model with
                 PendingEffects = model.PendingEffects @ provenanceEffects
@@ -973,14 +1072,22 @@ module internal HandlersScaffold =
                         | None -> [])
                     |> Map.ofList
 
+                // 108 / ADR-0054: the driver materialization — no-clobber writes from the CLI's
+                // embedded package bytes (a pure plan; content-addressed verify already ran), with
+                // its content-verified paths recorded in provenance under `driverPaths`. Emitted in
+                // this same batch as the probe, so they are interpreted before finalize (TICK C).
+                let driverOutcome = plannedDriverOutcome producedPaths
+
                 let effects =
-                    provenanceWriteEffect
+                    driverOutcome.Writes
+                    @ provenanceWriteEffect
                         model.Request
                         descriptor
                         outcome
                         producedPaths
                         mirroredPaths
                         sddOwnedPaths
+                        driverOutcome.ProvenancePaths
                         skillDigests
                         effective
                     @ [ RunProcess("git", [ "rev-parse"; "--is-inside-work-tree" ], "") ]

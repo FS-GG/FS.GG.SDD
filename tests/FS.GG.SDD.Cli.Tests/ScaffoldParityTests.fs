@@ -33,6 +33,10 @@ module ScaffoldParityTests =
           MirroredPaths =
             [ ".claude/skills/fs-gg-elmish/SKILL.md"
               ".codex/skills/fs-gg-elmish/SKILL.md" ]
+          MaterializedDriverPaths =
+            [ ".agents/skills/workRoadmap/SKILL.md"
+              ".claude/skills/workRoadmap/SKILL.md"
+              ".codex/skills/workRoadmap/SKILL.md" ]
           EffectiveParameters = [ "productName", "Acme"; "variant", "alpha" ]
           RepoInitOutcome = "initialized"
           ToolManifestOutcome = "pinned"

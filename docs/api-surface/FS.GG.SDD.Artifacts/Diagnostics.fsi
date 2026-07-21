@@ -131,6 +131,11 @@ module Diagnostics =
     val scaffoldProviderUnavailable: name: string -> Diagnostic
     val scaffoldProviderWroteSddTree: paths: string list -> Diagnostic
     val scaffoldMirrorFailed: paths: string list -> Diagnostic
+    // 108 / ADR-0054: the scaffold-time driver materializer's fail-closed diagnostics.
+    val scaffoldDriverVerifyFailed: ids: string list -> Diagnostic
+    val scaffoldDriverPredicateUnevaluated: ids: string list -> Diagnostic
+    val scaffoldDriverNamespaceCollision: ids: string list -> Diagnostic
+    val scaffoldDriverManifestMalformed: message: string -> Diagnostic
     val scaffoldProvenanceMalformed: path: string -> Diagnostic
 
     // Feature 052 CLI-coherence advisories: both non-blocking (Info/Warning), so the

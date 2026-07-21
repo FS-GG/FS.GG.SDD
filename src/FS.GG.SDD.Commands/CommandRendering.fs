@@ -389,6 +389,15 @@ module CommandRendering =
             |> List.sort
             |> List.iter (fun path -> builder.AppendLine($"scaffoldMirroredPath: {path}") |> ignore)
 
+            // 108 / ADR-0054: the driver skill copies materialized from the pinned package, one
+            // line each (parity with the json array).
+            builder.AppendLine($"scaffoldMaterializedDriverPaths: {List.length scaffold.MaterializedDriverPaths}")
+            |> ignore
+
+            scaffold.MaterializedDriverPaths
+            |> List.sort
+            |> List.iter (fun path -> builder.AppendLine($"scaffoldMaterializedDriverPath: {path}") |> ignore)
+
             scaffold.EffectiveParameters
             |> List.sortBy fst
             |> List.iter (fun (key, value) -> builder.AppendLine($"scaffoldEffectiveParam: {key}={value}") |> ignore)

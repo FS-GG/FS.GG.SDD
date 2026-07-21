@@ -192,6 +192,7 @@ evidence:
                 Sha256 = None } ]
           MirroredPaths = []
           SddOwnedPaths = []
+          DriverPaths = []
           EffectiveParameters = [] }
 
     [<Fact>]

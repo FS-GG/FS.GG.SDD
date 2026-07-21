@@ -43,6 +43,8 @@
     <Compile Include="LifecycleArtifacts/Config.fs" />
     <Compile Include="ScaffoldProvenance.fsi" />
     <Compile Include="ScaffoldProvenance.fs" />
+    <Compile Include="DriverManifest.fsi" />
+    <Compile Include="DriverManifest.fs" />
     <Compile Include="SkillManifestJson.fsi" />
     <Compile Include="SkillManifestJson.fs" />
     <Compile Include="DependencySurface.fsi" />

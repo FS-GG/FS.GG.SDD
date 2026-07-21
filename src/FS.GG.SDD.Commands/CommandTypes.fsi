@@ -500,6 +500,11 @@ module CommandTypes =
             /// `.agents/skills/*` skills that SDD fanned out. Sorted; `[]` when the provider
             /// produced no skills. Projected after `producedPaths` in json/text/rich.
             MirroredPaths: string list
+            /// 108 / ADR-0054: the `.github`-authored **driver** skill files (e.g.
+            /// `workRoadmap`) materialized from the pinned `FS.GG.Drivers` package into every
+            /// agent skill root. Sorted; `[]` when no driver materialized (predicate false,
+            /// verify failed, or no driver pinned). Projected after `mirroredPaths`.
+            MaterializedDriverPaths: string list
             /// The effective `key → value` parameters forwarded to the provider —
             /// provider-declared `default`s overlaid by author `--param` overrides
             /// (author wins). Sorted ascending by key; `[]` when none forwarded
