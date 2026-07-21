@@ -66,6 +66,9 @@ module internal DriverSkills =
         { Writes: CommandEffect list
           ProvenancePaths: (string * string) list
           MaterializedIds: string list
+          // The declared `scope` of each materialized driver id (from its manifest row), so a
+          // consumer can declare it in the product `skill-manifest.json` faithfully (ADR-0063 tail).
+          MaterializedScopes: Map<string, string>
           VerifyFailedIds: string list
           PredicateUnevaluatedIds: string list
           NamespaceCollisionIds: string list
@@ -75,6 +78,7 @@ module internal DriverSkills =
         { Writes = []
           ProvenancePaths = []
           MaterializedIds = []
+          MaterializedScopes = Map.empty
           VerifyFailedIds = []
           PredicateUnevaluatedIds = []
           NamespaceCollisionIds = []
@@ -143,6 +147,11 @@ module internal DriverSkills =
                     |> List.map (fun (id, _, sha256) -> id, sha256)
                     |> Map.ofList
 
+                // The declared scope of each manifest row, so a materialized id can be declared in
+                // the product manifest with the scope its own producer assigned it (ADR-0063 tail).
+                let scopeById =
+                    manifest.Skills |> List.map (fun skill -> skill.Id, skill.Scope) |> Map.ofList
+
                 // Fan the verified bodies into every declared root through the shared mirror,
                 // exactly as the seeded skeleton does — deterministic (id-sorted, roots in order),
                 // byte-identical across roots by construction, all no-clobber.
@@ -164,6 +173,10 @@ module internal DriverSkills =
 
                         write.Path, sha256)
                   MaterializedIds = classified.Materializable |> List.map (fun (id, _, _) -> id)
+                  MaterializedScopes =
+                    classified.Materializable
+                    |> List.choose (fun (id, _, _) -> Map.tryFind id scopeById |> Option.map (fun scope -> id, scope))
+                    |> Map.ofList
                   VerifyFailedIds = classified.VerifyFailed
                   PredicateUnevaluatedIds = classified.PredicateUnevaluated
                   NamespaceCollisionIds = classified.Collisions

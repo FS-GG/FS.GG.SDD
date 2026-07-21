@@ -555,6 +555,59 @@ module internal HandlersScaffold =
           if not (List.isEmpty outcome.PredicateUnevaluatedIds) then
               yield DiagnosticsModule.scaffoldGameSkillPredicateUnevaluated outcome.PredicateUnevaluatedIds ]
 
+    // ----- product skill-manifest union (ADR-0063 tail / skill-union coherence) -----
+
+    // The product's on-disk producer manifest, at the neutral `.agents` source root. A compliant
+    // provider SHIPS this file declaring its own product skills; the mirror fans it to the other
+    // roots. It declares NEITHER the `.github`-authored driver skills NOR the owner-sourced skills
+    // SDD materializes — the owner-sourced skills were re-homed OUT of the provider manifest
+    // (ADR-0063) and the drivers were never in it — so the consumer skill-union gate flags each as
+    // [dangling]. SDD, the sole materialize authority, is the only producer that knows the full set,
+    // so it folds them in here (mirroring the `scaffold-provenance.json` driver/owner-sourced treatment).
+    let private productSkillManifestSourcePath =
+        Fsgg.SkillMirror.providerSourceRoot + "/skills/skill-manifest.json"
+
+    let private productSkillManifestPaths =
+        Fsgg.Schemas.agentSkillRoots
+        |> List.map (fun root -> root + "/skills/skill-manifest.json")
+
+    // The manifest entries to fold in for one materialize outcome: one row per KEPT materialized id,
+    // carrying the content `sha256` recorded in provenance, the row's declared scope, and the `.agents`
+    // resolvable path. `materializes-when` is the canonical `always` — the manifest is per-product and
+    // declares only what THIS product actually materialized (so the skill is present, and `always`
+    // stays inside the shell gate's grammar; a driver `has …` predicate would not be evaluable there).
+    let private manifestEntriesOf
+        (provenancePaths: (string * string) list)
+        (materializedScopes: Map<string, string>)
+        (fallbackScope: string)
+        =
+        let shaById =
+            provenancePaths
+            |> List.choose (fun (path, sha256) ->
+                Fsgg.SkillMirror.skillIdOfPath path |> Option.map (fun id -> id, sha256))
+            |> Map.ofList
+
+        shaById
+        |> Map.toList
+        |> List.map (fun (id, sha256) ->
+            { ProductSkillManifest.Id = id
+              ProductSkillManifest.Scope = materializedScopes |> Map.tryFind id |> Option.defaultValue fallbackScope
+              ProductSkillManifest.Sha256 = sha256
+              ProductSkillManifest.ResolvablePath =
+                Some(Fsgg.SkillMirror.skillPath Fsgg.SkillMirror.providerSourceRoot id)
+              ProductSkillManifest.MaterializesWhen = "always"
+              ProductSkillManifest.SuppliedBy = None })
+
+    // All manifest additions for a scaffold: the drivers (scope from their manifest, `process`
+    // fallback) unioned with the owner-sourced skills (scope `product` fallback), id-deduped.
+    let productManifestAdditions
+        (driverOutcome: DriverSkills.DriverOutcome)
+        (gameSkillOutcome: GameSkills.GameSkillOutcome)
+        =
+        manifestEntriesOf driverOutcome.ProvenancePaths driverOutcome.MaterializedScopes "process"
+        @ manifestEntriesOf gameSkillOutcome.ProvenancePaths gameSkillOutcome.MaterializedScopes "product"
+        |> List.distinctBy (fun (entry: ProductSkillManifest.ProductManifestEntry) -> entry.Id)
+
     // ----- finalization (stage 3) -----
 
     let provenanceWriteEffect
@@ -1172,9 +1225,38 @@ module internal HandlersScaffold =
                 // this same batch so they are interpreted before finalize (TICK C).
                 let gameSkillOutcome = plannedGameSkillOutcome producedPaths effective
 
+                // ADR-0063 tail / skill-union coherence: fold the driver + owner-sourced skills we
+                // just materialized into the provider-shipped product `skill-manifest.json`, so the
+                // consumer skill-union gate no longer flags them [dangling]. Only when the provider
+                // actually shipped a manifest to amend (its bytes are already in a snapshot, read by
+                // the MIRROR tick that fanned it to the other roots); a tree with no product manifest
+                // gets none synthesized. Written over the provider's copy in EVERY root (GeneratedView
+                // — the tool owns the union), and the 3 copies' provenance digests are re-pointed to the
+                // amended bytes so `scaffold-provenance.json` stays coherent with disk.
+                let manifestAdditions = productManifestAdditions driverOutcome gameSkillOutcome
+
+                let amendedManifest =
+                    if List.isEmpty manifestAdditions then
+                        None
+                    else
+                        snapshot productSkillManifestSourcePath model
+                        |> Option.bind (fun snap -> ProductSkillManifest.amend snap.Text manifestAdditions)
+
+                let manifestWrites, manifestDigests =
+                    match amendedManifest with
+                    | None -> [], skillDigests
+                    | Some text ->
+                        let digest = Fsgg.SkillMirror.sha256 text
+
+                        productSkillManifestPaths
+                        |> List.map (fun path -> WriteFile(path, text, GeneratedView)),
+                        productSkillManifestPaths
+                        |> List.fold (fun acc path -> Map.add path digest acc) skillDigests
+
                 let effects =
                     driverOutcome.Writes
                     @ gameSkillOutcome.Writes
+                    @ manifestWrites
                     @ provenanceWriteEffect
                         model.Request
                         descriptor
@@ -1184,7 +1266,7 @@ module internal HandlersScaffold =
                         sddOwnedPaths
                         driverOutcome.ProvenancePaths
                         gameSkillOutcome.ProvenancePaths
-                        skillDigests
+                        manifestDigests
                         effective
                     @ [ RunProcess("git", [ "rev-parse"; "--is-inside-work-tree" ], "") ]
                     @ scriptEffects

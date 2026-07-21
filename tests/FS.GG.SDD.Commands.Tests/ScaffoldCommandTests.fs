@@ -373,8 +373,8 @@ module ScaffoldCommandTests =
         Assert.Contains("\"generator\":", provenance)
         Assert.Contains("\"version\":", provenance)
         // …alongside the provider-declared required minimum, recorded verbatim. min-behind declares
-        // one minor above the installed version, so it tracks the bump (installed 0.21.0 ⇒ 0.22.0).
-        Assert.Contains("\"requiredMinimumCliVersion\": \"0.22.0\"", provenance)
+        // one minor above the installed version, so it tracks the bump (installed 0.22.0 ⇒ 0.23.0).
+        Assert.Contains("\"requiredMinimumCliVersion\": \"0.23.0\"", provenance)
 
     // Feature 052 US1 scenario 2: no provider minimum ⇒ the field is recorded as null
     // (absent, not fabricated); the producing CLI version is still recorded.
@@ -1065,6 +1065,76 @@ module ScaffoldCommandTests =
         Assert.Contains(".agents/skills/workBoard/SKILL.md", summary.MaterializedDriverPaths)
         Assert.Contains(".claude/skills/workBoard/SKILL.md", summary.MaterializedDriverPaths)
         Assert.Contains(".codex/skills/workBoard/SKILL.md", summary.MaterializedDriverPaths)
+
+    // ADR-0063 tail / skill-union coherence: the provider ships a static product skill-manifest.json
+    // declaring only ITS skill (fs-gg-elmish). SDD materializes the drivers (workBoard/workRoadmap),
+    // which the provider manifest does not know about. SDD folds them in so the on-disk manifest the
+    // consumer skill-union gate reads declares EVERY materialized skill (no [dangling]), each with the
+    // content-addressed sha256 it was verified against, coherently across all three roots. The
+    // owner-sourced (profile-gated) class travels the identical `productManifestAdditions` path — a
+    // `product`-scoped addition is covered by ProductSkillManifestTests. This is the end-to-end
+    // regression guard for the bug that blocked the FS.GG.Templates composition gate.
+    [<Fact; Trait("tier", "slow")>]
+    let ``scaffold folds the materialized driver skills into the product skill-manifest`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "skills-with-manifest.providers.yml"
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+
+        Assert.Equal(0, exitCodeForReport report)
+        let summary = scaffoldSummary report
+
+        // The on-disk product manifest the consumer skill-union gate reads (`--manifest`).
+        let manifestText =
+            TestSupport.readRelative root ".agents/skills/skill-manifest.json"
+
+        let _, entries =
+            match ProductSkillManifest.tryParse manifestText with
+            | Ok result -> result
+            | Error message -> failwith $"Expected the amended product manifest to parse: {message}"
+
+        let declaredIds =
+            entries
+            |> List.map (fun (e: ProductSkillManifest.ProductManifestEntry) -> e.Id)
+            |> Set.ofList
+
+        // The provider's own declaration is preserved (existing declaration wins).
+        Assert.Contains("fs-gg-elmish", declaredIds)
+
+        // The always-on drivers, undeclared by the provider, are now folded in.
+        Assert.Contains("workRoadmap", declaredIds)
+        Assert.Contains("workBoard", declaredIds)
+
+        // EVERY materialized driver is now declared — the [dangling] class is closed for exactly the
+        // set the scaffold laid down.
+        let materializedIds =
+            summary.MaterializedDriverPaths
+            |> List.choose Fsgg.SkillMirror.skillIdOfPath
+            |> List.distinct
+
+        Assert.NotEmpty(materializedIds)
+
+        for id in materializedIds do
+            Assert.Contains(id, declaredIds)
+
+            // The declared digest is the canonical body digest on disk — the value the gate's
+            // check-3 cross-verifies (declared ∧ present ⇒ digest must match).
+            let entry =
+                entries
+                |> List.find (fun (e: ProductSkillManifest.ProductManifestEntry) -> e.Id = id)
+
+            let bodyDigest =
+                Fsgg.SkillMirror.sha256 (
+                    System.Text.Encoding.UTF8.GetString(bytesAt root $".agents/skills/{id}/SKILL.md")
+                )
+
+            Assert.Equal(bodyDigest, entry.Sha256)
+
+        // The unioned manifest is byte-identical across all three roots (a coherent union everywhere,
+        // not just under `.agents`).
+        Assert.Equal(manifestText, TestSupport.readRelative root ".claude/skills/skill-manifest.json")
+        Assert.Equal(manifestText, TestSupport.readRelative root ".codex/skills/skill-manifest.json")
 
     // 056 T018 (US1 acceptance #3): a provider that produces NO skills leaves all three roots
     // with the seeded fs-gg-sdd-* set byte-identical and mirroredPaths empty.

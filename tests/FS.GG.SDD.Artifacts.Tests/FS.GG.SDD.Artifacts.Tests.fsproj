@@ -9,6 +9,7 @@
     <Compile Include="IdentifierTests.fs" />
     <Compile Include="DriverManifestTests.fs" />
     <Compile Include="GameSkillManifestTests.fs" />
+    <Compile Include="ProductSkillManifestTests.fs" />
     <Compile Include="PathContainmentTests.fs" />
     <Compile Include="ArtifactCodecTests.fs" />
     <Compile Include="FsharpIdentifierTests.fs" />

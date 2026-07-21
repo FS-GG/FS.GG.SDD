@@ -49,6 +49,8 @@
     <Compile Include="GameSkillManifest.fs" />
     <Compile Include="SkillManifestJson.fsi" />
     <Compile Include="SkillManifestJson.fs" />
+    <Compile Include="ProductSkillManifest.fsi" />
+    <Compile Include="ProductSkillManifest.fs" />
     <Compile Include="DependencySurface.fsi" />
     <Compile Include="DependencySurface.fs" />
     <Compile Include="LifecycleArtifacts/WorkItemMetadata.fsi" />

@@ -1,0 +1,15 @@
+# ADR-0063 tail / skill-union coherence: a compliant provider that ships BOTH a co-tenant UI
+# skill AND the product `skill-manifest.json` under the neutral .agents/skills/ root (as the real
+# reference provider template does). SDD fans it out and — being the sole materialize authority —
+# folds the driver + owner-sourced skills it lays down into that manifest so the consumer
+# skill-union gate sees no [dangling] skill. Declares the `lifecycle` symbol so `dotnet new` accepts
+# the forwarded param.
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-skills-with-manifest
+    source: __FIXTURE__/skills-with-manifest
+    parameters:
+      - key: lifecycle
+        required: false

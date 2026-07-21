@@ -186,6 +186,9 @@ FS.GG.SDD.Artifacts.PathContainment.escapesRoot
 FS.GG.SDD.Artifacts.Plan.parsePlanFacts
 FS.GG.SDD.Artifacts.Plan.planStandardSections
 FS.GG.SDD.Artifacts.ProductPredicate.evaluate
+FS.GG.SDD.Artifacts.ProductSkillManifest.amend
+FS.GG.SDD.Artifacts.ProductSkillManifest.serialize
+FS.GG.SDD.Artifacts.ProductSkillManifest.tryParse
 FS.GG.SDD.Artifacts.RegistryDocument.load
 FS.GG.SDD.Artifacts.ReleaseContract.bumpRule
 FS.GG.SDD.Artifacts.ReleaseContract.changeClassValue
