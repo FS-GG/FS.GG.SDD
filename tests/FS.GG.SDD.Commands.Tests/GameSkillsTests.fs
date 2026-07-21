@@ -46,11 +46,32 @@ module GameSkillsTests =
         Assert.Equal<string list>(skillPathFor "fs-gg-playtest", playtestPaths)
 
     [<Fact>]
-    let ``plan materializes nothing off the game profile (predicate false)`` () =
-        // profile=app is outside `profile in [game, sample-pack]`, and the mirrored:true rows the
-        // manifest also lists carry no bytes here — so an app scaffold materializes no owner skill.
+    let ``plan materializes the four flipped game skills on the game profile (FS.GG.Game.Skills 0.2.0)`` () =
+        // FS.GG.Game#454 / ADR-0063 amendment (.github#1318): game-core, audio, persistence and
+        // model-swap flipped `mirrored:true -> mirrored:false` and are now owner-sourced through the
+        // pinned FS.GG.Game.Skills 0.2.0 package. A game-profile scaffold materializes all four,
+        // content-addressed (their shipped bodies are covered by the sha256 drift guard below).
+        let outcome = GameSkills.plan gameProfile
+
+        for id in [ "fs-gg-game-core"; "fs-gg-audio"; "fs-gg-persistence"; "fs-gg-model-swap" ] do
+            Assert.Contains(id, outcome.MaterializedIds)
+
+        Assert.Empty outcome.VerifyFailedIds
+        Assert.Empty outcome.PredicateUnevaluatedIds
+        Assert.Empty outcome.NamespaceCollisionIds
+
+    [<Fact>]
+    let ``plan on the app profile materializes only the app-gated fs-gg-audio`` () =
+        // Owner-authored (0.2.0): fs-gg-audio declares `profile in [app, sample-pack, game]`, so an
+        // app scaffold gets it; every other delivered row is gated to `profile in [game, sample-pack]`
+        // and is filtered out. The predicate gate is what keeps the game-only rows off an app scaffold
+        // now that the four flipped skills are delivered (mirrored:false) rather than mirror-only.
         let outcome = GameSkills.plan (Map.ofList [ "profile", "app" ])
-        Assert.Empty outcome.MaterializedIds
+        Assert.Contains("fs-gg-audio", outcome.MaterializedIds)
+        Assert.DoesNotContain("fs-gg-game-core", outcome.MaterializedIds)
+        Assert.DoesNotContain("fs-gg-persistence", outcome.MaterializedIds)
+        Assert.DoesNotContain("fs-gg-model-swap", outcome.MaterializedIds)
+        Assert.DoesNotContain("fs-gg-playtest", outcome.MaterializedIds)
         Assert.Empty outcome.VerifyFailedIds
 
     [<Fact>]
@@ -208,9 +229,12 @@ module GameSkillsTests =
         Assert.DoesNotContain("fs-gg-playtest", outcome.MaterializedIds)
 
     [<Fact>]
-    let ``plannedGameSkillOutcome materializes nothing off the game profile`` () =
+    let ``plannedGameSkillOutcome on the app profile materializes only the app-gated fs-gg-audio`` () =
+        // fs-gg-audio's owner-authored predicate includes `app` (0.2.0), so it materializes on an app
+        // scaffold; the game-gated rows do not. See the `plan on the app profile` fact above.
         let outcome =
             HandlersScaffold.plannedGameSkillOutcome [] (Map.ofList [ "profile", "app" ])
 
-        Assert.Empty outcome.MaterializedIds
-        Assert.Empty outcome.Writes
+        Assert.Contains("fs-gg-audio", outcome.MaterializedIds)
+        Assert.DoesNotContain("fs-gg-game-core", outcome.MaterializedIds)
+        Assert.NotEmpty outcome.Writes
