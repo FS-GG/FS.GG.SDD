@@ -139,6 +139,14 @@ produces nothing and reports `Blocked`. Stage outcomes are
 `Succeeded · SucceededWithWarnings · Blocked · NoChange`; exit code is `0` for
 the first three of those, `1` when blocked.
 
+When you edit an upstream artifact after a downstream stage has run, that stage's
+recorded source digest goes **stale**, and you must re-run the affected stages to
+reconcile it. You no longer have to guess the order: a stale-digest `nextAction`
+(`plan.acceptUpstream`, `tasks.correctStaleTasks`) now **names the ordered re-run
+set** in its `reason` — the stale stage plus each downstream stage that has already
+run, e.g. `re-run the recorded downstream stages in order: tasks, then evidence`.
+Stages you never ran carry no digest to stale and are not named.
+
 ## Output formats (every command)
 
 Every command projects the same `CommandReport` three ways, precedence

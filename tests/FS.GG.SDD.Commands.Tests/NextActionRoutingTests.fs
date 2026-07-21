@@ -85,3 +85,89 @@ module NextActionRoutingTests =
 
         Assert.Equal("correctBlockingDiagnostics", report.NextAction.Value.ActionId)
         Assert.Equal(2, exitCodeForReport report)
+
+    // FS-GG/FS.GG.SDD#642: an upstream artifact edit stales a downstream stage's recorded source
+    // digest, and the reconcile ORDER — which stages to re-run, and in what sequence — was previously
+    // learned by trial rather than surfaced. The stale-digest NextActions now name the ordered re-run
+    // set: the stale stage plus each *materialized* downstream stage in canonical order. "Materialized"
+    // is sensed from the lifecycle rail (a `work/`/`readiness/` directory enumeration), so a downstream
+    // stage that was never run — carrying no digest to stale — is omitted.
+
+    /// Build a model whose lifecycle sensing sees exactly `presentPaths` as materialized (the paths a
+    /// `work`/`readiness` enumeration would list), under work id `workId`.
+    let private modelWithPresence
+        (command: SddCommand)
+        (workId: string)
+        (presentPaths: string list)
+        (diagnostics: Diagnostic list)
+        =
+        let enumResult (dir: string) : CommandEffectResult =
+            let listed =
+                presentPaths
+                |> List.filter (fun path -> path.StartsWith(dir + "/"))
+                |> String.concat "\n"
+
+            { Effect = EnumerateDirectory dir
+              Succeeded = true
+              Snapshot = Some { Path = dir; Text = listed }
+              Process = None
+              Confirmed = None
+              Diagnostic = None }
+
+        let baseModel = modelWith command diagnostics
+
+        { baseModel with
+            Request = { baseModel.Request with WorkId = Some workId }
+            InterpretedEffects = [ enumResult "work"; enumResult "readiness" ] }
+
+    [<Fact>]
+    let ``downstreamLifecycleStages walks the canonical order and is empty past ship`` () =
+        Assert.Equal<SddCommand list>([ Analyze; Evidence; Verify; Ship ], downstreamLifecycleStages Tasks)
+        Assert.Equal<SddCommand list>([], downstreamLifecycleStages Ship)
+        // A cross-cutting command has no lifecycle successor, so no re-run set.
+        Assert.Equal<SddCommand list>([], downstreamLifecycleStages Refresh)
+
+    [<Fact>]
+    let ``staleTask names the materialized downstream re-run set in order`` () =
+        // plan.md was edited after tasks + evidence had run; analyze was never run. tasks is stale,
+        // and evidence is the one materialized downstream stage — so "re-run tasks, then evidence".
+        let report =
+            modelWithPresence
+                Tasks
+                "demo"
+                [ "work/demo/plan.md"; "work/demo/tasks.yml"; "work/demo/evidence.yml" ]
+                [ staleTask "work/demo/tasks.yml" [ "T-001" ] ]
+            |> buildReport
+
+        let action = report.NextAction.Value
+        Assert.Equal("tasks.correctStaleTasks", action.ActionId)
+        Assert.Contains("re-run the recorded downstream stages in order: tasks, then evidence", action.Reason)
+        // analyze was not materialized, so it is not named.
+        Assert.DoesNotContain("analyze", action.Reason)
+
+    [<Fact>]
+    let ``staleTask with no materialized downstream stage leaves the base reason unchanged`` () =
+        // Only tasks.yml exists; nothing downstream has been run, so there is nothing to reconcile.
+        let report =
+            modelWithPresence Tasks "demo" [ "work/demo/tasks.yml" ] [ staleTask "work/demo/tasks.yml" [ "T-001" ] ]
+            |> buildReport
+
+        let action = report.NextAction.Value
+        Assert.Equal("tasks.correctStaleTasks", action.ActionId)
+        Assert.DoesNotContain("re-run the recorded downstream stages", action.Reason)
+
+    [<Fact>]
+    let ``stalePlanSnapshot names the ordered downstream re-run set after the plan re-baseline`` () =
+        // spec/clarify/checklist changed after plan/tasks/evidence had run: re-baselining the plan
+        // re-stamps plan.md's digest, staling tasks then evidence. analyze was never run.
+        let report =
+            modelWithPresence
+                Plan
+                "demo"
+                [ "work/demo/plan.md"; "work/demo/tasks.yml"; "work/demo/evidence.yml" ]
+                [ stalePlanSnapshot "work/demo/plan.md" [ "work/demo/spec.md" ] ]
+            |> buildReport
+
+        let action = report.NextAction.Value
+        Assert.Equal("plan.acceptUpstream", action.ActionId)
+        Assert.Contains("re-run the recorded downstream stages in order: plan, then tasks, then evidence", action.Reason)

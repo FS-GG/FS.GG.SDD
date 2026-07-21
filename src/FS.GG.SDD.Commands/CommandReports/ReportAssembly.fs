@@ -120,6 +120,16 @@ module internal ReportAssembly =
 
         let reportOutcome = outcome diagnostics changes
 
+        // Feature 084: sensed from the interpreted stage-artifact reads; pure fold, no I/O here.
+        // Hoisted above the record so #642's stale-digest NextAction can name the ordered re-run set
+        // from the same lifecycle sensing the status footer carries — one presence read, not two.
+        let lifecycleStatus =
+            LifecycleSensing.deriveFromEffects
+                model.Request.Command
+                model.Request.WorkId
+                reportOutcome
+                model.InterpretedEffects
+
         { SchemaVersion = 1
           // Additive optional command blocks/fields bump the semantic reportVersion one minor while
           // `schemaVersion` stays Stable (1): 1.1.0 added `lifecycleStatus` (feature 084); 1.2.0
@@ -171,6 +181,7 @@ module internal ReportAssembly =
             nextAction
                 diagnostics
                 reportOutcome
+                lifecycleStatus
                 model.Request
                 model.Checklist
                 model.Plan
@@ -184,13 +195,7 @@ module internal ReportAssembly =
                 model.Doctor
                 model.Upgrade
           Help = None
-          // Feature 084: sensed from the interpreted stage-artifact reads; pure fold, no I/O here.
-          LifecycleStatus =
-            LifecycleSensing.deriveFromEffects
-                model.Request.Command
-                model.Request.WorkId
-                reportOutcome
-                model.InterpretedEffects }
+          LifecycleStatus = lifecycleStatus }
 
     /// §3.5: build the informational help report. Help carries no diagnostics and no changed
     /// artifacts → `NoChange` → exit 0, routed to stdout. `Help` is populated; `NextAction`
