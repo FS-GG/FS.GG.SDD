@@ -100,10 +100,14 @@ each row's `materializes-when` predicate and materializes only rows whose predic
 - **FR-009**: `scaffold` MUST report driver materialization in all three projections (json / text /
   rich) additively — the materialized skill ids and roots on success, the defect on a verify/predicate
   failure — and an incomplete driver materialization MUST NOT be reported as complete.
-- **FR-010** *(carved to a follow-up — see Out of scope)*: `fsgg-sdd upgrade`'s no-clobber re-seed backfills
-  a **missing** driver skill into an existing scaffold (missing-only, consumer-writes-only), and `doctor`
-  reports a missing expected driver as read-only drift. This is the existing-scaffold **transition** path;
-  it is separable from — and sequenced after — new-scaffold materialization, which this PR delivers in full.
+- **FR-010** *(delivered by FS.GG.SDD#624 / PR #629; carried here by #626)*: `fsgg-sdd upgrade`'s
+  no-clobber re-seed backfills a **missing** driver skill into an existing scaffold (missing-only,
+  consumer-writes-only), and `doctor` reports a missing expected driver as read-only drift. This is the
+  existing-scaffold **transition** path; it was separable from — and sequenced after — new-scaffold
+  materialization. ADR-0063 folded it into the general **owner-sourced backfill** (`Drift.ownerSourcedBackfill`,
+  driver + product classes): a missing driver is re-derived from the same embedded, content-addressed
+  `DriverSkills.plan` `scaffold` runs and folded into the no-clobber `artifactReSeed` step, so the driver
+  expected-set is covered without reading `driverPaths` back from provenance.
 
 ### Acceptance criteria
 
@@ -124,8 +128,12 @@ each row's `materializes-when` predicate and materializes only rows whose predic
   (no-clobber); a manifest whose row id is `fs-gg-sdd-plan` is rejected.
 - **AC-007** (FR-008): The embedded-driver drift guard is green against the pinned package and goes red
   if the embedded manifest or a body is altered out of band.
-- **AC-008** (FR-010, *carved to a follow-up*): `upgrade` on a scaffold missing `workRoadmap` re-seeds it
-  into the roots no-clobber; `doctor` reports the same missing driver as drift without writing.
+- **AC-008** (FR-010, *delivered by #624 / PR #629; verified by #626*): `upgrade` on a scaffold missing
+  `workRoadmap` re-seeds it into the roots no-clobber; `doctor` reports the same missing driver as drift
+  without writing. Covered by `RemediationCommandTests` — the driver (`workRoadmap`) cases:
+  `--yes backfills a missing owner-sourced skill into all three roots, coherent afterward`,
+  `owner-sourced backfill preserves a present author-edited copy and fills only the missing roots`, and
+  `doctor reports a missing owner-sourced skill as drift and previews the re-seed, read-only`.
 
 ### User stories
 
@@ -151,11 +159,12 @@ each row's `materializes-when` predicate and materializes only rows whose predic
 
 ## Out of scope
 
-- **Existing-scaffold backfill (FR-010 / AC-008), carved to a follow-up item.** `doctor`-reports-missing
-  and `upgrade`-`artifactReSeed`-backfills for the driver are the *transition* path for workspaces
-  scaffolded before this feature; they extend the `Drift` expected-set and the remediation seam and are
-  independently reviewable. New scaffolds materialize the driver in full in this PR, so the follow-up is a
-  strict addition, not a fix. Sequenced after this PR lands.
+- ~~**Existing-scaffold backfill (FR-010 / AC-008), carved to a follow-up item.**~~ **Delivered** — this
+  feature-PR carved the `doctor`-reports-missing and `upgrade`-`artifactReSeed`-backfills for the driver to
+  a follow-up (#626); ADR-0063 / FS.GG.SDD#624 (PR #629) then delivered it as the general **owner-sourced
+  backfill** covering the driver and product classes alike, and #626 verified the driver case is met and
+  closed it. See FR-010 / AC-008 above and `docs/reference/scaffold-driver-materialization.md`
+  (§"Backfilling an existing scaffold").
 - The `.github`-side `skills.yml` / `driver-skill-manifest.json` predicate widening (`.github#1247`).
 - Any change to the `spec-kit` → `sdd` lane default (feature 107).
 - Authoring or editing driver skill content (owned by `.github`).
