@@ -42,7 +42,8 @@ module RemediationSupport =
 
     /// The seeded skeleton PLUS the owner-sourced copies — the present-set a pure `Drift.compute`
     /// test passes to assert a fully coherent scaffold now that owner-sourced skills are expected.
-    let coherentPresent = Drift.expectedArtifactPaths @ (ownerSourcedCopies [] |> List.map fst)
+    let coherentPresent =
+        Drift.expectedArtifactPaths @ (ownerSourcedCopies [] |> List.map fst)
 
     let private providersYml (minimum: string option) =
         let minBlock =

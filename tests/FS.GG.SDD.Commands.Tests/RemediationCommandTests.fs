@@ -86,7 +86,8 @@ module DriftTests =
     [<Fact>]
     let ``a missing owner-sourced skill is named for backfill and makes re-seed actionable`` () =
         // Seeded skeleton fully present, CLI at/above minimum — but no owner-sourced copies.
-        let report = drift (Some farBehindMinimum) installedVersion Drift.expectedArtifactPaths
+        let report =
+            drift (Some farBehindMinimum) installedVersion Drift.expectedArtifactPaths
 
         Assert.NotEmpty report.OwnerSkillBackfillPaths
         Assert.Contains(report.OwnerSkillBackfillPaths, fun (p: string) -> p.Contains "workRoadmap")

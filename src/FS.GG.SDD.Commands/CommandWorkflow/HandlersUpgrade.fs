@@ -60,7 +60,8 @@ module internal HandlersUpgrade =
         match step.StepId with
         | ReconciliationStepId.CliSelfUpdate -> [ selfUpdateEffect ]
         | ReconciliationStepId.ArtifactReSeed ->
-            reSeedEffects request step.TargetPaths @ ownerBackfillEffects model step.TargetPaths
+            reSeedEffects request step.TargetPaths
+            @ ownerBackfillEffects model step.TargetPaths
         // templateRePin is `noTarget` in this feature (R6) and never actionable.
         | ReconciliationStepId.TemplateRePin -> []
 
