@@ -333,6 +333,10 @@ module CommandSerialization =
             // 108 / ADR-0054: the `.github`-authored driver skill copies materialized from the
             // pinned package (owner `driver` in provenance), sorted; `[]` when none materialized.
             writeStringList writer Sorted "materializedDriverPaths" summary.MaterializedDriverPaths
+            // ADR-0063 / FS.GG.SDD#623: the owner-authored product skill copies materialized
+            // from the pinned the owner-skills package (owner `gameSkill` in provenance), sorted;
+            // `[]` when none materialized.
+            writeStringList writer Sorted "materializedGameSkillPaths" summary.MaterializedGameSkillPaths
             writer.WriteStartArray("effectiveParameters")
 
             summary.EffectiveParameters

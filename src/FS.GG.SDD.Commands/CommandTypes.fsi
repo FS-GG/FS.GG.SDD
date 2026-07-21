@@ -505,6 +505,12 @@ module CommandTypes =
             /// agent skill root. Sorted; `[]` when no driver materialized (predicate false,
             /// verify failed, or no driver pinned). Projected after `mirroredPaths`.
             MaterializedDriverPaths: string list
+            /// ADR-0063 / FS.GG.SDD#623: the owner-authored **product** skill files (e.g.
+            /// `fs-gg-playtest`, `mirrored: false`) materialized from the pinned
+            /// the owner-skills package into every agent skill root. Sorted; `[]` when none
+            /// materialized (off-profile, verify failed, or no package pinned). Projected after
+            /// `materializedDriverPaths`.
+            MaterializedGameSkillPaths: string list
             /// The effective `key → value` parameters forwarded to the provider —
             /// provider-declared `default`s overlaid by author `--param` overrides
             /// (author wins). Sorted ascending by key; `[]` when none forwarded

@@ -472,6 +472,70 @@ module Diagnostics =
             [ message ]
         |> markToolDefect
 
+    // ADR-0063 / FS.GG.SDD#623 (FR-003): a delivered owner-skill body failed its content-addressed
+    // check (its `sha256` disagreed with the manifest, or its body was absent). Fail closed — the
+    // skill is not written. A corrupt embedded set is a CLI build/packaging defect (the package's
+    // stage-time drift guard is the release gate), so this is the tool-defect class.
+    let scaffoldGameSkillVerifyFailed (ids: string list) =
+        let ordered = ids |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.gameSkillVerifyFailed"
+            DiagnosticError
+            None
+            None
+            $"Owner-sourced skill(s) failed the content-addressed verify and were not materialized: {rendered}."
+            "The embedded owner-skill bytes do not match their manifest sha256 (a CLI packaging defect). Rebuild/republish the CLI from a coherent the owner-skills package pin; the skill was not written and was not recorded as materialized."
+            ordered
+        |> markToolDefect
+
+    // ADR-0063 / FS.GG.SDD#623 (FR-004): a owner-skill row's `materializes-when` predicate is a form
+    // the materializer does not evaluate, so the row is skipped (never materialized by default).
+    // Non-blocking advisory — the scaffold otherwise succeeds.
+    let scaffoldGameSkillPredicateUnevaluated (ids: string list) =
+        let ordered = ids |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.gameSkillPredicateUnevaluated"
+            DiagnosticWarning
+            None
+            None
+            $"Owner-sourced skill(s) skipped — their `materializes-when` predicate was not evaluable by this CLI: {rendered}."
+            "Upgrade `fsgg-sdd` to a version that understands the predicate, or adjust the delivered manifest; the row was skipped (fail-closed), not materialized."
+            ordered
+
+    // ADR-0063 / FS.GG.SDD#623: a owner-skill row's id collides with the reserved seeded
+    // `fs-gg-sdd-*` namespace. Rejected so a delivered skill can never shadow the SDD-owned
+    // skeleton. Tool-defect class.
+    let scaffoldGameSkillNamespaceCollision (ids: string list) =
+        let ordered = ids |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.gameSkillNamespaceCollision"
+            DiagnosticError
+            None
+            None
+            $"Owner-sourced skill(s) rejected — their id collides with the reserved seeded `fs-gg-sdd-*` namespace: {rendered}."
+            "An owner-sourced skill may not shadow an SDD-owned seeded skill. Fix the delivered the owner-skills package manifest to use a non-reserved id; the row was not materialized."
+            ordered
+        |> markToolDefect
+
+    // ADR-0063 / FS.GG.SDD#623: the embedded owner-skill manifest could not be parsed — a CLI
+    // packaging defect.
+    let scaffoldGameSkillManifestMalformed (message: string) =
+        create
+            "scaffold.gameSkillManifestMalformed"
+            DiagnosticError
+            None
+            None
+            $"The embedded owner-skill manifest is malformed: {message}."
+            "Rebuild/republish the CLI from a coherent the owner-skills package pin; no owner-sourced skill was materialized."
+            [ message ]
+        |> markToolDefect
+
     let scaffoldProvenanceMalformed path =
         create
             "scaffold.provenanceMalformed"

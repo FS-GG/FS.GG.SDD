@@ -55,6 +55,14 @@ module ScaffoldProvenance =
             /// by path, serialized immediately after `sddOwnedPaths`; `tryParse` defaults
             /// absent/null to `[]` (schema stays v1, additive). Empty when none materialized.
             DriverPaths: ScaffoldProducedPath list
+            /// ADR-0063 / FS.GG.SDD#623: the owner-authored **product** skills (e.g.
+            /// `fs-gg-playtest`, `mirrored: false`) materialized from the pinned
+            /// the owner-skills package into the product's skill roots (owner `GameSkill`),
+            /// each with its content `sha256`. Externally owned like `DriverPaths` — `refresh`
+            /// excludes them (never regenerated). Sorted ascending by path, serialized immediately
+            /// after `driverPaths`; `tryParse` defaults absent/null to `[]` (schema stays v1,
+            /// additive). Empty when none materialized.
+            GameSkillPaths: ScaffoldProducedPath list
             /// The effective `key → value` parameters forwarded to the provider —
             /// provider-declared `default`s overlaid by author `--param` overrides
             /// (author wins). Sorted ascending by key; `[]` when none. Records the

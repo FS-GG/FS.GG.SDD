@@ -145,6 +145,7 @@ providers:
           MirroredPaths = []
           SddOwnedPaths = []
           DriverPaths = []
+          GameSkillPaths = []
           EffectiveParameters = [ "variant", "alpha"; "productName", "Demo" ] }
 
     [<Fact>]

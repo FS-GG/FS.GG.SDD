@@ -240,6 +240,7 @@ sdd:
           MirroredPaths = []
           SddOwnedPaths = []
           DriverPaths = []
+          GameSkillPaths = []
           EffectiveParameters = [] }
 
     let descriptor (minimum: string option) : ProviderDescriptor =

@@ -112,6 +112,7 @@
         "dependencies": {
           "FS.GG.Contracts": "[5.0.1, )",
           "FS.GG.Drivers": "[0.1.0, )",
+          "FS.GG.Game.Skills": "[0.1.0, )",
           "FS.GG.SDD.Artifacts": "[0.19.0, )",
           "FSharp.Core": "[10.1.302, )"
         }
@@ -129,6 +130,12 @@
         "requested": "[0.1.0, )",
         "resolved": "0.1.0",
         "contentHash": "efRxz/mKIvMr/gIHdE9DuAxfxjoOTAXPOstAh9ZstFuQB9hO4kPG9/DegsjEzgsT7ab7iCDxHMm/5gYLGGke+g=="
+      },
+      "FS.GG.Game.Skills": {
+        "type": "CentralTransitive",
+        "requested": "[0.1.0, )",
+        "resolved": "0.1.0",
+        "contentHash": "CcgEUeguTZj5DGyQUncwzMdMsFvuL7pLtUFR933TzwIZFk8jOP+4XOWSfLZp6oePXf+Azpl33I+moZH6YEKARQ=="
       },
       "YamlDotNet": {
         "type": "CentralTransitive",

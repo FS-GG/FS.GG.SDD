@@ -32,6 +32,11 @@ module ScaffoldProvenance =
           // its content `sha256`. Externally owned like `MirroredPaths`, so `refresh` excludes
           // them. Additive; empty when no driver materialized (schema stays v1).
           DriverPaths: ScaffoldProducedPath list
+          // ADR-0063 / FS.GG.SDD#623: the owner-authored product skills (e.g. `fs-gg-playtest`)
+          // materialized from the pinned the owner-skills package into the product's skill roots
+          // (owner `GameSkill`), each with its content `sha256`. Externally owned like `DriverPaths`,
+          // so `refresh` excludes them. Additive; empty when none materialized (schema stays v1).
+          GameSkillPaths: ScaffoldProducedPath list
           EffectiveParameters: (string * string) list }
 
     let provenancePath = ".fsgg/scaffold-provenance.json"
@@ -60,6 +65,7 @@ module ScaffoldProvenance =
           MirroredPaths = []
           SddOwnedPaths = []
           DriverPaths = []
+          GameSkillPaths = []
           EffectiveParameters = [] }
 
     let ownerFromValue (value: string) =
@@ -69,6 +75,7 @@ module ScaffoldProvenance =
         | "rendering" -> ArtifactOwner.Rendering
         | "mirrored" -> ArtifactOwner.Mirrored
         | "driver" -> ArtifactOwner.Driver
+        | "gameSkill" -> ArtifactOwner.GameSkill
         | _ -> ArtifactOwner.GeneratedProduct
 
     // Additive (contract 1.1.0, ADR-0014): emit `sha256` only when a digest was
@@ -168,6 +175,23 @@ module ScaffoldProvenance =
             writer.WriteString("path", driver.Path)
             writer.WriteString("owner", ownerValue driver.Owner)
             writeSha256 writer driver.Sha256
+            writer.WriteEndObject())
+
+        writer.WriteEndArray()
+
+        // ADR-0063 / FS.GG.SDD#623: additive owner-skill record — the owner-authored product
+        // skills materialized from the pinned the owner-skills package, owner `gameSkill`, each
+        // with its content `sha256`. Sorted by path, immediately after `driverPaths`; empty array
+        // when none (schema stays v1). `"gameSkill"` appears only inside this array.
+        writer.WriteStartArray("gameSkillPaths")
+
+        record.GameSkillPaths
+        |> List.sortBy (fun gameSkill -> gameSkill.Path)
+        |> List.iter (fun gameSkill ->
+            writer.WriteStartObject()
+            writer.WriteString("path", gameSkill.Path)
+            writer.WriteString("owner", ownerValue gameSkill.Owner)
+            writeSha256 writer gameSkill.Sha256
             writer.WriteEndObject())
 
         writer.WriteEndArray()
@@ -276,6 +300,22 @@ module ScaffoldProvenance =
                                           Sha256 = readSha256 element }
                                 | _ -> None)
 
+                        // ADR-0063 / FS.GG.SDD#623: additive owner-skill record. Absent/null ⇒ `[]`,
+                        // so provenance written before this field still parses (schema stays v1).
+                        let gameSkillPaths =
+                            jsonArray "gameSkillPaths" root
+                            |> List.choose (fun element ->
+                                match jsonString "path" element with
+                                | Some path when not (String.IsNullOrWhiteSpace path) ->
+                                    Some
+                                        { Path = path
+                                          Owner =
+                                            jsonString "owner" element
+                                            |> Option.map ownerFromValue
+                                            |> Option.defaultValue ArtifactOwner.GameSkill
+                                          Sha256 = readSha256 element }
+                                | _ -> None)
+
                         // Additive optional field (D3): absent ⇒ `[]`, so provenance
                         // written before `effectiveParameters` still parses.
                         let effectiveParameters =
@@ -304,6 +344,7 @@ module ScaffoldProvenance =
                               MirroredPaths = mirroredPaths
                               SddOwnedPaths = sddOwnedPaths
                               DriverPaths = driverPaths
+                              GameSkillPaths = gameSkillPaths
                               EffectiveParameters = effectiveParameters }
                     | _ -> None
                 | None -> None

@@ -63,6 +63,10 @@ FS.GG.SDD.Artifacts.Diagnostics.scaffoldDriverManifestMalformed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldDriverNamespaceCollision
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldDriverPredicateUnevaluated
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldDriverVerifyFailed
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldGameSkillManifestMalformed
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldGameSkillNamespaceCollision
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldGameSkillPredicateUnevaluated
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldGameSkillVerifyFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldInvalidParamKey
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldMirrorFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldNameUnrepresentable
@@ -120,6 +124,7 @@ FS.GG.SDD.Artifacts.Evidence.parseEvidenceArtifact
 FS.GG.SDD.Artifacts.Evidence.passesWithoutRenderedArtifact
 FS.GG.SDD.Artifacts.Evidence.satisfiesRequiredEvidenceKinds
 FS.GG.SDD.Artifacts.FsharpIdentifier.deriveNamespace
+FS.GG.SDD.Artifacts.GameSkillManifest.tryParse
 FS.GG.SDD.Artifacts.GenerationManifest.createSummaryManifest
 FS.GG.SDD.Artifacts.GenerationManifest.createWorkModelManifest
 FS.GG.SDD.Artifacts.GenerationManifest.currencyStatusValue
@@ -180,6 +185,7 @@ FS.GG.SDD.Artifacts.LifecycleRuleContracts.sddOnlyCompatibility
 FS.GG.SDD.Artifacts.PathContainment.escapesRoot
 FS.GG.SDD.Artifacts.Plan.parsePlanFacts
 FS.GG.SDD.Artifacts.Plan.planStandardSections
+FS.GG.SDD.Artifacts.ProductPredicate.evaluate
 FS.GG.SDD.Artifacts.RegistryDocument.load
 FS.GG.SDD.Artifacts.ReleaseContract.bumpRule
 FS.GG.SDD.Artifacts.ReleaseContract.changeClassValue

@@ -398,6 +398,15 @@ module CommandRendering =
             |> List.sort
             |> List.iter (fun path -> builder.AppendLine($"scaffoldMaterializedDriverPath: {path}") |> ignore)
 
+            // ADR-0063 / FS.GG.SDD#623: the owner-authored product skill copies materialized
+            // from the pinned the owner-skills package, one line each (parity with the json array).
+            builder.AppendLine($"scaffoldMaterializedGameSkillPaths: {List.length scaffold.MaterializedGameSkillPaths}")
+            |> ignore
+
+            scaffold.MaterializedGameSkillPaths
+            |> List.sort
+            |> List.iter (fun path -> builder.AppendLine($"scaffoldMaterializedGameSkillPath: {path}") |> ignore)
+
             scaffold.EffectiveParameters
             |> List.sortBy fst
             |> List.iter (fun (key, value) -> builder.AppendLine($"scaffoldEffectiveParam: {key}={value}") |> ignore)

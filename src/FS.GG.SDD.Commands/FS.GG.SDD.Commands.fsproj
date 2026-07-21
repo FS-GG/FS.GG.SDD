@@ -20,6 +20,7 @@
     <Compile Include="CommandHelp.fs" />
     <Compile Include="CommandWorkflow/SeededSkills.fs" />
     <Compile Include="CommandWorkflow/DriverSkills.fs" />
+    <Compile Include="CommandWorkflow/GameSkills.fs" />
     <Compile Include="CommandWorkflow/ProcessSkillManifest.fsi" />
     <Compile Include="CommandWorkflow/ProcessSkillManifest.fs" />
     <Compile Include="CommandWorkflow/Drift.fs" />
@@ -96,6 +97,20 @@
     </EmbeddedResource>
   </ItemGroup>
 
+  <!-- ADR-0063 §Decision / FS.GG.SDD#623: FS.GG.Game's owner-authored `mirrored: false` PRODUCT
+       skill bytes — the `skill-manifest.json` and each `skills/<id>/SKILL.md` — linked from the
+       pinned `FS.GG.Game.Skills` package's restored content ($(FsggGameSkillsContentDir), exposed by
+       the package's own build/FS.GG.Game.Skills.props) as embedded resources, so the scaffold
+       materializer reads compiled-in bytes at scaffold time (offline; FR-002). The glob names no
+       specific skill id, so no FS.GG.Game/provider literal enters generic SDD: whatever game product
+       skills the pinned package ships are embedded. Exactly the FS.GG.Drivers seam, one owner over. -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(FsggGameSkillsContentDir)/skill-manifest.json" LogicalName="GameSkill.manifest" />
+    <EmbeddedResource Include="$(FsggGameSkillsContentDir)/skills/**/SKILL.md">
+      <LogicalName>GameSkill.skill/%(RecursiveDir)SKILL.md</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="FS.GG.SDD.Commands.Tests" />
   </ItemGroup>
@@ -105,5 +120,6 @@
     <ProjectReference Include="../FS.GG.SDD.Artifacts/FS.GG.SDD.Artifacts.fsproj" />
     <PackageReference Include="FSharp.Core" />
     <PackageReference Include="FS.GG.Drivers" GeneratePathProperty="true" />
+    <PackageReference Include="FS.GG.Game.Skills" GeneratePathProperty="true" />
   </ItemGroup>
 </Project>

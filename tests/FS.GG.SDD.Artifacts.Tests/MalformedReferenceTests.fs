@@ -193,6 +193,7 @@ evidence:
           MirroredPaths = []
           SddOwnedPaths = []
           DriverPaths = []
+          GameSkillPaths = []
           EffectiveParameters = [] }
 
     [<Fact>]

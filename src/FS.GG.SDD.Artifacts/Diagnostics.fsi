@@ -136,6 +136,10 @@ module Diagnostics =
     val scaffoldDriverPredicateUnevaluated: ids: string list -> Diagnostic
     val scaffoldDriverNamespaceCollision: ids: string list -> Diagnostic
     val scaffoldDriverManifestMalformed: message: string -> Diagnostic
+    val scaffoldGameSkillVerifyFailed: ids: string list -> Diagnostic
+    val scaffoldGameSkillPredicateUnevaluated: ids: string list -> Diagnostic
+    val scaffoldGameSkillNamespaceCollision: ids: string list -> Diagnostic
+    val scaffoldGameSkillManifestMalformed: message: string -> Diagnostic
     val scaffoldProvenanceMalformed: path: string -> Diagnostic
 
     // Feature 052 CLI-coherence advisories: both non-blocking (Info/Warning), so the

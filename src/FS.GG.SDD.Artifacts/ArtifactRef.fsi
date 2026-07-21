@@ -16,6 +16,12 @@ module ArtifactRef =
         /// never regenerates it. Serialized `"driver"`; appears only in
         /// `ScaffoldProvenanceRecord.DriverPaths`.
         | Driver
+        /// ADR-0063 / FS.GG.SDD#623: an owner-authored **product** skill (e.g.
+        /// `fs-gg-playtest`, `mirrored: false`) delivered as bytes in the pinned
+        /// the owner-skills package and materialized by the SDD scaffolder into a product's
+        /// skill roots. Externally owned, so `refresh` never regenerates it. Serialized
+        /// `"gameSkill"`; appears only in `ScaffoldProvenanceRecord.GameSkillPaths`.
+        | GameSkill
 
     type ArtifactKind =
         | ProjectConfig
