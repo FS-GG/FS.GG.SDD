@@ -42,6 +42,7 @@ module internal HandlersRefresh =
         | Blocked
         | NotApplicable
         | Missing
+        | AwaitingLifecycle of SddCommand
         | Malformed
         | Stale
         | EarlyStage
@@ -63,6 +64,9 @@ module internal HandlersRefresh =
         | ViewCurrencyClass.Blocked -> "blocked"
         | ViewCurrencyClass.NotApplicable -> "not-applicable"
         | ViewCurrencyClass.Missing -> "missing"
+        // Currency remains a fact about the artifact: it is missing. The typed distinction is
+        // carried by the internal case, the awaiting-lifecycle disposition, and the next action.
+        | ViewCurrencyClass.AwaitingLifecycle _ -> "missing"
         | ViewCurrencyClass.Malformed -> "malformed"
         | ViewCurrencyClass.Stale -> "stale"
         | ViewCurrencyClass.EarlyStage -> "early-stage"
@@ -76,6 +80,7 @@ module internal HandlersRefresh =
         | ViewCurrencyClass.Stale -> GeneratedViewCurrency.Stale
         | ViewCurrencyClass.Malformed -> GeneratedViewCurrency.Malformed
         | ViewCurrencyClass.Missing -> GeneratedViewCurrency.Missing
+        | ViewCurrencyClass.AwaitingLifecycle _ -> GeneratedViewCurrency.Missing
         | _ -> GeneratedViewCurrency.Blocked
 
     // --- refresh orchestration (cross-cutting; reuses the per-view generators) ---
@@ -465,12 +470,12 @@ module internal HandlersRefresh =
                 //    contract, so the `Malformed` word lands on the artifact that is actually malformed.
                 //    Note the validator never runs when the work model is blocked — the short-circuit
                 //    below precedes it.
-                let downstreamClass (isValid: FileSnapshot -> bool) path =
+                let downstreamClass ownerCommand (isValid: FileSnapshot -> bool) path =
                     if wmClass = ViewCurrencyClass.Blocked then
                         ViewCurrencyClass.Blocked
                     else
                         match snapshot path model with
-                        | None -> ViewCurrencyClass.Missing
+                        | None -> ViewCurrencyClass.AwaitingLifecycle ownerCommand
                         | Some snap when not (isValid snap) -> ViewCurrencyClass.Malformed
                         | Some _ ->
                             if wmChanged then
@@ -480,14 +485,14 @@ module internal HandlersRefresh =
 
                 // analysis/verify keep the weaker JSON-syntax gate: each would need its own oracle,
                 // its own state matrix, and its own regression sweep (feature 095, spec §Out of Scope).
-                let anClass = downstreamClass parsesAsJsonSnap (analysisPath workId)
-                let veClass = downstreamClass parsesAsJsonSnap (verifyPath workId)
+                let anClass = downstreamClass Analyze parsesAsJsonSnap (analysisPath workId)
+                let veClass = downstreamClass Verify parsesAsJsonSnap (verifyPath workId)
 
                 // `ship.json` is validated as a SHIP VIEW. Before feature 095 this was `parsesAsJson`,
                 // so a valid-JSON/invalid-view source read as `AlreadyCurrent` — reporting `ship: current`
                 // about a file that does not parse, and then stamping `Malformed` on the well-formed
                 // COMMITTED verdict when the projection below inevitably failed. Both facts inverted.
-                let shClass = downstreamClass parsesAsShipView (shipPath workId)
+                let shClass = downstreamClass Ship parsesAsShipView (shipPath workId)
 
                 // Governance handoff currency. The handoff is a pure projection over the work
                 // model + verify/ship, so refresh CAN faithfully regenerate it — but only when its
@@ -597,6 +602,8 @@ module internal HandlersRefresh =
                     // remediation is the same: re-run `ship`. Reporting `Blocked` here would say
                     // "refresh could not proceed" about the ordinary edit-then-refresh path.
                     | ViewCurrencyClass.Stale, Some _ -> None, [], ViewCurrencyClass.Stale
+                    | ViewCurrencyClass.AwaitingLifecycle command, None ->
+                        None, [], ViewCurrencyClass.AwaitingLifecycle command
                     // Present, but the source cannot be read or trusted: refresh cannot tell whether
                     // the committed verdict is current.
                     | _, Some _ -> None, [], ViewCurrencyClass.Blocked
@@ -663,6 +670,7 @@ module internal HandlersRefresh =
                                   viewPath
                                   $"Generated view '{viewPath}' is malformed; re-run the responsible lifecycle command." ]
                         | ViewCurrencyClass.Missing -> [ refreshBlockedUpstreamView viewPath (workModelPath workId) ]
+                        | ViewCurrencyClass.AwaitingLifecycle command -> [ refreshNotYetGenerated viewPath command ]
                         | _ -> [])
 
                 // The verdict's upstream is `ship.json`, not the work model. Without this row a committed
@@ -699,9 +707,17 @@ module internal HandlersRefresh =
                     | ViewCurrencyClass.Missing when shClass = ViewCurrencyClass.Stale ->
                         [ refreshStaleView verdictPath [ shipPath workId ] ]
                     | ViewCurrencyClass.Missing -> [ refreshBlockedUpstreamView verdictPath (shipPath workId) ]
+                    | ViewCurrencyClass.AwaitingLifecycle command -> [ refreshNotYetGenerated verdictPath command ]
                     | _ -> []
 
-                let summaryRenderable = structuredAllClean
+                let isExpectedStageAbsence =
+                    function
+                    | ViewCurrencyClass.AwaitingLifecycle _ -> true
+                    | _ -> false
+
+                let summaryRenderable =
+                    structuredClasses
+                    |> List.forall (fun (_, state) -> isClean state || isExpectedStageAbsence state)
 
                 let summaryDiags =
                     if summaryRenderable then
@@ -756,6 +772,11 @@ module internal HandlersRefresh =
                     if wmClass = ViewCurrencyClass.Blocked || structuredNoneClean then
                         RefreshBlocked
                     elif
+                        summaryRenderable
+                        && (structuredClasses |> List.exists (snd >> isExpectedStageAbsence))
+                    then
+                        AwaitingLifecycle
+                    elif
                         structuredAllClean
                         && (agentClass = ViewCurrencyClass.Refreshed
                             || agentClass = ViewCurrencyClass.AlreadyCurrent
@@ -786,6 +807,8 @@ module internal HandlersRefresh =
                             match disposition with
                             | RefreshedCurrent ->
                                 "Generated views are current; rely on the refreshed readiness for the selected work item."
+                            | AwaitingLifecycle ->
+                                "Run the next lifecycle command named by the not-yet-generated view; refresh does not generate lifecycle views out of order."
                             | _ -> "Correct the named source or upstream view, then re-run fsgg-sdd refresh."
 
                         let text =
@@ -827,6 +850,7 @@ module internal HandlersRefresh =
                     | ViewCurrencyClass.Refreshed -> viewId :: refreshed, current, blocked, na
                     | ViewCurrencyClass.AlreadyCurrent -> refreshed, viewId :: current, blocked, na
                     | ViewCurrencyClass.NotApplicable -> refreshed, current, blocked, viewId :: na
+                    | ViewCurrencyClass.AwaitingLifecycle _ -> refreshed, current, blocked, viewId :: na
                     | _ -> refreshed, current, viewId :: blocked, na
 
                 let refreshedViewIds, alreadyCurrentViewIds, blockedViewIds, notApplicableViewIds =

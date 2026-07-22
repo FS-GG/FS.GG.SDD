@@ -431,6 +431,7 @@ module CommandTypes =
         | RefreshedCurrent
         | PartiallyBlocked
         | RefreshBlocked
+        | AwaitingLifecycle
         /// Feature 068 / US2 (2b): pre-work-model early-stage disposition (serializes to
         /// `early-stage`), formerly a bare literal bypassing this DU.
         | EarlyStage

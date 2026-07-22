@@ -377,12 +377,38 @@ module internal NextActionRouting =
                         |> Option.defaultValue []
                       BlockingDiagnosticIds = [] }
             elif request.Command = Refresh then
+                let pendingLifecycleViews =
+                    refresh
+                    |> Option.filter (fun summary -> summary.Disposition = "awaiting-lifecycle")
+                    |> Option.map (fun summary -> summary.NotApplicableViewIds)
+                    |> Option.defaultValue []
+
+                let pendingAction =
+                    if List.contains "analysis" pendingLifecycleViews then
+                        Some(Analyze, "analysis", "refresh.next.analyze")
+                    elif List.contains "verify" pendingLifecycleViews then
+                        Some(Verify, "verify", "refresh.next.verify")
+                    elif List.contains "ship" pendingLifecycleViews then
+                        Some(Ship, "ship", "refresh.next.ship")
+                    else
+                        None
+
                 let warningBlocked =
                     refresh
                     |> Option.map (fun summary -> summary.BlockedViewIds)
                     |> Option.defaultValue []
 
-                if not (List.isEmpty warningBlocked) then
+                match pendingAction with
+                | Some(command, view, actionId) ->
+                    Some
+                        { ActionId = actionId
+                          Command = Some command
+                          WorkId = request.WorkId
+                          Reason =
+                            $"The {view} view has not been generated yet; run its lifecycle command. Refresh will not generate it out of order."
+                          RequiredArtifacts = [ view ]
+                          BlockingDiagnosticIds = [] }
+                | None when not (List.isEmpty warningBlocked) ->
                     Some
                         { ActionId = "refresh.correctBlockedViews"
                           Command = None
@@ -391,7 +417,7 @@ module internal NextActionRouting =
                             "Some generated views could not be refreshed; correct the named source or upstream view."
                           RequiredArtifacts = warningBlocked |> List.sort
                           BlockingDiagnosticIds = [] }
-                else
+                | None ->
                     Some
                         { ActionId = "refreshGenerated"
                           Command = None
