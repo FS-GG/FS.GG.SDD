@@ -274,24 +274,47 @@ module Plan =
             else
                 None)
 
+    // The authored status of a decision is a bare keyword at the DECLARATION position of the
+    // line — `- <PD-###> [tag]… <status>: <description>` — sitting immediately before the first
+    // colon, after the id and any `[…]` bracket tags. It is NEVER read from the free prose that
+    // follows the colon. Scanning the whole line for the word `stale` (etc.) misread a decision
+    // whose prose merely *discussed* staleness ("… so a stale prior frame is never re-fired.") as a
+    // `stale`-flagged decision, wrongly raising `stalePlanDecision` and blocking `tasks` even with
+    // every `## Source Snapshot` digest current (FS.GG.SDD#653). This is the declaration-position-
+    // vs-prose fix the #541/#645/#648 (`Internal.listLeadingIdMatch`) family applied to id tokens,
+    // now for the decision status marker: the marker must sit before the colon, alone.
     let planDecisionStatus (line: string) =
-        let lowered = line.ToLowerInvariant()
+        let marker =
+            let colon = line.IndexOf(':')
 
-        if
-            containsWord "accepteddeferral" lowered
-            || containsWord "accepted deferral" lowered
-        then
-            "acceptedDeferral"
-        elif containsWord "stale" lowered || containsWord "needs review" lowered then
-            "stale"
-        elif containsWord "incomplete" lowered then
-            "incomplete"
-        elif containsWord "advisory" lowered then
-            "advisory"
-        elif containsWord "complete" lowered || containsWord "planned" lowered then
-            "complete"
-        else
-            "complete"
+            if colon < 0 then
+                // No `<status>:` marker at all → the default, unmarked status.
+                ""
+            else
+                // The header is everything before the first colon; drop the leading bullet, the
+                // leading `PD-###` id token, and any `[…]` bracket tags. What remains is the
+                // authored status marker alone (or empty for an unmarked `- PD-###: …` decision).
+                let header = line.Substring(0, colon).Trim().TrimStart('-', '*').Trim()
+
+                let withoutId =
+                    match planDecisionIdsInLine header |> List.tryHead with
+                    | Some decisionId -> cleanAfterId decisionId.Value header
+                    | None -> header
+
+                Regex.Replace(withoutId, @"\[[^\]]*\]", "").Trim().ToLowerInvariant()
+
+        // A prose colon before the descriptive one can leave arbitrary words in `marker`, so the
+        // marker must match a known status keyword EXACTLY — never as a contained substring/word.
+        match marker with
+        | "accepteddeferral"
+        | "accepted deferral" -> "acceptedDeferral"
+        | "stale"
+        | "needs review" -> "stale"
+        | "incomplete" -> "incomplete"
+        | "advisory" -> "advisory"
+        | "complete"
+        | "planned" -> "complete"
+        | _ -> "complete"
 
     let parsePlanDecisions text =
         sectionLines "Plan Decisions" text
