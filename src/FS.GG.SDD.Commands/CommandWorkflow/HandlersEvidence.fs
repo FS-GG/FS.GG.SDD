@@ -1269,6 +1269,21 @@ sourceAnalysis: {analysisPath workId}
                 let existingArtifact, existingDiagnostics, _ = parseExistingEvidence workId model
                 let inputArtifact, inputDiagnostics = parseInputEvidence workId model.Request
 
+                // A completed task with no declaration is exactly the FRESH-file state this stage
+                // can repair: `mergeEvidenceArtifacts` scaffolds its stable EV### obligation below.
+                // Keep the diagnostic blocking at `tasks`, `analyze`, `verify`, and `ship`; only the
+                // evidence authoring boundary consumes it while no authored artifact exists. An
+                // existing partial artifact stays blocking because the no-clobber merge deliberately
+                // does not invent additions beside authored declarations. Every other task diagnostic
+                // remains blocking, and the scaffold starts `kind/result: missing`, so file creation
+                // alone cannot make an obligation verification-ready.
+                let evidenceBootstrapTaskDiagnostics =
+                    match existingArtifact with
+                    | None ->
+                        taskDiagnostics
+                        |> List.filter (fun diagnostic -> diagnostic.Id <> "doneTaskMissingEvidence")
+                    | Some _ -> taskDiagnostics
+
                 let evidenceArtifact, mergeDiagnostics, evidenceText, evidenceSummary =
                     match
                         specText,
@@ -1396,7 +1411,7 @@ sourceAnalysis: {analysisPath workId}
                     @ clarificationDiagnostics
                     @ checklistDiagnostics
                     @ planDiagnostics
-                    @ taskDiagnostics
+                    @ evidenceBootstrapTaskDiagnostics
                     @ analysisDiagnostics
                     @ existingDiagnostics
                     @ inputDiagnostics

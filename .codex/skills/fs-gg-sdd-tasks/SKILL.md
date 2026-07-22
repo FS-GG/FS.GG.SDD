@@ -58,6 +58,13 @@ The merge matches a derived task to a prior one by its **title**, and carries th
 task's `status`, `owner`, its stable `T###`, and its still-live authored refs across.
 A `status` of `stale` is never carried — it was a tool signal, not something you wrote.
 
+Mark implemented tasks `done` when they are done. If this is the first point at which
+`evidence.yml` is needed, do **not** move them backward to make the lifecycle advance:
+run `fsgg-sdd evidence --work <id>` next. The evidence stage can scaffold the missing
+`EV###` declarations from already-completed tasks without changing their authored status.
+Those declarations begin `kind: missing` / `result: missing`, so verify remains blocked
+until you author real evidence and, for verification passes, register an observed run.
+
 A task you wrote yourself, matching nothing derived, is kept **verbatim** for as long
 as it still references a requirement or decision that exists upstream. When that
 disposition goes, the task is dropped as an orphan.
@@ -81,6 +88,8 @@ to learn the schema; there is nothing there to copy into your own file.
   YAML. (`tasks.md` is the legacy Spec Kit artifact.)
 - Referencing an `FR-###` or `DEC-###` that was renumbered upstream — fix the spec
   ids first, then the tasks.
+- Rolling a completed task back to `pending` only to create `evidence.yml` — keep the
+  honest `done` status and run the evidence stage to bootstrap its declarations.
 
 ## Next
 
