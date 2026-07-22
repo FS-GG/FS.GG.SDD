@@ -503,6 +503,7 @@ module CommandTypes =
         | RefreshedCurrent
         | PartiallyBlocked
         | RefreshBlocked
+        | AwaitingLifecycle
         // Feature 068 / US2 (2b): the pre-work-model early-stage disposition, formerly written as a
         // bare "early-stage" literal bypassing this DU (a latent inconsistency the review flagged).
         | EarlyStage
@@ -953,6 +954,7 @@ module CommandTypes =
         | RefreshedCurrent -> "refreshed-current"
         | PartiallyBlocked -> "partially-blocked"
         | RefreshBlocked -> "blocked"
+        | AwaitingLifecycle -> "awaiting-lifecycle"
         | EarlyStage -> "early-stage"
 
     let reconciliationStepIdValue (stepId: ReconciliationStepId) =

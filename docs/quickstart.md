@@ -160,6 +160,10 @@ currency and emit no lifecycle successor (`nextLifecycleCommand = None`):
 - `fsgg-sdd refresh --work <id>` regenerates the work model and agent guidance,
   renders the human-readable `readiness/<id>/summary.md` projection, and reports
   the currency of `analysis.json` / `verify.json` / `ship.json`.
+  It never creates those lifecycle-owned views out of order: an absent view keeps
+  the truthful `missing` currency under an `awaiting-lifecycle` disposition, with
+  the earliest responsible `analyze`, `verify`, or `ship` command returned as the
+  next action.
 
 Run `agents` and `refresh` whenever authored sources change, so the generated
 views reflect the current lifecycle state. A generated view that exists on disk

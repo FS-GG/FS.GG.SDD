@@ -28,6 +28,13 @@ Regenerates the SDD-owned generated views to currency:
 - renders the human-readable `readiness/<id>/summary.md`,
 - reports the currency of `analysis.json` / `verify.json` / `ship.json`.
 
+It does not create those three lifecycle-owned views. When the responsible stage
+has not run, refresh reports its currency as `missing` with an
+`awaiting-lifecycle` disposition and returns a
+non-blocking typed next action for the earliest applicable command: `analyze`,
+`verify`, or `ship`. Missing or malformed authored sources and unreadable upstream
+views remain blocking; repair those rather than advancing the lifecycle.
+
 It is the only command that runs under an overwrite policy that allows refreshing
 generated views.
 

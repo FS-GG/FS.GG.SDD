@@ -95,7 +95,7 @@ module RefreshCommandTests =
           10, S5_CurrentValidView, false ]
 
     [<Fact>]
-    let ``the exit code is invariant across the whole currency matrix`` () =
+    let ``the exit code distinguishes expected stage absence across the whole currency matrix`` () =
         // FR-007 / SC-004. THIS TEST IS GREEN BEFORE AND AFTER feature 095 — it is a regression lock,
         // not a red-green test. The expected values were captured from the unmodified handler (T002)
         // before any source edit; they are not derived from the new logic.
@@ -106,7 +106,10 @@ module RefreshCommandTests =
         // non-clean and ALREADY emitted the `refresh.unrenderableSummary` error. The run always failed;
         // it just blamed the wrong file. If this test ever reddens, that reasoning is unsound and the
         // change is a behavior change, not a re-attribution.
-        let expected = [ 1; 1; 1; 1; 1; 1; 1; 1; 0; 0 ]
+        // Cell 2 is the ordinary pre-ship state: neither ship nor its verdict has been generated.
+        // It is now navigable (exit 0); a surviving verdict without ship (cell 1), malformed ship,
+        // and stale ship remain non-clean.
+        let expected = [ 1; 0; 1; 1; 1; 1; 1; 1; 0; 0 ]
 
         let actual =
             matrixCells
@@ -208,10 +211,7 @@ module RefreshCommandTests =
         Assert.Equal("missing", verdictWord)
 
     [<Fact>]
-    let ``an absent verdict over a non-stale source still blocks with an error`` () =
-        // FR-011, matrix cells 2/4/6. The guardrail on the fix above: the severity correction is scoped
-        // to a STALE source. When the source is missing, unreadable, or unparseable, the verdict really
-        // is blocked on an upstream it cannot assess, and that stays an error.
+    let ``an absent verdict advances only when its source lifecycle has not run`` () =
         let verdictDiagnosticOf root =
             let report = TestSupport.runRefresh root workId
 
@@ -222,7 +222,20 @@ module RefreshCommandTests =
                 |> Option.defaultValue false)
             |> List.map (fun d -> d.Id, d.Severity)
 
-        for shipState in [ S1_Absent; S2_InvalidJson; S3_ValidJsonInvalidView ] do
+        let absentReport = TestSupport.runRefresh (cell S1_Absent false) workId
+
+        Assert.Equal<(string * DiagnosticSeverity) list>(
+            [ "refresh.notYetGenerated", DiagnosticSeverity.DiagnosticInfo ],
+            verdictDiagnosticOf (cell S1_Absent false)
+        )
+
+        Assert.NotEqual(CommandOutcome.Blocked, absentReport.Outcome)
+
+        match absentReport.NextAction with
+        | Some action -> Assert.Equal<SddCommand option>(Some Ship, action.Command)
+        | None -> failwith "Expected the ship lifecycle next action."
+
+        for shipState in [ S2_InvalidJson; S3_ValidJsonInvalidView ] do
             let root = cell shipState false
 
             Assert.Equal<(string * DiagnosticSeverity) list>(
@@ -236,6 +249,72 @@ module RefreshCommandTests =
                 TestSupport.existsRelative root shipVerdictPath,
                 $"refresh must not synthesise a verdict from a {shipState} ship.json."
             )
+
+    let private assertAwaitingLifecycle root expectedCommand expectedMissingViews =
+        let report = TestSupport.runRefresh root workId
+
+        Assert.Equal(0, exitCodeForReport report)
+
+        Assert.DoesNotContain(
+            report.Diagnostics,
+            fun diagnostic -> diagnostic.Severity = DiagnosticSeverity.DiagnosticError
+        )
+
+        TestSupport.assertRefreshDisposition report "awaiting-lifecycle"
+
+        match report.NextAction with
+        | Some action ->
+            Assert.Equal<SddCommand option>(Some expectedCommand, action.Command)
+            Assert.StartsWith("refresh.next.", action.ActionId)
+        | None -> failwith "Expected a typed lifecycle next action."
+
+        for view, path in expectedMissingViews do
+            Assert.Equal("missing", TestSupport.refreshViewState report view)
+            Assert.False(TestSupport.existsRelative root path, $"refresh must not generate {path} out of order.")
+
+        report
+
+    [<Fact>]
+    let ``pre-analyze refresh points to analyze without generating downstream views`` () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeTasksReadyProject root workId title
+
+        assertAwaitingLifecycle root Analyze [ "analysis", analysisPath; "verify", verifyPath; "ship", shipPath ]
+        |> ignore
+
+    [<Fact>]
+    let ``pre-verify refresh points to verify without generating later views`` () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeEvidencedProject root workId title
+
+        assertAwaitingLifecycle root Verify [ "verify", verifyPath; "ship", shipPath ]
+        |> ignore
+
+    [<Fact>]
+    let ``pre-ship refresh points to ship without generating the ship view`` () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeVerifiedProject root workId title
+
+        assertAwaitingLifecycle root Ship [ "ship", shipPath ] |> ignore
+
+    [<Fact>]
+    let ``missing authored source remains genuinely blocked`` () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeAnalyzedProject root workId title
+        File.Delete(absolute root $"work/{workId}/spec.md")
+
+        let report = TestSupport.runRefresh root workId
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+        Assert.Contains(
+            report.Diagnostics,
+            fun diagnostic ->
+                diagnostic.Id = "refresh.missingSource"
+                && diagnostic.Severity = DiagnosticSeverity.DiagnosticError
+        )
+
+        Assert.NotEqual<SddCommand option>(Some Verify, report.NextAction |> Option.bind (fun action -> action.Command))
 
     [<Fact>]
     let ``a deprecated but supported ship json schema stays current`` () =

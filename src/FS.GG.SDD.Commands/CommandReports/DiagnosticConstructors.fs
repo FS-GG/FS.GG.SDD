@@ -1274,6 +1274,17 @@ module internal DiagnosticConstructors =
             "Bring the named upstream generated view to currency before refreshing this dependent view."
             upstreamViewPath
 
+    let refreshNotYetGenerated viewPath command =
+        let lifecycleCommand = commandName command
+
+        commandDiagnostic
+            "refresh.notYetGenerated"
+            DiagnosticSeverity.DiagnosticInfo
+            (Some viewPath)
+            $"Generated view '{viewPath}' has not been produced at the current lifecycle state."
+            $"Run `fsgg-sdd {lifecycleCommand}` for this work item; refresh reports downstream lifecycle views but does not generate them out of order."
+            [ lifecycleCommand ]
+
     // Early-stage (FR-010b): refresh has nothing to bring to currency until the
     // pre-work-model authoring stages exist. When the work model is absent *and* its
     // authored sources have not been written yet, this advisory (non-blocking) reports the
