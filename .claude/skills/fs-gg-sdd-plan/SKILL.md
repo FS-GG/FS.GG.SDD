@@ -128,6 +128,29 @@ gets a disposing task straight from `clarifications.md`, so `PD-002`'s tag above
 no generator: `PD-003` disposes `AC-007`, an acceptance scenario no requirement
 references, which otherwise blocks `tasks` with `missingDisposition`.
 
+## Structure is read from the declaration position, not from prose
+
+Two things `tasks`/`analyze` read off a `## Plan Decisions` line are anchored to the
+**declaration position**, so the descriptive prose you write after the colon is free text —
+naming an id or a status word there no longer changes how the line is classified:
+
+- **The status marker.** A decision's status is the `<status>:` keyword sitting between the
+  id (with any `[…]` bracket tags) and the **first colon** — `- PD-001 [FR-001] complete: …`
+  is `complete`. It is matched **exactly** against the known keywords
+  (`complete`/`planned`, `stale`/`needs review`, `incomplete`, `advisory`), never as a
+  contained word. A status word that merely appears in the description — "… so a **stale**
+  prior frame is never re-fired." — no longer sets the status. Writing "stale" in a
+  decision's prose therefore does **not** trip `stalePlanDecision` (which otherwise blocks
+  `tasks` with `failedPlanPrerequisite: Plan contains stale decisions`); only a decision
+  authored `stale:`/`needs review:` at the marker position counts as stale (FS.GG.SDD#653).
+- **References.** Plan references resolve from the `[…]` **bracket-tag** citation grammar
+  only (`[FR-002]`, `[DEC-006]`) — the same tags that carry a task disposition. An id merely
+  named in a decision's prose — "… extending the SB-008 seam", "… inherited from M2 DEC-006"
+  — is a **citation, not a reference**, so it no longer trips `Plan reference '<id>' does not
+  resolve` or blocks `tasks`/`analyze`. Tag an id in `[…]` when you mean it to resolve and
+  carry a disposition; leave it bare in prose when you only mean to cite an upstream id
+  (FS.GG.SDD#648).
+
 ## Pitfalls
 
 - Planning implementation without declaring the surface first (violates Principle

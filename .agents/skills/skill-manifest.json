@@ -32,7 +32,7 @@
     {
       "id": "fs-gg-sdd-clarify",
       "scope": "process",
-      "sha256": "2d5729afd202d0f9c1cb921de2250383cbd1c7cd81cf04da5ce6b84a587c1c78",
+      "sha256": "dae626d25e237b39add1fa2446f8d8d7d5d0a55efdc1b6f1c482dd37a6f58ab2",
       "resolvablePath": ".agents/skills/fs-gg-sdd-clarify/SKILL.md",
       "materializes-when": "always"
     },
@@ -60,7 +60,7 @@
     {
       "id": "fs-gg-sdd-plan",
       "scope": "process",
-      "sha256": "39137f9b5fc006ff69570766045987fb34dc142051c1b8ef8644891549e8bf43",
+      "sha256": "ae0dce2d603967a333b8c340ab2ba3890ad4e362d5ea060fb272dfeb9775a6f5",
       "resolvablePath": ".agents/skills/fs-gg-sdd-plan/SKILL.md",
       "materializes-when": "always"
     },

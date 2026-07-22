@@ -61,13 +61,18 @@ resolution is carried by the decision **tag**, not the answer. If you only answe
 and skip the tagged decision, `clarify` still reports *"missing answers for
 blocking ambiguity."*
 
-**Declare each `DEC-###` id exactly once.** Any line under `## Decisions` or
-`## Accepted Deferrals` whose leading id is a `DEC-###` is a *declaration*, and the
-two sections are pooled — declaring the same `DEC-002` in **both** raises
-`duplicateClarificationId`. Mentioning a `DEC-###` in `## Answers`,
-`## Remaining Ambiguity`, or `## Lifecycle Notes` is a safe *reference*. Record an
-accepted deferral as its own uniquely-id'd `DEC-###`, declared once, under
-`## Accepted Deferrals`.
+**Declare each `DEC-###` id exactly once.** A *declaration* is only a line under
+`## Decisions` or `## Accepted Deferrals` whose **list-leading** id — the token right
+after the `- ` bullet (bold `- **DEC-002**` is fine) — is that `DEC-###`. The two
+sections are pooled, so declaring the same `DEC-002` at the leading position in **both**
+raises `duplicateClarificationId`. Everything else is a safe *reference*: a `DEC-###`
+mentioned in `## Answers`, `## Remaining Ambiguity`, or `## Lifecycle Notes`, **and** —
+since FS.GG.SDD#647 — a `DEC-###` cited later in a decision's own prose, even inside
+`## Decisions`/`## Accepted Deferrals`. So a hand-off note that cites a prior milestone's
+decision — "… the deferral inherited from M2 DEC-004", exactly the citation the lifecycle
+asks you to write — no longer counts as a second declaration of that id. Record an
+accepted deferral as its own uniquely-id'd `DEC-###`, declared once at the leading
+position, under `## Accepted Deferrals`.
 
 ## Example
 
