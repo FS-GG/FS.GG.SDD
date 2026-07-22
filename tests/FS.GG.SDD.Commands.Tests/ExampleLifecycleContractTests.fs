@@ -147,16 +147,17 @@ module ExampleLifecycleContractTests =
         Assert.Equal(CommandOutcome.NoChange, (TestSupport.runPlan root workId title).Outcome)
         Assert.Equal(CommandOutcome.NoChange, (TestSupport.runTasks root workId title).Outcome)
 
-    /// FS.GG.SDD#310 (AC9) as narrowed by FS.GG.SDD#649 — the fold direction. The example's plan
-    /// carries four `PD-###`, and `tasks` folds all four, each into the one obligation that already
-    /// disposes it:
+    /// FS.GG.SDD#310 (AC9) as narrowed by #649, then #646 — the fold direction. One accepted deferral
+    /// (DEC-002) collapses into ONE keep-visible obligation; everything that merely echoes it folds in:
     ///   * `PD-001`→FR-001 and `PD-002`→FR-002 mirror a requirement's own refs, so they fold into the
     ///     requirement task (the original #310 fold).
-    ///   * `PD-003`→DEC-002 and `PD-004`→CR-003 are the plan scaffold's PURE deferral mirrors
-    ///     (`acceptedDeferral: Accepted deferral DEC-### remains visible to task generation.`) — every
-    ///     ref an accepted-deferral id, text the fixed boilerplate — so each folds into that deferral's
-    ///     keep-visible task instead of earning a second `Implement plan decision PD-###` obligation
-    ///     (#649). One obligation per deferral, not two.
+    ///   * `PD-003`→DEC-002 is the plan scaffold's PURE deferral mirror (#649) and folds into DEC-002's
+    ///     keep-visible task instead of earning its own `Implement plan decision` obligation.
+    ///   * `CR-003`→DEC-002 is the checklist scaffold's PURE deferral echo (#646) and folds into the
+    ///     SAME keep-visible task rather than earning a second keep-visible obligation.
+    ///   * `PD-004`→CR-003 is the plan's pure mirror of that echo and folds transitively into it too.
+    /// So the four echoes of one deferral land in one task, `sourceIds: [CR-003, DEC-002, PD-003, PD-004]`
+    /// — one obligation per deferral, not four.
     [<Fact>]
     let ``Shipped example folds its FR-mirror and pure deferral-mirror PDs into their keep tasks`` () =
         let root = exampleWorkspace ()
@@ -169,13 +170,13 @@ module ExampleLifecycleContractTests =
         Assert.Contains("sourceIds: [AC-001, FR-001, PD-001]", tasks)
         Assert.Contains("sourceIds: [AC-002, FR-002, PD-002]", tasks)
 
-        // Pure deferral mirrors: each folded into its deferral's keep-visible task, no task of its own.
+        // Pure deferral echoes (PD-003, CR-003, PD-004) all fold into DEC-002's ONE keep-visible task;
+        // none earns an obligation of its own.
         Assert.DoesNotContain("Implement plan decision PD-003", tasks)
         Assert.DoesNotContain("Implement plan decision PD-004", tasks)
+        Assert.DoesNotContain("Keep accepted deferral CR-003 visible", tasks)
         Assert.Contains("Keep accepted deferral DEC-002 visible", tasks)
-        Assert.Contains("sourceIds: [DEC-002, PD-003]", tasks)
-        Assert.Contains("Keep accepted deferral CR-003 visible", tasks)
-        Assert.Contains("sourceIds: [CR-003, PD-004]", tasks)
+        Assert.Contains("sourceIds: [CR-003, DEC-002, PD-003, PD-004]", tasks)
 
     /// FS.GG.SDD#310 (AC9), the protective direction #649 must NOT weaken — the over-collapse guard.
     /// It is the dangerous direction every other test misses: a predicate that folded on the deferral
@@ -211,12 +212,94 @@ module ExampleLifecycleContractTests =
         TestSupport.runTasks root workId title |> ignore
         let tasks = TestSupport.readRelative root $"work/{workId}/tasks.yml"
 
-        // Real design content, not boilerplate: PD-003 keeps its own obligation, and DEC-002's
-        // keep-visible task disposes DEC-002 ALONE — the fold did not happen. (When PD-003 IS folded,
-        // as in the shipped example, no task carries the bare `sourceIds: [DEC-002]`; the keep-visible
-        // task carries `[DEC-002, PD-003]` instead.)
+        // Real design content, not boilerplate: PD-003 keeps its own obligation and does NOT fold into
+        // DEC-002's keep-visible task. DEC-002's task still folds in the checklist echo CR-003 and its
+        // pure mirror PD-004 (#646) — that fold is unaffected — but NOT the now-real PD-003. (When PD-003
+        // IS folded, as in the shipped example, the keep-visible task carries `[CR-003, DEC-002, PD-003,
+        // PD-004]`; here PD-003 is absent from it.)
         Assert.Contains("Implement plan decision PD-003", tasks)
-        Assert.Contains("sourceIds: [DEC-002]", tasks)
+        Assert.Contains("sourceIds: [CR-003, DEC-002, PD-004]", tasks)
+
+    /// FS.GG.SDD#646 (the residual #649 left): the `checklist` scaffold echoes every accepted CLARIFY
+    /// deferral as one `CR-### [DEC-###] acceptedDeferral: …` review result. That echo keeps visible
+    /// nothing the clarify deferral's own keep-visible task does not, so it FOLDS into that task instead
+    /// of fanning a single deferral out into a second keep-visible obligation.
+    ///
+    /// Driven through the REAL generators end to end (checklist -> plan -> tasks in lifecycle order, so no
+    /// upstream snapshot goes stale) — which is also what pins the fold against drift in the checklist
+    /// scaffold. The shipped-example fold-walk above proves the same on the copied corpus; this proves it
+    /// on freshly generated artifacts.
+    [<Fact>]
+    let ``A pure checklist deferral echo folds into its clarify deferral`` () =
+        let root = exampleWorkspace ()
+
+        for name in [ "checklist.md"; "plan.md"; "tasks.yml" ] do
+            File.Delete(Path.Combine(root, "work", workId, name))
+
+        TestSupport.runChecklist root workId title |> ignore
+
+        // The native checklist carries the scaffold's pure deferral echo for DEC-002.
+        let checklist = TestSupport.readRelative root $"work/{workId}/checklist.md"
+        Assert.Contains("remains visible to planning", checklist)
+
+        TestSupport.runPlan root workId title |> ignore
+        TestSupport.authorPlanProse root workId
+
+        let report = TestSupport.runTasks root workId title
+
+        let ids =
+            report.Diagnostics
+            |> List.map (fun d -> $"{d.Severity}:{d.Id}")
+            |> String.concat ", "
+
+        Assert.True(
+            File.Exists(Path.Combine(root, "work", workId, "tasks.yml")),
+            $"tasks.yml not written; diagnostics: [{ids}]"
+        )
+
+        let tasks = TestSupport.readRelative root $"work/{workId}/tasks.yml"
+
+        // The CR echo gets no keep-visible task of its own; it folds — with its own pure PD mirror — into
+        // DEC-002's keep-visible task. One obligation for the deferral, not two.
+        Assert.DoesNotContain("Keep accepted deferral CR-", tasks)
+        Assert.Contains("Keep accepted deferral DEC-002 visible", tasks)
+        Assert.Matches("sourceIds: \\[CR-\\d+, DEC-002, PD-\\d+, PD-\\d+\\]", tasks)
+
+    /// FS.GG.SDD#646 over-collapse guard, the structural analogue of #649's prose guard. A checklist
+    /// deferral echo folds because every one of its refs is an accepted clarify deferral. A checklist
+    /// review that ALSO references a non-deferral id (here a requirement, FR-001) is not a pure echo —
+    /// it disposes something the deferral's keep-visible task does not — so it KEEPS its own obligation
+    /// and does not fold. The fold decision is drawn on the refs, which for a `CR` are dispositive (a
+    /// checklist deferral review has no author-editable body that could carry a separable decision).
+    [<Fact>]
+    let ``A checklist deferral that also refs a requirement is not folded`` () =
+        let root = exampleWorkspace ()
+
+        let checklistPath = $"work/{workId}/checklist.md"
+
+        // Add a requirement ref to CR-003's refs, leaving its accepted-deferral status. Its ref set is no
+        // longer a subset of the accepted clarify deferrals, so it is not a pure echo.
+        let rewritten =
+            (TestSupport.readRelative root checklistPath)
+                .Replace(
+                    "[CHK:CHK-002] [DEC-002] acceptedDeferral:",
+                    "[CHK:CHK-002] [DEC-002] [FR-001] acceptedDeferral:"
+                )
+
+        Assert.Contains("[DEC-002] [FR-001] acceptedDeferral:", rewritten) // the edit landed
+        TestSupport.writeRelative root checklistPath rewritten
+
+        // Editing the checklist staleifies plan.md's checklist snapshot; regenerate plan (and tasks)
+        // fresh so the snapshot re-records against the edited checklist and the derivation decides anew.
+        File.Delete(Path.Combine(root, "work", workId, "plan.md"))
+        File.Delete(Path.Combine(root, "work", workId, "tasks.yml"))
+        TestSupport.runPlan root workId title |> ignore
+        TestSupport.authorPlanProse root workId
+        TestSupport.runTasks root workId title |> ignore
+        let tasks = TestSupport.readRelative root $"work/{workId}/tasks.yml"
+
+        // Not a pure echo: CR-003 keeps its own keep-visible task rather than folding into DEC-002's.
+        Assert.Contains("Keep accepted deferral CR-003 visible", tasks)
 
     /// The specific regression #192 filed: nine ids required a task disposition and the example
     /// authored none of them, because `AC-###`/`CR-###`/`GV-###`/`PC-###`/`PD-###`/`PM-###`/`VO-###`

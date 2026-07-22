@@ -107,6 +107,31 @@ module internal TaskGraphAuthoring =
         && decision.Status.Equals("acceptedDeferral", StringComparison.OrdinalIgnoreCase)
         && isDeferralMirrorBoilerplate decision.Text
 
+    /// A PURE checklist deferral mirror (#646, the residual #649 left): the `checklist` scaffold echoes
+    /// every accepted CLARIFY deferral as one `CR-### [CHK:...] [DEC-###] acceptedDeferral: Accepted
+    /// deferral DEC-### remains visible to planning.` review result (`ChecklistAuthoring.deferralReviews`).
+    /// Such an echo keeps visible nothing the clarify deferral's own keep-visible task does not, so it
+    /// folds into that task instead of earning a second keep-visible obligation.
+    ///
+    /// The purity test here is STRUCTURAL (every ref an accepted clarify-deferral id), not textual as the
+    /// PD mirror's is, and deliberately so. A `PD` can carry real, separately-verifiable DESIGN content
+    /// beside a deferral ref — which is why #310 AC9 makes its fold hinge on the prose. A checklist
+    /// deferral REVIEW cannot: it is re-derived from `clarificationFacts.AcceptedDeferrals` on every run
+    /// with no author-editable body (#146), and its prose only DESCRIBES the deferral — it never encodes
+    /// a decision the deferral's keep-visible task does not already dispose. So a `CR` whose refs are all
+    /// accepted clarify deferrals is a pure echo whatever its prose. A `CR` that also refs a
+    /// non-deferral id (a requirement, say) is not a pure echo and keeps its own obligation — the
+    /// structural analogue of the over-collapse guard.
+    let internal isPureChecklistDeferralMirror
+        (clarificationDeferralIdSet: Set<string>)
+        (result: ChecklistReviewResult)
+        =
+        let refs = upperSet result.SourceIds
+
+        not (Set.isEmpty refs)
+        && Set.isSubset refs clarificationDeferralIdSet
+        && result.Status.Equals("acceptedDeferral", StringComparison.OrdinalIgnoreCase)
+
     let tasksSummary (facts: TaskFacts) : TasksSummary =
         let statusCount predicate =
             facts.Tasks |> List.filter (fun task -> predicate task.Status) |> List.length
@@ -441,6 +466,27 @@ module internal TaskGraphAuthoring =
             |> List.map (fun (taskId, pairs) -> taskId, pairs |> List.map snd)
             |> Map.ofList
 
+        // #646: the `checklist` scaffold echoes every accepted CLARIFY deferral as a pure deferral
+        // review result (`isPureChecklistDeferralMirror`). That echo earns its own keep-visible task
+        // today, so one accepted deferral fans out into TWO keep-visible obligations — the clarify
+        // `DEC-###` and its checklist `CR-###` echo. The echo folds into the clarify deferral's
+        // keep-visible task instead, exactly as a pure `PD-###` mirror does (#649): one obligation per
+        // deferral. A `CR` whose refs are not all accepted deferrals is not a pure echo and keeps its own.
+        let clarificationDeferralIdSet =
+            clarificationFacts.AcceptedDeferrals
+            |> List.map (fun deferral -> deferral.DecisionId.Value)
+            |> upperSet
+
+        // CR id (upper) -> the clarify deferral id (upper) it folds into (its single accepted-deferral ref).
+        let checklistMirrorFoldTarget =
+            checklistFacts.AcceptedDeferrals
+            |> List.filter (isPureChecklistDeferralMirror clarificationDeferralIdSet)
+            |> List.choose (fun result ->
+                result.SourceIds
+                |> List.tryHead
+                |> Option.map (fun target -> result.ResultId.Value.ToUpperInvariant(), target.ToUpperInvariant()))
+            |> Map.ofList
+
         let planDecisionTasks =
             standalone
             |> List.choose (fun (decision, _) ->
@@ -511,12 +557,26 @@ module internal TaskGraphAuthoring =
         // two. `plannedTask` sorts `sourceIds`, so the fold is order-insensitive on output.
         let deferralTasks =
             acceptedDeferralIds
+            // A pure checklist mirror (#646) earns no keep-visible task of its own; it folds into the
+            // clarify deferral it echoes (below), so filter it out of the task-bearing ids here.
+            |> List.filter (fun id -> not (Map.containsKey (id.ToUpperInvariant()) checklistMirrorFoldTarget))
             |> List.choose (fun id ->
-                let folded =
-                    Map.tryFind (id.ToUpperInvariant()) deferralFoldedPds |> Option.defaultValue []
+                let idUpper = id.ToUpperInvariant()
+
+                let folded = Map.tryFind idUpper deferralFoldedPds |> Option.defaultValue []
+
+                // The pure checklist mirrors that fold into THIS clarify deferral, each carrying any pure
+                // PD mirror already folded into it — so the collapse is transitive (DEC <- CR <- PD all
+                // land in one obligation) and the folded CR/PD ids stay disposed via this task's sourceIds.
+                let mirrorFolded =
+                    checklistMirrorFoldTarget
+                    |> Map.toList
+                    |> List.filter (fun (_, target) -> target = idUpper)
+                    |> List.collect (fun (crId, _) ->
+                        crId :: (Map.tryFind crId deferralFoldedPds |> Option.defaultValue []))
 
                 maybeTask
-                    (id :: folded)
+                    (id :: (folded @ mirrorFolded))
                     $"Keep accepted deferral {id} visible"
                     []
                     []

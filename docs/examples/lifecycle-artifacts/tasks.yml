@@ -105,19 +105,9 @@ tasks:
     dependencies: [T001]
     requirements: []
     decisions: []
-    sourceIds: [DEC-002, PD-003]
+    sourceIds: [CR-003, DEC-002, PD-003, PD-004]
     requiredSkills: [traceability]
     requiredEvidence: [EV008]
-  - id: T009
-    title: Keep accepted deferral CR-003 visible
-    status: pending
-    owner: sdd
-    dependencies: [T001]
-    requirements: []
-    decisions: []
-    sourceIds: [CR-003, PD-004]
-    requiredSkills: [traceability]
-    requiredEvidence: [EV009]
 acceptedDeferrals:
   - "CR-003"
   - "DEC-002"

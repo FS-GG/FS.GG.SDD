@@ -3,7 +3,7 @@
 # through the real generating + gating stages plan -> tasks -> analyze -> evidence ->
 # verify -> ship (ExampleLifecycleContractTests). Because `tasks` re-derives the task
 # graph on every run (one obligation per required disposition), this file declares one
-# evidence entry per generated obligation EV001..EV009 — so the example is a genuine
+# evidence entry per generated obligation EV001..EV008 — so the example is a genuine
 # FIXPOINT of the tool that produces it (#211): running the generators over it leaves a
 # graph its own evidence still satisfies.
 #
@@ -23,8 +23,8 @@
 # A DEFERRAL (result: deferred, or kind: deferral) is a first-class, accepted outcome —
 # NOT a failure and NOT a synthetic pass. The evidence gate REQUIRES every deferral to
 # carry all four fields — `rationale`, `owner`, `scope`, `laterLifecycleVisibility` —
-# or it blocks with `evidence.missingDeferralRationale`. EV008/EV009 below are the
-# canonical deferral shape (matched by SkillGateDoctestTests against the deferral gate rule).
+# or it blocks with `evidence.missingDeferralRationale`. EV008 below is the canonical
+# deferral shape (matched by SkillGateDoctestTests against the deferral gate rule).
 schemaVersion: 1
 evidence:
   # Satisfies EV001 (T001, requirement FR-001): real (non-synthetic) verification that passed.
@@ -103,12 +103,15 @@ evidence:
     artifacts: [tests/ExampleApp.Tests/WorkModelViewTests.fs]
     result: pass
     synthetic: false
-  # An accepted DEFERRAL — the match-end/win condition (DEC-002) is out of scope for this
-  # work item; T008 only keeps that deferral visible. PD-003 is the plan scaffold's PURE
-  # deferral mirror for DEC-002 (`acceptedDeferral: Accepted deferral DEC-002 remains visible
-  # to task generation.`), so `tasks` FOLDS it into this one keep-visible obligation instead of
-  # deriving a second `Implement plan decision PD-003` task (#649) — hence `planDecisionRefs:
-  # [PD-003]` here. All four deferral fields are present, so the gate accepts it. Satisfies EV008.
+  # An accepted DEFERRAL — the match-end/win condition (DEC-002) is out of scope for this work
+  # item; T008 keeps that ONE deferral visible. Everything that merely echoes DEC-002 folds into
+  # this single keep-visible obligation rather than fanning out into three more (#646):
+  #   * PD-003 — the plan scaffold's PURE deferral mirror for DEC-002 (#649);
+  #   * CR-003 — the checklist scaffold's PURE deferral echo of DEC-002 (`acceptedDeferral: …
+  #     remains visible to planning.`), which keeps visible nothing this task does not;
+  #   * PD-004 — the plan's pure mirror OF that CR-003 echo, folded transitively.
+  # So one accepted deferral yields ONE keep-visible obligation, not four — hence the folded refs
+  # below. All four deferral fields are present, so the gate accepts it. Satisfies EV008.
   - id: EV008
     kind: deferral
     subject:
@@ -116,24 +119,11 @@ evidence:
       id: T008
     requirementRefs: [FR-002]
     clarificationDecisionRefs: [DEC-002]
-    planDecisionRefs: [PD-003]
+    checklistResultRefs: [CR-003]
+    planDecisionRefs: [PD-003, PD-004]
     result: deferred
     synthetic: false
     rationale: A match-end/win condition is out of scope for this work item; rally scoring ships without it.
     owner: codex
     scope: match-end condition and win detection
     laterLifecycleVisibility: Re-open as a follow-on work item when match play is specified.
-  # An accepted DEFERRAL for the checklist result CR-003 that T009 keeps visible. Its pure deferral
-  # mirror PD-004 folds in the same way (`planDecisionRefs: [PD-004]`). Satisfies EV009.
-  - id: EV009
-    kind: deferral
-    subject:
-      type: task
-      id: T009
-    planDecisionRefs: [PD-004]
-    result: deferred
-    synthetic: false
-    rationale: The CR-003 review item is accepted as a deferral; it stays visible to tasks and evidence without gating this item.
-    owner: codex
-    scope: CR-003 checklist review follow-up
-    laterLifecycleVisibility: Re-open with the follow-on work item that specifies match play.
