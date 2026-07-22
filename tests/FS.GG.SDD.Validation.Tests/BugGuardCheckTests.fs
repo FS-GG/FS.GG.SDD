@@ -23,8 +23,14 @@ module BugGuardCheckTests =
         let markers = scanText "tests/MazeTests.fs" text
 
         Assert.Equal<BugGuardMarker list>(
-            [ { Kind = PinsBug; Issue = 14; Path = "tests/MazeTests.fs"; Line = 2 }
-              { Kind = Guards; Issue = 27; Path = "tests/MazeTests.fs"; Line = 4 } ],
+            [ { Kind = PinsBug
+                Issue = 14
+                Path = "tests/MazeTests.fs"
+                Line = 2 }
+              { Kind = Guards
+                Issue = 27
+                Path = "tests/MazeTests.fs"
+                Line = 4 } ],
             markers
         )
 
@@ -42,7 +48,9 @@ module BugGuardCheckTests =
     [<Fact>]
     let ``the bare word guards without a hash-number is not a marker`` () =
         // The mandatory `#<n>` is what distinguishes a deliberate marker from prose.
-        let markers = scanText "t.fs" "// this test guards the invariant but references no issue\n"
+        let markers =
+            scanText "t.fs" "// this test guards the invariant but references no issue\n"
+
         Assert.Empty(markers)
 
     // ---- the lane rule (check) ----
@@ -58,7 +66,10 @@ module BugGuardCheckTests =
     [<Fact>]
     let ``fires on a test guarding an OPEN issue`` () =
         let markers =
-            [ { Kind = PinsBug; Issue = 14; Path = "tests/MazeTests.fs"; Line = 2 } ]
+            [ { Kind = PinsBug
+                Issue = 14
+                Path = "tests/MazeTests.fs"
+                Line = 2 } ]
 
         let diagnostics = check (resolver [ 14, Open ]) markers
 
@@ -72,7 +83,10 @@ module BugGuardCheckTests =
     [<Fact>]
     let ``stays silent once the guarded issue is CLOSED`` () =
         let markers =
-            [ { Kind = PinsBug; Issue = 14; Path = "tests/MazeTests.fs"; Line = 2 } ]
+            [ { Kind = PinsBug
+                Issue = 14
+                Path = "tests/MazeTests.fs"
+                Line = 2 } ]
 
         let diagnostics = check (resolver [ 14, Closed ]) markers
 
@@ -81,7 +95,10 @@ module BugGuardCheckTests =
     [<Fact>]
     let ``a guards marker on an OPEN issue also fires`` () =
         let markers =
-            [ { Kind = Guards; Issue = 27; Path = "tests/MazeTests.fs"; Line = 4 } ]
+            [ { Kind = Guards
+                Issue = 27
+                Path = "tests/MazeTests.fs"
+                Line = 4 } ]
 
         let diag = Assert.Single(check (resolver [ 27, Open ]) markers)
         Assert.Equal("bugGuard.openIssuePinned", diag.Id)
@@ -90,7 +107,10 @@ module BugGuardCheckTests =
     [<Fact>]
     let ``an unresolvable issue is flagged as a dangling link`` () =
         let markers =
-            [ { Kind = PinsBug; Issue = 9999; Path = "t.fs"; Line = 1 } ]
+            [ { Kind = PinsBug
+                Issue = 9999
+                Path = "t.fs"
+                Line = 1 } ]
 
         let diag = Assert.Single(check (resolver []) markers)
         Assert.Equal("bugGuard.unresolvedIssue", diag.Id)
@@ -99,9 +119,18 @@ module BugGuardCheckTests =
     [<Fact>]
     let ``mixed corpus: only markers whose issue is OPEN produce warnings, deterministically ordered`` () =
         let markers =
-            [ { Kind = PinsBug; Issue = 14; Path = "b.fs"; Line = 5 }
-              { Kind = Guards; Issue = 27; Path = "a.fs"; Line = 3 }
-              { Kind = PinsBug; Issue = 31; Path = "a.fs"; Line = 1 } ]
+            [ { Kind = PinsBug
+                Issue = 14
+                Path = "b.fs"
+                Line = 5 }
+              { Kind = Guards
+                Issue = 27
+                Path = "a.fs"
+                Line = 3 }
+              { Kind = PinsBug
+                Issue = 31
+                Path = "a.fs"
+                Line = 1 } ]
 
         // #14 open, #27 closed (fixed → silent), #31 open.
         let diagnostics = check (resolver [ 14, Open; 27, Closed; 31, Open ]) markers

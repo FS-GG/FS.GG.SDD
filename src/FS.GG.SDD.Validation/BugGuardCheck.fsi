@@ -33,12 +33,14 @@ module BugGuardCheck =
 
     /// One structured test→issue link found in a test source file.
     type BugGuardMarker =
-        { Kind: MarkerKind
-          Issue: int
-          /// Source file the marker was found in (as supplied to the scanner).
-          Path: string
-          /// 1-based line number of the marker within that file.
-          Line: int }
+        {
+            Kind: MarkerKind
+            Issue: int
+            /// Source file the marker was found in (as supplied to the scanner).
+            Path: string
+            /// 1-based line number of the marker within that file.
+            Line: int
+        }
 
     /// Resolved open/closed state of a referenced issue, populated by the edge that has
     /// issue access. The pure rule never performs I/O.

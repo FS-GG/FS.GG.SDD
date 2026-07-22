@@ -64,7 +64,12 @@ module BugGuardCheck =
     let private diagnosticFor (state: IssueState) (marker: BugGuardMarker) : Diagnostic option =
         let where = $"{marker.Path}:{marker.Line}"
         let token = markerKindValue marker.Kind
-        let location = Some { Line = Some marker.Line; Column = None }
+
+        let location =
+            Some
+                { Line = Some marker.Line
+                  Column = None }
+
         let artifact = artifactFor marker.Path
 
         match state with
