@@ -134,6 +134,37 @@ No blocking planning findings recorded.
             Assert.DoesNotContain("SB-008", decision.SourceIds)
             Assert.DoesNotContain("DEC-006", decision.SourceIds)
 
+    // FS.GG.SDD#653 (#645/#648 prose-token family) — a decision's authored status is the `<status>:`
+    // marker at the DECLARATION position (before the first colon, after the id and bracket tags), not
+    // a word its free prose happens to use. A decision whose PROSE merely discusses staleness ("… so a
+    // stale prior frame is never re-fired.") must NOT read as a `stale`-flagged decision — otherwise
+    // `stalePlanDecision` fires and blocks `tasks` even with every `## Source Snapshot` digest current.
+    // A genuinely marked `- PD-### … stale: …` decision still must (covered by StaleDecisionCount = 1
+    // in the parser test above, whose PD-003 carries a real `stale:` marker).
+
+    [<Fact>]
+    let ``Decision prose mentioning stale is not read as a stale-flagged decision`` () =
+        // PD-001 keeps its `complete:` marker; only its description now uses the word "stale", and even
+        // an embedded prose colon precedes it. Before the fix the whole-line word scan flipped its
+        // status to "stale" and lifted StaleDecisionCount, blocking tasks with digests current.
+        let text =
+            planText.Replace(
+                "- PD-001 [FR-001] [AC-001] complete: Plan command creates technical plans.",
+                "- PD-001 [FR-001] [AC-001] complete: Prior-frame guard: so a stale prior frame is never re-fired."
+            )
+
+        match parsePlanFacts (snapshot text) with
+        | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
+        | Ok facts ->
+            let decision =
+                facts.Decisions
+                |> List.find (fun decision -> decision.DecisionId.Value = "PD-001")
+
+            Assert.Equal("complete", decision.Status)
+            // PD-003 still carries a genuine `stale:` marker; the prose "stale" in PD-001 must not add
+            // to the count.
+            Assert.Equal(1, facts.StaleDecisionCount)
+
     // FS.GG.SDD#569 (feature 105) — the framework-API reference grammar (Phase 1).
 
     [<Fact>]
