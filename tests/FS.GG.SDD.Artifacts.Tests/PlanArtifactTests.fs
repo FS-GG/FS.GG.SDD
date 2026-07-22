@@ -105,6 +105,35 @@ No blocking planning findings recorded.
             Assert.Equal(1, facts.AcceptedDeferrals.Length)
             Assert.Equal(1, facts.StaleDecisionCount)
 
+    // FS.GG.SDD#648 (#541 family) — a plan decision's SOURCE references are the ids it carries in
+    // `[...]` bracket tags, not every id its prose happens to name. A prior-milestone / inherited id
+    // cited in a decision's PROSE ("… extending the SB-008 seam", "… inherited from M2 DEC-006") is a
+    // citation, not a dangling plan reference — so it must NOT appear in the decision's SourceIds,
+    // which is the set `tasks`/`analyze` resolve against.
+
+    [<Fact>]
+    let ``Plan decision source ids come from bracket tags, not prose citations`` () =
+        // SB-008 and DEC-006 are named only in the decision's prose — neither is bracket-tagged, and
+        // neither belongs to this work item's known set. Before the fix both were lifted into SourceIds
+        // and blocked tasks/analyze with "Plan reference '…' does not resolve".
+        let text =
+            planText.Replace(
+                "- PD-001 [FR-001] [AC-001] complete: Plan command creates technical plans.",
+                "- PD-001 [FR-001] [AC-001] complete: Plan command creates technical plans, extending the SB-008 seam inherited from M2 DEC-006."
+            )
+
+        match parsePlanFacts (snapshot text) with
+        | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
+        | Ok facts ->
+            let decision =
+                facts.Decisions
+                |> List.find (fun decision -> decision.DecisionId.Value = "PD-001")
+
+            // Bracket-tagged refs are kept; prose-only citations are not.
+            Assert.Equal<string list>([ "FR-001"; "AC-001" ], decision.SourceIds)
+            Assert.DoesNotContain("SB-008", decision.SourceIds)
+            Assert.DoesNotContain("DEC-006", decision.SourceIds)
+
     // FS.GG.SDD#569 (feature 105) — the framework-API reference grammar (Phase 1).
 
     [<Fact>]

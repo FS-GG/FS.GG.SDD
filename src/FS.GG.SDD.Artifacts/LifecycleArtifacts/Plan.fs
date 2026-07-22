@@ -218,9 +218,26 @@ module Plan =
         |> Seq.distinctBy (fun id -> id.Value)
         |> Seq.toList
 
+    // The `<PREFIX>-<NNN>` family a plan line can reference. Kept as one constant so the reference
+    // scan (`planSourceIdsInLine`) and the accepted-deferral declaration scan stay in lockstep.
+    let private planSourceIdPattern =
+        @"\b(?:FR|US|AC|SB|AMB|CQ|DEC|CHK|CR|PD|PC|VO|PM|GV)-\d{3,}\b"
+
+    /// The family ids a plan line REFERENCES — the ids it carries in `[...]` bracket tags
+    /// (`- PD-001 [FR-002] [AC-003]: …`, `[AMB:AMB-001]`), the citation grammar the plan artifact
+    /// already emits (`lineRefs`) and the one `missingDisposition` tells authors to tag with. An id
+    /// that appears only in a line's PROSE — a decision citing an inherited or prior-milestone id
+    /// ("… extending the SB-008 seam", "… inherited from M2 DEC-006") — is a citation, not a source
+    /// reference, so it is NOT returned and does not read as a dangling `Plan reference '…' does not
+    /// resolve` at tasks/analyze (FS.GG.SDD#648). This is the reference-position sibling of the
+    /// list-leading declaration anchor #541/#647 (`Internal.listLeadingIdMatch`) established for the
+    /// specification and clarification stable-id scans.
     let planSourceIdsInLine line =
-        Regex.Matches(line, @"\b(?:FR|US|AC|SB|AMB|CQ|DEC|CHK|CR|PD|PC|VO|PM|GV)-\d{3,}\b", RegexOptions.IgnoreCase)
+        Regex.Matches(line, @"\[[^\]]*\]")
         |> Seq.cast<Match>
+        |> Seq.collect (fun bracket ->
+            Regex.Matches(bracket.Value, planSourceIdPattern, RegexOptions.IgnoreCase)
+            |> Seq.cast<Match>)
         |> Seq.map (fun m -> m.Value.ToUpperInvariant())
         |> Seq.distinct
         |> Seq.toList
@@ -392,13 +409,19 @@ module Plan =
     let parseAcceptedPlanDeferrals text =
         sectionLines "Accepted Deferrals" text
         |> List.choose (fun (lineNumber, line) ->
-            let sourceIds = planSourceIdsInLine line
+            // A deferral is DECLARED by the id at the list-leading position — `- CR-002 acceptedDeferral: …`
+            // (the upstream deferral it keeps visible). That id is the deferral's identity AND a genuine
+            // source reference, so it is captured even though it is unbracketed; bracket-tagged ids on the
+            // line are additional references. A family id appearing only later in the line's prose is a
+            // citation, not a reference, and `planSourceIdsInLine` already excludes it (FS.GG.SDD#648).
+            match listLeadingIdMatch planSourceIdPattern line with
+            | None -> None
+            | Some m ->
+                let declaredId = m.Value.ToUpperInvariant()
+                let sourceIds = (declaredId :: planSourceIdsInLine line) |> List.distinct
 
-            if List.isEmpty sourceIds then
-                None
-            else
                 Some
-                    { Id = sourceIds.Head
+                    { Id = declaredId
                       Text = line.Trim().TrimStart('-', '*').Trim()
                       SourceIds = sourceIds
                       SourceLocation = sourceLocation lineNumber })
