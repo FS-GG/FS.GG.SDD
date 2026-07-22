@@ -99,6 +99,11 @@ Notes:
   work model.
 - `analyze` reports `analysis.json` as implementation-ready and points you to
   record implementation evidence next; `evidence` then authors `evidence.yml`.
+- After implementation, keep completed tasks honestly marked `done`. The first
+  `fsgg-sdd evidence --work <id>` can scaffold their missing `EV###` declarations
+  even when `evidence.yml` does not exist; it never requires a temporary rollback
+  to `pending` or `inProgress`. The scaffold starts unsatisfied, so author the
+  declarations and register the observed test run before `verify`.
 - `ship` aggregates SDD-owned merge-boundary readiness into `ship.json` and
   points ship-ready work to the **Governance-owned protected-boundary handoff**.
   That handoff is optional and lives outside SDD — SDD never evaluates or enforces

@@ -29,6 +29,11 @@ fsgg-sdd evidence --work <id> --sync-observed-run <trx>  # re-stamp existing rec
 versus an observed-run *receipt* — and one does not do the other's job. See "Satisfied
 here is not observed at verify" below.
 
+You may run the first command after implementation tasks are already marked `done`, even
+when `evidence.yml` does not exist. It scaffolds their stable `EV###` declarations without
+rewriting task status. The scaffold is deliberately unsatisfied (`kind: missing`,
+`result: missing`): author it, run the suite, then use `--from-test-report` for the receipt.
+
 ## Produces / consumes
 
 - **Consumes:** `readiness/<id>/analysis.json` and the task obligations.

@@ -37,6 +37,14 @@ module EvidenceCommandTests =
           StdOut = stdout
           StdErr = stderr }
 
+    let private passingTrx count =
+        $"""<?xml version="1.0" encoding="UTF-8"?>
+<TestRun id="done-task-bootstrap" name="run" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <ResultSummary outcome="Completed">
+    <Counters total="{count}" executed="{count}" passed="{count}" failed="0" error="0" notExecuted="0" />
+  </ResultSummary>
+</TestRun>"""
+
     let undisclosedSyntheticInput =
         """schemaVersion: 1
 workId: 011-evidence-command
@@ -96,6 +104,93 @@ evidence:
         match parseEvidenceArtifact { Path = evidencePath; Text = evidence } with
         | Ok artifact -> Assert.Equal("evidenceReady", artifact.Status)
         | Error diagnostics -> failwith $"Generated evidence artifact did not parse: {diagnostics}."
+
+    [<Fact>]
+    let ``evidence bootstraps declarations after implementation without rolling task status backward`` () =
+        let root = TestSupport.tempDirectory ()
+        let tasksPath = $"work/{workId}/tasks.yml"
+        let provingTest = "tests/DoneTaskBootstrap.Tests/FeatureTests.fs"
+        let testReport = "artifacts/done-task-bootstrap.trx"
+
+        // The supported lifecycle order: analyze while work is pending, implement, then record the
+        // honest completed status before the first evidence scaffold exists.
+        TestSupport.initializePlanReadyProject root workId title
+        TestSupport.runTasks root workId title |> ignore
+        TestSupport.runAnalyze root workId title |> ignore
+
+        let doneTasks =
+            TestSupport.readRelative root tasksPath
+            |> fun text -> text.Replace("status: pending", "status: done")
+
+        TestSupport.writeRelative root tasksPath doneTasks
+        Assert.False(TestSupport.existsRelative root evidencePath)
+
+        let bootstrap =
+            { TestSupport.evidenceRequest root workId title with
+                FromTests = Some provingTest }
+            |> TestSupport.runRequest
+
+        Assert.NotEqual(CommandOutcome.Blocked, bootstrap.Outcome)
+        Assert.DoesNotContain(bootstrap.Diagnostics, fun diagnostic -> diagnostic.Id = "doneTaskMissingEvidence")
+        Assert.Equal(doneTasks, TestSupport.readRelative root tasksPath)
+
+        let scaffold = TestSupport.readRelative root evidencePath
+        Assert.Contains("kind: missing", scaffold)
+        Assert.Contains("result: missing", scaffold)
+        Assert.DoesNotContain("observedRun:", scaffold)
+
+        // Scaffolding is not a bypass: missing declarations still stop verify.
+        let beforeAuthoring = TestSupport.runVerify root workId title
+        Assert.Equal(CommandOutcome.Blocked, beforeAuthoring.Outcome)
+
+        // Author the declarations honestly, materialize their cited test, then register the run SDD
+        // actually observed. No task status is rewritten at any point.
+        TestSupport.writeRelative root provingTest "module DoneTaskBootstrap.Tests.FeatureTests\n"
+
+        scaffold
+        |> fun text -> text.Replace("kind: missing", "kind: verification").Replace("result: missing", "result: pass")
+        |> TestSupport.writeRelative root evidencePath
+
+        TestSupport.runEvidence root workId title |> ignore
+
+        let beforeReceipt =
+            { TestSupport.verifyRequest root workId title with
+                RequireObserved = true }
+            |> TestSupport.runRequest
+
+        Assert.Equal(CommandOutcome.Blocked, beforeReceipt.Outcome)
+
+        TestSupport.writeRelative root testReport (passingTrx 1)
+
+        let receiptReport =
+            { TestSupport.evidenceRequest root workId title with
+                FromTestReport = Some testReport }
+            |> TestSupport.runRequest
+
+        Assert.DoesNotContain(
+            receiptReport.Diagnostics,
+            fun diagnostic -> diagnostic.Severity = Diagnostics.DiagnosticError
+        )
+
+        let received = TestSupport.readRelative root evidencePath
+        Assert.Contains("observedRun:", received)
+        Assert.Equal(doneTasks, TestSupport.readRelative root tasksPath)
+
+        let afterReceipt =
+            { TestSupport.verifyRequest root workId title with
+                RequireObserved = true }
+            |> TestSupport.runRequest
+
+        Assert.NotEqual(CommandOutcome.Blocked, afterReceipt.Outcome)
+
+        // Repeating the same bootstrap/receipt operation is byte-idempotent and no-clobber.
+        let repeat =
+            { TestSupport.evidenceRequest root workId title with
+                FromTestReport = Some testReport }
+            |> TestSupport.runRequest
+
+        Assert.DoesNotContain(repeat.Diagnostics, fun diagnostic -> diagnostic.Severity = Diagnostics.DiagnosticError)
+        Assert.Equal(received, TestSupport.readRelative root evidencePath)
 
     [<Fact>]
     let ``evidence missing analysis blocks without authored evidence write`` () =

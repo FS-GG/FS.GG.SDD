@@ -39,7 +39,7 @@
     {
       "id": "fs-gg-sdd-evidence",
       "scope": "process",
-      "sha256": "2e393771fb1d417de988cb6edf0e32493f6ff8e457f00f884c18dd10455f8493",
+      "sha256": "91cec168ed536a769fbdf7734318d8990083dfa665890328e359b9fc14b38bfb",
       "resolvablePath": ".agents/skills/fs-gg-sdd-evidence/SKILL.md",
       "materializes-when": "always"
     },
@@ -88,7 +88,7 @@
     {
       "id": "fs-gg-sdd-tasks",
       "scope": "process",
-      "sha256": "ee82144065c3288e34180350655c4fccd3e95b473c2b745b490937fdf893d0a7",
+      "sha256": "33c3410cab95503c5c0c6b91de785ad2682f21dc3088d8d46d3f1e1d8975d548",
       "resolvablePath": ".agents/skills/fs-gg-sdd-tasks/SKILL.md",
       "materializes-when": "always"
     },
