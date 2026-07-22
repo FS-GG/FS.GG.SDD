@@ -1,5 +1,5 @@
 command: ship
-toolVersion: 0.22.0
+toolVersion: 0.23.0
 outcome: succeeded
 changedArtifacts: 6
 specificationRequirements: 1
