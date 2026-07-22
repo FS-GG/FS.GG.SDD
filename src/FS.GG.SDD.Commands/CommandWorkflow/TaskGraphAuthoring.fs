@@ -563,8 +563,7 @@ module internal TaskGraphAuthoring =
             |> List.choose (fun id ->
                 let idUpper = id.ToUpperInvariant()
 
-                let folded =
-                    Map.tryFind idUpper deferralFoldedPds |> Option.defaultValue []
+                let folded = Map.tryFind idUpper deferralFoldedPds |> Option.defaultValue []
 
                 // The pure checklist mirrors that fold into THIS clarify deferral, each carrying any pure
                 // PD mirror already folded into it — so the collapse is transitive (DEC <- CR <- PD all

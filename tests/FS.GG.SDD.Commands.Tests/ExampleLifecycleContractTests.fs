@@ -248,7 +248,9 @@ module ExampleLifecycleContractTests =
         let report = TestSupport.runTasks root workId title
 
         let ids =
-            report.Diagnostics |> List.map (fun d -> $"{d.Severity}:{d.Id}") |> String.concat ", "
+            report.Diagnostics
+            |> List.map (fun d -> $"{d.Severity}:{d.Id}")
+            |> String.concat ", "
 
         Assert.True(
             File.Exists(Path.Combine(root, "work", workId, "tasks.yml")),
@@ -279,7 +281,10 @@ module ExampleLifecycleContractTests =
         // longer a subset of the accepted clarify deferrals, so it is not a pure echo.
         let rewritten =
             (TestSupport.readRelative root checklistPath)
-                .Replace("[CHK:CHK-002] [DEC-002] acceptedDeferral:", "[CHK:CHK-002] [DEC-002] [FR-001] acceptedDeferral:")
+                .Replace(
+                    "[CHK:CHK-002] [DEC-002] acceptedDeferral:",
+                    "[CHK:CHK-002] [DEC-002] [FR-001] acceptedDeferral:"
+                )
 
         Assert.Contains("[DEC-002] [FR-001] acceptedDeferral:", rewritten) // the edit landed
         TestSupport.writeRelative root checklistPath rewritten
