@@ -77,6 +77,36 @@ module internal TaskGraphAuthoring =
     let internal upperSet (values: string list) =
         values |> List.map (fun value -> value.ToUpperInvariant()) |> Set.ofList
 
+    // #649 (narrowing #310 AC9): the fixed sentence `PlanAuthoring.deferralDecisionLines` writes for
+    // an auto-generated deferral mirror — `acceptedDeferral: Accepted deferral <id> remains visible
+    // to task generation.` The parser leaves the leading `[ref]` tokens on the decision's `Text`, so
+    // they are stripped before the match. Anchored end-to-end: a mirror that carried one extra clause
+    // of real design rationale would fail this and keep its own obligation, which is the whole point.
+    let private deferralMirrorBoilerplate =
+        Regex(
+            @"^acceptedDeferral:\s*Accepted deferral\s+[A-Za-z][A-Za-z0-9]*-\d{3,}\s+remains visible to task generation\.?\s*$",
+            RegexOptions.IgnoreCase
+        )
+
+    let private isDeferralMirrorBoilerplate (text: string) =
+        let withoutRefs = Regex.Replace(text, @"^\s*(?:\[[^\]]*\]\s*)+", "")
+        deferralMirrorBoilerplate.IsMatch(withoutRefs.Trim())
+
+    /// A PURE auto-generated deferral-mirror `PD-###` (#649): the `plan` scaffold emits one
+    /// `PD-### [DEC-###] acceptedDeferral: Accepted deferral DEC-### remains visible to task
+    /// generation.` per accepted deferral. Such a mirror disposes nothing the keep-visible task does
+    /// not already dispose. It is PURE — and therefore foldable — ONLY when every ref is an
+    /// accepted-deferral id AND the text is that exact boilerplate. A `PD` that references a deferral
+    /// PLUS real design content fails the text check and keeps its own obligation, which is exactly
+    /// the over-collapse #310 AC9 protects against.
+    let internal isPureDeferralMirror (acceptedDeferralIdSet: Set<string>) (decision: PlanDecision) =
+        let refs = upperSet decision.SourceIds
+
+        not (Set.isEmpty refs)
+        && Set.isSubset refs acceptedDeferralIdSet
+        && decision.Status.Equals("acceptedDeferral", StringComparison.OrdinalIgnoreCase)
+        && isDeferralMirrorBoilerplate decision.Text
+
     let tasksSummary (facts: TaskFacts) : TasksSummary =
         let statusCount predicate =
             facts.Tasks |> List.filter (fun task -> predicate task.Status) |> List.length
@@ -342,16 +372,37 @@ module internal TaskGraphAuthoring =
         // the id is FOLDED into the subsuming task's `sourceIds`, which is what disposes it.
         //
         // A PD with no refs at all is subsumed by nothing (an empty set is a subset of anything),
-        // and a PD that refs an accepted deferral (`[AMB-007]`) matches no requirement task. Both
-        // keep their own task.
+        // and a PD that refs an accepted deferral (`[AMB-007]`) matches no requirement task.
+        //
+        // #649 (narrowing #310 AC9): a PD that refs an accepted deferral splits in two. A PURE
+        // auto-generated deferral mirror (`isPureDeferralMirror` — every ref an accepted-deferral id,
+        // text the fixed boilerplate) is FOLDED into the keep-visible task for that deferral, exactly
+        // as an FR-mirror folds into its requirement task — one obligation, not two. A PD that refs a
+        // deferral PLUS real design content is NOT pure, matches no requirement task, and keeps its
+        // own task — the real design decision #310 AC9 refuses to discard.
+
+        // The accepted-deferral id universe (clarify + checklist + plan): the ids `deferralTasks`
+        // keeps visible, and the fold target for a pure deferral-mirror PD. Built once, upstream of
+        // both, so the mirror partition and the keep-visible tasks read the same set.
+        let acceptedDeferralIds =
+            [ clarificationFacts.AcceptedDeferrals
+              |> List.map (fun deferral -> deferral.DecisionId.Value)
+              checklistFacts.AcceptedDeferrals
+              |> List.map (fun result -> result.ResultId.Value)
+              planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id) ]
+            |> List.concat
+            |> List.distinct
+
+        let acceptedDeferralIdSet = upperSet acceptedDeferralIds
+
         // Each requirement task's ref set, built once. `tryFind` below would otherwise rebuild
         // every candidate's set per decision — quadratic in a spec's requirement count.
         let requirementRefSets: (WorkTask * Set<string>) list =
             requirementTasks |> List.map (fun task -> task, upperSet task.SourceIds)
 
-        // Decide each decision's fate up front, as a value. Deriving `planDecisionTasks` and the
-        // folded requirement tasks from ONE partition keeps them from depending on each other's
-        // evaluation order.
+        // Decide each decision's fate up front, as a value. Deriving `planDecisionTasks`, the folded
+        // requirement tasks, and the folded keep-visible tasks from ONE partition keeps them from
+        // depending on each other's evaluation order.
         let subsumerOf (decision: PlanDecision) =
             let refs = upperSet decision.SourceIds
 
@@ -362,10 +413,26 @@ module internal TaskGraphAuthoring =
                 |> List.tryFind (fun (_, taskRefs) -> Set.isSubset refs taskRefs)
                 |> Option.map fst
 
-        let subsumed, standalone =
+        // Pure deferral mirrors fold into their keep-visible task (below); the rest partition into
+        // requirement-subsumed (fold into the requirement task) and standalone (own task), unchanged.
+        let deferralMirrors, nonMirrorDecisions =
             planFacts.Decisions
+            |> List.partition (isPureDeferralMirror acceptedDeferralIdSet)
+
+        let subsumed, standalone =
+            nonMirrorDecisions
             |> List.map (fun decision -> decision, subsumerOf decision)
             |> List.partition (snd >> Option.isSome)
+
+        // deferralId (upper) -> the pure-mirror PD ids folded into that deferral's keep-visible task.
+        let deferralFoldedPds =
+            deferralMirrors
+            |> List.collect (fun decision ->
+                decision.SourceIds
+                |> List.map (fun deferralId -> deferralId.ToUpperInvariant(), decision.DecisionId.Value))
+            |> List.groupBy fst
+            |> List.map (fun (deferralId, pairs) -> deferralId, pairs |> List.map snd)
+            |> Map.ofList
 
         let foldedByTaskId =
             subsumed
@@ -438,16 +505,23 @@ module internal TaskGraphAuthoring =
                     primaryDependency
                     [ "deterministic-json" ])
 
+        // The keep-visible task per accepted deferral. Its `sourceIds` carry the deferral id FIRST
+        // (so `maybeTask`'s dedup key is unchanged) and then any pure deferral-mirror PD folded into
+        // it (#649) — one obligation disposing both the deferral and its redundant mirror, instead of
+        // two. `plannedTask` sorts `sourceIds`, so the fold is order-insensitive on output.
         let deferralTasks =
-            [ clarificationFacts.AcceptedDeferrals
-              |> List.map (fun deferral -> deferral.DecisionId.Value)
-              checklistFacts.AcceptedDeferrals
-              |> List.map (fun result -> result.ResultId.Value)
-              planFacts.AcceptedDeferrals |> List.map (fun deferral -> deferral.Id) ]
-            |> List.concat
-            |> List.distinct
+            acceptedDeferralIds
             |> List.choose (fun id ->
-                maybeTask [ id ] $"Keep accepted deferral {id} visible" [] [] primaryDependency [ "traceability" ])
+                let folded =
+                    Map.tryFind (id.ToUpperInvariant()) deferralFoldedPds |> Option.defaultValue []
+
+                maybeTask
+                    (id :: folded)
+                    $"Keep accepted deferral {id} visible"
+                    []
+                    []
+                    primaryDependency
+                    [ "traceability" ])
 
         // #306: the render-and-look obligation. Every other derived task descends from a lifecycle
         // fact id; this one descends from none, because the defect class it exists to catch — a spec

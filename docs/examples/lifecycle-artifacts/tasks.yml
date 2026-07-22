@@ -25,7 +25,7 @@ sources:
     schemaVersion: 1
   - label: plan
     path: work/001-example/plan.md
-    digest: c16b143afcb84a0cc5c49db25a35842f825f4906888bfe85516894ad822ec347
+    digest: da53a46b6be83c60dee48826f7d4638db8b5c0409ebe2dfd10357a526131a5a2
     schemaVersion: 1
 tasks:
   - id: T001
@@ -58,27 +58,7 @@ tasks:
     sourceIds: [DEC-001]
     requiredSkills: [fsharp, implementation]
     requiredEvidence: [EV003]
-  - id: T006
-    title: Implement plan decision PD-003
-    status: pending
-    owner: sdd
-    dependencies: [T001]
-    requirements: []
-    decisions: []
-    sourceIds: [DEC-002, PD-003]
-    requiredSkills: [fsharp, implementation]
-    requiredEvidence: [EV006]
-  - id: T007
-    title: Implement plan decision PD-004
-    status: pending
-    owner: sdd
-    dependencies: [T001]
-    requirements: []
-    decisions: []
-    sourceIds: [CR-003, PD-004]
-    requiredSkills: [fsharp, implementation]
-    requiredEvidence: [EV007]
-  - id: T008
+  - id: T004
     title: Update contract surface PC-001
     status: pending
     owner: sdd
@@ -87,8 +67,8 @@ tasks:
     decisions: []
     sourceIds: [PC-001, PD-001]
     requiredSkills: [fsharp]
-    requiredEvidence: [EV008]
-  - id: T009
+    requiredEvidence: [EV004]
+  - id: T005
     title: Record verification evidence VO-001
     status: pending
     owner: sdd
@@ -97,8 +77,8 @@ tasks:
     decisions: []
     sourceIds: [PC-001, PD-001, VO-001]
     requiredSkills: [automated-tests, readiness-evidence]
-    requiredEvidence: [EV009]
-  - id: T010
+    requiredEvidence: [EV005]
+  - id: T006
     title: Handle migration posture PM-001
     status: pending
     owner: sdd
@@ -107,8 +87,8 @@ tasks:
     decisions: []
     sourceIds: [PC-001, PM-001]
     requiredSkills: [schema-versioning]
-    requiredEvidence: [EV010]
-  - id: T011
+    requiredEvidence: [EV006]
+  - id: T007
     title: Refresh generated view impact GV-001
     status: pending
     owner: sdd
@@ -117,27 +97,27 @@ tasks:
     decisions: []
     sourceIds: [GV-001, PD-001]
     requiredSkills: [deterministic-json]
-    requiredEvidence: [EV011]
-  - id: T012
+    requiredEvidence: [EV007]
+  - id: T008
     title: Keep accepted deferral DEC-002 visible
     status: pending
     owner: sdd
     dependencies: [T001]
     requirements: []
     decisions: []
-    sourceIds: [DEC-002]
+    sourceIds: [DEC-002, PD-003]
     requiredSkills: [traceability]
-    requiredEvidence: [EV012]
-  - id: T013
+    requiredEvidence: [EV008]
+  - id: T009
     title: Keep accepted deferral CR-003 visible
     status: pending
     owner: sdd
     dependencies: [T001]
     requirements: []
     decisions: []
-    sourceIds: [CR-003]
+    sourceIds: [CR-003, PD-004]
     requiredSkills: [traceability]
-    requiredEvidence: [EV013]
+    requiredEvidence: [EV009]
 acceptedDeferrals:
   - "CR-003"
   - "DEC-002"
