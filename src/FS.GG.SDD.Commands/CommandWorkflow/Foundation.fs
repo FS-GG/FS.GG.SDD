@@ -692,9 +692,10 @@ nuget-cache/
 
     let surfaceSourceRoot request = surfaceParam "sourceRoot" "src" request
 
-    // Feature 105, Phase 2: `dependency-surface` roots/targets. `baselineRoot` is where captures are
-    // committed; `packageId`/`version` name an explicit `--update` target (both empty ⇒ operate over
-    // the committed set only). Generic SDD embeds no package literal — the default is a directory.
+    // Feature 105/109: `dependency-surface` roots/targets. `baselineRoot` is where captures are
+    // committed; `packageId`/`version` name an explicit target. With no explicit target the command
+    // discovers framework references from authored plans (and resolves unversioned references from
+    // the CPM pins), so a clean generated consumer can bootstrap its first capture.
     let dependencySurfaceBaselineRoot request =
         surfaceParam "baselineRoot" "docs/dependency-surface" request
 
@@ -858,7 +859,11 @@ nuget-cache/
                     if escapesRoot baselineRoot then
                         [ dependencySurfaceRootEscape baselineRoot ], []
                     else
-                        [], [ EnumerateDirectory baselineRoot ]
+                        [],
+                        [ EnumerateDirectory baselineRoot
+                          EnumerateDirectory "work"
+                          ReadFile "Directory.Packages.local.props"
+                          ReadFile "Directory.Packages.props" ]
                 // Lint reads the single `<artifact>` (feature 076); a missing path is a plan-time
                 // user error (nothing for the effect loop to read) surfaced as unusable input.
                 | Lint, _ ->

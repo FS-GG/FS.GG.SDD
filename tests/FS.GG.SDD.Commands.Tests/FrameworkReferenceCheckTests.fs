@@ -166,6 +166,28 @@ No blocking planning findings recorded.
         Assert.Equal(Some "2.3.4", ViewGeneration.resolveFrameworkVersion reference [ pin ])
 
     [<Fact>]
+    let ``an unversioned reference resolves a coherent-set CPM property`` () =
+        let propertyPin =
+            """<Project><PropertyGroup><SampleVersion>2.3.4</SampleVersion></PropertyGroup><ItemGroup>
+  <PackageVersion Include="Pkg.Sample" Version="$(SampleVersion)" />
+</ItemGroup></Project>"""
+
+        let facts = parse (planWith "- framework: Pkg.Sample#bareSymbol — no version." "")
+        let reference = List.exactlyOne facts.FrameworkApiReferences
+        Assert.Equal(Some "2.3.4", ViewGeneration.resolveFrameworkVersion reference [ propertyPin ])
+
+    [<Fact>]
+    let ``an unresolved CPM property remains unavailable instead of becoming a literal version`` () =
+        let unresolvedPin =
+            """<Project><ItemGroup>
+  <PackageVersion Include="Pkg.Sample" Version="$(MissingVersion)" />
+</ItemGroup></Project>"""
+
+        let facts = parse (planWith "- framework: Pkg.Sample#bareSymbol — no version." "")
+        let reference = List.exactlyOne facts.FrameworkApiReferences
+        Assert.Equal(None, ViewGeneration.resolveFrameworkVersion reference [ unresolvedPin ])
+
+    [<Fact>]
     let ``an unversioned reference with no pin does not resolve`` () =
         let facts = parse (planWith "- framework: Unpinned.Pkg#bareSymbol — no version." "")
         let reference = List.exactlyOne facts.FrameworkApiReferences

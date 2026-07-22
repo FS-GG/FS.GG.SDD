@@ -150,16 +150,16 @@ jobs:
             --param versionAxisFile=Directory.Build.local.props || rc=1
           exit $rc
 
-      # Feature 105, Phase 2 (ADR-0004 D2): the dependency-surface capture drift-guard. `--check`
-      # re-reads each committed `docs/dependency-surface/<Pkg>/<ver>.json` from the package's REAL
-      # restored surface and blocks (exit 1) on any digest disagreement; an unreadable surface is
-      # advisory, never a false red (ADR-0002 / #266). It relies on the build step above having
-      # restored the graph, so the packages are present in the cache.
+      # Feature 105/109 (ADR-0004 D2): the dependency-surface capture drift-guard. `--check`
+      # discovers authored framework references across work/**/plan.md, resolves CPM pins, restores
+      # the workspace, and compares each required capture to the package's REAL restored surface.
+      # A readable missing capture or digest disagreement blocks; an unreadable surface is advisory,
+      # never a false red (ADR-0002 / #266).
       #
       # INERT in FS.GG.SDD itself today: this repo references no framework package to capture, so
-      # `docs/dependency-surface/` is empty and the check enumerates zero targets (exit 0). The step
-      # exists so the guard fires the moment a capture is committed here, and so a consumer product
-      # (which DOES reference e.g. FS.GG.UI.*) inherits the identical gate. As one ordinary step it
+      # its authored plans have no framework references, so target discovery is empty. A consumer
+      # product's first authored reference is enough to activate the same gate; no pre-existing
+      # capture is needed. As one ordinary step it
       # is skipped when something upstream is already red.
       - name: Dependency-surface captures (dependency-surface --check)
         run: |

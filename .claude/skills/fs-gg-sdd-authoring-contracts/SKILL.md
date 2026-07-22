@@ -177,6 +177,15 @@ ADR-0004) rather than an un-checked backtick token. On a `## Contract Impact` li
   - no capture committed, or the version cannot be resolved → **advisory**
     (`frameworkApiSurfaceUnavailable`, exit 0) — "could not look" is never a negative
     verdict.
+- The parameter-free capture commands are the generated-product lifecycle:
+  - after adding a framework reference or changing a package pin, run
+    `fsgg-sdd dependency-surface --update`; it discovers targets across `work/**/plan.md`,
+    resolves omitted versions from `Directory.Packages*.props`, restores the workspace, and
+    commits captures from the real packages;
+  - CI runs `fsgg-sdd dependency-surface --check`; a readable authored target with no capture,
+    or a capture whose real package surface drifted, blocks until `--update` is committed;
+  - an unavailable package remains advisory. The `frameworkApiSurfaceUnavailable` diagnostic
+    names the exact targeted update command when a single package needs remediation.
 
 That is what a plain backtick citation cannot give you: a reference the tool resolves
 against the **real** package, defeating both a genuinely dangling reference and the
