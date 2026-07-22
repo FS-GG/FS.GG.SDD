@@ -535,6 +535,14 @@ surface** — `docs/dependency-surface/<PackageId>/<version>.json`, produced by
 | a `blocked-on-framework:` **deferral** | no | passes — the deferral is legitimate |
 | any | no capture / unresolvable version | **advisory** — `frameworkApiSurfaceUnavailable` (exit 0) |
 
+The generated-product owner is parameter-free and discovery-driven. After adding a framework
+reference or changing a package pin, run `fsgg-sdd dependency-surface --update`; it discovers all
+targets in `work/**/plan.md`, resolves omitted versions from `Directory.Packages*.props`, restores
+the workspace, and writes captures from the real packages. CI runs
+`fsgg-sdd dependency-surface --check`: a readable authored target with no capture, or a capture that
+differs from the restored surface, exits 1 until the update is committed. An unavailable package
+remains advisory, and `analyze` remains hermetic: it reads only committed capture JSON.
+
 The last row is the settled severity policy: **block on real contradictions, advise
 when blind.** "Could not look" — no capture committed, or the run cannot resolve the
 version — is never rendered as a negative verdict (org ADR-0002 / #266). This defeats

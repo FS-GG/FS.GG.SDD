@@ -118,13 +118,15 @@ the mis-scoping the incident produced, and it is what the check contradicts.
 **Chosen: a captured baseline plus a drift guard.** A new capture verb (working
 name `fsgg-sdd dependency-surface`) owns the restore:
 
-- `--update` — resolve the pin → `dotnet restore` the package → read its **real**
+- `--update` — discover references across `work/**/plan.md`, resolve explicit versions or the
+  workspace CPM pins → `dotnet restore` the workspace → read each package's **real**
   public surface from the restored artifact in `~/.nuget/packages/<id>/<version>/`
   → write a committed, provenance-stamped capture at
   `docs/dependency-surface/<PackageId>/<version>.json` (schema v1:
   `packageId`, `version`, `capturedFrom` feed, content `sha256`, `symbols[]`).
-- `--check` (default, read-only) — re-capture and diff against the committed file;
-  any drift exits 1. This is the CI drift-guard, matching the `surface` /
+- `--check` (default) — discover the same authored target set, restore, and diff against the
+  committed files; a readable target with no capture or any content drift exits 1. This is the CI
+  drift-guard, matching the `surface` /
   `skill-manifest` idiom the repo already uses.
 
 This resolves the crux by **confining the restore to the capture verb**:
@@ -132,7 +134,7 @@ This resolves the crux by **confining the restore to the capture verb**:
 - `analyze` reads only the committed capture — it stays pure, offline, and
   deterministic; no network or reflection at analyze time.
 - the capture is **authoritative by construction** — read from the real published
-  package, not hand-vendored — and CI re-captures on any pin change, so it cannot
+  package, not hand-vendored — and CI discovers the new target on any pin change, so it cannot
   silently go stale. This actively closes the `orphanBaseline` hole the incident
   exploited.
 
@@ -196,6 +198,9 @@ contradicts it).
   needs neither.
 - **Determinism preserved** for the inner loop: `analyze` reads a committed file;
   the nondeterministic restore is a separate, CI-gated step.
+- **Generated-consumer owner**: `dependency-surface --update` owns initial capture and pin-change
+  refresh; `dependency-surface --check` owns drift/missing-capture enforcement. Both derive targets
+  from authored plans and CPM pins, so an empty capture directory is no longer an empty check.
 
 ## Scope / phasing (for the implementation feature)
 

@@ -729,31 +729,30 @@ module CommandTypes =
             ObservedSymbolCount: int
         }
 
-    /// The read-only (or, under `--update`, reconciling) dependency-surface picture
-    /// `dependency-surface` emits (feature 105, Phase 2; ADR-0004 D2). Each committed capture under
-    /// `docs/dependency-surface/<PackageId>/<Version>.json` is compared to the package's real
-    /// restored surface. `--check` blocks on drift (a committed digest disagreeing with the real
-    /// surface); an unreadable surface is advisory, never a block. `--update` refreshes/creates the
-    /// captures.
+    /// The capture-read-only (or, under `--update`, reconciling) dependency-surface picture
+    /// `dependency-surface` emits (features 105/109; ADR-0004 D2). Authored plan targets, committed
+    /// captures, and an explicit target are compared to each package's real restored surface.
+    /// `--check` writes no captures and blocks on a readable missing capture or content drift; an
+    /// unreadable surface is advisory, never a block. `--update` refreshes/creates captures.
     type DependencySurfaceSummary =
         {
             BaselineRoot: string
-            /// `check` (read-only, blocks on drift) or `update` (refresh captures).
+            /// `check` (writes no captures; blocks on missing/drift) or `update` (refresh captures).
             Mode: string
-            /// Count of packages examined this run (committed captures ∪ an explicit `--param`
-            /// target).
+            /// Count of packages examined this run (authored references ∪ committed captures ∪ an
+            /// explicit `--param` target).
             CheckedCount: int
             /// One entry per examined package, sorted by `<PackageId>@<Version>`.
             Entries: DependencySurfaceEntry list
-            /// `<PackageId>@<Version>` of every package whose committed capture drifted from the
-            /// real surface. Sorted. Non-empty ⇒ `--check` blocks.
+            /// `<PackageId>@<Version>` of every readable package whose capture is missing or drifted
+            /// from the real surface. Sorted. Non-empty ⇒ `--check` blocks.
             DriftedPackages: string list
             /// `<PackageId>@<Version>` of every package whose real surface could not be read.
             /// Sorted. Advisory — never blocks (fail-open, ADR-0002 / #266).
             UnavailablePackages: string list
             /// `<PackageId>@<Version>` of every capture written this run (`--update` only). Sorted.
             UpdatedPackages: string list
-            /// True when no committed capture drifted from a readable real surface. An unavailable
+            /// True when every readable required target has a matching capture. An unavailable
             /// surface does not affect coherence.
             IsCoherent: bool
         }

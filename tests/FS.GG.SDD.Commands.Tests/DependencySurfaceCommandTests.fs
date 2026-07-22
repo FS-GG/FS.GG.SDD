@@ -163,3 +163,63 @@ module DependencySurfaceCommandTests =
         Assert.Equal(1, exitCodeForReport report)
         // No capture was written anywhere under the workspace.
         Assert.False(existsRelative root capturePathRel)
+
+    // ---- Feature 109: generated-consumer bootstrap and drift lifecycle -----------------
+
+    [<Fact>]
+    let ``authored framework references bootstrap a real capture and make missing capture drift visible`` () =
+        let root = tempDirectory ()
+        let workId = "109-dependency-surface-consumer"
+        let title = "Dependency Surface Consumer"
+        initializeTasksReadyProject root workId title
+
+        // Read the genuinely restored package once to select a real, grammar-safe symbol for the
+        // end-to-end assertion. Delete that explicit seed: the command under test must rediscover
+        // the target from the generated product's authored plan, starting with no capture.
+        depSurfaceRequest true root targetParams |> ignore
+
+        let realSymbol =
+            match tryParse (readRelative root capturePathRel) with
+            | Ok capture ->
+                capture.Symbols
+                |> List.find (fun symbol -> symbol |> Seq.forall (System.Char.IsWhiteSpace >> not))
+            | Error message -> failwith $"expected seed capture: {message}"
+
+        System.IO.File.Delete(System.IO.Path.Combine(root, capturePathRel))
+
+        let planPath = $"work/{workId}/plan.md"
+
+        let withFrameworkReference =
+            (readRelative root planPath)
+                .Replace(
+                    "## Contract Impact\n",
+                    $"## Contract Impact\n- framework: {restoredPackage}@{restoredVersion}#{realSymbol} — generated-consumer use.\n"
+                )
+
+        writeRelative root planPath withFrameworkReference
+
+        let updateReport = depSurfaceRequest true root []
+        let updateSummary = summaryOf updateReport
+        Assert.True(existsRelative root capturePathRel)
+        Assert.Contains(targetId restoredPackage restoredVersion, updateSummary.UpdatedPackages)
+
+        let presentReport = runAnalyze root workId title
+        Assert.DoesNotContain(presentReport.Diagnostics, fun d -> d.Id = "frameworkApiSurfaceUnavailable")
+        Assert.DoesNotContain(presentReport.Diagnostics, fun d -> d.Id = "frameworkApiDangling")
+
+        writeRelative root planPath (withFrameworkReference.Replace(realSymbol, "Definitely.Missing.Symbol"))
+        let missingReport = runAnalyze root workId title
+        Assert.Contains(missingReport.Diagnostics, fun d -> d.Id = "frameworkApiDangling")
+
+        // A clean-checkout/pin-refresh hole is not invisible: if the authored target is readable but
+        // its capture is absent, parameter-free --check blocks and names it. --update repairs it.
+        System.IO.File.Delete(System.IO.Path.Combine(root, capturePathRel))
+        let checkReport = depSurfaceRequest false root []
+        let checkSummary = summaryOf checkReport
+        Assert.Contains(targetId restoredPackage restoredVersion, checkSummary.DriftedPackages)
+        Assert.Equal("new", (List.exactlyOne checkSummary.Entries).Status)
+        Assert.Contains(checkReport.Diagnostics, fun d -> d.Id = "dependencySurface.drift")
+        Assert.Equal(1, exitCodeForReport checkReport)
+
+        depSurfaceRequest true root [] |> ignore
+        Assert.True(existsRelative root capturePathRel)

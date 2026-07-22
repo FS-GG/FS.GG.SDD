@@ -767,15 +767,16 @@ module Diagnostics =
         create "surface.versionBumpRequired" DiagnosticWarning None None message remediation []
 
     // Feature 105, Phase 2 (ADR-0004 D2): a committed dependency-surface capture disagrees with the
-    // package's real restored surface. `DiagnosticError` so `dependency-surface --check` exits 1 and
-    // fails CI; `--update` reconciles instead. RelatedIds carry the drifted `<Pkg>@<ver>` ids.
+    // package's real restored surface, or an authored target has no committed capture.
+    // `DiagnosticError` so `dependency-surface --check` exits 1 and fails CI; `--update` reconciles
+    // instead. RelatedIds carry the affected `<Pkg>@<ver>` ids.
     let dependencySurfaceDrift (packages: string list) =
         create
             "dependencySurface.drift"
             DiagnosticError
             None
             None
-            $"{List.length packages} committed dependency-surface capture(s) disagree with the package's real restored surface."
+            $"{List.length packages} required dependency-surface capture(s) are missing or disagree with the package's real restored surface."
             "Run `fsgg-sdd dependency-surface --update` to refresh the `docs/dependency-surface/**` captures from the restored packages, then commit."
             (packages |> List.sort)
 

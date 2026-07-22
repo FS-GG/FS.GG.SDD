@@ -52,29 +52,64 @@ module internal ViewGeneration =
 
     // Feature 105, Phase 3 (ADR-0004 D1/D4). Resolve a framework reference's version: the explicit
     // `@version`, else the Central Package Management pin. Single-sourced from the pin so a reference
-    // never duplicates (nor drifts from) the pinned version. MSBuild is NOT evaluated — a
-    // `<PackageVersion Include="…" Version="…" />` item is read structurally; a malformed pin file is
-    // `None`, never an exception. Matched on `LocalName` for the legacy MSBuild-2003 namespace.
+    // never duplicates (nor drifts from) the pinned version. The common coherent-set form
+    // `Version="$(SomeVersion)"` is resolved structurally from a property in the supplied props
+    // documents; arbitrary MSBuild expressions are deliberately not evaluated. A malformed pin file
+    // is `None`, never an exception. Matched on `LocalName` for the legacy MSBuild-2003 namespace.
     let frameworkPinnedVersion (packageId: string) (pinTexts: string list) : string option =
-        pinTexts
-        |> List.tryPick (fun text ->
-            try
-                XDocument.Parse(text).Descendants()
-                |> Seq.tryPick (fun element ->
-                    if element.Name.LocalName = "PackageVersion" then
-                        let includeAttr = element.Attribute(XName.Get "Include") |> Option.ofObj
-                        let versionAttr = element.Attribute(XName.Get "Version") |> Option.ofObj
+        let documents =
+            pinTexts
+            |> List.choose (fun text ->
+                try
+                    Some(XDocument.Parse text)
+                with _ ->
+                    None)
 
-                        match includeAttr, versionAttr with
-                        | Some inc, Some ver when
-                            String.Equals(inc.Value, packageId, StringComparison.OrdinalIgnoreCase)
-                            ->
-                            Some ver.Value
-                        | _ -> None
+        let propertyReference = Regex(@"^\$\((?<name>[^)]+)\)$", RegexOptions.Compiled)
+
+        let propertyValue (name: string) =
+            documents
+            |> List.tryPick (fun document ->
+                document.Descendants()
+                |> Seq.tryPick (fun element ->
+                    if
+                        not element.HasAttributes
+                        && not element.HasElements
+                        && String.Equals(element.Name.LocalName, name, StringComparison.OrdinalIgnoreCase)
+                    then
+                        Some(element.Value.Trim())
                     else
-                        None)
-            with _ ->
-                None)
+                        None))
+
+        let rec resolveProperty (depth: int) (seen: Set<string>) (value: string) =
+            let trimmed = value.Trim()
+            let matched = propertyReference.Match trimmed
+
+            if not matched.Success then
+                Some trimmed
+            else
+                let name = matched.Groups.["name"].Value
+
+                if depth >= 16 || Set.contains name seen then
+                    None
+                else
+                    propertyValue name
+                    |> Option.bind (resolveProperty (depth + 1) (Set.add name seen))
+
+        documents
+        |> List.tryPick (fun document ->
+            document.Descendants()
+            |> Seq.tryPick (fun element ->
+                if element.Name.LocalName = "PackageVersion" then
+                    let includeAttr = element.Attribute(XName.Get "Include") |> Option.ofObj
+                    let versionAttr = element.Attribute(XName.Get "Version") |> Option.ofObj
+
+                    match includeAttr, versionAttr with
+                    | Some inc, Some ver when String.Equals(inc.Value, packageId, StringComparison.OrdinalIgnoreCase) ->
+                        resolveProperty 0 Set.empty ver.Value
+                    | _ -> None
+                else
+                    None))
 
     let resolveFrameworkVersion (reference: FrameworkApiReference) (pinTexts: string list) : string option =
         match reference.Version with

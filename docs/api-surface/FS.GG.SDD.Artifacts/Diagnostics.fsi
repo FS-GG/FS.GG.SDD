@@ -197,10 +197,9 @@ module Diagnostics =
         suggestedVersion: string option ->
             Diagnostic
 
-    /// Feature 105, Phase 2 (ADR-0004 D2): a committed `dependency-surface` capture disagrees with
-    /// the package's freshly-read real surface. `DiagnosticError` so `dependency-surface --check`
-    /// exits 1 and fails CI; `--update` reconciles instead. `packages` are the drifted
-    /// `<PackageId>@<Version>` ids.
+    /// Feature 105/109 (ADR-0004 D2): a required `dependency-surface` capture is missing or
+    /// disagrees with the package's freshly-read real surface. `DiagnosticError` so
+    /// `dependency-surface --check` exits 1 and fails CI; `--update` reconciles instead.
     val dependencySurfaceDrift: packages: string list -> Diagnostic
 
     /// Feature 105, Phase 2 (ADR-0004 D3): a package's real surface could not be read (not restored,

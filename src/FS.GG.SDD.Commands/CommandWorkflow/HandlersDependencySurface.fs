@@ -7,8 +7,9 @@ open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.Internal.Foundation
 
 /// `fsgg-sdd dependency-surface` handler (feature 105, Phase 2; design of record ADR-0004 D2).
-/// Compares each committed capture under `docs/dependency-surface/<Pkg>/<ver>.json` — and an
-/// explicit `--param packageId=/version=` target — against the package's **real restored surface**,
+/// Compares every target discovered from authored plans, each committed capture under
+/// `docs/dependency-surface/<Pkg>/<ver>.json`, and an explicit `--param packageId=/version=` target
+/// against the package's **real restored surface**,
 /// read by reflection at the edge (`ReadPackageSurface`). `--check` (default) blocks on drift (a
 /// committed digest disagreeing with the real surface); `--update` refreshes/creates the captures.
 /// An unreadable real surface is advisory, never a false drift (fail-open, ADR-0002 / #266).
@@ -72,13 +73,72 @@ module internal HandlersDependencySurface =
         else
             None
 
-    // Every package this run examines: committed captures ∪ the explicit target, deduplicated.
+    let private authoredPlanPaths model =
+        (directoryListing "work" model).Split([| '\n'; '\r' |], StringSplitOptions.RemoveEmptyEntries)
+        |> Array.map normalizeRelativePath
+        |> Array.filter (fun path -> path.EndsWith("/plan.md", StringComparison.Ordinal))
+        |> Array.distinct
+        |> Array.sort
+        |> Array.toList
+
+    let private planReads model =
+        authoredPlanPaths model |> List.map ReadFile
+
+    let private planReadGate model =
+        let reads = planReads model
+
+        let allInterpreted =
+            reads |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
+
+        let anyPlanned =
+            reads |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
+
+        if List.isEmpty reads || allInterpreted then None
+        elif anyPlanned then Some []
+        else Some reads
+
+    let private authoredTargets model =
+        let pinTexts =
+            [ "Directory.Packages.local.props"; "Directory.Packages.props" ]
+            |> List.choose (fun path -> snapshot path model |> Option.map (fun snap -> snap.Text))
+
+        authoredPlanPaths model
+        |> List.choose (fun path -> snapshot path model)
+        |> List.choose (fun planSnapshot ->
+            match parsePlanFacts planSnapshot with
+            | Ok facts -> Some facts
+            | Error _ -> None)
+        |> List.collect (fun facts -> facts.FrameworkApiReferences)
+        |> List.choose (fun reference ->
+            ViewGeneration.resolveFrameworkVersion reference pinTexts
+            |> Option.map (fun version -> reference.PackageId, version))
+        |> List.distinct
+        |> List.sortBy targetId
+
+    let private restoreEffect = RunProcess("dotnet", [ "restore" ], "")
+
+    // Every package this run examines: committed captures ∪ explicit target ∪ authored references.
     let private allTargets baselineRoot model =
         let committed = committedTargets baselineRoot model
+        let explicit = explicitTarget model |> Option.toList
 
-        match explicitTarget model with
-        | Some target when not (List.contains target committed) -> committed @ [ target ]
-        | _ -> committed
+        committed @ explicit @ authoredTargets model
+        |> List.distinct
+        |> List.sortBy targetId
+
+    // The capture verb owns dependency acquisition. A normal generated product has a solution or
+    // project at its root, so this makes reachable configured feeds sufficient on a clean checkout.
+    // Failure is not itself a negative API verdict: the following package read remains the authority
+    // and degrades to `unavailable` when restore could not establish the package (ADR-0002).
+    let private restoreGate baselineRoot model =
+        if List.isEmpty (allTargets baselineRoot model) then
+            None
+        elif hasInterpreted (effectKey restoreEffect) model then
+            None
+        elif hasPlanned (effectKey restoreEffect) model then
+            Some []
+        else
+            Some [ restoreEffect ]
 
     // The real surface of a target, from its interpreted `ReadPackageSurface` result. `None` ⇒ the
     // package could not be read (advisory). By the time this runs the read gate has interpreted it.
@@ -207,15 +267,24 @@ module internal HandlersDependencySurface =
             else
                 []
 
+        // A readable authored target without a capture is just as incoherent as a stale capture:
+        // both leave plan-time validation without the committed oracle it requires. Keep the public
+        // `DriftedPackages` field as the complete set that `--check` must repair.
+        let incoherentPackages =
+            entries
+            |> List.filter (fun entry -> entry.Status = "drifted" || entry.Status = "new")
+            |> List.map (fun entry -> targetId (entry.PackageId, entry.Version))
+            |> List.sort
+
         let summary =
             { BaselineRoot = normalizeRelativePath baselineRoot
               Mode = if update then "update" else "check"
               CheckedCount = List.length targets
               Entries = entries |> List.sortBy (fun entry -> targetId (entry.PackageId, entry.Version))
-              DriftedPackages = idsWithStatus "drifted"
+              DriftedPackages = incoherentPackages
               UnavailablePackages = idsWithStatus "unavailable"
               UpdatedPackages = idsWithStatus "written"
-              IsCoherent = List.isEmpty (idsWithStatus "drifted") }
+              IsCoherent = List.isEmpty incoherentPackages }
 
         summary, writes
 
@@ -225,7 +294,7 @@ module internal HandlersDependencySurface =
         | None ->
             let baselineRoot = dependencySurfaceBaselineRoot model.Request
 
-            match readGate baselineRoot model with
+            match planReadGate model with
             | Some effects ->
                 if List.isEmpty effects then
                     model, []
@@ -234,24 +303,42 @@ module internal HandlersDependencySurface =
                         PendingEffects = model.PendingEffects @ effects },
                     effects
             | None ->
-                let summary, writes = computeSummary baselineRoot model
-
-                // Drift blocks (exit 1) only under `--check`; `--update` reconciles it into a write.
-                let driftDiagnostics =
-                    if (not model.Request.SurfaceUpdate) && not (List.isEmpty summary.DriftedPackages) then
-                        [ dependencySurfaceDrift summary.DriftedPackages ]
+                match restoreGate baselineRoot model with
+                | Some effects ->
+                    if List.isEmpty effects then
+                        model, []
                     else
-                        []
+                        { model with
+                            PendingEffects = model.PendingEffects @ effects },
+                        effects
+                | None ->
+                    match readGate baselineRoot model with
+                    | Some effects ->
+                        if List.isEmpty effects then
+                            model, []
+                        else
+                            { model with
+                                PendingEffects = model.PendingEffects @ effects },
+                            effects
+                    | None ->
+                        let summary, writes = computeSummary baselineRoot model
 
-                // Unreadable real surface is advisory in both modes.
-                let unavailableDiagnostics =
-                    if List.isEmpty summary.UnavailablePackages then
-                        []
-                    else
-                        [ dependencySurfaceUnavailable summary.UnavailablePackages ]
+                        // Drift/missing captures block only under `--check`; `--update` reconciles them.
+                        let driftDiagnostics =
+                            if (not model.Request.SurfaceUpdate) && not (List.isEmpty summary.DriftedPackages) then
+                                [ dependencySurfaceDrift summary.DriftedPackages ]
+                            else
+                                []
 
-                { model with
-                    DependencySurface = Some summary
-                    Diagnostics = model.Diagnostics @ driftDiagnostics @ unavailableDiagnostics
-                    PendingEffects = model.PendingEffects @ writes },
-                writes
+                        // Unreadable real surface is advisory in both modes.
+                        let unavailableDiagnostics =
+                            if List.isEmpty summary.UnavailablePackages then
+                                []
+                            else
+                                [ dependencySurfaceUnavailable summary.UnavailablePackages ]
+
+                        { model with
+                            DependencySurface = Some summary
+                            Diagnostics = model.Diagnostics @ driftDiagnostics @ unavailableDiagnostics
+                            PendingEffects = model.PendingEffects @ writes },
+                        writes

@@ -166,7 +166,7 @@ module CommandHelp =
             [ flag
                   "--check"
                   None
-                  "Report dependency-surface capture drift vs the real restored surface; read-only, exits 1 on drift (default)."
+                  "Restore and check every authored/committed dependency-surface target; writes no captures, exits 1 on missing capture or drift (default)."
               flag
                   "--update"
                   None
@@ -174,7 +174,7 @@ module CommandHelp =
               flag
                   "--param"
                   (Some "packageId=<id>")
-                  "Explicit capture target package id (with version=); default operates over the committed captures."
+                  "Explicit capture target package id (with version=); default discovers authored references and committed captures."
               flag "--param" (Some "version=<ver>") "Explicit capture target version (with packageId=)."
               flag
                   "--param"
