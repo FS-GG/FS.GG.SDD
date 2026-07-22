@@ -103,12 +103,15 @@ evidence:
     artifacts: [tests/ExampleApp.Tests/WorkModelViewTests.fs]
     result: pass
     synthetic: false
-  # An accepted DEFERRAL — the match-end/win condition (DEC-002) is out of scope for this
-  # work item; T008 only keeps that deferral visible. PD-003 is the plan scaffold's PURE
-  # deferral mirror for DEC-002 (`acceptedDeferral: Accepted deferral DEC-002 remains visible
-  # to task generation.`), so `tasks` FOLDS it into this one keep-visible obligation instead of
-  # deriving a second `Implement plan decision PD-003` task (#649) — hence `planDecisionRefs:
-  # [PD-003]` here. All four deferral fields are present, so the gate accepts it. Satisfies EV008.
+  # An accepted DEFERRAL — the match-end/win condition (DEC-002) is out of scope for this work
+  # item; T008 keeps that ONE deferral visible. Everything that merely echoes DEC-002 folds into
+  # this single keep-visible obligation rather than fanning out into three more (#646):
+  #   * PD-003 — the plan scaffold's PURE deferral mirror for DEC-002 (#649);
+  #   * CR-003 — the checklist scaffold's PURE deferral echo of DEC-002 (`acceptedDeferral: …
+  #     remains visible to planning.`), which keeps visible nothing this task does not;
+  #   * PD-004 — the plan's pure mirror OF that CR-003 echo, folded transitively.
+  # So one accepted deferral yields ONE keep-visible obligation, not four — hence the folded refs
+  # below. All four deferral fields are present, so the gate accepts it. Satisfies EV008.
   - id: EV008
     kind: deferral
     subject:
@@ -116,24 +119,11 @@ evidence:
       id: T008
     requirementRefs: [FR-002]
     clarificationDecisionRefs: [DEC-002]
-    planDecisionRefs: [PD-003]
+    checklistResultRefs: [CR-003]
+    planDecisionRefs: [PD-003, PD-004]
     result: deferred
     synthetic: false
     rationale: A match-end/win condition is out of scope for this work item; rally scoring ships without it.
     owner: codex
     scope: match-end condition and win detection
     laterLifecycleVisibility: Re-open as a follow-on work item when match play is specified.
-  # An accepted DEFERRAL for the checklist result CR-003 that T009 keeps visible. Its pure deferral
-  # mirror PD-004 folds in the same way (`planDecisionRefs: [PD-004]`). Satisfies EV009.
-  - id: EV009
-    kind: deferral
-    subject:
-      type: task
-      id: T009
-    planDecisionRefs: [PD-004]
-    result: deferred
-    synthetic: false
-    rationale: The CR-003 review item is accepted as a deferral; it stays visible to tasks and evidence without gating this item.
-    owner: codex
-    scope: CR-003 checklist review follow-up
-    laterLifecycleVisibility: Re-open with the follow-on work item that specifies match play.
