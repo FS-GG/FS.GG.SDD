@@ -9,6 +9,8 @@
   <!-- Compile order: ValidationContracts -> ValidationHarness -> ValidationRunner.
        No Spectre.Console and no Governance package reference (research Decision 2/6). -->
   <ItemGroup>
+    <Compile Include="BugGuardCheck.fsi" />
+    <Compile Include="BugGuardCheck.fs" />
     <Compile Include="ValidationContracts.fsi" />
     <Compile Include="ValidationContracts.fs" />
     <Compile Include="ValidationHarness.fsi" />
