@@ -236,7 +236,8 @@ module Plan =
         Regex.Matches(line, @"\[[^\]]*\]")
         |> Seq.cast<Match>
         |> Seq.collect (fun bracket ->
-            Regex.Matches(bracket.Value, planSourceIdPattern, RegexOptions.IgnoreCase) |> Seq.cast<Match>)
+            Regex.Matches(bracket.Value, planSourceIdPattern, RegexOptions.IgnoreCase)
+            |> Seq.cast<Match>)
         |> Seq.map (fun m -> m.Value.ToUpperInvariant())
         |> Seq.distinct
         |> Seq.toList
