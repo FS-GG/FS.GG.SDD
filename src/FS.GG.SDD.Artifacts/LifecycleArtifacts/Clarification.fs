@@ -157,13 +157,6 @@ module Clarification =
     // ever read. Feature 093 removed the fields, so the scanners went with them. A decision's FR/US/AC
     // refs now travel on `RequirementModel.Decision`, where `work-model.json` actually reads them (#164).
 
-    let decisionIdsInLine line =
-        Regex.Matches(line, @"\bDEC-\d{3,}\b", RegexOptions.IgnoreCase)
-        |> Seq.cast<Match>
-        |> Seq.choose (fun m -> Identifiers.createDecisionId m.Value |> Result.toOption)
-        |> Seq.distinctBy (fun id -> id.Value)
-        |> Seq.toList
-
     let cleanDecisionText text =
         Regex.Replace(text, @"^(?:\[[^\]]+\]\s*)+:\s*", "", RegexOptions.CultureInvariant).Trim()
 
@@ -217,7 +210,16 @@ module Clarification =
     let parseClarificationDecisionsInSection heading kind text =
         sectionLines heading text
         |> List.choose (fun (lineNumber, line) ->
-            match decisionIdsInLine line |> List.tryHead with
+            // A decision is DECLARED at the list-leading `- DEC-###:` position. A `DEC-###` that
+            // appears later in a line's prose — a hand-off note citing a prior milestone's decision
+            // ("… the deferral inherited from M2 DEC-004"), which the lifecycle's own doctrine asks
+            // authors to write — is a REFERENCE, not a second declaration, and must not produce a
+            // spurious "declared more than once" (FS.GG.SDD#645, generalising the #541 fix from the
+            // specification stable-id scan to clarification decisions).
+            match
+                listLeadingIdMatch @"\bDEC-\d{3,}\b" line
+                |> Option.bind (fun m -> createDecisionId m.Value |> Result.toOption)
+            with
             | Some decisionId ->
                 let decisionText = cleanAfterId decisionId.Value line |> cleanDecisionText
 
