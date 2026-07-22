@@ -241,13 +241,14 @@ the skill↔gate doctest):
 
 <!-- fsgg-sdd:example corpus=evidence.yml mode=contains -->
 ```yaml
-  - id: EV012
+  - id: EV008
     kind: deferral
     subject:
       type: task
-      id: T012
+      id: T008
     requirementRefs: [FR-002]
     clarificationDecisionRefs: [DEC-002]
+    planDecisionRefs: [PD-003]
     result: deferred
     synthetic: false
     rationale: A match-end/win condition is out of scope for this work item; rally scoring ships without it.
@@ -255,6 +256,11 @@ the skill↔gate doctest):
     scope: match-end condition and win detection
     laterLifecycleVisibility: Re-open as a follow-on work item when match play is specified.
 ```
+
+Here `planDecisionRefs: [PD-003]` is the plan scaffold's **pure deferral mirror** for the
+accepted deferral `DEC-002`, folded into this one keep-visible obligation rather than earning a
+second `Implement plan decision PD-003` task (a redundant obligation over the same deferral). A
+plan decision that carries real design content, by contrast, keeps its own task and obligation.
 
 ## Example: declarations that DO NOT satisfy
 

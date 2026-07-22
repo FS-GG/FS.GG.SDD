@@ -147,30 +147,76 @@ module ExampleLifecycleContractTests =
         Assert.Equal(CommandOutcome.NoChange, (TestSupport.runPlan root workId title).Outcome)
         Assert.Equal(CommandOutcome.NoChange, (TestSupport.runTasks root workId title).Outcome)
 
-    /// FS.GG.SDD#310 (AC9), both directions. The example's plan carries four `PD-###`: two that
-    /// mirror a requirement's own refs (`PD-001`→FR-001, `PD-002`→FR-002) and two that do not
-    /// (`PD-003` refs the accepted deferral `DEC-002`, `PD-004` refs the checklist deferral
-    /// `CR-003`). `tasks` must fold the first pair into the requirement tasks and leave the second
-    /// pair with tasks of their own.
-    ///
-    /// The over-collapse direction is the dangerous one and the one every other test misses: a
-    /// predicate that swallowed every plan decision would still satisfy "no duplicate PD-001 task",
-    /// while silently discarding two real design decisions.
+    /// FS.GG.SDD#310 (AC9) as narrowed by FS.GG.SDD#649 — the fold direction. The example's plan
+    /// carries four `PD-###`, and `tasks` folds all four, each into the one obligation that already
+    /// disposes it:
+    ///   * `PD-001`→FR-001 and `PD-002`→FR-002 mirror a requirement's own refs, so they fold into the
+    ///     requirement task (the original #310 fold).
+    ///   * `PD-003`→DEC-002 and `PD-004`→CR-003 are the plan scaffold's PURE deferral mirrors
+    ///     (`acceptedDeferral: Accepted deferral DEC-### remains visible to task generation.`) — every
+    ///     ref an accepted-deferral id, text the fixed boilerplate — so each folds into that deferral's
+    ///     keep-visible task instead of earning a second `Implement plan decision PD-###` obligation
+    ///     (#649). One obligation per deferral, not two.
     [<Fact>]
-    let ``Shipped example folds only the plan decisions its requirement tasks subsume`` () =
+    let ``Shipped example folds its FR-mirror and pure deferral-mirror PDs into their keep tasks`` () =
         let root = exampleWorkspace ()
         TestSupport.runTasks root workId title |> ignore
         let tasks = TestSupport.readRelative root $"work/{workId}/tasks.yml"
 
-        // Folded: no task of their own, but disposed by the requirement task that subsumes them.
+        // FR-mirror PDs: folded into the requirement task that subsumes them, no task of their own.
         Assert.DoesNotContain("Implement plan decision PD-001", tasks)
         Assert.DoesNotContain("Implement plan decision PD-002", tasks)
         Assert.Contains("sourceIds: [AC-001, FR-001, PD-001]", tasks)
         Assert.Contains("sourceIds: [AC-002, FR-002, PD-002]", tasks)
 
-        // Not subsumed by any requirement task's refs: each keeps its own task.
+        // Pure deferral mirrors: each folded into its deferral's keep-visible task, no task of its own.
+        Assert.DoesNotContain("Implement plan decision PD-003", tasks)
+        Assert.DoesNotContain("Implement plan decision PD-004", tasks)
+        Assert.Contains("Keep accepted deferral DEC-002 visible", tasks)
+        Assert.Contains("sourceIds: [DEC-002, PD-003]", tasks)
+        Assert.Contains("Keep accepted deferral CR-003 visible", tasks)
+        Assert.Contains("sourceIds: [CR-003, PD-004]", tasks)
+
+    /// FS.GG.SDD#310 (AC9), the protective direction #649 must NOT weaken — the over-collapse guard.
+    /// It is the dangerous direction every other test misses: a predicate that folded on the deferral
+    /// ref alone would satisfy "no duplicate PD-003 task" while silently discarding a real design
+    /// decision.
+    ///
+    /// Take the shipped example's PD-003 — a pure boilerplate mirror that folds — and rewrite ONLY its
+    /// prose into a real design decision, leaving its `[DEC-002]` ref untouched. Same accepted-deferral
+    /// ref, opposite fate: because the text is no longer the fixed keep-visible boilerplate, it is no
+    /// longer a pure mirror, so `tasks` leaves it its own `Implement plan decision PD-003` obligation
+    /// and does NOT fold it into `DEC-002`'s keep-visible task. The pure-vs-authored line is exactly
+    /// what #649 draws, and it is drawn on the prose, not the refs.
+    [<Fact>]
+    let ``A deferral PD rewritten with real design content is not folded`` () =
+        let root = exampleWorkspace ()
+
+        let planPath = $"work/{workId}/plan.md"
+
+        let rewritten =
+            (TestSupport.readRelative root planPath)
+                .Replace(
+                    "- PD-003 [DEC-002] acceptedDeferral: Accepted deferral DEC-002 remains visible to task generation.",
+                    "- PD-003 [DEC-002] acceptedDeferral: Defer the match-end/win condition deliberately; the rally rules are provable without it and inventing one now would fix a scoring model we have not played against yet."
+                )
+
+        Assert.DoesNotContain("Accepted deferral DEC-002 remains visible to task generation.", rewritten) // the replace actually landed
+
+        TestSupport.writeRelative root planPath rewritten
+
+        // Derive fresh (no prior tasks.yml) so the merge cannot re-add the folded ref from the shipped,
+        // pre-folded graph — the derivation, not the merge, must decide this.
+        File.Delete(Path.Combine(root, "work", workId, "tasks.yml"))
+        TestSupport.runTasks root workId title |> ignore
+        let tasks = TestSupport.readRelative root $"work/{workId}/tasks.yml"
+
+        // Real design content, not boilerplate: PD-003 keeps its own obligation, and DEC-002's
+        // keep-visible task disposes DEC-002 ALONE — the fold did not happen. (When PD-003 IS folded,
+        // as in the shipped example, no task carries the bare `sourceIds: [DEC-002]`; the keep-visible
+        // task carries `[DEC-002, PD-003]` instead.)
         Assert.Contains("Implement plan decision PD-003", tasks)
-        Assert.Contains("Implement plan decision PD-004", tasks)
+        Assert.Contains("sourceIds: [DEC-002]", tasks)
 
     /// The specific regression #192 filed: nine ids required a task disposition and the example
     /// authored none of them, because `AC-###`/`CR-###`/`GV-###`/`PC-###`/`PD-###`/`PM-###`/`VO-###`

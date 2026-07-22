@@ -100,6 +100,13 @@ module internal PlanAuthoring =
 
     type PlannedPlanEntries =
         { DecisionLines: string list
+          // The subset of `DecisionLines` that is auto-generated deferral mirrors (#649): one
+          // `PD-### [DEC-###] acceptedDeferral: Accepted deferral DEC-### remains visible to task
+          // generation.` per accepted deferral. Carried out separately so the #351 unauthored-scaffold
+          // gate can exempt them — a deferral mirror restates an already-authored deferral, it is not a
+          // design decision the author must write, so requiring them to rewrite it is the very
+          // busywork #646 flags. Requirement-decision scaffold lines stay gated.
+          DeferralDecisionLines: string list
           ContractLines: string list
           ObligationLines: string list
           MigrationLines: string list
@@ -110,6 +117,7 @@ module internal PlanAuthoring =
 
     let emptyPlanEntries =
         { DecisionLines = []
+          DeferralDecisionLines = []
           ContractLines = []
           ObligationLines = []
           MigrationLines = []
@@ -292,6 +300,7 @@ module internal PlanAuthoring =
 
         { emptyPlanEntries with
             DecisionLines = requirementDecisionLines @ deferralDecisionLines
+            DeferralDecisionLines = deferralDecisionLines
             ContractLines = contractLines
             ObligationLines = obligationLines
             MigrationLines = migrationLines
@@ -357,6 +366,14 @@ module internal PlanAuthoring =
             | -1 -> entry
             | space -> entry.Substring(space + 1)
 
+        // #649: a pure deferral mirror (`DeferralDecisionLines`) is auto-generated boilerplate that
+        // restates an already-authored accepted deferral — the author is not expected to rewrite it,
+        // and `tasks` folds it into the keep-visible obligation rather than deriving a second one. So
+        // it is EXEMPT from the unauthored-scaffold gate: leaving it verbatim is correct, not a
+        // missing decision. Requirement-decision scaffold lines (`DecisionLines` minus the mirrors)
+        // stay gated — a placeholder FR decision is still prose no human authored.
+        let exemptBodies = seeded.DeferralDecisionLines |> List.map bodyOf |> Set.ofList
+
         let seededBodies =
             seeded.DecisionLines
             @ seeded.ContractLines
@@ -366,6 +383,7 @@ module internal PlanAuthoring =
             @ seeded.DeferralLines
             |> List.map bodyOf
             |> Set.ofList
+            |> fun bodies -> Set.difference bodies exemptBodies
 
         planText.Split '\n'
         |> Array.map (fun line -> line.TrimEnd '\r')

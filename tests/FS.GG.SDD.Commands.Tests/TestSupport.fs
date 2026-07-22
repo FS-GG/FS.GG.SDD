@@ -255,13 +255,29 @@ module TestSupport =
         let prose =
             "Authored by the test fixture: a real decision would say why, not restate the id."
 
+        // FS.GG.SDD#649: a PURE deferral-mirror PD (`- PD-### [DEC-###] acceptedDeferral: Accepted
+        // deferral DEC-### remains visible to task generation.`) is auto-generated boilerplate that
+        // restates an already-authored accepted deferral — it is EXEMPT from the #351 unauthored gate
+        // and `tasks` folds it into the keep-visible obligation. A real author leaves it verbatim, so
+        // the fixture must too; rewriting it would turn it into a real decision that keeps its own task
+        // and breaks the fold the corpus demonstrates. Requirement/PC/VO/PM/GV lines are still authored.
+        let isPureDeferralMirrorProse (body: string) =
+            Regex.IsMatch(
+                body.Trim(),
+                @"^Accepted deferral [A-Za-z][A-Za-z0-9]*-\d+ remains visible to task generation\.?$"
+            )
+
         let authored =
             readRelative root path
             |> fun text ->
                 Regex.Replace(
                     text,
                     @"(?m)^(- (?:PD|PC|VO|PM|GV)-\d+\b[^:\r\n]*: )(.+)$",
-                    fun m -> m.Groups[1].Value + prose
+                    fun m ->
+                        if isPureDeferralMirrorProse m.Groups[2].Value then
+                            m.Value
+                        else
+                            m.Groups[1].Value + prose
                 )
             // The Accepted Deferrals section keys its rows on the SOURCE id (`- DEC-002
             // acceptedDeferral: …`), not a `PD-###`, so the pattern above misses them and they stay

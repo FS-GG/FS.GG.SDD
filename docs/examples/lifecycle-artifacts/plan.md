@@ -37,8 +37,8 @@ Prose status: planned
 ## Plan Decisions
 - PD-001 [AC-001] [FR-001] complete: Serve direction is derived from the finished rally's loser at rally end and stored on the match, not recomputed at serve time — so a replayed match and a live one cannot disagree.
 - PD-002 [AC-002] [FR-002] complete: The scoreboard accumulates points and exposes no terminal state, because the clarified rally is endless; a win condition would be a new requirement, not a tweak.
-- PD-003 [DEC-002] acceptedDeferral: A match-end/win condition is deferred: the rally rules are provable without it, and inventing one now would fix a scoring model we have not played against yet.
-- PD-004 [CR-003] acceptedDeferral: The checklist's request for a scoring-limit review is deferred alongside the win-condition question, because it cannot be answered until a win condition exists.
+- PD-003 [DEC-002] acceptedDeferral: Accepted deferral DEC-002 remains visible to task generation.
+- PD-004 [CR-003] acceptedDeferral: Accepted deferral CR-003 remains visible to task generation.
 
 ## Contract Impact
 - PC-001 [PD-001] command report: `nextServer` is returned as a value rather than applied as a mutation, so a caller cannot desync the scoreboard from the serve.
