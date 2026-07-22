@@ -17,7 +17,7 @@
          and materialized at scaffold time (offline). Its own version cadence — first release 0.1.0. -->
     <PackageVersion Include="FS.GG.Game.Skills" Version="0.2.0" />
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
-    <PackageVersion Include="System.Text.Json" Version="10.0.9" />
+    <PackageVersion Include="System.Text.Json" Version="10.0.10" />
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
