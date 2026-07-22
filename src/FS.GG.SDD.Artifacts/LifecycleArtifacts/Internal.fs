@@ -410,27 +410,35 @@ module internal Internal =
             |> Array.mapi (fun offset line -> index + offset + 2, line)
             |> Array.toList
 
+    /// The first `pattern` match on `line` when it sits at the DECLARATION position — the
+    /// list-leading id of its family on a markdown list item (`- FR-001: …`, `- **US-001**:`,
+    /// `- AC-001 [US-001] [FR-001]:`, `- DEC-001 [CQ-001]:`, `- AMB-001 open:`). A later occurrence
+    /// of the family — in that item's prose or on a plain line — is a REFERENCE, not a declaration,
+    /// so a line that names another id ("… the same gate as FR-003", "… inherited from M2 DEC-004")
+    /// is not counted as a second declaration. This is the anchor #541 introduced for the
+    /// specification stable-id scan; sharing it lets the clarification decision scan reject a prose
+    /// citation of a prior milestone's id the same way (FS.GG.SDD#645). It mirrors the anchoring that
+    /// `requirementReferences` and `missingIdDiagnostics` already apply to the same lines.
+    let listLeadingIdMatch (pattern: string) (line: string) =
+        let m = Regex.Match(line, pattern, RegexOptions.IgnoreCase)
+
+        if
+            m.Success
+            && Regex.IsMatch(line.Substring(0, m.Index), @"^\s*-\s*(?:\*\*|__|\*|_)?\s*$")
+        then
+            Some m
+        else
+            None
+
     let scopedIdLocations (pattern: string) (createId: string -> Result<'id, string>) (lines: (int * string) list) =
-        // A stable id is DECLARED at the list-leading position — the first id of its family on a
-        // markdown list item (`- FR-001: …`, `- **US-001**:`, `- AC-001 [US-001] [FR-001]:`,
-        // `- AMB-001 open:`). A later occurrence of the same family — in that item's prose or on a
-        // plain line — is a REFERENCE, not a declaration, so a requirement that names another by id
-        // ("… the same gate as FR-003") no longer counts as a second declaration and triggers a
-        // spurious duplicate (FS.GG.SDD#541). This mirrors the list-leading anchoring that
-        // `requirementReferences` and `missingIdDiagnostics` already apply to the same lines.
         lines
         |> List.choose (fun (lineNumber, line) ->
-            let m = Regex.Match(line, pattern, RegexOptions.IgnoreCase)
-
-            if
-                m.Success
-                && Regex.IsMatch(line.Substring(0, m.Index), @"^\s*-\s*(?:\*\*|__|\*|_)?\s*$")
-            then
+            match listLeadingIdMatch pattern line with
+            | Some m ->
                 match createId m.Value with
                 | Ok id -> Some(id, sourceLocation lineNumber)
                 | Error _ -> None
-            else
-                None)
+            | None -> None)
 
     let scopedIdLocationsInSections headings pattern createId text =
         headings

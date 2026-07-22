@@ -85,6 +85,46 @@ publicOrToolFacingImpact: true
             let ids = facts.Diagnostics |> List.map _.Id
             Assert.Contains("duplicateIdentifier", ids)
 
+    // FS.GG.SDD#645: an Accepted Deferrals (or Decisions) line that CITES a prior milestone's
+    // decision id in prose ("… the deferral inherited from M2 DEC-002 …") is a REFERENCE, not a
+    // second declaration. Only the list-leading `- DEC-###:` token declares — mirroring the #541
+    // fix for the specification stable-id scan — so the in-prose citation must not be parsed as a
+    // duplicate decision or trigger a spurious "declared more than once".
+    [<Fact>]
+    let ``Clarification decision cited in prose is not a duplicate declaration`` () =
+        let cited =
+            clarificationText.Replace(
+                "- DEC-002 [CQ-001] [AMB:AMB-001]: Defer checklist command details to the checklist feature.",
+                "- DEC-002 [CQ-001] [AMB:AMB-001]: Defer checklist command details to the checklist feature.\n"
+                + "- Context: this carries forward the deferral inherited from M2 DEC-002, now superseded here."
+            )
+
+        match parseClarificationFacts (snapshot cited) with
+        | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
+        | Ok facts ->
+            Assert.Equal<string list>(
+                [ "DEC-002" ],
+                facts.AcceptedDeferrals |> List.map (fun decision -> decision.DecisionId.Value)
+            )
+
+            Assert.DoesNotContain("duplicateIdentifier", facts.Diagnostics |> List.map _.Id)
+
+    // FS.GG.SDD#645: a genuine duplicate — two list-leading `- DEC-###:` declarations of the same
+    // id in the Accepted Deferrals section — must STILL be reported. Anchoring the scan to the
+    // declaration position narrows what counts as a declaration; it does not stop counting real ones.
+    [<Fact>]
+    let ``Clarification duplicate list-leading decision declarations still block`` () =
+        let broken =
+            clarificationText.Replace(
+                "- DEC-002 [CQ-001] [AMB:AMB-001]: Defer checklist command details to the checklist feature.",
+                "- DEC-002 [CQ-001] [AMB:AMB-001]: Defer checklist command details to the checklist feature.\n"
+                + "- DEC-002 [CQ-001] [AMB:AMB-001]: A second, conflicting deferral of the same id."
+            )
+
+        match parseClarificationFacts (snapshot broken) with
+        | Error diagnostics -> failwith $"Front matter should parse: {diagnostics}"
+        | Ok facts -> Assert.Contains("duplicateIdentifier", facts.Diagnostics |> List.map _.Id)
+
     [<Fact>]
     let ``Clarification question state does not misread (unanswered) as answered`` () =
         // Regression (#67): substring `Contains("answered")` misclassified an
