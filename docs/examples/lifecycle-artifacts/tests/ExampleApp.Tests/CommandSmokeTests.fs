@@ -3,7 +3,7 @@ namespace ExampleApp.Tests
 open ExampleApp
 open Xunit
 
-/// Proves the app actually runs end to end — the smoke leg. Cited by evidence EV009.
+/// Proves the app actually runs end to end — the smoke leg. Cited by evidence EV005.
 ///
 /// A contract test can pass over a model that no real invocation ever produces; this drives the
 /// entry point instead, so "it builds" and "it runs" are separately evidenced.

@@ -3,7 +3,7 @@
 # through the real generating + gating stages plan -> tasks -> analyze -> evidence ->
 # verify -> ship (ExampleLifecycleContractTests). Because `tasks` re-derives the task
 # graph on every run (one obligation per required disposition), this file declares one
-# evidence entry per generated obligation EV001..EV009 — so the example is a genuine
+# evidence entry per generated obligation EV001..EV008 — so the example is a genuine
 # FIXPOINT of the tool that produces it (#211): running the generators over it leaves a
 # graph its own evidence still satisfies.
 #
@@ -23,8 +23,8 @@
 # A DEFERRAL (result: deferred, or kind: deferral) is a first-class, accepted outcome —
 # NOT a failure and NOT a synthetic pass. The evidence gate REQUIRES every deferral to
 # carry all four fields — `rationale`, `owner`, `scope`, `laterLifecycleVisibility` —
-# or it blocks with `evidence.missingDeferralRationale`. EV008/EV009 below are the
-# canonical deferral shape (matched by SkillGateDoctestTests against the deferral gate rule).
+# or it blocks with `evidence.missingDeferralRationale`. EV008 below is the canonical
+# deferral shape (matched by SkillGateDoctestTests against the deferral gate rule).
 schemaVersion: 1
 evidence:
   # Satisfies EV001 (T001, requirement FR-001): real (non-synthetic) verification that passed.
