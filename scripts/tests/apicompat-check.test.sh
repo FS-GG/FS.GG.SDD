@@ -14,7 +14,7 @@
 #      which reads like a toolchain artifact when it is really a removed constructor overload. The
 #      `strip-*` cases below FAIL against the pre-#381 sed.
 #
-# Run:  bash scripts/tests/apicompat-check.test.sh   (no network, no dotnet)
+# Run:  bash scripts/tests/apicompat-check.test.sh   (no network; requires the repo's .NET SDK)
 set -uo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -106,6 +106,139 @@ if apicompat_baseline_optional "FS.GG.Contracts"; then
 else
   printf '  ok   %-32s\n' "contracts-needs-a-baseline"
 fi
+
+# --- ambient same-ID/version cache isolation ---------------------------------------------------
+
+# This is deliberately a real NuGet/ApiCompat regression, not an assertion over shell text. Two
+# byte-different packages are packed with the same ID/version:
+#
+#   * the configured feed contains the authoritative baseline, compatible with the candidate;
+#   * the ambient global-packages cache is pre-seeded from another feed with a PoisonOnly member.
+#
+# Without gate-owned NUGET_PACKAGES + NUGET_HTTP_CACHE_PATH, NuGet reuses the poisoned bytes and
+# Package Validation reports CP0002. With isolation, the exact production script resolves the
+# configured-feed package and reports OK.
+check_ambient_cache_isolation() (
+  set -euo pipefail
+
+  local fixture_root="$1"
+  local package_id="FS.GG.ApiCompat.CacheProbe"
+  local baseline_version="1.0.0"
+  local authoritative="$fixture_root/authoritative"
+  local poison="$fixture_root/poison"
+  local candidate="$fixture_root/candidate"
+  local consumer="$fixture_root/consumer"
+  local authoritative_feed="$fixture_root/authoritative-feed"
+  local poison_feed="$fixture_root/poison-feed"
+  local ambient_packages="$fixture_root/ambient-packages"
+  local ambient_http_cache="$fixture_root/ambient-http-cache"
+  local build_packages="$fixture_root/build-packages"
+
+  mkdir -p \
+    "$authoritative" "$poison" "$candidate" "$consumer" \
+    "$authoritative_feed" "$poison_feed" \
+    "$ambient_packages" "$ambient_http_cache" "$build_packages"
+
+  for project in "$authoritative" "$poison" "$candidate"; do
+    cat > "$project/Probe.csproj" <<EOF
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <PackageId>$package_id</PackageId>
+    <AssemblyName>$package_id</AssemblyName>
+    <Version>$baseline_version</Version>
+  </PropertyGroup>
+  <Target Name="CaptureApiCompatCacheEnvironment"
+          BeforeTargets="Pack"
+          Condition="'\$(APICOMPAT_ENV_PROBE)' != ''">
+    <WriteLinesToFile File="\$(APICOMPAT_ENV_PROBE)"
+                      Lines="\$(NUGET_PACKAGES)|\$(NUGET_HTTP_CACHE_PATH)"
+                      Overwrite="true" />
+  </Target>
+</Project>
+EOF
+  done
+
+  cat > "$authoritative/Contract.cs" <<'EOF'
+namespace FS.GG.ApiCompat.CacheProbe;
+public sealed class Contract
+{
+    public string Value() => "authoritative";
+}
+EOF
+  cp "$authoritative/Contract.cs" "$candidate/Contract.cs"
+  cat > "$poison/Contract.cs" <<'EOF'
+namespace FS.GG.ApiCompat.CacheProbe;
+public sealed class Contract
+{
+    public string Value() => "poison";
+    public string PoisonOnly() => "ambient";
+}
+EOF
+
+  NUGET_PACKAGES="$build_packages" NUGET_HTTP_CACHE_PATH="$fixture_root/build-http-cache" \
+    dotnet pack "$authoritative/Probe.csproj" -c Release -o "$authoritative_feed" \
+      --nologo --verbosity quiet
+  NUGET_PACKAGES="$build_packages" NUGET_HTTP_CACHE_PATH="$fixture_root/build-http-cache" \
+    dotnet pack "$poison/Probe.csproj" -c Release -o "$poison_feed" \
+      --nologo --verbosity quiet
+
+  cat > "$consumer/Consumer.csproj" <<EOF
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework></PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="$package_id" Version="[$baseline_version]" />
+  </ItemGroup>
+</Project>
+EOF
+  cat > "$consumer/nuget.config" <<EOF
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="poison" value="$poison_feed" />
+  </packageSources>
+</configuration>
+EOF
+
+  NUGET_PACKAGES="$ambient_packages" NUGET_HTTP_CACHE_PATH="$ambient_http_cache" \
+    dotnet restore "$consumer/Consumer.csproj" --configfile "$consumer/nuget.config" \
+      --nologo --verbosity quiet
+
+  test -f \
+    "$ambient_packages/fs.gg.apicompat.cacheprobe/$baseline_version/lib/net10.0/$package_id.dll"
+
+  NUGET_PACKAGES="$ambient_packages" \
+  NUGET_HTTP_CACHE_PATH="$ambient_http_cache" \
+  NUGET_FEED_TOKEN="functional-test-token" \
+  APICOMPAT_TEST_PROJECT="$candidate/Probe.csproj" \
+  APICOMPAT_TEST_FEED_URL="$authoritative_feed" \
+  APICOMPAT_ENV_PROBE="$fixture_root/gate-env.txt" \
+    "$here/../apicompat-check.sh" --baseline "$baseline_version" \
+      >"$fixture_root/gate.log" 2>&1
+
+  grep -F "FS.GG.ApiCompat.CacheProbe OK" "$fixture_root/gate.log" >/dev/null
+
+  local gate_packages gate_http_cache
+  IFS='|' read -r gate_packages gate_http_cache < "$fixture_root/gate-env.txt"
+  test "$gate_packages" != "$ambient_packages"
+  test "$gate_http_cache" != "$ambient_http_cache"
+  test "$(basename "$gate_packages")" = "packages"
+  test "$(basename "$gate_http_cache")" = "http-cache"
+  test "$(dirname "$gate_packages")" = "$(dirname "$gate_http_cache")"
+  test ! -e "$gate_packages"
+  test ! -e "$gate_http_cache"
+)
+
+cache_fixture="$(mktemp -d)"
+if check_ambient_cache_isolation "$cache_fixture"; then
+  printf '  ok   %-32s\n' "ambient-cache-isolated"
+else
+  printf '  FAIL %-32s\n' "ambient-cache-isolated"
+  sed 's/^/       /' "$cache_fixture/gate.log" 2>/dev/null || true
+  fail=1
+fi
+rm -rf "$cache_fixture"
 
 if [ "$fail" -ne 0 ]; then
   echo "apicompat-check.test.sh: FAILURES" >&2
