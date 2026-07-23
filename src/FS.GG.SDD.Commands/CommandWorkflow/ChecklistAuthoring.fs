@@ -408,6 +408,44 @@ Prose status: {status}
         ensuredText
         |> replaceSectionBodies bodies (MergePolicy.rederivedSections MergePolicies.checklist)
 
+    /// The checklist status is machine-owned bookkeeping derived from the current review set,
+    /// just like the re-derived result and blocking-finding sections. Keep both projections in
+    /// lockstep on every re-run, in both directions, while touching no other front-matter/body line.
+    let reconcileChecklistStatus (reviews: PlannedChecklistReview list) (text: string) =
+        let status =
+            if reviews |> List.exists (fun review -> review.Status = "fail") then
+                "needsCorrection"
+            else
+                "checklistReady"
+
+        let lines =
+            (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n").Split('\n')
+
+        let frontMatterEnd =
+            if lines.Length > 0 && lines.[0].Trim() = "---" then
+                lines
+                |> Array.mapi (fun index line -> index, line)
+                |> Array.tryPick (fun (index, line) ->
+                    if index > 0 && line.Trim() = "---" then
+                        Some index
+                    else
+                        None)
+            else
+                None
+
+        lines
+        |> Array.mapi (fun index line ->
+            match frontMatterEnd with
+            | Some fenceIndex when
+                index < fenceIndex
+                && Regex.IsMatch(line, @"^status:\s*(needsCorrection|checklistReady)\s*$")
+                ->
+                $"status: {status}"
+            | _ when Regex.IsMatch(line, @"^Prose status:\s*(needsCorrection|checklistReady)\s*$") ->
+                $"Prose status: {status}"
+            | _ -> line)
+        |> String.concat "\n"
+
     let checklistQualityDiagnostics (path: string) (reviews: PlannedChecklistReview list) =
         reviews
         |> List.filter (fun review -> review.Status = "fail")
@@ -539,6 +577,7 @@ Prose status: {status}
 
                         let proposedText =
                             rederiveChecklist workId specText clarificationText reviews ensuredText
+                            |> reconcileChecklistStatus reviews
 
                         match parseChecklistForCommand path proposedText with
                         | Error diagnostics -> diagnostics, Some proposedText, None

@@ -394,6 +394,37 @@ No blocking ambiguity remains.
         Assert.Contains("fail: Requirement FR-002 is missing acceptance coverage.", checklist)
         Assert.DoesNotContain("fail: Requirement FR-001 is missing acceptance coverage.", checklist)
 
+    [<Fact>]
+    let ``checklist full correction promotes both hybrid status projections to checklistReady`` () =
+        let root = TestSupport.tempDirectory ()
+        TestSupport.initializeProject root
+        TestSupport.writeRelative root specPath missingCoverageSpec
+        TestSupport.writeRelative root clarificationPath clarifiedNoAmbiguity
+
+        TestSupport.runChecklist root workId title |> ignore
+
+        let initial = TestSupport.readRelative root checklistPath
+        Assert.Contains("status: needsCorrection", initial)
+        Assert.Contains("Prose status: needsCorrection", initial)
+
+        TestSupport.writeRelative
+            root
+            specPath
+            (coverageSpec "- FR-001: The command creates checklist output. (Stories: US-001; Acceptance: AC-001)")
+
+        let report = TestSupport.runChecklist root workId title
+        let corrected = TestSupport.readRelative root checklistPath
+
+        Assert.Equal(1, report.Checklist.Value.PassedCount)
+        Assert.Equal(0, report.Checklist.Value.FailedBlockingCount)
+        Assert.Contains("status: checklistReady", corrected)
+        Assert.Contains("Prose status: checklistReady", corrected)
+        Assert.DoesNotContain("needsCorrection", corrected)
+
+        let planReport = TestSupport.runPlan root workId title
+
+        Assert.DoesNotContain(planReport.Diagnostics, fun diagnostic -> diagnostic.Id = "failedChecklistPrerequisite")
+
     // §3.1 determinism (FR-012): an unchanged re-run preserves rows, reports noChange, and
     // is byte-identical.
     [<Fact>]
