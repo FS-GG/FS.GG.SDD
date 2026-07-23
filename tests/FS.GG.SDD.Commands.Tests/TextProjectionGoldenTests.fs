@@ -38,13 +38,7 @@ module TextProjectionGoldenTests =
             { TestSupport.request Init root with
                 DryRun = true }
 
-        let model, effects = init request
-
-        interpretAll root true effects
-        |> List.fold (fun state result -> update (EffectInterpreted result) state |> fst) model
-        |> fun state -> update BuildReport state |> fst
-        |> fun state -> state.Report.Value
-        |> renderText
+        TestSupport.runRequest request |> renderText
 
     [<Fact>]
     let ``init text projection matches golden`` () =

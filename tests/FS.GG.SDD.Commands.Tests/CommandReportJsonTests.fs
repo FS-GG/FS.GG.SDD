@@ -18,12 +18,7 @@ module CommandReportJsonTests =
             { TestSupport.request Init root with
                 DryRun = true }
 
-        let model, effects = init request
-
-        interpretAll root true effects
-        |> List.fold (fun state result -> update (EffectInterpreted result) state |> fst) model
-        |> fun state -> update BuildReport state |> fst
-        |> fun state -> state.Report.Value
+        TestSupport.runRequest request
 
     // Guards hole #1 of FS-GG/FS.GG.SDD#198: `reportVersion` is a hand-maintained literal, and
     // nothing forced it to move when feature 093 (#164) removed `specification.unresolvedAmbiguityCount`

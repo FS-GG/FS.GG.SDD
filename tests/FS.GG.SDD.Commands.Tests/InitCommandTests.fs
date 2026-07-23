@@ -11,13 +11,7 @@ open Xunit
 
 module InitCommandTests =
     let runInit root =
-        let request = TestSupport.request Init root
-        let model, effects = init request
-
-        interpretAll root false effects
-        |> List.fold (fun state result -> update (EffectInterpreted result) state |> fst) model
-        |> fun state -> update BuildReport state |> fst
-        |> fun state -> state.Report |> Option.defaultWith (fun () -> buildReport state)
+        TestSupport.request Init root |> TestSupport.runRequest
 
     [<Fact>]
     let ``init creates SDD skeleton with real filesystem evidence`` () =
@@ -87,6 +81,29 @@ module InitCommandTests =
         let first = File.ReadAllBytes(Path.Combine(firstRoot, rel))
         let second = File.ReadAllBytes(Path.Combine(secondRoot, rel))
         Assert.Equal<byte[]>(first, second)
+
+    [<Fact>]
+    let ``init preserves existing scaffold provenance while re-supplying the lifecycle skeleton`` () =
+        let root = TestSupport.tempDirectory ()
+        let provenancePath = Path.Combine(root, ".fsgg", "scaffold-provenance.json")
+        Directory.CreateDirectory(Path.Combine(root, ".fsgg")) |> ignore
+
+        let scaffoldRecord =
+            { ScaffoldProvenance.devRepoRecord { Id = "fsgg-sdd"; Version = "0.23.0" } [] with
+                ProviderName = "rendering"
+                ProviderContractVersion = "1"
+                TemplateRef = "fsgg-ui"
+                Outcome = "succeeded" }
+
+        let existing = ScaffoldProvenance.serialize scaffoldRecord
+        File.WriteAllText(provenancePath, existing)
+
+        let report = runInit root
+
+        Assert.Equal(CommandOutcome.Succeeded, report.Outcome)
+        Assert.Equal(existing, File.ReadAllText provenancePath)
+        Assert.True(File.Exists(Path.Combine(root, ".fsgg", "project.yml")))
+        Assert.DoesNotContain(report.ChangedArtifacts, fun change -> change.Path = ScaffoldProvenance.provenancePath)
 
     [<Fact>]
     let ``init preserves unrelated user files with real filesystem evidence`` () =
