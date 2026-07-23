@@ -43,6 +43,30 @@ module ReleaseReadinessCheckTests =
     let ``T019 a fully conformant, fully baselined release evaluates ready (no diagnostics)`` () =
         Assert.Empty(evaluate release (conformantProduced release))
 
+    [<Fact>]
+    let ``T019 analysis catalog includes the complete produced diagnostic and finding shapes`` () =
+        let fields =
+            release.Catalog
+            |> List.find (fun entry -> entry.Contract = "analysis.json")
+            |> fun entry -> entry.Inventory |> List.map _.Name
+
+        for field in
+            [ "diagnostics[].artifact"
+              "diagnostics[].correction"
+              "diagnostics[].id"
+              "diagnostics[].message"
+              "diagnostics[].relatedIds"
+              "diagnostics[].severity"
+              "findings[].category"
+              "findings[].correction"
+              "findings[].id"
+              "findings[].message"
+              "findings[].path"
+              "findings[].relatedIds"
+              "findings[].severity"
+              "findings[].state" ] do
+            Assert.Contains(field, fields)
+
     // ===== readiness fails by absence, never passes by it (FR-012) =====
 
     [<Fact>]

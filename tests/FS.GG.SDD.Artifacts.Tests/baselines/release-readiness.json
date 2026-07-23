@@ -272,7 +272,77 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "diagnostics[].artifact",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "diagnostics[].correction",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "diagnostics[].id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "diagnostics[].message",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "diagnostics[].relatedIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "diagnostics[].severity",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "findings",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings[].category",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings[].correction",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings[].id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings[].message",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings[].relatedIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings[].severity",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings[].state",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
