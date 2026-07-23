@@ -75,6 +75,24 @@ module CommandWorkflow =
         | _ ->
 
             match model.Request.Command, model.Request.WorkId with
+            | Init, _ ->
+                let readKey = effectKey initProvenanceReadEffect
+                let writeEffect = initProvenanceEffect model.Request
+
+                if not (hasInterpreted readKey model) then
+                    model, []
+                elif Option.isSome (snapshot ScaffoldProvenance.provenancePath model) then
+                    // Existing scaffold provenance is an authoritative reconciliation anchor.
+                    // Preserve it byte-for-byte; init only re-supplies missing lifecycle files.
+                    model, []
+                elif hasPlanned (effectKey writeEffect) model then
+                    model, []
+                else
+                    let effects = [ writeEffect ]
+
+                    { model with
+                        PendingEffects = model.PendingEffects @ effects },
+                    effects
             | (Charter | Specify | Clarify | Checklist | Plan | Tasks | Analyze | Evidence | Verify | Ship), Some workId when
                 not (hasPlannedWrite model)
                 ->

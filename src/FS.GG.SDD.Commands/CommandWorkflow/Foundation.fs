@@ -455,6 +455,8 @@ nuget-cache/
             StructuredSource
         )
 
+    let initProvenanceReadEffect = ReadFile ScaffoldProvenance.provenancePath
+
     let initEffects (request: CommandRequest) =
         let projectId = projectIdFromRoot request.ProjectRoot
 
@@ -826,7 +828,11 @@ nuget-cache/
 
             let planned =
                 match request.Command, request.WorkId with
-                | Init, _ -> [], initEffects request @ [ initProvenanceEffect request ]
+                // Read provenance before planning its write. A product scaffold already carries
+                // provider-owned provenance, which init must preserve rather than reinterpret as
+                // authored content that it attempted to overwrite. The command driver appends the
+                // dev-repo anchor only when this read proves the path absent.
+                | Init, _ -> [], initProvenanceReadEffect :: initEffects request
                 | Charter, Some workId
                 | Specify, Some workId -> [], charterReadEffects workId
                 | Clarify, Some workId -> [], clarifyReadEffects workId
