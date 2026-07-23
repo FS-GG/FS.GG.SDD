@@ -5,7 +5,10 @@ open System.Text.Json
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Artifacts.ReleaseContract
+open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandSerialization
+open FS.GG.SDD.Commands.CommandTypes
+open FS.GG.SDD.Commands.Internal.ViewGeneration
 open Xunit
 
 /// Conformance: a produced artifact from a real lifecycle run must match its
@@ -41,15 +44,55 @@ module ReleaseConformanceTests =
         |> List.find (fun e -> e.Contract = contract)
         |> fun e -> e.Inventory |> List.map (fun i -> i.Name)
 
+    // #660: the shipped conformance project correctly has no analysis diagnostics/findings.
+    // Generate a second, in-memory analysis specimen through the real writer with one diagnostic,
+    // then union its observed keys with the clean file. This exercises both nested array shapes
+    // without hand-copying their fields or weakening the empty-array guard below.
+    let analysisDiagnosticShape () =
+        let readiness: AnalysisSummary =
+            { WorkId = workId
+              Stage = "analyze"
+              Status = "blocked"
+              AnalysisPath = $"readiness/{workId}/analysis.json"
+              SourceCount = 0
+              SourceRelationshipCount = 0
+              ReadyFindingCount = 0
+              AdvisoryCount = 0
+              WarningCount = 0
+              BlockingCount = 1
+              StaleSourceCount = 0
+              MissingDispositionCount = 0
+              MalformedSourceCount = 0
+              GeneratedViewFindingCount = 0
+              AcceptedDeferralCount = 0
+              Readiness = "needsCorrection" }
+
+        analysisJson
+            workId
+            (SchemaVersion.currentGeneratorVersion ())
+            []
+            []
+            readiness
+            [ unsafeOverwrite $"work/{workId}/spec.md" ]
+            []
+        |> topKeys
+
     /// Build the produced-artifact snapshot the pure `evaluate` check consumes.
     let producedArtifacts (root: string) (shipReport) =
         let rd = Path.Combine(root, "readiness", workId)
         let read rel = File.ReadAllText(Path.Combine(rd, rel))
 
         let jsonProduced contract file =
+            let observed = topKeys (read file)
+
             { Contract = contract
               Source = refOf ("readiness/<id>/" + contract)
-              Inventory = topKeys (read file) }
+              Inventory =
+                if contract = "analysis.json" then
+                    Set.union (Set.ofList observed) (Set.ofList (analysisDiagnosticShape ()))
+                    |> Set.toList
+                else
+                    observed }
 
         // Markdown projections: observed sections are the documented sections that
         // actually appear in the produced file (a missing one surfaces as drift).

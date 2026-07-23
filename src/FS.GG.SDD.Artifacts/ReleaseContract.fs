@@ -342,13 +342,31 @@ module ReleaseContract =
                   "workItem.title" ]
 
         let analysis =
+            // #660: the clean release-conformance fixture leaves diagnostics/findings empty, while
+            // validate's blocked-state matrix populates them. Catalogue the complete writer-owned
+            // shapes explicitly so empty-array blindness cannot make validation rediscover one
+            // nested field at a time.
             jsonViewEntry
                 "analysis.json"
                 Analysis
                 AdditiveOptional
                 [ "schemaVersion" ]
                 [ "diagnostics"
+                  "diagnostics[].artifact"
+                  "diagnostics[].correction"
+                  "diagnostics[].id"
+                  "diagnostics[].message"
+                  "diagnostics[].relatedIds"
+                  "diagnostics[].severity"
                   "findings"
+                  "findings[].category"
+                  "findings[].correction"
+                  "findings[].id"
+                  "findings[].message"
+                  "findings[].path"
+                  "findings[].relatedIds"
+                  "findings[].severity"
+                  "findings[].state"
                   "generatedViews"
                   "generatedViews[].currency"
                   "generatedViews[].diagnosticIds"
