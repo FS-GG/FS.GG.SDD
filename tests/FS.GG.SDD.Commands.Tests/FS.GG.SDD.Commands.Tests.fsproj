@@ -36,6 +36,7 @@
     <Compile Include="RefreshCommandTests.fs" />
     <Compile Include="GeneratedViewCommandTests.fs" />
     <Compile Include="CommandReportJsonTests.fs" />
+    <Compile Include="CommandTypeFamilyTests.fs" />
     <Compile Include="ToolVersionTests.fs" />
     <Compile Include="TextProjectionTests.fs" />
     <Compile Include="GovernanceBoundaryCommandTests.fs" />

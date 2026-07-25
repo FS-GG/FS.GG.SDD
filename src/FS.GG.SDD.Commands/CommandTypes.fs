@@ -861,6 +861,88 @@ module CommandTypes =
         | EffectInterpreted of CommandEffectResult
         | BuildReport
 
+    // Additive source-navigation aliases only. Canonical definitions stay at CommandTypes.* so
+    // grouping the contract does not move CLR types or change serialized representations.
+    module CommandFamilies =
+        module Invocation =
+            type Command = SddCommand
+            type Format = OutputFormat
+            type Outcome = CommandOutcome
+            type Request = CommandRequest
+
+        module Artifacts =
+            type Policy = MergePolicy
+            type WriteKind = ArtifactWriteKind
+            type Operation = ArtifactOperation
+            type ViewCurrency = GeneratedViewCurrency
+            type ViewSource = GeneratedViewSource
+            type Change = ArtifactChange
+            type ViewState = GeneratedViewState
+
+        module Lifecycle =
+            type Specification = SpecificationSummary
+            type Clarification = ClarificationSummary
+            type Checklist = ChecklistSummary
+            type Plan = PlanSummary
+            type Tasks = TasksSummary
+            type Analysis = AnalysisSummary
+            type Evidence = EvidenceSummary
+            type Verification = VerificationSummary
+            type Ship = ShipSummary
+
+        module Guidance =
+            type Disposition = GuidanceDisposition
+            type Finding = AgentGuidanceFinding
+            type Summary = AgentGuidanceSummary
+            type RefreshState = RefreshDisposition
+            type Refresh = RefreshSummary
+
+        module Scaffold =
+            type InvocationResult = ProviderInvocationResult
+            type Summary = ScaffoldSummary
+
+        module Remediation =
+            type StepId = ReconciliationStepId
+            type Outcome = ReconciliationOutcome
+            type Step = ReconciliationStep
+            type Doctor = DoctorSummary
+            type Upgrade = UpgradeSummary
+
+        module Surfaces =
+            type Entry = ClassifiedEntry
+            type Classification = SurfaceClassification
+            type BumpPrompt = VersionBumpPrompt
+            type Summary = SurfaceSummary
+            type DependencyEntry = DependencySurfaceEntry
+            type DependencySummary = DependencySurfaceSummary
+
+        module Lint =
+            type ArtifactKind = LintArtifactKind
+            type DefectClass = LintDefectClass
+            type Outcome = LintOutcome
+            type Pointer = GrammarPointer
+            type Defect = LintDefect
+            type Summary = LintSummary
+
+        module Reporting =
+            type GovernanceFact = GovernanceCompatibilityFact
+            type Action = NextAction
+            type Flag = HelpFlag
+            type HelpCommand = HelpCommandEntry
+            type Scope = HelpScope
+            type Help = HelpSummary
+            type Stage = StageState
+            type StageReport = StageEntry
+            type Lifecycle = LifecycleStatus
+            type Report = CommandReport
+
+        module Runtime =
+            type Effect = CommandEffect
+            type ProcessResult = ProcessRunResult
+            type EffectResult = CommandEffectResult
+            type Model = CommandModel
+            type Msg = CommandMsg
+
     let commandName (command: SddCommand) =
         match command with
         | Init -> "init"
