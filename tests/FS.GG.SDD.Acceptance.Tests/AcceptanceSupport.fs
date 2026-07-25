@@ -64,9 +64,17 @@ module AcceptanceSupport =
             | Some path when File.Exists path -> ()
             | _ -> this.Skip <- $"{registryEnvVar} is unset; the composition acceptance is opt-in and network-gated."
 
-    /// A fresh, empty product root for one run (temp dir, sensed — never compared). Nested under
-    /// the shared per-run temp root so it is swept at process exit (feature 067 / FR-007).
-    let newProductRoot = FS.GG.SDD.TestShared.TestShared.tempDirectory
+    /// A fresh, empty product root for one run (temp dir, sensed — never compared). The real
+    /// provider uses the output directory name when no explicit product name is supplied, so the
+    /// leaf is deliberately a valid identifier rather than a bare GUID that can begin with a
+    /// digit. The dedicated hyphenated-name acceptance still exercises identifier sanitization.
+    /// Nested under the shared per-run temp root so it is swept at process exit (feature 067 /
+    /// FR-007).
+    let newProductRoot () =
+        let parent = FS.GG.SDD.TestShared.TestShared.tempDirectory ()
+        let root = Path.Combine(parent, "Acceptance" + Guid.NewGuid().ToString("N"))
+        Directory.CreateDirectory root |> ignore
+        root
 
     /// Copy the external registry file into `<root>/.fsgg/providers.yml` verbatim. The
     /// registry is the only channel carrying the real template identity; it is never
@@ -334,10 +342,22 @@ module AcceptanceSupport =
                   WorkingDirectory = root })
 
     /// The build probe: resolve the declared-or-default command and route it through the
-    /// shared 300 s bounded edge (research D6). `declared = None` is today's `dotnet build`.
+    /// shared 300 s bounded edge (research D6). The default `dotnet build` disables persistent
+    /// build servers and worker fan-out: otherwise an MSBuild descendant can inherit the capture
+    /// pipes after `dotnet` exits, making two identical real-provider runs alternate between a
+    /// trustworthy exit and the bounded held-pipes diagnostic. Provider-declared commands remain
+    /// byte-for-byte authoritative.
     let buildProbe (declared: DeclaredCommand option) (root: string) =
         let command = resolveBuildCommand declared root
-        runToCompletion command.Executable command.Arguments command.WorkingDirectory 300_000
+
+        let arguments =
+            match declared with
+            | None ->
+                command.Arguments
+                @ [ "-maxcpucount:1"; "--disable-build-servers"; "-p:UseSharedCompilation=false" ]
+            | Some _ -> command.Arguments
+
+        runToCompletion command.Executable arguments command.WorkingDirectory 300_000
 
     /// Feature 083 (080 FR-011): the test probe — run `dotnet test` at the product root through
     /// the same shared 300 s bounded edge as `buildProbe`. Exit 0 (including an empty-but-green
