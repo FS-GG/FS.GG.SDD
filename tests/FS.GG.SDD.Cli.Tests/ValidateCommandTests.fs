@@ -79,6 +79,17 @@ module ValidateCommandTests =
         Assert.Contains("notValidated", stdout)
         Assert.NotEqual(0, exitCode)
 
+    [<Fact>]
+    let ``validate --help exits successfully without executing validation`` () =
+        let stdout, stderr, exitCode = runCliFull [ "validate"; "--help" ]
+        Assert.Equal(0, exitCode)
+        Assert.Equal("", stderr)
+        Assert.Contains("\"scope\": \"command\"", stdout)
+        Assert.Contains("\"command\": \"validate\"", stdout)
+        Assert.Contains("\"name\": \"--matrix\"", stdout)
+        Assert.Contains("partial run exits non-zero", stdout)
+        Assert.DoesNotContain("\"matrices\"", stdout)
+
     // #68: a bad `--out` path is user input, not a tool defect — it must surface as a stderr
     // diagnostic + exit 1, never a raw stack trace, while the stdout report contract still emits.
     [<Fact; Trait("tier", "slow")>]
