@@ -210,6 +210,32 @@ let private printTopLevelHelp format forceColor =
 let private printCommandHelp format forceColor command =
     emitHelp format forceColor command (CommandHelp.commandHelp command)
 
+let private printValidateHelp format forceColor =
+    // `validate` is a cross-cutting CLI command rather than an SddCommand, so it owns this
+    // small help table while reusing the standard deterministic help report and projections.
+    // Dispatch resolves it before printValidate: asking for help never builds fixtures or
+    // executes a validation cell (#679).
+    let flag name argument description : HelpFlag =
+        { Name = name
+          Argument = argument
+          Description = description }
+
+    let summary =
+        { Scope = Command "validate"
+          Usage = "fsgg-sdd validate [options]"
+          Commands = []
+          GlobalFlags = CommandHelp.globalFlags
+          CommandFlags =
+            [ flag
+                  "--matrix"
+                  (Some "<name>")
+                  "Evaluate only one matrix. Other matrices remain notValidated, so this partial run exits non-zero even when its cells pass. Names: lifecycle-output, determinism, baseline-conformance, compatibility."
+              flag "--markdown" None "Emit a deterministic Markdown report card."
+              flag "--out" (Some "<path>") "Persist the selected deterministic projection inside the workspace."
+              flag "--force-color" None "Enable rich color even when output is redirected." ] }
+
+    emitHelp format forceColor Help summary
+
 /// A command invoked with malformed argv (FS-GG/FS.GG.SDD#196 unknown tokens, #264 a valued option
 /// with no value). Each defect is a blocking `DiagnosticError`: the report is an ordinary
 /// `CommandReport`, so it projects three ways and routes to stderr, and it carries no effects, so the
@@ -326,6 +352,8 @@ let run args =
     // §3.5: top-level help (no command) — dispatched as a peer of `--version`/`validate`,
     // before `parseCommand`, so it never falls through to `printUnknown` (FR-008).
     | ("--help" | "-h" | "help") :: rest -> printTopLevelHelp (outputFormat rest) (forceColorRequested rest)
+    | "validate" :: rest when hasFlag "--help" rest || hasFlag "-h" rest ->
+        printValidateHelp (outputFormat rest) (forceColorRequested rest)
     | "validate" :: rest -> printValidate rest
     // CLI-level cross-cutting command (peer of `validate`), dispatched before
     // `parseCommand` so the lifecycle CommandReport/parseCommand contracts stay
