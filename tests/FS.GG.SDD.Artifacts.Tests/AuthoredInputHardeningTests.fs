@@ -1,5 +1,7 @@
 namespace FS.GG.SDD.Artifacts.Tests
 
+open System
+open System.Diagnostics
 open FS.GG.SDD.Artifacts
 open Xunit
 
@@ -246,6 +248,52 @@ module AuthoredInputHardeningTests =
 
         Assert.Equal("malformedYaml", diagnostic.Id)
         Assert.Contains("exceeding", diagnostic.Message)
+
+    [<Fact>]
+    let ``a maximum-size authored artifact stays within explicit parser resource ceilings`` () =
+        // Warm the same public parser path so the ceiling measures document work rather than
+        // one-time JIT/type initialization. Fixture construction stays outside the allocation
+        // window: the contract is the parser's cost for an already-read authored artifact.
+        let warmup: FileSnapshot =
+            { Path = "work/001-demo/evidence.yml"
+              Text = "schemaVersion: 1\nworkId: 001-demo\nnotes: warm\n" }
+
+        parseEvidenceArtifact warmup |> ignore
+
+        let prefix = "schemaVersion: 1\nworkId: 001-demo\nnotes: "
+        let maxSupportedChars = 2_000_000
+
+        let snapshot: FileSnapshot =
+            { Path = "work/001-demo/evidence.yml"
+              Text = prefix + String('a', maxSupportedChars - prefix.Length) }
+
+        Assert.Equal(maxSupportedChars, snapshot.Text.Length)
+
+        let allocatedBefore = GC.GetAllocatedBytesForCurrentThread()
+        let stopwatch = Stopwatch.StartNew()
+        let result = parseEvidenceArtifact snapshot
+        stopwatch.Stop()
+        let allocatedBytes = GC.GetAllocatedBytesForCurrentThread() - allocatedBefore
+
+        match result with
+        | Ok _ -> ()
+        | Error diagnostics -> failwith $"Expected the maximum-size supported document to parse, got {diagnostics}."
+
+        // Baseline on a Release build is ~8 MiB / ~65 ms. Four-times allocation
+        // headroom and a deliberately wider elapsed-time margin keep this a portable
+        // regression ceiling rather than a machine-specific microbenchmark.
+        let allocationCeilingBytes = 32L * 1024L * 1024L
+        let elapsedCeiling = TimeSpan.FromSeconds 2.0
+
+        Assert.True(
+            allocatedBytes < allocationCeilingBytes,
+            $"Maximum-size parse allocated {allocatedBytes:N0} bytes; ceiling is {allocationCeilingBytes:N0}."
+        )
+
+        Assert.True(
+            stopwatch.Elapsed < elapsedCeiling,
+            $"Maximum-size parse took {stopwatch.Elapsed.TotalMilliseconds:F1}ms; ceiling is {elapsedCeiling.TotalMilliseconds:F0}ms."
+        )
 
     // --- §2.2 of the 2026-07-15 review: a handful of authored constructs make
     // YamlDotNet's `stream.Load` throw a framework exception (ArgumentException,
