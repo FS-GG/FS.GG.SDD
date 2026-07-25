@@ -579,7 +579,13 @@ providers:
         // The deterministic body (everything but the null-normalized sensed block) is
         // byte-identical across same-input runs — including two equally-unavailable runs.
         let body record = serialize (normalizeSensed record)
-        Assert.Equal(body first, body second)
+        let firstBody = body first
+        let secondBody = body second
+
+        Assert.True(
+            (firstBody = secondBody),
+            $"Same-input composition bodies differed.\nFirst:\n{firstBody}\nSecond:\n{secondBody}"
+        )
 
     // ===================================================================
     // Offline result-schema contract: the verdict-mapping unit test (T008) and the byte-exact

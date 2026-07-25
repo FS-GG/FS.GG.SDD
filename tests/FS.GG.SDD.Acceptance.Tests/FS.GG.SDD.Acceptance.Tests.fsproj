@@ -9,6 +9,7 @@
     <Compile Include="AcceptanceSupport.fs" />
     <Compile Include="ProbeResolutionTests.fs" />
     <Compile Include="RegistryResolverTests.fs" />
+    <Compile Include="ScheduledAcceptanceWorkflowTests.fs" />
     <Compile Include="CompositionResult.fs" />
     <Compile Include="CompositionAcceptanceTests.fs" />
     <Compile Include="WorkBoardScaffoldAcceptanceTests.fs" />
@@ -21,6 +22,10 @@
     <None Include="../../scripts/workflows/resolve-acceptance-registry.sh">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>resolve-acceptance-registry.sh</Link>
+    </None>
+    <None Include="../../.github/workflows/composition-acceptance.yml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>composition-acceptance.yml</Link>
     </None>
   </ItemGroup>
 
