@@ -32,6 +32,7 @@
     <Compile Include="TextProjectionGoldenTests.fs" />
     <Compile Include="ReconciliationDuTests.fs" />
     <Compile Include="FoundationTests.fs" />
+    <Compile Include="CommandDomainServiceTests.fs" />
     <Compile Include="AgentsCommandTests.fs" />
     <Compile Include="RefreshCommandTests.fs" />
     <Compile Include="GeneratedViewCommandTests.fs" />

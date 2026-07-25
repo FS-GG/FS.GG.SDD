@@ -407,12 +407,8 @@ module internal HandlersEvidence =
         else
             true
 
-    let evidenceSourceSnapshot label path text : EvidenceSourceSnapshot =
-        { Label = label
-          Path = path
-          Digest = Some((SchemaVersionModule.sha256Text text).Value)
-          SchemaVersion = Some 1
-          SourceLocation = None }
+    let evidenceSourceSnapshot label path text =
+        EvidenceDomain.sourceSnapshot label path text
 
     let currentEvidenceSourceSnapshots
         workId
@@ -423,114 +419,22 @@ module internal HandlersEvidence =
         tasksText
         analysisText
         : EvidenceSourceSnapshot list =
-        [ evidenceSourceSnapshot "spec" (specPath workId) specText
-          evidenceSourceSnapshot "clarifications" (clarificationPath workId) clarificationText
-          evidenceSourceSnapshot "checklist" (checklistPath workId) checklistText
-          evidenceSourceSnapshot "plan" (planPath workId) planText
-          evidenceSourceSnapshot "tasks" (tasksPath workId) tasksText
-          evidenceSourceSnapshot "analysis" (analysisPath workId) analysisText ]
+        EvidenceDomain.currentSourceSnapshots
+            workId
+            specText
+            clarificationText
+            checklistText
+            planText
+            tasksText
+            analysisText
 
-    let evidenceSourceSnapshotStale (current: EvidenceSourceSnapshot list) (recorded: EvidenceSourceSnapshot list) =
-        let currentMap =
-            current
-            |> List.choose (fun snapshot -> snapshot.Digest |> Option.map (fun digest -> snapshot.Path, digest))
-            |> Map.ofList
+    let evidenceSourceSnapshotStale current recorded =
+        EvidenceDomain.sourceSnapshotStale current recorded
 
-        recorded
-        |> List.exists (fun snapshot ->
-            match snapshot.Digest, Map.tryFind snapshot.Path currentMap with
-            | Some recordedDigest, Some currentDigest ->
-                not (String.Equals(recordedDigest, currentDigest, StringComparison.OrdinalIgnoreCase))
-            | Some _, None -> true
-            | _ -> false)
+    let declarationMeaningKey declaration =
+        EvidenceDomain.declarationMeaningKey declaration
 
-    let declarationMeaningKey (declaration: EvidenceDeclaration) =
-        (evidenceKindSourceValue declaration.Kind,
-         declaration.Subject.SubjectType,
-         declaration.Subject.Id,
-         declaration.TaskRefs |> List.map _.Value |> List.sort,
-         declaration.RequirementRefs |> List.map _.Value |> List.sort,
-         declaration.ObligationRefs |> List.sort,
-         declaration.SourceRefs
-         |> List.map (fun source -> source.Kind, source.Path, source.Uri, source.Result)
-         |> List.sort,
-         normalizedEvidenceResult declaration.Result,
-         declaration.Synthetic,
-         declaration.SyntheticDisclosure
-         |> Option.map (fun disclosure -> disclosure.StandsInFor, disclosure.Reason),
-         declaration.Rationale,
-         declaration.Owner,
-         declaration.Scope,
-         declaration.LaterLifecycleVisibility)
-
-    let evidenceObligations (taskFacts: TaskFacts) : EvidenceObligation list =
-        taskFacts.Tasks
-        |> List.collect (fun task ->
-            let ids =
-                if List.isEmpty task.RequiredEvidence && task.Status = TaskStatus.Done then
-                    [ $"task.{task.Id.Value}.completion" ]
-                else
-                    task.RequiredEvidence |> List.map _.Value
-
-            ids
-            |> List.map (fun id ->
-                { ObligationId = id
-                  Kind = "taskEvidence"
-                  SourceArtifactPath = task.Source.Path
-                  SourceId = Some task.Id.Value
-                  LinkedTaskIds = [ task.Id ]
-                  LinkedRequirementIds = task.Requirements
-                  LinkedDecisionIds = task.Decisions |> List.map _.Value
-                  // Feature 077: carry the task's full source-id lineage so the scaffolded
-                  // declaration can recover the plan-decision (and FR-via-plan) origin that
-                  // task.Requirements/task.Decisions omit for a plan-decision task.
-                  //
-                  // Feature 096 (issue #189): do NOT "fix" this to
-                  // `task.SourceIds ∪ requirements ∪ decisions`. It has been proposed twice and is a
-                  // no-op both times: `LinkedSourceIds` has exactly one consumer — `routeSourceRefs`
-                  // below — and that call site already unions this field with `LinkedRequirementIds`
-                  // and `LinkedDecisionIds`. Widening here would change no emitted byte. The blind
-                  // consumers were `WorkModel.deriveGuidanceModel` and `HandlersVerify`, both fixed
-                  // at their own seams; `evidence` was never blind.
-                  LinkedSourceIds = task.SourceIds
-                  ExpectedEvidenceKinds = [ "implementation"; "verification"; "deferral"; "synthetic" ]
-                  // WI-4 (ADR-0048): a task carrying the gameplay-test capability (the per-classified-FR
-                  // obligation derived in TaskGraphAuthoring) is discharged only by a real, non-synthetic
-                  // test — so its obligation restricts the satisfying kind. Every other task leaves this
-                  // empty (no restriction), which is why the change is additive and backward-compatible.
-                  RequiredEvidenceKinds =
-                    if isGameplayTestTagged task.RequiredSkills then
-                        realTestEvidenceKinds
-                    else
-                        []
-                  RequiredSkillOrCapabilityTags = task.RequiredSkills
-                  Blocking = true
-                  Correction =
-                    $"Add evidence {id} for {task.Id.Value} with result: pass and synthetic: false (a synthetic pass does not satisfy it), or an accepted deferral linked to {task.Id.Value}." }))
-        // Spec 096 AC-005 (issue #225): an obligation id required by two tasks must yield ONE
-        // obligation carrying the union of both lineages — not a duplicate per task. The
-        // `List.collect` above emits one draft per (task, requiredEvidence) pair, so two tasks that
-        // share `requiredEvidence: [EV-001]` would otherwise produce two obligations with the same
-        // `ObligationId`, scaffolding duplicate `EV-001` declarations and duplicate `ED-EV-001`
-        // disposition rows, and leaving `verifyEvidenceDispositionViews.affectedSourceIds`' union
-        // fold (written for many task ids) unreachable. Group by the obligation id and union the
-        // lineage — the same shape `verifyTestDispositionViews` reaches with its `groupBy` on the
-        // obligation id, so `TD-`/`ED-` merge identically. Scalar fields (`Kind`, source, correction,
-        // …) are per-first-task and not read downstream; `List.distinct` preserves first-occurrence
-        // (task) order, so a single-task obligation passes through byte-identically.
-        |> List.groupBy (fun obligation -> obligation.ObligationId)
-        |> List.map (fun (_, group) ->
-            { List.head group with
-                LinkedTaskIds = group |> List.collect _.LinkedTaskIds |> List.distinct
-                LinkedRequirementIds = group |> List.collect _.LinkedRequirementIds |> List.distinct
-                LinkedDecisionIds = group |> List.collect _.LinkedDecisionIds |> List.distinct
-                LinkedSourceIds = group |> List.collect _.LinkedSourceIds |> List.distinct
-                RequiredSkillOrCapabilityTags = group |> List.collect _.RequiredSkillOrCapabilityTags |> List.distinct
-                // WI-4 (ADR-0048): union the required kinds alongside the tags they are derived from.
-                // The tag set decides `ClassifiedRequirement`; if a gameplay task shares an obligation
-                // id with a non-gameplay task listed first, head-winning `RequiredEvidenceKinds` would
-                // leave it empty and silently disable the real-test gate for that obligation.
-                RequiredEvidenceKinds = group |> List.collect _.RequiredEvidenceKinds |> List.distinct })
+    let evidenceObligations taskFacts = EvidenceDomain.obligations taskFacts
 
     // Feature 077 (issue #124): route an obligation's origin lineage into the declaration's
     // `requirementRefs` / `planDecisionRefs` buckets by the shared id grammar
