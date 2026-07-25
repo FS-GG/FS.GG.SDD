@@ -50,6 +50,11 @@ Releases `0.2.0` through `0.8.0` were additive-only and intentionally carry no
 note. The paragraphs below record each of those additive changes; they are the
 per-change classification record, not migration notes.
 
+Release `0.25.0` is additive-only: `CommandTypes.CommandFamilies` adds F# type
+abbreviations that group the existing public command contract by responsibility.
+Every canonical `CommandTypes.*` runtime type and serialized representation is
+unchanged, so no consumer adaptation or `<version>.md` migration note is required.
+
 The `030-scaffold-template-provider` change is additive: it adds the cross-cutting
 `fsgg-sdd scaffold` command, the new `command-report` `scaffold` field, and the new
 project-level `.fsgg/scaffold-provenance.json` and `.fsgg/providers.yml` artifacts.
