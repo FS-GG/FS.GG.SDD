@@ -39,59 +39,25 @@ module internal HandlersScaffold =
 
     let supportedContractRange = ">=1.0.0 <2.0.0"
 
-    let contractMajor (version: string) =
-        match version.Trim().Trim('"').Split('.') with
-        | parts when parts.Length >= 1 ->
-            match Int32.TryParse parts.[0] with
-            | true, value -> Some value
-            | _ -> None
-        | _ -> None
+    let contractMajor version = ScaffoldMutation.contractMajor version
 
     let isSupportedContract version = contractMajor version = Some 1
 
     // The SDD-owned trees a compliant provider must never write into (FR-011), and
     // the paths the SDD skeleton/provenance own (excluded from collision + diff).
-    let isSddTree (path: string) =
-        let p = normalizeRelativePath path
-
-        p.StartsWith(".fsgg/", StringComparison.Ordinal)
-        || p.StartsWith("work/", StringComparison.Ordinal)
-        || p.StartsWith("readiness/", StringComparison.Ordinal)
-        // 051: the seeded fs-gg-sdd-* process-skill subtrees are SDD-owned skeleton
-        // (FR-008). A provider that writes into them is rejected as an intrusion, and
-        // they are never recorded as generatedProduct in scaffold-provenance.json.
-        // The `.claude`/`.codex` roots stay WHOLE-ROOT reserved (056 keeps the guard
-        // strict — the opposite of the reverted 055 narrowing).
-        || p.StartsWith(".claude/skills/", StringComparison.Ordinal)
-        || p.StartsWith(".codex/skills/", StringComparison.Ordinal)
-        // 056: the neutral `.agents/skills/` root is the provider's to write, EXCEPT the
-        // reserved `fs-gg-sdd-*` namespace — a provider write there is an intrusion, so a
-        // provider can never clobber SDD's seeded skills in the root it does own (FR-002).
-        || p.StartsWith(".agents/skills/fs-gg-sdd-", StringComparison.Ordinal)
-
-    let isSddOwned (path: string) =
-        let p = normalizeRelativePath path
-        isSddTree p || p = "AGENTS.md" || p = "CLAUDE.md"
-
-    let parseListing (text: string) =
-        text.Split([| '\n'; '\r' |], StringSplitOptions.RemoveEmptyEntries)
-        |> Array.map normalizeRelativePath
-        |> Array.filter (String.IsNullOrWhiteSpace >> not)
-        |> Set.ofArray
+    let isSddTree path = ScaffoldMutation.isSddTree path
+    let isSddOwned path = ScaffoldMutation.isSddOwned path
+    let parseListing text = ScaffoldMutation.parseListing text
 
     let beforePaths model =
         parseListing (directoryListing "" model)
 
     // Pre-existing, non-SDD content the provider would materialize over (FR-010).
     let collisionPaths model =
-        beforePaths model |> Set.filter (isSddOwned >> not) |> Set.toList |> List.sort
+        ScaffoldMutation.collisionPaths (directoryListing "" model)
 
     let skeletonFiles request =
-        initEffects request
-        |> List.choose (function
-            | WriteFile(path, _, _) -> Some(normalizeRelativePath path)
-            | _ -> None)
-        |> Set.ofList
+        ScaffoldMutation.skeletonFiles (initEffects request)
 
     let effectiveParameters (descriptor: ProviderDescriptor) (request: CommandRequest) =
         let defaults =
@@ -305,7 +271,7 @@ module internal HandlersScaffold =
     /// `git init` and the script executable bit — never delegated to the provider. The pinned id
     /// is SDD's **own** (`FS.GG.SDD.Cli` / `fsgg-sdd`), which generic SDD may legitimately name;
     /// no provider package id, template id, or docs URL appears here.
-    let toolManifestPath = ".config/dotnet-tools.json"
+    let toolManifestPath = ScaffoldMutation.toolManifestPath
 
     let private isToolManifestWrite effect =
         match effect with
@@ -316,27 +282,8 @@ module internal HandlersScaffold =
     /// `dotnet` keys the manifest by the lowercased package id and lists the `ToolCommandName`.
     /// A pure function of `version` — no clock, no environment — so two runs of one CLI produce
     /// byte-identical bytes (the determinism the rest of scaffold's output already guarantees).
-    let toolManifestText (version: string) =
-        // Escaped through the JSON serializer rather than interpolated raw: the version reaches
-        // here from an assembly attribute, and a report must never emit malformed JSON.
-        let quotedVersion = JsonSerializer.Serialize(version: string)
-
-        String.Join(
-            "\n",
-            [ "{"
-              "  \"version\": 1,"
-              "  \"isRoot\": true,"
-              "  \"tools\": {"
-              "    \"fs.gg.sdd.cli\": {"
-              $"      \"version\": {quotedVersion},"
-              "      \"commands\": ["
-              "        \"fsgg-sdd\""
-              "      ]"
-              "    }"
-              "  }"
-              "}"
-              "" ]
-        )
+    let toolManifestText version =
+        ScaffoldMutation.toolManifestText version
 
     let scaffoldInvocationEffects
         (request: CommandRequest)

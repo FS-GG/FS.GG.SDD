@@ -26,111 +26,34 @@ module internal TaskGraphAuthoring =
     module IdentifiersModule = FS.GG.SDD.Artifacts.Identifiers
     module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
 
-    // A declared skill is trusted and normalized (trim -> invariant-culture lowercase ->
-    // collapse internal whitespace runs to `-`); SDD keeps no closed allow-list. An
-    // absent/blank declaration degrades to the caller's neutral, non-misleading default.
-    let private resolveSkill (neutral: string) (declared: string option) : string =
-        match declared with
-        | Some raw when not (String.IsNullOrWhiteSpace raw) ->
-            let lowered = raw.Trim().ToLowerInvariant()
-            Regex.Replace(lowered, @"\s+", "-")
-        | _ -> neutral
-
-    // The required test skill for verification-obligation tasks is framework-aware.
     let neutralTestSkill = "automated-tests"
 
-    let resolveTestSkill (declared: string option) : string = resolveSkill neutralTestSkill declared
+    let resolveTestSkill declared =
+        TaskGraphDomain.resolveTestSkill declared
 
-    // The required implement skill for derived implementation tasks (#310, AC8). It was the
-    // literal `speckit-implement` — SDD's own authoring toolchain leaking into every consumer's
-    // task graph. Declared as `project.implementSkill`, it degrades to a neutral default that
-    // names the obligation rather than any one workspace's skill.
     let neutralImplementSkill = "implementation"
 
-    let resolveImplementSkill (declared: string option) : string =
-        resolveSkill neutralImplementSkill declared
+    let resolveImplementSkill declared =
+        TaskGraphDomain.resolveImplementSkill declared
 
-    /// The workspace-declared skills the task generator stamps onto derived tasks. Passed as a
-    /// record rather than two adjacent `string option`s, which are trivially swapped at a call site.
-    type DerivedSkills =
-        { TestSkill: string
-          ImplementSkill: string }
+    type DerivedSkills = TaskGraphDomain.DerivedSkills
+    let derivedSkills config = TaskGraphDomain.derivedSkills config
 
-    /// Resolve both derived skills from a `.fsgg/project.yml` that may be absent or malformed.
-    let derivedSkills (config: ProjectLifecycleConfig option) : DerivedSkills =
-        { TestSkill = resolveTestSkill (config |> Option.bind _.TestFramework)
-          ImplementSkill = resolveImplementSkill (config |> Option.bind _.ImplementSkill) }
-
-    /// Does the workspace declare a visual surface (#306)? An absent or malformed
-    /// `.fsgg/project.yml` declares none, matching how the derived skills degrade.
-    let derivedVisualSurface (config: ProjectLifecycleConfig option) : bool =
-        config |> Option.map _.VisualSurface |> Option.defaultValue false
+    let derivedVisualSurface config =
+        TaskGraphDomain.derivedVisualSurface config
 
     /// The one derived task whose obligation is not descended from any requirement (#306). Its title
     /// is its identity: `mergeAuthoredTaskState` matches derived to prior tasks by title, which is
     /// what keeps its `T###` — and therefore its `EV###` obligation — stable across re-derivations.
     let visualInspectionTaskTitle = "Inspect a rendered frame"
 
-    /// Lifecycle ids compare case-insensitively. One spelling of the fold, shared by every
-    /// membership test below, so a change of comparison convention cannot reach three of four
-    /// call sites and silently miss the fourth.
-    let internal upperSet (values: string list) =
-        values |> List.map (fun value -> value.ToUpperInvariant()) |> Set.ofList
+    let internal upperSet values = TaskGraphDomain.upperSet values
 
-    // #649 (narrowing #310 AC9): the fixed sentence `PlanAuthoring.deferralDecisionLines` writes for
-    // an auto-generated deferral mirror — `acceptedDeferral: Accepted deferral <id> remains visible
-    // to task generation.` The parser leaves the leading `[ref]` tokens on the decision's `Text`, so
-    // they are stripped before the match. Anchored end-to-end: a mirror that carried one extra clause
-    // of real design rationale would fail this and keep its own obligation, which is the whole point.
-    let private deferralMirrorBoilerplate =
-        Regex(
-            @"^acceptedDeferral:\s*Accepted deferral\s+[A-Za-z][A-Za-z0-9]*-\d{3,}\s+remains visible to task generation\.?\s*$",
-            RegexOptions.IgnoreCase
-        )
+    let internal isPureDeferralMirror ids decision =
+        TaskGraphDomain.isPureDeferralMirror ids decision
 
-    let private isDeferralMirrorBoilerplate (text: string) =
-        let withoutRefs = Regex.Replace(text, @"^\s*(?:\[[^\]]*\]\s*)+", "")
-        deferralMirrorBoilerplate.IsMatch(withoutRefs.Trim())
-
-    /// A PURE auto-generated deferral-mirror `PD-###` (#649): the `plan` scaffold emits one
-    /// `PD-### [DEC-###] acceptedDeferral: Accepted deferral DEC-### remains visible to task
-    /// generation.` per accepted deferral. Such a mirror disposes nothing the keep-visible task does
-    /// not already dispose. It is PURE — and therefore foldable — ONLY when every ref is an
-    /// accepted-deferral id AND the text is that exact boilerplate. A `PD` that references a deferral
-    /// PLUS real design content fails the text check and keeps its own obligation, which is exactly
-    /// the over-collapse #310 AC9 protects against.
-    let internal isPureDeferralMirror (acceptedDeferralIdSet: Set<string>) (decision: PlanDecision) =
-        let refs = upperSet decision.SourceIds
-
-        not (Set.isEmpty refs)
-        && Set.isSubset refs acceptedDeferralIdSet
-        && decision.Status.Equals("acceptedDeferral", StringComparison.OrdinalIgnoreCase)
-        && isDeferralMirrorBoilerplate decision.Text
-
-    /// A PURE checklist deferral mirror (#646, the residual #649 left): the `checklist` scaffold echoes
-    /// every accepted CLARIFY deferral as one `CR-### [CHK:...] [DEC-###] acceptedDeferral: Accepted
-    /// deferral DEC-### remains visible to planning.` review result (`ChecklistAuthoring.deferralReviews`).
-    /// Such an echo keeps visible nothing the clarify deferral's own keep-visible task does not, so it
-    /// folds into that task instead of earning a second keep-visible obligation.
-    ///
-    /// The purity test here is STRUCTURAL (every ref an accepted clarify-deferral id), not textual as the
-    /// PD mirror's is, and deliberately so. A `PD` can carry real, separately-verifiable DESIGN content
-    /// beside a deferral ref — which is why #310 AC9 makes its fold hinge on the prose. A checklist
-    /// deferral REVIEW cannot: it is re-derived from `clarificationFacts.AcceptedDeferrals` on every run
-    /// with no author-editable body (#146), and its prose only DESCRIBES the deferral — it never encodes
-    /// a decision the deferral's keep-visible task does not already dispose. So a `CR` whose refs are all
-    /// accepted clarify deferrals is a pure echo whatever its prose. A `CR` that also refs a
-    /// non-deferral id (a requirement, say) is not a pure echo and keeps its own obligation — the
-    /// structural analogue of the over-collapse guard.
-    let internal isPureChecklistDeferralMirror
-        (clarificationDeferralIdSet: Set<string>)
-        (result: ChecklistReviewResult)
-        =
-        let refs = upperSet result.SourceIds
-
-        not (Set.isEmpty refs)
-        && Set.isSubset refs clarificationDeferralIdSet
-        && result.Status.Equals("acceptedDeferral", StringComparison.OrdinalIgnoreCase)
+    let internal isPureChecklistDeferralMirror ids result =
+        TaskGraphDomain.isPureChecklistDeferralMirror ids result
 
     let tasksSummary (facts: TaskFacts) : TasksSummary =
         let statusCount predicate =
