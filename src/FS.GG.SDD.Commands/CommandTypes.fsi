@@ -1001,6 +1001,90 @@ module CommandTypes =
         | EffectInterpreted of CommandEffectResult
         | BuildReport
 
+    /// Additive source-navigation aliases for the broad command contract. The canonical
+    /// `CommandTypes.*` definitions remain the binary and serialization identities; these families
+    /// only group those same types by responsibility. See
+    /// `docs/reference/command-contract-compatibility.md`.
+    module CommandFamilies =
+        module Invocation =
+            type Command = SddCommand
+            type Format = OutputFormat
+            type Outcome = CommandOutcome
+            type Request = CommandRequest
+
+        module Artifacts =
+            type Policy = MergePolicy
+            type WriteKind = ArtifactWriteKind
+            type Operation = ArtifactOperation
+            type ViewCurrency = GeneratedViewCurrency
+            type ViewSource = GeneratedViewSource
+            type Change = ArtifactChange
+            type ViewState = GeneratedViewState
+
+        module Lifecycle =
+            type Specification = SpecificationSummary
+            type Clarification = ClarificationSummary
+            type Checklist = ChecklistSummary
+            type Plan = PlanSummary
+            type Tasks = TasksSummary
+            type Analysis = AnalysisSummary
+            type Evidence = EvidenceSummary
+            type Verification = VerificationSummary
+            type Ship = ShipSummary
+
+        module Guidance =
+            type Disposition = GuidanceDisposition
+            type Finding = AgentGuidanceFinding
+            type Summary = AgentGuidanceSummary
+            type RefreshState = RefreshDisposition
+            type Refresh = RefreshSummary
+
+        module Scaffold =
+            type InvocationResult = ProviderInvocationResult
+            type Summary = ScaffoldSummary
+
+        module Remediation =
+            type StepId = ReconciliationStepId
+            type Outcome = ReconciliationOutcome
+            type Step = ReconciliationStep
+            type Doctor = DoctorSummary
+            type Upgrade = UpgradeSummary
+
+        module Surfaces =
+            type Entry = ClassifiedEntry
+            type Classification = SurfaceClassification
+            type BumpPrompt = VersionBumpPrompt
+            type Summary = SurfaceSummary
+            type DependencyEntry = DependencySurfaceEntry
+            type DependencySummary = DependencySurfaceSummary
+
+        module Lint =
+            type ArtifactKind = LintArtifactKind
+            type DefectClass = LintDefectClass
+            type Outcome = LintOutcome
+            type Pointer = GrammarPointer
+            type Defect = LintDefect
+            type Summary = LintSummary
+
+        module Reporting =
+            type GovernanceFact = GovernanceCompatibilityFact
+            type Action = NextAction
+            type Flag = HelpFlag
+            type HelpCommand = HelpCommandEntry
+            type Scope = HelpScope
+            type Help = HelpSummary
+            type Stage = StageState
+            type StageReport = StageEntry
+            type Lifecycle = LifecycleStatus
+            type Report = CommandReport
+
+        module Runtime =
+            type Effect = CommandEffect
+            type ProcessResult = ProcessRunResult
+            type EffectResult = CommandEffectResult
+            type Model = CommandModel
+            type Msg = CommandMsg
+
     val commandName: command: SddCommand -> string
     val commandStage: command: SddCommand -> string
     val parseCommand: value: string -> Result<SddCommand, string>
