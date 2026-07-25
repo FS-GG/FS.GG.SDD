@@ -113,7 +113,7 @@
           "FS.GG.Contracts": "[5.0.1, )",
           "FS.GG.Drivers": "[0.2.0, )",
           "FS.GG.Game.Skills": "[0.2.0, )",
-          "FS.GG.SDD.Artifacts": "[0.24.1, )",
+          "FS.GG.SDD.Artifacts": "[0.25.0, )",
           "FSharp.Core": "[10.1.302, )"
         }
       },
