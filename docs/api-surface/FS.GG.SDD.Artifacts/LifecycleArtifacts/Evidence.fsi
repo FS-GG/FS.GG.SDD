@@ -54,6 +54,35 @@ module Evidence =
           Failed: int
           Skipped: int }
 
+    /// A typed, active normal-play performance gate attached to an evidence declaration.
+    /// Absence means the cited artifact is baseline/stress information only and carries no target.
+    type PerformanceBudgetDeclaration =
+        { ArtifactPath: string
+          TargetFps: int
+          WorkloadIds: string list
+          StressWorkloadIds: string list
+          MaxP95Ms: decimal
+          MaxP99Ms: decimal
+          MaxCatchUpFrames: int
+          MeasurementScope: string
+          RequiredCapability: string
+          LiveCompositorRequired: bool
+          DeferralIssue: string option }
+
+    type PerformanceBudgetState =
+        | PerformancePassed
+        | PerformanceFailed
+        | PerformanceDeferred
+        | PerformanceMalformed
+
+    type PerformanceBudgetEvaluation =
+        { DeclarationId: string
+          ArtifactPath: string
+          State: PerformanceBudgetState
+          WorkloadIds: string list
+          Reasons: string list
+          DeferralIssue: string option }
+
     type EvidenceDeclaration =
         {
             Id: EvidenceId
@@ -74,6 +103,7 @@ module Evidence =
             /// FS.GG.SDD#350: the receipt, when a run was observed. `None` is the honest state for an
             /// obligation discharged on the author's word — it is what `isSelfAttested` counts.
             ObservedRun: ObservedRun option
+            PerformanceBudget: PerformanceBudgetDeclaration option
             Rationale: string option
             Owner: string option
             Scope: string option
@@ -159,6 +189,9 @@ module Evidence =
         val liftObservedRun: draft: ObservedRunDraft -> ObservedRun option
         val lowerObservedRun: run: ObservedRun -> ObservedRunDraft
 
+        val performanceBudgetSeed: PerformanceBudgetDeclaration
+        val performanceBudgetFields: ArtifactCodec.FieldCodec<PerformanceBudgetDeclaration> list
+
         /// The whole authored evidence declaration as one shared field list — drives both the
         /// reader (`parseEvidenceArtifact`) and the renderer (`HandlersEvidence`). `id` is framed by
         /// the artifact-level renderer and read by the semantic layer, so it is not a field here.
@@ -169,6 +202,13 @@ module Evidence =
     val evidenceKindSourceValue: kind: EvidenceKind -> string
     val allowedEvidenceResults: Set<string>
     val normalizedEvidenceResult: result: string -> string
+
+    /// Evaluate every active performance gate against the standard scaffold text artifact.
+    /// `artifactText` is an injected, already-sensed lookup; the pure artifact layer performs no IO.
+    val evaluatePerformanceBudgets:
+        artifactText: (string -> string option) ->
+        declarations: EvidenceDeclaration list ->
+            PerformanceBudgetEvaluation list
 
     /// The skill tag marking a task, and the obligation minted from it, as discharged by rendering a
     /// frame and looking at it (FS.GG.SDD#306).

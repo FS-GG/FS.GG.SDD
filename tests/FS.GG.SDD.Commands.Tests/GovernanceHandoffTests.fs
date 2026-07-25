@@ -73,6 +73,7 @@ module GovernanceHandoffTests =
           ArtifactRefs = []
           Result = result
           Synthetic = synthetic
+          PerformanceBudget = None
           Rationale = rationale
           Source = $"work/{workId}/evidence.yml"
           SourceLocation = None }

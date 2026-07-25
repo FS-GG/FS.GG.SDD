@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "generatorVersion": {
     "id": "FS.GG.SDD.Artifacts",
-    "version": "0.23.0"
+    "version": "0.24.0"
   },
   "identity": {
-    "version": "0.23.0",
+    "version": "0.24.0",
     "channel": "preRelease",
     "packageIds": [
       "FS.GG.SDD.Artifacts",
@@ -16,7 +16,7 @@
   },
   "compatibility": [
     {
-      "sddVersionLine": "0.23.x",
+      "sddVersionLine": "0.24.x",
       "specKitRange": "\u003E=0.8.5",
       "governanceContractVersionRange": "1.x"
     }
@@ -1629,6 +1629,31 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "diagnostics[].correction",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "diagnostics[].id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "diagnostics[].message",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "diagnostics[].relatedIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "diagnostics[].severity",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "evidence",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -2298,6 +2323,36 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "diagnostics[].artifact",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "diagnostics[].correction",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "diagnostics[].id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "diagnostics[].message",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "diagnostics[].relatedIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "diagnostics[].severity",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "evidenceDispositions",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -2359,6 +2414,41 @@
         },
         {
           "name": "findings",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings[].category",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings[].correction",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings[].id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings[].message",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings[].path",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings[].relatedIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "findings[].severity",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -2710,6 +2800,66 @@
         },
         {
           "name": "evidence[].kind",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.artifactPath",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.deferralIssue",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.liveCompositorRequired",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.maxCatchUpFrames",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.maxP95Ms",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.maxP99Ms",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.measurementScope",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.requiredCapability",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.stressWorkloadIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.targetFps",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.workloadIds",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },

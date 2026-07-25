@@ -24,7 +24,46 @@ module ReleaseConformanceTests =
     /// readiness directory plus a shipped `--json` report.
     let producedProject () =
         let root = TestSupport.tempDirectory ()
-        TestSupport.initializeVerifiedProject root workId title
+        TestSupport.initializeEvidencedProject root workId title
+
+        let artifactPath = $"readiness/{workId}/performance-baseline.txt"
+        let evidencePath = $"work/{workId}/evidence.yml"
+
+        TestSupport.readRelative root evidencePath
+        |> fun text ->
+            text.Replace(
+                "    result: pass\n    synthetic: false",
+                $"""    performanceBudget:
+      artifactPath: {artifactPath}
+      targetFps: 60
+      workloadIds: [normal-play]
+      stressWorkloadIds: [pointer-stress]
+      maxP95Ms: 16.67
+      maxP99Ms: 25
+      maxCatchUpFrames: 0
+      measurementScope: normal
+      requiredCapability: bounded-headless-update-render
+      liveCompositorRequired: false
+      deferralIssue: FS-GG/Game#123
+    result: pass
+    synthetic: false"""
+            )
+        |> TestSupport.writeRelative root evidencePath
+
+        TestSupport.writeRelative
+            root
+            artifactPath
+            """measurement-mode=bounded-headless-update-render
+live-compositor-proof=false
+target-normal-play-p95-ms<=16.67
+target-normal-play-p99-ms<=25
+target-sustained-catch-up-frames=0
+target-scope=normal
+scenario=normal-play p95-ms=12 p99-ms=20 catch-up-frames=0
+scenario=pointer-stress p95-ms=1 p99-ms=88.632 catch-up-frames=0
+"""
+
+        TestSupport.runVerify root workId title |> ignore
         let shipReport = TestSupport.runShip root workId title
         TestSupport.runAgents root workId |> ignore
         TestSupport.runRefresh root workId |> ignore

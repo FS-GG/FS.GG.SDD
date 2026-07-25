@@ -95,6 +95,87 @@ lifecycleNotes:
         | Error diagnostics -> failwith $"Expected evidence artifact to parse, got {diagnostics}."
 
     [<Fact>]
+    let ``active normal-play performance budget binds measured workloads and fails over budget`` () =
+        let withBudget =
+            validEvidenceYaml.Replace(
+                "    result: pass\n    synthetic: false",
+                """    performanceBudget:
+      artifactPath: readiness/011-evidence-command/performance-baseline.txt
+      targetFps: 60
+      workloadIds: [idle-play]
+      stressWorkloadIds: [pointer-stress]
+      maxP95Ms: 16.67
+      maxP99Ms: 25
+      maxCatchUpFrames: 0
+      measurementScope: normal-60-fps-play
+      requiredCapability: bounded-headless-update-render
+      liveCompositorRequired: false
+    result: pass
+    synthetic: false"""
+            )
+
+        let declaration =
+            match
+                parseEvidenceArtifact
+                    { Path = evidencePath
+                      Text = withBudget }
+            with
+            | Ok artifact -> Assert.Single artifact.Evidence
+            | Error diagnostics -> failwith $"Expected performance evidence to parse, got {diagnostics}."
+
+        let measured =
+            """measurement-mode=bounded-headless-update-render
+live-compositor-proof=false
+target-normal-play-p95-ms<=16.67
+target-normal-play-p99-ms<=25
+target-sustained-catch-up-frames=0
+target-scope=normal-60-fps-play
+scenario=idle-play p95-ms=38.262 p99-ms=54.88 catch-up-frames=0
+scenario=pointer-stress p95-ms=1 p99-ms=88.632 catch-up-frames=0"""
+
+        let evaluation =
+            evaluatePerformanceBudgets (fun _ -> Some measured) [ declaration ]
+            |> Assert.Single
+
+        Assert.Equal(PerformanceFailed, evaluation.State)
+        Assert.Contains(evaluation.Reasons, fun reason -> reason.Contains("idle-play p95 38.262"))
+        Assert.Contains(evaluation.Reasons, fun reason -> reason.Contains("idle-play p99 54.88"))
+        Assert.DoesNotContain(evaluation.Reasons, fun reason -> reason.Contains("pointer-stress"))
+
+    [<Fact>]
+    let ``performance deferral stays blocking debt rather than becoming a pass`` () =
+        let budget =
+            { EvidenceCodec.declarationSeed with
+                Id = createEvidenceId "EV680" |> Result.defaultWith failwith
+                PerformanceBudget =
+                    Some
+                        { EvidenceCodec.performanceBudgetSeed with
+                            ArtifactPath = "readiness/performance.txt"
+                            TargetFps = 60
+                            WorkloadIds = [ "idle-play" ]
+                            MaxP95Ms = 16.67m
+                            MaxP99Ms = 25m
+                            MaxCatchUpFrames = 0
+                            MeasurementScope = "normal"
+                            RequiredCapability = "headless"
+                            DeferralIssue = Some "FS-GG/Game#999" } }
+
+        let measured =
+            """measurement-mode=headless
+live-compositor-proof=false
+target-normal-play-p95-ms<=16.67
+target-normal-play-p99-ms<=25
+target-sustained-catch-up-frames=0
+target-scope=normal
+scenario=idle-play p95-ms=38.262 p99-ms=54.88 catch-up-frames=0"""
+
+        let evaluation =
+            evaluatePerformanceBudgets (fun _ -> Some measured) [ budget ] |> Assert.Single
+
+        Assert.Equal(PerformanceDeferred, evaluation.State)
+        Assert.Equal(Some "FS-GG/Game#999", evaluation.DeferralIssue)
+
+    [<Fact>]
     let ``parseEvidenceArtifact reads a bare null optional scalar as None`` () =
         // A bare `null` is the *absence* of a value, so it must round-trip back to None —
         // otherwise a re-run rewrites `null` → the quoted string `"null"` (issue #161).

@@ -75,6 +75,7 @@ module WorkModel =
           ArtifactRefs: string list
           Result: string
           Synthetic: bool
+          PerformanceBudget: PerformanceBudgetDeclaration option
           Rationale: string option
           Source: string
           SourceLocation: SourceLocation option }
@@ -646,6 +647,7 @@ module WorkModel =
                   ArtifactRefs = evidence.ArtifactRefs |> List.map (fun artifact -> artifact.Path) |> List.sort
                   Result = evidence.Result
                   Synthetic = evidence.Synthetic
+                  PerformanceBudget = evidence.PerformanceBudget
                   Rationale = evidence.Rationale
                   Source = evidence.Source.Path
                   SourceLocation = evidence.SourceLocation })
@@ -702,6 +704,24 @@ module WorkModel =
                 | _ -> None
             else
                 None)
+
+    let jmDecimal name element =
+        jmProp name element
+        |> Option.bind (fun value ->
+            if value.ValueKind = JsonValueKind.Number then
+                match value.TryGetDecimal() with
+                | true, parsed -> Some parsed
+                | _ -> None
+            else
+                None)
+
+    let jmBool name element =
+        jmProp name element
+        |> Option.bind (fun value ->
+            match value.ValueKind with
+            | JsonValueKind.True -> Some true
+            | JsonValueKind.False -> Some false
+            | _ -> None)
 
     // Reverse of `writeLocation`: a `null`/absent `sourceLocation` reads as `None`; an object reads
     // its `line`/`column` back as `int option`s (each independently `null`-tolerant, mirroring the
@@ -1007,6 +1027,25 @@ module WorkModel =
                                   Synthetic =
                                     (jmProp "synthetic" item
                                      |> Option.exists (fun value -> value.ValueKind = JsonValueKind.True))
+                                  PerformanceBudget =
+                                    jmProp "performanceBudget" item
+                                    |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Object)
+                                    |> Option.map (fun budget ->
+                                        { ArtifactPath = jmString "artifactPath" budget
+                                          TargetFps = jmInt "targetFps" budget |> Option.defaultValue 0
+                                          WorkloadIds = jmStringList "workloadIds" budget |> List.sort
+                                          StressWorkloadIds = jmStringList "stressWorkloadIds" budget |> List.sort
+                                          MaxP95Ms = jmDecimal "maxP95Ms" budget |> Option.defaultValue -1m
+                                          MaxP99Ms = jmDecimal "maxP99Ms" budget |> Option.defaultValue -1m
+                                          MaxCatchUpFrames = jmInt "maxCatchUpFrames" budget |> Option.defaultValue -1
+                                          MeasurementScope = jmString "measurementScope" budget
+                                          RequiredCapability = jmString "requiredCapability" budget
+                                          LiveCompositorRequired =
+                                            jmBool "liveCompositorRequired" budget |> Option.defaultValue false
+                                          DeferralIssue =
+                                            match jmString "deferralIssue" budget with
+                                            | "" -> None
+                                            | value -> Some value })
                                   Rationale =
                                     (match jmString "rationale" item with
                                      | "" -> None

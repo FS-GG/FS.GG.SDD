@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Artifacts
 
 open System
+open System.Globalization
 open System.IO
 open System.Text.Json
 open System.Text.RegularExpressions
@@ -63,6 +64,33 @@ module Evidence =
           Failed: int
           Skipped: int }
 
+    type PerformanceBudgetDeclaration =
+        { ArtifactPath: string
+          TargetFps: int
+          WorkloadIds: string list
+          StressWorkloadIds: string list
+          MaxP95Ms: decimal
+          MaxP99Ms: decimal
+          MaxCatchUpFrames: int
+          MeasurementScope: string
+          RequiredCapability: string
+          LiveCompositorRequired: bool
+          DeferralIssue: string option }
+
+    type PerformanceBudgetState =
+        | PerformancePassed
+        | PerformanceFailed
+        | PerformanceDeferred
+        | PerformanceMalformed
+
+    type PerformanceBudgetEvaluation =
+        { DeclarationId: string
+          ArtifactPath: string
+          State: PerformanceBudgetState
+          WorkloadIds: string list
+          Reasons: string list
+          DeferralIssue: string option }
+
     type EvidenceDeclaration =
         {
             Id: EvidenceId
@@ -83,6 +111,7 @@ module Evidence =
             /// FS.GG.SDD#350: the receipt, when a run was observed. `None` is the honest state for an
             /// obligation discharged on the author's word — it is what `isSelfAttested` counts.
             ObservedRun: ObservedRun option
+            PerformanceBudget: PerformanceBudgetDeclaration option
             Rationale: string option
             Owner: string option
             Scope: string option
@@ -242,6 +271,206 @@ module Evidence =
          else
              result.Trim().ToLowerInvariant())
 
+    let private decimalInvariant (fallback: decimal) (value: string) =
+        match Decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture) with
+        | true, parsed -> parsed
+        | _ -> fallback
+
+    let private decimalText (value: decimal) =
+        value.ToString("0.############################", CultureInfo.InvariantCulture)
+
+    let private scalarFacts (line: string) =
+        Regex.Matches(line, @"(?<key>[A-Za-z0-9-]+)=(?<value>[^\s]+)")
+        |> Seq.cast<Match>
+        |> Seq.map (fun matched -> matched.Groups["key"].Value, matched.Groups["value"].Value)
+        |> Map.ofSeq
+
+    let private tryDecimal key facts =
+        facts
+        |> Map.tryFind key
+        |> Option.bind (fun (value: string) ->
+            match Decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture) with
+            | true, parsed -> Some parsed
+            | _ -> None)
+
+    let private tryInt key facts =
+        facts
+        |> Map.tryFind key
+        |> Option.bind (fun (value: string) ->
+            match Int32.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture) with
+            | true, parsed -> Some parsed
+            | _ -> None)
+
+    let private performanceArtifactFacts (text: string) =
+        let lines =
+            text.Replace("\r\n", "\n").Split('\n')
+            |> Array.map _.Trim()
+            |> Array.filter (String.IsNullOrWhiteSpace >> not)
+
+        let valueAfter prefix =
+            lines
+            |> Array.tryPick (fun line ->
+                if line.StartsWith(prefix, StringComparison.Ordinal) then
+                    Some(line.Substring(prefix.Length).Trim())
+                else
+                    None)
+
+        let workloads =
+            lines
+            |> Array.choose (fun line ->
+                if line.StartsWith("scenario=", StringComparison.Ordinal) then
+                    let facts = scalarFacts line
+                    Map.tryFind "scenario" facts |> Option.map (fun id -> id, facts)
+                else
+                    None)
+            |> Map.ofArray
+
+        valueAfter "target-normal-play-p95-ms<="
+        |> Option.bind (fun value ->
+            match Decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture) with
+            | true, p95 ->
+                valueAfter "target-normal-play-p99-ms<="
+                |> Option.bind (fun p99Text ->
+                    match Decimal.TryParse(p99Text, NumberStyles.Number, CultureInfo.InvariantCulture) with
+                    | true, p99 ->
+                        valueAfter "target-sustained-catch-up-frames="
+                        |> Option.bind (fun catchUpText ->
+                            match
+                                Int32.TryParse(catchUpText, NumberStyles.Integer, CultureInfo.InvariantCulture)
+                            with
+                            | true, catchUp ->
+                                Some(
+                                    p95,
+                                    p99,
+                                    catchUp,
+                                    valueAfter "target-scope=" |> Option.defaultValue "",
+                                    valueAfter "measurement-mode=" |> Option.defaultValue "",
+                                    valueAfter "live-compositor-proof="
+                                    |> Option.map (fun value ->
+                                        String.Equals(value, "true", StringComparison.OrdinalIgnoreCase))
+                                    |> Option.defaultValue false,
+                                    workloads
+                                )
+                            | _ -> None)
+                    | _ -> None)
+            | _ -> None)
+
+    let evaluatePerformanceBudgets
+        (artifactText: string -> string option)
+        (declarations: EvidenceDeclaration list)
+        : PerformanceBudgetEvaluation list =
+        declarations
+        |> List.choose (fun declaration ->
+            declaration.PerformanceBudget
+            |> Option.map (fun budget ->
+                let malformed =
+                    [ if String.IsNullOrWhiteSpace budget.ArtifactPath then
+                          "artifactPath is required"
+                      if budget.TargetFps <= 0 then
+                          "targetFps must be positive"
+                      if List.isEmpty budget.WorkloadIds then
+                          "workloadIds must name at least one active normal-play workload"
+                      if budget.MaxP95Ms <= 0m then
+                          "maxP95Ms must be positive"
+                      if budget.MaxP99Ms <= 0m then
+                          "maxP99Ms must be positive"
+                      if budget.MaxCatchUpFrames < 0 then
+                          "maxCatchUpFrames cannot be negative"
+                      if String.IsNullOrWhiteSpace budget.MeasurementScope then
+                          "measurementScope is required"
+                      if String.IsNullOrWhiteSpace budget.RequiredCapability then
+                          "requiredCapability is required"
+                      let overlap =
+                          Set.intersect (Set.ofList budget.WorkloadIds) (Set.ofList budget.StressWorkloadIds)
+
+                      if not (Set.isEmpty overlap) then
+                          let overlappingIds = String.concat ", " (Set.toList overlap)
+                          $"normal and stress workload ids overlap: {overlappingIds}" ]
+
+                let state, reasons =
+                    if not (List.isEmpty malformed) then
+                        PerformanceMalformed, malformed
+                    else
+                        match artifactText budget.ArtifactPath with
+                        | None -> PerformanceMalformed, [ $"performance artifact '{budget.ArtifactPath}' is absent" ]
+                        | Some text ->
+                            match performanceArtifactFacts text with
+                            | None ->
+                                PerformanceMalformed,
+                                [ $"performance artifact '{budget.ArtifactPath}' is missing or has malformed targets" ]
+                            | Some(artifactP95,
+                                   artifactP99,
+                                   artifactCatchUp,
+                                   artifactScope,
+                                   capability,
+                                   liveProof,
+                                   workloads) ->
+                                let bindingFailures =
+                                    [ if artifactP95 <> budget.MaxP95Ms then
+                                          $"artifact p95 target {decimalText artifactP95} does not match declared {decimalText budget.MaxP95Ms}"
+                                      if artifactP99 <> budget.MaxP99Ms then
+                                          $"artifact p99 target {decimalText artifactP99} does not match declared {decimalText budget.MaxP99Ms}"
+                                      if artifactCatchUp <> budget.MaxCatchUpFrames then
+                                          $"artifact catch-up target {artifactCatchUp} does not match declared {budget.MaxCatchUpFrames}"
+                                      if
+                                          not (
+                                              String.Equals(
+                                                  artifactScope,
+                                                  budget.MeasurementScope,
+                                                  StringComparison.Ordinal
+                                              )
+                                          )
+                                      then
+                                          $"artifact scope '{artifactScope}' does not match declared '{budget.MeasurementScope}'"
+                                      if
+                                          not (
+                                              String.Equals(
+                                                  capability,
+                                                  budget.RequiredCapability,
+                                                  StringComparison.Ordinal
+                                              )
+                                          )
+                                      then
+                                          $"artifact capability '{capability}' does not match required '{budget.RequiredCapability}'"
+                                      if budget.LiveCompositorRequired && not liveProof then
+                                          "live compositor proof is required but the artifact declares live-compositor-proof=false"
+                                      for workloadId in budget.WorkloadIds do
+                                          match Map.tryFind workloadId workloads with
+                                          | None -> $"normal-play workload '{workloadId}' is absent"
+                                          | Some facts ->
+                                              match tryDecimal "p95-ms" facts with
+                                              | Some actual when actual <= budget.MaxP95Ms -> ()
+                                              | Some actual ->
+                                                  $"{workloadId} p95 {decimalText actual} ms exceeds {decimalText budget.MaxP95Ms} ms"
+                                              | None -> $"{workloadId} p95-ms is missing or malformed"
+
+                                              match tryDecimal "p99-ms" facts with
+                                              | Some actual when actual <= budget.MaxP99Ms -> ()
+                                              | Some actual ->
+                                                  $"{workloadId} p99 {decimalText actual} ms exceeds {decimalText budget.MaxP99Ms} ms"
+                                              | None -> $"{workloadId} p99-ms is missing or malformed"
+
+                                              match tryInt "catch-up-frames" facts with
+                                              | Some actual when actual <= budget.MaxCatchUpFrames -> ()
+                                              | Some actual ->
+                                                  $"{workloadId} catch-up frames {actual} exceeds {budget.MaxCatchUpFrames}"
+                                              | None -> $"{workloadId} catch-up-frames is missing or malformed" ]
+
+                                if List.isEmpty bindingFailures then
+                                    PerformancePassed, []
+                                elif Option.isSome budget.DeferralIssue then
+                                    PerformanceDeferred, bindingFailures
+                                else
+                                    PerformanceFailed, bindingFailures
+
+                { DeclarationId = declaration.Id.Value
+                  ArtifactPath = budget.ArtifactPath
+                  State = state
+                  WorkloadIds = budget.WorkloadIds |> List.distinct |> List.sort
+                  Reasons = reasons
+                  DeferralIssue = budget.DeferralIssue }))
+        |> List.sortBy _.DeclarationId
+
     /// The visual-inspection artifact rule (FS.GG.SDD#306, FR-004), stated once. A declaration that
     /// claims a real, non-synthetic pass while naming no rendered artifact asserts that someone
     /// looked at a frame that does not exist. Three call sites read this — the `evidence` pre-write
@@ -290,6 +519,10 @@ module Evidence =
           // record of reality" means for a receipt: the record is not self-certifying.
           match declaration.ObservedRun with
           | Some run when named run.Source && citedPathIsContained run.Source -> run.Source
+          | _ -> ()
+          match declaration.PerformanceBudget with
+          | Some budget when named budget.ArtifactPath && citedPathIsContained budget.ArtifactPath ->
+              budget.ArtifactPath
           | _ -> () ]
         |> List.distinct
         |> List.sort
@@ -554,6 +787,45 @@ module Evidence =
               Failed = run.Failed
               Skipped = run.Skipped }
 
+        let performanceBudgetSeed: PerformanceBudgetDeclaration =
+            { ArtifactPath = ""
+              TargetFps = 0
+              WorkloadIds = []
+              StressWorkloadIds = []
+              MaxP95Ms = -1m
+              MaxP99Ms = -1m
+              MaxCatchUpFrames = -1
+              MeasurementScope = ""
+              RequiredCapability = ""
+              LiveCompositorRequired = false
+              DeferralIssue = None }
+
+        let performanceBudgetFields: ArtifactCodec.FieldCodec<PerformanceBudgetDeclaration> list =
+            [ ArtifactCodec.requiredScalar "artifactPath" _.ArtifactPath (fun value budget ->
+                  { budget with ArtifactPath = value })
+              ArtifactCodec.intScalar "targetFps" 0 _.TargetFps (fun value budget -> { budget with TargetFps = value })
+              ArtifactCodec.alwaysInlineList "workloadIds" _.WorkloadIds (fun value budget ->
+                  { budget with WorkloadIds = value })
+              ArtifactCodec.alwaysInlineList "stressWorkloadIds" _.StressWorkloadIds (fun value budget ->
+                  { budget with
+                      StressWorkloadIds = value })
+              ArtifactCodec.mappedScalar "maxP95Ms" decimalText (decimalInvariant -1m) _.MaxP95Ms (fun value budget ->
+                  { budget with MaxP95Ms = value })
+              ArtifactCodec.mappedScalar "maxP99Ms" decimalText (decimalInvariant -1m) _.MaxP99Ms (fun value budget ->
+                  { budget with MaxP99Ms = value })
+              ArtifactCodec.intScalar "maxCatchUpFrames" -1 _.MaxCatchUpFrames (fun value budget ->
+                  { budget with MaxCatchUpFrames = value })
+              ArtifactCodec.requiredScalar "measurementScope" _.MeasurementScope (fun value budget ->
+                  { budget with MeasurementScope = value })
+              ArtifactCodec.requiredScalar "requiredCapability" _.RequiredCapability (fun value budget ->
+                  { budget with
+                      RequiredCapability = value })
+              ArtifactCodec.boolScalar "liveCompositorRequired" false _.LiveCompositorRequired (fun value budget ->
+                  { budget with
+                      LiveCompositorRequired = value })
+              ArtifactCodec.optionalScalar "deferralIssue" _.DeferralIssue (fun value budget ->
+                  { budget with DeferralIssue = value }) ]
+
         let subjectSeed: EvidenceSubject = { SubjectType = "task"; Id = "" }
 
         let subjectFields: ArtifactCodec.FieldCodec<EvidenceSubject> list =
@@ -581,6 +853,7 @@ module Evidence =
               Synthetic = false
               SyntheticDisclosure = None
               ObservedRun = None
+              PerformanceBudget = None
               Rationale = None
               Owner = None
               Scope = None
@@ -675,6 +948,14 @@ module Evidence =
                   lowerObservedRun
                   (fun d -> d.ObservedRun)
                   (fun v d -> { d with ObservedRun = v })
+              ArtifactCodec.optionalNestedVia
+                  "performanceBudget"
+                  performanceBudgetFields
+                  performanceBudgetSeed
+                  Some
+                  id
+                  (fun d -> d.PerformanceBudget)
+                  (fun v d -> { d with PerformanceBudget = v })
               ArtifactCodec.optionalScalar "rationale" (fun d -> d.Rationale) (fun v d -> { d with Rationale = v })
               ArtifactCodec.optionalScalar "owner" (fun d -> d.Owner) (fun v d -> { d with Owner = v })
               ArtifactCodec.optionalScalar "scope" (fun d -> d.Scope) (fun v d -> { d with Scope = v })

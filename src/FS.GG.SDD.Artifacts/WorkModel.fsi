@@ -76,6 +76,7 @@ module WorkModel =
           ArtifactRefs: string list
           Result: string
           Synthetic: bool
+          PerformanceBudget: PerformanceBudgetDeclaration option
           Rationale: string option
           Source: string
           SourceLocation: SourceLocation option }

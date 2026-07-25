@@ -3,6 +3,7 @@ namespace FS.GG.SDD.Artifacts
 open System.IO
 open System.Text
 open System.Text.Json
+open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Artifacts.GenerationManifest
 open FS.GG.SDD.Artifacts.SchemaVersion
@@ -260,7 +261,29 @@ module GovernanceHandoff =
                       "Re-run verification to refresh the stale evidence before relying on it."
                       staleEvidenceIds ]
 
-        let diagnostics = model.Diagnostics @ staleDiagnostics |> Diagnostics.sort
+        // Active performance obligations remain typed in work-model.json and are also projected as
+        // stable handoff diagnostics, so Governance consumers can discover the accepted target even
+        // when every workload passed (the failing/deferred cases never reach a handoff).
+        let performanceDiagnostics =
+            model.Evidence
+            |> List.choose (fun evidence ->
+                evidence.PerformanceBudget
+                |> Option.bind (fun budget ->
+                    ArtifactRef.create evidence.Source ArtifactKind.Evidence ArtifactOwner.Sdd true
+                    |> Result.toOption
+                    |> Option.map (fun artifact ->
+                        Diagnostics.create
+                            "evidence.performanceBudgetPassed"
+                            DiagnosticInfo
+                            (Some artifact)
+                            evidence.SourceLocation
+                            "Every declared normal-play workload satisfies the active performance budget."
+                            "Keep the cited artifact fresh when the workload or target changes."
+                            ([ evidence.Id; budget.ArtifactPath ] @ budget.WorkloadIds))))
+
+        let diagnostics =
+            model.Diagnostics @ staleDiagnostics @ performanceDiagnostics
+            |> Diagnostics.sort
 
         { SchemaVersion = Fsgg.Schemas.governanceHandoffVersion
           ContractVersion = Fsgg.Schemas.governanceHandoffContractVersion

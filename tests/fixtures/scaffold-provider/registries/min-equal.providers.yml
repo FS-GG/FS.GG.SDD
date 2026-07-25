@@ -7,7 +7,7 @@ providers:
     # Coherent-set orchestrator axis (ADR-0008): the minimum coherent fsgg-sdd version
     # is the nested minimumFsggSdd.version scalar (matches FS.GG.Templates providers/rendering.providers.yml).
     minimumFsggSdd:
-      version: "0.23.0"
+      version: "0.24.0"
     parameters:
       - key: productName
         required: true

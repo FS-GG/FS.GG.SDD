@@ -109,6 +109,7 @@ FS.GG.SDD.Artifacts.Evidence+EvidenceCodec.lowerObservedRun
 FS.GG.SDD.Artifacts.Evidence.citedArtifactPaths
 FS.GG.SDD.Artifacts.Evidence.citedPathIsContained
 FS.GG.SDD.Artifacts.Evidence.claimsRealPass
+FS.GG.SDD.Artifacts.Evidence.evaluatePerformanceBudgets
 FS.GG.SDD.Artifacts.Evidence.evidenceKindSourceValue
 FS.GG.SDD.Artifacts.Evidence.isGameplayTestTagged
 FS.GG.SDD.Artifacts.Evidence.isObserved

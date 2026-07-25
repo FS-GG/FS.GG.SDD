@@ -239,13 +239,13 @@ module ReleaseContract =
 
     let currentRelease () : ReleaseReadiness =
         let identity =
-            { Version = "0.23.0"
-              Channel = channelOfVersion "0.23.0"
+            { Version = "0.24.0"
+              Channel = channelOfVersion "0.24.0"
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "0.23.x"
+            [ { SddVersionLine = "0.24.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "1.x" } ]
 
@@ -261,6 +261,18 @@ module ReleaseContract =
                   "evidence[].artifactRefs"
                   "evidence[].id"
                   "evidence[].kind"
+                  "evidence[].performanceBudget"
+                  "evidence[].performanceBudget.artifactPath"
+                  "evidence[].performanceBudget.deferralIssue"
+                  "evidence[].performanceBudget.liveCompositorRequired"
+                  "evidence[].performanceBudget.maxCatchUpFrames"
+                  "evidence[].performanceBudget.maxP95Ms"
+                  "evidence[].performanceBudget.maxP99Ms"
+                  "evidence[].performanceBudget.measurementScope"
+                  "evidence[].performanceBudget.requiredCapability"
+                  "evidence[].performanceBudget.stressWorkloadIds"
+                  "evidence[].performanceBudget.targetFps"
+                  "evidence[].performanceBudget.workloadIds"
                   "evidence[].rationale"
                   "evidence[].requirementRefs"
                   "evidence[].result"
@@ -424,6 +436,12 @@ module ReleaseContract =
                 AdditiveOptional
                 [ "schemaVersion" ]
                 [ "diagnostics"
+                  "diagnostics[].artifact"
+                  "diagnostics[].correction"
+                  "diagnostics[].id"
+                  "diagnostics[].message"
+                  "diagnostics[].relatedIds"
+                  "diagnostics[].severity"
                   "evidenceDispositions"
                   "evidenceDispositions[].affectedSourceIds"
                   "evidenceDispositions[].affectedTaskIds"
@@ -437,6 +455,13 @@ module ReleaseContract =
                   "evidenceDispositions[].severity"
                   "evidenceDispositions[].state"
                   "findings"
+                  "findings[].category"
+                  "findings[].correction"
+                  "findings[].id"
+                  "findings[].message"
+                  "findings[].path"
+                  "findings[].relatedIds"
+                  "findings[].severity"
                   "generatedViews"
                   "generatedViews[].currency"
                   "generatedViews[].diagnosticIds"
@@ -618,6 +643,11 @@ module ReleaseContract =
                     [ "schemaVersion"; "contractVersion" ]
                     [ "contractVersion"
                       "diagnostics"
+                      "diagnostics[].correction"
+                      "diagnostics[].id"
+                      "diagnostics[].message"
+                      "diagnostics[].relatedIds"
+                      "diagnostics[].severity"
                       "evidence"
                       "evidence.dependencies"
                       "evidence.dependencies[].dependency"
