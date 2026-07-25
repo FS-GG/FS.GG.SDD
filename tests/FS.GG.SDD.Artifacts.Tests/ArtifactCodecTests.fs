@@ -496,6 +496,19 @@ module ArtifactCodecTests =
                           Passed = 7
                           Failed = 0
                           Skipped = 3 }
+                PerformanceBudget =
+                    Some
+                        { ArtifactPath = "readiness/perfval.txt"
+                          TargetFps = 61
+                          WorkloadIds = [ "workloadval" ]
+                          StressWorkloadIds = [ "stressval" ]
+                          MaxP95Ms = 16.7m
+                          MaxP99Ms = 25.1m
+                          MaxCatchUpFrames = 2
+                          MeasurementScope = "scopeperfval"
+                          RequiredCapability = "capabilityval"
+                          LiveCompositorRequired = true
+                          DeferralIssue = Some "FS-GG/Game#321" }
                 Rationale = Some "rationaleval"
                 Owner = Some "ownerval"
                 Scope = Some "scopeval"
@@ -523,6 +536,7 @@ module ArtifactCodecTests =
               "Synthetic", [ "synthetic", "synthetic: true" ]
               "SyntheticDisclosure", [ "syntheticDisclosure", "syntheticDisclosure:\n  standsInFor: standsval" ]
               "ObservedRun", [ "observedRun", "observedRun:\n  source: observedsourceval" ]
+              "PerformanceBudget", [ "performanceBudget", "performanceBudget:\n  artifactPath: readiness/perfval.txt" ]
               "Rationale", [ "rationale", "rationale: rationaleval" ]
               "Owner", [ "owner", "owner: ownerval" ]
               "Scope", [ "scope", "scope: scopeval" ]

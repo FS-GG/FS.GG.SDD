@@ -638,6 +638,7 @@ module internal HandlersEvidence =
           // once the author has flipped the result to a real pass. Seeding one here would record an
           // observation of an obligation nobody has yet claimed to have discharged.
           ObservedRun = None
+          PerformanceBudget = None
           Rationale = None
           Owner = None
           Scope = None
@@ -759,6 +760,9 @@ module internal HandlersEvidence =
         // FS.GG.SDD#349: injected, not called — the probe happened at the edge and this fold reads
         // its result, so no handler touches `System.IO` (Constitution V, FR-003).
         (artifactExists: string -> bool)
+        // Performance evidence is interpreted from the same already-sensed snapshots. This is an
+        // injected lookup, not filesystem IO in the pure handler.
+        (artifactText: string -> string option)
         (artifact: EvidenceArtifact)
         =
         let path = evidencePath workId
@@ -884,6 +888,9 @@ module internal HandlersEvidence =
             |> List.distinct
             |> List.sort
 
+        let performanceEvaluations =
+            evaluatePerformanceBudgets artifactText artifact.Evidence
+
         [ if not (String.Equals(artifact.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
               evidenceIdentityMismatch path workId artifact.WorkId.Value
           if artifact.Stage <> LifecycleStage.Evidence then
@@ -914,6 +921,43 @@ module internal HandlersEvidence =
               missingVisualInspectionArtifact path missingVisualArtifacts
           if not (List.isEmpty missingArtifactPaths) then
               evidenceArtifactNotFound path missingArtifactPaths
+          for evaluation in performanceEvaluations do
+              match evaluation.State with
+              | PerformancePassed ->
+                  commandDiagnostic
+                      "evidence.performanceBudgetPassed"
+                      DiagnosticInfo
+                      (Some path)
+                      "Every declared normal-play workload satisfies the active performance budget."
+                      "Keep the cited artifact fresh when the workload or target changes."
+                      ([ evaluation.DeclarationId; evaluation.ArtifactPath ] @ evaluation.WorkloadIds)
+              | state ->
+                  let id, message, correction =
+                      match state with
+                      | PerformanceMalformed ->
+                          "evidence.performanceBudgetMalformed",
+                          "An active performance budget could not be bound to well-formed measured evidence.",
+                          "Correct the typed performanceBudget declaration and regenerate the standard performance artifact."
+                      | PerformanceFailed ->
+                          "evidence.performanceBudgetExceeded",
+                          "One or more active normal-play workloads exceed the declared performance budget.",
+                          "Improve the normal-play workload or record a deliberate deferral linked to open blocking performance debt."
+                      | PerformanceDeferred ->
+                          "evidence.performanceBudgetDeferred",
+                          "An active performance target remains unresolved behind declared performance debt.",
+                          "Keep the linked debt open and blocking until a fresh performance artifact satisfies every declared workload threshold."
+                      | PerformancePassed -> failwith "unreachable"
+
+                  let details = String.concat "; " evaluation.Reasons
+
+                  errorDiagnostic
+                      id
+                      (Some path)
+                      $"{message} {details}"
+                      correction
+                      ([ evaluation.DeclarationId; evaluation.ArtifactPath ]
+                       @ evaluation.WorkloadIds
+                       @ (evaluation.DeferralIssue |> Option.toList))
           // FS.GG.SDD#350 (FR-005). A receipt SDD recorded cannot reach here incoherent —
           // `TestReport.parse` derives `outcome` from the counts. A receipt somebody TYPED can, and
           // `evidence.yml` is a text file. Without this, `observedRun` would just be a new and more
@@ -1384,6 +1428,7 @@ sourceAnalysis: {analysisPath workId}
                                     taskFacts
                                     currentSnapshots
                                     (citedArtifactExists model)
+                                    (fun artifactPath -> snapshot artifactPath model |> Option.map _.Text)
                                     merged
 
                             let dispositions =

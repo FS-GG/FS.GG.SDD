@@ -193,7 +193,8 @@ top-level fields only.
 - **`work-model.json`** — `decisions`, `diagnostics`, `evidence`,
   `generatedViews`, `governanceBoundaries`, `modelVersion`, `project`,
   `requirements`, `schemaVersion` *(Stable)*, `sources`, `tasks`, `workId`,
-  `workItem`.
+  `workItem`. Each evidence entry may carry additive
+  `performanceBudget.{artifactPath,targetFps,workloadIds,stressWorkloadIds,maxP95Ms,maxP99Ms,maxCatchUpFrames,measurementScope,requiredCapability,liveCompositorRequired,deferralIssue}`.
 - **`analysis.json`** — `diagnostics`, `findings`, `generatedViews`, `generator`,
   `nextAction`, `optionalBoundaryFacts`, `readiness`, `schemaVersion` *(Stable)*,
   `sourceRelationships`, `sources`, `stage`, `status`, `viewVersion`, `workId`.

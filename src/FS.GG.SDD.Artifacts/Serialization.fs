@@ -90,6 +90,27 @@ module Serialization =
         writer.WriteString("result", evidence.Result)
         writer.WriteBoolean("synthetic", evidence.Synthetic)
 
+        match evidence.PerformanceBudget with
+        | Some budget ->
+            writer.WriteStartObject("performanceBudget")
+            writer.WriteString("artifactPath", budget.ArtifactPath)
+            writer.WriteNumber("targetFps", budget.TargetFps)
+            writeStringList writer SourceOrder "workloadIds" budget.WorkloadIds
+            writeStringList writer SourceOrder "stressWorkloadIds" budget.StressWorkloadIds
+            writer.WriteNumber("maxP95Ms", budget.MaxP95Ms)
+            writer.WriteNumber("maxP99Ms", budget.MaxP99Ms)
+            writer.WriteNumber("maxCatchUpFrames", budget.MaxCatchUpFrames)
+            writer.WriteString("measurementScope", budget.MeasurementScope)
+            writer.WriteString("requiredCapability", budget.RequiredCapability)
+            writer.WriteBoolean("liveCompositorRequired", budget.LiveCompositorRequired)
+
+            match budget.DeferralIssue with
+            | Some issue -> writer.WriteString("deferralIssue", issue)
+            | None -> writer.WriteNull "deferralIssue"
+
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "performanceBudget"
+
         match evidence.Rationale with
         | Some rationale -> writer.WriteString("rationale", rationale)
         | None -> writer.WriteNull "rationale"

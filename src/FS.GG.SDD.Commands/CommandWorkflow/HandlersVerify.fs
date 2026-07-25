@@ -613,6 +613,7 @@ module internal HandlersVerify =
                                 taskFacts
                                 currentSnapshots
                                 (citedArtifactExists model)
+                                (fun artifactPath -> snapshot artifactPath model |> Option.map _.Text)
                                 artifact
 
                         let obligations = evidenceObligations taskFacts

@@ -212,6 +212,24 @@ module EvidenceRoundTripPropertyTests =
                             Skipped = skipped }
               } ]
 
+    let private performanceBudget: Gen<PerformanceBudgetDeclaration option> =
+        Gen.oneof
+            [ Gen.constant None
+              Gen.constant (
+                  Some
+                      { ArtifactPath = "readiness/work/performance-baseline.txt"
+                        TargetFps = 60
+                        WorkloadIds = [ "idle-play"; "movement" ]
+                        StressWorkloadIds = [ "pointer-stress" ]
+                        MaxP95Ms = 16.67m
+                        MaxP99Ms = 25m
+                        MaxCatchUpFrames = 0
+                        MeasurementScope = "normal 60 FPS play"
+                        RequiredCapability = "bounded-headless-update-render"
+                        LiveCompositorRequired = false
+                        DeferralIssue = Some "FS-GG/Game#123" }
+              ) ]
+
     let private evidenceKind: Gen<EvidenceKind> =
         Gen.elements
             [ EvidenceKind.Implementation
@@ -261,6 +279,7 @@ module EvidenceRoundTripPropertyTests =
             let! synthetic = Gen.elements [ true; false ]
             let! syntheticDisclosure = disclosure
             let! receipt = observedRun
+            let! performance = performanceBudget
             let! rationale = optScalar
             let! owner = optScalar
             let! scope = optScalar
@@ -284,6 +303,7 @@ module EvidenceRoundTripPropertyTests =
                   Synthetic = synthetic
                   SyntheticDisclosure = syntheticDisclosure
                   ObservedRun = receipt
+                  PerformanceBudget = performance
                   Rationale = rationale
                   Owner = owner
                   Scope = scope
@@ -345,6 +365,7 @@ module EvidenceRoundTripPropertyTests =
            Synthetic = declaration.Synthetic
            SyntheticDisclosure = declaration.SyntheticDisclosure
            ObservedRun = declaration.ObservedRun
+           PerformanceBudget = declaration.PerformanceBudget
            Rationale = declaration.Rationale
            Owner = declaration.Owner
            Scope = declaration.Scope
@@ -414,6 +435,19 @@ module EvidenceRoundTripPropertyTests =
                       Passed = 1630
                       Failed = 0
                       Skipped = 4 }
+              PerformanceBudget =
+                Some
+                    { ArtifactPath = "readiness/work/performance-baseline.txt"
+                      TargetFps = 60
+                      WorkloadIds = [ "idle-play"; "movement" ]
+                      StressWorkloadIds = [ "pointer-stress" ]
+                      MaxP95Ms = 16.67m
+                      MaxP99Ms = 25m
+                      MaxCatchUpFrames = 0
+                      MeasurementScope = "normal 60 FPS play"
+                      RequiredCapability = "bounded-headless-update-render"
+                      LiveCompositorRequired = false
+                      DeferralIssue = Some "FS-GG/Game#123" }
               Rationale = Some "why"
               Owner = Some "team"
               Scope = None

@@ -31,6 +31,49 @@ module VerifyCommandTests =
         TestSupport.initializeEvidencedProject root workId title
         root
 
+    let private addPerformanceBudget root p95 p99 deferralIssue =
+        let artifactPath = $"readiness/{workId}/performance-baseline.txt"
+
+        let deferralLine =
+            deferralIssue
+            |> Option.map (fun issue -> $"\n      deferralIssue: {issue}")
+            |> Option.defaultValue ""
+
+        let evidence =
+            TestSupport.readRelative root evidencePath
+            |> fun text ->
+                text.Replace(
+                    "    result: pass\n    synthetic: false",
+                    $"""    performanceBudget:
+      artifactPath: {artifactPath}
+      targetFps: 60
+      workloadIds: [normal-play]
+      stressWorkloadIds: [pointer-stress]
+      maxP95Ms: 16.67
+      maxP99Ms: 25
+      maxCatchUpFrames: 0
+      measurementScope: normal
+      requiredCapability: bounded-headless-update-render
+      liveCompositorRequired: false{deferralLine}
+    result: pass
+    synthetic: false"""
+                )
+
+        TestSupport.writeRelative root evidencePath evidence
+
+        TestSupport.writeRelative
+            root
+            artifactPath
+            $"""measurement-mode=bounded-headless-update-render
+live-compositor-proof=false
+target-normal-play-p95-ms<=16.67
+target-normal-play-p99-ms<=25
+target-sustained-catch-up-frames=0
+target-scope=normal
+scenario=normal-play p95-ms={p95} p99-ms={p99} catch-up-frames=0
+scenario=pointer-stress p95-ms=1 p99-ms=88.632 catch-up-frames=0
+"""
+
     // `--no-require-observed` restores the pre-ADR-0035-stage-3b default (FS.GG.SDD#497). These CLI
     // smokes exercise rendering / JSON shape / dry-run over an UNOBSERVED fixture and are orthogonal
     // to the receipt gate; the flipped default itself is pinned at the boundary in
@@ -134,6 +177,42 @@ module VerifyCommandTests =
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "staleGeneratedView")
 
     // --- User Story 2: find blocking readiness gaps ---
+
+    [<Fact>]
+    let ``verify blocks an over-budget active normal-play workload`` () =
+        let root = initializedEvidencedProject ()
+        addPerformanceBudget root "38.262" "54.88" None
+
+        let report = TestSupport.runVerify root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.performanceBudgetExceeded")
+        Assert.False(TestSupport.existsRelative root verifyPath)
+
+    [<Fact>]
+    let ``verify accepts passing normal workloads and ignores separately declared stress p99`` () =
+        let root = initializedEvidencedProject ()
+        addPerformanceBudget root "12.5" "20" None
+
+        let report = TestSupport.runVerify root workId title
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.performanceBudgetPassed")
+        Assert.Contains("\"performanceBudget\": {", TestSupport.readRelative root workModelPath)
+
+        Assert.DoesNotContain(
+            report.Diagnostics,
+            fun diagnostic ->
+                diagnostic.Id = "evidence.performanceBudgetExceeded"
+                || diagnostic.Id = "evidence.performanceBudgetMalformed"
+                || diagnostic.Id = "evidence.performanceBudgetDeferred"
+        )
+
+        let ship = TestSupport.runShip root workId title
+        let handoffPath = $"readiness/{workId}/governance-handoff.json"
+
+        Assert.NotEqual(CommandOutcome.Blocked, ship.Outcome)
+        Assert.Contains("evidence.performanceBudgetPassed", TestSupport.readRelative root handoffPath)
 
     [<Fact>]
     let ``verify missing evidence blocks without verification write`` () =
