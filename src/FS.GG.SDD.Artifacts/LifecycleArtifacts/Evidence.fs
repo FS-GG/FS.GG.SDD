@@ -69,6 +69,9 @@ module Evidence =
           TargetFps: int
           WorkloadIds: string list
           StressWorkloadIds: string list
+          WorkloadDefinitionDigests: string list
+          CurrencyToken: string
+          CapturedAfterUtc: string
           MaxP95Ms: decimal
           MaxP99Ms: decimal
           MaxCatchUpFrames: int
@@ -622,9 +625,23 @@ module Evidence =
         (List.sort sample.PackageVersions),
         sample.MeasurementMode,
         sample.MeasurementScope,
+        sample.RequiredCapability,
+        (List.sort sample.Capabilities),
         sample.WarmupPolicy,
         sample.SamplePolicy,
-        sample.CurrencyToken
+        sample.CapturedAtUtc,
+        sample.CurrencyToken,
+        sample.ProbeReadbackContaminated
+
+    let private workloadDefinitionBindings (entries: string list) =
+        entries
+        |> List.choose (fun entry ->
+            let separator = entry.IndexOf('=')
+
+            if separator <= 0 || separator = entry.Length - 1 then
+                None
+            else
+                Some(entry.Substring(0, separator).Trim(), entry.Substring(separator + 1).Trim()))
 
     let evaluatePerformanceBudgets
         (artifactText: string -> string option)
@@ -635,12 +652,43 @@ module Evidence =
             declaration.PerformanceBudget
             |> Option.map (fun budget ->
                 let declarationErrors =
+                    let workloadDefinitions =
+                        workloadDefinitionBindings budget.WorkloadDefinitionDigests
+
+                    let declaredIds = budget.WorkloadIds @ budget.StressWorkloadIds |> List.distinct
+
                     [ if String.IsNullOrWhiteSpace budget.ArtifactPath then
                           "artifactPath is required"
                       if budget.TargetFps <= 0 then
                           "targetFps must be positive"
                       if List.isEmpty budget.WorkloadIds then
                           "workloadIds must name at least one active normal-play workload"
+                      if workloadDefinitions.Length <> budget.WorkloadDefinitionDigests.Length then
+                          "workloadDefinitionDigests entries must use '<workloadId>=<digest>'"
+                      for workloadId in declaredIds do
+                          let matches = workloadDefinitions |> List.filter (fun (id, _) -> id = workloadId)
+
+                          if List.isEmpty matches then
+                              $"workloadDefinitionDigests must bind '{workloadId}'"
+                          elif matches.Length <> 1 then
+                              $"workloadDefinitionDigests must bind '{workloadId}' exactly once"
+                      for workloadId, _ in workloadDefinitions do
+                          if not (List.contains workloadId declaredIds) then
+                              $"workloadDefinitionDigests binds undeclared workload '{workloadId}'"
+                      if String.IsNullOrWhiteSpace budget.CurrencyToken then
+                          "currencyToken is required"
+                      if
+                          match
+                              DateTimeOffset.TryParse(
+                                  budget.CapturedAfterUtc,
+                                  CultureInfo.InvariantCulture,
+                                  DateTimeStyles.AssumeUniversal
+                              )
+                          with
+                          | true, _ -> false
+                          | _ -> true
+                      then
+                          "capturedAfterUtc must be an ISO-8601 timestamp"
                       if budget.MaxP95Ms <= 0m then
                           "maxP95Ms must be positive"
                       if budget.MaxP99Ms <= 0m then
@@ -684,6 +732,16 @@ module Evidence =
                         | Ok artifact ->
                             let declaredIds = Set.ofList (budget.WorkloadIds @ budget.StressWorkloadIds)
 
+                            let expectedDefinitions =
+                                workloadDefinitionBindings budget.WorkloadDefinitionDigests |> Map.ofList
+
+                            let capturedAfter =
+                                DateTimeOffset.Parse(
+                                    budget.CapturedAfterUtc,
+                                    CultureInfo.InvariantCulture,
+                                    DateTimeStyles.AssumeUniversal
+                                )
+
                             let bindingErrors =
                                 [ for sample in artifact.SampleSets do
                                       let id =
@@ -697,6 +755,11 @@ module Evidence =
 
                                       if String.IsNullOrWhiteSpace sample.WorkloadDefinitionDigest then
                                           $"{id} workloadDefinitionDigest is required"
+                                      elif
+                                          Map.tryFind sample.WorkloadId expectedDefinitions
+                                          <> Some sample.WorkloadDefinitionDigest
+                                      then
+                                          $"{id} workloadDefinitionDigest does not match the declaration"
 
                                       if String.IsNullOrWhiteSpace sample.HostProfile then
                                           $"{id} hostProfile is required"
@@ -712,9 +775,23 @@ module Evidence =
 
                                       if String.IsNullOrWhiteSpace sample.CapturedAtUtc then
                                           $"{id} capturedAtUtc is required"
+                                      else
+                                          let parsed, captured =
+                                              DateTimeOffset.TryParse(
+                                                  sample.CapturedAtUtc,
+                                                  CultureInfo.InvariantCulture,
+                                                  DateTimeStyles.AssumeUniversal
+                                              )
+
+                                          if not parsed then
+                                              $"{id} capturedAtUtc must be an ISO-8601 timestamp"
+                                          elif captured < capturedAfter then
+                                              $"{id} capturedAtUtc predates declared capturedAfterUtc"
 
                                       if String.IsNullOrWhiteSpace sample.CurrencyToken then
                                           $"{id} currencyToken is required"
+                                      elif sample.CurrencyToken <> budget.CurrencyToken then
+                                          $"{id} currencyToken does not match the declaration"
 
                                       if List.isEmpty sample.DurationSamplesMs then
                                           $"{id} durationSamplesMs must not be empty"
@@ -772,7 +849,7 @@ module Evidence =
                                       elif sets |> List.exists (fun set -> set.WorkloadClass <> "normal-play") then
                                           $"{workloadId} must be classified as normal-play"
                                       elif sets |> List.map sampleBinding |> List.distinct |> List.length > 1 then
-                                          $"{workloadId} sample sets have mixed digest, host, package, mode, scope, policy, or currency bindings"
+                                          $"{workloadId} sample sets have mixed digest, host, package, mode, scope, capability, policy, capture-time, currency, or contamination bindings"
 
                                   for workloadId in budget.StressWorkloadIds do
                                       let sets =
@@ -1163,6 +1240,9 @@ module Evidence =
               TargetFps = 0
               WorkloadIds = []
               StressWorkloadIds = []
+              WorkloadDefinitionDigests = []
+              CurrencyToken = ""
+              CapturedAfterUtc = ""
               MaxP95Ms = -1m
               MaxP99Ms = -1m
               MaxCatchUpFrames = -1
@@ -1180,6 +1260,16 @@ module Evidence =
               ArtifactCodec.alwaysInlineList "stressWorkloadIds" _.StressWorkloadIds (fun value budget ->
                   { budget with
                       StressWorkloadIds = value })
+              ArtifactCodec.alwaysInlineList
+                  "workloadDefinitionDigests"
+                  _.WorkloadDefinitionDigests
+                  (fun value budget ->
+                      { budget with
+                          WorkloadDefinitionDigests = value })
+              ArtifactCodec.requiredScalar "currencyToken" _.CurrencyToken (fun value budget ->
+                  { budget with CurrencyToken = value })
+              ArtifactCodec.requiredScalar "capturedAfterUtc" _.CapturedAfterUtc (fun value budget ->
+                  { budget with CapturedAfterUtc = value })
               ArtifactCodec.mappedScalar "maxP95Ms" decimalText (decimalInvariant -1m) _.MaxP95Ms (fun value budget ->
                   { budget with MaxP95Ms = value })
               ArtifactCodec.mappedScalar "maxP99Ms" decimalText (decimalInvariant -1m) _.MaxP99Ms (fun value budget ->

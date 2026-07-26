@@ -525,6 +525,9 @@ module GovernanceHandoffTests =
                           TargetFps = 60
                           WorkloadIds = [ "idle-play" ]
                           StressWorkloadIds = []
+                          WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ]
+                          CurrencyToken = "commit:abc123"
+                          CapturedAfterUtc = "2026-07-25T00:00:00Z"
                           MaxP95Ms = 16.67m
                           MaxP99Ms = 25m
                           MaxCatchUpFrames = 0

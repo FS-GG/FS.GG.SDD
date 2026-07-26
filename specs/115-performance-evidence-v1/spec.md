@@ -16,11 +16,15 @@ environment. SDD recomputes the result; a producer-authored verdict is never suf
   class, target and thresholds, warmup and sample policy, host profile, package versions,
   measurement scope and mode, capability facts, capture time/currency token, and probe/readback
   contamination state.
+- **FR-002a:** The declaration MUST independently name the expected digest for every workload,
+  the current currency token, and a capture-not-before timestamp. Artifact values MUST match
+  those declaration-owned inputs.
 - **FR-003:** SDD MUST recompute p95 and p99 with the documented nearest-rank algorithm and
   sustained catch-up as the maximum raw catch-up sample.
 - **FR-004:** A claimed pass MUST be rejected when recomputed measurements fail.
 - **FR-005:** Sets for one workload MUST NOT be combined across workload-definition digests,
-  hosts, package versions, modes, scopes, policies, or currency tokens.
+  hosts, package versions, modes, scopes, capabilities, policies, capture times, contamination
+  states, or currency tokens.
 - **FR-006:** Every declared normal workload MUST have bound samples; stress workloads remain
   diagnostic context and MUST NOT replace a missing normal workload.
 - **FR-007:** Headless or probe/readback-contaminated measurements MUST NOT satisfy a declaration
@@ -46,4 +50,3 @@ environment. SDD recomputes the result; a producer-authored verdict is never suf
 - Trusting the provenance of the machine that wrote the artifact; CI/Governance owns provenance.
 - Choosing product workloads or performance thresholds.
 - Treating stress-throughput measurements as normal-play acceptance.
-

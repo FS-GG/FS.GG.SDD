@@ -61,6 +61,9 @@ module Evidence =
           TargetFps: int
           WorkloadIds: string list
           StressWorkloadIds: string list
+          WorkloadDefinitionDigests: string list
+          CurrencyToken: string
+          CapturedAfterUtc: string
           MaxP95Ms: decimal
           MaxP99Ms: decimal
           MaxCatchUpFrames: int

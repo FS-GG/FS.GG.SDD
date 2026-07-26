@@ -138,6 +138,9 @@ module Serialization =
             writer.WriteNumber("targetFps", budget.TargetFps)
             writeStringList writer SourceOrder "workloadIds" budget.WorkloadIds
             writeStringList writer SourceOrder "stressWorkloadIds" budget.StressWorkloadIds
+            writeStringList writer SourceOrder "workloadDefinitionDigests" budget.WorkloadDefinitionDigests
+            writer.WriteString("currencyToken", budget.CurrencyToken)
+            writer.WriteString("capturedAfterUtc", budget.CapturedAfterUtc)
             writer.WriteNumber("maxP95Ms", budget.MaxP95Ms)
             writer.WriteNumber("maxP99Ms", budget.MaxP99Ms)
             writer.WriteNumber("maxCatchUpFrames", budget.MaxCatchUpFrames)

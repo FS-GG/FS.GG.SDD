@@ -38,6 +38,9 @@ module ReleaseConformanceTests =
       targetFps: 60
       workloadIds: [normal-play]
       stressWorkloadIds: [pointer-stress]
+      workloadDefinitionDigests: [normal-play=sha256:normal-v1, pointer-stress=sha256:stress-v1]
+      currencyToken: commit:abc123
+      capturedAfterUtc: 2026-07-25T00:00:00Z
       maxP95Ms: 16.67
       maxP99Ms: 25
       maxCatchUpFrames: 0

@@ -104,6 +104,9 @@ lifecycleNotes:
       targetFps: 60
       workloadIds: [idle-play]
       stressWorkloadIds: [pointer-stress]
+      workloadDefinitionDigests: [idle-play=sha256:idle-v1, pointer-stress=sha256:pointer-v1]
+      currencyToken: commit:abc123
+      capturedAfterUtc: 2026-07-25T00:00:00Z
       maxP95Ms: 16.67
       maxP99Ms: 25
       maxCatchUpFrames: 0
@@ -172,6 +175,9 @@ lifecycleNotes:
                             ArtifactPath = "readiness/performance.txt"
                             TargetFps = 60
                             WorkloadIds = [ "idle-play" ]
+                            WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ]
+                            CurrencyToken = "commit:abc123"
+                            CapturedAfterUtc = "2026-07-25T00:00:00Z"
                             MaxP95Ms = 16.67m
                             MaxP99Ms = 25m
                             MaxCatchUpFrames = 0
@@ -223,6 +229,9 @@ lifecycleNotes:
                             ArtifactPath = "readiness/performance.json"
                             TargetFps = 60
                             WorkloadIds = [ "idle-play" ]
+                            WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ]
+                            CurrencyToken = "commit:abc123"
+                            CapturedAfterUtc = "2026-07-25T00:00:00Z"
                             MaxP95Ms = 16.67m
                             MaxP99Ms = 25m
                             MaxCatchUpFrames = 0
@@ -253,6 +262,77 @@ lifecycleNotes:
         Assert.Contains(evaluation.Reasons, fun reason -> reason.Contains("mixed digest, host"))
         Assert.Contains(evaluation.Reasons, fun reason -> reason.Contains("live-compositor evidence is required"))
 
+        let sameHost = sample.Replace("HOST", "host-a")
+
+        let mixedCapture =
+            """{"contractVersion":"performance-evidence-v1","sampleSets":[SAMPLES]}"""
+                .Replace(
+                    "SAMPLES",
+                    sameHost
+                    + ","
+                    + sameHost.Replace("2026-07-26T00:00:00Z", "2026-07-26T00:01:00Z")
+                )
+
+        let captureEvaluation =
+            evaluatePerformanceBudgets (fun _ -> Some mixedCapture) [ declaration ]
+            |> Assert.Single
+
+        Assert.Contains(captureEvaluation.Reasons, fun reason -> reason.Contains("capture-time"))
+
+        let mixedCapabilities =
+            """{"contractVersion":"performance-evidence-v1","sampleSets":[SAMPLES]}"""
+                .Replace(
+                    "SAMPLES",
+                    sameHost
+                    + ","
+                    + sameHost.Replace("""["present-timing"]""", """["present-timing","extra-probe"]""")
+                )
+
+        let capabilityEvaluation =
+            evaluatePerformanceBudgets (fun _ -> Some mixedCapabilities) [ declaration ]
+            |> Assert.Single
+
+        Assert.Contains(capabilityEvaluation.Reasons, fun reason -> reason.Contains("capability"))
+
+    [<Fact>]
+    let ``performance evidence rejects stale and declaration-mismatched bindings`` () =
+        let declaration =
+            { EvidenceCodec.declarationSeed with
+                Id = createEvidenceId "EV689" |> Result.defaultWith failwith
+                PerformanceBudget =
+                    Some
+                        { EvidenceCodec.performanceBudgetSeed with
+                            ArtifactPath = "readiness/performance.json"
+                            TargetFps = 60
+                            WorkloadIds = [ "idle-play" ]
+                            WorkloadDefinitionDigests = [ "idle-play=sha256:current" ]
+                            CurrencyToken = "commit:current"
+                            CapturedAfterUtc = "2026-07-25T00:00:00Z"
+                            MaxP95Ms = 16.67m
+                            MaxP99Ms = 25m
+                            MaxCatchUpFrames = 0
+                            MeasurementScope = "normal"
+                            RequiredCapability = "headless" } }
+
+        let stale =
+            """{"contractVersion":"performance-evidence-v1","sampleSets":[{
+"workloadId":"idle-play","workloadDefinitionDigest":"sha256:stale","workloadClass":"normal-play",
+"targetFps":60,"maxP95Ms":16.67,"maxP99Ms":25,"maxCatchUpFrames":0,
+"measurementScope":"normal","requiredCapability":"headless","hostProfile":"linux-x64-ci",
+"packageVersions":["FS.GG.Game@1.2.3"],"measurementMode":"headless","capabilities":["headless"],
+"warmupPolicy":"120-frames","samplePolicy":"nearest-rank/3","capturedAtUtc":"2026-07-24T00:00:00Z",
+"currencyToken":"commit:stale","probeReadbackContaminated":false,
+"durationSamplesMs":[10,11,12],"catchUpFrames":[0,0,0]}]}"""
+
+        let evaluation =
+            evaluatePerformanceBudgets (fun _ -> Some stale) [ declaration ]
+            |> Assert.Single
+
+        Assert.Equal(PerformanceMalformed, evaluation.State)
+        Assert.Contains(evaluation.Reasons, fun reason -> reason.Contains("workloadDefinitionDigest does not match"))
+        Assert.Contains(evaluation.Reasons, fun reason -> reason.Contains("predates declared capturedAfterUtc"))
+        Assert.Contains(evaluation.Reasons, fun reason -> reason.Contains("currencyToken does not match"))
+
     [<Fact>]
     let ``summary-only M0 performance report is malformed`` () =
         let declaration =
@@ -264,6 +344,9 @@ lifecycleNotes:
                             ArtifactPath = "readiness/performance.txt"
                             TargetFps = 60
                             WorkloadIds = [ "idle-play" ]
+                            WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ]
+                            CurrencyToken = "commit:abc123"
+                            CapturedAfterUtc = "2026-07-25T00:00:00Z"
                             MaxP95Ms = 16.67m
                             MaxP99Ms = 25m
                             MaxCatchUpFrames = 0

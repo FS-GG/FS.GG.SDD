@@ -131,7 +131,7 @@ module ContractVersionTests =
     // bump+pin per new scope value.
     [<Fact>]
     let ``contract version self-report matches 5_0_1`` () =
-        Assert.Equal("5.1.0", ContractVersion.value)
+        Assert.Equal("6.0.0", ContractVersion.value)
         Assert.Equal(5, ContractVersion.major)
         Assert.Equal(0, ContractVersion.minor)
         Assert.Equal(1, ContractVersion.patch)

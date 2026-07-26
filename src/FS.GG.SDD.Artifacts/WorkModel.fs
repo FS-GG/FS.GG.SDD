@@ -1057,6 +1057,10 @@ module WorkModel =
                                           TargetFps = jmInt "targetFps" budget |> Option.defaultValue 0
                                           WorkloadIds = jmStringList "workloadIds" budget |> List.sort
                                           StressWorkloadIds = jmStringList "stressWorkloadIds" budget |> List.sort
+                                          WorkloadDefinitionDigests =
+                                            jmStringList "workloadDefinitionDigests" budget |> List.sort
+                                          CurrencyToken = jmString "currencyToken" budget
+                                          CapturedAfterUtc = jmString "capturedAfterUtc" budget
                                           MaxP95Ms = jmDecimal "maxP95Ms" budget |> Option.defaultValue -1m
                                           MaxP99Ms = jmDecimal "maxP99Ms" budget |> Option.defaultValue -1m
                                           MaxCatchUpFrames = jmInt "maxCatchUpFrames" budget |> Option.defaultValue -1

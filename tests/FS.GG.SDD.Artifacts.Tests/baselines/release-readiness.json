@@ -2974,6 +2974,16 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "evidence[].performanceBudget.capturedAfterUtc",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.currencyToken",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "evidence[].performanceBudget.deferralIssue",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -3015,6 +3025,11 @@
         },
         {
           "name": "evidence[].performanceBudget.targetFps",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.workloadDefinitionDigests",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
