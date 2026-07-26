@@ -51,5 +51,7 @@ module ReleaseDeterminismTests =
         Assert.DoesNotContain(":\\", json)
         // no ISO-8601 timestamp / wall-clock
         Assert.False(Regex.IsMatch(json, @"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}"), "release contract must carry no timestamp")
-        // no duration field
-        Assert.DoesNotContain("duration", json.ToLowerInvariant())
+        // No generator-owned timing metadata. Raw performance duration samples are authored
+        // evidence and are intentionally preserved.
+        Assert.DoesNotContain("elapsed", json.ToLowerInvariant())
+        Assert.DoesNotContain("generatedat", json.ToLowerInvariant())

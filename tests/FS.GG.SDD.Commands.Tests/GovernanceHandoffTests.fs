@@ -74,6 +74,8 @@ module GovernanceHandoffTests =
           Result = result
           Synthetic = synthetic
           PerformanceBudget = None
+          PerformanceEvidenceArtifact = None
+          PerformanceMeasurements = []
           Rationale = rationale
           Source = $"work/{workId}/evidence.yml"
           SourceLocation = None }
@@ -479,3 +481,86 @@ module GovernanceHandoffTests =
         TestSupport.runRefresh root workId |> ignore
         let after = authored |> List.map (TestSupport.readRelative root)
         Assert.Equal<string list>(before, after)
+
+    [<Fact>]
+    let ``performance evidence projects raw samples and recomputed measurements`` () =
+        let sample: Fsgg.Schemas.PerformanceEvidenceSampleSet =
+            { WorkloadId = "idle-play"
+              WorkloadDefinitionDigest = "sha256:idle-v1"
+              WorkloadClass = "normal-play"
+              TargetFps = 60
+              MaxP95Ms = 16.67m
+              MaxP99Ms = 25m
+              MaxCatchUpFrames = 0
+              MeasurementScope = "normal"
+              RequiredCapability = "headless"
+              HostProfile = "linux-x64-ci"
+              PackageVersions = [ "FS.GG.Game@1.2.3" ]
+              MeasurementMode = "headless"
+              Capabilities = [ "headless" ]
+              WarmupPolicy = "120-frames"
+              SamplePolicy = "nearest-rank/3"
+              CapturedAtUtc = "2026-07-26T00:00:00Z"
+              CurrencyToken = "commit:abc123"
+              ProbeReadbackContaminated = false
+              DurationSamplesMs = [ 10m; 11m; 12m ]
+              CatchUpFrames = [ 0; 0; 0 ] }
+
+        let artifact: Fsgg.Schemas.PerformanceEvidenceArtifact =
+            { ContractVersion = "performance-evidence-v1"
+              ClaimedBudgetPassed = Some true
+              SampleSets = [ sample ] }
+
+        let measured: Fsgg.Schemas.PerformanceEvidenceMeasurement =
+            { WorkloadId = "idle-play"
+              P95Ms = 12m
+              P99Ms = 12m
+              MaxCatchUpFrames = 0 }
+
+        let evidence =
+            { mkEvidence "EV687" "pass" false [] None with
+                PerformanceBudget =
+                    Some
+                        { ArtifactPath = "readiness/performance.json"
+                          TargetFps = 60
+                          WorkloadIds = [ "idle-play" ]
+                          StressWorkloadIds = []
+                          MaxP95Ms = 16.67m
+                          MaxP99Ms = 25m
+                          MaxCatchUpFrames = 0
+                          MeasurementScope = "normal"
+                          RequiredCapability = "headless"
+                          LiveCompositorRequired = false
+                          DeferralIssue = None }
+                PerformanceEvidenceArtifact = Some artifact
+                PerformanceMeasurements = [ measured ] }
+
+        let json =
+            project
+                { emptyModel with
+                    Evidence = [ evidence ] }
+                emptyGovernanceConfig
+                cleanReadiness
+            |> toJson
+
+        use document = JsonDocument.Parse json
+
+        let projected =
+            document.RootElement.GetProperty("performanceEvidence").EnumerateArray()
+            |> Seq.exactlyOne
+
+        Assert.Equal(
+            "performance-evidence-v1",
+            projected.GetProperty("artifact").GetProperty("contractVersion").GetString()
+        )
+
+        Assert.Equal(
+            3,
+            projected
+                .GetProperty("artifact")
+                .GetProperty("sampleSets")
+                .[0].GetProperty("durationSamplesMs")
+                .GetArrayLength()
+        )
+
+        Assert.Equal(12m, projected.GetProperty("measurements").[0].GetProperty("p99Ms").GetDecimal())

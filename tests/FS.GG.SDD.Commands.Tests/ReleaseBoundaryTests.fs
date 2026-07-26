@@ -36,7 +36,7 @@ module ReleaseBoundaryTests =
         for forbidden in
             [ "gate"
               "route"
-              "profile"
+              "\"profile\""
               "freshness"
               "publish"
               "provenance"

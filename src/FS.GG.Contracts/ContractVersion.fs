@@ -2,7 +2,7 @@ namespace Fsgg
 
 module ContractVersion =
 
-    let value = "5.0.1"
+    let value = "5.1.0"
 
     let major = 5
     let minor = 0

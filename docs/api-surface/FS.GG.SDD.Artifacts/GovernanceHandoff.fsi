@@ -39,6 +39,8 @@ module GovernanceHandoff =
         { Nodes: EvidenceNode list
           Dependencies: EvidenceEdge list }
 
+    type PerformanceEvidenceProjection = Fsgg.Schemas.GovernanceHandoffPerformanceEvidence
+
     type GovernedReference =
         { Path: string
           Owner: string
@@ -77,6 +79,7 @@ module GovernanceHandoff =
           WorkId: string
           Sources: SourceIdentity list
           Evidence: EvidenceProjection
+          PerformanceEvidence: PerformanceEvidenceProjection list
           GovernedReferences: GovernedReference list
           GovernanceConfig: GovernanceConfigPresence
           Readiness: ReadinessFacts

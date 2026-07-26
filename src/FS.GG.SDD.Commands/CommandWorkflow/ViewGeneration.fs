@@ -786,6 +786,21 @@ module internal ViewGeneration =
           SchemaVersion = Some 1
           SchemaStatus = Some "current" }
 
+    let performanceEvidenceSnapshots workId evidenceText model =
+        evidenceText
+        |> Option.bind (fun text ->
+            match
+                parseEvidence
+                    { Path = evidencePath workId
+                      Text = text }
+            with
+            | Ok declarations -> Some declarations
+            | Error _ -> None)
+        |> Option.defaultValue []
+        |> List.choose _.PerformanceBudget
+        |> List.choose (fun budget -> snapshot budget.ArtifactPath model)
+        |> List.distinctBy _.Path
+
     let existingGeneratedViewDiagnostic workId path model =
         match snapshot path model with
         | None -> None
@@ -817,6 +832,13 @@ module internal ViewGeneration =
                       snapshot (evidencePath workId) model
                       Some generated ]
                     |> List.choose id
+                    |> fun snapshots ->
+                        let evidenceText =
+                            snapshots
+                            |> List.tryFind (fun source -> source.Path = evidencePath workId)
+                            |> Option.map _.Text
+
+                        snapshots @ performanceEvidenceSnapshots workId evidenceText model
 
                 match
                     SerializationModule.checkGeneratedWorkModelCurrency
@@ -883,6 +905,7 @@ module internal ViewGeneration =
                 Text = text })
           |> Option.orElseWith (fun () -> snapshot (evidencePath workId) model) ]
         |> List.choose id
+        |> fun snapshots -> snapshots @ performanceEvidenceSnapshots workId evidenceText model
         |> List.map (fun snapshot ->
             { snapshot with
                 Path = normalizeRelativePath snapshot.Path })

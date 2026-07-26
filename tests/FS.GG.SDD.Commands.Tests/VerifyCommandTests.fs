@@ -32,7 +32,7 @@ module VerifyCommandTests =
         root
 
     let private addPerformanceBudget root p95 p99 deferralIssue =
-        let artifactPath = $"readiness/{workId}/performance-baseline.txt"
+        let artifactPath = $"readiness/{workId}/performance-evidence.json"
 
         let deferralLine =
             deferralIssue
@@ -61,18 +61,19 @@ module VerifyCommandTests =
 
         TestSupport.writeRelative root evidencePath evidence
 
+        let durations = (List.replicate 95 p95 @ List.replicate 5 p99) |> String.concat ","
+
         TestSupport.writeRelative
             root
             artifactPath
-            $"""measurement-mode=bounded-headless-update-render
-live-compositor-proof=false
-target-normal-play-p95-ms<=16.67
-target-normal-play-p99-ms<=25
-target-sustained-catch-up-frames=0
-target-scope=normal
-scenario=normal-play p95-ms={p95} p99-ms={p99} catch-up-frames=0
-scenario=pointer-stress p95-ms=1 p99-ms=88.632 catch-up-frames=0
-"""
+            $$"""{"contractVersion":"performance-evidence-v1","claimedBudgetPassed":true,"sampleSets":[{
+"workloadId":"normal-play","workloadDefinitionDigest":"sha256:normal-v1","workloadClass":"normal-play",
+"targetFps":60,"maxP95Ms":16.67,"maxP99Ms":25,"maxCatchUpFrames":0,
+"measurementScope":"normal","requiredCapability":"bounded-headless-update-render",
+"hostProfile":"linux-x64-ci","packageVersions":["FS.GG.Game@1.2.3"],"measurementMode":"headless",
+"capabilities":["bounded-headless-update-render"],"warmupPolicy":"120-frames","samplePolicy":"nearest-rank/100",
+"capturedAtUtc":"2026-07-26T00:00:00Z","currencyToken":"commit:abc123","probeReadbackContaminated":false,
+"durationSamplesMs":[{{durations}}],"catchUpFrames":[0]}]}"""
 
     // `--no-require-observed` restores the pre-ADR-0035-stage-3b default (FS.GG.SDD#497). These CLI
     // smokes exercise rendering / JSON shape / dry-run over an UNOBSERVED fixture and are orthogonal
@@ -199,6 +200,7 @@ scenario=pointer-stress p95-ms=1 p99-ms=88.632 catch-up-frames=0
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.performanceBudgetPassed")
         Assert.Contains("\"performanceBudget\": {", TestSupport.readRelative root workModelPath)
+        Assert.Contains("\"performanceEvidenceArtifact\": {", TestSupport.readRelative root workModelPath)
 
         Assert.DoesNotContain(
             report.Diagnostics,

@@ -26,7 +26,7 @@ module ReleaseConformanceTests =
         let root = TestSupport.tempDirectory ()
         TestSupport.initializeEvidencedProject root workId title
 
-        let artifactPath = $"readiness/{workId}/performance-baseline.txt"
+        let artifactPath = $"readiness/{workId}/performance-evidence.json"
         let evidencePath = $"work/{workId}/evidence.yml"
 
         TestSupport.readRelative root evidencePath
@@ -50,18 +50,20 @@ module ReleaseConformanceTests =
             )
         |> TestSupport.writeRelative root evidencePath
 
+        let durations =
+            (List.replicate 95 "12" @ List.replicate 5 "20") |> String.concat ","
+
         TestSupport.writeRelative
             root
             artifactPath
-            """measurement-mode=bounded-headless-update-render
-live-compositor-proof=false
-target-normal-play-p95-ms<=16.67
-target-normal-play-p99-ms<=25
-target-sustained-catch-up-frames=0
-target-scope=normal
-scenario=normal-play p95-ms=12 p99-ms=20 catch-up-frames=0
-scenario=pointer-stress p95-ms=1 p99-ms=88.632 catch-up-frames=0
-"""
+            $$"""{"contractVersion":"performance-evidence-v1","claimedBudgetPassed":true,"sampleSets":[{
+"workloadId":"normal-play","workloadDefinitionDigest":"sha256:normal-v1","workloadClass":"normal-play",
+"targetFps":60,"maxP95Ms":16.67,"maxP99Ms":25,"maxCatchUpFrames":0,
+"measurementScope":"normal","requiredCapability":"bounded-headless-update-render",
+"hostProfile":"linux-x64-ci","packageVersions":["FS.GG.Game@1.2.3"],"measurementMode":"headless",
+"capabilities":["bounded-headless-update-render"],"warmupPolicy":"120-frames","samplePolicy":"nearest-rank/100",
+"capturedAtUtc":"2026-07-26T00:00:00Z","currencyToken":"commit:abc123","probeReadbackContaminated":false,
+"durationSamplesMs":[{{durations}}],"catchUpFrames":[0]}]}"""
 
         TestSupport.runVerify root workId title |> ignore
         let shipReport = TestSupport.runShip root workId title

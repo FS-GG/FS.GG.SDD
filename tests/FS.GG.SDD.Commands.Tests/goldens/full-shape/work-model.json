@@ -76,7 +76,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "17d56ca50844f54e748de076731e7d1e08657bd14c83039043a3a8c8422b4e52"
+        "value": "87af28fb1a334c175f822433f65b5275222dcb1a4a4175d8c3f52cce3857e792"
       }
     },
     {
@@ -297,6 +297,8 @@
       "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
       "rationale": null,
       "source": "work/247-full-shape-golden/evidence.yml",
       "sourceLocation": {
@@ -319,6 +321,8 @@
       "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
       "rationale": null,
       "source": "work/247-full-shape-golden/evidence.yml",
       "sourceLocation": {
@@ -341,6 +345,8 @@
       "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
       "rationale": null,
       "source": "work/247-full-shape-golden/evidence.yml",
       "sourceLocation": {
@@ -363,6 +369,8 @@
       "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
       "rationale": null,
       "source": "work/247-full-shape-golden/evidence.yml",
       "sourceLocation": {
@@ -385,6 +393,8 @@
       "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
       "rationale": null,
       "source": "work/247-full-shape-golden/evidence.yml",
       "sourceLocation": {
@@ -400,7 +410,7 @@
       "schemaVersion": 1,
       "generator": {
         "id": "FS.GG.SDD.Artifacts",
-        "version": "0.25.1"
+        "version": "0.26.0"
       },
       "sources": [
         {
@@ -447,7 +457,7 @@
           "path": "work/247-full-shape-golden/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "17d56ca50844f54e748de076731e7d1e08657bd14c83039043a3a8c8422b4e52"
+            "value": "87af28fb1a334c175f822433f65b5275222dcb1a4a4175d8c3f52cce3857e792"
           },
           "schemaVersion": 1
         },
@@ -478,7 +488,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "622b55a789d906d3275d3e23acb73b73611ffc6262aad2e628405b512f59d3b9"
+        "value": "02e3b4985612e97cc719bd98a891ed42387e99fb1eec1ffa1c5a1d5696324791"
       },
       "currency": "current"
     }

@@ -1,22 +1,22 @@
 {
   "schemaVersion": 1,
-  "contractVersion": "1.1.0",
-  "generatorVersion": "FS.GG.SDD.Artifacts/0.25.1",
+  "contractVersion": "1.2.0",
+  "generatorVersion": "FS.GG.SDD.Artifacts/0.26.0",
   "workId": "247-full-shape-golden",
   "sources": [
     {
       "path": "readiness/247-full-shape-golden/ship.json",
-      "digest": "sha256:cba5dd50457b891cf8a4512ce5576746a5468404930da4f60ca516a7612b40c2",
+      "digest": "sha256:828f8115c4c4a9953a000e044d94355fe4d00b9d1ec3674a4e126ca9fc87e643",
       "schemaVersion": 1
     },
     {
       "path": "readiness/247-full-shape-golden/verify.json",
-      "digest": "sha256:733b8815f9775edefb2b5cb5b69ceda31e468f08f9e535a23da8762fe291654c",
+      "digest": "sha256:7d3f2434aea2937afd77e33acf9c55d959a618fa17147dee5b9dda1dd176be73",
       "schemaVersion": 1
     },
     {
       "path": "readiness/247-full-shape-golden/work-model.json",
-      "digest": "sha256:ba29455650eda2a8b4ab3c34e48de153a536f0b905aed3248912091bd60fdce3",
+      "digest": "sha256:ce03fe2aad76bca98cc33107b3ffca748f5e9f12e6632dcf7b9c9e86159e3e91",
       "schemaVersion": 1
     }
   ],
@@ -132,6 +132,7 @@
       }
     ]
   },
+  "performanceEvidence": [],
   "governedReferences": [],
   "governanceConfig": {
     "policyPresent": false,

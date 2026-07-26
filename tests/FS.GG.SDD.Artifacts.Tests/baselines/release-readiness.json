@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "generatorVersion": {
     "id": "FS.GG.SDD.Artifacts",
-    "version": "0.25.1"
+    "version": "0.26.0"
   },
   "identity": {
-    "version": "0.25.1",
+    "version": "0.26.0",
     "channel": "preRelease",
     "packageIds": [
       "FS.GG.SDD.Artifacts",
@@ -16,7 +16,7 @@
   },
   "compatibility": [
     {
-      "sddVersionLine": "0.25.x",
+      "sddVersionLine": "0.26.x",
       "specKitRange": "\u003E=0.8.5",
       "governanceContractVersionRange": "1.x"
     }
@@ -1614,7 +1614,7 @@
         "format": "json"
       },
       "schemaVersion": 1,
-      "contractVersion": "1.1.0",
+      "contractVersion": "1.2.0",
       "stability": "stable",
       "determinism": "byte-stable; canonical key order; no clock/path/ANSI",
       "inventory": [
@@ -1720,6 +1720,166 @@
         },
         {
           "name": "governedReferences",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.claimedBudgetPassed",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.contractVersion",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].capabilities",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].capturedAtUtc",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].catchUpFrames",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].currencyToken",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].durationSamplesMs",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].hostProfile",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].maxCatchUpFrames",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].maxP95Ms",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].maxP99Ms",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].measurementMode",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].measurementScope",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].packageVersions",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].probeReadbackContaminated",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].requiredCapability",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].samplePolicy",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].targetFps",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].warmupPolicy",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].workloadClass",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].workloadDefinitionDigest",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifact.sampleSets[].workloadId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].artifactPath",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].evidenceId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].measurements",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].measurements[].maxCatchUpFrames",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].measurements[].p95Ms",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].measurements[].p99Ms",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].measurements[].workloadId",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -2864,6 +3024,151 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "evidence[].performanceEvidenceArtifact",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.claimedBudgetPassed",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.contractVersion",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].capabilities",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].capturedAtUtc",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].catchUpFrames",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].currencyToken",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].durationSamplesMs",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].hostProfile",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].maxCatchUpFrames",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].maxP95Ms",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].maxP99Ms",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].measurementMode",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].measurementScope",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].packageVersions",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].probeReadbackContaminated",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].requiredCapability",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].samplePolicy",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].targetFps",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].warmupPolicy",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].workloadClass",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].workloadDefinitionDigest",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceEvidenceArtifact.sampleSets[].workloadId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceMeasurements",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceMeasurements[].maxCatchUpFrames",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceMeasurements[].p95Ms",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceMeasurements[].p99Ms",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceMeasurements[].workloadId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "evidence[].rationale",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -3269,5 +3574,14 @@
       "durableGenerated": false
     }
   ],
-  "migrations": []
+  "migrations": [
+    {
+      "version": "0.26.0",
+      "path": "docs/release/migrations/0.26.0.md",
+      "breakingChanges": [
+        "Summary-only performance artifacts are now malformed; emit performance-evidence-v1 raw sample sets with complete workload, budget, host, package, measurement, policy, and currency bindings.",
+        "Headless or probe/readback-contaminated measurements no longer satisfy declarations that require live-compositor evidence."
+      ]
+    }
+  ]
 }

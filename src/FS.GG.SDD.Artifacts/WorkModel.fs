@@ -76,6 +76,8 @@ module WorkModel =
           Result: string
           Synthetic: bool
           PerformanceBudget: PerformanceBudgetDeclaration option
+          PerformanceEvidenceArtifact: PerformanceEvidenceArtifact option
+          PerformanceMeasurements: PerformanceEvidenceMeasurement list
           Rationale: string option
           Source: string
           SourceLocation: SourceLocation option }
@@ -545,6 +547,17 @@ module WorkModel =
         let diagnostics =
             parsed.Diagnostics @ validationDiagnostics parsed |> Diagnostics.sort
 
+        let artifactText path =
+            parsed.ExistingGeneratedViews
+            |> List.tryFind (fun snapshot ->
+                String.Equals(normalizePath snapshot.Path, normalizePath path, StringComparison.Ordinal))
+            |> Option.map _.Text
+
+        let performanceByDeclaration =
+            evaluatePerformanceBudgets artifactText parsed.Evidence
+            |> List.map (fun evaluation -> evaluation.DeclarationId, evaluation)
+            |> Map.ofList
+
         { SchemaVersion = 1
           // 1.1.0: additive `requirements[].classification` facet (ADR-0048, feature WI-3). The
           // schema major stays 1 — the field is additive and optional-valued (empty = unclassified)
@@ -648,6 +661,15 @@ module WorkModel =
                   Result = evidence.Result
                   Synthetic = evidence.Synthetic
                   PerformanceBudget = evidence.PerformanceBudget
+                  PerformanceEvidenceArtifact =
+                    performanceByDeclaration
+                    |> Map.tryFind evidence.Id.Value
+                    |> Option.bind _.Artifact
+                  PerformanceMeasurements =
+                    performanceByDeclaration
+                    |> Map.tryFind evidence.Id.Value
+                    |> Option.map _.Measurements
+                    |> Option.defaultValue []
                   Rationale = evidence.Rationale
                   Source = evidence.Source.Path
                   SourceLocation = evidence.SourceLocation })
@@ -1046,6 +1068,32 @@ module WorkModel =
                                             match jmString "deferralIssue" budget with
                                             | "" -> None
                                             | value -> Some value })
+                                  PerformanceEvidenceArtifact =
+                                    jmProp "performanceEvidenceArtifact" item
+                                    |> Option.bind (fun artifact ->
+                                        match parsePerformanceEvidence (artifact.GetRawText()) with
+                                        | Ok value -> Some value
+                                        | Error _ -> None)
+                                  PerformanceMeasurements =
+                                    jmArray "performanceMeasurements" item
+                                    |> List.choose (fun measured ->
+                                        match
+                                            jmString "workloadId" measured,
+                                            jmDecimal "p95Ms" measured,
+                                            jmDecimal "p99Ms" measured,
+                                            jmInt "maxCatchUpFrames" measured
+                                        with
+                                        | workloadId, Some p95, Some p99, Some catchUp when
+                                            not (String.IsNullOrWhiteSpace workloadId)
+                                            ->
+                                            Some(
+                                                { WorkloadId = workloadId
+                                                  P95Ms = p95
+                                                  P99Ms = p99
+                                                  MaxCatchUpFrames = catchUp }
+                                                : PerformanceEvidenceMeasurement
+                                            )
+                                        | _ -> None)
                                   Rationale =
                                     (match jmString "rationale" item with
                                      | "" -> None

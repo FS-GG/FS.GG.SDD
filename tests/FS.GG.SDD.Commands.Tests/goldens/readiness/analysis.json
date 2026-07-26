@@ -4,7 +4,7 @@
   "workId": "068-readiness-golden",
   "stage": "analyze",
   "status": "implementationReady",
-  "generator": "FS.GG.SDD.Artifacts/0.25.1",
+  "generator": "FS.GG.SDD.Artifacts/0.26.0",
   "sources": [
     {
       "path": ".fsgg/agents.yml",
@@ -41,7 +41,7 @@
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "24b5a7b8b853a746f8639ea12f01687324ec488e9d76bb24657304d3b1dfbe6d"
+        "value": "c4135cbd8c664955ecff64f309b8925d348750ad6ae9663ce3409cbb56f44ecb"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"

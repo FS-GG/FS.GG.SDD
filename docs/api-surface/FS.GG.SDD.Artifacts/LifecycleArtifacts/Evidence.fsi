@@ -75,13 +75,19 @@ module Evidence =
         | PerformanceDeferred
         | PerformanceMalformed
 
+    type PerformanceEvidenceSampleSet = Fsgg.Schemas.PerformanceEvidenceSampleSet
+    type PerformanceEvidenceArtifact = Fsgg.Schemas.PerformanceEvidenceArtifact
+    type PerformanceEvidenceMeasurement = Fsgg.Schemas.PerformanceEvidenceMeasurement
+
     type PerformanceBudgetEvaluation =
         { DeclarationId: string
           ArtifactPath: string
           State: PerformanceBudgetState
           WorkloadIds: string list
           Reasons: string list
-          DeferralIssue: string option }
+          DeferralIssue: string option
+          Artifact: PerformanceEvidenceArtifact option
+          Measurements: PerformanceEvidenceMeasurement list }
 
     type EvidenceDeclaration =
         {
@@ -203,7 +209,10 @@ module Evidence =
     val allowedEvidenceResults: Set<string>
     val normalizedEvidenceResult: result: string -> string
 
-    /// Evaluate every active performance gate against the standard scaffold text artifact.
+    /// Parse the independently verifiable JSON evidence contract.
+    val parsePerformanceEvidence: text: string -> Result<PerformanceEvidenceArtifact, string list>
+
+    /// Evaluate every active performance gate against `performance-evidence-v1`.
     /// `artifactText` is an injected, already-sensed lookup; the pure artifact layer performs no IO.
     val evaluatePerformanceBudgets:
         artifactText: (string -> string option) ->

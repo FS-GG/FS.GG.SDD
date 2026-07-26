@@ -158,6 +158,47 @@ module Schemas =
         { Nodes: GovernanceHandoffEvidenceNode list
           Dependencies: GovernanceHandoffEvidenceEdge list }
 
+    /// One independently auditable run from a `performance-evidence-v1` artifact.
+    type PerformanceEvidenceSampleSet =
+        { WorkloadId: string
+          WorkloadDefinitionDigest: string
+          WorkloadClass: string
+          TargetFps: int
+          MaxP95Ms: decimal
+          MaxP99Ms: decimal
+          MaxCatchUpFrames: int
+          MeasurementScope: string
+          RequiredCapability: string
+          HostProfile: string
+          PackageVersions: string list
+          MeasurementMode: string
+          Capabilities: string list
+          WarmupPolicy: string
+          SamplePolicy: string
+          CapturedAtUtc: string
+          CurrencyToken: string
+          ProbeReadbackContaminated: bool
+          DurationSamplesMs: decimal list
+          CatchUpFrames: int list }
+
+    type PerformanceEvidenceArtifact =
+        { ContractVersion: string
+          ClaimedBudgetPassed: bool option
+          SampleSets: PerformanceEvidenceSampleSet list }
+
+    type PerformanceEvidenceMeasurement =
+        { WorkloadId: string
+          P95Ms: decimal
+          P99Ms: decimal
+          MaxCatchUpFrames: int }
+
+    /// Raw bound evidence plus SDD's reproducible calculations; not a verdict summary.
+    type GovernanceHandoffPerformanceEvidence =
+        { EvidenceId: string
+          ArtifactPath: string
+          Artifact: PerformanceEvidenceArtifact
+          Measurements: PerformanceEvidenceMeasurement list }
+
     /// A governed reference declared to the Governance boundary.
     type GovernanceHandoffReference =
         { Path: string
@@ -193,6 +234,7 @@ module Schemas =
           WorkId: string
           Sources: SchemaSourceIdentity list
           Evidence: GovernanceHandoffEvidence
+          PerformanceEvidence: GovernanceHandoffPerformanceEvidence list
           GovernedReferences: GovernanceHandoffReference list
           GovernanceConfig: GovernanceHandoffConfigPresence
           Readiness: GovernanceHandoffReadiness

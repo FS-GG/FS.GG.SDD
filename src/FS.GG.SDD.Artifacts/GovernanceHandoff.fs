@@ -30,6 +30,8 @@ module GovernanceHandoff =
         { Nodes: EvidenceNode list
           Dependencies: EvidenceEdge list }
 
+    type PerformanceEvidenceProjection = Fsgg.Schemas.GovernanceHandoffPerformanceEvidence
+
     type GovernedReference =
         { Path: string
           Owner: string
@@ -66,6 +68,7 @@ module GovernanceHandoff =
           WorkId: string
           Sources: SourceIdentity list
           Evidence: EvidenceProjection
+          PerformanceEvidence: PerformanceEvidenceProjection list
           GovernedReferences: GovernedReference list
           GovernanceConfig: GovernanceConfigPresence
           Readiness: ReadinessFacts
@@ -285,12 +288,27 @@ module GovernanceHandoff =
             model.Diagnostics @ staleDiagnostics @ performanceDiagnostics
             |> Diagnostics.sort
 
+        let performanceEvidence =
+            model.Evidence
+            |> List.choose (fun evidence ->
+                evidence.PerformanceBudget
+                |> Option.bind (fun budget ->
+                    evidence.PerformanceEvidenceArtifact
+                    |> Option.map (fun artifact ->
+                        ({ EvidenceId = evidence.Id
+                           ArtifactPath = budget.ArtifactPath
+                           Artifact = artifact
+                           Measurements = evidence.PerformanceMeasurements }
+                        : PerformanceEvidenceProjection))))
+            |> List.sortBy _.EvidenceId
+
         { SchemaVersion = Fsgg.Schemas.governanceHandoffVersion
           ContractVersion = Fsgg.Schemas.governanceHandoffContractVersion
           GeneratorVersion = generator
           WorkId = model.WorkId
           Sources = sources |> List.sortBy (fun source -> source.Artifact.Path)
           Evidence = { Nodes = nodes; Dependencies = edges }
+          PerformanceEvidence = performanceEvidence
           GovernedReferences = governedReferences
           GovernanceConfig = config
           Readiness = readiness
@@ -300,6 +318,67 @@ module GovernanceHandoff =
         match value with
         | Some text -> writer.WriteString(name, text)
         | None -> writer.WriteNull name
+
+    let writeStrings (writer: Utf8JsonWriter) (name: string) (values: string list) =
+        writer.WriteStartArray name
+        values |> List.iter (fun value -> writer.WriteStringValue(value))
+        writer.WriteEndArray()
+
+    let writePerformanceEvidence (writer: Utf8JsonWriter) (projection: PerformanceEvidenceProjection) =
+        writer.WriteStartObject()
+        writer.WriteString("evidenceId", projection.EvidenceId)
+        writer.WriteString("artifactPath", projection.ArtifactPath)
+        writer.WriteStartObject("artifact")
+        writer.WriteString("contractVersion", projection.Artifact.ContractVersion)
+
+        match projection.Artifact.ClaimedBudgetPassed with
+        | Some value -> writer.WriteBoolean("claimedBudgetPassed", value)
+        | None -> writer.WriteNull "claimedBudgetPassed"
+
+        writer.WriteStartArray "sampleSets"
+
+        for sample in projection.Artifact.SampleSets do
+            writer.WriteStartObject()
+            writer.WriteString("workloadId", sample.WorkloadId)
+            writer.WriteString("workloadDefinitionDigest", sample.WorkloadDefinitionDigest)
+            writer.WriteString("workloadClass", sample.WorkloadClass)
+            writer.WriteNumber("targetFps", sample.TargetFps)
+            writer.WriteNumber("maxP95Ms", sample.MaxP95Ms)
+            writer.WriteNumber("maxP99Ms", sample.MaxP99Ms)
+            writer.WriteNumber("maxCatchUpFrames", sample.MaxCatchUpFrames)
+            writer.WriteString("measurementScope", sample.MeasurementScope)
+            writer.WriteString("requiredCapability", sample.RequiredCapability)
+            writer.WriteString("hostProfile", sample.HostProfile)
+            writeStrings writer "packageVersions" sample.PackageVersions
+            writer.WriteString("measurementMode", sample.MeasurementMode)
+            writeStrings writer "capabilities" sample.Capabilities
+            writer.WriteString("warmupPolicy", sample.WarmupPolicy)
+            writer.WriteString("samplePolicy", sample.SamplePolicy)
+            writer.WriteString("capturedAtUtc", sample.CapturedAtUtc)
+            writer.WriteString("currencyToken", sample.CurrencyToken)
+            writer.WriteBoolean("probeReadbackContaminated", sample.ProbeReadbackContaminated)
+            writer.WriteStartArray "durationSamplesMs"
+            sample.DurationSamplesMs |> List.iter writer.WriteNumberValue
+            writer.WriteEndArray()
+            writer.WriteStartArray "catchUpFrames"
+            sample.CatchUpFrames |> List.iter writer.WriteNumberValue
+            writer.WriteEndArray()
+            writer.WriteEndObject()
+
+        writer.WriteEndArray()
+        writer.WriteEndObject()
+        writer.WriteStartArray "measurements"
+
+        for measurement in projection.Measurements do
+            writer.WriteStartObject()
+            writer.WriteString("workloadId", measurement.WorkloadId)
+            writer.WriteNumber("p95Ms", measurement.P95Ms)
+            writer.WriteNumber("p99Ms", measurement.P99Ms)
+            writer.WriteNumber("maxCatchUpFrames", measurement.MaxCatchUpFrames)
+            writer.WriteEndObject()
+
+        writer.WriteEndArray()
+        writer.WriteEndObject()
 
     let toJson (handoff: GovernanceHandoff) =
         use stream = new MemoryStream()
@@ -350,6 +429,10 @@ module GovernanceHandoff =
 
         writer.WriteEndArray()
         writer.WriteEndObject()
+
+        writer.WriteStartArray("performanceEvidence")
+        handoff.PerformanceEvidence |> List.iter (writePerformanceEvidence writer)
+        writer.WriteEndArray()
 
         writer.WriteStartArray("governedReferences")
 

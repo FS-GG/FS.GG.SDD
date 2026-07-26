@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "modelVersion": "1.0.0",
+  "modelVersion": "1.1.0",
   "workId": "002-normalized-work-model",
   "project": {
     "id": "fs-gg-sdd",
@@ -94,6 +94,7 @@
       "text": "Normalize authored lifecycle work.",
       "acceptanceCriteria": [],
       "priority": null,
+      "classification": [],
       "source": "work/002-normalized-work-model/spec.md",
       "sourceLocation": {
         "line": 16,
@@ -110,6 +111,7 @@
       "text": "Diagnose conflicting lifecycle data.",
       "acceptanceCriteria": [],
       "priority": null,
+      "classification": [],
       "source": "work/002-normalized-work-model/spec.md",
       "sourceLocation": {
         "line": 17,
@@ -124,6 +126,7 @@
       "text": "Check generated work-model currency.",
       "acceptanceCriteria": [],
       "priority": null,
+      "classification": [],
       "source": "work/002-normalized-work-model/spec.md",
       "sourceLocation": {
         "line": 18,
@@ -240,6 +243,9 @@
       ],
       "result": "pending",
       "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
       "rationale": null,
       "source": "work/002-normalized-work-model/evidence.yml",
       "sourceLocation": {
@@ -261,6 +267,9 @@
       ],
       "result": "pending",
       "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
       "rationale": null,
       "source": "work/002-normalized-work-model/evidence.yml",
       "sourceLocation": {
@@ -276,7 +285,7 @@
       "schemaVersion": 1,
       "generator": {
         "id": "FS.GG.SDD.Artifacts",
-        "version": "0.25.1"
+        "version": "0.26.0"
       },
       "sources": [
         {
@@ -328,7 +337,10 @@
           "schemaVersion": 1
         }
       ],
-      "outputDigest": null,
+      "outputDigest": {
+        "algorithm": "sha256",
+        "value": "938ca6e596c528205d0caa297bb4e1216169abea0549ac8076f1d01a83dd58ae"
+      },
       "currency": "current"
     }
   ],

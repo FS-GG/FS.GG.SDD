@@ -124,22 +124,41 @@ lifecycleNotes:
             | Error diagnostics -> failwith $"Expected performance evidence to parse, got {diagnostics}."
 
         let measured =
-            """measurement-mode=bounded-headless-update-render
-live-compositor-proof=false
-target-normal-play-p95-ms<=16.67
-target-normal-play-p99-ms<=25
-target-sustained-catch-up-frames=0
-target-scope=normal-60-fps-play
-scenario=idle-play p95-ms=38.262 p99-ms=54.88 catch-up-frames=0
-scenario=pointer-stress p95-ms=1 p99-ms=88.632 catch-up-frames=0"""
+            """{
+  "contractVersion": "performance-evidence-v1",
+  "claimedBudgetPassed": true,
+  "sampleSets": [{
+    "workloadId": "idle-play",
+    "workloadDefinitionDigest": "sha256:idle-v1",
+    "workloadClass": "normal-play",
+    "targetFps": 60,
+    "maxP95Ms": 16.67,
+    "maxP99Ms": 25,
+    "maxCatchUpFrames": 0,
+    "measurementScope": "normal-60-fps-play",
+    "requiredCapability": "bounded-headless-update-render",
+    "hostProfile": "linux-x64-ci",
+    "packageVersions": ["FS.GG.Game@1.2.3"],
+    "measurementMode": "headless",
+    "capabilities": ["bounded-headless-update-render"],
+    "warmupPolicy": "120-frames",
+    "samplePolicy": "nearest-rank/3-frames",
+    "capturedAtUtc": "2026-07-26T00:00:00Z",
+    "currencyToken": "commit:abc123",
+    "probeReadbackContaminated": false,
+    "durationSamplesMs": [10, 38.262, 54.88],
+    "catchUpFrames": [0, 0, 0]
+  }]
+}"""
 
         let evaluation =
             evaluatePerformanceBudgets (fun _ -> Some measured) [ declaration ]
             |> Assert.Single
 
         Assert.Equal(PerformanceFailed, evaluation.State)
-        Assert.Contains(evaluation.Reasons, fun reason -> reason.Contains("idle-play p95 38.262"))
-        Assert.Contains(evaluation.Reasons, fun reason -> reason.Contains("idle-play p99 54.88"))
+        Assert.Contains(evaluation.Reasons, fun reason -> reason.Contains("recomputed p95 54.88"))
+        Assert.Contains(evaluation.Reasons, fun reason -> reason.Contains("recomputed p99 54.88"))
+        Assert.Contains(evaluation.Reasons, fun reason -> reason.Contains("claimedBudgetPassed=true"))
         Assert.DoesNotContain(evaluation.Reasons, fun reason -> reason.Contains("pointer-stress"))
 
     [<Fact>]
@@ -161,19 +180,104 @@ scenario=pointer-stress p95-ms=1 p99-ms=88.632 catch-up-frames=0"""
                             DeferralIssue = Some "FS-GG/Game#999" } }
 
         let measured =
-            """measurement-mode=headless
-live-compositor-proof=false
-target-normal-play-p95-ms<=16.67
-target-normal-play-p99-ms<=25
-target-sustained-catch-up-frames=0
-target-scope=normal
-scenario=idle-play p95-ms=38.262 p99-ms=54.88 catch-up-frames=0"""
+            """{
+  "contractVersion": "performance-evidence-v1",
+  "sampleSets": [{
+    "workloadId": "idle-play",
+    "workloadDefinitionDigest": "sha256:idle-v1",
+    "workloadClass": "normal-play",
+    "targetFps": 60,
+    "maxP95Ms": 16.67,
+    "maxP99Ms": 25,
+    "maxCatchUpFrames": 0,
+    "measurementScope": "normal",
+    "requiredCapability": "headless",
+    "hostProfile": "linux-x64-ci",
+    "packageVersions": ["FS.GG.Game@1.2.3"],
+    "measurementMode": "headless",
+    "capabilities": ["headless"],
+    "warmupPolicy": "120-frames",
+    "samplePolicy": "nearest-rank/3-frames",
+    "capturedAtUtc": "2026-07-26T00:00:00Z",
+    "currencyToken": "commit:abc123",
+    "probeReadbackContaminated": false,
+    "durationSamplesMs": [10, 38.262, 54.88],
+    "catchUpFrames": [0, 0, 0]
+  }]
+}"""
 
         let evaluation =
             evaluatePerformanceBudgets (fun _ -> Some measured) [ budget ] |> Assert.Single
 
         Assert.Equal(PerformanceDeferred, evaluation.State)
         Assert.Equal(Some "FS-GG/Game#999", evaluation.DeferralIssue)
+
+    [<Fact>]
+    let ``performance evidence rejects mixed hosts and headless evidence for a live declaration`` () =
+        let declaration =
+            { EvidenceCodec.declarationSeed with
+                Id = createEvidenceId "EV687" |> Result.defaultWith failwith
+                PerformanceBudget =
+                    Some
+                        { EvidenceCodec.performanceBudgetSeed with
+                            ArtifactPath = "readiness/performance.json"
+                            TargetFps = 60
+                            WorkloadIds = [ "idle-play" ]
+                            MaxP95Ms = 16.67m
+                            MaxP99Ms = 25m
+                            MaxCatchUpFrames = 0
+                            MeasurementScope = "normal"
+                            RequiredCapability = "present-timing"
+                            LiveCompositorRequired = true } }
+
+        let sample =
+            """{
+  "workloadId":"idle-play","workloadDefinitionDigest":"sha256:idle-v1",
+  "workloadClass":"normal-play","targetFps":60,"maxP95Ms":16.67,"maxP99Ms":25,
+  "maxCatchUpFrames":0,"measurementScope":"normal","requiredCapability":"present-timing",
+  "hostProfile":"HOST","packageVersions":["FS.GG.Game@1.2.3"],"measurementMode":"headless",
+  "capabilities":["present-timing"],"warmupPolicy":"120-frames","samplePolicy":"nearest-rank/3",
+  "capturedAtUtc":"2026-07-26T00:00:00Z","currencyToken":"commit:abc123",
+  "probeReadbackContaminated":false,"durationSamplesMs":[10,11,12],"catchUpFrames":[0,0,0]
+}"""
+
+        let mixed =
+            """{"contractVersion":"performance-evidence-v1","sampleSets":[SAMPLES]}"""
+                .Replace("SAMPLES", sample.Replace("HOST", "host-a") + "," + sample.Replace("HOST", "host-b"))
+
+        let evaluation =
+            evaluatePerformanceBudgets (fun _ -> Some mixed) [ declaration ]
+            |> Assert.Single
+
+        Assert.Equal(PerformanceMalformed, evaluation.State)
+        Assert.Contains(evaluation.Reasons, fun reason -> reason.Contains("mixed digest, host"))
+        Assert.Contains(evaluation.Reasons, fun reason -> reason.Contains("live-compositor evidence is required"))
+
+    [<Fact>]
+    let ``summary-only M0 performance report is malformed`` () =
+        let declaration =
+            { EvidenceCodec.declarationSeed with
+                Id = createEvidenceId "EV688" |> Result.defaultWith failwith
+                PerformanceBudget =
+                    Some
+                        { EvidenceCodec.performanceBudgetSeed with
+                            ArtifactPath = "readiness/performance.txt"
+                            TargetFps = 60
+                            WorkloadIds = [ "idle-play" ]
+                            MaxP95Ms = 16.67m
+                            MaxP99Ms = 25m
+                            MaxCatchUpFrames = 0
+                            MeasurementScope = "normal"
+                            RequiredCapability = "headless" } }
+
+        let summary = "scenario=idle-play p95-ms=10 p99-ms=12 catch-up-frames=0"
+
+        let evaluation =
+            evaluatePerformanceBudgets (fun _ -> Some summary) [ declaration ]
+            |> Assert.Single
+
+        Assert.Equal(PerformanceMalformed, evaluation.State)
+        Assert.Contains(evaluation.Reasons, fun reason -> reason.Contains("not valid JSON"))
 
     [<Fact>]
     let ``parseEvidenceArtifact reads a bare null optional scalar as None`` () =
