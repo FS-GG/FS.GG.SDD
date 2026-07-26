@@ -78,6 +78,47 @@ module Serialization =
         writeLocation writer "sourceLocation" task.SourceLocation
         writer.WriteEndObject()
 
+    let writePerformanceArtifact (writer: Utf8JsonWriter) (name: string) (artifact: PerformanceEvidenceArtifact) =
+        writer.WriteStartObject name
+        writer.WriteString("contractVersion", artifact.ContractVersion)
+
+        match artifact.ClaimedBudgetPassed with
+        | Some value -> writer.WriteBoolean("claimedBudgetPassed", value)
+        | None -> writer.WriteNull "claimedBudgetPassed"
+
+        writer.WriteStartArray "sampleSets"
+
+        for sample in artifact.SampleSets do
+            writer.WriteStartObject()
+            writer.WriteString("workloadId", sample.WorkloadId)
+            writer.WriteString("workloadDefinitionDigest", sample.WorkloadDefinitionDigest)
+            writer.WriteString("workloadClass", sample.WorkloadClass)
+            writer.WriteNumber("targetFps", sample.TargetFps)
+            writer.WriteNumber("maxP95Ms", sample.MaxP95Ms)
+            writer.WriteNumber("maxP99Ms", sample.MaxP99Ms)
+            writer.WriteNumber("maxCatchUpFrames", sample.MaxCatchUpFrames)
+            writer.WriteString("measurementScope", sample.MeasurementScope)
+            writer.WriteString("requiredCapability", sample.RequiredCapability)
+            writer.WriteString("hostProfile", sample.HostProfile)
+            writeStringList writer SourceOrder "packageVersions" sample.PackageVersions
+            writer.WriteString("measurementMode", sample.MeasurementMode)
+            writeStringList writer SourceOrder "capabilities" sample.Capabilities
+            writer.WriteString("warmupPolicy", sample.WarmupPolicy)
+            writer.WriteString("samplePolicy", sample.SamplePolicy)
+            writer.WriteString("capturedAtUtc", sample.CapturedAtUtc)
+            writer.WriteString("currencyToken", sample.CurrencyToken)
+            writer.WriteBoolean("probeReadbackContaminated", sample.ProbeReadbackContaminated)
+            writer.WriteStartArray "durationSamplesMs"
+            sample.DurationSamplesMs |> List.iter writer.WriteNumberValue
+            writer.WriteEndArray()
+            writer.WriteStartArray "catchUpFrames"
+            sample.CatchUpFrames |> List.iter writer.WriteNumberValue
+            writer.WriteEndArray()
+            writer.WriteEndObject()
+
+        writer.WriteEndArray()
+        writer.WriteEndObject()
+
     let writeEvidence (writer: Utf8JsonWriter) (evidence: EvidenceEntry) =
         writer.WriteStartObject()
         writer.WriteString("id", evidence.Id)
@@ -97,6 +138,9 @@ module Serialization =
             writer.WriteNumber("targetFps", budget.TargetFps)
             writeStringList writer SourceOrder "workloadIds" budget.WorkloadIds
             writeStringList writer SourceOrder "stressWorkloadIds" budget.StressWorkloadIds
+            writeStringList writer SourceOrder "workloadDefinitionDigests" budget.WorkloadDefinitionDigests
+            writer.WriteString("currencyToken", budget.CurrencyToken)
+            writer.WriteString("capturedAfterUtc", budget.CapturedAfterUtc)
             writer.WriteNumber("maxP95Ms", budget.MaxP95Ms)
             writer.WriteNumber("maxP99Ms", budget.MaxP99Ms)
             writer.WriteNumber("maxCatchUpFrames", budget.MaxCatchUpFrames)
@@ -110,6 +154,22 @@ module Serialization =
 
             writer.WriteEndObject()
         | None -> writer.WriteNull "performanceBudget"
+
+        match evidence.PerformanceEvidenceArtifact with
+        | Some artifact -> writePerformanceArtifact writer "performanceEvidenceArtifact" artifact
+        | None -> writer.WriteNull "performanceEvidenceArtifact"
+
+        writer.WriteStartArray "performanceMeasurements"
+
+        for measurement in evidence.PerformanceMeasurements do
+            writer.WriteStartObject()
+            writer.WriteString("workloadId", measurement.WorkloadId)
+            writer.WriteNumber("p95Ms", measurement.P95Ms)
+            writer.WriteNumber("p99Ms", measurement.P99Ms)
+            writer.WriteNumber("maxCatchUpFrames", measurement.MaxCatchUpFrames)
+            writer.WriteEndObject()
+
+        writer.WriteEndArray()
 
         match evidence.Rationale with
         | Some rationale -> writer.WriteString("rationale", rationale)

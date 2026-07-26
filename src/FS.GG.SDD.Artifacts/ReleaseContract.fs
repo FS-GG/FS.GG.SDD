@@ -239,13 +239,13 @@ module ReleaseContract =
 
     let currentRelease () : ReleaseReadiness =
         let identity =
-            { Version = "0.25.1"
-              Channel = channelOfVersion "0.25.1"
+            { Version = "0.26.1"
+              Channel = channelOfVersion "0.26.1"
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "0.25.x"
+            [ { SddVersionLine = "0.26.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "1.x" } ]
 
@@ -263,6 +263,8 @@ module ReleaseContract =
                   "evidence[].kind"
                   "evidence[].performanceBudget"
                   "evidence[].performanceBudget.artifactPath"
+                  "evidence[].performanceBudget.capturedAfterUtc"
+                  "evidence[].performanceBudget.currencyToken"
                   "evidence[].performanceBudget.deferralIssue"
                   "evidence[].performanceBudget.liveCompositorRequired"
                   "evidence[].performanceBudget.maxCatchUpFrames"
@@ -273,6 +275,36 @@ module ReleaseContract =
                   "evidence[].performanceBudget.stressWorkloadIds"
                   "evidence[].performanceBudget.targetFps"
                   "evidence[].performanceBudget.workloadIds"
+                  "evidence[].performanceBudget.workloadDefinitionDigests"
+                  "evidence[].performanceEvidenceArtifact"
+                  "evidence[].performanceEvidenceArtifact.claimedBudgetPassed"
+                  "evidence[].performanceEvidenceArtifact.contractVersion"
+                  "evidence[].performanceEvidenceArtifact.sampleSets"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].capabilities"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].capturedAtUtc"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].catchUpFrames"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].currencyToken"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].durationSamplesMs"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].hostProfile"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].maxCatchUpFrames"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].maxP95Ms"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].maxP99Ms"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].measurementMode"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].measurementScope"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].packageVersions"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].probeReadbackContaminated"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].requiredCapability"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].samplePolicy"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].targetFps"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].warmupPolicy"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].workloadClass"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].workloadDefinitionDigest"
+                  "evidence[].performanceEvidenceArtifact.sampleSets[].workloadId"
+                  "evidence[].performanceMeasurements"
+                  "evidence[].performanceMeasurements[].maxCatchUpFrames"
+                  "evidence[].performanceMeasurements[].p95Ms"
+                  "evidence[].performanceMeasurements[].p99Ms"
+                  "evidence[].performanceMeasurements[].workloadId"
                   "evidence[].rationale"
                   "evidence[].requirementRefs"
                   "evidence[].result"
@@ -662,6 +694,38 @@ module ReleaseContract =
                       "governanceConfig.policyPresent"
                       "governanceConfig.toolingPresent"
                       "governedReferences"
+                      "performanceEvidence"
+                      "performanceEvidence[].artifact"
+                      "performanceEvidence[].artifact.claimedBudgetPassed"
+                      "performanceEvidence[].artifact.contractVersion"
+                      "performanceEvidence[].artifact.sampleSets"
+                      "performanceEvidence[].artifact.sampleSets[].capabilities"
+                      "performanceEvidence[].artifact.sampleSets[].capturedAtUtc"
+                      "performanceEvidence[].artifact.sampleSets[].catchUpFrames"
+                      "performanceEvidence[].artifact.sampleSets[].currencyToken"
+                      "performanceEvidence[].artifact.sampleSets[].durationSamplesMs"
+                      "performanceEvidence[].artifact.sampleSets[].hostProfile"
+                      "performanceEvidence[].artifact.sampleSets[].maxCatchUpFrames"
+                      "performanceEvidence[].artifact.sampleSets[].maxP95Ms"
+                      "performanceEvidence[].artifact.sampleSets[].maxP99Ms"
+                      "performanceEvidence[].artifact.sampleSets[].measurementMode"
+                      "performanceEvidence[].artifact.sampleSets[].measurementScope"
+                      "performanceEvidence[].artifact.sampleSets[].packageVersions"
+                      "performanceEvidence[].artifact.sampleSets[].probeReadbackContaminated"
+                      "performanceEvidence[].artifact.sampleSets[].requiredCapability"
+                      "performanceEvidence[].artifact.sampleSets[].samplePolicy"
+                      "performanceEvidence[].artifact.sampleSets[].targetFps"
+                      "performanceEvidence[].artifact.sampleSets[].warmupPolicy"
+                      "performanceEvidence[].artifact.sampleSets[].workloadClass"
+                      "performanceEvidence[].artifact.sampleSets[].workloadDefinitionDigest"
+                      "performanceEvidence[].artifact.sampleSets[].workloadId"
+                      "performanceEvidence[].artifactPath"
+                      "performanceEvidence[].evidenceId"
+                      "performanceEvidence[].measurements"
+                      "performanceEvidence[].measurements[].maxCatchUpFrames"
+                      "performanceEvidence[].measurements[].p95Ms"
+                      "performanceEvidence[].measurements[].p99Ms"
+                      "performanceEvidence[].measurements[].workloadId"
                       "readiness"
                       "readiness.blockingDiagnosticIds"
                       "readiness.counts"
@@ -1014,7 +1078,12 @@ module ReleaseContract =
           // fixes; F# surface diff v0.14.0..HEAD adds members, removes none). An additive release
           // carries NO migration note (`migrationNoteRequired Additive = false`); the 0.14.0 note
           // lives on disk under docs/release/migrations/ and is not carried here.
-          Migrations = [] }
+          Migrations =
+            [ { Version = identity.Version
+                Path = $"docs/release/migrations/{identity.Version}.md"
+                BreakingChanges =
+                  [ "Summary-only performance artifacts are now malformed; emit performance-evidence-v1 raw sample sets with complete workload, budget, host, package, measurement, policy, and currency bindings."
+                    "Headless or probe/readback-contaminated measurements no longer satisfy declarations that require live-compositor evidence." ] } ] }
 
     // ---- canonical serialization ----
 

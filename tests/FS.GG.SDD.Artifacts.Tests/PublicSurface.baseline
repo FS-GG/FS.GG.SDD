@@ -122,6 +122,7 @@ FS.GG.SDD.Artifacts.Evidence.obligationIsObserved
 FS.GG.SDD.Artifacts.Evidence.observedRunInconsistency
 FS.GG.SDD.Artifacts.Evidence.parseEvidence
 FS.GG.SDD.Artifacts.Evidence.parseEvidenceArtifact
+FS.GG.SDD.Artifacts.Evidence.parsePerformanceEvidence
 FS.GG.SDD.Artifacts.Evidence.passesWithoutRenderedArtifact
 FS.GG.SDD.Artifacts.Evidence.satisfiesRequiredEvidenceKinds
 FS.GG.SDD.Artifacts.FsharpIdentifier.deriveNamespace

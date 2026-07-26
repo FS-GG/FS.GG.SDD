@@ -103,7 +103,7 @@ module ReleaseContractTests =
     [<Fact>]
     let ``T011 the compatibility entry carries a Spec Kit range and tolerates a null Governance range`` () =
         let entry = List.exactlyOne release.Compatibility
-        Assert.Equal("0.25.x", entry.SddVersionLine)
+        Assert.Equal("0.26.x", entry.SddVersionLine)
         Assert.False(String.IsNullOrWhiteSpace entry.SpecKitRange)
 
         // ...and the literal above is only half the guard. What makes a compatibility entry TRUE
@@ -278,11 +278,11 @@ module ReleaseContractTests =
     // 0.10.0 predicate above, so dropping the note here does not silently delete the guard — the
     // lesson recorded in the US4 header.)
     [<Fact>]
-    let ``T023 this additive release carries no migration note`` () =
-        Assert.False(migrationNoteRequired Additive)
-
-        // Additive-empty: an additive release is obliged to carry NO note, and this one carries none.
-        Assert.Empty release.Migrations
+    let ``T023 this breaking pre-1_0 release carries its migration note`` () =
+        Assert.True(migrationNoteRequired Breaking)
+        let note = Assert.Single release.Migrations
+        Assert.Equal(release.Identity.Version, note.Version)
+        Assert.Equal($"docs/release/migrations/{release.Identity.Version}.md", note.Path)
 
     [<Fact>]
     let ``T023 a breaking release is obliged to carry a migration note`` () =

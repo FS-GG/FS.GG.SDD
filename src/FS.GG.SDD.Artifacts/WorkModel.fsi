@@ -77,6 +77,8 @@ module WorkModel =
           Result: string
           Synthetic: bool
           PerformanceBudget: PerformanceBudgetDeclaration option
+          PerformanceEvidenceArtifact: PerformanceEvidenceArtifact option
+          PerformanceMeasurements: PerformanceEvidenceMeasurement list
           Rationale: string option
           Source: string
           SourceLocation: SourceLocation option }

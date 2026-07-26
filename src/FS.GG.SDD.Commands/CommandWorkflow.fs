@@ -105,14 +105,14 @@ module CommandWorkflow =
                         // The paths only become known once `evidence.yml` has been read, so they join
                         // the existing second wave.
                         //
-                        // `Evidence` and `Verify` only: they are the two stages that evaluate evidence
-                        // (the gate + the `ED-`/`TD-` cascades). `Ship` re-reads none of it — it
-                        // aggregates the blocking findings already recorded in `verify.json` — so
-                        // probing there would read every cited artifact's bytes off disk for a verdict
-                        // nothing consults.
+                        // Evidence/verify evaluate the gate. Ship also reads cited artifacts because
+                        // performance-evidence-v1 is projected through the regenerated work model and
+                        // Governance handoff; dropping the bytes there would reduce the handoff back
+                        // to a verdict/reference summary.
                         @ (match model.Request.Command with
                            | Evidence
-                           | Verify -> citedArtifactReadEffects workId model
+                           | Verify
+                           | Ship -> citedArtifactReadEffects workId model
                            | _ -> [])
                         // FS.GG.SDD#350: the `--from-tests` report. `Evidence` only — it is the stage
                         // that RECORDS the receipt. `Verify` re-reads the receipt's report through
@@ -373,6 +373,7 @@ module CommandWorkflow =
                     let candidateReads =
                         appendNewEffects
                             ((duplicateCandidateReadEffects workId model)
+                             @ (citedArtifactReadEffects workId model)
                              @ (agentGuidanceCandidateReadEffects workId model)
                              // 056: provider-skill bodies for the re-mirror step (two-phase).
                              @ (providerSkillMirrorReads model))

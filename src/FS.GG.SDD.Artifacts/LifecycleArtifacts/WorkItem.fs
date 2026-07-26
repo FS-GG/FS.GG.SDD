@@ -161,6 +161,12 @@ module WorkItem =
             | Some(Error diagnostics) -> [], diagnostics
             | None -> [], []
 
+        let performanceArtifactPaths =
+            evidence
+            |> List.choose _.PerformanceBudget
+            |> List.map (fun budget -> normalizePath budget.ArtifactPath)
+            |> Set.ofList
+
         let kindFor path =
             requiredFiles workId
             |> List.tryFind (fun (candidate, _) -> candidate = path)
@@ -172,6 +178,8 @@ module WorkItem =
                     ArtifactKind.Checklist
                 elif path.EndsWith("/plan.md", StringComparison.OrdinalIgnoreCase) then
                     ArtifactKind.Plan
+                elif Set.contains path performanceArtifactPaths then
+                    ArtifactKind.Other "performanceEvidence"
                 elif path.Contains("/readiness/") || path.StartsWith("readiness/") then
                     ArtifactKind.GeneratedView
                 else
@@ -181,7 +189,8 @@ module WorkItem =
         let sources =
             normalized
             |> List.filter (fun snapshot ->
-                not (snapshot.Path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                (not (snapshot.Path.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                 || Set.contains snapshot.Path performanceArtifactPaths)
                 && not (snapshot.Path.EndsWith("manifest.yml", StringComparison.OrdinalIgnoreCase)))
             |> List.map (fun snapshot -> sourceIdentity snapshot (kindFor snapshot.Path))
             |> List.sortBy (fun source -> source.Artifact.Path)
@@ -189,7 +198,8 @@ module WorkItem =
         let generatedViews =
             normalized
             |> List.filter (fun snapshot ->
-                snapshot.Path.StartsWith($"readiness/{workId}/", StringComparison.OrdinalIgnoreCase))
+                snapshot.Path.StartsWith($"readiness/{workId}/", StringComparison.OrdinalIgnoreCase)
+                || Set.contains snapshot.Path performanceArtifactPaths)
 
         let governanceBoundaries =
             [ project |> Option.bind (fun project -> project.GovernancePolicyPath)

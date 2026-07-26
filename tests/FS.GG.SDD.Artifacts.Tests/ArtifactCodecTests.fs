@@ -502,6 +502,9 @@ module ArtifactCodecTests =
                           TargetFps = 61
                           WorkloadIds = [ "workloadval" ]
                           StressWorkloadIds = [ "stressval" ]
+                          WorkloadDefinitionDigests = [ "workloadval=sha256:workload"; "stressval=sha256:stress" ]
+                          CurrencyToken = "commit:abc123"
+                          CapturedAfterUtc = "2026-07-25T00:00:00Z"
                           MaxP95Ms = 16.7m
                           MaxP99Ms = 25.1m
                           MaxCatchUpFrames = 2

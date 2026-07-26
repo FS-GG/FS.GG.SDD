@@ -55,7 +55,7 @@ module SchemaVersionConstantTests =
         Assert.Equal(1, Schemas.governanceHandoffVersion)
         // 1.1.0: ADR-0035 stage 3 / FS.GG.SDD#422 — `ship.unobservedEvidence` reachable in
         // readiness.blockingDiagnosticIds[]. Additive ⇒ minor.
-        Assert.Equal("1.1.0", Schemas.governanceHandoffContractVersion)
+        Assert.Equal("1.2.0", Schemas.governanceHandoffContractVersion)
         // Feature 057 / ADR-0014: the skill-manifest contract starts at schema version 1.
         Assert.Equal(1, Schemas.skillManifestVersion)
 

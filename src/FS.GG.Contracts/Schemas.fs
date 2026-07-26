@@ -116,6 +116,45 @@ module Schemas =
         { Nodes: GovernanceHandoffEvidenceNode list
           Dependencies: GovernanceHandoffEvidenceEdge list }
 
+    type PerformanceEvidenceSampleSet =
+        { WorkloadId: string
+          WorkloadDefinitionDigest: string
+          WorkloadClass: string
+          TargetFps: int
+          MaxP95Ms: decimal
+          MaxP99Ms: decimal
+          MaxCatchUpFrames: int
+          MeasurementScope: string
+          RequiredCapability: string
+          HostProfile: string
+          PackageVersions: string list
+          MeasurementMode: string
+          Capabilities: string list
+          WarmupPolicy: string
+          SamplePolicy: string
+          CapturedAtUtc: string
+          CurrencyToken: string
+          ProbeReadbackContaminated: bool
+          DurationSamplesMs: decimal list
+          CatchUpFrames: int list }
+
+    type PerformanceEvidenceArtifact =
+        { ContractVersion: string
+          ClaimedBudgetPassed: bool option
+          SampleSets: PerformanceEvidenceSampleSet list }
+
+    type PerformanceEvidenceMeasurement =
+        { WorkloadId: string
+          P95Ms: decimal
+          P99Ms: decimal
+          MaxCatchUpFrames: int }
+
+    type GovernanceHandoffPerformanceEvidence =
+        { EvidenceId: string
+          ArtifactPath: string
+          Artifact: PerformanceEvidenceArtifact
+          Measurements: PerformanceEvidenceMeasurement list }
+
     type GovernanceHandoffReference =
         { Path: string
           Owner: string
@@ -147,6 +186,7 @@ module Schemas =
           WorkId: string
           Sources: SchemaSourceIdentity list
           Evidence: GovernanceHandoffEvidence
+          PerformanceEvidence: GovernanceHandoffPerformanceEvidence list
           GovernedReferences: GovernanceHandoffReference list
           GovernanceConfig: GovernanceHandoffConfigPresence
           Readiness: GovernanceHandoffReadiness
@@ -182,7 +222,7 @@ module Schemas =
     // `governance-handoff-emitted-version` tracks it). Until it lands, the two are kept in step by
     // hand — so change this value only alongside the registry.
     let governanceHandoffVersion = 1
-    let governanceHandoffContractVersion = "1.1.0"
+    let governanceHandoffContractVersion = "1.2.0"
     // SDD-owned skill-vendoring contract (ADR-0014). The manifest is the producer's
     // declarative skill set; the root set is a single declared constant.
     let skillManifestVersion = 1

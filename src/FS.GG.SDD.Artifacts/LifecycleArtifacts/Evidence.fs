@@ -69,6 +69,9 @@ module Evidence =
           TargetFps: int
           WorkloadIds: string list
           StressWorkloadIds: string list
+          WorkloadDefinitionDigests: string list
+          CurrencyToken: string
+          CapturedAfterUtc: string
           MaxP95Ms: decimal
           MaxP99Ms: decimal
           MaxCatchUpFrames: int
@@ -83,13 +86,19 @@ module Evidence =
         | PerformanceDeferred
         | PerformanceMalformed
 
+    type PerformanceEvidenceSampleSet = Fsgg.Schemas.PerformanceEvidenceSampleSet
+    type PerformanceEvidenceArtifact = Fsgg.Schemas.PerformanceEvidenceArtifact
+    type PerformanceEvidenceMeasurement = Fsgg.Schemas.PerformanceEvidenceMeasurement
+
     type PerformanceBudgetEvaluation =
         { DeclarationId: string
           ArtifactPath: string
           State: PerformanceBudgetState
           WorkloadIds: string list
           Reasons: string list
-          DeferralIssue: string option }
+          DeferralIssue: string option
+          Artifact: PerformanceEvidenceArtifact option
+          Measurements: PerformanceEvidenceMeasurement list }
 
     type EvidenceDeclaration =
         {
@@ -355,7 +364,7 @@ module Evidence =
                     | _ -> None)
             | _ -> None)
 
-    let evaluatePerformanceBudgets
+    let private evaluateLegacyPerformanceBudgets
         (artifactText: string -> string option)
         (declarations: EvidenceDeclaration list)
         : PerformanceBudgetEvaluation list =
@@ -468,7 +477,463 @@ module Evidence =
                   State = state
                   WorkloadIds = budget.WorkloadIds |> List.distinct |> List.sort
                   Reasons = reasons
-                  DeferralIssue = budget.DeferralIssue }))
+                  DeferralIssue = budget.DeferralIssue
+                  Artifact = None
+                  Measurements = [] }))
+        |> List.sortBy _.DeclarationId
+
+    let private tryProperty (name: string) (element: JsonElement) =
+        match element.TryGetProperty name with
+        | true, value -> Some value
+        | _ -> None
+
+    let private jsonString (name: string) (element: JsonElement) =
+        tryProperty name element
+        |> Option.filter (fun value -> value.ValueKind = JsonValueKind.String)
+        |> Option.bind (fun value -> value.GetString() |> Option.ofObj)
+        |> Option.defaultValue ""
+
+    let private jsonInt (name: string) (element: JsonElement) =
+        tryProperty name element
+        |> Option.bind (fun value ->
+            match value.TryGetInt32() with
+            | true, parsed -> Some parsed
+            | _ -> None)
+        |> Option.defaultValue Int32.MinValue
+
+    let private jsonDecimal (name: string) (element: JsonElement) =
+        tryProperty name element
+        |> Option.bind (fun value ->
+            match value.TryGetDecimal() with
+            | true, parsed -> Some parsed
+            | _ -> None)
+        |> Option.defaultValue -1m
+
+    let private jsonBool (name: string) (element: JsonElement) =
+        tryProperty name element
+        |> Option.filter (fun value -> value.ValueKind = JsonValueKind.True || value.ValueKind = JsonValueKind.False)
+        |> Option.map _.GetBoolean()
+        |> Option.defaultValue false
+
+    let private jsonList (read: JsonElement -> 'a option) (name: string) (element: JsonElement) =
+        tryProperty name element
+        |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Array)
+        |> Option.map (fun value -> value.EnumerateArray() |> Seq.choose read |> List.ofSeq)
+        |> Option.defaultValue []
+
+    let private jsonStrings name element =
+        jsonList
+            (fun item ->
+                if item.ValueKind = JsonValueKind.String then
+                    item.GetString() |> Option.ofObj
+                else
+                    None)
+            name
+            element
+
+    let private jsonDecimals name element =
+        jsonList
+            (fun item ->
+                match item.TryGetDecimal() with
+                | true, value -> Some value
+                | _ -> None)
+            name
+            element
+
+    let private jsonInts name element =
+        jsonList
+            (fun item ->
+                match item.TryGetInt32() with
+                | true, value -> Some value
+                | _ -> None)
+            name
+            element
+
+    let parsePerformanceEvidence (text: string) : Result<PerformanceEvidenceArtifact, string list> =
+        try
+            use document = JsonDocument.Parse text
+            let root = document.RootElement
+
+            if root.ValueKind <> JsonValueKind.Object then
+                Error [ "performance evidence root must be a JSON object" ]
+            else
+                let contractVersion = jsonString "contractVersion" root
+
+                let claimed =
+                    tryProperty "claimedBudgetPassed" root
+                    |> Option.bind (fun value ->
+                        if value.ValueKind = JsonValueKind.True || value.ValueKind = JsonValueKind.False then
+                            Some(value.GetBoolean())
+                        else
+                            None)
+
+                let parsedSampleSets =
+                    tryProperty "sampleSets" root
+                    |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Array)
+                    |> Option.map (fun value ->
+                        value.EnumerateArray()
+                        |> Seq.map (fun item ->
+                            let sample: Fsgg.Schemas.PerformanceEvidenceSampleSet =
+                                { WorkloadId = jsonString "workloadId" item
+                                  WorkloadDefinitionDigest = jsonString "workloadDefinitionDigest" item
+                                  WorkloadClass = jsonString "workloadClass" item
+                                  TargetFps = jsonInt "targetFps" item
+                                  MaxP95Ms = jsonDecimal "maxP95Ms" item
+                                  MaxP99Ms = jsonDecimal "maxP99Ms" item
+                                  MaxCatchUpFrames = jsonInt "maxCatchUpFrames" item
+                                  MeasurementScope = jsonString "measurementScope" item
+                                  RequiredCapability = jsonString "requiredCapability" item
+                                  HostProfile = jsonString "hostProfile" item
+                                  PackageVersions = jsonStrings "packageVersions" item
+                                  MeasurementMode = jsonString "measurementMode" item
+                                  Capabilities = jsonStrings "capabilities" item
+                                  WarmupPolicy = jsonString "warmupPolicy" item
+                                  SamplePolicy = jsonString "samplePolicy" item
+                                  CapturedAtUtc = jsonString "capturedAtUtc" item
+                                  CurrencyToken = jsonString "currencyToken" item
+                                  ProbeReadbackContaminated = jsonBool "probeReadbackContaminated" item
+                                  DurationSamplesMs = jsonDecimals "durationSamplesMs" item
+                                  CatchUpFrames = jsonInts "catchUpFrames" item }
+
+                            let itemErrors =
+                                [ match tryProperty "probeReadbackContaminated" item with
+                                  | Some property when
+                                      property.ValueKind = JsonValueKind.True
+                                      || property.ValueKind = JsonValueKind.False
+                                      ->
+                                      ()
+                                  | _ ->
+                                      let id =
+                                          if String.IsNullOrWhiteSpace sample.WorkloadId then
+                                              "<missing workloadId>"
+                                          else
+                                              sample.WorkloadId
+
+                                      $"{id} probeReadbackContaminated must be present and boolean" ]
+
+                            sample, itemErrors)
+                        |> List.ofSeq)
+                    |> Option.defaultValue []
+
+                let sampleSets = parsedSampleSets |> List.map fst
+
+                let errors =
+                    [ if contractVersion <> "performance-evidence-v1" then
+                          "contractVersion must be 'performance-evidence-v1'"
+                      if List.isEmpty sampleSets then
+                          "sampleSets must contain at least one independently verifiable sample set"
+                      yield! parsedSampleSets |> List.collect snd ]
+
+                if List.isEmpty errors then
+                    Ok
+                        { ContractVersion = contractVersion
+                          ClaimedBudgetPassed = claimed
+                          SampleSets = sampleSets }
+                else
+                    Error errors
+        with :? JsonException as ex ->
+            Error [ $"performance evidence is not valid JSON: {ex.Message}" ]
+
+    let private nearestRank percentile samples =
+        let ordered = samples |> List.sort
+        ordered.[max 0 (int (Math.Ceiling(percentile * float ordered.Length)) - 1)]
+
+    let private sampleBinding (sample: PerformanceEvidenceSampleSet) =
+        sample.WorkloadDefinitionDigest,
+        sample.HostProfile,
+        (List.sort sample.PackageVersions),
+        sample.MeasurementMode,
+        sample.MeasurementScope,
+        sample.RequiredCapability,
+        (List.sort sample.Capabilities),
+        sample.WarmupPolicy,
+        sample.SamplePolicy,
+        sample.CapturedAtUtc,
+        sample.CurrencyToken,
+        sample.ProbeReadbackContaminated
+
+    let private workloadDefinitionBindings (entries: string list) =
+        entries
+        |> List.choose (fun entry ->
+            let separator = entry.IndexOf('=')
+
+            if separator <= 0 || separator = entry.Length - 1 then
+                None
+            else
+                Some(entry.Substring(0, separator).Trim(), entry.Substring(separator + 1).Trim()))
+
+    let private tryIsoTimestamp (value: string) =
+        if
+            String.IsNullOrWhiteSpace value
+            || not (
+                Regex.IsMatch(
+                    value,
+                    @"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,7})?(?:Z|[+-]\d{2}:\d{2})$",
+                    RegexOptions.CultureInvariant
+                )
+            )
+        then
+            None
+        else
+            match DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None) with
+            | true, parsed -> Some parsed
+            | _ -> None
+
+    let evaluatePerformanceBudgets
+        (artifactText: string -> string option)
+        (declarations: EvidenceDeclaration list)
+        : PerformanceBudgetEvaluation list =
+        declarations
+        |> List.choose (fun declaration ->
+            declaration.PerformanceBudget
+            |> Option.map (fun budget ->
+                let declarationErrors =
+                    let workloadDefinitions =
+                        workloadDefinitionBindings budget.WorkloadDefinitionDigests
+
+                    let declaredIds = budget.WorkloadIds @ budget.StressWorkloadIds |> List.distinct
+
+                    [ if String.IsNullOrWhiteSpace budget.ArtifactPath then
+                          "artifactPath is required"
+                      if budget.TargetFps <= 0 then
+                          "targetFps must be positive"
+                      if List.isEmpty budget.WorkloadIds then
+                          "workloadIds must name at least one active normal-play workload"
+                      if workloadDefinitions.Length <> budget.WorkloadDefinitionDigests.Length then
+                          "workloadDefinitionDigests entries must use '<workloadId>=<digest>'"
+                      for workloadId in declaredIds do
+                          let matches = workloadDefinitions |> List.filter (fun (id, _) -> id = workloadId)
+
+                          if List.isEmpty matches then
+                              $"workloadDefinitionDigests must bind '{workloadId}'"
+                          elif matches.Length <> 1 then
+                              $"workloadDefinitionDigests must bind '{workloadId}' exactly once"
+                      for workloadId, _ in workloadDefinitions do
+                          if not (List.contains workloadId declaredIds) then
+                              $"workloadDefinitionDigests binds undeclared workload '{workloadId}'"
+                      if String.IsNullOrWhiteSpace budget.CurrencyToken then
+                          "currencyToken is required"
+                      if tryIsoTimestamp budget.CapturedAfterUtc |> Option.isNone then
+                          "capturedAfterUtc must be an ISO-8601 timestamp"
+                      if budget.MaxP95Ms <= 0m then
+                          "maxP95Ms must be positive"
+                      if budget.MaxP99Ms <= 0m then
+                          "maxP99Ms must be positive"
+                      if budget.MaxCatchUpFrames < 0 then
+                          "maxCatchUpFrames cannot be negative"
+                      if String.IsNullOrWhiteSpace budget.MeasurementScope then
+                          "measurementScope is required"
+                      if String.IsNullOrWhiteSpace budget.RequiredCapability then
+                          "requiredCapability is required"
+                      let overlap =
+                          Set.intersect (Set.ofList budget.WorkloadIds) (Set.ofList budget.StressWorkloadIds)
+
+                      if not (Set.isEmpty overlap) then
+                          let names = String.concat ", " (Set.toList overlap)
+                          $"normal and stress workload ids overlap: {names}" ]
+
+                let finish state reasons artifact measurements =
+                    { DeclarationId = declaration.Id.Value
+                      ArtifactPath = budget.ArtifactPath
+                      State = state
+                      WorkloadIds = budget.WorkloadIds |> List.distinct |> List.sort
+                      Reasons = reasons
+                      DeferralIssue = budget.DeferralIssue
+                      Artifact = artifact
+                      Measurements = measurements }
+
+                if not (List.isEmpty declarationErrors) then
+                    finish PerformanceMalformed declarationErrors None []
+                else
+                    match artifactText budget.ArtifactPath with
+                    | None ->
+                        finish
+                            PerformanceMalformed
+                            [ $"performance artifact '{budget.ArtifactPath}' is absent" ]
+                            None
+                            []
+                    | Some text ->
+                        match parsePerformanceEvidence text with
+                        | Error errors -> finish PerformanceMalformed errors None []
+                        | Ok artifact ->
+                            let declaredIds = Set.ofList (budget.WorkloadIds @ budget.StressWorkloadIds)
+
+                            let expectedDefinitions =
+                                workloadDefinitionBindings budget.WorkloadDefinitionDigests |> Map.ofList
+
+                            let capturedAfter = tryIsoTimestamp budget.CapturedAfterUtc |> Option.get
+
+                            let bindingErrors =
+                                [ for sample in artifact.SampleSets do
+                                      let id =
+                                          if String.IsNullOrWhiteSpace sample.WorkloadId then
+                                              "<missing workloadId>"
+                                          else
+                                              sample.WorkloadId
+
+                                      if not (Set.contains sample.WorkloadId declaredIds) then
+                                          $"{id} is not a declared workload"
+
+                                      if String.IsNullOrWhiteSpace sample.WorkloadDefinitionDigest then
+                                          $"{id} workloadDefinitionDigest is required"
+                                      elif
+                                          Map.tryFind sample.WorkloadId expectedDefinitions
+                                          <> Some sample.WorkloadDefinitionDigest
+                                      then
+                                          $"{id} workloadDefinitionDigest does not match the declaration"
+
+                                      if String.IsNullOrWhiteSpace sample.HostProfile then
+                                          $"{id} hostProfile is required"
+
+                                      if List.isEmpty sample.PackageVersions then
+                                          $"{id} packageVersions must not be empty"
+
+                                      if String.IsNullOrWhiteSpace sample.WarmupPolicy then
+                                          $"{id} warmupPolicy is required"
+
+                                      if String.IsNullOrWhiteSpace sample.SamplePolicy then
+                                          $"{id} samplePolicy is required"
+
+                                      if String.IsNullOrWhiteSpace sample.CapturedAtUtc then
+                                          $"{id} capturedAtUtc is required"
+                                      else
+                                          match tryIsoTimestamp sample.CapturedAtUtc with
+                                          | None -> $"{id} capturedAtUtc must be an ISO-8601 timestamp"
+                                          | Some captured when captured < capturedAfter ->
+                                              $"{id} capturedAtUtc predates declared capturedAfterUtc"
+                                          | Some _ -> ()
+
+                                      if String.IsNullOrWhiteSpace sample.CurrencyToken then
+                                          $"{id} currencyToken is required"
+                                      elif sample.CurrencyToken <> budget.CurrencyToken then
+                                          $"{id} currencyToken does not match the declaration"
+
+                                      if List.isEmpty sample.DurationSamplesMs then
+                                          $"{id} durationSamplesMs must not be empty"
+
+                                      if sample.DurationSamplesMs |> List.exists (fun value -> value < 0m) then
+                                          $"{id} durationSamplesMs cannot contain negative values"
+
+                                      if List.isEmpty sample.CatchUpFrames then
+                                          $"{id} catchUpFrames must not be empty"
+
+                                      if sample.CatchUpFrames |> List.exists (fun value -> value < 0) then
+                                          $"{id} catchUpFrames cannot contain negative values"
+
+                                      if sample.TargetFps <> budget.TargetFps then
+                                          $"{id} targetFps {sample.TargetFps} does not match declared {budget.TargetFps}"
+
+                                      if sample.MaxP95Ms <> budget.MaxP95Ms then
+                                          $"{id} maxP95Ms does not match the declaration"
+
+                                      if sample.MaxP99Ms <> budget.MaxP99Ms then
+                                          $"{id} maxP99Ms does not match the declaration"
+
+                                      if sample.MaxCatchUpFrames <> budget.MaxCatchUpFrames then
+                                          $"{id} maxCatchUpFrames does not match the declaration"
+
+                                      if sample.MeasurementScope <> budget.MeasurementScope then
+                                          $"{id} measurementScope does not match the declaration"
+
+                                      if
+                                          sample.RequiredCapability <> budget.RequiredCapability
+                                          || not (List.contains budget.RequiredCapability sample.Capabilities)
+                                      then
+                                          $"{id} does not bind the required capability '{budget.RequiredCapability}'"
+
+                                      if
+                                          sample.MeasurementMode <> "headless"
+                                          && sample.MeasurementMode <> "live-compositor"
+                                      then
+                                          $"{id} measurementMode '{sample.MeasurementMode}' is unsupported"
+
+                                      if
+                                          budget.LiveCompositorRequired && sample.MeasurementMode <> "live-compositor"
+                                      then
+                                          $"{id} uses '{sample.MeasurementMode}' but live-compositor evidence is required"
+
+                                      if budget.LiveCompositorRequired && sample.ProbeReadbackContaminated then
+                                          $"{id} is probe/readback contaminated and cannot prove live-compositor performance"
+
+                                  for workloadId in budget.WorkloadIds do
+                                      let sets =
+                                          artifact.SampleSets |> List.filter (fun set -> set.WorkloadId = workloadId)
+
+                                      if List.isEmpty sets then
+                                          $"normal-play workload '{workloadId}' is absent"
+                                      elif sets |> List.exists (fun set -> set.WorkloadClass <> "normal-play") then
+                                          $"{workloadId} must be classified as normal-play"
+                                      elif sets |> List.map sampleBinding |> List.distinct |> List.length > 1 then
+                                          $"{workloadId} sample sets have mixed digest, host, package, mode, scope, capability, policy, capture-time, currency, or contamination bindings"
+
+                                  for workloadId in budget.StressWorkloadIds do
+                                      let sets =
+                                          artifact.SampleSets |> List.filter (fun set -> set.WorkloadId = workloadId)
+
+                                      if
+                                          sets |> List.exists (fun set -> set.WorkloadClass <> "stress-throughput")
+                                      then
+                                          $"{workloadId} must be classified as stress-throughput"
+                                      elif sets |> List.map sampleBinding |> List.distinct |> List.length > 1 then
+                                          $"{workloadId} sample sets have mixed digest, host, package, mode, scope, capability, policy, capture-time, currency, or contamination bindings" ]
+
+                            let measurements =
+                                budget.WorkloadIds @ budget.StressWorkloadIds
+                                |> List.distinct
+                                |> List.choose (fun workloadId ->
+                                    let sets =
+                                        artifact.SampleSets |> List.filter (fun set -> set.WorkloadId = workloadId)
+
+                                    let durations = sets |> List.collect _.DurationSamplesMs
+                                    let catchUps = sets |> List.collect _.CatchUpFrames
+
+                                    if List.isEmpty durations || List.isEmpty catchUps then
+                                        None
+                                    else
+                                        let measured: Fsgg.Schemas.PerformanceEvidenceMeasurement =
+                                            { WorkloadId = workloadId
+                                              P95Ms = nearestRank 0.95 durations
+                                              P99Ms = nearestRank 0.99 durations
+                                              MaxCatchUpFrames = List.max catchUps }
+
+                                        Some measured)
+
+                            let measurementFailures =
+                                [ for measured in measurements do
+                                      if
+                                          List.contains measured.WorkloadId budget.WorkloadIds
+                                          && measured.P95Ms > budget.MaxP95Ms
+                                      then
+                                          $"{measured.WorkloadId} recomputed p95 {decimalText measured.P95Ms} ms exceeds {decimalText budget.MaxP95Ms} ms"
+
+                                      if
+                                          List.contains measured.WorkloadId budget.WorkloadIds
+                                          && measured.P99Ms > budget.MaxP99Ms
+                                      then
+                                          $"{measured.WorkloadId} recomputed p99 {decimalText measured.P99Ms} ms exceeds {decimalText budget.MaxP99Ms} ms"
+
+                                      if
+                                          List.contains measured.WorkloadId budget.WorkloadIds
+                                          && measured.MaxCatchUpFrames > budget.MaxCatchUpFrames
+                                      then
+                                          $"{measured.WorkloadId} recomputed catch-up frames {measured.MaxCatchUpFrames} exceeds {budget.MaxCatchUpFrames}" ]
+
+                            let failures =
+                                [ yield! measurementFailures
+                                  if
+                                      artifact.ClaimedBudgetPassed = Some true
+                                      && not (List.isEmpty measurementFailures)
+                                  then
+                                      "claimedBudgetPassed=true disagrees with the raw samples" ]
+
+                            if not (List.isEmpty bindingErrors) then
+                                finish PerformanceMalformed bindingErrors (Some artifact) measurements
+                            elif List.isEmpty failures then
+                                finish PerformancePassed [] (Some artifact) measurements
+                            elif Option.isSome budget.DeferralIssue then
+                                finish PerformanceDeferred failures (Some artifact) measurements
+                            else
+                                finish PerformanceFailed failures (Some artifact) measurements))
         |> List.sortBy _.DeclarationId
 
     /// The visual-inspection artifact rule (FS.GG.SDD#306, FR-004), stated once. A declaration that
@@ -792,6 +1257,9 @@ module Evidence =
               TargetFps = 0
               WorkloadIds = []
               StressWorkloadIds = []
+              WorkloadDefinitionDigests = []
+              CurrencyToken = ""
+              CapturedAfterUtc = ""
               MaxP95Ms = -1m
               MaxP99Ms = -1m
               MaxCatchUpFrames = -1
@@ -809,6 +1277,16 @@ module Evidence =
               ArtifactCodec.alwaysInlineList "stressWorkloadIds" _.StressWorkloadIds (fun value budget ->
                   { budget with
                       StressWorkloadIds = value })
+              ArtifactCodec.alwaysInlineList
+                  "workloadDefinitionDigests"
+                  _.WorkloadDefinitionDigests
+                  (fun value budget ->
+                      { budget with
+                          WorkloadDefinitionDigests = value })
+              ArtifactCodec.requiredScalar "currencyToken" _.CurrencyToken (fun value budget ->
+                  { budget with CurrencyToken = value })
+              ArtifactCodec.requiredScalar "capturedAfterUtc" _.CapturedAfterUtc (fun value budget ->
+                  { budget with CapturedAfterUtc = value })
               ArtifactCodec.mappedScalar "maxP95Ms" decimalText (decimalInvariant -1m) _.MaxP95Ms (fun value budget ->
                   { budget with MaxP95Ms = value })
               ArtifactCodec.mappedScalar "maxP99Ms" decimalText (decimalInvariant -1m) _.MaxP99Ms (fun value budget ->
