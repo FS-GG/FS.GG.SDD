@@ -45,7 +45,7 @@ For each row in the embedded `driver-skill-manifest.json`, in id order
    the no-clobber `AgentGuidanceTarget` write kind — an author-edited or pre-existing copy is
    preserved.
 
-The delivered `FS.GG.Drivers 0.8.0` ships three `scope: driver`,
+The delivered `FS.GG.Drivers 0.8.1` ships three `scope: driver`,
 `materializes-when: always` rows: `padd-item`, `work-board`, and `work-roadmap`. It also carries
 `drive-board`, `p-add`, and `cut-nuget-release` as `scope: operator`,
 `materializes-when: false`; those operator commands are withheld from product workspaces.

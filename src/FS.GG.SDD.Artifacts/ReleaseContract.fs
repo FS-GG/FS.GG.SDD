@@ -239,8 +239,8 @@ module ReleaseContract =
 
     let currentRelease () : ReleaseReadiness =
         let identity =
-            { Version = "0.29.0"
-              Channel = channelOfVersion "0.29.0"
+            { Version = "0.29.1"
+              Channel = channelOfVersion "0.29.1"
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
@@ -1123,10 +1123,10 @@ module ReleaseContract =
           //
           // And enumerate EVERY breaking change: a note that under-reports is the exact failure
           // the note exists to prevent.
-          // 0.29.0 is ADDITIVE: it updates the embedded owner-skills package so newly scaffolded
-          // product workspaces receive the current owner-authored skill set. No public SDD
-          // command/output contract is removed or retyped. An additive release carries no
-          // migration note.
+          // 0.29.1 is CLARIFYING: it republishes the CLI against FS.GG.Drivers 0.8.1 so the
+          // embedded package manifest matches current producer truth. The delivered driver
+          // skill bodies and every public SDD command/output contract are unchanged. A
+          // clarifying release carries no migration note.
           Migrations = [] }
 
     // ---- canonical serialization ----
