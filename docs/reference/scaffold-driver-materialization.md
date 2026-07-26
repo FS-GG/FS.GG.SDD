@@ -49,13 +49,18 @@ For each row in the embedded `driver-skill-manifest.json`, in id order
    members receive their executable bit. A provider-owned same-id skill owns its complete
    directory, so SDD never creates a mixed provider/driver tree.
 
-The delivered `FS.GG.Drivers 0.8.1` ships three `scope: driver`,
+The delivered `FS.GG.Drivers 0.8.3` ships three `scope: driver`,
 `materializes-when: always` rows: `padd-item`, `work-board`, and `work-roadmap`. It also carries
 `drive-board`, `p-add`, and `cut-nuget-release` as `scope: operator`,
 `materializes-when: false`; those operator commands are withheld from product workspaces.
 `padd-item` files a described issue onto the product workspace's explicitly configured organization,
 named-user, or viewer GitHub Projects v2 board. Its package-delivered guidance refuses missing wiring
 without mutation and never falls back to the FS-GG organization board.
+
+The 0.8.3 payload is closed under product materialization: its real Markdown links target packaged
+members or guaranteed product siblings. Conditional coordination-kit dependencies remain named
+requirements rather than filesystem links. The fresh-scaffold regression resolves every remaining
+relative link, including parent-relative targets; it has no prefix-based escape hatch.
 
 ## Provenance and refresh
 

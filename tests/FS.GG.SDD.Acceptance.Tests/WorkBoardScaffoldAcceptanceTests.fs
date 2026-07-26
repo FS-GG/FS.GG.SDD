@@ -86,7 +86,7 @@ module WorkBoardScaffoldAcceptanceTests =
             assembly.GetManifestResourceNames()
             |> Array.tryFind (fun n -> n.Replace('\\', '/') = $"Driver.skill/{id}/SKILL.md")
             |> Option.defaultWith (fun () ->
-                failwith $"the {id} driver body must be embedded in FS.GG.SDD.Commands (FS.GG.Drivers 0.8.0).")
+                failwith $"the {id} driver body must be embedded in FS.GG.SDD.Commands (FS.GG.Drivers 0.8.3).")
 
         match assembly.GetManifestResourceStream name with
         | null -> failwith $"the embedded {id} driver body could not be opened."

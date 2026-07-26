@@ -28,7 +28,8 @@ scripts therefore arrive with `SKILL.md` instead of becoming dangling links.
 - Schema-v2 parser tests cover valid, malformed, duplicate, traversal, and tree-digest cases.
 - Materializer tests cover missing, extra, unreadable, digest-mismatched, and executable members.
 - A real fresh scaffold contains every declared work-board/work-roadmap file in all three roots;
-  every directory-local Markdown link resolves.
+  every relative Markdown link resolves in the composed workspace, including parent-relative
+  product-sibling targets.
 - A legacy `SKILL.md`-only workspace upgrades to complete directories and complete provenance.
 
 ## Boundaries

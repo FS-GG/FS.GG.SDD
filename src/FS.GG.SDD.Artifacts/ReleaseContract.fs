@@ -239,8 +239,8 @@ module ReleaseContract =
 
     let currentRelease () : ReleaseReadiness =
         let identity =
-            { Version = "0.31.0"
-              Channel = channelOfVersion "0.31.0"
+            { Version = "0.31.1"
+              Channel = channelOfVersion "0.31.1"
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
@@ -1127,9 +1127,9 @@ module ReleaseContract =
           //
           // And enumerate EVERY breaking change: a note that under-reports is the exact failure
           // the note exists to prevent.
-          // 0.31.0 is ADDITIVE: schema-v2 driver manifests describe complete content-addressed
-          // directories, and scaffold/upgrade materialize their verified auxiliary files.
-          // Schema-v1 single-file manifests remain supported, so no migration note is required.
+          // 0.31.1 is a PATCH: it adopts the link-closed FS.GG.Drivers 0.8.3 payload and makes the
+          // existing composed-workspace regression verify parent-relative links. Public schemas and
+          // the schema-v1 compatibility path are unchanged, so no migration note is required.
           Migrations = [] }
 
     // ---- canonical serialization ----
