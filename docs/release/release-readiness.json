@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "generatorVersion": {
     "id": "FS.GG.SDD.Artifacts",
-    "version": "0.26.0"
+    "version": "0.26.1"
   },
   "identity": {
-    "version": "0.26.0",
+    "version": "0.26.1",
     "channel": "preRelease",
     "packageIds": [
       "FS.GG.SDD.Artifacts",
@@ -3591,8 +3591,8 @@
   ],
   "migrations": [
     {
-      "version": "0.26.0",
-      "path": "docs/release/migrations/0.26.0.md",
+      "version": "0.26.1",
+      "path": "docs/release/migrations/0.26.1.md",
       "breakingChanges": [
         "Summary-only performance artifacts are now malformed; emit performance-evidence-v1 raw sample sets with complete workload, budget, host, package, measurement, policy, and currency bindings.",
         "Headless or probe/readback-contaminated measurements no longer satisfy declarations that require live-compositor evidence."

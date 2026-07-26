@@ -567,7 +567,7 @@ module Evidence =
                         else
                             None)
 
-                let sampleSets =
+                let parsedSampleSets =
                     tryProperty "sampleSets" root
                     |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Array)
                     |> Option.map (fun value ->
@@ -595,15 +595,34 @@ module Evidence =
                                   DurationSamplesMs = jsonDecimals "durationSamplesMs" item
                                   CatchUpFrames = jsonInts "catchUpFrames" item }
 
-                            sample)
+                            let itemErrors =
+                                [ match tryProperty "probeReadbackContaminated" item with
+                                  | Some property when
+                                      property.ValueKind = JsonValueKind.True
+                                      || property.ValueKind = JsonValueKind.False
+                                      ->
+                                      ()
+                                  | _ ->
+                                      let id =
+                                          if String.IsNullOrWhiteSpace sample.WorkloadId then
+                                              "<missing workloadId>"
+                                          else
+                                              sample.WorkloadId
+
+                                      $"{id} probeReadbackContaminated must be present and boolean" ]
+
+                            sample, itemErrors)
                         |> List.ofSeq)
                     |> Option.defaultValue []
+
+                let sampleSets = parsedSampleSets |> List.map fst
 
                 let errors =
                     [ if contractVersion <> "performance-evidence-v1" then
                           "contractVersion must be 'performance-evidence-v1'"
                       if List.isEmpty sampleSets then
-                          "sampleSets must contain at least one independently verifiable sample set" ]
+                          "sampleSets must contain at least one independently verifiable sample set"
+                      yield! parsedSampleSets |> List.collect snd ]
 
                 if List.isEmpty errors then
                     Ok
@@ -643,6 +662,23 @@ module Evidence =
             else
                 Some(entry.Substring(0, separator).Trim(), entry.Substring(separator + 1).Trim()))
 
+    let private tryIsoTimestamp (value: string) =
+        if
+            String.IsNullOrWhiteSpace value
+            || not (
+                Regex.IsMatch(
+                    value,
+                    @"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,7})?(?:Z|[+-]\d{2}:\d{2})$",
+                    RegexOptions.CultureInvariant
+                )
+            )
+        then
+            None
+        else
+            match DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None) with
+            | true, parsed -> Some parsed
+            | _ -> None
+
     let evaluatePerformanceBudgets
         (artifactText: string -> string option)
         (declarations: EvidenceDeclaration list)
@@ -677,17 +713,7 @@ module Evidence =
                               $"workloadDefinitionDigests binds undeclared workload '{workloadId}'"
                       if String.IsNullOrWhiteSpace budget.CurrencyToken then
                           "currencyToken is required"
-                      if
-                          match
-                              DateTimeOffset.TryParse(
-                                  budget.CapturedAfterUtc,
-                                  CultureInfo.InvariantCulture,
-                                  DateTimeStyles.AssumeUniversal
-                              )
-                          with
-                          | true, _ -> false
-                          | _ -> true
-                      then
+                      if tryIsoTimestamp budget.CapturedAfterUtc |> Option.isNone then
                           "capturedAfterUtc must be an ISO-8601 timestamp"
                       if budget.MaxP95Ms <= 0m then
                           "maxP95Ms must be positive"
@@ -735,12 +761,7 @@ module Evidence =
                             let expectedDefinitions =
                                 workloadDefinitionBindings budget.WorkloadDefinitionDigests |> Map.ofList
 
-                            let capturedAfter =
-                                DateTimeOffset.Parse(
-                                    budget.CapturedAfterUtc,
-                                    CultureInfo.InvariantCulture,
-                                    DateTimeStyles.AssumeUniversal
-                                )
+                            let capturedAfter = tryIsoTimestamp budget.CapturedAfterUtc |> Option.get
 
                             let bindingErrors =
                                 [ for sample in artifact.SampleSets do
@@ -776,17 +797,11 @@ module Evidence =
                                       if String.IsNullOrWhiteSpace sample.CapturedAtUtc then
                                           $"{id} capturedAtUtc is required"
                                       else
-                                          let parsed, captured =
-                                              DateTimeOffset.TryParse(
-                                                  sample.CapturedAtUtc,
-                                                  CultureInfo.InvariantCulture,
-                                                  DateTimeStyles.AssumeUniversal
-                                              )
-
-                                          if not parsed then
-                                              $"{id} capturedAtUtc must be an ISO-8601 timestamp"
-                                          elif captured < capturedAfter then
+                                          match tryIsoTimestamp sample.CapturedAtUtc with
+                                          | None -> $"{id} capturedAtUtc must be an ISO-8601 timestamp"
+                                          | Some captured when captured < capturedAfter ->
                                               $"{id} capturedAtUtc predates declared capturedAfterUtc"
+                                          | Some _ -> ()
 
                                       if String.IsNullOrWhiteSpace sample.CurrencyToken then
                                           $"{id} currencyToken is required"
@@ -858,7 +873,9 @@ module Evidence =
                                       if
                                           sets |> List.exists (fun set -> set.WorkloadClass <> "stress-throughput")
                                       then
-                                          $"{workloadId} must be classified as stress-throughput" ]
+                                          $"{workloadId} must be classified as stress-throughput"
+                                      elif sets |> List.map sampleBinding |> List.distinct |> List.length > 1 then
+                                          $"{workloadId} sample sets have mixed digest, host, package, mode, scope, capability, policy, capture-time, currency, or contamination bindings" ]
 
                             let measurements =
                                 budget.WorkloadIds @ budget.StressWorkloadIds

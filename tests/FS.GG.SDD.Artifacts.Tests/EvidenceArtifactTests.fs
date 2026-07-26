@@ -334,6 +334,127 @@ lifecycleNotes:
         Assert.Contains(evaluation.Reasons, fun reason -> reason.Contains("currencyToken does not match"))
 
     [<Fact>]
+    let ``performance evidence rejects mixed stress bindings omitted booleans and non ISO timestamps`` () =
+        let budget =
+            { EvidenceCodec.performanceBudgetSeed with
+                ArtifactPath = "readiness/performance.json"
+                TargetFps = 60
+                WorkloadIds = [ "idle-play" ]
+                StressWorkloadIds = [ "pointer-stress" ]
+                WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1"; "pointer-stress=sha256:pointer-v1" ]
+                CurrencyToken = "commit:abc123"
+                CapturedAfterUtc = "2026-07-25T00:00:00Z"
+                MaxP95Ms = 16.67m
+                MaxP99Ms = 25m
+                MaxCatchUpFrames = 0
+                MeasurementScope = "normal"
+                RequiredCapability = "headless" }
+
+        let declaration =
+            { EvidenceCodec.declarationSeed with
+                Id = createEvidenceId "EV690" |> Result.defaultWith failwith
+                PerformanceBudget = Some budget }
+
+        let sample workloadId digest workloadClass host captured contamination =
+            $"""{{"workloadId":"{workloadId}","workloadDefinitionDigest":"{digest}",
+"workloadClass":"{workloadClass}","targetFps":60,"maxP95Ms":16.67,"maxP99Ms":25,
+"maxCatchUpFrames":0,"measurementScope":"normal","requiredCapability":"headless",
+"hostProfile":"{host}","packageVersions":["FS.GG.Game@1.2.3"],"measurementMode":"headless",
+"capabilities":["headless"],"warmupPolicy":"120-frames","samplePolicy":"nearest-rank/3",
+"capturedAtUtc":"{captured}","currencyToken":"commit:abc123",
+"probeReadbackContaminated":{contamination},"durationSamplesMs":[10,11,12],"catchUpFrames":[0,0,0]}}"""
+
+        let normal =
+            sample "idle-play" "sha256:idle-v1" "normal-play" "host-a" "2026-07-26T00:00:00Z" "false"
+
+        let stressA =
+            sample "pointer-stress" "sha256:pointer-v1" "stress-throughput" "host-a" "2026-07-26T00:00:00Z" "false"
+
+        let stressB = stressA.Replace("host-a", "host-b")
+
+        let artifact samples =
+            """{"contractVersion":"performance-evidence-v1","sampleSets":[SAMPLES]}""".Replace("SAMPLES", samples)
+
+        let mixedStress =
+            evaluatePerformanceBudgets
+                (fun _ -> Some(artifact (String.concat "," [ normal; stressA; stressB ])))
+                [ declaration ]
+            |> Assert.Single
+
+        Assert.Equal(PerformanceMalformed, mixedStress.State)
+        Assert.Contains(mixedStress.Reasons, fun reason -> reason.Contains("pointer-stress sample sets have mixed"))
+
+        let mistypedBoolean =
+            evaluatePerformanceBudgets
+                (fun _ ->
+                    Some(
+                        artifact (
+                            normal.Replace(
+                                """"probeReadbackContaminated":false""",
+                                """"probeReadbackContaminated":null"""
+                            )
+                        )
+                    ))
+                [ { declaration with
+                      PerformanceBudget =
+                          Some
+                              { budget with
+                                  StressWorkloadIds = []
+                                  WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ] } } ]
+            |> Assert.Single
+
+        Assert.Contains(
+            mistypedBoolean.Reasons,
+            fun reason -> reason.Contains("probeReadbackContaminated must be present and boolean")
+        )
+
+        let omittedBoolean =
+            evaluatePerformanceBudgets
+                (fun _ -> Some(artifact (normal.Replace(""""probeReadbackContaminated":false,""", ""))))
+                [ { declaration with
+                      PerformanceBudget =
+                          Some
+                              { budget with
+                                  StressWorkloadIds = []
+                                  WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ] } } ]
+            |> Assert.Single
+
+        Assert.Contains(
+            omittedBoolean.Reasons,
+            fun reason -> reason.Contains("probeReadbackContaminated must be present and boolean")
+        )
+
+        let nonIsoSample =
+            evaluatePerformanceBudgets
+                (fun _ -> Some(artifact (normal.Replace("2026-07-26T00:00:00Z", "07/26/2026 00:00:00"))))
+                [ { declaration with
+                      PerformanceBudget =
+                          Some
+                              { budget with
+                                  StressWorkloadIds = []
+                                  WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ] } } ]
+            |> Assert.Single
+
+        Assert.Contains(nonIsoSample.Reasons, fun reason -> reason.Contains("capturedAtUtc must be an ISO-8601"))
+
+        let nonIsoDeclaration =
+            evaluatePerformanceBudgets
+                (fun _ -> Some(artifact normal))
+                [ { declaration with
+                      PerformanceBudget =
+                          Some
+                              { budget with
+                                  StressWorkloadIds = []
+                                  WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ]
+                                  CapturedAfterUtc = "07/25/2026 00:00:00" } } ]
+            |> Assert.Single
+
+        Assert.Contains(
+            nonIsoDeclaration.Reasons,
+            fun reason -> reason.Contains("capturedAfterUtc must be an ISO-8601")
+        )
+
+    [<Fact>]
     let ``summary-only M0 performance report is malformed`` () =
         let declaration =
             { EvidenceCodec.declarationSeed with

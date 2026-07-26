@@ -15,7 +15,8 @@ environment. SDD recomputes the result; a producer-authored verdict is never suf
 - **FR-002:** Every sample set MUST bind its workload id and definition digest, normal/stress
   class, target and thresholds, warmup and sample policy, host profile, package versions,
   measurement scope and mode, capability facts, capture time/currency token, and probe/readback
-  contamination state.
+  contamination state. Capture times MUST use ISO-8601 with an explicit offset, and the
+  contamination state MUST be an explicitly present JSON boolean.
 - **FR-002a:** The declaration MUST independently name the expected digest for every workload,
   the current currency token, and a capture-not-before timestamp. Artifact values MUST match
   those declaration-owned inputs.
@@ -24,7 +25,7 @@ environment. SDD recomputes the result; a producer-authored verdict is never suf
 - **FR-004:** A claimed pass MUST be rejected when recomputed measurements fail.
 - **FR-005:** Sets for one workload MUST NOT be combined across workload-definition digests,
   hosts, package versions, modes, scopes, capabilities, policies, capture times, contamination
-  states, or currency tokens.
+  states, or currency tokens. This applies equally to normal-play and present stress sets.
 - **FR-006:** Every declared normal workload MUST have bound samples; stress workloads remain
   diagnostic context and MUST NOT replace a missing normal workload.
 - **FR-007:** Headless or probe/readback-contaminated measurements MUST NOT satisfy a declaration

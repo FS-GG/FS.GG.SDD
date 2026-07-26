@@ -42,15 +42,15 @@
           "FS.GG.Contracts": "[6.0.0, )",
           "FS.GG.Drivers": "[0.2.0, )",
           "FS.GG.Game.Skills": "[0.2.0, )",
-          "FS.GG.SDD.Artifacts": "[0.26.0, )",
+          "FS.GG.SDD.Artifacts": "[0.26.1, )",
           "FSharp.Core": "[10.1.302, )"
         }
       },
       "fs.gg.sdd.validation": {
         "type": "Project",
         "dependencies": {
-          "FS.GG.SDD.Artifacts": "[0.26.0, )",
-          "FS.GG.SDD.Commands": "[0.26.0, )",
+          "FS.GG.SDD.Artifacts": "[0.26.1, )",
+          "FS.GG.SDD.Commands": "[0.26.1, )",
           "FSharp.Core": "[10.1.302, )"
         }
       },
