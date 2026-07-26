@@ -44,6 +44,54 @@ module internal HandlersUpgrade =
             | WriteFile(path, _, _) -> Set.contains (normalizeRelativePath path) missingSet
             | _ -> false)
 
+    let private driverIdOfPath (path: string) =
+        Fsgg.Schemas.agentSkillRoots
+        |> List.tryPick (fun root ->
+            let prefix = root + "/skills/"
+
+            if path.StartsWith(prefix, System.StringComparison.Ordinal) then
+                path.Substring(prefix.Length).Split('/')
+                |> Array.tryHead
+                |> Option.filter (System.String.IsNullOrWhiteSpace >> not)
+            else
+                None)
+
+    /// Before a v1/SKILL-only directory can be completed and recorded as a schema-v2 driver tree,
+    /// read every preserved file that the new provenance record would attest. The missing targets
+    /// themselves are supplied from the verified embedded plan; these are the complementary files
+    /// already on disk and therefore outside the write set.
+    let private ownerBackfillPreservedFiles model (targets: string list) =
+        match resolveProvenance model with
+        | Some record ->
+            let targetSet = targets |> List.map normalizeRelativePath |> Set.ofList
+
+            let presentIds =
+                Set.ofList (
+                    SeededSkills.skillNames
+                    @ (Drift.productSkillEntries (Some record) |> List.map fst)
+                )
+
+            let driver = DriverSkills.plan presentIds
+            let affectedDriverIds = targets |> List.choose driverIdOfPath |> Set.ofList
+
+            driver.ProvenancePaths
+            |> List.filter (fun (path, _) ->
+                driverIdOfPath path |> Option.exists affectedDriverIds.Contains
+                && not (Set.contains (normalizeRelativePath path) targetSet))
+        | None -> []
+
+    let private preservedFilesVerified model preservedFiles =
+        let rawTextSha256 (text: string) =
+            System.Text.Encoding.UTF8.GetBytes text
+            |> System.Security.Cryptography.SHA256.HashData
+            |> System.Convert.ToHexString
+            |> fun value -> value.ToLowerInvariant()
+
+        preservedFiles
+        |> List.forall (fun (path, expectedSha256) ->
+            snapshot path model
+            |> Option.exists (fun file -> rawTextSha256 file.Text = expectedSha256))
+
     // ADR-0063 / FS-GG/FS.GG.SDD#624: the owner-sourced (driver + product classes) skill copies among a
     // re-seed step's targets, reconstructed as no-clobber writes from the SAME embedded, content-
     // addressed plan the drift preview used (`Drift.ownerSourcedBackfill`, filtered to the step's
@@ -69,23 +117,11 @@ module internal HandlersUpgrade =
                 driver.Writes @ product.Writes
                 |> List.filter (fun effect -> effectPath effect |> Option.exists targetSet.Contains)
 
-            let skillIdOfPath (path: string) =
-                Fsgg.Schemas.agentSkillRoots
-                |> List.tryPick (fun root ->
-                    let prefix = root + "/skills/"
-
-                    if path.StartsWith(prefix, System.StringComparison.Ordinal) then
-                        path.Substring(prefix.Length).Split('/')
-                        |> Array.tryHead
-                        |> Option.filter (System.String.IsNullOrWhiteSpace >> not)
-                    else
-                        None)
-
-            let affectedDriverIds = targets |> List.choose skillIdOfPath |> Set.ofList
+            let affectedDriverIds = targets |> List.choose driverIdOfPath |> Set.ofList
 
             let newDriverPaths =
                 driver.ProvenancePaths
-                |> List.filter (fun (path, _) -> skillIdOfPath path |> Option.exists affectedDriverIds.Contains)
+                |> List.filter (fun (path, _) -> driverIdOfPath path |> Option.exists affectedDriverIds.Contains)
                 |> List.map (fun (path, sha256) ->
                     { Path = path
                       Owner = ArtifactOwner.Driver
@@ -169,22 +205,47 @@ module internal HandlersUpgrade =
         | Awaiting
 
     let private applyStage model (request: CommandRequest) (step: ReconciliationStep) =
-        let effects = applyEffectsFor model request step
+        let preservedFiles =
+            match step.StepId with
+            | ReconciliationStepId.ArtifactReSeed -> ownerBackfillPreservedFiles model step.TargetPaths
+            | _ -> []
 
-        let allInterpreted =
-            effects |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
+        let verificationReads = preservedFiles |> List.map (fst >> ReadFile)
 
-        let anyPlanned =
-            effects |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
+        let readsInterpreted =
+            verificationReads
+            |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
 
-        if List.isEmpty effects then
-            Resolved ReconciliationOutcome.Applied
-        elif allInterpreted then
-            Resolved(applyOutcome model effects)
-        elif anyPlanned then
-            Awaiting
+        let readsPlanned =
+            verificationReads
+            |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
+
+        if not readsInterpreted then
+            if readsPlanned then
+                Awaiting
+            else
+                EmitEffects verificationReads
+        elif not (preservedFilesVerified model preservedFiles) then
+            // A missing/unreadable/tampered preserved file must never be laundered into a fresh
+            // canonical digest in provenance. Fail before emitting any recovery write.
+            Resolved ReconciliationOutcome.Failed
         else
-            EmitEffects effects
+            let effects = applyEffectsFor model request step
+
+            let allInterpreted =
+                effects |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
+
+            let anyPlanned =
+                effects |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
+
+            if List.isEmpty effects then
+                Resolved ReconciliationOutcome.Applied
+            elif allInterpreted then
+                Resolved(applyOutcome model effects)
+            elif anyPlanned then
+                Awaiting
+            else
+                EmitEffects effects
 
     let private stepProgress model (request: CommandRequest) (step: ReconciliationStep) =
         if request.AssumeYes then
