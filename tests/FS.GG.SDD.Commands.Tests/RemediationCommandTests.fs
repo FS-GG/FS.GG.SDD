@@ -90,7 +90,7 @@ module DriftTests =
             drift (Some farBehindMinimum) installedVersion Drift.expectedArtifactPaths
 
         Assert.NotEmpty report.OwnerSkillBackfillPaths
-        Assert.Contains(report.OwnerSkillBackfillPaths, fun (p: string) -> p.Contains "workRoadmap")
+        Assert.Contains(report.OwnerSkillBackfillPaths, fun (p: string) -> p.Contains "work-roadmap")
         // The seeded axis is clean — backfill paths are NOT double-counted as missing seeded artifacts.
         Assert.Empty report.MissingArtifactPaths
 
@@ -292,7 +292,7 @@ module UpgradeCommandTests =
     let ``--yes backfills a missing owner-sourced skill into all three roots, coherent afterward`` () =
         let root = ownerMissingFixture ()
         // Precondition: the always-on driver skill is absent from a pre-#624 tree.
-        Assert.False(TestSupport.existsRelative root ".agents/skills/workRoadmap/SKILL.md")
+        Assert.False(TestSupport.existsRelative root ".agents/skills/work-roadmap/SKILL.md")
 
         let report = upgradeYes root
         let summary = upgrade report
@@ -302,8 +302,8 @@ module UpgradeCommandTests =
 
         for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
             Assert.True(
-                TestSupport.existsRelative root $"{skillRoot}/skills/workRoadmap/SKILL.md",
-                $"expected the {skillRoot} backfill of workRoadmap"
+                TestSupport.existsRelative root $"{skillRoot}/skills/work-roadmap/SKILL.md",
+                $"expected the {skillRoot} backfill of work-roadmap"
             )
 
         Assert.True(
@@ -317,15 +317,15 @@ module UpgradeCommandTests =
     [<Fact>]
     let ``owner-sourced backfill preserves a present author-edited copy and fills only the missing roots`` () =
         let root = ownerMissingFixture ()
-        TestSupport.writeRelative root ".claude/skills/workRoadmap/SKILL.md" "AUTHOR EDIT\n"
+        TestSupport.writeRelative root ".claude/skills/work-roadmap/SKILL.md" "AUTHOR EDIT\n"
 
         upgradeYes root |> ignore
 
         // The present copy is byte-unchanged...
-        Assert.Equal("AUTHOR EDIT\n", TestSupport.readRelative root ".claude/skills/workRoadmap/SKILL.md")
+        Assert.Equal("AUTHOR EDIT\n", TestSupport.readRelative root ".claude/skills/work-roadmap/SKILL.md")
         // ...and the roots that were missing are backfilled.
-        Assert.True(TestSupport.existsRelative root ".agents/skills/workRoadmap/SKILL.md")
-        Assert.True(TestSupport.existsRelative root ".codex/skills/workRoadmap/SKILL.md")
+        Assert.True(TestSupport.existsRelative root ".agents/skills/work-roadmap/SKILL.md")
+        Assert.True(TestSupport.existsRelative root ".codex/skills/work-roadmap/SKILL.md")
 
     // 624: doctor is read-only but must SURFACE the owner-sourced gap so an operator knows to upgrade.
     [<Fact>]
@@ -343,7 +343,7 @@ module UpgradeCommandTests =
                 fun s ->
                     s.StepId = ReconciliationStepId.ArtifactReSeed
                     && s.Outcome = ReconciliationOutcome.WouldApply
-                    && s.TargetPaths |> List.exists (fun p -> p.Contains "workRoadmap")
+                    && s.TargetPaths |> List.exists (fun p -> p.Contains "work-roadmap")
             )
         | None -> failwith "expected a doctor summary"
 

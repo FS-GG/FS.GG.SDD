@@ -5,7 +5,8 @@
 ADR-0061 (structural scope; semantic enforcement at the consumer).*
 
 A **driver** skill is authored not by a producer repo but by `.github` itself, delivered as bytes
-and materialized into a scaffolded product's skill roots. The first is `workRoadmap`. This page
+and materialized into a scaffolded product's skill roots. The current always-on set is `padd-item`,
+`work-board`, and `work-roadmap`. This page
 describes how `fsgg-sdd scaffold` obtains and lays down those bytes. It embeds **no** `.github`- or
 provider-specific package id, skill id, or path as behavior (`scaffold` FR-002 / SC-005): the package
 identity is a pin, and the set of driver skills is read from the delivered manifest.
@@ -44,9 +45,13 @@ For each row in the embedded `driver-skill-manifest.json`, in id order
    the no-clobber `AgentGuidanceTarget` write kind — an author-edited or pre-existing copy is
    preserved.
 
-The delivered `FS.GG.Drivers 0.1.0` ships `workRoadmap` (`materializes-when: always`) and an inert
-`drive-board` (`scope: operator`, `materializes-when: false`, bytes not shipped) — so every scaffold
-materializes `workRoadmap` and skips `drive-board`.
+The delivered `FS.GG.Drivers 0.8.0` ships three `scope: driver`,
+`materializes-when: always` rows: `padd-item`, `work-board`, and `work-roadmap`. It also carries
+`drive-board`, `p-add`, and `cut-nuget-release` as `scope: operator`,
+`materializes-when: false`; those operator commands are withheld from product workspaces.
+`padd-item` files a described issue onto the product workspace's explicitly configured organization,
+named-user, or viewer GitHub Projects v2 board. Its package-delivered guidance refuses missing wiring
+without mutation and never falls back to the FS-GG organization board.
 
 ## Provenance and refresh
 
@@ -64,7 +69,7 @@ materialization is surfaced by its diagnostic and never reported as complete (FR
 
 The embedded manifest and bodies are pinned by a content-addressed drift guard
 (`DriverSkillsTests`): the embedded manifest must parse, every shipped body must hash to its declared
-`sha256`, and the delivered `workRoadmap` digest is pinned to a golden — so a stale pin or an
+`sha256`, and every delivered driver digest is pinned to a golden — so a stale pin or an
 out-of-band edit is caught before release. The API surface is captured under
 `docs/api-surface/**` and gated by `surface --check`.
 
@@ -73,7 +78,7 @@ out-of-band edit is caught before release. The API surface is captured under
 *ADR-0063 (Consequences: "Existing scaffolds need a backfill") · FS.GG.SDD#624.*
 
 A tree scaffolded **before** owner-sourced delivery is missing the owner-sourced skills — a shipped
-`sdd`-lane tree with no `workRoadmap`, a `--profile game` tree with no `fs-gg-playtest`. The
+`sdd`-lane tree with no `work-roadmap`, a `--profile game` tree with no `fs-gg-playtest`. The
 decision, settled once for the driver and product classes alike (ADR-0063; FS.GG.SDD#620 asked the
 same question):
 
@@ -104,7 +109,7 @@ re-derived from the plan each run, exactly as `scaffold` re-derives it per tick 
 
 - Authoring or editing driver skill **content** — owned by `.github`; SDD lays the bytes down
   verbatim and verifies them.
-- **Content** drift of an owner-sourced copy (a tampered `workRoadmap` body) — `upgrade`/`doctor`
+- **Content** drift of an owner-sourced copy (a tampered `work-roadmap` body) — `upgrade`/`doctor`
   reconcile owner-sourced skills by **presence** (backfill), not against a recorded digest the way
   provider *product* skills are content-verified; the materialize-time content-addressed verify still
   guards what a backfill writes.

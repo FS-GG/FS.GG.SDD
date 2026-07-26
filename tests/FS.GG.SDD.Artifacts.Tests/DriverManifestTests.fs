@@ -8,30 +8,50 @@ open Xunit
 /// predicate this CLI cannot evaluate yields `None` (skip), never a default materialize.
 module DriverManifestTests =
 
-    // The delivered FS.GG.Drivers 0.2.0 manifest (verbatim shape), used as the parse fixture.
-    // 0.2.0 (#632) adds the second `always` driver, workBoard, alongside workRoadmap.
+    // The delivered FS.GG.Drivers 0.8.0 manifest shape, used as the parse fixture.
     let private deliveredManifest =
         """{
   "schemaVersion": 1,
   "skills": [
     {
-      "id": "workRoadmap",
+      "id": "work-roadmap",
       "scope": "driver",
-      "sha256": "2b9313bf960ba6df3f5634ba19919f9013a9f6e58d83734f102bfa4705b06812",
-      "supplied-by": ".claude/skills/workRoadmap",
+      "sha256": "715609ab4d97337ee5250fb31e57159fb5d7b99a8c4ead0b712fd8c8c50b1677",
+      "supplied-by": ".claude/skills/work-roadmap",
       "materializes-when": "always"
     },
     {
-      "id": "workBoard",
+      "id": "work-board",
       "scope": "driver",
-      "sha256": "02ccd2a602bc3a0bcca453901b77bcf7085c3d656807494bbcec2077ec3ec665",
-      "supplied-by": ".claude/skills/workBoard",
+      "sha256": "7b3668c5137e6dc9de9f008f45aa55623abb8b4bc8ea18715fcd9ce584ce694b",
+      "supplied-by": ".claude/skills/work-board",
       "materializes-when": "always"
+    },
+    {
+      "id": "padd-item",
+      "scope": "driver",
+      "sha256": "4daf167ef061d9a27504ad212e4c9c42321f597c64143953b0c666f072092d9e",
+      "supplied-by": ".claude/skills/padd-item",
+      "materializes-when": "always"
+    },
+    {
+      "id": "p-add",
+      "scope": "operator",
+      "sha256": "44de53fbacc74f6e8be0227cd45549f93a14ee9f3b12a39c63859ebf6d4a1f9e",
+      "supplied-by": ".claude/skills/p-add",
+      "materializes-when": "false"
+    },
+    {
+      "id": "cut-nuget-release",
+      "scope": "operator",
+      "sha256": "1dd3dd74f875d01330002bafd7c26f872e0167d8caaba44978187869f42459df",
+      "supplied-by": ".claude/skills/cut-nuget-release",
+      "materializes-when": "false"
     },
     {
       "id": "drive-board",
       "scope": "operator",
-      "sha256": "28edb56f4cc7926ef423f9980ad6161e5d6c18cbe5f6008bc7b3c7981e2c7027",
+      "sha256": "4ccacf65786b14ad5917981f0fb0a6a4d17aa62bb2fda65fbd1cef00fda3bac6",
       "supplied-by": ".claude/skills/drive-board",
       "materializes-when": "false"
     }
@@ -44,23 +64,30 @@ module DriverManifestTests =
         | Error message -> failwithf "expected Ok, got Error %s" message
         | Ok manifest ->
             Assert.Equal(1, manifest.SchemaVersion)
-            Assert.Equal(3, List.length manifest.Skills)
+            Assert.Equal(6, List.length manifest.Skills)
 
-            let workRoadmap = manifest.Skills |> List.find (fun s -> s.Id = "workRoadmap")
+            let workRoadmap = manifest.Skills |> List.find (fun s -> s.Id = "work-roadmap")
             Assert.Equal("driver", workRoadmap.Scope)
             Assert.Equal("always", workRoadmap.MaterializesWhen)
-            Assert.Equal("2b9313bf960ba6df3f5634ba19919f9013a9f6e58d83734f102bfa4705b06812", workRoadmap.Sha256)
-            Assert.Equal(Some ".claude/skills/workRoadmap", workRoadmap.SuppliedBy)
+            Assert.Equal("715609ab4d97337ee5250fb31e57159fb5d7b99a8c4ead0b712fd8c8c50b1677", workRoadmap.Sha256)
+            Assert.Equal(Some ".claude/skills/work-roadmap", workRoadmap.SuppliedBy)
 
-            // #632: workBoard is the second always-on driver 0.2.0 delivers.
-            let workBoard = manifest.Skills |> List.find (fun s -> s.Id = "workBoard")
+            let workBoard = manifest.Skills |> List.find (fun s -> s.Id = "work-board")
             Assert.Equal("driver", workBoard.Scope)
             Assert.Equal("always", workBoard.MaterializesWhen)
-            Assert.Equal("02ccd2a602bc3a0bcca453901b77bcf7085c3d656807494bbcec2077ec3ec665", workBoard.Sha256)
-            Assert.Equal(Some ".claude/skills/workBoard", workBoard.SuppliedBy)
+            Assert.Equal("7b3668c5137e6dc9de9f008f45aa55623abb8b4bc8ea18715fcd9ce584ce694b", workBoard.Sha256)
+            Assert.Equal(Some ".claude/skills/work-board", workBoard.SuppliedBy)
 
-            let driveBoard = manifest.Skills |> List.find (fun s -> s.Id = "drive-board")
-            Assert.Equal("false", driveBoard.MaterializesWhen)
+            let paddItem = manifest.Skills |> List.find (fun s -> s.Id = "padd-item")
+            Assert.Equal("driver", paddItem.Scope)
+            Assert.Equal("always", paddItem.MaterializesWhen)
+            Assert.Equal("4daf167ef061d9a27504ad212e4c9c42321f597c64143953b0c666f072092d9e", paddItem.Sha256)
+            Assert.Equal(Some ".claude/skills/padd-item", paddItem.SuppliedBy)
+
+            for id in [ "drive-board"; "p-add"; "cut-nuget-release" ] do
+                let operator = manifest.Skills |> List.find (fun s -> s.Id = id)
+                Assert.Equal("operator", operator.Scope)
+                Assert.Equal("false", operator.MaterializesWhen)
 
     [<Fact>]
     let ``tryParse fails on a missing schemaVersion`` () =

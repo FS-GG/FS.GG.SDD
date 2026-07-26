@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "generatorVersion": {
     "id": "FS.GG.SDD.Artifacts",
-    "version": "0.27.0"
+    "version": "0.28.0"
   },
   "identity": {
-    "version": "0.27.0",
+    "version": "0.28.0",
     "channel": "preRelease",
     "packageIds": [
       "FS.GG.SDD.Artifacts",
@@ -16,7 +16,7 @@
   },
   "compatibility": [
     {
-      "sddVersionLine": "0.27.x",
+      "sddVersionLine": "0.28.x",
       "specKitRange": "\u003E=0.8.5",
       "governanceContractVersionRange": "2.x"
     }
@@ -3834,15 +3834,5 @@
       "durableGenerated": false
     }
   ],
-  "migrations": [
-    {
-      "version": "0.27.0",
-      "path": "docs/release/migrations/0.27.0.md",
-      "breakingChanges": [
-        "Interactive and render-loop work now needs typed performance intent before implementation readiness.",
-        "Active measured performance budgets must bind the canonical early intent without changing its workload definitions, targets, limits, capability, or compositor posture.",
-        "Governance handoff contract 2.0.0 adds the optional canonical intent beside raw performance samples; consumers must recompile against FS.GG.Contracts 7.0.0."
-      ]
-    }
-  ]
+  "migrations": []
 }
