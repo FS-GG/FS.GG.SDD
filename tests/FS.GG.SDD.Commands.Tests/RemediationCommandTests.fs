@@ -312,20 +312,97 @@ module UpgradeCommandTests =
             | None -> false
         )
 
-    // 624: the backfill is no-clobber — an author who already placed one root's copy keeps it, and
-    // only the missing roots are materialized.
+    // 710: an edited preserved file cannot be laundered into schema-v2 provenance while missing
+    // siblings are recovered. Verification happens before every recovery write.
     [<Fact>]
-    let ``owner-sourced backfill preserves a present author-edited copy and fills only the missing roots`` () =
+    let ``owner-sourced backfill fails closed before writing when a preserved file was edited`` () =
         let root = ownerMissingFixture ()
         TestSupport.writeRelative root ".claude/skills/work-roadmap/SKILL.md" "AUTHOR EDIT\n"
 
-        upgradeYes root |> ignore
+        let report = upgradeYes root
+        let summary = upgrade report
 
-        // The present copy is byte-unchanged...
+        Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.FailedStepIds)
         Assert.Equal("AUTHOR EDIT\n", TestSupport.readRelative root ".claude/skills/work-roadmap/SKILL.md")
-        // ...and the roots that were missing are backfilled.
-        Assert.True(TestSupport.existsRelative root ".agents/skills/work-roadmap/SKILL.md")
-        Assert.True(TestSupport.existsRelative root ".codex/skills/work-roadmap/SKILL.md")
+        Assert.False(TestSupport.existsRelative root ".agents/skills/work-roadmap/SKILL.md")
+        Assert.False(TestSupport.existsRelative root ".codex/skills/work-roadmap/SKILL.md")
+
+        let provenance =
+            TestSupport.readRelative root provenancePath
+            |> tryParse
+            |> Option.defaultWith (fun () -> failwith "existing provenance must remain parseable")
+
+        Assert.DoesNotContain(
+            provenance.DriverPaths,
+            fun path -> path.Path.StartsWith(".claude/skills/work-roadmap/", System.StringComparison.Ordinal)
+        )
+
+    [<Fact>]
+    let ``upgrade completes a legacy SKILL-only driver directory and records every recovered file`` () =
+        let root = ownerMissingFixture ()
+        let workBoardBody = DriverSkills.embeddedBodies () |> Map.find "work-board"
+
+        // Model the exact pre-v2 shape: every root has only the canonical body.
+        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+            TestSupport.writeRelative root $"{skillRoot}/skills/work-board/SKILL.md" workBoardBody
+
+        let report = upgradeYes root
+        Assert.Contains(ReconciliationStepId.ArtifactReSeed, (upgrade report).AppliedStepIds)
+
+        let expectedRelative =
+            [ "SKILL.md"
+              "agents/openai.yaml"
+              "references/backlog-triage.md"
+              "references/deep-detail.md"
+              "references/host-loop.md"
+              "references/workspace-scope.md" ]
+
+        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+            for relativePath in expectedRelative do
+                Assert.True(
+                    TestSupport.existsRelative root $"{skillRoot}/skills/work-board/{relativePath}",
+                    $"upgrade did not recover {skillRoot}/skills/work-board/{relativePath}"
+                )
+
+        let provenance =
+            TestSupport.readRelative root provenancePath
+            |> tryParse
+            |> Option.defaultWith (fun () -> failwith "upgraded provenance must parse")
+
+        let recorded = provenance.DriverPaths |> List.map _.Path |> Set.ofList
+
+        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+            for relativePath in expectedRelative do
+                Assert.Contains($"{skillRoot}/skills/work-board/{relativePath}", recorded)
+
+    [<Fact>]
+    let ``upgrade does not attest an edited legacy SKILL when auxiliary files are missing`` () =
+        let root = ownerMissingFixture ()
+        let workBoardBody = DriverSkills.embeddedBodies () |> Map.find "work-board"
+
+        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+            TestSupport.writeRelative root $"{skillRoot}/skills/work-board/SKILL.md" workBoardBody
+
+        TestSupport.writeRelative root ".codex/skills/work-board/SKILL.md" "EDITED LEGACY BODY\n"
+
+        let report = upgradeYes root
+        Assert.Contains(ReconciliationStepId.ArtifactReSeed, (upgrade report).FailedStepIds)
+
+        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+            Assert.False(
+                TestSupport.existsRelative root $"{skillRoot}/skills/work-board/agents/openai.yaml",
+                "verification must finish before any missing auxiliary file is written"
+            )
+
+        let provenance =
+            TestSupport.readRelative root provenancePath
+            |> tryParse
+            |> Option.defaultWith (fun () -> failwith "existing provenance must remain parseable")
+
+        Assert.DoesNotContain(
+            provenance.DriverPaths,
+            fun path -> path.Path.StartsWith(".codex/skills/work-board/", System.StringComparison.Ordinal)
+        )
 
     // 624: doctor is read-only but must SURFACE the owner-sourced gap so an operator knows to upgrade.
     [<Fact>]

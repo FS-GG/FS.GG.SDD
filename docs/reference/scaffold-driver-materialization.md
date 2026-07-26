@@ -17,8 +17,8 @@ identity is a pin, and the set of driver skills is read from the delivered manif
    channel as `FS.GG.Kit`, ADR-0062). Bumping the driver is bumping this one version.
 2. **Embed at build time (online).** `FS.GG.SDD.Commands` references the package; its auto-imported
    `build/FS.GG.Drivers.props` exposes `$(FsggDriversContentDir)`, from which the
-   `driver-skill-manifest.json` and each `skills/<id>/SKILL.md` are linked as **embedded resources**
-   (`Driver.manifest`, `Driver.skill/<id>/SKILL.md`).
+   `driver-skill-manifest.json` and every member below each `skills/<id>/` directory are linked as
+   **embedded resources** (`Driver.manifest`, `Driver.skill/<id>/<relative-path>`).
 3. **Materialize at scaffold time (offline).** A published `fsgg-sdd` runs as an installed `dotnet
    tool`; a package's *content* files are consumed at build time and are **not** carried into the
    installed tool nor guaranteed in an end user's NuGet cache. So the materializer reads the
@@ -37,13 +37,17 @@ For each row in the embedded `driver-skill-manifest.json`, in id order
    joined by a single `and` **or** a single `or`, evaluated against the skill ids present in the
    workspace (seeded ∪ provider). A predicate it cannot evaluate yields a **skip** with a
    non-blocking `scaffold.driverPredicateUnevaluated` advisory — never a default materialize.
-3. **Content-addressed verify (FR-003, ADR-0014).** The embedded body must hash (CRLF→LF-normalized
-   SHA-256, lowercase hex) to the `sha256` its manifest row declares. A mismatch or missing body
-   **fails closed** (`scaffold.driverVerifyFailed`): nothing is written for that row.
-4. **Materialize (FR-001/FR-005).** A verified, predicate-true row is written into **all three**
-   agent skill roots (`.claude`/`.codex`/`.agents` `/skills/<id>/SKILL.md`), byte-identically, with
-   the no-clobber `AgentGuidanceTarget` write kind — an author-edited or pre-existing copy is
-   preserved.
+3. **Manifest-v2 verify (FR-003, ADR-0014).** The ordered `files` array is compact-JSON hashed
+   against `tree-sha256`. Every row requires a unique, contained forward-slash relative path, a
+   raw-byte SHA-256, and a Boolean executable flag. The embedded directory must be a closed match:
+   missing, extra, unreadable, digest-mismatched, duplicate, or path-traversing members fail the
+   entire skill row (`scaffold.driverVerifyFailed`), never producing a partial directory. The
+   legacy row-level `sha256` still binds `SKILL.md`.
+4. **Materialize (FR-001/FR-005).** Every file in a verified, predicate-true row is written into
+   **all three** agent skill roots (`.claude`/`.codex`/`.agents` `/skills/<id>/<relative-path>`),
+   byte-identically, with the no-clobber `AgentGuidanceTarget` write kind. Declared executable
+   members receive their executable bit. A provider-owned same-id skill owns its complete
+   directory, so SDD never creates a mixed provider/driver tree.
 
 The delivered `FS.GG.Drivers 0.8.1` ships three `scope: driver`,
 `materializes-when: always` rows: `padd-item`, `work-board`, and `work-roadmap`. It also carries
@@ -55,9 +59,9 @@ without mutation and never falls back to the FS-GG organization board.
 
 ## Provenance and refresh
 
-Materialized driver paths are recorded in `.fsgg/scaffold-provenance.json` under the additive
-`driverPaths` array (owner **`driver`**), each with the content `sha256` it was verified against. The
-record schema stays **v1**. Driver paths are `.github`-owned external content: `refresh` never
+Every materialized driver file is recorded in `.fsgg/scaffold-provenance.json` under the additive
+`driverPaths` array (owner **`driver`**), with its manifest file digest. The record schema stays
+**v1**. Driver paths are `.github`-owned external content: `refresh` never
 regenerates them (it has no source for them), and its no-clobber union re-mirror preserves the
 byte-identical copies — so a `refresh` neither rewrites nor removes a materialized driver.
 
@@ -67,10 +71,10 @@ materialization is surfaced by its diagnostic and never reported as complete (FR
 
 ## Drift guard
 
-The embedded manifest and bodies are pinned by a content-addressed drift guard
-(`DriverSkillsTests`): the embedded manifest must parse, every shipped body must hash to its declared
-`sha256`, and every delivered driver digest is pinned to a golden — so a stale pin or an
-out-of-band edit is caught before release. The API surface is captured under
+The embedded manifest and complete directories are pinned by a content-addressed drift guard
+(`DriverSkillsTests`): the embedded manifest must parse, its tree digest must bind the file index,
+and every shipped file must hash to its declared digest — so a stale pin or an out-of-band edit is
+caught before release. The API surface is captured under
 `docs/api-surface/**` and gated by `surface --check`.
 
 ## Backfilling an existing scaffold (`upgrade` / `doctor`)
@@ -98,12 +102,12 @@ present-skill set (seeded ∪ the product ids recorded in provenance), and the p
 no-clobber `AgentGuidanceTarget`, so an author-edited or already-present copy is preserved and only
 the missing roots are filled.
 
-`fsgg-sdd doctor` reports the same gap read-only: a scaffold missing an owner-sourced skill it should
-carry is **not coherent**, and the missing copies are previewed under the `artifactReSeed` step (they
-are kept out of the seeded-skeleton `missingArtifacts`/`expectedArtifactCount` axis, which is
-unchanged). Provenance is **not** rewritten by a backfill — the owner-sourced expectation is
-re-derived from the plan each run, exactly as `scaffold` re-derives it per tick — so the seeded
-`refresh`/provenance contracts are untouched.
+`fsgg-sdd doctor` reports the same gap read-only, including an older directory that has `SKILL.md`
+but lacks its declared `references/**`, `agents/**`, or `scripts/**` members. The missing files are
+previewed under the `artifactReSeed` step (kept out of the seeded-skeleton
+`missingArtifacts`/`expectedArtifactCount` axis). After a successful backfill, `upgrade` amends
+`driverPaths` with every affected directory member and digest, including the pre-existing
+`SKILL.md`; present files remain no-clobber.
 
 ## Not covered here
 

@@ -1,13 +1,15 @@
 namespace FS.GG.SDD.Commands.Internal
 
 open System.Reflection
+open System.Security.Cryptography
+open System.Text
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Artifacts
 
 /// The scaffold-time materializer for the `.github`-authored **driver** skills (e.g.
 /// `workRoadmap`) delivered as bytes in the pinned `FS.GG.Drivers` package (ADR-0054
 /// §Byte-transport, ADR-0062/0063; ADR-0014 verify). The package's `driver-skill-manifest.json`
-/// and `skills/<id>/SKILL.md` bodies are linked into this assembly as embedded resources at
+/// and complete `skills/<id>/**` directories are linked into this assembly as embedded resources at
 /// build time (`Driver.manifest` / `Driver.skill/<id>/SKILL.md`), so the materialize reads
 /// **compiled-in bytes** — never the NuGet cache, a `.github` clone, or the network — which is
 /// what makes scaffold time offline (FR-002). This mirrors the `SeededSkills` seam exactly.
@@ -27,23 +29,38 @@ module internal DriverSkills =
     // name from an id, so a build whose MSBuild `%(RecursiveDir)` used `\` still resolves.
     let private skillResourcePrefix = "Driver.skill/"
 
-    let private tryLoadResource (name: string) : string option =
+    let private tryLoadResourceBytes (name: string) : byte array option =
         let assembly = Assembly.GetExecutingAssembly()
 
         match assembly.GetManifestResourceStream(name) with
         | null -> None
         | stream ->
             use stream = stream
-            use reader = new StreamReader(stream)
-            Some(reader.ReadToEnd())
+            use buffer = new System.IO.MemoryStream()
+            stream.CopyTo buffer
+            Some(buffer.ToArray())
+
+    let private strictUtf8 = UTF8Encoding(false, true)
+
+    let private tryDecode (bytes: byte array) =
+        try
+            Some(strictUtf8.GetString bytes)
+        with :? DecoderFallbackException ->
+            None
+
+    let private rawSha256 (bytes: byte array) =
+        SHA256.HashData bytes
+        |> System.Convert.ToHexString
+        |> fun value -> value.ToLowerInvariant()
 
     /// The embedded delivered driver manifest text; `None` when no driver package is embedded
     /// (e.g. a build without the pin) — the materializer then no-ops rather than failing.
-    let manifestText () = tryLoadResource manifestResourceName
+    let manifestText () =
+        tryLoadResourceBytes manifestResourceName |> Option.bind tryDecode
 
-    // Map of driver-skill id → embedded body, keyed off the embedded resource names. Robust to
-    // the `/` vs `\` a build's `%(RecursiveDir)` may have baked into the logical name.
-    let embeddedBodies () : Map<string, string> =
+    // Map of (driver-skill id, relative path) → raw bytes, keyed off the embedded resource names.
+    // Robust to the `/` vs `\` a build's `%(RecursiveDir)` may have baked into the logical name.
+    let embeddedFiles () : Map<string * string, byte array> =
         let assembly = Assembly.GetExecutingAssembly()
 
         assembly.GetManifestResourceNames()
@@ -51,12 +68,29 @@ module internal DriverSkills =
             let normalized = name.Replace('\\', '/')
 
             if normalized.StartsWith(skillResourcePrefix, System.StringComparison.Ordinal) then
-                match normalized.Split('/') |> Array.toList with
-                | [ _; id; "SKILL.md" ] when id <> "" -> tryLoadResource name |> Option.map (fun body -> id, body)
-                | _ -> None
+                let rest = normalized.Substring(skillResourcePrefix.Length)
+                let separator = rest.IndexOf('/')
+
+                if separator <= 0 || separator = rest.Length - 1 then
+                    None
+                else
+                    let id = rest.Substring(0, separator)
+                    let relativePath = rest.Substring(separator + 1)
+                    tryLoadResourceBytes name |> Option.map (fun bytes -> (id, relativePath), bytes)
             else
                 None)
         |> Map.ofArray
+
+    // Compatibility seam retained for tests/acceptance that specifically inspect the canonical body.
+    let embeddedBodies () : Map<string, string> =
+        embeddedFiles ()
+        |> Map.toList
+        |> List.choose (fun ((id, path), bytes) ->
+            if path = "SKILL.md" then
+                tryDecode bytes |> Option.map (fun body -> id, body)
+            else
+                None)
+        |> Map.ofList
 
     /// The outcome of planning driver materialization: the no-clobber writes to emit, the
     /// per-path provenance digests (owner `Driver`), the ids actually materialized, and the
@@ -94,11 +128,11 @@ module internal DriverSkills =
         { Collisions: string list
           PredicateUnevaluated: string list
           VerifyFailed: string list
-          Materializable: (string * string * string) list } // (id, body, sha256)
+          Materializable: (DriverManifest.DriverManifestEntry * (DriverManifest.DriverManifestFile * string) list) list }
 
     let private classifyEntry
         (presentIds: Set<string>)
-        (bodies: Map<string, string>)
+        (files: Map<string * string, byte array>)
         (acc: Classified)
         (entry: DriverManifest.DriverManifestEntry)
         =
@@ -112,20 +146,55 @@ module internal DriverSkills =
                     PredicateUnevaluated = acc.PredicateUnevaluated @ [ entry.Id ] }
             | Some false -> acc // deliberately not materialized (e.g. `materializes-when: false`)
             | Some true ->
-                match Map.tryFind entry.Id bodies with
-                | Some body when Fsgg.SkillMirror.sha256 body = entry.Sha256 ->
+                let declaredPaths = entry.Files |> List.map (fun file -> file.Path) |> Set.ofList
+
+                let actualPaths =
+                    files
+                    |> Map.toList
+                    |> List.choose (fun ((id, path), _) -> if id = entry.Id then Some path else None)
+                    |> Set.ofList
+
+                let verifiedFiles =
+                    entry.Files
+                    |> List.map (fun file ->
+                        Map.tryFind (entry.Id, file.Path) files
+                        |> Option.bind (fun bytes ->
+                            let digestMatches =
+                                if entry.TreeSha256.IsSome then
+                                    rawSha256 bytes = file.Sha256
+                                else
+                                    tryDecode bytes
+                                    |> Option.exists (fun body -> Fsgg.SkillMirror.sha256 body = file.Sha256)
+
+                            if digestMatches then
+                                tryDecode bytes |> Option.map (fun body -> file, body)
+                            else
+                                None))
+
+                match verifiedFiles |> List.choose id with
+                | verified when
+                    verified.Length = entry.Files.Length
+                    && actualPaths = declaredPaths
+                    && (verified
+                        |> List.tryFind (fun (file, _) -> file.Path = "SKILL.md")
+                        |> Option.exists (fun (_, body) -> Fsgg.SkillMirror.sha256 body = entry.Sha256))
+                    ->
                     { acc with
-                        Materializable = acc.Materializable @ [ entry.Id, body, entry.Sha256 ] }
+                        Materializable = acc.Materializable @ [ entry, verified ] }
                 | _ ->
-                    // Body absent or digest mismatch: cannot produce a verified body ⇒ fail
-                    // closed, write nothing for this row (FR-003).
+                    // Any missing/extra/unreadable file or digest mismatch invalidates the closed
+                    // directory transport. Never materialize a partial row.
                     { acc with
                         VerifyFailed = acc.VerifyFailed @ [ entry.Id ] }
 
     /// Plan driver materialization from an explicit manifest text + id→body map, gated by the
     /// present skill-id set. The pure core of `plan`, factored out so the fail-closed classes
     /// (tamper, id collision, unevaluable predicate) are testable without the compiled-in bytes.
-    let planFrom (manifestText: string option) (bodies: Map<string, string>) (presentIds: Set<string>) : DriverOutcome =
+    let planFilesFrom
+        (manifestText: string option)
+        (files: Map<string * string, byte array>)
+        (presentIds: Set<string>)
+        : DriverOutcome =
         match manifestText with
         | None -> empty
         | Some text ->
@@ -140,12 +209,7 @@ module internal DriverSkills =
                        VerifyFailed = []
                        Materializable = [] },
                      manifest.Skills |> List.sortBy (fun skill -> skill.Id))
-                    ||> List.fold (classifyEntry presentIds bodies)
-
-                let shaById =
-                    classified.Materializable
-                    |> List.map (fun (id, _, sha256) -> id, sha256)
-                    |> Map.ofList
+                    ||> List.fold (classifyEntry presentIds files)
 
                 // The declared scope of each manifest row, so a materialized id can be declared in
                 // the product manifest with the scope its own producer assigned it (ADR-0063 tail).
@@ -155,35 +219,46 @@ module internal DriverSkills =
                 // Fan the verified bodies into every declared root through the shared mirror,
                 // exactly as the seeded skeleton does — deterministic (id-sorted, roots in order),
                 // byte-identical across roots by construction, all no-clobber.
-                let mirrorWrites =
+                let materializedFiles =
                     classified.Materializable
-                    |> List.map (fun (id, body, _) -> id, body)
-                    |> Fsgg.SkillMirror.mirror Fsgg.Schemas.agentSkillRoots
+                    |> List.collect (fun (entry, files) ->
+                        [ for root in Fsgg.Schemas.agentSkillRoots do
+                              for file, body in files do
+                                  let path = $"{root}/skills/{entry.Id}/{file.Path}"
+                                  yield path, body, file ])
 
                 { Writes =
-                    mirrorWrites
-                    |> List.map (fun write -> WriteFile(write.Path, write.Body, AgentGuidanceTarget))
-                  ProvenancePaths =
-                    mirrorWrites
-                    |> List.map (fun write ->
-                        let sha256 =
-                            Fsgg.SkillMirror.skillIdOfPath write.Path
-                            |> Option.bind (fun id -> Map.tryFind id shaById)
-                            |> Option.defaultValue ""
+                    materializedFiles
+                    |> List.collect (fun (path, body, file) ->
+                        [ yield WriteFile(path, body, AgentGuidanceTarget)
 
-                        write.Path, sha256)
-                  MaterializedIds = classified.Materializable |> List.map (fun (id, _, _) -> id)
+                          if file.Executable then
+                              yield SetExecutable path ])
+                  ProvenancePaths = materializedFiles |> List.map (fun (path, _, file) -> path, file.Sha256)
+                  MaterializedIds = classified.Materializable |> List.map (fun (entry, _) -> entry.Id)
                   MaterializedScopes =
                     classified.Materializable
-                    |> List.choose (fun (id, _, _) -> Map.tryFind id scopeById |> Option.map (fun scope -> id, scope))
+                    |> List.choose (fun (entry, _) ->
+                        Map.tryFind entry.Id scopeById |> Option.map (fun scope -> entry.Id, scope))
                     |> Map.ofList
                   VerifyFailedIds = classified.VerifyFailed
                   PredicateUnevaluatedIds = classified.PredicateUnevaluated
                   NamespaceCollisionIds = classified.Collisions
                   ManifestError = None }
 
+    /// Legacy test seam: map each supplied body to `SKILL.md`. Schema-v2 callers should use
+    /// `planFilesFrom` so auxiliary bytes are part of the closed transport.
+    let planFrom (manifestText: string option) (bodies: Map<string, string>) (presentIds: Set<string>) : DriverOutcome =
+        let files =
+            bodies
+            |> Map.toList
+            |> List.map (fun (id, body) -> (id, "SKILL.md"), strictUtf8.GetBytes body)
+            |> Map.ofList
+
+        planFilesFrom manifestText files presentIds
+
     /// Plan driver materialization from the CLI's embedded package bytes, gated by the set of
     /// skill ids already present in the workspace (seeded ∪ provider). Pure — reads only
     /// compiled-in resources (FR-002 — no NuGet cache / network at scaffold time).
     let plan (presentIds: Set<string>) : DriverOutcome =
-        planFrom (manifestText ()) (embeddedBodies ()) presentIds
+        planFilesFrom (manifestText ()) (embeddedFiles ()) presentIds
