@@ -604,6 +604,12 @@ module internal HandlersVerify =
                                 analysisText
 
                         let validationDiagnostics =
+                            let performanceIntent =
+                                specText
+                                |> splitFrontMatter
+                                |> Option.bind (fun (yaml, _) ->
+                                    parsePerformanceIntentYaml yaml |> Result.toOption |> Option.flatten)
+
                             evidenceValidationDiagnostics
                                 workId
                                 specFacts
@@ -611,6 +617,7 @@ module internal HandlersVerify =
                                 checklistFacts
                                 planFacts
                                 taskFacts
+                                performanceIntent
                                 currentSnapshots
                                 (citedArtifactExists model)
                                 (fun artifactPath -> snapshot artifactPath model |> Option.map _.Text)

@@ -1,10 +1,11 @@
 {
   "schemaVersion": 1,
-  "modelVersion": "1.1.0",
+  "modelVersion": "1.2.0",
   "workId": "247-full-shape-golden",
   "project": {
     "id": "247-full-shape-golden",
-    "defaultWorkRoot": "work"
+    "defaultWorkRoot": "work",
+    "profile": null
   },
   "sources": [
     {
@@ -76,7 +77,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "4f27b6c940a36209a8dd79c4e62a6c189dee4eb3aa335cd2a2ae860299716bf7"
+        "value": "da359e1f82324aaad2aae4ab848a5b94990405861dbb2f41a95c57ca70598971"
       }
     },
     {
@@ -88,7 +89,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "fe573976c060af327246df72101e26537c5431f8f6980a8296b66c322f6cc5f1"
+        "value": "041794a1345a817362553cc831a625a4a5b466f9fa4a56489113df715b8d32a8"
       }
     },
     {
@@ -112,7 +113,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "fae66debd5749e7dbca19f54c2d506378e76fb8136a32994fb54a75f4d6808f6"
+        "value": "eb96c6a7e2c44b03d88171c3c93fc985c59be85d6b23e731c67f80e6adff256f"
       }
     }
   ],
@@ -123,6 +124,7 @@
     "changeTier": "tier1",
     "status": "specified"
   },
+  "performanceIntent": null,
   "requirements": [
     {
       "id": "FR-001",
@@ -410,7 +412,7 @@
       "schemaVersion": 1,
       "generator": {
         "id": "FS.GG.SDD.Artifacts",
-        "version": "0.26.1"
+        "version": "0.27.0"
       },
       "sources": [
         {
@@ -457,7 +459,7 @@
           "path": "work/247-full-shape-golden/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "4f27b6c940a36209a8dd79c4e62a6c189dee4eb3aa335cd2a2ae860299716bf7"
+            "value": "da359e1f82324aaad2aae4ab848a5b94990405861dbb2f41a95c57ca70598971"
           },
           "schemaVersion": 1
         },
@@ -465,7 +467,7 @@
           "path": "work/247-full-shape-golden/plan.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "fe573976c060af327246df72101e26537c5431f8f6980a8296b66c322f6cc5f1"
+            "value": "041794a1345a817362553cc831a625a4a5b466f9fa4a56489113df715b8d32a8"
           },
           "schemaVersion": 1
         },
@@ -481,14 +483,14 @@
           "path": "work/247-full-shape-golden/tasks.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "fae66debd5749e7dbca19f54c2d506378e76fb8136a32994fb54a75f4d6808f6"
+            "value": "eb96c6a7e2c44b03d88171c3c93fc985c59be85d6b23e731c67f80e6adff256f"
           },
           "schemaVersion": 1
         }
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "1ac8b73b424671199dddff32134dc5bdedcc9052c89cc59b038d8116f8af03e3"
+        "value": "96f38be7953be4b23c4baa8b762566f380ce768dafd23af7185c29772b71bd99"
       },
       "currency": "current"
     }

@@ -19,6 +19,7 @@ module Config =
           GovernancePolicyPath: string option
           GovernanceCapabilitiesPath: string option
           GovernanceToolingPath: string option
+          Profile: string option
           TestFramework: string option
           ImplementSkill: string option
           VisualSurface: bool

@@ -218,6 +218,7 @@ module EvidenceRoundTripPropertyTests =
               Gen.constant (
                   Some
                       { ArtifactPath = "readiness/work/performance-baseline.txt"
+                        Intent = None
                         TargetFps = 60
                         WorkloadIds = [ "idle-play"; "movement" ]
                         StressWorkloadIds = [ "pointer-stress" ]
@@ -444,6 +445,7 @@ module EvidenceRoundTripPropertyTests =
               PerformanceBudget =
                 Some
                     { ArtifactPath = "readiness/work/performance-baseline.txt"
+                      Intent = None
                       TargetFps = 60
                       WorkloadIds = [ "idle-play"; "movement" ]
                       StressWorkloadIds = [ "pointer-stress" ]

@@ -64,8 +64,11 @@ module Evidence =
           Failed: int
           Skipped: int }
 
+    type PerformanceIntentDeclaration = Fsgg.Schemas.PerformanceIntentDeclaration
+
     type PerformanceBudgetDeclaration =
         { ArtifactPath: string
+          Intent: PerformanceIntentDeclaration option
           TargetFps: int
           WorkloadIds: string list
           StressWorkloadIds: string list
@@ -99,6 +102,103 @@ module Evidence =
           DeferralIssue: string option
           Artifact: PerformanceEvidenceArtifact option
           Measurements: PerformanceEvidenceMeasurement list }
+
+    let isPerformanceDebtIssueReference (value: string) =
+        not (String.IsNullOrWhiteSpace value)
+        && Regex.IsMatch(
+            value.Trim(),
+            @"^(?:https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+/issues/[1-9][0-9]*|[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#[1-9][0-9]*)$",
+            RegexOptions.CultureInvariant
+        )
+
+    let requiresPerformanceIntentProfile (profile: string option) =
+        let renderLoopProfile = String.Concat("g", "ame")
+
+        profile
+        |> Option.exists (fun value ->
+            value.Equals("interactive", StringComparison.OrdinalIgnoreCase)
+            || value.Equals(renderLoopProfile, StringComparison.OrdinalIgnoreCase))
+
+    let performanceIntentProblems (intent: PerformanceIntentDeclaration) =
+        let disposition = intent.Disposition.Trim().ToLowerInvariant()
+
+        let bindings =
+            intent.WorkloadDefinitionDigests
+            |> List.map (fun entry ->
+                let separator = entry.IndexOf('=')
+
+                if separator <= 0 || separator = entry.Length - 1 then
+                    None
+                else
+                    Some(entry.Substring(0, separator).Trim(), entry.Substring(separator + 1).Trim()))
+
+        let validBindings = bindings |> List.choose id
+
+        let placeholders =
+            validBindings
+            |> List.filter (fun (_, digest) ->
+                let lowered = digest.ToLowerInvariant()
+
+                lowered.Contains("placeholder")
+                || lowered.Contains("todo")
+                || lowered.Contains("tbd"))
+
+        [ if String.IsNullOrWhiteSpace intent.Id then
+              "id is required"
+          match disposition with
+          | "active" ->
+              if intent.TargetFps <= 0 then
+                  "targetFps must be positive"
+
+              if List.isEmpty intent.WorkloadIds then
+                  "workloadIds must name at least one normal workload"
+
+              if bindings |> List.exists Option.isNone then
+                  "workloadDefinitionDigests entries must use '<workloadId>=<digest>'"
+
+              for workloadId in intent.WorkloadIds |> List.distinct do
+                  let matches = validBindings |> List.filter (fun (id, _) -> id = workloadId)
+
+                  if List.isEmpty matches then
+                      $"workloadDefinitionDigests must bind '{workloadId}'"
+                  elif matches.Length <> 1 then
+                      $"workloadDefinitionDigests must bind '{workloadId}' exactly once"
+
+              for workloadId, digest in validBindings do
+                  if not (List.contains workloadId intent.WorkloadIds) then
+                      $"workloadDefinitionDigests binds undeclared workload '{workloadId}'"
+
+                  if not (Regex.IsMatch(digest, @"^sha256:[A-Za-z0-9._-]+$", RegexOptions.CultureInvariant)) then
+                      $"workloadDefinitionDigests for '{workloadId}' must use a nonblank sha256 digest token"
+
+              if not (List.isEmpty placeholders) then
+                  "workloadDefinitionDigests cannot contain placeholder/TODO/TBD values"
+
+              if String.IsNullOrWhiteSpace intent.MaximumExpectedScale then
+                  "maximumExpectedScale is required"
+
+              if intent.MaxP95Ms <= 0m || intent.MaxP99Ms <= 0m || intent.MaxCatchUpFrames < 0 then
+                  "timing thresholds must contain positive p95/p99 and non-negative catch-up limits"
+
+              if List.isEmpty intent.StructuralCostBudgets then
+                  "structuralCostBudgets must declare at least one structural limit"
+
+              if String.IsNullOrWhiteSpace intent.RequiredCapability then
+                  "requiredCapability is required"
+          | "not-applicable" ->
+              if List.isEmpty intent.EvidenceRefs then
+                  "not-applicable intent requires evidenceRefs"
+
+              if intent.Rationale |> Option.forall String.IsNullOrWhiteSpace then
+                  "not-applicable intent requires rationale"
+          | "deferred" ->
+              if List.isEmpty intent.EvidenceRefs then
+                  "deferred intent requires evidenceRefs"
+
+              match intent.DeferralIssue with
+              | Some issue when isPerformanceDebtIssueReference issue -> ()
+              | _ -> "deferred intent requires an owner/repo#N or GitHub issue URL"
+          | _ -> $"unknown disposition '{intent.Disposition}'" ]
 
     type EvidenceDeclaration =
         {
@@ -695,6 +795,64 @@ module Evidence =
 
                     [ if String.IsNullOrWhiteSpace budget.ArtifactPath then
                           "artifactPath is required"
+                      match budget.Intent with
+                      | Some intent ->
+                          yield!
+                              performanceIntentProblems intent
+                              |> List.map (fun problem -> $"intent.{problem}")
+
+                          if
+                              not (String.Equals(intent.Disposition, "active", StringComparison.OrdinalIgnoreCase))
+                          then
+                              "a performanceBudget may bind only an active performance intent"
+
+                          if String.IsNullOrWhiteSpace intent.Id then
+                              "intent.id is required"
+
+                          if intent.TargetFps <> budget.TargetFps then
+                              "intent.targetFps must equal performanceBudget.targetFps"
+
+                          if Set.ofList intent.WorkloadIds <> Set.ofList budget.WorkloadIds then
+                              "intent.workloadIds must equal performanceBudget.workloadIds"
+
+                          if
+                              (workloadDefinitionBindings intent.WorkloadDefinitionDigests |> Map.ofList)
+                              <> (workloadDefinitions
+                                  |> List.filter (fun (id, _) -> List.contains id intent.WorkloadIds)
+                                  |> Map.ofList)
+                          then
+                              "intent.workloadDefinitionDigests must equal the performanceBudget normal-workload bindings"
+
+                          if intent.MaxP95Ms <> budget.MaxP95Ms || intent.MaxP99Ms <> budget.MaxP99Ms then
+                              "intent timing thresholds must equal the performanceBudget thresholds"
+
+                          if intent.MaxCatchUpFrames <> budget.MaxCatchUpFrames then
+                              "intent.maxCatchUpFrames must equal performanceBudget.maxCatchUpFrames"
+
+                          if
+                              not (
+                                  String.Equals(
+                                      intent.RequiredCapability,
+                                      budget.RequiredCapability,
+                                      StringComparison.Ordinal
+                                  )
+                              )
+                          then
+                              "intent.requiredCapability must equal performanceBudget.requiredCapability"
+
+                          if intent.LiveCompositorRequired <> budget.LiveCompositorRequired then
+                              "intent.liveCompositorRequired must equal performanceBudget.liveCompositorRequired"
+
+                          if String.IsNullOrWhiteSpace intent.MaximumExpectedScale then
+                              "intent.maximumExpectedScale is required"
+
+                          if List.isEmpty intent.StructuralCostBudgets then
+                              "intent.structuralCostBudgets must declare at least one structural limit"
+                      | None -> ()
+                      match budget.DeferralIssue with
+                      | Some issue when not (isPerformanceDebtIssueReference issue) ->
+                          "deferralIssue must use owner/repo#N or a GitHub issue URL"
+                      | _ -> ()
                       if budget.TargetFps <= 0 then
                           "targetFps must be positive"
                       if List.isEmpty budget.WorkloadIds then
@@ -1254,6 +1412,7 @@ module Evidence =
 
         let performanceBudgetSeed: PerformanceBudgetDeclaration =
             { ArtifactPath = ""
+              Intent = None
               TargetFps = 0
               WorkloadIds = []
               StressWorkloadIds = []
@@ -1268,9 +1427,72 @@ module Evidence =
               LiveCompositorRequired = false
               DeferralIssue = None }
 
+        let performanceIntentSeed: PerformanceIntentDeclaration =
+            { Id = ""
+              Disposition = ""
+              TargetFps = 0
+              WorkloadIds = []
+              WorkloadDefinitionDigests = []
+              MaximumExpectedScale = ""
+              MaxP95Ms = -1m
+              MaxP99Ms = -1m
+              MaxCatchUpFrames = -1
+              StructuralCostBudgets = []
+              RequiredCapability = ""
+              LiveCompositorRequired = false
+              DeferralIssue = None
+              EvidenceRefs = []
+              Rationale = None }
+
+        let performanceIntentFields: ArtifactCodec.FieldCodec<PerformanceIntentDeclaration> list =
+            [ ArtifactCodec.requiredScalar "id" _.Id (fun value intent -> { intent with Id = value })
+              ArtifactCodec.requiredScalar "disposition" _.Disposition (fun value intent ->
+                  { intent with Disposition = value })
+              ArtifactCodec.intScalar "targetFps" 0 _.TargetFps (fun value intent -> { intent with TargetFps = value })
+              ArtifactCodec.alwaysInlineList "workloadIds" _.WorkloadIds (fun value intent ->
+                  { intent with WorkloadIds = value })
+              ArtifactCodec.alwaysInlineList
+                  "workloadDefinitionDigests"
+                  _.WorkloadDefinitionDigests
+                  (fun value intent ->
+                      { intent with
+                          WorkloadDefinitionDigests = value })
+              ArtifactCodec.requiredScalar "maximumExpectedScale" _.MaximumExpectedScale (fun value intent ->
+                  { intent with
+                      MaximumExpectedScale = value })
+              ArtifactCodec.mappedScalar "maxP95Ms" decimalText (decimalInvariant -1m) _.MaxP95Ms (fun value intent ->
+                  { intent with MaxP95Ms = value })
+              ArtifactCodec.mappedScalar "maxP99Ms" decimalText (decimalInvariant -1m) _.MaxP99Ms (fun value intent ->
+                  { intent with MaxP99Ms = value })
+              ArtifactCodec.intScalar "maxCatchUpFrames" -1 _.MaxCatchUpFrames (fun value intent ->
+                  { intent with MaxCatchUpFrames = value })
+              ArtifactCodec.alwaysInlineList "structuralCostBudgets" _.StructuralCostBudgets (fun value intent ->
+                  { intent with
+                      StructuralCostBudgets = value })
+              ArtifactCodec.requiredScalar "requiredCapability" _.RequiredCapability (fun value intent ->
+                  { intent with
+                      RequiredCapability = value })
+              ArtifactCodec.boolScalar "liveCompositorRequired" false _.LiveCompositorRequired (fun value intent ->
+                  { intent with
+                      LiveCompositorRequired = value })
+              ArtifactCodec.optionalScalar "deferralIssue" _.DeferralIssue (fun value intent ->
+                  { intent with DeferralIssue = value })
+              ArtifactCodec.alwaysInlineList "evidenceRefs" _.EvidenceRefs (fun value intent ->
+                  { intent with EvidenceRefs = value })
+              ArtifactCodec.optionalScalar "rationale" _.Rationale (fun value intent ->
+                  { intent with Rationale = value }) ]
+
         let performanceBudgetFields: ArtifactCodec.FieldCodec<PerformanceBudgetDeclaration> list =
             [ ArtifactCodec.requiredScalar "artifactPath" _.ArtifactPath (fun value budget ->
                   { budget with ArtifactPath = value })
+              ArtifactCodec.optionalNestedVia
+                  "intent"
+                  performanceIntentFields
+                  performanceIntentSeed
+                  Some
+                  id
+                  _.Intent
+                  (fun value budget -> { budget with Intent = value })
               ArtifactCodec.intScalar "targetFps" 0 _.TargetFps (fun value budget -> { budget with TargetFps = value })
               ArtifactCodec.alwaysInlineList "workloadIds" _.WorkloadIds (fun value budget ->
                   { budget with WorkloadIds = value })
@@ -1444,6 +1666,17 @@ module Evidence =
     // `parseEvidenceSourceRefs`/`parseSyntheticDisclosure` were retired when the declaration moved onto
     // `declarationFields` (FS.GG.SDD#260): its `recordList "sourceRefs"` and
     // `optionalNestedVia "syntheticDisclosure"` now own both directions for those records.
+
+    let parsePerformanceIntentYaml (yaml: string) =
+        match parseYamlDocument yaml with
+        | YamlRoot root ->
+            match tryNodeAt [ "performanceIntent" ] root |> Option.bind tryMapping with
+            | None -> Ok None
+            | Some mapping ->
+                ArtifactCodec.foldInto EvidenceCodec.performanceIntentFields EvidenceCodec.performanceIntentSeed mapping
+                |> Result.map Some
+        | YamlEmpty -> Error "front matter is empty"
+        | YamlMalformed(message, line, column) -> Error $"YAML syntax error at line {line}, column {column}: {message}"
 
     let workIdFromEvidencePath (path: string) =
         let normalized = normalizePath path

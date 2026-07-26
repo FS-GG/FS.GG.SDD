@@ -297,6 +297,7 @@ module GovernanceHandoff =
                     |> Option.map (fun artifact ->
                         ({ EvidenceId = evidence.Id
                            ArtifactPath = budget.ArtifactPath
+                           Intent = budget.Intent
                            Artifact = artifact
                            Measurements = evidence.PerformanceMeasurements }
                         : PerformanceEvidenceProjection))))
@@ -328,6 +329,28 @@ module GovernanceHandoff =
         writer.WriteStartObject()
         writer.WriteString("evidenceId", projection.EvidenceId)
         writer.WriteString("artifactPath", projection.ArtifactPath)
+
+        match projection.Intent with
+        | Some intent ->
+            writer.WriteStartObject("intent")
+            writer.WriteString("id", intent.Id)
+            writer.WriteString("disposition", intent.Disposition)
+            writer.WriteNumber("targetFps", intent.TargetFps)
+            writeStrings writer "workloadIds" intent.WorkloadIds
+            writeStrings writer "workloadDefinitionDigests" intent.WorkloadDefinitionDigests
+            writer.WriteString("maximumExpectedScale", intent.MaximumExpectedScale)
+            writer.WriteNumber("maxP95Ms", intent.MaxP95Ms)
+            writer.WriteNumber("maxP99Ms", intent.MaxP99Ms)
+            writer.WriteNumber("maxCatchUpFrames", intent.MaxCatchUpFrames)
+            writeStrings writer "structuralCostBudgets" intent.StructuralCostBudgets
+            writer.WriteString("requiredCapability", intent.RequiredCapability)
+            writer.WriteBoolean("liveCompositorRequired", intent.LiveCompositorRequired)
+            writeNullableString writer "deferralIssue" intent.DeferralIssue
+            writeStrings writer "evidenceRefs" intent.EvidenceRefs
+            writeNullableString writer "rationale" intent.Rationale
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "intent"
+
         writer.WriteStartObject("artifact")
         writer.WriteString("contractVersion", projection.Artifact.ContractVersion)
 

@@ -123,6 +123,7 @@ member Fsgg.Schemas+GovernanceHandoffEvidenceNode.State
 member Fsgg.Schemas+GovernanceHandoffPerformanceEvidence.Artifact
 member Fsgg.Schemas+GovernanceHandoffPerformanceEvidence.ArtifactPath
 member Fsgg.Schemas+GovernanceHandoffPerformanceEvidence.EvidenceId
+member Fsgg.Schemas+GovernanceHandoffPerformanceEvidence.Intent
 member Fsgg.Schemas+GovernanceHandoffPerformanceEvidence.Measurements
 member Fsgg.Schemas+GovernanceHandoffReadiness.AdvisoryCount
 member Fsgg.Schemas+GovernanceHandoffReadiness.BlockingCount
@@ -175,6 +176,21 @@ member Fsgg.Schemas+PerformanceEvidenceSampleSet.WarmupPolicy
 member Fsgg.Schemas+PerformanceEvidenceSampleSet.WorkloadClass
 member Fsgg.Schemas+PerformanceEvidenceSampleSet.WorkloadDefinitionDigest
 member Fsgg.Schemas+PerformanceEvidenceSampleSet.WorkloadId
+member Fsgg.Schemas+PerformanceIntentDeclaration.DeferralIssue
+member Fsgg.Schemas+PerformanceIntentDeclaration.Disposition
+member Fsgg.Schemas+PerformanceIntentDeclaration.EvidenceRefs
+member Fsgg.Schemas+PerformanceIntentDeclaration.Id
+member Fsgg.Schemas+PerformanceIntentDeclaration.LiveCompositorRequired
+member Fsgg.Schemas+PerformanceIntentDeclaration.MaxCatchUpFrames
+member Fsgg.Schemas+PerformanceIntentDeclaration.MaxP95Ms
+member Fsgg.Schemas+PerformanceIntentDeclaration.MaxP99Ms
+member Fsgg.Schemas+PerformanceIntentDeclaration.MaximumExpectedScale
+member Fsgg.Schemas+PerformanceIntentDeclaration.Rationale
+member Fsgg.Schemas+PerformanceIntentDeclaration.RequiredCapability
+member Fsgg.Schemas+PerformanceIntentDeclaration.StructuralCostBudgets
+member Fsgg.Schemas+PerformanceIntentDeclaration.TargetFps
+member Fsgg.Schemas+PerformanceIntentDeclaration.WorkloadDefinitionDigests
+member Fsgg.Schemas+PerformanceIntentDeclaration.WorkloadIds
 member Fsgg.Schemas+PolicySchema.SchemaVersion
 member Fsgg.Schemas+ProjectSchema.AgentsConfigPath
 member Fsgg.Schemas+ProjectSchema.DefaultWorkRoot
@@ -312,6 +328,7 @@ type Fsgg.Schemas+GovernanceSchema
 type Fsgg.Schemas+PerformanceEvidenceArtifact
 type Fsgg.Schemas+PerformanceEvidenceMeasurement
 type Fsgg.Schemas+PerformanceEvidenceSampleSet
+type Fsgg.Schemas+PerformanceIntentDeclaration
 type Fsgg.Schemas+PolicySchema
 type Fsgg.Schemas+ProjectSchema
 type Fsgg.Schemas+ProviderParameterEntry

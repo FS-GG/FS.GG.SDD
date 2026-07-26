@@ -499,6 +499,7 @@ module ArtifactCodecTests =
                 PerformanceBudget =
                     Some
                         { ArtifactPath = "readiness/perfval.txt"
+                          Intent = None
                           TargetFps = 61
                           WorkloadIds = [ "workloadval" ]
                           StressWorkloadIds = [ "stressval" ]

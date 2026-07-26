@@ -130,11 +130,11 @@ module ContractVersionTests =
     // registry, retiring the ADR-0037 §3 "known, not enforced" rail that cost an ADR + republish +
     // bump+pin per new scope value.
     [<Fact>]
-    let ``contract version self-report matches 5_0_1`` () =
-        Assert.Equal("6.0.0", ContractVersion.value)
-        Assert.Equal(5, ContractVersion.major)
+    let ``contract version self-report matches 7_0_0`` () =
+        Assert.Equal("7.0.0", ContractVersion.value)
+        Assert.Equal(7, ContractVersion.major)
         Assert.Equal(0, ContractVersion.minor)
-        Assert.Equal(1, ContractVersion.patch)
+        Assert.Equal(0, ContractVersion.patch)
 
     // THE ASSERTION THAT WAS MISSING, AND THE ONLY ONE THAT WOULD HAVE CAUGHT IT.
     //

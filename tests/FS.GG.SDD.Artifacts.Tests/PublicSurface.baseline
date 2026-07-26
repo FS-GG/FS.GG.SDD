@@ -113,6 +113,7 @@ FS.GG.SDD.Artifacts.Evidence.evaluatePerformanceBudgets
 FS.GG.SDD.Artifacts.Evidence.evidenceKindSourceValue
 FS.GG.SDD.Artifacts.Evidence.isGameplayTestTagged
 FS.GG.SDD.Artifacts.Evidence.isObserved
+FS.GG.SDD.Artifacts.Evidence.isPerformanceDebtIssueReference
 FS.GG.SDD.Artifacts.Evidence.isSelfAttested
 FS.GG.SDD.Artifacts.Evidence.isVisualInspectionTagged
 FS.GG.SDD.Artifacts.Evidence.missingCitedArtifacts
@@ -123,7 +124,10 @@ FS.GG.SDD.Artifacts.Evidence.observedRunInconsistency
 FS.GG.SDD.Artifacts.Evidence.parseEvidence
 FS.GG.SDD.Artifacts.Evidence.parseEvidenceArtifact
 FS.GG.SDD.Artifacts.Evidence.parsePerformanceEvidence
+FS.GG.SDD.Artifacts.Evidence.parsePerformanceIntentYaml
 FS.GG.SDD.Artifacts.Evidence.passesWithoutRenderedArtifact
+FS.GG.SDD.Artifacts.Evidence.performanceIntentProblems
+FS.GG.SDD.Artifacts.Evidence.requiresPerformanceIntentProfile
 FS.GG.SDD.Artifacts.Evidence.satisfiesRequiredEvidenceKinds
 FS.GG.SDD.Artifacts.FsharpIdentifier.deriveNamespace
 FS.GG.SDD.Artifacts.GameSkillManifest.tryParse

@@ -15,25 +15,30 @@ open YamlDotNet.RepresentationModel
 [<AutoOpen>]
 module Config =
     type ProjectLifecycleConfig =
-        { SchemaVersion: SchemaVersion
-          ProjectId: string
-          DefaultWorkRoot: string
-          SddConfigPath: string
-          AgentsConfigPath: string
-          GovernancePolicyPath: string option
-          GovernanceCapabilitiesPath: string option
-          GovernanceToolingPath: string option
-          TestFramework: string option
-          // FS-GG/FS.GG.SDD#310: `project.implementSkill`, the workspace's implementation skill for
-          // derived implementation tasks. None degrades to a neutral, non-misleading skill.
-          ImplementSkill: string option
-          // FS-GG/FS.GG.SDD#306: `project.visualSurface`, the workspace's declaration that its product
-          // renders something a human must look at. Value-agnostic on purpose: the consumer decides
-          // what a visual surface is (a scene graph, a terminal frame, a plot), SDD reads a boolean.
-          VisualSurface: bool
-          // FS-GG/FS.GG.SDD#305: `sdd.minToolVersion`, the workspace's declared floor for the fsgg-sdd
-          // toolchain. None declares no floor.
-          MinToolVersion: string option }
+        {
+            SchemaVersion: SchemaVersion
+            ProjectId: string
+            DefaultWorkRoot: string
+            SddConfigPath: string
+            AgentsConfigPath: string
+            GovernancePolicyPath: string option
+            GovernanceCapabilitiesPath: string option
+            GovernanceToolingPath: string option
+            /// Product posture used by lifecycle obligations. Interactive/render-loop postures
+            /// activate the mandatory early performance-intent rule.
+            Profile: string option
+            TestFramework: string option
+            // FS-GG/FS.GG.SDD#310: `project.implementSkill`, the workspace's implementation skill for
+            // derived implementation tasks. None degrades to a neutral, non-misleading skill.
+            ImplementSkill: string option
+            // FS-GG/FS.GG.SDD#306: `project.visualSurface`, the workspace's declaration that its product
+            // renders something a human must look at. Value-agnostic on purpose: the consumer decides
+            // what a visual surface is (a scene graph, a terminal frame, a plot), SDD reads a boolean.
+            VisualSurface: bool
+            // FS-GG/FS.GG.SDD#305: `sdd.minToolVersion`, the workspace's declared floor for the fsgg-sdd
+            // toolchain. None declares no floor.
+            MinToolVersion: string option
+        }
 
     type SddLifecyclePolicy =
         { SchemaVersion: SchemaVersion
@@ -88,6 +93,10 @@ module Config =
                       GovernancePolicyPath = tryScalarAt [ "governance"; "policy" ] root
                       GovernanceCapabilitiesPath = tryScalarAt [ "governance"; "capabilities" ] root
                       GovernanceToolingPath = tryScalarAt [ "governance"; "tooling" ] root
+                      Profile =
+                        tryScalarAt [ "project"; "profile" ] root
+                        |> Option.map (fun value -> value.Trim().ToLowerInvariant())
+                        |> Option.filter (String.IsNullOrWhiteSpace >> not)
                       TestFramework =
                         tryScalarAt [ "project"; "testFramework" ] root
                         |> Option.filter (fun value -> not (String.IsNullOrWhiteSpace value))

@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "generatorVersion": {
     "id": "FS.GG.SDD.Artifacts",
-    "version": "0.26.1"
+    "version": "0.27.0"
   },
   "identity": {
-    "version": "0.26.1",
+    "version": "0.27.0",
     "channel": "preRelease",
     "packageIds": [
       "FS.GG.SDD.Artifacts",
@@ -16,9 +16,9 @@
   },
   "compatibility": [
     {
-      "sddVersionLine": "0.26.x",
+      "sddVersionLine": "0.27.x",
       "specKitRange": "\u003E=0.8.5",
-      "governanceContractVersionRange": "1.x"
+      "governanceContractVersionRange": "2.x"
     }
   ],
   "catalog": [
@@ -1614,7 +1614,7 @@
         "format": "json"
       },
       "schemaVersion": 1,
-      "contractVersion": "1.2.0",
+      "contractVersion": "2.0.0",
       "stability": "stable",
       "determinism": "byte-stable; canonical key order; no clock/path/ANSI",
       "inventory": [
@@ -1855,6 +1855,86 @@
         },
         {
           "name": "performanceEvidence[].evidenceId",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].intent",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].intent.deferralIssue",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].intent.disposition",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].intent.evidenceRefs",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].intent.id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].intent.liveCompositorRequired",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].intent.maxCatchUpFrames",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].intent.maxP95Ms",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].intent.maxP99Ms",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].intent.maximumExpectedScale",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].intent.rationale",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].intent.requiredCapability",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].intent.structuralCostBudgets",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].intent.targetFps",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].intent.workloadDefinitionDigests",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceEvidence[].intent.workloadIds",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -2989,6 +3069,86 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "evidence[].performanceBudget.intent",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.intent.deferralIssue",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.intent.disposition",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.intent.evidenceRefs",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.intent.id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.intent.liveCompositorRequired",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.intent.maxCatchUpFrames",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.intent.maxP95Ms",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.intent.maxP99Ms",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.intent.maximumExpectedScale",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.intent.rationale",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.intent.requiredCapability",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.intent.structuralCostBudgets",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.intent.targetFps",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.intent.workloadDefinitionDigests",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidence[].performanceBudget.intent.workloadIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "evidence[].performanceBudget.liveCompositorRequired",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -3334,6 +3494,86 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "performanceIntent",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceIntent.deferralIssue",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceIntent.disposition",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceIntent.evidenceRefs",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceIntent.id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceIntent.liveCompositorRequired",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceIntent.maxCatchUpFrames",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceIntent.maxP95Ms",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceIntent.maxP99Ms",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceIntent.maximumExpectedScale",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceIntent.rationale",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceIntent.requiredCapability",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceIntent.structuralCostBudgets",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceIntent.targetFps",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceIntent.workloadDefinitionDigests",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "performanceIntent.workloadIds",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "project",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -3345,6 +3585,11 @@
         },
         {
           "name": "project.id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "project.profile",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -3591,11 +3836,12 @@
   ],
   "migrations": [
     {
-      "version": "0.26.1",
-      "path": "docs/release/migrations/0.26.1.md",
+      "version": "0.27.0",
+      "path": "docs/release/migrations/0.27.0.md",
       "breakingChanges": [
-        "Summary-only performance artifacts are now malformed; emit performance-evidence-v1 raw sample sets with complete workload, budget, host, package, measurement, policy, and currency bindings.",
-        "Headless or probe/readback-contaminated measurements no longer satisfy declarations that require live-compositor evidence."
+        "Interactive and render-loop work now needs typed performance intent before implementation readiness.",
+        "Active measured performance budgets must bind the canonical early intent without changing its workload definitions, targets, limits, capability, or compositor posture.",
+        "Governance handoff contract 2.0.0 adds the optional canonical intent beside raw performance samples; consumers must recompile against FS.GG.Contracts 7.0.0."
       ]
     }
   ]

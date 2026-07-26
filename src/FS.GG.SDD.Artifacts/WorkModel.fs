@@ -10,7 +10,10 @@ open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Artifacts.SchemaVersion
 
 module WorkModel =
-    type ProjectSummary = { Id: string; DefaultWorkRoot: string }
+    type ProjectSummary =
+        { Id: string
+          DefaultWorkRoot: string
+          Profile: string option }
 
     type SourceEntry =
         { Path: string
@@ -95,6 +98,7 @@ module WorkModel =
           Project: ProjectSummary
           Sources: SourceEntry list
           WorkItem: WorkItemSummary
+          PerformanceIntent: PerformanceIntentDeclaration option
           Requirements: RequirementEntry list
           Decisions: DecisionEntry list
           Tasks: TaskEntry list
@@ -452,6 +456,43 @@ module WorkModel =
                 Some(Diagnostics.deprecatedSchemaVersion source.Artifact raw)
             | _ -> None)
 
+    let performanceIntentDiagnostics (artifact: ArtifactRef) (parsed: ParsedWorkItem) =
+        let requiresIntent =
+            parsed.Project |> Option.bind _.Profile |> requiresPerformanceIntentProfile
+
+        let error message correction relatedIds =
+            Diagnostics.create
+                "performance.intentNotReady"
+                DiagnosticError
+                (Some artifact)
+                None
+                message
+                correction
+                relatedIds
+
+        if not requiresIntent then
+            []
+        else
+            match parsed.PerformanceIntent with
+            | None ->
+                [ error
+                      "Interactive/render-loop work is missing a typed performanceIntent declaration."
+                      "Declare performanceIntent in spec.md front matter before implementation."
+                      [] ]
+            | Some intent ->
+                let disposition = intent.Disposition.Trim().ToLowerInvariant()
+
+                [ for problem in performanceIntentProblems intent do
+                      error
+                          $"Performance intent is not ready: {problem}."
+                          "Correct the typed performanceIntent declaration before implementation."
+                          [ intent.Id ]
+                  if disposition = "deferred" then
+                      error
+                          "Performance intent is deliberately deferred; its acceptance target remains unresolved."
+                          "Resolve the open blocking performance-debt issue and replace the deferral with active or supported not-applicable intent."
+                          ([ intent.Id ] @ (intent.DeferralIssue |> Option.toList)) ]
+
     let validationDiagnostics (parsed: ParsedWorkItem) =
         let specArtifact =
             match
@@ -530,6 +571,7 @@ module WorkModel =
           staleDiagnostics parsed
           missingEvidenceDiagnostics parsed
           requirementTypingDiagnostics parsed
+          performanceIntentDiagnostics specArtifact parsed
           schemaCompatibilityDiagnostics parsed ]
         |> List.concat
 
@@ -562,7 +604,7 @@ module WorkModel =
           // 1.1.0: additive `requirements[].classification` facet (ADR-0048, feature WI-3). The
           // schema major stays 1 — the field is additive and optional-valued (empty = unclassified)
           // — so the change bumps the model's minor per docs/release/versioning-policy.md.
-          ModelVersion = "1.1.0"
+          ModelVersion = "1.2.0"
           WorkId = parsed.WorkId.Value
           Project =
             { Id =
@@ -572,7 +614,8 @@ module WorkModel =
               DefaultWorkRoot =
                 parsed.Project
                 |> Option.map (fun project -> project.DefaultWorkRoot)
-                |> Option.defaultValue "work" }
+                |> Option.defaultValue "work"
+              Profile = parsed.Project |> Option.bind _.Profile }
           Sources = sourceEntries parsed
           WorkItem =
             { Id = parsed.WorkId.Value
@@ -580,6 +623,7 @@ module WorkModel =
               Stage = Identifiers.stageValue parsed.Metadata.Stage
               ChangeTier = parsed.Metadata.ChangeTier
               Status = parsed.Metadata.Status }
+          PerformanceIntent = parsed.PerformanceIntent
           Requirements =
             parsed.Requirements
             |> List.map (fun requirement ->
@@ -959,10 +1003,15 @@ module WorkModel =
                             jmProp "project" root
                             |> Option.map (fun project ->
                                 { Id = jmString "id" project
-                                  DefaultWorkRoot = jmString "defaultWorkRoot" project })
+                                  DefaultWorkRoot = jmString "defaultWorkRoot" project
+                                  Profile =
+                                    match jmString "profile" project with
+                                    | "" -> None
+                                    | value -> Some value })
                             |> Option.defaultValue
                                 { Id = "unknown"
-                                  DefaultWorkRoot = "work" }
+                                  DefaultWorkRoot = "work"
+                                  Profile = None }
                           Sources =
                             jmArray "sources" root
                             |> List.map parseSourceEntry
@@ -981,6 +1030,33 @@ module WorkModel =
                                   Stage = stage
                                   ChangeTier = "tier1"
                                   Status = "draft" }
+                          PerformanceIntent =
+                            jmProp "performanceIntent" root
+                            |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Object)
+                            |> Option.map (fun intent ->
+                                { Id = jmString "id" intent
+                                  Disposition = jmString "disposition" intent
+                                  TargetFps = jmInt "targetFps" intent |> Option.defaultValue 0
+                                  WorkloadIds = jmStringList "workloadIds" intent |> List.sort
+                                  WorkloadDefinitionDigests =
+                                    jmStringList "workloadDefinitionDigests" intent |> List.sort
+                                  MaximumExpectedScale = jmString "maximumExpectedScale" intent
+                                  MaxP95Ms = jmDecimal "maxP95Ms" intent |> Option.defaultValue -1m
+                                  MaxP99Ms = jmDecimal "maxP99Ms" intent |> Option.defaultValue -1m
+                                  MaxCatchUpFrames = jmInt "maxCatchUpFrames" intent |> Option.defaultValue -1
+                                  StructuralCostBudgets = jmStringList "structuralCostBudgets" intent |> List.sort
+                                  RequiredCapability = jmString "requiredCapability" intent
+                                  LiveCompositorRequired =
+                                    jmBool "liveCompositorRequired" intent |> Option.defaultValue false
+                                  DeferralIssue =
+                                    match jmString "deferralIssue" intent with
+                                    | "" -> None
+                                    | value -> Some value
+                                  EvidenceRefs = jmStringList "evidenceRefs" intent |> List.sort
+                                  Rationale =
+                                    match jmString "rationale" intent with
+                                    | "" -> None
+                                    | value -> Some value })
                           Requirements =
                             jmArray "requirements" root
                             |> List.map (fun item ->
@@ -1054,6 +1130,36 @@ module WorkModel =
                                     |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Object)
                                     |> Option.map (fun budget ->
                                         { ArtifactPath = jmString "artifactPath" budget
+                                          Intent =
+                                            jmProp "intent" budget
+                                            |> Option.filter (fun value -> value.ValueKind = JsonValueKind.Object)
+                                            |> Option.map (fun intent ->
+                                                { Id = jmString "id" intent
+                                                  Disposition = jmString "disposition" intent
+                                                  TargetFps = jmInt "targetFps" intent |> Option.defaultValue 0
+                                                  WorkloadIds = jmStringList "workloadIds" intent |> List.sort
+                                                  WorkloadDefinitionDigests =
+                                                    jmStringList "workloadDefinitionDigests" intent |> List.sort
+                                                  MaximumExpectedScale = jmString "maximumExpectedScale" intent
+                                                  MaxP95Ms = jmDecimal "maxP95Ms" intent |> Option.defaultValue -1m
+                                                  MaxP99Ms = jmDecimal "maxP99Ms" intent |> Option.defaultValue -1m
+                                                  MaxCatchUpFrames =
+                                                    jmInt "maxCatchUpFrames" intent |> Option.defaultValue -1
+                                                  StructuralCostBudgets =
+                                                    jmStringList "structuralCostBudgets" intent |> List.sort
+                                                  RequiredCapability = jmString "requiredCapability" intent
+                                                  LiveCompositorRequired =
+                                                    jmBool "liveCompositorRequired" intent
+                                                    |> Option.defaultValue false
+                                                  DeferralIssue =
+                                                    match jmString "deferralIssue" intent with
+                                                    | "" -> None
+                                                    | value -> Some value
+                                                  EvidenceRefs = jmStringList "evidenceRefs" intent |> List.sort
+                                                  Rationale =
+                                                    match jmString "rationale" intent with
+                                                    | "" -> None
+                                                    | value -> Some value })
                                           TargetFps = jmInt "targetFps" budget |> Option.defaultValue 0
                                           WorkloadIds = jmStringList "workloadIds" budget |> List.sort
                                           StressWorkloadIds = jmStringList "stressWorkloadIds" budget |> List.sort

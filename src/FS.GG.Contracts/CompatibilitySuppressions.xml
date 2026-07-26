@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Intentional FS.GG.Contracts 7.0.0 break for FS-GG/FS.GG.SDD#700.
+
+  GovernanceHandoffPerformanceEvidence gains the typed performance-intent declaration. F# records
+  expose a positional constructor, so adding the field removes the 6.0.0 constructor and ApiCompat
+  correctly reports CP0002. The 7.0.0 major version and docs/release/contracts-7.0.0.md declare that
+  break. Remove this suppression after 7.0.0 is published and becomes the feed baseline.
+-->
+<Suppressions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Suppression>
+    <DiagnosticId>CP0002</DiagnosticId>
+    <Target>M:Fsgg.Schemas.GovernanceHandoffPerformanceEvidence.#ctor(System.String,System.String,Fsgg.Schemas.PerformanceEvidenceArtifact,Microsoft.FSharp.Collections.FSharpList{Fsgg.Schemas.PerformanceEvidenceMeasurement})</Target>
+    <Left>lib/net10.0/FS.GG.Contracts.dll</Left>
+    <Right>lib/net10.0/FS.GG.Contracts.dll</Right>
+    <IsBaselineSuppression>true</IsBaselineSuppression>
+  </Suppression>
+</Suppressions>

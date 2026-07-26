@@ -135,6 +135,36 @@ module Serialization =
         | Some budget ->
             writer.WriteStartObject("performanceBudget")
             writer.WriteString("artifactPath", budget.ArtifactPath)
+
+            match budget.Intent with
+            | Some intent ->
+                writer.WriteStartObject("intent")
+                writer.WriteString("id", intent.Id)
+                writer.WriteString("disposition", intent.Disposition)
+                writer.WriteNumber("targetFps", intent.TargetFps)
+                writeStringList writer SourceOrder "workloadIds" intent.WorkloadIds
+                writeStringList writer SourceOrder "workloadDefinitionDigests" intent.WorkloadDefinitionDigests
+                writer.WriteString("maximumExpectedScale", intent.MaximumExpectedScale)
+                writer.WriteNumber("maxP95Ms", intent.MaxP95Ms)
+                writer.WriteNumber("maxP99Ms", intent.MaxP99Ms)
+                writer.WriteNumber("maxCatchUpFrames", intent.MaxCatchUpFrames)
+                writeStringList writer SourceOrder "structuralCostBudgets" intent.StructuralCostBudgets
+                writer.WriteString("requiredCapability", intent.RequiredCapability)
+                writer.WriteBoolean("liveCompositorRequired", intent.LiveCompositorRequired)
+
+                match intent.DeferralIssue with
+                | Some issue -> writer.WriteString("deferralIssue", issue)
+                | None -> writer.WriteNull "deferralIssue"
+
+                writeStringList writer SourceOrder "evidenceRefs" intent.EvidenceRefs
+
+                match intent.Rationale with
+                | Some rationale -> writer.WriteString("rationale", rationale)
+                | None -> writer.WriteNull "rationale"
+
+                writer.WriteEndObject()
+            | None -> writer.WriteNull "intent"
+
             writer.WriteNumber("targetFps", budget.TargetFps)
             writeStringList writer SourceOrder "workloadIds" budget.WorkloadIds
             writeStringList writer SourceOrder "stressWorkloadIds" budget.StressWorkloadIds
@@ -227,6 +257,11 @@ module Serialization =
         writer.WriteStartObject("project")
         writer.WriteString("id", model.Project.Id)
         writer.WriteString("defaultWorkRoot", model.Project.DefaultWorkRoot)
+
+        match model.Project.Profile with
+        | Some profile -> writer.WriteString("profile", profile)
+        | None -> writer.WriteNull "profile"
+
         writer.WriteEndObject()
         writer.WriteStartArray("sources")
         model.Sources |> List.iter (writeSource writer)
@@ -238,6 +273,36 @@ module Serialization =
         writer.WriteString("changeTier", model.WorkItem.ChangeTier)
         writer.WriteString("status", model.WorkItem.Status)
         writer.WriteEndObject()
+
+        match model.PerformanceIntent with
+        | Some intent ->
+            writer.WriteStartObject("performanceIntent")
+            writer.WriteString("id", intent.Id)
+            writer.WriteString("disposition", intent.Disposition)
+            writer.WriteNumber("targetFps", intent.TargetFps)
+            writeStringList writer SourceOrder "workloadIds" intent.WorkloadIds
+            writeStringList writer SourceOrder "workloadDefinitionDigests" intent.WorkloadDefinitionDigests
+            writer.WriteString("maximumExpectedScale", intent.MaximumExpectedScale)
+            writer.WriteNumber("maxP95Ms", intent.MaxP95Ms)
+            writer.WriteNumber("maxP99Ms", intent.MaxP99Ms)
+            writer.WriteNumber("maxCatchUpFrames", intent.MaxCatchUpFrames)
+            writeStringList writer SourceOrder "structuralCostBudgets" intent.StructuralCostBudgets
+            writer.WriteString("requiredCapability", intent.RequiredCapability)
+            writer.WriteBoolean("liveCompositorRequired", intent.LiveCompositorRequired)
+
+            match intent.DeferralIssue with
+            | Some issue -> writer.WriteString("deferralIssue", issue)
+            | None -> writer.WriteNull "deferralIssue"
+
+            writeStringList writer SourceOrder "evidenceRefs" intent.EvidenceRefs
+
+            match intent.Rationale with
+            | Some rationale -> writer.WriteString("rationale", rationale)
+            | None -> writer.WriteNull "rationale"
+
+            writer.WriteEndObject()
+        | None -> writer.WriteNull "performanceIntent"
+
         writer.WriteStartArray("requirements")
         model.Requirements |> List.iter (writeRequirement writer)
         writer.WriteEndArray()

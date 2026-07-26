@@ -19,8 +19,14 @@ open FS.GG.SDD.Commands.Internal.EarlyStageAuthoring
 
 module internal CharterAuthoring =
 
-    let charterTemplate request workId =
+    let charterTemplate request workId performanceIntentRequired =
         let title = requestTitle request workId
+
+        let performanceBoundary =
+            if performanceIntentRequired then
+                "\n- Performance intent is required in the specification before implementation readiness."
+            else
+                ""
 
         $"""---
 schemaVersion: 1
@@ -48,7 +54,7 @@ policyPointers:
 - Capture the work item's local principles before specification begins.
 
 ## Scope Boundaries
-- Keep SDD lifecycle ownership separate from optional Governance enforcement.
+- Keep SDD lifecycle ownership separate from optional Governance enforcement.{performanceBoundary}
 
 ## Policy Pointers
 - SDD policy comes from `.fsgg/sdd.yml` and `.fsgg/agents.yml`.
@@ -75,8 +81,13 @@ policyPointers:
     let charterDiagnosticsAndText request workId model =
         let path = charterPath workId
 
+        let performanceIntentRequired =
+            snapshot ".fsgg/project.yml" model
+            |> Option.bind (fun project -> parseProjectConfig project |> Result.toOption |> Option.bind _.Profile)
+            |> requiresPerformanceIntentProfile
+
         match snapshot path model with
-        | None -> [], charterTemplate request workId
+        | None -> [], charterTemplate request workId performanceIntentRequired
         | Some existing ->
             match parseCharterFrontMatter path existing.Text with
             | Error diagnostic -> [ diagnostic ], existing.Text

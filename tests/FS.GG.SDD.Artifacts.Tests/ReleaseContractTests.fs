@@ -103,7 +103,7 @@ module ReleaseContractTests =
     [<Fact>]
     let ``T011 the compatibility entry carries a Spec Kit range and tolerates a null Governance range`` () =
         let entry = List.exactlyOne release.Compatibility
-        Assert.Equal("0.26.x", entry.SddVersionLine)
+        Assert.Equal("0.27.x", entry.SddVersionLine)
         Assert.False(String.IsNullOrWhiteSpace entry.SpecKitRange)
 
         // ...and the literal above is only half the guard. What makes a compatibility entry TRUE
@@ -189,6 +189,14 @@ module ReleaseContractTests =
         let baseline = File.ReadAllText(baselinePath).Replace("\r\n", "\n")
         let actual = (serialize release).Replace("\r\n", "\n")
 
+        if
+            Environment.GetEnvironmentVariable "FSGG_UPDATE_BASELINE" = "1"
+            && baseline <> actual
+        then
+            File.WriteAllText(baselinePath, actual)
+
+        let baseline = File.ReadAllText(baselinePath).Replace("\r\n", "\n")
+
         if baseline <> actual then
             failwith
                 "release-readiness contract drifted from tests/FS.GG.SDD.Artifacts.Tests/baselines/release-readiness.json. \
@@ -198,8 +206,16 @@ module ReleaseContractTests =
 
     [<Fact>]
     let ``T017 the published docs artifact matches the contract (projection cannot drift)`` () =
+        let actual = (serialize release).Replace("\r\n", "\n")
         let published = File.ReadAllText(publishedPath).Replace("\r\n", "\n")
-        Assert.Equal((serialize release).Replace("\r\n", "\n"), published)
+
+        if
+            Environment.GetEnvironmentVariable "FSGG_UPDATE_BASELINE" = "1"
+            && published <> actual
+        then
+            File.WriteAllText(publishedPath, actual)
+
+        Assert.Equal(actual, File.ReadAllText(publishedPath).Replace("\r\n", "\n"))
 
     // ===== US4 — migration-note obligation for this release (T023) =====
 

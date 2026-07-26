@@ -1,5 +1,34 @@
 # Performance budgets
 
+## Declare intent before implementation
+
+Projects whose `.fsgg/project.yml` declares an interactive or render-loop `project.profile` add
+the canonical declaration to `spec.md` front matter:
+
+```yaml
+performanceIntent:
+  id: PI-001
+  disposition: active
+  targetFps: 60
+  workloadIds: [normal-play]
+  workloadDefinitionDigests: [normal-play=sha256:generated-definition]
+  maximumExpectedScale: 10000 sprites
+  maxP95Ms: 16.67
+  maxP99Ms: 25
+  maxCatchUpFrames: 0
+  structuralCostBudgets: [draw-calls<=500, allocations-per-frame<=0]
+  requiredCapability: live-compositor
+  liveCompositorRequired: true
+  evidenceRefs: []
+```
+
+`analyze` fails closed if active intent is absent, incomplete, or contains placeholder workload
+definitions. `not-applicable` requires `evidenceRefs` and `rationale`. `deferred` requires cited
+decision evidence and a blocking debt issue and deliberately remains unresolved.
+
+The later `performanceBudget.intent` value is the same declaration, byte-for-field. SDD rejects a
+budget whose target, workload bindings, thresholds, capability, or compositor posture diverges.
+
 An evidence declaration may activate a normal-play performance gate:
 
 ```yaml
