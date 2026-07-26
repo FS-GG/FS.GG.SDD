@@ -239,13 +239,13 @@ module ReleaseContract =
 
     let currentRelease () : ReleaseReadiness =
         let identity =
-            { Version = "0.28.0"
-              Channel = channelOfVersion "0.28.0"
+            { Version = "0.29.0"
+              Channel = channelOfVersion "0.29.0"
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "0.28.x"
+            [ { SddVersionLine = "0.29.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "2.x" } ]
 
@@ -1123,10 +1123,10 @@ module ReleaseContract =
           //
           // And enumerate EVERY breaking change: a note that under-reports is the exact failure
           // the note exists to prevent.
-          // 0.28.0 is ADDITIVE: it updates the embedded driver package so newly scaffolded product
-          // workspaces receive padd-item. No public SDD command/output contract is removed or
-          // retyped. An additive release carries no migration note; the 0.27.0 breaking note stays
-          // on disk under docs/release/migrations/ and is not carried here.
+          // 0.29.0 is ADDITIVE: it updates the embedded owner-skills package so newly scaffolded
+          // product workspaces receive the current owner-authored skill set. No public SDD
+          // command/output contract is removed or retyped. An additive release carries no
+          // migration note.
           Migrations = [] }
 
     // ---- canonical serialization ----

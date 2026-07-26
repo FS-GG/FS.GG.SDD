@@ -16,7 +16,7 @@ module GameSkillsTests =
 
     // The pinned digest of the delivered fs-gg-playtest body (the drift-guard golden).
     let private playtestSha256 =
-        "0541a9f30328732d998dfd0bb5a1e79d8887d7cf2f3b42cc03324f0de5adbb41"
+        "f60aa51e41db3fdff0e45f72c2499ea26352edac51297058cc2930ee9574650d"
 
     let private roots = [ ".agents"; ".claude"; ".codex" ]
 
