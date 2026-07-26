@@ -133,7 +133,9 @@ module DriverSkillsTests =
         sprintf """{ "id": "%s", "scope": "driver", "sha256": "%s", "materializes-when": "%s" }""" id sha predicate
 
     let private rawSha (bytes: byte array) =
-        SHA256.HashData bytes |> Convert.ToHexString |> fun value -> value.ToLowerInvariant()
+        SHA256.HashData bytes
+        |> Convert.ToHexString
+        |> fun value -> value.ToLowerInvariant()
 
     let private v2Fixture () =
         let skill = Encoding.UTF8.GetBytes "# driver\n"
@@ -158,6 +160,7 @@ module DriverSkillsTests =
 
         Assert.Equal<string list>([ "driver" ], outcome.MaterializedIds)
         Assert.Equal(6, outcome.ProvenancePaths.Length)
+
         Assert.Equal(
             3,
             outcome.Writes
@@ -174,7 +177,8 @@ module DriverSkillsTests =
         let cases =
             [ files |> Map.remove ("driver", "scripts/run.sh")
               files |> Map.add ("driver", "extra.txt") (Encoding.UTF8.GetBytes "extra")
-              files |> Map.add ("driver", "scripts/run.sh") (Encoding.UTF8.GetBytes "tampered")
+              files
+              |> Map.add ("driver", "scripts/run.sh") (Encoding.UTF8.GetBytes "tampered")
               files |> Map.add ("driver", "scripts/run.sh") [| 0xffuy |] ]
 
         for invalid in cases do

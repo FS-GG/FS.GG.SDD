@@ -417,6 +417,7 @@ module internal HandlersScaffold =
         // — dropping such paths keeps both, and provenance, from over-claiming a refused write.
         let occupied = Set.ofList (producedPaths @ plannedMirroredPaths producedPaths)
         let providerOwnedIds = Set.ofList providerIds
+
         let driverIdOfPath (path: string) =
             Fsgg.Schemas.agentSkillRoots
             |> List.tryPick (fun root ->
@@ -433,8 +434,7 @@ module internal HandlersScaffold =
             outcome.ProvenancePaths
             |> List.filter (fun (path, _) ->
                 not (occupied.Contains path)
-                && (driverIdOfPath path
-                    |> Option.forall (providerOwnedIds.Contains >> not)))
+                && (driverIdOfPath path |> Option.forall (providerOwnedIds.Contains >> not)))
 
         let keptPaths = kept |> List.map fst |> Set.ofList
 

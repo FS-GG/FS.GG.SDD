@@ -1090,8 +1090,13 @@ module ScaffoldCommandTests =
                 let directory = Path.Combine(root, skillRoot, "skills", driver.Id)
 
                 for file in driver.Files do
-                    let absolute = Path.Combine(directory, file.Path.Replace('/', Path.DirectorySeparatorChar))
-                    Assert.True(File.Exists absolute, $"missing complete driver member {skillRoot}/skills/{driver.Id}/{file.Path}")
+                    let absolute =
+                        Path.Combine(directory, file.Path.Replace('/', Path.DirectorySeparatorChar))
+
+                    Assert.True(
+                        File.Exists absolute,
+                        $"missing complete driver member {skillRoot}/skills/{driver.Id}/{file.Path}"
+                    )
 
                     if file.Path.EndsWith(".md") then
                         for linkMatch in Regex.Matches(File.ReadAllText absolute, @"\[[^\]]+\]\(([^)#]+)(?:#[^)]+)?\)") do

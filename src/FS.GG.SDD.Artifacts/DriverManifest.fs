@@ -27,8 +27,7 @@ module DriverManifest =
 
     let private isSha256 (value: string) =
         value.Length = 64
-        && value
-           |> Seq.forall (fun c -> (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))
+        && value |> Seq.forall (fun c -> (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))
 
     let private isSafeRelativePath (path: string) =
         not (String.IsNullOrWhiteSpace path)
@@ -59,7 +58,9 @@ module DriverManifest =
         stream.ToArray()
 
     let private rawSha256 (bytes: byte array) =
-        SHA256.HashData bytes |> Convert.ToHexString |> fun value -> value.ToLowerInvariant()
+        SHA256.HashData bytes
+        |> Convert.ToHexString
+        |> fun value -> value.ToLowerInvariant()
 
     let private requiredString name (element: JsonElement) =
         match
@@ -82,7 +83,10 @@ module DriverManifest =
                 result
                 |> Result.bind (fun files ->
                     match requiredString "path" row, requiredString "sha256" row, tryJsonProperty "executable" row with
-                    | Ok path, Ok sha256, Some executable when executable.ValueKind = JsonValueKind.True || executable.ValueKind = JsonValueKind.False ->
+                    | Ok path, Ok sha256, Some executable when
+                        executable.ValueKind = JsonValueKind.True
+                        || executable.ValueKind = JsonValueKind.False
+                        ->
                         if not (isSafeRelativePath path) then
                             Error $"driver '{id}': unsafe file path '{path}'."
                         elif not (isSha256 sha256) then
@@ -100,7 +104,8 @@ module DriverManifest =
                     | _, Error message, _ -> Error $"driver '{id}': {message}."
                     | _, _, _ -> Error $"driver '{id}': file 'executable' must be boolean.")
 
-            (Ok [], rows) ||> List.fold folder
+            (Ok [], rows)
+            ||> List.fold folder
             |> Result.bind (fun files ->
                 if List.isEmpty files then
                     Error $"driver '{id}': 'files' must not be empty."
@@ -112,7 +117,9 @@ module DriverManifest =
                     Ok files)
 
     let private parseEntry schemaVersion (element: JsonElement) =
-        match requiredString "id" element, requiredString "sha256" element, requiredString "materializes-when" element with
+        match
+            requiredString "id" element, requiredString "sha256" element, requiredString "materializes-when" element
+        with
         | Ok id, Ok sha256, Ok materializesWhen ->
             if schemaVersion >= 2 then
                 if not (isSha256 sha256) then
@@ -129,7 +136,10 @@ module DriverManifest =
                         else
                             Ok
                                 { Id = id
-                                  Scope = jsonString "scope" element |> Option.defaultValue "" |> fun value -> value.Trim()
+                                  Scope =
+                                    jsonString "scope" element
+                                    |> Option.defaultValue ""
+                                    |> fun value -> value.Trim()
                                   Sha256 = sha256
                                   TreeSha256 = Some treeSha256
                                   Files = files
@@ -143,7 +153,10 @@ module DriverManifest =
             else
                 Ok
                     { Id = id
-                      Scope = jsonString "scope" element |> Option.defaultValue "" |> fun value -> value.Trim()
+                      Scope =
+                        jsonString "scope" element
+                        |> Option.defaultValue ""
+                        |> fun value -> value.Trim()
                       Sha256 = sha256
                       TreeSha256 = None
                       Files =

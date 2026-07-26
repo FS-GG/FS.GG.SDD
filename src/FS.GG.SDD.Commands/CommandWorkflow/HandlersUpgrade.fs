@@ -57,15 +57,17 @@ module internal HandlersUpgrade =
             let targetSet = targets |> Set.ofList
 
             let presentIds =
-                Set.ofList (SeededSkills.skillNames @ (Drift.productSkillEntries (Some record) |> List.map fst))
+                Set.ofList (
+                    SeededSkills.skillNames
+                    @ (Drift.productSkillEntries (Some record) |> List.map fst)
+                )
 
             let driver = DriverSkills.plan presentIds
             let product = GameSkills.plan (record.EffectiveParameters |> Map.ofList)
 
             let writes =
                 driver.Writes @ product.Writes
-                |> List.filter (fun effect ->
-                    effectPath effect |> Option.exists targetSet.Contains)
+                |> List.filter (fun effect -> effectPath effect |> Option.exists targetSet.Contains)
 
             let skillIdOfPath (path: string) =
                 Fsgg.Schemas.agentSkillRoots
@@ -79,13 +81,11 @@ module internal HandlersUpgrade =
                     else
                         None)
 
-            let affectedDriverIds =
-                targets |> List.choose skillIdOfPath |> Set.ofList
+            let affectedDriverIds = targets |> List.choose skillIdOfPath |> Set.ofList
 
             let newDriverPaths =
                 driver.ProvenancePaths
-                |> List.filter (fun (path, _) ->
-                    skillIdOfPath path |> Option.exists affectedDriverIds.Contains)
+                |> List.filter (fun (path, _) -> skillIdOfPath path |> Option.exists affectedDriverIds.Contains)
                 |> List.map (fun (path, sha256) ->
                     { Path = path
                       Owner = ArtifactOwner.Driver
@@ -102,13 +102,11 @@ module internal HandlersUpgrade =
                         |> List.map (fun (_, paths) -> List.last paths)
                         |> List.sortBy (fun path -> path.Path)
 
-                    let updated = { record with DriverPaths = driverPaths }
+                    let updated =
+                        { record with
+                            DriverPaths = driverPaths }
 
-                    [ WriteFile(
-                          ScaffoldProvenance.provenancePath,
-                          ScaffoldProvenance.serialize updated,
-                          GeneratedView
-                      ) ]
+                    [ WriteFile(ScaffoldProvenance.provenancePath, ScaffoldProvenance.serialize updated, GeneratedView) ]
 
             writes @ provenanceWrite
         | None -> []

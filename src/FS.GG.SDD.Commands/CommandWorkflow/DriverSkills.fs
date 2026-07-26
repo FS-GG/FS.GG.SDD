@@ -49,7 +49,9 @@ module internal DriverSkills =
             None
 
     let private rawSha256 (bytes: byte array) =
-        SHA256.HashData bytes |> System.Convert.ToHexString |> fun value -> value.ToLowerInvariant()
+        SHA256.HashData bytes
+        |> System.Convert.ToHexString
+        |> fun value -> value.ToLowerInvariant()
 
     /// The embedded delivered driver manifest text; `None` when no driver package is embedded
     /// (e.g. a build without the pin) — the materializer then no-ops rather than failing.
@@ -232,8 +234,7 @@ module internal DriverSkills =
 
                           if file.Executable then
                               yield SetExecutable path ])
-                  ProvenancePaths =
-                    materializedFiles |> List.map (fun (path, _, file) -> path, file.Sha256)
+                  ProvenancePaths = materializedFiles |> List.map (fun (path, _, file) -> path, file.Sha256)
                   MaterializedIds = classified.Materializable |> List.map (fun (entry, _) -> entry.Id)
                   MaterializedScopes =
                     classified.Materializable
