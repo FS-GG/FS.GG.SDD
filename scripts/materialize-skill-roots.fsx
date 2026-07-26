@@ -30,14 +30,16 @@ open System.Text
 open System.Text.Json
 open Fsgg
 
-let checkOnly =
-    fsi.CommandLineArgs |> Array.exists (fun a -> a = "--check")
+let checkOnly = fsi.CommandLineArgs |> Array.exists (fun a -> a = "--check")
 
 let repoRoot =
     let rec find (dir: DirectoryInfo) =
-        if File.Exists(Path.Combine(dir.FullName, "FS.GG.SDD.sln")) then dir.FullName
-        elif isNull dir.Parent then failwith "Could not locate repository root (FS.GG.SDD.sln)."
-        else find dir.Parent
+        if File.Exists(Path.Combine(dir.FullName, "FS.GG.SDD.sln")) then
+            dir.FullName
+        elif isNull dir.Parent then
+            failwith "Could not locate repository root (FS.GG.SDD.sln)."
+        else
+            find dir.Parent
 
     find (DirectoryInfo __SOURCE_DIRECTORY__)
 
@@ -68,7 +70,8 @@ let present = roots |> List.map (fun r -> r, idsIn r) |> Map.ofList
 /// The union — the subject of the `skill-union` capability (.github#1504): every skill any root
 /// holds. `coordination-coherence`'s subject is only the kit-owned subset, which is why it was
 /// green throughout on a tree with 28 partitioned skills.
-let union = present |> Map.values |> Seq.fold Set.union Set.empty |> Set.toList |> List.sort
+let union =
+    present |> Map.values |> Seq.fold Set.union Set.empty |> Set.toList |> List.sort
 
 let readBody (root: string) (id: string) =
     let p = abs (SkillMirror.skillPath root id)
@@ -106,7 +109,8 @@ let fail msg = failures <- failures @ [ msg ]
 // Guard: a skill present in several roots must already agree, or this is a DIVERGENCE and the
 // repair is a producer question, not a fan-out. (#716 measured none; this keeps it that way.)
 for id in union do
-    let bodies = roots |> List.choose (fun r -> readBody r id |> Option.map (fun b -> r, b))
+    let bodies =
+        roots |> List.choose (fun r -> readBody r id |> Option.map (fun b -> r, b))
 
     match bodies with
     | [] -> ()
@@ -154,7 +158,8 @@ for id in union do
             else
                 // Multi-file and coherent — assert the aux bytes agree too, then leave alone.
                 for rel in first do
-                    let bytesOf (r: string) = File.ReadAllBytes(abs (r + "/skills/" + id + "/" + rel))
+                    let bytesOf (r: string) =
+                        File.ReadAllBytes(abs (r + "/skills/" + id + "/" + rel))
 
                     let b0 = bytesOf (List.head rootsHaving)
 
@@ -189,7 +194,8 @@ for id in union do
 // `.agents/skills/skill-manifest.json` is this repo's producer manifest (ADR-0017, schema v1),
 // emitted by `fsgg-sdd registry skill-manifest`. Every entry is `materializes-when: always`, so
 // each declared id MUST be materialized in every root — the exact claim `.agents`=4 violated.
-let manifestPath = abs (SkillMirror.providerSourceRoot + "/skills/skill-manifest.json")
+let manifestPath =
+    abs (SkillMirror.providerSourceRoot + "/skills/skill-manifest.json")
 
 let declaredDigests =
     if File.Exists manifestPath then
@@ -221,8 +227,10 @@ let canonicalSkills =
 
 if not (List.isEmpty failures) then
     eprintfn "materialize-skill-roots: REFUSED — %d precondition failure(s):" (List.length failures)
+
     for f in failures do
         eprintfn "  %s" f
+
     exit 2
 
 // ---------------------------------------------------------------------------------------------
@@ -240,7 +248,12 @@ let mutable changed: string list = []
 for w in writes do
     let target = abs w.Path
     let desired = utf8NoBom.GetBytes w.Body
-    let current = if File.Exists target then Some(File.ReadAllBytes target) else None
+
+    let current =
+        if File.Exists target then
+            Some(File.ReadAllBytes target)
+        else
+            None
 
     if current <> Some desired then
         changed <- changed @ [ w.Path ]
@@ -259,7 +272,11 @@ let expected: SkillMirror.ExpectedSkill list =
           // `scope` here is only carried through to the drift report; the process set is what the
           // producer manifest declares, everything else in the union is a co-tenant product/process
           // skill this repo vendors.
-          Scope = (if Map.containsKey id declaredDigests then Schemas.SkillScope.Process else Schemas.SkillScope.Product)
+          Scope =
+            (if Map.containsKey id declaredDigests then
+                 Schemas.SkillScope.Process
+             else
+                 Schemas.SkillScope.Product)
           // Reference digest only where the producer declares one; "" means skip hash-match and
           // assert presence + cross-root identity only (the library's documented semantics).
           Sha256 = (Map.tryFind id declaredDigests |> Option.defaultValue "") })
@@ -286,12 +303,7 @@ if not (List.isEmpty drift) then
     eprintfn "  verify       : %d skill(s) still drifted" (List.length drift)
 
     for d in drift do
-        eprintfn
-            "      %s missing=%A divergent=%b hashMismatch=%A"
-            d.Id
-            d.MissingRoots
-            d.Divergent
-            d.HashMismatchRoots
+        eprintfn "      %s missing=%A divergent=%b hashMismatch=%A" d.Id d.MissingRoots d.Divergent d.HashMismatchRoots
 
     exit 1
 
