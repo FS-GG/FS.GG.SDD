@@ -162,6 +162,27 @@ for id in union do
                         if bytesOf r <> b0 then
                             fail $"[divergent] {id}: auxiliary file {rel} differs between roots."
 
+// Guard: `SkillMirror.mirror` models a body as a `string`, so a body only survives the library
+// byte-exactly if its on-disk bytes are exactly the UTF-8 (no BOM) encoding of its decoded text.
+// A BOM is the realistic violation: `ReadAllText` strips it, so the projected copies would lose it
+// and the roots would differ by three bytes the library cannot see. Refuse rather than emit a tree
+// the gate will fail for a reason this script called clean.
+let utf8NoBom = UTF8Encoding(false)
+
+for id in union do
+    for root in roots do
+        if Set.contains id present.[root] then
+            let p = abs (SkillMirror.skillPath root id)
+            let raw = File.ReadAllBytes p
+
+            if raw <> utf8NoBom.GetBytes(File.ReadAllText p) then
+                fail (
+                    $"[unrepresentable] {root}/skills/{id}/SKILL.md does not round-trip through the "
+                    + "library's string body model (a UTF-8 BOM, or a non-UTF-8 encoding). "
+                    + "`SkillMirror.mirror` cannot carry these bytes byte-exactly — normalize the file "
+                    + "to UTF-8 without a BOM."
+                )
+
 // ---------------------------------------------------------------------------------------------
 // Content-address the process set against the PRODUCER's own committed manifest.
 // ---------------------------------------------------------------------------------------------
@@ -209,21 +230,24 @@ if not (List.isEmpty failures) then
 // ---------------------------------------------------------------------------------------------
 let writes = SkillMirror.mirror roots canonicalSkills
 
-// UTF-8, no BOM, body verbatim — the bytes must be identical across roots (criterion 1).
-let utf8NoBom = UTF8Encoding(false)
-
 let mutable changed: string list = []
 
+// Compare and write BYTES, never decoded strings. `File.ReadAllText` silently strips a UTF-8 BOM, so
+// a string comparison would call a BOM'd `.claude` and a BOM-less `.codex` copy "unchanged" while the
+// gate — which uses `diff -r` — fails them `[divergent]`. A verdict weaker than the invariant it
+// asserts is exactly the defect class this whole item exists to close (cf. FS-GG/.github#1506), so
+// this driver's notion of "unchanged" is byte equality, the same notion the gate uses.
 for w in writes do
     let target = abs w.Path
-    let current = if File.Exists target then Some(File.ReadAllText target) else None
+    let desired = utf8NoBom.GetBytes w.Body
+    let current = if File.Exists target then Some(File.ReadAllBytes target) else None
 
-    if current <> Some w.Body then
+    if current <> Some desired then
         changed <- changed @ [ w.Path ]
 
         if not checkOnly then
             Directory.CreateDirectory(Path.GetDirectoryName target: string) |> ignore
-            File.WriteAllText(target, w.Body, utf8NoBom)
+            File.WriteAllBytes(target, desired)
 
 // ---------------------------------------------------------------------------------------------
 // Verify: the verdict comes from `SkillMirror.verify`.
