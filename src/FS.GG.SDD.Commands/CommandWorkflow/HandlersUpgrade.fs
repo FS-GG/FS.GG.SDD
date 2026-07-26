@@ -1,5 +1,8 @@
 namespace FS.GG.SDD.Commands.Internal
 
+open Fsgg
+open FS.GG.SDD.Artifacts
+open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.Internal.Foundation
@@ -51,9 +54,63 @@ module internal HandlersUpgrade =
     let ownerBackfillEffects model (targets: string list) =
         match resolveProvenance model with
         | Some record ->
-            Drift.ownerSourcedBackfill record
-            |> List.filter (fun (path, _) -> List.contains path targets)
-            |> List.map (fun (path, body) -> WriteFile(path, body, AgentGuidanceTarget))
+            let targetSet = targets |> Set.ofList
+
+            let presentIds =
+                Set.ofList (SeededSkills.skillNames @ (Drift.productSkillEntries (Some record) |> List.map fst))
+
+            let driver = DriverSkills.plan presentIds
+            let product = GameSkills.plan (record.EffectiveParameters |> Map.ofList)
+
+            let writes =
+                driver.Writes @ product.Writes
+                |> List.filter (fun effect ->
+                    effectPath effect |> Option.exists targetSet.Contains)
+
+            let skillIdOfPath (path: string) =
+                Fsgg.Schemas.agentSkillRoots
+                |> List.tryPick (fun root ->
+                    let prefix = root + "/skills/"
+
+                    if path.StartsWith(prefix, System.StringComparison.Ordinal) then
+                        path.Substring(prefix.Length).Split('/')
+                        |> Array.tryHead
+                        |> Option.filter (System.String.IsNullOrWhiteSpace >> not)
+                    else
+                        None)
+
+            let affectedDriverIds =
+                targets |> List.choose skillIdOfPath |> Set.ofList
+
+            let newDriverPaths =
+                driver.ProvenancePaths
+                |> List.filter (fun (path, _) ->
+                    skillIdOfPath path |> Option.exists affectedDriverIds.Contains)
+                |> List.map (fun (path, sha256) ->
+                    { Path = path
+                      Owner = ArtifactOwner.Driver
+                      Sha256 = Some sha256 }
+                    : ScaffoldProvenance.ScaffoldProducedPath)
+
+            let provenanceWrite =
+                if List.isEmpty newDriverPaths then
+                    []
+                else
+                    let driverPaths =
+                        record.DriverPaths @ newDriverPaths
+                        |> List.groupBy (fun path -> path.Path)
+                        |> List.map (fun (_, paths) -> List.last paths)
+                        |> List.sortBy (fun path -> path.Path)
+
+                    let updated = { record with DriverPaths = driverPaths }
+
+                    [ WriteFile(
+                          ScaffoldProvenance.provenancePath,
+                          ScaffoldProvenance.serialize updated,
+                          GeneratedView
+                      ) ]
+
+            writes @ provenanceWrite
         | None -> []
 
     let applyEffectsFor model (request: CommandRequest) (step: ReconciliationStep) =

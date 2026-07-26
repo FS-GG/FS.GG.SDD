@@ -1,5 +1,8 @@
 namespace FS.GG.SDD.Commands.Tests
 
+open System
+open System.Security.Cryptography
+open System.Text
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.Internal
 open FS.GG.SDD.Artifacts
@@ -26,8 +29,28 @@ module DriverSkillsTests =
 
     let private roots = [ ".agents"; ".claude"; ".codex" ]
 
+    let private deliveredFiles =
+        Map.ofList
+            [ "padd-item", [ "SKILL.md"; "agents/openai.yaml" ]
+              "work-board",
+              [ "SKILL.md"
+                "agents/openai.yaml"
+                "references/backlog-triage.md"
+                "references/deep-detail.md"
+                "references/host-loop.md"
+                "references/workspace-scope.md" ]
+              "work-roadmap",
+              [ "SKILL.md"
+                "agents/openai.yaml"
+                "references/deep-detail.md"
+                "references/host-loop.md"
+                "references/roadmap-ledger.md" ] ]
+
     let private driverPathFor id =
-        roots |> List.map (fun root -> $"{root}/skills/{id}/SKILL.md") |> List.sort
+        [ for root in roots do
+              for relativePath in deliveredFiles[id] do
+                  yield $"{root}/skills/{id}/{relativePath}" ]
+        |> List.sort
 
     // The union of driver targets across ids, id-sorted then root-sorted — the deterministic
     // shape both `MaterializedIds` (id-sorted) and the mirrored provenance paths take.
@@ -68,6 +91,7 @@ module DriverSkillsTests =
         for effect in outcome.Writes do
             match effect with
             | WriteFile(_, _, kind) -> Assert.Equal(AgentGuidanceTarget, kind)
+            | SetExecutable _ -> ()
             | other -> failwithf "expected a WriteFile, got %A" other
 
     // ---------- the content-addressed drift guard (FR-008) ----------
@@ -94,8 +118,11 @@ module DriverSkillsTests =
     [<Fact>]
     let ``the delivered driver digests are pinned to the goldens`` () =
         let outcome = DriverSkills.plan Set.empty
-        let shas = outcome.ProvenancePaths |> List.map snd |> List.distinct |> List.sort
-        Assert.Equal<string list>([ paddItemSha256; workRoadmapSha256; workBoardSha256 ], shas)
+        let shas = outcome.ProvenancePaths |> List.map snd |> Set.ofList
+        Assert.Contains(paddItemSha256, shas)
+        Assert.Contains(workRoadmapSha256, shas)
+        Assert.Contains(workBoardSha256, shas)
+        Assert.Equal(13, shas.Count)
 
     // ---------- the fail-closed classes (planFrom, synthetic) ----------
 
@@ -104,6 +131,56 @@ module DriverSkillsTests =
 
     let private row id sha predicate =
         sprintf """{ "id": "%s", "scope": "driver", "sha256": "%s", "materializes-when": "%s" }""" id sha predicate
+
+    let private rawSha (bytes: byte array) =
+        SHA256.HashData bytes |> Convert.ToHexString |> fun value -> value.ToLowerInvariant()
+
+    let private v2Fixture () =
+        let skill = Encoding.UTF8.GetBytes "# driver\n"
+        let script = Encoding.UTF8.GetBytes "#!/bin/sh\nexit 0\n"
+        let skillSha = rawSha skill
+        let scriptSha = rawSha script
+
+        let filesJson =
+            $"""[{{"path":"SKILL.md","sha256":"{skillSha}","executable":false}},{{"path":"scripts/run.sh","sha256":"{scriptSha}","executable":true}}]"""
+
+        let treeSha = filesJson |> Encoding.UTF8.GetBytes |> rawSha
+
+        let manifest =
+            $"""{{"schemaVersion":2,"skills":[{{"id":"driver","scope":"driver","sha256":"{skillSha}","tree-sha256":"{treeSha}","files":{filesJson},"materializes-when":"always"}}]}}"""
+
+        manifest, Map.ofList [ ("driver", "SKILL.md"), skill; ("driver", "scripts/run.sh"), script ]
+
+    [<Fact>]
+    let ``planFilesFrom writes every verified file and preserves declared executable mode`` () =
+        let manifest, files = v2Fixture ()
+        let outcome = DriverSkills.planFilesFrom (Some manifest) files Set.empty
+
+        Assert.Equal<string list>([ "driver" ], outcome.MaterializedIds)
+        Assert.Equal(6, outcome.ProvenancePaths.Length)
+        Assert.Equal(
+            3,
+            outcome.Writes
+            |> List.filter (function
+                | SetExecutable path when path.EndsWith("/scripts/run.sh") -> true
+                | _ -> false)
+            |> List.length
+        )
+
+    [<Fact>]
+    let ``planFilesFrom rejects missing extra tampered and unreadable directory members`` () =
+        let manifest, files = v2Fixture ()
+
+        let cases =
+            [ files |> Map.remove ("driver", "scripts/run.sh")
+              files |> Map.add ("driver", "extra.txt") (Encoding.UTF8.GetBytes "extra")
+              files |> Map.add ("driver", "scripts/run.sh") (Encoding.UTF8.GetBytes "tampered")
+              files |> Map.add ("driver", "scripts/run.sh") [| 0xffuy |] ]
+
+        for invalid in cases do
+            let outcome = DriverSkills.planFilesFrom (Some manifest) invalid Set.empty
+            Assert.Equal<string list>([ "driver" ], outcome.VerifyFailedIds)
+            Assert.Empty outcome.Writes
 
     [<Fact>]
     let ``planFrom fails closed on a tampered body digest`` () =
@@ -182,8 +259,8 @@ module DriverSkillsTests =
         Assert.Contains("padd-item", outcome.MaterializedIds)
         Assert.Contains("work-board", outcome.MaterializedIds)
         Assert.Contains("work-roadmap", outcome.MaterializedIds)
-        // three `always` drivers × three roots.
-        Assert.Equal(9, outcome.ProvenancePaths |> List.length)
+        // Thirteen declared files across the three `always` drivers × three roots.
+        Assert.Equal(39, outcome.ProvenancePaths |> List.length)
 
     // FR-005/FR-009: a provider that shipped its own `work-roadmap` (its `.agents` skill, mirrored to
     // the other roots by the preceding tick) already occupies that driver's targets — the no-clobber
@@ -200,4 +277,4 @@ module DriverSkillsTests =
 
         let writtenPaths = outcome.ProvenancePaths |> List.map fst |> List.sort
         Assert.Equal<string list>(driverPathsFor [ "padd-item"; "work-board" ], writtenPaths)
-        Assert.Equal(6, outcome.Writes |> List.length)
+        Assert.Equal(24, outcome.Writes |> List.length)

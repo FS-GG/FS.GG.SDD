@@ -327,6 +327,44 @@ module UpgradeCommandTests =
         Assert.True(TestSupport.existsRelative root ".agents/skills/work-roadmap/SKILL.md")
         Assert.True(TestSupport.existsRelative root ".codex/skills/work-roadmap/SKILL.md")
 
+    [<Fact>]
+    let ``upgrade completes a legacy SKILL-only driver directory and records every recovered file`` () =
+        let root = ownerMissingFixture ()
+        let workBoardBody = DriverSkills.embeddedBodies () |> Map.find "work-board"
+
+        // Model the exact pre-v2 shape: every root has only the canonical body.
+        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+            TestSupport.writeRelative root $"{skillRoot}/skills/work-board/SKILL.md" workBoardBody
+
+        let report = upgradeYes root
+        Assert.Contains(ReconciliationStepId.ArtifactReSeed, (upgrade report).AppliedStepIds)
+
+        let expectedRelative =
+            [ "SKILL.md"
+              "agents/openai.yaml"
+              "references/backlog-triage.md"
+              "references/deep-detail.md"
+              "references/host-loop.md"
+              "references/workspace-scope.md" ]
+
+        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+            for relativePath in expectedRelative do
+                Assert.True(
+                    TestSupport.existsRelative root $"{skillRoot}/skills/work-board/{relativePath}",
+                    $"upgrade did not recover {skillRoot}/skills/work-board/{relativePath}"
+                )
+
+        let provenance =
+            TestSupport.readRelative root provenancePath
+            |> tryParse
+            |> Option.defaultWith (fun () -> failwith "upgraded provenance must parse")
+
+        let recorded = provenance.DriverPaths |> List.map _.Path |> Set.ofList
+
+        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+            for relativePath in expectedRelative do
+                Assert.Contains($"{skillRoot}/skills/work-board/{relativePath}", recorded)
+
     // 624: doctor is read-only but must SURFACE the owner-sourced gap so an operator knows to upgrade.
     [<Fact>]
     let ``doctor reports a missing owner-sourced skill as drift and previews the re-seed, read-only`` () =

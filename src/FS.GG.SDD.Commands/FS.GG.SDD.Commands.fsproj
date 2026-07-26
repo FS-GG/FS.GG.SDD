@@ -89,15 +89,15 @@
   </ItemGroup>
 
   <!-- 108 / ADR-0054 §Byte-transport: the delivered `FS.GG.Drivers` bytes — the
-       `driver-skill-manifest.json` and each `skills/<id>/SKILL.md` — linked from the pinned
+       `driver-skill-manifest.json` and every file below each `skills/<id>/` — linked from the pinned
        package's restored content ($(FsggDriversContentDir)) as embedded resources, so the
        scaffold materializer reads compiled-in bytes at scaffold time (offline; FR-002). The
        glob names no specific skill id, so no `.github`/provider literal enters generic SDD:
        whatever driver skills the pinned package ships are embedded (FR-002/SC-002). -->
   <ItemGroup>
     <EmbeddedResource Include="$(FsggDriversContentDir)/driver-skill-manifest.json" LogicalName="Driver.manifest" />
-    <EmbeddedResource Include="$(FsggDriversContentDir)/skills/**/SKILL.md">
-      <LogicalName>Driver.skill/%(RecursiveDir)SKILL.md</LogicalName>
+    <EmbeddedResource Include="$(FsggDriversContentDir)/skills/**/*">
+      <LogicalName>Driver.skill/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
 

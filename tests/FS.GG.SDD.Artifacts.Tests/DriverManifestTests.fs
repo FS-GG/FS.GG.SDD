@@ -102,13 +102,63 @@ module DriverManifestTests =
         | Error _ -> ()
 
     [<Fact>]
-    let ``tryParse drops a row lacking id/sha256/materializes-when rather than materializing it`` () =
+    let ``tryParse fails closed on a row lacking id or materialization contract`` () =
         let text =
             """{ "schemaVersion": 1, "skills": [ { "scope": "driver", "sha256": "x" } ] }"""
 
         match DriverManifest.tryParse text with
-        | Error message -> failwithf "expected Ok, got Error %s" message
-        | Ok manifest -> Assert.Empty manifest.Skills
+        | Error _ -> ()
+        | Ok _ -> failwith "expected malformed row to fail the manifest"
+
+    let private schemaV2 fileRows treeSha =
+        $"""{{ "schemaVersion": 2, "skills": [
+  {{ "id": "work-board", "scope": "driver",
+     "sha256": "7b3668c5137e6dc9de9f008f45aa55623abb8b4bc8ea18715fcd9ce584ce694b",
+     "tree-sha256": "{treeSha}",
+     "files": {fileRows},
+     "materializes-when": "always" }}
+] }}"""
+
+    [<Fact>]
+    let ``tryParse reads and binds the complete schema-v2 file directory`` () =
+        let files =
+            """[{"path":"SKILL.md","sha256":"7b3668c5137e6dc9de9f008f45aa55623abb8b4bc8ea18715fcd9ce584ce694b","executable":false},{"path":"references/host-loop.md","sha256":"d75f4e3ba80e6cf75b3f3fef5fe3d26eec86c117c0f21d8eeb4d8aed5982d325","executable":false}]"""
+
+        let tree = "3947b090bc0b14f914137026960f29a890e2b81fea11ac44f37e08f8a131660f"
+
+        match DriverManifest.tryParse (schemaV2 files tree) with
+        | Error message -> failwithf "expected schema v2 to parse: %s" message
+        | Ok manifest ->
+            let entry = Assert.Single manifest.Skills
+            Assert.Equal(Some tree, entry.TreeSha256)
+            Assert.Equal<string list>([ "SKILL.md"; "references/host-loop.md" ], entry.Files |> List.map _.Path)
+
+    [<Theory>]
+    [<InlineData("""[{"path":"../escape","sha256":"7b3668c5137e6dc9de9f008f45aa55623abb8b4bc8ea18715fcd9ce584ce694b","executable":false}]""")>]
+    [<InlineData("""[{"path":"SKILL.md","sha256":"bad","executable":false}]""")>]
+    [<InlineData("""[{"path":"SKILL.md","sha256":"7b3668c5137e6dc9de9f008f45aa55623abb8b4bc8ea18715fcd9ce584ce694b","executable":"false"}]""")>]
+    let ``tryParse fails closed on malformed schema-v2 file rows`` (files: string) =
+        match DriverManifest.tryParse (schemaV2 files (String.replicate 64 "0")) with
+        | Error _ -> ()
+        | Ok _ -> failwith "expected malformed schema-v2 file row to fail"
+
+    [<Fact>]
+    let ``tryParse rejects duplicate file paths before tree verification`` () =
+        let files =
+            """[{"path":"SKILL.md","sha256":"7b3668c5137e6dc9de9f008f45aa55623abb8b4bc8ea18715fcd9ce584ce694b","executable":false},{"path":"SKILL.md","sha256":"7b3668c5137e6dc9de9f008f45aa55623abb8b4bc8ea18715fcd9ce584ce694b","executable":false}]"""
+
+        match DriverManifest.tryParse (schemaV2 files (String.replicate 64 "0")) with
+        | Error message -> Assert.Contains("duplicate", message)
+        | Ok _ -> failwith "expected duplicate path to fail"
+
+    [<Fact>]
+    let ``tryParse rejects a tree digest that does not bind the declared files`` () =
+        let files =
+            """[{"path":"SKILL.md","sha256":"7b3668c5137e6dc9de9f008f45aa55623abb8b4bc8ea18715fcd9ce584ce694b","executable":false}]"""
+
+        match DriverManifest.tryParse (schemaV2 files (String.replicate 64 "0")) with
+        | Error message -> Assert.Contains("tree-sha256", message)
+        | Ok _ -> failwith "expected mismatched tree digest to fail"
 
     // ---------- DriverPredicate ----------
 

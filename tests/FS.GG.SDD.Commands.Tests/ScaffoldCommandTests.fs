@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Commands.Tests
 
 open System.IO
+open System.Text.RegularExpressions
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Artifacts.ArtifactRef
 open FS.GG.SDD.Commands
@@ -650,16 +651,10 @@ module ScaffoldCommandTests =
         // are SDD-owned (owner `driver`), not the provider's — excluded from the app-only diff
         // exactly as the provenance/tool-manifest SDD writes are. FS.GG.Drivers 0.8.0 (#703) ships
         // three `always` drivers: padd-item, work-board, and work-roadmap.
-        let driverPaths =
-            [ ".agents/skills/padd-item/SKILL.md"
-              ".agents/skills/work-board/SKILL.md"
-              ".agents/skills/work-roadmap/SKILL.md"
-              ".claude/skills/padd-item/SKILL.md"
-              ".claude/skills/work-board/SKILL.md"
-              ".claude/skills/work-roadmap/SKILL.md"
-              ".codex/skills/padd-item/SKILL.md"
-              ".codex/skills/work-board/SKILL.md"
-              ".codex/skills/work-roadmap/SKILL.md" ]
+        let driverPaths = summary.MaterializedDriverPaths |> List.sort
+        Assert.Equal(39, driverPaths.Length)
+        Assert.Contains(".agents/skills/work-board/references/host-loop.md", driverPaths)
+        Assert.Contains(".codex/skills/work-roadmap/references/roadmap-ledger.md", driverPaths)
 
         let preexisting =
             Set.ofList ([ provenancePath; toolManifestPath; ".fsgg/providers.yml" ] @ driverPaths)
@@ -1068,6 +1063,52 @@ module ScaffoldCommandTests =
         Assert.Contains(".agents/skills/work-board/SKILL.md", summary.MaterializedDriverPaths)
         Assert.Contains(".claude/skills/work-board/SKILL.md", summary.MaterializedDriverPaths)
         Assert.Contains(".codex/skills/work-board/SKILL.md", summary.MaterializedDriverPaths)
+
+    [<Fact; Trait("tier", "slow")>]
+    let ``fresh scaffold materializes complete work driver directories and every relative link resolves`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "lifecycle.providers.yml"
+
+        let report =
+            runScaffold (
+                scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false
+            )
+
+        Assert.Equal(0, exitCodeForReport report)
+
+        let manifest =
+            DriverSkills.manifestText ()
+            |> Option.bind (DriverManifest.tryParse >> Result.toOption)
+            |> Option.defaultWith (fun () -> failwith "embedded driver manifest must parse")
+
+        let drivers =
+            manifest.Skills
+            |> List.filter (fun entry -> entry.Scope = "driver" && entry.MaterializesWhen = "always")
+
+        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+            for driver in drivers do
+                let directory = Path.Combine(root, skillRoot, "skills", driver.Id)
+
+                for file in driver.Files do
+                    let absolute = Path.Combine(directory, file.Path.Replace('/', Path.DirectorySeparatorChar))
+                    Assert.True(File.Exists absolute, $"missing complete driver member {skillRoot}/skills/{driver.Id}/{file.Path}")
+
+                    if file.Path.EndsWith(".md") then
+                        for linkMatch in Regex.Matches(File.ReadAllText absolute, @"\[[^\]]+\]\(([^)#]+)(?:#[^)]+)?\)") do
+                            let target = linkMatch.Groups[1].Value
+
+                            if
+                                not (target.Contains "://")
+                                && not (target.StartsWith "/")
+                                && not (target.StartsWith "../")
+                            then
+                                let parent =
+                                    Path.GetDirectoryName absolute
+                                    |> Option.ofObj
+                                    |> Option.defaultWith (fun () -> failwith $"no parent for {absolute}")
+
+                                let resolved = Path.GetFullPath(Path.Combine(parent, target))
+                                Assert.True(File.Exists resolved, $"dead relative link {file.Path} -> {target}")
 
     // FS.GG.SDD#703: FS.GG.Drivers 0.8.0 adds the product-workspace board filer padd-item.
     // The generic driver materializer embeds and lays down the package-delivered source unchanged.

@@ -7,6 +7,14 @@ namespace FS.GG.SDD.Artifacts
 /// gates whether it is laid into a scaffold. This models the *shape* of a driver manifest —
 /// never the contents of any particular one (no `.github` literal as behavior).
 module DriverManifest =
+    /// One file in a schema-v2 driver skill directory. Paths are normalized forward-slash
+    /// relative paths; the digest covers the raw file bytes, and `Executable` is the intended
+    /// execute-bit state in every materialized skill root.
+    type DriverManifestFile =
+        { Path: string
+          Sha256: string
+          Executable: bool }
+
     type DriverManifestEntry =
         {
             /// The skill id (the `<id>` of `skills/<id>/SKILL.md`).
@@ -16,6 +24,12 @@ module DriverManifest =
             /// The canonical-body digest (CRLF→LF-normalized, lowercase hex) the delivered body
             /// must hash to (ADR-0014). Compared with `Fsgg.SkillMirror.sha256`.
             Sha256: string
+            /// Schema-v2 digest of the canonical compact JSON `files` array. `None` only for a
+            /// legacy schema-v1 manifest.
+            TreeSha256: string option
+            /// The complete closed directory transport. A schema-v2 row always has at least
+            /// `SKILL.md`; schema-v1 rows are projected to that single legacy file.
+            Files: DriverManifestFile list
             /// The row's origin path in the authoring repo (informational, e.g. `.claude/skills/<id>`).
             SuppliedBy: string option
             /// The ADR-0017 predicate gating materialization (`always`, `false`, `has X and has Y`, …).
@@ -26,9 +40,10 @@ module DriverManifest =
         { SchemaVersion: int
           Skills: DriverManifestEntry list }
 
-    /// Parse a `driver-skill-manifest.json` document. `Error` on malformed JSON or a missing
-    /// integer `schemaVersion`; a row lacking `id`/`sha256`/`materializes-when` is dropped
-    /// (it cannot be safely materialized), never silently materialized.
+    /// Parse and validate a `driver-skill-manifest.json` document. Schema v2 is fail-closed:
+    /// every file row, raw digest, executable flag, unique safe relative path, and the
+    /// `tree-sha256` binding are required. Schema v1 remains readable as a single-SKILL.md
+    /// legacy transport. Malformed rows fail the whole manifest; they are never dropped.
     val tryParse: text: string -> Result<DriverManifest, string>
 
 /// Evaluate an ADR-0017 `materializes-when` predicate against the set of skill ids present in
