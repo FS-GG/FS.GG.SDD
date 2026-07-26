@@ -6,7 +6,10 @@ open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Artifacts.SchemaVersion
 
 module WorkModel =
-    type ProjectSummary = { Id: string; DefaultWorkRoot: string }
+    type ProjectSummary =
+        { Id: string
+          DefaultWorkRoot: string
+          Profile: string option }
 
     type SourceEntry =
         { Path: string
@@ -96,6 +99,7 @@ module WorkModel =
           Project: ProjectSummary
           Sources: SourceEntry list
           WorkItem: WorkItemSummary
+          PerformanceIntent: PerformanceIntentDeclaration option
           Requirements: RequirementEntry list
           Decisions: DecisionEntry list
           Tasks: TaskEntry list

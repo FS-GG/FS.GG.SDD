@@ -15,6 +15,7 @@ module WorkItem =
           SddPolicy: SddLifecyclePolicy option
           Agents: AgentGuidanceConfig option
           Metadata: WorkItemMetadata
+          PerformanceIntent: PerformanceIntentDeclaration option
           Requirements: Requirement list
           Decisions: Decision list
           Tasks: WorkTask list

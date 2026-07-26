@@ -149,9 +149,29 @@ module Schemas =
           P99Ms: decimal
           MaxCatchUpFrames: int }
 
+    /// The single lifecycle declaration of performance intent. Early SDD stages author this
+    /// contract; evidence and Governance carry the same value instead of maintaining mirrors.
+    type PerformanceIntentDeclaration =
+        { Id: string
+          Disposition: string
+          TargetFps: int
+          WorkloadIds: string list
+          WorkloadDefinitionDigests: string list
+          MaximumExpectedScale: string
+          MaxP95Ms: decimal
+          MaxP99Ms: decimal
+          MaxCatchUpFrames: int
+          StructuralCostBudgets: string list
+          RequiredCapability: string
+          LiveCompositorRequired: bool
+          DeferralIssue: string option
+          EvidenceRefs: string list
+          Rationale: string option }
+
     type GovernanceHandoffPerformanceEvidence =
         { EvidenceId: string
           ArtifactPath: string
+          Intent: PerformanceIntentDeclaration option
           Artifact: PerformanceEvidenceArtifact
           Measurements: PerformanceEvidenceMeasurement list }
 
@@ -222,7 +242,7 @@ module Schemas =
     // `governance-handoff-emitted-version` tracks it). Until it lands, the two are kept in step by
     // hand — so change this value only alongside the registry.
     let governanceHandoffVersion = 1
-    let governanceHandoffContractVersion = "1.2.0"
+    let governanceHandoffContractVersion = "2.0.0"
     // SDD-owned skill-vendoring contract (ADR-0014). The manifest is the producer's
     // declarative skill set; the root set is a single declared constant.
     let skillManifestVersion = 1

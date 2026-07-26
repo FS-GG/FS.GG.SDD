@@ -34,6 +34,7 @@ module internal PlanAuthoring =
         | "Plan Decisions" -> "## Plan Decisions\nNo plan decisions recorded.\n"
         | "Contract Impact" -> "## Contract Impact\nNo contract references recorded.\n"
         | "Verification Obligations" -> "## Verification Obligations\nNo verification obligations recorded.\n"
+        | "Performance Intent" -> "## Performance Intent\nNo performance intent is declared for this work item.\n"
         | "Migration Posture" -> "## Migration Posture\nNo migration notes recorded.\n"
         | "Generated View Impact" -> "## Generated View Impact\nNo generated-view impacts recorded.\n"
         | "Accepted Deferrals" -> "## Accepted Deferrals\nNo accepted plan deferrals recorded.\n"
@@ -404,6 +405,30 @@ module internal PlanAuthoring =
         | Some text -> lines @ [ sourceSnapshotLine "plan" (planPath workId) text ]
         | None -> lines
 
+    let performanceIntentProjection (specText: string) =
+        specText
+        |> splitFrontMatter
+        |> Option.bind (fun (yaml, _) -> parsePerformanceIntentYaml yaml |> Result.toOption |> Option.flatten)
+        |> Option.map (fun intent ->
+            let workloads = String.concat ", " intent.WorkloadIds
+            let definitions = String.concat ", " intent.WorkloadDefinitionDigests
+            let structuralBudgets = String.concat ", " intent.StructuralCostBudgets
+
+            [ $"- id: {intent.Id}"
+              $"- disposition: {intent.Disposition}"
+              $"- targetFps: {intent.TargetFps}"
+              $"- workloadIds: [{workloads}]"
+              $"- workloadDefinitionDigests: [{definitions}]"
+              $"- maximumExpectedScale: {intent.MaximumExpectedScale}"
+              $"- maxP95Ms: {intent.MaxP95Ms}"
+              $"- maxP99Ms: {intent.MaxP99Ms}"
+              $"- maxCatchUpFrames: {intent.MaxCatchUpFrames}"
+              $"- structuralCostBudgets: [{structuralBudgets}]"
+              $"- requiredCapability: {intent.RequiredCapability}"
+              $"- liveCompositorRequired: {intent.LiveCompositorRequired.ToString().ToLowerInvariant()}" ]
+            |> String.concat "\n")
+        |> Option.defaultValue "No performance intent is declared for this work item."
+
     let planTemplate
         (request: CommandRequest)
         (workId: string)
@@ -416,6 +441,8 @@ module internal PlanAuthoring =
         (checklistFacts: ChecklistFacts)
         =
         let title = requestTitle request workId
+
+        let performanceIntentProjection = performanceIntentProjection specText
 
         let entries =
             plannedPlanEntries workId specFacts clarificationFacts checklistFacts None
@@ -490,6 +517,9 @@ Prose status: planned
 
 ## Verification Obligations
 {String.concat "\n" obligations}
+
+## Performance Intent
+{performanceIntentProjection}
 
 ## Migration Posture
 {String.concat "\n" migrations}
@@ -781,7 +811,12 @@ No blocking planning findings recorded.
                                     checklistFacts
                                     (Some existingFacts)
 
-                            let withEntries = appendPlanEntries ensuredText entries
+                            let withEntries =
+                                appendPlanEntries ensuredText entries
+                                |> replaceSectionBody
+                                    "Performance Intent"
+                                    (performanceIntentProjection specText
+                                     |> fun text -> text.Split('\n') |> Array.toList)
 
                             // FR-004. Rewrite the plan's own `## Source Snapshot` body — and nothing else —
                             // whenever the operator asks for it with `--accept-upstream`.

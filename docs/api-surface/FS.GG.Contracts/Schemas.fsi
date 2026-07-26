@@ -192,10 +192,30 @@ module Schemas =
           P99Ms: decimal
           MaxCatchUpFrames: int }
 
+    /// The canonical declaration authored before implementation and carried unchanged through
+    /// evidence and Governance.
+    type PerformanceIntentDeclaration =
+        { Id: string
+          Disposition: string
+          TargetFps: int
+          WorkloadIds: string list
+          WorkloadDefinitionDigests: string list
+          MaximumExpectedScale: string
+          MaxP95Ms: decimal
+          MaxP99Ms: decimal
+          MaxCatchUpFrames: int
+          StructuralCostBudgets: string list
+          RequiredCapability: string
+          LiveCompositorRequired: bool
+          DeferralIssue: string option
+          EvidenceRefs: string list
+          Rationale: string option }
+
     /// Raw bound evidence plus SDD's reproducible calculations; not a verdict summary.
     type GovernanceHandoffPerformanceEvidence =
         { EvidenceId: string
           ArtifactPath: string
+          Intent: PerformanceIntentDeclaration option
           Artifact: PerformanceEvidenceArtifact
           Measurements: PerformanceEvidenceMeasurement list }
 

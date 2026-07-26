@@ -4,6 +4,40 @@ open FS.GG.SDD.Artifacts
 open Xunit
 
 module WorkModelTests =
+    let private withProfileAndIntent profile intent =
+        TestSupport.snapshots "valid-work-item"
+        |> List.map (fun snapshot ->
+            if snapshot.Path = ".fsgg/project.yml" then
+                { snapshot with
+                    Text =
+                        snapshot.Text.Replace(
+                            "  defaultWorkRoot: work",
+                            $"  defaultWorkRoot: work\n  profile: {profile}"
+                        ) }
+            elif snapshot.Path.EndsWith("/spec.md") && Option.isSome intent then
+                { snapshot with
+                    Text = snapshot.Text.Replace("status: draft\n---", $"status: draft\n{Option.get intent}---") }
+            else
+                snapshot)
+        |> fun snapshots -> Serialization.normalizeSnapshotsToWorkModel snapshots "001-sdd-artifact-model"
+
+    let private activeIntent =
+        """performanceIntent:
+  id: PI-001
+  disposition: active
+  targetFps: 60
+  workloadIds: [normal-play]
+  workloadDefinitionDigests: [normal-play=sha256:normal-v1]
+  maximumExpectedScale: 10000 sprites
+  maxP95Ms: 16.67
+  maxP99Ms: 25
+  maxCatchUpFrames: 0
+  structuralCostBudgets: [draw-calls<=500]
+  requiredCapability: live-compositor
+  liveCompositorRequired: true
+  evidenceRefs: []
+"""
+
     [<Fact>]
     let ``Valid fixture normalizes to work model with zero blocking diagnostics`` () =
         let model = TestSupport.model "valid-work-item"
@@ -23,6 +57,109 @@ module WorkModelTests =
         Assert.Contains("\"modelVersion\"", json)
         Assert.Contains("\"workId\"", json)
         Assert.Contains("\"governanceBoundaries\"", json)
+
+    [<Fact>]
+    let ``interactive profile without intent fails closed before implementation`` () =
+        let model = withProfileAndIntent "interactive" None
+        TestSupport.assertDiagnostic "performance.intentNotReady" model
+
+    [<Fact>]
+    let ``active interactive intent is typed and implementation ready`` () =
+        let model = withProfileAndIntent "interactive" (Some activeIntent)
+        Assert.Equal(Some "PI-001", model.PerformanceIntent |> Option.map _.Id)
+        Assert.DoesNotContain(model.Diagnostics, fun diagnostic -> diagnostic.Id = "performance.intentNotReady")
+
+    [<Fact>]
+    let ``placeholder workload definition fails closed`` () =
+        let model =
+            withProfileAndIntent "interactive" (Some(activeIntent.Replace("sha256:normal-v1", "TODO-placeholder")))
+
+        TestSupport.assertDiagnostic "performance.intentNotReady" model
+
+    [<Theory>]
+    [<InlineData("other=sha256:normal-v1")>]
+    [<InlineData("normal-play=sha256:a, normal-play=sha256:b")>]
+    [<InlineData("normal-play=")>]
+    [<InlineData("normal-play=md5:not-authoritative")>]
+    let ``wrong duplicate or malformed workload binding fails closed`` binding =
+        let model =
+            withProfileAndIntent
+                "interactive"
+                (Some(
+                    activeIntent.Replace(
+                        "workloadDefinitionDigests: [normal-play=sha256:normal-v1]",
+                        $"workloadDefinitionDigests: [{binding}]"
+                    )
+                ))
+
+        TestSupport.assertDiagnostic "performance.intentNotReady" model
+
+    [<Fact>]
+    let ``non-interactive profile remains compatible without intent`` () =
+        let model = withProfileAndIntent "library" None
+        Assert.DoesNotContain(model.Diagnostics, fun diagnostic -> diagnostic.Id = "performance.intentNotReady")
+
+    [<Fact>]
+    let ``supported non-applicability is accepted`` () =
+        let intent =
+            """performanceIntent:
+  id: PI-002
+  disposition: not-applicable
+  targetFps: 0
+  workloadIds: []
+  workloadDefinitionDigests: []
+  maximumExpectedScale: none
+  maxP95Ms: 0
+  maxP99Ms: 0
+  maxCatchUpFrames: 0
+  structuralCostBudgets: []
+  requiredCapability: none
+  liveCompositorRequired: false
+  evidenceRefs: [DEC-001]
+  rationale: This change has no runtime interactive path.
+"""
+
+        let model = withProfileAndIntent "interactive" (Some intent)
+        Assert.DoesNotContain(model.Diagnostics, fun diagnostic -> diagnostic.Id = "performance.intentNotReady")
+
+    [<Fact>]
+    let ``deferral remains blocking typed debt`` () =
+        let intent =
+            """performanceIntent:
+  id: PI-003
+  disposition: deferred
+  targetFps: 60
+  workloadIds: [normal-play]
+  workloadDefinitionDigests: [normal-play=sha256:normal-v1]
+  maximumExpectedScale: 10000 sprites
+  maxP95Ms: 16.67
+  maxP99Ms: 25
+  maxCatchUpFrames: 0
+  structuralCostBudgets: [draw-calls<=500]
+  requiredCapability: live-compositor
+  liveCompositorRequired: true
+  deferralIssue: FS-GG/Product#123
+  evidenceRefs: [DEC-001]
+"""
+
+        let model = withProfileAndIntent "interactive" (Some intent)
+        TestSupport.assertDiagnostic "performance.intentNotReady" model
+
+    [<Fact>]
+    let ``deferral rejects an untyped debt reference`` () =
+        let intent =
+            activeIntent
+                .Replace("disposition: active", "disposition: deferred")
+                .Replace("evidenceRefs: []", "deferralIssue: someday\n  evidenceRefs: [DEC-001]")
+
+        let model = withProfileAndIntent "interactive" (Some intent)
+
+        Assert.Contains(
+            model.Diagnostics,
+            fun diagnostic ->
+                diagnostic.Id = "performance.intentNotReady"
+                && diagnostic.Message.Contains("owner/repo#N")
+        )
 
     [<Fact>]
     let ``Duplicate identifier fixture emits duplicateIdentifier`` () =

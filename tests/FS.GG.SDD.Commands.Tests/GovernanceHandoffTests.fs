@@ -47,7 +47,8 @@ module GovernanceHandoffTests =
           WorkId = workId
           Project =
             { Id = "fsgg-sdd"
-              DefaultWorkRoot = "work" }
+              DefaultWorkRoot = "work"
+              Profile = None }
           Sources = []
           WorkItem =
             { Id = workId
@@ -55,6 +56,7 @@ module GovernanceHandoffTests =
               Stage = "ship"
               ChangeTier = "tier1"
               Status = "draft" }
+          PerformanceIntent = None
           Requirements = []
           Decisions = []
           Tasks = []
@@ -522,6 +524,23 @@ module GovernanceHandoffTests =
                 PerformanceBudget =
                     Some
                         { ArtifactPath = "readiness/performance.json"
+                          Intent =
+                            Some
+                                { Id = "PI-001"
+                                  Disposition = "active"
+                                  TargetFps = 60
+                                  WorkloadIds = [ "idle-play" ]
+                                  WorkloadDefinitionDigests = [ "idle-play=sha256:idle-v1" ]
+                                  MaximumExpectedScale = "10k sprites"
+                                  MaxP95Ms = 16.67m
+                                  MaxP99Ms = 25m
+                                  MaxCatchUpFrames = 0
+                                  StructuralCostBudgets = [ "draw-calls<=500" ]
+                                  RequiredCapability = "headless"
+                                  LiveCompositorRequired = false
+                                  DeferralIssue = None
+                                  EvidenceRefs = []
+                                  Rationale = None }
                           TargetFps = 60
                           WorkloadIds = [ "idle-play" ]
                           StressWorkloadIds = []

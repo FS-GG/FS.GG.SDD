@@ -56,8 +56,11 @@ module Evidence =
 
     /// A typed, active normal-play performance gate attached to an evidence declaration.
     /// Absence means the cited artifact is baseline/stress information only and carries no target.
+    type PerformanceIntentDeclaration = Fsgg.Schemas.PerformanceIntentDeclaration
+
     type PerformanceBudgetDeclaration =
         { ArtifactPath: string
+          Intent: PerformanceIntentDeclaration option
           TargetFps: int
           WorkloadIds: string list
           StressWorkloadIds: string list
@@ -91,6 +94,11 @@ module Evidence =
           DeferralIssue: string option
           Artifact: PerformanceEvidenceArtifact option
           Measurements: PerformanceEvidenceMeasurement list }
+
+    val parsePerformanceIntentYaml: yaml: string -> Result<PerformanceIntentDeclaration option, string>
+    val isPerformanceDebtIssueReference: value: string -> bool
+    val requiresPerformanceIntentProfile: profile: string option -> bool
+    val performanceIntentProblems: intent: PerformanceIntentDeclaration -> string list
 
     type EvidenceDeclaration =
         {
@@ -199,6 +207,8 @@ module Evidence =
         val lowerObservedRun: run: ObservedRun -> ObservedRunDraft
 
         val performanceBudgetSeed: PerformanceBudgetDeclaration
+        val performanceIntentSeed: PerformanceIntentDeclaration
+        val performanceIntentFields: ArtifactCodec.FieldCodec<PerformanceIntentDeclaration> list
         val performanceBudgetFields: ArtifactCodec.FieldCodec<PerformanceBudgetDeclaration> list
 
         /// The whole authored evidence declaration as one shared field list — drives both the

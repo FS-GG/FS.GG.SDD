@@ -660,6 +660,7 @@ module internal HandlersEvidence =
         (checklistFacts: ChecklistFacts)
         (planFacts: PlanFacts)
         (taskFacts: TaskFacts)
+        (performanceIntent: PerformanceIntentDeclaration option)
         (currentSnapshots: EvidenceSourceSnapshot list)
         // FS.GG.SDD#349: injected, not called — the probe happened at the edge and this fold reads
         // its result, so no handler touches `System.IO` (Constitution V, FR-003).
@@ -795,6 +796,17 @@ module internal HandlersEvidence =
         let performanceEvaluations =
             evaluatePerformanceBudgets artifactText artifact.Evidence
 
+        let performanceIntentBindings =
+            match performanceIntent with
+            | Some intent when intent.Disposition.Equals("active", StringComparison.OrdinalIgnoreCase) ->
+                artifact.Evidence
+                |> List.choose (fun declaration ->
+                    declaration.PerformanceBudget
+                    |> Option.bind (fun budget ->
+                        budget.Intent |> Option.map (fun bound -> declaration.Id.Value, bound)))
+                |> List.filter (fun (_, bound) -> bound = intent)
+            | _ -> []
+
         [ if not (String.Equals(artifact.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
               evidenceIdentityMismatch path workId artifact.WorkId.Value
           if artifact.Stage <> LifecycleStage.Evidence then
@@ -825,6 +837,18 @@ module internal HandlersEvidence =
               missingVisualInspectionArtifact path missingVisualArtifacts
           if not (List.isEmpty missingArtifactPaths) then
               evidenceArtifactNotFound path missingArtifactPaths
+          match performanceIntent with
+          | Some intent when
+              intent.Disposition.Equals("active", StringComparison.OrdinalIgnoreCase)
+              && List.isEmpty performanceIntentBindings
+              ->
+              errorDiagnostic
+                  "evidence.performanceIntentUnbound"
+                  (Some path)
+                  "The active early performance intent is not bound by any performanceBudget declaration."
+                  "Copy the canonical performanceIntent into performanceBudget.intent and cite its measured artifact."
+                  [ intent.Id ]
+          | _ -> ()
           for evaluation in performanceEvaluations do
               match evaluation.State with
               | PerformancePassed ->
@@ -1323,6 +1347,12 @@ sourceAnalysis: {analysisPath workId}
                                     SourceSnapshots = currentSnapshots }
 
                             let validationDiagnostics =
+                                let performanceIntent =
+                                    specText
+                                    |> splitFrontMatter
+                                    |> Option.bind (fun (yaml, _) ->
+                                        parsePerformanceIntentYaml yaml |> Result.toOption |> Option.flatten)
+
                                 evidenceValidationDiagnostics
                                     workId
                                     specFacts
@@ -1330,6 +1360,7 @@ sourceAnalysis: {analysisPath workId}
                                     checklistFacts
                                     planFacts
                                     taskFacts
+                                    performanceIntent
                                     currentSnapshots
                                     (citedArtifactExists model)
                                     (fun artifactPath -> snapshot artifactPath model |> Option.map _.Text)

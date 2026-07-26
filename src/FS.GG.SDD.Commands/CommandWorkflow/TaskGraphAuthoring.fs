@@ -191,6 +191,7 @@ module internal TaskGraphAuthoring =
     let plannedTasks
         (skills: DerivedSkills)
         (visualSurface: bool)
+        (performanceIntent: PerformanceIntentDeclaration option)
         (specFacts: SpecificationFacts)
         (clarificationFacts: ClarificationFacts)
         (checklistFacts: ChecklistFacts)
@@ -525,6 +526,23 @@ module internal TaskGraphAuthoring =
                       [ visualInspectionSkill; skills.ImplementSkill ] ]
                 |> List.choose id
 
+        // SDD#700: the task projection of the exact early intent. The stable intent id stays in the
+        // title (and therefore the derived-task merge identity); the required capability travels as
+        // a skill and the normal evidence id minted by `maybeTask` becomes the later binding point.
+        let performanceIntentTasks =
+            performanceIntent
+            |> Option.filter (fun intent -> intent.Disposition.Equals("active", StringComparison.OrdinalIgnoreCase))
+            |> Option.map (fun intent ->
+                [ maybeTask
+                      []
+                      $"Measure performance intent {intent.Id}"
+                      []
+                      []
+                      primaryDependency
+                      [ "performance-measurement"; intent.RequiredCapability ] ]
+                |> List.choose id)
+            |> Option.defaultValue []
+
         // WI-4 (ADR-0048): the per-classified-FR gameplay obligation, one granularity finer than the
         // project-wide visual task. Every FR annotated `{gameplay}` earns a task discharged only by a
         // real, non-synthetic test — the `gameplayTestCapability` tag makes the minted obligation carry
@@ -553,6 +571,7 @@ module internal TaskGraphAuthoring =
         @ migrationTasks
         @ generatedViewTasks
         @ deferralTasks
+        @ performanceIntentTasks
         @ visualInspectionTasks
         @ classifiedRequirementTasks
 
@@ -1107,10 +1126,23 @@ sources:
         let skills = derivedSkills projectConfig
         let visualSurface = derivedVisualSurface projectConfig
 
+        let performanceIntent =
+            specText
+            |> splitFrontMatter
+            |> Option.bind (fun (yaml, _) -> parsePerformanceIntentYaml yaml |> Result.toOption |> Option.flatten)
+
         match snapshot path model with
         | None ->
             let tasks =
-                plannedTasks skills visualSurface specFacts clarificationFacts checklistFacts planFacts None
+                plannedTasks
+                    skills
+                    visualSurface
+                    performanceIntent
+                    specFacts
+                    clarificationFacts
+                    checklistFacts
+                    planFacts
+                    None
 
             let acceptedDeferrals =
                 [ clarificationFacts.AcceptedDeferrals
@@ -1234,7 +1266,15 @@ sources:
                         // never reports stale-and-unchanged (FR-004/FR-005). Derived rows are
                         // reclaimed — prior tool-injected rows are never re-ingested (FR-002).
                         let derived =
-                            plannedTasks skills visualSurface specFacts clarificationFacts checklistFacts planFacts None
+                            plannedTasks
+                                skills
+                                visualSurface
+                                performanceIntent
+                                specFacts
+                                clarificationFacts
+                                checklistFacts
+                                planFacts
+                                None
 
                         // The universe of ids the current sources can dispose (the ONE shared
                         // `requiredDispositionIds` list analyze's completeness check also reads).

@@ -239,15 +239,15 @@ module ReleaseContract =
 
     let currentRelease () : ReleaseReadiness =
         let identity =
-            { Version = "0.26.1"
-              Channel = channelOfVersion "0.26.1"
+            { Version = "0.27.0"
+              Channel = channelOfVersion "0.27.0"
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "0.26.x"
+            [ { SddVersionLine = "0.27.x"
                 SpecKitRange = ">=0.8.5"
-                GovernanceContractVersionRange = Some "1.x" } ]
+                GovernanceContractVersionRange = Some "2.x" } ]
 
         let workModel =
             jsonViewEntry
@@ -263,6 +263,22 @@ module ReleaseContract =
                   "evidence[].kind"
                   "evidence[].performanceBudget"
                   "evidence[].performanceBudget.artifactPath"
+                  "evidence[].performanceBudget.intent"
+                  "evidence[].performanceBudget.intent.deferralIssue"
+                  "evidence[].performanceBudget.intent.disposition"
+                  "evidence[].performanceBudget.intent.evidenceRefs"
+                  "evidence[].performanceBudget.intent.id"
+                  "evidence[].performanceBudget.intent.liveCompositorRequired"
+                  "evidence[].performanceBudget.intent.maxCatchUpFrames"
+                  "evidence[].performanceBudget.intent.maxP95Ms"
+                  "evidence[].performanceBudget.intent.maxP99Ms"
+                  "evidence[].performanceBudget.intent.maximumExpectedScale"
+                  "evidence[].performanceBudget.intent.rationale"
+                  "evidence[].performanceBudget.intent.requiredCapability"
+                  "evidence[].performanceBudget.intent.structuralCostBudgets"
+                  "evidence[].performanceBudget.intent.targetFps"
+                  "evidence[].performanceBudget.intent.workloadDefinitionDigests"
+                  "evidence[].performanceBudget.intent.workloadIds"
                   "evidence[].performanceBudget.capturedAfterUtc"
                   "evidence[].performanceBudget.currencyToken"
                   "evidence[].performanceBudget.deferralIssue"
@@ -316,6 +332,23 @@ module ReleaseContract =
                   "evidence[].subjectType"
                   "evidence[].synthetic"
                   "evidence[].taskRefs"
+                  "performanceIntent"
+                  "performanceIntent.deferralIssue"
+                  "performanceIntent.disposition"
+                  "performanceIntent.evidenceRefs"
+                  "performanceIntent.id"
+                  "performanceIntent.liveCompositorRequired"
+                  "performanceIntent.maxCatchUpFrames"
+                  "performanceIntent.maxP95Ms"
+                  "performanceIntent.maxP99Ms"
+                  "performanceIntent.maximumExpectedScale"
+                  "performanceIntent.rationale"
+                  "performanceIntent.requiredCapability"
+                  "performanceIntent.structuralCostBudgets"
+                  "performanceIntent.targetFps"
+                  "performanceIntent.workloadDefinitionDigests"
+                  "performanceIntent.workloadIds"
+                  "project.profile"
                   "generatedViews"
                   "generatedViews[].currency"
                   "generatedViews[].generator"
@@ -721,6 +754,22 @@ module ReleaseContract =
                       "performanceEvidence[].artifact.sampleSets[].workloadId"
                       "performanceEvidence[].artifactPath"
                       "performanceEvidence[].evidenceId"
+                      "performanceEvidence[].intent"
+                      "performanceEvidence[].intent.deferralIssue"
+                      "performanceEvidence[].intent.disposition"
+                      "performanceEvidence[].intent.evidenceRefs"
+                      "performanceEvidence[].intent.id"
+                      "performanceEvidence[].intent.liveCompositorRequired"
+                      "performanceEvidence[].intent.maxCatchUpFrames"
+                      "performanceEvidence[].intent.maxP95Ms"
+                      "performanceEvidence[].intent.maxP99Ms"
+                      "performanceEvidence[].intent.maximumExpectedScale"
+                      "performanceEvidence[].intent.rationale"
+                      "performanceEvidence[].intent.requiredCapability"
+                      "performanceEvidence[].intent.structuralCostBudgets"
+                      "performanceEvidence[].intent.targetFps"
+                      "performanceEvidence[].intent.workloadDefinitionDigests"
+                      "performanceEvidence[].intent.workloadIds"
                       "performanceEvidence[].measurements"
                       "performanceEvidence[].measurements[].maxCatchUpFrames"
                       "performanceEvidence[].measurements[].p95Ms"
@@ -1082,8 +1131,9 @@ module ReleaseContract =
             [ { Version = identity.Version
                 Path = $"docs/release/migrations/{identity.Version}.md"
                 BreakingChanges =
-                  [ "Summary-only performance artifacts are now malformed; emit performance-evidence-v1 raw sample sets with complete workload, budget, host, package, measurement, policy, and currency bindings."
-                    "Headless or probe/readback-contaminated measurements no longer satisfy declarations that require live-compositor evidence." ] } ] }
+                  [ "Interactive and render-loop work now needs typed performance intent before implementation readiness."
+                    "Active measured performance budgets must bind the canonical early intent without changing its workload definitions, targets, limits, capability, or compositor posture."
+                    "Governance handoff contract 2.0.0 adds the optional canonical intent beside raw performance samples; consumers must recompile against FS.GG.Contracts 7.0.0." ] } ] }
 
     // ---- canonical serialization ----
 

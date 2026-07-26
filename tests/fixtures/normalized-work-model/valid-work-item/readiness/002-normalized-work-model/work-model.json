@@ -1,10 +1,11 @@
 {
   "schemaVersion": 1,
-  "modelVersion": "1.1.0",
+  "modelVersion": "1.2.0",
   "workId": "002-normalized-work-model",
   "project": {
     "id": "fs-gg-sdd",
-    "defaultWorkRoot": "work"
+    "defaultWorkRoot": "work",
+    "profile": null
   },
   "sources": [
     {
@@ -87,6 +88,7 @@
     "changeTier": "tier1",
     "status": "draft"
   },
+  "performanceIntent": null,
   "requirements": [
     {
       "id": "FR-001",
@@ -285,7 +287,7 @@
       "schemaVersion": 1,
       "generator": {
         "id": "FS.GG.SDD.Artifacts",
-        "version": "0.26.1"
+        "version": "0.27.0"
       },
       "sources": [
         {
@@ -339,7 +341,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "c14133a2b0d901041af3ff29d5e3700378ce009b7d4de97a400c7b1f945aae07"
+        "value": "3c4ba1cf4175d38a059f642c6846cf1efd52c8a0f38ccced8f96faedc986ff7a"
       },
       "currency": "current"
     }

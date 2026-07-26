@@ -19,6 +19,7 @@ module WorkItem =
           SddPolicy: SddLifecyclePolicy option
           Agents: AgentGuidanceConfig option
           Metadata: WorkItemMetadata
+          PerformanceIntent: PerformanceIntentDeclaration option
           Requirements: Requirement list
           Decisions: Decision list
           Tasks: WorkTask list
@@ -125,14 +126,28 @@ module WorkItem =
         let agents, agentDiagnostics =
             parse ".fsgg/agents.yml" parseAgentGuidanceConfig |> collect
 
+        let specSnapshot = Map.tryFind $"work/{workId}/spec.md" byPath
+        let clarificationSnapshot = Map.tryFind $"work/{workId}/clarifications.md" byPath
+
         let metadata, metadataDiagnostics =
             match parse $"work/{workId}/spec.md" parseWorkItemMetadata with
             | Some(Ok value) -> value, []
             | Some(Error diagnostics) -> defaultMetadata workId, diagnostics
             | None -> defaultMetadata workId, []
 
-        let specSnapshot = Map.tryFind $"work/{workId}/spec.md" byPath
-        let clarificationSnapshot = Map.tryFind $"work/{workId}/clarifications.md" byPath
+        let performanceIntent, performanceIntentDiagnostics =
+            match specSnapshot |> Option.bind frontMatter with
+            | None -> None, []
+            | Some(yaml, _) ->
+                match parsePerformanceIntentYaml yaml with
+                | Ok value -> value, []
+                | Error message ->
+                    None,
+                    [ Diagnostics.workModelInconsistent
+                          (sourceArtifact $"work/{workId}/spec.md" ArtifactKind.Spec)
+                          $"Performance intent is malformed: {message}"
+                          "Correct the typed performanceIntent mapping in specification front matter."
+                          [] ]
 
         let requirements =
             specSnapshot |> Option.map parseRequirements |> Option.defaultValue []
@@ -231,6 +246,7 @@ module WorkItem =
           SddPolicy = sdd
           Agents = agents
           Metadata = metadata
+          PerformanceIntent = performanceIntent
           Requirements = requirements
           Decisions = decisions
           Tasks = tasks
@@ -245,6 +261,7 @@ module WorkItem =
             @ sddDiagnostics
             @ agentDiagnostics
             @ metadataDiagnostics
+            @ performanceIntentDiagnostics
             @ selectedWorkItemDiagnostics
             @ taskDiagnostics
             @ evidenceDiagnostics }

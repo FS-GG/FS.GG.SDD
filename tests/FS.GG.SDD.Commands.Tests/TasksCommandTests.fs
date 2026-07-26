@@ -2,6 +2,8 @@ namespace FS.GG.SDD.Commands.Tests
 
 open System
 open System.Diagnostics
+open System.IO
+open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.CommandRendering
 open FS.GG.SDD.Commands.CommandSerialization
 open FS.GG.SDD.Commands.CommandTypes
@@ -11,6 +13,83 @@ open FS.GG.SDD.Commands.Internal.TaskGraphAuthoring
 open Xunit
 
 module TasksCommandTests =
+    let private activePerformanceIntent =
+        """performanceIntent:
+  id: PI-001
+  disposition: active
+  targetFps: 60
+  workloadIds: [normal-play]
+  workloadDefinitionDigests: [normal-play=sha256:normal-v1]
+  maximumExpectedScale: 10000 sprites
+  maxP95Ms: 16.67
+  maxP99Ms: 25
+  maxCatchUpFrames: 0
+  structuralCostBudgets: [draw-calls<=500]
+  requiredCapability: live-compositor
+  liveCompositorRequired: true
+  evidenceRefs: []
+"""
+
+    [<Fact>]
+    let ``performance intent projects through charter plan tasks and guidance`` () =
+        let root = TestSupport.tempDirectory ()
+        let workId = "700-performance-intent"
+        let title = "Performance intent"
+        TestSupport.initializeProject root
+
+        TestSupport.readRelative root ".fsgg/project.yml"
+        |> fun text -> text.Replace("  defaultWorkRoot: work", "  defaultWorkRoot: work\n  profile: interactive")
+        |> TestSupport.writeRelative root ".fsgg/project.yml"
+
+        TestSupport.runCharter root workId title |> ignore
+        Assert.Contains("Performance intent is required", TestSupport.readRelative root $"work/{workId}/charter.md")
+        TestSupport.runSpecify root workId title |> ignore
+
+        TestSupport.readRelative root $"work/{workId}/spec.md"
+        |> fun text ->
+            text.Replace(
+                "publicOrToolFacingImpact: true\n---",
+                $"publicOrToolFacingImpact: true\n{activePerformanceIntent}---"
+            )
+        |> TestSupport.writeRelative root $"work/{workId}/spec.md"
+
+        TestSupport.runClarify root workId title |> ignore
+        TestSupport.runChecklist root workId title |> ignore
+        TestSupport.runPlan root workId title |> ignore
+        let plan = TestSupport.readRelative root $"work/{workId}/plan.md"
+        Assert.Contains("## Performance Intent", plan)
+        Assert.Contains("- id: PI-001", plan)
+        TestSupport.authorPlanProse root workId
+        TestSupport.runTasks root workId title |> ignore
+        let tasks = TestSupport.readRelative root $"work/{workId}/tasks.yml"
+        Assert.Contains("Measure performance intent PI-001", tasks)
+        Assert.Contains("performance-measurement", tasks)
+        TestSupport.writePassingTaskEvidenceFor root workId
+        let analysis = TestSupport.runAnalyze root workId title
+
+        Assert.True(
+            analysis.Outcome <> CommandOutcome.Blocked,
+            String.concat ", " (analysis.Diagnostics |> List.map _.Id)
+        )
+
+        let snapshots =
+            Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+            |> Seq.map (fun path ->
+                { Path = Path.GetRelativePath(root, path).Replace('\\', '/')
+                  Text = File.ReadAllText(path) })
+            |> Seq.toList
+
+        let generated =
+            Serialization.generateWorkModel
+                { WorkId = workId
+                  Snapshots = snapshots
+                  GeneratorVersion = SchemaVersion.currentGeneratorVersion ()
+                  ExpectedOutputPath = None }
+
+        let guidance = WorkModel.deriveGuidanceModel generated.Model
+        Assert.Contains(guidance.Commands, fun command -> command.Title = "Measure performance intent PI-001")
+        Assert.Contains(guidance.Skills, fun skill -> skill.Id = "performance-measurement")
+
     [<Theory>]
     [<InlineData("expecto", "expecto")>]
     [<InlineData("Expecto", "expecto")>]

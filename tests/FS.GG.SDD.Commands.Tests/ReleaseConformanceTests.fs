@@ -24,7 +24,51 @@ module ReleaseConformanceTests =
     /// readiness directory plus a shipped `--json` report.
     let producedProject () =
         let root = TestSupport.tempDirectory ()
-        TestSupport.initializeEvidencedProject root workId title
+        TestSupport.initializeProject root
+
+        TestSupport.readRelative root ".fsgg/project.yml"
+        |> fun text -> text.Replace("  defaultWorkRoot: work", "  defaultWorkRoot: work\n  profile: interactive")
+        |> TestSupport.writeRelative root ".fsgg/project.yml"
+
+        TestSupport.runCharter root workId title |> ignore
+        TestSupport.runSpecify root workId title |> ignore
+
+        TestSupport.readRelative root $"work/{workId}/spec.md"
+        |> fun text ->
+            text.Replace(
+                "publicOrToolFacingImpact: true\n---",
+                """publicOrToolFacingImpact: true
+performanceIntent:
+  id: PI-001
+  disposition: active
+  targetFps: 60
+  workloadIds: [normal-play]
+  workloadDefinitionDigests: [normal-play=sha256:normal-v1]
+  maximumExpectedScale: 10000 sprites
+  maxP95Ms: 16.67
+  maxP99Ms: 25
+  maxCatchUpFrames: 0
+  structuralCostBudgets: [draw-calls<=500]
+  requiredCapability: bounded-headless-update-render
+  liveCompositorRequired: false
+  evidenceRefs: []
+---"""
+            )
+        |> TestSupport.writeRelative root $"work/{workId}/spec.md"
+
+        TestSupport.runClarify root workId title |> ignore
+        TestSupport.runChecklist root workId title |> ignore
+        TestSupport.runPlan root workId title |> ignore
+        TestSupport.authorPlanProse root workId
+        TestSupport.runTasks root workId title |> ignore
+
+        TestSupport.writeRelative
+            root
+            $"work/{workId}/evidence.yml"
+            (FS.GG.SDD.TestShared.TestShared.EvidenceLadder.passingTaskEvidence 6)
+
+        FS.GG.SDD.TestShared.TestShared.EvidenceLadder.writeArtifacts root 6
+        TestSupport.runAnalyze root workId title |> ignore
 
         let artifactPath = $"readiness/{workId}/performance-evidence.json"
         let evidencePath = $"work/{workId}/evidence.yml"
@@ -32,9 +76,23 @@ module ReleaseConformanceTests =
         TestSupport.readRelative root evidencePath
         |> fun text ->
             text.Replace(
-                "    result: pass\n    synthetic: false",
+                "    result: pass",
                 $"""    performanceBudget:
       artifactPath: {artifactPath}
+      intent:
+        id: PI-001
+        disposition: active
+        targetFps: 60
+        workloadIds: [normal-play]
+        workloadDefinitionDigests: [normal-play=sha256:normal-v1]
+        maximumExpectedScale: 10000 sprites
+        maxP95Ms: 16.67
+        maxP99Ms: 25
+        maxCatchUpFrames: 0
+        structuralCostBudgets: [draw-calls<=500]
+        requiredCapability: bounded-headless-update-render
+        liveCompositorRequired: false
+        evidenceRefs: []
       targetFps: 60
       workloadIds: [normal-play]
       stressWorkloadIds: [pointer-stress]
@@ -68,7 +126,18 @@ module ReleaseConformanceTests =
 "capturedAtUtc":"2026-07-26T00:00:00Z","currencyToken":"commit:abc123","probeReadbackContaminated":false,
 "durationSamplesMs":[{{durations}}],"catchUpFrames":[0]}]}"""
 
-        TestSupport.runVerify root workId title |> ignore
+        let evidenceReport = TestSupport.runEvidence root workId title
+
+        if evidenceReport.Outcome = CommandOutcome.Blocked then
+            let ids = String.concat ", " (evidenceReport.Diagnostics |> List.map _.Id)
+            failwith $"Evidence blocked: {ids}"
+
+        let verifyReport = TestSupport.runVerify root workId title
+
+        if verifyReport.Outcome = CommandOutcome.Blocked then
+            let ids = String.concat ", " (verifyReport.Diagnostics |> List.map _.Id)
+            failwith $"Verify blocked: {ids}"
+
         let shipReport = TestSupport.runShip root workId title
         TestSupport.runAgents root workId |> ignore
         TestSupport.runRefresh root workId |> ignore
