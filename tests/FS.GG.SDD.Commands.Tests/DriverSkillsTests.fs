@@ -17,15 +17,15 @@ module DriverSkillsTests =
 
     // The pinned digests of the delivered driver bodies (the drift-guard goldens).
     let private workRoadmapSha256 =
-        "715609ab4d97337ee5250fb31e57159fb5d7b99a8c4ead0b712fd8c8c50b1677"
+        "7eb9f056104bdbcfdcbd6a73cc82199f481b46864f762a8f0f041d6757529c4f"
 
     // work-board ships in FS.GG.Drivers 0.8.0, `materializes-when: always` like work-roadmap.
     let private workBoardSha256 =
-        "7b3668c5137e6dc9de9f008f45aa55623abb8b4bc8ea18715fcd9ce584ce694b"
+        "0e44ecccfb46537cdb40296c7351dd08a0e5494ea6144ff13ceefd27872a8855"
 
     // padd-item is the product-workspace board filer added by FS.GG.Drivers 0.8.0 (#703).
     let private paddItemSha256 =
-        "4daf167ef061d9a27504ad212e4c9c42321f597c64143953b0c666f072092d9e"
+        "028316b22d32384d3b7c3f0bccac4191e0b16dfc7595f769a1a93510218277af"
 
     let private roots = [ ".agents"; ".claude"; ".codex" ]
 
@@ -37,14 +37,18 @@ module DriverSkillsTests =
                 "agents/openai.yaml"
                 "references/backlog-triage.md"
                 "references/deep-detail.md"
+                "references/feedback-contract.md"
                 "references/host-loop.md"
-                "references/workspace-scope.md" ]
+                "references/workspace-scope.md"
+                "scripts/validate-feedback-state.py" ]
               "work-roadmap",
               [ "SKILL.md"
                 "agents/openai.yaml"
                 "references/deep-detail.md"
+                "references/feedback-contract.md"
                 "references/host-loop.md"
-                "references/roadmap-ledger.md" ] ]
+                "references/roadmap-ledger.md"
+                "scripts/validate-feedback-state.py" ] ]
 
     let private driverPathFor id =
         [ for root in roots do
@@ -122,7 +126,8 @@ module DriverSkillsTests =
         Assert.Contains(paddItemSha256, shas)
         Assert.Contains(workRoadmapSha256, shas)
         Assert.Contains(workBoardSha256, shas)
-        Assert.Equal(13, shas.Count)
+        // The two driver feedback validators are byte-identical, so 17 files yield 16 distinct digests.
+        Assert.Equal(16, shas.Count)
 
     // ---------- the fail-closed classes (planFrom, synthetic) ----------
 
@@ -263,8 +268,8 @@ module DriverSkillsTests =
         Assert.Contains("padd-item", outcome.MaterializedIds)
         Assert.Contains("work-board", outcome.MaterializedIds)
         Assert.Contains("work-roadmap", outcome.MaterializedIds)
-        // Thirteen declared files across the three `always` drivers × three roots.
-        Assert.Equal(39, outcome.ProvenancePaths |> List.length)
+        // Seventeen declared files across the three `always` drivers × three roots.
+        Assert.Equal(51, outcome.ProvenancePaths |> List.length)
 
     // FR-005/FR-009: a provider that shipped its own `work-roadmap` (its `.agents` skill, mirrored to
     // the other roots by the preceding tick) already occupies that driver's targets — the no-clobber
@@ -281,4 +286,4 @@ module DriverSkillsTests =
 
         let writtenPaths = outcome.ProvenancePaths |> List.map fst |> List.sort
         Assert.Equal<string list>(driverPathsFor [ "padd-item"; "work-board" ], writtenPaths)
-        Assert.Equal(24, outcome.Writes |> List.length)
+        Assert.Equal(30, outcome.Writes |> List.length)

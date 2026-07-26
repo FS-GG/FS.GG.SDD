@@ -374,7 +374,7 @@ module ScaffoldCommandTests =
         Assert.Contains("\"generator\":", provenance)
         Assert.Contains("\"version\":", provenance)
         // …alongside the provider-declared required minimum, recorded verbatim. min-behind declares
-        // one minor above the installed version, so it tracks the bump (installed 0.31.0 ⇒ 0.32.0).
+        // one minor above the installed version, so it tracks the bump (installed 0.31.1 ⇒ 0.32.0).
         Assert.Contains("\"requiredMinimumCliVersion\": \"0.32.0\"", provenance)
 
     // Feature 052 US1 scenario 2: no provider minimum ⇒ the field is recorded as null
@@ -652,7 +652,7 @@ module ScaffoldCommandTests =
         // exactly as the provenance/tool-manifest SDD writes are. FS.GG.Drivers 0.8.0 (#703) ships
         // three `always` drivers: padd-item, work-board, and work-roadmap.
         let driverPaths = summary.MaterializedDriverPaths |> List.sort
-        Assert.Equal(39, driverPaths.Length)
+        Assert.Equal(51, driverPaths.Length)
         Assert.Contains(".agents/skills/work-board/references/host-loop.md", driverPaths)
         Assert.Contains(".codex/skills/work-roadmap/references/roadmap-ledger.md", driverPaths)
 
@@ -1102,11 +1102,7 @@ module ScaffoldCommandTests =
                         for linkMatch in Regex.Matches(File.ReadAllText absolute, @"\[[^\]]+\]\(([^)#]+)(?:#[^)]+)?\)") do
                             let target = linkMatch.Groups[1].Value
 
-                            if
-                                not (target.Contains "://")
-                                && not (target.StartsWith "/")
-                                && not (target.StartsWith "../")
-                            then
+                            if not (target.Contains "://") && not (target.StartsWith "/") then
                                 let parent =
                                     Path.GetDirectoryName absolute
                                     |> Option.ofObj
