@@ -14,8 +14,9 @@ measurement capability, live-compositor posture, evidence references, and typed 
 Consumers on 6.x must recompile. Legacy handoffs may carry `intent: null`; Governance must require
 intent only for the governed interactive/render-loop profiles.
 
-`CompatibilitySuppressions.xml` acknowledges the resulting `CP0002` against the published 6.0.0
-baseline. It is intentionally narrow and must be removed after 7.0.0 becomes the feed baseline.
+The introducing PR used a narrow `CP0002` suppression while 6.0.0 was the published baseline. That
+suppression was removed immediately after 7.0.0 became the feed baseline, so subsequent compatibility
+checks compare cleanly against the released 7.x surface.
 
 Release sequence: publish Contracts 7.0.0 first, update the dependency registry, then publish the
 coherent FS.GG.SDD 0.27.0 package set.
