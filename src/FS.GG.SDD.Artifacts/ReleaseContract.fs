@@ -239,13 +239,13 @@ module ReleaseContract =
 
     let currentRelease () : ReleaseReadiness =
         let identity =
-            { Version = "0.27.0"
-              Channel = channelOfVersion "0.27.0"
+            { Version = "0.28.0"
+              Channel = channelOfVersion "0.28.0"
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "0.27.x"
+            [ { SddVersionLine = "0.28.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "2.x" } ]
 
@@ -1123,17 +1123,11 @@ module ReleaseContract =
           //
           // And enumerate EVERY breaking change: a note that under-reports is the exact failure
           // the note exists to prevent.
-          // 0.15.0 is ADDITIVE (feature 105 plan-time framework-API resolution + evidence/lint
-          // fixes; F# surface diff v0.14.0..HEAD adds members, removes none). An additive release
-          // carries NO migration note (`migrationNoteRequired Additive = false`); the 0.14.0 note
-          // lives on disk under docs/release/migrations/ and is not carried here.
-          Migrations =
-            [ { Version = identity.Version
-                Path = $"docs/release/migrations/{identity.Version}.md"
-                BreakingChanges =
-                  [ "Interactive and render-loop work now needs typed performance intent before implementation readiness."
-                    "Active measured performance budgets must bind the canonical early intent without changing its workload definitions, targets, limits, capability, or compositor posture."
-                    "Governance handoff contract 2.0.0 adds the optional canonical intent beside raw performance samples; consumers must recompile against FS.GG.Contracts 7.0.0." ] } ] }
+          // 0.28.0 is ADDITIVE: it updates the embedded driver package so newly scaffolded product
+          // workspaces receive padd-item. No public SDD command/output contract is removed or
+          // retyped. An additive release carries no migration note; the 0.27.0 breaking note stays
+          // on disk under docs/release/migrations/ and is not carried here.
+          Migrations = [] }
 
     // ---- canonical serialization ----
 

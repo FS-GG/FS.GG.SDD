@@ -14,11 +14,15 @@ module DriverSkillsTests =
 
     // The pinned digests of the delivered driver bodies (the drift-guard goldens).
     let private workRoadmapSha256 =
-        "2b9313bf960ba6df3f5634ba19919f9013a9f6e58d83734f102bfa4705b06812"
+        "715609ab4d97337ee5250fb31e57159fb5d7b99a8c4ead0b712fd8c8c50b1677"
 
-    // workBoard ships in FS.GG.Drivers 0.2.0 (#632), `materializes-when: always` like workRoadmap.
+    // work-board ships in FS.GG.Drivers 0.8.0, `materializes-when: always` like work-roadmap.
     let private workBoardSha256 =
-        "02ccd2a602bc3a0bcca453901b77bcf7085c3d656807494bbcec2077ec3ec665"
+        "7b3668c5137e6dc9de9f008f45aa55623abb8b4bc8ea18715fcd9ce584ce694b"
+
+    // padd-item is the product-workspace board filer added by FS.GG.Drivers 0.8.0 (#703).
+    let private paddItemSha256 =
+        "4daf167ef061d9a27504ad212e4c9c42321f597c64143953b0c666f072092d9e"
 
     let private roots = [ ".agents"; ".claude"; ".codex" ]
 
@@ -32,27 +36,29 @@ module DriverSkillsTests =
 
     // ---------- the embedded delivery (real bytes) ----------
 
-    // Both `always` driver rows FS.GG.Drivers 0.2.0 ships (#632) materialize; the operator-scoped
-    // `drive-board` row (materializes-when: false) does not — asserted separately below.
+    // All three `always` driver rows FS.GG.Drivers 0.8.0 ships materialize; the operator-scoped
+    // rows (`drive-board`, `p-add`, `cut-nuget-release`) do not — asserted separately below.
     [<Fact>]
     let ``plan materializes the delivered always-on drivers into all three roots`` () =
         let outcome = DriverSkills.plan Set.empty
 
-        // id-sorted: "workBoard" < "workRoadmap".
-        Assert.Equal<string list>([ "workBoard"; "workRoadmap" ], outcome.MaterializedIds)
+        Assert.Equal<string list>([ "padd-item"; "work-board"; "work-roadmap" ], outcome.MaterializedIds)
         Assert.Empty outcome.VerifyFailedIds
         Assert.Empty outcome.PredicateUnevaluatedIds
         Assert.Empty outcome.NamespaceCollisionIds
         Assert.Equal(None, outcome.ManifestError)
 
         let writtenPaths = outcome.ProvenancePaths |> List.map fst |> List.sort
-        Assert.Equal<string list>(driverPathsFor [ "workBoard"; "workRoadmap" ], writtenPaths)
+        Assert.Equal<string list>(driverPathsFor [ "padd-item"; "work-board"; "work-roadmap" ], writtenPaths)
 
-    [<Fact>]
-    let ``plan does not materialize the drive-board operator row (materializes-when false)`` () =
+    [<Theory>]
+    [<InlineData("drive-board")>]
+    [<InlineData("p-add")>]
+    [<InlineData("cut-nuget-release")>]
+    let ``plan does not materialize operator rows (materializes-when false)`` (id: string) =
         let outcome = DriverSkills.plan Set.empty
-        Assert.DoesNotContain("drive-board", outcome.MaterializedIds)
-        Assert.DoesNotContain(outcome.ProvenancePaths |> List.map fst, fun (p: string) -> p.Contains "drive-board")
+        Assert.DoesNotContain(id, outcome.MaterializedIds)
+        Assert.DoesNotContain(outcome.ProvenancePaths |> List.map fst, fun (p: string) -> p.Contains id)
 
     [<Fact>]
     let ``the materialized driver writes are no-clobber AgentGuidanceTarget`` () =
@@ -89,8 +95,7 @@ module DriverSkillsTests =
     let ``the delivered driver digests are pinned to the goldens`` () =
         let outcome = DriverSkills.plan Set.empty
         let shas = outcome.ProvenancePaths |> List.map snd |> List.distinct |> List.sort
-        // sorted hex: "02cc…" (workBoard) < "2b93…" (workRoadmap).
-        Assert.Equal<string list>([ workBoardSha256; workRoadmapSha256 ], shas)
+        Assert.Equal<string list>([ paddItemSha256; workRoadmapSha256; workBoardSha256 ], shas)
 
     // ---------- the fail-closed classes (planFrom, synthetic) ----------
 
@@ -174,24 +179,25 @@ module DriverSkillsTests =
     [<Fact>]
     let ``plannedDriverOutcome materializes the always-on drivers when the provider produced none`` () =
         let outcome = HandlersScaffold.plannedDriverOutcome []
-        Assert.Contains("workBoard", outcome.MaterializedIds)
-        Assert.Contains("workRoadmap", outcome.MaterializedIds)
-        // two `always` drivers × three roots.
-        Assert.Equal(6, outcome.ProvenancePaths |> List.length)
+        Assert.Contains("padd-item", outcome.MaterializedIds)
+        Assert.Contains("work-board", outcome.MaterializedIds)
+        Assert.Contains("work-roadmap", outcome.MaterializedIds)
+        // three `always` drivers × three roots.
+        Assert.Equal(9, outcome.ProvenancePaths |> List.length)
 
-    // FR-005/FR-009: a provider that shipped its own `workRoadmap` (its `.agents` skill, mirrored to
+    // FR-005/FR-009: a provider that shipped its own `work-roadmap` (its `.agents` skill, mirrored to
     // the other roots by the preceding tick) already occupies that driver's targets — the no-clobber
     // write preserves the provider's, so the driver must not claim those paths (no over-claim, no
-    // double owner-claim). The OTHER always-on driver (workBoard) the provider did NOT ship still
+    // double owner-claim). The other always-on drivers the provider did not ship still
     // materializes into all three roots — no-clobber is per-id, not all-or-nothing.
     [<Fact>]
     let ``plannedDriverOutcome does not over-claim a driver id the provider already produced`` () =
         let outcome =
-            HandlersScaffold.plannedDriverOutcome [ ".agents/skills/workRoadmap/SKILL.md" ]
+            HandlersScaffold.plannedDriverOutcome [ ".agents/skills/work-roadmap/SKILL.md" ]
 
-        Assert.DoesNotContain("workRoadmap", outcome.MaterializedIds)
-        Assert.Equal<string list>([ "workBoard" ], outcome.MaterializedIds)
+        Assert.DoesNotContain("work-roadmap", outcome.MaterializedIds)
+        Assert.Equal<string list>([ "padd-item"; "work-board" ], outcome.MaterializedIds)
 
         let writtenPaths = outcome.ProvenancePaths |> List.map fst |> List.sort
-        Assert.Equal<string list>(driverPathFor "workBoard", writtenPaths)
-        Assert.Equal(3, outcome.Writes |> List.length)
+        Assert.Equal<string list>(driverPathsFor [ "padd-item"; "work-board" ], writtenPaths)
+        Assert.Equal(6, outcome.Writes |> List.length)

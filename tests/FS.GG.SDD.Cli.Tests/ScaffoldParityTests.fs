@@ -34,9 +34,15 @@ module ScaffoldParityTests =
             [ ".claude/skills/fs-gg-elmish/SKILL.md"
               ".codex/skills/fs-gg-elmish/SKILL.md" ]
           MaterializedDriverPaths =
-            [ ".agents/skills/workRoadmap/SKILL.md"
-              ".claude/skills/workRoadmap/SKILL.md"
-              ".codex/skills/workRoadmap/SKILL.md" ]
+            [ ".agents/skills/padd-item/SKILL.md"
+              ".agents/skills/work-board/SKILL.md"
+              ".agents/skills/work-roadmap/SKILL.md"
+              ".claude/skills/padd-item/SKILL.md"
+              ".claude/skills/work-board/SKILL.md"
+              ".claude/skills/work-roadmap/SKILL.md"
+              ".codex/skills/padd-item/SKILL.md"
+              ".codex/skills/work-board/SKILL.md"
+              ".codex/skills/work-roadmap/SKILL.md" ]
           MaterializedGameSkillPaths =
             [ ".agents/skills/fs-gg-playtest/SKILL.md"
               ".claude/skills/fs-gg-playtest/SKILL.md"

@@ -373,8 +373,8 @@ module ScaffoldCommandTests =
         Assert.Contains("\"generator\":", provenance)
         Assert.Contains("\"version\":", provenance)
         // …alongside the provider-declared required minimum, recorded verbatim. min-behind declares
-        // one minor above the installed version, so it tracks the bump (installed 0.27.0 ⇒ 0.28.0).
-        Assert.Contains("\"requiredMinimumCliVersion\": \"0.28.0\"", provenance)
+        // one minor above the installed version, so it tracks the bump (installed 0.28.0 ⇒ 0.29.0).
+        Assert.Contains("\"requiredMinimumCliVersion\": \"0.29.0\"", provenance)
 
     // Feature 052 US1 scenario 2: no provider minimum ⇒ the field is recorded as null
     // (absent, not fabricated); the producing CLI version is still recorded.
@@ -648,15 +648,18 @@ module ScaffoldCommandTests =
         // provider output).
         // 108 / ADR-0054: the always-on driver skills scaffold materializes into all three roots
         // are SDD-owned (owner `driver`), not the provider's — excluded from the app-only diff
-        // exactly as the provenance/tool-manifest SDD writes are. FS.GG.Drivers 0.2.0 (#632) ships
-        // two `always` drivers, workBoard and workRoadmap; the list is id-then-root sorted.
+        // exactly as the provenance/tool-manifest SDD writes are. FS.GG.Drivers 0.8.0 (#703) ships
+        // three `always` drivers: padd-item, work-board, and work-roadmap.
         let driverPaths =
-            [ ".agents/skills/workBoard/SKILL.md"
-              ".agents/skills/workRoadmap/SKILL.md"
-              ".claude/skills/workBoard/SKILL.md"
-              ".claude/skills/workRoadmap/SKILL.md"
-              ".codex/skills/workBoard/SKILL.md"
-              ".codex/skills/workRoadmap/SKILL.md" ]
+            [ ".agents/skills/padd-item/SKILL.md"
+              ".agents/skills/work-board/SKILL.md"
+              ".agents/skills/work-roadmap/SKILL.md"
+              ".claude/skills/padd-item/SKILL.md"
+              ".claude/skills/work-board/SKILL.md"
+              ".claude/skills/work-roadmap/SKILL.md"
+              ".codex/skills/padd-item/SKILL.md"
+              ".codex/skills/work-board/SKILL.md"
+              ".codex/skills/work-roadmap/SKILL.md" ]
 
         let preexisting =
             Set.ofList ([ provenancePath; toolManifestPath; ".fsgg/providers.yml" ] @ driverPaths)
@@ -681,7 +684,7 @@ module ScaffoldCommandTests =
 
         Assert.Equal(producedExpected.Length, countOf "\"owner\": \"generatedProduct\"")
         Assert.Equal(1, countOf "\"owner\": \"sdd\"")
-        // 108: the workRoadmap driver, materialized into all three roots (owner `driver`).
+        // 108: the work-roadmap driver, materialized into all three roots (owner `driver`).
         Assert.Equal(driverPaths.Length, countOf "\"owner\": \"driver\"")
         Assert.Equal(countOf "\"owner\":", producedExpected.Length + 1 + driverPaths.Length)
 
@@ -1014,11 +1017,11 @@ module ScaffoldCommandTests =
             Assert.DoesNotContain(mirroredPaths, fun (p: string) -> p.Contains "fs-gg-sdd-")
         | None -> failwith "Expected the scaffold provenance to parse."
 
-    // 108 / ADR-0054 (AC-001/AC-006): the `.github`-authored workRoadmap driver skill materializes
+    // 108 / ADR-0054 (AC-001/AC-006): the `.github`-authored work-roadmap driver skill materializes
     // byte-identically into all three agent roots on every scaffold (`materializes-when: always`),
     // from the CLI's embedded package bytes — no NuGet cache or network at scaffold time (AC-004).
     [<Fact; Trait("tier", "slow")>]
-    let ``scaffold materializes the workRoadmap driver byte-identically into all three roots`` () =
+    let ``scaffold materializes the work-roadmap driver byte-identically into all three roots`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
 
@@ -1029,23 +1032,23 @@ module ScaffoldCommandTests =
 
         Assert.Equal(0, exitCodeForReport report)
 
-        for path in threeRoots "workRoadmap" do
+        for path in threeRoots "work-roadmap" do
             Assert.True(TestSupport.existsRelative root path, $"expected {path} to exist")
 
-        assertByteIdenticalAcrossRoots root "workRoadmap"
+        assertByteIdenticalAcrossRoots root "work-roadmap"
 
         // The scaffold report names the materialized driver copies (FR-009).
         let summary = scaffoldSummary report
-        Assert.Contains(".agents/skills/workRoadmap/SKILL.md", summary.MaterializedDriverPaths)
-        Assert.Contains(".claude/skills/workRoadmap/SKILL.md", summary.MaterializedDriverPaths)
-        Assert.Contains(".codex/skills/workRoadmap/SKILL.md", summary.MaterializedDriverPaths)
+        Assert.Contains(".agents/skills/work-roadmap/SKILL.md", summary.MaterializedDriverPaths)
+        Assert.Contains(".claude/skills/work-roadmap/SKILL.md", summary.MaterializedDriverPaths)
+        Assert.Contains(".codex/skills/work-roadmap/SKILL.md", summary.MaterializedDriverPaths)
 
-    // 108 / ADR-0054 / FS.GG.SDD#632: FS.GG.Drivers 0.2.0 ships a second `always` driver, workBoard.
+    // 108 / ADR-0054 / FS.GG.SDD#632: FS.GG.Drivers ships work-board as an `always` driver.
     // It materializes byte-identically into all three agent roots on every scaffold from the CLI's
     // embedded package bytes — the generic materializer picks it up with no code change, exactly the
-    // workRoadmap seam. This is the end-to-end acceptance for #632 (a fresh scaffold delivers workBoard).
+    // work-roadmap seam. This is the end-to-end acceptance for #632 (a fresh scaffold delivers work-board).
     [<Fact; Trait("tier", "slow")>]
-    let ``scaffold materializes the workBoard driver byte-identically into all three roots`` () =
+    let ``scaffold materializes the work-board driver byte-identically into all three roots`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "lifecycle.providers.yml"
 
@@ -1056,18 +1059,42 @@ module ScaffoldCommandTests =
 
         Assert.Equal(0, exitCodeForReport report)
 
-        for path in threeRoots "workBoard" do
+        for path in threeRoots "work-board" do
             Assert.True(TestSupport.existsRelative root path, $"expected {path} to exist")
 
-        assertByteIdenticalAcrossRoots root "workBoard"
+        assertByteIdenticalAcrossRoots root "work-board"
 
         let summary = scaffoldSummary report
-        Assert.Contains(".agents/skills/workBoard/SKILL.md", summary.MaterializedDriverPaths)
-        Assert.Contains(".claude/skills/workBoard/SKILL.md", summary.MaterializedDriverPaths)
-        Assert.Contains(".codex/skills/workBoard/SKILL.md", summary.MaterializedDriverPaths)
+        Assert.Contains(".agents/skills/work-board/SKILL.md", summary.MaterializedDriverPaths)
+        Assert.Contains(".claude/skills/work-board/SKILL.md", summary.MaterializedDriverPaths)
+        Assert.Contains(".codex/skills/work-board/SKILL.md", summary.MaterializedDriverPaths)
+
+    // FS.GG.SDD#703: FS.GG.Drivers 0.8.0 adds the product-workspace board filer padd-item.
+    // The generic driver materializer embeds and lays down the package-delivered source unchanged.
+    [<Fact; Trait("tier", "slow")>]
+    let ``scaffold materializes the padd-item driver byte-identically into all three roots`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "lifecycle.providers.yml"
+
+        let report =
+            runScaffold (
+                scaffoldRequest root (Some "fixture") [ "productName", "Acme"; "lifecycle", "sdd" ] false false
+            )
+
+        Assert.Equal(0, exitCodeForReport report)
+
+        for path in threeRoots "padd-item" do
+            Assert.True(TestSupport.existsRelative root path, $"expected {path} to exist")
+
+        assertByteIdenticalAcrossRoots root "padd-item"
+
+        let summary = scaffoldSummary report
+        Assert.Contains(".agents/skills/padd-item/SKILL.md", summary.MaterializedDriverPaths)
+        Assert.Contains(".claude/skills/padd-item/SKILL.md", summary.MaterializedDriverPaths)
+        Assert.Contains(".codex/skills/padd-item/SKILL.md", summary.MaterializedDriverPaths)
 
     // ADR-0063 tail / skill-union coherence: the provider ships a static product skill-manifest.json
-    // declaring only ITS skill (fs-gg-elmish). SDD materializes the drivers (workBoard/workRoadmap),
+    // declaring only ITS skill (fs-gg-elmish). SDD materializes the drivers (work-board/work-roadmap),
     // which the provider manifest does not know about. SDD folds them in so the on-disk manifest the
     // consumer skill-union gate reads declares EVERY materialized skill (no [dangling]), each with the
     // content-addressed sha256 it was verified against, coherently across all three roots. The
@@ -1103,8 +1130,9 @@ module ScaffoldCommandTests =
         Assert.Contains("fs-gg-elmish", declaredIds)
 
         // The always-on drivers, undeclared by the provider, are now folded in.
-        Assert.Contains("workRoadmap", declaredIds)
-        Assert.Contains("workBoard", declaredIds)
+        Assert.Contains("work-roadmap", declaredIds)
+        Assert.Contains("work-board", declaredIds)
+        Assert.Contains("padd-item", declaredIds)
 
         // EVERY materialized driver is now declared — the [dangling] class is closed for exactly the
         // set the scaffold laid down.
