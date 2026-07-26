@@ -627,6 +627,7 @@ tasks:
               State = "supported"
               Observed = false
               ClassifiedRequirement = false
+              JourneyRequirement = false
               EvidenceIds = [ "EV001" ]
               TaskIds = [ "T001"; "T002" ]
               DiagnosticIds = [] }

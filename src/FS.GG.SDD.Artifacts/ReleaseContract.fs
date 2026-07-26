@@ -239,13 +239,13 @@ module ReleaseContract =
 
     let currentRelease () : ReleaseReadiness =
         let identity =
-            { Version = "0.29.1"
-              Channel = channelOfVersion "0.29.1"
+            { Version = "0.30.0"
+              Channel = channelOfVersion "0.30.0"
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "0.29.x"
+            [ { SddVersionLine = "0.30.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "2.x" } ]
 
@@ -511,6 +511,7 @@ module ReleaseContract =
                   "evidenceDispositions[].affectedSourceIds"
                   "evidenceDispositions[].affectedTaskIds"
                   "evidenceDispositions[].classifiedRequirement"
+                  "evidenceDispositions[].journeyRequirement"
                   "evidenceDispositions[].correction"
                   "evidenceDispositions[].diagnosticIds"
                   "evidenceDispositions[].evidenceIds"
@@ -599,6 +600,7 @@ module ReleaseContract =
                   "disposition.advisoryFindingIds"
                   "disposition.blockingFindingIds"
                   "disposition.classifiedObligationsUnmetCount"
+                  "disposition.journeyObligationsUnmetCount"
                   "disposition.contributingStages"
                   "disposition.correction"
                   "disposition.state"
@@ -781,6 +783,7 @@ module ReleaseContract =
                       "readiness.counts.advisory"
                       "readiness.counts.blocking"
                       "readiness.counts.classifiedObligationsUnmet"
+                      "readiness.counts.journeyObligationsUnmet"
                       "readiness.counts.warning"
                       "readiness.perViewState"
                       "readiness.perViewState[].state"
@@ -992,6 +995,7 @@ module ReleaseContract =
                       "ship.advisoryCount"
                       "ship.blockingCount"
                       "ship.classifiedObligationsUnmetCount"
+                      "ship.journeyObligationsUnmetCount"
                       "ship.disposition"
                       "ship.evidenceDeferredCount"
                       "ship.evidenceInvalidCount"
@@ -1123,10 +1127,9 @@ module ReleaseContract =
           //
           // And enumerate EVERY breaking change: a note that under-reports is the exact failure
           // the note exists to prevent.
-          // 0.29.1 is CLARIFYING: it republishes the CLI against FS.GG.Drivers 0.8.1 so the
-          // embedded package manifest matches current producer truth. The delivered driver
-          // skill bodies and every public SDD command/output contract are unchanged. A
-          // clarifying release carries no migration note.
+          // 0.30.0 is ADDITIVE: it introduces the optional production-journey classification,
+          // receipt, disposition, and readiness fields. Existing unclassified and gameplay
+          // requirements retain their previous semantics, so no migration note is required.
           Migrations = [] }
 
     // ---- canonical serialization ----

@@ -496,6 +496,30 @@ module ArtifactCodecTests =
                           Passed = 7
                           Failed = 0
                           Skipped = 3 }
+                JourneyReceipt =
+                    Some
+                        { EvidenceCodec.journeyReceiptSeed with
+                            SchemaVersion = 1
+                            RunnerIdentity = "runneridentityval"
+                            RunnerVersion = "runnerversionval"
+                            Origin = "production-journey"
+                            RouteId = "routeval"
+                            ScenarioId = "scenarioval"
+                            TestId = "testval"
+                            InputKind = "fixed-script"
+                            InputDigest = "sha256:" + String.replicate 64 "1"
+                            ReplayDigest = "sha256:" + String.replicate 64 "2"
+                            TraceDigest = "sha256:" + String.replicate 64 "3"
+                            InitialFingerprint = "sha256:" + String.replicate 64 "4"
+                            TerminalFingerprint = "sha256:" + String.replicate 64 "5"
+                            TerminalPredicateReached = true
+                            Outcome = "passed"
+                            MaximumSteps = 32
+                            ActualSteps = 12
+                            ObservedReportSource = "journeyreportval"
+                            ObservedReportDigest = "sha256:" + String.replicate 64 "6"
+                            ObservedTestName = "testnameval"
+                            ObservedTestOutcome = "passed" }
                 PerformanceBudget =
                     Some
                         { ArtifactPath = "readiness/perfval.txt"
@@ -540,6 +564,7 @@ module ArtifactCodecTests =
               "Synthetic", [ "synthetic", "synthetic: true" ]
               "SyntheticDisclosure", [ "syntheticDisclosure", "syntheticDisclosure:\n  standsInFor: standsval" ]
               "ObservedRun", [ "observedRun", "observedRun:\n  source: observedsourceval" ]
+              "JourneyReceipt", [ "journeyReceipt", "journeyReceipt:\n  schemaVersion: 1" ]
               "PerformanceBudget", [ "performanceBudget", "performanceBudget:\n  artifactPath: readiness/perfval.txt" ]
               "Rationale", [ "rationale", "rationale: rationaleval" ]
               "Owner", [ "owner", "owner: ownerval" ]

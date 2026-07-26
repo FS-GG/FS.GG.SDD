@@ -83,7 +83,10 @@ module internal EvidenceDomain =
                   LinkedSourceIds = task.SourceIds
                   ExpectedEvidenceKinds = [ "implementation"; "verification"; "deferral"; "synthetic" ]
                   RequiredEvidenceKinds =
-                    if isGameplayTestTagged task.RequiredSkills then
+                    if
+                        isGameplayTestTagged task.RequiredSkills
+                        || isProductionJourneyTagged task.RequiredSkills
+                    then
                         realTestEvidenceKinds
                     else
                         []

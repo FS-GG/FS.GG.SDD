@@ -563,6 +563,19 @@ module internal TaskGraphAuthoring =
                     primaryDependency
                     [ gameplayTestCapability; skills.TestSkill ])
 
+        let productionJourneyTasks =
+            specFacts.RequirementReferences
+            |> List.filter (fun reference -> reference.Classification |> List.contains productionJourneyClassification)
+            |> List.sortBy (fun reference -> reference.RequirementId.Value)
+            |> List.choose (fun reference ->
+                maybeTask
+                    []
+                    $"Prove production journey {reference.RequirementId.Value} from boot to terminal outcome"
+                    [ reference.RequirementId ]
+                    []
+                    primaryDependency
+                    [ productionJourneyCapability; skills.TestSkill ])
+
         requirementTasksWithFoldedDecisions
         @ clarificationDecisionTasks
         @ planDecisionTasks
@@ -574,6 +587,7 @@ module internal TaskGraphAuthoring =
         @ performanceIntentTasks
         @ visualInspectionTasks
         @ classifiedRequirementTasks
+        @ productionJourneyTasks
 
     let currentTaskSourceDigests workId specText clarificationText checklistText planText =
         [ "spec", specPath workId, specText

@@ -43,6 +43,7 @@ module internal HandlersEvidence =
             /// `evidence`/`verify`/`ship` count "classified-FR obligations unmet" identically without
             /// re-correlating each disposition back to its obligation's tags.
             ClassifiedRequirement: bool
+            JourneyRequirement: bool
             EvidenceIds: string list
             TaskIds: string list
             DiagnosticIds: string list
@@ -407,6 +408,25 @@ module internal HandlersEvidence =
         else
             true
 
+    let private sha256Digest (text: string) =
+        Encoding.UTF8.GetBytes text
+        |> System.Security.Cryptography.SHA256.HashData
+        |> Array.map (fun value -> value.ToString("x2"))
+        |> String.concat ""
+        |> fun value -> "sha256:" + value
+
+    /// A structurally valid journey receipt is still unsupported when the bytes it cites have
+    /// moved. Keep this predicate at the disposition boundary: a diagnostic alone must never let a
+    /// stale producer report retain a supported ED-/TD- state through ship and Governance.
+    let journeyReceiptReportIsCurrent (artifactText: string -> string option) declaration =
+        hasValidJourneyReceipt declaration
+        && match declaration.JourneyReceipt with
+           | Some receipt when citedPathIsContained receipt.ObservedReportSource ->
+               artifactText receipt.ObservedReportSource
+               |> Option.exists (fun text ->
+                   receipt.ObservedReportDigest.Equals(sha256Digest text, StringComparison.OrdinalIgnoreCase))
+           | _ -> false
+
     let evidenceSourceSnapshot label path text =
         EvidenceDomain.sourceSnapshot label path text
 
@@ -542,6 +562,7 @@ module internal HandlersEvidence =
           // once the author has flipped the result to a real pass. Seeding one here would record an
           // observation of an obligation nobody has yet claimed to have discharged.
           ObservedRun = None
+          JourneyReceipt = None
           PerformanceBudget = None
           Rationale = None
           Owner = None
@@ -897,6 +918,54 @@ module internal HandlersEvidence =
                   | Some reason -> observedRunInconsistent path [ declaration.Id.Value ] reason
                   | None -> ()
               | None -> ()
+
+              if
+                  declaration.JourneyReceipt.IsSome
+                  || declaration.RequirementRefs
+                     |> List.exists (fun requirement ->
+                         taskFacts.Tasks
+                         |> List.exists (fun task ->
+                             isProductionJourneyTagged task.RequiredSkills
+                             && task.Requirements |> List.contains requirement))
+              then
+                  let problems = journeyReceiptProblems declaration
+
+                  if not (List.isEmpty problems) then
+                      let details = String.concat "; " problems
+
+                      errorDiagnostic
+                          "evidence.productionJourneyReceiptInvalid"
+                          (Some path)
+                          $"Production-journey receipt is invalid: {details}."
+                          "Import the complete producer journeyReceipt schema-v1 map bound to the same passing observed test report."
+                          [ declaration.Id.Value ]
+
+                  match declaration.JourneyReceipt with
+                  | Some receipt when citedPathIsContained receipt.ObservedReportSource ->
+                      match artifactText receipt.ObservedReportSource with
+                      | Some reportText ->
+                          let actualDigest = sha256Digest reportText
+
+                          if
+                              not (
+                                  receipt.ObservedReportDigest.Equals(actualDigest, StringComparison.OrdinalIgnoreCase)
+                              )
+                          then
+                              errorDiagnostic
+                                  "evidence.productionJourneyReceiptStale"
+                                  (Some path)
+                                  "Production-journey receipt digest does not match the cited test report bytes."
+                                  "Regenerate the producer receipt from the current observed test report."
+                                  [ declaration.Id.Value; receipt.ObservedReportSource ]
+                      | None -> ()
+                  | Some receipt ->
+                      errorDiagnostic
+                          "evidence.productionJourneyReceiptInvalid"
+                          (Some path)
+                          "Production-journey receipt cites a report path outside the repository."
+                          "Use a contained repository-relative observedTestReport.source path."
+                          [ declaration.Id.Value; receipt.ObservedReportSource ]
+                  | None -> ()
           if evidenceSourceSnapshotStale currentSnapshots artifact.SourceSnapshots then
               staleEvidenceSource
                   path
@@ -909,6 +978,9 @@ module internal HandlersEvidence =
         // FS.GG.SDD#349: same injected probe result as the gate above, so the `ED-` disposition and
         // the blocking diagnostic cannot disagree about which declarations are supported.
         (artifactExists: string -> bool)
+        // FS.GG.SDD#709: existence is insufficient for a journey receipt. Classification must read
+        // the cited report bytes and bind their digest, or a stale report remains "supported".
+        (artifactText: string -> string option)
         (artifact: EvidenceArtifact)
         : EvidenceDispositionDraft list =
         obligations
@@ -1013,6 +1085,18 @@ module internal HandlersEvidence =
                 // state). A synthetic-only pass already fell to "synthetic" above, and a deferral/missing
                 // to their own arms, so this fires only on a real pass of the wrong kind.
                 elif
+                    isProductionJourneyTagged obligation.RequiredSkillOrCapabilityTags
+                    && matches
+                       |> List.exists (fun declaration ->
+                           normalizedEvidenceResult declaration.Result = "pass"
+                           && not declaration.Synthetic)
+                    && not (matches |> List.exists (journeyReceiptReportIsCurrent artifactText))
+                then
+                    if matches |> List.exists hasValidJourneyReceipt then
+                        "invalid", [ "evidence.productionJourneyReceiptStale" ]
+                    else
+                        "invalid", [ "evidence.productionJourneyReceiptInvalid" ]
+                elif
                     not (List.isEmpty obligation.RequiredEvidenceKinds)
                     && matches
                        |> List.exists (fun declaration ->
@@ -1063,6 +1147,7 @@ module internal HandlersEvidence =
                // loud — in the console and in the committed verdict — is the feature.
                Observed = state = "supported" && obligationIsObserved matches
                ClassifiedRequirement = isGameplayTestTagged obligation.RequiredSkillOrCapabilityTags
+               JourneyRequirement = isProductionJourneyTagged obligation.RequiredSkillOrCapabilityTags
                EvidenceIds =
                  matches
                  |> List.map (fun declaration -> declaration.Id.Value)
@@ -1102,6 +1187,14 @@ module internal HandlersEvidence =
     let classifiedObligationsUnmetCount (dispositions: EvidenceDispositionDraft list) =
         dispositions |> List.filter classifiedObligationUnmet |> List.length
 
+    let journeyObligationsUnmetCount (dispositions: EvidenceDispositionDraft list) =
+        dispositions
+        |> List.filter (fun disposition ->
+            disposition.JourneyRequirement
+            && disposition.State <> "supported"
+            && disposition.State <> "deferred")
+        |> List.length
+
     let evidenceSummary
         workId
         (artifact: EvidenceArtifact)
@@ -1140,6 +1233,7 @@ module internal HandlersEvidence =
           AdvisoryCount = count "advisory"
           BlockingCount = blockingCount
           ClassifiedObligationsUnmetCount = classifiedObligationsUnmetCount dispositions
+          JourneyObligationsUnmetCount = journeyObligationsUnmetCount dispositions
           SourceSnapshotCount = artifact.SourceSnapshots.Length
           Readiness = readiness }
 
@@ -1367,7 +1461,11 @@ sourceAnalysis: {analysisPath workId}
                                     merged
 
                             let dispositions =
-                                evidenceDispositions obligations (citedArtifactExists model) artifact
+                                evidenceDispositions
+                                    obligations
+                                    (citedArtifactExists model)
+                                    (fun artifactPath -> snapshot artifactPath model |> Option.map _.Text)
+                                    artifact
 
                             let dispositionDiagnostics =
                                 evidenceDispositionDiagnostics (evidencePath workId) dispositions

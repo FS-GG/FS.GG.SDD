@@ -54,6 +54,29 @@ module Evidence =
           Failed: int
           Skipped: int }
 
+    type JourneyReceipt =
+        { SchemaVersion: int
+          RunnerIdentity: string
+          RunnerVersion: string
+          Origin: string
+          RouteId: string
+          ScenarioId: string
+          TestId: string
+          InputKind: string
+          InputDigest: string
+          ReplayDigest: string
+          TraceDigest: string
+          InitialFingerprint: string
+          TerminalFingerprint: string
+          TerminalPredicateReached: bool
+          Outcome: string
+          MaximumSteps: int
+          ActualSteps: int
+          ObservedReportSource: string
+          ObservedReportDigest: string
+          ObservedTestName: string
+          ObservedTestOutcome: string }
+
     /// A typed, active normal-play performance gate attached to an evidence declaration.
     /// Absence means the cited artifact is baseline/stress information only and carries no target.
     type PerformanceIntentDeclaration = Fsgg.Schemas.PerformanceIntentDeclaration
@@ -120,6 +143,7 @@ module Evidence =
             /// FS.GG.SDD#350: the receipt, when a run was observed. `None` is the honest state for an
             /// obligation discharged on the author's word — it is what `isSelfAttested` counts.
             ObservedRun: ObservedRun option
+            JourneyReceipt: JourneyReceipt option
             PerformanceBudget: PerformanceBudgetDeclaration option
             Rationale: string option
             Owner: string option
@@ -205,6 +229,8 @@ module Evidence =
         /// source with no digest is a filename, a digest with no source is a number.
         val liftObservedRun: draft: ObservedRunDraft -> ObservedRun option
         val lowerObservedRun: run: ObservedRun -> ObservedRunDraft
+        val journeyReceiptSeed: JourneyReceipt
+        val journeyReceiptFields: ArtifactCodec.FieldCodec<JourneyReceipt> list
 
         val performanceBudgetSeed: PerformanceBudgetDeclaration
         val performanceIntentSeed: PerformanceIntentDeclaration
@@ -246,12 +272,17 @@ module Evidence =
     /// The capability tag marking a task, and the obligation minted from it, as a per-classified-FR
     /// gameplay test obligation discharged only by a real, non-synthetic test (ADR-0048, WI-4).
     val gameplayTestCapability: string
+    val productionJourneyClassification: string
+    val productionJourneyCapability: string
 
     /// The evidence kinds that count as a *real test* for a classified-FR obligation (ADR-0048) — the
     /// single source of truth for the derived obligation's `RequiredEvidenceKinds`.
     val realTestEvidenceKinds: string list
 
     val isGameplayTestTagged: tags: string list -> bool
+    val isProductionJourneyTagged: tags: string list -> bool
+    val journeyReceiptProblems: declaration: EvidenceDeclaration -> string list
+    val hasValidJourneyReceipt: declaration: EvidenceDeclaration -> bool
 
     /// Does this declaration name a rendered artifact — an `artifactRefs` entry, or a `sourceRefs[]`
     /// entry carrying a `path` or a `uri`?

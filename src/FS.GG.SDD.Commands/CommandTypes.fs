@@ -380,6 +380,7 @@ module CommandTypes =
             /// real non-synthetic test (nor an accepted deferral). The aggregate Governance binds to
             /// block-on-ship. `0` for every work item that classifies no FR (additive, backward-compatible).
             ClassifiedObligationsUnmetCount: int
+            JourneyObligationsUnmetCount: int
             SourceSnapshotCount: int
             Readiness: string
         }
@@ -423,6 +424,7 @@ module CommandTypes =
             /// WI-4 (ADR-0048): classified `{gameplay}` FR obligations left unmet — carried through
             /// from the evidence dispositions so verify reports the same aggregate ship binds to.
             ClassifiedObligationsUnmetCount: int
+            JourneyObligationsUnmetCount: int
             SkillVisibleCount: int
             SkillMissingCount: int
             SourceSnapshotCount: int
@@ -460,6 +462,7 @@ module CommandTypes =
             /// WI-4 (ADR-0048): classified `{gameplay}` FR obligations left unmet — the merge-boundary
             /// aggregate Governance binds to block-on-ship. `0` when no FR is classified.
             ClassifiedObligationsUnmetCount: int
+            JourneyObligationsUnmetCount: int
             GeneratedViewState: string
             SourceSnapshotCount: int
             Readiness: string

@@ -57,6 +57,7 @@ module GovernanceHandoff =
             /// WI-4 (ADR-0048): classified `{gameplay}` FR obligations left unmet at the merge boundary —
             /// the aggregate a Governance gate binds to block-on-ship. `0` when no FR is classified.
             ClassifiedObligationsUnmet: int
+            JourneyObligationsUnmet: int
             BlockingDiagnosticIds: string list
             PerViewState: (string * string) list
         }
@@ -500,6 +501,7 @@ module GovernanceHandoff =
         writer.WriteNumber("warning", handoff.Readiness.WarningCount)
         writer.WriteNumber("blocking", handoff.Readiness.BlockingCount)
         writer.WriteNumber("classifiedObligationsUnmet", handoff.Readiness.ClassifiedObligationsUnmet)
+        writer.WriteNumber("journeyObligationsUnmet", handoff.Readiness.JourneyObligationsUnmet)
         writer.WriteEndObject()
         writer.WriteStartArray("blockingDiagnosticIds")
 

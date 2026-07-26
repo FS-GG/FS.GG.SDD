@@ -1,22 +1,22 @@
 {
   "schemaVersion": 1,
   "contractVersion": "2.0.0",
-  "generatorVersion": "FS.GG.SDD.Artifacts/0.29.1",
+  "generatorVersion": "FS.GG.SDD.Artifacts/0.30.0",
   "workId": "247-full-shape-golden",
   "sources": [
     {
       "path": "readiness/247-full-shape-golden/ship.json",
-      "digest": "sha256:b2192305b1ab64aec56b8a61f14b808b00b16c7a812950307a1ef14a557ed063",
+      "digest": "sha256:a53fbd7eb1f435dec39cb96ecb7b8ea4b9559233b31eefc771e572b012452001",
       "schemaVersion": 1
     },
     {
       "path": "readiness/247-full-shape-golden/verify.json",
-      "digest": "sha256:b6ab671d94cc714c5a102184d84dcb90c5ba59aa8bb0dd1a20f9d743d359b059",
+      "digest": "sha256:8fa87bb35859d28475d36537d8cf1f4f263cc0a48177a548f057e0ae5b37849b",
       "schemaVersion": 1
     },
     {
       "path": "readiness/247-full-shape-golden/work-model.json",
-      "digest": "sha256:1db03db05a56ea5f6f0686c7474f44c1ac42113e5a540b25f95ab55067280b96",
+      "digest": "sha256:27ed1b6c3b341fe7902e22469ef59a9a40c4b5b8bcfcbfec70c9634dbcf1d61f",
       "schemaVersion": 1
     }
   ],
@@ -146,7 +146,8 @@
       "advisory": 0,
       "warning": 0,
       "blocking": 0,
-      "classifiedObligationsUnmet": 0
+      "classifiedObligationsUnmet": 0,
+      "journeyObligationsUnmet": 0
     },
     "blockingDiagnosticIds": [],
     "perViewState": [

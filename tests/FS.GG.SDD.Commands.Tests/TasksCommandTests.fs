@@ -918,7 +918,7 @@ module TasksCommandTests =
 
     /// A plan-ready project whose FR-001 coverage line is annotated `{gameplay}` (the facet is scanned
     /// anywhere on the FR line, so appending it preserves the line's coverage).
-    let private gameplayClassifiedProject () =
+    let private classifiedProject classification =
         let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
         TestSupport.runCharter root workId title |> ignore
@@ -929,7 +929,7 @@ module TasksCommandTests =
             |> fun spec -> spec.Replace("\r\n", "\n").Split('\n')
             |> Array.map (fun line ->
                 if line.StartsWith("- FR-001:") then
-                    line + " {gameplay}"
+                    line + $" {{{classification}}}"
                 else
                     line)
             |> String.concat "\n"
@@ -945,6 +945,8 @@ module TasksCommandTests =
         TestSupport.runPlan root workId title |> ignore
         root
 
+    let private gameplayClassifiedProject () = classifiedProject "gameplay"
+
     /// WI-4 one granularity finer than the visual task: a `{gameplay}`-classified FR derives a task
     /// carrying the `gameplay-test` capability (which makes its obligation require a real test kind).
     [<Fact>]
@@ -957,6 +959,18 @@ module TasksCommandTests =
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains("Cover gameplay requirement FR-001 with a non-synthetic test", tasks)
         Assert.Contains("gameplay-test", tasks)
+
+    [<Fact>]
+    let ``tasks derives a distinct production-journey task`` () =
+        let root = classifiedProject "production-journey"
+
+        let report = TestSupport.runTasks root workId title
+        let tasks = TestSupport.readRelative root tasksPath
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains("Prove production journey FR-001 from boot to terminal outcome", tasks)
+        Assert.Contains("production-journey", tasks)
+        Assert.DoesNotContain("Cover gameplay requirement FR-001", tasks)
 
     /// SC-001 at the tasks seam: an unclassified workspace's graph gains no gameplay task.
     [<Fact>]

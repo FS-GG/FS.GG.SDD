@@ -16,17 +16,20 @@ machine contract is authoritative. (FR-002)
 
 | SDD version line | Spec Kit range | Governance handoff `contractVersion` range (optional) |
 |---|---|---|
-| `0.11.x` | `>=0.8.5` | `1.x` |
+| `0.30.x` | `>=0.8.5` | `2.x` |
 
 ## How to read this
 
-- **SDD version line** — the `0.11.x` release line covered by this record. The
-  declared `identity.version` is `0.11.0` on the `preRelease` channel.
+- **SDD version line** — the `0.30.x` release line covered by this record. The
+  declared `identity.version` is `0.30.0` on the `preRelease` channel.
 - **Spec Kit range** — the supported Spec Kit version range for this line:
   `>=0.8.5`.
 - **Governance handoff `contractVersion` range** — the supported handoff
-  `contractVersion` range, `1.x`, matching the `governance-handoff.json`
-  contract at `contractVersion` `1.0.0`.
+  `contractVersion` range, `2.x`, matching the current `governance-handoff.json`
+  contract.
+
+Production-journey receipt import in this line consumes the serialized schema-v1 contract emitted
+by FS.GG.Game 0.12.0. Adoption is opt-in until a requirement uses `{production-journey}`.
 
 ## Governance compatibility is optional
 

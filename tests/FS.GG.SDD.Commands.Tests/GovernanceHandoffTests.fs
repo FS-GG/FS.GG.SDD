@@ -109,6 +109,7 @@ module GovernanceHandoffTests =
           WarningCount = 0
           BlockingCount = List.length blockingIds
           ClassifiedObligationsUnmet = 0
+          JourneyObligationsUnmet = 0
           BlockingDiagnosticIds = blockingIds
           PerViewState =
             [ "ship.json", "current"

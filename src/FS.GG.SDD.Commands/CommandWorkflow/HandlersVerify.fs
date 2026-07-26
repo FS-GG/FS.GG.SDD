@@ -44,6 +44,7 @@ module internal HandlersVerify =
             /// Carried from the draft and serialized into verify.json so `ship` and Governance count
             /// "classified-FR obligations unmet" over the committed dispositions without re-deriving it.
             ClassifiedRequirement: bool
+            JourneyRequirement: bool
             EvidenceIds: string list
             TaskIds: string list
             SourceIds: string list
@@ -206,6 +207,7 @@ module internal HandlersVerify =
               State = draft.State
               Observed = draft.Observed
               ClassifiedRequirement = draft.ClassifiedRequirement
+              JourneyRequirement = draft.JourneyRequirement
               EvidenceIds = draft.EvidenceIds
               TaskIds = draft.TaskIds
               SourceIds = affectedSourceIds draft.TaskIds
@@ -225,6 +227,8 @@ module internal HandlersVerify =
         // must still be caught here — otherwise the check only ever fires at authoring time and a
         // stale citation walks straight past the boundary that matters (FR-004, US2).
         (artifactExists: string -> bool)
+        // #709: the production-journey receipt binds report bytes, not mere path existence.
+        (artifactText: string -> string option)
         // FS.GG.SDD#350 / ADR-0035 stage 3: `verify --require-observed`. `false` (the default) leaves
         // this function byte-for-byte what it was — the `unobserved` arm below is unreachable and a
         // pass satisfies on the author's word, exactly as it does today.
@@ -291,6 +295,18 @@ module internal HandlersVerify =
                 // kind (e.g. `implementation`) leaves the required test UNMET, not satisfied, so `ED-`
                 // and `TD-` cannot drift on what discharges a gameplay obligation (as for the #306
                 // visual arm above). A synthetic-only pass already fell to `synthetic`.
+                elif
+                    isProductionJourneyTagged (tasks |> List.collect (fun task -> task.RequiredSkills))
+                    && matches
+                       |> List.exists (fun declaration ->
+                           normalizedEvidenceResult declaration.Result = "pass"
+                           && not declaration.Synthetic)
+                    && not (matches |> List.exists (journeyReceiptReportIsCurrent artifactText))
+                then
+                    if matches |> List.exists hasValidJourneyReceipt then
+                        "invalid", [ "evidence.productionJourneyReceiptStale" ]
+                    else
+                        "invalid", [ "evidence.productionJourneyReceiptInvalid" ]
                 elif
                     isGameplayTestTagged (tasks |> List.collect (fun task -> task.RequiredSkills))
                     && matches
@@ -467,6 +483,7 @@ module internal HandlersVerify =
                 writer.WriteString("state", view.State)
                 writer.WriteBoolean("observed", view.Observed)
                 writer.WriteBoolean("classifiedRequirement", view.ClassifiedRequirement)
+                writer.WriteBoolean("journeyRequirement", view.JourneyRequirement)
                 writeStringArray writer "evidenceIds" view.EvidenceIds
                 writeStringArray writer "affectedTaskIds" view.TaskIds
                 writeStringArray writer "affectedSourceIds" view.SourceIds
@@ -626,7 +643,11 @@ module internal HandlersVerify =
                         let obligations = evidenceObligations taskFacts
 
                         let dispositions =
-                            evidenceDispositions obligations (citedArtifactExists model) artifact
+                            evidenceDispositions
+                                obligations
+                                (citedArtifactExists model)
+                                (fun artifactPath -> snapshot artifactPath model |> Option.map _.Text)
+                                artifact
 
                         let dispositionDiagnostics =
                             evidenceDispositionDiagnostics (evidencePath workId) dispositions
@@ -637,6 +658,7 @@ module internal HandlersVerify =
                             verifyTestDispositionViews
                                 taskFacts
                                 (citedArtifactExists model)
+                                (fun artifactPath -> snapshot artifactPath model |> Option.map _.Text)
                                 model.Request.RequireObserved
                                 artifact
 
@@ -926,6 +948,10 @@ module internal HandlersVerify =
                                   ClassifiedObligationsUnmetCount =
                                     evidenceSummaryOpt
                                     |> Option.map (fun summary -> summary.ClassifiedObligationsUnmetCount)
+                                    |> Option.defaultValue 0
+                                  JourneyObligationsUnmetCount =
+                                    evidenceSummaryOpt
+                                    |> Option.map (fun summary -> summary.JourneyObligationsUnmetCount)
                                     |> Option.defaultValue 0
                                   SkillVisibleCount =
                                     skillViews

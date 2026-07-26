@@ -34,6 +34,7 @@ module Verify =
             /// Carried per-disposition so `ship` and the Governance handoff count "classified-FR
             /// obligations unmet" over the committed verify view. Absent in a pre-WI-4 view ⇒ `false`.
             ClassifiedRequirement: bool
+            JourneyRequirement: bool
             EvidenceIds: EvidenceId list
             AffectedTaskIds: TaskId list
             AffectedSourceIds: string list
