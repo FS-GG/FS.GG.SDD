@@ -239,13 +239,13 @@ module ReleaseContract =
 
     let currentRelease () : ReleaseReadiness =
         let identity =
-            { Version = "0.30.0"
-              Channel = channelOfVersion "0.30.0"
+            { Version = "0.31.0"
+              Channel = channelOfVersion "0.31.0"
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "0.30.x"
+            [ { SddVersionLine = "0.31.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "2.x" } ]
 
@@ -1127,9 +1127,9 @@ module ReleaseContract =
           //
           // And enumerate EVERY breaking change: a note that under-reports is the exact failure
           // the note exists to prevent.
-          // 0.30.0 is ADDITIVE: it introduces the optional production-journey classification,
-          // receipt, disposition, and readiness fields. Existing unclassified and gameplay
-          // requirements retain their previous semantics, so no migration note is required.
+          // 0.31.0 is ADDITIVE: schema-v2 driver manifests describe complete content-addressed
+          // directories, and scaffold/upgrade materialize their verified auxiliary files.
+          // Schema-v1 single-file manifests remain supported, so no migration note is required.
           Migrations = [] }
 
     // ---- canonical serialization ----
