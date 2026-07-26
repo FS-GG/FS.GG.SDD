@@ -121,7 +121,7 @@
         "type": "CentralTransitive",
         "requested": "[0.8.3, )",
         "resolved": "0.8.3",
-        "contentHash": "vxCxqZ+L+n33GZwE5yZrXn17dAp1XjDQtqzl26v4+BAq4bvCpF7Va87NGJ7aod9J65g5pID34BetYUIgLXyTBA=="
+        "contentHash": "2LerPyLKcIQBqvphRMztdjahYoVNmIIftcsFUTyfGCwX8MNf1zqaIxZmqyNhA/079ic29IsuMOXuhb1Mxp7jaA=="
       },
       "FS.GG.Game.Skills": {
         "type": "CentralTransitive",

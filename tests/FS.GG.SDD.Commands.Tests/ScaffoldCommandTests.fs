@@ -1102,10 +1102,7 @@ module ScaffoldCommandTests =
                         for linkMatch in Regex.Matches(File.ReadAllText absolute, @"\[[^\]]+\]\(([^)#]+)(?:#[^)]+)?\)") do
                             let target = linkMatch.Groups[1].Value
 
-                            if
-                                not (target.Contains "://")
-                                && not (target.StartsWith "/")
-                            then
+                            if not (target.Contains "://") && not (target.StartsWith "/") then
                                 let parent =
                                     Path.GetDirectoryName absolute
                                     |> Option.ofObj
