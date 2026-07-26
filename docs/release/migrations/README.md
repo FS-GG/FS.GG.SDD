@@ -50,6 +50,12 @@ Releases `0.2.0` through `0.8.0` were additive-only and intentionally carry no
 note. The paragraphs below record each of those additive changes; they are the
 per-change classification record, not migration notes.
 
+Release `0.25.1` is clarifying-only: command orchestration now delegates
+diagnostic routing, task-graph policy, evidence mutation, and scaffold mutation
+to cohesive internal domain services. The public command API, serialized
+artifacts, CLI surface, and exit-code contracts are unchanged, so no consumer
+adaptation or `<version>.md` migration note is required.
+
 Release `0.25.0` is additive-only: `CommandTypes.CommandFamilies` adds F# type
 abbreviations that group the existing public command contract by responsibility.
 Every canonical `CommandTypes.*` runtime type and serialized representation is

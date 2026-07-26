@@ -89,7 +89,7 @@ module InitCommandTests =
         Directory.CreateDirectory(Path.Combine(root, ".fsgg")) |> ignore
 
         let scaffoldRecord =
-            { ScaffoldProvenance.devRepoRecord { Id = "fsgg-sdd"; Version = "0.25.0" } [] with
+            { ScaffoldProvenance.devRepoRecord { Id = "fsgg-sdd"; Version = "0.25.1" } [] with
                 ProviderName = "rendering"
                 ProviderContractVersion = "1"
                 TemplateRef = "fsgg-ui"
