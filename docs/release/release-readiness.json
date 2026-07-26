@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "generatorVersion": {
     "id": "FS.GG.SDD.Artifacts",
-    "version": "0.29.1"
+    "version": "0.30.0"
   },
   "identity": {
-    "version": "0.29.1",
+    "version": "0.30.0",
     "channel": "preRelease",
     "packageIds": [
       "FS.GG.SDD.Artifacts",
@@ -16,7 +16,7 @@
   },
   "compatibility": [
     {
-      "sddVersionLine": "0.29.x",
+      "sddVersionLine": "0.30.x",
       "specKitRange": "\u003E=0.8.5",
       "governanceContractVersionRange": "2.x"
     }
@@ -1348,6 +1348,11 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "ship.journeyObligationsUnmetCount",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "ship.lifecycleStageReadiness",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -1994,6 +1999,11 @@
           "stability": "additiveOptional"
         },
         {
+          "name": "readiness.counts.journeyObligationsUnmet",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
           "name": "readiness.counts.warning",
           "kind": "jsonField",
           "stability": "additiveOptional"
@@ -2217,6 +2227,11 @@
         },
         {
           "name": "disposition.correction",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "disposition.journeyObligationsUnmetCount",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },
@@ -2629,6 +2644,11 @@
         },
         {
           "name": "evidenceDispositions[].id",
+          "kind": "jsonField",
+          "stability": "additiveOptional"
+        },
+        {
+          "name": "evidenceDispositions[].journeyRequirement",
           "kind": "jsonField",
           "stability": "additiveOptional"
         },

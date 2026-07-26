@@ -4,7 +4,7 @@
   "workId": "068-readiness-golden",
   "stage": "verify",
   "status": "verificationReady",
-  "generator": "FS.GG.SDD.Artifacts/0.29.1",
+  "generator": "FS.GG.SDD.Artifacts/0.30.0",
   "sources": [
     {
       "path": ".fsgg/agents.yml",
@@ -41,7 +41,7 @@
       "kind": "analysis",
       "digest": {
         "algorithm": "sha256",
-        "value": "65ae41bf0e5e7e518a31e1690f407647f91787a619eba3f731ef64dc4d39386b"
+        "value": "26ce77c1f59294905b49a8f1907f2521cb99be153d74a8c0bc74814f79513e03"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -51,7 +51,7 @@
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "d20651a5be35c129789b6f78a2473050a19017dc6996c7467d4fa70ea4e1937e"
+        "value": "af8880a207a5da0be8dd05d5d221231db14289e76e6990dbfa05e45e07c148bf"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -81,7 +81,7 @@
       "kind": "evidence",
       "digest": {
         "algorithm": "sha256",
-        "value": "bb2464ff54d3de62a6f383281def69b2f861be27120a65397b0f9b35bc531701"
+        "value": "1457f8fdcdbd0b2fbb350c1b90dc38267021bcac52c4eb04787999399c1d5b15"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -164,6 +164,7 @@
       "state": "supported",
       "observed": false,
       "classifiedRequirement": false,
+      "journeyRequirement": false,
       "evidenceIds": [
         "EV001"
       ],
@@ -185,6 +186,7 @@
       "state": "supported",
       "observed": false,
       "classifiedRequirement": false,
+      "journeyRequirement": false,
       "evidenceIds": [
         "EV002"
       ],
@@ -205,6 +207,7 @@
       "state": "supported",
       "observed": false,
       "classifiedRequirement": false,
+      "journeyRequirement": false,
       "evidenceIds": [
         "EV003"
       ],
@@ -226,6 +229,7 @@
       "state": "supported",
       "observed": false,
       "classifiedRequirement": false,
+      "journeyRequirement": false,
       "evidenceIds": [
         "EV004"
       ],
@@ -246,6 +250,7 @@
       "state": "supported",
       "observed": false,
       "classifiedRequirement": false,
+      "journeyRequirement": false,
       "evidenceIds": [
         "EV005"
       ],

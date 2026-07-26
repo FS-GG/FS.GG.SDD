@@ -1150,7 +1150,7 @@ evidence:
     synthetic: false"""
 
         let ev001 =
-            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) artifact
+            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) (fun _ -> None) artifact
             |> List.find (fun disposition -> disposition.ObligationId = "EV001")
 
         Assert.Equal("missing", ev001.State)
@@ -1179,7 +1179,7 @@ evidence:
     synthetic: false"""
 
         let ev001 =
-            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) artifact
+            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) (fun _ -> None) artifact
             |> List.find (fun disposition -> disposition.ObligationId = "EV001")
 
         Assert.Equal("supported", ev001.State)
@@ -1239,7 +1239,7 @@ tasks:
     synthetic: false"""
 
         let completion =
-            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) artifact
+            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) (fun _ -> None) artifact
             |> List.find (fun disposition -> disposition.ObligationId = completionId)
 
         Assert.Equal("supported", completion.State)
@@ -1714,8 +1714,25 @@ evidence:
     let private gameplayDisposition (declaration: string) =
         let artifact = evidenceArtifactWith declaration
 
-        HandlersEvidence.evidenceDispositions [ gameplayObligation "EV001" ] (fun _ -> true) artifact
+        HandlersEvidence.evidenceDispositions [ gameplayObligation "EV001" ] (fun _ -> true) (fun _ -> None) artifact
         |> List.find (fun disposition -> disposition.ObligationId = "EV001")
+
+    let private journeyDisposition reportText (declaration: string) =
+        let obligation =
+            { evidenceObligation "EV001" with
+                RequiredEvidenceKinds = Evidence.realTestEvidenceKinds
+                RequiredSkillOrCapabilityTags = [ Evidence.productionJourneyCapability ] }
+
+        HandlersEvidence.evidenceDispositions
+            [ obligation ]
+            (fun _ -> true)
+            (fun path ->
+                if path = "artifacts/journey.trx" then
+                    Some reportText
+                else
+                    None)
+            (evidenceArtifactWith declaration)
+        |> List.exactlyOne
 
     let private declarationOfKind (kind: string) (synthetic: bool) =
         $"""  - id: EV001
@@ -1727,12 +1744,96 @@ evidence:
     result: pass
     synthetic: {(if synthetic then "true" else "false")}"""
 
+    let private digestOf (text: string) =
+        System.Text.Encoding.UTF8.GetBytes text
+        |> System.Security.Cryptography.SHA256.HashData
+        |> System.Convert.ToHexString
+        |> fun value -> "sha256:" + value.ToLowerInvariant()
+
+    let private journeyDeclaration digest =
+        $"""  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    obligationRefs: [EV001]
+    result: pass
+    synthetic: false
+    observedRun:
+      source: artifacts/journey.trx
+      digest: "{digest}"
+      outcome: passed
+      passed: 1
+      failed: 0
+      skipped: 0
+    journeyReceipt:
+      schemaVersion: 1
+      runner:
+        identity: "FS.GG.Game.Harness.Journey"
+        version: "0.12.0"
+      origin: production-journey
+      routeId: "FS.GG.Game.Reference/Composition"
+      scenarioId: "boot-to-vault-exit"
+      testId: "GP-JOURNEY-001"
+      input:
+        kind: fixed-script
+        digest: "{digest}"
+      replayDigest: "{digest}"
+      traceDigest: "{digest}"
+      initialFingerprint: "{digest}"
+      terminalFingerprint: "{digest}"
+      terminalPredicate:
+        reached: true
+      outcome: passed
+      maximumSteps: 32
+      actualSteps: 12
+      observedTestReport:
+        source: artifacts/journey.trx
+        digest: "{digest}"
+        testName: "ReferenceProof GP-JOURNEY-001"
+        outcome: passed"""
+
     [<Fact>]
     let ``a gameplay obligation is supported by a non-synthetic verification pass`` () =
         let disposition = gameplayDisposition (declarationOfKind "verification" false)
         Assert.Equal("supported", disposition.State)
         Assert.True(disposition.ClassifiedRequirement)
         Assert.Equal(0, HandlersEvidence.classifiedObligationsUnmetCount [ disposition ])
+
+    [<Fact>]
+    let ``a production journey requires a complete receipt bound to the observed report`` () =
+        let reportText = "journey report bytes"
+        let digest = digestOf reportText
+        let declaration = journeyDeclaration digest
+
+        let valid = journeyDisposition reportText declaration
+        Assert.Equal("supported", valid.State)
+        Assert.True(valid.JourneyRequirement)
+        Assert.Equal(0, HandlersEvidence.journeyObligationsUnmetCount [ valid ])
+
+        let noReceipt =
+            journeyDisposition reportText (declarationOfKind "verification" false)
+
+        Assert.Equal("invalid", noReceipt.State)
+        Assert.Contains("evidence.productionJourneyReceiptInvalid", noReceipt.DiagnosticIds)
+        Assert.Equal(1, HandlersEvidence.journeyObligationsUnmetCount [ noReceipt ])
+
+        let badDigest = "sha256:" + System.String('b', 64)
+
+        let mismatched =
+            journeyDisposition
+                reportText
+                (declaration.Replace(
+                    $"digest: \"{digest}\"\n        testName",
+                    $"digest: \"{badDigest}\"\n        testName"
+                ))
+
+        Assert.Equal("invalid", mismatched.State)
+
+        let staleReport = journeyDisposition "changed journey report bytes" declaration
+        Assert.Equal("invalid", staleReport.State)
+        Assert.Contains("evidence.productionJourneyReceiptStale", staleReport.DiagnosticIds)
+        Assert.Equal(1, HandlersEvidence.journeyObligationsUnmetCount [ staleReport ])
 
     [<Fact>]
     let ``a gameplay obligation is unmet by a non-test-kind pass`` () =
@@ -1760,6 +1861,7 @@ evidence:
             HandlersEvidence.evidenceDispositions
                 [ evidenceObligation "EV001" ]
                 (fun _ -> true)
+                (fun _ -> None)
                 (evidenceArtifactWith (declarationOfKind "implementation" false))
             |> List.find (fun disposition -> disposition.ObligationId = "EV001")
 
@@ -1849,8 +1951,43 @@ tasks:
     synthetic: false"""
 
         let view =
-            HandlersVerify.verifyTestDispositionViews (gameplayTaskFacts ()) (fun _ -> true) false artifact
+            HandlersVerify.verifyTestDispositionViews
+                (gameplayTaskFacts ())
+                (fun _ -> true)
+                (fun _ -> None)
+                false
+                artifact
             |> List.find (fun view -> view.ObligationId = "EV001")
 
         Assert.Equal("invalid", view.State)
         Assert.Contains("evidence.classifiedRequirementTestObligationUnmet", view.DiagnosticIds)
+
+    [<Fact>]
+    let ``verifyTestDispositionViews rejects a journey receipt after its report bytes drift`` () =
+        let reportText = "journey report bytes"
+        let artifact = journeyDeclaration (digestOf reportText) |> evidenceArtifactWith
+        let facts = gameplayTaskFacts ()
+
+        let journeyFacts =
+            { facts with
+                Tasks =
+                    facts.Tasks
+                    |> List.map (fun task ->
+                        { task with
+                            RequiredSkills = Evidence.productionJourneyCapability :: task.RequiredSkills }) }
+
+        let view =
+            HandlersVerify.verifyTestDispositionViews
+                journeyFacts
+                (fun _ -> true)
+                (fun path ->
+                    if path = "artifacts/journey.trx" then
+                        Some "changed journey report bytes"
+                    else
+                        None)
+                false
+                artifact
+            |> List.find (fun disposition -> disposition.ObligationId = "EV001")
+
+        Assert.Equal("invalid", view.State)
+        Assert.Contains("evidence.productionJourneyReceiptStale", view.DiagnosticIds)

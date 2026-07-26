@@ -39,6 +39,7 @@ module Verify =
             /// so `ship` and the Governance handoff count "classified-FR obligations unmet" over the
             /// committed verify view without re-deriving it. Absent in a pre-WI-4 view ⇒ `false`.
             ClassifiedRequirement: bool
+            JourneyRequirement: bool
             EvidenceIds: EvidenceId list
             AffectedTaskIds: TaskId list
             AffectedSourceIds: string list
@@ -177,6 +178,7 @@ module Verify =
           // WI-4: absent in a pre-WI-4 view parses to `false` (no FR was classified). Degrade, don't
           // throw (Principle VIII), and no `schemaVersion` bump.
           ClassifiedRequirement = jsonBool "classifiedRequirement" element |> Option.defaultValue false
+          JourneyRequirement = jsonBool "journeyRequirement" element |> Option.defaultValue false
           EvidenceIds = evidenceIdsFromJson "evidenceIds" element
           AffectedTaskIds = taskIdsFromJson "affectedTaskIds" element
           AffectedSourceIds = jsonStringList "affectedSourceIds" element

@@ -64,6 +64,33 @@ module Evidence =
           Failed: int
           Skipped: int }
 
+    /// FS.GG.SDD#709 / ADR-0065. The producer-issued, schema-versioned proof that a passing test
+    /// traversed the real producer-owned production composition. Every value is imported from the
+    /// producer's
+    /// `journeyReceipt` map; none is inferred from a test name or authored boolean.
+    type JourneyReceipt =
+        { SchemaVersion: int
+          RunnerIdentity: string
+          RunnerVersion: string
+          Origin: string
+          RouteId: string
+          ScenarioId: string
+          TestId: string
+          InputKind: string
+          InputDigest: string
+          ReplayDigest: string
+          TraceDigest: string
+          InitialFingerprint: string
+          TerminalFingerprint: string
+          TerminalPredicateReached: bool
+          Outcome: string
+          MaximumSteps: int
+          ActualSteps: int
+          ObservedReportSource: string
+          ObservedReportDigest: string
+          ObservedTestName: string
+          ObservedTestOutcome: string }
+
     type PerformanceIntentDeclaration = Fsgg.Schemas.PerformanceIntentDeclaration
 
     type PerformanceBudgetDeclaration =
@@ -220,6 +247,7 @@ module Evidence =
             /// FS.GG.SDD#350: the receipt, when a run was observed. `None` is the honest state for an
             /// obligation discharged on the author's word — it is what `isSelfAttested` counts.
             ObservedRun: ObservedRun option
+            JourneyReceipt: JourneyReceipt option
             PerformanceBudget: PerformanceBudgetDeclaration option
             Rationale: string option
             Owner: string option
@@ -329,6 +357,9 @@ module Evidence =
     // different modules of `Commands` and must agree on one literal.
     let gameplayTestCapability = "gameplay-test"
 
+    let productionJourneyClassification = "production-journey"
+    let productionJourneyCapability = "production-journey"
+
     /// The evidence kinds that count as a *real test* for a classified-FR obligation (ADR-0048). A
     /// gameplay obligation is satisfied only by one of these kinds with a non-synthetic pass — the
     /// single source of truth for the derived obligation's `RequiredEvidenceKinds`.
@@ -338,6 +369,82 @@ module Evidence =
     let isGameplayTestTagged (tags: string list) =
         tags
         |> List.exists (fun tag -> String.Equals(tag, gameplayTestCapability, StringComparison.OrdinalIgnoreCase))
+
+    let isProductionJourneyTagged (tags: string list) =
+        tags
+        |> List.exists (fun tag -> String.Equals(tag, productionJourneyCapability, StringComparison.OrdinalIgnoreCase))
+
+    let private sha256Digest value =
+        not (String.IsNullOrWhiteSpace value)
+        && Regex.IsMatch(value, @"^sha256:[a-f0-9]{64}$", RegexOptions.CultureInvariant)
+
+    /// The complete schema-v1 producer contract and its same-execution observed-report binding.
+    /// Returns stable, actionable reasons; an empty list is the only valid verdict.
+    let journeyReceiptProblems (declaration: EvidenceDeclaration) =
+        match declaration.JourneyReceipt with
+        | None -> [ "journey receipt is missing" ]
+        | Some receipt ->
+            [ if receipt.SchemaVersion <> 1 then
+                  $"unsupported journey receipt schemaVersion {receipt.SchemaVersion}"
+              if String.IsNullOrWhiteSpace receipt.RunnerIdentity then
+                  "runner.identity is required"
+              if String.IsNullOrWhiteSpace receipt.RunnerVersion then
+                  "runner.version is required"
+              if not (receipt.Origin.Equals("production-journey", StringComparison.OrdinalIgnoreCase)) then
+                  $"origin '{receipt.Origin}' is not production-journey"
+              for label, value in
+                  [ "routeId", receipt.RouteId
+                    "scenarioId", receipt.ScenarioId
+                    "testId", receipt.TestId
+                    "observedTestReport.source", receipt.ObservedReportSource
+                    "observedTestReport.testName", receipt.ObservedTestName ] do
+                  if String.IsNullOrWhiteSpace value then
+                      $"{label} is required"
+              if
+                  not (
+                      receipt.InputKind.Equals("fixed-script", StringComparison.OrdinalIgnoreCase)
+                      || receipt.InputKind.Equals("seeded-policy", StringComparison.OrdinalIgnoreCase)
+                  )
+              then
+                  $"input.kind '{receipt.InputKind}' is not fixed-script or seeded-policy"
+              for label, digest in
+                  [ "input.digest", receipt.InputDigest
+                    "replayDigest", receipt.ReplayDigest
+                    "traceDigest", receipt.TraceDigest
+                    "initialFingerprint", receipt.InitialFingerprint
+                    "terminalFingerprint", receipt.TerminalFingerprint
+                    "observedTestReport.digest", receipt.ObservedReportDigest ] do
+                  if not (sha256Digest digest) then
+                      $"{label} is not a sha256:<hex> digest"
+              if not receipt.TerminalPredicateReached then
+                  "terminal predicate was not reached"
+              if not (receipt.Outcome.Equals("passed", StringComparison.OrdinalIgnoreCase)) then
+                  $"journey outcome '{receipt.Outcome}' is not passed"
+              if receipt.MaximumSteps <= 0 then
+                  "maximumSteps must be positive"
+              if receipt.ActualSteps <= 0 then
+                  "actualSteps must be positive"
+              if receipt.ActualSteps > receipt.MaximumSteps then
+                  $"actualSteps {receipt.ActualSteps} exceeds maximumSteps {receipt.MaximumSteps}"
+              if not (receipt.ObservedTestOutcome.Equals("passed", StringComparison.OrdinalIgnoreCase)) then
+                  $"observed test outcome '{receipt.ObservedTestOutcome}' is not passed"
+              match declaration.ObservedRun with
+              | None -> "matching observedRun is missing"
+              | Some run ->
+                  if not (receipt.ObservedReportSource.Equals(run.Source, StringComparison.Ordinal)) then
+                      "journey receipt report source does not match observedRun.source"
+
+                  if not (receipt.ObservedReportDigest.Equals(run.Digest, StringComparison.OrdinalIgnoreCase)) then
+                      "journey receipt report digest does not match observedRun.digest"
+
+                  if
+                      not (run.Outcome.Equals("passed", StringComparison.OrdinalIgnoreCase))
+                      || run.Failed <> 0
+                  then
+                      "observedRun is not passing" ]
+
+    let hasValidJourneyReceipt declaration =
+        List.isEmpty (journeyReceiptProblems declaration)
 
     let private evidenceArtifactRef path =
         tryArtifact path (ArtifactKind.Other "evidenceArtifact") ArtifactOwner.Sdd false
@@ -1143,6 +1250,13 @@ module Evidence =
           match declaration.ObservedRun with
           | Some run when named run.Source && citedPathIsContained run.Source -> run.Source
           | _ -> ()
+          match declaration.JourneyReceipt with
+          | Some receipt when
+              not (String.IsNullOrWhiteSpace receipt.ObservedReportSource)
+              && citedPathIsContained receipt.ObservedReportSource
+              ->
+              receipt.ObservedReportSource
+          | _ -> ()
           match declaration.PerformanceBudget with
           | Some budget when named budget.ArtifactPath && citedPathIsContained budget.ArtifactPath ->
               budget.ArtifactPath
@@ -1410,6 +1524,105 @@ module Evidence =
               Failed = run.Failed
               Skipped = run.Skipped }
 
+        let journeyReceiptSeed: JourneyReceipt =
+            { SchemaVersion = 0
+              RunnerIdentity = ""
+              RunnerVersion = ""
+              Origin = ""
+              RouteId = ""
+              ScenarioId = ""
+              TestId = ""
+              InputKind = ""
+              InputDigest = ""
+              ReplayDigest = ""
+              TraceDigest = ""
+              InitialFingerprint = ""
+              TerminalFingerprint = ""
+              TerminalPredicateReached = false
+              Outcome = ""
+              MaximumSteps = 0
+              ActualSteps = 0
+              ObservedReportSource = ""
+              ObservedReportDigest = ""
+              ObservedTestName = ""
+              ObservedTestOutcome = "" }
+
+        let private journeyRunnerFields: ArtifactCodec.FieldCodec<JourneyReceipt> list =
+            [ ArtifactCodec.requiredScalar "identity" _.RunnerIdentity (fun value receipt ->
+                  { receipt with RunnerIdentity = value })
+              ArtifactCodec.requiredScalar "version" _.RunnerVersion (fun value receipt ->
+                  { receipt with RunnerVersion = value }) ]
+
+        let private journeyInputFields: ArtifactCodec.FieldCodec<JourneyReceipt> list =
+            [ ArtifactCodec.requiredScalar "kind" _.InputKind (fun value receipt -> { receipt with InputKind = value })
+              ArtifactCodec.requiredScalar "digest" _.InputDigest (fun value receipt ->
+                  { receipt with InputDigest = value }) ]
+
+        let private journeyTerminalFields: ArtifactCodec.FieldCodec<JourneyReceipt> list =
+            [ ArtifactCodec.boolScalar "reached" false _.TerminalPredicateReached (fun value receipt ->
+                  { receipt with
+                      TerminalPredicateReached = value }) ]
+
+        let private journeyObservedReportFields: ArtifactCodec.FieldCodec<JourneyReceipt> list =
+            [ ArtifactCodec.requiredScalar "source" _.ObservedReportSource (fun value receipt ->
+                  { receipt with
+                      ObservedReportSource = value })
+              ArtifactCodec.requiredScalar "digest" _.ObservedReportDigest (fun value receipt ->
+                  { receipt with
+                      ObservedReportDigest = value })
+              ArtifactCodec.requiredScalar "testName" _.ObservedTestName (fun value receipt ->
+                  { receipt with
+                      ObservedTestName = value })
+              ArtifactCodec.requiredScalar "outcome" _.ObservedTestOutcome (fun value receipt ->
+                  { receipt with
+                      ObservedTestOutcome = value }) ]
+
+        let journeyReceiptFields: ArtifactCodec.FieldCodec<JourneyReceipt> list =
+            [ ArtifactCodec.intScalar "schemaVersion" 0 _.SchemaVersion (fun value receipt ->
+                  { receipt with SchemaVersion = value })
+              ArtifactCodec.nested "runner" journeyRunnerFields journeyReceiptSeed id (fun value receipt ->
+                  { receipt with
+                      RunnerIdentity = value.RunnerIdentity
+                      RunnerVersion = value.RunnerVersion })
+              ArtifactCodec.requiredScalar "origin" _.Origin (fun value receipt -> { receipt with Origin = value })
+              ArtifactCodec.requiredScalar "routeId" _.RouteId (fun value receipt -> { receipt with RouteId = value })
+              ArtifactCodec.requiredScalar "scenarioId" _.ScenarioId (fun value receipt ->
+                  { receipt with ScenarioId = value })
+              ArtifactCodec.requiredScalar "testId" _.TestId (fun value receipt -> { receipt with TestId = value })
+              ArtifactCodec.nested "input" journeyInputFields journeyReceiptSeed id (fun value receipt ->
+                  { receipt with
+                      InputKind = value.InputKind
+                      InputDigest = value.InputDigest })
+              ArtifactCodec.requiredScalar "replayDigest" _.ReplayDigest (fun value receipt ->
+                  { receipt with ReplayDigest = value })
+              ArtifactCodec.requiredScalar "traceDigest" _.TraceDigest (fun value receipt ->
+                  { receipt with TraceDigest = value })
+              ArtifactCodec.requiredScalar "initialFingerprint" _.InitialFingerprint (fun value receipt ->
+                  { receipt with
+                      InitialFingerprint = value })
+              ArtifactCodec.requiredScalar "terminalFingerprint" _.TerminalFingerprint (fun value receipt ->
+                  { receipt with
+                      TerminalFingerprint = value })
+              ArtifactCodec.nested "terminalPredicate" journeyTerminalFields journeyReceiptSeed id (fun value receipt ->
+                  { receipt with
+                      TerminalPredicateReached = value.TerminalPredicateReached })
+              ArtifactCodec.requiredScalar "outcome" _.Outcome (fun value receipt -> { receipt with Outcome = value })
+              ArtifactCodec.intScalar "maximumSteps" 0 _.MaximumSteps (fun value receipt ->
+                  { receipt with MaximumSteps = value })
+              ArtifactCodec.intScalar "actualSteps" 0 _.ActualSteps (fun value receipt ->
+                  { receipt with ActualSteps = value })
+              ArtifactCodec.nested
+                  "observedTestReport"
+                  journeyObservedReportFields
+                  journeyReceiptSeed
+                  id
+                  (fun value receipt ->
+                      { receipt with
+                          ObservedReportSource = value.ObservedReportSource
+                          ObservedReportDigest = value.ObservedReportDigest
+                          ObservedTestName = value.ObservedTestName
+                          ObservedTestOutcome = value.ObservedTestOutcome }) ]
+
         let performanceBudgetSeed: PerformanceBudgetDeclaration =
             { ArtifactPath = ""
               Intent = None
@@ -1553,6 +1766,7 @@ module Evidence =
               Synthetic = false
               SyntheticDisclosure = None
               ObservedRun = None
+              JourneyReceipt = None
               PerformanceBudget = None
               Rationale = None
               Owner = None
@@ -1648,6 +1862,14 @@ module Evidence =
                   lowerObservedRun
                   (fun d -> d.ObservedRun)
                   (fun v d -> { d with ObservedRun = v })
+              ArtifactCodec.optionalNestedVia
+                  "journeyReceipt"
+                  journeyReceiptFields
+                  journeyReceiptSeed
+                  Some
+                  id
+                  (fun d -> d.JourneyReceipt)
+                  (fun v d -> { d with JourneyReceipt = v })
               ArtifactCodec.optionalNestedVia
                   "performanceBudget"
                   performanceBudgetFields

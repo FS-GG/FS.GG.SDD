@@ -12,8 +12,15 @@ module RequirementClassificationTests =
         RequirementModel.requirementClassification line
 
     [<Fact>]
-    let ``recognizedRequirementClasses is the closed set, initially just gameplay`` () =
-        Assert.Equal<string list>([ "gameplay" ], RequirementModel.recognizedRequirementClasses)
+    let ``recognizedRequirementClasses includes gameplay and production journey`` () =
+        Assert.Equal<string list>([ "gameplay"; "production-journey" ], RequirementModel.recognizedRequirementClasses)
+
+    [<Fact>]
+    let ``production journey is a distinct normalized class`` () =
+        Assert.Equal<string list>(
+            [ "production-journey" ],
+            classificationOf "- FR-002: Boot to the vault exit. {Production-Journey}"
+        )
 
     [<Fact>]
     let ``a recognized gameplay token classifies the line`` () =

@@ -310,6 +310,7 @@ module EvidenceRoundTripPropertyTests =
                   Synthetic = synthetic
                   SyntheticDisclosure = syntheticDisclosure
                   ObservedRun = receipt
+                  JourneyReceipt = None
                   PerformanceBudget = performance
                   Rationale = rationale
                   Owner = owner
@@ -442,6 +443,7 @@ module EvidenceRoundTripPropertyTests =
                       Passed = 1630
                       Failed = 0
                       Skipped = 4 }
+              JourneyReceipt = None
               PerformanceBudget =
                 Some
                     { ArtifactPath = "readiness/work/performance-baseline.txt"

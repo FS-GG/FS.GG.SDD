@@ -143,6 +143,7 @@ module internal HandlersShip =
               BlockingCount = blocking.Length
               // WI-4: absent in a pre-WI-4 ship.json ⇒ 0 (no FR was classified). Degrade, don't throw.
               ClassifiedObligationsUnmet = intField dispositionEl "classifiedObligationsUnmetCount"
+              JourneyObligationsUnmet = intField dispositionEl "journeyObligationsUnmetCount"
               BlockingDiagnosticIds = blocking |> List.sort
               PerViewState = perViewState }
         with _ ->
@@ -152,6 +153,7 @@ module internal HandlersShip =
               WarningCount = 0
               BlockingCount = 0
               ClassifiedObligationsUnmet = 0
+              JourneyObligationsUnmet = 0
               BlockingDiagnosticIds = []
               PerViewState = perViewState }
 
@@ -387,6 +389,17 @@ module internal HandlersShip =
                 |> List.length
             | None -> 0
 
+        let journeyObligationsUnmet =
+            match verificationView with
+            | Some view ->
+                view.EvidenceDispositions
+                |> List.filter (fun disposition ->
+                    disposition.JourneyRequirement
+                    && disposition.State <> EvidenceSupported
+                    && disposition.State <> EvidenceDeferred)
+                |> List.length
+            | None -> 0
+
         writeReadinessEnvelope workId "ship" readiness generator verifySourceKind sources (fun writer ->
             writeLifecycleReadiness writer lifecycleStatus lifecycleStages
             writer.WriteStartObject("verificationReadiness")
@@ -462,6 +475,7 @@ module internal HandlersShip =
                  |> List.map fst)
 
             writer.WriteNumber("classifiedObligationsUnmetCount", classifiedObligationsUnmet)
+            writer.WriteNumber("journeyObligationsUnmetCount", journeyObligationsUnmet)
 
             writer.WriteString(
                 "correction",
@@ -732,6 +746,17 @@ module internal HandlersShip =
                                     |> List.length
                                 | None -> 0
 
+                            let journeyObligationsUnmet =
+                                match verificationView with
+                                | Some v ->
+                                    v.EvidenceDispositions
+                                    |> List.filter (fun disposition ->
+                                        disposition.JourneyRequirement
+                                        && disposition.State <> EvidenceSupported
+                                        && disposition.State <> EvidenceDeferred)
+                                    |> List.length
+                                | None -> 0
+
                             let _, evidenceSelfAttestedCount, evidenceObservedCount =
                                 shipEvidenceAttestationCounts verificationView
 
@@ -757,6 +782,7 @@ module internal HandlersShip =
                                   EvidenceSyntheticCount = evidenceCount EvidenceSyntheticDisposition
                                   EvidenceInvalidCount = evidenceCount EvidenceInvalid
                                   ClassifiedObligationsUnmetCount = classifiedObligationsUnmet
+                                  JourneyObligationsUnmetCount = journeyObligationsUnmet
                                   GeneratedViewState = (if hasBlocking then "blocked" else "current")
                                   SourceSnapshotCount = sources.Length
                                   Readiness = readiness }

@@ -40,7 +40,7 @@ module RequirementModel =
 
     // The closed set of recognized FR classification facets (ADR-0048), lowercased. Initially just
     // `gameplay`. Single source of truth for the coverage-line `{…}` annotation vocabulary.
-    let recognizedRequirementClasses = [ "gameplay" ]
+    let recognizedRequirementClasses = [ "gameplay"; "production-journey" ]
 
     let private recognizedRequirementClassSet =
         recognizedRequirementClasses
