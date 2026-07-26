@@ -108,7 +108,9 @@ module WorkBoardScaffoldAcceptanceTests =
             )
 
     [<Fact>]
-    let ``the shipped padd-item skill targets only the configured board and fails without mutation when wiring is missing`` () =
+    let ``the shipped padd-item skill targets only the configured board and fails without mutation when wiring is missing``
+        ()
+        =
         let body = shippedDriverBody "padd-item"
 
         for token in
