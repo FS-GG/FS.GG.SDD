@@ -20,7 +20,16 @@
 //   (1) proves, per skill, which root holds the PRODUCER-AUTHORITATIVE body,
 //   (2) content-addresses the process set against the producer's own committed manifest
 //       (`.agents/skills/skill-manifest.json`) using `SkillMirror.sha256`, and
-//   (3) computes the writes with `SkillMirror.mirror` and the verdict with `SkillMirror.verify`.
+//   (3) computes the writes with `SkillMirror.mirrorFiles` and the verdict with `SkillMirror.verify`.
+//
+// MULTI-FILE (FS.GG.SDD#717). This driver originally refused `[unrepresentable]` when a skill
+// carrying non-`SKILL.md` files was PARTITIONED across roots, because `SkillMirror.mirror` modelled
+// a skill as `(id, body)` and emitted `SKILL.md` and nothing else. That refusal was a guard around a
+// LIBRARY limitation, honest only until the library could express the case. #717 made the library
+// express it (`MultiFileSkill`/`mirrorFiles`), so the guard is gone and the whole file set —
+// `SKILL.md` + `references/**` + `agents/*.yaml`, which is what every kit-owned coordination skill
+// here actually is — goes through the one implementation. What did NOT change is the refusal to
+// arbitrate: divergence across roots is still refused at the producer, never flattened.
 
 #r "../src/FS.GG.Contracts/bin/Release/net10.0/FS.GG.Contracts.dll"
 
@@ -77,6 +86,22 @@ let readBody (root: string) (id: string) =
     let p = abs (SkillMirror.skillPath root id)
     if File.Exists p then Some(File.ReadAllText p) else None
 
+/// Every file a skill carries in `root`, as paths RELATIVE to `<root>/skills/<id>/` — `SKILL.md`
+/// plus whatever `references/**` and `agents/*.yaml` it has. A skill IS this set (FS.GG.SDD#717):
+/// `SkillMirror.mirrorFiles` materializes all of it, so the driver observes all of it.
+let filesIn (root: string) (id: string) =
+    let dir = abs (root + "/skills/" + id)
+
+    if Directory.Exists dir then
+        Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories)
+        |> Seq.map (fun f -> Path.GetRelativePath(dir, f).Replace('\\', '/'))
+        |> Set.ofSeq
+    else
+        Set.empty
+
+let fileBytes (root: string) (id: string) (rel: string) =
+    File.ReadAllBytes(abs (root + "/skills/" + id + "/" + rel))
+
 // ---------------------------------------------------------------------------------------------
 // Which root holds the producer-authoritative body?
 // ---------------------------------------------------------------------------------------------
@@ -106,87 +131,70 @@ let canonicalRootOf (id: string) =
 let mutable failures: string list = []
 let fail msg = failures <- failures @ [ msg ]
 
-// Guard: a skill present in several roots must already agree, or this is a DIVERGENCE and the
-// repair is a producer question, not a fan-out. (#716 measured none; this keeps it that way.)
-for id in union do
-    let bodies =
-        roots |> List.choose (fun r -> readBody r id |> Option.map (fun b -> r, b))
-
-    match bodies with
-    | [] -> ()
-    | (r0, b0) :: rest ->
-        for (r, b) in rest do
-            if b <> b0 then
-                fail (
-                    $"[divergent] {id}: {r0} and {r} disagree. This driver fans out a canonical body; "
-                    + "it must not pick a winner between two producers. Resolve at the producer."
-                )
-
-// Guard: `SkillMirror.mirror` materializes `<root>/skills/<id>/SKILL.md` and NOTHING ELSE, so a
-// multi-file skill (SKILL.md + references/**) cannot be projected through the library. The
-// kit-owned four are multi-file and ALREADY coherent in all three roots (FS.GG.Kit materializes
-// them), so they are pass-through here. A multi-file skill that is *partitioned* would be
-// unrepresentable — refuse loudly rather than hand-rolling a second copier around the library
-// (FS.GG.SDD#717).
-let auxFilesOf (root: string) (id: string) =
-    let dir = abs (root + "/skills/" + id)
-
-    if Directory.Exists dir then
-        Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories)
-        |> Seq.map (fun f -> Path.GetRelativePath(dir, f).Replace('\\', '/'))
-        |> Seq.filter (fun rel -> rel <> "SKILL.md")
-        |> Set.ofSeq
-    else
-        Set.empty
-
+// Guard: a skill present in several roots must ALREADY agree — the same file SET, and the same
+// BYTES for every file in it — or this is a DIVERGENCE and the repair is a producer question, not
+// a fan-out. This driver fans out a canonical copy; it must never pick a winner between two
+// producers, and multi-file support must NOT become a way to flatten divergence silently.
+//
+// #716 asserted this over SKILL.md, and separately over the auxiliary set behind an
+// `[unrepresentable]` refusal. FS.GG.SDD#717 unifies them: a skill IS its file set now, so ONE
+// guard covers `SKILL.md`, `references/**` and `agents/*.yaml` alike, and there is no file class
+// the refusal can miss. (#716 measured no divergence; this keeps it that way.)
 for id in union do
     let rootsHaving = roots |> List.filter (fun r -> Set.contains id present.[r])
-    let aux = rootsHaving |> List.map (fun r -> auxFilesOf r id)
 
-    if aux |> List.exists (Set.isEmpty >> not) then
-        if List.length rootsHaving <> List.length roots then
-            fail (
-                $"[unrepresentable] {id} carries non-SKILL.md files and is NOT present in every root. "
-                + "`Fsgg.SkillMirror.mirror` emits SKILL.md only, so this skill cannot be materialized "
-                + "through the library — escalate to the library owner (see FS.GG.SDD#717)."
-            )
-        else
-            let first = List.head aux
+    match rootsHaving with
+    | []
+    | [ _ ] -> ()
+    | r0 :: rest ->
+        let files0 = filesIn r0 id
 
-            if aux |> List.exists (fun s -> s <> first) then
-                fail $"[divergent] {id}: auxiliary file SETS differ across roots {rootsHaving}."
+        for r in rest do
+            let files = filesIn r id
+
+            if files <> files0 then
+                let onlyIn0 = Set.difference files0 files |> Set.toList
+                let onlyInR = Set.difference files files0 |> Set.toList
+
+                fail (
+                    $"[divergent] {id}: {r0} and {r} carry DIFFERENT file sets — only in {r0}: %A{onlyIn0}; "
+                    + $"only in {r}: %A{onlyInR}. Resolve at the producer."
+                )
             else
-                // Multi-file and coherent — assert the aux bytes agree too, then leave alone.
-                for rel in first do
-                    let bytesOf (r: string) =
-                        File.ReadAllBytes(abs (r + "/skills/" + id + "/" + rel))
+                for rel in files0 do
+                    if fileBytes r id rel <> fileBytes r0 id rel then
+                        fail (
+                            $"[divergent] {id}: {r0} and {r} disagree on {rel}. This driver fans out a "
+                            + "canonical copy; it must not pick a winner between two producers. "
+                            + "Resolve at the producer."
+                        )
 
-                    let b0 = bytesOf (List.head rootsHaving)
-
-                    for r in List.tail rootsHaving do
-                        if bytesOf r <> b0 then
-                            fail $"[divergent] {id}: auxiliary file {rel} differs between roots."
-
-// Guard: `SkillMirror.mirror` models a body as a `string`, so a body only survives the library
+// Guard: `SkillMirror` models a body as a `string`, so a file only survives the library
 // byte-exactly if its on-disk bytes are exactly the UTF-8 (no BOM) encoding of its decoded text.
 // A BOM is the realistic violation: `ReadAllText` strips it, so the projected copies would lose it
 // and the roots would differ by three bytes the library cannot see. Refuse rather than emit a tree
 // the gate will fail for a reason this script called clean.
+//
+// FS.GG.SDD#717 widened this from SKILL.md to EVERY file of the skill: `mirrorFiles` carries the
+// auxiliaries through the same `string` model, so they inherit the same constraint. A guard that
+// covered only the file the old library could carry would have gone quiet exactly as the library
+// grew able to carry the rest.
 let utf8NoBom = UTF8Encoding(false)
 
 for id in union do
     for root in roots do
         if Set.contains id present.[root] then
-            let p = abs (SkillMirror.skillPath root id)
-            let raw = File.ReadAllBytes p
+            for rel in filesIn root id do
+                let p = abs (root + "/skills/" + id + "/" + rel)
+                let raw = File.ReadAllBytes p
 
-            if raw <> utf8NoBom.GetBytes(File.ReadAllText p) then
-                fail (
-                    $"[unrepresentable] {root}/skills/{id}/SKILL.md does not round-trip through the "
-                    + "library's string body model (a UTF-8 BOM, or a non-UTF-8 encoding). "
-                    + "`SkillMirror.mirror` cannot carry these bytes byte-exactly — normalize the file "
-                    + "to UTF-8 without a BOM."
-                )
+                if raw <> utf8NoBom.GetBytes(File.ReadAllText p) then
+                    fail (
+                        $"[unrepresentable] {root}/skills/{id}/{rel} does not round-trip through the "
+                        + "library's string body model (a UTF-8 BOM, or a non-UTF-8 encoding). "
+                        + "`SkillMirror.mirrorFiles` cannot carry these bytes byte-exactly — normalize "
+                        + "the file to UTF-8 without a BOM."
+                    )
 
 // ---------------------------------------------------------------------------------------------
 // Content-address the process set against the PRODUCER's own committed manifest.
@@ -207,23 +215,49 @@ let declaredDigests =
     else
         failwith $"producer manifest missing: {manifestPath}"
 
-/// The canonical (id, body) pairs `mirror` fans out, each proven against its authority.
-let canonicalSkills =
+/// The canonical MULTI-FILE skills `mirrorFiles` fans out, each proven against its authority.
+/// FS.GG.SDD#717: this used to be `(id, body)` — one id, one body — which is precisely what could
+/// not express a skill carrying `references/**` and `agents/*.yaml`. It is now the whole file set,
+/// read from the one root proven canonical above.
+let canonicalSkills: SkillMirror.MultiFileSkill list =
     union
     |> List.map (fun id ->
-        match canonicalRootOf id |> Option.bind (fun r -> readBody r id) with
+        match canonicalRootOf id with
         | None -> failwith $"no body found for {id}"
-        | Some body ->
-            // The library's OWN digest function against the producer's OWN declared digest.
-            match Map.tryFind id declaredDigests with
-            | Some declared when SkillMirror.sha256 body <> declared ->
-                fail (
-                    $"[drifted] {id}: canonical body sha256={SkillMirror.sha256 body} but the producer "
-                    + $"manifest declares {declared}. Regenerate with `fsgg-sdd registry skill-manifest --write`."
-                )
-            | _ -> ()
+        | Some root ->
+            match readBody root id with
+            | None -> failwith $"no body found for {id}"
+            | Some body ->
+                // The library's OWN digest function against the producer's OWN declared digest.
+                // The manifest content-addresses the SKILL.md body (ADR-0017), so that is what is
+                // compared here — the auxiliaries are covered by the cross-root identity guard.
+                match Map.tryFind id declaredDigests with
+                | Some declared when SkillMirror.sha256 body <> declared ->
+                    fail (
+                        $"[drifted] {id}: canonical body sha256={SkillMirror.sha256 body} but the producer "
+                        + $"manifest declares {declared}. Regenerate with `fsgg-sdd registry skill-manifest --write`."
+                    )
+                | _ -> ()
 
-            id, body)
+                { SkillMirror.MultiFileSkill.Id = id
+                  Files =
+                    filesIn root id
+                    |> Set.toList
+                    |> List.map (fun rel ->
+                        { SkillMirror.SkillFile.RelativePath = rel
+                          Body = File.ReadAllText(abs (root + "/skills/" + id + "/" + rel)) }) })
+
+// The plan, and with it the library's OWN refusals — surfaced verbatim rather than re-derived.
+// `[unrepresentable]` used to live in this script as a hand-written guard around `mirror`'s
+// SKILL.md-only model (#716). FS.GG.SDD#717 closed that hole, so the only refusals left are the
+// library's own lexical-confinement and duplicate guards. On a tree this driver has already proven
+// coherent they cannot fire — but they are REPORTED rather than assumed away, because a guard you
+// assume cannot fire is a guard nobody notices going quiet.
+let plan = SkillMirror.mirrorFiles roots canonicalSkills
+
+for refusal in plan.Refused do
+    for reason in refusal.Reasons do
+        fail $"[refused] {refusal.Id}: %A{reason} (Fsgg.SkillMirror.mirrorFiles)"
 
 if not (List.isEmpty failures) then
     eprintfn "materialize-skill-roots: REFUSED — %d precondition failure(s):" (List.length failures)
@@ -234,9 +268,9 @@ if not (List.isEmpty failures) then
     exit 2
 
 // ---------------------------------------------------------------------------------------------
-// Materialize: every write comes from `SkillMirror.mirror`.
+// Materialize: every write comes from `SkillMirror.mirrorFiles`.
 // ---------------------------------------------------------------------------------------------
-let writes = SkillMirror.mirror roots canonicalSkills
+let writes = plan.Writes
 
 let mutable changed: string list = []
 
@@ -267,7 +301,9 @@ for w in writes do
 // ---------------------------------------------------------------------------------------------
 let expected: SkillMirror.ExpectedSkill list =
     canonicalSkills
-    |> List.map (fun (id, _) ->
+    |> List.map (fun skill ->
+        let id = skill.Id
+
         { Id = id
           // `scope` here is only carried through to the drift report; the process set is what the
           // producer manifest declares, everything else in the union is a co-tenant product/process
@@ -283,17 +319,18 @@ let expected: SkillMirror.ExpectedSkill list =
 
 let actual: SkillMirror.ActualCopy list =
     [ for root in roots do
-          for (id, _) in canonicalSkills ->
+          for skill in canonicalSkills ->
               { Root = root
-                Id = id
-                Body = readBody root id } ]
+                Id = skill.Id
+                Body = readBody root skill.Id } ]
 
 let drift = SkillMirror.verify roots expected actual
 
 printfn "materialize-skill-roots (%s)" (if checkOnly then "--check" else "write")
 printfn "  roots        : %s" (String.concat " " roots)
 printfn "  union        : %d skills" (List.length union)
-printfn "  writes        : %d planned by SkillMirror.mirror" (List.length writes)
+printfn "  files        : %d across the union" (canonicalSkills |> List.sumBy (fun s -> List.length s.Files))
+printfn "  writes        : %d planned by SkillMirror.mirrorFiles" (List.length writes)
 printfn "  changed      : %d" (List.length changed)
 
 for p in changed do
