@@ -7,9 +7,18 @@
 #
 # THE COMPARAND IS THIS REPO'S OWN PIN, NOT `.github@main` (FS-GG/.github#1584, FS.GG.SDD#731).
 # The gate restores the exact FS.GG.Kit version THIS repo pins in Directory.Packages.local.props and
-# verifies every materialized destination against the sha256s that package's own kit-manifest.tsv
-# ships. No byte of the hub reaches the comparison, so a hub commit can never retroactively red this
-# repo.
+# verifies the materialized skill, client and config destinations against the sha256s that package's
+# own kit-manifest.tsv ships. No byte of the hub reaches the comparison, so a hub commit can never
+# retroactively red this repo.
+#
+# IT DOES NOT COVER THE BUILD-CONFIG ROWS, and this comment will not round that up. The reusable
+# workflow's `include-build-config` input defaults to false and this caller passes no `with:` block,
+# so Directory.Build.props / Directory.Packages.props are NOT graded here — 71 destinations, not 73 —
+# even though this receiver does materialize them (FsggKitMaterializeBuildConfig=true). They are
+# covered instead by gate.yml's own required `Shared-build-config drift check`, which re-runs the
+# materialize and diffs exactly those two files. Do not add `include-build-config: true` to close the
+# wording gap: it would put two required gates on one question, which the reusable workflow's own
+# header argues is how both end up ignored. Fix the sentence, not the coverage.
 #
 # BOTH ARMS RESOLVE THE KIT FROM THE SAME REF, AND THAT IS THE FIX (#731 AC3). They did NOT always.
 # The gate used to check out `FS-GG/.github@main` as the comparand on both triggers, and additionally
