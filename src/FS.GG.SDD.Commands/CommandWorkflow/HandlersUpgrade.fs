@@ -170,11 +170,12 @@ module internal HandlersUpgrade =
     // whose paths are in `MissingArtifactPaths` (`reSeedEffects`, the SEEDED skeleton set), the owner
     // backfill only paths in the embedded verified plan, and there is no delete effect anywhere in
     // the model. So `upgrade` can neither add an auxiliary copy, remove a stray one, nor rewrite a
-    // divergent body — and what it CAN repair (a missing seeded copy) is already subtracted before
-    // these fire, so a sentence saying "re-running will not clear it" is true of what is left.
+    // divergent body — and what it CAN repair (a missing seeded copy, and since #733 a missing
+    // owner-sourced copy) is already subtracted before these fire, so a sentence saying "re-running
+    // will not clear it" is true of what is left.
     let private notMirroredHint =
         "Skill copies are not mirrored (advisory): each reported path is a file another root carries and that root does not. "
-        + "`fsgg-sdd upgrade` cannot repair this class and re-running it will not clear it — its re-seed writes only MISSING SEEDED skeleton files and the lane has no delete step. "
+        + "`fsgg-sdd upgrade` cannot repair this class and re-running it will not clear it — its re-seed writes only MISSING files it has a canonical source for (the seeded skeleton, and the owner-sourced copies recorded in provenance) and the lane has no delete step. "
         + "Reconcile by hand: copy the file into the roots that lack it if it belongs to the skill, or delete it from the root that has it if it does not (e.g. `.DS_Store`, an editor backup, a `.orig` left by a merge)."
 
     // The third condition, and the reason `notMirroredHint` cannot simply absorb it: when NO root
@@ -367,9 +368,17 @@ module internal HandlersUpgrade =
         // first, no clobber). Missing *seeded* copies are excluded ONLY when the `artifactReSeed`
         // step actually applied (a skipped/failed re-seed leaves them outstanding, so they stay
         // in the advisory surface).
+        //
+        // FS-GG/FS.GG.SDD#733: the OWNER-SOURCED backfill paths are subtracted too. They are
+        // deliberately NOT in `MissingArtifactPaths` (that field is the SEEDED-skeleton axis and its
+        // goldens), but the SAME `artifactReSeed` step writes them — `ownerBackfillEffects` — so a
+        // copy this run just restored must not close the run as residual drift. Before #733 the
+        // omission was inert, because the owner-sourced class produced no `SkillDriftPaths` at all;
+        // now it does, and without this the commonest owner-sourced repair reports itself unrepaired
+        // under a hint saying the lane cannot repair it — both false, and FR-013 inverted.
         let repairedMissing =
             if List.contains ReconciliationStepId.ArtifactReSeed applied then
-                drift.MissingArtifactPaths
+                drift.MissingArtifactPaths @ drift.OwnerSkillBackfillPaths
             else
                 []
 
