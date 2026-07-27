@@ -496,16 +496,24 @@ module MultiFileSkillDriftTests =
             |> List.sort
         )
 
+        // Pairwise disjoint, compared by POSITION rather than by value: two DIFFERENT classes that
+        // happened to hold the same non-empty set would be the worst overlap there is, and a
+        // `left <> right` guard is exactly the one that would skip it.
         let classes =
-            [ report.SkillNotMirroredPaths
-              report.SkillLostPaths
-              report.SkillDivergentPaths ]
-            |> List.map Set.ofList
+            [ "notMirrored", report.SkillNotMirroredPaths
+              "lost", report.SkillLostPaths
+              "divergent", report.SkillDivergentPaths ]
+            |> List.map (fun (name, paths) -> name, Set.ofList paths)
 
-        for left in classes do
-            for right in classes do
-                if not (Set.isEmpty left) && left <> right then
-                    Assert.Empty(Set.intersect left right)
+        for i in 0 .. classes.Length - 1 do
+            for j in i + 1 .. classes.Length - 1 do
+                let leftName, left = classes[i]
+                let rightName, right = classes[j]
+
+                Assert.True(
+                    Set.isEmpty (Set.intersect left right),
+                    $"{leftName} and {rightName} both claim {Set.intersect left right |> Set.toList}"
+                )
 
     // A root that carries no copy of the skill while ANOTHER root still has one is not-mirrored —
     // `.codex` has nothing to diverge FROM, and there is a sibling to copy from. This is one of the
