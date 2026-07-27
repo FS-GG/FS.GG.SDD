@@ -755,10 +755,12 @@ module MultiFileSkillDriftTests =
         |> List.map (fun root -> Fsgg.SkillMirror.skillFilePath root id relativePath)
         |> List.sort
 
-    /// A build with no multi-file owner-sourced skill has no subject for these cases. Assert THAT,
-    /// so the suite reports a lost premise instead of going quietly green.
-    let private assertNoOwnerSourcedSubject () =
-        Assert.Empty(ownerSourcedAuxiliaries ())
+    /// A build with no multi-file owner-sourced skill has no subject for these cases. Assert the
+    /// STRONGER premise — that no owner-sourced copy is delivered AT ALL — so this branch cannot
+    /// swallow the case that matters: owner skills that ARE delivered and have merely stopped being
+    /// multi-file would satisfy `Assert.Empty(ownerSourcedAuxiliaries ())` and take every case below
+    /// silently green. If a build ever delivers single-file owner skills, this reds and says so.
+    let private assertNoOwnerSourcedSubject () = Assert.Empty(ownerSourcedCopies [])
 
     // AC2 + AC6, the case the issue names: an owner-sourced AUXILIARY edited in ONE root. The
     // recorded per-file digest arbitrates it to that root, so the report names one path — not the
@@ -955,3 +957,93 @@ module MultiFileSkillDriftTests =
             Assert.Equal<string list>(ownerAuxiliaryAtAllRoots id relativePath, report.SkillDivergentPaths)
             Assert.Equal<string list>(ownerAuxiliaryAtAllRoots id relativePath, report.SkillDriftPaths)
             Assert.False report.IsCoherent
+
+    // `DriverPaths[].Sha256` does NOT live in `SkillMirror.sha256`'s domain. That function normalizes
+    // `\r\n` to `\n` before hashing; `DriverSkills.classifyEntry` validates and records a schema-v2
+    // row's per-file digest as `rawSha256 bytes`, un-normalized — and the shipped driver package is
+    // v2. `HandlersUpgrade.preservedFilesVerified` compares the same field with an un-normalized
+    // digest, which is the repo's own statement of the domain.
+    //
+    // Left uncorrected, a CRLF-authored driver file would make EVERY scaffolded workspace report
+    // permanent drift on it: no `upgrade` writes it (no-clobber, and it is not missing) and a
+    // re-scaffold reproduces it. A false positive nothing can clear is worse than the gap #733
+    // closes, so a mismatch a raw comparison clears is dropped.
+    //
+    // Every shipped driver file is LF today, so this cannot be reached by editing the fixture — the
+    // case builds the CRLF shape explicitly and records the digest the producer would have recorded
+    // for it.
+    [<Fact>]
+    let ``a CRLF owner-sourced file matching its RAW recorded digest is not drift`` () =
+        match ownerAuxiliaryTarget () with
+        | None -> assertNoOwnerSourcedSubject ()
+        | Some(_, id, relativePath) ->
+            let crlfBody = "line one\r\nline two\r\n"
+
+            let rawDigest (body: string) =
+                Text.Encoding.UTF8.GetBytes body
+                |> Security.Cryptography.SHA256.HashData
+                |> Convert.ToHexString
+                |> fun value -> value.ToLowerInvariant()
+
+            // The producer records `sha256(raw bytes)`; the file on disk IS those bytes, in every
+            // root. Nothing is wrong with this workspace.
+            let declared = ownerRecordWithCorruptDigest id relativePath (rawDigest crlfBody)
+
+            let bodies =
+                allRoots
+                |> List.fold
+                    (fun acc root -> Map.add (Fsgg.SkillMirror.skillFilePath root id relativePath) crlfBody acc)
+                    (coherentOwnerBodies ())
+
+            let report = computeOwner declared bodies
+
+            // The normalized digest of this body is NOT the recorded one, so an un-filtered
+            // `verifyFileSet` reports all three roots. It must not.
+            Assert.NotEqual<string>(Fsgg.SkillMirror.sha256 crlfBody, rawDigest crlfBody)
+            Assert.Empty report.SkillDriftPaths
+            Assert.True report.IsCoherent
+
+    // The other half of the same rule: the raw-domain allowance must not become a hole. A tampered
+    // body matches NEITHER domain, so it still reports.
+    [<Fact>]
+    let ``a tampered owner-sourced file matching NEITHER digest domain is still drift`` () =
+        match ownerAuxiliaryTarget () with
+        | None -> assertNoOwnerSourcedSubject ()
+        | Some(_, id, relativePath) ->
+            let target = Fsgg.SkillMirror.skillFilePath ".codex" id relativePath
+
+            let report =
+                computeOwner (ownerRecord ()) (coherentOwnerBodies () |> Map.add target "TAMPERED\r\n")
+
+            Assert.Equal<string list>([ target ], report.SkillDriftPaths)
+            Assert.False report.IsCoherent
+
+    // FS-GG/FS.GG.SDD#733 regression on the UPGRADE side: `repairedMissing` subtracted only
+    // `MissingArtifactPaths` — the SEEDED axis. Owner-sourced backfill paths are deliberately not in
+    // that field, but the same `artifactReSeed` step writes them, so a copy this run just restored
+    // was still closing the run as residual drift under a hint saying the lane cannot repair it.
+    // Both false, and FR-013 inverted. The shape is every scaffolded product since #624: provenance
+    // DECLARES the owner-sourced copies and one is missing on disk.
+    [<Fact>]
+    let ``upgrade --yes backfills a declared owner-sourced copy and does NOT report it residual`` () =
+        match ownerAuxiliaryTarget () with
+        | None -> assertNoOwnerSourcedSubject ()
+        | Some(_, id, relativePath) ->
+            let fixtureRoot = productCoherentFixture ()
+            let deleted = Fsgg.SkillMirror.skillFilePath ".codex" id relativePath
+            File.Delete(absolute fixtureRoot deleted)
+
+            // Precondition: `doctor` sees it, so the assertions below are not vacuous.
+            Assert.Contains(deleted, (doctorSummary (doctorReport fixtureRoot)).SkillDriftPaths)
+
+            let report = upgradeYes fixtureRoot
+            let summary = report.Upgrade.Value
+
+            Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.AppliedStepIds)
+            Assert.True(TestSupport.existsRelative fixtureRoot deleted)
+            Assert.DoesNotContain(deleted, summary.SkillDriftPaths)
+            Assert.False summary.ResidualDrift
+            Assert.Equal(0, exitCode report)
+
+            // And it converges: a second look is clean.
+            Assert.True (doctorSummary (doctorReport fixtureRoot)).IsCoherent

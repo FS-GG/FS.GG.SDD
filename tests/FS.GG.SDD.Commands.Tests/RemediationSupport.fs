@@ -56,8 +56,8 @@ module RemediationSupport =
         driver.ProvenancePaths, game.ProvenancePaths
 
     /// The `"driverPaths":[…],"gameSkillPaths":[…]` JSON fragment (leading comma) a current-generator
-    /// provenance document carries. Empty arrays when no owner-skill package is embedded in this
-    /// build — the same degradation `Drift.ownerSourcedSkillFiles` handles.
+    /// provenance document carries. Empty arrays when no owner-skill package is embedded in THIS
+    /// build, because there is then nothing for a scaffold to have materialized or recorded.
     let ownerSourcedProvenanceJson (parameters: (string * string) list) =
         let driverRows, gameRows = ownerSourcedProvenanceRows parameters
 

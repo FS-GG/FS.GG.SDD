@@ -227,10 +227,16 @@ module internal Drift =
     /// to trust because nothing ever launders it — `HandlersUpgrade.preservedFilesVerified` refuses
     /// to record a fresh digest for a preserved file that does not already match.
     ///
-    /// Empty when provenance records no owner-sourced path (a pre-#624 tree, a dev-repo `init`, or a
-    /// build without the owner-skill pin). That degradation is the honest one: with no recorded
+    /// Empty when provenance records no owner-sourced path — a pre-#624 tree, or a dev-repo `init`
+    /// (`devRepoRecord` sets both fields empty). That degradation is the honest one: with no recorded
     /// declaration there is no authority to judge a copy against, so the class reports exactly what
     /// it did before — nothing — rather than inventing an expectation.
+    ///
+    /// It is a function of the RECORD ALONE, deliberately: unlike `ownerSourcedBackfill` it does not
+    /// consult the CLI's embedded owner-skill package, so a build without that pin still verifies
+    /// what a scaffold declared. Such a build can therefore report owner-sourced drift it has no
+    /// backfill for — correct, and the honest report: the workspace really does disagree with its own
+    /// provenance, and a CLI that cannot supply the canonical bytes must say so rather than go quiet.
     let ownerSourcedSkillFiles (provenance: ScaffoldProvenanceRecord option) : SkillMirror.ExpectedSkillFiles list =
         match provenance with
         | None -> []
@@ -259,16 +265,24 @@ module internal Drift =
                   SkillMirror.ExpectedSkillFiles.Scope = SkillScope.Product
                   SkillMirror.ExpectedSkillFiles.Files =
                     rows
-                    // One row per (root × file), so each relative path arrives once per root
-                    // carrying the same recorded digest. Sort before dedupe so the survivor is
-                    // deterministic even if two roots somehow recorded different digests.
+                    // One row per (root × file): each relative path arrives once per root, and the
+                    // three carry the SAME recorded digest because `DriverSkills.plan` fans one
+                    // manifest `file.Sha256` into every root. Roots that DISAGREE mean the record was
+                    // partially written or hand-edited, and there is then no authority to arbitrate
+                    // with — electing one by sort order would invent one. Declare the path with an
+                    // EMPTY digest instead, which `verifyFileSet` reads as "no reference digest":
+                    // presence and cross-root identity still hold, and nothing is asserted that the
+                    // record cannot support.
                     |> List.map snd
                     |> List.distinct
-                    |> List.sort
-                    |> List.distinctBy fst
-                    |> List.map (fun (relative, sha256) ->
+                    |> List.groupBy fst
+                    |> List.sortBy fst
+                    |> List.map (fun (relative, declared) ->
                         { SkillManifestFile.RelativePath = relative
-                          SkillManifestFile.Sha256 = sha256 }) })
+                          SkillManifestFile.Sha256 =
+                            match declared |> List.map snd |> List.distinct with
+                            | [ single ] -> single
+                            | _ -> "" }) })
             |> List.sortBy (fun skill -> skill.Id)
 
     /// FS-GG/FS.GG.SDD#733: every skill id the content-verified surface expects — the process ∪
@@ -482,6 +496,47 @@ module internal Drift =
         // rendering, which is a wider change than #733's touch-set — filed as
         // FS-GG/FS.GG.SDD#750. Dropping it reports strictly what #733 asked for and regresses
         // nothing: before #733 this class was not content-verified at all.
+        //
+        // FACT 3 SPANS TWO DIGEST DOMAINS, and this is the reason for the filter below.
+        // `SkillMirror.sha256` normalizes `\r\n` to `\n` before hashing; `DriverPaths[].Sha256` does
+        // NOT always live in that domain. `DriverSkills.classifyEntry` validates a schema-v2 row
+        // (`TreeSha256.IsSome` — what the shipped driver package uses) with `rawSha256 bytes`, and
+        // records THAT value; only a v1 row is validated with `SkillMirror.sha256`. The repo's other
+        // consumer of the same field, `HandlersUpgrade.preservedFilesVerified`, compares it with an
+        // un-normalized `UTF8.GetBytes text` digest — so the raw domain is the one the recorded value
+        // is already documented to live in.
+        //
+        // Left alone, a CRLF-authored or BOM-prefixed driver file would be reported as drift by every
+        // scaffolded workspace, permanently: no `upgrade` writes it (no-clobber, and it is not
+        // missing), and re-scaffolding reproduces it. A false positive nothing can clear is worse
+        // than the gap #733 closes. So a mismatch `verifyFileSet` reports is DROPPED when a raw
+        // comparison clears it — the file matches the digest in the domain its producer recorded it
+        // in. Genuine tampering matches NEITHER domain and survives, which is what the regression
+        // legs pin. This is a MITIGATION, not the fix: accepting either domain is weaker than
+        // knowing which to expect. The root cause — one field, two domains, and a producer that
+        // uses both inside one manifest row — is FS-GG/FS.GG.SDD#752, whose AC4 removes this
+        // allowance once the field has a single meaning.
+        let rawDigest (body: string) =
+            System.Text.Encoding.UTF8.GetBytes body
+            |> System.Security.Cryptography.SHA256.HashData
+            |> System.Convert.ToHexString
+            |> fun value -> value.ToLowerInvariant()
+
+        let ownerDeclaredSha =
+            [ for skill in ownerExpected do
+                  for file in skill.Files -> (skill.Id, file.RelativePath), file.Sha256 ]
+            |> Map.ofList
+
+        let observedBody root id relativePath =
+            copyFiles root id
+            |> Option.bind (List.tryFind (fun file -> file.RelativePath = relativePath))
+            |> Option.map (fun file -> file.Body)
+
+        let clearedByRawDigest id relativePath root =
+            match Map.tryFind (id, relativePath) ownerDeclaredSha, observedBody root id relativePath with
+            | Some declared, Some body -> not (System.String.IsNullOrWhiteSpace declared) && rawDigest body = declared
+            | _ -> false
+
         let ownerClassified =
             SkillMirror.verifyFileSet agentSkillRoots ownerExpected actual
             |> List.collect (fun drift ->
@@ -490,7 +545,11 @@ module internal Drift =
                     drift.MissingRoots
                     (drift.Files
                      |> List.map (fun file ->
-                         file.RelativePath, file.MissingRoots, file.Divergent, file.HashMismatchRoots)))
+                         file.RelativePath,
+                         file.MissingRoots,
+                         file.Divergent,
+                         file.HashMismatchRoots
+                         |> List.filter (clearedByRawDigest drift.Id file.RelativePath >> not))))
 
         let classified = processProductClassified @ ownerClassified
 
