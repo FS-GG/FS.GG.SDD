@@ -52,7 +52,7 @@
     <Compile Include="ScaffoldGuardTests.fs" />
     <Compile Include="RemediationSupport.fs" />
     <Compile Include="RemediationCommandTests.fs" />
-    <Compile Include="DriftTests.fs" />
+    <Compile Include="MultiFileSkillDriftTests.fs" />
     <Compile Include="SeededSkillsTests.fs" />
     <Compile Include="DriverSkillsTests.fs" />
     <Compile Include="GameSkillsTests.fs" />

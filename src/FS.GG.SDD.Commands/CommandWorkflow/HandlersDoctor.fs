@@ -106,13 +106,18 @@ module internal HandlersDoctor =
     // presence — a missing copy stays absent after its read, so a presence gate would loop forever
     // on a deleted copy.
     //
-    // One phase resolves to: `None` when nothing is outstanding, `Some []` when everything
-    // outstanding is already in flight, and otherwise the effects not yet emitted. Emitting only
-    // the NOT-YET-PLANNED remainder matters since #726: `skillCopyFilePaths` legitimately names
-    // paths `Foundation.remediationReadEffects` already planned (every seeded `SKILL.md` is in both
-    // sets). A whole-set "is any of these planned?" test therefore answers yes on the first pass and
-    // parks the gate at `Some []` forever — no effects produced, so the run loop goes idle and the
+    // One phase resolves to: `None` when nothing is outstanding, and otherwise the outstanding
+    // effects not yet emitted. Deriving that remainder from the OUTSTANDING set rather than testing
+    // the whole set is what matters since #726: `skillCopyFilePaths` legitimately names paths
+    // `Foundation.remediationReadEffects` already planned (every seeded `SKILL.md` is in both sets),
+    // so a whole-set "is any of these already planned?" test answers yes on the first pass and parks
+    // the gate at "emit nothing" forever — no effects produced, so the run loop goes idle and the
     // drift is never computed at all.
+    //
+    // The `Some []` arm is unreachable as the lanes stand — `CommandWorkflow` gates both drivers on
+    // `allPlannedReadsInterpreted`, so nothing planned is ever still in flight here — and is kept
+    // only so this stays correct if that guard is ever relaxed. It must never be the ONLY thing a
+    // phase can return, which is precisely the parked-gate failure above.
     let private phase (effects: CommandEffect list) model =
         let outstanding =
             effects
@@ -132,9 +137,11 @@ module internal HandlersDoctor =
         match phase skillRootEnumerations model with
         | Some effects -> Some effects
         | None ->
-            // Phase 2: the bodies — the enumerated copy files, plus the product copies and
-            // owner-sourced backfill targets, whose paths are derived from provenance rather than
-            // discovered (an ABSENT copy has no listing entry, and its absence is the drift fact).
+            // Phase 2: the bodies. The enumerated copy files, plus the product copies, whose paths
+            // are derived from provenance rather than discovered (an ABSENT copy has no listing
+            // entry, and its absence is the drift fact). `ownerSkillTargetPaths` rides along because
+            // it is read for `presentArtifacts`, NOT for the content fold — the owner-sourced class
+            // is not in `Drift.expectedSkills` and its bodies never reach `skillBodies` (#733).
             (productSkillCopyPaths model
              @ ownerSkillTargetPaths model
              @ skillCopyFilePaths model)

@@ -72,10 +72,22 @@ module internal Drift =
 
     /// Split an on-disk path into `(root, id, relativePath)` when — and only when — it names a file
     /// inside a declared agent skill directory, `<root>/skills/<id>/<relative>`, for one of the
-    /// declared `agentSkillRoots`. The multi-file generalization of `SkillMirror.skillIdOfPath`,
-    /// which recognises the `SKILL.md` shape alone; both anchor on the same `skills` segment under a
-    /// known root, so a product file that merely LOOKS skill-shaped (`app/docs/skills/x/SKILL.md`)
-    /// is `None` here exactly as it is there.
+    /// declared `agentSkillRoots`.
+    ///
+    /// This is the multi-file counterpart of `SkillMirror.skillIdOfPath`, but NOT its exact
+    /// generalization, and the difference is deliberate. `skillIdOfPath` matches the `SKILL.md`
+    /// shape from the END and is not root-anchored, so it answers `Some "x"` for
+    /// `app/docs/skills/x/SKILL.md`; its callers confine it themselves (`productSkillEntries`
+    /// prefixes on `.agents/skills/`). This one is root-anchored instead, so a product file that
+    /// merely LOOKS skill-shaped is `None` without the caller having to remember to guard it.
+    ///
+    /// It also applies the same lexical confinement `SkillMirror` applies on the WRITE side
+    /// (`isConfinedRelativePath` / `isSafeSkillId`): no `.`, `..`, or empty segment in the id or the
+    /// relative path. The doctor lane feeds this only paths returned by a directory enumeration,
+    /// which cannot produce a traversal — but this function is the shared answer to "what counts as
+    /// a skill copy", and its output is fed straight back into `SkillMirror.skillFilePath` to
+    /// CONSTRUCT the paths this surface reports. A parser one careless reuse away from a containment
+    /// hole is not the one to leave weaker than the neighbours it sits between (#185 / #337).
     ///
     /// Deliberately ONE parser, shared by the drift fold below and by the caller that collects the
     /// bodies (`HandlersDoctor.skillBodies`): a second spelling of "what counts as a skill copy" is
@@ -83,6 +95,9 @@ module internal Drift =
     /// defect class ADR-0014 §Decision 2 exists to end.
     let skillCopyOfPath (path: string) : (string * string * string) option =
         let normalized = path.Replace('\\', '/')
+
+        let isConfinedSegment segment =
+            segment <> "" && segment <> "." && segment <> ".."
 
         agentSkillRoots
         |> List.tryPick (fun root ->
@@ -97,10 +112,10 @@ module internal Drift =
                     let id = rest.Substring(0, cut)
                     let relative = rest.Substring(cut + 1)
 
-                    if id = "" || relative = "" then
-                        None
-                    else
+                    if isConfinedSegment id && relative.Split('/') |> Array.forall isConfinedSegment then
                         Some(root, id, relative)
+                    else
+                        None
             else
                 None)
 
@@ -196,12 +211,29 @@ module internal Drift =
             |> List.map (fun (copy, group) -> copy, group |> List.map snd)
             |> Map.ofList
 
+        // A directory WITHOUT `SKILL.md` is not a copy of the skill. `SKILL.md` is what MAKES a
+        // directory a skill — it is what `SkillMirror.skillPath` names, what `skillIdOfPath`
+        // recognises, and what `mirrorFiles` refuses to materialize without (`MissingSkillFile`).
+        //
+        // This is load-bearing, not pedantry. `verifyFiles` derives skill-level `MissingRoots` from
+        // `Files = None`, and its per-file union from what the PRESENT roots carry. So a root that
+        // lost `SKILL.md` but kept one stray file would count as present, `SKILL.md` would never
+        // enter the union, and its loss would go unreported — and with EVERY root in that state (a
+        // product skill deleted but for a leftover auxiliary) the whole skill reads as coherent.
+        // That is strictly weaker than the pre-#726 surface, which reported it. Treating such a root
+        // as carrying no copy restores exactly the pre-#726 verdict, and states one repair ("this
+        // root has no copy") instead of a per-file inventory of a directory that is not a skill.
+        let copyFiles root id =
+            match Map.tryFind (root, id) filesByCopy with
+            | Some files when files |> List.exists (fun file -> file.RelativePath = "SKILL.md") -> Some files
+            | _ -> None
+
         let actual =
             [ for skill in expected do
                   for root in agentSkillRoots ->
                       { SkillMirror.ActualSkillFiles.Root = root
                         SkillMirror.ActualSkillFiles.Id = skill.Id
-                        SkillMirror.ActualSkillFiles.Files = Map.tryFind (root, skill.Id) filesByCopy } ]
+                        SkillMirror.ActualSkillFiles.Files = copyFiles root skill.Id } ]
 
         SkillMirror.verifyFiles agentSkillRoots expected actual
         |> List.collect (fun drift ->
