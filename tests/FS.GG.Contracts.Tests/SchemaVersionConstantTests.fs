@@ -56,8 +56,14 @@ module SchemaVersionConstantTests =
         // 1.1.0: ADR-0035 stage 3 / FS.GG.SDD#422 — `ship.unobservedEvidence` reachable in
         // readiness.blockingDiagnosticIds[]. Additive ⇒ minor.
         Assert.Equal("2.0.0", Schemas.governanceHandoffContractVersion)
-        // Feature 057 / ADR-0014: the skill-manifest contract starts at schema version 1.
-        Assert.Equal(1, Schemas.skillManifestVersion)
+        // Feature 057 / ADR-0014: the skill-manifest contract started at schema version 1.
+        // 2 (ADR-0017 amendment, FS.GG.SDD#727): the manifest content-addresses a skill's COMPLETE
+        // FILE SET, not its `SKILL.md` alone. Deliberately a version bump rather than a silent
+        // widening — v1's silence about the auxiliaries was a TRUE statement that they carried no
+        // declared authority, and v2's declared set is complete, so a consumer must be able to tell
+        // which claim it is reading. The wire document stays a SUPERSET of v1 (every v1 property
+        // retained, in its v1 position), so the bump costs a v1 reader nothing.
+        Assert.Equal(2, Schemas.skillManifestVersion)
 
     // spec Assumptions / data-model "Governance-owned" provenance: these are the
     // values the package DECLARES to the Governance published reference — NOT

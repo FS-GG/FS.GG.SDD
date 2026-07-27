@@ -239,15 +239,76 @@ for d in SkillMirror.verifyFiles roots preMaterializeExpected (observe ()) do
 let manifestPath =
     abs (SkillMirror.providerSourceRoot + "/skills/skill-manifest.json")
 
+// FS.GG.SDD#727: the manifest now declares a digest for a skill's COMPLETE FILE SET, not its
+// `SKILL.md` alone. BOTH schema versions are read, and the reader is what makes the v1 tolerance in
+// the amendment's acceptance criteria real rather than asserted:
+//
+//   v2 — `files: [{ path, sha256 }]` is the complete declared set, verbatim.
+//   v1 — `sha256` content-addresses `SKILL.md` and NOTHING ELSE, so a v1 document declares exactly
+//        one file. That is not a degraded reading of v1, it is v1's actual claim; the auxiliaries
+//        genuinely had no declared authority, and the reader must not invent one for them.
+//
+// The version is read rather than assumed, so an unrecognized FUTURE version refuses instead of
+// being silently reinterpreted through today's rules.
+let manifestSchemaVersion, declaredFiles =
+    if not (File.Exists manifestPath) then
+        failwith $"producer manifest missing: {manifestPath}"
+    else
+
+        use doc = JsonDocument.Parse(File.ReadAllText manifestPath)
+        let root = doc.RootElement
+
+        let version =
+            match root.TryGetProperty "schemaVersion" with
+            | true, v -> v.GetInt32()
+            | _ -> failwith $"producer manifest has no schemaVersion: {manifestPath}"
+
+        if version <> 1 && version <> 2 then
+            failwith (
+                $"producer manifest {manifestPath} declares schemaVersion {version}, which this driver "
+                + "does not know how to read. Refusing rather than reinterpreting it as v2."
+            )
+
+        let declaredFile (path: string) (sha: string) : Schemas.SkillManifestFile =
+            { RelativePath = path; Sha256 = sha }
+
+        let sets =
+            root.GetProperty("skills").EnumerateArray()
+            |> Seq.map (fun e ->
+                let id = e.GetProperty("id").GetString()
+
+                let files =
+                    match e.TryGetProperty "files" with
+                    | true, arr ->
+                        [ for f in arr.EnumerateArray() ->
+                              declaredFile (f.GetProperty("path").GetString()) (f.GetProperty("sha256").GetString()) ]
+                    | _ -> [ declaredFile "SKILL.md" (e.GetProperty("sha256").GetString()) ]
+
+                id, files)
+            |> Map.ofSeq
+
+        version, sets
+
+/// The `SKILL.md` digest per declared id — the canonical-body authority, read from the ROW-LEVEL
+/// `sha256` exactly as before this amendment. v2 retains that property with its v1 meaning, so this
+/// map is byte-for-byte what it always was at both schema versions.
+///
+/// Deliberately NOT derived from `declaredFiles`'s `SKILL.md` row, though the two agree in every
+/// document this repo emits: a hand-edited v2 entry that omitted its `SKILL.md` row would then drop
+/// out of this map, and the `[drifted]` canonical-body assertion below would silently skip that
+/// skill. Reading the field that has always carried this fact keeps the guard's reach unchanged.
+/// (The omission is still caught — `verifyFileSet` reports the undeclared `SKILL.md` — but a guard
+/// must not go quiet just because another one would notice.)
 let declaredDigests =
-    if File.Exists manifestPath then
+    if not (File.Exists manifestPath) then
+        failwith $"producer manifest missing: {manifestPath}"
+    else
+
         use doc = JsonDocument.Parse(File.ReadAllText manifestPath)
 
         doc.RootElement.GetProperty("skills").EnumerateArray()
         |> Seq.map (fun e -> e.GetProperty("id").GetString(), e.GetProperty("sha256").GetString())
         |> Map.ofSeq
-    else
-        failwith $"producer manifest missing: {manifestPath}"
 
 /// The canonical MULTI-FILE skills `mirrorFiles` fans out, each proven against its authority.
 /// FS.GG.SDD#717: this used to be `(id, body)` — one id, one body — which is precisely what could
@@ -331,9 +392,9 @@ for w in writes do
             File.WriteAllBytes(target, desired)
 
 // ---------------------------------------------------------------------------------------------
-// Verify: the verdict comes from `SkillMirror.verify`.
+// Verify: the verdict comes from `SkillMirror.verifyFileSet`.
 // ---------------------------------------------------------------------------------------------
-let expected: SkillMirror.ExpectedSkill list =
+let expected: SkillMirror.ExpectedSkillFiles list =
     canonicalSkills
     |> List.map (fun skill ->
         let id = skill.Id
@@ -343,28 +404,70 @@ let expected: SkillMirror.ExpectedSkill list =
           // producer manifest declares, everything else in the union is a co-tenant product/process
           // skill this repo vendors.
           Scope =
-            (if Map.containsKey id declaredDigests then
+            (if Map.containsKey id declaredFiles then
                  Schemas.SkillScope.Process
              else
                  Schemas.SkillScope.Product)
-          // Reference digest only where the producer declares one; "" means skip hash-match and
-          // assert presence + cross-root identity only (the library's documented semantics).
-          Sha256 = (Map.tryFind id declaredDigests |> Option.defaultValue "") })
+          // FS.GG.SDD#727: the producer's declared FILE SET, not one digest for the whole skill.
+          // An empty list means this producer declares nothing about this skill — hash-match is
+          // skipped and presence + cross-root identity carry it, exactly as `Sha256 = ""` did.
+          // That is the honest state for a CO-TENANT skill whose manifest lives in another
+          // producer's repo; inventing a digest for it would be a fabricated authority.
+          Files = (Map.tryFind id declaredFiles |> Option.defaultValue []) })
 
 // FS.GG.SDD#721: the verdict is taken over the skill's WHOLE FILE SET, not just `SKILL.md`.
 // Before this, the driver materialized `references/**` and `agents/*.yaml` through `mirrorFiles`
 // and then verified only the one file the old `verify` could see — a verdict weaker than the
-// invariant it claimed, the same defect class as FS-GG/.github#1506. `verifyFiles` closes it, and
-// the observation is RE-READ from disk after the writes, so this measures the tree that now exists
-// rather than restating the plan that produced it.
+// invariant it claimed, the same defect class as FS-GG/.github#1506. `verifyFiles` closed the
+// cross-root half; FS.GG.SDD#727 closes the AUTHORITY half, so a declared file is now hash-matched
+// wherever it lives rather than only when it is called `SKILL.md`. The observation is RE-READ from
+// disk after the writes, so this measures the tree that now exists rather than restating the plan
+// that produced it.
 let actual = observe ()
 
-let drift = SkillMirror.verifyFiles roots expected actual
+let drift = SkillMirror.verifyFileSet roots expected actual
+
+// COVERAGE, REPORTED RATHER THAN ASSUMED (FS.GG.SDD#727). The whole defect this item closed is a
+// verdict reading stronger than its evidence, so the driver states how much of the tree the
+// digests actually reach. Without these two lines a reader would take "verify: clean" over 51
+// files as "51 files hash-matched", which is exactly the misreading that made
+// `HashMismatchRoots = []` on an auxiliary look like a passed check.
+let declaredFor (id: string) =
+    Map.tryFind id declaredFiles |> Option.defaultValue []
+
+let coveredFiles =
+    canonicalSkills
+    |> List.sumBy (fun skill ->
+        let declared =
+            declaredFor skill.Id |> List.map (fun f -> f.RelativePath) |> Set.ofList
+
+        skill.Files
+        |> List.filter (fun f -> Set.contains f.RelativePath declared)
+        |> List.length)
+
+let totalFiles = canonicalSkills |> List.sumBy (fun s -> List.length s.Files)
+
+let undeclaredSkills =
+    canonicalSkills
+    |> List.filter (fun s -> List.isEmpty (declaredFor s.Id))
+    |> List.map (fun s -> s.Id)
 
 printfn "materialize-skill-roots (%s)" (if checkOnly then "--check" else "write")
 printfn "  roots        : %s" (String.concat " " roots)
 printfn "  union        : %d skills" (List.length union)
-printfn "  files        : %d across the union" (canonicalSkills |> List.sumBy (fun s -> List.length s.Files))
+printfn "  files        : %d across the union" totalFiles
+printfn "  manifest     : ADR-0017 schema v%d, %d skill(s) declared" manifestSchemaVersion (Map.count declaredFiles)
+
+printfn
+    "  digests      : %d of %d union file(s) carry a declared digest; %d skill(s) declare none (co-tenant producers: %s)"
+    coveredFiles
+    totalFiles
+    (List.length undeclaredSkills)
+    (if List.isEmpty undeclaredSkills then
+         "—"
+     else
+         String.concat " " undeclaredSkills)
+
 printfn "  writes        : %d planned by SkillMirror.mirrorFiles" (List.length writes)
 printfn "  changed      : %d" (List.length changed)
 
@@ -377,18 +480,32 @@ if not (List.isEmpty drift) then
     for d in drift do
         eprintfn "      %s missingRoots=%A" d.Id d.MissingRoots
 
+        // All FOUR facts are rendered, each named. `undeclared` is not a weaker `hashMismatch`:
+        // it says the producer manifest does not cover this file at all, and its repair is
+        // `fsgg-sdd registry skill-manifest --write`, not restoring bytes.
         for f in d.Files do
             eprintfn
-                "        %s missing=%A divergent=%b hashMismatch=%A"
+                "        %s missing=%A divergent=%b hashMismatch=%A undeclared=%A"
                 f.RelativePath
                 f.MissingRoots
                 f.Divergent
                 f.HashMismatchRoots
+                f.UndeclaredRoots
 
     exit 1
 
+// The verdict states its own REACH. "clean" over 51 files where 16 carry a digest is a true
+// statement about three different subjects, and collapsing them into one sentence is how a
+// verdict comes to read stronger than its evidence (FS-GG/.github#1506, FS.GG.SDD#727).
 printfn
-    "  verify       : clean — every union skill present in every root, every FILE byte-identical across roots, SKILL.md hash-matched"
+    "  verify       : clean — every union skill present in every root, every FILE byte-identical across roots, and %d of %d file(s) matched against a declared digest"
+    coveredFiles
+    totalFiles
+
+if coveredFiles < totalFiles then
+    printfn
+        "                 the remaining %d file(s) are held by presence + cross-root identity ALONE — a consistency guarantee, not an authenticity one. Their producer's manifest is not this repo's."
+        (totalFiles - coveredFiles)
 
 if checkOnly && not (List.isEmpty changed) then
     eprintfn "  --check: %d path(s) would change; run without --check to materialize." (List.length changed)

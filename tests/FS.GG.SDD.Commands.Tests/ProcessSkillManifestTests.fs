@@ -34,6 +34,12 @@ module ProcessSkillManifestTests =
         | null -> ""
         | value -> value
 
+    // Same null-safety as `prop`, for the nested `files[]` rows (ADR-0017 v2, FS.GG.SDD#727).
+    let private fileProp (name: string) (file: JsonElement) =
+        match file.GetProperty(name).GetString() with
+        | null -> ""
+        | value -> value
+
     // ---------- FR-001 / AC-001: membership == the seeded set ----------
 
     [<Fact>]
@@ -74,17 +80,91 @@ module ProcessSkillManifestTests =
             Assert.DoesNotContain("||", mw)
             Assert.DoesNotContain("\"", mw)
 
-    // ---------- FR-003 / AC-003: schema v1, org-consumable shape ----------
+    // ---------- FR-003 / AC-003: schema v2, org-consumable shape ----------
 
     [<Fact>]
-    let ``manifest declares schemaVersion 1 and the resolvable path shape`` () =
+    let ``manifest declares schemaVersion 2 and the resolvable path shape`` () =
         let root = committedDoc().RootElement
         Assert.Equal(Fsgg.Schemas.skillManifestVersion, root.GetProperty("schemaVersion").GetInt32())
-        Assert.Equal(1, root.GetProperty("schemaVersion").GetInt32())
+        Assert.Equal(2, root.GetProperty("schemaVersion").GetInt32())
 
         for entry in skills () do
             let id = prop "id" entry
             Assert.Equal($".agents/skills/{id}/SKILL.md", prop "resolvablePath" entry)
+
+    // ---------- ADR-0017 v2 / FS.GG.SDD#727: the COMPLETE declared file set ----------
+
+    // Coverage is total or the document is a lie: a v2 manifest that declares a skill and omits
+    // its file set claims a completeness it does not carry. `SkillManifestV2` makes that
+    // unrepresentable in the type; this asserts it on the ARTIFACT, which is what other repos read.
+    [<Fact>]
+    let ``every entry declares a non-empty file set`` () =
+        for entry in skills () do
+            let files = [ for f in entry.GetProperty("files").EnumerateArray() -> f ]
+            Assert.NotEmpty files
+
+    // The superset invariant that keeps v2 readable by a v1 consumer: the row-level `sha256` is
+    // RETAINED and still means the `SKILL.md` digest, so it cannot drift from the `files[]` row
+    // that now also carries it. If these two ever disagree the document says two things at once.
+    [<Fact>]
+    let ``each entry's SKILL_md file row carries the same digest as its top-level sha256`` () =
+        for entry in skills () do
+            let files = [ for f in entry.GetProperty("files").EnumerateArray() -> f ]
+
+            let skillMd = files |> List.find (fun f -> fileProp "path" f = "SKILL.md")
+
+            Assert.Equal(prop "sha256" entry, fileProp "sha256" skillMd)
+
+    // Every declared file digest is recomputed FROM DISK, the same way the top-level `sha256`
+    // already was — so the file set is pinned to authored bytes and not merely to itself.
+    [<Fact>]
+    let ``each declared file digest matches the authored bytes on disk`` () =
+        for entry in skills () do
+            let id = prop "id" entry
+
+            for f in entry.GetProperty("files").EnumerateArray() do
+                let rel = fileProp "path" f
+
+                let authored =
+                    File.ReadAllText(Path.Combine(TestSupport.repoRoot, ".claude", "skills", id, rel))
+
+                Assert.Equal(Fsgg.SkillMirror.sha256 authored, fileProp "sha256" f)
+
+    // The declared set is the WHOLE set. A file present under the authored skill directory but
+    // absent from `files[]` would be a file no digest authorises, which is exactly the state v2
+    // exists to make impossible — and the state `SkillMirror.verifyFileSet` reds on.
+    [<Fact>]
+    let ``the declared file set equals what the authored skill directory actually carries`` () =
+        for entry in skills () do
+            let id = prop "id" entry
+            let dir = Path.Combine(TestSupport.repoRoot, ".claude", "skills", id)
+
+            let onDisk =
+                Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories)
+                |> Seq.map (fun f -> Path.GetRelativePath(dir, f).Replace('\\', '/'))
+                |> List.ofSeq
+                |> List.sort
+
+            let declaredPaths =
+                [ for f in entry.GetProperty("files").EnumerateArray() -> fileProp "path" f ]
+                |> List.sort
+
+            Assert.Equal<string list>(onDisk, declaredPaths)
+
+    // v2 IS A SUPERSET OF v1 ON THE WIRE, and the property ORDER is part of that promise. Every v1
+    // key keeps its v1 position and `files` is appended, so a reader that scans these rows
+    // positionally sees the v1 document it already parses with trailing content it ignores. Some
+    // readers in the org FAIL OPEN when a row stops matching, so an insertion here would drop rows
+    // out of another repo's guard silently rather than reddening it.
+    [<Fact>]
+    let ``v1 keys keep their v1 order and files is appended last`` () =
+        for entry in skills () do
+            let names = [ for p in entry.EnumerateObject() -> p.Name ]
+
+            Assert.Equal<string list>(
+                [ "id"; "scope"; "sha256"; "resolvablePath"; "materializes-when"; "files" ],
+                names
+            )
 
     // ---------- FR-005 / AC-005: determinism + sort order + LF ----------
 

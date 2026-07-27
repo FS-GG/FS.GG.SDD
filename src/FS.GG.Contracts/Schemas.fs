@@ -103,6 +103,17 @@ module Schemas =
         { SchemaVersion: int
           Skills: SkillManifestEntry list }
 
+    type SkillManifestFile =
+        { RelativePath: string; Sha256: string }
+
+    type SkillManifestFileSet =
+        { Skill: SkillManifestEntry
+          Files: SkillManifestFile list }
+
+    type SkillManifestV2 =
+        { SchemaVersion: int
+          Skills: SkillManifestFileSet list }
+
     type GovernanceHandoffEvidenceNode =
         { Id: string
           State: string
@@ -245,7 +256,14 @@ module Schemas =
     let governanceHandoffContractVersion = "2.0.0"
     // SDD-owned skill-vendoring contract (ADR-0014). The manifest is the producer's
     // declarative skill set; the root set is a single declared constant.
-    let skillManifestVersion = 1
+    //
+    // 2 (ADR-0017 amendment, FS.GG.SDD#727): the manifest content-addresses a skill's COMPLETE
+    // FILE SET (`SkillManifestV2`/`SkillManifestFileSet`), not its `SKILL.md` alone. Deliberately
+    // a VERSION BUMP and not a silent widening: at v1 the absence of per-file digests truthfully
+    // said "the auxiliaries carry no declared authority", while at v2 the declared set is complete,
+    // so a file outside it is a file no digest authorises. A reader must be able to tell which
+    // claim it holds, and `schemaVersion` is how.
+    let skillManifestVersion = 2
     // Governance-owned: declared to the Governance published reference, NOT SDD-emitted.
     let governanceVersion = 1
     let policyVersion = 1

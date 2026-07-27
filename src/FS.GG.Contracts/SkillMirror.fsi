@@ -133,8 +133,20 @@ module SkillMirror =
     /// The drift found for ONE FILE of a skill, as the SAME three INDEPENDENT facts `SkillDrift`
     /// keeps apart — never collapsed into a per-file verdict. `MissingRoots` here ranges only over
     /// roots that DO carry the skill (a root missing the skill entirely is `MultiFileSkillDrift`'s
-    /// own `MissingRoots`, a different repair). `HashMismatchRoots` is populated for `SKILL.md`
-    /// only, because `ExpectedSkill.Sha256` content-addresses that body and nothing else.
+    /// own `MissingRoots`, a different repair).
+    ///
+    /// `HashMismatchRoots` means WHAT THE CALLER ASKED FOR, and the two entry points ask for
+    /// different things (FS.GG.SDD#727):
+    ///
+    ///   - under `verifyFiles`, it is populated for `SKILL.md` ONLY, because `ExpectedSkill.Sha256`
+    ///     content-addresses that body and nothing else. On every auxiliary it is empty BY
+    ///     CONSTRUCTION — "no digest was available", NOT "a digest was checked and matched";
+    ///   - under `verifyFileSet`, it is populated for EVERY file the v2 manifest declares, and the
+    ///     absence of a declaration is itself reported rather than passed over.
+    ///
+    /// An empty `HashMismatchRoots` is therefore only as strong as the expectation fed in. That is
+    /// exactly why the ADR-0017 manifest was amended: reading the empty list as "hash checked,
+    /// clean" is the misreading, and at v1 it was unavoidable for 19 of this repo's 51 skill files.
     type SkillFileDrift =
         { RelativePath: string
           MissingRoots: string list
@@ -165,3 +177,80 @@ module SkillMirror =
     /// what `verify` reports — same missing roots, same divergence, same hash-mismatch roots.
     val verifyFiles:
         roots: string list -> expected: ExpectedSkill list -> actual: ActualSkillFiles list -> MultiFileSkillDrift list
+
+    /// One expected skill and the digest its producer declares for EVERY file it carries — the
+    /// ADR-0017 schema-v2 expectation (FS.GG.SDD#727), and the multi-file generalization of
+    /// `ExpectedSkill`.
+    ///
+    /// `Files` is the COMPLETE declared file set, `SKILL.md` included. An EMPTY `Files` means "no
+    /// declared file set" and is the exact analogue of `ExpectedSkill.Sha256 = ""`: hash-match is
+    /// skipped entirely and only presence + cross-root identity hold. That case is real, not
+    /// theoretical — a root may vendor a CO-TENANT skill from a producer whose manifest this
+    /// caller does not hold, and inventing an expectation for it would be a fabricated authority.
+    type ExpectedSkillFiles =
+        { Id: string
+          Scope: SkillScope
+          Files: SkillManifestFile list }
+
+    /// The drift found for ONE FILE against a DECLARED file set — `SkillFileDrift`'s three
+    /// independent facts, unchanged in meaning, plus the fourth one a declaration makes statable.
+    ///
+    /// `HashMismatchRoots` here means EXACTLY what it means under `verifyFiles`: roots whose copy
+    /// of a file that HAS a declared digest does not match it. It is never borrowed to report
+    /// anything else.
+    ///
+    /// `UndeclaredRoots` is the roots carrying a file the declaration does not cover at all. It is
+    /// a SEPARATE FIELD rather than a reuse of `HashMismatchRoots` because the two are different
+    /// causes with different repairs — regenerate the manifest, versus restore the file — and
+    /// folding them together would make one field mean two things. That is the exact defect this
+    /// amendment exists to remove (at v1 an empty `HashMismatchRoots` meant "unchecked" and read as
+    /// "checked and clean"), and it would be no better pointing the other way.
+    ///
+    /// Empty when the caller holds no declaration for the skill: with no authority, nothing can be
+    /// said to lie outside it.
+    type DeclaredFileDrift =
+        { RelativePath: string
+          MissingRoots: string list
+          Divergent: bool
+          HashMismatchRoots: string list
+          UndeclaredRoots: string list }
+
+    /// The drift found for one skill against a DECLARED file set — `MultiFileSkillDrift`'s shape
+    /// over `DeclaredFileDrift`. All-clean (both lists empty) ⇒ the skill is coherent WITH ITS
+    /// DECLARATION and is not returned by `verifyFileSet`.
+    type DeclaredSkillDrift =
+        { Id: string
+          Scope: SkillScope
+          MissingRoots: string list
+          Files: DeclaredFileDrift list }
+
+    /// `verifyFiles` with the third fact widened from `SKILL.md` to the WHOLE declared file set:
+    /// present-in-each-root ∧ every file byte-identical across roots ∧ every file matching the
+    /// digest its producer declared. Returns only the skills exhibiting drift, sorted by id, each
+    /// naming the offending files sorted by relative path. Pure, content-addressed.
+    ///
+    /// The three facts stay INDEPENDENT and keep their `verifyFiles` meanings — this widens what
+    /// fact 3 is computed OVER, and collapses nothing into a verdict.
+    ///
+    /// THE DECLARATION IS AN AUTHORITY, NOT A FILTER, and that is the whole strength gain. When
+    /// `Files` is non-empty the compared set is `declared ∪ observed`, so:
+    ///
+    ///   - a DECLARED file absent from a root that carries the skill is `MissingRoots` — including
+    ///     when it is absent from EVERY root. `verifyFiles` cannot state that: its comparison set
+    ///     is the observed union, so a file deleted everywhere leaves nothing to compare and the
+    ///     skill reads coherent. A surviving auxiliary masking a lost file is precisely the shape
+    ///     that made a deleted skill read clean in FS.GG.SDD#726;
+    ///   - an OBSERVED file the declaration does not cover is reported in `UndeclaredRoots`, its
+    ///     own fact. It is NOT passed over in silence: at v2 the declared set is complete, so an
+    ///     undeclared file is a finding about the tree, and a file that cannot be verified must not
+    ///     read as coherent either.
+    ///
+    /// Fed an expectation whose `Files` is exactly `[ { RelativePath = "SKILL.md"; Sha256 = s } ]`,
+    /// this reports what `verifyFiles` reports for `ExpectedSkill.Sha256 = s` on a single-file
+    /// skill; fed `Files = []` it reports what `verifyFiles` reports for `Sha256 = ""`. Both
+    /// equivalences are pinned in `SkillMirrorTests`.
+    val verifyFileSet:
+        roots: string list ->
+        expected: ExpectedSkillFiles list ->
+        actual: ActualSkillFiles list ->
+            DeclaredSkillDrift list
