@@ -701,6 +701,35 @@ module CommandRendering =
 
         builder.AppendLine($"diagnostics: {List.length report.Diagnostics}") |> ignore
 
+        // FS.GG.SDD#745 AC4 (decision #754). `--text`/`--rich` carried only `diagnostics: <count>`,
+        // so the entire read-edge mechanism was invisible outside `--json` — the projection an
+        // operator actually reads said a number and nothing else, while `doctor --text` over an
+        // unreadable file said the file was MISSING and pointed at `upgrade`.
+        //
+        // Only the three read-edge ids are surfaced here, not every diagnostic: this projection's
+        // contract is "the facts that live only in the structured summary", and promoting the whole
+        // diagnostic list would be a different (much wider) change to every golden. The `--rich`
+        // renderer derives from this plain projection, so both gain it from this one addition.
+        //
+        // Single-line-encoded for the same reason the scaffold provider block is (R6): the rich
+        // renderer's `key: value` derivation would break on an embedded newline in an OS error.
+        report.Diagnostics
+        |> List.filter (fun diagnostic ->
+            match diagnostic.Id with
+            | "unreadableFile"
+            | "unreadableSubject"
+            | "unreadableWriteTarget" -> true
+            | _ -> false)
+        |> List.iter (fun diagnostic ->
+            let singleLine (value: string) =
+                value.Replace("\r\n", "\n").Replace("\n", "\\n").Replace("\r", "\\n")
+
+            builder.AppendLine($"{diagnostic.Id}: {singleLine diagnostic.Message}")
+            |> ignore
+
+            diagnostic.RelatedIds
+            |> List.iter (fun path -> builder.AppendLine($"{diagnostic.Id}Path: {path}") |> ignore))
+
         match report.NextAction with
         | Some action -> builder.AppendLine($"nextAction: {action.ActionId}") |> ignore
         | None -> builder.AppendLine("nextAction: none") |> ignore

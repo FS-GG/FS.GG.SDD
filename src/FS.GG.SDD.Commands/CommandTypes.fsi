@@ -963,10 +963,39 @@ module CommandTypes =
             StandardErrorTruncated: bool
         }
 
+    /// FS.GG.SDD#745, decision FS.GG.SDD#754 — the read edge's three states.
+    ///
+    /// Before this the core had two (bytes, or nothing) and `None` meant ABSENT, so a file that
+    /// exists and cannot be read collapsed into the absent branch. Verdict folds that take their
+    /// candidate set from a directory listing and their comparison from the read then treat an
+    /// absent subject as *not a finding* — silently not checked, i.e. a pass. That is how
+    /// `surface --check` reported `isCoherent: true` at exit 0 over a `chmod 000` file.
+    ///
+    /// A discriminated union rather than a parallel unreadable-path set: a set is something a fold
+    /// MAY consult, and the failure class is folds that quietly skip a subject. A total match is
+    /// something the compiler makes a fold do (`TreatWarningsAsErrors` promotes FS0025), which is
+    /// what stops a newly-added fold reintroducing the fail-open.
+    type ReadResult =
+        /// The file existed and its bytes were read.
+        | Bytes of snapshot: FileSnapshot
+        /// The path does not exist — or the effect performs no read at all.
+        | Absent
+        /// The path EXISTS and its bytes could not be obtained. Carries the path and the
+        /// underlying reason, so the diagnostic names the file and is distinguishable from drift.
+        | Unreadable of path: string * reason: string
+
     type CommandEffectResult =
         {
             Effect: CommandEffect
             Succeeded: bool
+            /// What the edge observed about the path this effect reads. For `WriteFile` this is
+            /// the PRE-READ of the destination that `canOverwrite` decides from. Every fold that
+            /// computes a verdict must consume this rather than `Snapshot`: only this one can
+            /// tell *absent* from *present but unreadable*.
+            Read: ReadResult
+            /// `Read` projected through `Bytes s -> Some s`. The accessor for callers that only
+            /// want the body they read; it cannot express the third state and so may never decide
+            /// a coherence verdict on its own.
             Snapshot: FileSnapshot option
             Process: ProcessRunResult option
             /// The confirmation decision for a `Confirm` effect: `Some true` = confirmed,

@@ -328,7 +328,16 @@ open in a new place.
   The additive `surface` field is present on `fsgg-sdd surface` (`null` otherwise) — feature 086;
   it carries `sourceRoot`, `baselineRoot`, `mode` (`check`/`update`), `checkedCount`,
   `missingBaselinePaths[]`, `driftedSourcePaths[]`, `orphanBaselinePaths[]`,
-  `updatedBaselinePaths[]`, and `isCoherent`. One exception (FS.GG.SDD#185): when a `--param
+  `updatedBaselinePaths[]`, and `isCoherent`.
+  **`checkedCount` changed meaning in FS.GG.SDD#745 (decision #754)**, and a caller reading it
+  today should know: it used to be the number of authored `.fsi` files the run *intended* to
+  check (the source-root listing length), and it is now the number it actually **read**. The two
+  differ only when a source exists and could not be read — the case that previously reported the
+  file as checked while no byte of it was ever compared. `isCoherent` is likewise now `false`
+  whenever any subject was unreadable, alongside the existing missing/drifted conditions, and the
+  run emits an `unreadableSubject` `DiagnosticError` (exit 1, never a tool defect) plus one
+  `unreadableFile` warning per file naming the path and the reason.
+  One exception (FS.GG.SDD#185): when a `--param
   sourceRoot`/`baselineRoot` resolves outside the workspace root — an absolute path or one with a
   `..` segment — the command plans no effect, blocks with a `surface.rootEscape` `DiagnosticError`
   (`outcome: blocked`, exit 1), and emits `surface: null` even though the command is `surface`.

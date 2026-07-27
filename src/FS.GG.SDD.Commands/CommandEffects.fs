@@ -68,31 +68,73 @@ module CommandEffects =
             with _ ->
                 ()
 
-    let snapshotIfExists (projectRoot: string) (path: string) =
+    /// The file read, as the three states the core actually has (FS.GG.SDD#745, decision #754).
+    ///
+    /// The whole point is the third arm. `File.Exists` answers from `stat`, which succeeds on a
+    /// mode-000 file, so *exists* and *readable* are genuinely different questions — and before
+    /// #745 the second one had no answer to return. The open threw, the exception escaped to
+    /// `interpret`'s outer handler, and the read surfaced as a `toolDefect` at exit 2 (an
+    /// accusation that the TOOL is broken over a permissions accident) while every verdict fold
+    /// downstream still saw only "no bytes", indistinguishable from a file that is not there.
+    ///
+    /// `Unreadable` carries the reason verbatim from the exception rather than a rephrasing: the
+    /// operator needs to know whether this was a mode bit, a dangling symlink, or a device error,
+    /// and the tool cannot classify that better than the OS already did.
+    ///
+    /// Catching broadly is deliberate and is the fail-CLOSED direction: every escape from
+    /// `ReadAllText` on a path `File.Exists` just affirmed is, by construction, "it is there and I
+    /// could not read it". A narrower filter would let some IO faults keep escaping to the outer
+    /// handler — i.e. keep the exit-2 bug for a subset — which is the failure this replaces.
+    let tryRead (projectRoot: string) (path: string) : ReadResult =
         let absolute = fullPath projectRoot path
 
-        if File.Exists absolute then
-            Some(
-                { Path = path
-                  Text = File.ReadAllText absolute }
-                : FileSnapshot
-            )
+        if not (File.Exists absolute) then
+            Absent
         else
-            None
+            try
+                Bytes(
+                    { Path = path
+                      Text = File.ReadAllText absolute }
+                    : FileSnapshot
+                )
+            with ex ->
+                Unreadable(path, ex.Message)
+
+    /// `tryRead` projected to the bytes. Retained verbatim for the callers that only ever wanted
+    /// the body; it cannot express the third state, so it may never decide a coherence verdict.
+    let snapshotIfExists (projectRoot: string) (path: string) =
+        match tryRead projectRoot path with
+        | Bytes snapshot -> Some snapshot
+        | Absent
+        | Unreadable _ -> None
+
+    /// The directory listing, with the same three states. An unreadable directory is the
+    /// `EnumerateDirectory` sibling of the file edge (FS.GG.SDD#743's lane): enumeration of a
+    /// mode-000 directory throws, and before #745 that was either a `toolDefect` or — where the
+    /// listing drives a candidate set — an EMPTY candidate set, which reads as "there is nothing
+    /// here to check" and passes.
+    let tryEnumerate (projectRoot: string) (path: string) : ReadResult =
+        let absolute = fullPath projectRoot path
+
+        if not (Directory.Exists absolute) then
+            Absent
+        else
+            try
+                let entries =
+                    Directory.EnumerateFiles(absolute, "*", SearchOption.AllDirectories)
+                    |> Seq.map (fun file -> Path.GetRelativePath(projectRoot, file).Replace('\\', '/'))
+                    |> Seq.sort
+                    |> String.concat "\n"
+
+                Bytes({ Path = path; Text = entries }: FileSnapshot)
+            with ex ->
+                Unreadable(path, ex.Message)
 
     let directorySnapshot (projectRoot: string) (path: string) =
-        let absolute = fullPath projectRoot path
-
-        if Directory.Exists absolute then
-            let entries =
-                Directory.EnumerateFiles(absolute, "*", SearchOption.AllDirectories)
-                |> Seq.map (fun file -> Path.GetRelativePath(projectRoot, file).Replace('\\', '/'))
-                |> Seq.sort
-                |> String.concat "\n"
-
-            Some({ Path = path; Text = entries }: FileSnapshot)
-        else
-            None
+        match tryEnumerate projectRoot path with
+        | Bytes snapshot -> Some snapshot
+        | Absent
+        | Unreadable _ -> None
 
     /// The tag decides. An absent file is always writable, and an identical rewrite is a no-op
     /// whatever the kind. Otherwise only the two tool-owned kinds may replace bytes: a
@@ -108,18 +150,29 @@ module CommandEffects =
         | Some _, GeneratedView -> true
         | Some _, _ -> false
 
-    let success (effect: CommandEffect) (snapshot: FileSnapshot option) =
+    /// `Snapshot` is DERIVED from `Read` here and nowhere else, so the two cannot drift apart —
+    /// the failure mode a second, hand-passed snapshot argument would have re-opened is a result
+    /// claiming `Read = Unreadable` while still carrying bytes for a fold to compare.
+    let private snapshotOf (read: ReadResult) =
+        match read with
+        | Bytes snapshot -> Some snapshot
+        | Absent
+        | Unreadable _ -> None
+
+    let success (effect: CommandEffect) (read: ReadResult) =
         { Effect = effect
           Succeeded = true
-          Snapshot = snapshot
+          Read = read
+          Snapshot = snapshotOf read
           Process = None
           Confirmed = None
           Diagnostic = None }
 
-    let failure (effect: CommandEffect) (snapshot: FileSnapshot option) diagnostic =
+    let failure (effect: CommandEffect) (read: ReadResult) diagnostic =
         { Effect = effect
           Succeeded = false
-          Snapshot = snapshot
+          Read = read
+          Snapshot = snapshotOf read
           Process = None
           Confirmed = None
           Diagnostic = Some diagnostic }
@@ -227,6 +280,7 @@ module CommandEffects =
             | null ->
                 { Effect = effect
                   Succeeded = true
+                  Read = Absent
                   Snapshot = None
                   Process =
                     Some
@@ -251,9 +305,15 @@ module CommandEffects =
                     let stdout, stdoutTruncated = stdoutTask.GetAwaiter().GetResult()
                     let stderr, stderrTruncated = stderrTask.GetAwaiter().GetResult()
 
+                    // ONE enumeration, shared by the three-state `Read` and its derived
+                    // `Snapshot`. Enumerating twice would walk the tree twice and, worse, could
+                    // disagree if the directory's readability changed between the two walks.
+                    let after = tryEnumerate projectRoot workingDir
+
                     { Effect = effect
                       Succeeded = true
-                      Snapshot = directorySnapshot projectRoot workingDir
+                      Read = after
+                      Snapshot = snapshotOf after
                       Process =
                         Some
                             { Started = true
@@ -290,6 +350,7 @@ module CommandEffects =
 
                     let stdout, stdoutTruncated = reap stdoutTask
                     let capturedErr, stderrTruncated = reap stderrTask
+                    let after = tryEnumerate projectRoot workingDir
 
                     let timeoutNote =
                         $"fsgg-sdd: process timed out after {timeoutMs} ms and was terminated: {commandLine}"
@@ -302,7 +363,8 @@ module CommandEffects =
 
                     { Effect = effect
                       Succeeded = true
-                      Snapshot = directorySnapshot projectRoot workingDir
+                      Read = after
+                      Snapshot = snapshotOf after
                       Process =
                         Some
                             { Started = true
@@ -320,6 +382,7 @@ module CommandEffects =
             // error is retained on StandardError so the report can explain the failure (R4).
             { Effect = effect
               Succeeded = true
+              Read = Absent
               Snapshot = None
               Process =
                 Some
@@ -419,7 +482,13 @@ module CommandEffects =
                  else
                      None)
             with
-            | None -> success effect None // not restored / no assembly ⇒ unavailable (advisory)
+            // Not restored / no assembly. `Absent` and NOT `Unreadable`, deliberately and against
+            // the surface reading of the word: this is the ONE read edge whose "could not look" is
+            // already a first-class reported state — `dependency-surface` folds it to
+            // `unavailable` and `dependencySurfaceUnavailable` (advisory, exit 0, ADR-0002/#266),
+            // because a package outside the restore graph is not a subject the workspace declared.
+            // #745 changes the FILE edge, where "could not look" had no representation at all.
+            | None -> success effect Absent
             | Some assemblyPath ->
                 // Load into a fresh context is unnecessary for name-only reflection; `LoadFrom`
                 // is enough and `symbolsFromAssembly` tolerates partial type loads. Any failure
@@ -429,14 +498,16 @@ module CommandEffects =
 
                 success
                     effect
-                    (Some(
+                    (Bytes(
                         { Path = $"{packageId}@{version}"
                           Text = String.concat "\n" symbols }
                         : FileSnapshot
                     ))
         with _ ->
             // Fail-open: an unreadable surface is advisory, never a tool defect and never a drift.
-            success effect None
+            // Same `Absent`-not-`Unreadable` reasoning as the arm above — the lane already reports
+            // it as `unavailable`, so the third state would add a second name for one fact.
+            success effect Absent
 
     // Edge interpreter for `Confirm` (feature 053, confirm-effect contract). Under `DryRun`
     // it never mutates and never reads stdin (`Some false`). Otherwise it writes the step
@@ -464,6 +535,7 @@ module CommandEffects =
 
         { Effect = effect
           Succeeded = true
+          Read = Absent
           Snapshot = None
           Process = None
           Confirmed = Some decision
@@ -472,54 +544,101 @@ module CommandEffects =
     let interpret (projectRoot: string) (dryRun: bool) (effect: CommandEffect) =
         try
             match effect with
+            // THE READ EDGE (FS.GG.SDD#745, decision #754). All three states are carried forward;
+            // none of them is an exception any more.
+            //
+            // `Succeeded = true` on the `Unreadable` arm is deliberate and is the difference
+            // between this and the pre-#745 behaviour. The READ did what a read can do: it looked,
+            // and it reports what it found. Nothing about the tool failed, so nothing here may
+            // escalate to exit 2 — the run continues, the WARNING names the file and the reason,
+            // and it is the verdict FOLD downstream that must refuse to be coherent over a subject
+            // it did not read. Putting the block here instead would make one unreadable file fatal
+            // to `doctor`, which is documented read-only and exit 0 (#754 rejected that).
             | ReadFile path ->
-                match snapshotIfExists projectRoot path with
-                | Some snapshot -> success effect (Some snapshot)
-                | None -> success effect None
+                match tryRead projectRoot path with
+                | Bytes snapshot -> success effect (Bytes snapshot)
+                | Absent -> success effect Absent
+                | Unreadable(unreadablePath, reason) ->
+                    { Effect = effect
+                      Succeeded = true
+                      Read = Unreadable(unreadablePath, reason)
+                      Snapshot = None
+                      Process = None
+                      Confirmed = None
+                      Diagnostic = Some(Diagnostics.unreadableFile unreadablePath reason) }
             | EnumerateDirectory path ->
-                match directorySnapshot projectRoot path with
-                | Some snapshot -> success effect (Some snapshot)
-                | None -> success effect None
+                match tryEnumerate projectRoot path with
+                | Bytes snapshot -> success effect (Bytes snapshot)
+                | Absent -> success effect Absent
+                | Unreadable(unreadablePath, reason) ->
+                    // The `EnumerateDirectory` sibling, and the more dangerous of the two: a
+                    // listing that comes back empty because the directory could not be opened
+                    // yields an EMPTY candidate set, which every fold reads as "there is nothing
+                    // here to check" — a pass over an unknown number of subjects.
+                    { Effect = effect
+                      Succeeded = true
+                      Read = Unreadable(unreadablePath, reason)
+                      Snapshot = None
+                      Process = None
+                      Confirmed = None
+                      Diagnostic = Some(Diagnostics.unreadableFile unreadablePath reason) }
             | CreateDirectory path ->
                 let absolute = fullPath projectRoot path
 
                 let existing =
                     if Directory.Exists absolute then
-                        Some({ Path = path; Text = "<directory>" }: FileSnapshot)
+                        Bytes({ Path = path; Text = "<directory>" }: FileSnapshot)
                     else
-                        None
+                        Absent
 
                 if not dryRun then
                     Directory.CreateDirectory absolute |> ignore
 
                 success effect existing
             | WriteFile(path, text, kind) ->
-                let existing = snapshotIfExists projectRoot path
+                // THE WRITE EDGE'S PRE-READ (#745 AC3). `canOverwrite` decides whether the tool may
+                // replace an existing file FROM THAT FILE'S CURRENT BYTES, so an unreadable
+                // destination makes the decision undecidable — and the fail-closed answer to an
+                // undecidable safety question is to refuse, not to write.
+                //
+                // Before #745 this call threw, the exception escaped to the outer handler, and the
+                // run reported `toolDefect` at exit 2: `upgrade --yes` and `charter` over a
+                // mode-000 target both accused the TOOL of being broken over a mode bit, while
+                // emitting three `toolDefect`s beside warnings whose correction read "Nothing about
+                // the tool is broken." Now it blocks at exit 1 with a diagnostic naming the file.
+                match tryRead projectRoot path with
+                | Unreadable(unreadablePath, reason) ->
+                    failure
+                        effect
+                        (Unreadable(unreadablePath, reason))
+                        (Diagnostics.unreadableWriteTarget unreadablePath reason)
+                | existingRead ->
+                    let existing = snapshotOf existingRead
 
-                // The bytes are already on disk. Skip the commit entirely rather than re-committing
-                // identical content: `writeFileAtomic` renames a fresh inode over the destination, so a
-                // no-op write would still unlink the old inode — replacing a symlink with a regular file,
-                // detaching hardlinks, and churning every inode-tracking watcher on an unchanged
-                // `refresh`. The truncating write it replaced had no such side effect, so this keeps a
-                // no-op run genuinely no-op. `ArtifactOperation.NoChange` is unchanged: it is derived from
-                // `existing` at report assembly and never depended on the write happening.
-                let unchanged =
-                    match existing with
-                    | Some snapshot -> snapshot.Text = text
-                    | None -> false
+                    // The bytes are already on disk. Skip the commit entirely rather than re-committing
+                    // identical content: `writeFileAtomic` renames a fresh inode over the destination, so a
+                    // no-op write would still unlink the old inode — replacing a symlink with a regular file,
+                    // detaching hardlinks, and churning every inode-tracking watcher on an unchanged
+                    // `refresh`. The truncating write it replaced had no such side effect, so this keeps a
+                    // no-op run genuinely no-op. `ArtifactOperation.NoChange` is unchanged: it is derived from
+                    // `existing` at report assembly and never depended on the write happening.
+                    let unchanged =
+                        match existing with
+                        | Some snapshot -> snapshot.Text = text
+                        | None -> false
 
-                if canOverwrite kind existing text then
-                    if not dryRun && not unchanged then
-                        let absolute = fullPath projectRoot path
-                        Directory.CreateDirectory(parentDirectory absolute) |> ignore
-                        writeFileAtomic absolute text
+                    if canOverwrite kind existing text then
+                        if not dryRun && not unchanged then
+                            let absolute = fullPath projectRoot path
+                            Directory.CreateDirectory(parentDirectory absolute) |> ignore
+                            writeFileAtomic absolute text
 
-                    success effect existing
-                else
-                    failure effect existing (unsafeOverwrite path)
+                        success effect existingRead
+                    else
+                        failure effect existingRead (unsafeOverwrite path)
             | RunProcess(command, args, workingDir) ->
                 if dryRun then
-                    success effect None
+                    success effect Absent
                 else
                     runProcess projectRoot effect command args workingDir
             | ReadPackageSurface(packageId, version) ->
@@ -528,7 +647,7 @@ module CommandEffects =
                 readPackageSurface effect packageId version
             | SetExecutable path ->
                 if dryRun then
-                    success effect None
+                    success effect Absent
                 else
                     try
                         let absolute = fullPath projectRoot path
@@ -540,13 +659,14 @@ module CommandEffects =
                             ||| UnixFileMode.OtherExecute
 
                         File.SetUnixFileMode(absolute, executable)
-                        success effect None
+                        success effect Absent
                     with _ ->
                         // Read-only FS, non-Unix host, or a missing file: reported as a
                         // skipped/partial make-executable (FR-005, US2-AC3), never a tool
                         // defect. Caught here so the outer handler never escalates it.
                         { Effect = effect
                           Succeeded = false
+                          Read = Absent
                           Snapshot = None
                           Process = None
                           Confirmed = None
@@ -554,7 +674,7 @@ module CommandEffects =
             | Confirm(_, prompt) -> confirm dryRun effect prompt
         with ex ->
             let path = CommandTypes.effectPath effect
-            failure effect None (toolDefect path ex.Message)
+            failure effect Absent (toolDefect path ex.Message)
 
     let interpretAll (projectRoot: string) (dryRun: bool) (effects: CommandEffect list) =
         effects |> List.map (interpret projectRoot dryRun)

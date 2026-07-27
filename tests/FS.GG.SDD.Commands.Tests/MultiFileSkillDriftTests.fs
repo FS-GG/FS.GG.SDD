@@ -2,6 +2,7 @@ namespace FS.GG.SDD.Commands.Tests
 
 open System
 open System.IO
+open System.Runtime.InteropServices
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.Internal
 open Xunit
@@ -1047,3 +1048,101 @@ module MultiFileSkillDriftTests =
 
             // And it converges: a second look is clean.
             Assert.True (doctorSummary (doctorReport fixtureRoot)).IsCoherent
+
+    // ===================================================================================
+    // FS.GG.SDD#745 (decision FS.GG.SDD#754) — `doctor`'s share of the same shape.
+    //
+    // `skillBodies` was a `List.choose (snapshot …)`, so an unread body was DROPPED from the map,
+    // and `SkillMirror.verifyFiles` builds its per-file union from the OBSERVED rows — a file no
+    // root contributed a row for is never compared at all. `presentArtifacts` had the mirror-image
+    // shape (`Option.isSome`), so an unreadable expected artifact read as MISSING, which pointed
+    // the operator at `upgrade` — which would then plan a re-seed write straight into it.
+    //
+    // `doctor` is the lane #754 used to REJECT refusing at the edge: it is documented read-only
+    // and exit 0, and one permissions accident must not wedge a repo. So the correction here is
+    // the VERDICT, not the exit code.
+    // ===================================================================================
+
+    [<Fact>]
+    let ``FS.GG.SDD#745: an unreadable skill copy makes doctor incoherent, at exit 0, and is not "missing"`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let fixtureRoot = productCoherentFixture ()
+
+            // The control leg: this fixture is coherent when every copy can be read. Without it a
+            // green "incoherent" assertion below would prove nothing about the read edge.
+            Assert.True((doctorSummary (doctorReport fixtureRoot)).IsCoherent)
+
+            let target = skillMd ".claude" productSkillId
+            let targetAbsolute = absolute fixtureRoot target
+            File.SetUnixFileMode(targetAbsolute, enum<UnixFileMode> 0)
+
+            try
+                let report = doctorReport fixtureRoot
+                let summary = doctorSummary report
+
+                // The verdict may not be coherent over a subject the run did not read.
+                Assert.False summary.IsCoherent
+
+                // …but `doctor` still exits 0 and writes nothing: #754 rejected making one
+                // unreadable file fatal to a documented read-only lane.
+                Assert.Equal(0, RemediationSupport.exitCode report)
+
+                // #745 AC4: the file is present. Reporting it missing would be the wrong finding
+                // and the wrong remedy.
+                Assert.DoesNotContain(target, summary.MissingArtifactPaths)
+
+                // The finding names the file, and it is not a tool defect.
+                Assert.Contains(report.Diagnostics, fun d -> d.Id = "unreadableFile" && List.contains target d.RelatedIds)
+                Assert.DoesNotContain(report.Diagnostics, fun d -> d.IsToolDefect)
+
+                // Visible in the projection an operator actually reads (#745 AC4).
+                let text = FS.GG.SDD.Commands.CommandRendering.renderText report
+                Assert.Contains("unreadableFile:", text)
+                Assert.Contains(target, text)
+            finally
+                File.SetUnixFileMode(targetAbsolute, enum<UnixFileMode> 0o644)
+
+    /// The load-bearing doctor leg, and the one the skill case above cannot stand in for.
+    ///
+    /// A skill copy that cannot be read at least still trips the CONTENT fold (its body drops out
+    /// of `skillBodies`, so `verifyFiles` reports it as un-mirrored) — the wrong finding, but a
+    /// finding. `.fsgg/project.yml` has no such backstop: it is not a skill and not a
+    /// content-verified artifact, so before #745 an unreadable one dropped the workspace's
+    /// `sdd.minToolVersion` floor silently and `cliAxis` flipped `behind` → `coherentByAbsence`.
+    /// A workspace pinned to a CLI floor it does not meet reported itself perfectly healthy
+    /// because the tool could not open the file that says so (#745 §4).
+    [<Fact>]
+    let ``FS.GG.SDD#745: an unreadable project.yml cannot turn an unmet tool floor into coherence`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            // Provider declares NO minimum, so the workspace floor is the only drift signal there
+            // is — which is exactly what makes losing it a clean pass.
+            let fixtureRoot =
+                makeFixtureWithFloor None (Some farAheadMinimum) Drift.expectedArtifactPaths true
+
+            let readable = doctorSummary (doctorReport fixtureRoot)
+            Assert.False readable.IsCoherent
+            Assert.Equal("behind", readable.CliAxis)
+
+            let configAbsolute = absolute fixtureRoot ".fsgg/project.yml"
+            File.SetUnixFileMode(configAbsolute, enum<UnixFileMode> 0)
+
+            try
+                let report = doctorReport fixtureRoot
+                let summary = doctorSummary report
+
+                // Before #745 this was `true`, with `cliAxis: coherentByAbsence`.
+                Assert.False summary.IsCoherent
+                Assert.Equal(0, RemediationSupport.exitCode report)
+
+                Assert.Contains(
+                    report.Diagnostics,
+                    fun d -> d.Id = "unreadableFile" && List.contains ".fsgg/project.yml" d.RelatedIds
+                )
+
+                Assert.DoesNotContain(report.Diagnostics, fun d -> d.IsToolDefect)
+            finally
+                File.SetUnixFileMode(configAbsolute, enum<UnixFileMode> 0o644)

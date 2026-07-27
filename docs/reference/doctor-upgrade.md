@@ -26,6 +26,12 @@ provider-declared `minimumFsggSdd` — live wins — and the workspace's own `sd
   version unparseable).
 - **Artifact axis** — which seeded `fs-gg-sdd-*` process skills and
   `.fsgg/early-stage-guidance.md` are present vs expected, naming the missing ones.
+- **Read axis** — any file that exists and could **not be read** (FS-GG/FS.GG.SDD#745). Such a
+  file is reported as unreadable, never as *missing* and never as *drifted*: it is present, and
+  the tool did not observe a difference, it failed to look. `doctor` still exits `0`, but
+  `isCoherent` is **false** — a verdict may never report coherent over a subject it did not read
+  (decision FS-GG/FS.GG.SDD#754, `.github#266`). Each such file gets an `unreadableFile` warning
+  naming the path and the underlying reason, in `--json`, `--text` and `--rich` alike.
 - **Preview** — a dry-run of what `upgrade` would change across the three steps, applying
   none of it.
 
@@ -107,12 +113,27 @@ stage) ever self-updates or re-seeds as a side effect.
   surfaced, exit 0); a confirmed step that fails to apply is `failed` (residual drift, exit
   2). After a fully successful `upgrade`, a subsequent `doctor` reports coherent (a CLI
   self-update applied in the same run reconciles on the next invocation).
+- **Never writes over a file it could not read** (FS-GG/FS.GG.SDD#745). The write edge pre-reads
+  its destination, because whether the tool may replace an existing file is decided from that
+  file's current bytes. An unreadable destination makes the decision undecidable, so the write is
+  **refused** with an `unreadableWriteTarget` error naming the path and the reason — the prior
+  bytes are untouched. This is exit **1**, not 2: a mode bit in the workspace is not a broken
+  tool. Every authoring lane that writes a path it also reads (`charter` re-run over a mode-000
+  `charter.md`, and the rest) behaves the same way.
 
 ## Exit codes
+
+Exit `2` means **the tool itself failed** and nothing else. An unreadable file in the workspace
+is an environment fault the operator can fix, so it never reaches this class
+(FS-GG/FS.GG.SDD#745 AC5) — before that fix, `upgrade --yes` and `charter` over a mode-000
+target both exited 2, reporting `toolDefect` beside warnings whose correction read *"Nothing
+about the tool is broken."*
 
 | Situation | `doctor` | `upgrade` |
 |---|---|---|
 | Coherent / nothing to reconcile / no provenance | 0 | 0 |
 | Drift reported / steps applied / step declined (residual) | 0 | 0 |
+| A subject exists but could not be read (`unreadableFile`) | 0, `isCoherent: false` | 0 |
+| A write refused because its target could not be read (`unreadableWriteTarget`) | n/a | 1 |
 | Non-interactive without `--yes` | n/a | 1 |
-| A confirmed step failed to apply | n/a | 2 |
+| A confirmed step failed to apply (for any other reason) | n/a | 2 |

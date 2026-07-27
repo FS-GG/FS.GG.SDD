@@ -97,13 +97,43 @@ module internal HandlersDependencySurface =
         elif anyPlanned then Some []
         else Some reads
 
+    /// FS.GG.SDD#745 / decision #754 — the subjects THIS lane is responsible for and could not
+    /// read: the authored `work/**/plan.md` files whose `framework:` references define the target
+    /// set, the two version-pin files those references resolve against, the committed captures, and
+    /// the `work` enumeration that discovers the plans in the first place.
+    ///
+    /// The shape being closed (#745 §4): an unreadable `plan.md` is dropped by `List.choose`, so
+    /// every `framework:` reference it declares silently leaves `allTargets` — the packages simply
+    /// stop being checked, and `IsCoherent = List.isEmpty incoherentPackages` then reports coherent
+    /// over a set the run quietly shrank. An unreadable `work` listing shrinks it to nothing.
+    let unreadableSubjects baselineRoot model =
+        let filePaths =
+            authoredPlanPaths model
+            @ [ "Directory.Packages.local.props"; "Directory.Packages.props" ]
+            @ (committedTargets baselineRoot model
+               |> List.map (fun (packageId, version) ->
+                   DependencySurface.capturePath baselineRoot packageId version))
+            |> List.distinct
+
+        (filePaths |> List.map (fun path -> readOf path model))
+        @ [ enumerationOf "work" model; enumerationOf baselineRoot model ]
+        |> unreadablePathsOf
+
     let private authoredTargets model =
         let pinTexts =
             [ "Directory.Packages.local.props"; "Directory.Packages.props" ]
-            |> List.choose (fun path -> snapshot path model |> Option.map (fun snap -> snap.Text))
+            |> List.choose (fun path ->
+                match readOf path model with
+                | Bytes snap -> Some snap.Text
+                | Absent
+                | Unreadable _ -> None)
 
         authoredPlanPaths model
-        |> List.choose (fun path -> snapshot path model)
+        |> List.choose (fun path ->
+            match readOf path model with
+            | Bytes snap -> Some snap
+            | Absent
+            | Unreadable _ -> None)
         |> List.choose (fun planSnapshot ->
             match parsePlanFacts planSnapshot with
             | Ok facts -> Some facts
@@ -158,11 +188,17 @@ module internal HandlersDependencySurface =
 
     // The committed capture's recorded digest, from the interpreted `ReadFile` of its path.
     let private committedDigest baselineRoot (packageId, version) model : string option =
-        snapshot (DependencySurface.capturePath baselineRoot packageId version) model
-        |> Option.bind (fun snapshot ->
+        // Total since #745. `Unreadable` yields no digest, exactly as an absent capture does — the
+        // target then classifies as `new`, which is already in `incoherentPackages` and therefore
+        // already blocking under `--check`. It is in `unreadableSubjects` too, which is what stops
+        // `--update` from "reconciling" it by overwriting bytes it never read.
+        match readOf (DependencySurface.capturePath baselineRoot packageId version) model with
+        | Bytes snapshot ->
             match DependencySurface.tryParse snapshot.Text with
             | Ok capture -> Some capture.Sha256
-            | Error _ -> None)
+            | Error _ -> None
+        | Absent
+        | Unreadable _ -> None
 
     // The per-target read gate: read the committed capture + the real surface before drift is
     // computed. Mirrors `HandlersSurface.readGate`.
@@ -190,7 +226,7 @@ module internal HandlersDependencySurface =
 
     // The pure drift picture plus, under `--update`, the capture write effects. Every input is a
     // snapshot from the interpreted reads — no disk access here.
-    let private computeSummary baselineRoot model =
+    let private computeSummary baselineRoot (unreadable: string list) model =
         let update = model.Request.SurfaceUpdate
         let committed = committedTargets baselineRoot model |> Set.ofList
         let targets = allTargets baselineRoot model
@@ -284,7 +320,12 @@ module internal HandlersDependencySurface =
               DriftedPackages = incoherentPackages
               UnavailablePackages = idsWithStatus "unavailable"
               UpdatedPackages = idsWithStatus "written"
-              IsCoherent = List.isEmpty incoherentPackages }
+              // Decision #754: a verdict may never report coherent over a subject it did not read.
+              // `incoherentPackages` can only ever name targets the run actually DISCOVERED, and an
+              // unreadable `plan.md` (or `work` listing) removes targets from discovery — so
+              // without the second conjunct the emptier the run's blind spot made the target set,
+              // the more coherent it reported itself.
+              IsCoherent = List.isEmpty incoherentPackages && List.isEmpty unreadable }
 
         summary, writes
 
@@ -321,7 +362,8 @@ module internal HandlersDependencySurface =
                                 PendingEffects = model.PendingEffects @ effects },
                             effects
                     | None ->
-                        let summary, writes = computeSummary baselineRoot model
+                        let unreadable = unreadableSubjects baselineRoot model
+                        let summary, writes = computeSummary baselineRoot unreadable model
 
                         // Drift/missing captures block only under `--check`; `--update` reconciles them.
                         let driftDiagnostics =
@@ -329,6 +371,21 @@ module internal HandlersDependencySurface =
                                 [ dependencySurfaceDrift summary.DriftedPackages ]
                             else
                                 []
+
+                        // FS.GG.SDD#745 / decision #754. Blocking (exit 1) and never a tool
+                        // defect, in both modes: `--update` reconciles captures against a target
+                        // set derived from plans it could not read, so an `--update` that exited 0
+                        // here would claim to have reconciled a set it never fully saw.
+                        //
+                        // Distinct from `unavailableDiagnostics` below and deliberately so: an
+                        // unrestored PACKAGE is advisory (ADR-0002/#266 — the package is outside
+                        // the workspace's control), while an unreadable authored FILE is a subject
+                        // the workspace declared and the run was responsible for.
+                        let unreadableDiagnostics =
+                            if List.isEmpty unreadable then
+                                []
+                            else
+                                [ unreadableSubject "dependency-surface" unreadable ]
 
                         // Unreadable real surface is advisory in both modes.
                         let unavailableDiagnostics =
@@ -339,6 +396,10 @@ module internal HandlersDependencySurface =
 
                         { model with
                             DependencySurface = Some summary
-                            Diagnostics = model.Diagnostics @ driftDiagnostics @ unavailableDiagnostics
+                            Diagnostics =
+                                model.Diagnostics
+                                @ unreadableDiagnostics
+                                @ driftDiagnostics
+                                @ unavailableDiagnostics
                             PendingEffects = model.PendingEffects @ writes },
                         writes

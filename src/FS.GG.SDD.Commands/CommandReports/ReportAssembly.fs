@@ -58,12 +58,28 @@ module internal ReportAssembly =
     // A malformed project.yml yields no floor and no diagnostic: the handler that required the config
     // already reported the parse failure, and re-reporting it here would double-count it.
     let private minToolVersionDiagnostics (model: CommandModel) =
+        // Total over `ReadResult` since FS.GG.SDD#745 (decision #754). `Unreadable` yields no floor,
+        // as `Absent` always did — but the collapse is now written down, and it is no longer
+        // SILENT: the read edge emitted an `unreadableFile` warning naming `.fsgg/project.yml`, and
+        // `effectDiagnostics` below folds every interpreted result's diagnostic into this same
+        // report. Before #745 an unreadable config dropped the `sdd.minToolVersion` floor for EVERY
+        // command with nothing said, and `cliAxis` flipped `behind` to `coherentByAbsence`.
+        //
+        // The floor is deliberately not made blocking here: this is the report assembler, which
+        // runs for every command including ones that never asked for the config, and #754 rejected
+        // "refuse at the edge" precisely because one unreadable file must not wedge a read-only
+        // lane. The lanes whose VERDICT depends on the config block it themselves.
         let projectConfigSnapshot =
             model.InterpretedEffects
             |> List.tryPick (fun result ->
                 match result.Effect with
-                | ReadFile path when path = ".fsgg/project.yml" -> result.Snapshot
+                | ReadFile path when path = ".fsgg/project.yml" ->
+                    match result.Read with
+                    | Bytes snapshot -> Some(Some snapshot)
+                    | Absent
+                    | Unreadable _ -> Some None
                 | _ -> None)
+            |> Option.flatten
 
         let declaredFloor =
             projectConfigSnapshot

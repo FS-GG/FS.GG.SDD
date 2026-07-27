@@ -20,6 +20,10 @@ module LifecycleStatusTests =
     let private enumResult (dir: string) (paths: string list) : CommandEffectResult =
         { Effect = EnumerateDirectory dir
           Succeeded = true
+          Read =
+            Bytes
+                { Path = dir
+                  Text = String.concat "\n" paths }
           Snapshot =
             Some
                 { Path = dir

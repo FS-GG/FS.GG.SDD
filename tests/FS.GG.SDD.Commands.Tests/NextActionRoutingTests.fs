@@ -109,6 +109,7 @@ module NextActionRoutingTests =
 
             { Effect = EnumerateDirectory dir
               Succeeded = true
+              Read = Bytes { Path = dir; Text = listed }
               Snapshot = Some { Path = dir; Text = listed }
               Process = None
               Confirmed = None

@@ -340,8 +340,13 @@ module internal HandlersRefresh =
                     let key = readEffectKey path
 
                     let injected: CommandEffectResult =
+                        // `Bytes`, and `Snapshot` derived from it: this is a synthesized read of
+                        // text this run is ABOUT to write, so the bytes are known. It must never be
+                        // `Absent`/`Unreadable` — a fold that consults `Read` (#745) would then
+                        // treat a view this run authored as unread.
                         { Effect = ReadFile path
                           Succeeded = true
+                          Read = Bytes { Path = path; Text = text }
                           Snapshot = Some { Path = path; Text = text }
                           Process = None
                           Confirmed = None

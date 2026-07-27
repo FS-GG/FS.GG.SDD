@@ -930,19 +930,80 @@ nuget-cache/
             else
                 None)
 
+    /// The three-state read for `path` from the interpreted-effect log (FS.GG.SDD#745, decision
+    /// #754). This — not `snapshot` — is what a fold that computes a COHERENCE VERDICT must
+    /// consult: `snapshot` returns `FileSnapshot option`, and `None` there means *absent*, so a
+    /// file that exists and could not be read is indistinguishable from one that is not there.
+    /// Several folds take their candidate set from a directory listing and their comparison from
+    /// `snapshot`, and in those an absent subject is not a finding — it is silently not checked.
+    ///
+    /// `Absent` when no read for `path` was interpreted at all. That is the same defaulting
+    /// `snapshot` has always had and is safe *only* because every verdict lane gates on its own
+    /// read gate (`readGate` / `skillReadGate` / `planReadGate`) before folding, so a subject the
+    /// verdict is responsible for has always been read by the time this is asked. A lane that
+    /// folds without such a gate must not rely on this to notice a missing read.
+    let readOf path model =
+        let key = readEffectKey path
+
+        model.InterpretedEffects
+        |> List.tryPick (fun result ->
+            if effectKey result.Effect = key then
+                Some result.Read
+            else
+                None)
+        |> Option.defaultValue Absent
+
+    /// The `EnumerateDirectory` sibling of `readOf`. A listing that could not be taken is the more
+    /// dangerous of the two states to lose: it yields an EMPTY candidate set, which every fold
+    /// downstream reads as "there is nothing here to check".
+    let enumerationOf path model =
+        let key = "enumerate:" + normalizeRelativePath path
+
+        model.InterpretedEffects
+        |> List.tryPick (fun result ->
+            if effectKey result.Effect = key then
+                Some result.Read
+            else
+                None)
+        |> Option.defaultValue Absent
+
+    /// The sorted, de-duplicated paths among `reads` that EXIST and could not be read. A lane
+    /// passes the reads it is responsible for and blocks its verdict when this is non-empty —
+    /// which is decision #754's binding rule: `isCoherent` is false if any subject is `Unreadable`.
+    ///
+    /// Total over `ReadResult` on purpose. `TreatWarningsAsErrors` promotes FS0025, so adding a
+    /// fourth state later cannot slip past this (or any other) fold by defaulting to "fine".
+    let unreadablePathsOf (reads: ReadResult list) =
+        reads
+        |> List.choose (fun read ->
+            match read with
+            | Unreadable(path, _) -> Some path
+            | Bytes _
+            | Absent -> None)
+        |> List.distinct
+        |> List.sort
+
     /// FS.GG.SDD#573. The `changeTier` established at charter, for a stage that re-scaffolds a
     /// front matter whose tier it does not own (`specify`/`plan`) to CARRY rather than reset it.
     /// `changeTier` is a free string the parser does not validate (authoring-contracts §5), so
     /// whatever the charter authored is honored verbatim. Falls back to the `tier1` template
     /// default only when the charter is absent, unparseable, or leaves the tier blank — preserving
     /// prior behavior on the no-charter edge.
+    ///
+    /// Total over `ReadResult` since #745. This is NOT a verdict — it is a template default for a
+    /// stage that re-scaffolds front matter — so `Unreadable` does not block here: the read edge
+    /// has already emitted the `unreadableFile` warning naming the charter, and that warning rides
+    /// into every report through `buildReport`'s effect-diagnostic channel. What the explicit arm
+    /// buys is that the collapse is now a written decision rather than a `None` that absorbed two
+    /// different facts.
     let charteredChangeTier workId model =
-        match snapshot (charterPath workId) model with
-        | Some charter ->
+        match readOf (charterPath workId) model with
+        | Bytes charter ->
             match WorkItemMetadata.parseWorkItemMetadata charter with
             | Ok metadata when not (String.IsNullOrWhiteSpace metadata.ChangeTier) -> metadata.ChangeTier
             | _ -> "tier1"
-        | None -> "tier1"
+        | Absent
+        | Unreadable _ -> "tier1"
 
     /// Shared "load snapshot → parse view → Error⇒malformed / Ok+WorkId mismatch⇒identityMismatch /
     /// Ok⇒none" skeleton behind the per-stage existing-view identity diagnostics
