@@ -568,3 +568,92 @@ module SkillMirror =
                       Scope = skill.Scope
                       MissingRoots = missingRoots
                       Files = fileDrift })
+
+    // -----------------------------------------------------------------------------------------
+    // THE BYTE SEAM (FS.GG.SDD#737).
+    // -----------------------------------------------------------------------------------------
+    // `sha256` takes text a caller has ALREADY DECODED, and every caller in the org decodes with
+    // `File.ReadAllText`, whose UTF-8 decoder SUBSTITUTES U+FFFD for an invalid sequence before the
+    // body ever reaches this module. So for a body that is not valid UTF-8 the digest addresses
+    // something the file does not contain, and two DIFFERENT files collide under ONE digest:
+    //
+    //     bytes 0xFF -> U+FFFD -> 83d544ccc223c057d2bf80d3f2a32982c32c3c0db8e2674820da5064783fb097
+    //     bytes 0xFE -> U+FFFD -> 83d544ccc223c057d2bf80d3f2a32982c32c3c0db8e2674820da5064783fb097
+    //
+    // Under ADR-0014 §Decision 3 clause (c) — "hash matches the manifest" — that is a fail-open on
+    // the PRODUCING side: two distinct bodies recorded under one digest, and nothing downstream able
+    // to tell them apart. The CONSUMING side fails closed (a raw-byte shell digest reports
+    // `[drifted]`), which is exactly why it stayed invisible.
+    //
+    // THE REFUSAL CANNOT LIVE INSIDE `sha256`: by the time it is called the bytes are gone. So it
+    // lives at a BYTE-level entry point beside it, and the DIGEST IS NOT REDEFINED. Rehashing over
+    // raw bytes was the other candidate and is rejected: it changes the digest of every file, so
+    // every recorded manifest digest in every repo would need regenerating in one coordinated act,
+    // and it is a behaviour change on the published `FS.GG.Contracts` surface. Refusing costs no
+    // digest change for any valid file, so no manifest migration anywhere.
+    //
+    // Everything here is ADDITIVE, for the same reason #717/#721/#727 were: `sha256` is untouched
+    // and still the string spelling every caller holds today.
+    //
+    // MEASURED EXPOSURE when this landed: across all 1881 tracked files in this repository —
+    // including all 103 `SKILL.md` — ZERO contain invalid UTF-8 and zero carry a UTF-16/32 BOM. The
+    // single invalid-UTF-8 file is `assets/icon.png` (a PNG, never read as a skill body) and the
+    // single UTF-8 BOM is on `FS.GG.SDD.sln`. The equivalent measurement in `FS-GG/.github` (756
+    // files, 39 `SKILL.md`) is also zero. So the refusal turns no currently-green tree red.
+
+    type BodyRefusalReason = NotValidUtf8 of byteOffset: int
+
+    // A decoder that REPORTS an invalid sequence rather than papering over it. `Encoding.UTF8` — the
+    // static instance `File.ReadAllText` uses — carries a REPLACEMENT fallback, and that
+    // substitution is the whole defect; this instance carries the throwing one.
+    let private strictUtf8 = UTF8Encoding(false, true)
+
+    // `File.ReadAllText path` is `StreamReader(path, Encoding.UTF8, detectEncodingFromByteOrderMarks
+    // = true)`, so it BOM-DETECTS before it decodes. This reproduces that detection exactly — same
+    // preambles, same precedence, same lengths — because a byte seam that decoded differently would
+    // not be the same read: a body whose digest is recorded today would acquire a new one, which is
+    // precisely the migration this change exists to avoid. Verified against `File.ReadAllText` on
+    // this runtime for all five preambles and pinned in `SkillMirrorTests`.
+    //
+    // `None` for the encoding means "UTF-8" — the default, and the ONLY branch that can refuse.
+    let private detectEncoding (bytes: byte array) : Encoding option * int =
+        let at index =
+            if index < bytes.Length then int bytes[index] else -1
+
+        if at 0 = 0xFE && at 1 = 0xFF then
+            Some Encoding.BigEndianUnicode, 2
+        elif at 0 = 0xFF && at 1 = 0xFE && at 2 = 0x00 && at 3 = 0x00 then
+            Some(UTF32Encoding(false, true) :> Encoding), 4
+        elif at 0 = 0xFF && at 1 = 0xFE then
+            Some Encoding.Unicode, 2
+        elif at 0 = 0xEF && at 1 = 0xBB && at 2 = 0xBF then
+            None, 3
+        elif at 0 = 0x00 && at 1 = 0x00 && at 2 = 0xFE && at 3 = 0xFF then
+            Some(UTF32Encoding(true, true) :> Encoding), 4
+        else
+            None, 0
+
+    let decodeBody (bytes: byte array) : Result<string, BodyRefusalReason> =
+        let bytes = if isNull (box bytes) then Array.empty else bytes
+
+        match detectEncoding bytes with
+        // A UTF-16/UTF-32 BOM is OUT OF SCOPE here, deliberately: `File.ReadAllText` detects it and
+        // decodes CORRECTLY, so there is no mangling to refuse, and the library is the PERMISSIVE
+        // side of a disagreement that points the other way (the consuming shells special-case only
+        // the UTF-8 BOM). Tracked alongside FS-GG/.github#1589. Refusal must not fire on a body that
+        // already decodes, or adopting this seam would turn a green tree red for a cause this change
+        // never measured.
+        | Some encoding, preamble -> Ok(encoding.GetString(bytes, preamble, bytes.Length - preamble))
+        | None, preamble ->
+            try
+                Ok(strictUtf8.GetString(bytes, preamble, bytes.Length - preamble))
+            with :? DecoderFallbackException as ex ->
+                // `Index` is the offset, within the block handed to the decoder, at which the first
+                // invalid sequence BEGINS. Add the preamble back so the offset names a byte of the
+                // FILE rather than of a slice the caller never took.
+                Error(NotValidUtf8(preamble + ex.Index))
+
+    // The composition is the point: decode-or-refuse, then the EXISTING digest over the EXISTING
+    // string. That is what makes "byte-identical to today's digests for every body that decodes"
+    // true BY CONSTRUCTION rather than by a test that could drift.
+    let sha256Bytes (bytes: byte array) : Result<string, BodyRefusalReason> = decodeBody bytes |> Result.map sha256

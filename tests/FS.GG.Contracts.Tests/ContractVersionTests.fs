@@ -271,11 +271,33 @@ module ContractVersionTests =
     // publish + registry flip the coherence invariant is broken and `.github`'s `source-coherence`
     // reds on that repo alone (FS-GG/.github#741). Note that registry is ALREADY behind at 7.0.0 —
     // the 7.1.0 flip was never made — so this bump widens an existing gap rather than opening one.
+    //
+    // 7.2.0 -> 7.3.0 (FS.GG.SDD#737): an ADDITIVE MINOR — the same fourth row, for the same reason.
+    // `SkillMirror.sha256` takes text a caller has ALREADY DECODED, and every caller decodes with
+    // `File.ReadAllText`, whose UTF-8 decoder substitutes U+FFFD for an invalid sequence BEFORE the
+    // body is hashed. So two files differing only in an invalid byte (`0xFF` and `0xFE`) both hash
+    // to 83d544cc… — a fail-open on ADR-0014 §Decision 3 clause (c). The fix is a BYTE-level entry
+    // point beside `sha256` that refuses a body which does not decode: `SkillMirror.fsi` grows the
+    // type `BodyRefusalReason` and the vals `decodeBody` and `sha256Bytes`. ZERO members removed,
+    // renamed or retyped; no case added to an existing public DU; NO public record gains a field.
+    //
+    // The additive spelling is again a CONSTRAINT, not a coincidence, and here it is doubly so.
+    // Tightening `sha256` itself is impossible — by the time it is called the bytes are gone — and
+    // REDEFINING the digest to hash raw bytes would change the digest of every file in every repo,
+    // forcing one coordinated manifest migration org-wide AND a behaviour break on a published
+    // surface. Refusing costs no digest change for any body that decodes, which is what keeps this
+    // inside a minor.
+    //
+    // AND IT IS BEING MADE HERE RATHER THAN DEFERRED, for the fourth time in this file's history.
+    // 7.2.0 IS live on the org feed (verified against
+    // `/orgs/FS-GG/packages/nuget/FS.GG.Contracts/versions` while preparing this change: the newest
+    // listed version is 7.2.0), so growing the surface without moving the number would make the
+    // `.nupkg` at 7.2.0 and the source at 7.2.0 different artifacts — the #426/#432 shape again.
     [<Fact>]
-    let ``contract version self-report matches 7_2_0`` () =
-        Assert.Equal("7.2.0", ContractVersion.value)
+    let ``contract version self-report matches 7_3_0`` () =
+        Assert.Equal("7.3.0", ContractVersion.value)
         Assert.Equal(7, ContractVersion.major)
-        Assert.Equal(2, ContractVersion.minor)
+        Assert.Equal(3, ContractVersion.minor)
         Assert.Equal(0, ContractVersion.patch)
 
     // THE ASSERTION THAT WAS MISSING, AND THE ONLY ONE THAT WOULD HAVE CAUGHT IT.

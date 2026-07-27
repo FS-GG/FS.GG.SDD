@@ -16,6 +16,13 @@ module SkillMirror =
     val providerSourceRoot: string
 
     /// Lowercase-hex SHA256 of a skill body's UTF-8 bytes. Pure, BCL-only.
+    ///
+    /// Takes text a caller has ALREADY DECODED, and cannot see how that decoding went. A caller
+    /// decoding with `File.ReadAllText` substitutes `U+FFFD` for every invalid sequence before the
+    /// body arrives, so for a body that is not valid UTF-8 this digest addresses something the file
+    /// does not contain and two DIFFERENT files collide under one digest (FS.GG.SDD#737). Hash from
+    /// `sha256Bytes` when the raw bytes are still in hand; this spelling is unchanged and its digest
+    /// is unchanged for every body that decodes.
     val sha256: body: string -> string
 
     /// Canonical on-disk path of skill `id` under `root` (`<root>/skills/<id>/SKILL.md`).
@@ -254,3 +261,36 @@ module SkillMirror =
         expected: ExpectedSkillFiles list ->
         actual: ActualSkillFiles list ->
             DeclaredSkillDrift list
+
+    /// Why a body's RAW BYTES are not a skill body. A NAMED cause, kept in its own type rather than
+    /// spelled as a bare `string option`, for the reason `MirrorRefusalReason` is: a refusal must be
+    /// distinguishable from every other outcome BY CONSTRUCTION, never by a caller's convention.
+    ///
+    /// `NotValidUtf8` carries the offset — within the file, preamble included — at which the first
+    /// invalid sequence begins. Deterministic: the same bytes always name the same offset. The
+    /// library never names the FILE, because it never sees one; naming the file is the caller's half
+    /// of the diagnostic.
+    type BodyRefusalReason = NotValidUtf8 of byteOffset: int
+
+    /// Decode a skill body's raw bytes the way the read seam does — BOM-detecting exactly as
+    /// `File.ReadAllText` does, preamble stripped — but REFUSING a body that does not decode instead
+    /// of silently substituting `U+FFFD` for it (FS.GG.SDD#737, ADR-0014 §Decision 3 clause (c)).
+    ///
+    /// `Ok` is character-for-character what `File.ReadAllText` returns for the same bytes, so a
+    /// caller that swaps its read for this one changes NO digest and needs NO manifest migration.
+    /// Only the mangling case is refused.
+    ///
+    /// A UTF-16/UTF-32 BOM is deliberately NOT refused: `File.ReadAllText` detects it and decodes
+    /// correctly, so there is no mangling there to refuse. That disagreement runs the OTHER way (the
+    /// consuming shells special-case only the UTF-8 BOM `EF BB BF`) and is tracked alongside
+    /// FS-GG/.github#1589, not resolved here.
+    val decodeBody: bytes: byte array -> Result<string, BodyRefusalReason>
+
+    /// `sha256` computed from RAW BYTES: the ADR-0014 §Decision 3 clause (c) digest taken from what
+    /// is on disk rather than from what a caller's decoder made of it.
+    ///
+    /// `Ok` is byte-for-byte the digest `sha256` already produces for that body — the digest is NOT
+    /// redefined, because rehashing over raw bytes would change the digest of EVERY file and force a
+    /// coordinated manifest migration in every repo. `Error` is the case `sha256` cannot express at
+    /// all: the bytes never decoded, so there is no body to address.
+    val sha256Bytes: bytes: byte array -> Result<string, BodyRefusalReason>

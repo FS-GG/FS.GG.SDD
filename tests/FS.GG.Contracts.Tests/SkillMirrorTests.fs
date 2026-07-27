@@ -1,5 +1,7 @@
 namespace FS.GG.Contracts.Tests
 
+open System.IO
+open System.Text
 open Fsgg
 open Fsgg.Schemas
 open Fsgg.SkillMirror
@@ -907,3 +909,129 @@ module SkillMirrorTests =
               declared "references\\deep.md" (sha256 "d\n") ]
 
         Assert.Empty(verifyFileSet roots [ expectedFiles "s" declaration ] actual)
+
+    // ---------------------------------------------------------------------------------------
+    // THE BYTE SEAM (FS.GG.SDD#737).
+    // ---------------------------------------------------------------------------------------
+
+    /// Round-trip a byte sequence through a real file and `File.ReadAllText`, which is what every
+    /// caller of `sha256` actually does. These tests assert against THAT, not against a decoder
+    /// spelled out here, because "what the read seam produces" is the fact under test.
+    let private readAllTextOf (bytes: byte array) =
+        let path =
+            Path.Combine(Path.GetTempPath(), "fsgg-737-" + string (System.Guid.NewGuid()))
+
+        try
+            File.WriteAllBytes(path, bytes)
+            File.ReadAllText path
+        finally
+            File.Delete path
+
+    let private utf8 (text: string) = Encoding.UTF8.GetBytes text
+    let private utf8Bom = [| 0xEFuy; 0xBBuy; 0xBFuy |]
+
+    // THE FAIL-OPEN, PINNED. Two files differing ONLY in one invalid byte are reported EQUAL by the
+    // string entry point, because `File.ReadAllText` substituted U+FFFD for each before `sha256`
+    // ever saw them. The literal digest is recorded so this test states the exact collision rather
+    // than merely "they are equal": if the decode path ever stops mangling, this reds and says so.
+    [<Fact>]
+    let ``sha256 collides on two files differing only in an invalid byte`` () =
+        let oneFf = readAllTextOf [| 0xFFuy |]
+        let oneFe = readAllTextOf [| 0xFEuy |]
+
+        Assert.Equal("�", oneFf)
+        Assert.Equal("�", oneFe)
+        Assert.Equal("83d544ccc223c057d2bf80d3f2a32982c32c3c0db8e2674820da5064783fb097", sha256 oneFf)
+        Assert.Equal(sha256 oneFf, sha256 oneFe)
+
+    // AC1/AC4, the red direction: fed the SAME two files' bytes, the byte seam refuses BOTH. It does
+    // not report them equal, and it does not report them as a digest MISMATCH either — a refusal is
+    // its own outcome, which is the whole point of `Error` carrying a named reason.
+    [<Fact>]
+    let ``sha256Bytes refuses both files the string entry point collided`` () =
+        Assert.Equal<Result<string, BodyRefusalReason>>(Error(NotValidUtf8 0), sha256Bytes [| 0xFFuy |])
+        Assert.Equal<Result<string, BodyRefusalReason>>(Error(NotValidUtf8 0), sha256Bytes [| 0xFEuy |])
+
+    // The offset names a byte of the FILE, and it is the byte the first invalid SEQUENCE begins at —
+    // not the byte the decoder happened to stop on. Pinned past a BOM too, since the preamble is
+    // stripped before the decoder runs and an un-corrected offset would point one file-position per
+    // preamble byte too early.
+    [<Fact>]
+    let ``NotValidUtf8 names the offset the first invalid sequence begins at`` () =
+        Assert.Equal<Result<string, BodyRefusalReason>>(
+            Error(NotValidUtf8 3),
+            decodeBody (Array.append (utf8 "abc") [| 0x80uy; 0x64uy |])
+        )
+
+        // A truncated multi-byte sequence: the offset is its FIRST byte, not its last.
+        Assert.Equal<Result<string, BodyRefusalReason>>(Error(NotValidUtf8 0), decodeBody [| 0xE2uy; 0x82uy |])
+
+        // Past a UTF-8 BOM the offset still counts from the start of the file.
+        Assert.Equal<Result<string, BodyRefusalReason>>(
+            Error(NotValidUtf8 4),
+            decodeBody (Array.concat [ utf8Bom; utf8 "a"; [| 0xC0uy; 0xAFuy |] ])
+        )
+
+    // AC4, the green direction, stated as the equivalence that makes it true: for every body that
+    // decodes, the byte seam produces CHARACTER-FOR-CHARACTER what the read seam produces, so its
+    // digest is BYTE-IDENTICAL to today's. CRLF normalization, the empty body and multi-byte
+    // sequences all ride on that one equivalence rather than each needing its own digest literal.
+    [<Fact>]
+    let ``decodeBody is File_ReadAllText for every body that decodes`` () =
+        let bodies =
+            [ "decodeBody: empty", [||]
+              "decodeBody: ascii", utf8 "# Skill\n\nbody\n"
+              "decodeBody: multibyte", utf8 "héllo — naïve ✅ 🚀\n"
+              "decodeBody: crlf", utf8 "line one\r\nline two\r\n"
+              "decodeBody: lone cr", utf8 "line one\rline two\n"
+              "decodeBody: nul", [| 0x61uy; 0x00uy; 0x62uy |]
+              "decodeBody: utf-8 BOM", Array.append utf8Bom (utf8 "# Skill\n")
+              "decodeBody: utf-16 LE BOM", Array.append [| 0xFFuy; 0xFEuy |] (Encoding.Unicode.GetBytes "hi\n")
+              "decodeBody: utf-16 BE BOM", Array.append [| 0xFEuy; 0xFFuy |] (Encoding.BigEndianUnicode.GetBytes "hi\n")
+              "decodeBody: utf-32 LE BOM",
+              Array.append [| 0xFFuy; 0xFEuy; 0x00uy; 0x00uy |] (UTF32Encoding(false, false).GetBytes "hi\n")
+              "decodeBody: utf-32 BE BOM",
+              Array.append [| 0x00uy; 0x00uy; 0xFEuy; 0xFFuy |] (UTF32Encoding(true, false).GetBytes "hi\n") ]
+
+        for (label, bytes) in bodies do
+            let expected = readAllTextOf bytes
+
+            Assert.True(
+                Ok expected = decodeBody bytes,
+                sprintf "%s: decodeBody %A, File.ReadAllText %A" label (decodeBody bytes) expected
+            )
+
+            Assert.True(
+                Ok(sha256 expected) = sha256Bytes bytes,
+                sprintf "%s: sha256Bytes %A, sha256 (File.ReadAllText …) %A" label (sha256Bytes bytes) (sha256 expected)
+            )
+
+    // A UTF-16/UTF-32 BOM is EXPLICITLY not this refusal's subject: `File.ReadAllText` detects it and
+    // decodes correctly, so there is nothing mangled to refuse. Stated as its own test because it is
+    // the case where a stricter-looking implementation would have been WRONG — refusing here would
+    // turn a file that reads fine today into a hard failure, a migration nobody authorised.
+    [<Fact>]
+    let ``a UTF-16 BOM decodes rather than being refused`` () =
+        let bytes =
+            Array.append [| 0xFFuy; 0xFEuy |] (Encoding.Unicode.GetBytes "# Skill\n")
+
+        Assert.Equal<Result<string, BodyRefusalReason>>(Ok "# Skill\n", decodeBody bytes)
+
+    // AC4 over the REAL TREE rather than over fixtures: every file this repository actually fans out
+    // across the three skill roots keeps EXACTLY the digest it has today. This is the "stays green,
+    // byte-identical" half, and it is measured, not asserted in the abstract — when this landed it
+    // covered 100+ files and refused none of them.
+    [<Fact>]
+    let ``every committed skill file keeps its digest under the byte seam`` () =
+        let files =
+            roots
+            |> List.map (fun root -> Path.Combine(TestSupport.repoRoot, root, "skills"))
+            |> List.filter Directory.Exists
+            |> List.collect (fun dir -> Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories) |> List.ofSeq)
+
+        Assert.NotEmpty files
+
+        for file in files do
+            let bytes = File.ReadAllBytes file
+            Assert.Equal<Result<string, BodyRefusalReason>>(Ok(File.ReadAllText file), decodeBody bytes)
+            Assert.Equal<Result<string, BodyRefusalReason>>(Ok(sha256 (File.ReadAllText file)), sha256Bytes bytes)
