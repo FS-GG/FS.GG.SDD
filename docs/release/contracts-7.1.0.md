@@ -46,8 +46,8 @@ The **verify** half ([#721](https://github.com/FS-GG/FS.GG.SDD/issues/721), PR #
 
 `mirror`'s `(id, body)` model could express a skill as exactly one `SKILL.md`, and ADR-0014's "one
 implementation" was therefore SKILL.md-only — while the org's own coordination-kit skills are five to
-seven files each, so every driver hand-rolled its auxiliary cross-root check. `mirrorFiles` and
-`verifyFiles` are the generalization.
+seven files each, so the driver hand-rolled the auxiliary cross-root check the library could not
+express. `mirrorFiles` and `verifyFiles` are the generalization.
 
 Both are **strict** generalizations, which is why `mirror` and `verify` are untouched rather than
 replaced:
@@ -83,8 +83,11 @@ Nearly twice the filing's number. The extra **+46** is `52fb6ae` (#721, PR #725)
 which the bump commit never assessed.
 
 **The conclusion survives the correction.** Across the whole publish-to-publish range the delta is
-insertion-only, zero deletions on any `.fsi`, so not one existing signature was removed or retyped.
-7.1.0 is the right number; the filing was right for an incomplete reason.
+insertion-only — zero deletions on any `FS.GG.Contracts` `.fsi`, and `SkillMirror.fsi` is the only
+one of them that moved — so not one existing signature was removed or retyped. 7.1.0 is the right
+number; the filing was right for an incomplete reason. (Other `.fsi` in the repo did change in that
+window — `FS.GG.SDD.Artifacts`, `FS.GG.SDD.Commands` — but those ship in `FS.GG.SDD.Cli`, not in
+this package, and are not what this version number describes.)
 
 Also in that range, and not a surface change: `src/FS.GG.Contracts/CompatibilitySuppressions.xml`
 was **deleted** (#702, `d0f4514`), retiring the Contracts-7 transition suppression. That removes a
@@ -102,14 +105,17 @@ every existing caller keeps its byte-for-byte call shape.
 cases and is itself a new type, so the source-breaking `FS0025` *incomplete pattern matches* hazard
 that [`contracts-2.1.0.md`](contracts-2.1.0.md) had to warn about does **not** apply here. No public
 record gained a field either, so no positional primary constructor was regenerated (`CP0002`). Those
-are the two rows of the change-class table that force a major, and neither fires — this is the first
-`FS.GG.Contracts` release since 1.4.0 that is not a major, because it is the first that adds only new
-types.
+are the two rows of the change-class table that force a major, and neither fires — because this is
+the first `FS.GG.Contracts` release since 1.4.0 whose growth is **only new types**. It is therefore
+the first minor since 1.4.0 to carry any new public surface at all: `2.1.0` was a *corrective* minor
+that added no code, and the `2.0.0` → `7.0.0` run was six majors, every one of them a public-record
+shape change with no additive spelling.
 
 Measured on the committed reflection baseline (`tests/FS.GG.Contracts.Tests/PublicSurface.baseline`),
 the delta is **+41 lines, zero deletions**.
 
-ApiCompat was green against the 7.0.0 baseline, and that is corroboration rather than the
+ApiCompat was green against the 7.0.0 baseline (the `API compatibility gate` check run on `a372259`
+concluded `success`), and that is corroboration rather than the
 classification: it is a *break* detector, structurally blind to every additive row of the checklist's
 table, and `scripts/apicompat-check.sh` documents its own baseline ratchet. The insertion-only `.fsi`
 and reflection-baseline deltas above are what actually classify this release.
@@ -125,8 +131,8 @@ and reflection-baseline deltas above are what actually classify this release.
 | Feeds | live on the org feed and nuget.org |
 | This note | [#734](https://github.com/FS-GG/FS.GG.SDD/issues/734) |
 
-At the publish point the fsproj `<Version>` and `Fsgg.ContractVersion.value` both read `7.1.0`, as
-the in-repo two-facts-must-agree test requires.
+At the publish point `src/FS.GG.Contracts/FS.GG.Contracts.fsproj` `<Version>` and
+`Fsgg.ContractVersion.value` both read `7.1.0`, as the in-repo two-facts-must-agree test requires.
 
 ## Release sequence, as it actually ran
 
