@@ -55,6 +55,19 @@ module internal Drift =
           // `<root>/skills/<id>/references/deep-detail.md` is reported at that path, because a skill
           // is a directory and this surface used to see only its `SKILL.md`.
           SkillDriftPaths: string list
+          // FS-GG/FS.GG.SDD#736: `SkillDriftPaths` split by the CONDITION that produced each entry.
+          // The union is unchanged; these name WHICH failure each path is, because they have three
+          // different repairs and only one of them is about bytes. Disjoint by construction (see
+          // `computeSkillDrift`), and their union is exactly `SkillDriftPaths`.
+          //
+          // A file at least one OTHER root carries and this one does not — an inconsistently applied
+          // edit, a provider file dropped from one root, or junk (`.DS_Store`, an editor backup).
+          SkillNotMirroredPaths: string list
+          // No declared root carries a copy of the skill at all; there is nothing to mirror from.
+          SkillLostPaths: string list
+          // Every named root HAS the file and the bodies disagree (or disagree with the recorded
+          // digest). This is the condition the single pre-#736 advisory described.
+          SkillDivergentPaths: string list
           // ADR-0063 / FS-GG/FS.GG.SDD#624: the owner-sourced skill copies (driver + product classes)
           // this scaffold is EXPECTED to carry — per the recorded parameters + present-skill set —
           // but is missing on disk. These are backfilled no-clobber by the `artifactReSeed` step,
@@ -189,10 +202,50 @@ module internal Drift =
 
         processSkills @ productSkills
 
-    let private computeSkillDriftPaths
+    /// FS-GG/FS.GG.SDD#736: which condition put a path on the drift surface. Kept as a tag carried
+    /// alongside each path rather than a second traversal, so the classification cannot drift from
+    /// the reporting rule that produced it.
+    type private SkillDriftCondition =
+        | NotMirroredAt
+        | LostEverywhere
+        | DivergentAt
+
+    /// FS-GG/FS.GG.SDD#736: the skill-drift surface, split by the CONDITION that produced each path.
+    ///
+    /// One flat list could not tell an operator which repair to make, and the single advisory that
+    /// described it named the wrong one: a file present in only one root was reported at the two
+    /// roots that LACK it under a hint reading "some copies diverge from their canonical body —
+    /// re-scaffold or restore the canonical skill sources", which for an extra `.DS_Store` reads as
+    /// "create `.DS_Store` here". `All` is the union this surface has always reported.
+    ///
+    /// Three classes, not two, because a copy that is absent EVERYWHERE has a third repair and
+    /// neither of the other two sentences is true of it: there is no sibling root to mirror from,
+    /// and nothing disagrees about bytes. Collapsing it into `NotMirrored` would have the advisory
+    /// assert "another root carries this file" about a file no root carries — the same class of
+    /// false report #736 exists to end.
+    type SkillDriftClasses =
+        {
+            /// This root does not carry a file that AT LEAST ONE other root does — a per-file
+            /// absence, or a root carrying no copy of the skill while another root has one (in which
+            /// case it is reported once at its `SKILL.md`). Repair: mirror it, or delete the stray.
+            NotMirrored: string list
+            /// No declared root carries a copy of the skill at all, reported once per root at its
+            /// `SKILL.md`. Repair: restore the canonical source (for a SEEDED skill this is the
+            /// `artifactReSeed` step, and `upgrade` subtracts it once applied).
+            Lost: string list
+            /// This root DOES carry the file and its bytes disagree — with the other roots, or with
+            /// the digest recorded for it. Repair: reconcile the bodies.
+            Divergent: string list
+            /// `NotMirrored ∪ Lost ∪ Divergent`, sorted and deduped — byte-identical to the pre-#736
+            /// list, which is the whole point: this is a SPLIT of the existing surface, not a change
+            /// to what it reports.
+            All: string list
+        }
+
+    let private computeSkillDrift
         (provenance: ScaffoldProvenanceRecord option)
         (skillBodies: Map<string, string>)
-        : string list =
+        : SkillDriftClasses =
         let expected = expectedSkills provenance
 
         // `(root, id)` -> the file set that copy carries. A (root, id) with no file at all has NO
@@ -235,46 +288,91 @@ module internal Drift =
                         SkillMirror.ActualSkillFiles.Id = skill.Id
                         SkillMirror.ActualSkillFiles.Files = copyFiles root skill.Id } ]
 
-        SkillMirror.verifyFiles agentSkillRoots expected actual
-        |> List.collect (fun drift ->
-            // A root carrying NO copy of the skill at all is reported once, at its `SKILL.md` — the
-            // file that MAKES a directory a skill (`SkillMirror.skillPath` / `skillIdOfPath`) —
-            // rather than as one absence per file in the union. The repair is a single one ("this
-            // root has no copy"), and naming every auxiliary of a root that has none of them buries
-            // it under its own detail; it is also exactly what this surface reported before it could
-            // see the auxiliaries, so the pre-#726 output is preserved for that case.
-            let missingSkillPaths =
-                drift.MissingRoots |> List.map (fun root -> SkillMirror.skillPath root drift.Id)
+        let classified =
+            SkillMirror.verifyFiles agentSkillRoots expected actual
+            |> List.collect (fun drift ->
+                // A root carrying NO copy of the skill at all is reported once, at its `SKILL.md` —
+                // the file that MAKES a directory a skill (`SkillMirror.skillPath` /
+                // `skillIdOfPath`) — rather than as one absence per file in the union. The repair is
+                // a single one ("this root has no copy"), and naming every auxiliary of a root that
+                // has none of them buries it under its own detail; it is also exactly what this
+                // surface reported before it could see the auxiliaries, so the pre-#726 output is
+                // preserved for that case.
+                //
+                // #736: a root with no copy is an ABSENCE, never a byte disagreement — but WHICH
+                // absence depends on whether any root still has one. `verifyFiles` reports the
+                // whole-skill loss (every root in `MissingRoots`) through this same field, and there
+                // the sibling root an operator would mirror FROM does not exist. Classifying that as
+                // not-mirrored would make the advisory assert "another root carries this file" about
+                // a file no root carries.
+                let skillLostEverywhere =
+                    agentSkillRoots
+                    |> List.forall (fun root -> List.contains root drift.MissingRoots)
 
-            let rootsWithSkill =
-                agentSkillRoots
-                |> List.filter (fun root -> not (List.contains root drift.MissingRoots))
+                let missingSkillCondition =
+                    if skillLostEverywhere then
+                        LostEverywhere
+                    else
+                        NotMirroredAt
 
-            // The pre-existing root-selection rule, unchanged in substance and now applied PER FILE:
-            // when a reference digest pinpoints the offending root(s) (`HashMismatchRoots`), report
-            // only those. When copies merely disagree with no reference to arbitrate — a divergent
-            // process skill, a product skill whose digest wasn't recorded, and EVERY auxiliary,
-            // since the ADR-0017 manifest content-addresses `SKILL.md` alone — the canonical copy is
-            // unknowable, so report every root that HAS the file and let the operator reconcile them.
-            let filePaths =
-                drift.Files
-                |> List.collect (fun file ->
-                    let rootsWithFile =
-                        rootsWithSkill
-                        |> List.filter (fun root -> not (List.contains root file.MissingRoots))
+                let missingSkillPaths =
+                    drift.MissingRoots
+                    |> List.map (fun root -> missingSkillCondition, SkillMirror.skillPath root drift.Id)
 
-                    let divergentRoots =
-                        if file.Divergent && List.isEmpty file.HashMismatchRoots then
-                            rootsWithFile
-                        else
-                            []
+                let rootsWithSkill =
+                    agentSkillRoots
+                    |> List.filter (fun root -> not (List.contains root drift.MissingRoots))
 
-                    file.MissingRoots @ file.HashMismatchRoots @ divergentRoots
-                    |> List.map (fun root -> SkillMirror.skillFilePath root drift.Id file.RelativePath))
+                // The pre-existing root-selection rule, unchanged in substance and now applied PER
+                // FILE: when a reference digest pinpoints the offending root(s)
+                // (`HashMismatchRoots`), report only those. When copies merely disagree with no
+                // reference to arbitrate — a divergent process skill, a product skill whose digest
+                // wasn't recorded, and EVERY auxiliary, since the ADR-0017 manifest
+                // content-addresses `SKILL.md` alone — the canonical copy is unknowable, so report
+                // every root that HAS the file and let the operator reconcile them.
+                //
+                // #736 classifies the three sources without changing which paths they produce.
+                // `file.MissingRoots` ranges over roots that CARRY THE SKILL but not this file, so
+                // it is not-mirrored — and never `LostEverywhere`, because `verifyFiles` builds the
+                // per-file union from the PRESENT roots, so a file in the union is carried by at
+                // least one of them. `HashMismatchRoots` and the digest-less `divergentRoots` both
+                // range over roots that HAVE the file, so they are divergent. The classes are
+                // therefore disjoint per (root, file), and the union below is what the pre-#736
+                // fold returned.
+                let filePaths =
+                    drift.Files
+                    |> List.collect (fun file ->
+                        let rootsWithFile =
+                            rootsWithSkill
+                            |> List.filter (fun root -> not (List.contains root file.MissingRoots))
 
-            missingSkillPaths @ filePaths)
-        |> List.distinct
-        |> List.sort
+                        let divergentRoots =
+                            if file.Divergent && List.isEmpty file.HashMismatchRoots then
+                                rootsWithFile
+                            else
+                                []
+
+                        (file.MissingRoots |> List.map (fun root -> NotMirroredAt, root))
+                        @ (file.HashMismatchRoots @ divergentRoots
+                           |> List.map (fun root -> DivergentAt, root))
+                        |> List.map (fun (condition, root) ->
+                            condition, SkillMirror.skillFilePath root drift.Id file.RelativePath))
+
+                missingSkillPaths @ filePaths)
+
+        let pathsOf condition =
+            classified
+            |> List.filter (fst >> (=) condition)
+            |> List.map snd
+            |> List.distinct
+            |> List.sort
+
+        let all = classified |> List.map snd |> List.distinct |> List.sort
+
+        { NotMirrored = pathsOf NotMirroredAt
+          Lost = pathsOf LostEverywhere
+          Divergent = pathsOf DivergentAt
+          All = all }
 
     let private noTargetStep (stepId: ReconciliationStepId) preview : ReconciliationStep =
         { StepId = stepId
@@ -381,6 +479,9 @@ module internal Drift =
               ExpectedArtifactCount = expectedArtifactCount
               MissingArtifactPaths = []
               SkillDriftPaths = []
+              SkillNotMirroredPaths = []
+              SkillLostPaths = []
+              SkillDivergentPaths = []
               // No provenance ⇒ not a scaffold ⇒ nothing to backfill (#624).
               OwnerSkillBackfillPaths = []
               Steps = steps
@@ -450,7 +551,7 @@ module internal Drift =
             // 058/ADR-0014 §Decision 3: the content-addressed union verify over process +
             // product skills. Non-empty ⇒ content drift (advisory), which also makes the
             // scaffold not coherent alongside the CLI-axis / missing-artifact drivers.
-            let skillDriftPaths = computeSkillDriftPaths provenance skillBodies
+            let skillDrift = computeSkillDrift provenance skillBodies
 
             let hasActionableWork =
                 steps
@@ -470,7 +571,10 @@ module internal Drift =
               CliBehindBy = cliBehindBy
               ExpectedArtifactCount = expectedArtifactCount
               MissingArtifactPaths = missing
-              SkillDriftPaths = skillDriftPaths
+              SkillDriftPaths = skillDrift.All
+              SkillNotMirroredPaths = skillDrift.NotMirrored
+              SkillLostPaths = skillDrift.Lost
+              SkillDivergentPaths = skillDrift.Divergent
               OwnerSkillBackfillPaths = ownerBackfillMissing
               Steps = steps
-              IsCoherent = not hasActionableWork && List.isEmpty skillDriftPaths }
+              IsCoherent = not hasActionableWork && List.isEmpty skillDrift.All }

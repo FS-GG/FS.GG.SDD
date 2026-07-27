@@ -296,6 +296,272 @@ module MultiFileSkillDriftTests =
         Assert.True((upgradeNonInteractive fixtureRoot).Upgrade.IsSome, $"upgrade produced no summary for {shape}")
 
     // ---------------------------------------------------------------------------------------
+    // FS-GG/FS.GG.SDD#736 — an EXTRA file under one root.
+    //
+    // Since #726 the surface compares the UNION of files across roots, so a file present in one
+    // root and absent from the others is drift, reported at the roots that LACK it. That detection
+    // is right (an inconsistently applied edit IS drift, by the same `claude ≡ codex ≡ agents` rule
+    // — ADR-0011 / E7). What was wrong was the REPORT: `upgrade` closed with "some copies diverge
+    // from their canonical body — re-scaffold or restore the canonical skill sources", which
+    // describes a divergent BODY, and for an extra `.DS_Store` reads as "create `.DS_Store` here".
+    // Nothing clears it either: the re-seed writes only MISSING SEEDED paths and there is no delete
+    // effect, so `ResidualDrift` recurs forever under a hint about a different failure.
+    //
+    // These cases pin the two realistic triggers (§Observed) and the two things the fix owes them:
+    // the advisory NAMES the not-mirrored condition, and it says plainly that the lane cannot
+    // repair it — not the byte-divergence sentence, which must stay reserved for byte divergence.
+    // ---------------------------------------------------------------------------------------
+
+    /// The exact junk shape #736 reproduces with — an OS turd under a seeded process skill.
+    let private junkFile = ".DS_Store"
+
+    /// A stand-in for the OS turd's binary payload. Non-empty deliberately: an empty file would
+    /// drag an unrelated "does a zero-byte read look absent?" question into a case about mirroring.
+    let private junkBody = "Bud1\n"
+
+    /// The wording that must NEVER close a run whose only drift is a not-mirrored file: it is the
+    /// pre-#736 hint, and it is an instruction to reconcile BODIES.
+    let private divergenceWording = "diverge from their canonical body"
+
+    /// Fragments the not-mirrored advisory owes an operator: what the condition is, and that
+    /// re-running `upgrade` is not the repair (#736 AC1 / AC2).
+    let private assertNotMirroredAdvisory (hint: string) =
+        Assert.Contains("not mirrored", hint)
+        Assert.Contains("another root carries", hint)
+        Assert.Contains("cannot repair this class", hint)
+
+    [<Fact>]
+    let ``an EXTRA junk file in one root is advisory drift named at the roots that LACK it`` () =
+        let fixtureRoot = productCoherentFixture ()
+        let id = "fs-gg-sdd-plan"
+        TestSupport.writeRelative fixtureRoot $".claude/skills/{id}/{junkFile}" junkBody
+
+        let before = treeHash fixtureRoot
+        let report = doctorReport fixtureRoot
+        let summary = doctorSummary report
+
+        // EXACT: the two roots that lack it, and NOT the root that has it.
+        Assert.Equal<string list>(
+            [ $".agents/skills/{id}/{junkFile}"; $".codex/skills/{id}/{junkFile}" ]
+            |> List.sort,
+            summary.SkillDriftPaths
+        )
+
+        Assert.False summary.IsCoherent
+        // AC3: `doctor` stays advisory and writes nothing.
+        Assert.Equal(0, exitCode report)
+        Assert.Empty report.ChangedArtifacts
+        Assert.Equal(before, treeHash fixtureRoot)
+
+    // AC1 + AC2, on the shape that motivated the issue. The old hint told the operator their copies
+    // diverged and to restore the canonical sources; both are false here — every root that HAS the
+    // file agrees about it, there is exactly one, and no canonical source ships a `.DS_Store`.
+    [<Fact>]
+    let ``upgrade --yes over an EXTRA junk file names the not-mirrored condition, not divergence`` () =
+        let fixtureRoot = productCoherentFixture ()
+        let id = "fs-gg-sdd-plan"
+        TestSupport.writeRelative fixtureRoot $".claude/skills/{id}/{junkFile}" junkBody
+
+        let summary = (upgradeYes fixtureRoot).Upgrade.Value
+
+        assertNotMirroredAdvisory summary.NextActionHint
+        Assert.DoesNotContain(divergenceWording, summary.NextActionHint)
+
+    // AC2's second branch, measured rather than asserted from the shape: the class is genuinely not
+    // repairable, so `upgrade` must SAY so — and the run must be a true no-op, not a write that
+    // fails to converge. Two consecutive `--yes` runs, tree byte-identical throughout.
+    [<Fact>]
+    let ``upgrade --yes over an EXTRA junk file is a stable no-op that says it cannot repair it`` () =
+        let fixtureRoot = productCoherentFixture ()
+        let id = "fs-gg-sdd-plan"
+        TestSupport.writeRelative fixtureRoot $".claude/skills/{id}/{junkFile}" junkBody
+
+        let before = treeHash fixtureRoot
+        let first = upgradeYes fixtureRoot
+        let afterFirst = treeHash fixtureRoot
+        let second = upgradeYes fixtureRoot
+
+        for report in [ first; second ] do
+            let summary = report.Upgrade.Value
+            Assert.True summary.ResidualDrift
+            Assert.Contains($".codex/skills/{id}/{junkFile}", summary.SkillDriftPaths)
+            assertNotMirroredAdvisory summary.NextActionHint
+            Assert.Equal(0, exitCode report)
+
+        // Unchanged after each run: nothing was mirrored, nothing was deleted, nothing converged.
+        Assert.Equal(before, afterFirst)
+        Assert.Equal(before, treeHash fixtureRoot)
+
+    // The second realistic trigger from §Observed, with no user junk involved: a provider drops a
+    // file from a multi-file skill and the no-clobber re-mirror never removes the stale copies, so
+    // the roots disagree about whether the file exists. On disk this is the SAME condition as the
+    // junk file — a file some roots carry and one does not — and it must get the same advisory.
+    [<Fact>]
+    let ``a provider-dropped file left in a subset of roots is not-mirrored, not divergent`` () =
+        let fixtureRoot = productCoherentFixture ()
+
+        // `.codex` was refreshed and lost the file; `.agents`/`.claude` still carry it, in
+        // agreement with each other — so nothing here is a byte divergence.
+        writeAuxiliaries fixtureRoot productSkillId [ ".agents", "stale\n"; ".claude", "stale\n" ]
+
+        let doctor = doctorSummary (doctorReport fixtureRoot)
+
+        Assert.Equal<string list>([ auxiliaryPath ".codex" productSkillId ], doctor.SkillDriftPaths)
+        Assert.False doctor.IsCoherent
+
+        let summary = (upgradeYes fixtureRoot).Upgrade.Value
+        assertNotMirroredAdvisory summary.NextActionHint
+        Assert.DoesNotContain(divergenceWording, summary.NextActionHint)
+        Assert.True summary.ResidualDrift
+
+    // The reserved half of AC1: byte divergence must keep the byte-divergence advisory, unchanged.
+    // Without this the fix could satisfy the junk case by simply rewording every advisory.
+    [<Fact>]
+    let ``byte divergence alone still closes with the canonical-body advisory`` () =
+        let fixtureRoot = productCoherentFixture ()
+
+        writeAuxiliaries fixtureRoot productSkillId [ ".agents", "a\n"; ".claude", "a\n"; ".codex", "b\n" ]
+
+        let summary = (upgradeYes fixtureRoot).Upgrade.Value
+
+        Assert.Equal<string>(
+            "Skill content drift detected (advisory); some copies diverge from their canonical body — re-scaffold or restore the canonical skill sources.",
+            summary.NextActionHint
+        )
+
+    // Both conditions at once: the advisory must state BOTH, because the repairs differ per path
+    // and one sentence cannot describe two files in opposite states.
+    [<Fact>]
+    let ``both conditions at once are both named in the advisory`` () =
+        let fixtureRoot = productCoherentFixture ()
+        let id = "fs-gg-sdd-plan"
+
+        // Not mirrored: present in `.claude` only.
+        TestSupport.writeRelative fixtureRoot $".claude/skills/{id}/{junkFile}" junkBody
+        // Divergent: present in every root, bodies disagree.
+        writeAuxiliaries fixtureRoot productSkillId [ ".agents", "a\n"; ".claude", "a\n"; ".codex", "b\n" ]
+
+        let summary = (upgradeYes fixtureRoot).Upgrade.Value
+
+        assertNotMirroredAdvisory summary.NextActionHint
+        Assert.Contains(divergenceWording, summary.NextActionHint)
+
+    // The classification is a SPLIT of the existing surface, not a second opinion about it: an
+    // invariant every hint branch depends on and nothing else states. If a later change lets a path
+    // fall out of all three classes, the advisory silently stops describing it.
+    [<Theory>]
+    [<InlineData "notMirrored">]
+    [<InlineData "divergent">]
+    [<InlineData "mixed">]
+    [<InlineData "missingRoot">]
+    [<InlineData "lostEverywhere">]
+    let ``the drift classes partition the reported paths`` (shape: string) =
+        let id = "fs-gg-sdd-plan"
+        let bodies = skillBodiesFor coherentPresent
+
+        let bodies =
+            match shape with
+            | "notMirrored" -> bodies |> Map.add (auxiliaryPath ".claude" id) "only here\n"
+            | "divergent" ->
+                bodies
+                |> Map.add (auxiliaryPath ".agents" id) "a\n"
+                |> Map.add (auxiliaryPath ".claude" id) "a\n"
+                |> Map.add (auxiliaryPath ".codex" id) "b\n"
+            | "mixed" ->
+                bodies
+                |> Map.add (auxiliaryPath ".claude" id) "only here\n"
+                |> Map.add (skillMd ".claude" "fs-gg-sdd-charter") "EDITED\n"
+            | "missingRoot" -> bodies |> Map.remove (skillMd ".codex" id)
+            | "lostEverywhere" -> allRoots |> List.fold (fun acc root -> Map.remove (skillMd root id) acc) bodies
+            | other -> failwith $"unknown shape {other}"
+
+        let report =
+            Drift.compute
+                (Some(record None))
+                (Some(descriptor None))
+                None
+                installedVersion
+                (Set.ofList coherentPresent)
+                bodies
+
+        Assert.NotEmpty report.SkillDriftPaths
+
+        // Exhaustive: every reported path is in exactly one class, and the classes add nothing.
+        Assert.Equal<string list>(
+            report.SkillDriftPaths,
+            report.SkillNotMirroredPaths
+            @ report.SkillLostPaths
+            @ report.SkillDivergentPaths
+            |> List.distinct
+            |> List.sort
+        )
+
+        // Pairwise disjoint, compared by POSITION rather than by value: two DIFFERENT classes that
+        // happened to hold the same non-empty set would be the worst overlap there is, and a
+        // `left <> right` guard is exactly the one that would skip it.
+        let classes =
+            [ "notMirrored", report.SkillNotMirroredPaths
+              "lost", report.SkillLostPaths
+              "divergent", report.SkillDivergentPaths ]
+            |> List.map (fun (name, paths) -> name, Set.ofList paths)
+
+        for i in 0 .. classes.Length - 1 do
+            for j in i + 1 .. classes.Length - 1 do
+                let leftName, left = classes[i]
+                let rightName, right = classes[j]
+
+                Assert.True(
+                    Set.isEmpty (Set.intersect left right),
+                    $"{leftName} and {rightName} both claim {Set.intersect left right |> Set.toList}"
+                )
+
+    // A root that carries no copy of the skill while ANOTHER root still has one is not-mirrored —
+    // `.codex` has nothing to diverge FROM, and there is a sibling to copy from. This is one of the
+    // two paths the classifier derives from skill-level `MissingRoots`, so it is pinned separately.
+    [<Fact>]
+    let ``a root with no copy of the skill classifies as not mirrored`` () =
+        let fixtureRoot = productCoherentFixture ()
+        writeCoherentAuxiliaries fixtureRoot productSkillId
+        Directory.Delete(absolute fixtureRoot $".codex/skills/{productSkillId}", true)
+
+        let summary = (upgradeYes fixtureRoot).Upgrade.Value
+
+        Assert.Equal<string list>([ skillMd ".codex" productSkillId ], summary.SkillDriftPaths)
+        assertNotMirroredAdvisory summary.NextActionHint
+        Assert.DoesNotContain(divergenceWording, summary.NextActionHint)
+
+    // The other path from skill-level `MissingRoots`, and the reason the not-mirrored sentence
+    // cannot simply absorb it: when NO root carries the skill, "another root carries this file" is
+    // FALSE and "copy it from the root that has it" is an impossible instruction. Folding this into
+    // the not-mirrored class would reintroduce, in the fix, the exact defect #736 reports — an
+    // advisory whose text describes a condition the workspace is not in.
+    //
+    // The product skill is the one that can reach this state and stay there: it is not in
+    // `expectedArtifactPaths`, so no re-seed step ever targets it.
+    [<Fact>]
+    let ``a skill lost from EVERY root is not called not-mirrored, and says what to restore`` () =
+        let fixtureRoot = productCoherentFixture ()
+        writeCoherentAuxiliaries fixtureRoot productSkillId
+
+        // Every root loses `SKILL.md`; the auxiliary survives, so the directories still exist.
+        for root in allRoots do
+            File.Delete(absolute fixtureRoot (skillMd root productSkillId))
+
+        let summary = (upgradeYes fixtureRoot).Upgrade.Value
+
+        Assert.Equal<string list>(
+            allRoots |> List.map (fun root -> skillMd root productSkillId) |> List.sort,
+            summary.SkillDriftPaths
+        )
+
+        Assert.Contains("absent from every declared root", summary.NextActionHint)
+        Assert.Contains("restore the canonical skill sources", summary.NextActionHint)
+        // The two false statements, neither of which may appear.
+        Assert.DoesNotContain("another root carries", summary.NextActionHint)
+        Assert.DoesNotContain(divergenceWording, summary.NextActionHint)
+        Assert.True summary.ResidualDrift
+
+    // ---------------------------------------------------------------------------------------
     // The `upgrade` lane over auxiliary drift.
     // ---------------------------------------------------------------------------------------
 
