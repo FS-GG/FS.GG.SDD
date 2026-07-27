@@ -129,11 +129,47 @@ module ContractVersionTests =
     // the two-PR ADR-0061 flow; `.github#1261` (step 2) pins this published version and flips the
     // registry, retiring the ADR-0037 §3 "known, not enforced" rail that cost an ADR + republish +
     // bump+pin per new scope value.
+    //
+    // 7.0.0 -> 7.1.0 (FS.GG.SDD#720, owed by FS.GG.SDD#717 / PR #719): an ADDITIVE MINOR — the
+    // version-bump checklist's fourth row, "add a new module, type, or `val`". #719 grew
+    // `Fsgg.SkillMirror` so a skill can be MULTI-FILE: it adds the types `SkillFile`,
+    // `MultiFileSkill`, `MirrorRefusalReason`, `MirrorRefusal` and `MirrorPlan`, and the vals
+    // `skillFilePath` and `mirrorFiles`. ZERO members were removed, renamed or retyped, and no case
+    // was added to an existing public DU — the new DUs (`MirrorRefusalReason`) are themselves new
+    // types, so they do not carry the source-breaking `FS0025` tax the DU row warns about. Both
+    // detectors agree and neither is being overruled: `surface --check` classifies the delta
+    // `additive` / suggested `7.1.0` against the committed `.fsi` baseline, and
+    // `scripts/apicompat-check.sh` reports `FS.GG.Contracts OK (compatible with 7.0.0)` — which for
+    // an additive delta is a CORRECT pass, not a second opinion, since additions are binary-
+    // compatible and ApiCompat is structurally blind to this whole class.
+    //
+    // WHY IT IS A SEPARATE ISSUE FROM THE CHANGE THAT EARNED IT: a Contracts bump is a COORDINATED
+    // three-part change (docs/release/contracts-version-bump-checklist.md) — bump the source here,
+    // publish `7.1.0` to the org feed, then advance `fsgg-contracts.version` and (only after the
+    // feed serves it) `package-version` in `FS-GG/.github`'s `registry/dependencies.yml`. #717 was
+    // an additive library change and correctly declined to take that release decision unilaterally.
+    // The debt it left is EXACTLY the #432 shape this file already records twice: surface growth
+    // shipped under a number that never moved, which makes the `.nupkg` at `7.0.0` and the source at
+    // `7.0.0` different artifacts. `surface --check`'s version half is advisory and never reds a PR
+    // (ADR-0025 §2), so nothing catches this automatically — it has to be done deliberately, and
+    // this commit is the deliberate half that can be done in-repo.
+    //
+    // WHAT THIS COMMIT DOES NOT DO, STATED SO THE NEXT READER DOES NOT ASSUME IT: it moves the
+    // SOURCE only. Between this merge and the feed publish + registry flip the coherence invariant
+    // `source == feed(newest) == registry.version == registry.package-version` is BROKEN, and
+    // `.github`'s `source-coherence` gate reds on that repo — correctly, and saying exactly what is
+    // owed. Since FS-GG/.github#741 that red lands on `.github` ALONE (the repo that owns the
+    // registry and is the only one that can flip it); it no longer holds this repo's merges or any
+    // other repo's. Source-first is not a choice of ordering here, it is the ONLY correct order:
+    // the publish workflow's manual-dispatch path packs `-p:Version=<input>` with NO
+    // source-vs-published drift guard, so publishing before the source moves would ship a package
+    // whose `ContractVersion.value` disagrees with its own package version — the 1.4.1 defect this
+    // file's second test exists to prevent.
     [<Fact>]
-    let ``contract version self-report matches 7_0_0`` () =
-        Assert.Equal("7.0.0", ContractVersion.value)
+    let ``contract version self-report matches 7_1_0`` () =
+        Assert.Equal("7.1.0", ContractVersion.value)
         Assert.Equal(7, ContractVersion.major)
-        Assert.Equal(0, ContractVersion.minor)
+        Assert.Equal(1, ContractVersion.minor)
         Assert.Equal(0, ContractVersion.patch)
 
     // THE ASSERTION THAT WAS MISSING, AND THE ONLY ONE THAT WOULD HAVE CAUGHT IT.
