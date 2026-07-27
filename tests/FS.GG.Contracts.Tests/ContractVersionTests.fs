@@ -247,11 +247,35 @@ module ContractVersionTests =
     // source-vs-published drift guard, so publishing before the source moves would ship a package
     // whose `ContractVersion.value` disagrees with its own package version — the 1.4.1 defect this
     // file's second test exists to prevent.
+    // 7.1.0 -> 7.2.0 (FS.GG.SDD#727): an ADDITIVE MINOR — the version-bump checklist's fourth row,
+    // "add a new module, type, or `val`". The ADR-0017 producer manifest is amended to
+    // content-address a skill's COMPLETE FILE SET rather than its `SKILL.md` alone, which grows
+    // `Schemas.fsi` by the types `SkillManifestFile`, `SkillManifestFileSet` and `SkillManifestV2`,
+    // and `SkillMirror.fsi` by the type `ExpectedSkillFiles` and the val `verifyFileSet`. ZERO
+    // members were removed, renamed or retyped; no case was added to an existing public DU; and —
+    // the row that would have forced a MAJOR — NO public record gained a field. That last point was
+    // a design constraint, not an outcome: the obvious spelling of this change is a `Files` field on
+    // `Schemas.SkillManifestEntry` or on `SkillMirror.ExpectedSkill`, and either would have
+    // regenerated a positional primary constructor and deleted the old one (`CP0002`), costing a
+    // coordinated major that was NOT authorised. The amendment is expressed as NEW types and a NEW
+    // entry point beside the shipped ones instead, which is why it fits in a minor at all.
+    //
+    // AND IT IS BEING MADE HERE RATHER THAN DEFERRED, WHICH IS THE LESSON THIS FILE RECORDS THREE
+    // TIMES ALREADY. #717's growth could ride an unpublished 7.1.0 because 7.1.0 had not shipped;
+    // 7.1.0 IS now live on the org feed (verified against
+    // `/orgs/FS-GG/packages/nuget/FS.GG.Contracts/versions` while preparing this change), so
+    // growing the surface without moving the number would make the `.nupkg` at 7.1.0 and the source
+    // at 7.1.0 different artifacts — the exact #426/#432 shape recorded above, for the third time.
+    //
+    // WHAT THIS COMMIT DOES NOT DO: it moves the SOURCE only. Between this merge and the feed
+    // publish + registry flip the coherence invariant is broken and `.github`'s `source-coherence`
+    // reds on that repo alone (FS-GG/.github#741). Note that registry is ALREADY behind at 7.0.0 —
+    // the 7.1.0 flip was never made — so this bump widens an existing gap rather than opening one.
     [<Fact>]
-    let ``contract version self-report matches 7_1_0`` () =
-        Assert.Equal("7.1.0", ContractVersion.value)
+    let ``contract version self-report matches 7_2_0`` () =
+        Assert.Equal("7.2.0", ContractVersion.value)
         Assert.Equal(7, ContractVersion.major)
-        Assert.Equal(1, ContractVersion.minor)
+        Assert.Equal(2, ContractVersion.minor)
         Assert.Equal(0, ContractVersion.patch)
 
     // THE ASSERTION THAT WAS MISSING, AND THE ONLY ONE THAT WOULD HAVE CAUGHT IT.

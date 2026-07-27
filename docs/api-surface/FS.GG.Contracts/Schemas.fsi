@@ -138,9 +138,51 @@ module Schemas =
 
     /// A producer's declarative skill manifest — the contract the skill fan-out
     /// reads instead of directory scans or per-source `template.json` strings.
+    ///
+    /// This is the SCHEMA v1 document, and it is unchanged. `SkillManifestEntry.Sha256`
+    /// content-addresses the skill's `SKILL.md` body and NOTHING ELSE, so at v1 a skill's
+    /// `references/**` and `agents/*.yaml` have no declared authority (FS.GG.SDD#727).
+    /// `SkillManifestV2` below is the amendment; a v1 document stays readable.
     type SkillManifest =
         { SchemaVersion: int
           Skills: SkillManifestEntry list }
+
+    /// One file of a skill, content-addressed by the producer manifest (ADR-0017 schema v2,
+    /// FS.GG.SDD#727). `RelativePath` is relative to the skill's OWN directory
+    /// (`<root>/skills/<id>/`) — the same spelling `SkillMirror.SkillFile.RelativePath` uses,
+    /// so `SKILL.md` is simply `"SKILL.md"` and a reference is `"references/deep-detail.md"`.
+    type SkillManifestFile =
+        { RelativePath: string; Sha256: string }
+
+    /// One skill in a schema-v2 producer manifest: everything v1 declares about it, plus a
+    /// digest for EVERY file it carries.
+    ///
+    /// The v1 entry is carried WHOLE (`Skill`) rather than re-spelled field by field, so v2 is
+    /// exactly "v1 plus one fact" and the two cannot drift apart. `Files` is the skill's
+    /// COMPLETE file set, not a supplement to `Skill.Sha256`: it includes `SKILL.md`, whose
+    /// digest is the same value `Skill.Sha256` carries.
+    type SkillManifestFileSet =
+        { Skill: SkillManifestEntry
+          Files: SkillManifestFile list }
+
+    /// A producer's declarative skill manifest at SCHEMA v2 (ADR-0017, FS.GG.SDD#727) — the
+    /// amendment that content-addresses a skill's COMPLETE FILE SET rather than its `SKILL.md`
+    /// alone.
+    ///
+    /// Why it is a separate type and a version bump rather than a widening of `SkillManifest`:
+    /// a consumer reading v1 must not be handed v2 semantics implicitly. At v1, "this skill's
+    /// auxiliaries carry no declared digest" is TRUE and the absence of per-file digests says
+    /// so; at v2 the declared set is COMPLETE, so a file outside it is a file no digest
+    /// authorises. Those are different claims, and a reader must be able to tell which it holds
+    /// by reading `SchemaVersion` — which is why the version moves.
+    ///
+    /// Coverage is total BY CONSTRUCTION: every skill is a `SkillManifestFileSet`, so a v2
+    /// document cannot declare a skill and omit its file set. That is the property the whole
+    /// amendment buys — at v1 the same omission was unrepresentable-as-a-defect, because there
+    /// was nothing to omit.
+    type SkillManifestV2 =
+        { SchemaVersion: int
+          Skills: SkillManifestFileSet list }
 
     /// A declared evidence node in the governance-handoff projection.
     type GovernanceHandoffEvidenceNode =

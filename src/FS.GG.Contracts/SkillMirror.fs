@@ -398,3 +398,173 @@ module SkillMirror =
                       Scope = skill.Scope
                       MissingRoots = missingRoots
                       Files = fileDrift })
+
+    // -----------------------------------------------------------------------------------------
+    // WHOLE-FILE-SET verify (FS.GG.SDD#727).
+    // -----------------------------------------------------------------------------------------
+    // #721 gave the library a multi-file VERIFY, but its third fact stayed pinned to `SKILL.md`,
+    // because that is all `ExpectedSkill.Sha256` — and the ADR-0017 v1 manifest behind it — could
+    // ever address. So `verifyFiles` reported `HashMismatchRoots = []` on every auxiliary BY
+    // CONSTRUCTION, and an empty list there reads as "hash checked, clean" when it means "no hash
+    // was available". Measured on this repo: 32 skills, 51 files, of which the producer manifest
+    // declared a digest for 16 — every `references/**` and `agents/*.yaml` held by presence and
+    // cross-root identity alone. Cross-root identity is a CONSISTENCY guarantee, not an
+    // AUTHENTICITY one: three roots all materialized from one tampered producer copy are
+    // byte-identical, and no digest anywhere contradicts them.
+    //
+    // Everything below is ADDITIVE, for the same reason #717 and #721 were: `verify`, `verifyFiles`,
+    // `ExpectedSkill`, `SkillFileDrift` and `MultiFileSkillDrift` are untouched, so every existing
+    // caller keeps its byte-for-byte call shape and the two spellings coexist as ONE algorithm
+    // (ADR-0014 §Decision 2). It is a new expectation type and a new entry point, NOT a new field
+    // on a shipped record — which would have deleted that record's positional constructor and cost
+    // a coordinated MAJOR nobody authorised (docs/release/contracts-version-bump-checklist.md).
+
+    type ExpectedSkillFiles =
+        { Id: string
+          Scope: SkillScope
+          Files: SkillManifestFile list }
+
+    type DeclaredFileDrift =
+        { RelativePath: string
+          MissingRoots: string list
+          Divergent: bool
+          HashMismatchRoots: string list
+          UndeclaredRoots: string list }
+
+    type DeclaredSkillDrift =
+        { Id: string
+          Scope: SkillScope
+          MissingRoots: string list
+          Files: DeclaredFileDrift list }
+
+    let verifyFileSet
+        (roots: string list)
+        (expected: ExpectedSkillFiles list)
+        (actual: ActualSkillFiles list)
+        : DeclaredSkillDrift list =
+        // Identical observation fold to `verifyFiles` — same normalization, same first-entry-wins
+        // determinism — so the two entry points cannot disagree about what is ON DISK. Only the
+        // EXPECTATION differs, which is the entire point of having two.
+        let filesAt =
+            actual
+            |> List.choose (fun copy ->
+                copy.Files
+                |> Option.map (fun files ->
+                    (copy.Root, copy.Id),
+                    files
+                    |> List.map (fun file -> normalizeRelative file.RelativePath, file.Body)
+                    |> List.distinctBy fst
+                    |> Map.ofList))
+            |> Map.ofList
+
+        expected
+        |> List.sortBy (fun skill -> skill.Id)
+        |> List.choose (fun skill ->
+            // The declared set, normalized the same way the observation is. A relative path
+            // declared twice is a producer question and not a drift fact (first wins), exactly as
+            // a path repeated within one copy is.
+            let declared =
+                skill.Files
+                |> List.map (fun file -> normalizeRelative file.RelativePath, file.Sha256)
+                |> List.distinctBy fst
+                |> Map.ofList
+
+            let perRoot =
+                roots |> List.map (fun root -> root, Map.tryFind (root, skill.Id) filesAt)
+
+            let missingRoots =
+                perRoot
+                |> List.choose (fun (root, files) -> if Option.isNone files then Some root else None)
+
+            let presentRoots =
+                perRoot
+                |> List.choose (fun (root, files) -> files |> Option.map (fun f -> root, f))
+
+            // `declared ∪ observed`, NOT the observed union alone. This is the strength gain over
+            // `verifyFiles`: a declared file that no root carries still gets a row, so a file
+            // deleted from EVERY root is drift instead of nothing to compare. With an empty
+            // declaration this degenerates to exactly `verifyFiles`'s observed union.
+            let fileUnion =
+                (declared |> Map.keys |> List.ofSeq)
+                @ (presentRoots |> List.collect (fun (_, files) -> files |> Map.keys |> List.ofSeq))
+                |> List.distinct
+                |> List.sort
+
+            let fileDrift =
+                fileUnion
+                |> List.choose (fun relativePath ->
+                    let bodyPerRoot =
+                        presentRoots
+                        |> List.map (fun (root, files) -> root, Map.tryFind relativePath files)
+
+                    let fileMissingRoots =
+                        bodyPerRoot
+                        |> List.choose (fun (root, body) -> if Option.isNone body then Some root else None)
+
+                    let presentBodies = bodyPerRoot |> List.choose snd
+
+                    let divergent =
+                        match presentBodies with
+                        | [] -> false
+                        | first :: rest -> rest |> List.exists (fun body -> body <> first)
+
+                    // Fact 3: "matches the declared digest", over the WHOLE declared set rather than
+                    // `SKILL.md` alone. It means EXACTLY what it means under `verifyFiles` — roots
+                    // whose copy of a file that HAS a declared digest does not match it — and it is
+                    // never borrowed to say anything else.
+                    let hashMismatchRoots =
+                        match Map.tryFind relativePath declared with
+                        | Some declaredSha when not (String.IsNullOrWhiteSpace declaredSha) ->
+                            bodyPerRoot
+                            |> List.choose (fun (root, body) ->
+                                match body with
+                                | Some content when sha256 content <> declaredSha -> Some root
+                                | _ -> None)
+                        // Declared with a BLANK digest: the producer named the file and declared
+                        // nothing about its content. Presence and cross-root identity still hold;
+                        // there is no digest to contradict. Undeclared entirely: that is fact 4's
+                        // subject, not this one.
+                        | _ -> []
+
+                    // Fact 4, and the reason it is a FIELD rather than a reuse of fact 3: "this
+                    // file is not in the declaration at all" and "this file's bytes contradict its
+                    // declared digest" are DIFFERENT CAUSES with different repairs — regenerate the
+                    // manifest versus restore the file. Reporting the first through
+                    // `HashMismatchRoots` would make one field mean two things, which is precisely
+                    // the defect this whole item exists to remove: at v1 an empty
+                    // `HashMismatchRoots` meant "unchecked" and read as "checked and clean", and
+                    // overloading it here would rebuild that ambiguity pointing the other way.
+                    //
+                    // Empty when the caller holds NO declaration for this skill (`Files = []`) —
+                    // with no authority, nothing can be said to be outside it, and a co-tenant
+                    // skill must not be flooded with findings for files nobody here declared.
+                    let undeclaredRoots =
+                        if Map.isEmpty declared || Map.containsKey relativePath declared then
+                            []
+                        else
+                            bodyPerRoot
+                            |> List.choose (fun (root, body) -> if Option.isSome body then Some root else None)
+
+                    if
+                        List.isEmpty fileMissingRoots
+                        && not divergent
+                        && List.isEmpty hashMismatchRoots
+                        && List.isEmpty undeclaredRoots
+                    then
+                        None
+                    else
+                        Some
+                            { RelativePath = relativePath
+                              MissingRoots = fileMissingRoots
+                              Divergent = divergent
+                              HashMismatchRoots = hashMismatchRoots
+                              UndeclaredRoots = undeclaredRoots })
+
+            if List.isEmpty missingRoots && List.isEmpty fileDrift then
+                None
+            else
+                Some
+                    { Id = skill.Id
+                      Scope = skill.Scope
+                      MissingRoots = missingRoots
+                      Files = fileDrift })

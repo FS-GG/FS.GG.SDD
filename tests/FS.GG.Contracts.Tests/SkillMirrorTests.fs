@@ -678,3 +678,232 @@ module SkillMirrorTests =
                     o.HashMismatchRoots,
                     skillMd |> Option.map (fun f -> f.HashMismatchRoots) |> Option.defaultValue []
                 )
+
+    // ----- verifyFileSet (FS.GG.SDD#727) -----
+    //
+    // #721 gave `verifyFiles` three independent facts over a skill's whole file set, but its THIRD
+    // fact could only ever address `SKILL.md`, because that is all the ADR-0017 v1 manifest
+    // declared. So `HashMismatchRoots = []` on an auxiliary meant "no digest was available" while
+    // reading as "hash checked, clean". These tests pin the widened fact — and, deliberately, pin
+    // it BY CONTRAST: the headline case asserts what `verifyFiles` reports on the identical input,
+    // so the strengthening is stated as a difference rather than asserted in prose.
+
+    let private declared rel sha : SkillManifestFile = { RelativePath = rel; Sha256 = sha }
+
+    let private expectedFiles id files : ExpectedSkillFiles =
+        { Id = id
+          Scope = Process
+          Files = files }
+
+    /// The declaration matching `multiFile body` — every file of the 3-file skill, digested.
+    let private declaredMultiFile body =
+        [ declared "SKILL.md" (sha256 body)
+          declared "references/deep-detail.md" (sha256 "detail\n")
+          declared "agents/openai.yaml" (sha256 "name: s\n") ]
+
+    // THE DEFECT THE ITEM NAMES, AND THE ONE THE OLD SURFACE CANNOT SEE.
+    //
+    // Every root carries the SAME tampered auxiliary. Cross-root identity is therefore CLEAN — the
+    // three copies agree with each other perfectly — and `verifyFiles` has no digest for that file,
+    // so it reports NOTHING AT ALL. That is the gap in one sentence: consistency is not
+    // authenticity, and three roots materialized from one tampered producer copy are byte-identical.
+    //
+    // The assertion on `verifyFiles` is not decoration. It is the proof that this test fails
+    // without the change: run the same input through the pre-#727 surface and it is empty.
+    [<Fact>]
+    let ``verifyFileSet catches a tampered AUXILIARY that every root agrees on`` () =
+        let body = "canonical\n"
+
+        let tampered =
+            [ file "SKILL.md" body
+              file "references/deep-detail.md" "TAMPERED\n"
+              file "agents/openai.yaml" "name: s\n" ]
+
+        let actual = roots |> List.map (fun r -> copyFiles r "s" (Some tampered))
+
+        // The old surface: silent. No digest for the auxiliary, and the roots agree.
+        Assert.Empty(verifyFiles roots [ expected "s" (sha256 body) ] actual)
+
+        // The widened one: named, with every root that carries the unauthorised bytes.
+        let d =
+            List.exactlyOne (verifyFileSet roots [ expectedFiles "s" (declaredMultiFile body) ] actual)
+
+        Assert.Empty d.MissingRoots
+        let f = List.exactlyOne d.Files
+        Assert.Equal("references/deep-detail.md", f.RelativePath)
+        Assert.Equal<string list>(roots, f.HashMismatchRoots)
+        // INDEPENDENT: a hash mismatch did not manufacture a missing root, a divergence, or an
+        // undeclared-file finding. The roots really do agree with each other — they agree on the
+        // WRONG bytes, for a file the manifest DOES declare.
+        Assert.Empty f.MissingRoots
+        Assert.False f.Divergent
+        Assert.Empty f.UndeclaredRoots
+
+    // A DECLARED file that NO root carries. `verifyFiles` compares the OBSERVED union, so a file
+    // deleted from every root leaves nothing to compare and the skill reads coherent — the shape
+    // that let a skill deleted from all three roots pass in FS.GG.SDD#726. The declaration is an
+    // authority, so its absence is drift.
+    [<Fact>]
+    let ``verifyFileSet reports a declared file missing from EVERY root`` () =
+        let body = "canonical\n"
+
+        let actual =
+            roots |> List.map (fun r -> copyFiles r "s" (Some [ file "SKILL.md" body ]))
+
+        // The old surface: silent — there is nothing in the observed union to disagree about.
+        Assert.Empty(verifyFiles roots [ expected "s" (sha256 body) ] actual)
+
+        let d =
+            List.exactlyOne (verifyFileSet roots [ expectedFiles "s" (declaredMultiFile body) ] actual)
+
+        Assert.Empty d.MissingRoots // the skill itself is present everywhere
+
+        Assert.Equal<string list>(
+            [ "agents/openai.yaml"; "references/deep-detail.md" ],
+            d.Files |> List.map (fun f -> f.RelativePath)
+        )
+
+        for f in d.Files do
+            Assert.Equal<string list>(roots, f.MissingRoots)
+            Assert.False f.Divergent
+            Assert.Empty f.HashMismatchRoots
+            Assert.Empty f.UndeclaredRoots
+
+    // An UNDECLARED file that every root carries. At v2 the declared set is COMPLETE, so no
+    // declared digest authorises these bytes. Reporting nothing would rebuild the exact misreading
+    // this item closed, one level up: a file that cannot be verified must not read as coherent.
+    [<Fact>]
+    let ``verifyFileSet reports an UNDECLARED file rather than passing it over`` () =
+        let body = "canonical\n"
+
+        let actual =
+            roots
+            |> List.map (fun r -> copyFiles r "s" (Some [ file "SKILL.md" body; file "references/extra.md" "new\n" ]))
+
+        let d =
+            List.exactlyOne (verifyFileSet roots [ expectedFiles "s" [ declared "SKILL.md" (sha256 body) ] ] actual)
+
+        let f = List.exactlyOne d.Files
+        Assert.Equal("references/extra.md", f.RelativePath)
+        Assert.Equal<string list>(roots, f.UndeclaredRoots)
+        // INDEPENDENT, and this is the point of the separate field: "no declaration covers this
+        // file" is NOT "its bytes contradict a declared digest". Reporting it through
+        // `HashMismatchRoots` would make one field mean two things — the very ambiguity this
+        // amendment removes, pointing the other way.
+        Assert.Empty f.HashMismatchRoots
+        Assert.Empty f.MissingRoots
+        Assert.False f.Divergent
+
+    // An EMPTY declaration is "no authority held", not "nothing is expected" — the exact analogue
+    // of `ExpectedSkill.Sha256 = ""`. A co-tenant skill whose manifest lives in another producer's
+    // repo must not have an expectation invented for it, and must not be flooded with per-file
+    // mismatches for files nobody here declared.
+    [<Fact>]
+    let ``verifyFileSet with an EMPTY declaration skips hash-match entirely`` () =
+        let body = "canonical\n"
+
+        let actual = roots |> List.map (fun r -> copyFiles r "s" (Some(multiFile body)))
+
+        Assert.Empty(verifyFileSet roots [ expectedFiles "s" [] ] actual)
+
+    // …and still asserts the other two facts. An empty declaration weakens fact 3 ALONE.
+    [<Fact>]
+    let ``verifyFileSet with an EMPTY declaration still reports divergence and absence`` () =
+        let body = "canonical\n"
+
+        let actual =
+            [ copyFiles ".claude" "s" (Some(multiFile body))
+              copyFiles
+                  ".codex"
+                  "s"
+                  (Some
+                      [ file "SKILL.md" body
+                        file "references/deep-detail.md" "EDITED\n"
+                        file "agents/openai.yaml" "name: s\n" ])
+              copyFiles ".agents" "s" None ]
+
+        let d = List.exactlyOne (verifyFileSet roots [ expectedFiles "s" [] ] actual)
+        Assert.Equal<string list>([ ".agents" ], d.MissingRoots)
+        let f = List.exactlyOne d.Files
+        Assert.Equal("references/deep-detail.md", f.RelativePath)
+        Assert.True f.Divergent
+
+    // A declared file that IS present and DOES match is silent — the check can pass, which is the
+    // other half of "a check that cannot fail is not a check".
+    [<Fact>]
+    let ``verifyFileSet is clean when every declared file matches`` () =
+        let body = "canonical\n"
+
+        let actual = roots |> List.map (fun r -> copyFiles r "s" (Some(multiFile body)))
+
+        Assert.Empty(verifyFileSet roots [ expectedFiles "s" (declaredMultiFile body) ] actual)
+
+    // ADDITIVE, and provably so — the same equivalence #721 pinned for `verifyFiles` against
+    // `verify`, one level up. Fed a single-file skill, `verifyFileSet` with a one-row declaration
+    // reports precisely what `verifyFiles` reports for the same digest, and with an empty
+    // declaration precisely what it reports for `Sha256 = ""`. Neither shipped function is
+    // reimplemented in terms of the other; this is what lets all three coexist as ONE algorithm
+    // (ADR-0014 §Decision 2).
+    [<Fact>]
+    let ``verifyFileSet agrees with verifyFiles on every single-file case`` () =
+        let body = "canonical\n"
+
+        let cases =
+            [ "coherent", [ Some body; Some body; Some body ], sha256 body
+              "missing", [ Some body; Some body; None ], sha256 body
+              "divergent", [ Some body; Some "EDITED\n"; Some body ], ""
+              "hash", [ Some body; Some body; Some "TAMPERED\n" ], sha256 body
+              "all-absent", [ None; None; None ], "" ]
+
+        for (id, bodies, sha) in cases do
+            let observed =
+                List.zip roots bodies
+                |> List.map (fun (r, b) -> copyFiles r id (b |> Option.map (fun x -> [ file "SKILL.md" x ])))
+
+            let old = verifyFiles roots [ expected id sha ] observed
+
+            let declaration = if sha = "" then [] else [ declared "SKILL.md" sha ]
+
+            let neu = verifyFileSet roots [ expectedFiles id declaration ] observed
+
+            Assert.Equal(List.length old, List.length neu)
+
+            for (o, n) in List.zip old neu do
+                Assert.Equal<string list>(o.MissingRoots, n.MissingRoots)
+                Assert.Equal(List.length o.Files, List.length n.Files)
+
+                for (fo, fn) in List.zip o.Files n.Files do
+                    Assert.Equal(fo.RelativePath, fn.RelativePath)
+                    Assert.Equal(fo.Divergent, fn.Divergent)
+                    Assert.Equal<string list>(fo.HashMismatchRoots, fn.HashMismatchRoots)
+                    Assert.Equal<string list>(fo.MissingRoots, fn.MissingRoots)
+                    // The fourth fact is silent on a single-file skill whose one file IS declared,
+                    // which is what makes the equivalence an equivalence and not a coincidence.
+                    Assert.Empty fn.UndeclaredRoots
+
+    [<Fact>]
+    let ``verifyFileSet returns drifted skills sorted by id`` () =
+        let actual = [ copyFiles ".claude" "z" None; copyFiles ".claude" "a" None ]
+
+        Assert.Equal<string list>(
+            [ "a"; "z" ],
+            verifyFileSet [ ".claude" ] [ expectedFiles "z" []; expectedFiles "a" [] ] actual
+            |> List.map (fun d -> d.Id)
+        )
+
+    // Path spelling is normalized on BOTH sides, so a declaration written `references\deep.md`
+    // and an observation read `references/deep.md` are the same file. Without this a Windows-
+    // authored manifest would report every auxiliary as both missing and undeclared at once.
+    [<Fact>]
+    let ``verifyFileSet normalizes declared and observed relative paths alike`` () =
+        let body = "canonical\n"
+
+        let actual =
+            roots
+            |> List.map (fun r -> copyFiles r "s" (Some [ file "SKILL.md" body; file "references/deep.md" "d\n" ]))
+
+        let declaration =
+            [ declared "SKILL.md" (sha256 body)
+              declared "references\\deep.md" (sha256 "d\n") ]
+
+        Assert.Empty(verifyFileSet roots [ expectedFiles "s" declaration ] actual)
