@@ -80,6 +80,55 @@ module CommandEffects =
         else
             None
 
+    /// The three outcomes of a `ReadFile`, kept distinct — FS-GG/FS.GG.SDD#735.
+    ///
+    /// `Ok None` (absent) and `Ok (Some _)` (read) were the only two before, because a read that
+    /// THREW fell through to `interpret`'s outer handler and became a `toolDefect` — exit 2. Since
+    /// #726 `doctor` reads every file under every expected skill directory across three roots, so a
+    /// single `chmod 000` anywhere in that tree hard-failed a lane whose header advertises a
+    /// strictly read-only projection. The maintainer decision on #735 settles the classification:
+    /// an unreadable file is a FINDING about the tree, not a defect in the tool.
+    ///
+    /// `Error message` is that third outcome. The caller reports it (naming the path) and hands the
+    /// pure core NO bytes, so every fold downstream sees the file exactly as it sees a missing one —
+    /// unverifiable, which each lane already reports as a finding. Nothing here can turn an
+    /// unreadable file into a pass.
+    ///
+    /// The catch is deliberately narrow, and this is the whole reason `ReadFile` gets its own `try`
+    /// rather than the outer one being softened: only a genuine READ failure on a file that EXISTS
+    /// is reclassified. `IOException` covers the real-world set (permission-adjacent IO faults, an
+    /// exclusive lock, a symlink loop, an over-long path) and `UnauthorizedAccessException` /
+    /// `SecurityException` the access ones. Anything else — a path the tool itself malformed, an
+    /// unsupported path shape — is still a tool defect and still reaches `interpret`'s handler.
+    ///
+    /// `EnumerateDirectory` is deliberately NOT reclassified here, and the omission is recorded, not
+    /// forgotten: FS-GG/FS.GG.SDD#743. `Directory.EnumerateFiles(_, _, SearchOption)` resolves to
+    /// `EnumerationOptions.CompatibleRecursive` (`IgnoreInaccessible = false`), so an unreadable
+    /// SUBdirectory under a skill root still throws and still exits 2. It cannot ride along on this
+    /// change because it has no equivalent degradation: swallowing it would return an EMPTY listing
+    /// for the whole root, dropping the siblings it could have listed and reporting them as phantom
+    /// drift — the blind spot the #735 decision's point 4 forbids outright. The fix there is a
+    /// tolerant enumeration that keeps what it could list and names what it could not, which is a
+    /// different change with different acceptance criteria.
+    let private tryReadSnapshot (projectRoot: string) (path: string) : Result<FileSnapshot option, string> =
+        let absolute = fullPath projectRoot path
+
+        if not (File.Exists absolute) then
+            Ok None
+        else
+            try
+                Ok(
+                    Some(
+                        { Path = path
+                          Text = File.ReadAllText absolute }
+                        : FileSnapshot
+                    )
+                )
+            with
+            | :? UnauthorizedAccessException as ex -> Error ex.Message
+            | :? System.Security.SecurityException as ex -> Error ex.Message
+            | :? IOException as ex -> Error ex.Message
+
     let directorySnapshot (projectRoot: string) (path: string) =
         let absolute = fullPath projectRoot path
 
@@ -473,9 +522,17 @@ module CommandEffects =
         try
             match effect with
             | ReadFile path ->
-                match snapshotIfExists projectRoot path with
-                | Some snapshot -> success effect (Some snapshot)
-                | None -> success effect None
+                match tryReadSnapshot projectRoot path with
+                | Ok snapshot -> success effect snapshot
+                | Error message ->
+                    // #735: interpreted, not failed. `Succeeded = true` with no snapshot is the
+                    // same shape an ABSENT file produces, so every downstream fold treats the file
+                    // as unverifiable by the path it already has for "no bytes" — no handler learns
+                    // a new state, and no reconciliation step is marked failed by a read it could
+                    // not perform. The warning is what stops that being silent: it names the file
+                    // and says the bytes were unavailable, which "missing" alone would not.
+                    { success effect None with
+                        Diagnostic = Some(Internal.DiagnosticConstructors.unreadableFile path message) }
             | EnumerateDirectory path ->
                 match directorySnapshot projectRoot path with
                 | Some snapshot -> success effect (Some snapshot)

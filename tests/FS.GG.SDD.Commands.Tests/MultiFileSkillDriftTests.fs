@@ -2,6 +2,7 @@ namespace FS.GG.SDD.Commands.Tests
 
 open System
 open System.IO
+open System.Runtime.InteropServices
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.Internal
 open Xunit
@@ -386,6 +387,201 @@ module MultiFileSkillDriftTests =
         // `ChangedArtifacts` catches what a tree hash over FILES cannot — a created directory.
         Assert.Empty report.ChangedArtifacts
         Assert.Equal(before, treeHash fixtureRoot)
+
+    // ---------------------------------------------------------------------------------------
+    // FS-GG/FS.GG.SDD#735 — an UNREADABLE file under an expected skill directory.
+    //
+    // #726 grew the set of files whose unreadability the lane notices from ~51 known `SKILL.md`
+    // paths to every file under every expected skill directory across three roots. Before this,
+    // `CommandEffects.interpret` turned the resulting IO exception into a `toolDefect` — outcome
+    // `Blocked`, exit 2 — from a `chmod 000` on any one of them. The maintainer decision on #735
+    // settles the classification: an unreadable file is a FINDING about the tree, not a defect in
+    // the tool. Exit 2 keeps meaning "the tool itself failed", and the last case below is what
+    // holds it to that.
+    // ---------------------------------------------------------------------------------------
+
+    /// `chmod 000` `relativePath`, run `body`, and restore the mode whatever happens.
+    ///
+    /// Returns `None` where the fixture cannot be built: Windows (no Unix mode) or a process that
+    /// can read the file anyway (running as root, the usual container shape). The callers assert
+    /// their premise in that case rather than passing silently — a case that quietly stops
+    /// exercising an unreadable file has stopped testing #735 without going red.
+    let private withUnreadable fixtureRoot (relativePath: string) (body: unit -> 'a) : 'a option =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            None
+        else
+            let target = absolute fixtureRoot relativePath
+            let original = File.GetUnixFileMode target
+            File.SetUnixFileMode(target, UnixFileMode.None)
+
+            try
+                let unreadable =
+                    try
+                        File.ReadAllText target |> ignore
+                        false
+                    with _ ->
+                        true
+
+                if unreadable then Some(body ()) else None
+            finally
+                File.SetUnixFileMode(target, original)
+
+    /// The premise assertion for a `withUnreadable` that could not be built (see above).
+    let private assertNoUnreadableFixture fixtureRoot relativePath =
+        let readable =
+            RuntimeInformation.IsOSPlatform OSPlatform.Windows
+            || (try
+                    File.ReadAllText(absolute fixtureRoot relativePath) |> ignore
+                    true
+                with _ ->
+                    false)
+
+        Assert.True(readable, $"{relativePath} is unreadable, so the case should have run")
+
+    let private unreadableDiagnostics (report: CommandReport) =
+        report.Diagnostics |> List.filter (fun d -> d.Id = "unreadableFile")
+
+    [<Fact>]
+    let ``an unreadable auxiliary is a named finding, not a tool defect, and doctor does not exit 2`` () =
+        let fixtureRoot = productCoherentFixture ()
+        writeCoherentAuxiliaries fixtureRoot productSkillId
+        let target = auxiliaryPath ".claude" productSkillId
+
+        match withUnreadable fixtureRoot target (fun () -> doctorReport fixtureRoot) with
+        | None -> assertNoUnreadableFixture fixtureRoot target
+        | Some report ->
+            // The whole point of the item: this was `outcome=Blocked exit=2 diagnostics=[toolDefect]`.
+            Assert.DoesNotContain("toolDefect", diagnosticIds report)
+            Assert.NotEqual(2, exitCode report)
+            Assert.Equal(0, exitCode report)
+
+            // ...and it is NAMED, so the operator can act without a log or an strace.
+            match unreadableDiagnostics report with
+            | [ diagnostic ] ->
+                Assert.Contains(target, diagnostic.Message)
+                Assert.Equal<string list>([ target ], diagnostic.RelatedIds)
+                Assert.Equal<string option>(Some target, diagnostic.Artifact |> Option.map _.Path)
+                Assert.False diagnostic.IsToolDefect
+            | other -> failwith $"expected exactly one unreadableFile diagnostic, got {other.Length}"
+
+    // Decision point 2 / `.github#266`, the half that is easy to lose: not exiting 2 must not become
+    // reporting a pass. The file could not be verified, so it is reported as drift at the root that
+    // holds it — and the `unreadableFile` diagnostic is what says WHICH of the two happened, so a
+    // reader is never left inferring "drifted" from "could not be read".
+    [<Fact>]
+    let ``an unreadable auxiliary is never reported as coherent, and says so as a read failure`` () =
+        let fixtureRoot = productCoherentFixture ()
+        writeCoherentAuxiliaries fixtureRoot productSkillId
+        let target = auxiliaryPath ".claude" productSkillId
+
+        match withUnreadable fixtureRoot target (fun () -> doctorReport fixtureRoot) with
+        | None -> assertNoUnreadableFixture fixtureRoot target
+        | Some report ->
+            let summary = doctorSummary report
+            Assert.False summary.IsCoherent
+            Assert.Contains(target, summary.SkillDriftPaths)
+            Assert.Contains("doctor.driftDetected", diagnosticIds report)
+            // The two facts are separately stated, not conflated into one.
+            Assert.Equal(1, (unreadableDiagnostics report).Length)
+
+    // `SKILL.md` is the file that MAKES a directory a skill, so its unreadability is the strongest
+    // version of the same question: the root reads as carrying no copy at all. Still a finding,
+    // still named, still not exit 2.
+    [<Fact>]
+    let ``an unreadable SKILL_md is a named finding, not a tool defect`` () =
+        let fixtureRoot = productCoherentFixture ()
+        let target = skillMd ".codex" productSkillId
+
+        match withUnreadable fixtureRoot target (fun () -> doctorReport fixtureRoot) with
+        | None -> assertNoUnreadableFixture fixtureRoot target
+        | Some report ->
+            Assert.DoesNotContain("toolDefect", diagnosticIds report)
+            Assert.Equal(0, exitCode report)
+            Assert.Contains("unreadableFile", diagnosticIds report)
+            Assert.Contains(target, (doctorSummary report).SkillDriftPaths)
+
+    // AC5: the lanes share the read gate, so they must share the verdict. `upgrade` inherited the
+    // exit 2 verbatim and must inherit the fix verbatim — including not dead-ending at the
+    // non-interactive refusal, which CI would hit.
+    [<Fact>]
+    let ``upgrade inherits the unreadable-file finding rather than the tool defect`` () =
+        let fixtureRoot = productCoherentFixture ()
+        writeCoherentAuxiliaries fixtureRoot productSkillId
+        let target = auxiliaryPath ".claude" productSkillId
+
+        match withUnreadable fixtureRoot target (fun () -> upgradeNonInteractive fixtureRoot) with
+        | None -> assertNoUnreadableFixture fixtureRoot target
+        | Some report ->
+            Assert.DoesNotContain("toolDefect", diagnosticIds report)
+            Assert.NotEqual(2, exitCode report)
+            Assert.Contains("unreadableFile", diagnosticIds report)
+            Assert.True(report.Upgrade.IsSome, "upgrade produced no summary")
+
+    // The lane stays read-only under the new classification. A degradation that "recovered" by
+    // rewriting the file's mode, or by touching anything at all, would be a worse cure.
+    [<Fact>]
+    let ``doctor over an unreadable file still writes nothing`` () =
+        let fixtureRoot = productCoherentFixture ()
+        writeCoherentAuxiliaries fixtureRoot productSkillId
+        let target = auxiliaryPath ".claude" productSkillId
+
+        match
+            withUnreadable fixtureRoot target (fun () ->
+                let report = doctorReport fixtureRoot
+                report, File.GetUnixFileMode(absolute fixtureRoot target))
+        with
+        | None -> assertNoUnreadableFixture fixtureRoot target
+        | Some(report, modeAfter) ->
+            Assert.Empty report.ChangedArtifacts
+            Assert.Equal(UnixFileMode.None, modeAfter)
+
+    // The other half of the decision, and the one that keeps the first half honest: exit 2 still
+    // means the tool itself failed. Nothing above widens or narrows that.
+    //
+    // Two legs, because two things could have gone wrong. The interpreter leg proves the new `try`
+    // around `ReadFile` did not soften any OTHER effect: an effect the edge genuinely cannot
+    // perform still yields a `toolDefect` carrying the exit-2 bit. The end-to-end leg proves the
+    // bit still reaches the exit code from inside this very lane — `upgrade`, the lane that
+    // inherited the #735 exit 2 — so a defect here is still exit 2 while a `chmod` is not.
+    [<Fact>]
+    let ``an effect the edge cannot perform is still a toolDefect`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let root = TestSupport.tempDirectory ()
+            let locked = Path.Combine(root, "locked")
+            Directory.CreateDirectory locked |> ignore
+            File.SetUnixFileMode(locked, UnixFileMode.UserRead ||| UnixFileMode.UserExecute)
+
+            try
+                let result =
+                    FS.GG.SDD.Commands.CommandEffects.interpret root false (CreateDirectory "locked/child")
+
+                Assert.False result.Succeeded
+
+                match result.Diagnostic with
+                | Some diagnostic ->
+                    Assert.Equal("toolDefect", diagnostic.Id)
+                    Assert.True diagnostic.IsToolDefect
+                | None -> failwith "expected a toolDefect diagnostic"
+            finally
+                File.SetUnixFileMode(
+                    locked,
+                    UnixFileMode.UserRead ||| UnixFileMode.UserWrite ||| UnixFileMode.UserExecute
+                )
+
+    [<Fact>]
+    let ``a genuine tool defect in the remediation lane still exits 2`` () =
+        let blocked = Drift.expectedArtifactPaths |> List.head
+        let present = Drift.expectedArtifactPaths |> List.filter (fun p -> p <> blocked)
+        let root = makeFixture (Some farBehindMinimum) present true
+        // A directory where the re-seed's file must be written: the WriteFile fails deterministically.
+        Directory.CreateDirectory(Path.Combine(root, blocked.Replace('/', Path.DirectorySeparatorChar)))
+        |> ignore
+
+        let report = upgradeYes root
+        Assert.Contains(report.Diagnostics, (fun d -> d.IsToolDefect))
+        Assert.Equal(2, exitCode report)
 
     [<Fact>]
     let ``skill drift paths are sorted and deduped`` () =

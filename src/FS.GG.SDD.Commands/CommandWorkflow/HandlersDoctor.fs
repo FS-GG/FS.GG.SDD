@@ -16,6 +16,28 @@ open FS.GG.SDD.Commands.Internal.HandlersScaffold
 /// file set, not `SKILL.md` alone) and builds the `DoctorSummary`. It emits **no** mutating
 /// effect on any path (FR-002 / SC-001), so a write-audit over a doctor run finds only
 /// `ReadFile`/`EnumerateDirectory`.
+///
+/// ## How this lane can fail — FS-GG/FS.GG.SDD#735, AC4
+///
+/// "Read-only" is not "cannot fail", and the header used to read as though it were. The lane's
+/// actual outcomes, exhaustively:
+///
+/// * **Drift** — the file set disagrees with the recorded expectation. `IsCoherent = false` and a
+///   `doctor.driftDetected` WARNING; `doctor` still exits 0 (the drift is advisory, and `upgrade`
+///   is what repairs it).
+/// * **An unreadable file** — the path exists but its bytes are unavailable (a permission bit, an
+///   exclusive lock on Windows, a symlink loop, an over-long path). Since #726 this lane reads
+///   every file under every expected skill directory across three roots, so the set of files that
+///   can be in this state is the whole tree, not the ~51 seeded `SKILL.md` paths. Per the #735
+///   decision it is a FINDING about the workspace, never a tool defect: the read edge reports an
+///   `unreadableFile` warning NAMING the path and hands this driver no bytes, so the file lands in
+///   `skillBodies` exactly as a missing one does and is reported as drift rather than as coherent.
+///   Exit stays 0. It is never silently passed, and never mistaken for a broken tool.
+/// * **A genuine tool defect** — an internal fault at the effect edge. `toolDefect`, exit 2. That
+///   is what exit 2 continues to mean here, and nothing else in this lane produces it.
+///
+/// `HandlersUpgrade` shares `skillReadGate`/`skillBodies` verbatim, so all three outcomes are the
+/// same in that lane (#735 AC5); `upgrade` additionally has its own step-failure defects.
 module internal HandlersDoctor =
 
     // Shared with HandlersUpgrade (both resolve the same drift inputs from the snapshots).

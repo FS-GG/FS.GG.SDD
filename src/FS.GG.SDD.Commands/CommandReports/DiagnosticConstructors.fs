@@ -1102,6 +1102,28 @@ module internal DiagnosticConstructors =
             []
         |> DiagnosticsModule.markToolDefect
 
+    /// FS-GG/FS.GG.SDD#735 (maintainer decision, 2026-07-27). A file that EXISTS but whose bytes
+    /// could not be read — a permission bit, an exclusive lock, a symlink loop, an over-long path.
+    ///
+    /// Deliberately NOT a `toolDefect`. An unreadable file is a fact about the subject being
+    /// inspected, not evidence that the tool malfunctioned; classifying it as a defect points the
+    /// operator at the tool when the answer is a mode bit on a file the tool just named. It also
+    /// protects what exit 2 means: a code that fires on a stray `chmod` is a code operators learn
+    /// to ignore. A genuine internal fault still raises `toolDefect` and still exits 2.
+    ///
+    /// Deliberately its OWN id rather than folding into a drift/missing report: "I could not read
+    /// X" is not "X drifted", and a reader must not have to infer which happened. The read edge
+    /// hands the pure core no bytes for this path, so every fold treats the file as unverifiable —
+    /// which the surrounding lane already reports as a finding. `.github#266` cuts both ways: an
+    /// unverifiable file is never a pass, and never a claim that the tool is broken.
+    let unreadableFile (path: string) (message: string) =
+        warningDiagnostic
+            "unreadableFile"
+            (Some path)
+            $"'{path}' exists but could not be read ({message}); it was treated as unverifiable, not as coherent."
+            $"Restore read access to '{path}' (for example 'chmod +r') and re-run. Nothing about the tool is broken — until the bytes are readable this file cannot be verified, so it is reported rather than passed."
+            [ path ]
+
     let missingVerificationPrerequisite path message =
         errorForPath
             "ship.missingVerificationPrerequisite"
