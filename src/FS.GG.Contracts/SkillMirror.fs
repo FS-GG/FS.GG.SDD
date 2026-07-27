@@ -263,3 +263,138 @@ module SkillMirror =
                       MissingRoots = missingRoots
                       Divergent = divergent
                       HashMismatchRoots = hashMismatchRoots })
+
+    // -----------------------------------------------------------------------------------------
+    // MULTI-FILE verify (FS.GG.SDD#721).
+    // -----------------------------------------------------------------------------------------
+    // #717 made the library MATERIALIZE a multi-file skill (`mirrorFiles`) but left `verify` on the
+    // `ActualCopy` model — one body per (root, id) — so the library wrote files it had no way to
+    // check. `scripts/materialize-skill-roots.fsx` compensated with a hand-rolled cross-root byte
+    // comparison sitting next to the library: a SECOND implementation of the verify half, which is
+    // exactly what ADR-0014 §Decision 2 exists to end.
+    //
+    // Everything below is ADDITIVE, for the same reason #717 was: `verify`, `ActualCopy` and
+    // `SkillDrift` are untouched, so every existing caller keeps its byte-for-byte call shape.
+    // `verifyFiles` is a strict generalization — fed copies whose file set is exactly `SKILL.md`,
+    // it reports precisely what `verify` reports (see `SkillMirrorTests`).
+
+    type ActualSkillFiles =
+        { Root: string
+          Id: string
+          Files: SkillFile list option }
+
+    type SkillFileDrift =
+        { RelativePath: string
+          MissingRoots: string list
+          Divergent: bool
+          HashMismatchRoots: string list }
+
+    type MultiFileSkillDrift =
+        { Id: string
+          Scope: SkillScope
+          MissingRoots: string list
+          Files: SkillFileDrift list }
+
+    let verifyFiles
+        (roots: string list)
+        (expected: ExpectedSkill list)
+        (actual: ActualSkillFiles list)
+        : MultiFileSkillDrift list =
+        // `(root, id)` -> that copy's files, keyed by NORMALIZED relative path. A relative path
+        // repeated within one copy is not a drift fact — two entries for one destination is a
+        // producer question, and `mirrorFiles` already refuses it as `DuplicateRelativePath`. The
+        // first entry wins so the fold is deterministic rather than order-of-arrival.
+        let filesAt =
+            actual
+            |> List.choose (fun copy ->
+                copy.Files
+                |> Option.map (fun files ->
+                    (copy.Root, copy.Id),
+                    files
+                    |> List.map (fun file -> normalizeRelative file.RelativePath, file.Body)
+                    |> List.distinctBy fst
+                    |> Map.ofList))
+            |> Map.ofList
+
+        expected
+        |> List.sortBy (fun skill -> skill.Id)
+        |> List.choose (fun skill ->
+            let perRoot =
+                roots |> List.map (fun root -> root, Map.tryFind (root, skill.Id) filesAt)
+
+            // Fact 1, at SKILL level: the root carries NO copy of this skill at all. Kept separate
+            // from the per-file facts below on purpose — "the whole skill is absent from `.agents`"
+            // and "`.agents`'s copy is missing one reference" are different repairs, and reporting
+            // the first as N per-file absences would bury it under its own detail.
+            let missingRoots =
+                perRoot
+                |> List.choose (fun (root, files) -> if Option.isNone files then Some root else None)
+
+            // Only roots that HAVE the skill can be judged on its file set.
+            let presentRoots =
+                perRoot
+                |> List.choose (fun (root, files) -> files |> Option.map (fun f -> root, f))
+
+            // Every relative path ANY present root carries. A union, not the canonical root's set,
+            // so the comparison is symmetric: a file only `.codex` has is drift just as surely as
+            // one only `.claude` has, and neither root gets to define the expectation by itself.
+            let fileUnion =
+                presentRoots
+                |> List.collect (fun (_, files) -> files |> Map.keys |> List.ofSeq)
+                |> List.distinct
+                |> List.sort
+
+            let fileDrift =
+                fileUnion
+                |> List.choose (fun relativePath ->
+                    let bodyPerRoot =
+                        presentRoots
+                        |> List.map (fun (root, files) -> root, Map.tryFind relativePath files)
+
+                    // Fact 1, at FILE level: the skill is here, this file is not.
+                    let fileMissingRoots =
+                        bodyPerRoot
+                        |> List.choose (fun (root, body) -> if Option.isNone body then Some root else None)
+
+                    let presentBodies = bodyPerRoot |> List.choose snd
+
+                    // Fact 2: "byte-identical across roots", per file — the invariant the driver
+                    // hand-rolled, now stated once, here.
+                    let divergent =
+                        match presentBodies with
+                        | [] -> false
+                        | first :: rest -> rest |> List.exists (fun body -> body <> first)
+
+                    // Fact 3: "matches the canonical digest". `ExpectedSkill.Sha256` content-
+                    // addresses the SKILL.md body and nothing else — that is what the ADR-0017
+                    // producer manifest declares — so hash-match is asserted on `SKILL.md` alone
+                    // and is empty for the auxiliaries by CONSTRUCTION, not by oversight. The
+                    // auxiliaries are held by presence + cross-root identity, which is the whole
+                    // guarantee the manifest offers for them.
+                    let hashMismatchRoots =
+                        if relativePath <> "SKILL.md" || String.IsNullOrWhiteSpace skill.Sha256 then
+                            []
+                        else
+                            bodyPerRoot
+                            |> List.choose (fun (root, body) ->
+                                match body with
+                                | Some content when sha256 content <> skill.Sha256 -> Some root
+                                | _ -> None)
+
+                    if List.isEmpty fileMissingRoots && not divergent && List.isEmpty hashMismatchRoots then
+                        None
+                    else
+                        Some
+                            { RelativePath = relativePath
+                              MissingRoots = fileMissingRoots
+                              Divergent = divergent
+                              HashMismatchRoots = hashMismatchRoots })
+
+            if List.isEmpty missingRoots && List.isEmpty fileDrift then
+                None
+            else
+                Some
+                    { Id = skill.Id
+                      Scope = skill.Scope
+                      MissingRoots = missingRoots
+                      Files = fileDrift })

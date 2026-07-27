@@ -257,6 +257,9 @@ member Fsgg.Schemas+ToolingSchema.SchemaVersion
 member Fsgg.SkillMirror+ActualCopy.Body
 member Fsgg.SkillMirror+ActualCopy.Id
 member Fsgg.SkillMirror+ActualCopy.Root
+member Fsgg.SkillMirror+ActualSkillFiles.Files
+member Fsgg.SkillMirror+ActualSkillFiles.Id
+member Fsgg.SkillMirror+ActualSkillFiles.Root
 member Fsgg.SkillMirror+ExpectedSkill.Id
 member Fsgg.SkillMirror+ExpectedSkill.Scope
 member Fsgg.SkillMirror+ExpectedSkill.Sha256
@@ -276,6 +279,10 @@ member Fsgg.SkillMirror+MirrorWrite.Body
 member Fsgg.SkillMirror+MirrorWrite.Path
 member Fsgg.SkillMirror+MultiFileSkill.Files
 member Fsgg.SkillMirror+MultiFileSkill.Id
+member Fsgg.SkillMirror+MultiFileSkillDrift.Files
+member Fsgg.SkillMirror+MultiFileSkillDrift.Id
+member Fsgg.SkillMirror+MultiFileSkillDrift.MissingRoots
+member Fsgg.SkillMirror+MultiFileSkillDrift.Scope
 member Fsgg.SkillMirror+SkillDrift.Divergent
 member Fsgg.SkillMirror+SkillDrift.HashMismatchRoots
 member Fsgg.SkillMirror+SkillDrift.Id
@@ -283,6 +290,10 @@ member Fsgg.SkillMirror+SkillDrift.MissingRoots
 member Fsgg.SkillMirror+SkillDrift.Scope
 member Fsgg.SkillMirror+SkillFile.Body
 member Fsgg.SkillMirror+SkillFile.RelativePath
+member Fsgg.SkillMirror+SkillFileDrift.Divergent
+member Fsgg.SkillMirror+SkillFileDrift.HashMismatchRoots
+member Fsgg.SkillMirror+SkillFileDrift.MissingRoots
+member Fsgg.SkillMirror+SkillFileDrift.RelativePath
 member Fsgg.Version+Version.Major
 member Fsgg.Version+Version.Minor
 member Fsgg.Version+Version.Patch
@@ -365,6 +376,7 @@ type Fsgg.Schemas+SkillScope+Tags
 type Fsgg.Schemas+ToolingSchema
 type Fsgg.SkillMirror
 type Fsgg.SkillMirror+ActualCopy
+type Fsgg.SkillMirror+ActualSkillFiles
 type Fsgg.SkillMirror+ExpectedSkill
 type Fsgg.SkillMirror+MirrorPlan
 type Fsgg.SkillMirror+MirrorRefusal
@@ -374,8 +386,10 @@ type Fsgg.SkillMirror+MirrorRefusalReason+Tags
 type Fsgg.SkillMirror+MirrorRefusalReason+UnsafeRelativePath
 type Fsgg.SkillMirror+MirrorWrite
 type Fsgg.SkillMirror+MultiFileSkill
+type Fsgg.SkillMirror+MultiFileSkillDrift
 type Fsgg.SkillMirror+SkillDrift
 type Fsgg.SkillMirror+SkillFile
+type Fsgg.SkillMirror+SkillFileDrift
 type Fsgg.Version
 type Fsgg.Version+Version
 val Fsgg.ContractVersion.major
@@ -412,5 +426,6 @@ val Fsgg.SkillMirror.skillFilePath
 val Fsgg.SkillMirror.skillIdOfPath
 val Fsgg.SkillMirror.skillPath
 val Fsgg.SkillMirror.verify
+val Fsgg.SkillMirror.verifyFiles
 val Fsgg.Version.compare
 val Fsgg.Version.tryParse
