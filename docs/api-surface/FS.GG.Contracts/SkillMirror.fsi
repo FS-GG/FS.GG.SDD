@@ -266,11 +266,11 @@ module SkillMirror =
     /// spelled as a bare `string option`, for the reason `MirrorRefusalReason` is: a refusal must be
     /// distinguishable from every other outcome BY CONSTRUCTION, never by a caller's convention.
     ///
-    /// `NotValidUtf8` carries the offset — within the file, preamble included — at which the first
+    /// `NotDecodable` carries the offset — within the file, preamble included — at which the first
     /// invalid sequence begins. Deterministic: the same bytes always name the same offset. The
     /// library never names the FILE, because it never sees one; naming the file is the caller's half
     /// of the diagnostic.
-    type BodyRefusalReason = NotValidUtf8 of byteOffset: int
+    type BodyRefusalReason = NotDecodable of byteOffset: int
 
     /// Decode a skill body's raw bytes the way the read seam does — BOM-detecting exactly as
     /// `File.ReadAllText` does, preamble stripped — but REFUSING a body that does not decode instead
@@ -278,12 +278,14 @@ module SkillMirror =
     ///
     /// `Ok` is character-for-character what `File.ReadAllText` returns for the same bytes, so a
     /// caller that swaps its read for this one changes NO digest and needs NO manifest migration.
-    /// Only the mangling case is refused.
+    /// Only the mangling case is refused. A null array is the empty body, matching `sha256`'s own
+    /// null coercion.
     ///
-    /// A UTF-16/UTF-32 BOM is deliberately NOT refused: `File.ReadAllText` detects it and decodes
-    /// correctly, so there is no mangling there to refuse. That disagreement runs the OTHER way (the
-    /// consuming shells special-case only the UTF-8 BOM `EF BB BF`) and is tracked alongside
-    /// FS-GG/.github#1589, not resolved here.
+    /// EVERY encoding the read seam can select is held to this, not UTF-8 alone: `File.ReadAllText`
+    /// substitutes `U+FFFD` in a UTF-16/UTF-32 body too — on an odd byte length, an unpaired
+    /// surrogate, or a scalar above `U+10FFFF` — and that is the same collision behind a BOM. What
+    /// this does NOT touch is the separate FS-GG/.github#1589 disagreement about which BOMs the
+    /// consuming shells strip: a WELL-FORMED UTF-16/UTF-32 body decodes here and is not refused.
     val decodeBody: bytes: byte array -> Result<string, BodyRefusalReason>
 
     /// `sha256` computed from RAW BYTES: the ADR-0014 §Decision 3 clause (c) digest taken from what

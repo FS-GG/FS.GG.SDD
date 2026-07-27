@@ -598,60 +598,70 @@ module SkillMirror =
     // MEASURED EXPOSURE when this landed: across all 1881 tracked files in this repository —
     // including all 103 `SKILL.md` — ZERO contain invalid UTF-8 and zero carry a UTF-16/32 BOM. The
     // single invalid-UTF-8 file is `assets/icon.png` (a PNG, never read as a skill body) and the
-    // single UTF-8 BOM is on `FS.GG.SDD.sln`. The equivalent measurement in `FS-GG/.github` (756
+    // single UTF-8 BOM is on `FS.GG.SDD.sln`. The equivalent measurement in `FS-GG/.github` (766
     // files, 39 `SKILL.md`) is also zero. So the refusal turns no currently-green tree red.
 
-    type BodyRefusalReason = NotValidUtf8 of byteOffset: int
+    type BodyRefusalReason = NotDecodable of byteOffset: int
 
-    // A decoder that REPORTS an invalid sequence rather than papering over it. `Encoding.UTF8` — the
-    // static instance `File.ReadAllText` uses — carries a REPLACEMENT fallback, and that
-    // substitution is the whole defect; this instance carries the throwing one.
+    // Decoders that REPORT an invalid sequence rather than papering over it. The framework's static
+    // instances — `Encoding.UTF8`, `Encoding.Unicode`, `Encoding.BigEndianUnicode`, and the ones
+    // `StreamReader` builds for UTF-32 — all carry a REPLACEMENT fallback, and that substitution IS
+    // the defect. These carry the throwing one, and they differ from what `File.ReadAllText` uses in
+    // NO other respect, so every body that decodes cleanly decodes identically.
+    //
+    // ALL FIVE throw, not just UTF-8. `File.ReadAllText` mangles a UTF-16/32 body too — on an odd
+    // byte length, an unpaired surrogate, or a UTF-32 scalar above U+10FFFF — and produces the SAME
+    // U+FFFD, so `FE FF 41` and `FE FF 42` collide under the same 83d544cc… digest as `0xFF` and
+    // `0xFE` do. An earlier draft of this seam excused those branches as "detected and decoded
+    // correctly, so there is nothing to refuse"; that was FALSE, and it left the exact collision this
+    // module exists to close open behind a BOM. What stays out of scope is the SEPARATE
+    // FS-GG/.github#1589 disagreement about which BOMs the consuming shells strip — a WELL-FORMED
+    // UTF-16/32 body still decodes here and is still not refused.
     let private strictUtf8 = UTF8Encoding(false, true)
+    let private strictUtf16Le = UnicodeEncoding(false, true, true) :> Encoding
+    let private strictUtf16Be = UnicodeEncoding(true, true, true) :> Encoding
+    let private strictUtf32Le = UTF32Encoding(false, true, true) :> Encoding
+    let private strictUtf32Be = UTF32Encoding(true, true, true) :> Encoding
 
     // `File.ReadAllText path` is `StreamReader(path, Encoding.UTF8, detectEncodingFromByteOrderMarks
     // = true)`, so it BOM-DETECTS before it decodes. This reproduces that detection exactly — same
-    // preambles, same precedence, same lengths — because a byte seam that decoded differently would
-    // not be the same read: a body whose digest is recorded today would acquire a new one, which is
-    // precisely the migration this change exists to avoid. Verified against `File.ReadAllText` on
-    // this runtime for all five preambles and pinned in `SkillMirrorTests`.
+    // preambles, same precedence, same lengths, including the `FF FE` UTF-16-vs-UTF-32
+    // disambiguation on a byte length below 4 — because a seam that SELECTED a different encoding
+    // would not be the same read: a body whose digest is recorded today would acquire a new one,
+    // which is precisely the migration this change exists to avoid. Differential-tested against
+    // `File.ReadAllText` on this runtime and pinned in `SkillMirrorTests`.
     //
-    // `None` for the encoding means "UTF-8" — the default, and the ONLY branch that can refuse.
-    let private detectEncoding (bytes: byte array) : Encoding option * int =
+    // UTF-8 is the default when no preamble matches, exactly as `StreamReader` leaves it.
+    let private detectEncoding (bytes: byte array) : Encoding * int =
         let at index =
             if index < bytes.Length then int bytes[index] else -1
 
         if at 0 = 0xFE && at 1 = 0xFF then
-            Some Encoding.BigEndianUnicode, 2
+            strictUtf16Be, 2
         elif at 0 = 0xFF && at 1 = 0xFE && at 2 = 0x00 && at 3 = 0x00 then
-            Some(UTF32Encoding(false, true) :> Encoding), 4
+            strictUtf32Le, 4
         elif at 0 = 0xFF && at 1 = 0xFE then
-            Some Encoding.Unicode, 2
+            strictUtf16Le, 2
         elif at 0 = 0xEF && at 1 = 0xBB && at 2 = 0xBF then
-            None, 3
+            strictUtf8, 3
         elif at 0 = 0x00 && at 1 = 0x00 && at 2 = 0xFE && at 3 = 0xFF then
-            Some(UTF32Encoding(true, true) :> Encoding), 4
+            strictUtf32Be, 4
         else
-            None, 0
+            strictUtf8, 0
 
     let decodeBody (bytes: byte array) : Result<string, BodyRefusalReason> =
+        // A null array is the empty body, matching `sha256`'s own null coercion — the caller handed
+        // over no bytes, which is a different thing from bytes that would not decode.
         let bytes = if isNull (box bytes) then Array.empty else bytes
+        let encoding, preamble = detectEncoding bytes
 
-        match detectEncoding bytes with
-        // A UTF-16/UTF-32 BOM is OUT OF SCOPE here, deliberately: `File.ReadAllText` detects it and
-        // decodes CORRECTLY, so there is no mangling to refuse, and the library is the PERMISSIVE
-        // side of a disagreement that points the other way (the consuming shells special-case only
-        // the UTF-8 BOM). Tracked alongside FS-GG/.github#1589. Refusal must not fire on a body that
-        // already decodes, or adopting this seam would turn a green tree red for a cause this change
-        // never measured.
-        | Some encoding, preamble -> Ok(encoding.GetString(bytes, preamble, bytes.Length - preamble))
-        | None, preamble ->
-            try
-                Ok(strictUtf8.GetString(bytes, preamble, bytes.Length - preamble))
-            with :? DecoderFallbackException as ex ->
-                // `Index` is the offset, within the block handed to the decoder, at which the first
-                // invalid sequence BEGINS. Add the preamble back so the offset names a byte of the
-                // FILE rather than of a slice the caller never took.
-                Error(NotValidUtf8(preamble + ex.Index))
+        try
+            Ok(encoding.GetString(bytes, preamble, bytes.Length - preamble))
+        with :? DecoderFallbackException as ex ->
+            // `Index` is the offset, within the block handed to the decoder, at which the first
+            // invalid sequence BEGINS. Add the preamble back so the offset names a byte of the FILE
+            // rather than of a slice the caller never took.
+            Error(NotDecodable(preamble + ex.Index))
 
     // The composition is the point: decode-or-refuse, then the EXISTING digest over the EXISTING
     // string. That is what makes "byte-identical to today's digests for every body that decodes"

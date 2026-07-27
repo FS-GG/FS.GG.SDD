@@ -949,28 +949,79 @@ module SkillMirrorTests =
     // its own outcome, which is the whole point of `Error` carrying a named reason.
     [<Fact>]
     let ``sha256Bytes refuses both files the string entry point collided`` () =
-        Assert.Equal<Result<string, BodyRefusalReason>>(Error(NotValidUtf8 0), sha256Bytes [| 0xFFuy |])
-        Assert.Equal<Result<string, BodyRefusalReason>>(Error(NotValidUtf8 0), sha256Bytes [| 0xFEuy |])
+        Assert.Equal<Result<string, BodyRefusalReason>>(Error(NotDecodable 0), sha256Bytes [| 0xFFuy |])
+        Assert.Equal<Result<string, BodyRefusalReason>>(Error(NotDecodable 0), sha256Bytes [| 0xFEuy |])
+
+    // THE SAME COLLISION, BEHIND A BOM — the case an earlier draft of this seam let through, on the
+    // false premise that `File.ReadAllText` "detects a UTF-16/32 BOM and decodes correctly, so there
+    // is nothing to refuse". It mangles those too: an odd byte length, an unpaired surrogate and a
+    // UTF-32 scalar above U+10FFFF each produce the SAME U+FFFD and therefore the SAME 83d544cc…
+    // digest. A refusal that fired only on UTF-8 would have closed the front door and left this open.
+    [<Fact>]
+    let ``a MANGLED UTF-16 or UTF-32 body is refused, not collided`` () =
+        let collidingPairs =
+            [ // UTF-16 BE, odd length: the trailing byte has no partner.
+              "utf-16 BE odd", [| 0xFEuy; 0xFFuy; 0x41uy |], [| 0xFEuy; 0xFFuy; 0x42uy |]
+              // UTF-16 LE, odd length.
+              "utf-16 LE odd", [| 0xFFuy; 0xFEuy; 0x41uy |], [| 0xFFuy; 0xFEuy; 0x42uy |]
+              // UTF-16 LE, unpaired HIGH surrogate (D800/D801) with nothing following it.
+              "utf-16 LE lone surrogate", [| 0xFFuy; 0xFEuy; 0x00uy; 0xD8uy |], [| 0xFFuy; 0xFEuy; 0x01uy; 0xD8uy |]
+              // UTF-32 LE, scalar above U+10FFFF.
+              "utf-32 LE out of range",
+              [| 0xFFuy; 0xFEuy; 0x00uy; 0x00uy; 0x00uy; 0x00uy; 0x11uy; 0x00uy |],
+              [| 0xFFuy; 0xFEuy; 0x00uy; 0x00uy; 0x00uy; 0x00uy; 0x12uy; 0x00uy |] ]
+
+        for (label, a, b) in collidingPairs do
+            // The read seam really does collide them — this is the defect, restated per case rather
+            // than assumed, so the test cannot silently stop testing anything.
+            let textA = readAllTextOf a
+            let textB = readAllTextOf b
+
+            Assert.True(
+                sha256 textA = sha256 textB,
+                sprintf "%s: expected File.ReadAllText to collide these, got %A vs %A" label textA textB
+            )
+
+            // And the byte seam refuses both rather than reproducing the collision.
+            Assert.True(
+                (match decodeBody a, decodeBody b with
+                 | Error _, Error _ -> true
+                 | _ -> false),
+                sprintf "%s: decodeBody %A / %A" label (decodeBody a) (decodeBody b)
+            )
 
     // The offset names a byte of the FILE, and it is the byte the first invalid SEQUENCE begins at —
     // not the byte the decoder happened to stop on. Pinned past a BOM too, since the preamble is
     // stripped before the decoder runs and an un-corrected offset would point one file-position per
     // preamble byte too early.
     [<Fact>]
-    let ``NotValidUtf8 names the offset the first invalid sequence begins at`` () =
+    let ``NotDecodable names the offset the first invalid sequence begins at`` () =
         Assert.Equal<Result<string, BodyRefusalReason>>(
-            Error(NotValidUtf8 3),
+            Error(NotDecodable 3),
             decodeBody (Array.append (utf8 "abc") [| 0x80uy; 0x64uy |])
         )
 
         // A truncated multi-byte sequence: the offset is its FIRST byte, not its last.
-        Assert.Equal<Result<string, BodyRefusalReason>>(Error(NotValidUtf8 0), decodeBody [| 0xE2uy; 0x82uy |])
+        Assert.Equal<Result<string, BodyRefusalReason>>(Error(NotDecodable 0), decodeBody [| 0xE2uy; 0x82uy |])
 
         // Past a UTF-8 BOM the offset still counts from the start of the file.
         Assert.Equal<Result<string, BodyRefusalReason>>(
-            Error(NotValidUtf8 4),
+            Error(NotDecodable 4),
             decodeBody (Array.concat [ utf8Bom; utf8 "a"; [| 0xC0uy; 0xAFuy |] ])
         )
+
+        // Whatever encoding the preamble selected, the offset is inside the file and everything
+        // before it decodes — the invariant that makes the number usable in a diagnostic.
+        for bytes in
+            [ Array.append (utf8 "abc") [| 0x80uy |]
+              Array.concat [ utf8Bom; utf8 "ok"; [| 0xFFuy |] ]
+              [| 0xFEuy; 0xFFuy; 0x41uy |]
+              [| 0xFFuy; 0xFEuy; 0x00uy; 0xD8uy |] ] do
+            match decodeBody bytes with
+            | Error(NotDecodable offset) ->
+                Assert.InRange(offset, 0, bytes.Length - 1)
+                Assert.True((decodeBody bytes[.. offset - 1]) |> Result.isOk, sprintf "prefix of %A must decode" bytes)
+            | Ok text -> Assert.Fail(sprintf "expected a refusal for %A, got %A" bytes text)
 
     // AC4, the green direction, stated as the equivalence that makes it true: for every body that
     // decodes, the byte seam produces CHARACTER-FOR-CHARACTER what the read seam produces, so its
@@ -1006,16 +1057,28 @@ module SkillMirrorTests =
                 sprintf "%s: sha256Bytes %A, sha256 (File.ReadAllText …) %A" label (sha256Bytes bytes) (sha256 expected)
             )
 
-    // A UTF-16/UTF-32 BOM is EXPLICITLY not this refusal's subject: `File.ReadAllText` detects it and
-    // decodes correctly, so there is nothing mangled to refuse. Stated as its own test because it is
-    // the case where a stricter-looking implementation would have been WRONG — refusing here would
-    // turn a file that reads fine today into a hard failure, a migration nobody authorised.
+    // The other half of the previous test, and the boundary that keeps the refusal honest: a
+    // WELL-FORMED UTF-16/UTF-32 body still decodes and is still NOT refused. A stricter
+    // strict-UTF-8-only implementation would refuse all four of these — `FF FE` is not valid UTF-8 —
+    // turning files that read fine today into hard failures, which is a migration nobody authorised
+    // and is NOT what FS-GG/.github#1589's separate BOM disagreement asks for.
     [<Fact>]
-    let ``a UTF-16 BOM decodes rather than being refused`` () =
-        let bytes =
-            Array.append [| 0xFFuy; 0xFEuy |] (Encoding.Unicode.GetBytes "# Skill\n")
+    let ``a well-formed UTF-16 or UTF-32 body decodes rather than being refused`` () =
+        let wellFormed =
+            [ Array.append [| 0xFFuy; 0xFEuy |] (Encoding.Unicode.GetBytes "# Skill\n")
+              Array.append [| 0xFEuy; 0xFFuy |] (Encoding.BigEndianUnicode.GetBytes "# Skill\n")
+              Array.append [| 0xFFuy; 0xFEuy; 0x00uy; 0x00uy |] (UTF32Encoding(false, false).GetBytes "# Skill\n")
+              Array.append [| 0x00uy; 0x00uy; 0xFEuy; 0xFFuy |] (UTF32Encoding(true, false).GetBytes "# Skill\n") ]
 
-        Assert.Equal<Result<string, BodyRefusalReason>>(Ok "# Skill\n", decodeBody bytes)
+        for bytes in wellFormed do
+            Assert.Equal<Result<string, BodyRefusalReason>>(Ok "# Skill\n", decodeBody bytes)
+
+        // Including a surrogate PAIR, which is well-formed UTF-16 and must not be mistaken for the
+        // unpaired-surrogate case the previous test refuses.
+        Assert.Equal<Result<string, BodyRefusalReason>>(
+            Ok "🚀",
+            decodeBody (Array.append [| 0xFFuy; 0xFEuy |] (Encoding.Unicode.GetBytes "🚀"))
+        )
 
     // AC4 over the REAL TREE rather than over fixtures: every file this repository actually fans out
     // across the three skill roots keeps EXACTLY the digest it has today. This is the "stays green,

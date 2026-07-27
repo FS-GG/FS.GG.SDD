@@ -13,7 +13,7 @@ no case is added to an existing public discriminated union, and **no public reco
 `Fsgg.SkillMirror`
 
 - `BodyRefusalReason` — why a body's raw bytes are not a skill body. One case today,
-  `NotValidUtf8 of byteOffset: int`, carrying the offset *within the file* at which the first
+  `NotDecodable of byteOffset: int`, carrying the offset *within the file* at which the first
   invalid sequence begins.
 - `decodeBody: byte array -> Result<string, BodyRefusalReason>` — decode a body's raw bytes exactly
   as the read seam does, but **refuse** a body that does not decode instead of substituting
@@ -49,12 +49,18 @@ same BOM detection (UTF-8, UTF-16 LE/BE, UTF-32 LE/BE), strips the same preamble
 mangling case is refused. `sha256Bytes` is `decodeBody` composed with the **unchanged** `sha256`, so
 "byte-identical to today's digests" holds by construction rather than by a test that could drift.
 
-## What is deliberately NOT refused
+## Every encoding is held to this, not UTF-8 alone
 
-A **UTF-16/UTF-32 BOM**. `File.ReadAllText` detects it and decodes correctly, so there is no
-mangling there to refuse — the library is the *permissive* side of a disagreement that points the
-other way (the consuming shells special-case only the UTF-8 BOM `EF BB BF`). Refusing it would turn
-a file that reads fine today into a hard failure. Tracked alongside `FS-GG/.github#1589`.
+`File.ReadAllText` BOM-detects, so it can select UTF-16 LE/BE or UTF-32 LE/BE — and it mangles those
+too, on an odd byte length, an unpaired surrogate, or a scalar above `U+10FFFF`. The result is the
+**same** `U+FFFD` and therefore the **same** `83d544cc…` digest: `FE FF 41` and `FE FF 42` collide
+exactly as `0xFF` and `0xFE` do. A refusal that fired only on UTF-8 would close the front door and
+leave that open behind a BOM, so all five decoders are the throwing ones.
+
+**What stays out of scope** is the separate `FS-GG/.github#1589` disagreement about *which BOMs the
+consuming shells strip* — there the library is the permissive side and the polarity is reversed. A
+**well-formed** UTF-16/UTF-32 body decodes here and is not refused; refusing it would turn a file
+that reads fine today into a hard failure, which is a different change and not this one.
 
 ## Adopting it
 
@@ -69,7 +75,7 @@ growing their own check.
 Across all **1881** tracked files in `FS-GG/FS.GG.SDD` — including all **103** `SKILL.md` — **zero**
 contain invalid UTF-8 and **zero** carry a UTF-16/32 BOM. The one invalid-UTF-8 file is
 `assets/icon.png` (a PNG, never read as a skill body) and the one UTF-8 BOM is on `FS.GG.SDD.sln`.
-The equivalent measurement in `FS-GG/.github` (756 files, 39 `SKILL.md`) is also zero. **The refusal
+The equivalent measurement in `FS-GG/.github` (766 files, 39 `SKILL.md`) is also zero. **The refusal
 turns no currently-green tree red in either repo.**
 
 ## Compatibility
@@ -77,3 +83,11 @@ turns no currently-green tree red in either repo.**
 `sha256`, `mirror`, `mirrorFiles`, `verify`, `verifyFiles`, `verifyFileSet` and every shipped type
 are **untouched**. Measured on the committed reflection baseline
 (`tests/FS.GG.Contracts.Tests/PublicSurface.baseline`), the delta is **+5 lines, zero deletions**.
+
+## Release sequence
+
+Publish Contracts 7.3.0 to the org feed, confirm it is live, then advance `fsgg-contracts.version`
+and `package-version` in `FS-GG/.github` `registry/dependencies.yml`. Note that registry was already
+pinned at `7.0.0` while source and feed were at `7.2.0` — neither the 7.1.0 nor the 7.2.0 flip was
+ever made — so this bump widens an existing, separately owed gap rather than opening a new one.
+Per `FS-GG/.github#741` the resulting disagreement reds `.github` alone.
