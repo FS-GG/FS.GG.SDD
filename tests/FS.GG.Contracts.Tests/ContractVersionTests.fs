@@ -130,6 +130,88 @@ module ContractVersionTests =
     // registry, retiring the ADR-0037 §3 "known, not enforced" rail that cost an ADR + republish +
     // bump+pin per new scope value.
     //
+    // 5.0.1 -> 6.0.0 (FS.GG.SDD#687, PR #699, merge ca60cf5): a DECLARED break, and the version-bump
+    // checklist's FIRST row again — "add a field to a public record" -> breaking -> major, declaration
+    // required. `Schemas.fsi` grew +42 lines. Four of the new types are themselves additive
+    // (`PerformanceEvidenceSampleSet`, `PerformanceEvidenceArtifact`, `PerformanceEvidenceMeasurement`,
+    // `GovernanceHandoffPerformanceEvidence`); what forces the major is ONE line — the public record
+    // `GovernanceHandoffSchema` gains `PerformanceEvidence: GovernanceHandoffPerformanceEvidence list`,
+    // inserted MID-RECORD between `Evidence` and `GovernedReferences`. That regenerates the positional
+    // primary constructor and the previous one CEASES TO EXIST (`CP0002`), the identical mechanism as
+    // 2.0.0/3.0.0/4.0.0. The break is DECLARED (docs/release/contracts-6.0.0.md, added in this merge),
+    // not suppressed — this merge adds no CompatibilitySuppressions.xml.
+    //
+    // AND IT CORRECTS THE ENTRY ABOVE, WHICH IS WHY THIS ONE IS WORTH READING: 5.0.0 called itself
+    // "the LAST one this record row will ever force". That was true of `ContractEntry`, the single
+    // record it de-positionalised into a class — and it was never true of the repo. `Schemas.fsi`'s
+    // governance-handoff DTOs are all still ordinary F# records with positional constructors (all 8
+    // `GovernanceHandoff*` types, measured on this file's `Schemas.fsi`), so the row that 5.0.0 spent
+    // a major to retire fired twice more six days later — here and at 7.0.0, both on 2026-07-26. The
+    // 5.0.0 fix was scoped to one record in `Registry.fsi`, not to the pattern.
+    //
+    // WHY THE MAJOR IS SPENT: Governance was being handed a producer-authored pass/fail summary and
+    // had to trust it. The new DTO graph carries each `performance-evidence-v1` artifact's RAW
+    // duration and catch-up samples, its workload/environment bindings, and SDD's own recomputed
+    // measurements, so the verdict is independently recomputable at the boundary rather than asserted
+    // across it. NOTE WHAT THE MAJOR DID *NOT* BUY, because the intuition is backwards: a single
+    // verdict-shaped `bool` would have cost the IDENTICAL major — the price is set by adding ANY field
+    // to a positional record, not by how much the field carries. Having decided to pay it, the cheap
+    // design and the honest one cost the same, so richness here is free and the summary would have
+    // been a worse artifact at the same price.
+    //
+    // WHAT THIS MERGE ALSO SHIPPED, RECORDED HERE BECAUSE IT IS THIS FILE'S OWN SUBJECT: it moved
+    // `ContractVersion.value` "5.0.1" -> "6.0.0" and LEFT `major = 5`, `minor = 0`, `patch = 1`. For
+    // the whole life of 6.0.0 the "single authoritative value" disagreed with itself inside one file.
+    // The test below was edited into agreement with the defect — its string assertion was updated, its
+    // three integer assertions were not, and its name still read "matches 5_0_1" while asserting
+    // "6.0.0" — so the suite stayed green. #700 / PR #701 repaired the triple in passing while
+    // spending 7.0.0; nobody filed it. This is the 1.4.1 shape (a number and a surface disagreeing)
+    // for the third time in this file, and the first time INSIDE `ContractVersion.fs`.
+    //
+    // NOTHING WOULD CATCH IT TODAY EITHER, WHICH IS THE PART THAT MATTERS: the one downstream gate
+    // that reads this constant at all — `.github`'s `check-source-coherence.py` — matches a single
+    // `\blet\s+value\s*=\s*"([^"]*)"` and uses ONLY that. (`check-emitted-contract-version.py` is not
+    // a second opinion: it reads `governanceHandoffContractVersion` out of `Schemas.fs` and never
+    // opens `ContractVersion.fs`.) So `major`/`minor`/`patch` have exactly one reader in this repo —
+    // the three hand-written literals below. Hand-written literals cannot detect drift from `value`;
+    // they can only be updated to match whatever was typed, which is precisely what happened. Tracked
+    // as FS.GG.SDD#728 (a structural assertion), deliberately NOT fixed here: #724 is the record, not
+    // the numbers.
+    //
+    // 6.0.0 -> 7.0.0 (FS.GG.SDD#700, PR #701, merge 7ea65ac, under an hour after 6.0.0): a DECLARED
+    // break, the checklist's FIRST row for the second time that day. `Schemas.fsi` grew +20 lines: the
+    // new type `PerformanceIntentDeclaration` (additive on its own), and the record
+    // `GovernanceHandoffPerformanceEvidence` — the one 6.0.0 had just introduced — gains
+    // `Intent: PerformanceIntentDeclaration option` MID-RECORD, between `ArtifactPath` and `Artifact`:
+    // ctor arity 4 -> 5, old ctor gone, `CP0002`. DECLARED in
+    // docs/release/contracts-7.0.0.md, added in this merge.
+    //
+    // THE TRAP, STATED BECAUSE THE WRONG READING IS THE PLAUSIBLE ONE: the field is an `option`, and
+    // `option` BUYS NOTHING HERE. An optional field is still a constructor parameter, so the 6.0.0
+    // four-argument .ctor is deleted exactly as a required field would delete it. What `option` buys
+    // is wire-level tolerance — a legacy handoff may carry `intent: null` — and wire tolerance is not
+    // surface compatibility. "I made it optional, so it is additive" is the reasoning this row of the
+    // table exists to refuse.
+    //
+    // AND IT WAS SUPPRESSED — CORRECTLY, WHICH IS THE OPPOSITE OF THE 1.4.1 CASE ABOVE. This merge
+    // added `src/FS.GG.Contracts/CompatibilitySuppressions.xml` with ONE `CP0002` baseline suppression
+    // naming that exact four-arg ctor, commented with the issue, the reason, and its own expiry. At
+    // 1.4.1 (f18877f) a suppression file recording real debt was DELETED so a binary break could ship
+    // as a patch; here the major is spent in the open and the suppression is a scoped, time-boxed
+    // bridge for the window in which `scripts/apicompat-check.sh` still compares against the PUBLISHED
+    // 6.0.0 baseline, where a correct tool must report the break the release notes already declare. It
+    // was retired by #702 (d0f4514) once 7.0.0 was the published baseline — which is why no
+    // CompatibilitySuppressions.xml exists in this repo today. A suppression is a lie when it stands
+    // in for the bump; it is bookkeeping when it stands beside it and is removed on schedule.
+    //
+    // WHY THE MAJOR IS SPENT: performance intent has to be authored BEFORE implementation and carried
+    // unchanged through evidence to Governance. Untyped, the target FPS, representative workload
+    // identities and definition digests, scale, timing and structural limits, capability and
+    // live-compositor posture were producer prose, so a run could be graded against a budget invented
+    // after the measurement — the one failure the 6.0.0 evidence graph cannot detect on its own,
+    // because it makes the samples auditable without fixing what they were promised against. Per the
+    // release note added in this merge, consumers on 6.x must recompile.
+    //
     // 7.0.0 -> 7.1.0 (FS.GG.SDD#720, owed by FS.GG.SDD#717 / PR #719): an ADDITIVE MINOR — the
     // version-bump checklist's fourth row, "add a new module, type, or `val`". #719 grew
     // `Fsgg.SkillMirror` so a skill can be MULTI-FILE: it adds the types `SkillFile`,
