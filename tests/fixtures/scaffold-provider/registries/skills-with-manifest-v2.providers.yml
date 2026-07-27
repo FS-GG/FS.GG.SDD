@@ -1,0 +1,14 @@
+# FS.GG.SDD#739: the `skills-with-manifest` provider, one ADR-0017 schema version on. Its product
+# `skill-manifest.json` is v2 (#727) — every row declares its COMPLETE file set, and the fixture
+# skill deliberately has MORE than one file so a dropped `files` array is visible. `scaffold` must
+# fold the drivers + owner-sourced skills it materializes into this document with their own file
+# sets, leaving it v2-COMPLETE rather than v2-in-the-header-only.
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-skills-with-manifest-v2
+    source: __FIXTURE__/skills-with-manifest-v2
+    parameters:
+      - key: lifecycle
+        required: false

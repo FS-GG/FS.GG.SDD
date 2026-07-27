@@ -1,0 +1,13 @@
+# FS.GG.SDD#739: a provider shipping a product `skill-manifest.json` at a schema version NEWER than
+# this CLI models — the case where re-emitting the document would drop row properties it cannot see.
+# `amend` refuses, so the union is not written; the point of the fixture is that the refusal is
+# REPORTED (`scaffold.productManifestAmendRefused`) instead of being swallowed as "no manifest writes".
+schemaVersion: 1
+providers:
+  - name: fixture
+    contractVersion: "1.0.0"
+    templateId: fsgg-fixture-skills-with-manifest-future
+    source: __FIXTURE__/skills-with-manifest-future
+    parameters:
+      - key: lifecycle
+        required: false

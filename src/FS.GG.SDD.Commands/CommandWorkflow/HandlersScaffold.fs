@@ -533,32 +533,84 @@ module internal HandlersScaffold =
         Fsgg.Schemas.agentSkillRoots
         |> List.map (fun root -> root + "/skills/skill-manifest.json")
 
+    // FS.GG.SDD#739: `<root>/skills/<id>/<relative…>` → `(id, relative)`, for ANY file inside a
+    // skill, not just its `SKILL.md`. `Fsgg.SkillMirror.skillIdOfPath` matches the canonical
+    // `SKILL.md` shape ONLY — which is exactly right for identifying a skill and exactly wrong for
+    // enumerating one, and is why the entries folded in below used to carry no file set at all.
+    // `<root>/skills/skill-manifest.json` has no `<id>/` segment, so it yields `None` and the
+    // manifest can never enumerate itself.
+    let private skillFileOfPath (path: string) : (string * string) option =
+        let normalized = path.Replace('\\', '/')
+
+        Fsgg.Schemas.agentSkillRoots
+        |> List.tryPick (fun root ->
+            let prefix = root + "/skills/"
+
+            if normalized.StartsWith(prefix, StringComparison.Ordinal) then
+                let tail = normalized.Substring(prefix.Length)
+
+                match tail.IndexOf('/') with
+                | -1 -> None
+                | separator ->
+                    let id = tail.Substring(0, separator)
+                    let relative = tail.Substring(separator + 1)
+
+                    if id = "" || relative = "" then
+                        None
+                    else
+                        Some(id, relative)
+            else
+                None)
+
     // The manifest entries to fold in for one materialize outcome: one row per KEPT materialized id,
     // carrying the content `sha256` recorded in provenance, the row's declared scope, and the `.agents`
     // resolvable path. `materializes-when` is the canonical `always` — the manifest is per-product and
     // declares only what THIS product actually materialized (so the skill is present, and `always`
     // stays inside the shell gate's grammar; a driver `has …` predicate would not be evaluable there).
+    //
+    // FS.GG.SDD#739 (ADR-0017 v2): each row also carries its COMPLETE file set, so an amended v2
+    // document is v2-complete rather than v2-in-the-header-only. The set is derived from the SAME
+    // `ProvenancePaths` the row's `sha256` and `scaffold-provenance.json` already draw on — a skill is
+    // an ordered set of files (#717) and the materializer knows every one of them — so no new source
+    // of truth is introduced and the two documents cannot disagree. The per-file digests are the
+    // provenance digests verbatim: their normalization domain is #752's subject, not this change's,
+    // and re-deriving them here would fork a third domain.
+    //
+    // A skill is keyed by its `SKILL.md`, which is why the row is emitted only when one is present —
+    // preserving today's behaviour exactly (before this change ONLY `SKILL.md` paths produced a row).
     let private manifestEntriesOf
         (provenancePaths: (string * string) list)
         (materializedScopes: Map<string, string>)
         (fallbackScope: string)
         =
-        let shaById =
-            provenancePaths
-            |> List.choose (fun (path, sha256) ->
-                Fsgg.SkillMirror.skillIdOfPath path |> Option.map (fun id -> id, sha256))
-            |> Map.ofList
+        provenancePaths
+        |> List.choose (fun (path, sha256) ->
+            skillFileOfPath path
+            |> Option.map (fun (id, relative) -> id, (relative, sha256)))
+        |> List.groupBy fst
+        |> List.map (fun (id, rows) ->
+            // The same skill file is mirrored into every agent root with identical bytes, so the
+            // three copies collapse to one declared row per skill-relative path.
+            id, rows |> List.map snd |> List.distinctBy fst |> List.sortBy fst)
+        |> List.sortBy fst
+        |> List.choose (fun (id, files) ->
+            let declaredFiles: ProductSkillManifest.ProductManifestFile list =
+                files
+                |> List.map (fun (relative, sha256) -> { Path = relative; Sha256 = sha256 })
 
-        shaById
-        |> Map.toList
-        |> List.map (fun (id, sha256) ->
-            { ProductSkillManifest.Id = id
-              ProductSkillManifest.Scope = materializedScopes |> Map.tryFind id |> Option.defaultValue fallbackScope
-              ProductSkillManifest.Sha256 = sha256
-              ProductSkillManifest.ResolvablePath =
-                Some(Fsgg.SkillMirror.skillPath Fsgg.SkillMirror.providerSourceRoot id)
-              ProductSkillManifest.MaterializesWhen = "always"
-              ProductSkillManifest.SuppliedBy = None })
+            files
+            |> List.tryFind (fun (relative, _) -> relative = "SKILL.md")
+            |> Option.map (fun (_, skillSha256) ->
+                let entry: ProductSkillManifest.ProductManifestEntry =
+                    { Id = id
+                      Scope = materializedScopes |> Map.tryFind id |> Option.defaultValue fallbackScope
+                      Sha256 = skillSha256
+                      ResolvablePath = Some(Fsgg.SkillMirror.skillPath Fsgg.SkillMirror.providerSourceRoot id)
+                      MaterializesWhen = "always"
+                      SuppliedBy = None
+                      Files = declaredFiles }
+
+                entry))
 
     // All manifest additions for a scaffold: the drivers (scope from their manifest, `process`
     // fallback) unioned with the owner-sourced skills (scope `product` fallback), id-deduped.
@@ -569,6 +621,40 @@ module internal HandlersScaffold =
         manifestEntriesOf driverOutcome.ProvenancePaths driverOutcome.MaterializedScopes "process"
         @ manifestEntriesOf gameSkillOutcome.ProvenancePaths gameSkillOutcome.MaterializedScopes "product"
         |> List.distinctBy (fun (entry: ProductSkillManifest.ProductManifestEntry) -> entry.Id)
+
+    // FS.GG.SDD#739: the amend as ONE function of the model plus the plan, so the tick that consumes
+    // the TEXT and the finalize that consumes the VERDICT cannot disagree about what happened.
+    // `snapshot` reads the interpreted READ of the provider's manifest — never SDD's own write of the
+    // amended bytes — so re-deriving this at finalize is pure and yields the identical answer.
+    // `None` is the one honest silence: there was nothing to fold in, or the provider shipped no
+    // product manifest to fold into, and a tree with no manifest gets none synthesized.
+    let productManifestAmend model (additions: ProductSkillManifest.ProductManifestEntry list) =
+        if List.isEmpty additions then
+            None
+        else
+            snapshot productSkillManifestSourcePath model
+            |> Option.map (fun snap -> ProductSkillManifest.amend snap.Text additions)
+
+    // The refusal rendered where the DU is in scope. Each case has a DIFFERENT owner — the provider,
+    // the installed CLI, SDD's own materializer — so each states its own remedy rather than one
+    // remedy that is right for none of them.
+    let private productManifestRefusalDiagnostic (refusal: ProductSkillManifest.AmendRefusal) =
+        let reason, remedy, details =
+            match refusal with
+            | ProductSkillManifest.ManifestUnparseable message ->
+                $"it is not readable as a product skill manifest ({message})",
+                "Repair the provider-shipped `skill-manifest.json`; an unreadable manifest is never overwritten with a guess.",
+                [ message ]
+            | ProductSkillManifest.SchemaVersionUnroundTrippable version ->
+                $"it declares schemaVersion {version}, which this CLI cannot re-emit without dropping row properties it does not model",
+                "Upgrade `fsgg-sdd` to a version that understands this manifest schema; the document was left exactly as the provider shipped it.",
+                [ string version ]
+            | ProductSkillManifest.AdditionsMissingFileSet(version, ids) ->
+                $"""at schemaVersion {version} every row declares its file set, and these carry none: {String.concat ", " ids}""",
+                "Rebuild/republish the CLI from a coherent skill package: SDD's materializer owns the file set of every skill it lays down.",
+                ids
+
+        DiagnosticsModule.scaffoldProductManifestAmendRefused productSkillManifestSourcePath reason remedy details
 
     // ----- finalization (stage 3) -----
 
@@ -936,6 +1022,15 @@ module internal HandlersScaffold =
               NextActionHint = hint
               ProviderInvocation = None }
 
+        // ADR-0063 tail / FS.GG.SDD#739: re-derived (pure) from the same plan and the same
+        // interpreted READ of the provider manifest that TICK A amended from, so the reported
+        // verdict is the one that actually decided whether the union was written. On the ordinary
+        // path this is empty; when `amend` refused, the refusal is finally stated.
+        let productManifestDiagnostics =
+            match productManifestAmend model (productManifestAdditions driverOutcome gameSkillOutcome) with
+            | Some(Error refusal) -> [ productManifestRefusalDiagnostic refusal ]
+            | _ -> []
+
         summary,
         outcomeDiagnostics
         @ repoInitDiagnostics
@@ -943,6 +1038,7 @@ module internal HandlersScaffold =
         @ execDiagnostics
         @ driverDiagnostics driverOutcome
         @ gameSkillDiagnostics gameSkillOutcome
+        @ productManifestDiagnostics
 
     // The post-instantiation machine, re-derived from the interpreted-effect log each tick
     // (no new model field). Reached only on a success create outcome. 056 prepends a MIRROR
@@ -1197,17 +1293,15 @@ module internal HandlersScaffold =
                 // amended bytes so `scaffold-provenance.json` stays coherent with disk.
                 let manifestAdditions = productManifestAdditions driverOutcome gameSkillOutcome
 
-                let amendedManifest =
-                    if List.isEmpty manifestAdditions then
-                        None
-                    else
-                        snapshot productSkillManifestSourcePath model
-                        |> Option.bind (fun snap -> ProductSkillManifest.amend snap.Text manifestAdditions)
-
+                // FS.GG.SDD#739: a REFUSED amend writes nothing, exactly as before — but it is no
+                // longer swallowed here. The refusal is re-derived (purely) at finalize and reported
+                // as `scaffold.productManifestAmendRefused`, so an incomplete union has a local
+                // cause instead of surfacing two repos away as a red skill-union gate.
                 let manifestWrites, manifestDigests =
-                    match amendedManifest with
-                    | None -> [], skillDigests
-                    | Some text ->
+                    match productManifestAmend model manifestAdditions with
+                    | None
+                    | Some(Error _) -> [], skillDigests
+                    | Some(Ok text) ->
                         let digest = Fsgg.SkillMirror.sha256 text
 
                         productSkillManifestPaths

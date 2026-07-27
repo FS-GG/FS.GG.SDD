@@ -536,6 +536,33 @@ module Diagnostics =
             [ message ]
         |> markToolDefect
 
+    // ADR-0063 tail / FS.GG.SDD#739: `ProductSkillManifest.amend` DECLINED to rewrite the
+    // provider-shipped product `skill-manifest.json`, so the driver + owner-sourced skills this
+    // scaffold materialized are not declared in it and the consumer skill-union gate will read them
+    // as `[dangling]`.
+    //
+    // WHY THIS EXISTS AT ALL. Refusing is the right half — a manifest whose header asserts a
+    // completeness its rows do not carry is the defect #739 is named for, and a wrong document is
+    // worse than a missing amend. SILENT was the wrong half: the call site mapped the refusal to
+    // `[], skillDigests` and emitted nothing, so an incomplete union left the tool with no trace at
+    // all and surfaced two repos away, as a red composition gate with no local cause.
+    //
+    // WARNING, DELIBERATELY, NOT ERROR. A `DiagnosticError` is `Blocked` (`ReportAssembly.outcome`)
+    // and exits 1/2, which would red a scaffold that succeeded at everything it owns — the tree is
+    // complete, only the union is not — on a path that is green today. #739 asks for the fact to be
+    // SAID, not for a new blocking policy; the hard stop for an incomplete union already exists
+    // downstream, in the consumer gate. So this states the cause, names the undeclared ids, and
+    // leaves the exit code alone.
+    let scaffoldProductManifestAmendRefused (path: string) (reason: string) (remedy: string) (details: string list) =
+        create
+            "scaffold.productManifestAmendRefused"
+            DiagnosticWarning
+            (scaffoldRef path)
+            None
+            $"`{path}` was left unamended — {reason}. The skills this scaffold materialized are therefore not declared in it, and a consumer skill-union check will read them as dangling."
+            remedy
+            details
+
     let scaffoldProvenanceMalformed path =
         create
             "scaffold.provenanceMalformed"

@@ -868,6 +868,11 @@ module ScaffoldCommandTests =
     let private bytesAt root (relativePath: string) =
         File.ReadAllBytes(Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar)))
 
+    let private parsedProductManifest (text: string) =
+        match ProductSkillManifest.tryParse text with
+        | Ok result -> result
+        | Error message -> failwith $"Expected the amended product manifest to parse: {message}"
+
     let private threeRoots (name: string) =
         [ $".claude/skills/{name}/SKILL.md"
           $".codex/skills/{name}/SKILL.md"
@@ -1158,10 +1163,7 @@ module ScaffoldCommandTests =
         let manifestText =
             TestSupport.readRelative root ".agents/skills/skill-manifest.json"
 
-        let _, entries =
-            match ProductSkillManifest.tryParse manifestText with
-            | Ok result -> result
-            | Error message -> failwith $"Expected the amended product manifest to parse: {message}"
+        let _, entries = parsedProductManifest manifestText
 
         let declaredIds =
             entries
@@ -1205,6 +1207,131 @@ module ScaffoldCommandTests =
         // not just under `.agents`).
         Assert.Equal(manifestText, TestSupport.readRelative root ".claude/skills/skill-manifest.json")
         Assert.Equal(manifestText, TestSupport.readRelative root ".codex/skills/skill-manifest.json")
+
+        // FS.GG.SDD#739, AC3 end-to-end: the provider shipped v1, so the amended document is STILL
+        // v1 and never grows a v2 property. The v1 leg of this seam is not disturbed by the v2 work.
+        Assert.Equal(1, fst (parsedProductManifest manifestText))
+        Assert.DoesNotContain("\"files\"", manifestText)
+
+    // FS.GG.SDD#739 — the same seam one ADR-0017 schema version on. Before this, `amend` re-emitted
+    // the v2 header over rows stripped of every `files` array it had just read past: a document
+    // asserting a completeness its rows no longer carried, and the driver rows folded in carried no
+    // file set of their own either. Both halves are asserted here against a REAL scaffold, because
+    // both are needed for the document to be v2-COMPLETE rather than v2-in-the-header-only.
+    [<Fact; Trait("tier", "slow")>]
+    let ``scaffold keeps a v2 product skill-manifest complete — provider file sets and its own`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "skills-with-manifest-v2.providers.yml"
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+
+        Assert.Equal(0, exitCodeForReport report)
+
+        // The amend happened at all — a refusal would say so, and silence is what #739 closed.
+        Assert.DoesNotContain("scaffold.productManifestAmendRefused", diagnosticIds report)
+
+        let manifestText =
+            TestSupport.readRelative root ".agents/skills/skill-manifest.json"
+
+        let version, entries = parsedProductManifest manifestText
+        Assert.Equal(2, version)
+
+        // (1) The PROVIDER's declared file set survives verbatim — including the auxiliary file,
+        // which is the row that a `SKILL.md`-only codec silently drops.
+        let elmish =
+            entries
+            |> List.find (fun (e: ProductSkillManifest.ProductManifestEntry) -> e.Id = "fs-gg-elmish")
+
+        Assert.Equal<string list>(
+            [ "SKILL.md"; "references/notes.md" ],
+            elmish.Files
+            |> List.map (fun (f: ProductSkillManifest.ProductManifestFile) -> f.Path)
+            |> List.sort
+        )
+
+        // (2) EVERY row SDD folded in carries its OWN complete file set, and every declared digest
+        // is the digest of the file actually on disk. The pinned driver package ships multi-file
+        // skills, so this is a real set, not a one-element coincidence.
+        let materializedIds =
+            (scaffoldSummary report).MaterializedDriverPaths
+            |> List.choose Fsgg.SkillMirror.skillIdOfPath
+            |> List.distinct
+
+        Assert.NotEmpty(materializedIds)
+
+        // At least one folded-in skill has auxiliary files — otherwise "complete file set" would be
+        // indistinguishable from "SKILL.md only" and this test could not fail for the right reason.
+        let mutable sawMultiFileSkill = false
+
+        for id in materializedIds do
+            let entry =
+                entries
+                |> List.find (fun (e: ProductSkillManifest.ProductManifestEntry) -> e.Id = id)
+
+            Assert.NotEmpty(entry.Files)
+
+            if List.length entry.Files > 1 then
+                sawMultiFileSkill <- true
+
+            // The declared set is exactly what was laid down under the skill root, with matching
+            // digests: no file missing from the declaration, none declared that is not there.
+            let onDisk =
+                let skillRoot = Path.Combine(root, ".agents", "skills", id)
+
+                Directory.GetFiles(skillRoot, "*", SearchOption.AllDirectories)
+                |> Array.map (fun path ->
+                    Path.GetRelativePath(skillRoot, path).Replace('\\', '/'),
+                    Fsgg.SkillMirror.sha256 (File.ReadAllText path))
+                |> Array.sortBy fst
+                |> Array.toList
+
+            let declared =
+                entry.Files
+                |> List.map (fun (f: ProductSkillManifest.ProductManifestFile) -> f.Path, f.Sha256)
+                |> List.sortBy fst
+
+            Assert.Equal<(string * string) list>(onDisk, declared)
+
+        Assert.True(sawMultiFileSkill, "Expected at least one folded-in driver skill to have auxiliary files.")
+
+        // Coherent across all three roots, exactly as the v1 leg.
+        Assert.Equal(manifestText, TestSupport.readRelative root ".claude/skills/skill-manifest.json")
+        Assert.Equal(manifestText, TestSupport.readRelative root ".codex/skills/skill-manifest.json")
+
+    // FS.GG.SDD#739 AC4 — the half that had no observable behaviour at all. `amend` returning "I
+    // will not rewrite this" was mapped to `[], skillDigests` and the scaffold went on reporting
+    // success, so an under-declared manifest reached the consumer skill-union gate with no local
+    // trace of why. The refusal is unchanged (the provider's document is still never overwritten
+    // with a guess); what changed is that it is now SAID.
+    [<Fact; Trait("tier", "slow")>]
+    let ``scaffold reports a refused product skill-manifest amend instead of swallowing it`` () =
+        let root = TestSupport.tempDirectory ()
+        writeRegistry root "skills-with-manifest-future.providers.yml"
+
+        let report =
+            runScaffold (scaffoldRequest root (Some "fixture") [ "lifecycle", "sdd" ] false false)
+
+        // A WARNING, not a block: the tree is complete, only the union is not (see the diagnostic's
+        // own note). The scaffold's exit code is deliberately unmoved.
+        Assert.Equal(0, exitCodeForReport report)
+        Assert.Contains("scaffold.productManifestAmendRefused", diagnosticIds report)
+
+        let diagnostic =
+            report.Diagnostics
+            |> List.find (fun d -> d.Id = "scaffold.productManifestAmendRefused")
+
+        Assert.Equal(FS.GG.SDD.Artifacts.Diagnostics.DiagnosticSeverity.DiagnosticWarning, diagnostic.Severity)
+        // It names the cause, not just the symptom.
+        Assert.Contains("schemaVersion 3", diagnostic.Message)
+
+        // And the provider's document is untouched — refusing means refusing, not half-writing.
+        let manifestText =
+            TestSupport.readRelative root ".agents/skills/skill-manifest.json"
+
+        Assert.Contains("\"schemaVersion\": 3", manifestText)
+        Assert.Contains("a-property-this-cli-does-not-model", manifestText)
+        Assert.DoesNotContain("work-board", manifestText)
 
     // 056 T018 (US1 acceptance #3): a provider that produces NO skills leaves all three roots
     // with the seeded fs-gg-sdd-* set byte-identical and mirroredPaths empty.

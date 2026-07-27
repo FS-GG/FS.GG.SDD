@@ -70,6 +70,7 @@ FS.GG.SDD.Artifacts.Diagnostics.scaffoldGameSkillVerifyFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldInvalidParamKey
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldMirrorFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldNameUnrepresentable
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldProductManifestAmendRefused
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProvenanceMalformed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderEmpty
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderFailed
