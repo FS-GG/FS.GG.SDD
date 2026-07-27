@@ -313,3 +313,66 @@ module ContractVersionTests =
             // A deterministic build appends `+<sha>` (SourceLink). The version is the part before it.
             let fsprojVersion = a.InformationalVersion.Split('+').[0]
             Assert.Equal(fsprojVersion, ContractVersion.value)
+
+    // THE OTHER MISSING ASSERTION — same promise, the second place it was broken (FS.GG.SDD#728).
+    //
+    // The test above pins `value` to the fsproj `<Version>`, one file away. It says nothing about the
+    // three integers sitting DIRECTLY BESIDE `value` in `ContractVersion.fs`, and those disagreed with
+    // it for the entire life of 6.0.0: `ca60cf5` moved `value` "5.0.1" -> "6.0.0" and left
+    // `major = 5`, `minor = 0`, `patch = 1`. The `.fsi` promises "no second place can disagree" and
+    // there were four places in ONE FILE.
+    //
+    // WHY THE SUITE STAYED GREEN, which is the whole reason this test is shaped the way it is: the
+    // per-version `[<Fact>]` at the top of this module asserts all four facts against HAND-WRITTEN
+    // LITERALS. Literals cannot detect drift BETWEEN the facts — they can only be updated to match
+    // whatever was typed, and at `ca60cf5` exactly that happened (the string assertion was updated,
+    // the three integer assertions were not, and the test's name still read "matches 5_0_1" while
+    // asserting "6.0.0"). That test still earns its place — it pins the EXPECTED version, a different
+    // job — but it must not be the only guard, because it is the guard that was edited into agreement
+    // with the defect.
+    //
+    // So this assertion carries NO literal at all. There is nothing in it to update: the expectation
+    // is DERIVED from the triple at run time, and the only way to satisfy it is to make the constant
+    // self-consistent. Move any ONE of the four and it reds.
+    //
+    // DIRECTION IS LOAD-BEARING, AND THE OBVIOUS SPELLING IS THE WEAKER ONE. The natural instinct is
+    // to parse `value` into three ints and compare them to the triple. That has a blind spot this
+    // spelling does not: `int "07"` is `7`, so a `value` of "07.2.0" would PASS a parse-and-compare
+    // while disagreeing with its own rendering — and a `value` with too few segments would die on an
+    // index rather than report a comparison. Rendering the triple and comparing whole strings has
+    // neither hole, so the derivation runs triple -> string, never string -> triple.
+    //
+    // AND IT IS DELIBERATELY STRICT. `Assert.Equal` on the FULL string means a `value` that the triple
+    // cannot describe — a pre-release or metadata suffix such as "7.2.0-rc1" — reds here. That is the
+    // intended answer, not a false positive: the triple genuinely does not describe such a `value`,
+    // and loosening the compare to segment-slicing or a prefix match would trade one wrong red for a
+    // permanent blind spot of exactly the kind that let 6.0.0 ship. If this repo ever ships a
+    // pre-release contract version, that is a decision to take in the open, here.
+    //
+    // WHAT IT COMPLETES: `value` is now the HUB. The triple is pinned to it by this test, the fsproj
+    // `<Version>` by the test above, so every in-repo restatement of the package contract version is
+    // transitively forced to agree with every other — which is what the `.fsi` has claimed all along.
+    //
+    // WHAT IT DELIBERATELY DOES NOT ASSERT, because keeping it to ONE proposition is the point: this
+    // is a CONSISTENCY check, not a VALIDITY check. A self-consistent but nonsensical constant — say
+    // `value = "-1.2.0"` with `major = -1` — satisfies it, and that is correct division of labour, not
+    // an oversight: WHICH version this is belongs to the literal `[<Fact>]` above (which pins 7.2.0 and
+    // would red), and WHETHER the string is a well-formed version belongs to `Fsgg.Version.tryParse`,
+    // whose own grammar already rejects "-1.2.3". Folding either of those in here would put a literal
+    // or a second proposition back inside the one guard that must have neither — which is precisely
+    // how the assertion above became editable into agreement with the defect it should have caught.
+    //
+    // MEASURED WHILE FIXING THIS, because the issue left it open: `major`/`minor`/`patch` have NO
+    // reader anywhere in the org outside this file. A grep for `ContractVersion.(major|minor|patch)`
+    // across all eight FS-GG repositories plus `FS-GG/.github` returns only the assertions in this
+    // module; `.github`'s `check-source-coherence.py` matches `\blet\s+value\s*=\s*"([^"]*)"` and uses
+    // only that capture. So 6.0.0's inconsistency was LATENT — no consumer took a 5.x path — and it
+    // stays latent only for as long as nobody branches on the triple, which is a property of today's
+    // consumers rather than of the surface. The triple is public `val`s on a gated package; the guard
+    // is what makes the promise true regardless.
+    [<Fact>]
+    let ``the major/minor/patch triple and ContractVersion.value cannot disagree`` () =
+        let renderedFromTriple =
+            sprintf "%d.%d.%d" ContractVersion.major ContractVersion.minor ContractVersion.patch
+
+        Assert.Equal(renderedFromTriple, ContractVersion.value)
