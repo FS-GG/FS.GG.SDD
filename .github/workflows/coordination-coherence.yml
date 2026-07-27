@@ -1,38 +1,58 @@
 # coordination-coherence — thin caller for the shared reusable gate (FS-GG/.github, ADR-0019).
 #
 # This repo is declared a `coordination-kit` receiver in FS-GG/.github registry/repos.yml, so it
-# holds a copy of the coordination kit — the cross-repo-coordination skill
-# (.claude/skills + .agents/skills) and the fsgg-coord client (scripts/fsgg-coord). The reusable
-# gate checks out FS-GG/.github (the canonical kit source) alongside this repo and runs
-# `scripts/coordination-sync --check`, failing CI if this repo's copy drifts from — or is missing
-# against — canonical. A non-receiver would pass trivially; this repo is a receiver, so it is
-# enforced. Kit changes arrive via the auto-sync PR the `coordination-propagate` workflow opens.
-# Fix drift by running `scripts/coordination-sync <this-checkout>` from a FS-GG/.github checkout.
+# holds a copy of the coordination kit — the coordination skills (.claude/skills + .codex/skills +
+# .agents/skills) and the fsgg-coord client (scripts/fsgg-coord). A non-receiver would pass
+# trivially; this repo is a receiver, so it is enforced.
+#
+# THE COMPARAND IS THIS REPO'S OWN PIN, NOT `.github@main` (FS-GG/.github#1584, FS.GG.SDD#731).
+# The gate restores the exact FS.GG.Kit version THIS repo pins in Directory.Packages.local.props and
+# verifies every materialized destination against the sha256s that package's own kit-manifest.tsv
+# ships. No byte of the hub reaches the comparison, so a hub commit can never retroactively red this
+# repo.
+#
+# BOTH ARMS RESOLVE THE KIT FROM THE SAME REF, AND THAT IS THE FIX (#731 AC3). They did NOT always.
+# The gate used to check out `FS-GG/.github@main` as the comparand on both triggers, and additionally
+# hand the PR arm a `--base-ref` so it reported only branch-AUTHORED drift (#450) while `push` did a
+# strict compare. Two arms, one tree, different verdicts — and because the comparand itself moved,
+# `kit / coordination-kit` PASSED on merged SHA 0376309 at 08:15Z and FAILED on byte-identical content
+# at 08:21Z, purely because a hub commit landed at 08:05:39Z in between. A required context that can
+# go red with nothing changed does not gate a merge, which is what #731 was filed about.
+# A pin-relative comparand is read out of the branch's own tree, so it moves WITH the branch and
+# attribution has nothing left to attribute: `--base-ref` is DROPPED, the script refuses it together
+# with `--against-pin`, and both arms now answer the identical question.
+#
+# STALENESS IS A DIFFERENT QUESTION WITH A DIFFERENT OWNER. A correctly materialized tree on an
+# out-of-date pin is legitimately green here. "Is my pin CURRENT?" belongs to the kit-pin freshness
+# sweep in FS-GG/.github scripts/repos-audit.sh (#1540), which runs daily and reds on any stale pin.
+# Do not add a staleness opinion to this gate.
+#
+# FIX DRIFT by bumping the FS.GG.Kit pin in Directory.Packages.local.props and re-materializing:
+#   dotnet build .config/kit/FS.GG.Kit.receiver.proj -t:FsggKitMaterialize
+# Renovate normally does the bump and kit-materialize.yml re-materializes on that PR. Do NOT byte-copy
+# from a `.github` checkout: the tree would then disagree with the pin it is graded against, which
+# turns this gate RED rather than green.
 #
 # All mechanics + rationale live in the reusable workflow:
 #   FS-GG/.github .github/workflows/coordination-coherence.yml
 name: coordination-coherence
 
-# The PR trigger is UNSCOPED — it runs on every PR, matching all five sibling receivers. It once
-# carried a `paths:` filter (#370) so it fired only on PRs that touched a kit file, because the gate
-# compares this repo's vendored kit against FS-GG/.github@main — a MOVING TARGET — and in the window
-# before the auto-sync PR lands, main is genuinely stale, so the strict compare went red on EVERY
+# The PR trigger is UNSCOPED — it runs on every PR, matching the sibling receivers. It once carried a
+# `paths:` filter (#370) so it fired only on PRs that touched a kit file, because the comparand was
+# then `FS-GG/.github@main` — a MOVING TARGET — so mid-sync-window the strict compare went red on EVERY
 # open PR at once, naming files the PR never touched (PR #366 reddened on a one-line F# test change).
 #
-# That workaround is now REDUNDANT and has been REMOVED (#525). FS-GG/.github#450 (landed
-# the same day, hours after #370) taught the reusable gate to ATTRIBUTE drift on a `pull_request`: it
-# hands the script the base branch's CURRENT tip and reports only the drift the BRANCH AUTHORED
-# (merge-base-relative). A PR that touches no kit file authors no drift, so it stays green even
-# mid-sync-window; inherited staleness becomes a non-blocking advisory that names coordination-propagate
-# as the owner. The strict compare — the verdict of record on this repo's kit — still runs on
-# `push: branches: [main]`, unchanged, including on the sync bot's own PR when it merges.
+# That workaround is REDUNDANT and was REMOVED (#525). It was first made safe by attribution (#450),
+# and is now made unnecessary outright by the pin-relative comparand (#1584, see the header): a branch
+# carries its own pin AND that pin's files, so a PR that never touches the kit cannot be red for
+# drift it did not author. The one PR that legitimately reds is a pin bump before the kit is
+# re-materialized on it — correct, and fixable in the branch.
 #
 # The filter HAD to go: a `paths:`-scoped workflow does not run on a non-kit PR, so its check context
 # never posts — and a REQUIRED context that never posts wedges every such PR at `Expected` forever.
 # Dropping the filter makes `kit / coordination-kit` report a concluded status on every PR, which is
-# the precondition FS-GG/.github#490 needs to mark it required across the receivers. #450 is what makes
-# always-running safe: the two changes compose exactly, so re-adding a `paths:` filter here would
-# re-wedge the required context — do not.
+# the precondition FS-GG/.github#490 needs to mark it required across the receivers. Re-adding a
+# `paths:` filter here would re-wedge the required context — do not.
 on:
   pull_request:
   push:
