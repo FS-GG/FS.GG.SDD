@@ -6,7 +6,7 @@
          v1.1.0 and justified in plan.md Complexity Tracking. -->
     <PackageId>FS.GG.Contracts</PackageId>
     <Description>Shared, BCL-only typed source of truth for every FS.GG `.fsgg` schema, the extended template-provider descriptor, and the cross-repo dependency registry with a pure validator.</Description>
-    <Version>7.3.0</Version>
+    <Version>7.4.0</Version>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IsPackable>true</IsPackable>
     <!-- nuget.org listing metadata (ADR-0012 §5). License + RepositoryUrl come from
@@ -33,6 +33,47 @@
     <Compile Include="Version.fs" />
     <Compile Include="Registry.fsi" />
     <Compile Include="Registry.fs" />
+  </ItemGroup>
+
+  <!-- #782's PRODUCER HALF, owed since 2026-07-14 and never done here (FS.GG.SDD#742).
+       FS-GG/FS.GG.Rendering#782 established that every packable project ships its own
+       signature files under `api-surface/` in the nupkg, because a consumer's surface
+       mirror cannot be generated from PE METADATA: a metadata walk yields NAMES, an
+       `.fsi` needs SIGNATURES, and F# type abbreviations compile to literally nothing
+       in IL. Rendering did its half in `Directory.Build.local.props`; FS.GG.Contracts
+       never did, so all 14 published versions (1.2.0 … 7.3.0) carry only `lib/net10.0/`
+       — measured by downloading every one from the flat container and reading the
+       archive, not inferred from this file.
+
+       The cost of the omission was NOT abstract. FS.GG.Rendering's
+       `scripts/refresh-api-surface-mirror.fsx` hard-fails on a pin with no `api-surface/`,
+       so Rendering#1094 had to extend a `legacyPre782Surfaces` bridge forward to
+       Contracts 7.2.0 against a 7.0.0-era hand-written copy. While such an entry exists
+       the generator never reads this package's REAL surface, so it cannot detect the
+       taught type drifting — measured, the generator's waiver-emitting mode emits 969
+       lines and not one is a Contracts member. FS.GG.Rendering#1101 deletes that bridge
+       against this release.
+
+       DERIVED FROM `@(Compile)`, NOT A SECOND LIST. The Include is the compiler's own
+       input list filtered to `.fsi` — so the packed surface IS the compiled surface, by
+       construction. A hand-maintained `<None Include="Schemas.fsi" />` roster, or a
+       `**/*.fsi` glob over the directory, would each be a second thing to keep in sync
+       and would reproduce the very defect this closes one layer over: the glob would also
+       pack an orphaned `.fsi` that no longer compiles. Add a signature file to the
+       `<Compile>` list above and it packs; remove it and it stops. There is nothing to
+       forget. `PackedApiSurfaceTests` proves the built package matches, byte for byte.
+
+       The PackagePath spells out the file's FULL target path. `PackagePath="api-surface/"`
+       (a bare folder, trailing slash) reads to NuGet as a DIRECTORY and appends the file's
+       own path a second time; naming `%(Filename)%(Extension)` leaves NuGet nothing to
+       append. `api-surface/` is an INERT folder — NuGet auto-consumes `lib/`, `build/`,
+       `contentFiles/`, `tools/` and friends, so a custom top-level folder is carried in the
+       nupkg and never fed to a consumer's compiler. Nothing a restoring product builds
+       changes, and no public API moves: this is additive PACKAGING only. -->
+  <ItemGroup Label="api-surface (#782 producer half — FS.GG.SDD#742)">
+    <None Include="@(Compile->WithMetadataValue('Extension', '.fsi'))"
+          Pack="true"
+          PackagePath="api-surface/%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

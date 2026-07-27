@@ -293,11 +293,43 @@ module ContractVersionTests =
     // `/orgs/FS-GG/packages/nuget/FS.GG.Contracts/versions` while preparing this change: the newest
     // listed version is 7.2.0), so growing the surface without moving the number would make the
     // `.nupkg` at 7.2.0 and the source at 7.2.0 different artifacts — the #426/#432 shape again.
+    //
+    // 7.3.0 -> 7.4.0 (FS.GG.SDD#742): an ADDITIVE MINOR, and the FIRST entry in this file whose
+    // justification is not a row of the version-bump checklist's table at all. The .NET public API
+    // surface does not move by one member: no type, `val`, DU case or record field is added,
+    // removed, renamed or retyped, and `docs/api-surface/FS.GG.Contracts/**` is byte-unchanged.
+    // Read literally, the table's LAST row ("behaviour change with no surface change; docs;
+    // internals") says PATCH.
+    //
+    // IT IS A MINOR ANYWAY, AND THE REASON IS WHAT THE TABLE DOES NOT MODEL. That table's axis is
+    // "change to the public API surface", because for seven majors that was the only thing about
+    // this package a consumer could depend on. This change adds a SECOND axis: the nupkg now
+    // carries `api-surface/*.fsi` (FS-GG/FS.GG.Rendering#782's producer half, owed since
+    // 2026-07-14 and never done here). That is a consumer-observable CAPABILITY of the package,
+    // not an internal, and a consumer is about to depend on it: FS.GG.Rendering#1101's
+    // `scripts/refresh-api-surface-mirror.fsx` HARD-FAILS on any pin whose package carries no
+    // `api-surface/`, so this version becomes a FLOOR that repo pins against. A patch bump
+    // announces "nothing new to depend on"; that would be false, and a consumer reading only the
+    // number would have no way to tell 7.3.0 from 7.4.0 on the one property it now requires.
+    // Minor is the honest number: purely additive, nothing removed, safe to take.
+    //
+    // WHY NOT A MAJOR. Nothing is removed, renamed, retyped or reshaped, so `api-compatibility-gate`
+    // stays green untouched — verified, not assumed. `api-surface/` is an INERT nupkg folder (NuGet
+    // auto-consumes `lib/`, `build/`, `contentFiles/`, `tools/` and friends), so no restoring
+    // consumer's build changes because of it. No major was authorised and none is owed.
+    //
+    // AND IT IS BEING MADE HERE RATHER THAN DEFERRED, for the fifth time in this file's history —
+    // with the sharpest reason yet. 7.3.0 IS live on the org feed (verified against
+    // `/orgs/FS-GG/packages/nuget/FS.GG.Contracts/versions` while preparing this change: the newest
+    // listed version is 7.3.0, published by #737 minutes earlier). Publishing the packed surface
+    // under the unmoved 7.3.0 would make the `.nupkg` at 7.3.0 and the source at 7.3.0 different
+    // artifacts — the #426/#432 shape a fifth time — and a published package cannot be un-published,
+    // so the generator's only input would be whatever that release shipped.
     [<Fact>]
-    let ``contract version self-report matches 7_3_0`` () =
-        Assert.Equal("7.3.0", ContractVersion.value)
+    let ``contract version self-report matches 7_4_0`` () =
+        Assert.Equal("7.4.0", ContractVersion.value)
         Assert.Equal(7, ContractVersion.major)
-        Assert.Equal(3, ContractVersion.minor)
+        Assert.Equal(4, ContractVersion.minor)
         Assert.Equal(0, ContractVersion.patch)
 
     // THE ASSERTION THAT WAS MISSING, AND THE ONLY ONE THAT WOULD HAVE CAUGHT IT.
@@ -378,7 +410,7 @@ module ContractVersionTests =
     // WHAT IT DELIBERATELY DOES NOT ASSERT, because keeping it to ONE proposition is the point: this
     // is a CONSISTENCY check, not a VALIDITY check. A self-consistent but nonsensical constant — say
     // `value = "-1.2.0"` with `major = -1` — satisfies it, and that is correct division of labour, not
-    // an oversight: WHICH version this is belongs to the literal `[<Fact>]` above (which pins 7.2.0 and
+    // an oversight: WHICH version this is belongs to the literal `[<Fact>]` above (which pins 7.4.0 and
     // would red), and WHETHER the string is a well-formed version belongs to `Fsgg.Version.tryParse`,
     // whose own grammar already rejects "-1.2.3". Folding either of those in here would put a literal
     // or a second proposition back inside the one guard that must have neither — which is precisely

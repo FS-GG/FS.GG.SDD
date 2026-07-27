@@ -17,6 +17,7 @@
     <Compile Include="DependencyClosureTests.fs" />
     <Compile Include="PublicSurfaceTests.fs" />
     <Compile Include="AgentSurfaceDriftTests.fs" />
+    <Compile Include="PackedApiSurfaceTests.fs" />
   </ItemGroup>
 
   <ItemGroup>
