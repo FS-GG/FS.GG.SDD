@@ -77,11 +77,18 @@ module internal Drift =
           Steps: ReconciliationStep list
           IsCoherent: bool }
 
-    // The content-addressed union `verifyFiles` covers: SDD-seeded *process* skills (canonical body
-    // = the embedded seeded body) and provider *product* skills recorded in provenance (canonical
-    // digest = the recorded `sha256`). `skillBodies` is the caller-read body of each skill copy
-    // FILE keyed by its on-disk path; a file absent from `skillBodies` is treated as missing, and a
-    // (root, id) with no file at all is treated as a root that carries no copy of the skill.
+    // The content-addressed union covers THREE skill classes, each with the strongest authority it
+    // actually has, and no stronger (FS-GG/FS.GG.SDD#733):
+    //
+    //   - SDD-seeded *process* skills — no digest at all; presence + cross-root byte-identity;
+    //   - provider *product* skills recorded in provenance — one recorded `sha256`, covering
+    //     `SKILL.md` alone (the ADR-0017 v1 gap, FS-GG/FS.GG.SDD#727);
+    //   - owner-sourced *driver + GameSkill* skills recorded in provenance — a `sha256` for EVERY
+    //     file, so every file is digest-arbitrated (`SkillMirror.verifyFileSet`).
+    //
+    // `skillBodies` is the caller-read body of each skill copy FILE keyed by its on-disk path; a
+    // file absent from `skillBodies` is treated as missing, and a (root, id) with no file at all is
+    // treated as a root that carries no copy of the skill.
 
     /// Split an on-disk path into `(root, id, relativePath)` when — and only when — it names a file
     /// inside a declared agent skill directory, `<root>/skills/<id>/<relative>`, for one of the
@@ -202,6 +209,78 @@ module internal Drift =
 
         processSkills @ productSkills
 
+    /// ADR-0063 / FS-GG/FS.GG.SDD#733: the OWNER-SOURCED skill class (driver + GameSkill), as the
+    /// COMPLETE declared file set `SkillMirror.verifyFileSet` arbitrates against.
+    ///
+    /// This is the third skill class, and the only one whose recorded authority covers every file.
+    /// `DriverSkills.plan` / `GameSkills.plan` materialize `<root>/skills/<id>/<file>` for every
+    /// root, per file, and record `(path, file.Sha256)` into `DriverPaths` / `GameSkillPaths` — so
+    /// unlike the process class (no digest at all) and the product class (one digest covering
+    /// `SKILL.md`, the #727 gap), this class can arbitrate EVERY file against a stable seed-time
+    /// digest. Before #733 it asserted none of it: the class was in neither `expectedSkills` arm and
+    /// reached `doctor` only through the presence-only `ownerSourcedBackfill` axis, so a driver
+    /// auxiliary edited away from its recorded digest — in one root or in all three — read coherent.
+    ///
+    /// The digest is the RECORDED one, never the running binary's embedded body, for the same reason
+    /// the product class uses the recorded value: hash-matching against an embedded reference would
+    /// flag every prior scaffold after any driver-skill text change across CLI versions. It is safe
+    /// to trust because nothing ever launders it — `HandlersUpgrade.preservedFilesVerified` refuses
+    /// to record a fresh digest for a preserved file that does not already match.
+    ///
+    /// Empty when provenance records no owner-sourced path (a pre-#624 tree, a dev-repo `init`, or a
+    /// build without the owner-skill pin). That degradation is the honest one: with no recorded
+    /// declaration there is no authority to judge a copy against, so the class reports exactly what
+    /// it did before — nothing — rather than inventing an expectation.
+    let ownerSourcedSkillFiles (provenance: ScaffoldProvenanceRecord option) : SkillMirror.ExpectedSkillFiles list =
+        match provenance with
+        | None -> []
+        | Some record ->
+            // The other two classes own their ids; an id in both would be verified twice, against
+            // two different authorities, and report the union of both verdicts. Driver rows in the
+            // reserved `fs-gg-sdd-*` namespace are already refused at materialize time
+            // (`DriverSkills.reservedNamespacePrefix`), so this is belt-and-braces for the product
+            // arm — but the drift fold is not the place to discover an overlap.
+            let alreadyExpected =
+                expectedSkills provenance |> List.map (fun skill -> skill.Id) |> Set.ofList
+
+            record.DriverPaths @ record.GameSkillPaths
+            |> List.choose (fun produced ->
+                // The SAME root-anchored parser the fold and the body collector share. A recorded
+                // path that is not a confined skill-copy path names no skill copy, whatever it says.
+                skillCopyOfPath produced.Path
+                |> Option.map (fun (_, id, relative) -> id, (relative, Option.defaultValue "" produced.Sha256)))
+            |> List.filter (fun (id, _) -> not (Set.contains id alreadyExpected))
+            |> List.groupBy fst
+            |> List.map (fun (id, rows) ->
+                { SkillMirror.ExpectedSkillFiles.Id = id
+                  // Owner-sourced skills are delivered TO a product, so they are `Product` on the
+                  // one axis this type carries. `Scope` is reporting metadata here — the fold below
+                  // classifies by condition, not by scope.
+                  SkillMirror.ExpectedSkillFiles.Scope = SkillScope.Product
+                  SkillMirror.ExpectedSkillFiles.Files =
+                    rows
+                    // One row per (root × file), so each relative path arrives once per root
+                    // carrying the same recorded digest. Sort before dedupe so the survivor is
+                    // deterministic even if two roots somehow recorded different digests.
+                    |> List.map snd
+                    |> List.distinct
+                    |> List.sort
+                    |> List.distinctBy fst
+                    |> List.map (fun (relative, sha256) ->
+                        { SkillManifestFile.RelativePath = relative
+                          SkillManifestFile.Sha256 = sha256 }) })
+            |> List.sortBy (fun skill -> skill.Id)
+
+    /// FS-GG/FS.GG.SDD#733: every skill id the content-verified surface expects — the process ∪
+    /// product union `expectedSkills` builds, plus the owner-sourced ids recorded in provenance.
+    /// `HandlersDoctor` reads this to decide which enumerated skill-copy FILES to snapshot: a body
+    /// the collector never reads cannot be verified however the fold is written.
+    let contentVerifiedSkillIds (provenance: ScaffoldProvenanceRecord option) : string list =
+        (expectedSkills provenance |> List.map (fun skill -> skill.Id))
+        @ (ownerSourcedSkillFiles provenance |> List.map (fun skill -> skill.Id))
+        |> List.distinct
+        |> List.sort
+
     /// FS-GG/FS.GG.SDD#736: which condition put a path on the drift surface. Kept as a tag carried
     /// alongside each path rather than a second traversal, so the classification cannot drift from
     /// the reporting rule that produced it.
@@ -247,6 +326,7 @@ module internal Drift =
         (skillBodies: Map<string, string>)
         : SkillDriftClasses =
         let expected = expectedSkills provenance
+        let ownerExpected = ownerSourcedSkillFiles provenance
 
         // `(root, id)` -> the file set that copy carries. A (root, id) with no file at all has NO
         // entry, which `verifyFiles` reads as "this root carries no copy of the skill" — the same
@@ -281,84 +361,138 @@ module internal Drift =
             | Some files when files |> List.exists (fun file -> file.RelativePath = "SKILL.md") -> Some files
             | _ -> None
 
+        // One observation set for BOTH verify entry points, over the union of ids either of them
+        // expects. A row for an id the fold in question does not expect is inert (each entry point
+        // folds over its OWN `expected`), so sharing the set is what keeps the two from disagreeing
+        // about what is on disk — the same reason `SkillMirror` shares its observation fold.
         let actual =
-            [ for skill in expected do
+            [ for id in
+                  (expected |> List.map (fun skill -> skill.Id))
+                  @ (ownerExpected |> List.map (fun skill -> skill.Id))
+                  |> List.distinct do
                   for root in agentSkillRoots ->
                       { SkillMirror.ActualSkillFiles.Root = root
-                        SkillMirror.ActualSkillFiles.Id = skill.Id
-                        SkillMirror.ActualSkillFiles.Files = copyFiles root skill.Id } ]
+                        SkillMirror.ActualSkillFiles.Id = id
+                        SkillMirror.ActualSkillFiles.Files = copyFiles root id } ]
 
-        let classified =
+        // The three facts, normalized off the two verify shapes so ONE classification rule sees
+        // both. `verifyFiles` reports `SkillFileDrift`, `verifyFileSet` reports `DeclaredFileDrift`;
+        // their first three fields are the SAME three independent facts with the same meanings, so
+        // the rule below is written once over `(relativePath, missingRoots, divergent,
+        // hashMismatchRoots)` rather than twice over two records that would drift apart.
+        let classifyDrift
+            (id: string)
+            (skillMissingRoots: string list)
+            (files: (string * string list * bool * string list) list)
+            =
+            // A root carrying NO copy of the skill at all is reported once, at its `SKILL.md` —
+            // the file that MAKES a directory a skill (`SkillMirror.skillPath` /
+            // `skillIdOfPath`) — rather than as one absence per file in the union. The repair is
+            // a single one ("this root has no copy"), and naming every auxiliary of a root that
+            // has none of them buries it under its own detail; it is also exactly what this
+            // surface reported before it could see the auxiliaries, so the pre-#726 output is
+            // preserved for that case.
+            //
+            // #736: a root with no copy is an ABSENCE, never a byte disagreement — but WHICH
+            // absence depends on whether any root still has one. `verifyFiles` reports the
+            // whole-skill loss (every root in `MissingRoots`) through this same field, and there
+            // the sibling root an operator would mirror FROM does not exist. Classifying that as
+            // not-mirrored would make the advisory assert "another root carries this file" about
+            // a file no root carries.
+            let skillLostEverywhere =
+                agentSkillRoots
+                |> List.forall (fun root -> List.contains root skillMissingRoots)
+
+            let missingSkillCondition =
+                if skillLostEverywhere then
+                    LostEverywhere
+                else
+                    NotMirroredAt
+
+            let missingSkillPaths =
+                skillMissingRoots
+                |> List.map (fun root -> missingSkillCondition, SkillMirror.skillPath root id)
+
+            let rootsWithSkill =
+                agentSkillRoots
+                |> List.filter (fun root -> not (List.contains root skillMissingRoots))
+
+            // The pre-existing root-selection rule, unchanged in substance and now applied PER
+            // FILE: when a reference digest pinpoints the offending root(s)
+            // (`HashMismatchRoots`), report only those. When copies merely disagree with no
+            // reference to arbitrate — a divergent process skill, a product skill whose digest
+            // wasn't recorded, and EVERY auxiliary, since the ADR-0017 manifest
+            // content-addresses `SKILL.md` alone — the canonical copy is unknowable, so report
+            // every root that HAS the file and let the operator reconcile them.
+            //
+            // #736 classifies the three sources without changing which paths they produce.
+            // `fileMissingRoots` ranges over roots that CARRY THE SKILL but not this file, so
+            // it is not-mirrored — and never `LostEverywhere` under `verifyFiles`, which builds
+            // the per-file union from the PRESENT roots, so a file in the union is carried by at
+            // least one of them. `hashMismatchRoots` and the digest-less `divergentRoots` both
+            // range over roots that HAVE the file, so they are divergent. The classes are
+            // therefore disjoint per (root, file), and the union below is what the pre-#736
+            // fold returned.
+            //
+            // #733 note: under `verifyFileSet` the per-file union is `declared ∪ observed`, so a
+            // DECLARED owner-sourced file absent from every root that carries the skill lands in
+            // `fileMissingRoots` for all of them. That is still not-mirrored rather than lost —
+            // the skill itself is present, and the repair is per-file, not "restore the copy".
+            let filePaths =
+                files
+                |> List.collect (fun (relativePath, fileMissingRoots, divergent, hashMismatchRoots) ->
+                    let rootsWithFile =
+                        rootsWithSkill
+                        |> List.filter (fun root -> not (List.contains root fileMissingRoots))
+
+                    let divergentRoots =
+                        if divergent && List.isEmpty hashMismatchRoots then
+                            rootsWithFile
+                        else
+                            []
+
+                    (fileMissingRoots |> List.map (fun root -> NotMirroredAt, root))
+                    @ (hashMismatchRoots @ divergentRoots |> List.map (fun root -> DivergentAt, root))
+                    |> List.map (fun (condition, root) -> condition, SkillMirror.skillFilePath root id relativePath))
+
+            missingSkillPaths @ filePaths
+
+        // The process ∪ product union, verified against `ExpectedSkill.Sha256` — a digest that
+        // content-addresses `SKILL.md` and nothing else (the #727 gap). Unchanged by #733.
+        let processProductClassified =
             SkillMirror.verifyFiles agentSkillRoots expected actual
             |> List.collect (fun drift ->
-                // A root carrying NO copy of the skill at all is reported once, at its `SKILL.md` —
-                // the file that MAKES a directory a skill (`SkillMirror.skillPath` /
-                // `skillIdOfPath`) — rather than as one absence per file in the union. The repair is
-                // a single one ("this root has no copy"), and naming every auxiliary of a root that
-                // has none of them buries it under its own detail; it is also exactly what this
-                // surface reported before it could see the auxiliaries, so the pre-#726 output is
-                // preserved for that case.
-                //
-                // #736: a root with no copy is an ABSENCE, never a byte disagreement — but WHICH
-                // absence depends on whether any root still has one. `verifyFiles` reports the
-                // whole-skill loss (every root in `MissingRoots`) through this same field, and there
-                // the sibling root an operator would mirror FROM does not exist. Classifying that as
-                // not-mirrored would make the advisory assert "another root carries this file" about
-                // a file no root carries.
-                let skillLostEverywhere =
-                    agentSkillRoots
-                    |> List.forall (fun root -> List.contains root drift.MissingRoots)
-
-                let missingSkillCondition =
-                    if skillLostEverywhere then
-                        LostEverywhere
-                    else
-                        NotMirroredAt
-
-                let missingSkillPaths =
+                classifyDrift
+                    drift.Id
                     drift.MissingRoots
-                    |> List.map (fun root -> missingSkillCondition, SkillMirror.skillPath root drift.Id)
+                    (drift.Files
+                     |> List.map (fun file ->
+                         file.RelativePath, file.MissingRoots, file.Divergent, file.HashMismatchRoots)))
 
-                let rootsWithSkill =
-                    agentSkillRoots
-                    |> List.filter (fun root -> not (List.contains root drift.MissingRoots))
+        // FS-GG/FS.GG.SDD#733: the owner-sourced class, verified against the COMPLETE declared file
+        // set recorded in provenance. `verifyFileSet` is the same algorithm with fact 3 widened from
+        // `SKILL.md` to every declared file, so a tampered driver AUXILIARY is arbitrated to the
+        // offending root instead of falling back to "report every present root".
+        //
+        // `DeclaredFileDrift.UndeclaredRoots` — fact 4, "this root carries a file the declaration
+        // does not cover" — is deliberately NOT classified here. It is a genuine fourth condition
+        // with a fourth repair, and every existing class's advisory sentence would be FALSE of it
+        // (`NotMirrored` asserts a sibling root carries the file, and it is reported at the roots
+        // that DO carry it). Reporting it needs a fourth advisory bucket on `DoctorSummary` and its
+        // rendering, which is a wider change than #733's touch-set — filed as
+        // FS-GG/FS.GG.SDD#750. Dropping it reports strictly what #733 asked for and regresses
+        // nothing: before #733 this class was not content-verified at all.
+        let ownerClassified =
+            SkillMirror.verifyFileSet agentSkillRoots ownerExpected actual
+            |> List.collect (fun drift ->
+                classifyDrift
+                    drift.Id
+                    drift.MissingRoots
+                    (drift.Files
+                     |> List.map (fun file ->
+                         file.RelativePath, file.MissingRoots, file.Divergent, file.HashMismatchRoots)))
 
-                // The pre-existing root-selection rule, unchanged in substance and now applied PER
-                // FILE: when a reference digest pinpoints the offending root(s)
-                // (`HashMismatchRoots`), report only those. When copies merely disagree with no
-                // reference to arbitrate — a divergent process skill, a product skill whose digest
-                // wasn't recorded, and EVERY auxiliary, since the ADR-0017 manifest
-                // content-addresses `SKILL.md` alone — the canonical copy is unknowable, so report
-                // every root that HAS the file and let the operator reconcile them.
-                //
-                // #736 classifies the three sources without changing which paths they produce.
-                // `file.MissingRoots` ranges over roots that CARRY THE SKILL but not this file, so
-                // it is not-mirrored — and never `LostEverywhere`, because `verifyFiles` builds the
-                // per-file union from the PRESENT roots, so a file in the union is carried by at
-                // least one of them. `HashMismatchRoots` and the digest-less `divergentRoots` both
-                // range over roots that HAVE the file, so they are divergent. The classes are
-                // therefore disjoint per (root, file), and the union below is what the pre-#736
-                // fold returned.
-                let filePaths =
-                    drift.Files
-                    |> List.collect (fun file ->
-                        let rootsWithFile =
-                            rootsWithSkill
-                            |> List.filter (fun root -> not (List.contains root file.MissingRoots))
-
-                        let divergentRoots =
-                            if file.Divergent && List.isEmpty file.HashMismatchRoots then
-                                rootsWithFile
-                            else
-                                []
-
-                        (file.MissingRoots |> List.map (fun root -> NotMirroredAt, root))
-                        @ (file.HashMismatchRoots @ divergentRoots
-                           |> List.map (fun root -> DivergentAt, root))
-                        |> List.map (fun (condition, root) ->
-                            condition, SkillMirror.skillFilePath root drift.Id file.RelativePath))
-
-                missingSkillPaths @ filePaths)
+        let classified = processProductClassified @ ownerClassified
 
         let pathsOf condition =
             classified

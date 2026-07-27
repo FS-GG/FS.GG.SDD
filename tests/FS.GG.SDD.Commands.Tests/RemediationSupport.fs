@@ -45,6 +45,32 @@ module RemediationSupport =
     let coherentPresent =
         Drift.expectedArtifactPaths @ (ownerSourcedCopies [] |> List.map fst)
 
+    /// FS-GG/FS.GG.SDD#733: the owner-sourced provenance ROWS a scaffold at the current generator
+    /// records — `(path, recorded sha256)` — taken from the same plans that produce the copies, so a
+    /// fixture's declaration is the real one rather than a hand-written approximation. Driver rows
+    /// and game rows are kept apart because provenance keeps them in two fields.
+    let ownerSourcedProvenanceRows (parameters: (string * string) list) =
+        let presentIds = Set.ofList SeededSkills.skillNames
+        let driver = DriverSkills.plan presentIds
+        let game = GameSkills.plan (Map.ofList parameters)
+        driver.ProvenancePaths, game.ProvenancePaths
+
+    /// The `"driverPaths":[…],"gameSkillPaths":[…]` JSON fragment (leading comma) a current-generator
+    /// provenance document carries. Empty arrays when no owner-skill package is embedded in this
+    /// build — the same degradation `Drift.ownerSourcedSkillFiles` handles.
+    let ownerSourcedProvenanceJson (parameters: (string * string) list) =
+        let driverRows, gameRows = ownerSourcedProvenanceRows parameters
+
+        let rows owner entries =
+            entries
+            |> List.map (fun (path: string, sha256: string) ->
+                $"{{\"path\":\"{path}\",\"owner\":\"{owner}\",\"sha256\":\"{sha256}\"}}")
+            |> String.concat ","
+
+        let driverJson = rows "driver" driverRows
+        let gameJson = rows "gameSkill" gameRows
+        $",\"driverPaths\":[{driverJson}],\"gameSkillPaths\":[{gameJson}]"
+
     let private providersYml (minimum: string option) =
         let minBlock =
             match minimum with
@@ -55,7 +81,10 @@ module RemediationSupport =
         + minBlock
         + "    parameters: []\n"
 
-    let private provenanceJson (minimum: string option) =
+    /// `ownerRows` is the `,"driverPaths":…,"gameSkillPaths":…` fragment. A fixture that
+    /// MATERIALIZES the owner-sourced copies declares them; a fixture modelling a tree that predates
+    /// owner-sourced delivery passes `""`, because such a tree recorded nothing about them (#733).
+    let private provenanceJsonWith (ownerRows: string) (minimum: string option) =
         let mv =
             match minimum with
             | Some v -> "\"" + v + "\""
@@ -63,7 +92,16 @@ module RemediationSupport =
 
         "{ \"schemaVersion\":1,\"generator\":{\"id\":\"fsgg-sdd\",\"version\":\"0.1.0\"},"
         + $"\"requiredMinimumCliVersion\":{mv},\"providerName\":\"rendering\","
-        + "\"providerContractVersion\":\"1.0.0\",\"templateRef\":\"fsgg-app\",\"outcome\":\"providerSucceeded\",\"producedPaths\":[],\"effectiveParameters\":[] }"
+        + "\"providerContractVersion\":\"1.0.0\",\"templateRef\":\"fsgg-app\",\"outcome\":\"providerSucceeded\",\"producedPaths\":[]"
+        + ownerRows
+        + ",\"effectiveParameters\":[] }"
+
+    /// The provenance a CURRENT-generator scaffold writes: it RECORDS the owner-sourced copies it
+    /// materialized, each with the digest it was content-verified against (#733). Callers of this
+    /// spelling also write those copies to disk; declaring nothing while carrying them would be a
+    /// shape no real scaffold produces.
+    let private provenanceJson (minimum: string option) =
+        provenanceJsonWith (ownerSourcedProvenanceJson []) minimum
 
     // 058/ADR-0014 P1: drift is content-addressed, so a "present" seeded skill copy must carry
     // its CANONICAL body (not a placeholder), else `verify` reports a hash-mismatch. The canonical
@@ -161,7 +199,11 @@ sdd:
     let ownerMissingFixture () =
         let root = TestSupport.tempDirectory ()
         TestSupport.writeRelative root ".fsgg/providers.yml" (providersYml (Some farBehindMinimum))
-        TestSupport.writeRelative root ".fsgg/scaffold-provenance.json" (provenanceJson (Some farBehindMinimum))
+        // #733: a tree that predates owner-sourced delivery recorded NOTHING about it, so this
+        // provenance declares no `driverPaths`/`gameSkillPaths`. That is what makes the backfill the
+        // ONLY axis here: with no recorded declaration there is no authority to content-verify
+        // against, and the owner-sourced lane correctly says nothing.
+        TestSupport.writeRelative root ".fsgg/scaffold-provenance.json" (provenanceJsonWith "" (Some farBehindMinimum))
 
         for path in Drift.expectedArtifactPaths do
             let body = canonicalSkillBody path |> Option.defaultValue "present\n"
@@ -203,8 +245,12 @@ sdd:
         + "\"providerContractVersion\":\"1.0.0\",\"templateRef\":\"fsgg-app\",\"outcome\":\"providerSucceeded\","
         + $"\"producedPaths\":[{{\"path\":\".agents/skills/{productSkillId}/SKILL.md\",\"owner\":\"generatedProduct\",\"sha256\":\"{digest}\"}}{extra}],"
         + $"\"mirroredPaths\":[{{\"path\":\".claude/skills/{productSkillId}/SKILL.md\",\"owner\":\"mirrored\",\"sha256\":\"{digest}\"}},"
-        + $"{{\"path\":\".codex/skills/{productSkillId}/SKILL.md\",\"owner\":\"mirrored\",\"sha256\":\"{digest}\"}}],"
-        + "\"effectiveParameters\":[] }"
+        + $"{{\"path\":\".codex/skills/{productSkillId}/SKILL.md\",\"owner\":\"mirrored\",\"sha256\":\"{digest}\"}}]"
+        // #733: as in `provenanceJson` — this fixture materializes the owner-sourced copies, so it
+        // declares them too. Without the declaration there is no recorded authority and the
+        // owner-sourced lane has nothing to verify.
+        + ownerSourcedProvenanceJson []
+        + ",\"effectiveParameters\":[] }"
 
     /// The three root copies of the provider product skill (`.claude`/`.codex`/`.agents`).
     let productSkillCopies =

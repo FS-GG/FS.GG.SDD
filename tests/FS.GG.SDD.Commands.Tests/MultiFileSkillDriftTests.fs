@@ -228,42 +228,19 @@ module MultiFileSkillDriftTests =
         Assert.Empty summary.SkillDriftPaths
 
     // ---------------------------------------------------------------------------------------
-    // The OWNER-SOURCED class is deliberately still excluded — FS-GG/FS.GG.SDD#733.
+    // The OWNER-SOURCED class — FS-GG/FS.GG.SDD#733. Cases live at the end of the file, where the
+    // #736 advisory helpers they need are in scope.
     // ---------------------------------------------------------------------------------------
 
     /// An owner-sourced (ADR-0063 driver/game) auxiliary copy that `productCoherentFixture` really
     /// materializes, derived from the same plan rather than hardcoded. Empty in a build with no
     /// owner-skill package embedded (`Drift.ownerSourcedBackfill` degrades to empty), in which case
-    /// the case below has no subject and asserts nothing.
+    /// the cases below have no subject.
     let private ownerSourcedAuxiliaries () =
         ownerSourcedCopies []
         |> List.map fst
         |> List.filter (fun path -> not (path.EndsWith("/SKILL.md", StringComparison.Ordinal)))
         |> List.sort
-
-    // `Drift.expectedSkills` is the SDD-seeded process union plus the provenance-recorded product
-    // ids — the owner-sourced driver/game class is in neither, and reaches `doctor` only on the
-    // presence/backfill axis. So its auxiliaries are NOT content-verified, even though it is the one
-    // skill class in this product that is genuinely multi-file AND records a per-file digest.
-    //
-    // That is out of scope for #726 and is filed as #733. It is pinned here so the exclusion is a
-    // recorded decision rather than an accident, and so #733 has a test to invert.
-    [<Fact>]
-    let ``owner-sourced auxiliaries are NOT yet content-verified - deliberate, see 733`` () =
-        match ownerSourcedAuxiliaries () with
-        | [] ->
-            // No owner-skill package embedded in this build, so the class has no auxiliary to
-            // diverge. Assert that premise rather than passing silently — if owner skills ARE
-            // delivered and simply stopped being multi-file, this case has lost its subject and
-            // should say so instead of going quietly green.
-            Assert.Empty(ownerSourcedCopies [])
-        | target :: _ ->
-            let fixtureRoot = productCoherentFixture ()
-            TestSupport.writeRelative fixtureRoot target "DRIFTED\n"
-
-            let summary = doctorSummary (doctorReport fixtureRoot)
-            Assert.Empty summary.SkillDriftPaths
-            Assert.True summary.IsCoherent
 
     // ---------------------------------------------------------------------------------------
     // The two-phase read gate must TERMINATE, in BOTH lanes that share it.
@@ -620,9 +597,11 @@ module MultiFileSkillDriftTests =
         Assert.Equal<string list>([ skillMd ".codex" productSkillId ], summary.SkillDriftPaths)
 
     // The recorded digest still pinpoints the offending root for `SKILL.md`. Note the auxiliary
-    // branch of this rule is STRUCTURALLY always the "nothing to arbitrate" case: `ExpectedSkill`
-    // carries one digest and `verifyFiles` applies it to `SKILL.md` alone, so no auxiliary can ever
-    // take the hash-mismatch branch. That gap is #727, not a hole in this test.
+    // branch of this rule is STRUCTURALLY always the "nothing to arbitrate" case FOR THIS CLASS:
+    // `ExpectedSkill` carries one digest and `verifyFiles` applies it to `SKILL.md` alone, so no
+    // auxiliary of a process or product skill can take the hash-mismatch branch. That gap is #727.
+    // The owner-sourced class is the exception since #733 — it declares a digest per file, so its
+    // auxiliaries DO take that branch; see the #733 section at the end of this file.
     [<Fact>]
     let ``a hash-mismatched SKILL_md still pinpoints only the offending root`` () =
         let fixtureRoot = productCoherentFixture ()
@@ -750,3 +729,229 @@ module MultiFileSkillDriftTests =
         Assert.Equal(None, Drift.skillCopyOfPath ".claude/skills/x/../../../etc/passwd")
         Assert.Equal(None, Drift.skillCopyOfPath ".claude/skills/./x/SKILL.md")
         Assert.Equal(None, Drift.skillCopyOfPath ".claude/skills/x//SKILL.md")
+
+    // ---------------------------------------------------------------------------------------
+    // FS-GG/FS.GG.SDD#733 — the OWNER-SOURCED class is content-verified, per FILE.
+    //
+    // This is the strongest of the three classes and it asserted nothing. Process skills have no
+    // declared digest at all; product skills have one covering `SKILL.md` (#727). The owner-sourced
+    // driver/game class records a `sha256` for EVERY file it materializes
+    // (`DriverSkills.plan`/`GameSkills.plan` -> `DriverPaths`/`GameSkillPaths`), and before #733 it
+    // was in neither arm of `Drift.expectedSkills` — it reached `doctor` only on the presence-only
+    // backfill axis, so a driver auxiliary edited away from its recorded digest read COHERENT.
+    // ---------------------------------------------------------------------------------------
+
+    /// The first owner-sourced auxiliary, split into `(root, id, relativePath)` by the SAME parser
+    /// the fold uses. `None` in a build with no owner-skill package embedded, or one whose owner
+    /// skills are single-file — in which case the cases below have lost their subject and say so
+    /// rather than passing vacuously.
+    let private ownerAuxiliaryTarget () =
+        ownerSourcedAuxiliaries ()
+        |> List.tryPick (fun path -> Drift.skillCopyOfPath path)
+
+    /// The same owner-sourced auxiliary at every declared root.
+    let private ownerAuxiliaryAtAllRoots (id: string) (relativePath: string) =
+        allRoots
+        |> List.map (fun root -> Fsgg.SkillMirror.skillFilePath root id relativePath)
+        |> List.sort
+
+    /// A build with no multi-file owner-sourced skill has no subject for these cases. Assert THAT,
+    /// so the suite reports a lost premise instead of going quietly green.
+    let private assertNoOwnerSourcedSubject () =
+        Assert.Empty(ownerSourcedAuxiliaries ())
+
+    // AC2 + AC6, the case the issue names: an owner-sourced AUXILIARY edited in ONE root. The
+    // recorded per-file digest arbitrates it to that root, so the report names one path — not the
+    // "no digest to arbitrate, report every present root" fallback every other auxiliary gets.
+    [<Fact>]
+    let ``a tampered owner-sourced auxiliary is arbitrated to the offending root alone`` () =
+        match ownerAuxiliaryTarget () with
+        | None -> assertNoOwnerSourcedSubject ()
+        | Some(_, id, relativePath) ->
+            let fixtureRoot = productCoherentFixture ()
+            let tampered = Fsgg.SkillMirror.skillFilePath ".codex" id relativePath
+            TestSupport.writeRelative fixtureRoot tampered "TAMPERED\n"
+
+            let summary = doctorSummary (doctorReport fixtureRoot)
+
+            // EXACT: only `.codex`. A `Contains` would also pass on the every-present-root fallback,
+            // which is precisely the weaker verdict this item replaces.
+            Assert.Equal<string list>([ tampered ], summary.SkillDriftPaths)
+            Assert.False summary.IsCoherent
+
+    // The authenticity gain, and the one verdict cross-root identity can never reach: the SAME edit
+    // applied to every root. All three copies agree, so `verifyFiles` — which holds an auxiliary by
+    // presence + cross-root identity alone — reports nothing. The recorded per-file digest
+    // contradicts all three.
+    [<Fact>]
+    let ``an owner-sourced auxiliary edited IDENTICALLY in every root is still drift`` () =
+        match ownerAuxiliaryTarget () with
+        | None -> assertNoOwnerSourcedSubject ()
+        | Some(_, id, relativePath) ->
+            let fixtureRoot = productCoherentFixture ()
+
+            for root in allRoots do
+                TestSupport.writeRelative fixtureRoot (Fsgg.SkillMirror.skillFilePath root id relativePath) "EDITED\n"
+
+            let summary = doctorSummary (doctorReport fixtureRoot)
+
+            Assert.Equal<string list>(ownerAuxiliaryAtAllRoots id relativePath, summary.SkillDriftPaths)
+            Assert.False summary.IsCoherent
+
+    /// The provenance a current-generator scaffold records for the owner-sourced class, as a real
+    /// `ScaffoldProvenanceRecord` — the declaration `Drift` reads. `rewrite` maps each recorded
+    /// `(path, sha256)` row, so a case can make one digest deliberately wrong.
+    let private ownerRecordWith (rewrite: string * string -> string * string) =
+        let driverRows, gameRows = ownerSourcedProvenanceRows []
+
+        let produced owner rows =
+            rows
+            |> List.map rewrite
+            |> List.map (fun (path, sha256) ->
+                { FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Path = path
+                  FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Owner = owner
+                  FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Sha256 = Some sha256 })
+
+        { record None with
+            DriverPaths = produced FS.GG.SDD.Artifacts.ArtifactRef.ArtifactOwner.Driver driverRows
+            GameSkillPaths = produced FS.GG.SDD.Artifacts.ArtifactRef.ArtifactOwner.GameSkill gameRows }
+
+    /// The record a real scaffold writes — every digest the one it verified against.
+    let private ownerRecord () = ownerRecordWith (fun row -> row)
+
+    /// The same record with ONE file's recorded digest replaced, at every root — the shape a real
+    /// record carries, since all three roots record the same digest for a file.
+    let private ownerRecordWithCorruptDigest (skillId: string) (relativePath: string) (sha256: string) =
+        let targets =
+            allRoots
+            |> List.map (fun root -> Fsgg.SkillMirror.skillFilePath root skillId relativePath)
+            |> Set.ofList
+
+        ownerRecordWith (fun (path, recorded) ->
+            if Set.contains path targets then
+                path, sha256
+            else
+                path, recorded)
+
+    /// A fully coherent workspace's bodies: the seeded skeleton plus every owner-sourced copy, with
+    /// the bytes this build materializes.
+    let private coherentOwnerBodies () =
+        ownerSourcedCopies []
+        |> List.fold (fun acc (path, body) -> Map.add path body acc) (skillBodiesFor coherentPresent)
+
+    let private computeOwner provenanceRecord bodies =
+        Drift.compute
+            (Some provenanceRecord)
+            (Some(descriptor None))
+            None
+            installedVersion
+            (Set.ofList coherentPresent)
+            bodies
+
+    // AC3: the three facts stay INDEPENDENT. Both shapes below report the SAME path — one
+    // owner-sourced auxiliary at `.codex` — from different conditions, so only the classification
+    // tells them apart. Collapse per-file absence into the digest verdict and the operator is told
+    // to reconcile the bytes of a file that is not there; collapse it the other way and a tampered
+    // file is reported as one to mirror back.
+    [<Fact>]
+    let ``a MISSING owner-sourced auxiliary is not-mirrored; a TAMPERED one is divergent`` () =
+        match ownerAuxiliaryTarget () with
+        | None -> assertNoOwnerSourcedSubject ()
+        | Some(_, id, relativePath) ->
+            let declared = ownerRecord ()
+            let target = Fsgg.SkillMirror.skillFilePath ".codex" id relativePath
+
+            let missing = computeOwner declared (coherentOwnerBodies () |> Map.remove target)
+            Assert.Equal<string list>([ target ], missing.SkillNotMirroredPaths)
+            Assert.Empty missing.SkillDivergentPaths
+            Assert.Empty missing.SkillLostPaths
+
+            let tampered =
+                computeOwner declared (coherentOwnerBodies () |> Map.add target "TAMPERED\n")
+
+            Assert.Equal<string list>([ target ], tampered.SkillDivergentPaths)
+            Assert.Empty tampered.SkillNotMirroredPaths
+            Assert.Empty tampered.SkillLostPaths
+
+    // AC4: the presence/backfill axis is untouched. A tree that predates owner-sourced delivery
+    // recorded NOTHING about the class, so there is no authority to content-verify against and the
+    // owner lane correctly says nothing — while the copies are still previewed for no-clobber
+    // re-seed. The honest degradation: absent declaration means unverified, not "verified clean".
+    [<Fact>]
+    let ``a pre-624 tree reports no owner-sourced content drift and still previews the backfill`` () =
+        match ownerAuxiliaryTarget () with
+        | None -> assertNoOwnerSourcedSubject ()
+        | Some _ ->
+            let fixtureRoot = ownerMissingFixture ()
+            let summary = doctorSummary (doctorReport fixtureRoot)
+
+            Assert.Empty summary.SkillDriftPaths
+
+            let reSeed =
+                summary.PreviewSteps
+                |> List.find (fun step -> step.StepId = ReconciliationStepId.ArtifactReSeed)
+
+            Assert.Equal(ReconciliationOutcome.WouldApply, reSeed.Outcome)
+
+            for path, _ in ownerSourcedCopies [] do
+                Assert.Contains(path, reSeed.TargetPaths)
+
+    // AC4's other half, measured end to end: content drift is ADVISORY and the no-clobber re-seed
+    // does not clobber it — the same policy a divergent product `SKILL.md` already has. `doctor`
+    // exits 0, and `upgrade --yes` leaves the edited bytes exactly as it found them.
+    [<Fact>]
+    let ``owner-sourced content drift is advisory and survives upgrade --yes unclobbered`` () =
+        match ownerAuxiliaryTarget () with
+        | None -> assertNoOwnerSourcedSubject ()
+        | Some(_, id, relativePath) ->
+            let fixtureRoot = productCoherentFixture ()
+            let tampered = Fsgg.SkillMirror.skillFilePath ".codex" id relativePath
+            TestSupport.writeRelative fixtureRoot tampered "TAMPERED\n"
+
+            let doctor = doctorReport fixtureRoot
+            Assert.Equal(0, exitCode doctor)
+            Assert.Empty doctor.ChangedArtifacts
+
+            let report = upgradeYes fixtureRoot
+            Assert.Equal(0, exitCode report)
+            Assert.True report.Upgrade.Value.ResidualDrift
+            Assert.Equal<string>("TAMPERED\n", File.ReadAllText(absolute fixtureRoot tampered))
+
+    // AC5: this is the skill-drift axis, not the seeded-skeleton axis. The owner-sourced class has
+    // never been in `ExpectedArtifactCount`/`MissingArtifactPaths` and must not enter them now —
+    // those two are golden-pinned facts about the SEEDED set.
+    [<Fact>]
+    let ``owner-sourced content drift disturbs neither the expected count nor the missing paths`` () =
+        match ownerAuxiliaryTarget () with
+        | None -> assertNoOwnerSourcedSubject ()
+        | Some(_, id, relativePath) ->
+            let fixtureRoot = productCoherentFixture ()
+            TestSupport.writeRelative fixtureRoot (Fsgg.SkillMirror.skillFilePath ".codex" id relativePath) "TAMPERED\n"
+
+            let summary = doctorSummary (doctorReport fixtureRoot)
+
+            Assert.NotEmpty summary.SkillDriftPaths
+            Assert.Equal(Drift.expectedArtifactCount, summary.ExpectedArtifactCount)
+            Assert.Empty summary.MissingArtifactPaths
+
+    // The declaration is read from PROVENANCE, never from the running binary's embedded bytes — the
+    // same rule the product class follows, and for the same reason: hash-matching against an
+    // embedded reference would flag every prior scaffold after any driver-skill text change across
+    // CLI versions. Pinned on the pure fold, where the recorded digest can be made deliberately
+    // wrong while the on-disk bytes stay exactly what this build would materialize.
+    [<Fact>]
+    let ``the owner-sourced expectation comes from the recorded digest, not the embedded body`` () =
+        match ownerAuxiliaryTarget () with
+        | None -> assertNoOwnerSourcedSubject ()
+        | Some(_, id, relativePath) ->
+            // Every copy on disk carries exactly the bytes this build materializes. Only the
+            // RECORDED digest of one file disagrees — and that is the authority this lane consults,
+            // so all three copies are reported.
+            let corrupted =
+                ownerRecordWithCorruptDigest id relativePath (String.replicate 64 "0")
+
+            let report = computeOwner corrupted (coherentOwnerBodies ())
+
+            Assert.Equal<string list>(ownerAuxiliaryAtAllRoots id relativePath, report.SkillDivergentPaths)
+            Assert.Equal<string list>(ownerAuxiliaryAtAllRoots id relativePath, report.SkillDriftPaths)
+            Assert.False report.IsCoherent

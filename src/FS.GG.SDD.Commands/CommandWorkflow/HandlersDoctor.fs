@@ -79,11 +79,13 @@ module internal HandlersDoctor =
     // unexpected skill directory could not affect the verdict; confining the set keeps `doctor` from
     // reading bodies nothing verifies rather than relying on them being ignored later.
     let skillCopyFilePaths model =
+        // FS-GG/FS.GG.SDD#733: the SDD-seeded process namespace ∪ the product ids recorded in
+        // provenance ∪ the OWNER-SOURCED (driver + GameSkill) ids recorded in provenance — exactly the
+        // union `Drift.computeSkillDrift` verifies across its two entry points. The owner-sourced
+        // arm was the gap: its ids were in neither expected set, so its bodies were never collected
+        // and its per-file digests arbitrated nothing.
         let expectedIds =
-            Set.ofList (
-                SeededSkills.skillNames
-                @ (Drift.productSkillEntries (resolveProvenance model) |> List.map fst)
-            )
+            Drift.contentVerifiedSkillIds (resolveProvenance model) |> Set.ofList
 
         skillRootEnumerations
         |> List.collect (fun effect ->
@@ -139,9 +141,15 @@ module internal HandlersDoctor =
         | None ->
             // Phase 2: the bodies. The enumerated copy files, plus the product copies, whose paths
             // are derived from provenance rather than discovered (an ABSENT copy has no listing
-            // entry, and its absence is the drift fact). `ownerSkillTargetPaths` rides along because
-            // it is read for `presentArtifacts`, NOT for the content fold — the owner-sourced class
-            // is not in `Drift.expectedSkills` and its bodies never reach `skillBodies` (#733).
+            // entry, and its absence is the drift fact). `ownerSkillTargetPaths` rides along for
+            // `presentArtifacts` / the backfill axis.
+            //
+            // #733: the owner-sourced copies now also reach the CONTENT fold — through
+            // `skillCopyFilePaths`, whose expected-id union includes them, so they are DISCOVERED
+            // like every other multi-file copy rather than probed one canonical path at a time. A
+            // file the provenance DECLARES but no root carries needs no read: `verifyFileSet`
+            // compares over `declared ∪ observed`, and its absence from `skillBodies` is exactly the
+            // drift fact.
             (productSkillCopyPaths model
              @ ownerSkillTargetPaths model
              @ skillCopyFilePaths model)
