@@ -477,3 +477,204 @@ module SkillMirrorTests =
             |> List.map (fun d -> d.Id)
 
         Assert.Equal<string list>([ "a"; "z" ], drift)
+
+    // ----- verifyFiles (FS.GG.SDD#721) -----
+    //
+    // The verify half of `mirrorFiles`. #717 gave the library a multi-file MATERIALIZER while
+    // `verify` still modelled a skill as one body, so the library wrote `references/**` it could
+    // not check and `scripts/materialize-skill-roots.fsx` hand-rolled the cross-root comparison.
+    // These tests pin the three facts staying INDEPENDENT and drift naming the offending FILE.
+
+    let private file rel body : SkillFile = { RelativePath = rel; Body = body }
+
+    let private copyFiles root id files : ActualSkillFiles = { Root = root; Id = id; Files = files }
+
+    /// A coherent 3-file skill in every root: `SKILL.md` + two auxiliaries.
+    let private multiFile body =
+        [ file "SKILL.md" body
+          file "references/deep-detail.md" "detail\n"
+          file "agents/openai.yaml" "name: s\n" ]
+
+    [<Fact>]
+    let ``verifyFiles returns no drift for a fully coherent multi-file skill`` () =
+        let body = "canonical\n"
+
+        let actual = roots |> List.map (fun r -> copyFiles r "s" (Some(multiFile body)))
+
+        Assert.Empty(verifyFiles roots [ expected "s" (sha256 body) ] actual)
+
+    // AC6.1: the defect the item names outright — a `references/deep-detail.md` that differs
+    // between `.claude` and `.codex` was INVISIBLE to `SkillMirror.verify`, which only ever saw
+    // SKILL.md. Drift must name the FILE, not merely the skill.
+    [<Fact>]
+    let ``verifyFiles reports a divergent AUXILIARY file and names it`` () =
+        let body = "canonical\n"
+
+        let actual =
+            [ copyFiles ".claude" "s" (Some(multiFile body))
+              copyFiles
+                  ".codex"
+                  "s"
+                  (Some
+                      [ file "SKILL.md" body
+                        file "references/deep-detail.md" "EDITED\n"
+                        file "agents/openai.yaml" "name: s\n" ])
+              copyFiles ".agents" "s" (Some(multiFile body)) ]
+
+        let d = List.exactlyOne (verifyFiles roots [ expected "s" (sha256 body) ] actual)
+        Assert.Empty d.MissingRoots
+        let f = List.exactlyOne d.Files
+        Assert.Equal("references/deep-detail.md", f.RelativePath)
+        Assert.True f.Divergent
+        // INDEPENDENT: divergence did not manufacture a missing root or a hash mismatch.
+        Assert.Empty f.MissingRoots
+        Assert.Empty f.HashMismatchRoots
+
+    // AC6.2: a MISSING auxiliary is a distinct fact from a DIVERGENT one. Both are per-file, both
+    // are reported, and neither is collapsed into the other or into a single verdict.
+    [<Fact>]
+    let ``verifyFiles reports a missing auxiliary as a fact distinct from divergence`` () =
+        let body = "canonical\n"
+
+        let actual =
+            [ copyFiles ".claude" "s" (Some(multiFile body))
+              // `.codex` lost the reference entirely AND disagrees on the agent card.
+              copyFiles ".codex" "s" (Some [ file "SKILL.md" body; file "agents/openai.yaml" "name: OTHER\n" ])
+              copyFiles ".agents" "s" (Some(multiFile body)) ]
+
+        let d = List.exactlyOne (verifyFiles roots [ expected "s" (sha256 body) ] actual)
+        // The skill is present in every root, so the SKILL-level missing fact stays empty.
+        Assert.Empty d.MissingRoots
+
+        let agents = d.Files |> List.find (fun f -> f.RelativePath = "agents/openai.yaml")
+
+        let reference =
+            d.Files |> List.find (fun f -> f.RelativePath = "references/deep-detail.md")
+
+        // Missing, and NOT divergent — the two present copies agree with each other.
+        Assert.Equal<string list>([ ".codex" ], reference.MissingRoots)
+        Assert.False reference.Divergent
+
+        // Divergent, and NOT missing.
+        Assert.True agents.Divergent
+        Assert.Empty agents.MissingRoots
+
+        // Files are named in a stable, sorted order.
+        Assert.Equal<string list>(
+            [ "agents/openai.yaml"; "references/deep-detail.md" ],
+            d.Files |> List.map (fun f -> f.RelativePath)
+        )
+
+    // A root missing the skill ENTIRELY is the skill-level fact, not N per-file absences —
+    // otherwise "the whole copy is gone" is buried under its own detail.
+    [<Fact>]
+    let ``verifyFiles keeps a whole-copy absence at the SKILL level`` () =
+        let body = "canonical\n"
+
+        let actual =
+            [ copyFiles ".claude" "s" (Some(multiFile body))
+              copyFiles ".codex" "s" (Some(multiFile body))
+              copyFiles ".agents" "s" None ]
+
+        let d = List.exactlyOne (verifyFiles roots [ expected "s" (sha256 body) ] actual)
+        Assert.Equal<string list>([ ".agents" ], d.MissingRoots)
+        // The two roots that DO carry it agree on every file, so no file is named.
+        Assert.Empty d.Files
+
+    // The file comparison is a UNION over present roots, not the first root's set: a file only the
+    // SECOND root carries is drift exactly as one only the first carries. An asymmetric compare
+    // would call this coherent.
+    [<Fact>]
+    let ``verifyFiles is symmetric — an EXTRA file in one root is drift`` () =
+        let body = "canonical\n"
+
+        let actual =
+            [ copyFiles ".claude" "s" (Some [ file "SKILL.md" body ])
+              copyFiles ".codex" "s" (Some [ file "SKILL.md" body; file "references/stale.md" "left over\n" ])
+              copyFiles ".agents" "s" (Some [ file "SKILL.md" body ]) ]
+
+        let d = List.exactlyOne (verifyFiles roots [ expected "s" (sha256 body) ] actual)
+        let f = List.exactlyOne d.Files
+        Assert.Equal("references/stale.md", f.RelativePath)
+        Assert.Equal<string list>([ ".claude"; ".agents" ], f.MissingRoots)
+
+    // `ExpectedSkill.Sha256` content-addresses the SKILL.md body (ADR-0017), so hash-match is
+    // asserted there and is empty for auxiliaries BY CONSTRUCTION.
+    [<Fact>]
+    let ``verifyFiles hash-matches SKILL_md against the manifest digest`` () =
+        let body = "canonical\n"
+
+        let actual =
+            [ copyFiles ".claude" "s" (Some(multiFile body))
+              copyFiles ".codex" "s" (Some(multiFile body))
+              copyFiles
+                  ".agents"
+                  "s"
+                  (Some
+                      [ file "SKILL.md" "TAMPERED\n"
+                        file "references/deep-detail.md" "detail\n"
+                        file "agents/openai.yaml" "name: s\n" ]) ]
+
+        let d = List.exactlyOne (verifyFiles roots [ expected "s" (sha256 body) ] actual)
+        let f = List.exactlyOne d.Files
+        Assert.Equal("SKILL.md", f.RelativePath)
+        Assert.Contains(".agents", f.HashMismatchRoots)
+        Assert.True f.Divergent // the tampered copy also breaks cross-root identity
+
+    [<Fact>]
+    let ``verifyFiles skips hash-match when no reference digest is declared`` () =
+        let actual =
+            roots
+            |> List.map (fun r -> copyFiles r "s" (Some [ file "SKILL.md" "whatever\n" ]))
+
+        Assert.Empty(verifyFiles roots [ expected "s" "" ] actual)
+
+    [<Fact>]
+    let ``verifyFiles returns drifted skills sorted by id`` () =
+        let actual = [ copyFiles ".claude" "z" None; copyFiles ".claude" "a" None ]
+
+        Assert.Equal<string list>(
+            [ "a"; "z" ],
+            verifyFiles [ ".claude" ] [ expected "z" ""; expected "a" "" ] actual
+            |> List.map (fun d -> d.Id)
+        )
+
+    // ADDITIVE, and provably so: fed a skill whose file set is exactly `SKILL.md`, `verifyFiles`
+    // reports precisely what `verify` reports. `verify` is not reimplemented in terms of it (that
+    // would change the shipped signature); this is the equivalence that lets both coexist as ONE
+    // algorithm rather than two (ADR-0014 §Decision 2).
+    [<Fact>]
+    let ``verifyFiles agrees with verify on every single-file case`` () =
+        let body = "canonical\n"
+
+        let cases =
+            [ "coherent", [ Some body; Some body; Some body ], sha256 body
+              "missing", [ Some body; Some body; None ], sha256 body
+              "divergent", [ Some body; Some "EDITED\n"; Some body ], ""
+              "hash", [ Some body; Some body; Some "TAMPERED\n" ], sha256 body
+              "all-absent", [ None; None; None ], "" ]
+
+        for (id, bodies, sha) in cases do
+            let pairs = List.zip roots bodies
+            let exp = [ expected id sha ]
+
+            let old = verify roots exp (pairs |> List.map (fun (r, b) -> copy r id b))
+
+            let neu =
+                verifyFiles
+                    roots
+                    exp
+                    (pairs
+                     |> List.map (fun (r, b) -> copyFiles r id (b |> Option.map (fun x -> [ file "SKILL.md" x ]))))
+
+            Assert.Equal(List.length old, List.length neu)
+
+            for (o, n) in List.zip old neu do
+                Assert.Equal<string list>(o.MissingRoots, n.MissingRoots)
+                let skillMd = n.Files |> List.tryFind (fun f -> f.RelativePath = "SKILL.md")
+                Assert.Equal(o.Divergent, skillMd |> Option.map (fun f -> f.Divergent) |> Option.defaultValue false)
+
+                Assert.Equal<string list>(
+                    o.HashMismatchRoots,
+                    skillMd |> Option.map (fun f -> f.HashMismatchRoots) |> Option.defaultValue []
+                )

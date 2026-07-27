@@ -99,9 +99,6 @@ let filesIn (root: string) (id: string) =
     else
         Set.empty
 
-let fileBytes (root: string) (id: string) (rel: string) =
-    File.ReadAllBytes(abs (root + "/skills/" + id + "/" + rel))
-
 // ---------------------------------------------------------------------------------------------
 // Which root holds the producer-authoritative body?
 // ---------------------------------------------------------------------------------------------
@@ -131,44 +128,6 @@ let canonicalRootOf (id: string) =
 let mutable failures: string list = []
 let fail msg = failures <- failures @ [ msg ]
 
-// Guard: a skill present in several roots must ALREADY agree — the same file SET, and the same
-// BYTES for every file in it — or this is a DIVERGENCE and the repair is a producer question, not
-// a fan-out. This driver fans out a canonical copy; it must never pick a winner between two
-// producers, and multi-file support must NOT become a way to flatten divergence silently.
-//
-// #716 asserted this over SKILL.md, and separately over the auxiliary set behind an
-// `[unrepresentable]` refusal. FS.GG.SDD#717 unifies them: a skill IS its file set now, so ONE
-// guard covers `SKILL.md`, `references/**` and `agents/*.yaml` alike, and there is no file class
-// the refusal can miss. (#716 measured no divergence; this keeps it that way.)
-for id in union do
-    let rootsHaving = roots |> List.filter (fun r -> Set.contains id present.[r])
-
-    match rootsHaving with
-    | []
-    | [ _ ] -> ()
-    | r0 :: rest ->
-        let files0 = filesIn r0 id
-
-        for r in rest do
-            let files = filesIn r id
-
-            if files <> files0 then
-                let onlyIn0 = Set.difference files0 files |> Set.toList
-                let onlyInR = Set.difference files files0 |> Set.toList
-
-                fail (
-                    $"[divergent] {id}: {r0} and {r} carry DIFFERENT file sets — only in {r0}: %A{onlyIn0}; "
-                    + $"only in {r}: %A{onlyInR}. Resolve at the producer."
-                )
-            else
-                for rel in files0 do
-                    if fileBytes r id rel <> fileBytes r0 id rel then
-                        fail (
-                            $"[divergent] {id}: {r0} and {r} disagree on {rel}. This driver fans out a "
-                            + "canonical copy; it must not pick a winner between two producers. "
-                            + "Resolve at the producer."
-                        )
-
 // Guard: `SkillMirror` models a body as a `string`, so a file only survives the library
 // byte-exactly if its on-disk bytes are exactly the UTF-8 (no BOM) encoding of its decoded text.
 // A BOM is the realistic violation: `ReadAllText` strips it, so the projected copies would lose it
@@ -179,22 +138,97 @@ for id in union do
 // auxiliaries through the same `string` model, so they inherit the same constraint. A guard that
 // covered only the file the old library could carry would have gone quiet exactly as the library
 // grew able to carry the rest.
+//
+// FS.GG.SDD#721 moved it AHEAD of the divergence guard below, which is now stated in terms of the
+// library's `string` bodies. That ordering is load-bearing: two copies differing only by a BOM are
+// EQUAL as strings, so a string-level divergence check running first would call them coherent and
+// report nothing. With this guard first, any file whose bytes are not exactly `utf8NoBom(text)` is
+// refused outright, and for every file that survives it string equality IS byte equality — which is
+// what makes the library verdict below a faithful statement about the bytes on disk.
+//
+// It therefore covers every file in every skill DIRECTORY, and is deliberately NOT gated on
+// `present`. `present` requires a `SKILL.md`, so a root holding stray auxiliaries in a SKILL.md-less
+// directory would skip the byte check — and those very files reappear in the post-materialization
+// observation once the fan-out writes the missing `SKILL.md`. A BOM'd stray would then be compared
+// as a STRING, found equal, and reported clean by a verdict that is supposed to be about bytes.
+// `filesIn` yields nothing for a directory that does not exist, so dropping the gate costs nothing.
 let utf8NoBom = UTF8Encoding(false)
 
 for id in union do
     for root in roots do
-        if Set.contains id present.[root] then
-            for rel in filesIn root id do
-                let p = abs (root + "/skills/" + id + "/" + rel)
-                let raw = File.ReadAllBytes p
+        for rel in filesIn root id do
+            let p = abs (root + "/skills/" + id + "/" + rel)
+            let raw = File.ReadAllBytes p
 
-                if raw <> utf8NoBom.GetBytes(File.ReadAllText p) then
-                    fail (
-                        $"[unrepresentable] {root}/skills/{id}/{rel} does not round-trip through the "
-                        + "library's string body model (a UTF-8 BOM, or a non-UTF-8 encoding). "
-                        + "`SkillMirror.mirrorFiles` cannot carry these bytes byte-exactly — normalize "
-                        + "the file to UTF-8 without a BOM."
-                    )
+            if raw <> utf8NoBom.GetBytes(File.ReadAllText p) then
+                fail (
+                    $"[unrepresentable] {root}/skills/{id}/{rel} does not round-trip through the "
+                    + "library's string body model (a UTF-8 BOM, or a non-UTF-8 encoding). "
+                    + "`SkillMirror.mirrorFiles` cannot carry these bytes byte-exactly — normalize "
+                    + "the file to UTF-8 without a BOM."
+                )
+
+/// Every file every root carries for every union skill, as the library's own observation type.
+/// `Files = None` means the root has no copy of the skill at all — distinct from a copy that is
+/// present but incomplete, which is the distinction the whole verdict below turns on.
+///
+/// Presence is re-read FROM DISK on every call (the same "a directory holding a SKILL.md" test
+/// `idsIn` uses), deliberately NOT from the `present` map. `present` is a snapshot taken before
+/// the fan-out; reusing it after the writes would report every root the fan-out just repaired as
+/// still missing the skill — a verdict about a tree that no longer exists.
+let observe () : SkillMirror.ActualSkillFiles list =
+    [ for root in roots do
+          for id in union ->
+              { Root = root
+                Id = id
+                Files =
+                  if File.Exists(abs (SkillMirror.skillPath root id)) then
+                      Some
+                          [ for rel in filesIn root id ->
+                                { SkillMirror.SkillFile.RelativePath = rel
+                                  Body = File.ReadAllText(abs (root + "/skills/" + id + "/" + rel)) } ]
+                  else
+                      None } ]
+
+// Guard: a skill present in several roots must ALREADY agree — the same file SET, and the same
+// BYTES for every file in it — or this is a DIVERGENCE and the repair is a producer question, not
+// a fan-out. This driver fans out a canonical copy; it must never pick a winner between two
+// producers, and multi-file support must NOT become a way to flatten divergence silently.
+//
+// #716 asserted this over SKILL.md, and separately over the auxiliary set behind an
+// `[unrepresentable]` refusal. #717 unified them into ONE guard over the file set — but as a
+// HAND-ROLLED byte-comparison loop sitting next to the library, because `SkillMirror.verify` still
+// modelled a skill as one body and could not state it. That was the second implementation of the
+// verify half, the exact thing ADR-0014 §Decision 2 exists to end (FS.GG.SDD#721).
+//
+// It is now the library's verdict. `verifyFiles` compares whole file sets across roots and names
+// the offending FILE; this loop only renders what it returns. Only the CROSS-ROOT facts refuse
+// here: a skill absent from a root ENTIRELY is `MultiFileSkillDrift.MissingRoots`, and that is not
+// a divergence — it is precisely the work the fan-out below is about to do.
+let preMaterializeExpected: SkillMirror.ExpectedSkill list =
+    union
+    |> List.map (fun id ->
+        { Id = id
+          Scope = Schemas.SkillScope.Process
+          // No reference digest at this stage: the manifest hash is asserted separately, below,
+          // against the CANONICAL body once that root has been proven. Here the subject is only
+          // whether the roots agree WITH EACH OTHER.
+          Sha256 = "" })
+
+for d in SkillMirror.verifyFiles roots preMaterializeExpected (observe ()) do
+    for f in d.Files do
+        if not (List.isEmpty f.MissingRoots) then
+            fail (
+                $"[divergent] {d.Id}: {f.RelativePath} is carried by some roots but MISSING from "
+                + $"%A{f.MissingRoots} — the roots carry DIFFERENT file sets. Resolve at the producer."
+            )
+
+        if f.Divergent then
+            fail (
+                $"[divergent] {d.Id}: the roots disagree on {f.RelativePath}. This driver fans out a "
+                + "canonical copy; it must not pick a winner between two producers. "
+                + "Resolve at the producer."
+            )
 
 // ---------------------------------------------------------------------------------------------
 // Content-address the process set against the PRODUCER's own committed manifest.
@@ -317,14 +351,15 @@ let expected: SkillMirror.ExpectedSkill list =
           // assert presence + cross-root identity only (the library's documented semantics).
           Sha256 = (Map.tryFind id declaredDigests |> Option.defaultValue "") })
 
-let actual: SkillMirror.ActualCopy list =
-    [ for root in roots do
-          for skill in canonicalSkills ->
-              { Root = root
-                Id = skill.Id
-                Body = readBody root skill.Id } ]
+// FS.GG.SDD#721: the verdict is taken over the skill's WHOLE FILE SET, not just `SKILL.md`.
+// Before this, the driver materialized `references/**` and `agents/*.yaml` through `mirrorFiles`
+// and then verified only the one file the old `verify` could see — a verdict weaker than the
+// invariant it claimed, the same defect class as FS-GG/.github#1506. `verifyFiles` closes it, and
+// the observation is RE-READ from disk after the writes, so this measures the tree that now exists
+// rather than restating the plan that produced it.
+let actual = observe ()
 
-let drift = SkillMirror.verify roots expected actual
+let drift = SkillMirror.verifyFiles roots expected actual
 
 printfn "materialize-skill-roots (%s)" (if checkOnly then "--check" else "write")
 printfn "  roots        : %s" (String.concat " " roots)
@@ -340,11 +375,20 @@ if not (List.isEmpty drift) then
     eprintfn "  verify       : %d skill(s) still drifted" (List.length drift)
 
     for d in drift do
-        eprintfn "      %s missing=%A divergent=%b hashMismatch=%A" d.Id d.MissingRoots d.Divergent d.HashMismatchRoots
+        eprintfn "      %s missingRoots=%A" d.Id d.MissingRoots
+
+        for f in d.Files do
+            eprintfn
+                "        %s missing=%A divergent=%b hashMismatch=%A"
+                f.RelativePath
+                f.MissingRoots
+                f.Divergent
+                f.HashMismatchRoots
 
     exit 1
 
-printfn "  verify       : clean — every union skill present in every root, byte-identical, hash-matched"
+printfn
+    "  verify       : clean — every union skill present in every root, every FILE byte-identical across roots, SKILL.md hash-matched"
 
 if checkOnly && not (List.isEmpty changed) then
     eprintfn "  --check: %d path(s) would change; run without --check to materialize." (List.length changed)

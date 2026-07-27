@@ -119,3 +119,49 @@ module SkillMirror =
     /// For every expected skill: present-in-each-root ∧ byte-identical-across-roots ∧ matches-hash.
     /// Returns only the skills exhibiting drift, sorted by id. Pure, content-addressed.
     val verify: roots: string list -> expected: ExpectedSkill list -> actual: ActualCopy list -> SkillDrift list
+
+    /// The files found at `(Root, Id)` — the multi-file generalization of `ActualCopy`. `None`
+    /// means the root carries NO copy of the skill at all; `Some files` is the copy's whole file
+    /// set, relative to `<root>/skills/<id>/`. A relative path repeated within one copy is not a
+    /// drift fact (the first wins): two entries for one destination is a producer question, and
+    /// `mirrorFiles` already refuses it as `DuplicateRelativePath`.
+    type ActualSkillFiles =
+        { Root: string
+          Id: string
+          Files: SkillFile list option }
+
+    /// The drift found for ONE FILE of a skill, as the SAME three INDEPENDENT facts `SkillDrift`
+    /// keeps apart — never collapsed into a per-file verdict. `MissingRoots` here ranges only over
+    /// roots that DO carry the skill (a root missing the skill entirely is `MultiFileSkillDrift`'s
+    /// own `MissingRoots`, a different repair). `HashMismatchRoots` is populated for `SKILL.md`
+    /// only, because `ExpectedSkill.Sha256` content-addresses that body and nothing else.
+    type SkillFileDrift =
+        { RelativePath: string
+          MissingRoots: string list
+          Divergent: bool
+          HashMismatchRoots: string list }
+
+    /// The drift found for one multi-file skill: the roots carrying no copy at all, plus the
+    /// per-FILE drift naming the offending relative path. All-clean (both lists empty) ⇒ the skill
+    /// is coherent and is not returned by `verifyFiles`.
+    type MultiFileSkillDrift =
+        { Id: string
+          Scope: SkillScope
+          MissingRoots: string list
+          Files: SkillFileDrift list }
+
+    /// The verify half of `mirrorFiles`: present-in-each-root ∧ every file byte-identical across
+    /// roots ∧ `SKILL.md` matching the canonical digest, over a skill's WHOLE file set. Returns
+    /// only the skills exhibiting drift, sorted by id, each naming the offending files sorted by
+    /// relative path. Pure, content-addressed.
+    ///
+    /// Files are compared over the UNION of what the present roots carry, so the comparison is
+    /// symmetric — a `references/deep-detail.md` only `.codex` has is drift exactly as a
+    /// `references/deep-detail.md` only `.claude` has is.
+    ///
+    /// A strict generalization of `verify`, which is unchanged and still the SKILL.md-only
+    /// spelling: fed copies whose file set is exactly `[ { RelativePath = "SKILL.md"; Body = b } ]`
+    /// (and `None` where `verify` would be given `Body = None`), `verifyFiles` reports precisely
+    /// what `verify` reports — same missing roots, same divergence, same hash-mismatch roots.
+    val verifyFiles:
+        roots: string list -> expected: ExpectedSkill list -> actual: ActualSkillFiles list -> MultiFileSkillDrift list
