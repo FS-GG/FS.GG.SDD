@@ -6,7 +6,17 @@ namespace FS.GG.SDD.Commands
 /// same embedded bodies `init`/`scaffold` seed. The single source of the id set stays
 /// `SeededSkills.skillNames`; this is a pure projection, never a second source of truth.
 /// The public entry point the CLI `registry skill-manifest` sub-verb emits from.
+///
+/// SCHEMA v2 (FS.GG.SDD#727): each entry now also declares the digest of EVERY file the skill
+/// carries. For this producer that set is exactly `[ SKILL.md ]` — every seeded fs-gg-sdd-* skill
+/// is a single file, and the embedded-resource set (`SeededSkill.<id>`, one `SKILL.md` each) is
+/// what makes that TRUE rather than assumed: this producer has no way to ship an auxiliary, so it
+/// has none to declare. That is worth stating precisely because it is easy to read the amendment
+/// as a no-op here. It is not: at v1 "this skill is one file" was UNSAID, and a reader could not
+/// distinguish it from "its other files are undeclared". At v2 it is a declared, checkable claim,
+/// and `Fsgg.SkillMirror.verifyFileSet` reds if a file ever appears beside a `SKILL.md` without
+/// the manifest being regenerated to declare it.
 module ProcessSkillManifest =
 
-    /// The process skill-manifest for the currently-seeded fs-gg-sdd-* set.
-    val build: unit -> Fsgg.Schemas.SkillManifest
+    /// The process skill-manifest for the currently-seeded fs-gg-sdd-* set, at ADR-0017 schema v2.
+    val build: unit -> Fsgg.Schemas.SkillManifestV2
