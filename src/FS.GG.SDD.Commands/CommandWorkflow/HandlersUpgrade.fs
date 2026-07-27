@@ -156,6 +156,56 @@ module internal HandlersUpgrade =
         // templateRePin is `noTarget` in this feature (R6) and never actionable.
         | ReconciliationStepId.TemplateRePin -> []
 
+    // FS-GG/FS.GG.SDD#736: the advisory that closes an `upgrade` over un-repaired skill drift must
+    // name the condition it actually found. There were three conditions and ONE sentence, and the
+    // sentence described the wrong one for the commonest of them: a file present in one root only —
+    // a `.DS_Store`, a `SKILL.md.orig` from a merge, a provider file dropped from one root — is
+    // reported at the roots that LACK it, under "some copies diverge from their canonical body —
+    // re-scaffold or restore the canonical skill sources", which reads as an instruction to CREATE
+    // `.DS_Store` in the other two roots.
+    //
+    // No class is repairable by this lane, and #736 AC2 requires that be said plainly rather than
+    // letting `ResidualDrift` recur forever under a hint describing a different failure. The reason
+    // is structural, not a gap waiting on a flag: the re-seed reconstructs only the init `WriteFile`s
+    // whose paths are in `MissingArtifactPaths` (`reSeedEffects`, the SEEDED skeleton set), the owner
+    // backfill only paths in the embedded verified plan, and there is no delete effect anywhere in
+    // the model. So `upgrade` can neither add an auxiliary copy, remove a stray one, nor rewrite a
+    // divergent body — and what it CAN repair (a missing seeded copy) is already subtracted before
+    // these fire, so a sentence saying "re-running will not clear it" is true of what is left.
+    let private notMirroredHint =
+        "Skill copies are not mirrored (advisory): each reported path is a file another root carries and that root does not. "
+        + "`fsgg-sdd upgrade` cannot repair this class and re-running it will not clear it — its re-seed writes only MISSING SEEDED skeleton files and the lane has no delete step. "
+        + "Reconcile by hand: copy the file into the roots that lack it if it belongs to the skill, or delete it from the root that has it if it does not (e.g. `.DS_Store`, an editor backup, a `.orig` left by a merge)."
+
+    // The third condition, and the reason `notMirroredHint` cannot simply absorb it: when NO root
+    // carries the skill there is no sibling to mirror from, so "another root carries it" would be a
+    // false statement and "copy it from the root that has it" an impossible instruction.
+    let private lostHint =
+        "Skill copies are missing entirely (advisory): the reported skills are absent from every declared root, so there is nothing to mirror from — restore the canonical skill sources or re-scaffold."
+
+    // Unchanged wording for the condition it always described correctly: every reported root HAS the
+    // file and the bytes disagree.
+    let private divergentHint =
+        "Skill content drift detected (advisory); some copies diverge from their canonical body — re-scaffold or restore the canonical skill sources."
+
+    /// The advisory for un-repaired skill drift: every condition actually present, in that order,
+    /// and nothing else. Divergence alone ⇒ byte-identical to the pre-#736 text, so the wording that
+    /// was always correct is preserved rather than reworded along with the wording that was not.
+    /// Nothing present at all ⇒ the divergence text, which is where this lane's only caller —
+    /// guarded on a non-empty drift list — behaved before, so an unclassified path can never leave
+    /// the operator with no advisory at all.
+    let skillDriftHint (notMirrored: string list) (lost: string list) (divergent: string list) =
+        match
+            [ if not (List.isEmpty notMirrored) then
+                  notMirroredHint
+              if not (List.isEmpty lost) then
+                  lostHint
+              if not (List.isEmpty divergent) then
+                  divergentHint ]
+        with
+        | [] -> divergentHint
+        | sentences -> String.concat " " sentences
+
     let private confirmPrompt (step: ReconciliationStep) =
         $"Apply {reconciliationStepIdValue step.StepId}?\n{step.DiffPreview}\n[y/N] "
 
@@ -323,9 +373,16 @@ module internal HandlersUpgrade =
             else
                 []
 
-        let unrepairedSkillDrift =
-            drift.SkillDriftPaths
-            |> List.filter (fun path -> not (List.contains path repairedMissing))
+        let unrepaired (paths: string list) =
+            paths |> List.filter (fun path -> not (List.contains path repairedMissing))
+
+        let unrepairedSkillDrift = unrepaired drift.SkillDriftPaths
+
+        // #736: the same subtraction, per condition, so the closing advisory names what actually
+        // survived the run rather than what the fold found before the re-seed ran.
+        let unrepairedNotMirrored = unrepaired drift.SkillNotMirroredPaths
+        let unrepairedLost = unrepaired drift.SkillLostPaths
+        let unrepairedDivergent = unrepaired drift.SkillDivergentPaths
 
         // FR-013: never report an incomplete reconciliation as complete. A skipped or
         // failed step leaves residual drift; so does a self-update that "applied" (the
@@ -356,7 +413,7 @@ module internal HandlersUpgrade =
             elif not (List.isEmpty skipped) then
                 "Re-run `fsgg-sdd upgrade` and confirm the skipped step(s) to finish reconciling."
             elif not (List.isEmpty unrepairedSkillDrift) then
-                "Skill content drift detected (advisory); some copies diverge from their canonical body — re-scaffold or restore the canonical skill sources."
+                skillDriftHint unrepairedNotMirrored unrepairedLost unrepairedDivergent
             elif residualDrift then
                 "The CLI self-update takes effect on the next invocation; re-run `fsgg-sdd doctor` afterwards to confirm coherence."
             else
@@ -431,7 +488,7 @@ module internal HandlersUpgrade =
                           SkillDriftPaths = drift.SkillDriftPaths
                           ResidualDrift = true
                           NextActionHint =
-                            "Skill content drift detected (advisory); some copies diverge from their canonical body — re-scaffold or restore the canonical skill sources." }
+                            skillDriftHint drift.SkillNotMirroredPaths drift.SkillLostPaths drift.SkillDivergentPaths }
 
                     { model with Upgrade = Some summary }, []
                 elif not request.AssumeYes && not request.IsInteractive then
