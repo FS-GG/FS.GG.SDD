@@ -10,11 +10,12 @@ open FS.GG.SDD.Commands.Internal.HandlersScaffold
 
 /// `fsgg-sdd doctor` handler (feature 053, US1). A strictly read-only projection: the
 /// `plan` stage snapshots the provenance, provider registry, and every expected seeded
-/// artifact (read effects only); a provenance-driven second read (058/ADR-0014 P1) then
-/// snapshots the provider *product* skill copies across every root, and this driver
-/// computes the shared pure `Drift` picture (now content-addressed) and builds the
-/// `DoctorSummary`. It emits **no** mutating effect on any path (FR-002 / SC-001), so a
-/// write-audit over a doctor run finds only `ReadFile`/`EnumerateDirectory`.
+/// artifact (read effects only); a second pass (058/ADR-0014 P1, FS-GG/FS.GG.SDD#726) then
+/// enumerates the declared skill roots and snapshots every skill copy FILE across them, and
+/// this driver computes the shared pure `Drift` picture (now content-addressed over the whole
+/// file set, not `SKILL.md` alone) and builds the `DoctorSummary`. It emits **no** mutating
+/// effect on any path (FR-002 / SC-001), so a write-audit over a doctor run finds only
+/// `ReadFile`/`EnumerateDirectory`.
 module internal HandlersDoctor =
 
     // Shared with HandlersUpgrade (both resolve the same drift inputs from the snapshots).
@@ -59,32 +60,102 @@ module internal HandlersDoctor =
         |> List.distinct
         |> List.sort
 
-    // The read-gate that brings the product-skill copies into snapshots before the drift is
-    // computed. `None` ⇒ ready to compute; `Some effects` ⇒ not ready (emit the reads, or `[]`
-    // while awaiting their interpretation). A missing copy stays absent after its read, so the
-    // gate resolves on read *interpretation*, not snapshot presence (else a deleted copy loops).
+    // FS-GG/FS.GG.SDD#726: a skill is a DIRECTORY, not a file. Probing `SkillMirror.skillPath`
+    // alone can only ever observe `SKILL.md`, so the file SET of each copy is discovered by
+    // enumerating each declared root's `skills/` tree.
+    //
+    // #726 AC6, settled explicitly rather than by reaching for direct IO: this needs NO new effect.
+    // `EnumerateDirectory` is an EXISTING read effect — recursive, listing-only (it carries no file
+    // content), interpreted at the edge like every other effect (Principle V), and already
+    // classified read-only by `Foundation`. `refresh` already enumerates `.agents/skills` for the
+    // same reason. So the doctor lane stays offline and write-free per FR-002 / SC-001, and a
+    // write-audit over a doctor run still finds only `ReadFile`/`EnumerateDirectory`.
+    let skillRootEnumerations =
+        agentSkillRoots |> List.map (fun root -> EnumerateDirectory(root + "/skills"))
+
+    // Every skill-copy FILE the enumerated roots actually carry, confined to the ids the drift fold
+    // EXPECTS — the SDD-seeded process namespace ∪ the product ids recorded in provenance, the same
+    // union `Drift.expectedSkills` builds. `verifyFiles` folds over `expected`, so files under an
+    // unexpected skill directory could not affect the verdict; confining the set keeps `doctor` from
+    // reading bodies nothing verifies rather than relying on them being ignored later.
+    let skillCopyFilePaths model =
+        let expectedIds =
+            Set.ofList (
+                SeededSkills.skillNames
+                @ (Drift.productSkillEntries (resolveProvenance model) |> List.map fst)
+            )
+
+        skillRootEnumerations
+        |> List.collect (fun effect ->
+            match effect with
+            | EnumerateDirectory path ->
+                (directoryListing path model).Split([| '\n'; '\r' |], System.StringSplitOptions.RemoveEmptyEntries)
+                |> Array.toList
+            | _ -> [])
+        |> List.map normalizeRelativePath
+        |> List.filter (fun path ->
+            match Drift.skillCopyOfPath path with
+            | Some(_, id, _) -> Set.contains id expectedIds
+            | None -> false)
+        |> List.distinct
+        |> List.sort
+
+    // The read-gate that brings the skill copies into snapshots before the drift is computed.
+    // `None` ⇒ ready to compute; `Some effects` ⇒ not ready (emit the effects, or `[]` while
+    // awaiting their interpretation). Both phases resolve on effect *interpretation*, not snapshot
+    // presence — a missing copy stays absent after its read, so a presence gate would loop forever
+    // on a deleted copy.
+    //
+    // One phase resolves to: `None` when nothing is outstanding, `Some []` when everything
+    // outstanding is already in flight, and otherwise the effects not yet emitted. Emitting only
+    // the NOT-YET-PLANNED remainder matters since #726: `skillCopyFilePaths` legitimately names
+    // paths `Foundation.remediationReadEffects` already planned (every seeded `SKILL.md` is in both
+    // sets). A whole-set "is any of these planned?" test therefore answers yes on the first pass and
+    // parks the gate at `Some []` forever — no effects produced, so the run loop goes idle and the
+    // drift is never computed at all.
+    let private phase (effects: CommandEffect list) model =
+        let outstanding =
+            effects
+            |> List.filter (fun effect -> not (hasInterpreted (effectKey effect) model))
+
+        let unemitted =
+            outstanding
+            |> List.filter (fun effect -> not (hasPlanned (effectKey effect) model))
+
+        if List.isEmpty outstanding then None
+        elif List.isEmpty unemitted then Some []
+        else Some unemitted
+
     let skillReadGate model =
-        let reads =
-            (productSkillCopyPaths model @ ownerSkillTargetPaths model)
+        // Phase 1 (#726): enumerate the skill roots. Until the listings are interpreted, the file
+        // set of each copy is unknown, so there is no complete set of bodies to ask for yet.
+        match phase skillRootEnumerations model with
+        | Some effects -> Some effects
+        | None ->
+            // Phase 2: the bodies — the enumerated copy files, plus the product copies and
+            // owner-sourced backfill targets, whose paths are derived from provenance rather than
+            // discovered (an ABSENT copy has no listing entry, and its absence is the drift fact).
+            (productSkillCopyPaths model
+             @ ownerSkillTargetPaths model
+             @ skillCopyFilePaths model)
             |> List.distinct
             |> List.map ReadFile
+            |> fun reads -> phase reads model
 
-        let allInterpreted =
-            reads |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
-
-        let anyPlanned =
-            reads |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
-
-        if List.isEmpty reads || allInterpreted then None
-        elif anyPlanned then Some []
-        else Some reads
-
-    // The read body of every skill copy (process expected paths + product copies) keyed by path,
-    // the content-addressed input to `Drift.compute`. A copy absent from snapshots ⇒ absent here
-    // ⇒ `verify` treats it as missing.
+    // The read body of every skill copy FILE (seeded expected paths + product copies + every
+    // auxiliary the roots carry) keyed by path — the content-addressed input to `Drift.compute`. A
+    // file absent from snapshots ⇒ absent here ⇒ `verifyFiles` treats it as missing.
+    //
+    // The confinement predicate is `Drift.skillCopyOfPath`, the SAME parser the drift fold uses to
+    // split these keys back apart, so the collector and the verifier cannot disagree about which
+    // paths are skill copies. It also drops the two non-skill members of `expectedArtifactPaths`
+    // (`.fsgg/early-stage-guidance.md`, `.gitignore`), as the old `skillIdOfPath` filter did.
     let skillBodies model =
-        (Drift.expectedArtifactPaths @ productSkillCopyPaths model)
-        |> List.filter (fun path -> SkillMirror.skillIdOfPath path |> Option.isSome)
+        (Drift.expectedArtifactPaths
+         @ productSkillCopyPaths model
+         @ skillCopyFilePaths model)
+        |> List.filter (fun path -> Drift.skillCopyOfPath path |> Option.isSome)
+        |> List.distinct
         |> List.choose (fun path -> snapshot path model |> Option.map (fun snap -> path, snap.Text))
         |> Map.ofList
 
