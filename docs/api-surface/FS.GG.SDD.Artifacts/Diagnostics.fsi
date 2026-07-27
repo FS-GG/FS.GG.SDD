@@ -140,6 +140,14 @@ module Diagnostics =
     val scaffoldGameSkillPredicateUnevaluated: ids: string list -> Diagnostic
     val scaffoldGameSkillNamespaceCollision: ids: string list -> Diagnostic
     val scaffoldGameSkillManifestMalformed: message: string -> Diagnostic
+
+    /// ADR-0063 tail / FS.GG.SDD#739: `ProductSkillManifest.amend` refused to rewrite the product
+    /// `skill-manifest.json`, so the materialized skills are left undeclared in it. A WARNING, not an
+    /// error: the scaffold succeeded at everything it owns and the incomplete union's hard stop lives
+    /// in the consumer skill-union gate — but the refusal is never again silent.
+    val scaffoldProductManifestAmendRefused:
+        path: string -> reason: string -> remedy: string -> details: string list -> Diagnostic
+
     val scaffoldProvenanceMalformed: path: string -> Diagnostic
 
     // Feature 052 CLI-coherence advisories: both non-blocking (Info/Warning), so the
