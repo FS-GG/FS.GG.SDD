@@ -175,10 +175,20 @@ module CommandEffects =
                 // `Hidden` on Unix. That is a narrowed read set bought for a fixed exit code, which
                 // is the trade #743 explicitly forbids ("would trade a wrong exit code for a blind
                 // spot — the strictly worse failure"), and it is invisible: fewer subjects examined
-                // reads exactly like fewer subjects in drift. The repo's own suite caught it —
-                // `an EXTRA junk file in one root is advisory drift named at the roots that LACK
-                // it` went green-to-empty on `.DS_Store`. Tolerance is the ONLY intended change
-                // from the previous behaviour; everything else is pinned to match it.
+                // reads exactly like fewer subjects in drift. The repo's own suite caught it — a
+                // dot-named file under a skill root went green-to-empty.
+                //
+                // FS-GG/FS.GG.SDD#747 MOVED THAT CANARY, and deliberately kept one. The case that
+                // caught it was `an EXTRA junk file in one root is advisory drift named at the
+                // roots that LACK it`, whose subject was `.DS_Store` — a file #747 now EXCLUDES
+                // from the comparison, so that case would report empty either way and would have
+                // stopped being able to fail. The dot-named subject is therefore carried by
+                // `an EXTRA dot-named file in one root is advisory drift named at the roots that
+                // LACK it` (`.editorconfig` — dot-named, and on no ignore list), which reds the
+                // same way if this enumeration ever stops listing dot-named files.
+                //
+                // Tolerance is the ONLY intended change from the previous behaviour; everything
+                // else is pinned to match it.
                 let options =
                     EnumerationOptions(
                         RecurseSubdirectories = true,
