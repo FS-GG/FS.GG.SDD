@@ -16,6 +16,37 @@ open FS.GG.SDD.Commands.Internal.HandlersScaffold
 /// file set, not `SKILL.md` alone) and builds the `DoctorSummary`. It emits **no** mutating
 /// effect on any path (FR-002 / SC-001), so a write-audit over a doctor run finds only
 /// `ReadFile`/`EnumerateDirectory`.
+///
+/// ## How this lane fails — FS-GG/FS.GG.SDD#735 AC4
+///
+/// Everything above says what the lane *reads*, and "strictly read-only" is easy to misread as
+/// *cannot fail*. It can, in three ways that are deliberately kept distinguishable — telling
+/// them apart is the whole job, because each sends the operator somewhere different:
+///
+/// - **Drift** — a subject was read and disagreed with what it should be. `IsCoherent` is
+///   false and `doctorDriftDetected` points at `upgrade`, at exit **0**: this lane reports,
+///   `upgrade` repairs.
+/// - **Unreadable** — a subject is present and could *not* be read (#745, decision #754).
+///   `IsCoherent` is false, because a verdict may never report coherent over a subject it did
+///   not read, and the read edge emits an `unreadableFile` warning naming the path and the
+///   reason. Still exit **0**: #754 rejected refusing at the edge precisely so that one
+///   permission bit cannot wedge a repo through a lane documented read-only and exit 0. Note
+///   the drift advisory above is keyed on `drift.IsCoherent`, *not* `summary.IsCoherent`, so
+///   an unreadable-only run does not say "run `upgrade`" — `upgrade` cannot repair a file it
+///   cannot read either, and the warning says `chmod +r` instead. Such a file also counts as
+///   PRESENT (see `presentArtifacts`); reporting it *missing* would send the operator to
+///   re-seed a file that is right there.
+/// - **Tool defect** — the tool itself failed. Exit **2**, and nothing else reaches this
+///   class. That last clause is what #735 was filed about: before #745, a `chmod 000` on any
+///   file under an expected skill directory landed *here*, so an environment fault the
+///   operator could fix was reported as a broken tool — across a read set #726 had just
+///   widened from ~51 known `SKILL.md` paths to every file under every declared root.
+///
+/// Known residual, owned by FS-GG/FS.GG.SDD#743, not by this module: an unreadable skill copy
+/// is *additionally* classified as skill drift of the *not mirrored* class, because
+/// `SkillMirror.verifyFiles` builds its per-file union from the rows it observed and an unread
+/// body contributes none. By then the verdict is already non-coherent and the file is already
+/// named, so the cost is a misleading remedy hint rather than a wrong pass.
 module internal HandlersDoctor =
 
     // Shared with HandlersUpgrade (both resolve the same drift inputs from the snapshots).
