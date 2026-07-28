@@ -177,14 +177,41 @@ for root in $ROOTS; do
   [ "$rc" -le 1 ] || die "diff -qr '$src_rel' '$root' could not complete (exit $rc):
 $out"
 
-  second_only="$(printf '%s\n' "$out" | grep -E "^Only in $dst(/|:)" || true)"
-  source_only="$(printf '%s\n' "$out" | grep -E "^Only in $src_abs(/|:)" || true)"
-  divergent="$(printf '%s\n' "$out" | grep -E '^(Files .* and .* differ|Binary files .* and .* differ)$' || true)"
+  # CLASSIFIED BY LITERAL PREFIX, NOT BY REGEX. The discriminator is an absolute PATH, and a path is
+  # not a pattern: `/home/runner/work/FS.GG.SDD/FS.GG.SDD` fed to `grep -E` has three `.`s that each
+  # match ANY character, and a tree checked out under a directory containing `+`, `(` or `[` is worse
+  # than loose — it is a broken or an accidentally-matching expression, in a check whose whole job is
+  # to be trusted. `case` patterns treat a QUOTED expansion as literal text, so the interpolation
+  # cannot become syntax. Same reason the report below strips the prefix with `${line//"$TREE_ABS"…}`
+  # (quoted, therefore literal) rather than an unquoted glob.
+  #
+  # AND EVERY LINE MUST LAND IN A BUCKET. `diff -qr` has more to say than three classes — `File X is
+  # a regular file while file Y is a directory`, `Symbolic links … differ`, and whatever a future
+  # `diff` adds. A line this script does not recognise is a fact about the tree it cannot interpret,
+  # and dropping it on the floor would be a pass earned by not understanding the evidence. It is
+  # exit 2: no verdict, never a clean tree (epic FS-GG/.github#266).
+  second_only=""
+  source_only=""
+  divergent=""
+  unclassified=""
+
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    case "$line" in
+      "Only in $dst:"* | "Only in $dst/"*) second_only+="$line"$'\n' ;;
+      "Only in $src_abs:"* | "Only in $src_abs/"*) source_only+="$line"$'\n' ;;
+      "Files "*" differ" | "Binary files "*" differ") divergent+="$line"$'\n' ;;
+      *) unclassified+="$line"$'\n' ;;
+    esac
+  done <<<"$out"
+
+  [ -z "$unclassified" ] || die "diff -qr '$src_rel' '$root' said something this check does not classify, so it has no verdict here:
+$(printf '%s' "$unclassified" | sed 's/^/  /')"
 
   if [ -n "$second_only" ]; then
     while IFS= read -r line; do
       [ -n "$line" ] || continue
-      echo "::error::check-root-asymmetry: [second-root-only] ${line/$TREE_ABS\//}" >&2
+      echo "::error::check-root-asymmetry: [second-root-only] ${line//"$TREE_ABS"\//}" >&2
       findings=$((findings + 1))
     done <<<"$second_only"
   fi
@@ -192,7 +219,7 @@ $out"
   if [ -n "$divergent" ]; then
     while IFS= read -r line; do
       [ -n "$line" ] || continue
-      echo "::error::check-root-asymmetry: [divergent] ${line//$TREE_ABS\//}" >&2
+      echo "::error::check-root-asymmetry: [divergent] ${line//"$TREE_ABS"\//}" >&2
       findings=$((findings + 1))
     done <<<"$divergent"
   fi
@@ -200,7 +227,7 @@ $out"
   if [ -n "$source_only" ]; then
     while IFS= read -r line; do
       [ -n "$line" ] || continue
-      echo "  [source-only] ${line/$TREE_ABS\//}  (not a finding: the source may legitimately carry more)"
+      echo "  [source-only] ${line//"$TREE_ABS"\//}  (not a finding: the source may legitimately carry more)"
     done <<<"$source_only"
   fi
 

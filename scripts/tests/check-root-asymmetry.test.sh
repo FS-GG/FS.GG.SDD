@@ -136,6 +136,19 @@ run_check "$T4"
 expect_rc "a divergent copy REDS" 1
 expect_out "the finding names its class" "[divergent]"
 
+# 4b. A line the classifier does not recognise is exit 2, not a clean tree. `diff -qr` says more
+# than three things — here, a path that is a FILE in one root and a DIRECTORY in the other, which is
+# neither "only in" nor "differ". Dropping an unrecognised line would be a pass earned by not
+# understanding the evidence. Its paired negative is leg 3: same fixture, same classifier, exit 0.
+printf '\n4b. an UNCLASSIFIED diff line yields no verdict\n'
+T4b="$(make_tree t4b)"
+rm -f "$T4b/$DST/demo-skill/SKILL.md"
+mkdir -p "$T4b/$DST/demo-skill/SKILL.md"
+run_check "$T4b"
+expect_rc "a file/directory type mismatch yields no verdict" 2
+expect_out "the refusal says the line was not classified" "does not classify"
+refute_out "and it does not report success" "OK — 1 non-source root"
+
 # ---------------------------------------------------------------------------------------------
 # 5..8. FAIL CLOSED — every "no subject" is exit 2, never a pass.
 # ---------------------------------------------------------------------------------------------
