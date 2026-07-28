@@ -117,17 +117,33 @@ jobs:
       # repo's own tree. Placed in THIS job for the same reason as the step above — it inherits the
       # required `gate` context.
       #
-      # WHEN `.agents/skills` BECOMES A VIEW, THIS STEP NEEDS A `skill-view generate` AHEAD OF IT,
-      # AND THIS JOB HAS NONE TODAY. Leg 9 of the test runs the real check over this repository's
-      # real tree, deliberately — legs 1-8 prove what the script does with a fixture, and only leg 9
-      # proves the invocation `skill-view-check.yml` runs has a SUBJECT here. After ADR-0067 phase 4
-      # (FS-GG/.github#1676) a bare checkout has no view, the check correctly dies `[absent-root]`
-      # exit 2 rather than passing over nothing, and leg 9's `expect_rc … 0` reds — blocking the
-      # required `gate` context. `.github/workflows/skill-view-check.yml` carries the same standing
-      # note for its own step; the retiring pull request must add the generate to BOTH jobs, in the
-      # same commit that untracks the root. Do not pre-emptively add it, and do not make it
-      # conditional on the root being absent: "generate whatever is missing, then assert it is
-      # present" is the fail-open shape this whole family of checks exists to remove.
+      # `.agents/skills` IS NOW A VIEW, AND THE STEP THE STANDING NOTE PRESCRIBED IS THE ONE ABOVE.
+      # ADR-0067 phase 4 landed for this repo on FS-GG/.github#1760: the second committed root was
+      # untracked and git-ignored, so a bare checkout — this runner included — has no `.agents/skills`
+      # until something generates it. Leg 9 of the test runs the real check over this repository's
+      # real tree, deliberately (legs 1-8 prove what the script does with a fixture; only leg 9 proves
+      # the invocation `skill-view-check.yml` runs has a SUBJECT here), and without the generate it
+      # dies `[absent-root]` exit 2 — correctly refusing to pass over nothing, and reddening the
+      # REQUIRED `gate` context on every pull request. Measured on a bare checkout of the retired tree
+      # before this step was added.
+      #
+      # The generate is UNCONDITIONAL and it is NOT `if: ${{ ... }}`-guarded on the root being absent.
+      # "Generate whatever is missing, then assert it is present" is the fail-open shape this whole
+      # family of checks exists to remove: it would make `[absent-root]` unreachable and hand back a
+      # gate that cannot fail. The authorisation to generate comes from this repo DECLARING the root a
+      # view in `<FsggKitViewSkillRoots>`, never from observing that one is missing.
+      #
+      # `--roots` names the VIEW root explicitly. The default set also contains `.claude/skills`, this
+      # repo's TRACKED source, and `skill-view generate` refuses a root git tracks with no override —
+      # so the fallback would be a refusal rather than a no-op.
+      #
+      # `.github/workflows/skill-view-check.yml` carries the same step for its own job, and
+      # `FsggSddGenerateSkillView` in `.config/kit/FS.GG.Kit.receiver.proj` covers the two MATERIALIZE
+      # trees — this workflow's `build-config-drift` job and `kit-materialize.yml`, the latter being a
+      # `uses:` of a reusable workflow that this repo cannot add a step to at all.
+      - name: Resolve the view root this tree no longer commits
+        run: bash scripts/skill-view generate --source .claude/skills --roots ".agents/skills"
+
       - name: Unit-test the root-asymmetry check
         run: bash scripts/tests/check-root-asymmetry.test.sh
 
