@@ -169,6 +169,19 @@ roots_line_is() {
   fi
 }
 
+# The WRITE SET line, which is a DIFFERENT line from `roots :` since FS.GG.SDD#770. `roots :` is the
+# CONTRACT set (source + view, minus retired) because the observation and agreement passes must still
+# see a view root; `write set :` is what is actually materialized. Asserting the old line for both is
+# how a view root in the write set would stay invisible.
+write_set_is() {
+  local what="$1" want="$2" got
+  got="$(printf '%s\n' "$RUN_OUT" | sed -n 's/^  write set  *: //p' | head -1)"
+  if [ "$got" = "$want" ]; then ok "$what"; else
+    bad "$what: the write set is '$got', expected exactly '$want'"
+    printf '%s\n' "$RUN_OUT" | sed 's/^/       | /'
+  fi
+}
+
 expect_out() {
   local what="$1" needle="$2"
   if printf '%s' "$RUN_OUT" | grep -qF -- "$needle"; then ok "$what"; else
@@ -432,6 +445,71 @@ fi
 # the driver refuses two files over, reproduced inside its own test: a check whose subject failed to
 # load, reporting the answer it wanted. So the evaluation is now validated FIRST, loudly, with the
 # MSBuild output attached, and both assertions are skipped rather than answered when it is unusable.
+# ---------------------------------------------------------------------------------------------
+# G. A VIEW ROOT IS IN THE CONTRACT AND IS NOT WRITTEN (FS.GG.SDD#770).
+# ---------------------------------------------------------------------------------------------
+# The hazard is FS.GG.SDD#767's, one disposition over. `roots` subtracted `FsggKitRetiredSkillRoots`
+# and had no term for `FsggKitViewSkillRoots`, so a root moved to the VIEW disposition stayed a root
+# this driver materialized into — measured before the fix, 102 planned writes into a two-root tree
+# whose second root is generated (51 x 2).
+#
+# WHY THE PAIRED FIXTURE IS THE ONLY HONEST SHAPE. On the shipped layout `skill-view generate`
+# defaults to `--mode link`, so the view root and the source are THE SAME OBJECT: every planned write
+# lands on the file it was copied from, `changed : 0`, and the defect is invisible to any assertion
+# about drift or exit codes. The two trees below differ ONLY in which property names `.agents` —
+# `FsggKitViewSkillRoots` in G, `FsggKitSkillRoots` in G-paired — so the contract set is identical in
+# both and the agreement assertion passes in both. The single variable is the DISPOSITION.
+view_victim="${declared[${#declared[@]}-1]}"
+# Every other declared root must be RETIRED in both fixtures. `roots` is `agentSkillRoots` minus the
+# retired set, and the driver REFUSES when that disagrees with the kit's runtime union — so a fixture
+# that simply omits a root never reaches this leg's subject. (Measured while authoring: without this,
+# both fixtures exit 1 with an empty write set and the leg fails for a reason unrelated to views.)
+retired_rest=()
+for r in "${declared[@]}"; do
+  [ "$r" = "$source_root" ] && continue
+  [ "$r" = "$view_victim" ] && continue
+  retired_rest+=("$r")
+done
+retired_decl="$(join_kit "${retired_rest[@]}")"
+
+printf '\nG. view root "%s" is in the contract, observed, and NOT written\n' "$view_victim"
+
+G="$(make_tree G "$(kitspell "$source_root")" "$retired_decl" "$(kitspell "$view_victim")")"
+seed_skill "$G" "$source_root" demo-skill
+rm -rf "${G:?}/$view_victim/skills"          # a view root is generated at checkout: absent in a fresh tree
+
+run_driver "$G" --check
+expect_rc "view-root tree is clean under --check" 0
+write_set_is "the write set excludes the view root" "$source_root"
+expect_out "the view root is REPORTED, not silently skipped" "  view         : $view_victim"
+expect_out "and the contract set still names it" "$view_victim"
+
+run_driver "$G"
+expect_rc "write mode succeeds (exit 0)" 0
+if [ -e "$G/$view_victim/skills" ]; then
+  bad "write mode CREATED the view root $view_victim/skills ($(find "$G/$view_victim/skills" -type f | wc -l) file(s)) — that re-creates the second committed copy the view exists to remove"
+else
+  ok "write mode created nothing under the view root $view_victim"
+fi
+
+# THE PAIRED FIXTURE — the same tree with `.agents` declared MATERIALIZED instead of VIEW. If this
+# does not flip, the leg above proves nothing about the disposition and is passing for some other
+# reason.
+printf '\nG-paired. the same root declared MATERIALIZED is written\n'
+
+GP="$(make_tree Gp "$(join_kit "$source_root" "$view_victim")" "$retired_decl" "")"
+seed_skill "$GP" "$source_root" demo-skill
+rm -rf "${GP:?}/$view_victim/skills"
+
+run_driver "$GP"
+expect_rc "write mode succeeds (exit 0)" 0
+write_set_is "the write set now includes the root" "$source_root $view_victim"
+if [ -e "$GP/$view_victim/skills/demo-skill/SKILL.md" ]; then
+  ok "the mirror IS created under $view_victim when it is declared materialized"
+else
+  bad "declared materialized, the root was still not written — the fixtures do not differ in what they claim to differ in"
+fi
+
 printf '\nF. the pinned FS.GG.Kit declaration in this repo\n'
 
 eval_kit() { (cd "$repo" && dotnet build .config/kit/FS.GG.Kit.receiver.proj --no-restore \
