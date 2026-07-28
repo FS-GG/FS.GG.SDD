@@ -61,7 +61,8 @@ module internal Drift =
           // `computeSkillDrift`), and their union is exactly `SkillDriftPaths`.
           //
           // A file at least one OTHER root carries and this one does not — an inconsistently applied
-          // edit, a provider file dropped from one root, or junk (`.DS_Store`, an editor backup).
+          // edit, or a provider file dropped from one root. Since FS-GG/FS.GG.SDD#747 this no longer
+          // includes OS/VCS junk, which is excluded from the compared set (`IgnoredSkillJunkPaths`).
           SkillNotMirroredPaths: string list
           // No declared root carries a copy of the skill at all; there is nothing to mirror from.
           SkillLostPaths: string list
@@ -74,6 +75,15 @@ module internal Drift =
           // so they are folded into that step's `TargetPaths`; the field names them on their own for
           // observability. Sorted, deduped. Non-empty ⇒ actionable (re-seed WouldApply, not coherent).
           OwnerSkillBackfillPaths: string list
+          // FS-GG/FS.GG.SDD#747: the skill-copy files this run OBSERVED on disk and then EXCLUDED
+          // from the comparison as OS/VCS junk (`junkFileNames` / `junkFileSuffixes`). Sorted,
+          // deduped, and EMPTY unless the exclusion actually fired — it names files, never the rule.
+          //
+          // It exists so the exclusion can be STATED rather than assumed. Without it "this tree is
+          // converged" would be quietly conditional on an invisible subtraction, which is the same
+          // class of silent-narrowing defect #743 caught in its own fix; `HandlersUpgrade` appends
+          // the exclusion to its advisory whenever this is non-empty.
+          IgnoredSkillJunkPaths: string list
           Steps: ReconciliationStep list
           IsCoherent: bool }
 
@@ -295,6 +305,68 @@ module internal Drift =
         |> List.distinct
         |> List.sort
 
+    // -------------------------------------------------------------------------------------------
+    // FS-GG/FS.GG.SDD#747 — the OS/VCS junk exclusion.
+    //
+    // THE DECISION (#747 AC1, taken 2026-07-27). Of {no repair, mirror, delete, ignore rule}, the
+    // ignore rule alone was adopted. `upgrade` gains NO repair, NO delete effect and NO per-path
+    // prompt; `doctor` stays read-only. The disqualifying fact for a repair is in #747 itself — the
+    // tool cannot tell a legitimate authored addition from an OS turd FROM THE FILE ALONE, so a
+    // repair means a per-path confirm, and a delete means introducing a destructive effect into a
+    // lane that has never had one. #736 already left the operator "no longer stuck, only
+    // unassisted", so none of that machinery buys a correctness fix.
+    //
+    // WHAT THE RULE BUYS. #736 left `ResidualDrift = true` PERMANENTLY on any tree carrying a
+    // `.DS_Store`, so "converged" never meant what it says on a developer machine that has ever
+    // opened a Finder window. With the junk subtracted, two consecutive `upgrade` runs over a
+    // junk-only tree reach zero residual drift — #747 AC4 satisfied for real rather than waived.
+    //
+    // WHY THIS IS A CLOSED LITERAL SET AND NOT A PATTERN LANGUAGE (#747 AC3, condition 1). #726 AC1
+    // says the surface observes EVERY file under `<root>/skills/<id>/`, and a provider is free to
+    // ship any filename. A glob/regex dialect — worse, a configurable one — would let that
+    // guarantee erode silently and invisibly, one added pattern at a time. So this is two flat
+    // lists of exact strings, compared with `=` and `EndsWith`: no wildcard is ever interpreted,
+    // and the complete set of files this tool will ever refuse to look at is READABLE HERE.
+    //
+    // ORDINAL, CASE-SENSITIVE, deliberately. `thumbs.db` is not `Thumbs.db` and is not ignored:
+    // widening the match widens the blind spot, and every name below is written by a program that
+    // writes it in exactly one casing.
+
+    /// FS-GG/FS.GG.SDD#747: files ignored by EXACT name. Closed set — adding to it needs a code
+    /// change and the #747 AC3 complement test below moves with it.
+    let junkFileNames =
+        [ ".DS_Store" // macOS Finder
+          "Thumbs.db" // Windows Explorer thumbnail cache
+          "ehthumbs.db" // ditto, Vista+
+          "desktop.ini" // Windows folder settings
+          ".directory" ] // KDE Dolphin folder settings
+
+    /// FS-GG/FS.GG.SDD#747: files ignored by EXACT suffix — merge leftovers and editor backups,
+    /// which are named after the file they shadow and so cannot be listed by exact name.
+    ///
+    /// A name that IS the suffix (a file called `.orig`, or called `~`) is NOT ignored: a backup is
+    /// a backup OF something, and a bare `~` is a file someone chose to name that. The length test
+    /// below is what enforces that, and it is the difference between a closed rule and a prefix of
+    /// one.
+    let junkFileSuffixes =
+        [ ".orig" // `git merge` / `patch` leftover
+          ".rej" // `patch` reject
+          ".bak"
+          ".swp" // vim swap
+          ".swo"
+          "~" ] // emacs/vi backup
+
+    /// Does this skill-relative path NAME junk? Judged on the last segment only — an auxiliary may
+    /// be nested (`references/deep-detail.md`), and it is the FILE name that identifies the junk.
+    let isJunkFileName (relativePath: string) =
+        let name = relativePath.Split('/') |> Array.last
+
+        List.contains name junkFileNames
+        || junkFileSuffixes
+           |> List.exists (fun suffix ->
+               name.Length > suffix.Length
+               && name.EndsWith(suffix, System.StringComparison.Ordinal))
+
     /// FS-GG/FS.GG.SDD#736: which condition put a path on the drift surface. Kept as a tag carried
     /// alongside each path rather than a second traversal, so the classification cannot drift from
     /// the reporting rule that produced it.
@@ -333,6 +405,10 @@ module internal Drift =
             /// list, which is the whole point: this is a SPLIT of the existing surface, not a change
             /// to what it reports.
             All: string list
+            /// FS-GG/FS.GG.SDD#747: the observed skill-copy files subtracted from the comparison as
+            /// OS/VCS junk before any of the three classes were computed. Disjoint from `All` by
+            /// construction — an ignored file reaches no class.
+            IgnoredJunk: string list
         }
 
     let private computeSkillDrift
@@ -341,6 +417,59 @@ module internal Drift =
         : SkillDriftClasses =
         let expected = expectedSkills provenance
         let ownerExpected = ownerSourcedSkillFiles provenance
+
+        // FS-GG/FS.GG.SDD#747, and this is the clause that makes the ignore rule SAFE (AC3,
+        // condition 4): a file the provenance DECLARES is never ignored, whatever it is called.
+        //
+        // "It cannot hide a file a producer actually ships" is the binding condition on this whole
+        // change, and a name list alone cannot honour it — a producer that really does ship a
+        // `desktop.ini` inside a skill would have it silently subtracted, and the workspace would
+        // read converged while missing a file it is supposed to carry. The declaration is the only
+        // evidence available that a producer meant a file, so it OVERRIDES the list: such a file
+        // stays in the compared set and any drift about it is reported exactly as for any other
+        // declared file. A conflict surfaced, not a silent skip.
+        //
+        // Keyed on `(id, relativePath)` rather than the whole path, because a declaration is about
+        // the file the skill carries, not about which root happens to carry it.
+        //
+        // THE LIMIT OF THIS CLAUSE, STATED RATHER THAN GLOSSED. `ownerExpected` is the only class
+        // that declares its files — the owner-sourced (driver + GameSkill) rows, which carry a
+        // digest per file. The SDD-seeded process skills declare nothing at all, and a provider
+        // PRODUCT skill declares its `SKILL.md` and nothing else, because the ADR-0017 manifest
+        // content-addresses `SKILL.md` alone (the #727 gap). So a product provider that shipped a
+        // junk-NAMED auxiliary would still be subtracted here, and no declaration exists to say
+        // otherwise. That is a consequence of #727, not of this rule: with no recorded declaration
+        // there is no evidence a producer meant the file, and inventing one would be worse. When
+        // #727 gives the product class a per-file declaration this clause covers it unchanged,
+        // because it reads `ownerExpected`'s shape and not its provenance field.
+        let declaredSkillFiles =
+            [ for skill in ownerExpected do
+                  for file in skill.Files -> skill.Id, file.RelativePath ]
+            |> Set.ofList
+
+        // `SKILL.md` needs no entry here: it is on neither junk list, and could not be — it is what
+        // MAKES a directory a skill (`SkillMirror.skillPath`), so a rule that could hide it would
+        // hide every copy of every skill.
+        let isIgnoredJunk path =
+            match skillCopyOfPath path with
+            | Some(_, id, relative) -> isJunkFileName relative && not (Set.contains (id, relative) declaredSkillFiles)
+            | None -> false
+
+        // Only files actually OBSERVED are reported as ignored: `skillBodies` is what the read
+        // gate delivered, so this names what was really subtracted from this run rather than
+        // restating the rule. Empty ⇒ the exclusion never fired ⇒ nothing to state.
+        let ignoredJunk =
+            skillBodies
+            |> Map.toList
+            |> List.map fst
+            |> List.filter isIgnoredJunk
+            |> List.sort
+
+        // The subtraction itself, applied ONCE, before the union across roots is built — which is
+        // the point. Filtering the CLASSES afterwards would leave a junk file in `All`, and
+        // filtering only the root that HAS the file would leave the two roots that lack it in
+        // `NotMirrored`, which is precisely the report #747 exists to stop.
+        let skillBodies = skillBodies |> Map.filter (fun path _ -> not (isIgnoredJunk path))
 
         // `(root, id)` -> the file set that copy carries. A (root, id) with no file at all has NO
         // entry, which `verifyFiles` reads as "this root carries no copy of the skill" — the same
@@ -565,7 +694,8 @@ module internal Drift =
         { NotMirrored = pathsOf NotMirroredAt
           Lost = pathsOf LostEverywhere
           Divergent = pathsOf DivergentAt
-          All = all }
+          All = all
+          IgnoredJunk = ignoredJunk }
 
     let private noTargetStep (stepId: ReconciliationStepId) preview : ReconciliationStep =
         { StepId = stepId
@@ -677,6 +807,10 @@ module internal Drift =
               SkillDivergentPaths = []
               // No provenance ⇒ not a scaffold ⇒ nothing to backfill (#624).
               OwnerSkillBackfillPaths = []
+              // No provenance ⇒ no skill drift computed at all ⇒ nothing was compared, so nothing
+              // was excluded. Reporting an exclusion here would claim a subtraction this arm never
+              // made (#747).
+              IgnoredSkillJunkPaths = []
               Steps = steps
               IsCoherent = List.isEmpty steps }
         | Some record ->
@@ -769,5 +903,6 @@ module internal Drift =
               SkillLostPaths = skillDrift.Lost
               SkillDivergentPaths = skillDrift.Divergent
               OwnerSkillBackfillPaths = ownerBackfillMissing
+              IgnoredSkillJunkPaths = skillDrift.IgnoredJunk
               Steps = steps
               IsCoherent = not hasActionableWork && List.isEmpty skillDrift.All }

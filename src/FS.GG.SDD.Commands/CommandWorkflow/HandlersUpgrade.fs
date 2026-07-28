@@ -173,10 +173,45 @@ module internal HandlersUpgrade =
     // divergent body — and what it CAN repair (a missing seeded copy, and since #733 a missing
     // owner-sourced copy) is already subtracted before these fire, so a sentence saying "re-running
     // will not clear it" is true of what is left.
+
+    // FS-GG/FS.GG.SDD#747, AC3 condition 3: "the ignored set is stated where a reader of the
+    // advisory finds it, so 'this tree is converged' is never quietly conditional on an invisible
+    // exclusion."
+    //
+    // `NextActionHint` is that place. `DoctorSummary` carries no prose field at all — it reports
+    // paths and a coherence bit — so `upgrade`'s hint is the ONLY advisory channel this lane has,
+    // and it is rendered in both projections (`upgradeNextAction:` and `nextActionHint`).
+    //
+    // It fires on WHAT WAS EXCLUDED, not on the rule: an empty list adds nothing, so a workspace
+    // with no junk reads byte-identically to the pre-#747 text (which is what the exact-wording
+    // regression on byte divergence pins). When it does fire it names the files AND the complete
+    // rule, because a reader who is told only "some files were ignored" has been told the tree is
+    // converged without being told what that is conditional on.
+    let private ignoredJunkStatement (ignored: string list) =
+        let names = String.concat ", " Drift.junkFileNames
+        let suffixes = String.concat ", " Drift.junkFileSuffixes
+        let excluded = String.concat ", " ignored
+
+        $"Excluded from the comparison as OS/VCS junk: {excluded}. "
+        + $"That exclusion is a fixed list built into the tool and is not configurable — these exact names ({names}), and these exact suffixes ({suffixes}). "
+        + "A file recorded in this workspace's scaffold provenance is never excluded, whatever it is called, so a producer that genuinely ships one of these names is still compared and still reported."
+
+    /// Append the #747 exclusion to an advisory when — and only when — it actually fired.
+    let private withIgnoredJunk (drift: Drift.DriftReport) (hint: string) =
+        match drift.IgnoredSkillJunkPaths with
+        | [] -> hint
+        | ignored -> hint + " " + ignoredJunkStatement ignored
+
     let private notMirroredHint =
         "Skill copies are not mirrored (advisory): each reported path is a file another root carries and that root does not. "
         + "`fsgg-sdd upgrade` cannot repair this class and re-running it will not clear it — its re-seed writes only MISSING files it has a canonical source for (the seeded skeleton, and the owner-sourced copies recorded in provenance) and the lane has no delete step. "
-        + "Reconcile by hand: copy the file into the roots that lack it if it belongs to the skill, or delete it from the root that has it if it does not (e.g. `.DS_Store`, an editor backup, a `.orig` left by a merge)."
+        // FS-GG/FS.GG.SDD#747: the old tail illustrated this class with `.DS_Store`, an editor
+        // backup and a merge `.orig` — the three shapes that are now EXCLUDED from the comparison
+        // and so can never reach this sentence. Left as it was it would tell an operator to go
+        // delete a file that is not on the list they were handed. AC5: the wording stays truthful
+        // for what was chosen, which means it now illustrates the class with what actually
+        // survives the filter — a real file one root is missing.
+        + "Reconcile by hand: copy the file into the roots that lack it if it belongs to the skill, or delete it from the root that has it if it does not (e.g. a scratch note, or a provider file dropped from a later release and left behind in the other roots). Recognised OS and merge junk is already excluded and is not reported here."
 
     // The third condition, and the reason `notMirroredHint` cannot simply absorb it: when NO root
     // carries the skill there is no sibling to mirror from, so "another root carries it" would be a
@@ -329,7 +364,10 @@ module internal HandlersUpgrade =
           FailedStepIds = []
           SkillDriftPaths = drift.SkillDriftPaths
           ResidualDrift = false
-          NextActionHint = hint }
+          // #747: the no-op summaries are exactly where the exclusion MUST be stated — this is the
+          // "Already coherent — nothing to reconcile." close, and after #747 that sentence can be
+          // true only because something was subtracted.
+          NextActionHint = withIgnoredJunk drift hint }
 
     let private finalizeApply
         model
@@ -469,7 +507,7 @@ module internal HandlersUpgrade =
               FailedStepIds = failed
               SkillDriftPaths = unrepairedSkillDrift
               ResidualDrift = residualDrift
-              NextActionHint = hint }
+              NextActionHint = withIgnoredJunk drift hint }
 
         { model with
             Upgrade = Some summary
@@ -528,7 +566,8 @@ module internal HandlersUpgrade =
                           SkillDriftPaths = drift.SkillDriftPaths
                           ResidualDrift = true
                           NextActionHint =
-                            skillDriftHint drift.SkillNotMirroredPaths drift.SkillLostPaths drift.SkillDivergentPaths }
+                            skillDriftHint drift.SkillNotMirroredPaths drift.SkillLostPaths drift.SkillDivergentPaths
+                            |> withIgnoredJunk drift }
 
                     { model with Upgrade = Some summary }, []
                 elif not request.AssumeYes && not request.IsInteractive then
@@ -545,7 +584,8 @@ module internal HandlersUpgrade =
                           SkillDriftPaths = drift.SkillDriftPaths
                           ResidualDrift = true
                           NextActionHint =
-                            "Re-run `fsgg-sdd upgrade` interactively, or pass `--yes` to apply without prompting." }
+                            "Re-run `fsgg-sdd upgrade` interactively, or pass `--yes` to apply without prompting."
+                            |> withIgnoredJunk drift }
 
                     { model with
                         Upgrade = Some summary

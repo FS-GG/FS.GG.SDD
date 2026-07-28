@@ -290,12 +290,29 @@ module MultiFileSkillDriftTests =
     // repair it — not the byte-divergence sentence, which must stay reserved for byte divergence.
     // ---------------------------------------------------------------------------------------
 
-    /// The exact junk shape #736 reproduces with — an OS turd under a seeded process skill.
+    /// The exact junk shape #736 reproduces with — an OS turd under a seeded process skill. Since
+    /// FS-GG/FS.GG.SDD#747 this is the subject of the EXCLUSION cases, not the not-mirrored ones.
     let private junkFile = ".DS_Store"
 
     /// A stand-in for the OS turd's binary payload. Non-empty deliberately: an empty file would
     /// drag an unrelated "does a zero-byte read look absent?" question into a case about mirroring.
     let private junkBody = "Bud1\n"
+
+    /// FS-GG/FS.GG.SDD#747: the not-mirrored subject that survives the ignore rule, and it is
+    /// DOT-NAMED on purpose — two jobs in one file.
+    ///
+    /// 1. It is the #747 AC3 complement: an unusual-but-plausible producer filename that must still
+    ///    be observed and still be reported. `.editorconfig` is on neither junk list and a provider
+    ///    shipping one inside a skill directory is entirely ordinary.
+    /// 2. It carries the ENUMERATION canary `CommandEffects.tryEnumerate` documents. The case that
+    ///    used to hold it had `.DS_Store` as its subject, and #747 excludes `.DS_Store` — so that
+    ///    case would now report empty whether or not the enumerator lists dot-named files, i.e. it
+    ///    would have become a test that cannot fail at the thing it was pinning. A dot-named,
+    ///    non-junk subject keeps a case that reds if `AttributesToSkip` ever hides dot-files on
+    ///    Unix again.
+    let private strayFile = ".editorconfig"
+
+    let private strayBody = "root = true\n"
 
     /// The wording that must NEVER close a run whose only drift is a not-mirrored file: it is the
     /// pre-#736 hint, and it is an instruction to reconcile BODIES.
@@ -309,10 +326,10 @@ module MultiFileSkillDriftTests =
         Assert.Contains("cannot repair this class", hint)
 
     [<Fact>]
-    let ``an EXTRA junk file in one root is advisory drift named at the roots that LACK it`` () =
+    let ``an EXTRA dot-named file in one root is advisory drift named at the roots that LACK it`` () =
         let fixtureRoot = productCoherentFixture ()
         let id = "fs-gg-sdd-plan"
-        TestSupport.writeRelative fixtureRoot $".claude/skills/{id}/{junkFile}" junkBody
+        TestSupport.writeRelative fixtureRoot $".claude/skills/{id}/{strayFile}" strayBody
 
         let before = treeHash fixtureRoot
         let report = doctorReport fixtureRoot
@@ -320,7 +337,7 @@ module MultiFileSkillDriftTests =
 
         // EXACT: the two roots that lack it, and NOT the root that has it.
         Assert.Equal<string list>(
-            [ $".agents/skills/{id}/{junkFile}"; $".codex/skills/{id}/{junkFile}" ]
+            [ $".agents/skills/{id}/{strayFile}"; $".codex/skills/{id}/{strayFile}" ]
             |> List.sort,
             summary.SkillDriftPaths
         )
@@ -331,28 +348,28 @@ module MultiFileSkillDriftTests =
         Assert.Empty report.ChangedArtifacts
         Assert.Equal(before, treeHash fixtureRoot)
 
-    // AC1 + AC2, on the shape that motivated the issue. The old hint told the operator their copies
-    // diverged and to restore the canonical sources; both are false here — every root that HAS the
-    // file agrees about it, there is exactly one, and no canonical source ships a `.DS_Store`.
+    // #736 AC1 + AC2, on the shape that motivated that issue. The old hint told the operator their
+    // copies diverged and to restore the canonical sources; both are false here — every root that
+    // HAS the file agrees about it, and there is exactly one.
     [<Fact>]
-    let ``upgrade --yes over an EXTRA junk file names the not-mirrored condition, not divergence`` () =
+    let ``upgrade --yes over an EXTRA dot-named file names the not-mirrored condition, not divergence`` () =
         let fixtureRoot = productCoherentFixture ()
         let id = "fs-gg-sdd-plan"
-        TestSupport.writeRelative fixtureRoot $".claude/skills/{id}/{junkFile}" junkBody
+        TestSupport.writeRelative fixtureRoot $".claude/skills/{id}/{strayFile}" strayBody
 
         let summary = (upgradeYes fixtureRoot).Upgrade.Value
 
         assertNotMirroredAdvisory summary.NextActionHint
         Assert.DoesNotContain(divergenceWording, summary.NextActionHint)
 
-    // AC2's second branch, measured rather than asserted from the shape: the class is genuinely not
-    // repairable, so `upgrade` must SAY so — and the run must be a true no-op, not a write that
+    // #736 AC2's second branch, measured rather than asserted from the shape: the class is genuinely
+    // not repairable, so `upgrade` must SAY so — and the run must be a true no-op, not a write that
     // fails to converge. Two consecutive `--yes` runs, tree byte-identical throughout.
     [<Fact>]
-    let ``upgrade --yes over an EXTRA junk file is a stable no-op that says it cannot repair it`` () =
+    let ``upgrade --yes over an EXTRA dot-named file is a stable no-op that says it cannot repair it`` () =
         let fixtureRoot = productCoherentFixture ()
         let id = "fs-gg-sdd-plan"
-        TestSupport.writeRelative fixtureRoot $".claude/skills/{id}/{junkFile}" junkBody
+        TestSupport.writeRelative fixtureRoot $".claude/skills/{id}/{strayFile}" strayBody
 
         let before = treeHash fixtureRoot
         let first = upgradeYes fixtureRoot
@@ -362,7 +379,7 @@ module MultiFileSkillDriftTests =
         for report in [ first; second ] do
             let summary = report.Upgrade.Value
             Assert.True summary.ResidualDrift
-            Assert.Contains($".codex/skills/{id}/{junkFile}", summary.SkillDriftPaths)
+            Assert.Contains($".codex/skills/{id}/{strayFile}", summary.SkillDriftPaths)
             assertNotMirroredAdvisory summary.NextActionHint
             Assert.Equal(0, exitCode report)
 
@@ -415,7 +432,7 @@ module MultiFileSkillDriftTests =
         let id = "fs-gg-sdd-plan"
 
         // Not mirrored: present in `.claude` only.
-        TestSupport.writeRelative fixtureRoot $".claude/skills/{id}/{junkFile}" junkBody
+        TestSupport.writeRelative fixtureRoot $".claude/skills/{id}/{strayFile}" strayBody
         // Divergent: present in every root, bodies disagree.
         writeAuxiliaries fixtureRoot productSkillId [ ".agents", "a\n"; ".claude", "a\n"; ".codex", "b\n" ]
 
@@ -423,6 +440,233 @@ module MultiFileSkillDriftTests =
 
         assertNotMirroredAdvisory summary.NextActionHint
         Assert.Contains(divergenceWording, summary.NextActionHint)
+
+    // ---------------------------------------------------------------------------------------
+    // FS-GG/FS.GG.SDD#747 — the OS/VCS junk ignore rule.
+    //
+    // #747 AC1 was answered by decision: adopt an ignore rule, add NO repair, NO delete effect, NO
+    // per-path prompt, and keep `doctor` read-only. What remains testable is AC3 (the rule cannot
+    // hide a file a producer actually ships), AC4 (`upgrade` now genuinely CONVERGES on the class
+    // it claims to, asserted by two consecutive runs reaching zero residual drift), AC5 (the
+    // advisory stays truthful), and the binding condition that the exclusion is STATED rather than
+    // silent.
+    // ---------------------------------------------------------------------------------------
+
+    /// A skill id owned by neither the seeded process namespace nor the product fixture, so
+    /// `Drift.ownerSourcedSkillFiles` picks it up from a hand-built provenance record — the only
+    /// way to model "a producer DECLARED this file" in a unit test.
+    let private declaringDriverId = "junk-shipper"
+
+    /// A junk NAME a producer might genuinely ship — Windows really does use `desktop.ini` for
+    /// folder settings, and a driver that ships one inside its skill directory means it.
+    let private declarableJunkName = "desktop.ini"
+
+    let private driverRow (path: string) : FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath =
+        { FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Path = path
+          Owner = FS.GG.SDD.Artifacts.ArtifactRef.ArtifactOwner.Driver
+          // No reference digest: `verifyFileSet` reads an empty digest as "no authority to
+          // arbitrate with", so presence and cross-root identity still decide. That is all this
+          // case needs, and inventing a digest would test the digest path instead.
+          Sha256 = Some "" }
+
+    /// A provenance record DECLARING `<relatives>` for `declaringDriverId` in every root.
+    let private recordDeclaring (relatives: string list) =
+        { record None with
+            DriverPaths =
+                [ for root in allRoots do
+                      for relative in relatives -> driverRow $"{root}/skills/{declaringDriverId}/{relative}" ] }
+
+    /// Bodies for a coherent `declaringDriverId` copy in every root, plus whatever `extra` adds.
+    let private declaringDriverBodies extra =
+        let baseline =
+            skillBodiesFor coherentPresent
+            |> Map.toList
+            |> List.append [ for root in allRoots -> $"{root}/skills/{declaringDriverId}/SKILL.md", "# junk-shipper\n" ]
+
+        (baseline @ extra) |> Map.ofList
+
+    // The core of the decision: a `.DS_Store` under ONE root is no longer drift at all. Before
+    // #747 this reported two not-mirrored paths and left `ResidualDrift` true forever — "converged"
+    // could never mean what it said on any machine that had opened a Finder window.
+    [<Fact>]
+    let ``an EXTRA junk file in one root is EXCLUDED from the comparison entirely`` () =
+        let fixtureRoot = productCoherentFixture ()
+        let id = "fs-gg-sdd-plan"
+        TestSupport.writeRelative fixtureRoot $".claude/skills/{id}/{junkFile}" junkBody
+
+        let before = treeHash fixtureRoot
+        let report = doctorReport fixtureRoot
+        let summary = doctorSummary report
+
+        Assert.Empty summary.SkillDriftPaths
+        Assert.True summary.IsCoherent
+        // #736 AC3 / #747: `doctor` stays read-only and exit 0, ignore rule or no ignore rule.
+        Assert.Equal(0, exitCode report)
+        Assert.Empty report.ChangedArtifacts
+        Assert.Equal(before, treeHash fixtureRoot)
+
+    // #747 AC4, the clause the whole decision was worth having for: `upgrade` must CONVERGE on the
+    // class it claims to repair, "asserted by two consecutive runs reaching zero residual drift".
+    // Two runs, both `ResidualDrift = false`, tree byte-identical throughout — the second run is
+    // what distinguishes convergence from a one-shot repair that re-dirties the tree.
+    [<Fact>]
+    let ``upgrade --yes over a junk-only tree CONVERGES across two consecutive runs`` () =
+        let fixtureRoot = productCoherentFixture ()
+        let id = "fs-gg-sdd-plan"
+
+        // Every junk shape the rule recognises, at once, and one of them nested under an auxiliary
+        // directory — the last is what proves the match is on the FILE name, not the whole path.
+        TestSupport.writeRelative fixtureRoot $".claude/skills/{id}/{junkFile}" junkBody
+        TestSupport.writeRelative fixtureRoot $".codex/skills/{id}/Thumbs.db" "thumbs\n"
+        TestSupport.writeRelative fixtureRoot $".agents/skills/{id}/SKILL.md.orig" "merge leftover\n"
+        TestSupport.writeRelative fixtureRoot $".claude/skills/{id}/references/notes.md~" "backup\n"
+
+        let before = treeHash fixtureRoot
+        let first = upgradeYes fixtureRoot
+        let afterFirst = treeHash fixtureRoot
+        let second = upgradeYes fixtureRoot
+
+        for report in [ first; second ] do
+            let summary = report.Upgrade.Value
+            Assert.False summary.ResidualDrift
+            Assert.Empty summary.SkillDriftPaths
+            Assert.Equal(0, exitCode report)
+
+        // No repair was adopted, so convergence here must come from the SUBTRACTION and from
+        // nothing else: not one byte moved, and in particular no junk file was deleted.
+        Assert.Equal(before, afterFirst)
+        Assert.Equal(before, treeHash fixtureRoot)
+        Assert.True(File.Exists(absolute fixtureRoot $".claude/skills/{id}/{junkFile}"))
+
+    // The binding condition on stating the exclusion: "this tree is converged" must never be
+    // quietly conditional on an invisible subtraction. The advisory names the files it dropped AND
+    // the complete rule that dropped them.
+    [<Fact>]
+    let ``the advisory STATES the junk it excluded, and the rule that excluded it`` () =
+        let fixtureRoot = productCoherentFixture ()
+        let id = "fs-gg-sdd-plan"
+        TestSupport.writeRelative fixtureRoot $".claude/skills/{id}/{junkFile}" junkBody
+
+        let hint = (upgradeYes fixtureRoot).Upgrade.Value.NextActionHint
+
+        // The file, by its real path — not a count, and not "some files".
+        Assert.Contains($".claude/skills/{id}/{junkFile}", hint)
+        // The whole closed set, so a reader can tell what else would have been dropped.
+        for name in Drift.junkFileNames do
+            Assert.Contains(name, hint)
+
+        for suffix in Drift.junkFileSuffixes do
+            Assert.Contains(suffix, hint)
+
+        Assert.Contains("not configurable", hint)
+
+    // The complement, and the reason this is not merely the inverse of the case above: silence must
+    // stay conditional on junk EXISTING. A hint that always recited the rule would satisfy the
+    // assertions above while telling every operator their tree was filtered when it was not.
+    [<Fact>]
+    let ``a tree with no junk says nothing about the exclusion`` () =
+        let hint = (upgradeYes (productCoherentFixture ())).Upgrade.Value.NextActionHint
+
+        Assert.DoesNotContain("Excluded from the comparison", hint)
+
+    // #747 AC3, condition 2 — "a test asserts the complement: a file with an unusual-but-plausible
+    // producer name is still observed and still reported." Every name here is near a rule without
+    // being on it, which is what makes this able to fail: widen any rule to a prefix, a substring,
+    // a case-insensitive match or a glob and one of these goes quiet.
+    [<Theory>]
+    [<InlineData ".editorconfig">] // dot-named, on no list — also the enumeration canary
+    [<InlineData "desktop.ini.md">] // a junk name that is a PREFIX of this one
+    [<InlineData "thumbs.db">] // `Thumbs.db` in another casing: the rule is ordinal
+    [<InlineData "origins.md">] // contains `orig`, but does not END in `.orig`
+    [<InlineData ".orig">] // IS the suffix, so it is a file, not a backup of one
+    [<InlineData "~">] // ditto
+    [<InlineData "swap.swpx">] // `.swp` is a prefix of this extension, not a suffix
+    let ``an unusual-but-plausible producer filename is still observed and still reported`` (producerFile: string) =
+        let fixtureRoot = productCoherentFixture ()
+        let id = "fs-gg-sdd-plan"
+        TestSupport.writeRelative fixtureRoot $".claude/skills/{id}/{producerFile}" "shipped by a producer\n"
+
+        let summary = doctorSummary (doctorReport fixtureRoot)
+
+        // EXACT: the two roots that lack it. `Contains` would accept a report that named the wrong
+        // roots, and a file that was never enumerated is reported at exactly these paths too — so
+        // the exact list is what separates "observed and reported" from "unobserved".
+        Assert.Equal<string list>(
+            [ $".agents/skills/{id}/{producerFile}"; $".codex/skills/{id}/{producerFile}" ]
+            |> List.sort,
+            summary.SkillDriftPaths
+        )
+
+        Assert.False summary.IsCoherent
+
+    // #747 AC3, condition 4 — "if a producer genuinely ships a file whose name is on the list, that
+    // is a conflict to surface, not a silent skip." The declaration in provenance is the only
+    // evidence available that a producer MEANT the file, so it overrides the name list.
+    [<Fact>]
+    let ``a junk-named file DECLARED in provenance is compared, not ignored`` () =
+        let declared = recordDeclaring [ "SKILL.md"; declarableJunkName ]
+
+        let bodies =
+            declaringDriverBodies [ $".claude/skills/{declaringDriverId}/{declarableJunkName}", "[.ShellClassInfo]\n" ]
+
+        let report =
+            Drift.compute
+                (Some declared)
+                (Some(descriptor None))
+                None
+                installedVersion
+                (Set.ofList coherentPresent)
+                bodies
+
+        // Surfaced: the two roots that lack the DECLARED file, exactly as for any other declared
+        // file the roots disagree about.
+        Assert.Equal<string list>(
+            [ $".agents/skills/{declaringDriverId}/{declarableJunkName}"
+              $".codex/skills/{declaringDriverId}/{declarableJunkName}" ]
+            |> List.sort,
+            report.SkillNotMirroredPaths
+            |> List.filter (fun p -> p.EndsWith(declarableJunkName, StringComparison.Ordinal))
+        )
+
+        // And NOT skipped: nothing about it was subtracted.
+        Assert.Empty report.IgnoredSkillJunkPaths
+
+    // The other half of the pair, and the one that proves the assertion above is about the
+    // DECLARATION rather than about the fixture: the identical tree with the identical file, minus
+    // the provenance row, is ignored.
+    [<Fact>]
+    let ``the same junk-named file is ignored when provenance does NOT declare it`` () =
+        let undeclared = recordDeclaring [ "SKILL.md" ]
+
+        let junkPath = $".claude/skills/{declaringDriverId}/{declarableJunkName}"
+        let bodies = declaringDriverBodies [ junkPath, "[.ShellClassInfo]\n" ]
+
+        let report =
+            Drift.compute
+                (Some undeclared)
+                (Some(descriptor None))
+                None
+                installedVersion
+                (Set.ofList coherentPresent)
+                bodies
+
+        Assert.Empty report.SkillDriftPaths
+        Assert.Equal<string list>([ junkPath ], report.IgnoredSkillJunkPaths)
+
+    // `IgnoredSkillJunkPaths` names what was OBSERVED and dropped, never the rule: a workspace that
+    // carries no junk must report an empty list, or the advisory above fires on every run.
+    [<Fact>]
+    let ``no junk on disk means nothing is reported as ignored`` () =
+        let report =
+            Drift.compute
+                (Some(record None))
+                (Some(descriptor None))
+                None
+                installedVersion
+                (Set.ofList coherentPresent)
+                (skillBodiesFor coherentPresent)
+
+        Assert.Empty report.IgnoredSkillJunkPaths
 
     // The classification is a SPLIT of the existing surface, not a second opinion about it: an
     // invariant every hint branch depends on and nothing else states. If a later change lets a path
