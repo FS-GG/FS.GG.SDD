@@ -125,14 +125,18 @@ module internal HandlersDependencySurface =
                 match readOf path model with
                 | Bytes snap -> Some snap.Text
                 | Absent
-                | Unreadable _ -> None)
+                | Unreadable _
+                // Unreachable — a version-pin file is a file (#743).
+                | Truncated _ -> None)
 
         authoredPlanPaths model
         |> List.choose (fun path ->
             match readOf path model with
             | Bytes snap -> Some snap
             | Absent
-            | Unreadable _ -> None)
+            | Unreadable _
+            // Unreachable — `plan.md` is a file (#743).
+            | Truncated _ -> None)
         |> List.choose (fun planSnapshot ->
             match parsePlanFacts planSnapshot with
             | Ok facts -> Some facts
@@ -197,7 +201,9 @@ module internal HandlersDependencySurface =
             | Ok capture -> Some capture.Sha256
             | Error _ -> None
         | Absent
-        | Unreadable _ -> None
+        | Unreadable _
+        // Unreachable — a capture is a file (#743).
+        | Truncated _ -> None
 
     // The per-target read gate: read the committed capture + the real surface before drift is
     // computed. Mirrors `HandlersSurface.readGate`.

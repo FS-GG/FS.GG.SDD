@@ -77,7 +77,10 @@ module internal ReportAssembly =
                     match result.Read with
                     | Bytes snapshot -> Some(Some snapshot)
                     | Absent
-                    | Unreadable _ -> Some None
+                    | Unreadable _
+                    // Unreachable: this arm is guarded on `ReadFile`, and only `tryEnumerate`
+                    // produces `Truncated` (#743). Stated so the fold stays total by decision.
+                    | Truncated _ -> Some None
                 | _ -> None)
             |> Option.flatten
 

@@ -182,6 +182,14 @@ module Diagnostics =
     /// `doctor` (documented read-only, exit 0). The block belongs to `unreadableSubject`.
     val unreadableFile: path: string -> reason: string -> Diagnostic
 
+    /// FS.GG.SDD#743: a directory tree was listed and the listing is INCOMPLETE — one or more
+    /// directories beneath `root` could not be opened, so what lies under them was never observed.
+    /// `entries` is `(path, reason)` per skipped directory and becomes the sorted `RelatedIds`.
+    /// The `EnumerateDirectory` sibling of `unreadableFile`: `DiagnosticWarning`, never a tool
+    /// defect, with the block belonging to `unreadableSubject`. Distinct from `unreadableFile`
+    /// because the listable entries ARE still reported on and the repair is traversal (`+rx`).
+    val unlistableDirectory: root: string -> entries: (string * string) list -> Diagnostic
+
     /// FS.GG.SDD#745 (decision #754): a verdict lane could not read one or more of the subjects it
     /// is responsible for, so its verdict may not be reported as coherent. `DiagnosticError`
     /// (exit 1), never a tool defect. `.github#266` on the read edge: *"I could not evaluate this"*

@@ -1150,3 +1150,79 @@ module MultiFileSkillDriftTests =
                 Assert.DoesNotContain(report.Diagnostics, fun d -> d.IsToolDefect)
             finally
                 File.SetUnixFileMode(configAbsolute, enum<UnixFileMode> 0o644)
+
+    // ===================================================================================
+    // FS.GG.SDD#743 — the `EnumerateDirectory` sibling of #745, end to end.
+    //
+    // #745 stopped an unenumerable directory being a `toolDefect` at exit 2, but it could only
+    // report the whole ROOT `Unreadable` — the listing was discarded. Measured on `main` with this
+    // fixture, one `chmod 000` on `.claude/skills/fs-gg-demo/references` produced:
+    //
+    //     isCoherent=False   exit=0
+    //     drift = .claude/skills/fs-gg-demo/references/deep-detail.md
+    //             .claude/skills/padd-item/SKILL.md
+    //             .claude/skills/work-board/SKILL.md
+    //             .claude/skills/work-roadmap/SKILL.md
+    //
+    // Those last three are present, readable, byte-identical copies. They are DISCOVERED by the
+    // root enumeration (`skillCopyFilePaths`), so when the enumeration returned nothing they
+    // vanished from the observation set and `verifyFiles` read their absence as *not mirrored at
+    // `.claude`* — whole-root phantom drift from one mode bit on an unrelated subdirectory. That
+    // is #743 AC3: "one inaccessible subdirectory must not blank its siblings or its parent."
+    // ===================================================================================
+
+    [<Fact>]
+    let ``FS.GG.SDD#743: an unlistable directory under a skill root does not blank the root, and is named`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let fixtureRoot = productCoherentFixture ()
+            writeCoherentAuxiliaries fixtureRoot productSkillId
+
+            // The control leg: coherent while every directory opens. Without it, the assertions
+            // below would be satisfied by a fixture that was simply never coherent.
+            Assert.True((doctorSummary (doctorReport fixtureRoot)).IsCoherent)
+
+            let blocked = $".claude/skills/{productSkillId}/references"
+            let blockedAbsolute = absolute fixtureRoot blocked
+            File.SetUnixFileMode(blockedAbsolute, enum<UnixFileMode> 0)
+
+            try
+                let report = doctorReport fixtureRoot
+                let summary = doctorSummary report
+
+                // AC1 / AC4: `doctor` does not exit 2, and nothing accuses the tool of being
+                // broken over a permissions accident.
+                Assert.Equal(0, RemediationSupport.exitCode report)
+                Assert.DoesNotContain(report.Diagnostics, fun d -> d.IsToolDefect)
+
+                // AC2: the verdict is withheld — a partial listing is never a complete one — and
+                // the finding names the DIRECTORY that could not be opened, not the root that
+                // could. Naming the root would send the operator to `chmod` a readable directory.
+                Assert.False summary.IsCoherent
+
+                Assert.Contains(
+                    report.Diagnostics,
+                    fun d -> d.Id = "unlistableDirectory" && List.contains blocked d.RelatedIds
+                )
+
+                // AC3, and the assertion the whole item turns on. EXACT, not `DoesNotContain`:
+                // this list is what distinguishes "the siblings survived" from "the enumeration
+                // was switched off", and on `main` it had four members (see the block above).
+                //
+                // The one remaining member is the KNOWN RESIDUAL #745 named and #743 inherited:
+                // `deep-detail.md` is under the directory that could not be opened, so no row was
+                // observed for it at `.claude`, and `SkillMirror.verifyFiles` builds its per-file
+                // union from observed rows with no state for "not observed" — so it classifies as
+                // *not mirrored* rather than *unobserved*. It is a misleading remedy hint on an
+                // already-non-coherent, already-named run, not a wrong pass. Filed at its root
+                // cause as FS-GG/FS.GG.SDD#760; when that lands, this list becomes empty.
+                Assert.Equal<string list>([ auxiliaryPath ".claude" productSkillId ], summary.SkillDriftPaths)
+
+                // AC2 in the projection an operator actually reads — otherwise `--text` shows the
+                // findings computed FROM the truncated listing with no sign that it was truncated.
+                let text = FS.GG.SDD.Commands.CommandRendering.renderText report
+                Assert.Contains("unlistableDirectory:", text)
+                Assert.Contains(blocked, text)
+            finally
+                File.SetUnixFileMode(blockedAbsolute, enum<UnixFileMode> 0o755)

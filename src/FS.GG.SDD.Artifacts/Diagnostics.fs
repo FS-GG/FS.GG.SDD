@@ -750,6 +750,40 @@ module Diagnostics =
             $"Restore read access to `{path}` (e.g. `chmod +r`) and re-run. A file the tool could not read is never counted as checked and never treated as unchanged."
             [ path ]
 
+    /// A directory tree was listed and the listing is INCOMPLETE: one or more directories beneath
+    /// `root` could not be opened, so what lies under them was never observed (FS.GG.SDD#743).
+    /// `entries` is `(path, reason)` per skipped directory; `RelatedIds` are those paths, sorted.
+    ///
+    /// The sibling of `unreadableFile`, and `DiagnosticWarning` for the same reason: the read edge
+    /// does not know what the lane meant to do with the listing, and making it fatal here would
+    /// wedge `doctor` — documented read-only and exit 0 — on one mode bit. The BLOCK is
+    /// `unreadableSubject`, emitted by the verdict fold that consumed the listing, which sees the
+    /// skipped directories through `ReadResult.Truncated`.
+    ///
+    /// Distinct from `unreadableFile` because the finding is genuinely different and so is the
+    /// repair: the entries that WERE listable are still reported on, and a directory needs
+    /// traversal (`+rx`), not merely read, to be listed. Saying "this file could not be read"
+    /// about a partially-listed tree would misdescribe both halves.
+    ///
+    /// Not a tool defect. Before #743 this landed in `interpret`'s outer handler as `toolDefect`
+    /// at exit 2 — the tool accused of being broken over a permissions accident.
+    let unlistableDirectory (root: string) (entries: (string * string) list) =
+        let ordered = entries |> List.distinctBy fst |> List.sortBy fst
+
+        let detail =
+            ordered
+            |> List.map (fun (path, reason) -> $"`{path}` ({reason})")
+            |> String.concat "; "
+
+        create
+            "unlistableDirectory"
+            DiagnosticWarning
+            None
+            None
+            $"`{root}` was listed only in part: {List.length ordered} director(y|ies) beneath it could not be opened — {detail}"
+            $"Restore traversal access (e.g. `chmod +rx`) to the listed director(y|ies) and re-run. What could be listed is still reported on; what could not is never counted as checked and never treated as unchanged."
+            (ordered |> List.map fst)
+
     /// One or more subjects a VERDICT was responsible for could not be read, so the verdict cannot
     /// be coherent. `DiagnosticError` (exit 1) — this is `.github#266` on the read edge: *"I could
     /// not evaluate this"* is not *"I evaluated it and it passed."*

@@ -32,6 +32,15 @@ provider-declared `minimumFsggSdd` — live wins — and the workspace's own `sd
   `isCoherent` is **false** — a verdict may never report coherent over a subject it did not read
   (decision FS-GG/FS.GG.SDD#754, `.github#266`). Each such file gets an `unreadableFile` warning
   naming the path and the underlying reason, in `--json`, `--text` and `--rich` alike.
+- **Listing axis** — the same rule for a DIRECTORY (FS-GG/FS.GG.SDD#743). `doctor` enumerates each
+  declared skill root to discover the file set of every copy, and that listing can be *partial*: a
+  subdirectory it cannot open costs its own subtree and nothing else. The entries that WERE listable
+  are still enumerated — one `chmod 000` on `.claude/skills/<id>/references` used to blank the whole
+  `.claude/skills` listing, which then reported every copy discovered by enumeration as *not
+  mirrored* at a root that carries them perfectly well. Each directory that could not be opened gets
+  an `unlistableDirectory` warning naming it and the reason, and enters the same unreadable-subject
+  set: `doctor` exits `0`, `isCoherent` is **false**, and a partial listing is never reported as a
+  complete one.
 - **Preview** — a dry-run of what `upgrade` would change across the three steps, applying
   none of it.
 
@@ -134,6 +143,7 @@ about the tool is broken."*
 | Coherent / nothing to reconcile / no provenance | 0 | 0 |
 | Drift reported / steps applied / step declined (residual) | 0 | 0 |
 | A subject exists but could not be read (`unreadableFile`) | 0, `isCoherent: false` | 0 |
+| A directory beneath an enumerated root could not be listed (`unlistableDirectory`) | 0, `isCoherent: false` | 0 |
 | A write refused because its target could not be read (`unreadableWriteTarget`) | n/a | 1 |
 | Non-interactive without `--yes` | n/a | 1 |
 | A confirmed step failed to apply (for any other reason) | n/a | 2 |

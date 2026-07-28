@@ -424,7 +424,13 @@ module internal HandlersUpgrade =
                     && (match result.Read with
                         | Unreadable _ -> true
                         | Bytes _
-                        | Absent -> false)))
+                        | Absent
+                        // #743: `false`, and not merely because it is unreachable (this ranges
+                        // over an APPLY step's effects, and `upgrade` never applies through an
+                        // enumeration). A truncated LISTING is not a refused write target, so it
+                        // could not be why a step failed, and claiming it was would suppress a
+                        // `upgradeStepFailed` that is genuinely owed.
+                        | Truncated _ -> false)))
 
         let diagnostics =
             if not (List.isEmpty failed) then

@@ -973,13 +973,21 @@ nuget-cache/
     ///
     /// Total over `ReadResult` on purpose. `TreatWarningsAsErrors` promotes FS0025, so adding a
     /// fourth state later cannot slip past this (or any other) fold by defaulting to "fine".
+    ///
+    /// FS.GG.SDD#743 added that fourth state, and this is the fold that promise was written for.
+    /// `Truncated` contributes the SKIPPED DIRECTORIES, not the enumerated path: the root WAS read,
+    /// and naming it here would say the wrong thing about it and send the operator to `chmod` a
+    /// directory that is already readable. One read can contribute several paths, so this is a
+    /// `collect` where it used to be a `choose` — a truncated listing may skip more than one
+    /// subtree, and reporting only the first would leave the rest unobserved AND unnamed.
     let unreadablePathsOf (reads: ReadResult list) =
         reads
-        |> List.choose (fun read ->
+        |> List.collect (fun read ->
             match read with
-            | Unreadable(path, _) -> Some path
+            | Unreadable(path, _) -> [ path ]
+            | Truncated(_, skipped) -> skipped |> List.map fst
             | Bytes _
-            | Absent -> None)
+            | Absent -> [])
         |> List.distinct
         |> List.sort
 
@@ -1003,7 +1011,10 @@ nuget-cache/
             | Ok metadata when not (String.IsNullOrWhiteSpace metadata.ChangeTier) -> metadata.ChangeTier
             | _ -> "tier1"
         | Absent
-        | Unreadable _ -> "tier1"
+        | Unreadable _
+        // Unreachable: the charter is a FILE read, and only `tryEnumerate` yields `Truncated`
+        // (#743). Stated rather than wildcarded, for the reason the DU exists.
+        | Truncated _ -> "tier1"
 
     /// Shared "load snapshot → parse view → Error⇒malformed / Ok+WorkId mismatch⇒identityMismatch /
     /// Ok⇒none" skeleton behind the per-stage existing-view identity diagnostics

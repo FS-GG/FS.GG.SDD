@@ -106,33 +106,116 @@ module CommandEffects =
         match tryRead projectRoot path with
         | Bytes snapshot -> Some snapshot
         | Absent
-        | Unreadable _ -> None
+        | Unreadable _
+        | Truncated _ -> None
 
-    /// The directory listing, with the same three states. An unreadable directory is the
-    /// `EnumerateDirectory` sibling of the file edge (FS.GG.SDD#743's lane): enumeration of a
-    /// mode-000 directory throws, and before #745 that was either a `toolDefect` or — where the
-    /// listing drives a candidate set — an EMPTY candidate set, which reads as "there is nothing
-    /// here to check" and passes.
+    /// Does this directory OPEN? One entry is enough to answer, and reading one entry is what a
+    /// mode-000 directory refuses — so this is the cheapest honest probe and it costs one
+    /// `opendir` per directory. `Ok ()` = it opens; `Error reason` = it does not, verbatim from
+    /// the OS.
+    ///
+    /// It exists because `IgnoreInaccessible = true` is SILENT: the tolerant enumerations below
+    /// simply omit what they could not open, and an omission is indistinguishable from an empty
+    /// directory. That silence is the whole hazard #743 is about, so the skip is discovered by
+    /// asking each directory directly rather than inferred from an absence.
+    let private opens (absoluteDirectory: string) =
+        try
+            Directory.EnumerateFileSystemEntries absoluteDirectory |> Seq.tryHead |> ignore
+            Ok()
+        with ex ->
+            Error ex.Message
+
+    /// The directory listing, in the same states as the file edge plus the one only a LISTING can
+    /// be in: complete-but-partial (FS.GG.SDD#743).
+    ///
+    /// `Directory.EnumerateFiles(path, pattern, SearchOption.AllDirectories)` resolves to
+    /// `EnumerationOptions.CompatibleRecursive`, whose `IgnoreInaccessible` is **false**, so one
+    /// mode-000 subdirectory threw and the whole call failed. #745 caught that and reported the
+    /// ROOT `Unreadable` — fail-closed, and better than the `toolDefect`/exit 2 it replaced, but
+    /// it discards the listing entirely. Measured on `main`: one `chmod 000` on
+    /// `.claude/skills/fs-gg-demo/references` made `doctor` report four OTHER, readable, present
+    /// copies under `.claude/skills` as *not mirrored* — phantom whole-root drift, #743 AC3.
+    ///
+    /// So: enumerate TOLERANTLY, and record what was skipped.
+    ///
+    /// - `IgnoreInaccessible = true` keeps every listable entry, which is AC3.
+    /// - A second, equally tolerant pass over the DIRECTORIES probes each one with `opens`. An
+    ///   inaccessible directory is still an ENTRY of its readable parent, so it is returned by
+    ///   that pass even though nothing under it is; probing is what turns the enumerator's silence
+    ///   into a named path, which is AC2. A directory whose PARENT could not be opened is never
+    ///   reached and needs no row of its own — its parent's row already says the subtree is
+    ///   unobserved.
+    /// - The ROOT is probed FIRST and separately, because `IgnoreInaccessible = true` applies to it
+    ///   too: a mode-000 root returns an EMPTY listing instead of throwing (verified on net10.0).
+    ///   Reporting that as `Bytes ""` would be precisely the fail-open this fixes, one level up
+    ///   again — "there is nothing here to check" over a root nothing could look inside. It stays
+    ///   `Unreadable`, which is what #745 established and what `CommandEffectsTests` pins.
     let tryEnumerate (projectRoot: string) (path: string) : ReadResult =
         let absolute = fullPath projectRoot path
+
+        let relative (full: string) =
+            Path.GetRelativePath(projectRoot, full).Replace('\\', '/')
 
         if not (Directory.Exists absolute) then
             Absent
         else
-            try
+            match opens absolute with
+            | Error reason -> Unreadable(path, reason)
+            | Ok() ->
+                // Recursive AND tolerant. Nothing below throws: a subtree that cannot be opened is
+                // omitted here and named by `skipped` instead.
+                //
+                // `AttributesToSkip` and `MatchType` are set EXPLICITLY, and that is the whole
+                // reason this is not a one-argument constructor call. `SearchOption.AllDirectories`
+                // resolved to `EnumerationOptions.CompatibleRecursive`, whose `AttributesToSkip` is
+                // `None` and whose `MatchType` is `Win32`; a bare `EnumerationOptions(…)` defaults
+                // to `Hidden ||| System` and `Simple`. Constructing one to gain `IgnoreInaccessible`
+                // therefore silently ALSO stops listing every dot-named file — `.DS_Store`,
+                // `.gitignore`, a dot-named skill auxiliary — because .NET maps a leading dot to
+                // `Hidden` on Unix. That is a narrowed read set bought for a fixed exit code, which
+                // is the trade #743 explicitly forbids ("would trade a wrong exit code for a blind
+                // spot — the strictly worse failure"), and it is invisible: fewer subjects examined
+                // reads exactly like fewer subjects in drift. The repo's own suite caught it —
+                // `an EXTRA junk file in one root is advisory drift named at the roots that LACK
+                // it` went green-to-empty on `.DS_Store`. Tolerance is the ONLY intended change
+                // from the previous behaviour; everything else is pinned to match it.
+                let options =
+                    EnumerationOptions(
+                        RecurseSubdirectories = true,
+                        IgnoreInaccessible = true,
+                        AttributesToSkip = FileAttributes.None,
+                        MatchType = MatchType.Win32
+                    )
+
                 let entries =
-                    Directory.EnumerateFiles(absolute, "*", SearchOption.AllDirectories)
-                    |> Seq.map (fun file -> Path.GetRelativePath(projectRoot, file).Replace('\\', '/'))
+                    Directory.EnumerateFiles(absolute, "*", options)
+                    |> Seq.map relative
                     |> Seq.sort
                     |> String.concat "\n"
 
-                Bytes({ Path = path; Text = entries }: FileSnapshot)
-            with ex ->
-                Unreadable(path, ex.Message)
+                let skipped =
+                    Directory.EnumerateDirectories(absolute, "*", options)
+                    |> Seq.choose (fun directory ->
+                        match opens directory with
+                        | Ok() -> None
+                        | Error reason -> Some(relative directory, reason))
+                    |> Seq.sortBy fst
+                    |> Seq.toList
 
+                let snapshot = { Path = path; Text = entries }: FileSnapshot
+
+                match skipped with
+                | [] -> Bytes snapshot
+                | _ -> Truncated(snapshot, skipped)
+
+    /// `tryEnumerate` projected to the listing. A TRUNCATED listing is still a listing and is
+    /// returned as one — that is #743 AC3, and it is safe here only because the truncation is
+    /// carried on `Read`, where the verdict folds consult it. As with `snapshotIfExists`, this
+    /// projection cannot express the refusal, so it may never decide a coherence verdict.
     let directorySnapshot (projectRoot: string) (path: string) =
         match tryEnumerate projectRoot path with
-        | Bytes snapshot -> Some snapshot
+        | Bytes snapshot
+        | Truncated(snapshot, _) -> Some snapshot
         | Absent
         | Unreadable _ -> None
 
@@ -153,9 +236,16 @@ module CommandEffects =
     /// `Snapshot` is DERIVED from `Read` here and nowhere else, so the two cannot drift apart —
     /// the failure mode a second, hand-passed snapshot argument would have re-opened is a result
     /// claiming `Read = Unreadable` while still carrying bytes for a fold to compare.
+    ///
+    /// `Truncated` yields its snapshot (#743). That is NOT the failure above: the bytes are a real,
+    /// honestly-obtained partial listing that AC3 requires downstream, and the incompleteness has
+    /// not been dropped — it is on `Read`, which is where every verdict fold is already required to
+    /// look. The invariant that matters is preserved exactly: `Snapshot` is still a projection of
+    /// `Read` and can still never carry bytes `Read` does not have.
     let private snapshotOf (read: ReadResult) =
         match read with
-        | Bytes snapshot -> Some snapshot
+        | Bytes snapshot
+        | Truncated(snapshot, _) -> Some snapshot
         | Absent
         | Unreadable _ -> None
 
@@ -544,8 +634,8 @@ module CommandEffects =
     let interpret (projectRoot: string) (dryRun: bool) (effect: CommandEffect) =
         try
             match effect with
-            // THE READ EDGE (FS.GG.SDD#745, decision #754). All three states are carried forward;
-            // none of them is an exception any more.
+            // THE READ EDGE (FS.GG.SDD#745, decision #754; the fourth state, FS.GG.SDD#743). Every
+            // state is carried forward; none of them is an exception any more.
             //
             // `Succeeded = true` on the `Unreadable` arm is deliberate and is the difference
             // between this and the pre-#745 behaviour. The READ did what a read can do: it looked,
@@ -566,6 +656,10 @@ module CommandEffects =
                       Process = None
                       Confirmed = None
                       Diagnostic = Some(Diagnostics.unreadableFile unreadablePath reason) }
+                // Unreachable — `tryRead` reads ONE file and a file has no partial state. Stated,
+                // not defaulted: the compiler is the mechanism that makes every fold decide, and a
+                // wildcard here would be the omission #754 built the DU to prevent.
+                | Truncated(snapshot, _) -> success effect (Bytes snapshot)
             | EnumerateDirectory path ->
                 match tryEnumerate projectRoot path with
                 | Bytes snapshot -> success effect (Bytes snapshot)
@@ -582,6 +676,15 @@ module CommandEffects =
                       Process = None
                       Confirmed = None
                       Diagnostic = Some(Diagnostics.unreadableFile unreadablePath reason) }
+                | Truncated(snapshot, skipped) ->
+                    // FS.GG.SDD#743. The listing SURVIVES — `success` derives `Snapshot` from
+                    // `Read`, so every candidate set downstream gets the entries that were listable
+                    // (AC3) — and the skipped directories ride on `Read`, where `unreadablePathsOf`
+                    // finds them and the verdict folds block on them (AC2). The warning names each
+                    // one and why (AC2); it is not blocking on its own and never a tool defect
+                    // (AC1/AC4), for the same reason `unreadableFile` is not.
+                    { success effect (Truncated(snapshot, skipped)) with
+                        Diagnostic = Some(Diagnostics.unlistableDirectory path skipped) }
             | CreateDirectory path ->
                 let absolute = fullPath projectRoot path
 
