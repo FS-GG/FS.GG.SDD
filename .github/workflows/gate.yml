@@ -104,6 +104,21 @@ jobs:
           dotnet restore .config/kit/FS.GG.Kit.receiver.proj
           bash scripts/tests/materialize-skill-roots.test.sh
 
+      # Mutation-test the root-asymmetry check (FS.GG.SDD#771 AC2). The check itself RUNS in the
+      # required `skill-view-check` workflow; this is the test that makes it distinguishable from a
+      # `true`. It guards a class whose entire character is silence — a tracked file deleted by the
+      # ADR-0067 phase 4 retirement with an EMPTY `git status --porcelain` — so a check that had
+      # never been observed to fail would be exactly as reassuring as no check. Every leg is paired:
+      # leg 1 is the layout this repo now ships, leg 2 is the measured `387adc6` layout that reds,
+      # and legs 5-8 are the fail-closed family (absent root, absent source, empty source, no
+      # non-source root — all exit 2, never a pass; epic FS-GG/.github#266).
+      #
+      # No .NET, no restore: it is pure bash over synthetic trees, plus one wiring leg over this
+      # repo's own tree. Placed in THIS job for the same reason as the step above — it inherits the
+      # required `gate` context.
+      - name: Unit-test the root-asymmetry check
+        run: bash scripts/tests/check-root-asymmetry.test.sh
+
       # The bulk of the suite (Artifacts / Commands / Validation / Contracts / Cli, plus the
       # offline acceptance facts) had no per-PR enforcement — only Contracts.Tests and Cli.Tests
       # ran, and only on release events. Run the whole offline suite here so a red suite blocks

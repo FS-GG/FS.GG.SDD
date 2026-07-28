@@ -107,17 +107,24 @@ seed_skill() {
   printf 'fixture reference for %s.\n' "$id" >"$t/$root/skills/$id/references/note.md"
 }
 
+# The producer manifest's committed home, read from the SAME declaration the driver derives it from
+# (FS.GG.SDD#771): `Schemas.agentSkillRoots`' FIRST root — the tracked source root — and NOT
+# `providerSourceRoot`, which ADR-0067 §6 turns into an untracked generated view. Spelled once, here,
+# so leg E below can move it without every other fixture having to know.
+source_root="${declared[0]}"
+manifest_rel="$source_root/skills/skill-manifest.json"
+
 # make_tree <name> <skill-roots> <retired-roots> <view-roots> — a minimal receiver the driver
 # accepts: the sln marker it locates the repo root by, ITS OWN copy of the script under test, the
 # built library it `#r`s, a producer manifest declaring nothing (so the verdict rests on presence +
 # cross-root identity and the subject stays the ROOT SET), and the kit declaration.
 make_tree() {
   local name="$1" t="$work/$1"
-  mkdir -p "$t/scripts" "$t/src/FS.GG.Contracts/bin/Release" "$t/$provider_root/skills"
+  mkdir -p "$t/scripts" "$t/src/FS.GG.Contracts/bin/Release" "$t/$provider_root/skills" "$t/$source_root/skills"
   : >"$t/FS.GG.SDD.sln"
   cp "$repo/scripts/materialize-skill-roots.fsx" "$t/scripts/materialize-skill-roots.fsx"
   ln -s "$release" "$t/src/FS.GG.Contracts/bin/Release/net10.0"
-  printf '{"schemaVersion":2,"skills":[]}\n' >"$t/$provider_root/skills/skill-manifest.json"
+  printf '{"schemaVersion":2,"skills":[]}\n' >"$t/$manifest_rel"
   kit_decl "$t" "$2" "$3" "$4"
   printf '%s' "$t"
 }
@@ -246,10 +253,16 @@ refute_out "agreeing declarations are not reported as a disagreement" "disagree 
 # ---------------------------------------------------------------------------------------------
 # B. RETIRING THE PROVIDER-SOURCE ROOT — the shape FS.GG.SDD#757 will select.
 # ---------------------------------------------------------------------------------------------
-# When the constant narrows to two, leg A's victim becomes the provider-source root (`.agents`), whose
-# `skills/skill-manifest.json` the driver reads whether or not that root is in the write set. Covering
-# it now means #757 lands against a test that already knows the answer, instead of one that starts
-# exercising an unmeasured path on the day the constant changes.
+# When the constant narrows to two, leg A's victim becomes the provider-source root (`.agents`).
+# Covering it now means #757 lands against a test that already knows the answer, instead of one that
+# starts exercising an unmeasured path on the day the constant changes.
+#
+# THIS LEG'S SUBJECT CHANGED WITH FS.GG.SDD#771, AND THE OLD ONE IS NOW LEG E'S. It used to read
+# "the manifest is still read from a RETIRED provider-source root" — true when the manifest lived at
+# `.agents/skills/skill-manifest.json`, and a fact that stopped existing when #771 moved it to the
+# tracked source root. What remains here is the write-set claim: retiring the provider-source root
+# removes it from the writes and nothing else breaks. That the manifest is read from the SOURCE root,
+# and that its absence is loud, is asserted by leg E, on its own fixtures.
 if [ "$provider_root" != "${declared[0]}" ] && [ "$provider_root" != "$victim" ]; then
   printf '\nB. retiring the provider-source root "%s"\n' "$provider_root"
 
@@ -260,7 +273,7 @@ if [ "$provider_root" != "${declared[0]}" ] && [ "$provider_root" != "$victim" ]
   for r in "${b_survivors[@]}"; do seed_skill "$B" "$r" demo-skill; done
 
   run_driver "$B" --check
-  expect_rc "manifest still read from a retired provider-source root" 0
+  expect_rc "retiring the provider-source root leaves the tree clean" 0
   roots_line_is "the write set excludes the provider-source root" "${b_survivors[*]}"
 else
   printf '\nB. skipped — the provider-source root is already leg A'"'"'s subject\n'
@@ -334,6 +347,76 @@ else
   ok "an empty evaluation is refused rather than read as a declaration (exit $RUN_RC)"
 fi
 expect_out "the refusal says the evaluation, not the retirement, was empty" "evaluated EMPTY"
+
+# ---------------------------------------------------------------------------------------------
+# E. THE PRODUCER MANIFEST'S HOME, AND ITS ABSENCE — FS.GG.SDD#771 AC3, in BOTH directions.
+# ---------------------------------------------------------------------------------------------
+# #771 moved `skill-manifest.json` out of the provider-source root (`.agents/skills`, which ADR-0067
+# §6 makes an untracked generated VIEW) and into the tracked SOURCE root. The criterion attached to
+# that move is not "the new path works": it is that the OLD failure mode survives the move. With the
+# manifest absent the driver must still DIE LOUDLY — `producer manifest missing: <path>` — and never
+# fall back to an empty declaration, because an empty declaration content-addresses nothing and every
+# subsequent `[drifted]` assertion in this driver would then pass over an unverified tree. A
+# relocation that quietly turns a hard failure into an empty set is worse than no relocation, and
+# invisible.
+#
+# ALL THREE LEGS ARE PAIRED, and E3 is the one that could not pass before #771:
+#   E1 present at the SOURCE root  -> clean, exit 0.
+#   E2 absent everywhere           -> non-zero, and the message NAMES the source-root path.
+#   E3 present ONLY at the OLD path (the provider-source root) -> still non-zero. Against the
+#      pre-#771 driver E3 exits 0, because that IS where it used to look. It is the leg that makes
+#      E1 a statement about WHICH path rather than about any path at all.
+printf '\nE. the producer manifest is read from the source root "%s", and its absence is LOUD\n' "$source_root"
+
+E1="$(make_tree E1 "$(join_kit "${declared[@]}")" "" "")"
+for r in "${declared[@]}"; do seed_skill "$E1" "$r" demo-skill; done
+
+run_driver "$E1" --check
+expect_rc "the manifest at $manifest_rel is READ (tree clean)" 0
+refute_out "no missing-manifest failure on the shipped layout" "producer manifest missing"
+
+E2="$(make_tree E2 "$(join_kit "${declared[@]}")" "" "")"
+for r in "${declared[@]}"; do seed_skill "$E2" "$r" demo-skill; done
+rm -f "$E2/$manifest_rel"
+
+run_driver "$E2" --check
+if [ "$RUN_RC" -eq 0 ]; then
+  bad "a MISSING producer manifest was accepted — the driver defaulted to an empty declaration"
+  printf '%s\n' "$RUN_OUT" | sed 's/^/       | /'
+else
+  ok "a missing producer manifest is refused (exit $RUN_RC)"
+fi
+expect_out "the refusal is the LOUD one, by its own words" "producer manifest missing"
+expect_out "and it names the SOURCE-root path it looked for" "$manifest_rel"
+
+# The same mutation in write mode: the loud failure must not be a `--check`-only courtesy. Write mode
+# is the command this driver's own header documents FIRST, so a silent empty declaration there would
+# fan out an unverified union into every root.
+run_driver "$E2"
+if [ "$RUN_RC" -eq 0 ]; then
+  bad "WRITE mode accepted a missing producer manifest"
+  printf '%s\n' "$RUN_OUT" | sed 's/^/       | /'
+else
+  ok "write mode refuses a missing producer manifest too (exit $RUN_RC)"
+fi
+expect_out "write mode's refusal is the same loud one" "producer manifest missing"
+
+if [ "$provider_root" != "$source_root" ]; then
+  E3="$(make_tree E3 "$(join_kit "${declared[@]}")" "" "")"
+  for r in "${declared[@]}"; do seed_skill "$E3" "$r" demo-skill; done
+  mv "$E3/$manifest_rel" "$E3/$provider_root/skills/skill-manifest.json"
+
+  run_driver "$E3" --check
+  if [ "$RUN_RC" -eq 0 ]; then
+    bad "the manifest at the PRE-#771 path ($provider_root/skills/) satisfied the driver — the relocation is not real"
+    printf '%s\n' "$RUN_OUT" | sed 's/^/       | /'
+  else
+    ok "the manifest at the pre-#771 path does NOT satisfy the driver (exit $RUN_RC)"
+  fi
+  expect_out "and the driver says which path it wanted" "$manifest_rel"
+else
+  printf '  (E3 skipped — the source root and the provider-source root are the same root)\n'
+fi
 
 # ---------------------------------------------------------------------------------------------
 # F. THE WIRING — this repository's real, pinned declaration actually retires `.codex/skills`.

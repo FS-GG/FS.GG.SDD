@@ -8,15 +8,28 @@ open FS.GG.SDD.Commands.Internal
 open Xunit
 
 /// 072 (ADR-0017 P2 / FS.GG.SDD#109): the emitted process `skill-manifest` and its
-/// drift guard. The committed `.agents/skills/skill-manifest.json` is pinned to the
+/// drift guard. The committed `.claude/skills/skill-manifest.json` is pinned to the
 /// seeded fs-gg-sdd-* set (ids == SeededSkills.skillNames), to the authored SKILL.md
 /// bytes (per-entry sha256 recomputed from disk), and to a fresh serialization
 /// (staleness), so it can never silently drift the way `.github`'s bootstrapped
 /// registry rows did. Real-filesystem reads against the repo tree.
 module ProcessSkillManifestTests =
 
+    // THE TRACKED SOURCE ROOT, SPELLED OUT (FS.GG.SDD#771). This was `.agents` — the
+    // provider-source root of the orchestrated scaffold lane, which ADR-0067 §6 turns into
+    // a generated VIEW of `.claude/skills`: untracked, git-ignored, and absent in a bare
+    // checkout. A test that read the manifest through the view would pass locally and fail
+    // by NOT FINDING A FILE anywhere that had not run `scripts/skill-view generate` — the
+    // silent-absence class the ADR-0067 rewrite exists to remove, and FS-GG/.github#1715's
+    // blocker B5 one layer down.
+    //
+    // Deliberately a LITERAL and not `List.head Fsgg.Schemas.agentSkillRoots` (the
+    // derivation `RegistrySkillManifest.manifestPath` and `materialize-skill-roots.fsx`
+    // share): a guard that re-derives the path from the code it guards cannot notice the
+    // path moving. This spelling is what reds if the manifest's declared home changes
+    // without this decision being re-taken.
     let private committedPath =
-        Path.Combine(TestSupport.repoRoot, ".agents", "skills", "skill-manifest.json")
+        Path.Combine(TestSupport.repoRoot, ".claude", "skills", "skill-manifest.json")
 
     // Normalize CRLF → LF so the guard tolerates a `core.autocrlf` checkout of the
     // LF-authored artifact (matching `Fsgg.SkillMirror.sha256` / feature 070 and the

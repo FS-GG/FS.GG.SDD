@@ -36,8 +36,13 @@ module RegistrySkillManifestContainmentTests =
         let outside =
             Path.Combine(Path.GetTempPath(), "fsgg-sdd-237-" + Guid.NewGuid().ToString("N"))
 
+        // `.claude`, the TRACKED SOURCE root the manifest moved to in FS.GG.SDD#771 — not
+        // `.agents`, which ADR-0067 §6 turns into an untracked generated view. Spelled out
+        // rather than derived from `RegistrySkillManifest.manifestPath` so this stays an
+        // independent statement of where a `--write` would have landed; the assertion that
+        // NOTHING escaped is `Directory.Exists outside` below, which holds for any path.
         let escapingTarget =
-            Path.Combine(outside, ".agents", "skills", "skill-manifest.json")
+            Path.Combine(outside, ".claude", "skills", "skill-manifest.json")
 
         let code, stderr =
             captureStderr (fun () -> RegistrySkillManifest.run [ "--write"; "--root"; outside ])

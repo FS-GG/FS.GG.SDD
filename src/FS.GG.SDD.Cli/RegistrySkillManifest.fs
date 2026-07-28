@@ -7,11 +7,36 @@ open FS.GG.SDD.Commands
 
 module RegistrySkillManifest =
 
-    // Derive the committed path from the single source of truth for the neutral skills
-    // root (`Fsgg.SkillMirror.providerSourceRoot` = ".agents"), so it moves with the
-    // mirror root rather than re-spelling it. = ".agents/skills/skill-manifest.json".
+    // THE TRACKED SOURCE ROOT, NOT THE PROVIDER-SOURCE ROOT (FS.GG.SDD#771).
+    //
+    // This used to be `Fsgg.SkillMirror.providerSourceRoot + "/skills/skill-manifest.json"` —
+    // `.agents/skills/skill-manifest.json`. That root is the one a PROVIDER owns in the
+    // orchestrated scaffold lane (ADR-0014 §Decision 6); it says nothing about where THIS
+    // repository's own producer-authoritative files live. Under ADR-0067 §6 `.agents/skills`
+    // becomes a generated VIEW of `.claude/skills`: untracked, git-ignored, and absent in a bare
+    // checkout by construction. A file that lives only there is deleted by the retirement with a
+    // clean `git status`, and every reader that resolves THROUGH the view reports "not found" in
+    // any context that has not run `scripts/skill-view generate` — which is FS-GG/.github#1715's
+    // blocker B5 (`configured root is absent: ./.agents/skills`, exit 2) one layer down.
+    //
+    // It is not even reliably resolvable through the view: `skill-view generate --mode copy` (the
+    // documented fallback when a filesystem or OS refuses a symlink) copies `<id>/` skill
+    // directories and NOTHING ELSE, so a top-level file in the source root has no counterpart in a
+    // copy-mode view at all. Only the link mode would have carried it.
+    //
+    // So the manifest lives in the TRACKED SOURCE root, and the source root is read from the one
+    // declaration that already carries that meaning: `Fsgg.Schemas.agentSkillRoots`' FIRST root.
+    // That ordering is already load-bearing and already documented as such — the materializer's
+    // `canonicalRootOf` picks "the first root that has it", and `scripts/materialize-skill-roots.fsx`
+    // preserves the constant's order precisely so re-ordering cannot silently re-point the
+    // producer-authoritative body. Re-spelling ".claude" here would be a second declaration of the
+    // same fact; deriving it keeps there being one. = ".claude/skills/skill-manifest.json".
+    //
+    // If the head of that constant ever moves, this path moves with it and BOTH readers say so out
+    // loud: `--check` below reports MISSING, and the materializer's `producer manifest missing:`
+    // failwith fires. Neither degrades to an empty declaration.
     let manifestPath =
-        Fsgg.SkillMirror.providerSourceRoot + "/skills/skill-manifest.json"
+        List.head Fsgg.Schemas.agentSkillRoots + "/skills/skill-manifest.json"
 
     // The deterministic canonical JSON for the currently-seeded process skill set
     // (sorted by id, trailing LF). One source of truth: ProcessSkillManifest.build.

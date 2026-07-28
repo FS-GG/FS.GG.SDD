@@ -6,7 +6,7 @@ namespace FS.GG.SDD.Cli
 ///
 /// Modes (deterministic; exit code carries the verdict):
 ///   bare      → print the canonical manifest JSON to stdout (the automation contract).
-///   --write   → (re)write the committed `.agents/skills/skill-manifest.json`.
+///   --write   → (re)write the committed `.claude/skills/skill-manifest.json`.
 ///   --check   → regenerate in memory and compare to the committed file; exit 0 iff
 ///               byte-identical, else non-zero with a hint (the CI/drift-guard mode).
 /// `--root <dir>` selects the product root (default `.`).

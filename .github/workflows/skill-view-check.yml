@@ -45,12 +45,31 @@
 # A leg that survives its own mutation is repaired or dropped, never shipped. Both mutations red this
 # one, in CI, by run id; the ids are in FS-GG/.github#1715.
 #
-# WHAT IT DOES **NOT** ASSERT, SAID OUT LOUD. It does not compare the two roots' BYTES against each
-# other, so while this repo still commits two independent copies of its skills it is weaker than the
-# union gate in exactly that one direction: a skill present in `.agents/skills` and absent from
-# `.claude/skills` is outside its subject. That direction stops existing the moment `.agents/skills`
-# becomes a view of `.claude/skills` — a view cannot diverge from what it is a view of — so the gap is
-# bounded by this repo's own ADR-0067 phase 4 retirement (FS-GG/.github#1676) and is recorded there.
+# WHAT `skill-view check` DOES **NOT** ASSERT, SAID OUT LOUD — AND WHAT NOW DOES (FS.GG.SDD#771).
+# `skill-view check` does not compare the two roots' BYTES against each other, so on its own, while
+# this repo still commits two independent copies of its skills, it is weaker than the union gate in
+# exactly that one direction: a skill present in `.agents/skills` and absent from `.claude/skills` is
+# outside its subject. That gap was not theoretical. It is precisely how
+# `.agents/skills/skill-manifest.json` — this repo's producer-authoritative process manifest, 6,891
+# tracked bytes — came to exist in NO OTHER ROOT, where ADR-0067 phase 4 would have deleted it and
+# `git status --porcelain` would have come back EMPTY (measured on `387adc6`, FS.GG.SDD#771).
+#
+# So the second step below closes it: `scripts/check-root-asymmetry.sh` asserts every non-source root
+# is a SUBSET of `.claude/skills`, byte for byte — the `diff -r` that found the defect, kept where
+# something runs it rather than in a reviewer's memory (FS.GG.SDD#771 AC2). It is mutation-checked by
+# `scripts/tests/check-root-asymmetry.test.sh`, which `gate` runs, and leg 2 of that test IS the
+# measured `387adc6` layout.
+#
+# THE ASYMMETRY IS DELIBERATELY ONE-DIRECTIONAL. `[second-root-only]` is fatal; `[source-only]` is
+# reported and is not. The source root legitimately carries more than a view does: `skill-view
+# generate --mode copy` copies `<id>/` skill directories and NO top-level files, so
+# `.claude/skills/skill-manifest.json` has no counterpart in a copy-mode view by construction. That
+# is also why FS.GG.SDD#771 moved the manifest's READERS rather than resolving them through the view.
+# Do not "tidy" the check into a symmetric `diff -r` — it would forbid the layout this repo chose.
+#
+# Both directions stop mattering the moment `.agents/skills` becomes a view of `.claude/skills` — a
+# view cannot diverge from what it is a view of — so the remaining exposure is bounded by this repo's
+# own ADR-0067 phase 4 retirement (FS-GG/.github#1676) and is recorded there.
 # `kit / coordination-kit` continues to grade the kit-owned skills' bytes against this repo's pin
 # throughout. Do not read that as coverage of the rest: a `coordination-coherence` green is evidence
 # about the kit's skills, never about the tree (FS-GG/.github#1504).
@@ -152,3 +171,20 @@ jobs:
       # coherent-but-incomplete class. A source directory cannot be a subset of itself.
       - name: Assert every skill .claude/skills declares is visible at every runtime root
         run: bash scripts/skill-view check --source .claude/skills --tree .
+
+      # FS.GG.SDD#771 AC2. The step above asks "is everything the source declares VISIBLE at each
+      # root"; this one asks the opposite direction, which nothing has asked since `skill-union /
+      # skill-union` was retired on 2026-07-28: "does any root carry something the source does NOT".
+      # That is the class ADR-0067 phase 4 deletes with a clean `git status`, and it is how this
+      # repo's own producer manifest was found. Placed in THIS job so it inherits the required
+      # `skill-view-check` context — a new job would need adding to branch protection to mean
+      # anything, and until then would be a check nobody has to pass.
+      #
+      # NO `--roots` HERE EITHER, for the reason in the header: the set comes from `lib/roots.sh`,
+      # the same precedence parser every other reader in this repo resolves with.
+      #
+      # WHEN `.agents/skills` BECOMES A VIEW, this step needs the same `skill-view generate` ahead of
+      # it that the header prescribes for the step above — it refuses an absent root with exit 2
+      # rather than passing over nothing, deliberately. One generate serves both.
+      - name: Assert no runtime root carries anything .claude/skills does not
+        run: bash scripts/check-root-asymmetry.sh --source .claude/skills --tree .
