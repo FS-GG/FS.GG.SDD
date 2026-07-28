@@ -27,3 +27,6 @@ TestResults/
 # matches that directory itself.
 specs/*/readiness/*/*
 !specs/*/readiness/*/ship-verdict.json
+
+# ADR-0067 §9 phase 4 dry run (FS-GG/.github#1715 AC2). A GENERATED VIEW of .claude/skills.
+/.agents/skills
