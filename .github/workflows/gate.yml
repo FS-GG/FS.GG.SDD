@@ -365,9 +365,23 @@ jobs:
   # required-checks set (do not add it to any "all checks required" policy) — FR-005.
   #
   # Fantomas is installed PINNED (7.0.5) to a repo-local --tool-path, deliberately WITHOUT
-  # touching .config/dotnet-tools.json: that manifest is a managed org file the
-  # build-config-drift gate pins byte-identical to FS-GG/.github dist/dotnet/, so adding
-  # Fantomas there would fail that gate (feature 065 research Decision 2 / FR-003). The
+  # touching .config/dotnet-tools.json (feature 065 research Decision 2 / FR-003).
+  #
+  # THE ORIGINAL REASON HAS LAPSED, and it is written down here rather than left to be
+  # re-derived from a stale sentence. This comment used to say that manifest was "a managed
+  # org file the build-config-drift gate pins byte-identical to FS-GG/.github dist/dotnet/,
+  # so adding Fantomas there would fail that gate". Both halves are false now, and the second
+  # was always false: the build-config-drift job above diffs ONLY Directory.Build.props and
+  # Directory.Packages.props — the manifest was graded by the kit context, never by that one.
+  # And since FS.GG.Kit 0.18.0 / FS-GG/.github#1615 (ADR-0068) the kit does not materialize
+  # `.config/dotnet-tools.json` at all: it is THIS REPO'S OWN FILE, Renovate bumps
+  # `fs.gg.coord.cli` in it directly, and no drift gate grades its contents. So nothing
+  # MECHANICAL stops Fantomas going in there today.
+  #
+  # THE ARRANGEMENT STANDS ANYWAY, for two reasons that never depended on the kit. FR-003 is a
+  # SPEC commitment, and reversing it is a spec decision, not a comment edit. And this job is
+  # deliberately standalone — no solution restore, no cache — so a `dotnet tool restore` here
+  # would buy nothing and cost the isolation the next paragraph exists to protect. The
   # same pinned commands are documented for contributors in DEVELOPING.md so a local
   # verdict matches CI. No solution restore/build here, so (like api-compatibility-gate)
   # this job must NOT cache — a partial cache would poison the deterministic gate's key.
