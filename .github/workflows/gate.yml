@@ -63,6 +63,24 @@ jobs:
       - name: Build (net10.0)
         run: dotnet build FS.GG.SDD.sln -c Debug --no-restore
 
+      # Guard the skill-root materializer's WRITE SET (FS.GG.SDD#767). The driver is a `.fsx` outside
+      # the solution, so no `dotnet test` project reaches it, and its defect presented as a green board:
+      # FS.GG.Kit 0.15.0 swept `.codex/skills` per ADR-0067 §5 and the driver — still reading three
+      # roots from `Fsgg.Schemas.agentSkillRoots` — would have re-created all 23 mirrors on the next
+      # ordinary run, which is the command this repo's own `skill-union.yml` prints as the repair.
+      # Every leg asserts by MUTATION over a synthetic receiver whose root declaration is the only
+      # thing that changes; 13 of them are red against the pre-#767 driver.
+      #
+      # `-c Release` because the driver's `#r` names the Release output by path; `--no-restore` because
+      # the locked restore above is config-agnostic and covers this project. Placed in THIS job rather
+      # than a new one so it inherits the required `gate` context — a new job would need adding to
+      # branch protection to mean anything, and until then would be a check nobody has to pass.
+      - name: Unit-test the skill-root materializer's write set
+        run: |
+          set -euo pipefail
+          dotnet build src/FS.GG.Contracts/FS.GG.Contracts.fsproj -c Release --no-restore
+          bash scripts/tests/materialize-skill-roots.test.sh
+
       # The bulk of the suite (Artifacts / Commands / Validation / Contracts / Cli, plus the
       # offline acceptance facts) had no per-PR enforcement — only Contracts.Tests and Cli.Tests
       # ran, and only on release events. Run the whole offline suite here so a red suite blocks

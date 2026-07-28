@@ -30,10 +30,58 @@
 // `SKILL.md` + `references/**` + `agents/*.yaml`, which is what every kit-owned coordination skill
 // here actually is — goes through the one implementation. What did NOT change is the refusal to
 // arbitrate: divergence across roots is still refused at the producer, never flattened.
+//
+// RETIRED ROOTS ARE NOT WRITTEN, AND THE DECLARATION IS READ RATHER THAN RE-SPELLED (FS.GG.SDD#767).
+// This driver used to take `Schemas.agentSkillRoots` verbatim as its write set. On 2026-07-28 that
+// became a re-materialization hazard rather than a contract: FS.GG.Kit 0.15.0 carried ADR-0067 §5's
+// retirement of `.codex/skills` into this receiver and its materializer SWEPT the four kit-owned
+// skills (23 files) out of that root, while the constant still declared three. `--check` therefore
+// exited 1 with exactly those 23 paths as DRIFT, and the write mode — the command this file's own
+// header documents FIRST, and the one `.github/workflows/skill-union.yml` prints as the repair —
+// would have put every one of them back, into the root the transport contract had just removed.
+// A receiver would have undone a retirement by running its own documented command.
+//
+// THE FIX IS A DERIVATION, NOT A SECOND CONSTANT. Hard-coding `[".claude"; ".agents"]` here would
+// re-create the exact defect one line lower: two declarations of the root set that agree only by
+// coincidence, in a file whose whole thesis is that it re-implements nothing. So the write set is
+// DERIVED from the two declarations that already exist, each read from its own authority:
+//
+//   * `Fsgg.Schemas.agentSkillRoots` — ADR-0014 §Decision 5's declared root set, and still the ONLY
+//     place a root is added, renamed or ordered. (It reads three today; FS.GG.SDD#757 owns making it
+//     two, on the `api-compatibility-gate`-protected `FS.GG.Contracts` surface. This derivation is
+//     correct BEFORE and AFTER that lands — subtracting a root that is no longer in the set is a
+//     no-op — so neither item blocks the other.)
+//   * `FsggKitRetiredSkillRoots` / `FsggKitSkillRoots` / `FsggKitViewSkillRoots` — the pinned
+//     FS.GG.Kit package's own consumer declaration (ADR-0062, ADR-0065 §A root's three dispositions),
+//     evaluated through MSBuild from `.config/kit/FS.GG.Kit.receiver.proj`. This is not "some other
+//     config that happens to agree": `FsggKitRetiredSkillRoots` is the property whose value PERFORMED
+//     the sweep this driver would otherwise undo, so reading it makes disagreeing with the sweep
+//     unrepresentable rather than merely unlikely.
+//
+// EVALUATED BY MSBUILD, NOT PARSED BY US. The property is overridable by the receiver (the kit's
+// defaults are all `Condition="'$(X)' == ''"`), so its VALUE is the result of an evaluation, and
+// re-deriving that from the package's `build/FS.GG.Kit.props` XML would be a second implementation
+// of MSBuild — the same mistake, one layer down. `dotnet build -getProperty:` asks the evaluator.
+//
+// AND IT FAILS CLOSED. An unrestored receiver project evaluates every one of these properties to the
+// EMPTY STRING and exits 0 (measured) — the kit's `build/` props are imported by NuGet's generated
+// `.g.props`, which does not exist before a restore. Read naively that says "no roots are retired",
+// which is precisely the wrong answer in the wrong direction: it would restore the three-root write
+// set and re-create the mirrors. So an empty `FsggKitSkillRoots` is treated as A FAILED EVALUATION,
+// never as a declaration, and this driver REFUSES rather than materializing an unmeasured root set.
+//
+// WHAT HAPPENS TO WHAT IS ALREADY UNDER A RETIRED ROOT: NOTHING, HERE (FS.GG.SDD#767 criterion 4).
+// `.codex/skills` still holds 28 skills this repo OWNS (`fs-gg-sdd-*`, `speckit-*`, `spectre-console`)
+// — the kit's sweep removes only the four kit-owned ones, exactly as ADR-0065 requires. This driver
+// neither writes them, reads them, nor deletes them: a receiver hand-deleting a mirror is what
+// ADR-0065 §Retiring a root forbids, and deciding the root has no runtime is a contract migration
+// owned by ADR-0067 phase 4 (FS-GG/.github#1676), not by this script. It does print what remains, so
+// "nothing writes it and nothing audits it" is stated on every run instead of being inferred.
 
 #r "../src/FS.GG.Contracts/bin/Release/net10.0/FS.GG.Contracts.dll"
 
 open System
+open System.Diagnostics
 open System.IO
 open System.Text
 open System.Text.Json
@@ -52,14 +100,160 @@ let repoRoot =
 
     find (DirectoryInfo __SOURCE_DIRECTORY__)
 
-/// ADR-0014 §Decision 5's one declared root set — read from the library, never re-spelled here.
-let roots = Schemas.agentSkillRoots
-
 let abs (relative: string) =
     Path.Combine(repoRoot, relative.Replace('/', Path.DirectorySeparatorChar))
 
 // ---------------------------------------------------------------------------------------------
-// Observe the three roots.
+// The write set: DECLARED by ADR-0014 §Decision 5, NARROWED by the receiver's own retirement.
+// ---------------------------------------------------------------------------------------------
+
+let kitReceiverProject = ".config/kit/FS.GG.Kit.receiver.proj"
+
+let kitProperties =
+    [ "FsggKitSkillRoots"; "FsggKitRetiredSkillRoots"; "FsggKitViewSkillRoots" ]
+
+/// Run `dotnet` under `repoRoot` and return (exit code, stdout, stderr). stdout and stderr are read
+/// to completion CONCURRENTLY (`ReadToEndAsync` before `WaitForExit`): draining one stream and only
+/// then the other deadlocks the moment the undrained pipe's buffer fills, which is a hang rather
+/// than an error and would look exactly like a slow restore.
+let runDotnet (args: string list) =
+    let psi = ProcessStartInfo("dotnet")
+    psi.WorkingDirectory <- repoRoot
+    psi.RedirectStandardOutput <- true
+    psi.RedirectStandardError <- true
+    psi.UseShellExecute <- false
+
+    for a in args do
+        psi.ArgumentList.Add a
+
+    use p = Process.Start psi
+    let out = p.StandardOutput.ReadToEndAsync()
+    let err = p.StandardError.ReadToEndAsync()
+    p.WaitForExit()
+    p.ExitCode, out.Result, err.Result
+
+/// `dotnet build -getProperty:X -getProperty:Y …` answers with a `{"Properties":{…}}` document on
+/// stdout. MSBuild may print warnings ahead of it, so the document is located rather than assumed to
+/// start at byte 0 — and a stdout with no `{` at all is a failure, not an empty property set.
+let evaluateKitProperties () =
+    let projectArg = kitReceiverProject
+
+    let ask (extra: string list) =
+        let args =
+            [ "build"; projectArg ]
+            @ extra
+            @ [ for p in kitProperties -> "-getProperty:" + p ]
+
+        let code, out, err = runDotnet args
+
+        match out.IndexOf '{' with
+        | -1 -> Error(sprintf "exit %d, no JSON on stdout.\n%s\n%s" code out err)
+        | i ->
+            try
+                use doc = JsonDocument.Parse(out.Substring i)
+                let props = doc.RootElement.GetProperty "Properties"
+
+                Ok(
+                    kitProperties
+                    |> List.map (fun name ->
+                        name,
+                        match props.TryGetProperty name with
+                        | true, v -> (v.GetString() |> Option.ofObj |> Option.defaultValue "")
+                        | _ -> "")
+                    |> Map.ofList
+                )
+            with ex ->
+                Error(sprintf "exit %d, unparseable evaluation: %s\n%s" code ex.Message out)
+
+    // An unrestored receiver project evaluates EVERY kit property to "" and exits 0, so the restore
+    // is attempted before refusing — a driver that died on a fresh clone would just teach people to
+    // skip it. `--no-restore` first, because that is the cached path and costs ~0.3s.
+    let refuse detail =
+        failwith (
+            $"cannot evaluate the pinned FS.GG.Kit root declaration from {kitReceiverProject}: {detail}\n"
+            + "This driver derives its write set by subtracting that package's FsggKitRetiredSkillRoots "
+            + "from Fsgg.Schemas.agentSkillRoots. An unevaluated declaration is not an empty one "
+            + "(FS.GG.SDD#767): reading it as empty would restore the retired root to the write set and "
+            + "re-create the mirrors the kit swept. Refusing instead. Repair: "
+            + $"`dotnet restore {kitReceiverProject}`."
+        )
+
+    if not (File.Exists(abs kitReceiverProject)) then
+        refuse "the receiver project is not in this tree"
+    else
+        let evaluated =
+            match ask [ "--no-restore" ] with
+            | Ok m when m.["FsggKitSkillRoots"] <> "" -> Ok m
+            | _ ->
+                let code, out, err = runDotnet [ "restore"; projectArg ]
+
+                if code <> 0 then
+                    Error(sprintf "restore failed (exit %d).\n%s\n%s" code out err)
+                else
+                    ask [ "--no-restore" ]
+
+        match evaluated with
+        | Error detail -> refuse detail
+        | Ok m when m.["FsggKitSkillRoots"] = "" ->
+            refuse
+                "FsggKitSkillRoots evaluated EMPTY even after a restore — the package's build/ props were not imported"
+        | Ok m -> m
+
+let kitRootDeclaration = evaluateKitProperties ()
+
+/// A `;`-separated MSBuild root list, in the kit's spelling (`.claude/skills`), reduced to the bare
+/// repo-root name ADR-0014 §Decision 5's constant uses (`.claude`) — consumers append `skills/`.
+/// The two vocabularies are the SAME roots; normalizing here is what lets them be compared at all,
+/// and doing it in one place is what stops the comparison from being a spelling accident.
+let bareRoots (declaration: string) =
+    declaration.Split(';', StringSplitOptions.RemoveEmptyEntries)
+    |> Array.map (fun r -> r.Trim().Replace('\\', '/').TrimEnd('/'))
+    |> Array.filter (fun r -> r <> "")
+    |> Array.map (fun r ->
+        if r.EndsWith "/skills" then
+            r.Substring(0, r.Length - "/skills".Length)
+        else
+            r)
+    |> Array.toList
+
+let retiredRoots =
+    bareRoots kitRootDeclaration.["FsggKitRetiredSkillRoots"] |> Set.ofList
+
+/// The kit's own statement of the RUNTIME surface. Its `build/FS.GG.Kit.props` says it outright:
+/// *"the runtime surface is `FsggKitSkillRoots` + `FsggKitViewSkillRoots`, and THAT union is what
+/// must equal `.agent-skill-roots` / `agentSkillRoots`"* — a materialized root and a generated-view
+/// root are both in the contract; only a RETIRED root leaves it.
+let kitRuntimeRoots =
+    (bareRoots kitRootDeclaration.["FsggKitSkillRoots"]
+     @ bareRoots kitRootDeclaration.["FsggKitViewSkillRoots"])
+    |> Set.ofList
+
+/// The write set. Order is `agentSkillRoots`' order, unchanged — `canonicalRootOf` below picks "the
+/// first root that has it", so re-ordering here would silently re-point the producer-authoritative
+/// body. Filtering a list preserves it; re-deriving one from the kit's declaration would not.
+let roots =
+    Schemas.agentSkillRoots
+    |> List.filter (fun r -> not (Set.contains r retiredRoots))
+
+// The two declarations must AGREE about the runtime surface, and the disagreement is stated rather
+// than resolved. This driver is not the place to arbitrate between the published contract constant
+// and the pinned transport package: a mismatch means one of them is wrong, and picking a winner is
+// how a stale declaration gets laundered into a green run. Today they agree in both directions —
+// three roots minus `.codex` equals the kit's two — and they still agree once FS.GG.SDD#757 makes
+// the constant two, because subtracting an absent root changes nothing.
+if Set.ofList roots <> kitRuntimeRoots then
+    failwith (
+        sprintf "the declared root set and the pinned FS.GG.Kit declaration disagree about the runtime surface.\n"
+        + sprintf "  Schemas.agentSkillRoots minus retired : %s\n" (String.concat " " (List.sort roots))
+        + sprintf "  FsggKitSkillRoots + FsggKitViewSkillRoots : %s\n" (String.concat " " (Set.toList kitRuntimeRoots))
+        + sprintf "  FsggKitRetiredSkillRoots : %s\n" (String.concat " " (Set.toList retiredRoots))
+        + "One of them is stale. FS.GG.SDD#757 owns Schemas.agentSkillRoots; ADR-0062/ADR-0065 own the "
+        + "kit declaration. Refusing to pick a winner (FS.GG.SDD#767)."
+    )
+
+// ---------------------------------------------------------------------------------------------
+// Observe the roots in the write set — and ONLY those. A retired root is not read either: reading it
+// would put its contents back in the union, and the very next step fans the union out to every root.
 // ---------------------------------------------------------------------------------------------
 
 /// Every skill id present under `<root>/skills/` (a directory holding a SKILL.md).
@@ -454,6 +648,28 @@ let undeclaredSkills =
 
 printfn "materialize-skill-roots (%s)" (if checkOnly then "--check" else "write")
 printfn "  roots        : %s" (String.concat " " roots)
+
+// THE RETIRED ROOTS ARE REPORTED, NOT SILENTLY SKIPPED (FS.GG.SDD#767 criterion 4). Dropping a root
+// from the write set makes it invisible to every line below, and an invisible root with 28 committed
+// skills in it is exactly the state this item was filed about. So each retirement is named, with what
+// is still on disk under it and who owns removing it — a NOTICE, never a failure: failing here would
+// leave a receiver no legal move, because ADR-0065 §Retiring a root forbids hand-deleting a mirror.
+for retired in Set.toList retiredRoots |> List.sort do
+    let dir = abs (retired + "/skills")
+
+    let remaining =
+        if Directory.Exists dir then
+            Directory.EnumerateDirectories dir
+            |> Seq.filter (fun d -> File.Exists(Path.Combine(d, "SKILL.md")))
+            |> Seq.length
+        else
+            0
+
+    printfn
+        "  retired      : %s — not written, not read, not swept here (FsggKitRetiredSkillRoots); %d skill(s) remain on disk, owned by ADR-0067 phase 4 (FS-GG/.github#1676). No gate audits this root."
+        retired
+        remaining
+
 printfn "  union        : %d skills" (List.length union)
 printfn "  files        : %d across the union" totalFiles
 printfn "  manifest     : ADR-0017 schema v%d, %d skill(s) declared" manifestSchemaVersion (Map.count declaredFiles)

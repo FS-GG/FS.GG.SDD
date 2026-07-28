@@ -1,22 +1,24 @@
 # skill-union — thin caller for the shared reusable assertion (FS-GG/.github, ADR-0014 / #1504).
 #
 # This repo is declared a `skill-union` receiver in FS-GG/.github registry/repos.yml. The reusable
-# workflow runs `scripts/skill-union-assert.sh` over this repository's OWN committed ADR-0011
-# agent-skill roots and asserts the full union is present in every root and byte-identical across
-# them. Fix drift by running, from this repo:
+# workflow runs `scripts/skill-union-assert.sh` over this repository's OWN committed agent-skill roots
+# — ADR-0011's set as narrowed by ADR-0065 and ADR-0067 §5, which is the reusable workflow's `roots`
+# default and is spelled out at the job below — and asserts the full union is present in every one of
+# them and byte-identical across them. Fix drift by running, from this repo:
 #
 #     dotnet build src/FS.GG.Contracts/FS.GG.Contracts.fsproj -c Release
 #     dotnet fsi scripts/materialize-skill-roots.fsx
 #
 # WHY THIS IS NOT REDUNDANT WITH coordination-coherence (.github#1504). The two gates check the
-# three-root invariant over DIFFERENT SUBJECTS, and reading one as the other cost the org three
-# partitioned repositories — this one included:
+# same all-roots-agree invariant over DIFFERENT SUBJECTS, and reading one as the other cost the org
+# three partitioned repositories — this one included:
 #
 #   * `coordination-coherence` (`receives: coordination-kit`) audits the KIT-OWNED SUBSET — exactly
 #     the four skills registry/repos.yml's `kit:` block names. It cannot see a co-tenant skill,
 #     because a co-tenant skill is not in its subject.
 #   * this gate (`receives: skill-union`) audits the COMPLETE runtime-visible UNION — every skill in
-#     `.claude/skills`, `.codex/skills`, `.agents/skills`.
+#     every root the runtime contract still declares. That is TWO roots, `.claude/skills` and
+#     `.agents/skills`; see the roots note below, which says exactly which and why.
 #
 # Measured on main before FS.GG.SDD#716: `.claude`=32 `.codex`=21 `.agents`=4, union 32, with 28
 # skills PARTITIONED and nothing divergent — and `coordination-coherence` green throughout, because
@@ -61,7 +63,31 @@ jobs:
   # reporting. The callee job id is public API on the authority's side too (reusable-workflow-contract).
   skill-union:
     # No `with:` at all is the most correct form — `product-path` defaults to "." (this repository's
-    # root, which is what `receives: skill-union` means) and `roots` to ADR-0011's three. Narrowing
-    # either would be a smaller audit than the capability claims, and a `product-path` naming a
-    # subdirectory would be a generated-product audit instead of this one.
+    # root, which is what `receives: skill-union` means) and `roots` to the reusable workflow's own
+    # default. Narrowing either HERE would be a smaller audit than the capability claims, and a
+    # `product-path` naming a subdirectory would be a generated-product audit instead of this one.
+    #
+    # WHICH ROOTS THAT ACTUALLY IS, MEASURED RATHER THAN NAMED BY ADR (FS.GG.SDD#767). This comment
+    # read "`roots` to ADR-0011's three" until 2026-07-28, when the reusable workflow's input default
+    # was already `.claude/skills .agents/skills` — TWO roots, per ADR-0065 as amended by ADR-0067 §5.
+    # A comment asserting coverage the gate does not have is a defect in its own right in this org
+    # (`.github#1059`'s class), and this one was load-bearing: it is the sentence a reader consults to
+    # find out whether a root is audited.
+    #
+    #   AUDITED HERE   .claude/skills, .agents/skills — the reusable workflow's `roots` default.
+    #   NOT AUDITED    .codex/skills. ADR-0067 §5 retired it from the runtime contract, so it is in no
+    #                  gate's subject: not this one (not in `roots`), and not `kit / coordination-kit`,
+    #                  whose subject is the four kit-owned skills that FS.GG.Kit 0.15.0's retired-root
+    #                  sweep removed from it. 28 skills this repo owns (`fs-gg-sdd-*`, `speckit-*`,
+    #                  `spectre-console`) are still COMMITTED there, audited by nothing. That is a
+    #                  known, owned state, not an oversight: ADR-0067 phase 4 (FS-GG/.github#1676) owns
+    #                  retiring the root from this tree, and ADR-0065 §Retiring a root forbids this
+    #                  repo hand-deleting the mirrors in the meantime.
+    #
+    # DO NOT "FIX" THIS BY PASSING `roots:` WITH THREE. It would re-arm the gate on a root the contract
+    # retired and go red against a tree that is correct, and the reusable workflow's own header calls
+    # narrowing-or-widening the audited set a declared decision rather than a caller's convenience.
+    # The repair the header above prints — `dotnet fsi scripts/materialize-skill-roots.fsx` — no longer
+    # writes the retired root either (#767); it derives its write set from the same pinned FS.GG.Kit
+    # declaration that performed the sweep, and its test is `scripts/tests/materialize-skill-roots.test.sh`.
     uses: FS-GG/.github/.github/workflows/skill-union-assert.yml@main
