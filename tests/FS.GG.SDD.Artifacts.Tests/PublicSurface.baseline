@@ -96,6 +96,7 @@ FS.GG.SDD.Artifacts.Diagnostics.surfaceOrphanBaseline
 FS.GG.SDD.Artifacts.Diagnostics.surfaceRootEscape
 FS.GG.SDD.Artifacts.Diagnostics.surfaceVersionBumpRequired
 FS.GG.SDD.Artifacts.Diagnostics.unknownReference
+FS.GG.SDD.Artifacts.Diagnostics.unlistableDirectory
 FS.GG.SDD.Artifacts.Diagnostics.unreadableFile
 FS.GG.SDD.Artifacts.Diagnostics.unreadableSubject
 FS.GG.SDD.Artifacts.Diagnostics.unreadableWriteTarget

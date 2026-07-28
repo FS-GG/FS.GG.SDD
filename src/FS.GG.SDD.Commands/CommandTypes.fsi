@@ -963,7 +963,7 @@ module CommandTypes =
             StandardErrorTruncated: bool
         }
 
-    /// FS.GG.SDD#745, decision FS.GG.SDD#754 — the read edge's three states.
+    /// FS.GG.SDD#745, decision FS.GG.SDD#754 — the read edge's states (four since #743).
     ///
     /// Before this the core had two (bytes, or nothing) and `None` meant ABSENT, so a file that
     /// exists and cannot be read collapsed into the absent branch. Verdict folds that take their
@@ -975,6 +975,12 @@ module CommandTypes =
     /// MAY consult, and the failure class is folds that quietly skip a subject. A total match is
     /// something the compiler makes a fold do (`TreatWarningsAsErrors` promotes FS0025), which is
     /// what stops a newly-added fold reintroducing the fail-open.
+    ///
+    /// FS.GG.SDD#743 adds `Truncated` for the `EnumerateDirectory` edge, whose observation the
+    /// file edge has no analogue of: a listing that is real but incomplete. AC3 needs the listable
+    /// entries kept (one `chmod` may not blank a root's other skills) and AC2 needs the truncation
+    /// to block the verdict; three states force a choice between them, and both choices are
+    /// defects.
     type ReadResult =
         /// The file existed and its bytes were read.
         | Bytes of snapshot: FileSnapshot
@@ -983,6 +989,10 @@ module CommandTypes =
         /// The path EXISTS and its bytes could not be obtained. Carries the path and the
         /// underlying reason, so the diagnostic names the file and is distinguishable from drift.
         | Unreadable of path: string * reason: string
+        /// The path was listed and the listing is INCOMPLETE. `snapshot` is what could be listed;
+        /// `unreadable` is every directory beneath it that could not be opened, `(path, reason)`,
+        /// and is never empty. Produced only by `CommandEffects.tryEnumerate`.
+        | Truncated of snapshot: FileSnapshot * unreadable: (string * string) list
 
     type CommandEffectResult =
         {

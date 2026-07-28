@@ -314,8 +314,10 @@ module internal HandlersSurface =
             |> List.filter (fun (_, _, sourceRead, baselineRead) ->
                 match sourceRead, baselineRead with
                 | Bytes _, Absent -> true
-                | Bytes _, (Bytes _ | Unreadable _)
-                | (Absent | Unreadable _), _ -> false)
+                // `Truncated` is unreachable on both axes — these are `.fsi` FILE reads — and is
+                // decided the same way `Unreadable` is (#743): not observed to be missing.
+                | Bytes _, (Bytes _ | Unreadable _ | Truncated _)
+                | (Absent | Unreadable _ | Truncated _), _ -> false)
             |> List.map (fun (_, baseline, _, _) -> baseline)
             |> List.sort
 
@@ -328,8 +330,10 @@ module internal HandlersSurface =
             |> List.filter (fun (_, _, sourceRead, baselineRead) ->
                 match sourceRead, baselineRead with
                 | Bytes source, Bytes baseline -> source.Text <> baseline.Text
-                | Bytes _, (Absent | Unreadable _)
-                | (Absent | Unreadable _), _ -> false)
+                // As above (#743): unreachable, and never drift — the tool did not observe a
+                // difference, it failed to observe.
+                | Bytes _, (Absent | Unreadable _ | Truncated _)
+                | (Absent | Unreadable _ | Truncated _), _ -> false)
             |> List.map (fun (s, _, _, _) -> s)
             |> List.sort
 
@@ -343,7 +347,9 @@ module internal HandlersSurface =
                 match sourceRead with
                 | Bytes _ -> true
                 | Absent
-                | Unreadable _ -> false)
+                | Unreadable _
+                // CHECKED means READ. A truncated listing is not a read signature (#743).
+                | Truncated _ -> false)
             |> List.length
 
         let classified =
@@ -353,7 +359,9 @@ module internal HandlersSurface =
                     match read with
                     | Bytes snap -> Some snap.Text
                     | Absent
-                    | Unreadable _ -> None
+                    | Unreadable _
+                    // A listing is not a signature body (#743); unreachable on these reads.
+                    | Truncated _ -> None
 
                 s, baseline, bodyOf sourceRead, bodyOf baselineRead)
 
@@ -429,7 +437,9 @@ module internal HandlersSurface =
                 match readOf axisFile model with
                 | Bytes snap -> Some snap.Text
                 | Absent
-                | Unreadable _ -> None
+                | Unreadable _
+                // Unreachable — the axis file is a file (#743) — and `undeterminable` either way.
+                | Truncated _ -> None
 
         let versionBump =
             VersionAxis.prompt axisFile axisProperty axisSnapshot classification

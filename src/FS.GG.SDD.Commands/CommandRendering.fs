@@ -706,7 +706,7 @@ module CommandRendering =
         // operator actually reads said a number and nothing else, while `doctor --text` over an
         // unreadable file said the file was MISSING and pointed at `upgrade`.
         //
-        // Only the three read-edge ids are surfaced here, not every diagnostic: this projection's
+        // Only the read-edge ids are surfaced here, not every diagnostic: this projection's
         // contract is "the facts that live only in the structured summary", and promoting the whole
         // diagnostic list would be a different (much wider) change to every golden. The `--rich`
         // renderer derives from this plain projection, so both gain it from this one addition.
@@ -717,6 +717,12 @@ module CommandRendering =
         |> List.filter (fun diagnostic ->
             match diagnostic.Id with
             | "unreadableFile"
+            // FS.GG.SDD#743 AC2: the `EnumerateDirectory` sibling belongs here for the same
+            // reason. Without it, `doctor --text` over a partially-listed skill root shows the
+            // findings computed FROM the truncated listing and no sign that it was truncated —
+            // which is a partial listing rendered as a complete one, in the projection an
+            // operator actually reads.
+            | "unlistableDirectory"
             | "unreadableSubject"
             | "unreadableWriteTarget" -> true
             | _ -> false)

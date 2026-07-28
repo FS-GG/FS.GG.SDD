@@ -843,6 +843,17 @@ module CommandTypes =
     //
     // `Unreadable` carries the path AND the reason so the diagnostic names the file and is
     // distinguishable from drift (#735 AC2). `Absent` keeps its old meaning exactly.
+    //
+    // FS.GG.SDD#743 adds the FOURTH state, and #745 predicted it: *"adding a fourth state later
+    // cannot slip past this (or any other) fold by defaulting to 'fine'"*. It exists because the
+    // `EnumerateDirectory` edge has an observation the `ReadFile` edge does not — a listing that
+    // is REAL but INCOMPLETE. A file is read or it is not; a directory tree can be listed except
+    // for one subtree, and #743 AC2/AC3 pull in opposite directions over exactly that: the
+    // listable entries must survive (AC3 — one `chmod` may not blank a root's other 50 skills)
+    // AND the truncation must block the verdict (AC2 — a partial listing is never a complete one).
+    // Three states force a choice between those, and either choice is a defect: `Bytes` of the
+    // partial listing is the fail-OPEN #745 closed one level down, and `Unreadable` of the whole
+    // root is the phantom whole-root drift #743 measured on `main`.
     type ReadResult =
         /// The file existed and its bytes were read.
         | Bytes of snapshot: FileSnapshot
@@ -853,6 +864,15 @@ module CommandTypes =
         /// The path EXISTS and its bytes could not be obtained: permissions, an IO fault, a device
         /// error. `reason` is the underlying exception message.
         | Unreadable of path: string * reason: string
+        /// The path was listed, and the listing is INCOMPLETE (FS.GG.SDD#743). `snapshot` carries
+        /// what could be listed — a real observation, and the one AC3 protects. `unreadable`
+        /// carries every directory beneath it that could not be opened, as `(path, reason)`, and
+        /// is never empty: that is what stops a fold reporting coherent over a truncated listing.
+        ///
+        /// Only `CommandEffects.tryEnumerate` produces this. Folds over a FILE read may state the
+        /// arm as unreachable, but they must still STATE it — the compiler (FS0025 promoted by
+        /// `TreatWarningsAsErrors`) is the mechanism, exactly as for the other three.
+        | Truncated of snapshot: FileSnapshot * unreadable: (string * string) list
 
     type CommandEffectResult =
         {

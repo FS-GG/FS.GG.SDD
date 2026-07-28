@@ -42,11 +42,19 @@ open FS.GG.SDD.Commands.Internal.HandlersScaffold
 ///   operator could fix was reported as a broken tool — across a read set #726 had just
 ///   widened from ~51 known `SKILL.md` paths to every file under every declared root.
 ///
-/// Known residual, owned by FS-GG/FS.GG.SDD#743, not by this module: an unreadable skill copy
-/// is *additionally* classified as skill drift of the *not mirrored* class, because
-/// `SkillMirror.verifyFiles` builds its per-file union from the rows it observed and an unread
-/// body contributes none. By then the verdict is already non-coherent and the file is already
-/// named, so the cost is a misleading remedy hint rather than a wrong pass.
+/// A fourth thing this lane reads, since FS-GG/FS.GG.SDD#743: a directory it enumerates may be
+/// listable only IN PART. The listable entries are kept — one `chmod` on a subdirectory used to
+/// blank the whole root's listing, which reported every copy discovered by enumeration as *not
+/// mirrored* — and each directory that could not be opened is named by an `unlistableDirectory`
+/// warning and enters `unreadableSubjects`. So it lands in the **Unreadable** class above: exit 0,
+/// `IsCoherent` false, no tool defect. A partial listing is never reported as a complete one.
+///
+/// Known residual, owned by FS-GG/FS.GG.SDD#760, not by this module: a skill copy the run could
+/// not OBSERVE — unreadable itself, or under a directory that could not be listed — is
+/// *additionally* classified as skill drift of the *not mirrored* class, because
+/// `SkillMirror.verifyFiles` builds its per-file union from the rows it observed and an
+/// unobserved subject contributes none. By then the verdict is already non-coherent and the path
+/// is already named, so the cost is a misleading remedy hint rather than a wrong pass.
 module internal HandlersDoctor =
 
     // Shared with HandlersUpgrade (both resolve the same drift inputs from the snapshots).
@@ -59,7 +67,10 @@ module internal HandlersDoctor =
         match readOf ".fsgg/scaffold-provenance.json" model with
         | Bytes snap -> tryParse snap.Text
         | Absent
-        | Unreadable _ -> None
+        | Unreadable _
+        // Unreachable — provenance is a FILE read, and only `tryEnumerate` yields `Truncated`
+        // (#743) — but stated, because the DU's job is to make every fold decide.
+        | Truncated _ -> None
 
     let resolveDriftDescriptor model (provenance: ScaffoldProvenanceRecord option) =
         match provenance with
@@ -89,7 +100,10 @@ module internal HandlersDoctor =
         |> List.filter (fun path ->
             match readOf path model with
             | Bytes _
-            | Unreadable _ -> true
+            | Unreadable _
+            // Same rule, one level up (#743): the tool observed the path and did not observe it
+            // to be gone, so it is PRESENT. (Unreachable here — these are file reads.)
+            | Truncated _ -> true
             | Absent -> false)
         |> Set.ofList
 
@@ -226,7 +240,9 @@ module internal HandlersDoctor =
             match readOf path model with
             | Bytes snap -> Some(path, snap.Text)
             | Absent
-            | Unreadable _ -> None)
+            | Unreadable _
+            // Unreachable — a skill copy is a file. (#743.)
+            | Truncated _ -> None)
         |> Map.ofList
 
     // FS-GG/FS.GG.SDD#313: the workspace-declared `sdd.minToolVersion` floor, read from the
@@ -242,7 +258,9 @@ module internal HandlersDoctor =
         // — but it is in `unreadableSubjects`, so `cliAxis` can no longer flip `behind` to
         // `coherentByAbsence` on a floor the run simply could not read.
         | Absent
-        | Unreadable _ -> None
+        | Unreadable _
+        // Unreachable — the config is a file. (#743.)
+        | Truncated _ -> None
 
     /// FS.GG.SDD#745 / decision #754 — every subject the doctor fold is responsible for and could
     /// not read. Exactly the union `skillBodies` and `presentArtifacts` fold over, plus the two

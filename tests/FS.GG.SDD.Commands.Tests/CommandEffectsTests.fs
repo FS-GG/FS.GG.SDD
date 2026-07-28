@@ -297,6 +297,163 @@ module CommandEffectsTests =
                     UnixFileMode.UserRead ||| UnixFileMode.UserWrite ||| UnixFileMode.UserExecute
                 )
 
+    /// FS.GG.SDD#743 — the state only a LISTING can be in, at the edge that produces it.
+    ///
+    /// The leg above pins the root itself being unopenable. This one pins the case #743 is about:
+    /// the root opens, one directory BENEATH it does not. `SearchOption.AllDirectories` resolves to
+    /// `EnumerationOptions.CompatibleRecursive`, whose `IgnoreInaccessible` is false, so that threw
+    /// and #745 reported the whole root `Unreadable` — fail-closed, but it discards a listing that
+    /// was 99% obtainable, and downstream that is indistinguishable from an empty root.
+    ///
+    /// Both halves are asserted together on purpose. Keeping the entries without naming the skip is
+    /// the fail-OPEN (a truncated listing read as complete); naming the skip without keeping the
+    /// entries is exactly the whole-root drift being fixed. Either alone would pass a test that
+    /// asserted only the other.
+    [<Fact>]
+    let ``enumerate keeps what it could list and names the subdirectory it could not open`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let root = TestSupport.tempDirectory ()
+
+            let write (path: string) =
+                let full = Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar))
+
+                Path.GetDirectoryName full
+                |> Option.ofObj
+                |> Option.iter (fun directory -> Directory.CreateDirectory directory |> ignore)
+
+                File.WriteAllText(full, "body")
+
+            write "tree/top.md"
+            write "tree/keep/kept.md"
+            write "tree/blocked/hidden.md"
+
+            let blocked = Path.Combine(root, "tree", "blocked")
+            File.SetUnixFileMode(blocked, enum<UnixFileMode> 0)
+
+            try
+                let result = interpret root (EnumerateDirectory "tree")
+
+                match result.Read with
+                | Truncated(snapshot, skipped) ->
+                    // The listable entries survive — the sibling `keep/kept.md` and the parent's
+                    // own `top.md`. `hidden.md` is genuinely unobserved and must not appear.
+                    Assert.Equal("tree/keep/kept.md\ntree/top.md", snapshot.Text)
+
+                    // …and the truncation is carried, naming the directory and the OS's reason.
+                    Assert.Equal<string list>([ "tree/blocked" ], skipped |> List.map fst)
+                    Assert.All(skipped, (fun (_, reason) -> Assert.False(System.String.IsNullOrWhiteSpace reason)))
+                | other -> failwith $"expected Truncated for a listing with a mode-000 subdirectory, got {other}"
+
+                // The listing reaches the folds that build candidate sets — #743 AC3 depends on
+                // `Snapshot` being the partial listing rather than `None`.
+                Assert.Equal(
+                    Some "tree/keep/kept.md\ntree/top.md",
+                    result.Snapshot |> Option.map (fun snapshot -> snapshot.Text)
+                )
+
+                // The READ succeeded at being a read (#754's rule, unchanged): the block belongs to
+                // the verdict fold, so nothing here escalates and nothing here is a tool defect.
+                Assert.True result.Succeeded
+
+                match result.Diagnostic with
+                | Some diagnostic ->
+                    Assert.Equal("unlistableDirectory", diagnostic.Id)
+                    Assert.False diagnostic.IsToolDefect
+                    Assert.Equal<string list>([ "tree/blocked" ], diagnostic.RelatedIds)
+                    Assert.Contains("tree/blocked", diagnostic.Message)
+                | None -> failwith "expected an unlistableDirectory diagnostic"
+            finally
+                File.SetUnixFileMode(
+                    blocked,
+                    UnixFileMode.UserRead ||| UnixFileMode.UserWrite ||| UnixFileMode.UserExecute
+                )
+
+    /// Why `opens` performs a real `readdir` instead of testing mode bits or `Directory.Exists`.
+    ///
+    /// `IgnoreInaccessible = true` is silent: whatever the enumerator could not open it simply omits,
+    /// and an omission reads exactly like an empty directory. The only sound way to name what was
+    /// omitted is to ask the SAME question the enumerator asked, so the two can never disagree —
+    /// and "readable" is not one question. Two directory modes break `read` and `traverse` apart,
+    /// and each loses a different thing:
+    ///
+    ///   - `--x` — `readdir` fails, so its own files are omitted. The directory itself is still an
+    ///     entry of its readable parent, so it is reached and named.
+    ///   - `r--` — `readdir` SUCCEEDS, so its files are listed and its subdirectories are listed as
+    ///     entries; what fails is descending, so the SUBDIRECTORY is what goes unobserved and what
+    ///     must be named. Naming the parent here would be wrong: it was listed.
+    ///
+    /// A mode-bit test would have to reproduce that reasoning and would get it wrong in one of the
+    /// two directions; `Directory.Exists` answers yes for both.
+    [<Fact>]
+    let ``a directory that is readable-but-not-traversable loses only its subdirectory, and says so`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let root = TestSupport.tempDirectory ()
+
+            for directory in [ "tree/listable"; "tree/listable/deeper"; "tree/opaque" ] do
+                Directory.CreateDirectory(Path.Combine(root, directory.Replace('/', Path.DirectorySeparatorChar)))
+                |> ignore
+
+            File.WriteAllText(Path.Combine(root, "tree", "top.md"), "body")
+            File.WriteAllText(Path.Combine(root, "tree", "listable", "seen.md"), "body")
+            File.WriteAllText(Path.Combine(root, "tree", "opaque", "unseen.md"), "body")
+
+            let listable = Path.Combine(root, "tree", "listable")
+            let opaque = Path.Combine(root, "tree", "opaque")
+
+            // r-- : its own entries list, its children cannot be entered.
+            File.SetUnixFileMode(listable, UnixFileMode.UserRead)
+            // --x : it can be entered, its own entries cannot be listed.
+            File.SetUnixFileMode(opaque, UnixFileMode.UserExecute)
+
+            try
+                match (interpret root (EnumerateDirectory "tree")).Read with
+                | Truncated(snapshot, skipped) ->
+                    // `listable/seen.md` survives — `readdir` on an `r--` directory works, and
+                    // dropping it would be the narrowed read set this whole item forbids.
+                    // `opaque/unseen.md` genuinely could not be listed.
+                    Assert.Equal("tree/listable/seen.md\ntree/top.md", snapshot.Text)
+
+                    // Exactly what went unobserved, at the right level in each case.
+                    Assert.Equal<string list>([ "tree/listable/deeper"; "tree/opaque" ], skipped |> List.map fst)
+                | other -> failwith $"expected Truncated, got {other}"
+            finally
+                for directory in [ listable; opaque ] do
+                    File.SetUnixFileMode(
+                        directory,
+                        UnixFileMode.UserRead ||| UnixFileMode.UserWrite ||| UnixFileMode.UserExecute
+                    )
+
+    /// The choke point, asserted directly. `Foundation.unreadablePathsOf` is what every lane's
+    /// verdict blocks on, so #743 AC2 reduces to this fold seeing the SKIPPED DIRECTORY — and not
+    /// seeing the enumerated root, which was read perfectly well and whose permissions are fine.
+    [<Fact>]
+    let ``the coherence fold blocks on the skipped directory, not on the root that listed`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let root = TestSupport.tempDirectory ()
+            let full = Path.Combine(root, "tree", "blocked")
+            Directory.CreateDirectory full |> ignore
+            File.WriteAllText(Path.Combine(root, "tree", "top.md"), "body")
+            File.SetUnixFileMode(full, enum<UnixFileMode> 0)
+
+            try
+                let read = (interpret root (EnumerateDirectory "tree")).Read
+
+                Assert.Equal<string list>(
+                    [ "tree/blocked" ],
+                    FS.GG.SDD.Commands.Internal.Foundation.unreadablePathsOf [ read ]
+                )
+            finally
+                File.SetUnixFileMode(
+                    full,
+                    UnixFileMode.UserRead ||| UnixFileMode.UserWrite ||| UnixFileMode.UserExecute
+                )
+
     /// #745 AC3 + AC5. The write edge pre-reads its destination because `canOverwrite` decides from
     /// that file's current bytes — so an unreadable destination makes the decision undecidable, and
     /// the fail-closed answer to an undecidable safety question is to refuse. It must refuse
