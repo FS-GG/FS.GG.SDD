@@ -26,6 +26,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # FIRST, because it costs ~1s and needs no SDK, no restore and no network — and because what it
+      # guards is this job's own subject: the committed lock graph (FS.GG.SDD#762).
+      #
+      # `lockfile-sync.yml` skips `renovate/fs.gg.kit-*`, because a kit bump cannot move this repo's
+      # lock graph and so anything `--force-evaluate` finds to repair on that branch is unrelated
+      # drift — which is exactly how the FS.GG.Kit 0.15.0 bump (#730) ended up carrying eight
+      # `packages.lock.json` files and being refused, correctly, by `.github`'s
+      # `scripts/check-kit-bump-shape.py`. This asserts both halves of that: the gating predicate
+      # excludes kit branches and nothing else, and `FS.GG.Kit` is still absent from every committed
+      # lockfile. The second is the premise; without a check it would rot silently the day someone
+      # puts the kit into the solution's restore graph.
+      - name: Lockfile-sync gating (a kit bump must not carry a lockfile repair)
+        run: bash scripts/tests/lockfile-sync-gating.test.sh
+
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:
