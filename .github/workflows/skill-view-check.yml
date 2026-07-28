@@ -158,9 +158,21 @@
 # directory deleted: the materialize reports "no view skill roots declared — nothing to assert" and
 # succeeds, and `coordination-sync --check --against-pin` reports "OK — all 28 materialized file(s)" —
 # and that second one IS the required context `kit / coordination-kit`. The required set passes on
-# exactly the tree the alarm exists to fail. `scripts/check-skill-view-roots.sh` is that alarm, and it
+# exactly the tree the alarm exists to fail. `skill-view check --receiver-proj` is that alarm, and it
 # runs here because `skill-view-check` is REQUIRED on `main` (read from branch protection, not from a
-# workflow comment — FS.GG.Audio#212), is authored in this repo, and needs no .NET SDK or restore.
+# workflow comment — FS.GG.Audio#212), and needs no .NET SDK or restore.
+#
+# IT USED TO BE `scripts/check-skill-view-roots.sh`, 23,050 BYTES OF THIS REPO'S OWN — the largest of
+# the five surviving hand-copies (FS-GG/.github#1710/#1777). Five receivers retired their second
+# committed skill root, ADR-0067 §8 obliged each to replace the loud failure it removed, and each
+# hand-wrote the same alarm on the same day: 23,050 / 21,353 / 18,346 / 18,277 / 14,864 bytes for one
+# invariant. The delivery seam already existed — `scripts/skill-view` is a kit-delivered file this
+# repo pins and byte-verifies — so the assertion lives THERE now and this repo calls it. Deleting the
+# copy is a net SAFETY GAIN rather than a tidy-up: the shared implementation grades a partial view per
+# skill by identity where the copy compared directory counts, and adds the tracked-view-root lane the
+# copy never had. Nothing this repo's copy asserted is lost — its declaration lane is `--receiver-proj`,
+# its resolution lane is `check`'s own (which already separated all four absence classes, so this repo's
+# FS.GG.Audio#212 fix is preserved by construction), and its `*_can_fire` demos are `skill-view selftest`.
 
 name: skill-view-check
 
@@ -187,19 +199,58 @@ jobs:
       - name: Resolve the view root this tree no longer commits
         run: bash scripts/skill-view generate --source .claude/skills --roots ".agents/skills"
 
-      # ADR-0067 §8's replacement alarm. Rides this REQUIRED context because the retirement left no
-      # other gate able to see `.agents/skills` leave the runtime contract — `kit / coordination-kit`
-      # is green on exactly that tree, measured. Runs BEFORE the visibility checks so that a broken
-      # DECLARATION is reported as such rather than as a missing directory.
-      - name: Assert the runtime skill-root contract is still ADR-0011's two
-        run: bash scripts/check-skill-view-roots.sh
+      # ADR-0067 §8's replacement alarm DEMONSTRATES IT CAN FIRE, and the demonstration now ships
+      # inside the tool (FS-GG/.github#1710/#1770). `scripts/check-skill-view-roots.sh` used to carry
+      # its own `*_can_fire` fixtures — 23,050 bytes of them, one of five such files in the fleet with
+      # a 55% size spread over one invariant. The collapse put the assertion and its demo in
+      # `scripts/skill-view`, which is a kit-delivered file this repo already pins and byte-verifies,
+      # so this repo now runs the SAME demonstration the hub does rather than a copy of it. Offline,
+      # about a second, and it asserts the SPECIFIC diagnostic class each negative case emits — a demo
+      # that only counts failures survives a mutation collapsing two branches into one, which is
+      # exactly how FS.GG.Audio#212 shipped green on a dangling root for a day.
+      - name: Demonstrate every lane of the skill-root alarm can fire
+        run: bash scripts/skill-view selftest
 
-      # The bare command a worker runs, over this repo's own declared roots. The expected set is the
-      # SOURCE directory, never a manifest: `registry`-style manifests declare a subset of a tree's
-      # skills and would stay green over a tree that had lost the rest, which is FS-GG/.github#1504's
-      # coherent-but-incomplete class. A source directory cannot be a subset of itself.
-      - name: Assert every skill .claude/skills declares is visible at every runtime root
-        run: bash scripts/skill-view check --source .claude/skills --tree .
+      # ADR-0067 §8's replacement alarm itself, and this repo's visibility check, in ONE call — the
+      # two are lanes of `skill-view check` since FS-GG/.github#1710.
+      #
+      # `--receiver-proj` is LANE 1, THE DECLARATION, and it is what replaces the deleted script. The
+      # retirement left no other gate able to see `.agents/skills` leave the runtime contract:
+      # measured on this repo's own tree with `<FsggKitViewSkillRoots>` emptied and the directory
+      # deleted, the materialize reports "no view skill roots declared — nothing to assert" and
+      # `coordination-sync --check --against-pin` reports OK — and that second one IS the required
+      # context `kit / coordination-kit`. The required set passes on exactly the tree this reds. The
+      # lane runs FIRST inside `check` and its fault is FATAL before the roots loop, so a broken
+      # DECLARATION is reported as such rather than as a missing directory — the ordering the two
+      # separate steps used to buy by hand.
+      #
+      # NO `--absent-ok`, DELIBERATELY, and it is a property of this HOST rather than of the check.
+      # An absent view root is RED here because the `skill-view generate` step above runs immediately
+      # before, and `FsggSddGenerateSkillView` covers every tree the materialize runs in. By the time
+      # this runs the view MUST exist, so absence means the generate was removed or did not run.
+      # FS.GG.Audio's and FS.GG.Templates' hosts are bare checkouts and legitimately pass
+      # `--absent-ok`; importing that carve-out here would make this lane unfalsifiable.
+      #
+      # `--receiver-proj` also SUPERSEDES the root-set precedence note in the header for this step:
+      # the roots now come from the declaration being graded rather than from `lib/roots.sh`, which is
+      # the whole point of the lane. It narrows nothing — this repo declares
+      # `<FsggKitSkillRoots>.claude/skills</…>` and `<FsggKitViewSkillRoots>.agents/skills</…>`, whose
+      # union is the same ADR-0011 pair `lib/roots.sh` defaults to, and `--expect-roots` defaults to
+      # that pair too. `--roots` and `--receiver-proj` are mutually exclusive by construction.
+      #
+      # The expected SKILL set is still the SOURCE directory, never a manifest: `registry`-style
+      # manifests declare a subset of a tree's skills and would stay green over a tree that had lost
+      # the rest, which is FS-GG/.github#1504's coherent-but-incomplete class. A source directory
+      # cannot be a subset of itself. The kit's version grades a partial view PER SKILL BY IDENTITY,
+      # where the deleted script compared directory COUNTS — a view with the right count and the wrong
+      # names reds here and would not have there — and adds a lane no copy of this repo's had: git
+      # must TRACK nothing under a declared view root (adopted from FS.GG.Net's copy).
+      - name: Assert the runtime skill-root declaration and every skill's visibility at every root
+        run: |
+          bash scripts/skill-view check \
+            --source .claude/skills \
+            --tree . \
+            --receiver-proj .config/kit/FS.GG.Kit.receiver.proj
 
       # FS.GG.SDD#771 AC2. The step above asks "is everything the source declares VISIBLE at each
       # root"; this one asks the opposite direction, which nothing has asked since `skill-union /
