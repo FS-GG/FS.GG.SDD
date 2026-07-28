@@ -39,6 +39,9 @@
 # tree rather than asserted (FS-GG/.github#1715 AC3):
 #
 #   the generated view removed   -> exit 1, "[absent-root] .agents/skills does not exist"
+#                                     (measured with NO generate in front of it; on the per-PR path
+#                                      the generate precedes the check, so this class is repaired
+#                                      rather than reported — FS-GG/.github#1869)
 #   the source root emptied      -> exit 2, "the expected skill set is EMPTY — refusing to report
 #                                    'everything is visible' over nothing"
 #
@@ -138,9 +141,31 @@
 #
 # It is NOT conditional on whether the root happens to be missing, and it must never become so.
 # "Generate whatever is absent, then assert it is present" is the fail-open shape this whole item
-# exists to remove: it would make [absent-root] unreachable and hand back a gate that cannot fail. The
-# generate is authorised by the repo DECLARING a root to be a view — in `<FsggKitViewSkillRoots>`,
-# `.config/kit/FS.GG.Kit.receiver.proj` — never by observing that one is missing.
+# exists to remove. The generate is authorised by the repo DECLARING a root to be a view — in
+# `<FsggKitViewSkillRoots>`, `.config/kit/FS.GG.Kit.receiver.proj` — never by observing that one is
+# missing.
+#
+# THAT DISTINCTION IS ABOUT AUTHORISATION, NOT REACHABILITY, AND THIS PARAGRAPH USED TO CLAIM BOTH
+# (FS-GG/.github#1869). It said a conditional generate "would make [absent-root] unreachable and hand
+# back a gate that cannot fail" — true, and equally true of the unconditional one written here. Both
+# leave the root present by the time the check runs. Measured on a bare checkout of this repo,
+# 2026-07-29, running the assertion alone (`-t:FsggKitCheckSkillView`):
+#
+#   [absent-root]     rc 0 — the generate creates the view, the check then passes 32/32
+#   [dangling-root]   rc 0 — the generate replaces the dangling link, same
+#   [text-file-root]  rc 1 — but via `skill-view generate` REFUSING ("exists, is not a symlink, and
+#                     carries no .skill-view receipt"), exit 2, BEFORE the check runs
+#
+# So none of §8's three absence classes is this check's verdict on the per-PR path. That is
+# STRUCTURAL, not an oversight: a view root is absent in every fresh checkout by construction (§6.1),
+# a required context over it must generate first, so absence can never be what it reports. The
+# unconditional-and-declared rule remains right for the reason it was written — it decides WHO may
+# generate — and it never preserved the class's reachability.
+#
+# WHAT THIS CHECK ASSERTS HERE, THEN: that the generate SUCCEEDED and the SOURCE is complete. Both are
+# real and both can fail — the text-file row above is one of them failing. §8's absence classes remain
+# reachable, and are mutation-proven to fire, in FS-GG/.github's own `src/FS.GG.Kit/verify-package.sh`,
+# whose fixtures deliberately do not generate (FS-GG/.github#1867).
 #
 # THE SAME GENERATE EXISTS IN TWO OTHER PLACES, AND NEITHER IS A DUPLICATE. `gate.yml`'s `gate` job
 # needs its own step because leg 9 of `scripts/tests/check-root-asymmetry.test.sh` runs the real check
