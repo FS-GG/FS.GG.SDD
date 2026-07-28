@@ -203,3 +203,136 @@ module CommandEffectsTests =
             "CommandEffects.fs writes directly to the destination path; commit through a temp sibling "
             + "and an atomic rename instead (FS.GG.SDD#164)."
         )
+
+    // ===================================================================================
+    // FS.GG.SDD#745 (decision FS.GG.SDD#754) — the read edge's THIRD state.
+    //
+    // Before this, `interpret` gave the pure core two read states: bytes, or nothing, and
+    // *nothing* meant ABSENT. A file that exists and cannot be read had nowhere to go, so it
+    // either threw (surfacing as `toolDefect` at exit 2 — the tool accused of being broken over a
+    // mode bit) or, once routed through the absent branch, became a SILENTLY VERIFIED file.
+    //
+    // These are the EDGE legs. The per-lane verdict legs live with their lanes
+    // (`SurfaceCommandTests`, `MultiFileSkillDriftTests`, `DependencySurfaceCommandTests`),
+    // because #745 AC1 is a property of each lane's verdict, not of any single diagnostic.
+    // ===================================================================================
+
+    /// The pair that must never collapse again: one effect, two different files, two DIFFERENT
+    /// answers. A test asserting only the `Unreadable` arm would still pass if a future edit made
+    /// EVERY read unreadable, so the absent leg is asserted in the same breath.
+    [<Fact>]
+    let ``read distinguishes absent from present-but-unreadable`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let root = TestSupport.tempDirectory ()
+
+            match (interpret root (ReadFile relative)).Read with
+            | Absent -> ()
+            | other -> failwith $"expected Absent for a file that does not exist, got {other}"
+
+            seed root "secret"
+            File.SetUnixFileMode(absolute root, enum<UnixFileMode> 0)
+
+            try
+                let result = interpret root (ReadFile relative)
+
+                match result.Read with
+                | Unreadable(path, reason) ->
+                    Assert.Equal(relative, path)
+                    Assert.False(System.String.IsNullOrWhiteSpace reason)
+                | other -> failwith $"expected Unreadable for a mode-000 file, got {other}"
+
+                // No bytes, and no exception: the READ succeeded at being a read. The block belongs
+                // to the verdict fold, not here — `doctor` is documented read-only and exit 0, and
+                // #754 rejected refusing at the edge for exactly that reason.
+                Assert.True(Option.isNone result.Snapshot)
+                Assert.True result.Succeeded
+
+                match result.Diagnostic with
+                | Some diagnostic ->
+                    Assert.Equal("unreadableFile", diagnostic.Id)
+                    // Never `toolDefect`: nothing about the tool is broken (#745 AC5).
+                    Assert.False diagnostic.IsToolDefect
+                    // The finding NAMES the file — #735 AC2, reachable only now.
+                    Assert.Contains(relative, diagnostic.RelatedIds)
+                    Assert.Contains(relative, diagnostic.Message)
+                | None -> failwith "expected an unreadableFile diagnostic"
+            finally
+                File.SetUnixFileMode(absolute root, enum<UnixFileMode> 0o644)
+
+    /// The `EnumerateDirectory` sibling, and the sharper of the two: a listing that comes back
+    /// empty because the directory could not be opened yields an EMPTY candidate set, which every
+    /// fold downstream reads as "there is nothing here to check".
+    [<Fact>]
+    let ``enumerate distinguishes absent from present-but-unreadable`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let root = TestSupport.tempDirectory ()
+
+            match (interpret root (EnumerateDirectory "work")).Read with
+            | Absent -> ()
+            | other -> failwith $"expected Absent for a directory that does not exist, got {other}"
+
+            seed root "body"
+            let directory = Path.Combine(root, "work", "demo")
+            File.SetUnixFileMode(directory, enum<UnixFileMode> 0)
+
+            try
+                let result = interpret root (EnumerateDirectory "work/demo")
+
+                match result.Read with
+                | Unreadable(path, _) -> Assert.Equal("work/demo", path)
+                | other -> failwith $"expected Unreadable for a mode-000 directory, got {other}"
+
+                Assert.True(Option.isNone result.Snapshot)
+
+                match result.Diagnostic with
+                | Some diagnostic -> Assert.Equal("unreadableFile", diagnostic.Id)
+                | None -> failwith "expected an unreadableFile diagnostic"
+            finally
+                File.SetUnixFileMode(
+                    directory,
+                    UnixFileMode.UserRead ||| UnixFileMode.UserWrite ||| UnixFileMode.UserExecute
+                )
+
+    /// #745 AC3 + AC5. The write edge pre-reads its destination because `canOverwrite` decides from
+    /// that file's current bytes — so an unreadable destination makes the decision undecidable, and
+    /// the fail-closed answer to an undecidable safety question is to refuse. It must refuse
+    /// WITHOUT claiming a tool defect: this arm used to throw into the outer handler, so
+    /// `upgrade --yes` and `charter` over a mode-000 target both exited 2.
+    ///
+    /// Paired deliberately with `a failed write leaves the prior bytes intact and no residue`
+    /// above, which pins the OTHER half of AC5: a genuine write fault is still `toolDefect`.
+    [<Fact>]
+    let ``a write over an unreadable destination is refused, blocking but not a tool defect`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let root = TestSupport.tempDirectory ()
+            seed root "the bytes that must survive"
+            File.SetUnixFileMode(absolute root, enum<UnixFileMode> 0)
+
+            try
+                let result =
+                    interpret root (WriteFile(relative, "never lands", HybridArtifact MergePolicies.specification))
+
+                Assert.False result.Succeeded
+
+                match result.Diagnostic with
+                | Some diagnostic ->
+                    Assert.Equal("unreadableWriteTarget", diagnostic.Id)
+                    Assert.False diagnostic.IsToolDefect
+                    Assert.Contains(relative, diagnostic.RelatedIds)
+                | None -> failwith "expected an unreadableWriteTarget diagnostic"
+
+                match result.Read with
+                | Unreadable(path, _) -> Assert.Equal(relative, path)
+                | other -> failwith $"expected Unreadable, got {other}"
+
+                File.SetUnixFileMode(absolute root, enum<UnixFileMode> 0o644)
+                Assert.Equal("the bytes that must survive", File.ReadAllText(absolute root))
+                Assert.Empty(residue root)
+            finally
+                File.SetUnixFileMode(absolute root, enum<UnixFileMode> 0o644)

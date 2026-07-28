@@ -19,10 +19,16 @@ open FS.GG.SDD.Commands.Internal.HandlersScaffold
 module internal HandlersDoctor =
 
     // Shared with HandlersUpgrade (both resolve the same drift inputs from the snapshots).
+    // Total over `ReadResult` since #745. `Unreadable` collapses to `None` — the same value an
+    // absent provenance yields — because there is genuinely no record to parse either way; what
+    // changed is that the collapse is now a written decision and the fact is separately reported
+    // by `unreadableSubjects`, so `doctor` can no longer answer `isCoherent: true` off the back of
+    // a provenance file it failed to open.
     let resolveProvenance model =
-        match snapshot ".fsgg/scaffold-provenance.json" model with
-        | Some snap -> tryParse snap.Text
-        | None -> None
+        match readOf ".fsgg/scaffold-provenance.json" model with
+        | Bytes snap -> tryParse snap.Text
+        | Absent
+        | Unreadable _ -> None
 
     let resolveDriftDescriptor model (provenance: ScaffoldProvenanceRecord option) =
         match provenance with
@@ -41,9 +47,19 @@ module internal HandlersDoctor =
         | Some record -> Drift.ownerSourcedBackfill record |> List.map fst |> List.distinct |> List.sort
         | None -> []
 
+    /// FS.GG.SDD#745 AC4: an unreadable expected artifact is PRESENT, not missing. It used to test
+    /// `Option.isSome`, so a file that is right there but unreadable dropped out of the present set
+    /// and into `MissingArtifactPaths` — `doctor --text` said the file was missing and pointed at
+    /// `upgrade`, which would then plan a re-seed write straight into it. "I could not read it" is
+    /// reported by `unreadableSubjects` (and the edge's per-file warning), which is a different
+    /// fact from "it is not there" and now says so.
     let presentArtifacts model =
         (Drift.expectedArtifactPaths @ ownerSkillTargetPaths model)
-        |> List.filter (fun path -> snapshot path model |> Option.isSome)
+        |> List.filter (fun path ->
+            match readOf path model with
+            | Bytes _
+            | Unreadable _ -> true
+            | Absent -> false)
         |> Set.ofList
 
     // 058/ADR-0014 P1: the provider *product* skill copies to content-verify — every product id
@@ -171,19 +187,54 @@ module internal HandlersDoctor =
          @ skillCopyFilePaths model)
         |> List.filter (fun path -> Drift.skillCopyOfPath path |> Option.isSome)
         |> List.distinct
-        |> List.choose (fun path -> snapshot path model |> Option.map (fun snap -> path, snap.Text))
+        |> List.choose (fun path ->
+            // Total since #745. An unread body is still dropped from the map — `verifyFiles`
+            // compares over `declared ∪ observed` and has nothing to compare a missing body
+            // against — but the DROP is no longer the end of the story: `unreadableSubjects`
+            // carries the path, so the run cannot close as coherent over a copy it never read.
+            match readOf path model with
+            | Bytes snap -> Some(path, snap.Text)
+            | Absent
+            | Unreadable _ -> None)
         |> Map.ofList
 
     // FS-GG/FS.GG.SDD#313: the workspace-declared `sdd.minToolVersion` floor, read from the
     // `.fsgg/project.yml` snapshot the remediation plan now takes. A malformed config yields no
     // floor and no diagnostic here — `ReportAssembly` already owns that reporting.
     let resolveWorkspaceFloor model =
-        match snapshot ".fsgg/project.yml" model with
-        | Some snap ->
+        match readOf ".fsgg/project.yml" model with
+        | Bytes snap ->
             match FS.GG.SDD.Artifacts.Config.parseProjectConfig snap with
             | Ok config -> config.MinToolVersion
             | Error _ -> None
-        | None -> None
+        // #745: an unreadable config declares no floor to this fold, exactly as an absent one does
+        // — but it is in `unreadableSubjects`, so `cliAxis` can no longer flip `behind` to
+        // `coherentByAbsence` on a floor the run simply could not read.
+        | Absent
+        | Unreadable _ -> None
+
+    /// FS.GG.SDD#745 / decision #754 — every subject the doctor fold is responsible for and could
+    /// not read. Exactly the union `skillBodies` and `presentArtifacts` fold over, plus the two
+    /// provenance-driven config reads and the skill-root enumerations, so the set this blocks on is
+    /// the set the verdict actually consumed.
+    ///
+    /// The shape being closed: `skillBodies` is a `List.choose (snapshot …)`, so an unread body is
+    /// simply DROPPED from the map, and `SkillMirror.verifyFiles` builds its per-file union from
+    /// the OBSERVED rows — a file no root contributed a row for is never compared at all.
+    /// `presentArtifacts` has the mirror-image shape: `Option.isSome`, so an unreadable expected
+    /// artifact reads as *missing*, which is the wrong finding for a file that is right there.
+    let unreadableSubjects model =
+        let bodyPaths =
+            (Drift.expectedArtifactPaths
+             @ ownerSkillTargetPaths model
+             @ productSkillCopyPaths model
+             @ skillCopyFilePaths model
+             @ [ ".fsgg/scaffold-provenance.json"; ".fsgg/project.yml" ])
+            |> List.distinct
+
+        (bodyPaths |> List.map (fun path -> readOf path model))
+        @ (agentSkillRoots |> List.map (fun root -> enumerationOf (root + "/skills") model))
+        |> unreadablePathsOf
 
     let computeDrift model =
         let provenance = resolveProvenance model
@@ -227,12 +278,27 @@ module internal HandlersDoctor =
                     effects
             | None ->
                 let drift = computeDrift model
-                let summary = doctorSummaryOf drift
+                let unreadable = unreadableSubjects model
+
+                // FS.GG.SDD#745 / decision #754: a verdict may never report coherent over a subject
+                // it did not read. `doctor` is the lane #754 used to REJECT refusing at the edge —
+                // it is documented read-only and exit 0, and one permissions accident must not
+                // wedge a repo — so the correction here is the VERDICT, not the exit code: the
+                // summary stops claiming coherence, and the `unreadableFile` warnings the read edge
+                // already emitted name the files and keep the run at exit 0.
+                let summary =
+                    { doctorSummaryOf drift with
+                        IsCoherent = drift.IsCoherent && List.isEmpty unreadable }
 
                 // Non-blocking drift advisory (doctor always exits 0) whenever there is drift to
                 // reconcile. #313: `IsCoherent` — not `HasProvenance` — is the gate, because an
                 // unmet workspace floor is real drift in a workspace that was never scaffolded.
                 // With no provenance and no floor, `IsCoherent` is true, so this stays silent.
+                //
+                // Keyed on `drift.IsCoherent`, NOT on `summary.IsCoherent`: `doctorDriftDetected`
+                // says "run `fsgg-sdd upgrade`", and `upgrade` cannot repair a file it cannot read.
+                // Pointing the operator at it for an unreadable subject would be advice that
+                // silently does nothing — the `unreadableFile` warning says `chmod +r` instead.
                 let diagnostics =
                     if not drift.IsCoherent then
                         [ doctorDriftDetected () ]

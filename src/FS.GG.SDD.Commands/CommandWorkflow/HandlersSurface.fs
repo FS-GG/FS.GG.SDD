@@ -259,14 +259,43 @@ module internal HandlersSurface =
         let sources = listing sourceRoot model
         let baselines = listing baselineRoot model
 
-        // (source, baseline, source body, baseline body) for every discovered signature.
+        // FS.GG.SDD#745 (decision #754). Both bodies come through `readOf`, so this fold sees the
+        // three states rather than `FileSnapshot option`, where `None` meant *absent* and absorbed
+        // *present but unreadable* along with it.
+        //
+        // THE BUG THIS CLOSES, exactly. `sourceText`/`baselineText` were `snapshot … |> Option.map`;
+        // `missing` requires `Option.isSome sourceText`, `drifted` requires `Some, Some`. An
+        // unreadable source `.fsi` is in NEITHER list, and `IsCoherent` was
+        // `isEmpty missing && isEmpty drifted` — so `surface --check`, a REQUIRED gate on both
+        // version axes, reported `isCoherent: true` with an empty `driftedSourcePaths` over a real
+        // API-surface drift hidden behind one mode bit, while `checkedCount` claimed the file had
+        // been checked. Measured before this change: `chmod 000` on a drifted `ContractVersion.fsi`
+        // → `isCoherent: true`, `driftedSourcePaths: []`, `checkedCount: 6`.
+        //
+        // Projecting to `string option` for the drift comparison is retained BELOW the split, after
+        // the unreadable subjects have been separated out — the comparison genuinely only needs the
+        // bytes, and it is the coherence verdict, not the comparison, that had to learn the third
+        // state.
         let classified =
             sources
             |> List.map (fun s ->
                 let baseline = baselinePathFor sourceRoot baselineRoot s
-                let sourceText = snapshot s model |> Option.map (fun snap -> snap.Text)
-                let baselineText = snapshot baseline model |> Option.map (fun snap -> snap.Text)
-                s, baseline, sourceText, baselineText)
+                s, baseline, readOf s model, readOf baseline model)
+
+        // Every subject THIS RUN was responsible for comparing and could not read — sources and
+        // their expected baselines alike. A baseline that cannot be read is exactly as blinding as
+        // a source that cannot: the comparison has one side, and one side always compares equal.
+        //
+        // The two ROOT enumerations are in the same set, and they are the sharper edge of the two:
+        // `listing` derives `sources` from the source root's listing, so a root this run could not
+        // open yields an EMPTY candidate set — zero signatures, zero drift, `isCoherent: true` over
+        // an entire tree. (The wider `EnumerateDirectory` lane is `FS.GG.SDD#743`, which this row
+        // unblocks; what is closed here is `surface`'s own two roots.)
+        let unreadable =
+            (classified
+             |> List.collect (fun (_, _, sourceRead, baselineRead) -> [ sourceRead; baselineRead ]))
+            @ [ enumerationOf sourceRoot model; enumerationOf baselineRoot model ]
+            |> unreadablePathsOf
 
         // A signature to (re)write: source present, and baseline absent or byte-differing.
         let needsWrite (sourceText: string option) (baselineText: string option) =
@@ -275,21 +304,58 @@ module internal HandlersSurface =
             | Some s, Some b -> s <> b
             | None, _ -> false
 
+        // MISSING is `Bytes, Absent` and nothing else. `Bytes, Unreadable` used to land here once
+        // the reads collapsed to `option`, which is #745 AC4's "never renders as missing": a
+        // baseline that is present and unreadable would have been reported to the operator as a
+        // baseline that does not exist, pointing `surface --update` at creating a file that is
+        // already there. It is reported under `unreadable` instead.
         let missing =
             classified
-            |> List.filter (fun (_, _, sourceText, baselineText) ->
-                Option.isSome sourceText && Option.isNone baselineText)
+            |> List.filter (fun (_, _, sourceRead, baselineRead) ->
+                match sourceRead, baselineRead with
+                | Bytes _, Absent -> true
+                | Bytes _, (Bytes _ | Unreadable _)
+                | (Absent | Unreadable _), _ -> false)
             |> List.map (fun (_, baseline, _, _) -> baseline)
             |> List.sort
 
+        // DRIFTED needs both bodies, so it is unchanged in substance — the total match is what
+        // changed. `Unreadable` on either side is deliberately NOT drift: the tool did not observe
+        // a difference, it failed to look, and conflating the two would produce a `surface.drift`
+        // naming a file whose baseline may in fact match. `unreadable` blocks the verdict instead.
         let drifted =
             classified
-            |> List.filter (fun (_, _, sourceText, baselineText) ->
-                match sourceText, baselineText with
-                | Some s, Some b -> s <> b
-                | _ -> false)
+            |> List.filter (fun (_, _, sourceRead, baselineRead) ->
+                match sourceRead, baselineRead with
+                | Bytes source, Bytes baseline -> source.Text <> baseline.Text
+                | Bytes _, (Absent | Unreadable _)
+                | (Absent | Unreadable _), _ -> false)
             |> List.map (fun (s, _, _, _) -> s)
             |> List.sort
+
+        // CHECKED means READ (decision #754). This was `List.length sources` — the count of files
+        // the run INTENDED to check, taken from the directory listing before a single body was
+        // read — so the measured `chmod 000` run reported `checkedCount: 6` for five files it read
+        // and one it did not. A count that includes unread files is the same defect in miniature.
+        let checkedCount =
+            classified
+            |> List.filter (fun (_, _, sourceRead, _) ->
+                match sourceRead with
+                | Bytes _ -> true
+                | Absent
+                | Unreadable _ -> false)
+            |> List.length
+
+        let classified =
+            classified
+            |> List.map (fun (s, baseline, sourceRead, baselineRead) ->
+                let bodyOf (read: ReadResult) =
+                    match read with
+                    | Bytes snap -> Some snap.Text
+                    | Absent
+                    | Unreadable _ -> None
+
+                s, baseline, bodyOf sourceRead, bodyOf baselineRead)
 
         let expectedBaselines =
             classified |> List.map (fun (_, baseline, _, _) -> baseline) |> Set.ofList
@@ -299,10 +365,20 @@ module internal HandlersSurface =
             |> List.filter (fun b -> not (Set.contains b expectedBaselines))
             |> List.sort
 
+        // `--update` reconciles only pairs it could READ. An unreadable baseline would otherwise
+        // look identical to an absent one here (`baselineText = None` ⇒ `needsWrite`), and the run
+        // would plan a write over a file whose current bytes it never saw — the write edge refuses
+        // it (`unreadableWriteTarget`), so nothing would be clobbered, but `UpdatedBaselinePaths`
+        // would still name a path this run did not update. An unreadable SOURCE has no bytes to
+        // write from at all. Both are already blocking through `unreadable`.
+        let reconcilable (source: string) (baseline: string) =
+            not (List.contains source unreadable) && not (List.contains baseline unreadable)
+
         let updated =
             if model.Request.SurfaceUpdate then
                 classified
-                |> List.filter (fun (_, _, sourceText, baselineText) -> needsWrite sourceText baselineText)
+                |> List.filter (fun (source, baseline, sourceText, baselineText) ->
+                    reconcilable source baseline && needsWrite sourceText baselineText)
                 |> List.map (fun (_, baseline, _, _) -> baseline)
                 |> List.sort
             else
@@ -311,9 +387,9 @@ module internal HandlersSurface =
         let writes =
             if model.Request.SurfaceUpdate then
                 classified
-                |> List.choose (fun (_, baseline, sourceText, baselineText) ->
+                |> List.choose (fun (source, baseline, sourceText, baselineText) ->
                     match sourceText with
-                    | Some text when needsWrite sourceText baselineText ->
+                    | Some text when reconcilable source baseline && needsWrite sourceText baselineText ->
                         Some(WriteFile(baseline, text, GeneratedView))
                     | _ -> None)
             else
@@ -341,11 +417,19 @@ module internal HandlersSurface =
         let axisFile = versionAxisFile model.Request
         let axisProperty = versionAxisProperty model.Request
 
+        //
+        // Total over `ReadResult` since #745. An unreadable axis file collapses to
+        // `undeterminable` alongside an absent one — correct here and not a fail-open: this is a
+        // PROMPT, never a verdict and never an exit code (FR-008/FR-013), and the read edge has
+        // already emitted the `unreadableFile` warning naming it.
         let axisSnapshot =
             if escapesRoot axisFile then
                 None
             else
-                snapshot axisFile model |> Option.map (fun snap -> snap.Text)
+                match readOf axisFile model with
+                | Bytes snap -> Some snap.Text
+                | Absent
+                | Unreadable _ -> None
 
         let versionBump =
             VersionAxis.prompt axisFile axisProperty axisSnapshot classification
@@ -354,16 +438,19 @@ module internal HandlersSurface =
             { SourceRoot = normalizeRelativePath sourceRoot
               BaselineRoot = normalizeRelativePath baselineRoot
               Mode = if model.Request.SurfaceUpdate then "update" else "check"
-              CheckedCount = List.length sources
+              CheckedCount = checkedCount
               MissingBaselinePaths = missing
               DriftedSourcePaths = drifted
               OrphanBaselinePaths = orphans
               UpdatedBaselinePaths = updated
-              IsCoherent = List.isEmpty missing && List.isEmpty drifted
+              // Decision #754's binding rule: a verdict may never report coherent over a subject it
+              // did not read. The third conjunct is the whole of #745 — without it this reads
+              // `true` on a `chmod 000` file, at exit 0, on a required gate.
+              IsCoherent = List.isEmpty missing && List.isEmpty drifted && List.isEmpty unreadable
               Classification = classification
               VersionBump = versionBump }
 
-        summary, writes
+        summary, (unreadable, writes)
 
     // FS-GG/FS.GG.SDD#185: containment is enforced at ONE place — `Foundation.plan` refuses every
     // effect for an escaping root and records the blocking `surface.rootEscape` diagnostic. With no
@@ -387,11 +474,37 @@ module internal HandlersSurface =
                         PendingEffects = model.PendingEffects @ effects },
                     effects
             | None ->
-                let summary, writes = computeSummary model
+                let summary, (unreadable, writes) = computeSummary model
+
+                // FS.GG.SDD#745 / decision #754. Blocking, and under BOTH modes — deliberately not
+                // gated on `not SurfaceUpdate` the way `driftDiagnostics` is. `--update` is the
+                // mode that RECONCILES drift, and it cannot reconcile bytes it could not read: an
+                // `--update` that silently left an unreadable pair alone and exited 0 would report
+                // the baselines as refreshed when one of them was not.
+                //
+                // Not a tool defect, so this is exit 1 and never exit 2 — a mode bit in the
+                // workspace is not a broken tool. The per-file reasons ride in on the
+                // `unreadableFile` warnings the read edge already emitted.
+                let unreadableDiagnostics =
+                    if List.isEmpty unreadable then
+                        []
+                    else
+                        [ unreadableSubject "surface" unreadable ]
 
                 // Drift blocks (exit 1) only under `--check`; `--update` reconciles it instead.
+                // Keyed on the drift lists themselves, NOT on `not summary.IsCoherent` as before:
+                // `IsCoherent` now also carries the unreadable subjects, and reusing it here would
+                // emit `surface.drift` reading "0 missing, 0 differing" for a run whose only
+                // finding was a file it could not open — the "never renders as drift" half of
+                // #745 AC4. `unreadableDiagnostics` above is that run's finding.
                 let driftDiagnostics =
-                    if (not model.Request.SurfaceUpdate) && not summary.IsCoherent then
+                    if
+                        (not model.Request.SurfaceUpdate)
+                        && not (
+                            List.isEmpty summary.MissingBaselinePaths
+                            && List.isEmpty summary.DriftedSourcePaths
+                        )
+                    then
                         [ surfaceDrift
                               (List.length summary.MissingBaselinePaths)
                               (List.length summary.DriftedSourcePaths)
@@ -428,6 +541,11 @@ module internal HandlersSurface =
 
                 { model with
                     Surface = Some summary
-                    Diagnostics = model.Diagnostics @ driftDiagnostics @ orphanDiagnostics @ versionDiagnostics
+                    Diagnostics =
+                        model.Diagnostics
+                        @ unreadableDiagnostics
+                        @ driftDiagnostics
+                        @ orphanDiagnostics
+                        @ versionDiagnostics
                     PendingEffects = model.PendingEffects @ writes },
                 writes

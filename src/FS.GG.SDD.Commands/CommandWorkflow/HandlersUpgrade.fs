@@ -403,14 +403,39 @@ module internal HandlersUpgrade =
             || List.contains ReconciliationStepId.CliSelfUpdate applied
             || not (List.isEmpty unrepairedSkillDrift)
 
+        // FS.GG.SDD#745 AC3. A step whose apply effects were refused because a TARGET could not be
+        // READ is not a tool defect, and `upgradeStepFailed` is `markToolDefect` — i.e. exit 2,
+        // "the tool itself failed", over a mode bit. The measured shape was three `toolDefect`s
+        // sitting beside three warnings whose correction read "Nothing about the tool is broken."
+        //
+        // The run still BLOCKS: the write edge emitted a blocking `unreadableWriteTarget` naming
+        // the file and the reason, which is strictly more informative than a step id, and
+        // `FailedStepIds` / `residualDrift` still report the step as failed. What is dropped is
+        // only the second, less specific diagnostic — and with it the exit-2 escalation. Exit 1.
+        let failedOnUnreadableTarget stepId =
+            actionable
+            |> List.filter (fun step -> step.StepId = stepId)
+            |> List.collect (applyEffectsFor model request)
+            |> List.exists (fun effect ->
+                model.InterpretedEffects
+                |> List.exists (fun result ->
+                    effectKey result.Effect = effectKey effect
+                    && not result.Succeeded
+                    && (match result.Read with
+                        | Unreadable _ -> true
+                        | Bytes _
+                        | Absent -> false)))
+
         let diagnostics =
             if not (List.isEmpty failed) then
                 failed
-                |> List.map (fun stepId ->
+                |> List.choose (fun stepId ->
                     if stepId = ReconciliationStepId.CliSelfUpdate then
-                        upgradeSelfUpdateFailed (selfUpdateExitCode model)
+                        Some(upgradeSelfUpdateFailed (selfUpdateExitCode model))
+                    elif failedOnUnreadableTarget stepId then
+                        None
                     else
-                        upgradeStepFailed (reconciliationStepIdValue stepId))
+                        Some(upgradeStepFailed (reconciliationStepIdValue stepId)))
             elif not (List.isEmpty skipped) then
                 [ upgradeResidualDrift (skipped |> List.map reconciliationStepIdValue) ]
             else

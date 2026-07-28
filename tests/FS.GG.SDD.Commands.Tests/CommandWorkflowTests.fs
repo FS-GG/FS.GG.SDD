@@ -70,6 +70,7 @@ module CommandWorkflowTests =
         let first =
             { Effect = List.head effects
               Succeeded = true
+              Read = Absent
               Snapshot = None
               Process = None
               Confirmed = None

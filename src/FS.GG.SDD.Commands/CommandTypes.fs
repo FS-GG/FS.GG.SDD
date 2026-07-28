@@ -827,13 +827,49 @@ module CommandTypes =
           StandardError: string
           StandardErrorTruncated: bool }
 
+    // FS.GG.SDD#745, decision FS.GG.SDD#754. The read edge's three states. Before this the core
+    // had two — bytes, or nothing — and `None` meant ABSENT, so a file that exists and cannot be
+    // read had nowhere to go but the absent branch. Several verdict folds take their candidate set
+    // from a directory listing and their comparison from the read, so an absent subject is not a
+    // finding: it is silently NOT CHECKED, i.e. a pass. That is how `surface --check` — a required
+    // gate on both version axes — reported `isCoherent: true` at exit 0 on a `chmod 000` file it
+    // never read, with `checkedCount` still counting it.
+    //
+    // A DU rather than the parallel unreadable-set alternative (`TouchSet.Unreadable`'s shape),
+    // and #754 rejected that alternative on exactly this: a set is something a fold MAY consult,
+    // and the failure class here is folds that quietly skip a subject. Matching a DU is something
+    // the compiler makes a fold do — `TreatWarningsAsErrors` promotes FS0025 (incomplete match) to
+    // an error, so a newly-added fold cannot reintroduce the fail-open by omission.
+    //
+    // `Unreadable` carries the path AND the reason so the diagnostic names the file and is
+    // distinguishable from drift (#735 AC2). `Absent` keeps its old meaning exactly.
+    type ReadResult =
+        /// The file existed and its bytes were read.
+        | Bytes of snapshot: FileSnapshot
+        /// The path does not exist — or the effect performs no read at all (`Confirm`,
+        /// `SetExecutable`, a dry-run `RunProcess`). "Nothing was observed, and nothing was
+        /// refused."
+        | Absent
+        /// The path EXISTS and its bytes could not be obtained: permissions, an IO fault, a device
+        /// error. `reason` is the underlying exception message.
+        | Unreadable of path: string * reason: string
+
     type CommandEffectResult =
-        { Effect: CommandEffect
-          Succeeded: bool
-          Snapshot: FileSnapshot option
-          Process: ProcessRunResult option
-          Confirmed: bool option
-          Diagnostic: Diagnostic option }
+        {
+            Effect: CommandEffect
+            Succeeded: bool
+            /// What the edge observed about the path this effect reads (#745). For `WriteFile` this
+            /// is the PRE-READ of the destination, which is what `canOverwrite` decides from.
+            Read: ReadResult
+            /// The bytes, when there were bytes — `Read` projected through `Bytes s -> Some s`. Kept
+            /// as the accessor the ~140 non-verdict call sites use ("give me the body I read"),
+            /// which is the same fact under both representations. Every fold that computes a
+            /// VERDICT reads `Read` instead, because only that one can tell absent from unreadable.
+            Snapshot: FileSnapshot option
+            Process: ProcessRunResult option
+            Confirmed: bool option
+            Diagnostic: Diagnostic option
+        }
 
     type CommandModel =
         { Request: CommandRequest

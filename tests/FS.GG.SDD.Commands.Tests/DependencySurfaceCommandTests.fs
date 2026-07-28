@@ -1,5 +1,6 @@
 namespace FS.GG.SDD.Commands.Tests
 
+open System.Runtime.InteropServices
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Artifacts.DependencySurface
@@ -223,3 +224,67 @@ module DependencySurfaceCommandTests =
 
         depSurfaceRequest true root [] |> ignore
         Assert.True(existsRelative root capturePathRel)
+
+    // ===================================================================================
+    // FS.GG.SDD#745 (decision FS.GG.SDD#754) — this lane's own "absent ⇒ not checked" shape.
+    //
+    // `authoredTargets` `List.choose`s the `work/**/plan.md` snapshots, so an unreadable plan is
+    // simply DROPPED — every `framework:` reference it declares leaves `allTargets`, and
+    // `IsCoherent = List.isEmpty incoherentPackages` then reports coherent over a target set the
+    // run quietly shrank. The fewer subjects the blind spot left, the more coherent it looked.
+    // ===================================================================================
+
+    [<Fact>]
+    let ``FS.GG.SDD#745: an unreadable authored plan cannot report a coherent dependency surface`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let root = tempDirectory ()
+            let workId = "745-unreadable-plan"
+            let title = "Unreadable Plan"
+            initializeTasksReadyProject root workId title
+
+            let planPath = $"work/{workId}/plan.md"
+
+            let withFrameworkReference =
+                (readRelative root planPath)
+                    .Replace(
+                        "## Contract Impact\n",
+                        $"## Contract Impact\n- framework: {restoredPackage}@{restoredVersion}#Spectre.Console.AnsiConsole — generated-consumer use.\n"
+                    )
+
+            writeRelative root planPath withFrameworkReference
+
+            // Readable: the reference is discovered, has no committed capture, and blocks. This is
+            // the control leg — without it, leg two below would also pass if the lane simply never
+            // discovered anything.
+            let readable = depSurfaceRequest false root []
+            Assert.False((summaryOf readable).IsCoherent)
+            Assert.Equal(1, exitCodeForReport readable)
+
+            let absolutePlan =
+                System.IO.Path.Combine(root, planPath.Replace('/', System.IO.Path.DirectorySeparatorChar))
+
+            System.IO.File.SetUnixFileMode(absolutePlan, enum<System.IO.UnixFileMode> 0)
+
+            try
+                let hidden = depSurfaceRequest false root []
+                let summary = summaryOf hidden
+
+                // Before #745: the plan is dropped, no target is discovered, `DriftedPackages` is
+                // empty and `IsCoherent` is TRUE at exit 0 — a pass produced by a blind spot.
+                Assert.False summary.IsCoherent
+                Assert.Equal(1, exitCodeForReport hidden)
+                Assert.DoesNotContain(hidden.Diagnostics, fun d -> d.IsToolDefect)
+
+                Assert.Contains(
+                    hidden.Diagnostics,
+                    fun d -> d.Id = "unreadableSubject" && List.contains planPath d.RelatedIds
+                )
+
+                // Distinct from `dependencySurface.unavailable`, which stays advisory: an
+                // unrestored PACKAGE is outside the workspace's control, an unreadable authored
+                // FILE is a subject the workspace declared.
+                Assert.DoesNotContain(hidden.Diagnostics, fun d -> d.Id = "dependencySurface.unavailable")
+            finally
+                System.IO.File.SetUnixFileMode(absolutePlan, enum<System.IO.UnixFileMode> 0o644)

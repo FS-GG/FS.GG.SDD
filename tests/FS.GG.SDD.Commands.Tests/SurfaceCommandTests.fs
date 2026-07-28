@@ -1,6 +1,8 @@
 namespace FS.GG.SDD.Commands.Tests
 
 open System.IO
+open System.Runtime.InteropServices
+open FS.GG.SDD.Commands
 open FS.GG.SDD.Commands.CommandEffects
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandSerialization
@@ -867,3 +869,192 @@ module SurfaceCommandTests =
         Assert.Equal(1, summary.CheckedCount)
         Assert.True summary.IsCoherent
         Assert.Equal(0, exitCodeForReport report)
+
+    // ===================================================================================
+    // FS.GG.SDD#745 (decision FS.GG.SDD#754) — `surface --check` is a REQUIRED gate on both
+    // version axes, and it reported a PASS on a file it never read.
+    //
+    // `sourceText`/`baselineText` came from `snapshot`, whose `None` means ABSENT. `missing`
+    // required `Option.isSome sourceText`; `drifted` required `Some, Some`. An unreadable source
+    // `.fsi` was in NEITHER list, and `IsCoherent = isEmpty missing && isEmpty drifted` — so a
+    // real API-surface drift shipped green behind one mode bit, with `checkedCount` still
+    // counting the file as checked.
+    //
+    // The table below is #745 §1's, pinned column for column. It is the whole point of the row,
+    // so it is asserted as a table rather than one assertion per fact: leg 3 differing from
+    // leg 2 in `outcome`/`exit` alone would not have caught the original defect, whose signature
+    // was `isCoherent: true` WITH `driftedSourcePaths: []` AND `checkedCount` unchanged.
+    // ===================================================================================
+
+    /// A source/baseline pair whose SOURCE is left at mode 000 for the duration of `body`.
+    /// Restored in `finally`, so a failing assertion still leaves the temp tree deletable.
+    let private withUnreadable (root: string) (relativePath: string) (body: unit -> unit) =
+        let absolute =
+            Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar))
+
+        File.SetUnixFileMode(absolute, enum<UnixFileMode> 0)
+
+        try
+            body ()
+        finally
+            File.SetUnixFileMode(absolute, enum<UnixFileMode> 0o644)
+
+    /// Six matched source/baseline pairs — the shape the #745 reproduction was measured on
+    /// (`src/FS.GG.Contracts/*.fsi`, `checkedCount: 6`).
+    let private sixPairFixture () =
+        let root = tempDirectory ()
+
+        for index in 1..6 do
+            writeRelative root $"src/Foo/Sig{index}.fsi" (signature "int")
+            writeRelative root $"docs/api-surface/Foo/Sig{index}.fsi" (signature "int")
+
+        root
+
+    let private diagnosticIds (report: CommandReport) =
+        report.Diagnostics |> List.map (fun d -> d.Id)
+
+    [<Fact>]
+    let ``FS.GG.SDD#745: an unreadable drifted source cannot report coherent — the exact table`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let root = sixPairFixture ()
+
+            // Leg 1 — clean. Unchanged by #745, and asserted so the fix cannot be a blanket
+            // "always incoherent".
+            let clean = surfaceReport false root
+            let cleanSummary = summaryOf clean
+            Assert.Equal(CommandOutcome.NoChange, clean.Outcome)
+            Assert.True cleanSummary.IsCoherent
+            Assert.Equal(6, cleanSummary.CheckedCount)
+            Assert.Empty cleanSummary.DriftedSourcePaths
+            Assert.Equal(0, exitCodeForReport clean)
+
+            // Leg 2 — real drift, readable. Also unchanged: the gate still works when it can look.
+            writeRelative root "src/Foo/Sig1.fsi" (signature "string")
+            let drifted = surfaceReport false root
+            let driftedSummary = summaryOf drifted
+            Assert.Equal(CommandOutcome.Blocked, drifted.Outcome)
+            Assert.False driftedSummary.IsCoherent
+            Assert.Equal(6, driftedSummary.CheckedCount)
+            Assert.Equal<string list>([ "src/Foo/Sig1.fsi" ], driftedSummary.DriftedSourcePaths)
+            Assert.Equal(1, exitCodeForReport drifted)
+
+            // Leg 3 — the SAME drift, now unreadable. Measured before the fix:
+            //   outcome succeededWithWarnings (on the #744 branch) / blocked+toolDefect (on main),
+            //   isCoherent TRUE, driftedSourcePaths [], checkedCount 6.
+            withUnreadable root "src/Foo/Sig1.fsi" (fun () ->
+                let hidden = surfaceReport false root
+                let hiddenSummary = summaryOf hidden
+
+                // The verdict. This is the assertion the row exists for.
+                Assert.False hiddenSummary.IsCoherent
+
+                // CHECKED means READ. It reported 6 for five files it read and one it did not.
+                Assert.Equal(5, hiddenSummary.CheckedCount)
+
+                // Still not "drift" — the tool did not observe a difference, it failed to look.
+                Assert.Empty hiddenSummary.DriftedSourcePaths
+
+                // And not "missing" either (#745 AC4): the file is right there.
+                Assert.Empty hiddenSummary.MissingBaselinePaths
+
+                Assert.Equal(CommandOutcome.Blocked, hidden.Outcome)
+                Assert.Equal(1, exitCodeForReport hidden)
+
+                // Exit 1, never 2: a mode bit in the workspace is not a broken tool (AC5).
+                Assert.DoesNotContain(hidden.Diagnostics, fun d -> d.IsToolDefect)
+
+                // The finding names the file, and is distinguishable from drift.
+                Assert.Contains("unreadableSubject", diagnosticIds hidden)
+                Assert.Contains("unreadableFile", diagnosticIds hidden)
+                Assert.DoesNotContain("surface.drift", diagnosticIds hidden)
+
+                Assert.Contains(
+                    hidden.Diagnostics,
+                    fun d -> d.Id = "unreadableSubject" && List.contains "src/Foo/Sig1.fsi" d.RelatedIds
+                ))
+
+    /// The mirror-image half. An unreadable BASELINE blinds the comparison exactly as an
+    /// unreadable source does — one side always compares equal — and it must not be reported as a
+    /// baseline that does not exist (#745 AC4), which would point `--update` at creating a file
+    /// that is already there.
+    [<Fact>]
+    let ``FS.GG.SDD#745: an unreadable baseline blocks and is never reported as missing`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let root = coherentFixture ()
+
+            withUnreadable root "docs/api-surface/Foo/Bar.fsi" (fun () ->
+                let report = surfaceReport false root
+                let summary = summaryOf report
+
+                Assert.False summary.IsCoherent
+                Assert.Empty summary.MissingBaselinePaths
+                Assert.Empty summary.DriftedSourcePaths
+                Assert.Equal(1, exitCodeForReport report)
+                Assert.Contains("unreadableSubject", diagnosticIds report))
+
+    /// `--update` is the mode that RECONCILES drift, and it cannot reconcile bytes it could not
+    /// read. An `--update` that quietly skipped the pair and exited 0 would report the baselines
+    /// as refreshed when one of them was not — so the block is emitted in BOTH modes, and the
+    /// unreadable pair is never named in `updatedBaselinePaths`.
+    [<Fact>]
+    let ``FS.GG.SDD#745: update blocks on an unreadable source and never claims to have written it`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let root = coherentFixture ()
+            writeRelative root "src/Foo/Extra.fsi" (signature "unit")
+
+            withUnreadable root "src/Foo/Extra.fsi" (fun () ->
+                let report = surfaceReport true root
+                let summary = summaryOf report
+
+                Assert.False summary.IsCoherent
+                Assert.DoesNotContain("docs/api-surface/Foo/Extra.fsi", summary.UpdatedBaselinePaths)
+                Assert.False(existsRelative root "docs/api-surface/Foo/Extra.fsi")
+                Assert.Equal(1, exitCodeForReport report)
+                Assert.Contains("unreadableSubject", diagnosticIds report))
+
+    /// The vacuous-pass edge, and the one an "absent ⇒ not checked" fold fails hardest: `sources`
+    /// is derived from the source ROOT's listing, so a root that could not be opened yields zero
+    /// signatures, zero drift and — before this — `isCoherent: true` over an entire tree.
+    [<Fact>]
+    let ``FS.GG.SDD#745: an unreadable source ROOT is not a coherent empty tree`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let root = coherentFixture ()
+            let sourceRoot = Path.Combine(root, "src")
+            File.SetUnixFileMode(sourceRoot, enum<UnixFileMode> 0)
+
+            try
+                let report = surfaceReport false root
+                let summary = summaryOf report
+                Assert.Equal(0, summary.CheckedCount)
+                Assert.False summary.IsCoherent
+                Assert.Equal(1, exitCodeForReport report)
+                Assert.Contains("unreadableSubject", diagnosticIds report)
+            finally
+                File.SetUnixFileMode(
+                    sourceRoot,
+                    UnixFileMode.UserRead ||| UnixFileMode.UserWrite ||| UnixFileMode.UserExecute
+                )
+
+    /// #745 AC4: the finding must be visible in `--text` (from which `--rich` derives). Before
+    /// this the plain projection carried only `diagnostics: <count>`, so the entire mechanism was
+    /// invisible in the projection an operator actually reads.
+    [<Fact>]
+    let ``FS.GG.SDD#745: the unreadable finding is visible in the plain-text projection`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let root = coherentFixture ()
+
+            withUnreadable root "src/Foo/Bar.fsi" (fun () ->
+                let text = surfaceReport false root |> CommandRendering.renderText
+                Assert.Contains("unreadableSubject:", text)
+                Assert.Contains("unreadableFile:", text)
+                Assert.Contains("src/Foo/Bar.fsi", text))

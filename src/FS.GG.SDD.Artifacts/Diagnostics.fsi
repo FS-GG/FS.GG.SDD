@@ -174,6 +174,27 @@ module Diagnostics =
     val upgradeStepFailed: stepId: string -> Diagnostic
     val upgradeResidualDrift: stepIds: string list -> Diagnostic
 
+    /// FS.GG.SDD#745 (decision #754): a file that EXISTS could not be read. The per-file fact,
+    /// emitted at the effect edge for every refused read in every lane, carrying the path and the
+    /// reason so the finding names the file and is distinguishable from drift.
+    /// `DiagnosticWarning` and never a tool defect — the read edge does not know what the lane
+    /// intended, and making it blocking on its own would make one unreadable file fatal to
+    /// `doctor` (documented read-only, exit 0). The block belongs to `unreadableSubject`.
+    val unreadableFile: path: string -> reason: string -> Diagnostic
+
+    /// FS.GG.SDD#745 (decision #754): a verdict lane could not read one or more of the subjects it
+    /// is responsible for, so its verdict may not be reported as coherent. `DiagnosticError`
+    /// (exit 1), never a tool defect. `.github#266` on the read edge: *"I could not evaluate this"*
+    /// is not *"I evaluated it and it passed."* `RelatedIds` are the offending paths; the reasons
+    /// are on the accompanying `unreadableFile` warnings.
+    val unreadableSubject: command: string -> paths: string list -> Diagnostic
+
+    /// FS.GG.SDD#745 (decision #754): a write was refused because its DESTINATION exists and could
+    /// not be read, so `canOverwrite` — which decides from the destination's current bytes —
+    /// cannot be decided. `DiagnosticError` (exit 1) and explicitly NOT a tool defect: before #745
+    /// this arm threw into the interpreter's outer handler and surfaced as `toolDefect` at exit 2.
+    val unreadableWriteTarget: path: string -> reason: string -> Diagnostic
+
     /// Feature 086: one or more committed `.fsi` surface baselines are missing or byte-differing
     /// from the authored source signature. `DiagnosticError` — `fsgg-sdd surface --check` exits 1.
     val surfaceDrift: missingCount: int -> driftedCount: int -> paths: string list -> Diagnostic

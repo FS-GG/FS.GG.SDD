@@ -718,6 +718,77 @@ module Diagnostics =
             "Re-run `fsgg-sdd upgrade` and confirm the skipped step(s), or `fsgg-sdd doctor` to review the residual drift."
             ordered
 
+    // ── The read edge's third state (FS.GG.SDD#745, decision FS.GG.SDD#754) ───────────────────
+    //
+    // Before #754 the core had two read states — bytes, or nothing — and *nothing* meant ABSENT.
+    // A file that exists and cannot be read collapsed into the absent branch, and several verdict
+    // folds take their candidate set from a directory listing but their comparison from the read,
+    // so an absent subject is not a finding: it is silently NOT CHECKED, i.e. a pass. `ReadResult`
+    // gives the third state a name; these three diagnostics are how it reaches an operator.
+    //
+    // Three, not one, because the three situations have different blocking polarity and a single
+    // id would have to pick one of them and be wrong about the other two.
+
+    /// A file that EXISTS could not be read (permissions, an IO fault, a device error). The
+    /// per-file fact, emitted at the effect edge for every refused read in every lane, so the
+    /// operator always learns WHICH file and WHY.
+    ///
+    /// `DiagnosticWarning`, deliberately: the read edge does not know what the lane was going to
+    /// do with the bytes. Making this alone blocking would make one unreadable file fatal to
+    /// `doctor`, which is documented read-only and exit 0 — the alternative #754 considered and
+    /// rejected. The BLOCK belongs to the verdict fold that was relying on the bytes
+    /// (`unreadableSubject`), which is emitted beside this one.
+    ///
+    /// Not a tool defect. Nothing about the tool is broken; exit 2 would say it is.
+    let unreadableFile (path: string) (reason: string) =
+        create
+            "unreadableFile"
+            DiagnosticWarning
+            None
+            None
+            $"`{path}` exists but could not be read: {reason}"
+            $"Restore read access to `{path}` (e.g. `chmod +r`) and re-run. A file the tool could not read is never counted as checked and never treated as unchanged."
+            [ path ]
+
+    /// One or more subjects a VERDICT was responsible for could not be read, so the verdict cannot
+    /// be coherent. `DiagnosticError` (exit 1) — this is `.github#266` on the read edge: *"I could
+    /// not evaluate this"* is not *"I evaluated it and it passed."*
+    ///
+    /// Emitted by the gate lanes (`surface --check/--update`, `dependency-surface`) alongside the
+    /// per-file `unreadableFile` warnings, which carry the reasons. `RelatedIds` are the paths.
+    ///
+    /// Not a tool defect: a permissions accident in the workspace is an environment fault the
+    /// operator can fix, not a broken tool, so it must not be laundered into exit 2.
+    let unreadableSubject (command: string) (paths: string list) =
+        let ordered = paths |> List.sort
+
+        create
+            "unreadableSubject"
+            DiagnosticError
+            None
+            None
+            $"`{command}` could not read {List.length ordered} of the file(s) it must compare, so its verdict cannot be coherent."
+            $"Restore read access to the listed file(s) and re-run `fsgg-sdd {command}`. Until then the verdict is withheld rather than reported as a pass."
+            ordered
+
+    /// A write was refused because its DESTINATION could not be read. The tool decides whether it
+    /// may replace an existing file from that file's current bytes (`canOverwrite`), so without
+    /// them the decision is undecidable and the only fail-closed answer is to refuse.
+    ///
+    /// `DiagnosticError` (exit 1) so the run blocks rather than reporting a write that did not
+    /// happen — but explicitly NOT a tool defect, which is the whole point of the separate id:
+    /// before #745 this arm threw into the interpreter's outer handler and surfaced as `toolDefect`
+    /// at exit 2, i.e. `upgrade`/`charter` over a mode-000 target accused the tool of being broken.
+    let unreadableWriteTarget (path: string) (reason: string) =
+        create
+            "unreadableWriteTarget"
+            DiagnosticError
+            None
+            None
+            $"Refusing to write `{path}`: it exists and could not be read ({reason}), so whether replacing it is safe cannot be decided."
+            $"Restore read access to `{path}` (e.g. `chmod +r`) and re-run. The tool never replaces bytes it could not read."
+            [ path ]
+
     // Feature 086: a committed `.fsi` surface baseline is missing or has drifted from its authored
     // source signature. A `DiagnosticError` so `fsgg-sdd surface --check` exits 1 and fails CI;
     // `--update` never emits it (it reconciles instead). RelatedIds carry the offending paths.
