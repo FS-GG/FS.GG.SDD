@@ -111,8 +111,7 @@ module internal HandlersDependencySurface =
             authoredPlanPaths model
             @ [ "Directory.Packages.local.props"; "Directory.Packages.props" ]
             @ (committedTargets baselineRoot model
-               |> List.map (fun (packageId, version) ->
-                   DependencySurface.capturePath baselineRoot packageId version))
+               |> List.map (fun (packageId, version) -> DependencySurface.capturePath baselineRoot packageId version))
             |> List.distinct
 
         (filePaths |> List.map (fun path -> readOf path model))

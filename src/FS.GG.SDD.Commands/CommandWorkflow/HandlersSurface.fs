@@ -294,8 +294,7 @@ module internal HandlersSurface =
         let unreadable =
             (classified
              |> List.collect (fun (_, _, sourceRead, baselineRead) -> [ sourceRead; baselineRead ]))
-            @ [ enumerationOf sourceRoot model
-                enumerationOf baselineRoot model ]
+            @ [ enumerationOf sourceRoot model; enumerationOf baselineRoot model ]
             |> unreadablePathsOf
 
         // A signature to (re)write: source present, and baseline absent or byte-differing.
@@ -501,7 +500,10 @@ module internal HandlersSurface =
                 let driftDiagnostics =
                     if
                         (not model.Request.SurfaceUpdate)
-                        && not (List.isEmpty summary.MissingBaselinePaths && List.isEmpty summary.DriftedSourcePaths)
+                        && not (
+                            List.isEmpty summary.MissingBaselinePaths
+                            && List.isEmpty summary.DriftedSourcePaths
+                        )
                     then
                         [ surfaceDrift
                               (List.length summary.MissingBaselinePaths)

@@ -1094,7 +1094,11 @@ module MultiFileSkillDriftTests =
                 Assert.DoesNotContain(target, summary.MissingArtifactPaths)
 
                 // The finding names the file, and it is not a tool defect.
-                Assert.Contains(report.Diagnostics, fun d -> d.Id = "unreadableFile" && List.contains target d.RelatedIds)
+                Assert.Contains(
+                    report.Diagnostics,
+                    fun d -> d.Id = "unreadableFile" && List.contains target d.RelatedIds
+                )
+
                 Assert.DoesNotContain(report.Diagnostics, fun d -> d.IsToolDefect)
 
                 // Visible in the projection an operator actually reads (#745 AC4).

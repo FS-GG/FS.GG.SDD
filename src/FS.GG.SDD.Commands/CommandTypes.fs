@@ -855,19 +855,21 @@ module CommandTypes =
         | Unreadable of path: string * reason: string
 
     type CommandEffectResult =
-        { Effect: CommandEffect
-          Succeeded: bool
-          /// What the edge observed about the path this effect reads (#745). For `WriteFile` this
-          /// is the PRE-READ of the destination, which is what `canOverwrite` decides from.
-          Read: ReadResult
-          /// The bytes, when there were bytes — `Read` projected through `Bytes s -> Some s`. Kept
-          /// as the accessor the ~140 non-verdict call sites use ("give me the body I read"),
-          /// which is the same fact under both representations. Every fold that computes a
-          /// VERDICT reads `Read` instead, because only that one can tell absent from unreadable.
-          Snapshot: FileSnapshot option
-          Process: ProcessRunResult option
-          Confirmed: bool option
-          Diagnostic: Diagnostic option }
+        {
+            Effect: CommandEffect
+            Succeeded: bool
+            /// What the edge observed about the path this effect reads (#745). For `WriteFile` this
+            /// is the PRE-READ of the destination, which is what `canOverwrite` decides from.
+            Read: ReadResult
+            /// The bytes, when there were bytes — `Read` projected through `Bytes s -> Some s`. Kept
+            /// as the accessor the ~140 non-verdict call sites use ("give me the body I read"),
+            /// which is the same fact under both representations. Every fold that computes a
+            /// VERDICT reads `Read` instead, because only that one can tell absent from unreadable.
+            Snapshot: FileSnapshot option
+            Process: ProcessRunResult option
+            Confirmed: bool option
+            Diagnostic: Diagnostic option
+        }
 
     type CommandModel =
         { Request: CommandRequest
