@@ -26,8 +26,15 @@ module ProcessSkillManifestTests =
     // Deliberately a LITERAL and not `List.head Fsgg.Schemas.agentSkillRoots` (the
     // derivation `RegistrySkillManifest.manifestPath` and `materialize-skill-roots.fsx`
     // share): a guard that re-derives the path from the code it guards cannot notice the
-    // path moving. This spelling is what reds if the manifest's declared home changes
-    // without this decision being re-taken.
+    // path moving.
+    //
+    // WHAT THIS SPELLING ACTUALLY GUARDS, STATED PRECISELY. It reds if the committed file
+    // goes ABSENT or STALE at this path — not if the derivation moves and a byte-identical
+    // copy is written to the new home, which would leave this green. The tripwire for the
+    // derivation itself is `FS.GG.Contracts.Tests.SchemaVersionConstantTests`'s
+    // `agentSkillRoots is the declared three-root set`, which pins the whole list INCLUDING
+    // ITS ORDER, so the head cannot move silently in the first place. Two guards, two
+    // subjects; this one is about the artifact, that one is about the declaration.
     let private committedPath =
         Path.Combine(TestSupport.repoRoot, ".claude", "skills", "skill-manifest.json")
 

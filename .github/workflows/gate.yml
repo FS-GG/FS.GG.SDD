@@ -116,6 +116,18 @@ jobs:
       # No .NET, no restore: it is pure bash over synthetic trees, plus one wiring leg over this
       # repo's own tree. Placed in THIS job for the same reason as the step above — it inherits the
       # required `gate` context.
+      #
+      # WHEN `.agents/skills` BECOMES A VIEW, THIS STEP NEEDS A `skill-view generate` AHEAD OF IT,
+      # AND THIS JOB HAS NONE TODAY. Leg 9 of the test runs the real check over this repository's
+      # real tree, deliberately — legs 1-8 prove what the script does with a fixture, and only leg 9
+      # proves the invocation `skill-view-check.yml` runs has a SUBJECT here. After ADR-0067 phase 4
+      # (FS-GG/.github#1676) a bare checkout has no view, the check correctly dies `[absent-root]`
+      # exit 2 rather than passing over nothing, and leg 9's `expect_rc … 0` reds — blocking the
+      # required `gate` context. `.github/workflows/skill-view-check.yml` carries the same standing
+      # note for its own step; the retiring pull request must add the generate to BOTH jobs, in the
+      # same commit that untracks the root. Do not pre-emptively add it, and do not make it
+      # conditional on the root being absent: "generate whatever is missing, then assert it is
+      # present" is the fail-open shape this whole family of checks exists to remove.
       - name: Unit-test the root-asymmetry check
         run: bash scripts/tests/check-root-asymmetry.test.sh
 

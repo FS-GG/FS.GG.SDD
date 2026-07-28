@@ -56,6 +56,19 @@
 # parser `skill-view`, `skill-union-assert.sh` and `coordination-sync` resolve with
 # (FS-GG/.github#525) — so this cannot become a fifth opinion about which roots exist.
 #
+# WHICH MEANS `.codex/skills` IS OUTSIDE THIS CHECK'S SUBJECT, AND THAT IS A CONSEQUENCE, NOT A
+# CHOICE. ADR-0067 §5 (FS-GG/.github#1636) retired `.codex/skills` from the runtime contract, so the
+# resolved set is ADR-0065's two. This repo nevertheless still TRACKS 28 skills it owns there
+# (`fs-gg-sdd-*`, `speckit-*`, `spectre-console`) — ADR-0065 §Retiring a root forbids hand-deleting
+# them, and their disposition belongs to ADR-0067 phase 4 (FS-GG/.github#1676). So nothing asks the
+# question above about `.codex/skills`, exactly as nothing writes it and nothing audits it
+# (`scripts/materialize-skill-roots.fsx` prints that fact on every run). Measured on 2026-07-28:
+# `diff -qr .claude/skills .codex/skills` reports only `Only in .claude/skills:` lines, so there is
+# no asymmetry there TODAY. Do NOT add `--roots` here to cover it: widening the audited set is a
+# declared decision about the runtime contract, not a caller's convenience, and re-arming a check on
+# a root the contract retired is what `.github/workflows/skill-view-check.yml`'s header forbids for
+# the same reason. If that root's content should be audited, that is an item, not a flag.
+#
 # Usage:
 #   check-root-asymmetry.sh --source <dir> [--tree <dir>] [--roots "<r1> <r2> ..."]
 #
