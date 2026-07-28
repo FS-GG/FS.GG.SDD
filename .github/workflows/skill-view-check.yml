@@ -150,8 +150,5 @@ jobs:
       # SOURCE directory, never a manifest: `registry`-style manifests declare a subset of a tree's
       # skills and would stay green over a tree that had lost the rest, which is FS-GG/.github#1504's
       # coherent-but-incomplete class. A source directory cannot be a subset of itself.
-      - name: Resolve the view roots this tree no longer commits
-        run: bash scripts/skill-view generate --source .claude/skills --roots ".agents/skills"
-
       - name: Assert every skill .claude/skills declares is visible at every runtime root
         run: bash scripts/skill-view check --source .claude/skills --tree .
