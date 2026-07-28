@@ -40,12 +40,18 @@ Core boundary:
   v1) in `.fsgg/scaffold-provenance.json`.
   As the producer of the `fs-gg-sdd-*` process skills, `fsgg-sdd` also emits their
   `skill-manifest` (schema v1) — the committed, process-only
-  `.agents/skills/skill-manifest.json` enumerating every seeded process skill with
+  `.claude/skills/skill-manifest.json` enumerating every seeded process skill with
   `scope: process`, a canonical-body `sha256` (`sha256sum SKILL.md`-equivalent), and the
   ADR-0017 canonical `materializes-when: always` — regenerated/checked by `fsgg-sdd
   registry skill-manifest [--write|--check]` and pinned to the seeded set by a drift
   guard; the org registry (`.github` `registry/skills.yml`) reconciles its process rows
-  from it (ADR-0017).
+  from it (ADR-0017). It lives in the TRACKED SOURCE root, never in `.agents/skills`
+  (FS.GG.SDD#771): ADR-0067 §6 makes that root a generated VIEW — untracked,
+  git-ignored, absent in a bare checkout — so a producer-authoritative file there is
+  deleted by the retirement with a clean `git status`, and every reader resolving
+  through the view fails by not finding a file. The rows' `resolvablePath` still names
+  the neutral `.agents/skills/<id>/SKILL.md` product path; that is manifest CONTENT and
+  a separate, org-registry-facing contract.
   `.fsgg/early-stage-guidance.md` covers the pre-work-model stages (`charter`,
   `specify`, `clarify`, `checklist`) — per-stage command, required section
   headings, stable-id formats, and the §1.1/§1.2 authoring contracts — and is a

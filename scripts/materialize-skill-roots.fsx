@@ -19,7 +19,7 @@
 // producer change, because nothing then knows the derived roots are derived. This script instead
 //   (1) proves, per skill, which root holds the PRODUCER-AUTHORITATIVE body,
 //   (2) content-addresses the process set against the producer's own committed manifest
-//       (`.agents/skills/skill-manifest.json`) using `SkillMirror.sha256`, and
+//       (`.claude/skills/skill-manifest.json`, FS.GG.SDD#771) using `SkillMirror.sha256`, and
 //   (3) computes the writes with `SkillMirror.mirrorFiles` and the verdict with `SkillMirror.verify`.
 //
 // MULTI-FILE (FS.GG.SDD#717). This driver originally refused `[unrepresentable]` when a skill
@@ -427,11 +427,35 @@ for d in SkillMirror.verifyFiles roots preMaterializeExpected (observe ()) do
 // ---------------------------------------------------------------------------------------------
 // Content-address the process set against the PRODUCER's own committed manifest.
 // ---------------------------------------------------------------------------------------------
-// `.agents/skills/skill-manifest.json` is this repo's producer manifest (ADR-0017, schema v1),
+// `.claude/skills/skill-manifest.json` is this repo's producer manifest (ADR-0017, schema v1),
 // emitted by `fsgg-sdd registry skill-manifest`. Every entry is `materializes-when: always`, so
 // each declared id MUST be materialized in every root — the exact claim `.agents`=4 violated.
+//
+// IT LIVES IN THE TRACKED SOURCE ROOT, NOT THE PROVIDER-SOURCE ROOT (FS.GG.SDD#771). This read used
+// to be `SkillMirror.providerSourceRoot + "/skills/skill-manifest.json"` — `.agents/...` — and that
+// root is the one a PROVIDER owns in the orchestrated scaffold lane (ADR-0014 §Decision 6), which
+// says nothing about where THIS repository's own producer-authoritative files live. Under ADR-0067
+// §6 `.agents/skills` becomes a generated VIEW of `.claude/skills`: untracked, git-ignored, absent
+// in a bare checkout by construction. A file living only there is deleted by the retirement with a
+// CLEAN `git status`, and this very `failwith` then fires on every ordinary run — measured on a
+// dry-run retirement of this repo on 2026-07-28, with and without the view generated.
+//
+// AND THE VIEW WOULD NOT HAVE CARRIED IT ANYWAY. `scripts/skill-view generate --mode copy` — the
+// documented fallback for a filesystem or OS that refuses a symlink — copies `<id>/` skill
+// directories and nothing else, so a top-level file in the source root has NO counterpart in a
+// copy-mode view. Resolving this path "through the view" would have worked in link mode and failed
+// in copy mode: a reader whose success depends on which fallback the runner took.
+//
+// THE ROOT IS DERIVED, NOT RE-SPELLED. `Schemas.agentSkillRoots`' FIRST root is already this repo's
+// producer-authoritative root and is already documented as such twice over — `canonicalRootOf`
+// below picks "the first root that has it", and `roots` above preserves the constant's order for
+// exactly that reason. Reading the same declaration here keeps there being ONE statement of which
+// root is authoritative. Deliberately the DECLARATION and not the write set `roots`: `registry
+// skill-manifest` in `src/FS.GG.SDD.Cli/RegistrySkillManifest.fs` has no kit declaration to
+// subtract with, and the writer and the reader of one file must not be able to disagree about
+// where it is.
 let manifestPath =
-    abs (SkillMirror.providerSourceRoot + "/skills/skill-manifest.json")
+    abs (List.head Schemas.agentSkillRoots + "/skills/skill-manifest.json")
 
 // FS.GG.SDD#727: the manifest now declares a digest for a skill's COMPLETE FILE SET, not its
 // `SKILL.md` alone. BOTH schema versions are read, and the reader is what makes the v1 tolerance in

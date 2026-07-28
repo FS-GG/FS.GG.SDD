@@ -70,7 +70,8 @@ digest is what makes the compaction sound: it binds the verdict to the exact aut
 without carrying their inventory. `ship.json` itself stays regenerable and ignored.
 
 Elsewhere, SDD ships two more durable-generated artifacts outside `readiness/`:
-`docs/release/release-readiness.json` and `.agents/skills/skill-manifest.json`.
+`docs/release/release-readiness.json` and `.claude/skills/skill-manifest.json` (the TRACKED
+source root — never `.agents/skills`, which ADR-0067 §6 makes a generated view; FS.GG.SDD#771).
 
 [ADR-0026]: https://github.com/FS-GG/.github/blob/main/docs/adr/0026-committed-compact-ship-verdict.md
 
