@@ -5,6 +5,10 @@
 # `dotnet restore --force-evaluate` by hand. Renovate edits the central <PackageVersion>
 # without running restore, so a referenced-package bump would otherwise fail with NU1004.
 #
+# ONE EXCLUSION, and the `if:` on the job below carries its full reasoning: `renovate/fs.gg.kit-*`.
+# A kit bump cannot move this repo's lock graph, so anything this workflow finds to repair there is
+# by construction unrelated drift — and folding it in is what made `#730` unmergeable (FS.GG.SDD#762).
+#
 # All mechanics + rationale (App-token push that re-triggers the gate, renovate/*-same-repo
 # gating, self-limiting second pass) live in the reusable workflow:
 #   FS-GG/.github .github/workflows/lockfile-sync.yml
@@ -23,6 +27,50 @@ permissions:
 
 jobs:
   sync:
+    # NOT ON THE KIT-BUMP BRANCH (FS.GG.SDD#762).
+    #
+    # MEASURED. `FS.GG.Kit` 0.10.0 -> 0.15.0 (#730) arrived with `main`'s committed lockfiles already
+    # stale against `main`'s OWN source: `src/FS.GG.Contracts` had moved to 7.4.0 while all eight
+    # `packages.lock.json` still recorded `"FS.GG.Contracts": "[7.0.0, )"`. This workflow fired on the
+    # `renovate/fs.gg.kit-0.x` head, `--force-evaluate` found that unrelated drift, and it committed the
+    # repair INSIDE the bump PR (`8333c2b`). The repair was correct. Its LOCATION made the bump
+    # unmergeable: `.github`'s `scripts/check-kit-bump-shape.py` (`.github#1693`, enforcing `#1587` AC 2)
+    # judged `#730` `contaminated`, exit 1, with eight findings — every one of them a `packages.lock.json`.
+    #
+    # THE FIX IS NOT TO WIDEN THAT GUARD. `#1587` AC 2's whole safety argument is that a kit bump's diff
+    # contains nothing but the pin and the materializer's own output. Admitting `packages.lock.json` into
+    # the admissible class would let any future kit bump carry an arbitrary dependency change under cover
+    # of a lockfile — the exact property the guard exists to deny. So the REPAIR moves out of the bump.
+    #
+    # WHY SKIPPING IS SOUND HERE, AND NOT MERELY CONVENIENT. In this repo the kit pin cannot move the
+    # lock graph of the `restore-target`:
+    #
+    #   * `FS.GG.Kit` is referenced by exactly one project, `.config/kit/FS.GG.Kit.receiver.proj`;
+    #   * that project is deliberately NOT in `FS.GG.SDD.sln` (its own comment says so) and sets
+    #     `RestorePackagesWithLockFile=false`, so it has no lockfile of its own;
+    #   * consequently the string `FS.GG.Kit` appears in ZERO `packages.lock.json` in this repo.
+    #
+    # `scripts/tests/lockfile-sync-gating.test.sh` asserts that third fact on every PR, so the premise
+    # cannot rot silently: the day something puts the kit into the lock graph, the gate goes red here
+    # rather than this skip quietly becoming wrong.
+    #
+    # AND WHERE THE PREMISE DOES NOT REACH, THIS FAILS CLOSED. The kit also materializes build config
+    # (`FsggKitMaterializeBuildConfig=true`), so a FUTURE kit version could move `Directory.Packages.props`
+    # and thereby the lock graph legitimately. Skipping does not hide that: the locked restore in
+    # `gate.yml` is a REQUIRED check and fails NU1004, naming `--force-evaluate` as the remedy. That is
+    # the right outcome, because such a bump is not automergeable anyway — a bump whose diff carries
+    # lockfiles is outside `check-kit-bump-shape.py`'s mechanical class no matter who wrote them. On a
+    # kit branch a lockfile change can never be part of a mechanical bump, so NOT PRODUCING IT is correct
+    # and the follow-up belongs in its own PR.
+    #
+    # SCOPE. Only `renovate/fs.gg.kit-*` is excluded. Every other `renovate/*` branch (a real
+    # `<PackageVersion>` bump, which genuinely does move the graph) and every `build-config/*` branch is
+    # untouched — the case this workflow was built for. `lockfile-sync` is not a required status check
+    # (`gate.yml`'s locked restore is), so a skip blocks nothing. The reusable workflow's ungated
+    # `preflight` provisioning check is skipped along with it on kit branches only; it still runs on every
+    # other PR to `main`, which is where an unprovisioned repo would learn it.
+    if: >-
+      ${{ !startsWith(github.event.pull_request.head.ref, 'renovate/fs.gg.kit-') }}
     uses: FS-GG/.github/.github/workflows/lockfile-sync.yml@main
     with:
       restore-target: FS.GG.SDD.sln
