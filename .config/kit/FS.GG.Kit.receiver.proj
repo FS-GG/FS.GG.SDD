@@ -2,7 +2,8 @@
 
   <!--
     FS.GG.Kit receiver (ADR-0062, .github#1262). This repo is a `coordination-kit` receiver: it holds
-    the shared coordination skills, the `fsgg-coord` client, and the engine tool manifest on disk. It
+    the shared coordination skills and the `fsgg-coord` client on disk (and, until FS.GG.Kit 0.18.0, the
+    engine tool manifest too — see the section on it below). It
     used to take them by byte-copy sync PR (`coordination-propagate`); it now REFERENCES the versioned
     `FS.GG.Kit` package and MATERIALIZES that kit onto disk from its pin. A hub change reaches this repo
     as an ordinary Renovate bump of the pin (in Directory.Packages.local.props), and `kit-materialize.yml`
@@ -13,11 +14,45 @@
 
         dotnet build .config/kit/FS.GG.Kit.receiver.proj -t:FsggKitMaterialize
 
-    The materialized files (skills, scripts/fsgg-coord, .config/dotnet-tools.json, and — because this is
-    a `build-config` receiver — Directory.Build.props / Directory.Packages.props) are COMMITTED: the
+    The materialized files (skills, scripts/fsgg-coord, and — because this is a `build-config` receiver
+    — Directory.Build.props / Directory.Packages.props) are COMMITTED: the
     materialize is the write arm that replaces the byte-copy, not a live per-build input, so it does NOT
     run on every build (FsggKitMaterializeOnBuild=false, per the .github#1280 review). The committed bytes
     are content-addressed and byte-identical to canonical, so `coordination-coherence` stays green.
+
+    `.config/dotnet-tools.json` IS NOT ON THAT LIST ANY MORE, AND IT IS NOT MISSING FROM IT — IT IS OURS.
+    FS-GG/.github#1615 (ADR-0068) took `dist/dotnet/.config/dotnet-tools.json` off the kit's `kit:` block,
+    so from FS.GG.Kit 0.18.0 the materialize writes that path in NO receiver and this repo's copy is a
+    plain tracked file it OWNS outright. Renovate bumps `fs.gg.coord.cli` in it DIRECTLY — a tool manifest
+    is native to Renovate's nuget manager (`/(^|/)dotnet-tools\.json$/` is one of its four SHIPPED
+    `managerFilePatterns`), so the pin needs no `# renovate:` annotation and no kit republish to move.
+    That is the whole reason the row left: an engine version bump used to edit HASHED kit content, which
+    staled `registry/repos.lock`, reddened `kit-published-coherence`, and obliged a full republish plus a
+    seven-receiver fan-out to move one integer in one JSON file.
+
+    NOTHING WAS LOST WHEN THE ROW LEFT, AND THAT IS MEASURED ON THIS TREE RATHER THAN REASONED FROM THE
+    ADR. The kit does not delete what it stops managing, and a committed file the kit no longer manages
+    is not "extra" drift — it is simply not the kit's subject. Both sides of the bump, on this repo's own
+    `main`, on the REQUIRED `kit / coordination-kit` context:
+
+        0.17.0 (run 30357207368)  coordination-sync: OK — all 28 materialized file(s) match … this tree pins.
+        0.18.0 (run 30369555078)  coordination-sync: OK — all 27 materialized file(s) match … this tree pins.
+
+    Same tree, both green, one fewer row, and no finding of any kind against the manifest that stayed
+    behind. Kit members went 9 -> 8; this repo's file count went 28 -> 27.
+
+    AND DELETING IT IS STILL CAUGHT — CENTRALLY, NOT HERE, WHICH IS WHY THIS FILE NEEDS NO GUARD OF ITS
+    OWN. #1615 replaced the old co-fabric rule with the `repos-audit` ENGINE-MANIFEST SWEEP in
+    FS-GG/.github, which runs daily (08:17 UTC, plus on demand) across EVERY `receives: coordination-kit`
+    repo and asserts each one declares `fs.gg.coord.cli` with a usable version in
+    `.config/dotnet-tools.json` — this repo included, and not narrowed to `kit-delivery: package`
+    receivers, because a byte-copy receiver gets the same `fsgg-coord` shim and needs the same engine to
+    exec. It is STRICTLY STRONGER than what it replaced, which is the point rather than a consolation:
+    the old rule was f(roster) and inferred the property from which fabric two rows happened to ride, so
+    a receiver that hand-deleted its own manifest stayed green forever because nothing ever read that
+    repo's TREE. The new one is f(roster, receiver tree) and reads it. It grades DECLARATION, not
+    VERSION — "can this repo run the engine its shim execs at all", never "is that engine the newest
+    published one"; a stale pin here is Renovate's business and the kit-pin sweep's, one package over.
   -->
 
   <PropertyGroup>

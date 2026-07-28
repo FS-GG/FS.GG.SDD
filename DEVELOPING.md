@@ -160,8 +160,16 @@ that fails a mis-formatted PR with an advisory red X; it never blocks the merge.
 
 Use the **same pinned version CI uses (7.0.5)** so your local verdict matches the
 gate. Fantomas is installed to a repo-local path, deliberately **not** into
-`.config/dotnet-tools.json` (that manifest is a managed org file pinned
-byte-identical to `FS-GG/.github`):
+`.config/dotnet-tools.json` — a spec commitment (feature 065, FR-003), and no longer
+a mechanical constraint. That manifest *used* to be an org file the kit materialized
+byte-identically from `FS-GG/.github`, so an entry added to it would have been
+overwritten; since **FS.GG.Kit 0.18.0** / `FS-GG/.github#1615` (ADR-0068) the kit no
+longer materializes it. It is now **this repo's own file**: Renovate bumps
+`fs.gg.coord.cli` in it directly (a tool manifest is native to Renovate's nuget
+manager, so the pin needs no annotation), and `FS-GG/.github`'s daily `repos-audit`
+engine-manifest sweep asserts that this repo still *declares* that tool — so deleting
+the file is caught centrally rather than silently. Edit it as you would any other
+tracked file here; just leave the formatter out of it, per FR-003:
 
 ```sh
 # Install the pinned formatter (once):
