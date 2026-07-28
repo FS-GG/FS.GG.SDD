@@ -75,10 +75,19 @@ jobs:
       # the locked restore above is config-agnostic and covers this project. Placed in THIS job rather
       # than a new one so it inherits the required `gate` context — a new job would need adding to
       # branch protection to mean anything, and until then would be a check nobody has to pass.
+      #
+      # THE KIT RECEIVER PROJECT IS RESTORED EXPLICITLY, and that is not belt-and-braces. It is NOT in
+      # FS.GG.SDD.sln, so the locked restore above does not cover it — and an unrestored receiver
+      # evaluates every FS.GG.Kit property to the empty string while exiting 0, which is exactly the
+      # fail-open the driver refuses. Measured on this branch's first CI run: the test's own fallback
+      # restore was silenced, so its wiring leg reported an empty declaration and one of its two
+      # assertions passed on that emptiness. Restoring here, unsilenced and under `set -e`, makes a
+      # restore failure a loud red naming its own cause instead of a check with no subject.
       - name: Unit-test the skill-root materializer's write set
         run: |
           set -euo pipefail
           dotnet build src/FS.GG.Contracts/FS.GG.Contracts.fsproj -c Release --no-restore
+          dotnet restore .config/kit/FS.GG.Kit.receiver.proj
           bash scripts/tests/materialize-skill-roots.test.sh
 
       # The bulk of the suite (Artifacts / Commands / Validation / Contracts / Cli, plus the

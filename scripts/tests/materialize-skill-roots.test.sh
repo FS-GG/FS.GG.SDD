@@ -342,32 +342,48 @@ expect_out "the refusal says the evaluation, not the retirement, was empty" "eva
 # THIS repo says what #767 measured. It is the only leg that touches the real FS.GG.Kit pin, and it
 # goes red if a future kit changes the disposition of `.codex/skills` — which is the correct signal,
 # because the driver's premise would have changed.
+#
+# AN UNEVALUATED DECLARATION FAILS THIS LEG; IT DOES NOT SATISFY IT. Measured in CI on the first run
+# of this test: the evaluation came back with every property empty, and the SECOND assertion below
+# passed on that emptiness — `.codex/skills` really is absent from `""`. That is the same fail-open
+# the driver refuses two files over, reproduced inside its own test: a check whose subject failed to
+# load, reporting the answer it wanted. So the evaluation is now validated FIRST, loudly, with the
+# MSBuild output attached, and both assertions are skipped rather than answered when it is unusable.
 printf '\nF. the pinned FS.GG.Kit declaration in this repo\n'
 
-if props="$(cd "$repo" && dotnet build .config/kit/FS.GG.Kit.receiver.proj --no-restore \
-  -getProperty:FsggKitSkillRoots -getProperty:FsggKitRetiredSkillRoots -getProperty:FsggKitViewSkillRoots 2>&1)" &&
-  printf '%s' "$props" | grep -q '"FsggKitSkillRoots": ".'; then
-  :
-else
-  props="$(cd "$repo" && dotnet restore .config/kit/FS.GG.Kit.receiver.proj >/dev/null 2>&1 &&
-    dotnet build .config/kit/FS.GG.Kit.receiver.proj --no-restore \
-      -getProperty:FsggKitSkillRoots -getProperty:FsggKitRetiredSkillRoots -getProperty:FsggKitViewSkillRoots 2>&1)"
+eval_kit() { (cd "$repo" && dotnet build .config/kit/FS.GG.Kit.receiver.proj --no-restore \
+  -getProperty:FsggKitSkillRoots -getProperty:FsggKitRetiredSkillRoots -getProperty:FsggKitViewSkillRoots 2>&1); }
+
+props="$(eval_kit)"
+if ! printf '%s' "$props" | grep -q '"FsggKitSkillRoots": ".'; then
+  restore_out="$(cd "$repo" && dotnet restore .config/kit/FS.GG.Kit.receiver.proj 2>&1)"
+  restore_rc=$?
+  props="$(eval_kit)"
 fi
 
 kit_retired="$(printf '%s' "$props" | sed -n 's/.*"FsggKitRetiredSkillRoots": "\(.*\)".*/\1/p')"
 kit_runtime="$(printf '%s' "$props" | sed -n 's/.*"FsggKitSkillRoots": "\(.*\)".*/\1/p')"
 kit_views="$(printf '%s' "$props" | sed -n 's/.*"FsggKitViewSkillRoots": "\(.*\)".*/\1/p')"
 
-if printf '%s' "$kit_retired" | tr ';' '\n' | grep -qx '\.codex/skills'; then
-  ok ".codex/skills is declared RETIRED by the pinned kit (FsggKitRetiredSkillRoots=$kit_retired)"
+if [ -z "$kit_runtime" ]; then
+  bad "the pinned kit declaration did not EVALUATE (FsggKitSkillRoots is empty) — this leg has no subject, it is not passing"
+  printf '     restore (rc=%s):\n' "${restore_rc:-not-attempted}"
+  printf '%s\n' "${restore_out:-<not attempted: the first evaluation returned a non-empty document>}" | sed 's/^/       | /'
+  printf '     evaluation:\n'
+  printf '%s\n' "$props" | sed 's/^/       | /'
+  printf '     Repair: dotnet restore .config/kit/FS.GG.Kit.receiver.proj\n'
 else
-  bad ".codex/skills is not in FsggKitRetiredSkillRoots ('$kit_retired') — #767's premise no longer holds"
-fi
+  if printf '%s' "$kit_retired" | tr ';' '\n' | grep -qx '\.codex/skills'; then
+    ok ".codex/skills is declared RETIRED by the pinned kit (FsggKitRetiredSkillRoots=$kit_retired)"
+  else
+    bad ".codex/skills is not in FsggKitRetiredSkillRoots ('$kit_retired') — #767's premise no longer holds"
+  fi
 
-if printf '%s;%s' "$kit_runtime" "$kit_views" | tr ';' '\n' | grep -qx '\.codex/skills'; then
-  bad ".codex/skills is ALSO declared as a runtime root ('$kit_runtime' / '$kit_views')"
-else
-  ok ".codex/skills is in no runtime root set (materialize='$kit_runtime' view='$kit_views')"
+  if printf '%s;%s' "$kit_runtime" "$kit_views" | tr ';' '\n' | grep -qx '\.codex/skills'; then
+    bad ".codex/skills is ALSO declared as a runtime root ('$kit_runtime' / '$kit_views')"
+  else
+    ok ".codex/skills is in no runtime root set (materialize='$kit_runtime' view='$kit_views')"
+  fi
 fi
 
 if [ "$fail" -ne 0 ]; then
