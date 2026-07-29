@@ -41,6 +41,15 @@ provider-declared `minimumFsggSdd` — live wins — and the workspace's own `sd
   an `unlistableDirectory` warning naming it and the reason, and enters the same unreadable-subject
   set: `doctor` exits `0`, `isCoherent` is **false**, and a partial listing is never reported as a
   complete one.
+- **Decode axis** — a file that exists and OPENS but whose bytes are not a decodable body
+  (FS-GG/FS.GG.SDD#748). It joins the read axis in every respect that matters to a verdict — never
+  *missing*, never *drifted*, `doctor` exits `0`, `isCoherent` is **false** — and is kept apart in
+  the one respect that matters to a person: it gets its own `undecodableFile` warning, naming the
+  file and the byte offset at which the first invalid sequence begins, rather than `unreadableFile`
+  and its `chmod +r`. The permission remedy is one an operator can carry out in full against a
+  mis-encoded file and change nothing. Before this, the seam read such a file with
+  `File.ReadAllText`, which substitutes `U+FFFD` and returns a string: the body was hashed and
+  compared like any other, and two files whose invalid bytes substituted alike shared one digest.
 - **Preview** — a dry-run of what `upgrade` would change across the three steps, applying
   none of it.
 
@@ -136,7 +145,8 @@ Exit `2` means **the tool itself failed** and nothing else. An unreadable file i
 is an environment fault the operator can fix, so it never reaches this class
 (FS-GG/FS.GG.SDD#745 AC5) — before that fix, `upgrade --yes` and `charter` over a mode-000
 target both exited 2, reporting `toolDefect` beside warnings whose correction read *"Nothing
-about the tool is broken."*
+about the tool is broken."* A file whose bytes do not decode is the same kind of fault — an
+authoring accident, not a broken tool — and is held to the same rule (FS-GG/FS.GG.SDD#748).
 
 | Situation | `doctor` | `upgrade` |
 |---|---|---|
@@ -144,6 +154,7 @@ about the tool is broken."*
 | Drift reported / steps applied / step declined (residual) | 0 | 0 |
 | A subject exists but could not be read (`unreadableFile`) | 0, `isCoherent: false` | 0 |
 | A directory beneath an enumerated root could not be listed (`unlistableDirectory`) | 0, `isCoherent: false` | 0 |
+| A subject exists but its bytes do not decode (`undecodableFile`) | 0, `isCoherent: false` | 0 |
 | A write refused because its target could not be read (`unreadableWriteTarget`) | n/a | 1 |
 | Non-interactive without `--yes` | n/a | 1 |
 | A confirmed step failed to apply (for any other reason) | n/a | 2 |

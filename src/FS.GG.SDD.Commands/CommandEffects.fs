@@ -68,7 +68,61 @@ module CommandEffects =
             with _ ->
                 ()
 
-    /// The file read, as the three states the core actually has (FS.GG.SDD#745, decision #754).
+    /// Why a file read did not yield a body — the file edge's states, before they are projected
+    /// onto `ReadResult`. Local to this module, and deliberately NOT a fifth `ReadResult` case.
+    ///
+    /// Every verdict fold's correct decision about a body that does not DECODE is the one it
+    /// already makes about a body it could not READ: do not compare it, do not call it drift, do
+    /// not call it missing, do not count it checked, and do not report coherent over it.
+    /// FS.GG.SDD#748 says so in as many words — *"It is the same representation gap; a non-UTF-8
+    /// body is just a second cause that needs it."* A fifth case would oblige every fold over
+    /// `ReadResult` to spell an arm byte-identical to its `Unreadable` one, and each of those is a
+    /// fresh opportunity to spell it differently; the DU's job is to make a fold DECIDE, not to
+    /// make it decide the same thing twice.
+    ///
+    /// What genuinely differs is the operator's repair, so the distinction is kept exactly where it
+    /// changes behaviour and nowhere else: the diagnostic `interpret` emits.
+    type private FileRead =
+        /// The path does not exist.
+        | Missing
+        /// The bytes were read AND decoded.
+        | Body of FileSnapshot
+        /// The open or the read threw: permissions, an IO fault, a device error.
+        | IoRefusal of reason: string
+        /// The bytes were obtained and are not a decodable body, carrying the offset of the first
+        /// invalid sequence (FS.GG.SDD#737's `SkillMirror.decodeBody`).
+        | DecodeRefusal of byteOffset: int
+
+    /// The `Unreadable` reason for a body that does not decode. ONE spelling, shared by the
+    /// `ReadResult` a fold sees and the diagnostic an operator reads, so the two can never drift
+    /// apart into two different accounts of one file.
+    let private undecodableReason (byteOffset: int) =
+        $"the bytes are not a decodable body — the first invalid sequence begins at byte offset {byteOffset}"
+
+    /// The file read, in the states the edge can actually distinguish.
+    ///
+    /// FS.GG.SDD#748: the bytes are read RAW and decoded through `SkillMirror.decodeBody`, not
+    /// `File.ReadAllText`. Those differ in exactly one case and it is the case that matters —
+    /// `File.ReadAllText` SUBSTITUTES `U+FFFD` for a sequence it cannot decode and returns a string,
+    /// so an undecodable file used to read as a perfectly ordinary body, get hashed, and compare
+    /// equal to every other file whose invalid bytes substituted the same way. `decodeBody` is
+    /// character-for-character `File.ReadAllText` for every body that DOES decode — BOM detection
+    /// and preamble stripping included — so no digest anywhere changes and no manifest migrates;
+    /// only the mangling case is refused.
+    let private readFile (projectRoot: string) (path: string) : FileRead =
+        let absolute = fullPath projectRoot path
+
+        if not (File.Exists absolute) then
+            Missing
+        else
+            try
+                match Fsgg.SkillMirror.decodeBody (File.ReadAllBytes absolute) with
+                | Ok text -> Body({ Path = path; Text = text }: FileSnapshot)
+                | Error(Fsgg.SkillMirror.NotDecodable byteOffset) -> DecodeRefusal byteOffset
+            with ex ->
+                IoRefusal ex.Message
+
+    /// The file read, as the states the core actually has (FS.GG.SDD#745, decision #754).
     ///
     /// The whole point is the third arm. `File.Exists` answers from `stat`, which succeeds on a
     /// mode-000 file, so *exists* and *readable* are genuinely different questions — and before
@@ -79,26 +133,24 @@ module CommandEffects =
     ///
     /// `Unreadable` carries the reason verbatim from the exception rather than a rephrasing: the
     /// operator needs to know whether this was a mode bit, a dangling symlink, or a device error,
-    /// and the tool cannot classify that better than the OS already did.
+    /// and the tool cannot classify that better than the OS already did. FS.GG.SDD#748's arm is the
+    /// one exception, and it is not a rephrasing either: nothing threw, so there is no OS message
+    /// to carry, and `undecodableReason` states the fact the decoder established instead.
     ///
-    /// Catching broadly is deliberate and is the fail-CLOSED direction: every escape from
-    /// `ReadAllText` on a path `File.Exists` just affirmed is, by construction, "it is there and I
-    /// could not read it". A narrower filter would let some IO faults keep escaping to the outer
-    /// handler — i.e. keep the exit-2 bug for a subset — which is the failure this replaces.
+    /// Catching broadly is deliberate and is the fail-CLOSED direction: every escape from the read
+    /// on a path `File.Exists` just affirmed is, by construction, "it is there and I could not read
+    /// it". A narrower filter would let some IO faults keep escaping to the outer handler — i.e.
+    /// keep the exit-2 bug for a subset — which is the failure this replaces.
     let tryRead (projectRoot: string) (path: string) : ReadResult =
-        let absolute = fullPath projectRoot path
-
-        if not (File.Exists absolute) then
-            Absent
-        else
-            try
-                Bytes(
-                    { Path = path
-                      Text = File.ReadAllText absolute }
-                    : FileSnapshot
-                )
-            with ex ->
-                Unreadable(path, ex.Message)
+        match readFile projectRoot path with
+        | Missing -> Absent
+        | Body snapshot -> Bytes snapshot
+        | IoRefusal reason -> Unreadable(path, reason)
+        // #748: an undecodable body rides the state #745 built, because every fold's decision about
+        // it is already the right one. It is `Unreadable` and never `Absent` — routing it through
+        // the only other channel the read edge has would convert a refusal into a PASS, which is
+        // the entire failure #748 was filed to prevent.
+        | DecodeRefusal byteOffset -> Unreadable(path, undecodableReason byteOffset)
 
     /// `tryRead` projected to the bytes. Retained verbatim for the callers that only ever wanted
     /// the body; it cannot express the third state, so it may never decide a coherence verdict.
@@ -654,22 +706,37 @@ module CommandEffects =
             // and it is the verdict FOLD downstream that must refuse to be coherent over a subject
             // it did not read. Putting the block here instead would make one unreadable file fatal
             // to `doctor`, which is documented read-only and exit 0 (#754 rejected that).
+            // Matched on `readFile`, not `tryRead`, and that is the whole of FS.GG.SDD#748's
+            // caller half. Both refusals are the same `ReadResult` — `Unreadable` — because every
+            // fold downstream must treat them identically; they are two different DIAGNOSTICS
+            // because the operator must not. This is the one place in the program that can tell
+            // them apart, and it is the one place the difference does any good.
             | ReadFile path ->
-                match tryRead projectRoot path with
-                | Bytes snapshot -> success effect (Bytes snapshot)
-                | Absent -> success effect Absent
-                | Unreadable(unreadablePath, reason) ->
+                match readFile projectRoot path with
+                | Body snapshot -> success effect (Bytes snapshot)
+                | Missing -> success effect Absent
+                | IoRefusal reason ->
                     { Effect = effect
                       Succeeded = true
-                      Read = Unreadable(unreadablePath, reason)
+                      Read = Unreadable(path, reason)
                       Snapshot = None
                       Process = None
                       Confirmed = None
-                      Diagnostic = Some(Diagnostics.unreadableFile unreadablePath reason) }
-                // Unreachable — `tryRead` reads ONE file and a file has no partial state. Stated,
-                // not defaulted: the compiler is the mechanism that makes every fold decide, and a
-                // wildcard here would be the omission #754 built the DU to prevent.
-                | Truncated(snapshot, _) -> success effect (Bytes snapshot)
+                      Diagnostic = Some(Diagnostics.unreadableFile path reason) }
+                | DecodeRefusal byteOffset ->
+                    // #737 AC2, finally satisfiable: the library named the byte offset because that
+                    // is all it can see, and NAMING THE FILE is the caller's half. `Succeeded` is
+                    // true and this is not a tool defect for the same reason the arm above is
+                    // neither — a mis-encoded file in the workspace is an authoring accident, and
+                    // the block is the verdict fold's to apply (`unreadableSubject`), not the
+                    // edge's.
+                    { Effect = effect
+                      Succeeded = true
+                      Read = Unreadable(path, undecodableReason byteOffset)
+                      Snapshot = None
+                      Process = None
+                      Confirmed = None
+                      Diagnostic = Some(Diagnostics.undecodableFile path byteOffset) }
             | EnumerateDirectory path ->
                 match tryEnumerate projectRoot path with
                 | Bytes snapshot -> success effect (Bytes snapshot)
@@ -719,6 +786,14 @@ module CommandEffects =
                 // mode-000 target both accused the TOOL of being broken over a mode bit, while
                 // emitting three `toolDefect`s beside warnings whose correction read "Nothing about
                 // the tool is broken." Now it blocks at exit 1 with a diagnostic naming the file.
+                //
+                // FS.GG.SDD#748 reaches here through `tryRead` and needs no arm of its own, because
+                // the question this edge asks is answered the same way: `canOverwrite` compares the
+                // destination's CURRENT TEXT to the text being written, and a body that does not
+                // decode has no current text to compare — only `File.ReadAllText`'s substitution,
+                // which would make an unequal file compare equal. The refusal carries
+                // `undecodableReason`, so `unreadableWriteTarget` names the byte offset rather than
+                // an OS error, and the operator is told to re-encode rather than to `chmod`.
                 match tryRead projectRoot path with
                 | Unreadable(unreadablePath, reason) ->
                     failure

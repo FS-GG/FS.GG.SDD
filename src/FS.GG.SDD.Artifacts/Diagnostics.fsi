@@ -182,6 +182,17 @@ module Diagnostics =
     /// `doctor` (documented read-only, exit 0). The block belongs to `unreadableSubject`.
     val unreadableFile: path: string -> reason: string -> Diagnostic
 
+    /// FS.GG.SDD#748 (ADR-0014 §Decision 3 clause (c)): a file that exists and OPENS could not be
+    /// DECODED — its bytes are not a valid body in any encoding the read seam selects. `byteOffset`
+    /// is where the first invalid sequence begins, preamble included, as
+    /// `SkillMirror.BodyRefusalReason.NotDecodable` reports it. This is the caller's half of
+    /// FS.GG.SDD#737: the library refuses the bytes and names the offset, and only a caller can name
+    /// the FILE. `DiagnosticWarning` and never a tool defect, with the block belonging to
+    /// `unreadableSubject` — the same polarity as `unreadableFile`. Distinct from it because the
+    /// repair is disjoint: `chmod +r` can be carried out in full against a file whose real problem
+    /// is its encoding, leaving the operator looking at an unchanged failure.
+    val undecodableFile: path: string -> byteOffset: int -> Diagnostic
+
     /// FS.GG.SDD#743: a directory tree was listed and the listing is INCOMPLETE — one or more
     /// directories beneath `root` could not be opened, so what lies under them was never observed.
     /// `entries` is `(path, reason)` per skipped directory and becomes the sorted `RelatedIds`.

@@ -975,6 +975,70 @@ module SurfaceCommandTests =
                     fun d -> d.Id = "unreadableSubject" && List.contains "src/Foo/Sig1.fsi" d.RelatedIds
                 ))
 
+    /// FS.GG.SDD#748 AC2, `surface --check`'s half — the same table, one row deeper.
+    ///
+    /// This is the sharper of the two lanes for #748, because `surface --check` is a REQUIRED gate
+    /// and its comparison is a byte comparison. Before the seam changed, an undecodable source was
+    /// read as `"…�…"` and compared against its baseline: it did not block, it reported
+    /// ordinary DRIFT, and `--update` would then have written the substituted text into the
+    /// baseline — laundering `U+FFFD` into the committed API surface. The row this pins is that a
+    /// body the tool never decoded blocks the verdict instead, and is reported as neither drift nor
+    /// missing.
+    ///
+    /// No Unix guard, unlike the #745 legs above: bytes are bytes on every platform.
+    [<Fact>]
+    let ``FS.GG.SDD#748: an undecodable source cannot report coherent, and is neither drift nor missing`` () =
+        let root = sixPairFixture ()
+
+        // Control: readable and coherent, so the assertions below cannot pass by blanket refusal.
+        let clean = surfaceReport false root
+        Assert.True (summaryOf clean).IsCoherent
+        Assert.Equal(6, (summaryOf clean).CheckedCount)
+        Assert.Equal(0, exitCodeForReport clean)
+
+        // `abc` + a lone continuation byte — invalid UTF-8 from byte 3.
+        File.WriteAllBytes(
+            Path.Combine(root, "src/Foo/Sig1.fsi".Replace('/', Path.DirectorySeparatorChar)),
+            [| 0x61uy; 0x62uy; 0x63uy; 0x80uy; 0x64uy |]
+        )
+
+        let report = surfaceReport false root
+        let summary = summaryOf report
+
+        // The assertion the row exists for.
+        Assert.False summary.IsCoherent
+
+        // CHECKED means DECODED: five read, one refused.
+        Assert.Equal(5, summary.CheckedCount)
+
+        // Never reported through the drift channel (AC3). Before #748 this said
+        // `[ "src/Foo/Sig1.fsi" ]` — a real-looking drift over bytes nothing understood.
+        Assert.Empty summary.DriftedSourcePaths
+        Assert.DoesNotContain("surface.drift", diagnosticIds report)
+
+        // …nor as missing: the file is right there.
+        Assert.Empty summary.MissingBaselinePaths
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Equal(1, exitCodeForReport report)
+
+        // Exit 1, never 2: a mis-encoded file in the workspace is not a broken tool.
+        Assert.DoesNotContain(report.Diagnostics, fun d -> d.IsToolDefect)
+
+        // Its own diagnostic, plus the fold's block, both naming the file.
+        Assert.Contains("undecodableFile", diagnosticIds report)
+        Assert.Contains("unreadableSubject", diagnosticIds report)
+
+        Assert.Contains(
+            report.Diagnostics,
+            fun d -> d.Id = "undecodableFile" && List.contains "src/Foo/Sig1.fsi" d.RelatedIds
+        )
+
+        Assert.Contains(
+            report.Diagnostics,
+            fun d -> d.Id = "unreadableSubject" && List.contains "src/Foo/Sig1.fsi" d.RelatedIds
+        )
+
     /// The mirror-image half. An unreadable BASELINE blinds the comparison exactly as an
     /// unreadable source does — one side always compares equal — and it must not be reported as a
     /// baseline that does not exist (#745 AC4), which would point `--update` at creating a file

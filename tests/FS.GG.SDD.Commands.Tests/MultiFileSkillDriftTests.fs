@@ -1352,6 +1352,55 @@ module MultiFileSkillDriftTests =
             finally
                 File.SetUnixFileMode(targetAbsolute, enum<UnixFileMode> 0o644)
 
+    /// FS.GG.SDD#748 AC2, `doctor`'s half — proven at the LANE, not at the diagnostic.
+    ///
+    /// The pre-#748 seam read this body with `File.ReadAllText`, so the run got a string, hashed
+    /// it, and compared it. The copy therefore looked like ordinary CONTENT DRIFT — a finding, but
+    /// the wrong one, pointing at `upgrade` to overwrite a file whose bytes were never understood.
+    /// A second undecodable copy whose invalid bytes substituted the same way would have compared
+    /// EQUAL to this one and reported coherent.
+    ///
+    /// No Unix guard: the subject is the bytes, which are the same everywhere.
+    [<Fact>]
+    let ``FS.GG.SDD#748: an undecodable skill copy makes doctor incoherent, at exit 0, and is neither drift nor missing``
+        ()
+        =
+        let fixtureRoot = productCoherentFixture ()
+
+        // The control leg. Without it, a green "incoherent" below would prove nothing.
+        Assert.True((doctorSummary (doctorReport fixtureRoot)).IsCoherent)
+
+        let target = skillMd ".claude" productSkillId
+
+        // `abc` + a lone continuation byte: invalid UTF-8 from byte 3.
+        File.WriteAllBytes(absolute fixtureRoot target, [| 0x61uy; 0x62uy; 0x63uy; 0x80uy; 0x64uy |])
+
+        let report = doctorReport fixtureRoot
+        let summary = doctorSummary report
+
+        // The verdict may not be coherent over a body the run never decoded.
+        Assert.False summary.IsCoherent
+
+        // Still exit 0 and still read-only: #754 rejected making one such file fatal to a lane
+        // documented read-only, and #748 does not reopen that.
+        Assert.Equal(0, RemediationSupport.exitCode report)
+
+        // Not "missing" — the file is right there, and re-seeding it is not the repair.
+        Assert.DoesNotContain(target, summary.MissingArtifactPaths)
+
+        // Its OWN diagnostic, naming the file, and never a tool defect.
+        Assert.Contains(report.Diagnostics, fun d -> d.Id = "undecodableFile" && List.contains target d.RelatedIds)
+
+        Assert.DoesNotContain(report.Diagnostics, fun d -> d.IsToolDefect)
+
+        // And distinguishable from the permissions refusal, whose remedy would be wrong here.
+        Assert.DoesNotContain(report.Diagnostics, fun d -> d.Id = "unreadableFile")
+
+        // Visible in the projection an operator actually reads.
+        let text = FS.GG.SDD.Commands.CommandRendering.renderText report
+        Assert.Contains("undecodableFile:", text)
+        Assert.Contains(target, text)
+
     /// The load-bearing doctor leg, and the one the skill case above cannot stand in for.
     ///
     /// A skill copy that cannot be read at least still trips the CONTENT fold (its body drops out
