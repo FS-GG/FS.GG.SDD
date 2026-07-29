@@ -336,7 +336,9 @@ module CommandEffectsTests =
         match result.Read with
         | Unreadable(path, reason) ->
             Assert.Equal(relative, path)
-            Assert.Contains("3", reason)
+            // "offset 3", not "3": a bare substring passes for offset 13, 30, 300 — i.e. for a
+            // decoder that named the WRONG byte, which is the only thing this assertion is for.
+            Assert.Contains("byte offset 3", reason)
         | other -> failwith $"expected Unreadable for an undecodable body, got {other}"
 
         // No bytes reach any fold. The old seam handed one over, `U+FFFD` and all.
@@ -354,7 +356,7 @@ module CommandEffectsTests =
             Assert.Contains(relative, diagnostic.RelatedIds)
             Assert.Contains(relative, diagnostic.Message)
             // …and the byte offset the library DID name.
-            Assert.Contains("3", diagnostic.Message)
+            Assert.Contains("byte offset 3", diagnostic.Message)
         | None -> failwith "expected an undecodableFile diagnostic"
 
     /// The pair that must stay exactly this far apart: ONE read state, TWO diagnostics.
@@ -389,6 +391,43 @@ module CommandEffectsTests =
                 Assert.Equal<string option>(Some "unreadableFile", idOf unreadable)
             finally
                 File.SetUnixFileMode(absolute root, enum<UnixFileMode> 0o644)
+
+    /// The WRITE edge's half, and the leg whose absence hid a real defect through one review round.
+    ///
+    /// `canOverwrite` decides whether the tool may replace a file FROM THAT FILE'S CURRENT BYTES, so
+    /// an undecodable destination makes the safety question undecidable and the write is refused.
+    /// That much this shared with `unreadableWriteTarget` from the start. What it did NOT share, and
+    /// what nothing asserted, is the REMEDY: the first cut routed this through `tryRead`, so the
+    /// operator got `unreadableWriteTarget`'s hardcoded `chmod +r` for a file whose mode was already
+    /// `0644` — a complete instruction that changes nothing, which is the exact failure #748 exists
+    /// to stop, reappearing at the other edge.
+    [<Fact>]
+    let ``FS.GG.SDD#748: a write over an undecodable destination is refused, and names the right repair`` () =
+        let root = TestSupport.tempDirectory ()
+        seedBytes root undecodableBytes
+
+        let result =
+            interpret root (WriteFile(relative, "replacement", HybridArtifact MergePolicies.specification))
+
+        Assert.False result.Succeeded
+
+        // The prior bytes are untouched — a refused write writes nothing.
+        Assert.Equal<byte array>(undecodableBytes, File.ReadAllBytes(absolute root))
+        Assert.Empty(residue root)
+
+        match result.Diagnostic with
+        | Some diagnostic ->
+            Assert.Equal("undecodableWriteTarget", diagnostic.Id)
+            // Exit 1, not 2: a mis-encoded file is an authoring accident, not a broken tool.
+            Assert.False diagnostic.IsToolDefect
+            Assert.Contains(relative, diagnostic.RelatedIds)
+            Assert.Contains("byte offset 3", diagnostic.Message)
+
+            // The assertion this leg exists for: the remedy must be re-encoding, and must NOT be
+            // the permission repair that cannot fix an encoding.
+            Assert.Contains("Re-encode", diagnostic.Correction)
+            Assert.DoesNotContain("chmod", diagnostic.Correction)
+        | None -> failwith "expected an undecodableWriteTarget diagnostic"
 
     /// AC4's second leg, and AC5. This one must stay green UNTOUCHED: `decodeBody` is
     /// `File.ReadAllText` for every body that decodes, so swapping the seam moves NO digest and

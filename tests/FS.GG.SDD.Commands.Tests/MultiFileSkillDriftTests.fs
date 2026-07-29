@@ -1354,15 +1354,24 @@ module MultiFileSkillDriftTests =
 
     /// FS.GG.SDD#748 AC2, `doctor`'s half — proven at the LANE, not at the diagnostic.
     ///
-    /// The pre-#748 seam read this body with `File.ReadAllText`, so the run got a string, hashed
-    /// it, and compared it. The copy therefore looked like ordinary CONTENT DRIFT — a finding, but
-    /// the wrong one, pointing at `upgrade` to overwrite a file whose bytes were never understood.
-    /// A second undecodable copy whose invalid bytes substituted the same way would have compared
-    /// EQUAL to this one and reported coherent.
+    /// The pre-#748 seam read this body with `File.ReadAllText`, so the run got a string, hashed it,
+    /// and compared it. A second undecodable copy whose invalid bytes substituted the same way would
+    /// have compared EQUAL to this one and reported coherent.
+    ///
+    /// WHAT THIS DOES NOT ASSERT, deliberately: that the copy is not ALSO reported as skill drift.
+    /// It still is. That is the residual `HandlersDoctor` documents at its head and
+    /// FS.GG.SDD#760 owns — `SkillMirror.verifyFiles` builds its per-file union from the rows it
+    /// OBSERVED, and a body that was never decoded contributes none, so the copy is additionally
+    /// classified *not mirrored*. #748 does not close it and must not claim to: by then the verdict
+    /// is already non-coherent and the path is already named by `undecodableFile`, so the cost is a
+    /// misleading remedy hint rather than a wrong pass. The `surface --check` leg in
+    /// `SurfaceCommandTests` DOES assert the not-drift half, because that lane's fold genuinely
+    /// separates the two — which is why the pair is asserted asymmetrically rather than by copying
+    /// one leg's assertions onto the other lane and calling it proven.
     ///
     /// No Unix guard: the subject is the bytes, which are the same everywhere.
     [<Fact>]
-    let ``FS.GG.SDD#748: an undecodable skill copy makes doctor incoherent, at exit 0, and is neither drift nor missing``
+    let ``FS.GG.SDD#748: an undecodable skill copy makes doctor incoherent, at exit 0, and is never reported missing``
         ()
         =
         let fixtureRoot = productCoherentFixture ()

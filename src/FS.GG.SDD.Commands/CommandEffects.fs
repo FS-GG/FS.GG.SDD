@@ -787,21 +787,39 @@ module CommandEffects =
                 // emitting three `toolDefect`s beside warnings whose correction read "Nothing about
                 // the tool is broken." Now it blocks at exit 1 with a diagnostic naming the file.
                 //
-                // FS.GG.SDD#748 reaches here through `tryRead` and needs no arm of its own, because
-                // the question this edge asks is answered the same way: `canOverwrite` compares the
+                // FS.GG.SDD#748 refuses here for the same reason and needs its OWN arm, which is not
+                // the same statement. The refusal is identical — `canOverwrite` compares the
                 // destination's CURRENT TEXT to the text being written, and a body that does not
-                // decode has no current text to compare — only `File.ReadAllText`'s substitution,
-                // which would make an unequal file compare equal. The refusal carries
-                // `undecodableReason`, so `unreadableWriteTarget` names the byte offset rather than
-                // an OS error, and the operator is told to re-encode rather than to `chmod`.
-                match tryRead projectRoot path with
-                | Unreadable(unreadablePath, reason) ->
+                // decode has no current text, only a substitution that would make a file that
+                // DIFFERS compare equal — but the REMEDY is not, and this is the edge where getting
+                // the remedy wrong costs the most. The operator is being told the tool will not
+                // overwrite their file; `chmod +r` against a `0644` file is an instruction they can
+                // carry out completely, after which the run refuses in exactly the same way.
+                //
+                // So this arm matches `readFile` rather than `tryRead`: `tryRead` has already
+                // collapsed both causes into one `Unreadable`, which is right for every FOLD and
+                // wrong for the only two callers that choose a diagnostic.
+                match readFile projectRoot path with
+                | IoRefusal reason ->
+                    failure effect (Unreadable(path, reason)) (Diagnostics.unreadableWriteTarget path reason)
+                | DecodeRefusal byteOffset ->
                     failure
                         effect
-                        (Unreadable(unreadablePath, reason))
-                        (Diagnostics.unreadableWriteTarget unreadablePath reason)
-                | existingRead ->
-                    let existing = snapshotOf existingRead
+                        (Unreadable(path, undecodableReason byteOffset))
+                        (Diagnostics.undecodableWriteTarget path byteOffset)
+                | fileRead ->
+                    let existing =
+                        match fileRead with
+                        | Body snapshot -> Some snapshot
+                        | Missing
+                        // Unreachable: both refusals are matched above.
+                        | IoRefusal _
+                        | DecodeRefusal _ -> None
+
+                    let existingRead =
+                        match existing with
+                        | Some snapshot -> Bytes snapshot
+                        | None -> Absent
 
                     // The bytes are already on disk. Skip the commit entirely rather than re-committing
                     // identical content: `writeFileAtomic` renames a fresh inode over the destination, so a

@@ -862,6 +862,27 @@ module Diagnostics =
             $"Restore read access to `{path}` (e.g. `chmod +r`) and re-run. The tool never replaces bytes it could not read."
             [ path ]
 
+    /// The `undecodableFile` sibling of `unreadableWriteTarget` (FS.GG.SDD#748): a write was refused
+    /// because its DESTINATION exists and its bytes do not DECODE, so `canOverwrite` — which decides
+    /// from the destination's current text — has no current text to decide from.
+    ///
+    /// Separate from `unreadableWriteTarget` for the reason `undecodableFile` is separate from
+    /// `unreadableFile`, and the write edge is where getting it wrong costs the most: the operator is
+    /// being told the tool will not overwrite their file, so the one thing the message must get right
+    /// is what to do about it. `chmod +r` against a file whose mode is already `0644` is a complete
+    /// instruction that changes nothing, and the run refuses identically on the next attempt.
+    ///
+    /// `DiagnosticError` (exit 1), never a tool defect — the same class as its sibling.
+    let undecodableWriteTarget (path: string) (byteOffset: int) =
+        create
+            "undecodableWriteTarget"
+            DiagnosticError
+            None
+            None
+            $"Refusing to write `{path}`: it exists and its bytes are not a decodable body (first invalid sequence at byte offset {byteOffset}), so whether replacing it is safe cannot be decided."
+            $"Re-encode `{path}` as UTF-8 (or a well-formed UTF-16/UTF-32 with its BOM) and re-run. The tool never replaces bytes it could not decode — comparing against a decoder's `U+FFFD` substitution would make a file that differs look unchanged."
+            [ path ]
+
     // Feature 086: a committed `.fsi` surface baseline is missing or has drifted from its authored
     // source signature. A `DiagnosticError` so `fsgg-sdd surface --check` exits 1 and fails CI;
     // `--update` never emits it (it reconciles instead). RelatedIds carry the offending paths.

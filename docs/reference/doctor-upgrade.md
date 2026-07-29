@@ -138,6 +138,15 @@ stage) ever self-updates or re-seeds as a side effect.
   bytes are untouched. This is exit **1**, not 2: a mode bit in the workspace is not a broken
   tool. Every authoring lane that writes a path it also reads (`charter` re-run over a mode-000
   `charter.md`, and the rest) behaves the same way.
+- **Never writes over a file it could not DECODE** (FS-GG/FS.GG.SDD#748) — the same rule, one cause
+  further on, and the same exit **1**. `canOverwrite` compares the destination's current text to the
+  text being written, and a body whose bytes do not decode has no current text: only a substitution
+  that would make a file that genuinely DIFFERS compare equal. The refusal is
+  `undecodableWriteTarget`, naming the path and the byte offset, and it is a separate id from its
+  sibling above precisely because this is the edge where a wrong remedy costs most — the operator is
+  being told their file will not be overwritten, and `chmod +r` against an already-readable file is
+  an instruction they can carry out in full before the run refuses identically. Note the consequence:
+  `upgrade` will not re-seed over a mis-encoded artifact. Re-encode it, then re-run.
 
 ## Exit codes
 
@@ -156,5 +165,6 @@ authoring accident, not a broken tool — and is held to the same rule (FS-GG/FS
 | A directory beneath an enumerated root could not be listed (`unlistableDirectory`) | 0, `isCoherent: false` | 0 |
 | A subject exists but its bytes do not decode (`undecodableFile`) | 0, `isCoherent: false` | 0 |
 | A write refused because its target could not be read (`unreadableWriteTarget`) | n/a | 1 |
+| A write refused because its target's bytes do not decode (`undecodableWriteTarget`) | n/a | 1 |
 | Non-interactive without `--yes` | n/a | 1 |
 | A confirmed step failed to apply (for any other reason) | n/a | 2 |

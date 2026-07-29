@@ -214,6 +214,13 @@ module Diagnostics =
     /// this arm threw into the interpreter's outer handler and surfaced as `toolDefect` at exit 2.
     val unreadableWriteTarget: path: string -> reason: string -> Diagnostic
 
+    /// FS.GG.SDD#748: the `undecodableFile` sibling of `unreadableWriteTarget` — a write refused
+    /// because its DESTINATION exists and its bytes do not decode, so `canOverwrite` has no current
+    /// text to decide from. `DiagnosticError` (exit 1), never a tool defect. Separate from its
+    /// sibling because the write edge is where a wrong remedy costs most: the operator is being told
+    /// the tool will not overwrite their file, so the message must name the repair that works.
+    val undecodableWriteTarget: path: string -> byteOffset: int -> Diagnostic
+
     /// Feature 086: one or more committed `.fsi` surface baselines are missing or byte-differing
     /// from the authored source signature. `DiagnosticError` — `fsgg-sdd surface --check` exits 1.
     val surfaceDrift: missingCount: int -> driftedCount: int -> paths: string list -> Diagnostic
