@@ -573,8 +573,16 @@ module internal HandlersScaffold =
     // `ProvenancePaths` the row's `sha256` and `scaffold-provenance.json` already draw on — a skill is
     // an ordered set of files (#717) and the materializer knows every one of them — so no new source
     // of truth is introduced and the two documents cannot disagree. The per-file digests are the
-    // provenance digests verbatim: their normalization domain is #752's subject, not this change's,
-    // and re-deriving them here would fork a third domain.
+    // provenance digests verbatim, and re-deriving them here would fork a third domain.
+    //
+    // #752 SETTLED THE DOMAIN THIS INHERITS, and it settled it in this document's favour. Those
+    // provenance digests used to be the driver manifest's TRANSPORT digests — raw file bytes at
+    // schema v2 — while every verifier of THIS document (`SkillMirror.verifyFiles`, and the org's
+    // `skill-union-assert.sh` / `fsgg-skill-registry-check`) computes the canonical CRLF-folded one.
+    // Value-identical on the all-LF content shipped to date, so it never fired, but latently a
+    // document whose own verifiers could not reproduce it. `DriverSkills` now records
+    // `SkillMirror.sha256` of the body it wrote, so what is copied here is already the domain those
+    // verifiers compute.
     //
     // A skill is keyed by its `SKILL.md`, which is why the row is emitted only when one is present —
     // preserving today's behaviour exactly (before this change ONLY `SKILL.md` paths produced a row).
@@ -706,8 +714,10 @@ module internal HandlersScaffold =
                       Owner = ArtifactOwner.Sdd
                       Sha256 = None })
               // 108 / ADR-0054: the `.github`-authored driver skill copies materialized from the
-              // pinned package, owner `Driver`, each carrying the manifest `sha256` it was
-              // content-verified against. Empty on every non-success/terminal path.
+              // pinned package, owner `Driver`, each carrying `SkillMirror.sha256` of the body that
+              // was written — NOT the manifest digest the bytes were content-verified against, which
+              // at schema v2 is a raw-byte transport digest no later read seam can reproduce
+              // (#752). Empty on every non-success/terminal path.
               DriverPaths =
                 driverPaths
                 |> List.map (fun (path, sha256) ->

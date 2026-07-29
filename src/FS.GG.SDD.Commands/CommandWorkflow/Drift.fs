@@ -224,7 +224,8 @@ module internal Drift =
     ///
     /// This is the third skill class, and the only one whose recorded authority covers every file.
     /// `DriverSkills.plan` / `GameSkills.plan` materialize `<root>/skills/<id>/<file>` for every
-    /// root, per file, and record `(path, file.Sha256)` into `DriverPaths` / `GameSkillPaths` — so
+    /// root, per file, and record `(path, SkillMirror.sha256 body)` — the digest of the body they
+    /// WROTE, not the manifest's transport digest (#752) — into `DriverPaths` / `GameSkillPaths`, so
     /// unlike the process class (no digest at all) and the product class (one digest covering
     /// `SKILL.md`, the #727 gap), this class can arbitrate EVERY file against a stable seed-time
     /// digest. Before #733 it asserted none of it: the class was in neither `expectedSkills` arm and

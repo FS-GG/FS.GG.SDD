@@ -1287,11 +1287,13 @@ module MultiFileSkillDriftTests =
     // `doctor`. The provenance here is the one THIS BUILD recorded, not a hand-built record, so it
     // proves the producer and the consumer agree rather than that a test can spell one digest twice.
     //
-    // The shape is not hypothetical — it is any Windows or `core.autocrlf` checkout of an
-    // LF-authored driver file. Before #752 that workspace reported permanent drift on every such
-    // file: `upgrade` never rewrites it (no-clobber, and it is not missing) and a re-scaffold
-    // reproduces it. Now the recorded digest folds `\r\n`, so the workspace is coherent — and a
-    // tampered CRLF file is still not.
+    // CHARACTERIZATION, NOT THE FIX, and worth saying so rather than letting the name imply
+    // otherwise. This case passes on the code before #752 too: `Drift` already compared with
+    // `SkillMirror.sha256`, which folds `\r\n`, so a CRLF checkout of the LF-authored files this
+    // package ships was ALREADY coherent on the doctor lane. The lane that was really broken for
+    // that workspace is `upgrade` — see the backfill case below, which is the discriminating one.
+    // This one exists to pin that the doctor answer does not REGRESS while the domain moves under
+    // it, and that a tampered CRLF file is still caught.
     [<Fact>]
     let ``doctor reports a CRLF owner-sourced file coherent end to end, and a tampered one not`` () =
         match ownerAuxiliaryTarget () with
@@ -1375,6 +1377,55 @@ module MultiFileSkillDriftTests =
 
             // And it converges: a second look is clean.
             Assert.True (doctorSummary (doctorReport fixtureRoot)).IsCoherent
+
+    // FS-GG/FS.GG.SDD#752, and THE case that discriminates the fix on a real workspace.
+    //
+    // `applyStage` re-reads every PRESERVED owner-sourced file a re-seed would attest — the
+    // complementary copies already on disk — and refuses the whole step unless each still matches
+    // its recorded digest, so a backfill can never launder an unverified body into fresh provenance.
+    // That comparison used to be an un-normalized `UTF8.GetBytes file.Text`, i.e. the RAW domain,
+    // against a digest recorded over LF bytes. On any Windows or `core.autocrlf` checkout
+    // `file.Text` carries `\r\n`, so it matched nothing, `preservedFilesVerified` returned false,
+    // and `ArtifactReSeed` resolved `Failed` — `upgrade` refused to restore a deleted driver file
+    // because OTHER files in the same skill had CRLF line endings. `doctor` meanwhile called the
+    // very same tree coherent, because it folds. That disagreement is the whole item.
+    //
+    // Both consumers now compare with `SkillMirror.sha256`, so the step applies.
+    [<Fact>]
+    let ``upgrade --yes backfills an owner-sourced copy whose PRESERVED siblings are CRLF`` () =
+        match ownerAuxiliaryTarget () with
+        | None -> assertNoOwnerSourcedSubject ()
+        | Some(_, id, relativePath) ->
+            let fixtureRoot = productCoherentFixture ()
+            let deleted = Fsgg.SkillMirror.skillFilePath ".codex" id relativePath
+            let deletedAbsolute = absolute fixtureRoot deleted
+
+            // Every OTHER copy of this skill — the preserved set `applyStage` re-verifies —
+            // rewritten with CRLF endings, exactly as a Windows checkout would hand them over.
+            let skillDirectories =
+                allRoots |> List.map (fun root -> absolute fixtureRoot $"{root}/skills/{id}")
+
+            let crlfConverted =
+                [ for directory in skillDirectories do
+                      for file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories) do
+                          if file <> deletedAbsolute then
+                              let lf = File.ReadAllText(file).Replace("\r\n", "\n")
+
+                              if lf.Contains '\n' then
+                                  File.WriteAllText(file, lf.Replace("\n", "\r\n"))
+                                  yield file ]
+
+            // Not vacuous: there really are preserved siblings, and they really did change.
+            Assert.NotEmpty crlfConverted
+            File.Delete deletedAbsolute
+
+            let report = upgradeYes fixtureRoot
+            let summary = report.Upgrade.Value
+
+            Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.AppliedStepIds)
+            Assert.True(TestSupport.existsRelative fixtureRoot deleted)
+            Assert.False summary.ResidualDrift
+            Assert.Equal(0, exitCode report)
 
     // ===================================================================================
     // FS.GG.SDD#745 (decision FS.GG.SDD#754) — `doctor`'s share of the same shape.

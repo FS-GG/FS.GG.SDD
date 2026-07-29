@@ -50,9 +50,21 @@ module internal DriverSkills =
     /// later reads back is the same bytes through `decodeBody`. A private strict-UTF-8 decode kept
     /// a leading BOM as a `U+FEFF` CHARACTER in the body, so the body written and the body read
     /// back differed by one character and no digest over them could ever agree — the unreachable
-    /// half of FS-GG/FS.GG.SDD#752's BOM case. Decoding through the read seam makes the round trip
-    /// exact by construction, which is what lets the recorded digest live in a domain the seam can
-    /// actually reproduce (AC6).
+    /// half of FS-GG/FS.GG.SDD#752's BOM case. Decoding through the read seam is what lets the
+    /// recorded digest live in a domain the seam can actually reproduce (AC6).
+    ///
+    /// ONE RESIDUAL HOLE, stated rather than claimed away: a body whose FIRST CHARACTER is a
+    /// legitimate `U+FEFF` (delivered bytes beginning `EF BB BF EF BB BF`) still cannot round trip
+    /// — the write re-emits a preamble the read then strips. Through a seam that consumes a
+    /// preamble such a body is indistinguishable from the same body with a BOM, so no decode can
+    /// tell them apart. Unreachable with any content shipped to date, and it fails CLOSED
+    /// (reported drift, not a silent pass); `GameSkills` shares it.
+    ///
+    /// It also WIDENS the accepted encodings: `decodeBody` detects UTF-16/UTF-32 preambles where a
+    /// strict UTF-8 decode threw. Deliberate — it is the read seam's own behaviour — and it cannot
+    /// fail open, because the transport digest below is still compared over the RAW bytes. Such a
+    /// file would be materialized transcoded to UTF-8; no shipped package contains one, and a
+    /// UTF-16 `SKILL.md` still fails the row's canonical `sha256`.
     let private tryDecode (bytes: byte array) =
         match Fsgg.SkillMirror.decodeBody bytes with
         | Ok body -> Some body
