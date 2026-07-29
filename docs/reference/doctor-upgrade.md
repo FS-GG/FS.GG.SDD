@@ -32,6 +32,19 @@ provider-declared `minimumFsggSdd` — live wins — and the workspace's own `sd
   `isCoherent` is **false** — a verdict may never report coherent over a subject it did not read
   (decision FS-GG/FS.GG.SDD#754, `.github#266`). Each such file gets an `unreadableFile` warning
   naming the path and the underlying reason, in `--json`, `--text` and `--rich` alike.
+
+  **"Never as *drifted*" became true in FS-GG/FS.GG.SDD#760**, and it is worth knowing it was a
+  promise the code did not keep before that. `SkillMirror.verifyFiles` derived every absence from
+  the rows it was GIVEN and had no state for "not observed", so an unreadable skill copy was
+  reported as unreadable *and additionally* as *not mirrored* — two findings about one subject
+  whose remedies point opposite ways (`chmod +r` versus `upgrade`, which cannot open the file
+  either). The fold is now told what could not be observed and withholds judgement on it.
+
+  **`upgrade` carries the same rule, and it is now a rule rather than an accident.** It cannot
+  report `alreadyCoherent` over an unreadable subject: such a run closes as an advisory residual
+  (exit `0`, no write, no prompt) whose `nextActionHint` names the read repair and says outright
+  that re-running will not clear it. Before #760 `upgrade` obeyed this only because the phantom
+  drift above made its `isCoherent` input false; removing the phantom made the guard explicit.
 - **Listing axis** — the same rule for a DIRECTORY (FS-GG/FS.GG.SDD#743). `doctor` enumerates each
   declared skill root to discover the file set of every copy, and that listing can be *partial*: a
   subdirectory it cannot open costs its own subtree and nothing else. The entries that WERE listable
@@ -161,9 +174,9 @@ authoring accident, not a broken tool — and is held to the same rule (FS-GG/FS
 |---|---|---|
 | Coherent / nothing to reconcile / no provenance | 0 | 0 |
 | Drift reported / steps applied / step declined (residual) | 0 | 0 |
-| A subject exists but could not be read (`unreadableFile`) | 0, `isCoherent: false` | 0 |
-| A directory beneath an enumerated root could not be listed (`unlistableDirectory`) | 0, `isCoherent: false` | 0 |
-| A subject exists but its bytes do not decode (`undecodableFile`) | 0, `isCoherent: false` | 0 |
+| A subject exists but could not be read (`unreadableFile`) | 0, `isCoherent: false` | 0, `alreadyCoherent: false` |
+| A directory beneath an enumerated root could not be listed (`unlistableDirectory`) | 0, `isCoherent: false` | 0, `alreadyCoherent: false` |
+| A subject exists but its bytes do not decode (`undecodableFile`) | 0, `isCoherent: false` | 0, `alreadyCoherent: false` |
 | A write refused because its target could not be read (`unreadableWriteTarget`) | n/a | 1 |
 | A write refused because its target's bytes do not decode (`undecodableWriteTarget`) | n/a | 1 |
 | Non-interactive without `--yes` | n/a | 1 |
