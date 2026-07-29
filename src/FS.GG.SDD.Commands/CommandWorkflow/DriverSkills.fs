@@ -42,11 +42,21 @@ module internal DriverSkills =
 
     let private strictUtf8 = UTF8Encoding(false, true)
 
+    /// The SAME decode the workspace read seam uses (`CommandEffects.readFile`), not a private
+    /// one — `Fsgg.SkillMirror.decodeBody` detects and STRIPS a byte-order mark exactly as
+    /// `File.ReadAllText` does, and refuses undecodable bytes rather than substituting `U+FFFD`.
+    ///
+    /// It has to be the same function. What is materialized is this decoded body; what `doctor`
+    /// later reads back is the same bytes through `decodeBody`. A private strict-UTF-8 decode kept
+    /// a leading BOM as a `U+FEFF` CHARACTER in the body, so the body written and the body read
+    /// back differed by one character and no digest over them could ever agree — the unreachable
+    /// half of FS-GG/FS.GG.SDD#752's BOM case. Decoding through the read seam makes the round trip
+    /// exact by construction, which is what lets the recorded digest live in a domain the seam can
+    /// actually reproduce (AC6).
     let private tryDecode (bytes: byte array) =
-        try
-            Some(strictUtf8.GetString bytes)
-        with :? DecoderFallbackException ->
-            None
+        match Fsgg.SkillMirror.decodeBody bytes with
+        | Ok body -> Some body
+        | Error _ -> None
 
     let private rawSha256 (bytes: byte array) =
         SHA256.HashData bytes
@@ -159,10 +169,15 @@ module internal DriverSkills =
                     |> List.map (fun file ->
                         Map.tryFind (entry.Id, file.Path) files
                         |> Option.bind (fun bytes ->
+                            // TRANSPORT integrity, in the domain the ROW says it recorded — read
+                            // off `file.DigestDomain`, never re-derived from `TreeSha256.IsSome`.
+                            // The two agree on every manifest that exists, which is exactly why the
+                            // inference survived: it was a coincidence of the parser, not a fact
+                            // about the field, and the next schema shape would silently break it.
                             let digestMatches =
-                                if entry.TreeSha256.IsSome then
-                                    rawSha256 bytes = file.Sha256
-                                else
+                                match file.DigestDomain with
+                                | DriverManifest.RawBytes -> rawSha256 bytes = file.Sha256
+                                | DriverManifest.CanonicalText ->
                                     tryDecode bytes
                                     |> Option.exists (fun body -> Fsgg.SkillMirror.sha256 body = file.Sha256)
 
@@ -234,7 +249,32 @@ module internal DriverSkills =
 
                           if file.Executable then
                               yield SetExecutable path ])
-                  ProvenancePaths = materializedFiles |> List.map (fun (path, _, file) -> path, file.Sha256)
+                  // FS-GG/FS.GG.SDD#752. This used to be `file.Sha256` — the TRANSPORT digest,
+                  // piped straight through into the WORKSPACE record. Those are two different
+                  // questions and only one of them is being asked here:
+                  //
+                  //   transport — "do the compiled-in package bytes match what the producer
+                  //     recorded?" Answered above, against the producer's own domain (raw at v2),
+                  //     over the bytes, once, at materialize time.
+                  //   workspace — "does the file on disk still match what scaffold wrote?"
+                  //     Answered later by `doctor`/`upgrade`, over a body READ BACK through
+                  //     `CommandEffects.readFile`.
+                  //
+                  // A read seam cannot return bytes: it strips the BOM and hands back text. So the
+                  // raw domain is not reproducible there for a BOM-prefixed file by ANY consumer,
+                  // and pinning the workspace question to it made a false positive nothing could
+                  // clear — `upgrade` will not rewrite a present file, and a re-scaffold reproduces
+                  // it. The canonical domain IS reproducible, for every file, because it is defined
+                  // as what that seam yields. So the workspace record is the digest of the body
+                  // actually written, which is what `GameSkills` has always recorded (AC3) and what
+                  // `HandlersUpgrade` and `Drift` now both compare against (AC4).
+                  //
+                  // Value-identical for every file shipped today: all 17 in `FS.GG.Drivers` 0.8.3
+                  // are LF with no BOM, so raw and canonical coincide and no scaffold's provenance
+                  // changes. This buys the CRLF/BOM case a correct answer at no migration cost.
+                  ProvenancePaths =
+                    materializedFiles
+                    |> List.map (fun (path, body, _) -> path, Fsgg.SkillMirror.sha256 body)
                   MaterializedIds = classified.Materializable |> List.map (fun (entry, _) -> entry.Id)
                   MaterializedScopes =
                     classified.Materializable

@@ -191,6 +191,156 @@ module DriverSkillsTests =
             Assert.Equal<string list>([ "driver" ], outcome.VerifyFailedIds)
             Assert.Empty outcome.Writes
 
+    // ---------- FS-GG/FS.GG.SDD#752 — the two digest domains, and which one is recorded ----------
+    //
+    // `files[].sha256` is RAW at schema v2 (the org producer writes `hashlib.sha256(raw)` and
+    // documents it as a byte-integrity record for a materialized tree) and CANONICAL at schema v1
+    // (which has no per-file digest at all, so the projected `SKILL.md` row is synthesized from the
+    // row's canonical-body `sha256`). Both are right for what they record; what was wrong was that
+    // the transport digest was then piped into PROVENANCE, where a later reader can only ever
+    // reproduce the canonical one — a read seam returns text, not bytes.
+    //
+    // The two shapes below are the only ones where the domains diverge at all. Every file shipped
+    // in `FS.GG.Drivers` today is LF with no BOM, so no fixture built from the real package can
+    // reach this; these build the shapes explicitly.
+
+    let private bomPrefix = [| 0xEFuy; 0xBBuy; 0xBFuy |]
+
+    /// A v2 row whose two files are exactly the shapes with two different digests: one CRLF, one
+    /// BOM-prefixed. Returns the manifest, the byte map, and the DECODED bodies a read seam yields.
+    let private v2NonLfFixture () =
+        let skill = Encoding.UTF8.GetBytes "# driver\r\nsecond line\r\n"
+        let aux = Array.append bomPrefix (Encoding.UTF8.GetBytes "aux body\n")
+        let skillSha = rawSha skill
+        let auxSha = rawSha aux
+
+        let filesJson =
+            $"""[{{"path":"SKILL.md","sha256":"{skillSha}","executable":false}},{{"path":"references/aux.md","sha256":"{auxSha}","executable":false}}]"""
+
+        let treeSha = filesJson |> Encoding.UTF8.GetBytes |> rawSha
+
+        // The row's skill-level `sha256` is the CANONICAL digest of `SKILL.md` — the producer's
+        // other normalization, on the same row, which is exactly the split #752 opened with.
+        let skillCanonical = Fsgg.SkillMirror.sha256 "# driver\r\nsecond line\r\n"
+
+        let manifest =
+            $"""{{"schemaVersion":2,"skills":[{{"id":"driver","scope":"driver","sha256":"{skillCanonical}","tree-sha256":"{treeSha}","files":{filesJson},"materializes-when":"always"}}]}}"""
+
+        manifest, Map.ofList [ ("driver", "SKILL.md"), skill; ("driver", "references/aux.md"), aux ]
+
+    // AC2: a v2 row is verified in the RAW domain — CRLF and BOM included, un-normalized — so the
+    // closed transport still catches a CRLF-mangled or BOM-stripped delivery.
+    [<Fact>]
+    let ``a v2 row verifies CRLF and BOM files in the RAW domain`` () =
+        let manifest, files = v2NonLfFixture ()
+        let outcome = DriverSkills.planFilesFrom (Some manifest) files Set.empty
+
+        Assert.Equal<string list>([ "driver" ], outcome.MaterializedIds)
+        Assert.Empty outcome.VerifyFailedIds
+
+    // AC2, the other direction: a v2 row is NOT accepted in the canonical domain. The domain is a
+    // property of the row, not "whichever one happens to match" — that latitude is precisely what
+    // #751 had to allow downstream and what AC4 removes.
+    [<Fact>]
+    let ``a v2 row whose files digest is CANONICAL rather than raw fails closed`` () =
+        let skill = Encoding.UTF8.GetBytes "# driver\r\n"
+        let canonical = Fsgg.SkillMirror.sha256 "# driver\r\n"
+
+        let filesJson =
+            $"""[{{"path":"SKILL.md","sha256":"{canonical}","executable":false}}]"""
+
+        let treeSha = filesJson |> Encoding.UTF8.GetBytes |> rawSha
+
+        let manifest =
+            $"""{{"schemaVersion":2,"skills":[{{"id":"driver","scope":"driver","sha256":"{canonical}","tree-sha256":"{treeSha}","files":{filesJson},"materializes-when":"always"}}]}}"""
+
+        // The premise: the two domains really do disagree on this body, so the case is not vacuous.
+        Assert.NotEqual<string>(rawSha skill, canonical)
+
+        let outcome =
+            DriverSkills.planFilesFrom (Some manifest) (Map.ofList [ ("driver", "SKILL.md"), skill ]) Set.empty
+
+        Assert.Equal<string list>([ "driver" ], outcome.VerifyFailedIds)
+        Assert.Empty outcome.Writes
+
+    // AC2 for the OTHER schema: a v1 row carries only a canonical-body digest, so that is the domain
+    // it is verified in — deliberately different from v2, because there is no raw digest in a v1
+    // document to use. Recorded here rather than left to be inferred from `TreeSha256.IsSome`.
+    [<Fact>]
+    let ``a v1 row verifies a CRLF body in the CANONICAL domain and not the raw one`` () =
+        let body = "driver body\r\n"
+        let canonical = Fsgg.SkillMirror.sha256 body
+        let raw = rawSha (Encoding.UTF8.GetBytes body)
+        Assert.NotEqual<string>(raw, canonical)
+
+        let accepted =
+            DriverSkills.planFrom
+                (manifestOf (row "someDriver" canonical "always"))
+                (Map.ofList [ "someDriver", body ])
+                Set.empty
+
+        Assert.Equal<string list>([ "someDriver" ], accepted.MaterializedIds)
+
+        let refused =
+            DriverSkills.planFrom
+                (manifestOf (row "someDriver" raw "always"))
+                (Map.ofList [ "someDriver", body ])
+                Set.empty
+
+        Assert.Equal<string list>([ "someDriver" ], refused.VerifyFailedIds)
+
+    // THE FIX ITSELF (AC4's premise). Provenance is the WORKSPACE record — "does the file on disk
+    // still match what scaffold wrote?" — and it is answered later against a body read back through
+    // `SkillMirror.decodeBody`, which strips the BOM and returns text. So the recorded digest is
+    // `SkillMirror.sha256` of the body written, NOT the transport digest the manifest carried. For
+    // a CRLF or BOM-prefixed file those are different values, and recording the transport one made
+    // a drift report no consumer could ever clear.
+    [<Fact>]
+    let ``provenance records the canonical digest of the written body, not the raw transport digest`` () =
+        let manifest, files = v2NonLfFixture ()
+        let outcome = DriverSkills.planFilesFrom (Some manifest) files Set.empty
+
+        let recorded path =
+            outcome.ProvenancePaths
+            |> List.filter (fun (p, _) -> p.EndsWith(path, StringComparison.Ordinal))
+            |> List.map snd
+            |> List.distinct
+
+        // One value per file across all three roots — the shape a real record carries.
+        Assert.Equal<string list>([ Fsgg.SkillMirror.sha256 "# driver\r\nsecond line\r\n" ], recorded "/SKILL.md")
+        Assert.Equal<string list>([ Fsgg.SkillMirror.sha256 "aux body\n" ], recorded "/references/aux.md")
+
+        // And that is genuinely NOT what the manifest declared, for either file — otherwise this
+        // case would pass just as well against the code it replaces.
+        for _, sha in outcome.ProvenancePaths do
+            Assert.NotEqual<string>(rawSha (Array.append bomPrefix (Encoding.UTF8.GetBytes "aux body\n")), sha)
+            Assert.NotEqual<string>(rawSha (Encoding.UTF8.GetBytes "# driver\r\nsecond line\r\n"), sha)
+
+    // AC6, settled affirmatively. The materialized body is what `SkillMirror.decodeBody` yields, so
+    // a BOM in the delivered bytes does NOT survive into the workspace as a `U+FEFF` character.
+    // That is what makes the recorded domain reproducible from the read seam for EVERY file: write
+    // the BOM through and the body written and the body read back differ by one character, and no
+    // digest over them could ever agree.
+    [<Fact>]
+    let ``a BOM-prefixed delivered file is materialized BOM-free`` () =
+        let manifest, files = v2NonLfFixture ()
+        let outcome = DriverSkills.planFilesFrom (Some manifest) files Set.empty
+
+        let auxBodies =
+            outcome.Writes
+            |> List.choose (function
+                | WriteFile(path, body, _) when path.EndsWith("/references/aux.md", StringComparison.Ordinal) ->
+                    Some body
+                | _ -> None)
+
+        Assert.Equal(3, auxBodies.Length)
+
+        for body in auxBodies do
+            Assert.Equal<string>("aux body\n", body)
+            // Named explicitly, because an invisible leading `U+FEFF` is exactly the kind of
+            // difference an equality assertion's failure message is hard to read.
+            Assert.NotEqual('\uFEFF', body[0])
+
     [<Fact>]
     let ``planFrom fails closed on a tampered body digest`` () =
         let body = "driver body\n"

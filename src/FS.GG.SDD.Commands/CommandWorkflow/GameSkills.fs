@@ -130,6 +130,13 @@ module internal GameSkills =
                     PredicateUnevaluated = acc.PredicateUnevaluated @ [ entry.Id ] }
             | Some false -> acc // deliberately not materialized off-profile (predicate held false)
             | Some true ->
+                // FS-GG/FS.GG.SDD#752 AC3 — ONE provenance class, ONE digest domain. The body
+                // arrives through a BOM-stripping `StreamReader` (`tryLoadResource`) and is
+                // verified, recorded and later re-verified with `Fsgg.SkillMirror.sha256`: BOM
+                // stripped, `\r\n` folded. `DriverSkills` now records `GameSkillPaths`' sibling
+                // `DriverPaths` in this same domain rather than passing its transport digest
+                // through, so the owner-sourced class is no longer half in each and `Drift` needs
+                // no either-domain allowance to read the two together.
                 match Map.tryFind entry.Id bodies with
                 | Some body when Fsgg.SkillMirror.sha256 body = entry.Sha256 ->
                     { acc with

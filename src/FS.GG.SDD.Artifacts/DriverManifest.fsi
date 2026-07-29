@@ -7,12 +7,26 @@ namespace FS.GG.SDD.Artifacts
 /// gates whether it is laid into a scaffold. This models the *shape* of a driver manifest —
 /// never the contents of any particular one (no `.github` literal as behavior).
 module DriverManifest =
+    /// Which function reproduces a `DriverManifestFile.Sha256`. The two schema versions record
+    /// genuinely different things in that field, so the domain travels WITH the value instead of
+    /// being inferred from `TreeSha256.IsSome` — that inference was a coincidence, and the
+    /// consumers that relied on it disagreed (FS-GG/FS.GG.SDD#752).
+    type DriverDigestDomain =
+        /// `sha256(file bytes)`, un-normalized — BOM and CR included. A schema-v2 `files[]` row.
+        /// The org producer writes `hashlib.sha256(raw)` and documents it as a byte-integrity
+        /// record for a materialized tree, deliberately NOT a canonical-body digest.
+        | RawBytes
+        /// `Fsgg.SkillMirror.sha256 body` — BOM stripped, `\r\n` folded. A schema-v1 row, whose
+        /// only digest is the canonical-body `sha256` the projected `SKILL.md` row is built from.
+        | CanonicalText
+
     /// One file in a schema-v2 driver skill directory. Paths are normalized forward-slash
-    /// relative paths; the digest covers the raw file bytes, and `Executable` is the intended
-    /// execute-bit state in every materialized skill root.
+    /// relative paths; `DigestDomain` says which function reproduces `Sha256`; and `Executable`
+    /// is the intended execute-bit state in every materialized skill root.
     type DriverManifestFile =
         { Path: string
           Sha256: string
+          DigestDomain: DriverDigestDomain
           Executable: bool }
 
     type DriverManifestEntry =
@@ -28,7 +42,8 @@ module DriverManifest =
             /// legacy schema-v1 manifest.
             TreeSha256: string option
             /// The complete closed directory transport. A schema-v2 row always has at least
-            /// `SKILL.md`; schema-v1 rows are projected to that single legacy file.
+            /// `SKILL.md`; schema-v1 rows are projected to that single legacy file, carrying the
+            /// row's canonical-body digest and therefore `DigestDomain = CanonicalText`.
             Files: DriverManifestFile list
             /// The row's origin path in the authoring repo (informational, e.g. `.claude/skills/<id>`).
             SuppliedBy: string option
