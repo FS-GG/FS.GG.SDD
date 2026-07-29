@@ -314,6 +314,9 @@ member Fsgg.SkillMirror+SkillFileDrift.Divergent
 member Fsgg.SkillMirror+SkillFileDrift.HashMismatchRoots
 member Fsgg.SkillMirror+SkillFileDrift.MissingRoots
 member Fsgg.SkillMirror+SkillFileDrift.RelativePath
+member Fsgg.SkillMirror+UnobservedSkillFiles.Id
+member Fsgg.SkillMirror+UnobservedSkillFiles.RelativePaths
+member Fsgg.SkillMirror+UnobservedSkillFiles.Root
 member Fsgg.Version+Version.Major
 member Fsgg.Version+Version.Minor
 member Fsgg.Version+Version.Patch
@@ -417,6 +420,7 @@ type Fsgg.SkillMirror+MultiFileSkillDrift
 type Fsgg.SkillMirror+SkillDrift
 type Fsgg.SkillMirror+SkillFile
 type Fsgg.SkillMirror+SkillFileDrift
+type Fsgg.SkillMirror+UnobservedSkillFiles
 type Fsgg.Version
 type Fsgg.Version+Version
 val Fsgg.ContractVersion.major
@@ -457,5 +461,7 @@ val Fsgg.SkillMirror.skillPath
 val Fsgg.SkillMirror.verify
 val Fsgg.SkillMirror.verifyFileSet
 val Fsgg.SkillMirror.verifyFiles
+val Fsgg.SkillMirror.verifyObservedFileSet
+val Fsgg.SkillMirror.verifyObservedFiles
 val Fsgg.Version.compare
 val Fsgg.Version.tryParse

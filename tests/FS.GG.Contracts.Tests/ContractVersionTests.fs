@@ -325,11 +325,37 @@ module ContractVersionTests =
     // under the unmoved 7.3.0 would make the `.nupkg` at 7.3.0 and the source at 7.3.0 different
     // artifacts — the #426/#432 shape a fifth time — and a published package cannot be un-published,
     // so the generator's only input would be whatever that release shipped.
+    //
+    // 7.4.0 -> 7.5.0 (FS.GG.SDD#760): an ADDITIVE MINOR, and this one IS a row of the checklist's
+    // table — the fourth, "add a new module, type, or `val`". `SkillMirror` gains one type
+    // (`UnobservedSkillFiles`) and two `val`s (`verifyObservedFiles`, `verifyObservedFileSet`),
+    // giving the mirror fold the third observation state it never had: NOT OBSERVED, as distinct
+    // from NOT THERE.
+    //
+    // WHY NOT A MAJOR, and this is the row that was deliberately NOT taken. The other shape
+    // considered was a fourth field on `SkillFileDrift` alongside `MissingRoots`/`Divergent`/
+    // `HashMismatchRoots`. That is the checklist's FIRST row: an F# record's positional constructor
+    // changes arity on any added field, which deletes the old constructor and costs a coordinated
+    // major nobody authorised. Two new entry points and one new type cost none of that, and
+    // `verifyFiles`/`verifyFileSet` are DEFINED as the new folds with an empty unobserved set, so
+    // the two spellings cannot drift apart. `api-compatibility-gate` stays green: nothing is
+    // removed, renamed, retyped or reshaped.
+    //
+    // WHY NOT A PATCH. The last row ("behaviour change with no surface change") does not reach this:
+    // `docs/api-surface/FS.GG.Contracts/SkillMirror.fsi` grows by a type and two `val`s, and a
+    // consumer can depend on both today.
+    //
+    // AND IT IS BEING MADE HERE RATHER THAN DEFERRED, for the sixth time in this file's history.
+    // 7.4.0 IS live on the org feed (verified against
+    // `/orgs/FS-GG/packages/nuget/FS.GG.Contracts/versions` while preparing this change: the newest
+    // listed version is 7.4.0, and source == feed == registry.version == registry.package-version ==
+    // 7.4.0 held before it). Growing the surface without moving the number would make the `.nupkg`
+    // at 7.4.0 and the source at 7.4.0 different artifacts — the #426/#432 shape a sixth time.
     [<Fact>]
-    let ``contract version self-report matches 7_4_0`` () =
-        Assert.Equal("7.4.0", ContractVersion.value)
+    let ``contract version self-report matches 7_5_0`` () =
+        Assert.Equal("7.5.0", ContractVersion.value)
         Assert.Equal(7, ContractVersion.major)
-        Assert.Equal(4, ContractVersion.minor)
+        Assert.Equal(5, ContractVersion.minor)
         Assert.Equal(0, ContractVersion.patch)
 
     // THE ASSERTION THAT WAS MISSING, AND THE ONLY ONE THAT WOULD HAVE CAUGHT IT.

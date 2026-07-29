@@ -262,6 +262,68 @@ module SkillMirror =
         actual: ActualSkillFiles list ->
             DeclaredSkillDrift list
 
+    /// The subjects of one copy the caller could NOT OBSERVE — the third observation state
+    /// `ActualSkillFiles` has never had (FS.GG.SDD#760).
+    ///
+    /// `ActualSkillFiles` says a root's copy carries exactly these files (`Some`) or carries no
+    /// copy at all (`None`), and `verifyFiles`/`verifyFileSet` derive every absence from the rows
+    /// they were given. So a subject the caller could not read contributed no row for the very
+    /// reason a deleted one does, and came back classified as an ABSENCE — `MissingRoots`, whose
+    /// advisory asserts that a sibling root carries a file this one does not. Stated about a file
+    /// that is present, byte-identical to its siblings, and merely unreadable, that sentence is a
+    /// finding nobody measured. This is the mirror-fold half of the state FS.GG.SDD#745 gave the
+    /// READ edge.
+    ///
+    /// `RelativePaths` are relative to `<root>/skills/<id>/` — the same coordinates as
+    /// `SkillFile.RelativePath` — and each names EITHER a file that could not be obtained OR a
+    /// DIRECTORY whose listing could not be taken, in which case every path beneath it is
+    /// unobserved too. A caller that could not open a directory cannot enumerate what is inside it,
+    /// so naming the directory is the most it can say.
+    ///
+    /// `"SKILL.md"` withholds the WHOLE COPY: it is what makes a directory a copy of the skill
+    /// (`skillPath`/`skillIdOfPath`, and `mirrorFiles` refuses to materialize a skill without it),
+    /// so a caller that could not read it cannot have established that the root carries no copy.
+    /// The empty relative path is ignored — a caller with nothing to name has nothing to withhold.
+    ///
+    /// Several entries for one `(Root, Id)` UNION; none of them shadows another.
+    type UnobservedSkillFiles =
+        { Root: string
+          Id: string
+          RelativePaths: string list }
+
+    /// `verifyFiles`, told which subjects the caller could not OBSERVE — and therefore may say
+    /// nothing about. An unobserved subject is withheld from `MissingRoots`, at the file level and
+    /// at the skill level alike; every other fact is unchanged, because facts 2 and 3 are computed
+    /// from bodies that are in hand and an unobserved subject supplies none.
+    ///
+    /// Withheld is NOT clean: this removes a finding the fold could not support, and adds none. The
+    /// caller keeps the whole duty of reporting what it could not observe — it is the only party
+    /// that knows — and a verdict that reads coherent over an unobserved subject is that caller's
+    /// defect, not a promise made here.
+    ///
+    /// `verifyObservedFiles roots expected actual []` is `verifyFiles roots expected actual`, by
+    /// construction: `verifyFiles` IS this function with an empty unobserved set.
+    val verifyObservedFiles:
+        roots: string list ->
+        expected: ExpectedSkill list ->
+        actual: ActualSkillFiles list ->
+        unobserved: UnobservedSkillFiles list ->
+            MultiFileSkillDrift list
+
+    /// `verifyFileSet`, told which subjects the caller could not OBSERVE — `verifyObservedFiles`'s
+    /// counterpart over a DECLARED file set, with the same rule and the same construction-level
+    /// equivalence (`verifyObservedFileSet roots expected actual []` is `verifyFileSet …`).
+    ///
+    /// A declaration does not narrow the rule. It establishes what a copy OUGHT to carry, never
+    /// whether this root has it, so "declared, and the caller could not look" is no more evidence of
+    /// an absence than "observed nowhere else, and the caller could not look".
+    val verifyObservedFileSet:
+        roots: string list ->
+        expected: ExpectedSkillFiles list ->
+        actual: ActualSkillFiles list ->
+        unobserved: UnobservedSkillFiles list ->
+            DeclaredSkillDrift list
+
     /// Why a body's RAW BYTES are not a skill body. A NAMED cause, kept in its own type rather than
     /// spelled as a bare `string option`, for the reason `MirrorRefusalReason` is: a refusal must be
     /// distinguishable from every other outcome BY CONSTRUCTION, never by a caller's convention.

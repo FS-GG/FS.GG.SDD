@@ -1098,3 +1098,212 @@ module SkillMirrorTests =
             let bytes = File.ReadAllBytes file
             Assert.Equal<Result<string, BodyRefusalReason>>(Ok(File.ReadAllText file), decodeBody bytes)
             Assert.Equal<Result<string, BodyRefusalReason>>(Ok(sha256 (File.ReadAllText file)), sha256Bytes bytes)
+
+    // ----- verifyObservedFiles / verifyObservedFileSet (FS.GG.SDD#760) -----
+    //
+    // The third observation state. `ActualSkillFiles` said "these files" or "no copy", so a subject
+    // the CALLER could not read contributed no row for exactly the reason a deleted one does, and
+    // both folds classified it `MissingRoots` — the class whose advisory asserts that a sibling root
+    // carries a file this one does not. Measured on `main` through `doctor`: one `chmod 000` on
+    // `.claude/skills/<id>/references` reported `.claude/skills/<id>/references/deep-detail.md` as
+    // not mirrored at `.claude`, about a file present at `.claude` and byte-identical to its
+    // siblings.
+    //
+    // EVERY case below is a PAIR. The unobserved-free half is not decoration: it is the proof that
+    // the input really does produce the finding, so the withheld half's silence is the third state
+    // working rather than a fold that reports nothing.
+
+    let private unobservedAt root id paths : UnobservedSkillFiles =
+        { Root = root
+          Id = id
+          RelativePaths = paths }
+
+    /// The shape the whole item is about: `.claude` is a complete copy but for ONE auxiliary, so
+    /// exactly one file is in question and every assertion below can be `exactlyOne`.
+    let private auxiliaryOnlyAtTwoRoots body =
+        [ copyFiles ".claude" "s" (Some [ file "SKILL.md" body; file "agents/openai.yaml" "name: s\n" ])
+          copyFiles ".codex" "s" (Some(multiFile body))
+          copyFiles ".agents" "s" (Some(multiFile body)) ]
+
+    [<Fact>]
+    let ``verifyObservedFiles withholds a file the caller could not observe`` () =
+        let body = "canonical\n"
+        let actual = auxiliaryOnlyAtTwoRoots body
+        let exp = [ expected "s" (sha256 body) ]
+
+        // Told nothing: the absence is reported, at `.claude`, and must keep being reported.
+        let unaware = List.exactlyOne (verifyObservedFiles roots exp actual [])
+        let f = List.exactlyOne unaware.Files
+        Assert.Equal("references/deep-detail.md", f.RelativePath)
+        Assert.Equal<string list>([ ".claude" ], f.MissingRoots)
+
+        // Told the caller could not observe it there: nothing is said about it at all.
+        Assert.Empty(
+            verifyObservedFiles roots exp actual [ unobservedAt ".claude" "s" [ "references/deep-detail.md" ] ]
+        )
+
+    // A caller that could not LIST a directory never saw what is inside it, so the directory itself
+    // is the most it can name — and it withholds everything beneath.
+    [<Fact>]
+    let ``verifyObservedFiles treats an unobserved DIRECTORY as covering the paths beneath it`` () =
+        let body = "canonical\n"
+        let actual = auxiliaryOnlyAtTwoRoots body
+        let exp = [ expected "s" (sha256 body) ]
+
+        Assert.Empty(verifyObservedFiles roots exp actual [ unobservedAt ".claude" "s" [ "references" ] ])
+
+        // A PATH PREFIX, not a string prefix. `reference` is not the directory `references`, and a
+        // fold matching on bare `StartsWith` would silence a sibling it was never told about.
+        let stillReported =
+            List.exactlyOne (verifyObservedFiles roots exp actual [ unobservedAt ".claude" "s" [ "reference" ] ])
+
+        Assert.Equal<string list>([ ".claude" ], (List.exactlyOne stillReported.Files).MissingRoots)
+
+    // `SKILL.md` is what MAKES a directory a copy of the skill, so a caller that could not read it
+    // has not established that the root carries no copy — the SKILL-level clause.
+    [<Fact>]
+    let ``verifyObservedFiles withholds a whole copy whose SKILL_md could not be observed`` () =
+        let body = "canonical\n"
+
+        let actual =
+            [ copyFiles ".claude" "s" (Some(multiFile body))
+              copyFiles ".codex" "s" (Some(multiFile body))
+              copyFiles ".agents" "s" None ]
+
+        let exp = [ expected "s" (sha256 body) ]
+
+        let unaware = List.exactlyOne (verifyObservedFiles roots exp actual [])
+        Assert.Equal<string list>([ ".agents" ], unaware.MissingRoots)
+
+        Assert.Empty(verifyObservedFiles roots exp actual [ unobservedAt ".agents" "s" [ "SKILL.md" ] ])
+
+    // Withholding is per (root, file) and nothing wider: the roots that WERE observed keep every
+    // finding they had. A fix that silenced the skill would be "stop looking", not "say less".
+    [<Fact>]
+    let ``verifyObservedFiles does not mask a divergence between the roots it did observe`` () =
+        let body = "canonical\n"
+
+        let actual =
+            [ copyFiles ".claude" "s" (Some [ file "SKILL.md" body ])
+              copyFiles ".codex" "s" (Some [ file "SKILL.md" body; file "references/deep-detail.md" "a\n" ])
+              copyFiles ".agents" "s" (Some [ file "SKILL.md" body; file "references/deep-detail.md" "b\n" ]) ]
+
+        let d =
+            List.exactlyOne (
+                verifyObservedFiles
+                    roots
+                    [ expected "s" (sha256 body) ]
+                    actual
+                    [ unobservedAt ".claude" "s" [ "references/deep-detail.md" ] ]
+            )
+
+        let f = List.exactlyOne d.Files
+        Assert.True f.Divergent
+        Assert.Empty f.MissingRoots
+
+    // Several entries for one copy state several facts about it — an unreadable file AND an
+    // unlistable directory, say — and letting the later one win would put the other's subjects back
+    // into the absence class.
+    [<Fact>]
+    let ``verifyObservedFiles unions repeated entries for one copy rather than shadowing them`` () =
+        let body = "canonical\n"
+
+        let actual =
+            [ copyFiles ".claude" "s" (Some [ file "SKILL.md" body ])
+              copyFiles ".codex" "s" (Some(multiFile body))
+              copyFiles ".agents" "s" (Some(multiFile body)) ]
+
+        let unobserved =
+            [ unobservedAt ".claude" "s" [ "references" ]
+              unobservedAt ".claude" "s" [ "agents/openai.yaml" ] ]
+
+        Assert.Empty(verifyObservedFiles roots [ expected "s" (sha256 body) ] actual unobserved)
+
+    // Backslashes normalize exactly as `SkillFile.RelativePath` does — the withholding and the
+    // observation must be spelled in one coordinate system or they cannot meet. And the EMPTY path
+    // is ignored: a caller with nothing to name has nothing to withhold, and the alternative reading
+    // ("silence this whole copy") is the dangerous one to take on a caller's slip.
+    [<Fact>]
+    let ``verifyObservedFiles normalizes separators and ignores the empty relative path`` () =
+        let body = "canonical\n"
+        let actual = auxiliaryOnlyAtTwoRoots body
+        let exp = [ expected "s" (sha256 body) ]
+
+        Assert.Empty(
+            verifyObservedFiles roots exp actual [ unobservedAt ".claude" "s" [ @"references\deep-detail.md" ] ]
+        )
+
+        let stillReported =
+            List.exactlyOne (verifyObservedFiles roots exp actual [ unobservedAt ".claude" "s" [ "" ] ])
+
+        Assert.Equal<string list>([ ".claude" ], (List.exactlyOne stillReported.Files).MissingRoots)
+
+    // ADDITIVE, and provably so: with nothing unobserved, the new entry point IS the old one. It is
+    // defined that way in the implementation, and this pins the promise the signature makes.
+    [<Fact>]
+    let ``verifyObservedFiles with nothing unobserved is verifyFiles`` () =
+        let body = "canonical\n"
+
+        let actual =
+            [ copyFiles ".claude" "s" (Some [ file "SKILL.md" body ])
+              copyFiles ".codex" "s" (Some(multiFile body))
+              copyFiles ".agents" "s" None ]
+
+        let exp = [ expected "s" (sha256 body) ]
+        Assert.Equal<MultiFileSkillDrift list>(verifyFiles roots exp actual, verifyObservedFiles roots exp actual [])
+
+    // The DECLARED half. A declaration says what a copy ought to CONTAIN, never whether this root
+    // has it, so "declared, and the caller could not look" is no more evidence of an absence than
+    // "observed nowhere else, and the caller could not look".
+    [<Fact>]
+    let ``verifyObservedFileSet withholds a DECLARED file the caller could not observe`` () =
+        let body = "canonical\n"
+        let actual = auxiliaryOnlyAtTwoRoots body
+        let exp = [ expectedFiles "s" (declaredMultiFile body) ]
+
+        let unaware = List.exactlyOne (verifyObservedFileSet roots exp actual [])
+        let f = List.exactlyOne unaware.Files
+        Assert.Equal("references/deep-detail.md", f.RelativePath)
+        Assert.Equal<string list>([ ".claude" ], f.MissingRoots)
+
+        Assert.Empty(
+            verifyObservedFileSet roots exp actual [ unobservedAt ".claude" "s" [ "references/deep-detail.md" ] ]
+        )
+
+    // Withholding removes ONLY the absence. A digest that contradicts the declaration at the roots
+    // that WERE read is still reported, at exactly those roots.
+    [<Fact>]
+    let ``verifyObservedFileSet still reports a tampered file at the roots it did observe`` () =
+        let body = "canonical\n"
+
+        let tampered =
+            [ file "SKILL.md" body
+              file "references/deep-detail.md" "TAMPERED\n"
+              file "agents/openai.yaml" "name: s\n" ]
+
+        let actual =
+            [ copyFiles ".claude" "s" (Some [ file "SKILL.md" body; file "agents/openai.yaml" "name: s\n" ])
+              copyFiles ".codex" "s" (Some tampered)
+              copyFiles ".agents" "s" (Some tampered) ]
+
+        let d =
+            List.exactlyOne (
+                verifyObservedFileSet
+                    roots
+                    [ expectedFiles "s" (declaredMultiFile body) ]
+                    actual
+                    [ unobservedAt ".claude" "s" [ "references/deep-detail.md" ] ]
+            )
+
+        let f = List.exactlyOne d.Files
+        Assert.Equal("references/deep-detail.md", f.RelativePath)
+        Assert.Equal<string list>([ ".codex"; ".agents" ], f.HashMismatchRoots)
+        Assert.Empty f.MissingRoots
+
+    [<Fact>]
+    let ``verifyObservedFileSet with nothing unobserved is verifyFileSet`` () =
+        let body = "canonical\n"
+        let actual = auxiliaryOnlyAtTwoRoots body
+        let exp = [ expectedFiles "s" (declaredMultiFile body) ]
+
+        Assert.Equal<DeclaredSkillDrift list>(verifyFileSet roots exp actual, verifyObservedFileSet roots exp actual [])
