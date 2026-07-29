@@ -107,7 +107,7 @@ module SkillRegistryDocument =
                 // existing path and yields that path's load diagnostic, which now refuses it.
                 // Detection stays conservative: only a positive `skills:` sighting diverts,
                 // and no file whose kind is decided today is decided differently.
-                match decodeDocumentBytes "Skill registry file" path with
+                match decodeDocumentBytes path with
                 | Error _ -> DependencyRegistry
                 | Ok text ->
 
@@ -133,8 +133,8 @@ module SkillRegistryDocument =
             else
                 // FS.GG.SDD#789: as in `RegistryDocument.load` — the catalog's ids, scopes and
                 // owners are validated from the bytes on disk or not at all.
-                match decodeDocumentBytes "Skill registry file" path with
-                | Error message -> err path message
+                match decodeDocumentBytes path with
+                | Error byteOffset -> err path (undecodableDocumentMessage "Skill registry file" path byteOffset)
                 | Ok text ->
 
                     match parseYamlDocument text with

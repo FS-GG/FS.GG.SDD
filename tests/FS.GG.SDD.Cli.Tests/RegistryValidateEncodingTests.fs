@@ -78,6 +78,10 @@ module RegistryValidateEncodingTests =
     /// AC2, at the verdict surface: one `MalformedDocument` diagnostic — the same class every
     /// other load failure takes, never a cascade — naming the file and the byte offset, and not
     /// claiming a YAML syntax error the document does not have.
+    ///
+    /// The offset is asserted WITH its label. A bare `Assert.Contains(string offset, …)` would
+    /// be near-tautological here: the temp path this fixture writes already contains `789` and
+    /// a 32-char hex GUID, so a bare decimal could match a line, a column, or pure coincidence.
     [<Fact>]
     let ``the verdict carries one MalformedDocument diagnostic naming the file and the offset`` () =
         let path, offset = mangledFixture ()
@@ -87,7 +91,7 @@ module RegistryValidateEncodingTests =
             let diagnostic = Assert.Single report.Diagnostics
             Assert.Equal("MalformedDocument", diagnostic.Rule)
             Assert.Contains(path, diagnostic.Message)
-            Assert.Contains(string offset, diagnostic.Message)
+            Assert.Contains($"byte offset {offset}", diagnostic.Message)
             Assert.DoesNotContain("YAML syntax error", diagnostic.Message)
         finally
             File.Delete path

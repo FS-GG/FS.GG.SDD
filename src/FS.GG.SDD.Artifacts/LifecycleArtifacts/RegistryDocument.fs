@@ -209,8 +209,8 @@ module RegistryDocument =
                 // FS.GG.SDD#789: the bytes are read RAW and decoded, not `File.ReadAllText`.
                 // A registry whose bytes do not decode is REFUSED here rather than parsed
                 // from a `U+FFFD`-substituted string and reported valid.
-                match decodeDocumentBytes "Registry file" path with
-                | Error message -> err path message
+                match decodeDocumentBytes path with
+                | Error byteOffset -> err path (undecodableDocumentMessage "Registry file" path byteOffset)
                 | Ok text ->
 
                     match parseYamlDocument text with
