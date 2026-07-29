@@ -548,8 +548,8 @@ kit_views="$(printf '%s' "$props" | sed -n 's/.*"FsggKitViewSkillRoots": "\(.*\)
 
 if [ -z "$kit_runtime" ]; then
   bad "the pinned kit declaration did not EVALUATE (FsggKitSkillRoots is empty) — this leg has no subject, it is not passing"
-  printf '     restore (rc=%s):\n' "${restore_rc:-not-attempted}"
-  printf '%s\n' "${restore_out:-<not attempted: the first evaluation returned a non-empty document>}" | sed 's/^/       | /'
+  printf '     restore (rc=%s):\n' "$restore_rc"
+  printf '%s\n' "$restore_out" | sed 's/^/       | /'
   printf '     evaluation:\n'
   printf '%s\n' "$props" | sed 's/^/       | /'
   printf '     Repair: dotnet restore .config/kit/FS.GG.Kit.receiver.proj\n'
@@ -586,10 +586,19 @@ fi
 # a second way for the two answers to drift apart.
 #
 # WHAT IT COMPARES. The header carries one `fsgg-kit-roots:` row per disposition, each naming the
-# property it mirrors, and each row's remaining fields are the roots. Three ways to be wrong are three
-# reds: a row missing, a row naming the wrong property, a row whose roots differ from the evaluation.
-# `(none)` is the spelling for an empty declaration, so "the property is empty" and "somebody deleted
-# the row" stay distinguishable.
+# property it mirrors, and each row's remaining fields are the roots. Four ways to be wrong are four
+# reds: a row missing, a row naming the wrong property, a row whose roots differ from the evaluation,
+# and a row that is not one of the three graded here at all. `(none)` is the spelling for an empty
+# declaration, so "the property is empty" and "somebody deleted the row" stay distinguishable.
+#
+# TWO OF THE THREE PROPERTIES ARE THE RECEIVER'S; THE THIRD MOVES WITH THE PIN, AND THAT IS DISCLOSED
+# RATHER THAN AVOIDED. `.config/kit/FS.GG.Kit.receiver.proj` declares `FsggKitSkillRoots` and
+# `FsggKitViewSkillRoots` outright, so those two rows follow an edit somebody makes in this repo.
+# `FsggKitRetiredSkillRoots` is the PINNED PACKAGE's default (`build/FS.GG.Kit.props`), so a kit bump
+# that changes the retired set reds this leg on a branch whose only diff is the pin, and the repair is
+# a comment edit rather than a materialize. That is a real cost and it is accepted, because it is
+# ALREADY leg F's: F reds on the same bump if `.codex/skills` leaves the retired set. One more red on a
+# bump that changes a disposition is the correct number when a comment claims that disposition.
 printf '\nH. coordination-coherence.yml names the roots this receiver actually declares\n'
 
 coherence_yml="$repo/.github/workflows/coordination-coherence.yml"
@@ -606,16 +615,25 @@ if [ ! -f "$coherence_yml" ]; then
 elif [ -z "$kit_runtime" ]; then
   bad "the pinned kit declaration did not EVALUATE (see F) — H cannot grade the header against nothing"
 else
+  # EXACTLY THREE, not "at least one". Counting only the zero case would let a FOURTH row in this very
+  # format — `fsgg-kit-roots: bogus  FsggKitBogusRoots  .totally/made/up` — sit in the header asserting
+  # a property nothing evaluates, while the three graded rows reported `ok` and the leg exited 0. An
+  # ungraded row in the format whose whole purpose is to be graded is the defect this leg exists to
+  # remove, wearing the leg's own uniform.
   header_rows="$(grep -c '^#[[:space:]]*fsgg-kit-roots:' "$coherence_yml" || true)"
   if [ "$header_rows" -eq 0 ]; then
     bad "coordination-coherence.yml carries NO 'fsgg-kit-roots:' rows — the header's root list is unchecked prose again (FS.GG.SDD#769)"
+  elif [ "$header_rows" -gt 3 ]; then
+    # Strictly MORE than the three graded below. FEWER is already reported per row, by name and with
+    # the value the missing row should have carried — a count would say less about it, not more.
+    bad "coordination-coherence.yml carries $header_rows 'fsgg-kit-roots:' rows; only 3 are graded below, so $((header_rows - 3)) assert a property nothing checks"
   fi
 
   check_row() {
     # check_row <disposition> <property> <evaluated value>
     local disposition="$1" property="$2" want row got
     want="$(norm_roots "$3")"
-    row="$(sed -n "s/^#[[:space:]]*fsgg-kit-roots:[[:space:]]*$disposition[[:space:]]\{1,\}//p" "$coherence_yml")"
+    row="$(sed -n "s/^#[[:space:]]*fsgg-kit-roots:[[:space:]]*${disposition}[[:space:]]\{1,\}//p" "$coherence_yml")"
     if [ -z "$row" ]; then
       bad "coordination-coherence.yml declares no 'fsgg-kit-roots: $disposition' row (expected $property = $want)"
       return
@@ -629,7 +647,10 @@ else
       *) bad "the '$disposition' row names property '${row%%[[:space:]]*}', but this leg grades $property"
          return ;;
     esac
-    got="$(printf '%s' "${row#"$property"}" | tr -s '[:space:]' ' ' | sed 's/^ //; s/ $//')"
+    # `;` is accepted as a separator alongside whitespace. A maintainer mirroring MSBuild's own syntax
+    # writes `.claude/skills;.agents/skills`, and rejecting that would red with "the header is stale",
+    # which is a true-sounding message about the wrong problem.
+    got="$(printf '%s' "${row#"$property"}" | tr ';' ' ' | tr -s '[:space:]' ' ' | sed 's/^ //; s/ $//')"
     got="$(printf '%s' "$got" | tr ' ' '\n' | sed '/^$/d' | sort | tr '\n' ' ' | sed 's/ $//')"
     [ -n "$got" ] || got="(none)"
     if [ "$got" = "$want" ]; then
