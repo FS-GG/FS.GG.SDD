@@ -773,18 +773,272 @@ module MultiFileSkillDriftTests =
         let aware = computeUnobserved bodies [ subject ]
         Assert.Empty aware.SkillDriftPaths
 
-    // The classification is a SPLIT of the existing surface, not a second opinion about it: an
-    // invariant every hint branch depends on and nothing else states. If a later change lets a path
-    // fall out of all three classes, the advisory silently stops describing it.
+    // ===================================================================================
+    // FS.GG.SDD#750 — `DeclaredFileDrift.UndeclaredRoots`, fact 4, which `Drift` used to drop.
+    //
+    // The owner-sourced (driver + GameSkill) class is the ONLY one whose recorded declaration
+    // covers every file, so it is the only one an "outside the declaration" finding can be stated
+    // about at all. Everything here is anchored on the REAL embedded plan rather than a hardcoded
+    // id, so a driver package that renames its skills reds these instead of vacuously passing.
+    // ===================================================================================
+
+    /// Every owner-sourced skill id a scaffold at this generator materializes, from the same
+    /// embedded plan the fixtures write to disk.
+    let private ownerSourcedSkillIds =
+        ownerSourcedCopies []
+        |> List.map fst
+        |> List.choose Drift.skillCopyOfPath
+        |> List.map (fun (_, id, _) -> id)
+        |> List.distinct
+        |> List.sort
+
+    let private ownerSourcedSkillId =
+        match ownerSourcedSkillIds with
+        | id :: _ -> id
+        | [] -> failwith "no owner-sourced skill is embedded in this build — #750 cannot be exercised"
+
+    /// A file no producer declares, under a skill whose declaration is complete. Not on either junk
+    /// list (#747 would otherwise subtract it before any class saw it), and deliberately shaped like
+    /// a legitimate auxiliary — the finding is that it is UNDECLARED, not that it looks odd.
+    let private undeclaredFile = "references/undeclared-note.md"
+
+    let private undeclaredBody = "a stray note nobody declared\n"
+
+    let private undeclaredPath root id = $"{root}/skills/{id}/{undeclaredFile}"
+
+    /// The paths #750 owes for an undeclared file written into EVERY root: the roots that HAVE it.
+    let private undeclaredAtEveryRoot id =
+        allRoots |> List.map (fun root -> undeclaredPath root id) |> List.sort
+
+    /// Fragments the undeclared advisory owes an operator: the condition, that `upgrade` is not the
+    /// repair, and the two-armed repair that is (#750 AC2).
+    let private assertUndeclaredAdvisory (hint: string) =
+        Assert.Contains("undeclared files", hint)
+        Assert.Contains("cannot repair this class", hint)
+        Assert.Contains("delete the file", hint)
+        Assert.Contains("re-scaffold", hint)
+
+    /// The three sentences that must NEVER close a run whose only drift is an undeclared file. Each
+    /// is FALSE of it, and the not-mirrored one is actively harmful: half of it reads "copy it into
+    /// the roots that lack it", which for a file the producer never declared is an instruction to
+    /// spread it (#750 AC2).
+    let private assertNoOtherDriftAdvisory (hint: string) =
+        Assert.DoesNotContain(divergenceWording, hint)
+        Assert.DoesNotContain("another root carries", hint)
+        Assert.DoesNotContain("absent from every declared root", hint)
+
+    /// AC6, end to end and at the shape the issue names: an undeclared file in EVERY root. Before
+    /// #750 this whole tree read COHERENT — `verifyFileSet` reported the fourth fact and `Drift`
+    /// discarded it — so the two assertions below are the regression.
+    ///
+    /// EXACT rather than `Contains`, for #726's reason: the roots that HAVE the file are the ones
+    /// reported, and a `Contains` could not tell that from the not-mirrored report a subset would
+    /// produce at the roots that LACK it.
+    [<Fact>]
+    let ``FS.GG.SDD#750: an UNDECLARED file in every root of an owner-sourced skill is reported`` () =
+        let fixtureRoot = productCoherentFixture ()
+
+        for root in allRoots do
+            TestSupport.writeRelative fixtureRoot (undeclaredPath root ownerSourcedSkillId) undeclaredBody
+
+        let before = treeHash fixtureRoot
+        let report = doctorReport fixtureRoot
+        let summary = doctorSummary report
+
+        Assert.Equal<string list>(undeclaredAtEveryRoot ownerSourcedSkillId, summary.SkillDriftPaths)
+        Assert.False summary.IsCoherent
+
+        // AC4: it stays advisory. `doctor` exits 0 and writes nothing.
+        Assert.Equal(0, exitCode report)
+        Assert.Empty report.ChangedArtifacts
+        Assert.Equal(before, treeHash fixtureRoot)
+
+    /// AC2 + AC4 on the `upgrade` lane: the advisory names the condition it found and none of the
+    /// other three, the run is residual rather than complete, and nothing is deleted.
+    [<Fact>]
+    let ``FS.GG.SDD#750: upgrade --yes names the undeclared condition, deletes nothing, stays residual`` () =
+        let fixtureRoot = productCoherentFixture ()
+
+        for root in allRoots do
+            TestSupport.writeRelative fixtureRoot (undeclaredPath root ownerSourcedSkillId) undeclaredBody
+
+        let before = treeHash fixtureRoot
+        let report = upgradeYes fixtureRoot
+        let summary = report.Upgrade.Value
+
+        Assert.Equal<string list>(undeclaredAtEveryRoot ownerSourcedSkillId, summary.SkillDriftPaths)
+        assertUndeclaredAdvisory summary.NextActionHint
+        assertNoOtherDriftAdvisory summary.NextActionHint
+        Assert.True summary.ResidualDrift
+
+        // "does not delete anything" is the load-bearing half of AC4, and a tree hash over the
+        // WHOLE fixture states it about every file rather than only the one this test wrote.
+        Assert.Equal(before, treeHash fixtureRoot)
+
+        for root in allRoots do
+            Assert.True(File.Exists(absolute fixtureRoot (undeclaredPath root ownerSourcedSkillId)))
+
+    // ----- the fourth class at the FOLD, where the class fields are visible at all -----
+    //
+    // `DoctorSummary`/`UpgradeSummary` carry only the union, exactly as they did through #736, so
+    // `SkillUndeclaredPaths` — the field AC1 names — can only be asserted on `Drift.DriftReport`.
+
+    /// A provenance record that DECLARES the owner-sourced file set. `RemediationSupport.record`
+    /// deliberately declares none (it models a tree that predates owner-sourced delivery), and the
+    /// pure fold cases elsewhere in this file depend on that, so #750's fold cases build their own.
+    /// The rows come from the same plan the fixtures materialize, so the declaration is the real one.
+    let private ownerDeclaringRecord () =
+        let driverRows, gameRows = ownerSourcedProvenanceRows []
+
+        let produced owner (path, sha256) =
+            { FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Path = path
+              FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Owner = owner
+              FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Sha256 = Some sha256 }
+
+        { record None with
+            // The PRODUCT class, present so AC5's "a product auxiliary is not reported undeclared"
+            // leg has a product skill to hang off. Its declaration covers `SKILL.md` and nothing
+            // else — the #727 gap — which is exactly why it can hold no opinion about an auxiliary.
+            ProducedPaths =
+                [ produced
+                      FS.GG.SDD.Artifacts.ArtifactRef.GeneratedProduct
+                      (Fsgg.SkillMirror.skillPath ".agents" productSkillId, Fsgg.SkillMirror.sha256 productSkillBody) ]
+            DriverPaths = driverRows |> List.map (produced FS.GG.SDD.Artifacts.ArtifactRef.Driver)
+            GameSkillPaths = gameRows |> List.map (produced FS.GG.SDD.Artifacts.ArtifactRef.GameSkill) }
+
+    /// The coherent body map for that record: the seeded skeleton, the owner-sourced copies with
+    /// the bodies their plan verified, and the product skill in all three roots.
+    let private ownerAwareBodies =
+        let withOwner =
+            ownerSourcedCopies []
+            |> List.fold (fun acc (path, body) -> Map.add path body acc) (skillBodiesFor coherentPresent)
+
+        productSkillCopies
+        |> List.fold (fun acc path -> Map.add path productSkillBody acc) withOwner
+
+    let private computeOwnerAware (bodies: Map<string, string>) =
+        Drift.computeObserved
+            (Some(ownerDeclaringRecord ()))
+            (Some(descriptor None))
+            None
+            installedVersion
+            (Set.ofList coherentPresent)
+            bodies
+            []
+
+    /// Without this the legs below would be satisfied by a fold that reported everything, or by a
+    /// declaration that never resolved to anything at all.
+    [<Fact>]
+    let ``FS.GG.SDD#750: the owner-declaring baseline is coherent and really does declare files`` () =
+        let report = computeOwnerAware ownerAwareBodies
+
+        Assert.Empty report.SkillDriftPaths
+        Assert.Empty report.SkillUndeclaredPaths
+        Assert.True report.IsCoherent
+
+        let declared =
+            Drift.ownerSourcedSkillFiles (Some(ownerDeclaringRecord ()))
+            |> List.collect (fun skill -> skill.Files |> List.map (fun file -> skill.Id, file.RelativePath))
+
+        Assert.NotEmpty declared
+        Assert.Contains((ownerSourcedSkillId, "SKILL.md"), declared)
+        // The subject of every leg below really is outside the declaration.
+        Assert.DoesNotContain((ownerSourcedSkillId, undeclaredFile), declared)
+
+    /// AC1 at the field, and the class the paths land in. `Undeclared` is reported at the roots that
+    /// HAVE the file, and the other three classes stay silent about it — including the roots that
+    /// lack it, which must not be reported at all.
+    [<Fact>]
+    let ``FS.GG.SDD#750: an undeclared owner-sourced file lands in SkillUndeclaredPaths alone`` () =
+        let bodies =
+            allRoots
+            |> List.fold
+                (fun acc root -> Map.add (undeclaredPath root ownerSourcedSkillId) undeclaredBody acc)
+                ownerAwareBodies
+
+        let report = computeOwnerAware bodies
+
+        Assert.Equal<string list>(undeclaredAtEveryRoot ownerSourcedSkillId, report.SkillUndeclaredPaths)
+        Assert.Equal<string list>(undeclaredAtEveryRoot ownerSourcedSkillId, report.SkillDriftPaths)
+        Assert.Empty report.SkillNotMirroredPaths
+        Assert.Empty report.SkillLostPaths
+        Assert.Empty report.SkillDivergentPaths
+        Assert.False report.IsCoherent
+
+    /// The SUBSET case, and the reason fact 4 DOMINATES the file rather than joining the other
+    /// three. `verifyFileSet` puts the two roots that lack an undeclared file in `MissingRoots`;
+    /// classifying those not-mirrored would close the run under a sentence half of which reads
+    /// "copy it into the roots that lack it" — an instruction to SPREAD a file the producer never
+    /// declared, which is the #736 defect rebuilt one condition over.
+    [<Fact>]
+    let ``FS.GG.SDD#750: an undeclared file in ONE root is reported only there, never as not-mirrored`` () =
+        let report =
+            computeOwnerAware (
+                ownerAwareBodies
+                |> Map.add (undeclaredPath ".claude" ownerSourcedSkillId) undeclaredBody
+            )
+
+        Assert.Equal<string list>([ undeclaredPath ".claude" ownerSourcedSkillId ], report.SkillUndeclaredPaths)
+
+        Assert.Equal<string list>([ undeclaredPath ".claude" ownerSourcedSkillId ], report.SkillDriftPaths)
+        Assert.Empty report.SkillNotMirroredPaths
+
+    /// The other half of the same rule: bodies that DISAGREE across the roots carrying an undeclared
+    /// file add no divergence finding. The paths are identical either way — the same roots, the same
+    /// files — so nothing is lost; what is dropped is a label whose repair ("reconcile the bodies")
+    /// names a canonical body no declaration exists to identify.
+    [<Fact>]
+    let ``FS.GG.SDD#750: undeclared dominates divergence, and loses no path doing it`` () =
+        let bodies =
+            ownerAwareBodies
+            |> Map.add (undeclaredPath ".agents" ownerSourcedSkillId) "a\n"
+            |> Map.add (undeclaredPath ".claude" ownerSourcedSkillId) "b\n"
+            |> Map.add (undeclaredPath ".codex" ownerSourcedSkillId) "c\n"
+
+        let report = computeOwnerAware bodies
+
+        Assert.Equal<string list>(undeclaredAtEveryRoot ownerSourcedSkillId, report.SkillUndeclaredPaths)
+        Assert.Equal<string list>(undeclaredAtEveryRoot ownerSourcedSkillId, report.SkillDriftPaths)
+        Assert.Empty report.SkillDivergentPaths
+
+    /// AC5. Only the owner-sourced class can produce the finding, because it is the only one whose
+    /// recorded declaration covers every file. `verifyFiles` holds the process and product classes
+    /// by presence + cross-root identity — the process class declares nothing at all, the product
+    /// class only its `SKILL.md` digest (the #727 gap) — so there is no declaration for an auxiliary
+    /// of either to be OUTSIDE of, and an identical one in all three roots is simply coherent.
+    [<Theory>]
+    [<InlineData "fs-gg-sdd-plan">] // a SEEDED process skill
+    [<InlineData "fs-gg-demo">] // the provider PRODUCT skill (`productSkillId`)
+    let ``FS.GG.SDD#750: an auxiliary of a process or product skill is never reported undeclared`` (id: string) =
+        let bodies =
+            allRoots
+            |> List.fold (fun acc root -> Map.add (undeclaredPath root id) undeclaredBody acc) ownerAwareBodies
+
+        let report = computeOwnerAware bodies
+
+        Assert.Empty report.SkillUndeclaredPaths
+        // And nothing else either: mirrored identically to every root, it is a coherent auxiliary.
+        Assert.Empty report.SkillDriftPaths
+        Assert.True report.IsCoherent
+
+    // The classification is a SPLIT of the existing surface (plus, since #750, the fourth condition
+    // it used to drop): an invariant every hint branch depends on and nothing else states. If a
+    // later change lets a path fall out of all four classes, the advisory silently stops describing
+    // it.
     [<Theory>]
     [<InlineData "notMirrored">]
     [<InlineData "divergent">]
     [<InlineData "mixed">]
     [<InlineData "missingRoot">]
     [<InlineData "lostEverywhere">]
+    [<InlineData "undeclared">]
+    [<InlineData "undeclaredAndDivergent">]
     let ``the drift classes partition the reported paths`` (shape: string) =
         let id = "fs-gg-sdd-plan"
-        let bodies = skillBodiesFor coherentPresent
+        // #750: the owner-DECLARING record, so the `undeclared` shapes are reachable at all. The
+        // pre-existing shapes all mutate the process class, which this record does not touch, so
+        // they keep reporting exactly what they reported against the declaration-less one.
+        let bodies = ownerAwareBodies
 
         let bodies =
             match shape with
@@ -800,16 +1054,22 @@ module MultiFileSkillDriftTests =
                 |> Map.add (skillMd ".claude" "fs-gg-sdd-charter") "EDITED\n"
             | "missingRoot" -> bodies |> Map.remove (skillMd ".codex" id)
             | "lostEverywhere" -> allRoots |> List.fold (fun acc root -> Map.remove (skillMd root id) acc) bodies
+            | "undeclared" ->
+                allRoots
+                |> List.fold
+                    (fun acc root -> Map.add (undeclaredPath root ownerSourcedSkillId) undeclaredBody acc)
+                    bodies
+            // Every class at once: an undeclared owner-sourced file alongside a divergent process
+            // auxiliary, so the fourth class has to stay disjoint from a populated third.
+            | "undeclaredAndDivergent" ->
+                bodies
+                |> Map.add (undeclaredPath ".claude" ownerSourcedSkillId) undeclaredBody
+                |> Map.add (auxiliaryPath ".agents" id) "a\n"
+                |> Map.add (auxiliaryPath ".claude" id) "a\n"
+                |> Map.add (auxiliaryPath ".codex" id) "b\n"
             | other -> failwith $"unknown shape {other}"
 
-        let report =
-            Drift.compute
-                (Some(record None))
-                (Some(descriptor None))
-                None
-                installedVersion
-                (Set.ofList coherentPresent)
-                bodies
+        let report = computeOwnerAware bodies
 
         Assert.NotEmpty report.SkillDriftPaths
 
@@ -819,6 +1079,7 @@ module MultiFileSkillDriftTests =
             report.SkillNotMirroredPaths
             @ report.SkillLostPaths
             @ report.SkillDivergentPaths
+            @ report.SkillUndeclaredPaths
             |> List.distinct
             |> List.sort
         )
@@ -829,7 +1090,8 @@ module MultiFileSkillDriftTests =
         let classes =
             [ "notMirrored", report.SkillNotMirroredPaths
               "lost", report.SkillLostPaths
-              "divergent", report.SkillDivergentPaths ]
+              "divergent", report.SkillDivergentPaths
+              "undeclared", report.SkillUndeclaredPaths ]
             |> List.map (fun (name, paths) -> name, Set.ofList paths)
 
         for i in 0 .. classes.Length - 1 do

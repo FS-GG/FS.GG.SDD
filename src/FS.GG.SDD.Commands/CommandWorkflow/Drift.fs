@@ -69,6 +69,13 @@ module internal Drift =
           // Every named root HAS the file and the bodies disagree (or disagree with the recorded
           // digest). This is the condition the single pre-#736 advisory described.
           SkillDivergentPaths: string list
+          // FS-GG/FS.GG.SDD#750: this root CARRIES a file that the skill's producer does not declare
+          // at all — `SkillMirror.DeclaredFileDrift.UndeclaredRoots`, fact 4. Only the owner-sourced
+          // class can reach it: it is the only one whose recorded declaration covers every file, and
+          // "outside the declaration" is unstatable without one. Reported at the roots that HAVE the
+          // file, which is what makes it a fourth class rather than a fourth spelling of the other
+          // three — every one of their sentences is false of it.
+          SkillUndeclaredPaths: string list
           // ADR-0063 / FS-GG/FS.GG.SDD#624: the owner-sourced skill copies (driver + product classes)
           // this scaffold is EXPECTED to carry — per the recorded parameters + present-skill set —
           // but is missing on disk. These are backfilled no-clobber by the `artifactReSeed` step,
@@ -375,6 +382,9 @@ module internal Drift =
         | NotMirroredAt
         | LostEverywhere
         | DivergentAt
+        /// FS-GG/FS.GG.SDD#750: this root carries a file its producer's COMPLETE declaration does
+        /// not cover. Tagged at the roots that HAVE it, never at the roots that lack it.
+        | UndeclaredAt
 
     /// FS-GG/FS.GG.SDD#736: the skill-drift surface, split by the CONDITION that produced each path.
     ///
@@ -402,9 +412,15 @@ module internal Drift =
             /// This root DOES carry the file and its bytes disagree — with the other roots, or with
             /// the digest recorded for it. Repair: reconcile the bodies.
             Divergent: string list
-            /// `NotMirrored ∪ Lost ∪ Divergent`, sorted and deduped — byte-identical to the pre-#736
-            /// list, which is the whole point: this is a SPLIT of the existing surface, not a change
-            /// to what it reports.
+            /// FS-GG/FS.GG.SDD#750: this root carries a file the skill's producer does not declare
+            /// at all, under a skill whose declared file set is COMPLETE by construction. Repair:
+            /// remove the file, or re-scaffold so tree and declaration are regenerated together.
+            /// Reported at the roots that HAVE it — the fourth condition, with a fourth repair.
+            Undeclared: string list
+            /// `NotMirrored ∪ Lost ∪ Divergent ∪ Undeclared`, sorted and deduped. Through #736 this
+            /// was byte-identical to the pre-#736 list, because that change was a pure SPLIT of the
+            /// existing surface; #750 is the one change that ADDS to it, because fact 4 was being
+            /// dropped on the floor and an undeclared file read coherent.
             All: string list
             /// FS-GG/FS.GG.SDD#747: the observed skill-copy files subtracted from the comparison as
             /// OS/VCS junk before any of the three classes were computed. Disjoint from `All` by
@@ -544,15 +560,18 @@ module internal Drift =
                         SkillMirror.ActualSkillFiles.Id = id
                         SkillMirror.ActualSkillFiles.Files = copyFiles root id } ]
 
-        // The three facts, normalized off the two verify shapes so ONE classification rule sees
-        // both. `verifyFiles` reports `SkillFileDrift`, `verifyFileSet` reports `DeclaredFileDrift`;
-        // their first three fields are the SAME three independent facts with the same meanings, so
-        // the rule below is written once over `(relativePath, missingRoots, divergent,
-        // hashMismatchRoots)` rather than twice over two records that would drift apart.
+        // The facts, normalized off the two verify shapes so ONE classification rule sees both.
+        // `verifyFiles` reports `SkillFileDrift`, `verifyFileSet` reports `DeclaredFileDrift`; their
+        // first three fields are the SAME three independent facts with the same meanings, so the
+        // rule below is written once over `(relativePath, missingRoots, divergent,
+        // hashMismatchRoots, undeclaredRoots)` rather than twice over two records that would drift
+        // apart. `SkillFileDrift` has no fourth fact to give — a caller holding no declaration can
+        // say nothing about what lies outside it — so the `verifyFiles` arm passes `[]`, which is
+        // the same "no authority" sentinel `verifyFileSet` itself returns for `Files = []`.
         let classifyDrift
             (id: string)
             (skillMissingRoots: string list)
-            (files: (string * string list * bool * string list) list)
+            (files: (string * string list * bool * string list * string list) list)
             =
             // The roots that CARRY this file — read off the observation directly, never inferred as
             // "carries the skill and is not in `fileMissingRoots`". Since #760 those are different
@@ -623,17 +642,42 @@ module internal Drift =
             // DECLARED owner-sourced file absent from every root that carries the skill lands in
             // `fileMissingRoots` for all of them. That is still not-mirrored rather than lost —
             // the skill itself is present, and the repair is per-file, not "restore the copy".
+            //
+            // #750: fact 4 DOMINATES the file, and that is the whole reason it is a class of its
+            // own rather than another way of reaching the existing three. A file the declaration
+            // does not cover is reported at the roots that HAVE it, and at nothing else:
+            //
+            //   - its absence from the other roots must NOT be reported. Under `verifyFileSet` an
+            //     undeclared file present in one root puts the other two in `MissingRoots`, and
+            //     `NotMirroredAt` there reads "another root carries this file — copy it in or
+            //     delete the stray". Half of that sentence is an instruction to SPREAD a file the
+            //     producer never declared, which is exactly the false-advisory defect #736 exists
+            //     to end, rebuilt one condition over;
+            //   - a byte disagreement AMONG the roots that carry it adds nothing. Those are the
+            //     same roots and the same paths this class already names, and "reconcile the
+            //     bodies" is the wrong repair for a file that should not be in any of them —
+            //     there is no canonical body to reconcile toward, because there is no declaration
+            //     to name one. No path is lost by the suppression; only a false label is.
+            //
+            // `hashMismatchRoots` cannot collide here: a file with no declared digest cannot
+            // contradict one (`verifyFileSet` returns `[]` for fact 3 in exactly that case).
             let filePaths =
                 files
-                |> List.collect (fun (relativePath, fileMissingRoots, divergent, hashMismatchRoots) ->
-                    let divergentRoots =
-                        if divergent && List.isEmpty hashMismatchRoots then
-                            rootsWithFile relativePath
+                |> List.collect (fun (relativePath, fileMissingRoots, divergent, hashMismatchRoots, undeclaredRoots) ->
+                    let tagged =
+                        if not (List.isEmpty undeclaredRoots) then
+                            undeclaredRoots |> List.map (fun root -> UndeclaredAt, root)
                         else
-                            []
+                            let divergentRoots =
+                                if divergent && List.isEmpty hashMismatchRoots then
+                                    rootsWithFile relativePath
+                                else
+                                    []
 
-                    (fileMissingRoots |> List.map (fun root -> NotMirroredAt, root))
-                    @ (hashMismatchRoots @ divergentRoots |> List.map (fun root -> DivergentAt, root))
+                            (fileMissingRoots |> List.map (fun root -> NotMirroredAt, root))
+                            @ (hashMismatchRoots @ divergentRoots |> List.map (fun root -> DivergentAt, root))
+
+                    tagged
                     |> List.map (fun (condition, root) -> condition, SkillMirror.skillFilePath root id relativePath))
 
             missingSkillPaths @ filePaths
@@ -648,7 +692,13 @@ module internal Drift =
                     drift.MissingRoots
                     (drift.Files
                      |> List.map (fun file ->
-                         file.RelativePath, file.MissingRoots, file.Divergent, file.HashMismatchRoots)))
+                         // No fourth fact: `verifyFiles` holds no declaration for these classes (the
+                         // process class declares nothing at all, the product class only its
+                         // `SKILL.md` digest — the #727 gap), so nothing here can be OUTSIDE a
+                         // declaration. That is #750 AC5 stated at its cause rather than asserted:
+                         // a process/product auxiliary is not reported undeclared because there is
+                         // no authority under which it could be.
+                         file.RelativePath, file.MissingRoots, file.Divergent, file.HashMismatchRoots, [])))
 
         // FS-GG/FS.GG.SDD#733: the owner-sourced class, verified against the COMPLETE declared file
         // set recorded in provenance. `verifyFileSet` is the same algorithm with fact 3 widened from
@@ -656,13 +706,14 @@ module internal Drift =
         // offending root instead of falling back to "report every present root".
         //
         // `DeclaredFileDrift.UndeclaredRoots` — fact 4, "this root carries a file the declaration
-        // does not cover" — is deliberately NOT classified here. It is a genuine fourth condition
-        // with a fourth repair, and every existing class's advisory sentence would be FALSE of it
-        // (`NotMirrored` asserts a sibling root carries the file, and it is reported at the roots
-        // that DO carry it). Reporting it needs a fourth advisory bucket on `DoctorSummary` and its
-        // rendering, which is a wider change than #733's touch-set — filed as
-        // FS-GG/FS.GG.SDD#750. Dropping it reports strictly what #733 asked for and regresses
-        // nothing: before #733 this class was not content-verified at all.
+        // does not cover" — was dropped on the floor here between #733 and FS-GG/FS.GG.SDD#750, so
+        // an editor backup or a stray file added to all three roots of a driver skill read
+        // COHERENT. #750 classifies it, as the fourth condition it is: a genuine fourth repair, and
+        // every existing class's advisory sentence is false of it (`NotMirrored` asserts a sibling
+        // root carries the file, and this is reported at the roots that DO carry it). The #733 note
+        // said closing it needed a fourth field on `DoctorSummary`/`UpgradeSummary`; #736 landed
+        // first and put the class split in `SkillDriftClasses` instead, where the other three live,
+        // so the summaries keep carrying only the union and no persisted schema moves.
         //
         // FACT 3 NOW SPANS ONE DIGEST DOMAIN, which is why there is no filter here any more.
         //
@@ -686,7 +737,11 @@ module internal Drift =
                     drift.MissingRoots
                     (drift.Files
                      |> List.map (fun file ->
-                         file.RelativePath, file.MissingRoots, file.Divergent, file.HashMismatchRoots)))
+                         file.RelativePath,
+                         file.MissingRoots,
+                         file.Divergent,
+                         file.HashMismatchRoots,
+                         file.UndeclaredRoots)))
 
         let classified = processProductClassified @ ownerClassified
 
@@ -702,6 +757,7 @@ module internal Drift =
         { NotMirrored = pathsOf NotMirroredAt
           Lost = pathsOf LostEverywhere
           Divergent = pathsOf DivergentAt
+          Undeclared = pathsOf UndeclaredAt
           All = all
           IgnoredJunk = ignoredJunk }
 
@@ -820,6 +876,7 @@ module internal Drift =
               SkillNotMirroredPaths = []
               SkillLostPaths = []
               SkillDivergentPaths = []
+              SkillUndeclaredPaths = []
               // No provenance ⇒ not a scaffold ⇒ nothing to backfill (#624).
               OwnerSkillBackfillPaths = []
               // No provenance ⇒ no skill drift computed at all ⇒ nothing was compared, so nothing
@@ -917,6 +974,7 @@ module internal Drift =
               SkillNotMirroredPaths = skillDrift.NotMirrored
               SkillLostPaths = skillDrift.Lost
               SkillDivergentPaths = skillDrift.Divergent
+              SkillUndeclaredPaths = skillDrift.Undeclared
               OwnerSkillBackfillPaths = ownerBackfillMissing
               IgnoredSkillJunkPaths = skillDrift.IgnoredJunk
               Steps = steps
