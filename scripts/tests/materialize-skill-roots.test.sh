@@ -515,11 +515,31 @@ printf '\nF. the pinned FS.GG.Kit declaration in this repo\n'
 eval_kit() { (cd "$repo" && dotnet build .config/kit/FS.GG.Kit.receiver.proj --no-restore \
   -getProperty:FsggKitSkillRoots -getProperty:FsggKitRetiredSkillRoots -getProperty:FsggKitViewSkillRoots 2>&1); }
 
+# THE RESTORE IS UNCONDITIONAL NOW, AND THE GUARD IT REPLACES HAD LOST ITS SUBJECT (FS.GG.SDD#769).
+# It used to run only when `FsggKitSkillRoots` came back empty. That probe was correct when it was
+# written: at FS.GG.Kit 0.15.0 every one of these three properties came from the PACKAGE, so an
+# unrestored evaluation emptied all three and the probe saw it. FS-GG/.github#1760 then moved
+# `FsggKitSkillRoots` and `FsggKitViewSkillRoots` into `.config/kit/FS.GG.Kit.receiver.proj` itself
+# (deliberately — an undeclared property would silently take the package default, which is that file's
+# own "BOTH PROPERTIES ARE DECLARED EXPLICITLY" note). The probe now reads a RECEIVER-owned property to
+# decide whether the PACKAGE was restored, which it structurally cannot tell. Measured on this
+# worktree, `.config/kit/obj` removed, `dotnet build --no-restore -getProperty:...` — exit 0, no
+# diagnostic:
+#
+#     {"FsggKitSkillRoots": ".claude/skills", "FsggKitRetiredSkillRoots": "", "FsggKitViewSkillRoots": ".agents/skills"}
+#
+# Non-empty, so the fallback did not fire, so leg F graded a package-owned property that no package had
+# supplied and reported `.codex/skills is not in FsggKitRetiredSkillRoots ('')` — "#767's premise no
+# longer holds" — about a premise that holds perfectly well. Red for a reason that is not the subject
+# is the same defect class as green for one (#266); it just costs a different hour. A restore is ~0.1s
+# and idempotent, gate.yml already runs one in front of this file, and unconditionally restoring
+# removes the inference entirely rather than making it cleverer.
+restore_out="$(cd "$repo" && dotnet restore .config/kit/FS.GG.Kit.receiver.proj 2>&1)"
+restore_rc=$?
 props="$(eval_kit)"
-if ! printf '%s' "$props" | grep -q '"FsggKitSkillRoots": ".'; then
-  restore_out="$(cd "$repo" && dotnet restore .config/kit/FS.GG.Kit.receiver.proj 2>&1)"
-  restore_rc=$?
-  props="$(eval_kit)"
+if [ "$restore_rc" -ne 0 ]; then
+  bad "dotnet restore of the kit receiver project FAILED (rc=$restore_rc) — legs F and H have no subject"
+  printf '%s\n' "$restore_out" | sed 's/^/       | /'
 fi
 
 kit_retired="$(printf '%s' "$props" | sed -n 's/.*"FsggKitRetiredSkillRoots": "\(.*\)".*/\1/p')"
@@ -528,8 +548,8 @@ kit_views="$(printf '%s' "$props" | sed -n 's/.*"FsggKitViewSkillRoots": "\(.*\)
 
 if [ -z "$kit_runtime" ]; then
   bad "the pinned kit declaration did not EVALUATE (FsggKitSkillRoots is empty) — this leg has no subject, it is not passing"
-  printf '     restore (rc=%s):\n' "${restore_rc:-not-attempted}"
-  printf '%s\n' "${restore_out:-<not attempted: the first evaluation returned a non-empty document>}" | sed 's/^/       | /'
+  printf '     restore (rc=%s):\n' "$restore_rc"
+  printf '%s\n' "$restore_out" | sed 's/^/       | /'
   printf '     evaluation:\n'
   printf '%s\n' "$props" | sed 's/^/       | /'
   printf '     Repair: dotnet restore .config/kit/FS.GG.Kit.receiver.proj\n'
@@ -545,6 +565,105 @@ else
   else
     ok ".codex/skills is in no runtime root set (materialize='$kit_runtime' view='$kit_views')"
   fi
+fi
+
+# ---------------------------------------------------------------------------------------------
+# H. THE DOC THAT NAMES THE ROOTS — `coordination-coherence.yml`'s header, against the SAME
+#    evaluation leg F just made (FS.GG.SDD#769).
+# ---------------------------------------------------------------------------------------------
+# The header of `.github/workflows/coordination-coherence.yml` is what a reader opens to find out what
+# the required `kit / coordination-kit` context covers. It named `.claude/skills + .codex/skills +
+# .agents/skills` — ADR-0011's three — for as long as it took anybody to notice, while the pinned kit
+# materialized into one of them, and it derived a "71 destinations" figure from that stale root count.
+# Nothing could observe either: prose has no subject to disagree with, which is exactly why the repair
+# for a lying comment is a leg and not a better comment (FS-GG/.github#1059).
+#
+# THIS LEG LIVES HERE, NEXT TO F, ON PURPOSE. F is already the wiring leg — the only one that reads
+# this repository's REAL pinned declaration rather than a synthetic fixture — and H asks the same
+# question of the same evaluation, one consumer over: F asks whether the declaration still says what
+# #767 measured, H asks whether the file that TELLS people what it says agrees with it. Re-evaluating
+# MSBuild in a second test script to ask a second question of one value would buy a tidier filename and
+# a second way for the two answers to drift apart.
+#
+# WHAT IT COMPARES. The header carries one `fsgg-kit-roots:` row per disposition, each naming the
+# property it mirrors, and each row's remaining fields are the roots. Four ways to be wrong are four
+# reds: a row missing, a row naming the wrong property, a row whose roots differ from the evaluation,
+# and a row that is not one of the three graded here at all. `(none)` is the spelling for an empty
+# declaration, so "the property is empty" and "somebody deleted the row" stay distinguishable.
+#
+# TWO OF THE THREE PROPERTIES ARE THE RECEIVER'S; THE THIRD MOVES WITH THE PIN, AND THAT IS DISCLOSED
+# RATHER THAN AVOIDED. `.config/kit/FS.GG.Kit.receiver.proj` declares `FsggKitSkillRoots` and
+# `FsggKitViewSkillRoots` outright, so those two rows follow an edit somebody makes in this repo.
+# `FsggKitRetiredSkillRoots` is the PINNED PACKAGE's default (`build/FS.GG.Kit.props`), so a kit bump
+# that changes the retired set reds this leg on a branch whose only diff is the pin, and the repair is
+# a comment edit rather than a materialize. That is a real cost and it is accepted, because it is
+# ALREADY leg F's: F reds on the same bump if `.codex/skills` leaves the retired set. One more red on a
+# bump that changes a disposition is the correct number when a comment claims that disposition.
+printf '\nH. coordination-coherence.yml names the roots this receiver actually declares\n'
+
+coherence_yml="$repo/.github/workflows/coordination-coherence.yml"
+
+# `;`-joined MSBuild value -> a sorted, space-separated set; the empty value -> `(none)`.
+norm_roots() {
+  local v
+  v="$(printf '%s' "$1" | tr ';' '\n' | sed '/^$/d' | sort | tr '\n' ' ' | sed 's/ $//')"
+  printf '%s' "${v:-(none)}"
+}
+
+if [ ! -f "$coherence_yml" ]; then
+  bad "$coherence_yml does not exist — this leg has no subject, it is not passing"
+elif [ -z "$kit_runtime" ]; then
+  bad "the pinned kit declaration did not EVALUATE (see F) — H cannot grade the header against nothing"
+else
+  # EXACTLY THREE, not "at least one". Counting only the zero case would let a FOURTH row in this very
+  # format — `fsgg-kit-roots: bogus  FsggKitBogusRoots  .totally/made/up` — sit in the header asserting
+  # a property nothing evaluates, while the three graded rows reported `ok` and the leg exited 0. An
+  # ungraded row in the format whose whole purpose is to be graded is the defect this leg exists to
+  # remove, wearing the leg's own uniform.
+  header_rows="$(grep -c '^#[[:space:]]*fsgg-kit-roots:' "$coherence_yml" || true)"
+  if [ "$header_rows" -eq 0 ]; then
+    bad "coordination-coherence.yml carries NO 'fsgg-kit-roots:' rows — the header's root list is unchecked prose again (FS.GG.SDD#769)"
+  elif [ "$header_rows" -gt 3 ]; then
+    # Strictly MORE than the three graded below. FEWER is already reported per row, by name and with
+    # the value the missing row should have carried — a count would say less about it, not more.
+    bad "coordination-coherence.yml carries $header_rows 'fsgg-kit-roots:' rows; only 3 are graded below, so $((header_rows - 3)) assert a property nothing checks"
+  fi
+
+  check_row() {
+    # check_row <disposition> <property> <evaluated value>
+    local disposition="$1" property="$2" want row got
+    want="$(norm_roots "$3")"
+    row="$(sed -n "s/^#[[:space:]]*fsgg-kit-roots:[[:space:]]*${disposition}[[:space:]]\{1,\}//p" "$coherence_yml")"
+    if [ -z "$row" ]; then
+      bad "coordination-coherence.yml declares no 'fsgg-kit-roots: $disposition' row (expected $property = $want)"
+      return
+    fi
+    if [ "$(printf '%s\n' "$row" | wc -l)" -ne 1 ]; then
+      bad "coordination-coherence.yml declares $(printf '%s\n' "$row" | wc -l) '$disposition' rows — exactly one is readable"
+      return
+    fi
+    case "$row" in
+      "$property"[[:space:]]*) ;;
+      *) bad "the '$disposition' row names property '${row%%[[:space:]]*}', but this leg grades $property"
+         return ;;
+    esac
+    # `;` is accepted as a separator alongside whitespace. A maintainer mirroring MSBuild's own syntax
+    # writes `.claude/skills;.agents/skills`, and rejecting that would red with "the header is stale",
+    # which is a true-sounding message about the wrong problem.
+    got="$(printf '%s' "${row#"$property"}" | tr ';' ' ' | tr -s '[:space:]' ' ' | sed 's/^ //; s/ $//')"
+    got="$(printf '%s' "$got" | tr ' ' '\n' | sed '/^$/d' | sort | tr '\n' ' ' | sed 's/ $//')"
+    [ -n "$got" ] || got="(none)"
+    if [ "$got" = "$want" ]; then
+      ok "$disposition: coordination-coherence.yml says '$got' and $property evaluates to '$want'"
+    else
+      bad "$disposition: coordination-coherence.yml says '$got' but $property evaluates to '$want' — the header is stale (FS.GG.SDD#769)"
+      printf "     Repair: correct the 'fsgg-kit-roots: %s' row in .github/workflows/coordination-coherence.yml\n" "$disposition"
+    fi
+  }
+
+  check_row materialized FsggKitSkillRoots        "$kit_runtime"
+  check_row view         FsggKitViewSkillRoots    "$kit_views"
+  check_row retired      FsggKitRetiredSkillRoots "$kit_retired"
 fi
 
 if [ "$fail" -ne 0 ]; then

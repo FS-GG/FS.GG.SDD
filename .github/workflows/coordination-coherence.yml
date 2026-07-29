@@ -1,9 +1,51 @@
 # coordination-coherence — thin caller for the shared reusable gate (FS-GG/.github, ADR-0019).
 #
 # This repo is declared a `coordination-kit` receiver in FS-GG/.github registry/repos.yml, so it
-# holds a copy of the coordination kit — the coordination skills (.claude/skills + .codex/skills +
-# .agents/skills) and the fsgg-coord client (scripts/fsgg-coord). A non-receiver would pass
-# trivially; this repo is a receiver, so it is enforced.
+# holds a copy of the coordination kit: the shared coordination skills, plus the clients and the shell
+# config they source, under `scripts/`. THE MEMBER LIST IS NOT RE-SPELLED HERE, for the same reason the
+# destination count below is not — the pinned package's own `kit/kit-manifest.tsv` is the enumeration,
+# it changes when the kit changes (0.18.0 dropped the engine tool-manifest row outright, ADR-0068), and
+# a copy in a comment is a second answer that can disagree with it. A non-receiver would pass trivially;
+# this repo is a receiver, so it is enforced.
+#
+# THE SKILL ROOTS ARE READ OFF THE DECLARATION, NOT OFF AN ADR'S ROOT COUNT (FS.GG.SDD#769). This
+# sentence used to name `.claude/skills + .codex/skills + .agents/skills` — ADR-0011's three — and by
+# the time anyone read it the pinned kit materialized into exactly one of them. A root count copied
+# from an ADR number rots on the next amendment; a disposition read off the evaluated declaration
+# cannot, because it is the same value that PERFORMS the materialize. The rows below are that value,
+# and they are CHECKED rather than promised: leg F of `scripts/tests/materialize-skill-roots.test.sh`
+# evaluates `.config/kit/FS.GG.Kit.receiver.proj` against the pin, leg H grades these three rows
+# against that evaluation, and both run in the required `Deterministic gate (locked restore + build +
+# test)` context — NOT in `kit / coordination-kit`, which this file otherwise describes.
+#
+#   fsgg-kit-roots: materialized  FsggKitSkillRoots         .claude/skills
+#   fsgg-kit-roots: view          FsggKitViewSkillRoots     .agents/skills
+#   fsgg-kit-roots: retired       FsggKitRetiredSkillRoots  .codex/skills
+#
+# Roots are space- or `;`-separated; `(none)` spells an empty set. The first two properties are
+# declared by the receiver project itself, so those rows follow an edit made in this repo — edit the
+# declaration and this block follows, or the gate says so. THE THIRD IS THE PINNED PACKAGE'S DEFAULT,
+# so a Renovate FS.GG.Kit bump that changes the retired set reds that gate on a branch whose only diff
+# is the pin, and the repair is an edit to this comment. That coupling is deliberate and it is not new:
+# leg F already reds on the same bump.
+#
+# ONLY THE MATERIALIZED ROW IS GRADED HERE. `coordination-sync --against-pin` resolves its roots from
+# `FsggKitSkillRoots` alone and places every skill row in each of those roots; the other two rows are
+# somebody else's subject, or nobody's:
+#
+#   * the VIEW root is produced at checkout by `scripts/skill-view generate` and is never transported
+#     or committed (ADR-0067 §6), so this gate has no delivered bytes to compare there. Whether the
+#     view is actually VISIBLE to a runtime is the required `skill-view-check` context's question, and
+#     whether anything lives under it that the source root does NOT carry — the class that a view
+#     retirement deletes silently — is `scripts/check-root-asymmetry.sh`'s.
+#   * the RETIRED root's CONTENT is graded by NOTHING, and that is the sentence a reader of this file
+#     most needs. (Its DISPOSITION is graded — legs F and H above — which is a different question: that
+#     the kit still calls it retired, not that anything audits what sits in it.)
+#     The kit's retired-root sweep withdrew the four kit-owned coordination skills from `.codex/skills`
+#     (FS.GG.SDD#730 for #762); what remains there is this repo's own `fs-gg-sdd-*` / `speckit-*` /
+#     `spectre-console` skills, which no kit member reaches and no gate audits. Do not read a green
+#     `kit / coordination-kit` as a statement about that root. Retiring it from this tree is ADR-0067
+#     phase 4 (FS-GG/.github#1676).
 #
 # THE COMPARAND IS THIS REPO'S OWN PIN, NOT `.github@main` (FS-GG/.github#1584, FS.GG.SDD#731).
 # The gate restores the exact FS.GG.Kit version THIS repo pins in Directory.Packages.local.props and
@@ -13,12 +55,38 @@
 #
 # IT DOES NOT COVER THE BUILD-CONFIG ROWS, and this comment will not round that up. The reusable
 # workflow's `include-build-config` input defaults to false and this caller passes no `with:` block,
-# so Directory.Build.props / Directory.Packages.props are NOT graded here — 71 destinations, not 73 —
-# even though this receiver does materialize them (FsggKitMaterializeBuildConfig=true). They are
-# covered instead by gate.yml's own required `Shared-build-config drift check`, which re-runs the
-# materialize and diffs exactly those two files. Do not add `include-build-config: true` to close the
-# wording gap: it would put two required gates on one question, which the reusable workflow's own
-# header argues is how both end up ignored. Fix the sentence, not the coverage.
+# so Directory.Build.props / Directory.Packages.props are NOT graded here, even though this receiver
+# does materialize them (FsggKitMaterializeBuildConfig=true). They are covered instead by gate.yml's
+# own required `Shared-build-config drift check`, which re-runs the materialize and diffs exactly
+# those two files. Do not add `include-build-config: true` to close the wording gap: it would put two
+# required gates on one question, which the reusable workflow's own header argues is how both end up
+# ignored. Fix the sentence, not the coverage.
+#
+# AND IT ASSERTS NO STANDING DESTINATION COUNT WHILE SAYING SO (FS.GG.SDD#769). That sentence used to
+# end "— 71 destinations, not 73 —". The figure was hand-computed from the three-root set corrected
+# above, so it was wrong from the moment the kit narrowed the roots, and it was wrong in a way nothing
+# could observe: a count in a comment has no subject to disagree with. It is deliberately NOT replaced
+# by a fresh hand-computed one, because the graded set is a function of three things this file does not
+# own — the pinned package's manifest rows, the reusable gate's row-kind-to-destination mapping (a
+# skill row lands in each MATERIALIZED root; every other kind has exactly one destination), and
+# `include-build-config` — and Renovate moves the first of those on its own schedule. This repo went
+# FS.GG.Kit 0.15.0 → 0.18.0 inside a day, and 0.18.0 dropped a kit row outright (ADR-0068 took the
+# engine tool manifest off the kit; see the receiver project's note).
+#
+# What a MEASUREMENT looks like, so nobody has to recompute one: the required `kit / coordination-kit`
+# context prints the whole verdict in its own job log. Run 30406066077, on `main` at aa1bd95,
+# 2026-07-28 — a real green run, quoted rather than derived:
+#
+#   coordination-sync: pin = 0.18.0 (from Directory.Packages.local.props -> 0.18.0)
+#   … (the `comparand = …nupkg` line, elided for width)
+#   coordination-sync: skill roots = .claude/skills (from .config/kit/FS.GG.Kit.receiver.proj <FsggKitSkillRoots>)
+#   … (one `ok: <path>` line per graded destination)
+#   coordination-sync: OK — all 27 materialized file(s) match the FS.GG.Kit 0.18.0 this tree pins.
+#
+# Those 27 are the graded set AT THAT PIN — not a constant, and not a property of this workflow. The
+# `skill roots` line is also the gate's own confirmation of the `materialized` row above: it names the
+# same property and resolves it from the same file. Read the current numbers off the newest run, never
+# off this comment.
 #
 # BOTH ARMS RESOLVE THE KIT FROM THE SAME REF, AND THAT IS THE FIX (#731 AC3). They did NOT always.
 # The gate used to check out `FS-GG/.github@main` as the comparand on both triggers, and additionally
