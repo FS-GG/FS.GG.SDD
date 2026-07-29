@@ -224,7 +224,8 @@ module internal Drift =
     ///
     /// This is the third skill class, and the only one whose recorded authority covers every file.
     /// `DriverSkills.plan` / `GameSkills.plan` materialize `<root>/skills/<id>/<file>` for every
-    /// root, per file, and record `(path, file.Sha256)` into `DriverPaths` / `GameSkillPaths` — so
+    /// root, per file, and record `(path, SkillMirror.sha256 body)` — the digest of the body they
+    /// WROTE, not the manifest's transport digest (#752) — into `DriverPaths` / `GameSkillPaths`, so
     /// unlike the process class (no digest at all) and the product class (one digest covering
     /// `SKILL.md`, the #727 gap), this class can arbitrate EVERY file against a stable seed-time
     /// digest. Before #733 it asserted none of it: the class was in neither `expectedSkills` arm and
@@ -626,46 +627,20 @@ module internal Drift =
         // FS-GG/FS.GG.SDD#750. Dropping it reports strictly what #733 asked for and regresses
         // nothing: before #733 this class was not content-verified at all.
         //
-        // FACT 3 SPANS TWO DIGEST DOMAINS, and this is the reason for the filter below.
-        // `SkillMirror.sha256` normalizes `\r\n` to `\n` before hashing; `DriverPaths[].Sha256` does
-        // NOT always live in that domain. `DriverSkills.classifyEntry` validates a schema-v2 row
-        // (`TreeSha256.IsSome` — what the shipped driver package uses) with `rawSha256 bytes`, and
-        // records THAT value; only a v1 row is validated with `SkillMirror.sha256`. The repo's other
-        // consumer of the same field, `HandlersUpgrade.preservedFilesVerified`, compares it with an
-        // un-normalized `UTF8.GetBytes text` digest — so the raw domain is the one the recorded value
-        // is already documented to live in.
+        // FACT 3 NOW SPANS ONE DIGEST DOMAIN, which is why there is no filter here any more.
         //
-        // Left alone, a CRLF-authored or BOM-prefixed driver file would be reported as drift by every
-        // scaffolded workspace, permanently: no `upgrade` writes it (no-clobber, and it is not
-        // missing), and re-scaffolding reproduces it. A false positive nothing can clear is worse
-        // than the gap #733 closes. So a mismatch `verifyFileSet` reports is DROPPED when a raw
-        // comparison clears it — the file matches the digest in the domain its producer recorded it
-        // in. Genuine tampering matches NEITHER domain and survives, which is what the regression
-        // legs pin. This is a MITIGATION, not the fix: accepting either domain is weaker than
-        // knowing which to expect. The root cause — one field, two domains, and a producer that
-        // uses both inside one manifest row — is FS-GG/FS.GG.SDD#752, whose AC4 removes this
-        // allowance once the field has a single meaning.
-        let rawDigest (body: string) =
-            System.Text.Encoding.UTF8.GetBytes body
-            |> System.Security.Cryptography.SHA256.HashData
-            |> System.Convert.ToHexString
-            |> fun value -> value.ToLowerInvariant()
-
-        let ownerDeclaredSha =
-            [ for skill in ownerExpected do
-                  for file in skill.Files -> (skill.Id, file.RelativePath), file.Sha256 ]
-            |> Map.ofList
-
-        let observedBody root id relativePath =
-            copyFiles root id
-            |> Option.bind (List.tryFind (fun file -> file.RelativePath = relativePath))
-            |> Option.map (fun file -> file.Body)
-
-        let clearedByRawDigest id relativePath root =
-            match Map.tryFind (id, relativePath) ownerDeclaredSha, observedBody root id relativePath with
-            | Some declared, Some body -> not (System.String.IsNullOrWhiteSpace declared) && rawDigest body = declared
-            | _ -> false
-
+        // #751 shipped a mitigation: a `HashMismatchRoots` entry was DROPPED when an un-normalized
+        // raw comparison cleared it, because `DriverPaths[].Sha256` could hold either a raw or a
+        // canonical digest and this fold could not tell which. Accepting either domain is strictly
+        // weaker than knowing which to expect — a body could clear on the domain it was not
+        // recorded in — and #751 said so, deferring the fix to FS-GG/FS.GG.SDD#752 AC4. This is it.
+        //
+        // Both producers of the field now record `SkillMirror.sha256` of the body they wrote
+        // (`DriverSkills` and `GameSkills` alike), and `HandlersUpgrade.preservedFilesVerified`
+        // compares it the same way. `verifyFileSet` arbitrates with `SkillMirror.sha256`, so the
+        // comparison here is already exactly the recorded domain and the allowance has nothing left
+        // to forgive: the CRLF case matches outright, and the raw domain — the one no read seam can
+        // reproduce for a BOM-prefixed file — is no longer accepted at all.
         let ownerClassified =
             SkillMirror.verifyFileSet agentSkillRoots ownerExpected actual
             |> List.collect (fun drift ->
@@ -674,11 +649,7 @@ module internal Drift =
                     drift.MissingRoots
                     (drift.Files
                      |> List.map (fun file ->
-                         file.RelativePath,
-                         file.MissingRoots,
-                         file.Divergent,
-                         file.HashMismatchRoots
-                         |> List.filter (clearedByRawDigest drift.Id file.RelativePath >> not))))
+                         file.RelativePath, file.MissingRoots, file.Divergent, file.HashMismatchRoots)))
 
         let classified = processProductClassified @ ownerClassified
 

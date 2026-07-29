@@ -143,6 +143,35 @@ module GameSkillsTests =
         Assert.Empty outcome.MaterializedIds
         Assert.Empty outcome.Writes
 
+    // FS-GG/FS.GG.SDD#752 AC3 — ONE provenance class, ONE digest domain. `GameSkillPaths` and its
+    // sibling `DriverPaths` are read together by `Drift` and by
+    // `HandlersUpgrade.preservedFilesVerified`, so a digest function that differed between them
+    // would make one field mean two things — which it did, and which is why #751 had to accept
+    // either domain downstream. Pinned on a CRLF body, the only shape where the two disagree.
+    [<Fact>]
+    let ``game-skill provenance records the canonical digest, in the same domain as DriverPaths`` () =
+        let body = "widget\r\nbody\r\n"
+
+        let rawSha =
+            System.Text.Encoding.UTF8.GetBytes body
+            |> System.Security.Cryptography.SHA256.HashData
+            |> System.Convert.ToHexString
+            |> fun value -> value.ToLowerInvariant()
+
+        let canonical = Fsgg.SkillMirror.sha256 body
+        Assert.NotEqual<string>(rawSha, canonical)
+
+        let outcome =
+            GameSkills.planFrom
+                (manifestOf (row "fs-gg-widget" canonical "always"))
+                (Map.ofList [ "fs-gg-widget", body ])
+                Map.empty
+
+        Assert.Equal<string list>([ "fs-gg-widget" ], outcome.MaterializedIds)
+
+        let recorded = outcome.ProvenancePaths |> List.map snd |> List.distinct
+        Assert.Equal<string list>([ canonical ], recorded)
+
     [<Fact>]
     let ``planFrom skips a mirrored-true row rather than verify-failing a body it never ships`` () =
         // A mirrored:true row whose predicate holds but whose body is absent here (delivered via the

@@ -80,17 +80,20 @@ module internal HandlersUpgrade =
                 && not (Set.contains (normalizeRelativePath path) targetSet))
         | None -> []
 
+    // FS-GG/FS.GG.SDD#752 AC4. `DriverSkills.ProvenancePaths` and `GameSkills.ProvenancePaths` both
+    // record `Fsgg.SkillMirror.sha256` of the body written, so that is the one function that
+    // reproduces the value here — this used to hash `UTF8.GetBytes file.Text` un-normalized, which
+    // was the OTHER domain and disagreed with `Drift`'s verification of the very same field.
+    //
+    // `file.Text` arrives from `CommandEffects.readFile`, i.e. through `SkillMirror.decodeBody`, so
+    // it is BOM-free; `SkillMirror.sha256` then folds `\r\n`. That composition is precisely the
+    // domain the digest was recorded in, so the comparison is exact rather than approximately right
+    // on the content that happens to ship.
     let private preservedFilesVerified model preservedFiles =
-        let rawTextSha256 (text: string) =
-            System.Text.Encoding.UTF8.GetBytes text
-            |> System.Security.Cryptography.SHA256.HashData
-            |> System.Convert.ToHexString
-            |> fun value -> value.ToLowerInvariant()
-
         preservedFiles
         |> List.forall (fun (path, expectedSha256) ->
             snapshot path model
-            |> Option.exists (fun file -> rawTextSha256 file.Text = expectedSha256))
+            |> Option.exists (fun file -> Fsgg.SkillMirror.sha256 file.Text = expectedSha256))
 
     // ADR-0063 / FS-GG/FS.GG.SDD#624: the owner-sourced (driver + product classes) skill copies among a
     // re-seed step's targets, reconstructed as no-clobber writes from the SAME embedded, content-

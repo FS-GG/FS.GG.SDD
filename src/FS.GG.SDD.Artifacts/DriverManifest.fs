@@ -7,10 +7,29 @@ open System.Text
 open System.Text.Json
 
 module DriverManifest =
+    /// Which function reproduces a `DriverManifestFile.Sha256`. Carried WITH the value because the
+    /// two schema versions genuinely record different things and a consumer must not have to infer
+    /// which from a coincidence (FS-GG/FS.GG.SDD#752).
+    type DriverDigestDomain =
+        /// `sha256(file bytes)` — un-normalized, BOM and CR included. What a schema-v2 `files[]`
+        /// row carries: the org producer writes `hashlib.sha256(raw)` there and documents it as a
+        /// byte-integrity record for a materialized tree, deliberately NOT a canonical-body digest
+        /// (`.github/scripts/generate-driver-manifest`, `canonical_digest`'s docstring).
+        | RawBytes
+        /// `Fsgg.SkillMirror.sha256 body` — BOM stripped, `\r\n` folded to `\n`. What a schema-v1
+        /// row carries, because v1 has no per-file digest at all: the single `SKILL.md` row below is
+        /// SYNTHESIZED from the row's canonical-body `sha256`, which lives in this domain and no
+        /// other.
+        | CanonicalText
+
     type DriverManifestFile =
-        { Path: string
-          Sha256: string
-          Executable: bool }
+        {
+            Path: string
+            Sha256: string
+            /// The domain of `Sha256` — see `DriverDigestDomain`. Never inferred from `TreeSha256`.
+            DigestDomain: DriverDigestDomain
+            Executable: bool
+        }
 
     type DriverManifestEntry =
         { Id: string
@@ -98,6 +117,7 @@ module DriverManifest =
                                 files
                                 @ [ { Path = path
                                       Sha256 = sha256
+                                      DigestDomain = RawBytes
                                       Executable = executable.GetBoolean() } ]
                             )
                     | Error message, _, _ -> Error $"driver '{id}': {message}."
@@ -160,8 +180,15 @@ module DriverManifest =
                       Sha256 = sha256
                       TreeSha256 = None
                       Files =
+                        // SYNTHESIZED, not read: schema v1 has no `files[]` and no per-file digest.
+                        // The only digest a v1 row carries is the row's canonical-body `sha256`, so
+                        // the projected `SKILL.md` row sits in `CanonicalText` — a DIFFERENT domain
+                        // from a v2 `files[]` row, deliberately, because there is no raw digest here
+                        // to use and inventing one from the bytes being verified would verify
+                        // nothing (FS-GG/FS.GG.SDD#752 AC2).
                         [ { Path = "SKILL.md"
                             Sha256 = sha256
+                            DigestDomain = CanonicalText
                             Executable = false } ]
                       SuppliedBy =
                         jsonString "supplied-by" element

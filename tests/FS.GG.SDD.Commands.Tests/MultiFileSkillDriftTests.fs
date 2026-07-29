@@ -1203,35 +1203,57 @@ module MultiFileSkillDriftTests =
             Assert.Equal<string list>(ownerAuxiliaryAtAllRoots id relativePath, report.SkillDriftPaths)
             Assert.False report.IsCoherent
 
-    // `DriverPaths[].Sha256` does NOT live in `SkillMirror.sha256`'s domain. That function normalizes
-    // `\r\n` to `\n` before hashing; `DriverSkills.classifyEntry` validates and records a schema-v2
-    // row's per-file digest as `rawSha256 bytes`, un-normalized — and the shipped driver package is
-    // v2. `HandlersUpgrade.preservedFilesVerified` compares the same field with an un-normalized
-    // digest, which is the repo's own statement of the domain.
+    // ---------------------------------------------------------------------------------------
+    // FS-GG/FS.GG.SDD#752 — ONE digest domain, and the removal of #751's either-domain allowance.
     //
-    // Left uncorrected, a CRLF-authored driver file would make EVERY scaffolded workspace report
-    // permanent drift on it: no `upgrade` writes it (no-clobber, and it is not missing) and a
-    // re-scaffold reproduces it. A false positive nothing can clear is worse than the gap #733
-    // closes, so a mismatch a raw comparison clears is dropped.
-    //
-    // Every shipped driver file is LF today, so this cannot be reached by editing the fixture — the
-    // case builds the CRLF shape explicitly and records the digest the producer would have recorded
-    // for it.
+    // #751 dropped a `HashMismatchRoots` entry whenever an un-normalized RAW comparison cleared it,
+    // because `DriverPaths[].Sha256` could hold either domain and this fold could not tell which.
+    // It said so and deferred the fix here. Both producers of the field now record
+    // `SkillMirror.sha256` of the body they wrote, so the comparison is exact and the allowance is
+    // gone. The three cases below pin what that buys and what it costs.
+    // ---------------------------------------------------------------------------------------
+
+    let private rawDigest (body: string) =
+        Text.Encoding.UTF8.GetBytes body
+        |> Security.Cryptography.SHA256.HashData
+        |> Convert.ToHexString
+        |> fun value -> value.ToLowerInvariant()
+
+    // AC5, on the pure fold. A CRLF file whose CANONICAL digest is recorded is coherent — which is
+    // the case that used to need the allowance, now answered by the recorded value itself.
     [<Fact>]
-    let ``a CRLF owner-sourced file matching its RAW recorded digest is not drift`` () =
+    let ``a CRLF owner-sourced file matching its CANONICAL recorded digest is not drift`` () =
         match ownerAuxiliaryTarget () with
         | None -> assertNoOwnerSourcedSubject ()
         | Some(_, id, relativePath) ->
             let crlfBody = "line one\r\nline two\r\n"
 
-            let rawDigest (body: string) =
-                Text.Encoding.UTF8.GetBytes body
-                |> Security.Cryptography.SHA256.HashData
-                |> Convert.ToHexString
-                |> fun value -> value.ToLowerInvariant()
+            let declared =
+                ownerRecordWithCorruptDigest id relativePath (Fsgg.SkillMirror.sha256 crlfBody)
 
-            // The producer records `sha256(raw bytes)`; the file on disk IS those bytes, in every
-            // root. Nothing is wrong with this workspace.
+            let bodies =
+                allRoots
+                |> List.fold
+                    (fun acc root -> Map.add (Fsgg.SkillMirror.skillFilePath root id relativePath) crlfBody acc)
+                    (coherentOwnerBodies ())
+
+            let report = computeOwner declared bodies
+
+            // Not vacuous: the two domains genuinely disagree on this body.
+            Assert.NotEqual<string>(Fsgg.SkillMirror.sha256 crlfBody, rawDigest crlfBody)
+            Assert.Empty report.SkillDriftPaths
+            Assert.True report.IsCoherent
+
+    // AC4: the surviving comparison REDS on the domain that is no longer accepted. This is the exact
+    // shape #751 let through — a body that matches only the raw digest — and it is the reason the
+    // allowance was weaker than knowing which domain to expect: nothing about a raw match says the
+    // file is the one that was written, only that it hashes to a value in a domain nobody records.
+    [<Fact>]
+    let ``an owner-sourced file matching ONLY the rejected RAW domain is drift`` () =
+        match ownerAuxiliaryTarget () with
+        | None -> assertNoOwnerSourcedSubject ()
+        | Some(_, id, relativePath) ->
+            let crlfBody = "line one\r\nline two\r\n"
             let declared = ownerRecordWithCorruptDigest id relativePath (rawDigest crlfBody)
 
             let bodies =
@@ -1242,14 +1264,12 @@ module MultiFileSkillDriftTests =
 
             let report = computeOwner declared bodies
 
-            // The normalized digest of this body is NOT the recorded one, so an un-filtered
-            // `verifyFileSet` reports all three roots. It must not.
-            Assert.NotEqual<string>(Fsgg.SkillMirror.sha256 crlfBody, rawDigest crlfBody)
-            Assert.Empty report.SkillDriftPaths
-            Assert.True report.IsCoherent
+            Assert.Equal<string list>(ownerAuxiliaryAtAllRoots id relativePath, report.SkillDriftPaths)
+            Assert.False report.IsCoherent
 
-    // The other half of the same rule: the raw-domain allowance must not become a hole. A tampered
-    // body matches NEITHER domain, so it still reports.
+    // The other half of the same rule, unchanged from #751: a tampered body matches no domain at
+    // all and still reports. Kept because it is the case the allowance was always at risk of
+    // swallowing, and its removal must not be the only thing standing between the two.
     [<Fact>]
     let ``a tampered owner-sourced file matching NEITHER digest domain is still drift`` () =
         match ownerAuxiliaryTarget () with
@@ -1262,6 +1282,71 @@ module MultiFileSkillDriftTests =
 
             Assert.Equal<string list>([ target ], report.SkillDriftPaths)
             Assert.False report.IsCoherent
+
+    // AC5 END TO END, and the case a pure fold cannot make: a real scaffold, real files, a real
+    // `doctor`. The provenance here is the one THIS BUILD recorded, not a hand-built record, so it
+    // proves the producer and the consumer agree rather than that a test can spell one digest twice.
+    //
+    // CHARACTERIZATION, NOT THE FIX, and worth saying so rather than letting the name imply
+    // otherwise. This case passes on the code before #752 too: `Drift` already compared with
+    // `SkillMirror.sha256`, which folds `\r\n`, so a CRLF checkout of the LF-authored files this
+    // package ships was ALREADY coherent on the doctor lane. The lane that was really broken for
+    // that workspace is `upgrade` — see the backfill case below, which is the discriminating one.
+    // This one exists to pin that the doctor answer does not REGRESS while the domain moves under
+    // it, and that a tampered CRLF file is still caught.
+    [<Fact>]
+    let ``doctor reports a CRLF owner-sourced file coherent end to end, and a tampered one not`` () =
+        match ownerAuxiliaryTarget () with
+        | None -> assertNoOwnerSourcedSubject ()
+        | Some(_, id, relativePath) ->
+            let fixtureRoot = productCoherentFixture ()
+
+            for root in allRoots do
+                let path =
+                    absolute fixtureRoot (Fsgg.SkillMirror.skillFilePath root id relativePath)
+
+                let lf = File.ReadAllText(path).Replace("\r\n", "\n")
+                File.WriteAllText(path, lf.Replace("\n", "\r\n"))
+
+            Assert.Empty (doctorSummary (doctorReport fixtureRoot)).SkillDriftPaths
+
+            // Same workspace, one root's CRLF copy edited: still caught, still arbitrated.
+            let tampered = Fsgg.SkillMirror.skillFilePath ".codex" id relativePath
+            File.WriteAllText(absolute fixtureRoot tampered, "TAMPERED\r\n")
+
+            let summary = doctorSummary (doctorReport fixtureRoot)
+            Assert.Equal<string list>([ tampered ], summary.SkillDriftPaths)
+            Assert.False summary.IsCoherent
+
+    // AC6, answered rather than deferred. The issue asked whether the read seam can express a
+    // BOM-prefixed file at all, and expected the answer to be no — `File.ReadAllText` strips the
+    // BOM, so `UTF8.GetBytes(readText)` is not the file's bytes and the RAW domain is unreachable
+    // from a read. That is still true, and it is exactly why the raw domain is the wrong one to
+    // record: the CANONICAL domain is defined as what that seam yields, so it is reproducible for
+    // every file INCLUDING this one. No limitation is owed to #737/#748 after all.
+    [<Fact>]
+    let ``doctor reports a BOM-prefixed owner-sourced file coherent end to end`` () =
+        match ownerAuxiliaryTarget () with
+        | None -> assertNoOwnerSourcedSubject ()
+        | Some(_, id, relativePath) ->
+            let fixtureRoot = productCoherentFixture ()
+            let bom = [| 0xEFuy; 0xBBuy; 0xBFuy |]
+
+            for root in allRoots do
+                let path =
+                    absolute fixtureRoot (Fsgg.SkillMirror.skillFilePath root id relativePath)
+
+                File.WriteAllBytes(path, Array.append bom (File.ReadAllBytes path))
+
+            // The bytes really did change — otherwise this passes without testing anything.
+            let path =
+                absolute fixtureRoot (Fsgg.SkillMirror.skillFilePath ".codex" id relativePath)
+
+            Assert.Equal<byte list>(List.ofArray bom, File.ReadAllBytes path |> Array.take 3 |> List.ofArray)
+
+            let summary = doctorSummary (doctorReport fixtureRoot)
+            Assert.Empty summary.SkillDriftPaths
+            Assert.True summary.IsCoherent
 
     // FS-GG/FS.GG.SDD#733 regression on the UPGRADE side: `repairedMissing` subtracted only
     // `MissingArtifactPaths` — the SEEDED axis. Owner-sourced backfill paths are deliberately not in
@@ -1292,6 +1377,55 @@ module MultiFileSkillDriftTests =
 
             // And it converges: a second look is clean.
             Assert.True (doctorSummary (doctorReport fixtureRoot)).IsCoherent
+
+    // FS-GG/FS.GG.SDD#752, and THE case that discriminates the fix on a real workspace.
+    //
+    // `applyStage` re-reads every PRESERVED owner-sourced file a re-seed would attest — the
+    // complementary copies already on disk — and refuses the whole step unless each still matches
+    // its recorded digest, so a backfill can never launder an unverified body into fresh provenance.
+    // That comparison used to be an un-normalized `UTF8.GetBytes file.Text`, i.e. the RAW domain,
+    // against a digest recorded over LF bytes. On any Windows or `core.autocrlf` checkout
+    // `file.Text` carries `\r\n`, so it matched nothing, `preservedFilesVerified` returned false,
+    // and `ArtifactReSeed` resolved `Failed` — `upgrade` refused to restore a deleted driver file
+    // because OTHER files in the same skill had CRLF line endings. `doctor` meanwhile called the
+    // very same tree coherent, because it folds. That disagreement is the whole item.
+    //
+    // Both consumers now compare with `SkillMirror.sha256`, so the step applies.
+    [<Fact>]
+    let ``upgrade --yes backfills an owner-sourced copy whose PRESERVED siblings are CRLF`` () =
+        match ownerAuxiliaryTarget () with
+        | None -> assertNoOwnerSourcedSubject ()
+        | Some(_, id, relativePath) ->
+            let fixtureRoot = productCoherentFixture ()
+            let deleted = Fsgg.SkillMirror.skillFilePath ".codex" id relativePath
+            let deletedAbsolute = absolute fixtureRoot deleted
+
+            // Every OTHER copy of this skill — the preserved set `applyStage` re-verifies —
+            // rewritten with CRLF endings, exactly as a Windows checkout would hand them over.
+            let skillDirectories =
+                allRoots |> List.map (fun root -> absolute fixtureRoot $"{root}/skills/{id}")
+
+            let crlfConverted =
+                [ for directory in skillDirectories do
+                      for file in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories) do
+                          if file <> deletedAbsolute then
+                              let lf = File.ReadAllText(file).Replace("\r\n", "\n")
+
+                              if lf.Contains '\n' then
+                                  File.WriteAllText(file, lf.Replace("\n", "\r\n"))
+                                  yield file ]
+
+            // Not vacuous: there really are preserved siblings, and they really did change.
+            Assert.NotEmpty crlfConverted
+            File.Delete deletedAbsolute
+
+            let report = upgradeYes fixtureRoot
+            let summary = report.Upgrade.Value
+
+            Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.AppliedStepIds)
+            Assert.True(TestSupport.existsRelative fixtureRoot deleted)
+            Assert.False summary.ResidualDrift
+            Assert.Equal(0, exitCode report)
 
     // ===================================================================================
     // FS.GG.SDD#745 (decision FS.GG.SDD#754) — `doctor`'s share of the same shape.
