@@ -1670,6 +1670,74 @@ module MultiFileSkillDriftTests =
             Assert.Equal<string list>([ target ], deletedSummary.SkillDriftPaths)
             Assert.Contains(deletedReport.Diagnostics, fun d -> d.Id = "doctor.driftDetected")
 
+    /// FS.GG.SDD#760, `upgrade`'s share — and the leg that exists because the fix above would
+    /// otherwise have MOVED the defect rather than removed it.
+    ///
+    /// `doctor` recomputes its verdict as `drift.IsCoherent && List.isEmpty unreadable` (#745,
+    /// decision #754). `upgrade` never carried that line and never needed it: an unobservable copy
+    /// used to reach `computeDrift` as phantom *not mirrored* drift, so `drift.IsCoherent` — the
+    /// flag `upgrade` DOES read — was already false. Removing the phantom removes the accident.
+    ///
+    /// Measured on this fixture with the fold change and without the guard:
+    ///
+    ///     alreadyCoherent  true
+    ///     residualDrift    false
+    ///     skillDriftPaths  []
+    ///     nextActionHint   Already coherent — nothing to reconcile.
+    ///
+    /// over a file the run could not open. A false FINDING traded for a false PASS is the same
+    /// defect facing the other way (epic FS-GG/.github#266), and the pass is the worse half.
+    [<Fact>]
+    let ``FS.GG.SDD#760: upgrade never reports coherent over a subject it could not read`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let fixtureRoot = productCoherentFixture ()
+            writeCoherentAuxiliaries fixtureRoot productSkillId
+
+            // The control: this fixture really does reconcile to "already coherent" when every
+            // subject can be read. Without it the assertions below would pass on a fixture that was
+            // never coherent in the first place.
+            let coherent = (upgradeYes fixtureRoot).Upgrade.Value
+            Assert.True coherent.AlreadyCoherent
+            Assert.False coherent.ResidualDrift
+
+            let target = auxiliaryPath ".claude" productSkillId
+            let targetAbsolute = absolute fixtureRoot target
+            File.SetUnixFileMode(targetAbsolute, enum<UnixFileMode> 0)
+
+            try
+                let report = upgradeYes fixtureRoot
+                let summary = report.Upgrade.Value
+
+                // The claim that must not be made.
+                Assert.False summary.AlreadyCoherent
+                Assert.True summary.ResidualDrift
+
+                // …and it is NOT made by re-manufacturing the phantom: the drift list stays empty.
+                // The run is withheld because a subject was unread, which is a different fact with
+                // a different repair, and the hint says which.
+                Assert.Empty summary.SkillDriftPaths
+                Assert.Contains("could not be read", summary.NextActionHint)
+                Assert.DoesNotContain("Already coherent", summary.NextActionHint)
+
+                // The drift advisory's wording must not leak in: nothing here diverges, and telling
+                // the operator to re-scaffold over a permissions bit is the advice #745 removed from
+                // `doctor`.
+                Assert.DoesNotContain("diverge", summary.NextActionHint)
+
+                // Still a read-only-ish advisory close: exit 0, no tool defect, and the subject
+                // named by the diagnostic whose remedy is the true one.
+                Assert.Equal(0, RemediationSupport.exitCode report)
+                Assert.DoesNotContain(report.Diagnostics, fun d -> d.IsToolDefect)
+
+                Assert.Contains(
+                    report.Diagnostics,
+                    fun d -> d.Id = "unreadableFile" && List.contains target d.RelatedIds
+                )
+            finally
+                File.SetUnixFileMode(targetAbsolute, enum<UnixFileMode> 0o644)
+
     /// FS.GG.SDD#748 AC2, `doctor`'s half — proven at the LANE, not at the diagnostic.
     ///
     /// The pre-#748 seam read this body with `File.ReadAllText`, so the run got a string, hashed it,

@@ -233,6 +233,13 @@ module internal HandlersUpgrade =
     /// Nothing present at all ⇒ the divergence text, which is where this lane's only caller —
     /// guarded on a non-empty drift list — behaved before, so an unclassified path can never leave
     /// the operator with no advisory at all.
+    /// FS.GG.SDD#760: the advisory for a run holding subjects it could not READ. Its repair is the
+    /// one the read edge's own `unreadableFile` / `unlistableDirectory` warning names, and it is
+    /// pointedly NOT "re-run `upgrade`": this lane cannot open the file either, so a re-run clears
+    /// nothing and the operator would keep taking the same advice forever.
+    let private unreadableSubjectHint =
+        "Some subjects could not be read, so this run cannot report the workspace coherent (advisory). `fsgg-sdd upgrade` cannot repair a file it cannot open — no re-run will clear this. See the `unreadableFile` / `unlistableDirectory` findings above for the exact paths, restore access to them (e.g. `chmod +r`), then re-run to get a verdict over the whole set."
+
     let skillDriftHint (notMirrored: string list) (lost: string list) (divergent: string list) =
         match
             [ if not (List.isEmpty notMirrored) then
@@ -541,15 +548,44 @@ module internal HandlersUpgrade =
                     drift.Steps
                     |> List.filter (fun step -> step.Outcome = ReconciliationOutcome.WouldApply)
 
+                // FS.GG.SDD#745 / decision #754, in the lane that never carried the rule and only
+                // ever obeyed it BY ACCIDENT.
+                //
+                // `doctor` recomputes its own verdict as `drift.IsCoherent && List.isEmpty
+                // unreadable`, because a verdict may never report coherent over a subject it did not
+                // read. `upgrade` has no such line — and did not need one, because an unobservable
+                // skill copy reached `computeDrift` as phantom *not mirrored* drift, so
+                // `drift.IsCoherent` was already false. FS.GG.SDD#760 removes that phantom, which is
+                // correct and which removes the accident with it.
+                //
+                // Measured on the `productCoherentFixture` with one `chmod 000` on a skill auxiliary,
+                // with #760's fold change and WITHOUT this guard: `alreadyCoherent: true`,
+                // `residualDrift: false`, "Already coherent — nothing to reconcile." — over a file
+                // the run could not open. Trading a false FINDING in `doctor` for a false PASS in
+                // `upgrade` is not a fix; it is the same defect moved (epic FS-GG/.github#266).
+                //
+                // So a run holding unreadable subjects may take neither nothing-to-reconcile close.
+                // It falls to the ADVISORY residual arm below: exit 0, no extra write, no prompt,
+                // `residualDrift: true`, and a hint naming the repair the read edge already named.
+                // The narrower claims are untouched — an APPLY summary sets `AlreadyCoherent = false`
+                // already, and its `ResidualDrift` describes what the reconciliation left rather than
+                // whether the workspace is whole.
+                let unreadable = unreadableSubjects model
+
                 // #313: provenance-less no longer implies nothing-to-reconcile. The CLI axis is a
                 // fact about the installed tool, so an unmet `sdd.minToolVersion` floor makes the
                 // self-update step actionable even here. Absent a floor there is no actionable
                 // step and this is the unchanged "nothing to reconcile" no-op.
-                if not drift.HasProvenance && List.isEmpty actionable then
+                //
+                // #760 adds the `unreadable` conjunct for the reason above, and it belongs on THIS
+                // arm too: an unreadable `.fsgg/scaffold-provenance.json` resolves to `None` exactly
+                // as an absent one does, so "No scaffold provenance" would be asserted about a
+                // workspace whose provenance is right there and merely unopenable.
+                if not drift.HasProvenance && List.isEmpty actionable && List.isEmpty unreadable then
                     { model with
                         Upgrade = Some(noOpSummary request drift "No scaffold provenance — nothing to reconcile.") },
                     []
-                elif drift.IsCoherent then
+                elif drift.IsCoherent && List.isEmpty unreadable then
                     { model with
                         Upgrade = Some(noOpSummary request drift "Already coherent — nothing to reconcile.") },
                     []
@@ -569,7 +605,27 @@ module internal HandlersUpgrade =
                           SkillDriftPaths = drift.SkillDriftPaths
                           ResidualDrift = true
                           NextActionHint =
-                            skillDriftHint drift.SkillNotMirroredPaths drift.SkillLostPaths drift.SkillDivergentPaths
+                            // #760: `skillDriftHint` describes DRIFT, and its no-condition fallback
+                            // is the divergence sentence — which would tell an operator whose only
+                            // problem is a permissions bit that "some copies diverge from their
+                            // canonical body", about copies nothing compared. When the reason this
+                            // arm was reached is unreadable subjects rather than drift, say so; when
+                            // both are present, say both, drift first, exactly as the three drift
+                            // conditions are already concatenated in a fixed order.
+                            [ if not (List.isEmpty drift.SkillDriftPaths) then
+                                  skillDriftHint
+                                      drift.SkillNotMirroredPaths
+                                      drift.SkillLostPaths
+                                      drift.SkillDivergentPaths
+                              if not (List.isEmpty unreadable) then
+                                  unreadableSubjectHint ]
+                            |> function
+                                | [] ->
+                                    skillDriftHint
+                                        drift.SkillNotMirroredPaths
+                                        drift.SkillLostPaths
+                                        drift.SkillDivergentPaths
+                                | sentences -> String.concat " " sentences
                             |> withIgnoredJunk drift }
 
                     { model with Upgrade = Some summary }, []
