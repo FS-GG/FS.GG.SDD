@@ -227,6 +227,35 @@ module internal HandlersUpgrade =
     let private divergentHint =
         "Skill content drift detected (advisory); some copies diverge from their canonical body — re-scaffold or restore the canonical skill sources."
 
+    // FS-GG/FS.GG.SDD#750: the FOURTH condition, and the reason none of the three above can carry
+    // it. It is reported at the roots that HAVE the file, so `notMirroredHint` ("another root
+    // carries this file", reported at the roots that LACK it) is false of it in both halves — and
+    // its "copy it into the roots that lack it" arm would instruct an operator to SPREAD a file the
+    // producer never declared. `lostHint` asserts the skill is absent everywhere; it is present.
+    // `divergentHint` asserts the bytes disagree; under the all-roots case they agree perfectly.
+    //
+    // The repair is genuinely a fourth one, and it has two arms because the tool cannot tell which
+    // applies FROM THE FILE ALONE — the same limit #747 recorded for the junk rule. Either the file
+    // does not belong to the skill (delete it), or it does and the recorded declaration is stale
+    // (re-scaffold, so tree and declaration are regenerated together). Naming only one would be a
+    // guess stated as an instruction.
+    //
+    // #747's LESSON APPLIES TO THE ILLUSTRATION, and it is why this sentence names neither an editor
+    // backup nor a merge leftover. Those are exactly `junkFileSuffixes` (`.bak`, `.orig`, `.swp`,
+    // `~`, …), subtracted from the compared set before any class is computed, and the junk filter
+    // spares only files the provenance DECLARES — which an undeclared file, by definition, is not.
+    // So no editor artefact can ever reach this sentence, and illustrating the class with one would
+    // rebuild the defect #747 removed from `notMirroredHint` above (see the comment at its tail):
+    // an advisory telling an operator to go delete a file that is not on the list they were handed.
+    // What survives the filter is an ordinarily-named file — a scratch note, a renamed auxiliary, a
+    // file a later release dropped from the declaration — so those are what it names.
+    let private undeclaredHint =
+        "Skill copies carry undeclared files (advisory): each reported path is a file that root HAS, under a skill whose producer records a complete file set, and this file is not in it. "
+        + "`fsgg-sdd upgrade` cannot repair this class and re-running it will not clear it — the lane has no delete step, and there is no canonical body to write for a file no declaration names. "
+        + "Reconcile by hand: delete the file if it does not belong to the skill (a scratch note, or an auxiliary renamed without updating the declaration), or re-scaffold if it does, so the tree and the recorded declaration are regenerated together. "
+        + "The other roots are NOT reported here and must not be made to match — an undeclared file is not repaired by copying it further. "
+        + "Recognised OS and merge junk never reaches this class: it is excluded from the comparison before any of it is computed."
+
     /// The advisory for un-repaired skill drift: every condition actually present, in that order,
     /// and nothing else. Divergence alone ⇒ byte-identical to the pre-#736 text, so the wording that
     /// was always correct is preserved rather than reworded along with the wording that was not.
@@ -240,14 +269,21 @@ module internal HandlersUpgrade =
     let private unreadableSubjectHint =
         "Some subjects could not be read, so this run cannot report the workspace coherent (advisory). `fsgg-sdd upgrade` cannot repair a file it cannot open — no re-run will clear this. See the `unreadableFile` / `unlistableDirectory` findings above for the exact paths, restore access to them (e.g. `chmod +r`), then re-run to get a verdict over the whole set."
 
-    let skillDriftHint (notMirrored: string list) (lost: string list) (divergent: string list) =
+    let skillDriftHint
+        (notMirrored: string list)
+        (lost: string list)
+        (divergent: string list)
+        (undeclared: string list)
+        =
         match
             [ if not (List.isEmpty notMirrored) then
                   notMirroredHint
               if not (List.isEmpty lost) then
                   lostHint
               if not (List.isEmpty divergent) then
-                  divergentHint ]
+                  divergentHint
+              if not (List.isEmpty undeclared) then
+                  undeclaredHint ]
         with
         | [] -> divergentHint
         | sentences -> String.concat " " sentences
@@ -440,6 +476,21 @@ module internal HandlersUpgrade =
         let unrepairedNotMirrored = unrepaired drift.SkillNotMirroredPaths
         let unrepairedLost = unrepaired drift.SkillLostPaths
         let unrepairedDivergent = unrepaired drift.SkillDivergentPaths
+        // #750: the fourth class takes the same subtraction, applied rather than special-cased so
+        // the four classes and the union they sum to keep being filtered by one rule.
+        //
+        // It is inert TODAY, and the reason is worth stating exactly rather than as "the re-seed
+        // writes only declared paths", which is not true of this lane. `ownerBackfillEffects` writes
+        // from the EMBEDDED plan (`driver.Writes @ product.Writes`), not from the record, and it
+        // re-declares only the DRIVER rows it wrote — `GameSkillPaths` is written by `scaffold`
+        // alone. A GameSkill is single-file at the pinned package's schema v1 (`SKILL.md`, no
+        // `files` array), so a backfilled GameSkill path is either the whole skill (no recorded
+        // rows ⇒ the id is not in `ownerSourcedSkillFiles` ⇒ nothing is asserted about it) or
+        // already declared. Nothing can currently land here. That is a property of the PACKAGE
+        // SCHEMA, not of this lane, and a GameSkill manifest that gained a `files` array would
+        // make an `upgrade`-written file report `Undeclared` permanently — filed as
+        // FS-GG/FS.GG.SDD#798 against the recording asymmetry, which is its cause.
+        let unrepairedUndeclared = unrepaired drift.SkillUndeclaredPaths
 
         // FR-013: never report an incomplete reconciliation as complete. A skipped or
         // failed step leaves residual drift; so does a self-update that "applied" (the
@@ -501,7 +552,7 @@ module internal HandlersUpgrade =
             elif not (List.isEmpty skipped) then
                 "Re-run `fsgg-sdd upgrade` and confirm the skipped step(s) to finish reconciling."
             elif not (List.isEmpty unrepairedSkillDrift) then
-                skillDriftHint unrepairedNotMirrored unrepairedLost unrepairedDivergent
+                skillDriftHint unrepairedNotMirrored unrepairedLost unrepairedDivergent unrepairedUndeclared
             elif residualDrift then
                 "The CLI self-update takes effect on the next invocation; re-run `fsgg-sdd doctor` afterwards to confirm coherence."
             else
@@ -617,6 +668,7 @@ module internal HandlersUpgrade =
                                       drift.SkillNotMirroredPaths
                                       drift.SkillLostPaths
                                       drift.SkillDivergentPaths
+                                      drift.SkillUndeclaredPaths
                               if not (List.isEmpty unreadable) then
                                   unreadableSubjectHint ]
                             |> function
@@ -625,6 +677,7 @@ module internal HandlersUpgrade =
                                         drift.SkillNotMirroredPaths
                                         drift.SkillLostPaths
                                         drift.SkillDivergentPaths
+                                        drift.SkillUndeclaredPaths
                                 | sentences -> String.concat " " sentences
                             |> withIgnoredJunk drift }
 
