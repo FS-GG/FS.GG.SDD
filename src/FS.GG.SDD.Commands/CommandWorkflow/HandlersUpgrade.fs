@@ -44,7 +44,15 @@ module internal HandlersUpgrade =
             | WriteFile(path, _, _) -> Set.contains (normalizeRelativePath path) missingSet
             | _ -> false)
 
-    let private driverIdOfPath (path: string) =
+    /// The owner-sourced skill id a declared-root skill-copy path belongs to; `None` for anything
+    /// that is not a confined copy under `<root>/skills/<id>/`. Root-anchored, unlike
+    /// `SkillMirror.skillIdOfPath`, which recognises the shape anywhere.
+    ///
+    /// FS-GG/FS.GG.SDD#798: ONE parser for BOTH owner-sourced classes. Driver and GameSkill copies
+    /// are fanned into the same declared roots by the same mirror, so a per-class parser would be
+    /// two spellings of one rule — and the name it used to carry (`driverIdOfPath`) is what made the
+    /// GameSkill arm look like a class this lane does not handle rather than one it forgot to record.
+    let private ownerSkillIdOfPath (path: string) =
         Fsgg.Schemas.agentSkillRoots
         |> List.tryPick (fun root ->
             let prefix = root + "/skills/"
@@ -56,10 +64,18 @@ module internal HandlersUpgrade =
             else
                 None)
 
-    /// Before a v1/SKILL-only directory can be completed and recorded as a schema-v2 driver tree,
-    /// read every preserved file that the new provenance record would attest. The missing targets
-    /// themselves are supplied from the verified embedded plan; these are the complementary files
-    /// already on disk and therefore outside the write set.
+    /// Before an owner-sourced skill directory can be completed and recorded, read every preserved
+    /// file that the new provenance record would attest. The missing targets themselves are supplied
+    /// from the verified embedded plan; these are the complementary files already on disk and
+    /// therefore outside the write set.
+    ///
+    /// FS-GG/FS.GG.SDD#798: BOTH owner-sourced classes, because `ownerBackfillEffects` now attests
+    /// both. `Drift.ownerSourcedSkillFiles` trusts a recorded digest precisely because "nothing ever
+    /// launders it — `HandlersUpgrade.preservedFilesVerified` refuses to record a fresh digest for a
+    /// preserved file that does not already match", and that sentence ranges over `DriverPaths` AND
+    /// `GameSkillPaths`. Widening what the record attests without widening what is read first would
+    /// have left that claim true of one half and silently false of the other, with every gate green.
+    /// The rule is one line and it has no per-class arm: never attest a file you did not read.
     let private ownerBackfillPreservedFiles model (targets: string list) =
         match resolveProvenance model with
         | Some record ->
@@ -72,11 +88,12 @@ module internal HandlersUpgrade =
                 )
 
             let driver = DriverSkills.plan presentIds
-            let affectedDriverIds = targets |> List.choose driverIdOfPath |> Set.ofList
+            let product = GameSkills.plan (record.EffectiveParameters |> Map.ofList)
+            let affectedSkillIds = targets |> List.choose ownerSkillIdOfPath |> Set.ofList
 
-            driver.ProvenancePaths
+            driver.ProvenancePaths @ product.ProvenancePaths
             |> List.filter (fun (path, _) ->
-                driverIdOfPath path |> Option.exists affectedDriverIds.Contains
+                ownerSkillIdOfPath path |> Option.exists affectedSkillIds.Contains
                 && not (Set.contains (normalizeRelativePath path) targetSet))
         | None -> []
 
@@ -95,6 +112,29 @@ module internal HandlersUpgrade =
             snapshot path model
             |> Option.exists (fun file -> Fsgg.SkillMirror.sha256 file.Text = expectedSha256))
 
+    // The provenance rows one owner-sourced class contributes for a re-seed step: the class's own
+    // planned `(path, sha256)` pairs, filtered to the skill ids actually among the step's targets.
+    // The digest is the plan's — the value the body was content-verified against before any write
+    // (ADR-0014) — so a recorded row is never a fresh hash of whatever happens to be on disk.
+    let private ownerBackfillRows owner (affectedSkillIds: Set<string>) (provenancePaths: (string * string) list) =
+        provenancePaths
+        |> List.filter (fun (path, _) -> ownerSkillIdOfPath path |> Option.exists affectedSkillIds.Contains)
+        |> List.map (fun (path, sha256) ->
+            { Path = path
+              Owner = owner
+              Sha256 = Some sha256 }
+            : ScaffoldProvenance.ScaffoldProducedPath)
+
+    // Merge freshly-attested rows over the recorded ones: last write wins per path, path-sorted.
+    let private mergeProducedRows
+        (recorded: ScaffoldProvenance.ScaffoldProducedPath list)
+        (fresh: ScaffoldProvenance.ScaffoldProducedPath list)
+        =
+        recorded @ fresh
+        |> List.groupBy (fun path -> path.Path)
+        |> List.map (fun (_, paths) -> List.last paths)
+        |> List.sortBy (fun path -> path.Path)
+
     // ADR-0063 / FS-GG/FS.GG.SDD#624: the owner-sourced (driver + product classes) skill copies among a
     // re-seed step's targets, reconstructed as no-clobber writes from the SAME embedded, content-
     // addressed plan the drift preview used (`Drift.ownerSourcedBackfill`, filtered to the step's
@@ -102,6 +142,27 @@ module internal HandlersUpgrade =
     // can never write an unverified body (ADR-0014). Empty when the scaffold has no provenance or no
     // owner package is embedded. These are disjoint from `reSeedEffects` (which reconstructs only the
     // SEEDED init writes among the targets), so the two together cover every re-seed target once.
+    //
+    // FS-GG/FS.GG.SDD#798 — THE DECISION, recorded here because this is where it is enforced. This
+    // lane writes BOTH owner-sourced classes and it now RE-DECLARES BOTH. Of the two coherent
+    // outcomes the issue put up (AC1: the GameSkill arm learns to re-declare; AC6: the driver arm stops),
+    // the first is the correct one, and the reason is not symmetry for its own sake: a file this lane
+    // materialized and did not declare is, since #750, permanent `Undeclared` drift reported at every
+    // root under an advisory instructing the operator to delete a file the tool itself just wrote.
+    // `upgrade`'s own `unrepaired` subtraction hides it for exactly one run — the one that wrote it.
+    // Removing the driver arm instead would have bought that same defect for the class that already
+    // works. What holds afterwards is one invariant over both classes: every owner-sourced file this
+    // step writes leaves the run declared in the record that governs it, so the next `doctor` sees a
+    // tree its own provenance accounts for. `ownerBackfillPreservedFiles` is its other half — a file
+    // is attested only after it has been read and matched.
+    //
+    // It is stated as a property rather than as a claim about reachability on purpose. The previous
+    // note here reasoned that the GameSkill arm could not currently be wrong BECAUSE the pinned
+    // owner-skills package's manifest is schema v1 and a GameSkill is therefore a lone `SKILL.md`. That
+    // was true, it was a fact about the PACKAGE and not about this code, and it would have gone
+    // silently false the day that manifest gained a `files` array — one release away, with every gate
+    // here still green. The regressions in `RemediationCommandTests` pin the invariant instead of the
+    // schema accident, so they keep meaning the same thing after that release.
     let ownerBackfillEffects model (targets: string list) =
         match resolveProvenance model with
         | Some record ->
@@ -120,30 +181,26 @@ module internal HandlersUpgrade =
                 driver.Writes @ product.Writes
                 |> List.filter (fun effect -> effectPath effect |> Option.exists targetSet.Contains)
 
-            let affectedDriverIds = targets |> List.choose driverIdOfPath |> Set.ofList
+            let affectedSkillIds = targets |> List.choose ownerSkillIdOfPath |> Set.ofList
 
             let newDriverPaths =
-                driver.ProvenancePaths
-                |> List.filter (fun (path, _) -> driverIdOfPath path |> Option.exists affectedDriverIds.Contains)
-                |> List.map (fun (path, sha256) ->
-                    { Path = path
-                      Owner = ArtifactOwner.Driver
-                      Sha256 = Some sha256 }
-                    : ScaffoldProvenance.ScaffoldProducedPath)
+                ownerBackfillRows ArtifactOwner.Driver affectedSkillIds driver.ProvenancePaths
 
+            let newGameSkillPaths =
+                ownerBackfillRows ArtifactOwner.GameSkill affectedSkillIds product.ProvenancePaths
+
+            // #798 AC2: EITHER class having new rows is a reason to record. Gating on the driver
+            // rows alone dropped a GameSkill-only backfill even once the rows above existed — and a
+            // GameSkill-only backfill is the whole shape this item is about, since a step's targets need
+            // not touch a driver id at all.
             let provenanceWrite =
-                if List.isEmpty newDriverPaths then
+                if List.isEmpty newDriverPaths && List.isEmpty newGameSkillPaths then
                     []
                 else
-                    let driverPaths =
-                        record.DriverPaths @ newDriverPaths
-                        |> List.groupBy (fun path -> path.Path)
-                        |> List.map (fun (_, paths) -> List.last paths)
-                        |> List.sortBy (fun path -> path.Path)
-
                     let updated =
                         { record with
-                            DriverPaths = driverPaths }
+                            DriverPaths = mergeProducedRows record.DriverPaths newDriverPaths
+                            GameSkillPaths = mergeProducedRows record.GameSkillPaths newGameSkillPaths }
 
                     [ WriteFile(ScaffoldProvenance.provenancePath, ScaffoldProvenance.serialize updated, GeneratedView) ]
 
@@ -479,17 +536,14 @@ module internal HandlersUpgrade =
         // #750: the fourth class takes the same subtraction, applied rather than special-cased so
         // the four classes and the union they sum to keep being filtered by one rule.
         //
-        // It is inert TODAY, and the reason is worth stating exactly rather than as "the re-seed
-        // writes only declared paths", which is not true of this lane. `ownerBackfillEffects` writes
-        // from the EMBEDDED plan (`driver.Writes @ product.Writes`), not from the record, and it
-        // re-declares only the DRIVER rows it wrote — `GameSkillPaths` is written by `scaffold`
-        // alone. A GameSkill is single-file at the pinned package's schema v1 (`SKILL.md`, no
-        // `files` array), so a backfilled GameSkill path is either the whole skill (no recorded
-        // rows ⇒ the id is not in `ownerSourcedSkillFiles` ⇒ nothing is asserted about it) or
-        // already declared. Nothing can currently land here. That is a property of the PACKAGE
-        // SCHEMA, not of this lane, and a GameSkill manifest that gained a `files` array would
-        // make an `upgrade`-written file report `Undeclared` permanently — filed as
-        // FS-GG/FS.GG.SDD#798 against the recording asymmetry, which is its cause.
+        // FS-GG/FS.GG.SDD#798: this subtraction is a one-run mask, never the reason a file the lane
+        // WROTE stays out of the class. It filters what THIS run repaired; on the next `doctor` an
+        // undeclared file is undeclared again, forever. The property that actually keeps a backfilled
+        // owner-sourced copy out of `Undeclared` lives at `ownerBackfillEffects`, which declares every
+        // file it materializes — both classes, since #798. Before that it declared only the driver
+        // rows, and the GameSkill arm was saved solely by the pinned owner-skills package's manifest being
+        // schema v1 (one `SKILL.md`, no `files` array): a fact about the PACKAGE, one release away
+        // from leaving `upgrade` reporting its own writes as junk to delete.
         let unrepairedUndeclared = unrepaired drift.SkillUndeclaredPaths
 
         // FR-013: never report an incomplete reconciliation as complete. A skipped or
