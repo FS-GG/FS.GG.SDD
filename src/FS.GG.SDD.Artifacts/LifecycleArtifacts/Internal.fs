@@ -229,6 +229,62 @@ module internal Internal =
                     // above, not this arm, is its defense.)
                     YamlMalformed(ex.Message, 0, 0)
 
+    /// Read an authored document's BYTES and decode them, refusing bytes that are not a
+    /// decodable body (FS.GG.SDD#789 — the registry documents' half of the read seam
+    /// FS.GG.SDD#748 built for `CommandEffects`, ADR-0014 §Decision 3 clause (c)).
+    ///
+    /// `File.ReadAllText` SUBSTITUTES `U+FFFD` for a byte sequence it cannot decode and
+    /// returns a string, so a mis-encoded registry used to be parsed from text nobody
+    /// authored and then validated as though they had: ids, scopes and owners silently
+    /// rewritten to contain `U+FFFD` and reported clean. The validator was answering a
+    /// question about bytes it never saw — `.github#266`'s shape, *"I could not read this"*
+    /// rendered as *"I read it and it passed"*. Nothing is hashed at this edge, so this is
+    /// not the digest COLLISION #737/#748 are about; it is the same representation gap
+    /// reached from the parsing side.
+    ///
+    /// `SkillMirror.decodeBody` is character-for-character `File.ReadAllText` for every body
+    /// that DOES decode — BOM detection and preamble stripping included — so no document
+    /// that loads today loads differently, and no verdict any registry gets today changes.
+    /// Only the mangling case is refused.
+    ///
+    /// The decode refusal is returned as the OFFSET, never raised, and never pre-rendered:
+    /// the probe that only needs to know *whether* the bytes decode must not pay for a
+    /// message it discards, and the two callers that DO report speak different vocabularies.
+    /// Callers turn it into the ordinary load `Error` they already return for a missing or
+    /// malformed file, so `registry validate` reports it through its existing
+    /// `MalformedDocument` verdict at its existing failure exit code — never a `toolDefect`
+    /// at exit 2. A mis-encoded file in the workspace is an authoring accident, not a broken
+    /// tool (FS.GG.SDD#745/#754/#748).
+    ///
+    /// **The caller owns the IO `try`.** Only the DECODE is total here; `File.ReadAllBytes`
+    /// still throws on a permissions fault, an IO error, or a file above the byte-array
+    /// ceiling, exactly as `File.ReadAllText` did. Both current callers already wrap their
+    /// whole body in one (`RegistryDocument.load`, `SkillRegistryDocument.load`/`detectKind`),
+    /// which is why nothing escapes today — a new caller must do the same.
+    let decodeDocumentBytes (path: string) : Result<string, int> =
+        match Fsgg.SkillMirror.decodeBody (File.ReadAllBytes path) with
+        | Ok text -> Ok text
+        | Error(Fsgg.SkillMirror.NotDecodable byteOffset) -> Error byteOffset
+
+    /// The refusal an author reads, in ONE spelling shared by every document that has this
+    /// edge — the discipline `CommandEffects.undecodableReason` states for its own seam, and
+    /// worded to match `Diagnostics.undecodableFile` so the two can never drift into two
+    /// different accounts of one file.
+    ///
+    /// `label` names the document kind so the refusal reads in the caller's vocabulary
+    /// ("Registry file", "Skill registry file"). The wording is deliberately distinct from the
+    /// YAML syntax-error message: the document may be perfectly well-formed YAML *after*
+    /// substitution, which is exactly what made the old pass so convincing, so an author must
+    /// not be sent hunting for a syntax error that is not there.
+    ///
+    /// It carries the REPAIR, because the offset alone does not imply one: re-encoding is
+    /// disjoint from every other load failure's fix, and an author who has just been told a
+    /// byte offset into a 47 KB file has no obvious next move without it.
+    let undecodableDocumentMessage (label: string) (path: string) (byteOffset: int) =
+        $"{label} '{path}' exists but its bytes are not a decodable body: the first invalid sequence begins at byte offset {byteOffset}. "
+        + $"Re-encode '{path}' as UTF-8 (or a well-formed UTF-16/UTF-32 with its BOM) and re-run. "
+        + "The file was not parsed — parsing it with replacement characters would validate ids, scopes and owners nobody authored."
+
     /// A lossy probe for the callers that answer a question about a document rather
     /// than diagnose it (a raw schemaVersion read for identity/digest purposes).
     /// A parser that reports to an author must use `yamlRoot`, which keeps the

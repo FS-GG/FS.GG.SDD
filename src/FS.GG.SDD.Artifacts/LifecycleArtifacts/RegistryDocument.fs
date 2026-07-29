@@ -206,30 +206,35 @@ module RegistryDocument =
             elif not (File.Exists path) then
                 err path $"Registry file not found: '{path}'."
             else
-                let text = File.ReadAllText path
+                // FS.GG.SDD#789: the bytes are read RAW and decoded, not `File.ReadAllText`.
+                // A registry whose bytes do not decode is REFUSED here rather than parsed
+                // from a `U+FFFD`-substituted string and reported valid.
+                match decodeDocumentBytes path with
+                | Error byteOffset -> err path (undecodableDocumentMessage "Registry file" path byteOffset)
+                | Ok text ->
 
-                match parseYamlDocument text with
-                | YamlEmpty -> err path "Registry file is empty."
-                | YamlMalformed(message, line, column) ->
-                    err path $"Registry file has a YAML syntax error at line {line}, column {column}: {message}"
-                | YamlRoot root ->
-                    match tryMapping root with
-                    | None -> err path "Registry root is not a YAML mapping."
-                    | Some rootMapping ->
-                        match tryScalarAt [ "schemaVersion" ] root with
-                        | None -> err path "Registry file is missing 'schemaVersion'."
-                        | Some raw ->
-                            match Int32.TryParse raw with
-                            | false, _ -> err path $"Registry 'schemaVersion' is not an integer: '{raw}'."
-                            | true, schemaVersion ->
-                                let childList key parse =
-                                    tryChild key rootMapping |> Option.map parse |> Option.defaultValue []
+                    match parseYamlDocument text with
+                    | YamlEmpty -> err path "Registry file is empty."
+                    | YamlMalformed(message, line, column) ->
+                        err path $"Registry file has a YAML syntax error at line {line}, column {column}: {message}"
+                    | YamlRoot root ->
+                        match tryMapping root with
+                        | None -> err path "Registry root is not a YAML mapping."
+                        | Some rootMapping ->
+                            match tryScalarAt [ "schemaVersion" ] root with
+                            | None -> err path "Registry file is missing 'schemaVersion'."
+                            | Some raw ->
+                                match Int32.TryParse raw with
+                                | false, _ -> err path $"Registry 'schemaVersion' is not an integer: '{raw}'."
+                                | true, schemaVersion ->
+                                    let childList key parse =
+                                        tryChild key rootMapping |> Option.map parse |> Option.defaultValue []
 
-                                Ok
-                                    { SchemaVersion = schemaVersion
-                                      Repos = childList "repos" parseRepos
-                                      Contracts = childList "contracts" parseContracts
-                                      Dependencies = childList "dependencies" parseDependencies
-                                      Coherence = childList "coherence" parseCoherence }
+                                    Ok
+                                        { SchemaVersion = schemaVersion
+                                          Repos = childList "repos" parseRepos
+                                          Contracts = childList "contracts" parseContracts
+                                          Dependencies = childList "dependencies" parseDependencies
+                                          Coherence = childList "coherence" parseCoherence }
         with ex ->
             err path $"Registry file could not be parsed: {ex.Message}"

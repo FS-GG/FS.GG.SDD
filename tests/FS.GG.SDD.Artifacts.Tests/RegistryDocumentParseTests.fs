@@ -277,3 +277,229 @@ module RegistryDocumentParseTests =
             "    wire-contract:\n      provenance: owned-proto\n      proto: p.proto\n"
 
         Assert.NotEqual(wireOf "", wireOf declared)
+
+    // --- FS.GG.SDD#789: the decode seam reaches the registry documents ---
+    //
+    // FS.GG.SDD#748 routed `CommandEffects`' read through `SkillMirror.decodeBody`. The
+    // registry documents did not read through it — they called `File.ReadAllText`, which
+    // SUBSTITUTES `U+FFFD` for a sequence it cannot decode and returns a string. So a
+    // mis-encoded registry was parsed from text nobody authored and reported VALID: ids,
+    // scopes and owners silently rewritten and then validated as though typed that way.
+    // Nothing is hashed at this edge, so this is not the digest collision #737/#748 are
+    // about; it is the same representation gap reached from the parsing side.
+
+    let private skillsFixturePath =
+        Path.Combine(TestSupport.repoRoot, "tests", "fixtures", "registry", "skills.yml")
+
+    /// First index of `needle` in `haystack`, or -1.
+    let private indexOfBytes (haystack: byte array) (needle: byte array) =
+        let limit = haystack.Length - needle.Length
+
+        let rec search i =
+            if i > limit then -1
+            elif Array.sub haystack i needle.Length = needle then i
+            else search (i + 1)
+
+        search 0
+
+    /// A copy of `sourcePath` with ONE invalid UTF-8 byte — `0x80`, a lone continuation —
+    /// spliced in immediately after `marker`, which must name a point inside a scalar VALUE.
+    ///
+    /// The splice point is chosen so the file is still PERFECTLY well-formed YAML once
+    /// `File.ReadAllText` substitutes `U+FFFD` for the byte: that is precisely what made the
+    /// old `valid: true` so convincing, and a fixture that merely broke the YAML would test
+    /// the malformed-document path instead of this one.
+    ///
+    /// Returns the temp path and the byte offset at which the invalid sequence begins — the
+    /// offset the refusal is required to name.
+    let private mangleAfter (sourcePath: string) (marker: string) =
+        let bytes = File.ReadAllBytes sourcePath
+        let markerBytes = System.Text.Encoding.UTF8.GetBytes marker
+        let at = indexOfBytes bytes markerBytes
+
+        Assert.True(at >= 0, $"marker '{marker}' must occur in {sourcePath}")
+        let offset = at + markerBytes.Length
+
+        let mangled = Array.concat [ bytes[.. offset - 1]; [| 0x80uy |]; bytes[offset..] ]
+
+        let temp =
+            Path.Combine(Path.GetTempPath(), $"fsgg-registry-789-{System.Guid.NewGuid():N}.yml")
+
+        File.WriteAllBytes(temp, mangled)
+        temp, offset
+
+    /// The marker each fixture is mangled after. BOTH name a point inside a scalar VALUE that
+    /// the loader tolerates any text in, so the substituted document parses AND validates
+    /// clean — the premise legs below prove exactly that, per fixture.
+    ///
+    /// This choice is load-bearing and easy to get wrong. Splicing after `schemaVersion: 1`
+    /// looks equivalent and is not: `Int32.TryParse "1�"` fails, so the OLD code already
+    /// rejected that file, and a leg built on it would go red before the change for the wrong
+    /// reason — never witnessing the substituted-parse defect at all.
+    let private dependencyMarker = "name: FS.GG.SDD"
+
+    /// A skill entry's `owner:`, in the first row of the real catalog. `validateSkillRegistry`
+    /// requires only that `owner` be non-blank, so `fs-gg-sdd�` sails through — which is
+    /// precisely the issue's complaint: "owners containing an invalid sequence are silently
+    /// rewritten and then validated as though the author had typed them".
+    let private catalogMarker = "scope: process, owner: fs-gg-sdd"
+
+    /// Writes `text` out as genuine UTF-8 and hands the path to `assertion` — the substituted
+    /// document, as the OLD load edge saw it.
+    let private withSubstituted (text: string) (assertion: string -> unit) =
+        let path =
+            Path.Combine(Path.GetTempPath(), $"fsgg-registry-789-subst-{System.Guid.NewGuid():N}.yml")
+
+        File.WriteAllText(path, text)
+
+        try
+            assertion path
+        finally
+            File.Delete path
+
+    /// The premise for the DEPENDENCY registry, pinned so it cannot quietly stop being true:
+    /// the mangled fixture is not merely well-formed after substitution, it validates CLEAN.
+    ///
+    /// Without this, the legs below could be passing for the wrong reason — refusing a broken
+    /// document rather than a mis-encoded one — and the defect they guard would be untested.
+    [<Fact>]
+    let ``the mangled registry validates CLEAN after substitution - why it used to pass`` () =
+        let temp, _ = mangleAfter fixturePath dependencyMarker
+
+        try
+            let substituted = File.ReadAllText temp
+            Assert.Contains("�", substituted)
+
+            withSubstituted substituted (fun path ->
+                match RegistryDocument.load path with
+                | Error error -> Assert.True(false, $"expected the substituted text to load, got: {error.Message}")
+                | Ok document -> Assert.Equal(Registry.Valid, Registry.validateDocument document))
+        finally
+            File.Delete temp
+
+    /// The same premise for the CATALOG, which is the document the issue is actually about.
+    /// A mis-encoded `skills.yml` used to load with a `U+FFFD` in an owner and validate clean.
+    [<Fact>]
+    let ``the mangled catalog validates CLEAN after substitution - why it used to pass`` () =
+        let temp, _ = mangleAfter skillsFixturePath catalogMarker
+
+        try
+            let substituted = File.ReadAllText temp
+            Assert.Contains("�", substituted)
+
+            withSubstituted substituted (fun path ->
+                Assert.Equal(SkillRegistryDocument.SkillRegistry, SkillRegistryDocument.detectKind path)
+
+                match SkillRegistryDocument.load path with
+                | Error error -> Assert.True(false, $"expected the substituted catalog to load, got: {error.Message}")
+                | Ok document ->
+                    // The owner really is the mangled one, and it validated anyway.
+                    Assert.Contains("�", (List.head document.Skills).Owner)
+                    Assert.Equal(Registry.Valid, Registry.validateSkillRegistry document))
+        finally
+            File.Delete temp
+
+    /// AC1/AC4. Before the change this returned `Ok` — the substituted document parsed and
+    /// validated clean.
+    [<Fact>]
+    let ``a dependency registry whose bytes are not valid UTF-8 is refused, not parsed`` () =
+        let temp, _ = mangleAfter fixturePath dependencyMarker
+
+        try
+            match RegistryDocument.load temp with
+            | Error _ -> ()
+            | Ok _ -> Assert.True(false, "Expected Error for a registry whose bytes do not decode.")
+        finally
+            File.Delete temp
+
+    /// AC2. The refusal names the file and the byte offset, and must not be mistakable for a
+    /// YAML syntax error — the document IS well-formed YAML after substitution, so an author
+    /// told "syntax error" would go hunting for something that is not there.
+    ///
+    /// The offset is asserted with its LABEL, not as a bare number: a bare decimal would also
+    /// match a line, a column, or a digit run inside the temp path's GUID.
+    [<Fact>]
+    let ``the refusal names the file and the byte offset, and is not a YAML syntax error`` () =
+        let temp, offset = mangleAfter fixturePath dependencyMarker
+
+        try
+            match RegistryDocument.load temp with
+            | Ok _ -> Assert.True(false, "Expected Error for a registry whose bytes do not decode.")
+            | Error error ->
+                Assert.Equal(temp, error.Path)
+                Assert.Contains(temp, error.Message)
+                Assert.Contains($"byte offset {offset}", error.Message)
+                Assert.DoesNotContain("YAML syntax error", error.Message)
+                // The repair, which the offset alone does not imply.
+                Assert.Contains("Re-encode", error.Message)
+        finally
+            File.Delete temp
+
+    /// AC1 for the org skill catalog — the document the issue is actually about.
+    [<Fact>]
+    let ``a skill catalog whose bytes are not valid UTF-8 is refused, not parsed`` () =
+        let temp, offset = mangleAfter skillsFixturePath catalogMarker
+
+        try
+            match SkillRegistryDocument.load temp with
+            | Ok _ -> Assert.True(false, "Expected Error for a skill catalog whose bytes do not decode.")
+            | Error error ->
+                Assert.Contains(temp, error.Message)
+                Assert.Contains($"byte offset {offset}", error.Message)
+                Assert.DoesNotContain("YAML syntax error", error.Message)
+        finally
+            File.Delete temp
+
+    /// The `detectKind` probe (the `:104` site) decided the document's KIND from substituted
+    /// text too — pre-change it read this file as a `SkillRegistry`. It stays conservative by
+    /// contract — an unreadable file is `DependencyRegistry` — and "unreadable" now correctly
+    /// includes "does not decode". Either arm refuses, so no mis-encoded catalog can reach a
+    /// `valid` verdict through the dispatch.
+    [<Fact>]
+    let ``detectKind reports an undecodable catalog as DependencyRegistry, and that path refuses it`` () =
+        let temp, _ = mangleAfter skillsFixturePath catalogMarker
+
+        try
+            Assert.Equal(SkillRegistryDocument.DependencyRegistry, SkillRegistryDocument.detectKind temp)
+
+            match RegistryDocument.load temp with
+            | Error _ -> ()
+            | Ok _ -> Assert.True(false, "the dependency path detectKind routes to must refuse it too.")
+        finally
+            File.Delete temp
+
+    /// AC5. The no-op is really guaranteed by `decodeBody`'s own differential test —
+    /// `FS.GG.Contracts.Tests/SkillMirrorTests`, ``decodeBody is File_ReadAllText for every
+    /// body that decodes`` — which pins the equality character-for-character across BOMs,
+    /// CRLF, NULs and multibyte content. This leg pins the consequence AT THIS EDGE: a
+    /// preamble the load path must still strip, parsed to the same document with the same
+    /// verdict.
+    [<Fact>]
+    let ``a registry that DOES decode parses identically, BOM included - a pure no-op`` () =
+        let canonical = loadFixture ()
+        let utf8Bom = [| 0xEFuy; 0xBBuy; 0xBFuy |]
+
+        let temp =
+            Path.Combine(Path.GetTempPath(), $"fsgg-registry-789-noop-{System.Guid.NewGuid():N}.yml")
+
+        File.WriteAllBytes(temp, Array.append utf8Bom (File.ReadAllBytes fixturePath))
+
+        try
+            match RegistryDocument.load temp with
+            | Error error -> Assert.True(false, $"expected Ok for a BOM'd copy, got Error: {error.Message}")
+            | Ok document ->
+                Assert.Equal<Registry.RegistryDocument>(canonical, document)
+                Assert.Equal(Registry.Valid, Registry.validateDocument document)
+        finally
+            File.Delete temp
+
+    /// AC5 for the catalog: the real `skills.yml` still detects as a skill registry and still
+    /// validates clean. (Its parsed CONTENT is pinned in `SkillRegistryDocumentParseTests`;
+    /// re-asserting the row count here would redden two files for one catalog edit.)
+    [<Fact>]
+    let ``the real skill catalog still detects, loads, and validates unchanged`` () =
+        Assert.Equal(SkillRegistryDocument.SkillRegistry, SkillRegistryDocument.detectKind skillsFixturePath)
+
+        match SkillRegistryDocument.load skillsFixturePath with
+        | Error error -> Assert.True(false, $"expected Ok for the real catalog, got Error: {error.Message}")
+        | Ok document -> Assert.Equal(Registry.Valid, Registry.validateSkillRegistry document)
