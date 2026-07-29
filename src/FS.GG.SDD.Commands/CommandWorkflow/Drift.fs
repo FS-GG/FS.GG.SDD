@@ -49,16 +49,19 @@ module internal Drift =
           MissingArtifactPaths: string list
           // 058/ADR-0014 §Decision 3: the content-addressed skill-drift surface — the concrete
           // root/skill paths where a skill in the union (process OR product) is missing from a
-          // root, byte-divergent across roots, or hash-mismatched against its canonical digest.
+          // root, byte-divergent across roots, hash-mismatched against its canonical digest, or
+          // (FS-GG/FS.GG.SDD#750) outside its producer's complete declaration.
           // Sorted, deduped. Non-empty ⇒ not coherent (advisory; `doctor` still exits 0).
           // FS-GG/FS.GG.SDD#726: these name the offending FILE, not merely the skill — a divergent
           // `<root>/skills/<id>/references/deep-detail.md` is reported at that path, because a skill
           // is a directory and this surface used to see only its `SKILL.md`.
           SkillDriftPaths: string list
           // FS-GG/FS.GG.SDD#736: `SkillDriftPaths` split by the CONDITION that produced each entry.
-          // The union is unchanged; these name WHICH failure each path is, because they have three
-          // different repairs and only one of them is about bytes. Disjoint by construction (see
-          // `computeSkillDrift`), and their union is exactly `SkillDriftPaths`.
+          // These name WHICH failure each path is, because they have four different repairs and
+          // only one of them is about bytes. Disjoint by construction (see `computeSkillDrift`),
+          // and their union is exactly `SkillDriftPaths`. #736 left the union itself unchanged;
+          // #750 added the fourth class, and it is the one change that MOVES the union in both
+          // directions — see `SkillDriftClasses.All`.
           //
           // A file at least one OTHER root carries and this one does not — an inconsistently applied
           // edit, or a provider file dropped from one root. Since FS-GG/FS.GG.SDD#747 this no longer
@@ -392,13 +395,19 @@ module internal Drift =
     /// described it named the wrong one: a file present in only one root was reported at the two
     /// roots that LACK it under a hint reading "some copies diverge from their canonical body —
     /// re-scaffold or restore the canonical skill sources", which for an extra `.DS_Store` reads as
-    /// "create `.DS_Store` here". `All` is the union this surface has always reported.
+    /// "create `.DS_Store` here". `All` is the union this surface reports.
     ///
     /// Three classes, not two, because a copy that is absent EVERYWHERE has a third repair and
     /// neither of the other two sentences is true of it: there is no sibling root to mirror from,
     /// and nothing disagrees about bytes. Collapsing it into `NotMirrored` would have the advisory
     /// assert "another root carries this file" about a file no root carries — the same class of
     /// false report #736 exists to end.
+    ///
+    /// FOUR since FS-GG/FS.GG.SDD#750, for the same reason one more time: a file OUTSIDE its
+    /// producer's complete declaration has a fourth repair, and all three sentences above are false
+    /// of it. It is the only class that reports at the roots that HAVE the subject rather than the
+    /// roots that lack it, which is what makes folding it into `NotMirrored` not merely imprecise
+    /// but an instruction to spread the file.
     type SkillDriftClasses =
         {
             /// This root does not carry a file that AT LEAST ONE other root does — a per-file
@@ -419,11 +428,14 @@ module internal Drift =
             Undeclared: string list
             /// `NotMirrored ∪ Lost ∪ Divergent ∪ Undeclared`, sorted and deduped. Through #736 this
             /// was byte-identical to the pre-#736 list, because that change was a pure SPLIT of the
-            /// existing surface; #750 is the one change that ADDS to it, because fact 4 was being
-            /// dropped on the floor and an undeclared file read coherent.
+            /// existing surface. #750 is the one change that MOVES it, and it moves it BOTH WAYS:
+            /// an undeclared file present in every root was reported as nothing at all and is now
+            /// reported at three paths, while an undeclared file present in ONE root used to be
+            /// reported at the two roots that LACK it and is now reported at the one that has it.
+            /// The second is a subtraction, and it is the correction — see `filePaths` below.
             All: string list
             /// FS-GG/FS.GG.SDD#747: the observed skill-copy files subtracted from the comparison as
-            /// OS/VCS junk before any of the three classes were computed. Disjoint from `All` by
+            /// OS/VCS junk before any of the four classes were computed. Disjoint from `All` by
             /// construction — an ignored file reaches no class.
             IgnoredJunk: string list
         }
