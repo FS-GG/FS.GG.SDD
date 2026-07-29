@@ -297,6 +297,184 @@ module CommandEffectsTests =
                     UnixFileMode.UserRead ||| UnixFileMode.UserWrite ||| UnixFileMode.UserExecute
                 )
 
+    // ===================================================================================
+    // FS.GG.SDD#748 — the read seam stops hashing `U+FFFD`.
+    //
+    // FS.GG.SDD#737 gave the LIBRARY a `decodeBody` that refuses bytes it cannot decode, and
+    // nothing called it. This seam still read `File.ReadAllText`, which SUBSTITUTES `U+FFFD` for an
+    // invalid sequence and returns a perfectly ordinary string — so an undecodable body was read,
+    // hashed, and compared like any other, and any two files whose invalid bytes substituted alike
+    // shared one digest.
+    //
+    // These are the EDGE legs. The per-lane verdict legs live with their lanes
+    // (`SurfaceCommandTests`, `MultiFileSkillDriftTests`), because #748 AC2 is a property of each
+    // lane's VERDICT and not of any single diagnostic.
+    //
+    // Unlike the #745/#743 legs above, most of these need no Unix guard: the subject is a body's
+    // BYTES, and they are the same bytes on every platform.
+    // ===================================================================================
+
+    /// `abc`, then a lone continuation byte. Invalid UTF-8 whose first bad sequence begins at
+    /// offset 3 — deterministically, which is what lets the legs below assert the offset.
+    let private undecodableBytes = [| 0x61uy; 0x62uy; 0x63uy; 0x80uy; 0x64uy |]
+
+    let private seedBytes root (bytes: byte array) =
+        Directory.CreateDirectory(Path.Combine(root, "work", "demo")) |> ignore
+        File.WriteAllBytes(absolute root, bytes)
+
+    /// AC1 + AC3. Must fail before the change: `File.ReadAllText` returns `"abc�d"` here, so
+    /// the pre-#748 seam yields `Bytes`, a snapshot, and no diagnostic at all.
+    [<Fact>]
+    let ``FS.GG.SDD#748: a body that does not decode is refused rather than hashed`` () =
+        let root = TestSupport.tempDirectory ()
+        seedBytes root undecodableBytes
+
+        let result = interpret root (ReadFile relative)
+
+        // NOT `Absent` (AC2). `Absent` is the only other channel the read edge has, and routing a
+        // refusal through it is precisely how a refusal becomes a PASS.
+        match result.Read with
+        | Unreadable(path, reason) ->
+            Assert.Equal(relative, path)
+            // "offset 3", not "3": a bare substring passes for offset 13, 30, 300 — i.e. for a
+            // decoder that named the WRONG byte, which is the only thing this assertion is for.
+            Assert.Contains("byte offset 3", reason)
+        | other -> failwith $"expected Unreadable for an undecodable body, got {other}"
+
+        // No bytes reach any fold. The old seam handed one over, `U+FFFD` and all.
+        Assert.True(Option.isNone result.Snapshot)
+
+        // The READ succeeded at being a read, and the tool is not broken (AC3's exit-code half:
+        // this never escalates to a `toolDefect`/exit 2, and the BLOCK is the fold's).
+        Assert.True result.Succeeded
+
+        match result.Diagnostic with
+        | Some diagnostic ->
+            Assert.Equal("undecodableFile", diagnostic.Id)
+            Assert.False diagnostic.IsToolDefect
+            // Names the FILE — #737 AC2's other half, which the library structurally cannot do.
+            Assert.Contains(relative, diagnostic.RelatedIds)
+            Assert.Contains(relative, diagnostic.Message)
+            // …and the byte offset the library DID name.
+            Assert.Contains("byte offset 3", diagnostic.Message)
+        | None -> failwith "expected an undecodableFile diagnostic"
+
+    /// The pair that must stay exactly this far apart: ONE read state, TWO diagnostics.
+    ///
+    /// One state, because every verdict fold's correct decision is identical for both — do not
+    /// compare, do not call it drift, do not call it missing, do not report coherent. Two
+    /// diagnostics, because the repairs are disjoint: an operator who carries out `chmod +r` in
+    /// full against a mis-encoded file has fixed nothing and has no way to discover that from the
+    /// message.
+    [<Fact>]
+    let ``FS.GG.SDD#748: undecodable and unreadable are one read state and two diagnostics`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let root = TestSupport.tempDirectory ()
+            seedBytes root undecodableBytes
+            let undecodable = interpret root (ReadFile relative)
+
+            File.SetUnixFileMode(absolute root, enum<UnixFileMode> 0)
+
+            try
+                let unreadable = interpret root (ReadFile relative)
+
+                match undecodable.Read, unreadable.Read with
+                | Unreadable _, Unreadable _ -> ()
+                | left, right -> failwith $"expected both to be Unreadable, got {left} and {right}"
+
+                let idOf (result: CommandEffectResult) =
+                    result.Diagnostic |> Option.map (fun d -> d.Id)
+
+                Assert.Equal<string option>(Some "undecodableFile", idOf undecodable)
+                Assert.Equal<string option>(Some "unreadableFile", idOf unreadable)
+            finally
+                File.SetUnixFileMode(absolute root, enum<UnixFileMode> 0o644)
+
+    /// The WRITE edge's half, and the leg whose absence hid a real defect through one review round.
+    ///
+    /// `canOverwrite` decides whether the tool may replace a file FROM THAT FILE'S CURRENT BYTES, so
+    /// an undecodable destination makes the safety question undecidable and the write is refused.
+    /// That much this shared with `unreadableWriteTarget` from the start. What it did NOT share, and
+    /// what nothing asserted, is the REMEDY: the first cut routed this through `tryRead`, so the
+    /// operator got `unreadableWriteTarget`'s hardcoded `chmod +r` for a file whose mode was already
+    /// `0644` — a complete instruction that changes nothing, which is the exact failure #748 exists
+    /// to stop, reappearing at the other edge.
+    [<Fact>]
+    let ``FS.GG.SDD#748: a write over an undecodable destination is refused, and names the right repair`` () =
+        let root = TestSupport.tempDirectory ()
+        seedBytes root undecodableBytes
+
+        let result =
+            interpret root (WriteFile(relative, "replacement", HybridArtifact MergePolicies.specification))
+
+        Assert.False result.Succeeded
+
+        // The prior bytes are untouched — a refused write writes nothing.
+        Assert.Equal<byte array>(undecodableBytes, File.ReadAllBytes(absolute root))
+        Assert.Empty(residue root)
+
+        match result.Diagnostic with
+        | Some diagnostic ->
+            Assert.Equal("undecodableWriteTarget", diagnostic.Id)
+            // Exit 1, not 2: a mis-encoded file is an authoring accident, not a broken tool.
+            Assert.False diagnostic.IsToolDefect
+            Assert.Contains(relative, diagnostic.RelatedIds)
+            Assert.Contains("byte offset 3", diagnostic.Message)
+
+            // The assertion this leg exists for: the remedy must be re-encoding, and must NOT be
+            // the permission repair that cannot fix an encoding.
+            Assert.Contains("Re-encode", diagnostic.Correction)
+            Assert.DoesNotContain("chmod", diagnostic.Correction)
+        | None -> failwith "expected an undecodableWriteTarget diagnostic"
+
+    /// AC4's second leg, and AC5. This one must stay green UNTOUCHED: `decodeBody` is
+    /// `File.ReadAllText` for every body that decodes, so swapping the seam moves NO digest and
+    /// migrates NO manifest. The equivalence is asserted against `File.ReadAllText` itself rather
+    /// than against digest literals, so CRLF, the empty body, embedded `NUL` and multi-byte
+    /// sequences all ride on the one comparison.
+    ///
+    /// The BOM rows are AC5: a well-formed UTF-16/UTF-32 body decodes and is NOT refused. That is
+    /// deliberately separate from the FS-GG/.github#1589 disagreement about which BOMs the
+    /// consuming shells strip — this seam's job is to not MANGLE them.
+    [<Fact>]
+    let ``FS.GG.SDD#748: every body that decodes keeps byte-identical text and digest`` () =
+        let utf8 (text: string) = System.Text.Encoding.UTF8.GetBytes text
+
+        let bodies =
+            [ "empty", [||]
+              "ascii", utf8 "# Skill\n\nbody\n"
+              "multibyte", utf8 "héllo — naïve ✅ 🚀\n"
+              "crlf", utf8 "line one\r\nline two\r\n"
+              "lone cr", utf8 "line one\rline two\n"
+              "nul", [| 0x61uy; 0x00uy; 0x62uy |]
+              "utf-8 BOM", Array.append [| 0xEFuy; 0xBBuy; 0xBFuy |] (utf8 "# Skill\n")
+              "utf-16 LE BOM", Array.append [| 0xFFuy; 0xFEuy |] (System.Text.Encoding.Unicode.GetBytes "hi\n")
+              "utf-16 BE BOM", Array.append [| 0xFEuy; 0xFFuy |] (System.Text.Encoding.BigEndianUnicode.GetBytes "hi\n")
+              "utf-32 LE BOM",
+              Array.append
+                  [| 0xFFuy; 0xFEuy; 0x00uy; 0x00uy |]
+                  (System.Text.UTF32Encoding(false, false).GetBytes "hi\n")
+              "utf-32 BE BOM",
+              Array.append [| 0x00uy; 0x00uy; 0xFEuy; 0xFFuy |] (System.Text.UTF32Encoding(true, false).GetBytes "hi\n") ]
+
+        for label, bytes in bodies do
+            let root = TestSupport.tempDirectory ()
+            seedBytes root bytes
+
+            let expected = File.ReadAllText(absolute root)
+            let result = interpret root (ReadFile relative)
+
+            match result.Read with
+            | Bytes snapshot ->
+                Assert.True((expected = snapshot.Text), $"{label}: text differs from File.ReadAllText")
+
+                Assert.Equal(Fsgg.SkillMirror.sha256 expected, Fsgg.SkillMirror.sha256 snapshot.Text)
+            | other -> failwith $"{label}: expected Bytes for a body that decodes, got {other}"
+
+            Assert.True(Option.isNone result.Diagnostic, $"{label}: a body that decodes needs no diagnostic")
+
     /// FS.GG.SDD#743 — the state only a LISTING can be in, at the edge that produces it.
     ///
     /// The leg above pins the root itself being unopenable. This one pins the case #743 is about:

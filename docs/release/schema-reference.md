@@ -332,11 +332,15 @@ open in a new place.
   **`checkedCount` changed meaning in FS.GG.SDD#745 (decision #754)**, and a caller reading it
   today should know: it used to be the number of authored `.fsi` files the run *intended* to
   check (the source-root listing length), and it is now the number it actually **read**. The two
-  differ only when a source exists and could not be read — the case that previously reported the
-  file as checked while no byte of it was ever compared. `isCoherent` is likewise now `false`
+  differ when a source exists and could not be READ — the case that previously reported the
+  file as checked while no byte of it was ever compared — and, since FS.GG.SDD#748, when a source
+  exists and opens but its bytes do not DECODE. `isCoherent` is likewise now `false`
   whenever any subject was unreadable, alongside the existing missing/drifted conditions, and the
   run emits an `unreadableSubject` `DiagnosticError` (exit 1, never a tool defect) plus one
-  `unreadableFile` warning per file naming the path and the reason.
+  per-file warning naming the path: `unreadableFile` with the OS reason when the read failed, or
+  `undecodableFile` with the byte offset of the first invalid sequence when the bytes did not
+  decode. Both are the same verdict — a subject the run did not establish blocks coherence — and
+  two ids, because the repairs are disjoint (`chmod +r` cannot fix an encoding).
   One exception (FS.GG.SDD#185): when a `--param
   sourceRoot`/`baselineRoot` resolves outside the workspace root — an absolute path or one with a
   `..` segment — the command plans no effect, blocks with a `surface.rootEscape` `DiagnosticError`

@@ -728,6 +728,13 @@ module Diagnostics =
     //
     // Three, not one, because the three situations have different blocking polarity and a single
     // id would have to pick one of them and be wrong about the other two.
+    //
+    // FS.GG.SDD#748 adds a FOURTH, and on a different axis from that one: `undecodableFile` shares
+    // `unreadableFile`'s polarity exactly. It is separate because the two findings send the
+    // operator somewhere different — the same reason `unlistableDirectory` is separate — and the
+    // remedy is the whole of it. `chmod +r` is not merely unhelpful for a file whose bytes are not
+    // valid UTF-8; it is an instruction the operator can carry out in full and still be looking at
+    // an unchanged failure.
 
     /// A file that EXISTS could not be read (permissions, an IO fault, a device error). The
     /// per-file fact, emitted at the effect edge for every refused read in every lane, so the
@@ -748,6 +755,38 @@ module Diagnostics =
             None
             $"`{path}` exists but could not be read: {reason}"
             $"Restore read access to `{path}` (e.g. `chmod +r`) and re-run. A file the tool could not read is never counted as checked and never treated as unchanged."
+            [ path ]
+
+    /// A file that exists and OPENS could not be DECODED: its bytes are not a valid body in any
+    /// encoding the read seam selects (FS.GG.SDD#748, ADR-0014 §Decision 3 clause (c)).
+    /// `byteOffset` is where the first invalid sequence begins, counted within the file with the
+    /// preamble included, exactly as `SkillMirror.BodyRefusalReason.NotDecodable` reports it.
+    ///
+    /// The finding this replaces was not a diagnostic at all — it was a PASS. `File.ReadAllText`
+    /// substitutes `U+FFFD` for a sequence it cannot decode and returns a string, so the read
+    /// succeeded, the digest was taken over the substitution, and any two files whose invalid bytes
+    /// substituted alike shared one digest. FS.GG.SDD#737 gave the library a `decodeBody` that
+    /// refuses instead; this is the caller's half, and it is the half that can name the file
+    /// (#737 AC2 — the library never sees one).
+    ///
+    /// `DiagnosticWarning`, and the block belongs to `unreadableSubject`, for exactly the reasons
+    /// `unreadableFile` is: the read edge does not know what the lane meant to do with the bytes,
+    /// and one such file must not be fatal to `doctor` (read-only, exit 0 — decision #754).
+    ///
+    /// Distinct from `unreadableFile` because the REPAIR is disjoint from it. An operator told to
+    /// `chmod +r` a file whose mode is already `0644` has been sent to fix something that is not
+    /// broken; the file needs re-encoding, and nothing about its permissions will ever say so.
+    ///
+    /// Not a tool defect. A mis-encoded file in the workspace is an authoring accident the operator
+    /// can fix, and exit 2 would accuse the tool of being broken over it.
+    let undecodableFile (path: string) (byteOffset: int) =
+        create
+            "undecodableFile"
+            DiagnosticWarning
+            None
+            None
+            $"`{path}` exists but its bytes are not a decodable body: the first invalid sequence begins at byte offset {byteOffset}."
+            $"Re-encode `{path}` as UTF-8 (or a well-formed UTF-16/UTF-32 with its BOM) and re-run. A body the tool could not decode is never hashed, never counted as checked, and never treated as unchanged — decoding it with replacement characters would give two different files one digest."
             [ path ]
 
     /// A directory tree was listed and the listing is INCOMPLETE: one or more directories beneath
@@ -821,6 +860,27 @@ module Diagnostics =
             None
             $"Refusing to write `{path}`: it exists and could not be read ({reason}), so whether replacing it is safe cannot be decided."
             $"Restore read access to `{path}` (e.g. `chmod +r`) and re-run. The tool never replaces bytes it could not read."
+            [ path ]
+
+    /// The `undecodableFile` sibling of `unreadableWriteTarget` (FS.GG.SDD#748): a write was refused
+    /// because its DESTINATION exists and its bytes do not DECODE, so `canOverwrite` — which decides
+    /// from the destination's current text — has no current text to decide from.
+    ///
+    /// Separate from `unreadableWriteTarget` for the reason `undecodableFile` is separate from
+    /// `unreadableFile`, and the write edge is where getting it wrong costs the most: the operator is
+    /// being told the tool will not overwrite their file, so the one thing the message must get right
+    /// is what to do about it. `chmod +r` against a file whose mode is already `0644` is a complete
+    /// instruction that changes nothing, and the run refuses identically on the next attempt.
+    ///
+    /// `DiagnosticError` (exit 1), never a tool defect — the same class as its sibling.
+    let undecodableWriteTarget (path: string) (byteOffset: int) =
+        create
+            "undecodableWriteTarget"
+            DiagnosticError
+            None
+            None
+            $"Refusing to write `{path}`: it exists and its bytes are not a decodable body (first invalid sequence at byte offset {byteOffset}), so whether replacing it is safe cannot be decided."
+            $"Re-encode `{path}` as UTF-8 (or a well-formed UTF-16/UTF-32 with its BOM) and re-run. The tool never replaces bytes it could not decode — comparing against a decoder's `U+FFFD` substitution would make a file that differs look unchanged."
             [ path ]
 
     // Feature 086: a committed `.fsi` surface baseline is missing or has drifted from its authored

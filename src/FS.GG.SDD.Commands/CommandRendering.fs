@@ -723,6 +723,11 @@ module CommandRendering =
             // which is a partial listing rendered as a complete one, in the projection an
             // operator actually reads.
             | "unlistableDirectory"
+            // FS.GG.SDD#748, for the same reason again: a body that does not decode is refused at
+            // the read edge and blocks the verdict, and an operator reading `--text` would
+            // otherwise see a lane report incoherent with nothing saying which file, or that its
+            // problem is an encoding rather than a permission.
+            | "undecodableFile"
             | "unreadableSubject"
             | "unreadableWriteTarget" -> true
             | _ -> false)
