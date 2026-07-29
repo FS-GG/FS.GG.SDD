@@ -101,16 +101,26 @@ module SkillRegistryDocument =
             if String.IsNullOrWhiteSpace path || not (File.Exists path) then
                 DependencyRegistry
             else
-                match parseYamlDocument (File.ReadAllText path) with
-                | YamlEmpty
-                | YamlMalformed _ -> DependencyRegistry
-                | YamlRoot root ->
-                    match tryMapping root with
-                    | None -> DependencyRegistry
-                    | Some rootMapping ->
-                        match tryChild "skills" rootMapping with
-                        | Some _ -> SkillRegistry
+                // FS.GG.SDD#789: decided from the bytes, not from a `U+FFFD`-substituted
+                // string. A file that does not decode is UNREADABLE, which this probe
+                // already routes to `DependencyRegistry` by contract — so it flows into the
+                // existing path and yields that path's load diagnostic, which now refuses it.
+                // Detection stays conservative: only a positive `skills:` sighting diverts,
+                // and no file whose kind is decided today is decided differently.
+                match decodeDocumentBytes "Skill registry file" path with
+                | Error _ -> DependencyRegistry
+                | Ok text ->
+
+                    match parseYamlDocument text with
+                    | YamlEmpty
+                    | YamlMalformed _ -> DependencyRegistry
+                    | YamlRoot root ->
+                        match tryMapping root with
                         | None -> DependencyRegistry
+                        | Some rootMapping ->
+                            match tryChild "skills" rootMapping with
+                            | Some _ -> SkillRegistry
+                            | None -> DependencyRegistry
         with _ ->
             DependencyRegistry
 
@@ -121,28 +131,34 @@ module SkillRegistryDocument =
             elif not (File.Exists path) then
                 err path $"Skill registry file not found: '{path}'."
             else
-                let text = File.ReadAllText path
+                // FS.GG.SDD#789: as in `RegistryDocument.load` — the catalog's ids, scopes and
+                // owners are validated from the bytes on disk or not at all.
+                match decodeDocumentBytes "Skill registry file" path with
+                | Error message -> err path message
+                | Ok text ->
 
-                match parseYamlDocument text with
-                | YamlEmpty -> err path "Skill registry file is empty."
-                | YamlMalformed(message, line, column) ->
-                    err path $"Skill registry file has a YAML syntax error at line {line}, column {column}: {message}"
-                | YamlRoot root ->
-                    match tryMapping root with
-                    | None -> err path "Skill registry root is not a YAML mapping."
-                    | Some rootMapping ->
-                        match tryScalarAt [ "schemaVersion" ] root with
-                        | None -> err path "Skill registry file is missing 'schemaVersion'."
-                        | Some raw ->
-                            match Int32.TryParse raw with
-                            | false, _ -> err path $"Skill registry 'schemaVersion' is not an integer: '{raw}'."
-                            | true, schemaVersion ->
-                                Ok
-                                    { SchemaVersion = schemaVersion
-                                      Parameters = scalarList [ "parameters" ] root
-                                      Skills =
-                                        tryChild "skills" rootMapping
-                                        |> Option.map parseSkills
-                                        |> Option.defaultValue [] }
+                    match parseYamlDocument text with
+                    | YamlEmpty -> err path "Skill registry file is empty."
+                    | YamlMalformed(message, line, column) ->
+                        err
+                            path
+                            $"Skill registry file has a YAML syntax error at line {line}, column {column}: {message}"
+                    | YamlRoot root ->
+                        match tryMapping root with
+                        | None -> err path "Skill registry root is not a YAML mapping."
+                        | Some rootMapping ->
+                            match tryScalarAt [ "schemaVersion" ] root with
+                            | None -> err path "Skill registry file is missing 'schemaVersion'."
+                            | Some raw ->
+                                match Int32.TryParse raw with
+                                | false, _ -> err path $"Skill registry 'schemaVersion' is not an integer: '{raw}'."
+                                | true, schemaVersion ->
+                                    Ok
+                                        { SchemaVersion = schemaVersion
+                                          Parameters = scalarList [ "parameters" ] root
+                                          Skills =
+                                            tryChild "skills" rootMapping
+                                            |> Option.map parseSkills
+                                            |> Option.defaultValue [] }
         with ex ->
             err path $"Skill registry file could not be parsed: {ex.Message}"

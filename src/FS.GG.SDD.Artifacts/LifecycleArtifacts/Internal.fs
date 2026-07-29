@@ -229,6 +229,42 @@ module internal Internal =
                     // above, not this arm, is its defense.)
                     YamlMalformed(ex.Message, 0, 0)
 
+    /// Read an authored document's BYTES and decode them, refusing bytes that are not a
+    /// decodable body (FS.GG.SDD#789 — the registry documents' half of the read seam
+    /// FS.GG.SDD#748 built for `CommandEffects`, ADR-0014 §Decision 3 clause (c)).
+    ///
+    /// `File.ReadAllText` SUBSTITUTES `U+FFFD` for a byte sequence it cannot decode and
+    /// returns a string, so a mis-encoded registry used to be parsed from text nobody
+    /// authored and then validated as though they had: ids, scopes and owners silently
+    /// rewritten to contain `U+FFFD` and reported clean. The validator was answering a
+    /// question about bytes it never saw — `.github#266`'s shape, *"I could not read this"*
+    /// rendered as *"I read it and it passed"*. Nothing is hashed at this edge, so this is
+    /// not the digest COLLISION #737/#748 are about; it is the same representation gap
+    /// reached from the parsing side.
+    ///
+    /// `SkillMirror.decodeBody` is character-for-character `File.ReadAllText` for every body
+    /// that DOES decode — BOM detection and preamble stripping included — so no document
+    /// that loads today loads differently, and no verdict any registry gets today changes.
+    /// Only the mangling case is refused.
+    ///
+    /// The refusal is returned as a MESSAGE, never raised: callers turn it into the ordinary
+    /// load `Error` they already return for a missing or malformed file, so `registry
+    /// validate` reports it through its existing `MalformedDocument` verdict at its existing
+    /// failure exit code — never a `toolDefect` at exit 2. A mis-encoded file in the
+    /// workspace is an authoring accident, not a broken tool (FS.GG.SDD#745/#754/#748).
+    ///
+    /// `label` names the document kind so the refusal reads in the caller's vocabulary
+    /// ("Registry file", "Skill registry file"), and the wording is deliberately distinct
+    /// from the YAML syntax-error message: the document may be perfectly well-formed YAML
+    /// *after* substitution, which is exactly what made the old pass so convincing, so an
+    /// author must not be sent hunting for a syntax error that is not there.
+    let decodeDocumentBytes (label: string) (path: string) : Result<string, string> =
+        match Fsgg.SkillMirror.decodeBody (File.ReadAllBytes path) with
+        | Ok text -> Ok text
+        | Error(Fsgg.SkillMirror.NotDecodable byteOffset) ->
+            Error
+                $"{label} '{path}' is not decodable text: the first invalid byte sequence begins at byte offset {byteOffset}. The file was not parsed."
+
     /// A lossy probe for the callers that answer a question about a document rather
     /// than diagnose it (a raw schemaVersion read for identity/digest purposes).
     /// A parser that reports to an author must use `yamlRoot`, which keeps the
