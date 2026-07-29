@@ -49,12 +49,16 @@ open FS.GG.SDD.Commands.Internal.HandlersScaffold
 /// warning and enters `unreadableSubjects`. So it lands in the **Unreadable** class above: exit 0,
 /// `IsCoherent` false, no tool defect. A partial listing is never reported as a complete one.
 ///
-/// Known residual, owned by FS-GG/FS.GG.SDD#760, not by this module: a skill copy the run could
-/// not OBSERVE — unreadable itself, or under a directory that could not be listed — is
-/// *additionally* classified as skill drift of the *not mirrored* class, because
-/// `SkillMirror.verifyFiles` builds its per-file union from the rows it observed and an
-/// unobserved subject contributes none. By then the verdict is already non-coherent and the path
-/// is already named, so the cost is a misleading remedy hint rather than a wrong pass.
+/// **Unreadable and Drift stay APART, which they did not until FS-GG/FS.GG.SDD#760.** A skill copy
+/// the run could not observe — unreadable itself, or under a directory that could not be listed —
+/// used to be reported as Unreadable *and additionally* as skill drift of the *not mirrored* class,
+/// because the mirror fold derived every absence from the rows it was given and an unobserved
+/// subject contributes none. The two classes send the operator to opposite remedies (`chmod +r`
+/// versus `upgrade`), so a subject in both is a subject this report cannot advise on. Since #760
+/// the fold is TOLD what could not be observed (`unreadableSubjects`, threaded through
+/// `Drift.computeObserved`) and withholds judgement on it. Withholding is not clearing: the verdict
+/// is still non-coherent and the subject is still named — by `unreadableFile` /
+/// `unlistableDirectory`, the diagnostic whose remedy is the true one.
 module internal HandlersDoctor =
 
     // Shared with HandlersUpgrade (both resolve the same drift inputs from the snapshots).
@@ -233,10 +237,11 @@ module internal HandlersDoctor =
         |> List.filter (fun path -> Drift.skillCopyOfPath path |> Option.isSome)
         |> List.distinct
         |> List.choose (fun path ->
-            // Total since #745. An unread body is still dropped from the map — `verifyFiles`
-            // compares over `declared ∪ observed` and has nothing to compare a missing body
-            // against — but the DROP is no longer the end of the story: `unreadableSubjects`
-            // carries the path, so the run cannot close as coherent over a copy it never read.
+            // Total since #745. An unread body is still dropped from the map — there is no body to
+            // put in it — but the DROP is no longer the end of the story. `unreadableSubjects`
+            // carries the path twice over: the run cannot close as coherent over a copy it never
+            // read (#745), and since #760 the same set reaches the mirror fold, so the dropped row
+            // is read as "not observed" rather than as "not there".
             match readOf path model with
             | Bytes snap -> Some(path, snap.Text)
             | Absent
@@ -272,6 +277,13 @@ module internal HandlersDoctor =
     /// the OBSERVED rows — a file no root contributed a row for is never compared at all.
     /// `presentArtifacts` has the mirror-image shape: `Option.isSome`, so an unreadable expected
     /// artifact reads as *missing*, which is the wrong finding for a file that is right there.
+    ///
+    /// #760 gave this set a SECOND reader. It still blocks the verdict, and it is now also the
+    /// mirror fold's third observation state (`Drift.computeObserved` →
+    /// `SkillMirror.verifyObservedFiles`), so a dropped body is withheld from the drift classes
+    /// instead of surfacing there as *not mirrored*. Both readers take the WHOLE set — the
+    /// non-skill members (`.fsgg/project.yml`, the provenance) simply do not parse as skill copies
+    /// and never reach the fold — so nothing has to keep two definitions of "unobserved" in step.
     let unreadableSubjects model =
         let bodyPaths =
             (Drift.expectedArtifactPaths
@@ -289,13 +301,20 @@ module internal HandlersDoctor =
         let provenance = resolveProvenance model
         let descriptor = resolveDriftDescriptor model provenance
 
-        Drift.compute
+        // #760: the drift fold is handed the subjects this run could NOT observe, alongside the
+        // bodies it did. Without them a copy it failed to open contributes no row for exactly the
+        // reason a deleted one does, and comes back classified *not mirrored* — the wrong finding
+        // and the wrong remedy for a file that is present and byte-identical to its siblings. The
+        // same set still blocks the coherence verdict in `computeDoctorNext`; this stops it ALSO
+        // being reported as drift.
+        Drift.computeObserved
             provenance
             descriptor
             (resolveWorkspaceFloor model)
             model.Request.GeneratorVersion.Version
             (presentArtifacts model)
             (skillBodies model)
+            (unreadableSubjects model)
 
     let doctorSummaryOf (drift: Drift.DriftReport) : DoctorSummary =
         { HasProvenance = drift.HasProvenance

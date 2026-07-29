@@ -415,6 +415,7 @@ module internal Drift =
     let private computeSkillDrift
         (provenance: ScaffoldProvenanceRecord option)
         (skillBodies: Map<string, string>)
+        (unobservedSubjects: string list)
         : SkillDriftClasses =
         let expected = expectedSkills provenance
         let ownerExpected = ownerSourcedSkillFiles provenance
@@ -505,6 +506,30 @@ module internal Drift =
             | Some files when files |> List.exists (fun file -> file.RelativePath = "SKILL.md") -> Some files
             | _ -> None
 
+        // FS-GG/FS.GG.SDD#760: the subjects this run could not OBSERVE, in the coordinates the
+        // mirror fold works in. Without it, a copy file that is present-but-unreadable — or under a
+        // directory the enumeration could not open — contributes no row for exactly the reason a
+        // DELETED file does, and the fold classifies it *not mirrored*: an advisory asserting that a
+        // sibling root carries a file this one does not, about a file that is right there.
+        //
+        // Parsed with `skillCopyOfPath`, the SAME parser that splits the observed bodies apart, for
+        // the same reason that one is shared: a second spelling of "what counts as a skill copy" is
+        // how the observation and the withholding come to disagree about which subject is which. A
+        // path that is not a skill copy — `.fsgg/project.yml`, and the several other subjects the
+        // caller's unreadable set legitimately carries — is `None` and simply does not reach the
+        // mirror fold.
+        //
+        // A `Truncated` listing contributes the DIRECTORY it could not open, not the files under it
+        // (it never saw them), which is why the library takes these as prefixes.
+        let unobserved =
+            unobservedSubjects
+            |> List.choose skillCopyOfPath
+            |> List.groupBy (fun (root, id, _) -> root, id)
+            |> List.map (fun ((root, id), group) ->
+                { SkillMirror.UnobservedSkillFiles.Root = root
+                  SkillMirror.UnobservedSkillFiles.Id = id
+                  SkillMirror.UnobservedSkillFiles.RelativePaths = group |> List.map (fun (_, _, relative) -> relative) })
+
         // One observation set for BOTH verify entry points, over the union of ids either of them
         // expects. A row for an id the fold in question does not expect is inert (each entry point
         // folds over its OWN `expected`), so sharing the set is what keeps the two from disagreeing
@@ -529,6 +554,21 @@ module internal Drift =
             (skillMissingRoots: string list)
             (files: (string * string list * bool * string list) list)
             =
+            // The roots that CARRY this file — read off the observation directly, never inferred as
+            // "carries the skill and is not in `fileMissingRoots`". Since #760 those are different
+            // sets, at both levels: a root whose copy or whose file could not be OBSERVED is in
+            // neither the absence list nor the presence one, and inferring presence from
+            // absence-of-absence puts it back in this one — where the `DivergentAt` branch below
+            // would then report a byte disagreement, among the roots that were read, AT A ROOT
+            // NOBODY READ. `copyFiles` is what built the observation the fold was handed, so this is
+            // the same fact stated at its source rather than a second opinion about it.
+            let rootsWithFile relativePath =
+                agentSkillRoots
+                |> List.filter (fun root ->
+                    match copyFiles root id with
+                    | Some files -> files |> List.exists (fun file -> file.RelativePath = relativePath)
+                    | None -> false)
+
             // A root carrying NO copy of the skill at all is reported once, at its `SKILL.md` —
             // the file that MAKES a directory a skill (`SkillMirror.skillPath` /
             // `skillIdOfPath`) — rather than as one absence per file in the union. The repair is
@@ -543,6 +583,11 @@ module internal Drift =
             // the sibling root an operator would mirror FROM does not exist. Classifying that as
             // not-mirrored would make the advisory assert "another root carries this file" about
             // a file no root carries.
+            //
+            // #760: a WITHHELD root is in neither list, so a skill absent from every root the run
+            // could observe but unobservable at one more is not `LostEverywhere` — and must not be.
+            // `LostEverywhere` asserts that no root has a copy to mirror from, which is precisely
+            // the claim an unobserved root leaves unsettled.
             let skillLostEverywhere =
                 agentSkillRoots
                 |> List.forall (fun root -> List.contains root skillMissingRoots)
@@ -556,10 +601,6 @@ module internal Drift =
             let missingSkillPaths =
                 skillMissingRoots
                 |> List.map (fun root -> missingSkillCondition, SkillMirror.skillPath root id)
-
-            let rootsWithSkill =
-                agentSkillRoots
-                |> List.filter (fun root -> not (List.contains root skillMissingRoots))
 
             // The pre-existing root-selection rule, unchanged in substance and now applied PER
             // FILE: when a reference digest pinpoints the offending root(s)
@@ -585,13 +626,9 @@ module internal Drift =
             let filePaths =
                 files
                 |> List.collect (fun (relativePath, fileMissingRoots, divergent, hashMismatchRoots) ->
-                    let rootsWithFile =
-                        rootsWithSkill
-                        |> List.filter (fun root -> not (List.contains root fileMissingRoots))
-
                     let divergentRoots =
                         if divergent && List.isEmpty hashMismatchRoots then
-                            rootsWithFile
+                            rootsWithFile relativePath
                         else
                             []
 
@@ -604,7 +641,7 @@ module internal Drift =
         // The process ∪ product union, verified against `ExpectedSkill.Sha256` — a digest that
         // content-addresses `SKILL.md` and nothing else (the #727 gap). Unchanged by #733.
         let processProductClassified =
-            SkillMirror.verifyFiles agentSkillRoots expected actual
+            SkillMirror.verifyObservedFiles agentSkillRoots expected actual unobserved
             |> List.collect (fun drift ->
                 classifyDrift
                     drift.Id
@@ -642,7 +679,7 @@ module internal Drift =
         // to forgive: the CRLF case matches outright, and the raw domain — the one no read seam can
         // reproduce for a BOM-prefixed file — is no longer accepted at all.
         let ownerClassified =
-            SkillMirror.verifyFileSet agentSkillRoots ownerExpected actual
+            SkillMirror.verifyObservedFileSet agentSkillRoots ownerExpected actual unobserved
             |> List.collect (fun drift ->
                 classifyDrift
                     drift.Id
@@ -734,13 +771,20 @@ module internal Drift =
     /// `sdd.minToolVersion` declared in `.fsgg/project.yml` (FS-GG/FS.GG.SDD#305); the
     /// **stricter** of the two floors governs the CLI axis (FS-GG/FS.GG.SDD#313), so the
     /// remediation verbs can no longer report `coherent` against a floor the author declared.
-    let compute
+    ///
+    /// `unobservedSubjects` are the paths this run is responsible for and could NOT observe —
+    /// `HandlersDoctor.unreadableSubjects` (FS-GG/FS.GG.SDD#745/#743/#760). Only the skill-copy
+    /// members reach the mirror fold, where they are WITHHELD from the drift classes rather than
+    /// read as absences. Withholding is not clearing: the caller still owns reporting them and
+    /// still owns refusing to call the run coherent over them, which `computeDoctorNext` does.
+    let computeObserved
         (provenance: ScaffoldProvenanceRecord option)
         (descriptor: ProviderDescriptor option)
         (workspaceFloor: string option)
         (installedVersion: string)
         (presentArtifacts: Set<string>)
         (skillBodies: Map<string, string>)
+        (unobservedSubjects: string list)
         : DriftReport =
         let workspaceCandidate =
             workspaceFloor
@@ -849,7 +893,7 @@ module internal Drift =
             // 058/ADR-0014 §Decision 3: the content-addressed union verify over process +
             // product skills. Non-empty ⇒ content drift (advisory), which also makes the
             // scaffold not coherent alongside the CLI-axis / missing-artifact drivers.
-            let skillDrift = computeSkillDrift provenance skillBodies
+            let skillDrift = computeSkillDrift provenance skillBodies unobservedSubjects
 
             let hasActionableWork =
                 steps
@@ -877,3 +921,19 @@ module internal Drift =
               IgnoredSkillJunkPaths = skillDrift.IgnoredJunk
               Steps = steps
               IsCoherent = not hasActionableWork && List.isEmpty skillDrift.All }
+
+    /// `computeObserved` for a caller that observed everything it fed in — the spelling that
+    /// predates the third state (FS-GG/FS.GG.SDD#760), unchanged in arity and in behaviour.
+    ///
+    /// Defined AS `computeObserved … []` so "nothing unobserved" cannot mean something different
+    /// here than it does there. A caller that DOES hold unobservable subjects and reaches for this
+    /// spelling is telling the fold they do not exist, and gets the pre-#760 finding back.
+    let compute
+        (provenance: ScaffoldProvenanceRecord option)
+        (descriptor: ProviderDescriptor option)
+        (workspaceFloor: string option)
+        (installedVersion: string)
+        (presentArtifacts: Set<string>)
+        (skillBodies: Map<string, string>)
+        : DriftReport =
+        computeObserved provenance descriptor workspaceFloor installedVersion presentArtifacts skillBodies []

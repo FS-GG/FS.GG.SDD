@@ -668,6 +668,111 @@ module MultiFileSkillDriftTests =
 
         Assert.Empty report.IgnoredSkillJunkPaths
 
+    // ===================================================================================
+    // FS.GG.SDD#760 — the fold's third observation state, asserted at the FOLD.
+    //
+    // The end-to-end legs further down prove `doctor` delivers the unobserved set; these prove what
+    // the fold does with it, and they are where the CLASS SPLIT (`SkillNotMirroredPaths` — the field
+    // AC1 names) is visible at all, since `DoctorSummary` carries only the union.
+    //
+    // Every one of them is a PAIR: the same tree through `Drift.compute` (which says nothing was
+    // unobserved) and through `Drift.computeObserved` (which says one subject was). Without the
+    // first half a green second half would be satisfied by a fold that reported nothing at all.
+    // ===================================================================================
+
+    /// The auxiliary present at two roots and absent from the third — the plainest not-mirrored
+    /// shape there is, and the one #760 is about when the third root is merely UNREADABLE.
+    let private auxiliaryMissingAtClaude id =
+        skillBodiesFor coherentPresent
+        |> Map.add (auxiliaryPath ".agents" id) "shared\n"
+        |> Map.add (auxiliaryPath ".codex" id) "shared\n"
+
+    let private computeUnobserved bodies unobserved =
+        Drift.computeObserved
+            (Some(record None))
+            (Some(descriptor None))
+            None
+            installedVersion
+            (Set.ofList coherentPresent)
+            bodies
+            unobserved
+
+    [<Fact>]
+    let ``FS.GG.SDD#760: an UNOBSERVED skill-copy file is withheld from every drift class`` () =
+        let id = "fs-gg-sdd-plan"
+        let bodies = auxiliaryMissingAtClaude id
+        let subject = auxiliaryPath ".claude" id
+
+        // The control: told nothing, the fold reports the absence — and must keep doing so.
+        let unaware = computeUnobserved bodies []
+        Assert.Equal<string list>([ subject ], unaware.SkillDriftPaths)
+        Assert.Equal<string list>([ subject ], unaware.SkillNotMirroredPaths)
+
+        // Told the subject could not be OBSERVED, it says nothing about it — AC1's field by name.
+        let aware = computeUnobserved bodies [ subject ]
+        Assert.Empty aware.SkillDriftPaths
+        Assert.Empty aware.SkillNotMirroredPaths
+        Assert.Empty aware.SkillLostPaths
+        Assert.Empty aware.SkillDivergentPaths
+
+        // A path that is not a skill copy reaches the fold in the same list (the caller's unreadable
+        // set legitimately carries `.fsgg/project.yml` and friends) and changes nothing.
+        let unrelated = computeUnobserved bodies [ ".fsgg/project.yml" ]
+        Assert.Equal<string list>([ subject ], unrelated.SkillDriftPaths)
+
+    /// AC2's shape at the fold: a caller that could not LIST a directory cannot name the files
+    /// inside it — it never saw them — so the directory itself withholds everything beneath it.
+    [<Fact>]
+    let ``FS.GG.SDD#760: an unlistable DIRECTORY withholds the subjects beneath it`` () =
+        let id = "fs-gg-sdd-plan"
+        let bodies = auxiliaryMissingAtClaude id
+
+        let aware = computeUnobserved bodies [ $".claude/skills/{id}/references" ]
+        Assert.Empty aware.SkillDriftPaths
+
+        // A PREFIX, not a substring: a sibling directory whose name merely starts the same way
+        // withholds nothing. `references-archive` is not `references`.
+        let unrelated =
+            computeUnobserved bodies [ $".claude/skills/{id}/references-archive" ]
+
+        Assert.Equal<string list>([ auxiliaryPath ".claude" id ], unrelated.SkillDriftPaths)
+
+    /// Withholding is per (root, file) and nothing wider. A root the run could not observe must not
+    /// take the findings about the roots it COULD observe down with it.
+    [<Fact>]
+    let ``FS.GG.SDD#760: withholding one root does not silence a divergence between the others`` () =
+        let id = "fs-gg-sdd-plan"
+
+        let bodies =
+            skillBodiesFor coherentPresent
+            |> Map.add (auxiliaryPath ".agents" id) "a\n"
+            |> Map.add (auxiliaryPath ".codex" id) "b\n"
+
+        let aware = computeUnobserved bodies [ auxiliaryPath ".claude" id ]
+
+        // `.claude` is silent; `.agents` and `.codex` still disagree, and still say so at both.
+        Assert.Equal<string list>(
+            [ auxiliaryPath ".agents" id; auxiliaryPath ".codex" id ] |> List.sort,
+            aware.SkillDivergentPaths
+        )
+
+        Assert.Empty aware.SkillNotMirroredPaths
+
+    /// The SKILL-LEVEL clause. `SKILL.md` is what makes a directory a copy of the skill, so a run
+    /// that could not read it has not established that the root carries no copy.
+    [<Fact>]
+    let ``FS.GG.SDD#760: an unobserved SKILL.md withholds the whole copy, and an absent one does not`` () =
+        let id = "fs-gg-sdd-plan"
+        let subject = skillMd ".codex" id
+        let bodies = skillBodiesFor coherentPresent |> Map.remove subject
+
+        // The control: genuinely gone, and reported — this is the pre-#726 verdict and it stands.
+        let unaware = computeUnobserved bodies []
+        Assert.Equal<string list>([ subject ], unaware.SkillNotMirroredPaths)
+
+        let aware = computeUnobserved bodies [ subject ]
+        Assert.Empty aware.SkillDriftPaths
+
     // The classification is a SPLIT of the existing surface, not a second opinion about it: an
     // invariant every hint branch depends on and nothing else states. If a later change lets a path
     // fall out of all three classes, the advisory silently stops describing it.
@@ -1471,6 +1576,18 @@ module MultiFileSkillDriftTests =
                 // and the wrong remedy.
                 Assert.DoesNotContain(target, summary.MissingArtifactPaths)
 
+                // FS.GG.SDD#760 AC1, the SKILL-LEVEL half. `SKILL.md` is what makes a directory a
+                // copy of the skill, so a run that could not read it has not established that
+                // `.claude` carries no copy — and before #760 it said so anyway, reporting
+                // `.claude/skills/fs-gg-demo/SKILL.md` as *not mirrored at `.claude`* about the very
+                // file it had just named unreadable. EXACT, not `DoesNotContain`: an empty list is
+                // the claim, and `DoesNotContain` would also pass if the fold reported some OTHER
+                // phantom instead. `SkillDriftPaths` is the UNION of the three #736 classes, so an
+                // empty one is the strongest form of AC1's "not reported as `SkillNotMirroredPaths`"
+                // — the class split itself is asserted at the fold, in the `Drift.computeObserved`
+                // legs above.
+                Assert.Equal<string list>([], summary.SkillDriftPaths)
+
                 // The finding names the file, and it is not a tool defect.
                 Assert.Contains(
                     report.Diagnostics,
@@ -1486,22 +1603,154 @@ module MultiFileSkillDriftTests =
             finally
                 File.SetUnixFileMode(targetAbsolute, enum<UnixFileMode> 0o644)
 
+    /// FS.GG.SDD#760 AC1, the FILE-LEVEL half — the case the `SKILL.md` leg above cannot stand in
+    /// for, because that one exercises the skill-level clause (a root whose copy could not be
+    /// established at all) and this one exercises the per-file clause (a root that plainly HAS the
+    /// copy, missing exactly one row the run could not obtain).
+    ///
+    /// Measured on `main` with this fixture, one `chmod 000` on the `.claude` auxiliary produced:
+    ///
+    ///     isCoherent=False   exit=0
+    ///     drift = .claude/skills/fs-gg-demo/references/deep-detail.md
+    ///
+    /// classified NOT MIRRORED — a class whose advisory asserts that another root carries a file
+    /// this one does not, about a file present at `.claude` and byte-identical to its siblings.
+    ///
+    /// The control at the end is the load-bearing half. Withholding must not be "stop looking": the
+    /// SAME path, at the SAME root, with the mode restored and the file DELETED, is still reported.
+    /// Without it, deleting the per-file comparison entirely would pass this test.
+    [<Fact>]
+    let ``FS.GG.SDD#760: an unreadable AUXILIARY copy is not reported as drift, and a deleted one still is`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let fixtureRoot = productCoherentFixture ()
+            writeCoherentAuxiliaries fixtureRoot productSkillId
+
+            // The control leg: coherent while every copy can be read. Without it a green
+            // "no drift" assertion below would be satisfied by a fixture that never drifted.
+            Assert.True((doctorSummary (doctorReport fixtureRoot)).IsCoherent)
+
+            let target = auxiliaryPath ".claude" productSkillId
+            let targetAbsolute = absolute fixtureRoot target
+
+            File.SetUnixFileMode(targetAbsolute, enum<UnixFileMode> 0)
+
+            try
+                let report = doctorReport fixtureRoot
+                let summary = doctorSummary report
+
+                // The verdict is still withheld — #745/#754's rule is untouched — and the run still
+                // exits 0 and accuses nothing of being broken.
+                Assert.False summary.IsCoherent
+                Assert.Equal(0, RemediationSupport.exitCode report)
+                Assert.DoesNotContain(report.Diagnostics, fun d -> d.IsToolDefect)
+
+                // The subject is still NAMED, by the diagnostic whose remedy is the true one.
+                Assert.Contains(
+                    report.Diagnostics,
+                    fun d -> d.Id = "unreadableFile" && List.contains target d.RelatedIds
+                )
+
+                // …and it is no longer ALSO a drift finding pointing at `upgrade`.
+                Assert.Equal<string list>([], summary.SkillDriftPaths)
+                Assert.DoesNotContain(report.Diagnostics, fun d -> d.Id = "doctor.driftDetected")
+            finally
+                File.SetUnixFileMode(targetAbsolute, enum<UnixFileMode> 0o644)
+
+            // THE CONTROL. Same path, same root, now genuinely gone: still drift, still
+            // *not mirrored*, and now `upgrade` IS the advice. #760 removed a finding the fold had
+            // no evidence for; it removed no finding the fold can support.
+            File.Delete targetAbsolute
+
+            let deletedReport = doctorReport fixtureRoot
+            let deletedSummary = doctorSummary deletedReport
+
+            Assert.False deletedSummary.IsCoherent
+            Assert.Equal<string list>([ target ], deletedSummary.SkillDriftPaths)
+            Assert.Contains(deletedReport.Diagnostics, fun d -> d.Id = "doctor.driftDetected")
+
+    /// FS.GG.SDD#760, `upgrade`'s share — and the leg that exists because the fix above would
+    /// otherwise have MOVED the defect rather than removed it.
+    ///
+    /// `doctor` recomputes its verdict as `drift.IsCoherent && List.isEmpty unreadable` (#745,
+    /// decision #754). `upgrade` never carried that line and never needed it: an unobservable copy
+    /// used to reach `computeDrift` as phantom *not mirrored* drift, so `drift.IsCoherent` — the
+    /// flag `upgrade` DOES read — was already false. Removing the phantom removes the accident.
+    ///
+    /// Measured on this fixture with the fold change and without the guard:
+    ///
+    ///     alreadyCoherent  true
+    ///     residualDrift    false
+    ///     skillDriftPaths  []
+    ///     nextActionHint   Already coherent — nothing to reconcile.
+    ///
+    /// over a file the run could not open. A false FINDING traded for a false PASS is the same
+    /// defect facing the other way (epic FS-GG/.github#266), and the pass is the worse half.
+    [<Fact>]
+    let ``FS.GG.SDD#760: upgrade never reports coherent over a subject it could not read`` () =
+        if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+            ()
+        else
+            let fixtureRoot = productCoherentFixture ()
+            writeCoherentAuxiliaries fixtureRoot productSkillId
+
+            // The control: this fixture really does reconcile to "already coherent" when every
+            // subject can be read. Without it the assertions below would pass on a fixture that was
+            // never coherent in the first place.
+            let coherent = (upgradeYes fixtureRoot).Upgrade.Value
+            Assert.True coherent.AlreadyCoherent
+            Assert.False coherent.ResidualDrift
+
+            let target = auxiliaryPath ".claude" productSkillId
+            let targetAbsolute = absolute fixtureRoot target
+            File.SetUnixFileMode(targetAbsolute, enum<UnixFileMode> 0)
+
+            try
+                let report = upgradeYes fixtureRoot
+                let summary = report.Upgrade.Value
+
+                // The claim that must not be made.
+                Assert.False summary.AlreadyCoherent
+                Assert.True summary.ResidualDrift
+
+                // …and it is NOT made by re-manufacturing the phantom: the drift list stays empty.
+                // The run is withheld because a subject was unread, which is a different fact with
+                // a different repair, and the hint says which.
+                Assert.Empty summary.SkillDriftPaths
+                Assert.Contains("could not be read", summary.NextActionHint)
+                Assert.DoesNotContain("Already coherent", summary.NextActionHint)
+
+                // The drift advisory's wording must not leak in: nothing here diverges, and telling
+                // the operator to re-scaffold over a permissions bit is the advice #745 removed from
+                // `doctor`.
+                Assert.DoesNotContain("diverge", summary.NextActionHint)
+
+                // Still a read-only-ish advisory close: exit 0, no tool defect, and the subject
+                // named by the diagnostic whose remedy is the true one.
+                Assert.Equal(0, RemediationSupport.exitCode report)
+                Assert.DoesNotContain(report.Diagnostics, fun d -> d.IsToolDefect)
+
+                Assert.Contains(
+                    report.Diagnostics,
+                    fun d -> d.Id = "unreadableFile" && List.contains target d.RelatedIds
+                )
+            finally
+                File.SetUnixFileMode(targetAbsolute, enum<UnixFileMode> 0o644)
+
     /// FS.GG.SDD#748 AC2, `doctor`'s half — proven at the LANE, not at the diagnostic.
     ///
     /// The pre-#748 seam read this body with `File.ReadAllText`, so the run got a string, hashed it,
     /// and compared it. A second undecodable copy whose invalid bytes substituted the same way would
     /// have compared EQUAL to this one and reported coherent.
     ///
-    /// WHAT THIS DOES NOT ASSERT, deliberately: that the copy is not ALSO reported as skill drift.
-    /// It still is. That is the residual `HandlersDoctor` documents at its head and
-    /// FS.GG.SDD#760 owns — `SkillMirror.verifyFiles` builds its per-file union from the rows it
-    /// OBSERVED, and a body that was never decoded contributes none, so the copy is additionally
-    /// classified *not mirrored*. #748 does not close it and must not claim to: by then the verdict
-    /// is already non-coherent and the path is already named by `undecodableFile`, so the cost is a
-    /// misleading remedy hint rather than a wrong pass. The `surface --check` leg in
-    /// `SurfaceCommandTests` DOES assert the not-drift half, because that lane's fold genuinely
-    /// separates the two — which is why the pair is asserted asymmetrically rather than by copying
-    /// one leg's assertions onto the other lane and calling it proven.
+    /// IT NOW ALSO ASSERTS THE NOT-DRIFT HALF, which it could not until FS.GG.SDD#760. An
+    /// undecodable body rides the state #745 built (`Unreadable`, with `undecodableReason`), so it
+    /// is one of the `unreadableSubjects` #760 threads into the mirror fold — and the copy that
+    /// used to be reported *not mirrored* alongside its own `undecodableFile` diagnostic is now
+    /// withheld from the drift classes. The asymmetry this comment used to record — `surface
+    /// --check` asserting the not-drift half while `doctor` could not — is gone, and both lanes now
+    /// separate the two facts.
     ///
     /// No Unix guard: the subject is the bytes, which are the same everywhere.
     [<Fact>]
@@ -1530,6 +1779,10 @@ module MultiFileSkillDriftTests =
 
         // Not "missing" — the file is right there, and re-seeding it is not the repair.
         Assert.DoesNotContain(target, summary.MissingArtifactPaths)
+
+        // …and not "not mirrored" either (#760). A body that never decoded is a body the run did
+        // not obtain, and the fold now says nothing about it rather than reporting an absence.
+        Assert.Equal<string list>([], summary.SkillDriftPaths)
 
         // Its OWN diagnostic, naming the file, and never a tool defect.
         Assert.Contains(report.Diagnostics, fun d -> d.Id = "undecodableFile" && List.contains target d.RelatedIds)
@@ -1646,14 +1899,24 @@ module MultiFileSkillDriftTests =
                 // this list is what distinguishes "the siblings survived" from "the enumeration
                 // was switched off", and on `main` it had four members (see the block above).
                 //
-                // The one remaining member is the KNOWN RESIDUAL #745 named and #743 inherited:
-                // `deep-detail.md` is under the directory that could not be opened, so no row was
-                // observed for it at `.claude`, and `SkillMirror.verifyFiles` builds its per-file
-                // union from observed rows with no state for "not observed" — so it classifies as
-                // *not mirrored* rather than *unobserved*. It is a misleading remedy hint on an
-                // already-non-coherent, already-named run, not a wrong pass. Filed at its root
-                // cause as FS-GG/FS.GG.SDD#760; when that lands, this list becomes empty.
-                Assert.Equal<string list>([ auxiliaryPath ".claude" productSkillId ], summary.SkillDriftPaths)
+                // FS.GG.SDD#760 AC2 took the last one. It was `deep-detail.md` at `.claude` — under
+                // the directory that could not be opened, so no row was observed for it there, and
+                // the mirror fold had no state for "not observed" and classified it *not mirrored*.
+                // The fold is now told (`Drift.computeObserved` → `SkillMirror.verifyObservedFiles`)
+                // and withholds. This list is empty, and its emptiness is what #760 is: the finding
+                // that survives is the TRUE one, asserted above — `unlistableDirectory`, naming the
+                // directory, whose remedy is `chmod` and not `upgrade`.
+                Assert.Equal<string list>([], summary.SkillDriftPaths)
+
+                // #760 AC2's second half is asserted in the SAME leg, so the fix cannot be "stop
+                // looking": the run is still non-coherent (above) and the subject is still named
+                // (above). What is gone is only the second, contradictory finding about it.
+                //
+                // And `upgrade` is not advised, because `upgrade` cannot repair a directory it
+                // cannot open. Before #760 the phantom drift made `drift.IsCoherent` false, which
+                // is the gate this advisory reads, so the run said "run `fsgg-sdd upgrade`" about a
+                // permissions accident.
+                Assert.DoesNotContain(report.Diagnostics, fun d -> d.Id = "doctor.driftDetected")
 
                 // AC2 in the projection an operator actually reads — otherwise `--text` shows the
                 // findings computed FROM the truncated listing with no sign that it was truncated.

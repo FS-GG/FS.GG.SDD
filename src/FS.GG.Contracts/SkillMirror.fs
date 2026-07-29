@@ -295,10 +295,27 @@ module SkillMirror =
           MissingRoots: string list
           Files: SkillFileDrift list }
 
-    let verifyFiles
+    // The observation model's THIRD STATE, threaded through the two folds below as a lookup rather
+    // than as a public parameter — the public spellings are added at the foot of this file
+    // (FS.GG.SDD#760). `unobservedAt` answers "was this (root, id, relativePath) beyond the
+    // caller's reach?"; `Map.empty` — what `verifyFiles`/`verifyFileSet` pass — answers `false` for
+    // everything, which is exactly the pre-#760 behaviour and is why those two are unchanged.
+    let private isUnobservedAt (index: Map<string * string, Set<string>>) root id (relativePath: string) =
+        match Map.tryFind (root, id) index with
+        | None -> false
+        | Some paths ->
+            // A DIRECTORY that could not be listed makes every path beneath it unobserved too — the
+            // caller cannot enumerate what it could not open, so it can only name the directory.
+            paths
+            |> Set.exists (fun path ->
+                relativePath = path
+                || relativePath.StartsWith(path + "/", StringComparison.Ordinal))
+
+    let private verifyFilesCore
         (roots: string list)
         (expected: ExpectedSkill list)
         (actual: ActualSkillFiles list)
+        (unobserved: Map<string * string, Set<string>>)
         : MultiFileSkillDrift list =
         // `(root, id)` -> that copy's files, keyed by NORMALIZED relative path. A relative path
         // repeated within one copy is not a drift fact — two entries for one destination is a
@@ -326,9 +343,20 @@ module SkillMirror =
             // from the per-file facts below on purpose — "the whole skill is absent from `.agents`"
             // and "`.agents`'s copy is missing one reference" are different repairs, and reporting
             // the first as N per-file absences would bury it under its own detail.
+            //
+            // FS.GG.SDD#760: a root whose `SKILL.md` the caller could not OBSERVE is neither
+            // missing nor present. `SKILL.md` is what MAKES a directory a copy of the skill, so a
+            // caller that could not read it cannot have decided the root carries no copy — it
+            // contributed no row for the same reason an absent root does, and until #760 the two
+            // were one fact. Such a root is WITHHELD: it appears in no list this fold returns, and
+            // the judgement about it is simply not made.
             let missingRoots =
                 perRoot
-                |> List.choose (fun (root, files) -> if Option.isNone files then Some root else None)
+                |> List.choose (fun (root, files) ->
+                    if Option.isNone files && not (isUnobservedAt unobserved root skill.Id "SKILL.md") then
+                        Some root
+                    else
+                        None)
 
             // Only roots that HAVE the skill can be judged on its file set.
             let presentRoots =
@@ -352,14 +380,30 @@ module SkillMirror =
                         |> List.map (fun (root, files) -> root, Map.tryFind relativePath files)
 
                     // Fact 1, at FILE level: the skill is here, this file is not.
+                    //
+                    // FS.GG.SDD#760: unless the caller says it could not OBSERVE the file here, in
+                    // which case "not there" is a claim it has no evidence for. This fold builds
+                    // its per-file union from the rows it was GIVEN, so a subject the caller could
+                    // not read — an unreadable body, or anything under a directory it could not
+                    // list — contributed no row for exactly the reason a deleted file does. The
+                    // root is withheld from this list rather than accused of an absence: the
+                    // advisory that follows a `MissingRoots` entry asserts a sibling root carries a
+                    // file THIS one does not, and about an unobserved subject that is a sentence
+                    // nobody measured.
                     let fileMissingRoots =
                         bodyPerRoot
-                        |> List.choose (fun (root, body) -> if Option.isNone body then Some root else None)
+                        |> List.choose (fun (root, body) ->
+                            if Option.isNone body && not (isUnobservedAt unobserved root skill.Id relativePath) then
+                                Some root
+                            else
+                                None)
 
                     let presentBodies = bodyPerRoot |> List.choose snd
 
                     // Fact 2: "byte-identical across roots", per file — the invariant the driver
-                    // hand-rolled, now stated once, here.
+                    // hand-rolled, now stated once, here. Facts 2 and 3 need no #760 clause: they
+                    // are computed from bodies that ARE in hand, and an unobserved subject supplies
+                    // none, so it can neither create a divergence nor mask one.
                     let divergent =
                         match presentBodies with
                         | [] -> false
@@ -399,6 +443,17 @@ module SkillMirror =
                       MissingRoots = missingRoots
                       Files = fileDrift })
 
+    // Every subject observed: the spelling that predates the third state, and the one every
+    // existing caller keeps. Defined AS the core with an empty unobserved set rather than beside
+    // it, so "`verifyFiles` is `verifyObservedFiles` with nothing unobserved" is true by
+    // construction and not by a test that could drift (FS.GG.SDD#760).
+    let verifyFiles
+        (roots: string list)
+        (expected: ExpectedSkill list)
+        (actual: ActualSkillFiles list)
+        : MultiFileSkillDrift list =
+        verifyFilesCore roots expected actual Map.empty
+
     // -----------------------------------------------------------------------------------------
     // WHOLE-FILE-SET verify (FS.GG.SDD#727).
     // -----------------------------------------------------------------------------------------
@@ -437,10 +492,11 @@ module SkillMirror =
           MissingRoots: string list
           Files: DeclaredFileDrift list }
 
-    let verifyFileSet
+    let private verifyFileSetCore
         (roots: string list)
         (expected: ExpectedSkillFiles list)
         (actual: ActualSkillFiles list)
+        (unobserved: Map<string * string, Set<string>>)
         : DeclaredSkillDrift list =
         // Identical observation fold to `verifyFiles` — same normalization, same first-entry-wins
         // determinism — so the two entry points cannot disagree about what is ON DISK. Only the
@@ -472,9 +528,17 @@ module SkillMirror =
             let perRoot =
                 roots |> List.map (fun root -> root, Map.tryFind (root, skill.Id) filesAt)
 
+            // #760's skill-level clause, verbatim from `verifyFilesCore`: a root whose `SKILL.md`
+            // the caller could not observe is WITHHELD, not accused of carrying no copy. A
+            // DECLARATION does not help here — it says what a copy should contain, never whether
+            // this root has one.
             let missingRoots =
                 perRoot
-                |> List.choose (fun (root, files) -> if Option.isNone files then Some root else None)
+                |> List.choose (fun (root, files) ->
+                    if Option.isNone files && not (isUnobservedAt unobserved root skill.Id "SKILL.md") then
+                        Some root
+                    else
+                        None)
 
             let presentRoots =
                 perRoot
@@ -497,9 +561,17 @@ module SkillMirror =
                         presentRoots
                         |> List.map (fun (root, files) -> root, Map.tryFind relativePath files)
 
+                    // #760's file-level clause, verbatim from `verifyFilesCore`. It applies to a
+                    // DECLARED file exactly as to an observed one: a declaration establishes that
+                    // the file ought to be there, never that this root does not have it, and
+                    // "declared, and I could not look" is not evidence of an absence.
                     let fileMissingRoots =
                         bodyPerRoot
-                        |> List.choose (fun (root, body) -> if Option.isNone body then Some root else None)
+                        |> List.choose (fun (root, body) ->
+                            if Option.isNone body && not (isUnobservedAt unobserved root skill.Id relativePath) then
+                                Some root
+                            else
+                                None)
 
                     let presentBodies = bodyPerRoot |> List.choose snd
 
@@ -568,6 +640,90 @@ module SkillMirror =
                       Scope = skill.Scope
                       MissingRoots = missingRoots
                       Files = fileDrift })
+
+    // Every subject observed — `verifyFiles`'s counterpart, and unchanged for the same reason.
+    let verifyFileSet
+        (roots: string list)
+        (expected: ExpectedSkillFiles list)
+        (actual: ActualSkillFiles list)
+        : DeclaredSkillDrift list =
+        verifyFileSetCore roots expected actual Map.empty
+
+    // -----------------------------------------------------------------------------------------
+    // THE THIRD OBSERVATION STATE (FS.GG.SDD#760).
+    // -----------------------------------------------------------------------------------------
+    // `ActualSkillFiles` has two states — `Files = Some files` ("this root's copy carries exactly
+    // these") and `Files = None` ("this root carries no copy") — and the folds above derive every
+    // absence from the rows they were GIVEN: a file no present root contributed a row for is
+    // `MissingRoots` at that root. So NOT OBSERVED and NOT THERE were the same fact, and every
+    // caller that drops an unobservable subject got it back classified as an absence. Measured on
+    // `main`: one `chmod 000` on `.claude/skills/<id>/references` and `doctor` reported
+    // `.claude/skills/<id>/references/deep-detail.md` as *not mirrored at `.claude`* — a class whose
+    // advisory asserts that another root carries a file this one does not, about a file present at
+    // `.claude`, byte-identical to its siblings, that the run simply could not open.
+    //
+    // This is the same shape FS.GG.SDD#745 closed one layer up. #745 gave the READ edge a state for
+    // "present but not obtained"; the MIRROR fold had none, so the read edge's honesty was discarded
+    // by the fold that consumed it.
+    //
+    // Everything below is ADDITIVE, for the same reason #717, #721 and #727 were: `verifyFiles`,
+    // `verifyFileSet`, `ActualSkillFiles`, `SkillFileDrift`, `MultiFileSkillDrift`,
+    // `DeclaredFileDrift` and `DeclaredSkillDrift` are untouched, so every existing caller keeps its
+    // byte-for-byte call shape. It is one new type and two new entry points, NOT a new field on a
+    // shipped record — which would delete that record's positional constructor and cost a
+    // coordinated MAJOR nobody authorised (docs/release/contracts-version-bump-checklist.md, first
+    // row).
+    //
+    // THE THIRD STATE IS AN INPUT, NOT AN OUTPUT, and that is deliberate. What an unobserved subject
+    // needs is for nothing to be SAID about it. The caller already holds the fact — it is the only
+    // party that can, since it owns the reads — and it reports it itself: in this org, `doctor`'s
+    // `unreadableFile`/`unlistableDirectory` warnings name the subject and its `unreadableSubjects`
+    // set withholds the coherence verdict. Echoing it back through a fourth drift field would add a
+    // record shape carrying a fact its only reader already has.
+
+    type UnobservedSkillFiles =
+        { Root: string
+          Id: string
+          RelativePaths: string list }
+
+    // `(root, id)` -> the unobserved relative paths for that copy, normalized like every other
+    // relative path in this module. Several entries for one copy UNION rather than shadow: a caller
+    // that reports an unreadable file and an unlistable directory separately is stating two facts
+    // about one copy, and letting the later entry win would put the other's subjects back into the
+    // absence class.
+    //
+    // The empty path is DISCARDED rather than honoured. Normalized to `""` it would equal-match no
+    // relative path and prefix-match every one of them, so it can only arrive from a caller that
+    // meant something it has no way to spell — and the reading that would silence a whole copy is
+    // the more dangerous of the two. Withholding a whole copy is spelled `"SKILL.md"`, the file that
+    // MAKES a directory a copy of the skill.
+    let private unobservedIndex (unobserved: UnobservedSkillFiles list) =
+        unobserved
+        |> List.groupBy (fun entry -> entry.Root, entry.Id)
+        |> List.map (fun (copy, entries) ->
+            copy,
+            entries
+            |> List.collect (fun entry -> entry.RelativePaths)
+            |> List.map normalizeRelative
+            |> List.filter (fun path -> path <> "")
+            |> Set.ofList)
+        |> Map.ofList
+
+    let verifyObservedFiles
+        (roots: string list)
+        (expected: ExpectedSkill list)
+        (actual: ActualSkillFiles list)
+        (unobserved: UnobservedSkillFiles list)
+        : MultiFileSkillDrift list =
+        verifyFilesCore roots expected actual (unobservedIndex unobserved)
+
+    let verifyObservedFileSet
+        (roots: string list)
+        (expected: ExpectedSkillFiles list)
+        (actual: ActualSkillFiles list)
+        (unobserved: UnobservedSkillFiles list)
+        : DeclaredSkillDrift list =
+        verifyFileSetCore roots expected actual (unobservedIndex unobserved)
 
     // -----------------------------------------------------------------------------------------
     // THE BYTE SEAM (FS.GG.SDD#737).
