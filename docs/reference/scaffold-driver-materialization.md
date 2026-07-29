@@ -65,8 +65,16 @@ relative link, including parent-relative targets; it has no prefix-based escape 
 ## Provenance and refresh
 
 Every materialized driver file is recorded in `.fsgg/scaffold-provenance.json` under the additive
-`driverPaths` array (owner **`driver`**), with its manifest file digest. The record schema stays
-**v1**. Driver paths are `.github`-owned external content: `refresh` never
+`driverPaths` array (owner **`driver`**), with `Fsgg.SkillMirror.sha256` of the body that was
+written — BOM-stripped and `\r\n`-folded. The record schema stays **v1**.
+
+That is deliberately **not** the manifest's `files[].sha256`, which at schema v2 is a raw-byte
+digest (step 3 above). The two answer different questions: the manifest digest is a *transport*
+record, checked once against the compiled-in package bytes, while `driverPaths[].sha256` is a
+*workspace* record, re-checked later by `doctor` and `upgrade` against a body read back through a
+text seam that strips the byte-order mark. A raw digest is not reproducible from that seam for a
+BOM-prefixed file by any consumer, so recording one produced drift no repair could clear
+(FS-GG/FS.GG.SDD#752). `gameSkillPaths` has always used this domain; both halves now agree. Driver paths are `.github`-owned external content: `refresh` never
 regenerates them (it has no source for them), and its no-clobber union re-mirror preserves the
 byte-identical copies — so a `refresh` neither rewrites nor removes a materialized driver.
 
@@ -111,8 +119,8 @@ the missing roots are filled.
 but lacks its declared `references/**`, `agents/**`, or `scripts/**` members. The missing files are
 previewed under the `artifactReSeed` step (kept out of the seeded-skeleton
 `missingArtifacts`/`expectedArtifactCount` axis). After a successful backfill, `upgrade` amends
-`driverPaths` with every affected directory member and digest, including the pre-existing
-`SKILL.md`; present files remain no-clobber.
+`driverPaths` with every affected directory member and digest — in the same written-body domain
+described above — including the pre-existing `SKILL.md`; present files remain no-clobber.
 
 ## Not covered here
 
