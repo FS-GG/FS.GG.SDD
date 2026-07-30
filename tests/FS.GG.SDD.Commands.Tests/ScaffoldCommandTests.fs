@@ -647,14 +647,13 @@ module ScaffoldCommandTests =
         // SDD-owned post-instantiation step (FS.GG.SDD#315 — SDD's file, not the provider's),
         // and the `.fsgg/providers.yml` registry the test pre-planted (an author input, not
         // provider output).
-        // 108 / ADR-0054: the always-on driver skills scaffold materializes into all three roots
+        // 108 / ADR-0054: the always-on driver skills scaffold materializes into every runtime root
         // are SDD-owned (owner `driver`), not the provider's — excluded from the app-only diff
         // exactly as the provenance/tool-manifest SDD writes are. FS.GG.Drivers 0.8.0 (#703) ships
         // three `always` drivers: padd-item, work-board, and work-roadmap.
         let driverPaths = summary.MaterializedDriverPaths |> List.sort
-        Assert.Equal(51, driverPaths.Length)
+        Assert.Equal(17 * Fsgg.Schemas.agentSkillRoots.Length, driverPaths.Length)
         Assert.Contains(".agents/skills/work-board/references/host-loop.md", driverPaths)
-        Assert.Contains(".codex/skills/work-roadmap/references/roadmap-ledger.md", driverPaths)
 
         let preexisting =
             Set.ofList ([ provenancePath; toolManifestPath; ".fsgg/providers.yml" ] @ driverPaths)
@@ -841,7 +840,7 @@ module ScaffoldCommandTests =
         Assert.DoesNotContain("readiness/leak.txt", summary.ProducedPaths)
 
     // 051 T020 (US3 / INV-6, FR-008): a provider that writes into the seeded skill trees
-    // (.claude/skills/ or .codex/skills/) is a provider defect — rejected as
+    // (every declared mirror root) is a provider defect — rejected as
     // providerWroteSddTree (exit 2), and the skill subtrees never appear in the provenance
     // producedPaths. Exercises the T015 isSddTree guard end-to-end over a real provider.
     [<Fact; Trait("tier", "slow")>]
@@ -858,7 +857,6 @@ module ScaffoldCommandTests =
         Assert.NotEqual<string>("providerSucceeded", summary.Outcome)
         // The intruded skill-tree paths are never laundered into provenance as app-only.
         Assert.DoesNotContain(".claude/skills/leak/SKILL.md", summary.ProducedPaths)
-        Assert.DoesNotContain(".codex/skills/leak/SKILL.md", summary.ProducedPaths)
 
     // ===================================================================
     // 056 — orchestrator skill fan-out: union SDD + provider skills into all
@@ -873,24 +871,18 @@ module ScaffoldCommandTests =
         | Ok result -> result
         | Error message -> failwith $"Expected the amended product manifest to parse: {message}"
 
-    let private threeRoots (name: string) =
-        [ $".claude/skills/{name}/SKILL.md"
-          $".codex/skills/{name}/SKILL.md"
-          $".agents/skills/{name}/SKILL.md" ]
+    let private runtimeRoots (name: string) =
+        [ $".claude/skills/{name}/SKILL.md"; $".agents/skills/{name}/SKILL.md" ]
 
     let private assertByteIdenticalAcrossRoots root name =
-        match threeRoots name |> List.map (bytesAt root) with
-        | [ claude; codex; agents ] ->
-            Assert.Equal<byte[]>(claude, codex)
-            Assert.Equal<byte[]>(claude, agents)
-        | _ -> failwith "expected exactly three roots"
+        match runtimeRoots name |> List.map (bytesAt root) with
+        | [ claude; agents ] -> Assert.Equal<byte[]>(claude, agents)
+        | _ -> failwith "expected exactly two runtime roots"
 
     // 056 T012 (US2 / FR-001 / SC-002 / P1): a provider write into the whole-root-reserved
-    // .claude/skills/ OR .codex/skills/ is a defect (exit 2), no fan-out, path never recorded.
-    // Each per-root fixture is driven independently so each whole-root clause is proven alone.
+    // .claude/skills/ is a defect (exit 2), no fan-out, path never recorded.
     [<Theory; Trait("tier", "slow")>]
     [<InlineData("skills-intrusion-claude.providers.yml", ".claude/skills/leak/SKILL.md")>]
-    [<InlineData("skills-intrusion-codex.providers.yml", ".codex/skills/leak/SKILL.md")>]
     let ``scaffold provider writing a whole-root-reserved skill tree is a defect``
         (registry: string)
         (intruded: string)
@@ -956,7 +948,7 @@ module ScaffoldCommandTests =
         for name in FS.GG.SDD.Commands.Internal.SeededSkills.skillNames do
             assertByteIdenticalAcrossRoots root name
 
-        for path in threeRoots "fs-gg-elmish" do
+        for path in runtimeRoots "fs-gg-elmish" do
             Assert.True(TestSupport.existsRelative root path, $"expected {path} to exist")
 
         assertByteIdenticalAcrossRoots root "fs-gg-elmish"
@@ -998,7 +990,6 @@ module ScaffoldCommandTests =
             Assert.Equal(Some expectedDigest, elmishProduced.Sha256)
 
             Assert.Contains(".claude/skills/fs-gg-elmish/SKILL.md", mirroredPaths)
-            Assert.Contains(".codex/skills/fs-gg-elmish/SKILL.md", mirroredPaths)
 
             Assert.True(
                 record.MirroredPaths
@@ -1032,7 +1023,7 @@ module ScaffoldCommandTests =
 
         Assert.Equal(0, exitCodeForReport report)
 
-        for path in threeRoots "work-roadmap" do
+        for path in runtimeRoots "work-roadmap" do
             Assert.True(TestSupport.existsRelative root path, $"expected {path} to exist")
 
         assertByteIdenticalAcrossRoots root "work-roadmap"
@@ -1041,7 +1032,6 @@ module ScaffoldCommandTests =
         let summary = scaffoldSummary report
         Assert.Contains(".agents/skills/work-roadmap/SKILL.md", summary.MaterializedDriverPaths)
         Assert.Contains(".claude/skills/work-roadmap/SKILL.md", summary.MaterializedDriverPaths)
-        Assert.Contains(".codex/skills/work-roadmap/SKILL.md", summary.MaterializedDriverPaths)
 
     // 108 / ADR-0054 / FS.GG.SDD#632: FS.GG.Drivers ships work-board as an `always` driver.
     // It materializes byte-identically into all three agent roots on every scaffold from the CLI's
@@ -1059,7 +1049,7 @@ module ScaffoldCommandTests =
 
         Assert.Equal(0, exitCodeForReport report)
 
-        for path in threeRoots "work-board" do
+        for path in runtimeRoots "work-board" do
             Assert.True(TestSupport.existsRelative root path, $"expected {path} to exist")
 
         assertByteIdenticalAcrossRoots root "work-board"
@@ -1067,7 +1057,6 @@ module ScaffoldCommandTests =
         let summary = scaffoldSummary report
         Assert.Contains(".agents/skills/work-board/SKILL.md", summary.MaterializedDriverPaths)
         Assert.Contains(".claude/skills/work-board/SKILL.md", summary.MaterializedDriverPaths)
-        Assert.Contains(".codex/skills/work-board/SKILL.md", summary.MaterializedDriverPaths)
 
     [<Fact; Trait("tier", "slow")>]
     let ``fresh scaffold materializes complete work driver directories and every relative link resolves`` () =
@@ -1090,7 +1079,7 @@ module ScaffoldCommandTests =
             manifest.Skills
             |> List.filter (fun entry -> entry.Scope = "driver" && entry.MaterializesWhen = "always")
 
-        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+        for skillRoot in [ ".agents"; ".claude" ] do
             for driver in drivers do
                 let directory = Path.Combine(root, skillRoot, "skills", driver.Id)
 
@@ -1130,7 +1119,7 @@ module ScaffoldCommandTests =
 
         Assert.Equal(0, exitCodeForReport report)
 
-        for path in threeRoots "padd-item" do
+        for path in runtimeRoots "padd-item" do
             Assert.True(TestSupport.existsRelative root path, $"expected {path} to exist")
 
         assertByteIdenticalAcrossRoots root "padd-item"
@@ -1138,7 +1127,6 @@ module ScaffoldCommandTests =
         let summary = scaffoldSummary report
         Assert.Contains(".agents/skills/padd-item/SKILL.md", summary.MaterializedDriverPaths)
         Assert.Contains(".claude/skills/padd-item/SKILL.md", summary.MaterializedDriverPaths)
-        Assert.Contains(".codex/skills/padd-item/SKILL.md", summary.MaterializedDriverPaths)
 
     // ADR-0063 tail / skill-union coherence: the provider ships a static product skill-manifest.json
     // declaring only ITS skill (fs-gg-elmish). SDD materializes the drivers (work-board/work-roadmap),
@@ -1206,7 +1194,6 @@ module ScaffoldCommandTests =
         // The unioned manifest is byte-identical across all three roots (a coherent union everywhere,
         // not just under `.agents`).
         Assert.Equal(manifestText, TestSupport.readRelative root ".claude/skills/skill-manifest.json")
-        Assert.Equal(manifestText, TestSupport.readRelative root ".codex/skills/skill-manifest.json")
 
         // FS.GG.SDD#739, AC3 end-to-end: the provider shipped v1, so the amended document is STILL
         // v1 and never grows a v2 property. The v1 leg of this seam is not disturbed by the v2 work.
@@ -1297,7 +1284,6 @@ module ScaffoldCommandTests =
 
         // Coherent across all three roots, exactly as the v1 leg.
         Assert.Equal(manifestText, TestSupport.readRelative root ".claude/skills/skill-manifest.json")
-        Assert.Equal(manifestText, TestSupport.readRelative root ".codex/skills/skill-manifest.json")
 
     // FS.GG.SDD#739 AC4 — the half that had no observable behaviour at all. `amend` returning "I
     // will not rewrite this" was mapped to `[], skillDigests` and the scaffold went on reporting
@@ -1952,13 +1938,12 @@ module ScaffoldCommandTests =
                   "AGENTS.md"
                   "CLAUDE.md" ]
 
-        // 051/056: the seeded process-skill files (16 declared skills × {.claude,.codex,.agents}).
+        // The seeded process-skill files under every declared runtime root.
         let seededSkillPaths =
             FS.GG.SDD.Commands.Internal.SeededSkills.skillNames
             |> List.collect (fun name ->
-                [ $".claude/skills/{name}/SKILL.md"
-                  $".codex/skills/{name}/SKILL.md"
-                  $".agents/skills/{name}/SKILL.md" ])
+                Fsgg.Schemas.agentSkillRoots
+                |> List.map (fun root -> Fsgg.SkillMirror.skillPath root name))
 
         // 073/ADR-0018: the seeded regenerable-output `.gitignore` is an authored skeleton seed too.
         // 085: `init` also writes the dev-repo `.fsgg/scaffold-provenance.json` anchor.

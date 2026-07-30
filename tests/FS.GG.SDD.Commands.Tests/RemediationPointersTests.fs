@@ -19,8 +19,9 @@ module RemediationPointersTests =
 
     /// The agent-skill roots a scaffold vendors byte-identically (drift-guarded). A cited skill
     /// resolves when its SKILL.md is present under any one of them: this tool repo carries the
-    /// `.claude`/`.codex` roots; a scaffold additionally carries the neutral `.agents` root.
-    let private skillRoots = [ ".claude"; ".codex"; ".agents" ]
+    /// This repository authors the vendored source once under `.claude`; a scaffold carries
+    /// every declared runtime root generated from that source.
+    let private skillRoots = [ ".claude" ]
 
     let private skillRelPath (root: string) (name: string) = $"{root}/skills/{name}/SKILL.md"
 

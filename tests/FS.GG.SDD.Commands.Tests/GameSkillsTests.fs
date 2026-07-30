@@ -18,7 +18,7 @@ module GameSkillsTests =
     let private playtestSha256 =
         "f60aa51e41db3fdff0e45f72c2499ea26352edac51297058cc2930ee9574650d"
 
-    let private roots = [ ".agents"; ".claude"; ".codex" ]
+    let private roots = [ ".agents"; ".claude" ]
 
     let private skillPathFor id =
         roots |> List.map (fun root -> $"{root}/skills/{id}/SKILL.md") |> List.sort
@@ -28,7 +28,7 @@ module GameSkillsTests =
     // ---------- the embedded delivery (real bytes) ----------
 
     [<Fact>]
-    let ``plan materializes the delivered fs-gg-playtest into all three roots on the game profile`` () =
+    let ``plan materializes the delivered fs-gg-playtest into both runtime roots on the game profile`` () =
         let outcome = GameSkills.plan gameProfile
 
         Assert.Contains("fs-gg-playtest", outcome.MaterializedIds)
@@ -244,7 +244,7 @@ module GameSkillsTests =
         Assert.Contains("fs-gg-playtest", outcome.MaterializedIds)
 
         Assert.Equal(
-            3,
+            2,
             outcome.ProvenancePaths
             |> List.filter (fun (p, _) -> p.Contains "fs-gg-playtest")
             |> List.length

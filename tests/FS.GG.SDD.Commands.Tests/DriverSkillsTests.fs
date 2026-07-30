@@ -27,7 +27,7 @@ module DriverSkillsTests =
     let private paddItemSha256 =
         "028316b22d32384d3b7c3f0bccac4191e0b16dfc7595f769a1a93510218277af"
 
-    let private roots = [ ".agents"; ".claude"; ".codex" ]
+    let private roots = [ ".agents"; ".claude" ]
 
     let private deliveredFiles =
         Map.ofList
@@ -63,10 +63,10 @@ module DriverSkillsTests =
 
     // ---------- the embedded delivery (real bytes) ----------
 
-    // All three `always` driver rows FS.GG.Drivers 0.8.0 ships materialize; the operator-scoped
+    // All `always` driver rows FS.GG.Drivers 0.8.0 ships materialize; the operator-scoped
     // rows (`drive-board`, `p-add`, `cut-nuget-release`) do not — asserted separately below.
     [<Fact>]
-    let ``plan materializes the delivered always-on drivers into all three roots`` () =
+    let ``plan materializes the delivered always-on drivers into both runtime roots`` () =
         let outcome = DriverSkills.plan Set.empty
 
         Assert.Equal<string list>([ "padd-item"; "work-board"; "work-roadmap" ], outcome.MaterializedIds)
@@ -164,10 +164,10 @@ module DriverSkillsTests =
         let outcome = DriverSkills.planFilesFrom (Some manifest) files Set.empty
 
         Assert.Equal<string list>([ "driver" ], outcome.MaterializedIds)
-        Assert.Equal(6, outcome.ProvenancePaths.Length)
+        Assert.Equal(4, outcome.ProvenancePaths.Length)
 
         Assert.Equal(
-            3,
+            2,
             outcome.Writes
             |> List.filter (function
                 | SetExecutable path when path.EndsWith("/scripts/run.sh") -> true
@@ -333,7 +333,7 @@ module DriverSkillsTests =
                     Some body
                 | _ -> None)
 
-        Assert.Equal(3, auxBodies.Length)
+        Assert.Equal(2, auxBodies.Length)
 
         for body in auxBodies do
             Assert.Equal<string>("aux body\n", body)
@@ -418,8 +418,8 @@ module DriverSkillsTests =
         Assert.Contains("padd-item", outcome.MaterializedIds)
         Assert.Contains("work-board", outcome.MaterializedIds)
         Assert.Contains("work-roadmap", outcome.MaterializedIds)
-        // Seventeen declared files across the three `always` drivers × three roots.
-        Assert.Equal(51, outcome.ProvenancePaths |> List.length)
+        // Seventeen declared files across the three `always` drivers × two runtime roots.
+        Assert.Equal(34, outcome.ProvenancePaths |> List.length)
 
     // FR-005/FR-009: a provider that shipped its own `work-roadmap` (its `.agents` skill, mirrored to
     // the other roots by the preceding tick) already occupies that driver's targets — the no-clobber
@@ -436,4 +436,4 @@ module DriverSkillsTests =
 
         let writtenPaths = outcome.ProvenancePaths |> List.map fst |> List.sort
         Assert.Equal<string list>(driverPathsFor [ "padd-item"; "work-board" ], writtenPaths)
-        Assert.Equal(30, outcome.Writes |> List.length)
+        Assert.Equal(20, outcome.Writes |> List.length)

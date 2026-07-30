@@ -1,7 +1,7 @@
 command: init
 toolVersion: 0.31.1
 outcome: succeeded
-changedArtifacts: 60
+changedArtifacts: 44
 generatedViews: 0
 diagnostics: 0
 nextAction: nextLifecycleCommand

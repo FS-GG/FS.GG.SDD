@@ -289,7 +289,7 @@ module UpgradeCommandTests =
     // declared root, no-clobber, from the CLI's embedded verified bytes — a pre-#624 tree becomes
     // coherent without a re-scaffold.
     [<Fact>]
-    let ``--yes backfills a missing owner-sourced skill into all three roots, coherent afterward`` () =
+    let ``--yes backfills a missing owner-sourced skill into both runtime roots, coherent afterward`` () =
         let root = ownerMissingFixture ()
         // Precondition: the always-on driver skill is absent from a pre-#624 tree.
         Assert.False(TestSupport.existsRelative root ".agents/skills/work-roadmap/SKILL.md")
@@ -300,7 +300,7 @@ module UpgradeCommandTests =
         Assert.False summary.ResidualDrift
         Assert.Equal(0, exitCode report)
 
-        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+        for skillRoot in [ ".agents"; ".claude" ] do
             Assert.True(
                 TestSupport.existsRelative root $"{skillRoot}/skills/work-roadmap/SKILL.md",
                 $"expected the {skillRoot} backfill of work-roadmap"
@@ -325,7 +325,6 @@ module UpgradeCommandTests =
         Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.FailedStepIds)
         Assert.Equal("AUTHOR EDIT\n", TestSupport.readRelative root ".claude/skills/work-roadmap/SKILL.md")
         Assert.False(TestSupport.existsRelative root ".agents/skills/work-roadmap/SKILL.md")
-        Assert.False(TestSupport.existsRelative root ".codex/skills/work-roadmap/SKILL.md")
 
         let provenance =
             TestSupport.readRelative root provenancePath
@@ -343,7 +342,7 @@ module UpgradeCommandTests =
         let workBoardBody = DriverSkills.embeddedBodies () |> Map.find "work-board"
 
         // Model the exact pre-v2 shape: every root has only the canonical body.
-        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+        for skillRoot in [ ".agents"; ".claude" ] do
             TestSupport.writeRelative root $"{skillRoot}/skills/work-board/SKILL.md" workBoardBody
 
         let report = upgradeYes root
@@ -357,7 +356,7 @@ module UpgradeCommandTests =
               "references/host-loop.md"
               "references/workspace-scope.md" ]
 
-        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+        for skillRoot in [ ".agents"; ".claude" ] do
             for relativePath in expectedRelative do
                 Assert.True(
                     TestSupport.existsRelative root $"{skillRoot}/skills/work-board/{relativePath}",
@@ -371,7 +370,7 @@ module UpgradeCommandTests =
 
         let recorded = provenance.DriverPaths |> List.map _.Path |> Set.ofList
 
-        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+        for skillRoot in [ ".agents"; ".claude" ] do
             for relativePath in expectedRelative do
                 Assert.Contains($"{skillRoot}/skills/work-board/{relativePath}", recorded)
 
@@ -380,15 +379,15 @@ module UpgradeCommandTests =
         let root = ownerMissingFixture ()
         let workBoardBody = DriverSkills.embeddedBodies () |> Map.find "work-board"
 
-        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+        for skillRoot in Fsgg.Schemas.agentSkillRoots do
             TestSupport.writeRelative root $"{skillRoot}/skills/work-board/SKILL.md" workBoardBody
 
-        TestSupport.writeRelative root ".codex/skills/work-board/SKILL.md" "EDITED LEGACY BODY\n"
+        TestSupport.writeRelative root ".agents/skills/work-board/SKILL.md" "EDITED LEGACY BODY\n"
 
         let report = upgradeYes root
         Assert.Contains(ReconciliationStepId.ArtifactReSeed, (upgrade report).FailedStepIds)
 
-        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+        for skillRoot in [ ".agents"; ".claude" ] do
             Assert.False(
                 TestSupport.existsRelative root $"{skillRoot}/skills/work-board/agents/openai.yaml",
                 "verification must finish before any missing auxiliary file is written"
@@ -401,7 +400,7 @@ module UpgradeCommandTests =
 
         Assert.DoesNotContain(
             provenance.DriverPaths,
-            fun path -> path.Path.StartsWith(".codex/skills/work-board/", System.StringComparison.Ordinal)
+            fun path -> path.Path.StartsWith(".agents/skills/work-board/", System.StringComparison.Ordinal)
         )
 
     // ------------------------------------------------------------------------------------------
@@ -434,12 +433,12 @@ module UpgradeCommandTests =
               Owner = owner
               Sha256 = Some sha256 })
 
-    /// The `.codex` copy of the first game skill this build delivers on the game profile, with the
+    /// The `.agents` copy of the first game skill this build delivers on the game profile, with the
     /// digest its plan verified — the backfill target these cases drive. `None` in a build with no
     /// owner-skill package embedded.
     let private gameBackfillTarget () =
         gameSkillRows ()
-        |> List.filter (fun (path: string, _) -> path.StartsWith(".codex/", System.StringComparison.Ordinal))
+        |> List.filter (fun (path: string, _) -> path.StartsWith(".agents/", System.StringComparison.Ordinal))
         |> List.sortBy fst
         |> List.tryHead
 
@@ -555,7 +554,7 @@ module UpgradeCommandTests =
         | None -> assertNoGameSubject ()
         | Some(missing, _) ->
             let root = gameBackfillFixture missing
-            let preserved = missing.Replace(".codex/", ".claude/")
+            let preserved = missing.Replace(".agents/", ".claude/")
             TestSupport.writeRelative root preserved "AUTHOR EDIT\n"
 
             let summary = upgrade (upgradeYes root)
@@ -677,7 +676,6 @@ module UpgradeCommandTests =
         for change in report.ChangedArtifacts do
             let allowed =
                 change.Path.StartsWith(".claude/skills/")
-                || change.Path.StartsWith(".codex/skills/")
                 || change.Path.StartsWith(".agents/skills/")
                 || change.Path = ".fsgg/early-stage-guidance.md"
                 || change.Path = ".gitignore"
@@ -769,7 +767,6 @@ module SkillContentDriftTests =
         let summary = doctor (doctorReport root)
         Assert.Contains(".claude/skills/fs-gg-demo/SKILL.md", summary.SkillDriftPaths)
         // The recorded digest pinpoints the offending root — the byte-correct copies are NOT flagged.
-        Assert.DoesNotContain(".codex/skills/fs-gg-demo/SKILL.md", summary.SkillDriftPaths)
         Assert.DoesNotContain(".agents/skills/fs-gg-demo/SKILL.md", summary.SkillDriftPaths)
         Assert.False summary.IsCoherent
         Assert.Contains("doctor.driftDetected", diagnosticIds (doctorReport root))
@@ -778,10 +775,10 @@ module SkillContentDriftTests =
     let ``doctor detects a product skill missing from one root (provider-skill loss)`` () =
         let root = productCoherentFixture ()
         // Delete the provider skill's copy in one root.
-        File.Delete(absolute root ".codex/skills/fs-gg-demo/SKILL.md")
+        File.Delete(absolute root ".agents/skills/fs-gg-demo/SKILL.md")
 
         let summary = doctor (doctorReport root)
-        Assert.Contains(".codex/skills/fs-gg-demo/SKILL.md", summary.SkillDriftPaths)
+        Assert.Contains(".agents/skills/fs-gg-demo/SKILL.md", summary.SkillDriftPaths)
         Assert.False summary.IsCoherent
 
     [<Fact>]
