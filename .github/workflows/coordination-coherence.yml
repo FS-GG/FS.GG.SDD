@@ -53,14 +53,10 @@
 # own kit-manifest.tsv ships. No byte of the hub reaches the comparison, so a hub commit can never
 # retroactively red this repo.
 #
-# IT DOES NOT COVER THE BUILD-CONFIG ROWS, and this comment will not round that up. The reusable
-# workflow's `include-build-config` input defaults to false and this caller passes no `with:` block,
-# so Directory.Build.props / Directory.Packages.props are NOT graded here, even though this receiver
-# does materialize them (FsggKitMaterializeBuildConfig=true). They are covered instead by gate.yml's
-# own required `Shared-build-config drift check`, which re-runs the materialize and diffs exactly
-# those two files. Do not add `include-build-config: true` to close the wording gap: it would put two
-# required gates on one question, which the reusable workflow's own header argues is how both end up
-# ignored. Fix the sentence, not the coverage.
+# IT ALSO COVERS THE BUILD-CONFIG ROWS. This receiver declares
+# FsggKitMaterializeBuildConfig=true, so Directory.Build.props and Directory.Packages.props are in
+# the materializer's write set; include-build-config makes them part of this reusable gate's read set
+# too. The shared build-config drift check remains a separate required guard for its own contract.
 #
 # AND IT ASSERTS NO STANDING DESTINATION COUNT WHILE SAYING SO (FS.GG.SDD#769). That sentence used to
 # end "— 71 destinations, not 73 —". The figure was hand-computed from the three-root set corrected
@@ -141,3 +137,5 @@ permissions:
 jobs:
   kit:
     uses: FS-GG/.github/.github/workflows/coordination-coherence.yml@main
+    with:
+      include-build-config: true
