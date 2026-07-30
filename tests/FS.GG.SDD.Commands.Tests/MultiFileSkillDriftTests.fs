@@ -648,6 +648,25 @@ module MultiFileSkillDriftTests =
         Assert.Empty report.SkillDriftPaths
         Assert.Equal<string list>([ junkPath ], report.IgnoredSkillJunkPaths)
 
+    // FS.GG.SDD#764 records the boundary deliberately rather than leaving #747's condition-4
+    // guarantee to imply a stronger product-skill contract than provenance supplies. A provider
+    // product skill has a stable digest for SKILL.md only; an auxiliary has no versioned declared
+    // file-set entry that could override the junk exclusion. This is not the owner-sourced case
+    // above, whose complete declaration MUST keep such a file in the comparison.
+    [<Fact>]
+    let ``FS.GG.SDD#764: a junk-named provider product auxiliary remains excluded without a declaration`` () =
+        let fixtureRoot = productCoherentFixture ()
+
+        TestSupport.writeRelative
+            fixtureRoot
+            $".claude/skills/{productSkillId}/{declarableJunkName}"
+            "[.ShellClassInfo]\n"
+
+        let summary = doctorSummary (doctorReport fixtureRoot)
+
+        Assert.Empty summary.SkillDriftPaths
+        Assert.True summary.IsCoherent
+
     // `IgnoredSkillJunkPaths` names what was OBSERVED and dropped, never the rule: a workspace that
     // carries no junk must report an empty list, or the advisory above fires on every run.
     [<Fact>]
