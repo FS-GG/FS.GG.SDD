@@ -100,7 +100,11 @@ module ProcessSkillManifestTests =
             Assert.DoesNotContain("||", mw)
             Assert.DoesNotContain("\"", mw)
 
-    // ---------- FR-003 / AC-003: schema v2, org-consumable shape ----------
+    // ---------- FR-003 / AC-003: schema v2, org-consumable product-tree shape ----------
+
+    // `resolvablePath` is intentionally resolved against a scaffolded PRODUCT tree. It is not a
+    // promise that this producer's generated `.agents/skills` view exists in a bare checkout;
+    // see ProcessSkillManifest's field-level ADR-0067 §6 documentation (FS.GG.SDD#778).
 
     [<Fact>]
     let ``manifest declares schemaVersion 2 and the resolvable path shape`` () =
