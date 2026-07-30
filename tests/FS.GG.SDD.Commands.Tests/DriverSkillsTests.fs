@@ -78,17 +78,28 @@ module DriverSkillsTests =
         let outcome = DriverSkills.plan Set.empty
 
         Assert.Equal<string list>(
-            [ "padd-item"; "work-board"; "work-board-best"; "work-board-normal"; "work-roadmap" ],
+            [ "padd-item"
+              "work-board"
+              "work-board-best"
+              "work-board-normal"
+              "work-roadmap" ],
             outcome.MaterializedIds
         )
+
         Assert.Empty outcome.VerifyFailedIds
         Assert.Empty outcome.PredicateUnevaluatedIds
         Assert.Empty outcome.NamespaceCollisionIds
         Assert.Equal(None, outcome.ManifestError)
 
         let writtenPaths = outcome.ProvenancePaths |> List.map fst |> List.sort
+
         Assert.Equal<string list>(
-            driverPathsFor [ "padd-item"; "work-board"; "work-board-best"; "work-board-normal"; "work-roadmap" ],
+            driverPathsFor
+                [ "padd-item"
+                  "work-board"
+                  "work-board-best"
+                  "work-board-normal"
+                  "work-roadmap" ],
             writtenPaths
         )
 
@@ -448,14 +459,17 @@ module DriverSkillsTests =
             HandlersScaffold.plannedDriverOutcome [ ".agents/skills/work-roadmap/SKILL.md" ]
 
         Assert.DoesNotContain("work-roadmap", outcome.MaterializedIds)
+
         Assert.Equal<string list>(
             [ "padd-item"; "work-board"; "work-board-best"; "work-board-normal" ],
             outcome.MaterializedIds
         )
 
         let writtenPaths = outcome.ProvenancePaths |> List.map fst |> List.sort
+
         Assert.Equal<string list>(
             driverPathsFor [ "padd-item"; "work-board"; "work-board-best"; "work-board-normal" ],
             writtenPaths
         )
+
         Assert.Equal(28, outcome.Writes |> List.length)

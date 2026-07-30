@@ -136,11 +136,7 @@ module GameSkillsTests =
 
     // A delivered product row. The legacy `mirrored` field is deliberately absent.
     let private row id sha predicate =
-        sprintf
-            """{ "id": "%s", "scope": "product", "sha256": "%s", "materializes-when": "%s" }"""
-            id
-            sha
-            predicate
+        sprintf """{ "id": "%s", "scope": "product", "sha256": "%s", "materializes-when": "%s" }""" id sha predicate
 
     [<Fact>]
     let ``planFrom fails closed on a tampered body digest`` () =

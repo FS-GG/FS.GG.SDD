@@ -100,8 +100,7 @@ module internal GameSkills =
     // The owner-skills package retired the provider-mirror classification: every product-scoped
     // row is a delivered owner skill. Keep parsing the optional legacy field for backwards
     // compatibility, but never use it to suppress product delivery.
-    let private isDelivered (entry: GameSkillManifest.GameSkillManifestEntry) =
-        entry.Scope = "product"
+    let private isDelivered (entry: GameSkillManifest.GameSkillManifestEntry) = entry.Scope = "product"
 
     // The intermediate per-row classification, folded into the four output classes.
     type private Classified =
