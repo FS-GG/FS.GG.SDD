@@ -6,7 +6,7 @@ ADR-0061 (structural scope; semantic enforcement at the consumer).*
 
 A **driver** skill is authored not by a producer repo but by `.github` itself, delivered as bytes
 and materialized into a scaffolded product's skill roots. The current always-on set is `padd-item`,
-`work-board`, and `work-roadmap`. This page
+`work-board`, `work-board-normal`, `work-board-best`, and `work-roadmap`. This page
 describes how `fsgg-sdd scaffold` obtains and lays down those bytes. It embeds **no** `.github`- or
 provider-specific package id, skill id, or path as behavior (`scaffold` FR-002 / SC-005): the package
 identity is a pin, and the set of driver skills is read from the delivered manifest.
@@ -44,20 +44,21 @@ For each row in the embedded `driver-skill-manifest.json`, in id order
    entire skill row (`scaffold.driverVerifyFailed`), never producing a partial directory. The
    legacy row-level `sha256` still binds `SKILL.md`.
 4. **Materialize (FR-001/FR-005).** Every file in a verified, predicate-true row is written into
-   **all three** agent skill roots (`.claude`/`.codex`/`.agents` `/skills/<id>/<relative-path>`),
+   both agent skill roots (`.claude`/`.agents` `/skills/<id>/<relative-path>`),
    byte-identically, with the no-clobber `AgentGuidanceTarget` write kind. Declared executable
    members receive their executable bit. A provider-owned same-id skill owns its complete
    directory, so SDD never creates a mixed provider/driver tree.
 
-The delivered `FS.GG.Drivers 0.8.3` ships three `scope: driver`,
-`materializes-when: always` rows: `padd-item`, `work-board`, and `work-roadmap`. It also carries
-`drive-board`, `p-add`, and `cut-nuget-release` as `scope: operator`,
+The delivered `FS.GG.Drivers 0.9.0` ships five `scope: driver`,
+`materializes-when: always` rows: `padd-item`, `work-board`, `work-board-normal`,
+`work-board-best`, and `work-roadmap`. It also carries `drive-board`, its routed variants,
+`p-add`, `lane-steward`, `publishing-and-deployment`, and `cut-nuget-release` as `scope: operator`,
 `materializes-when: false`; those operator commands are withheld from product workspaces.
 `padd-item` files a described issue onto the product workspace's explicitly configured organization,
 named-user, or viewer GitHub Projects v2 board. Its package-delivered guidance refuses missing wiring
 without mutation and never falls back to the FS-GG organization board.
 
-The 0.8.3 payload is closed under product materialization: its real Markdown links target packaged
+The 0.9.0 payload is closed under product materialization: its real Markdown links target packaged
 members or guaranteed product siblings. Conditional coordination-kit dependencies remain named
 requirements rather than filesystem links. The fresh-scaffold regression resolves every remaining
 relative link, including parent-relative targets; it has no prefix-based escape hatch.

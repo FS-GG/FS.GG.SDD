@@ -4,8 +4,8 @@ open System.Reflection
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Artifacts
 
-/// The scaffold-time materializer for an owner repo's owner-authored **`mirrored: false`
-/// product** skills (e.g. `fs-gg-playtest`) delivered as bytes in the pinned owner-skills package
+/// The scaffold-time materializer for an owner repo's owner-authored **product** skills
+/// (e.g. `fs-gg-playtest`) delivered as bytes in the pinned owner-skills package
 /// (ADR-0063 owner-repo byte source, ADR-0062 substrate; ADR-0014 verify). The package's
 /// `skill-manifest.json` and `skills/<id>/SKILL.md` bodies are linked into this assembly as
 /// embedded resources at build time (`GameSkill.manifest` / `GameSkill.skill/<id>/SKILL.md`), so
@@ -13,10 +13,9 @@ open FS.GG.SDD.Artifacts
 /// the network — which is what makes scaffold time offline (FR-002). This mirrors the
 /// `DriverSkills` seam exactly, one owner over.
 ///
-/// Two things differ from the driver seam, and both come from the registry: (1) only a
-/// `scope: product` row with `mirrored: false` is delivered here — a `mirrored: true` row is
-/// listed in the manifest but reaches a scaffold through the frozen provider mirror (ADR-0022 §6),
-/// so it is skipped rather than verify-failed for a body that was never shipped; (2) the
+/// Two things differ from the driver seam, and both come from the registry: (1) every
+/// `scope: product` row is delivered here; the retired legacy `mirrored` classification is not a
+/// materialization input; (2) the
 /// `materializes-when` predicate is evaluated against the scaffold PARAMETER set (`profile in
 /// [..]`), not the present-skill-id set the driver's `has …` grammar reads.
 ///
@@ -98,12 +97,10 @@ module internal GameSkills =
     // `fs-gg-sdd-*`), so this never fires today; it is the defensive parity backstop.
     let private reservedNamespacePrefix = "fs-gg-sdd-"
 
-    // The delivered subclass: a `scope: product` row with NO frozen provider mirror (ADR-0022 §6).
-    // A `mirrored: true` row is carried in the manifest but its bytes are delivered NOWHERE here —
-    // it reaches a scaffold through the provider mirror instead — so it must be SKIPPED, not treated
-    // as a body-absent verify failure. Matches the package stager's `is_delivered`.
-    let private isDelivered (entry: GameSkillManifest.GameSkillManifestEntry) =
-        entry.Scope = "product" && entry.Mirrored = Some false
+    // The owner-skills package retired the provider-mirror classification: every product-scoped
+    // row is a delivered owner skill. Keep parsing the optional legacy field for backwards
+    // compatibility, but never use it to suppress product delivery.
+    let private isDelivered (entry: GameSkillManifest.GameSkillManifestEntry) = entry.Scope = "product"
 
     // The intermediate per-row classification, folded into the four output classes.
     type private Classified =
@@ -119,7 +116,7 @@ module internal GameSkills =
         (entry: GameSkillManifest.GameSkillManifestEntry)
         =
         if not (isDelivered entry) then
-            acc // mirrored:true (delivered via the provider mirror) or any non-product row.
+            acc // Any non-product row belongs to another delivery seam.
         elif entry.Id.StartsWith(reservedNamespacePrefix, System.StringComparison.Ordinal) then
             { acc with
                 Collisions = acc.Collisions @ [ entry.Id ] }

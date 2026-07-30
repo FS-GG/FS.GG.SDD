@@ -9,14 +9,14 @@ open Xunit
 /// FS.GG.Game.Skills bytes are embedded, content-addressed against their manifest sha256
 /// (ADR-0014), and gated by a parameter `materializes-when` predicate (`profile in [..]`).
 /// Enforcement lives in this consumer (ADR-0061): tamper, id collision, and unevaluable predicates
-/// all fail closed; a mirrored:true row (delivered via the provider mirror) is skipped, never
-/// verify-failed for a body it never ships. The `plan` tests exercise the real compiled-in bytes;
+/// all fail closed; every product-scoped row is delivered and the retired legacy `mirrored`
+/// classification is ignored. The `plan` tests exercise the real compiled-in bytes;
 /// the `planFrom` tests inject synthetic manifests to cover the fail-closed classes.
 module GameSkillsTests =
 
     // The pinned digest of the delivered fs-gg-playtest body (the drift-guard golden).
     let private playtestSha256 =
-        "f60aa51e41db3fdff0e45f72c2499ea26352edac51297058cc2930ee9574650d"
+        "f070f0719dde93b55d1a41ea8aa881b90e41cd20a20e558771d87ef3fe28f642"
 
     let private roots = [ ".agents"; ".claude" ]
 
@@ -46,14 +46,26 @@ module GameSkillsTests =
         Assert.Equal<string list>(skillPathFor "fs-gg-playtest", playtestPaths)
 
     [<Fact>]
-    let ``plan materializes the four flipped game skills on the game profile (FS.GG.Game.Skills 0.2.0)`` () =
-        // FS.GG.Game#454 / ADR-0063 amendment (.github#1318): game-core, audio, persistence and
-        // model-swap flipped `mirrored:true -> mirrored:false` and are now owner-sourced through the
-        // pinned FS.GG.Game.Skills 0.2.0 package. A game-profile scaffold materializes all four,
-        // content-addressed (their shipped bodies are covered by the sha256 drift guard below).
+    let ``plan materializes every product skill on the game profile (FS.GG.Game.Skills 0.6.0)`` () =
+        // FS.GG.Game.Skills 0.6.0 supplies every product-scoped owner skill. A game-profile
+        // scaffold materializes all fourteen, content-addressed.
         let outcome = GameSkills.plan gameProfile
 
-        for id in [ "fs-gg-game-core"; "fs-gg-audio"; "fs-gg-persistence"; "fs-gg-model-swap" ] do
+        for id in
+            [ "fs-gg-ai"
+              "fs-gg-audio"
+              "fs-gg-ballistics"
+              "fs-gg-collision"
+              "fs-gg-effects"
+              "fs-gg-game-core"
+              "fs-gg-grids"
+              "fs-gg-line-drawing"
+              "fs-gg-mapcraft"
+              "fs-gg-model-swap"
+              "fs-gg-persistence"
+              "fs-gg-physics"
+              "fs-gg-playtest"
+              "fs-gg-visibility" ] do
             Assert.Contains(id, outcome.MaterializedIds)
 
         Assert.Empty outcome.VerifyFailedIds
@@ -65,7 +77,7 @@ module GameSkillsTests =
         // Owner-authored (0.2.0): fs-gg-audio declares `profile in [app, sample-pack, game]`, so an
         // app scaffold gets it; every other delivered row is gated to `profile in [game, sample-pack]`
         // and is filtered out. The predicate gate is what keeps the game-only rows off an app scaffold
-        // now that the four flipped skills are delivered (mirrored:false) rather than mirror-only.
+        // while every other product row remains game/sample-pack gated.
         let outcome = GameSkills.plan (Map.ofList [ "profile", "app" ])
         Assert.Contains("fs-gg-audio", outcome.MaterializedIds)
         Assert.DoesNotContain("fs-gg-game-core", outcome.MaterializedIds)
@@ -99,8 +111,7 @@ module GameSkillsTests =
 
         let bodies = GameSkills.embeddedBodies ()
 
-        // Every delivered (mirrored:false product) row's shipped body must hash to its declared
-        // sha256; a mirrored:true row ships no body here and is not verifiable.
+        // Every delivered product row's shipped body must hash to its declared sha256.
         for entry in manifest.Skills do
             match Map.tryFind entry.Id bodies with
             | Some body -> Assert.Equal(entry.Sha256, Fsgg.SkillMirror.sha256 body)
@@ -123,13 +134,9 @@ module GameSkillsTests =
     let private manifestOf (rows: string) =
         Some(sprintf """{ "schemaVersion": 1, "skills": [ %s ] }""" rows)
 
-    // A delivered (mirrored:false product) row.
+    // A delivered product row. The legacy `mirrored` field is deliberately absent.
     let private row id sha predicate =
-        sprintf
-            """{ "id": "%s", "scope": "product", "sha256": "%s", "mirrored": false, "materializes-when": "%s" }"""
-            id
-            sha
-            predicate
+        sprintf """{ "id": "%s", "scope": "product", "sha256": "%s", "materializes-when": "%s" }""" id sha predicate
 
     [<Fact>]
     let ``planFrom fails closed on a tampered body digest`` () =
@@ -173,14 +180,18 @@ module GameSkillsTests =
         Assert.Equal<string list>([ canonical ], recorded)
 
     [<Fact>]
-    let ``planFrom skips a mirrored-true row rather than verify-failing a body it never ships`` () =
-        // A mirrored:true row whose predicate holds but whose body is absent here (delivered via the
-        // provider mirror). It must be SKIPPED — not counted as a verify failure.
-        let mirroredTrue =
-            """{ "id": "fs-gg-audio", "scope": "product", "sha256": "abc", "mirrored": true, "materializes-when": "always" }"""
+    let ``planFrom ignores the retired mirrored classification for a product row`` () =
+        let body = "owner skill body\n"
 
-        let outcome = GameSkills.planFrom (manifestOf mirroredTrue) Map.empty Map.empty
-        Assert.Empty outcome.MaterializedIds
+        let mirroredTrue =
+            sprintf
+                """{ "id": "fs-gg-audio", "scope": "product", "sha256": "%s", "mirrored": true, "materializes-when": "always" }"""
+                (Fsgg.SkillMirror.sha256 body)
+
+        let outcome =
+            GameSkills.planFrom (manifestOf mirroredTrue) (Map.ofList [ "fs-gg-audio", body ]) Map.empty
+
+        Assert.Equal<string list>([ "fs-gg-audio" ], outcome.MaterializedIds)
         Assert.Empty outcome.VerifyFailedIds
 
     [<Theory>]
