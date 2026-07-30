@@ -478,8 +478,8 @@ module internal HandlersScaffold =
         // No-clobber honesty: a owner-skill target already occupied by the provider's own output —
         // its `.agents/skills/<id>` skill, or the `.claude`/`.codex` mirror copies of it — is
         // *preserved* by the `AgentGuidanceTarget` write, not materialized by us; claiming it would
-        // double-own the path. A delivered (`mirrored: false`) owner skill has no provider copy by
-        // construction (ADR-0022 §6), so this normally drops nothing — but it keeps the summary and
+        // double-own the path. Product skills are now owner-package sourced, so this normally drops
+        // nothing — but it keeps the summary and
         // provenance from over-claiming a refused write should a provider ship a same-named skill.
         let occupied = Set.ofList (producedPaths @ plannedMirroredPaths producedPaths)
 

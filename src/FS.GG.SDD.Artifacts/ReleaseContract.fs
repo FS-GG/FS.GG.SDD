@@ -239,13 +239,13 @@ module ReleaseContract =
 
     let currentRelease () : ReleaseReadiness =
         let identity =
-            { Version = "0.31.1"
-              Channel = channelOfVersion "0.31.1"
+            { Version = "0.32.0"
+              Channel = channelOfVersion "0.32.0"
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "0.31.x"
+            [ { SddVersionLine = "0.32.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "2.x" } ]
 
@@ -1127,9 +1127,9 @@ module ReleaseContract =
           //
           // And enumerate EVERY breaking change: a note that under-reports is the exact failure
           // the note exists to prevent.
-          // 0.31.1 is a PATCH: it adopts the link-closed FS.GG.Drivers 0.8.3 payload and makes the
-          // existing composed-workspace regression verify parent-relative links. Public schemas and
-          // the schema-v1 compatibility path are unchanged, so no migration note is required.
+          // 0.32.0 is a MINOR: it adopts the expanded product-skill and work-board driver payloads
+          // while preserving public schemas and the schema-v1 compatibility path, so no migration
+          // note is required.
           Migrations = [] }
 
     // ---- canonical serialization ----

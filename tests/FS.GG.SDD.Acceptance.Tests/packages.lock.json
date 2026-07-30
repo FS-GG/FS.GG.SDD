@@ -102,7 +102,7 @@
       "fs.gg.sdd.artifacts": {
         "type": "Project",
         "dependencies": {
-          "FS.GG.Contracts": "[7.4.0, )",
+          "FS.GG.Contracts": "[7.5.2, )",
           "FSharp.Core": "[10.1.302, )",
           "YamlDotNet": "[18.1.0, )"
         }
@@ -110,24 +110,24 @@
       "fs.gg.sdd.commands": {
         "type": "Project",
         "dependencies": {
-          "FS.GG.Contracts": "[7.4.0, )",
-          "FS.GG.Drivers": "[0.8.3, )",
-          "FS.GG.Game.Skills": "[0.4.0, )",
-          "FS.GG.SDD.Artifacts": "[0.31.1, )",
+          "FS.GG.Contracts": "[7.5.2, )",
+          "FS.GG.Drivers": "[0.9.0, )",
+          "FS.GG.Game.Skills": "[0.6.0, )",
+          "FS.GG.SDD.Artifacts": "[0.32.0, )",
           "FSharp.Core": "[10.1.302, )"
         }
       },
       "FS.GG.Drivers": {
         "type": "CentralTransitive",
-        "requested": "[0.8.3, )",
-        "resolved": "0.8.3",
-        "contentHash": "2LerPyLKcIQBqvphRMztdjahYoVNmIIftcsFUTyfGCwX8MNf1zqaIxZmqyNhA/079ic29IsuMOXuhb1Mxp7jaA=="
+        "requested": "[0.9.0, )",
+        "resolved": "0.9.0",
+        "contentHash": "rB+hA6dnLGGxtFijdLvHXA0iPQnWvyoFL7uwsrpRBlRv0iZH3WMzaJoZXZTQG6GCxupksqANpvfveUrifhGuHA=="
       },
       "FS.GG.Game.Skills": {
         "type": "CentralTransitive",
-        "requested": "[0.4.0, )",
-        "resolved": "0.4.0",
-        "contentHash": "LmeVXfBFfSH2tumyczl9dkHrhdsSbXZWspIQ9MQY+1MMFuWqbZ/PLW9xXCn1QRdlnS+/b59ggGeBe97dTxrGWA=="
+        "requested": "[0.6.0, )",
+        "resolved": "0.6.0",
+        "contentHash": "EUUAr3EMBryD/EENB3WCkIOXQyi1HV2CyRrMpHTCqMLXWAMirSFQ4H27Q9hcQYPM1YTMLTRzywZFGwXU8AWv7g=="
       },
       "YamlDotNet": {
         "type": "CentralTransitive",

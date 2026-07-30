@@ -8,7 +8,7 @@ open AcceptanceSupport
 
 /// Acceptance for the package-delivered board drivers materialized into product workspaces.
 ///
-/// `work-board` and `padd-item` are `.github`-authored `scope: driver` skills carried by the pinned
+/// `work-board`, its routed variants, and `padd-item` are `.github`-authored `scope: driver` skills carried by the pinned
 /// `FS.GG.Drivers` package. The materializer must preserve their exact package bytes. Because these
 /// are agent guidance rather than executable application code, their load-bearing runtime contract
 /// is pinned directly from the embedded body: work-board's immediate two-line reporting and
@@ -41,7 +41,7 @@ module WorkBoardScaffoldAcceptanceTests =
 
     /// Scaffold a fresh workspace over the offline fixture provider and assert it succeeded. The
     /// scaffold materializes the SDD skeleton AND the always-on driver skills
-    /// (padd-item/work-board/work-roadmap)
+    /// (padd-item/work-board/work-board-best/work-board-normal/work-roadmap)
     /// from the embedded `FS.GG.Drivers` bytes — the substrate this acceptance stands on.
     let private scaffoldWorkspace () : string =
         let root = newProductRoot ()
@@ -66,6 +66,12 @@ module WorkBoardScaffoldAcceptanceTests =
             "a scaffold must materialize the work-board driver skill into the workspace (W4/#632)."
         )
 
+        for id in [ "work-board-normal"; "work-board-best" ] do
+            Assert.True(
+                existsRelative root $".claude/skills/{id}/SKILL.md",
+                $"a scaffold must materialize the routed {id} driver skill from FS.GG.Drivers 0.9.0."
+            )
+
         Assert.True(
             existsRelative root ".claude/skills/padd-item/SKILL.md",
             "a scaffold must materialize the padd-item product-workspace board filer (#703)."
@@ -86,7 +92,7 @@ module WorkBoardScaffoldAcceptanceTests =
             assembly.GetManifestResourceNames()
             |> Array.tryFind (fun n -> n.Replace('\\', '/') = $"Driver.skill/{id}/SKILL.md")
             |> Option.defaultWith (fun () ->
-                failwith $"the {id} driver body must be embedded in FS.GG.SDD.Commands (FS.GG.Drivers 0.8.3).")
+                failwith $"the {id} driver body must be embedded in FS.GG.SDD.Commands (FS.GG.Drivers 0.9.0).")
 
         match assembly.GetManifestResourceStream name with
         | null -> failwith $"the embedded {id} driver body could not be opened."
@@ -106,6 +112,20 @@ module WorkBoardScaffoldAcceptanceTests =
                 body.Contains token,
                 $"the shipped work-board skill no longer carries the host-loop/status-reporting token \"{token}\"."
             )
+
+    [<Theory>]
+    [<InlineData("work-board-normal")>]
+    [<InlineData("work-board-best")>]
+    let ``a fresh product scaffold carries each routed work-board body byte-identically in both runtime roots``
+        (id: string)
+        =
+        let root = scaffoldWorkspace ()
+        let delivered = shippedDriverBody id
+
+        for skillRoot in [ ".agents"; ".claude" ] do
+            let path = Path.Combine(root, skillRoot, "skills", id, "SKILL.md")
+            Assert.True(File.Exists path, $"expected materialized {id} at {path}")
+            Assert.Equal(delivered, File.ReadAllText path)
 
     [<Fact>]
     let ``the shipped padd-item skill targets only the configured board and fails without mutation when wiring is missing``

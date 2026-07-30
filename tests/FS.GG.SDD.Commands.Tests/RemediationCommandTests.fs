@@ -289,10 +289,12 @@ module UpgradeCommandTests =
     // declared root, no-clobber, from the CLI's embedded verified bytes — a pre-#624 tree becomes
     // coherent without a re-scaffold.
     [<Fact>]
-    let ``--yes backfills a missing owner-sourced skill into both runtime roots, coherent afterward`` () =
+    let ``--yes backfills the current routed work-board set into both runtime roots, coherent afterward`` () =
         let root = ownerMissingFixture ()
         // Precondition: the always-on driver skill is absent from a pre-#624 tree.
         Assert.False(TestSupport.existsRelative root ".agents/skills/work-roadmap/SKILL.md")
+        Assert.False(TestSupport.existsRelative root ".agents/skills/work-board-normal/SKILL.md")
+        Assert.False(TestSupport.existsRelative root ".agents/skills/work-board-best/SKILL.md")
 
         let report = upgradeYes root
         let summary = upgrade report
@@ -301,10 +303,11 @@ module UpgradeCommandTests =
         Assert.Equal(0, exitCode report)
 
         for skillRoot in [ ".agents"; ".claude" ] do
-            Assert.True(
-                TestSupport.existsRelative root $"{skillRoot}/skills/work-roadmap/SKILL.md",
-                $"expected the {skillRoot} backfill of work-roadmap"
-            )
+            for id in [ "work-roadmap"; "work-board-normal"; "work-board-best" ] do
+                Assert.True(
+                    TestSupport.existsRelative root $"{skillRoot}/skills/{id}/SKILL.md",
+                    $"expected the {skillRoot} backfill of {id}"
+                )
 
         Assert.True(
             match (doctorReport root).Doctor with

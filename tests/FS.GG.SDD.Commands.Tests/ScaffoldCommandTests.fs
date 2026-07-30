@@ -374,8 +374,8 @@ module ScaffoldCommandTests =
         Assert.Contains("\"generator\":", provenance)
         Assert.Contains("\"version\":", provenance)
         // …alongside the provider-declared required minimum, recorded verbatim. min-behind declares
-        // one minor above the installed version, so it tracks the bump (installed 0.31.1 ⇒ 0.32.0).
-        Assert.Contains("\"requiredMinimumCliVersion\": \"0.32.0\"", provenance)
+        // one minor above the installed version, so it tracks the bump (installed 0.32.0 ⇒ 0.33.0).
+        Assert.Contains("\"requiredMinimumCliVersion\": \"0.33.0\"", provenance)
 
     // Feature 052 US1 scenario 2: no provider minimum ⇒ the field is recorded as null
     // (absent, not fabricated); the producing CLI version is still recorded.
@@ -649,10 +649,10 @@ module ScaffoldCommandTests =
         // provider output).
         // 108 / ADR-0054: the always-on driver skills scaffold materializes into every runtime root
         // are SDD-owned (owner `driver`), not the provider's — excluded from the app-only diff
-        // exactly as the provenance/tool-manifest SDD writes are. FS.GG.Drivers 0.8.0 (#703) ships
-        // three `always` drivers: padd-item, work-board, and work-roadmap.
+        // exactly as the provenance/tool-manifest SDD writes are. FS.GG.Drivers 0.9.0 ships five
+        // `always` drivers, adding work-board-normal and work-board-best.
         let driverPaths = summary.MaterializedDriverPaths |> List.sort
-        Assert.Equal(17 * Fsgg.Schemas.agentSkillRoots.Length, driverPaths.Length)
+        Assert.Equal(21 * Fsgg.Schemas.agentSkillRoots.Length, driverPaths.Length)
         Assert.Contains(".agents/skills/work-board/references/host-loop.md", driverPaths)
 
         let preexisting =
