@@ -17,8 +17,11 @@ module ProcessSkillManifest =
                       Scope = Process
                       Sha256 = digest
                       Body = None
-                      // The materialized location under every agent-skill root
-                      // (`.agents/skills/<id>/SKILL.md`), matching the org manifest shape.
+                      // The materialized location in a scaffolded PRODUCT tree under every
+                      // agent-skill root (`.agents/skills/<id>/SKILL.md`), matching the org
+                      // manifest shape. In this producer checkout `.agents/skills` is a
+                      // generated view: it resolves only after `scripts/skill-view generate`,
+                      // and is absent from a bare checkout (ADR-0067 §6).
                       ResolvablePath = Some(Fsgg.SkillMirror.skillPath Fsgg.SkillMirror.providerSourceRoot skill.Name) }
 
                 // ADR-0017 v2 (FS.GG.SDD#727): the COMPLETE file set. A seeded skill IS its
