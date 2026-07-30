@@ -15,6 +15,14 @@ open Xunit
 /// registry rows did. Real-filesystem reads against the repo tree.
 module ProcessSkillManifestTests =
 
+    [<Fact>]
+    let ``#792 manifest decision keeps the replacing-decoded digest domain`` () =
+        // Option (b): invalid embedded bytes would become U+FFFD through StreamReader; the manifest
+        // hashes that rendering, rather than adopting the strict raw-byte sha256Bytes affordance.
+        let replacingDigest = Fsgg.SkillMirror.sha256 "\uFFFD"
+        Assert.Equal(replacingDigest, Fsgg.SkillMirror.sha256 (System.Text.Encoding.UTF8.GetString [| 0xFFuy |]))
+        Assert.True(Fsgg.SkillMirror.sha256Bytes [| 0xFFuy |] |> Result.isError)
+
     // THE TRACKED SOURCE ROOT, SPELLED OUT (FS.GG.SDD#771). This was `.agents` — the
     // provider-source root of the orchestrated scaffold lane, which ADR-0067 §6 turns into
     // a generated VIEW of `.claude/skills`: untracked, git-ignored, and absent in a bare

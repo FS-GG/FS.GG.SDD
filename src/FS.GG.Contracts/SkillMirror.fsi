@@ -356,5 +356,7 @@ module SkillMirror =
     /// `Ok` is byte-for-byte the digest `sha256` already produces for that body — the digest is NOT
     /// redefined, because rehashing over raw bytes would change the digest of EVERY file and force a
     /// coordinated manifest migration in every repo. `Error` is the case `sha256` cannot express at
-    /// all: the bytes never decoded, so there is no body to address.
+    /// all: the bytes never decoded, so there is no body to address. This is retained as a library
+    /// affordance for raw authoring-input callers; FS.GG.SDD#792 records that it has no current
+    /// production caller because embedded manifest bodies deliberately retain replacing decode.
     val sha256Bytes: bytes: byte array -> Result<string, BodyRefusalReason>
