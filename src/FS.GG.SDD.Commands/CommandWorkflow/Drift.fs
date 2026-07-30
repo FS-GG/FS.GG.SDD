@@ -464,13 +464,14 @@ module internal Drift =
         // THE LIMIT OF THIS CLAUSE, STATED RATHER THAN GLOSSED. `ownerExpected` is the only class
         // that declares its files — the owner-sourced (driver + GameSkill) rows, which carry a
         // digest per file. The SDD-seeded process skills declare nothing at all, and a provider
-        // PRODUCT skill declares its `SKILL.md` and nothing else, because the ADR-0017 manifest
-        // content-addresses `SKILL.md` alone (the #727 gap). So a product provider that shipped a
-        // junk-NAMED auxiliary would still be subtracted here, and no declaration exists to say
-        // otherwise. That is a consequence of #727, not of this rule: with no recorded declaration
-        // there is no evidence a producer meant the file, and inventing one would be worse. When
-        // #727 gives the product class a per-file declaration this clause covers it unchanged,
-        // because it reads `ownerExpected`'s shape and not its provenance field.
+        // PRODUCT skill declares its `SKILL.md` and nothing else. FS.GG.SDD#764 records the
+        // deliberate decision to retain that presence + cross-root-identity contract until a
+        // provider-product provenance schema supplies a versioned complete file declaration. So a
+        // product provider that shipped a junk-NAMED auxiliary is subtracted here: no declaration
+        // exists to say it was intentional, and inventing one would be worse. Consequently #747's
+        // condition-4 guarantee does not extend to product-skill auxiliaries. If that contract is
+        // later strengthened, this clause already reads the complete-file expectation shape and
+        // will cover the product class without a second ignore-rule path.
         let declaredSkillFiles =
             [ for skill in ownerExpected do
                   for file in skill.Files -> skill.Id, file.RelativePath ]
