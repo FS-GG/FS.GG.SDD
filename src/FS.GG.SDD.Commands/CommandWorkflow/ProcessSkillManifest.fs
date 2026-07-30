@@ -10,6 +10,10 @@ module ProcessSkillManifest =
           Skills =
             SeededSkills.seededSkills ()
             |> List.map (fun skill ->
+                // FS.GG.SDD#792 decision (b): these are reviewed, build-time embedded resources,
+                // not author-workspace input. Keep the replacing StreamReader decode and hash its
+                // rendering: an invalid resource is a broken build, not the authoring-input case
+                // `sha256Bytes` protects. Re-open at refusal (c) if that ownership changes.
                 let digest = Fsgg.SkillMirror.sha256 skill.Body
 
                 let entry: SkillManifestEntry =
