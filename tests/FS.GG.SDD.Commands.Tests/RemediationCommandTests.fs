@@ -404,6 +404,169 @@ module UpgradeCommandTests =
             fun path -> path.Path.StartsWith(".codex/skills/work-board/", System.StringComparison.Ordinal)
         )
 
+    // ------------------------------------------------------------------------------------------
+    // FS-GG/FS.GG.SDD#798 — the owner backfill DECLARES the GameSkill rows it writes.
+    //
+    // `ownerBackfillEffects` materializes both owner-sourced classes from one effect list and used
+    // to re-declare only one of them. What that costs is not cosmetic: since #750 an owner-sourced
+    // file present under a skill whose producer records a complete file set, and absent from that
+    // record, is `Undeclared` drift at every root FOREVER — under an advisory telling the operator
+    // to delete a file `upgrade` itself wrote. So these cases pin the invariant that forecloses it,
+    // over the RECORD rather than over a drift count, because the record is what the next `doctor`
+    // reads and it keeps meaning this after the game manifest gains a `files` array.
+    //
+    // The subject is the game-profile class, so the fixture carries the one thing that delivers it:
+    // `EffectiveParameters` naming `profile = game`, which is what both `ownerBackfillEffects` and
+    // `Drift.ownerSourcedBackfill` feed to `GameSkills.plan`.
+    // ------------------------------------------------------------------------------------------
+
+    let private gameProfile = [ "profile", "game" ]
+
+    /// The `(path, recorded sha256)` rows a game-profile scaffold materializes for the owner-sourced
+    /// GAME class, from the same plan the lane reconciles against.
+    let private gameSkillRows () =
+        ownerSourcedProvenanceRows gameProfile |> snd
+
+    let private producedRows owner rows : ScaffoldProducedPath list =
+        rows
+        |> List.map (fun (path: string, sha256: string) ->
+            { Path = path
+              Owner = owner
+              Sha256 = Some sha256 })
+
+    /// The `.codex` copy of the first game skill this build delivers on the game profile, with the
+    /// digest its plan verified — the backfill target these cases drive. `None` in a build with no
+    /// owner-skill package embedded.
+    let private gameBackfillTarget () =
+        gameSkillRows ()
+        |> List.filter (fun (path: string, _) -> path.StartsWith(".codex/", System.StringComparison.Ordinal))
+        |> List.sortBy fst
+        |> List.tryHead
+
+    /// No delivered game skill means these cases have no subject. Assert the STRONGER premise — the
+    /// class delivers nothing at all on the game profile — so this branch can never quietly swallow
+    /// a build that does deliver one.
+    let private assertNoGameSubject () = Assert.Empty(gameSkillRows ())
+
+    /// A current-generator GAME-profile scaffold, coherent except that ONE root's copy of one
+    /// owner-sourced game skill is absent — and its provenance row absent with it, which is what a
+    /// partially delivered tree really looks like. Deliberately leaves NO driver path missing, so
+    /// the re-seed's provenance write has to fire on the game class alone (#798 AC2).
+    let private gameBackfillFixture (missing: string) =
+        let root = makeFixture (Some farBehindMinimum) Drift.expectedArtifactPaths true
+        let driverRows, gameRows = ownerSourcedProvenanceRows gameProfile
+
+        let updated =
+            { record (Some farBehindMinimum) with
+                DriverPaths = producedRows ArtifactOwner.Driver driverRows
+                GameSkillPaths =
+                    gameRows
+                    |> List.filter (fun (path, _) -> path <> missing)
+                    |> producedRows ArtifactOwner.GameSkill
+                EffectiveParameters = gameProfile }
+
+        TestSupport.writeRelative root provenancePath (serialize updated)
+
+        for path, body in ownerSourcedCopies gameProfile do
+            if path <> missing then
+                TestSupport.writeRelative root path body
+
+        root
+
+    let private provenanceOf root =
+        TestSupport.readRelative root provenancePath
+        |> tryParse
+        |> Option.defaultWith (fun () -> failwith "provenance must parse")
+
+    // AC1 + AC2 + AC3 + AC5.
+    [<Fact>]
+    let ``--yes backfilling a GameSkill copy declares it in gameSkillPaths with the verified digest`` () =
+        match gameBackfillTarget () with
+        | None -> assertNoGameSubject ()
+        | Some(missing, expectedSha256) ->
+            let root = gameBackfillFixture missing
+            Assert.False(TestSupport.existsRelative root missing)
+
+            let report = upgradeYes root
+            let summary = upgrade report
+
+            Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.AppliedStepIds)
+            Assert.False summary.ResidualDrift
+            Assert.Equal(0, exitCode report)
+            Assert.True(TestSupport.existsRelative root missing)
+
+            let provenance = provenanceOf root
+
+            // AC5: a recording change, not a schema change.
+            Assert.Equal(1, provenance.SchemaVersion)
+
+            match provenance.GameSkillPaths |> List.tryFind (fun row -> row.Path = missing) with
+            | None -> failwith $"upgrade materialized {missing} and left it undeclared"
+            | Some row ->
+                Assert.Equal(ArtifactOwner.GameSkill, row.Owner)
+                // The digest the PLAN verified the body against, never a fresh hash of the bytes
+                // that happen to be on disk afterwards.
+                Assert.Equal<string option>(Some expectedSha256, row.Sha256)
+
+            // AC2, measured: no driver id was among the step's targets, so the provenance write had
+            // to fire on the game class alone — exactly the case `if List.isEmpty newDriverPaths`
+            // used to drop. The driver declaration is carried through untouched.
+            Assert.Equal<string list>(
+                ownerSourcedProvenanceRows gameProfile |> fst |> List.map fst |> List.sort,
+                provenance.DriverPaths |> List.map _.Path |> List.sort
+            )
+
+    // AC4: the #747 convergence property, applied to the class #750 added.
+    [<Fact>]
+    let ``two --yes runs converge over a GameSkill backfill — every file it wrote is declared`` () =
+        match gameBackfillTarget () with
+        | None -> assertNoGameSubject ()
+        | Some(missing, _) ->
+            let root = gameBackfillFixture missing
+            Assert.Contains(ReconciliationStepId.ArtifactReSeed, (upgrade (upgradeYes root)).AppliedStepIds)
+
+            // The invariant, stated over the record: every owner-sourced game file the lane
+            // materialized is declared by the record that governs it. This is what keeps a
+            // backfilled copy out of `Undeclared` — not the pinned manifest happening to be
+            // single-file, which is a fact about the package and not about this lane.
+            let declared =
+                provenanceOf root |> _.GameSkillPaths |> List.map _.Path |> Set.ofList
+
+            for path, _ in gameSkillRows () do
+                Assert.Contains(path, declared)
+
+            // …and the second run is a true no-op: no drift of any class over the file the first
+            // run wrote, nothing left residual, not one further byte touched.
+            let before = treeHash root
+            let second = upgrade (upgradeYes root)
+
+            Assert.True second.AlreadyCoherent
+            Assert.False second.ResidualDrift
+            Assert.Empty second.SkillDriftPaths
+            Assert.Equal(before, treeHash root)
+
+    // The other half of the #798 rule, and the reason `ownerBackfillPreservedFiles` grew the game
+    // arm alongside the recording: a file is attested only after it has been READ and matched.
+    // `Drift.ownerSourcedSkillFiles` trusts a recorded digest on exactly that promise, and the
+    // promise now has to hold for `GameSkillPaths` too.
+    [<Fact>]
+    let ``a GameSkill backfill fails closed when a preserved sibling copy was edited`` () =
+        match gameBackfillTarget () with
+        | None -> assertNoGameSubject ()
+        | Some(missing, _) ->
+            let root = gameBackfillFixture missing
+            let preserved = missing.Replace(".codex/", ".claude/")
+            TestSupport.writeRelative root preserved "AUTHOR EDIT\n"
+
+            let summary = upgrade (upgradeYes root)
+
+            Assert.Contains(ReconciliationStepId.ArtifactReSeed, summary.FailedStepIds)
+            // Verification finishes before any recovery write, so nothing was written…
+            Assert.False(TestSupport.existsRelative root missing)
+            Assert.Equal("AUTHOR EDIT\n", TestSupport.readRelative root preserved)
+            // …and nothing was attested.
+            Assert.DoesNotContain(provenanceOf root |> _.GameSkillPaths, fun row -> row.Path = missing)
+
     // 624: doctor is read-only but must SURFACE the owner-sourced gap so an operator knows to upgrade.
     [<Fact>]
     let ``doctor reports a missing owner-sourced skill as drift and previews the re-seed, read-only`` () =
