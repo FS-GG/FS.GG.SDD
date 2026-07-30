@@ -174,7 +174,7 @@ module LintTests =
     // example artifacts whose `## …` lines are prose, not clickable GitHub anchors.
     let private authoringContractsHeadingSlugs () =
         let relPath =
-            [ ".claude"; ".codex"; ".agents" ]
+            Fsgg.Schemas.agentSkillRoots
             |> List.map (fun r -> $"{r}/skills/fs-gg-sdd-authoring-contracts/SKILL.md")
             |> List.tryFind (TestSupport.existsRelative root)
             |> Option.defaultWith (fun () ->

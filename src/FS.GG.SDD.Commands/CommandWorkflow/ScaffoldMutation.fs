@@ -19,12 +19,16 @@ module internal ScaffoldMutation =
     let isSddTree (path: string) =
         let path = normalizeRelativePath path
 
+        let isMirroredRuntimeRoot =
+            Fsgg.Schemas.agentSkillRoots
+            |> List.filter (fun root -> root <> Fsgg.SkillMirror.providerSourceRoot)
+            |> List.exists (fun root -> path.StartsWith(root + "/skills/", StringComparison.Ordinal))
+
         path.StartsWith(".fsgg/", StringComparison.Ordinal)
         || path.StartsWith("work/", StringComparison.Ordinal)
         || path.StartsWith("readiness/", StringComparison.Ordinal)
-        || path.StartsWith(".claude/skills/", StringComparison.Ordinal)
-        || path.StartsWith(".codex/skills/", StringComparison.Ordinal)
-        || path.StartsWith(".agents/skills/fs-gg-sdd-", StringComparison.Ordinal)
+        || isMirroredRuntimeRoot
+        || path.StartsWith(Fsgg.SkillMirror.providerSourceRoot + "/skills/fs-gg-sdd-", StringComparison.Ordinal)
 
     let isSddOwned path =
         let path = normalizeRelativePath path

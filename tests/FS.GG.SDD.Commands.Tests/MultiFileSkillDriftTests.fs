@@ -23,20 +23,30 @@ open Xunit
 module MultiFileSkillDriftTests =
     open RemediationSupport
 
+    // Historical fixtures used the retired Codex root as their third copy.  Keep their
+    // mutation intent while targeting the two roots that the runtime contract now declares.
+    let private runtimeRoot root =
+        if root = ".codex" then ".agents" else root
+
     let private doctorSummary (report: CommandReport) =
         match report.Doctor with
         | Some summary -> summary
         | None -> failwith "expected a doctor summary"
 
     let private absolute root (path: string) =
-        Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar))
+        Path.Combine(root, path.Replace(".codex/", ".agents/").Replace('/', Path.DirectorySeparatorChar))
+
+    let private skillFilePath root id relativePath =
+        Fsgg.SkillMirror.skillFilePath (runtimeRoot root) id relativePath
 
     /// The auxiliary file most cases below hang off — the exact shape #726 names.
     let private auxiliary = "references/deep-detail.md"
 
-    let private auxiliaryPath root id = $"{root}/skills/{id}/{auxiliary}"
+    let private auxiliaryPath root id =
+        $"{runtimeRoot root}/skills/{id}/{auxiliary}"
 
-    let private skillMd root id = Fsgg.SkillMirror.skillPath root id
+    let private skillMd root id =
+        Fsgg.SkillMirror.skillPath (runtimeRoot root) id
 
     /// Every root, in the declared order — the expected list for "reported at every present root".
     let private allRoots = Fsgg.Schemas.agentSkillRoots
@@ -98,7 +108,7 @@ module MultiFileSkillDriftTests =
         let fixtureRoot = productCoherentFixture ()
 
         let nested root =
-            $"{root}/skills/{productSkillId}/references/sub/deep.md"
+            $"{runtimeRoot root}/skills/{productSkillId}/references/sub/deep.md"
 
         TestSupport.writeRelative fixtureRoot (nested ".agents") "a\n"
         TestSupport.writeRelative fixtureRoot (nested ".claude") "a\n"
@@ -135,12 +145,7 @@ module MultiFileSkillDriftTests =
         let summary = doctorSummary (doctorReport fixtureRoot)
 
         // The root that HAS the file is not the one to repair, so it is absent from an EXACT list.
-        Assert.Equal<string list>(
-            [ auxiliaryPath ".agents" productSkillId
-              auxiliaryPath ".codex" productSkillId ]
-            |> List.sort,
-            summary.SkillDriftPaths
-        )
+        Assert.Equal<string list>([ auxiliaryPath ".agents" productSkillId ] |> List.sort, summary.SkillDriftPaths)
 
         Assert.False summary.IsCoherent
 
@@ -336,11 +341,7 @@ module MultiFileSkillDriftTests =
         let summary = doctorSummary report
 
         // EXACT: the two roots that lack it, and NOT the root that has it.
-        Assert.Equal<string list>(
-            [ $".agents/skills/{id}/{strayFile}"; $".codex/skills/{id}/{strayFile}" ]
-            |> List.sort,
-            summary.SkillDriftPaths
-        )
+        Assert.Equal<string list>([ $".agents/skills/{id}/{strayFile}" ] |> List.sort, summary.SkillDriftPaths)
 
         Assert.False summary.IsCoherent
         // AC3: `doctor` stays advisory and writes nothing.
@@ -379,7 +380,7 @@ module MultiFileSkillDriftTests =
         for report in [ first; second ] do
             let summary = report.Upgrade.Value
             Assert.True summary.ResidualDrift
-            Assert.Contains($".codex/skills/{id}/{strayFile}", summary.SkillDriftPaths)
+            Assert.Contains($".agents/skills/{id}/{strayFile}", summary.SkillDriftPaths)
             assertNotMirroredAdvisory summary.NextActionHint
             Assert.Equal(0, exitCode report)
 
@@ -392,16 +393,16 @@ module MultiFileSkillDriftTests =
     // the roots disagree about whether the file exists. On disk this is the SAME condition as the
     // junk file — a file some roots carry and one does not — and it must get the same advisory.
     [<Fact>]
-    let ``a provider-dropped file left in a subset of roots is not-mirrored, not divergent`` () =
+    let ``a provider-dropped file left in one runtime root is not-mirrored, not divergent`` () =
         let fixtureRoot = productCoherentFixture ()
 
-        // `.codex` was refreshed and lost the file; `.agents`/`.claude` still carry it, in
-        // agreement with each other — so nothing here is a byte divergence.
-        writeAuxiliaries fixtureRoot productSkillId [ ".agents", "stale\n"; ".claude", "stale\n" ]
+        // `.claude` was refreshed and lost the file; `.agents` still carries it, so this is
+        // absence rather than byte divergence.
+        writeAuxiliaries fixtureRoot productSkillId [ ".agents", "stale\n" ]
 
         let doctor = doctorSummary (doctorReport fixtureRoot)
 
-        Assert.Equal<string list>([ auxiliaryPath ".codex" productSkillId ], doctor.SkillDriftPaths)
+        Assert.Equal<string list>([ auxiliaryPath ".claude" productSkillId ], doctor.SkillDriftPaths)
         Assert.False doctor.IsCoherent
 
         let summary = (upgradeYes fixtureRoot).Upgrade.Value
@@ -591,11 +592,7 @@ module MultiFileSkillDriftTests =
         // EXACT: the two roots that lack it. `Contains` would accept a report that named the wrong
         // roots, and a file that was never enumerated is reported at exactly these paths too — so
         // the exact list is what separates "observed and reported" from "unobserved".
-        Assert.Equal<string list>(
-            [ $".agents/skills/{id}/{producerFile}"; $".codex/skills/{id}/{producerFile}" ]
-            |> List.sort,
-            summary.SkillDriftPaths
-        )
+        Assert.Equal<string list>([ $".agents/skills/{id}/{producerFile}" ] |> List.sort, summary.SkillDriftPaths)
 
         Assert.False summary.IsCoherent
 
@@ -621,9 +618,7 @@ module MultiFileSkillDriftTests =
         // Surfaced: the two roots that lack the DECLARED file, exactly as for any other declared
         // file the roots disagree about.
         Assert.Equal<string list>(
-            [ $".agents/skills/{declaringDriverId}/{declarableJunkName}"
-              $".codex/skills/{declaringDriverId}/{declarableJunkName}" ]
-            |> List.sort,
+            [ $".agents/skills/{declaringDriverId}/{declarableJunkName}" ] |> List.sort,
             report.SkillNotMirroredPaths
             |> List.filter (fun p -> p.EndsWith(declarableJunkName, StringComparison.Ordinal))
         )
@@ -740,7 +735,7 @@ module MultiFileSkillDriftTests =
     /// Withholding is per (root, file) and nothing wider. A root the run could not observe must not
     /// take the findings about the roots it COULD observe down with it.
     [<Fact>]
-    let ``FS.GG.SDD#760: withholding one root does not silence a divergence between the others`` () =
+    let ``FS.GG.SDD#760: withholding one runtime root withholds the comparison`` () =
         let id = "fs-gg-sdd-plan"
 
         let bodies =
@@ -750,11 +745,8 @@ module MultiFileSkillDriftTests =
 
         let aware = computeUnobserved bodies [ auxiliaryPath ".claude" id ]
 
-        // `.claude` is silent; `.agents` and `.codex` still disagree, and still say so at both.
-        Assert.Equal<string list>(
-            [ auxiliaryPath ".agents" id; auxiliaryPath ".codex" id ] |> List.sort,
-            aware.SkillDivergentPaths
-        )
+        // With two runtime roots there is no observed pair left to compare.
+        Assert.Empty aware.SkillDivergentPaths
 
         Assert.Empty aware.SkillNotMirroredPaths
 
@@ -809,7 +801,8 @@ module MultiFileSkillDriftTests =
 
     let private undeclaredBody = "a stray note nobody declared\n"
 
-    let private undeclaredPath root id = $"{root}/skills/{id}/{undeclaredFile}"
+    let private undeclaredPath root id =
+        $"{runtimeRoot root}/skills/{id}/{undeclaredFile}"
 
     /// The paths #750 owes for an undeclared file written into EVERY root: the roots that HAVE it.
     let private undeclaredAtEveryRoot id =
@@ -1405,7 +1398,7 @@ module MultiFileSkillDriftTests =
 
         Assert.Equal(Some(".agents", "demo", "SKILL.md"), Drift.skillCopyOfPath ".agents/skills/demo/SKILL.md")
         // Backslashes normalize, so a Windows-shaped path is the same copy.
-        Assert.Equal(Some(".codex", "demo", "SKILL.md"), Drift.skillCopyOfPath ".codex\\skills\\demo\\SKILL.md")
+        Assert.Equal(Some(".agents", "demo", "SKILL.md"), Drift.skillCopyOfPath ".agents\\skills\\demo\\SKILL.md")
 
         // Not under a DECLARED root — the decoy that must never be mistaken for an agent skill.
         // `SkillMirror.skillIdOfPath` answers `Some "widget"` here; this parser is root-anchored.
@@ -1463,7 +1456,7 @@ module MultiFileSkillDriftTests =
         | None -> assertNoOwnerSourcedSubject ()
         | Some(_, id, relativePath) ->
             let fixtureRoot = productCoherentFixture ()
-            let tampered = Fsgg.SkillMirror.skillFilePath ".codex" id relativePath
+            let tampered = skillFilePath ".codex" id relativePath
             TestSupport.writeRelative fixtureRoot tampered "TAMPERED\n"
 
             let summary = doctorSummary (doctorReport fixtureRoot)
@@ -1553,7 +1546,7 @@ module MultiFileSkillDriftTests =
         | None -> assertNoOwnerSourcedSubject ()
         | Some(_, id, relativePath) ->
             let declared = ownerRecord ()
-            let target = Fsgg.SkillMirror.skillFilePath ".codex" id relativePath
+            let target = skillFilePath ".codex" id relativePath
 
             let missing = computeOwner declared (coherentOwnerBodies () |> Map.remove target)
             Assert.Equal<string list>([ target ], missing.SkillNotMirroredPaths)
@@ -1599,7 +1592,7 @@ module MultiFileSkillDriftTests =
         | None -> assertNoOwnerSourcedSubject ()
         | Some(_, id, relativePath) ->
             let fixtureRoot = productCoherentFixture ()
-            let tampered = Fsgg.SkillMirror.skillFilePath ".codex" id relativePath
+            let tampered = skillFilePath ".codex" id relativePath
             TestSupport.writeRelative fixtureRoot tampered "TAMPERED\n"
 
             let doctor = doctorReport fixtureRoot
@@ -1620,7 +1613,7 @@ module MultiFileSkillDriftTests =
         | None -> assertNoOwnerSourcedSubject ()
         | Some(_, id, relativePath) ->
             let fixtureRoot = productCoherentFixture ()
-            TestSupport.writeRelative fixtureRoot (Fsgg.SkillMirror.skillFilePath ".codex" id relativePath) "TAMPERED\n"
+            TestSupport.writeRelative fixtureRoot (skillFilePath ".codex" id relativePath) "TAMPERED\n"
 
             let summary = doctorSummary (doctorReport fixtureRoot)
 
@@ -1722,7 +1715,7 @@ module MultiFileSkillDriftTests =
         match ownerAuxiliaryTarget () with
         | None -> assertNoOwnerSourcedSubject ()
         | Some(_, id, relativePath) ->
-            let target = Fsgg.SkillMirror.skillFilePath ".codex" id relativePath
+            let target = skillFilePath ".codex" id relativePath
 
             let report =
                 computeOwner (ownerRecord ()) (coherentOwnerBodies () |> Map.add target "TAMPERED\r\n")
@@ -1758,7 +1751,7 @@ module MultiFileSkillDriftTests =
             Assert.Empty (doctorSummary (doctorReport fixtureRoot)).SkillDriftPaths
 
             // Same workspace, one root's CRLF copy edited: still caught, still arbitrated.
-            let tampered = Fsgg.SkillMirror.skillFilePath ".codex" id relativePath
+            let tampered = skillFilePath ".codex" id relativePath
             File.WriteAllText(absolute fixtureRoot tampered, "TAMPERED\r\n")
 
             let summary = doctorSummary (doctorReport fixtureRoot)
@@ -1786,8 +1779,7 @@ module MultiFileSkillDriftTests =
                 File.WriteAllBytes(path, Array.append bom (File.ReadAllBytes path))
 
             // The bytes really did change — otherwise this passes without testing anything.
-            let path =
-                absolute fixtureRoot (Fsgg.SkillMirror.skillFilePath ".codex" id relativePath)
+            let path = absolute fixtureRoot (skillFilePath ".codex" id relativePath)
 
             Assert.Equal<byte list>(List.ofArray bom, File.ReadAllBytes path |> Array.take 3 |> List.ofArray)
 
@@ -1807,7 +1799,7 @@ module MultiFileSkillDriftTests =
         | None -> assertNoOwnerSourcedSubject ()
         | Some(_, id, relativePath) ->
             let fixtureRoot = productCoherentFixture ()
-            let deleted = Fsgg.SkillMirror.skillFilePath ".codex" id relativePath
+            let deleted = skillFilePath ".codex" id relativePath
             File.Delete(absolute fixtureRoot deleted)
 
             // Precondition: `doctor` sees it, so the assertions below are not vacuous.
@@ -1844,7 +1836,7 @@ module MultiFileSkillDriftTests =
         | None -> assertNoOwnerSourcedSubject ()
         | Some(_, id, relativePath) ->
             let fixtureRoot = productCoherentFixture ()
-            let deleted = Fsgg.SkillMirror.skillFilePath ".codex" id relativePath
+            let deleted = skillFilePath ".codex" id relativePath
             let deletedAbsolute = absolute fixtureRoot deleted
 
             // Every OTHER copy of this skill — the preserved set `applyStage` re-verifies —

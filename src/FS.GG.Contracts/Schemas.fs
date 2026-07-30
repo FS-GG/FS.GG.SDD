@@ -316,6 +316,6 @@ module Schemas =
             ContractVersion = None
             Owner = Governance } ]
 
-    // The single declared agent-skill root set (ADR-0014 §Decision 5). Bare repo-root
-    // names; consumers append `skills/`. One place to add/rename a runtime root.
-    let agentSkillRoots: string list = [ ".claude"; ".codex"; ".agents" ]
+    // The single declared agent-skill root set (ADR-0065, as amended by ADR-0067 §5).
+    // Bare repo-root names; consumers append `skills/`. One place to add/rename a runtime root.
+    let agentSkillRoots: string list = [ ".claude"; ".agents" ]

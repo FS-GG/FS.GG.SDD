@@ -352,11 +352,11 @@ module ContractVersionTests =
     // 7.4.0 held before it). Growing the surface without moving the number would make the `.nupkg`
     // at 7.4.0 and the source at 7.4.0 different artifacts — the #426/#432 shape a sixth time.
     [<Fact>]
-    let ``contract version self-report matches 7_5_0`` () =
-        Assert.Equal("7.5.0", ContractVersion.value)
+    let ``contract version self-report matches 7_5_1`` () =
+        Assert.Equal("7.5.1", ContractVersion.value)
         Assert.Equal(7, ContractVersion.major)
         Assert.Equal(5, ContractVersion.minor)
-        Assert.Equal(0, ContractVersion.patch)
+        Assert.Equal(1, ContractVersion.patch)
 
     // THE ASSERTION THAT WAS MISSING, AND THE ONLY ONE THAT WOULD HAVE CAUGHT IT.
     //

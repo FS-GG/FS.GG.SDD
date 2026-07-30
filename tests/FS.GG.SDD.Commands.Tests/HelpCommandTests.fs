@@ -142,7 +142,7 @@ module HelpCommandTests =
     // Feature 063 (FR-006 / SC-004): the reseed NextAction (triggered by scaffold.cliBehindMinimum)
     // must name all three seeded-skill roots, including the 056 neutral .agents/skills.
     [<Fact>]
-    let ``reseed NextAction lists all three seeded-skill roots`` () =
+    let ``reseed NextAction lists every declared seeded-skill root`` () =
         let model =
             { Request = TestSupport.request Doctor "."
               PendingEffects = []
@@ -172,7 +172,7 @@ module HelpCommandTests =
         let nextAction = Option.get report.NextAction
         Assert.Equal("reseedSeededSkills", nextAction.ActionId)
 
-        for root in [ ".claude/skills"; ".codex/skills"; ".agents/skills" ] do
+        for root in Fsgg.Schemas.agentSkillRoots |> List.map (fun root -> root + "/skills") do
             Assert.Contains(root, nextAction.RequiredArtifacts)
 
     // Feature 094 (V23 / FR-016): `surface --help` documents the two version-axis `--param` keys and

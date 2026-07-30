@@ -919,10 +919,10 @@ module RefreshCommandTests =
         let root = shippedProject ()
 
         // Simulate a scaffolded product: a provider co-tenant skill in the neutral root,
-        // already mirrored into .claude/.codex.
+        // already mirrored into every declared runtime root.
         let elmishBody = "# fs-gg-elmish\nprovider co-tenant skill\n"
 
-        for r in [ ".agents"; ".claude"; ".codex" ] do
+        for r in Fsgg.Schemas.agentSkillRoots do
             TestSupport.writeRelative root $"{r}/skills/fs-gg-elmish/SKILL.md" elmishBody
 
         // Drift: delete a mirror copy of the provider skill AND a seeded .agents copy.
@@ -941,8 +941,8 @@ module RefreshCommandTests =
         let bytesAt (p: string) =
             File.ReadAllBytes(Path.Combine(root, p.Replace('/', Path.DirectorySeparatorChar)))
 
-        // The provider skill is re-mirrored byte-identically across all three roots.
-        for r in [ ".agents"; ".claude"; ".codex" ] do
+        // The provider skill is re-mirrored byte-identically across every declared runtime root.
+        for r in Fsgg.Schemas.agentSkillRoots do
             Assert.True(
                 TestSupport.existsRelative root $"{r}/skills/fs-gg-elmish/SKILL.md",
                 $"expected {r} co-tenant copy"
@@ -955,7 +955,7 @@ module RefreshCommandTests =
 
         Assert.Equal<byte[]>(
             bytesAt ".agents/skills/fs-gg-elmish/SKILL.md",
-            bytesAt ".codex/skills/fs-gg-elmish/SKILL.md"
+            bytesAt ".claude/skills/fs-gg-elmish/SKILL.md"
         )
 
         // The deleted seeded .agents copy is refilled and byte-identical to its .claude sibling.

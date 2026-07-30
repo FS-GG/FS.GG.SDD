@@ -11,7 +11,9 @@ open Xunit
 /// `mirror`/`verify` and the content helpers — the algorithm every SDD lane routes through.
 module SkillMirrorTests =
 
-    let private roots = agentSkillRoots // [ ".claude"; ".codex"; ".agents" ]
+    // Keep the mirror algorithm covered with three arbitrary roots; the declared runtime roots
+    // themselves are pinned separately in SchemaVersionConstantTests.
+    let private roots = [ ".claude"; ".codex"; ".agents" ]
 
     // ----- helpers -----
 

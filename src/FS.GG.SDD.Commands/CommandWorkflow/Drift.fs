@@ -14,17 +14,16 @@ open FS.GG.SDD.Commands.CommandTypes
 module internal Drift =
 
     // The expected seeded-skeleton set (R3 / FR-004): for every `SeededSkills.skillNames`,
-    // the `.claude`, `.codex`, AND 056 neutral `.agents` SKILL.md, plus
+    // every declared runtime root's `SKILL.md`, plus
     // `.fsgg/early-stage-guidance.md`. This is exactly the set `init` seeds, so `upgrade`'s
-    // re-seed re-materializes the missing subset (e.g. the third root a pre-056 CLI never
-    // wrote) via `initEffects` no-clobber writes (R8/FR-010). Sorted, deterministic. A
-    // divergent/missing root among the three violates `claude ≡ codex ≡ agents` (E7).
+    // re-seed re-materializes the missing subset via `initEffects` no-clobber writes
+    // (R8/FR-010). Sorted and derived from the Contracts root authority, so the writer and
+    // reconciliation surface cannot drift apart when a runtime is retired or added.
     let expectedArtifactPaths =
         (SeededSkills.skillNames
          |> List.collect (fun name ->
-             [ $".claude/skills/{name}/SKILL.md"
-               $".codex/skills/{name}/SKILL.md"
-               $".agents/skills/{name}/SKILL.md" ]))
+             Fsgg.Schemas.agentSkillRoots
+             |> List.map (fun root -> Fsgg.SkillMirror.skillPath root name)))
         @ [ ".fsgg/early-stage-guidance.md"
             // 073/ADR-0018: the seeded regenerable-output `.gitignore` is part of the coherent
             // skeleton set — `doctor` reports it missing, `upgrade` no-clobber re-seeds it.

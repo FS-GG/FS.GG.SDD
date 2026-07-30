@@ -130,11 +130,11 @@ module WorkBoardScaffoldAcceptanceTests =
 
     [<Fact>]
     [<Trait("tier", "slow")>]
-    let ``a fresh product scaffold carries the exact package-delivered padd-item body in all roots`` () =
+    let ``a fresh product scaffold carries the exact package-delivered padd-item body in both runtime roots`` () =
         let root = scaffoldWorkspace ()
         let delivered = shippedDriverBody "padd-item"
 
-        for skillRoot in [ ".agents"; ".claude"; ".codex" ] do
+        for skillRoot in [ ".agents"; ".claude" ] do
             let path = Path.Combine(root, skillRoot, "skills", "padd-item", "SKILL.md")
             Assert.True(File.Exists path, $"expected materialized padd-item at {path}")
             Assert.Equal(delivered, File.ReadAllText path)

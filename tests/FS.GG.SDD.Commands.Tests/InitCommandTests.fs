@@ -295,7 +295,7 @@ module InitCommandTests =
     // ---- 051: SDD skeleton seeds the fs-gg-sdd-* process skill set ----
 
     // T005 (US1 / INV-1, INV-8, SC-001): init seeds all 32 skill files (16 declared skills
-    // × {.claude,.codex}), each non-empty, and never seeds the product-internal
+    // × {.claude,.agents}), each non-empty, and never seeds the product-internal
     // fs-gg-sdd-project skill. Fails before the skill effects are wired into initEffects.
     [<Fact>]
     let ``init seeds the fs-gg-sdd process skill set on both agent surfaces`` () =
@@ -307,7 +307,7 @@ module InitCommandTests =
         Assert.Equal(16, List.length FS.GG.SDD.Commands.Internal.SeededSkills.skillNames)
 
         for name in FS.GG.SDD.Commands.Internal.SeededSkills.skillNames do
-            for surface in [ ".claude"; ".codex" ] do
+            for surface in [ ".claude"; ".agents" ] do
                 let path = $"{surface}/skills/{name}/SKILL.md"
                 Assert.True(TestSupport.existsRelative root path, $"Expected seeded skill file {path}.")
 
@@ -318,7 +318,7 @@ module InitCommandTests =
 
         // The product-internal skill (developing FS.GG.SDD itself) is excluded from seeding.
         Assert.False(TestSupport.existsRelative root ".claude/skills/fs-gg-sdd-project/SKILL.md")
-        Assert.False(TestSupport.existsRelative root ".codex/skills/fs-gg-sdd-project/SKILL.md")
+        Assert.False(TestSupport.existsRelative root ".agents/skills/fs-gg-sdd-project/SKILL.md")
 
     // T005 (US1 / FR-003): each seeded skill is reported as a created authored agent-guidance
     // artifact — the same ownership class as the constitution / early-stage guidance.

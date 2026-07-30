@@ -39,7 +39,6 @@ module RequiredFieldContractTests =
     // #142: the evidence skill documents every gate-required deferral field, in both roots.
     [<Theory>]
     [<InlineData(".claude")>]
-    [<InlineData(".codex")>]
     let ``The evidence skill documents every required deferral field`` (root: string) =
         let text = skillText root "fs-gg-sdd-evidence"
 
@@ -52,7 +51,6 @@ module RequiredFieldContractTests =
     // #143: the clarify skill names every required clarify front-matter field (incl. sourceSpec).
     [<Theory>]
     [<InlineData(".claude")>]
-    [<InlineData(".codex")>]
     let ``The clarify skill names every required front-matter field`` (root: string) =
         let text = skillText root "fs-gg-sdd-clarify"
 
@@ -66,7 +64,6 @@ module RequiredFieldContractTests =
     // its stage — the human enumeration can never omit a gate-required key.
     [<Theory>]
     [<InlineData(".claude")>]
-    [<InlineData(".codex")>]
     let ``The authoring-contracts table lists every registry front-matter key`` (root: string) =
         let text = authoringContracts root
 
@@ -90,7 +87,6 @@ module RequiredFieldContractTests =
     // registry order (catches a missing or reordered field; not an extra-field check).
     [<Theory>]
     [<InlineData(".claude")>]
-    [<InlineData(".codex")>]
     let ``The evidence skill documents the deferral fields as backtick-wrapped, in registry order`` (root: string) =
         let text = skillText root "fs-gg-sdd-evidence"
 

@@ -114,8 +114,8 @@ module SchemaVersionConstantTests =
 
     // Feature 057 / ADR-0014 §Decision 5: AGENT_SKILL_ROOTS is the single declared root set.
     [<Fact>]
-    let ``agentSkillRoots is the declared three-root set`` () =
-        Assert.Equal<string list>([ ".claude"; ".codex"; ".agents" ], Schemas.agentSkillRoots)
+    let ``agentSkillRoots is the declared two-root set`` () =
+        Assert.Equal<string list>([ ".claude"; ".agents" ], Schemas.agentSkillRoots)
 
     // Feature 057 / ADR-0014 §Decision 1: the manifest expresses id, scope, digest, and a
     // body source (inline or a resolvable path) for both process and product skills.
