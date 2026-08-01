@@ -3,6 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test --test-reporter=junit client.test.mjs > ../results/client.junit.xml"
+    "compile": "tsc --project tsconfig.json",
+    "test": "npm run compile && node --test --test-reporter=junit dist/client.test.js > ../results/client.junit.xml"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "typescript": "^5.9.3"
   }
 }

@@ -1,12 +1,13 @@
 # Polyglot lifecycle acceptance
 
 `tests/fixtures/polyglot-lifecycle/` is the provider-composition regression fixture for a
-workspace with independently owned F# and Node/browser lanes. It deliberately does not add a
+workspace with ASP.NET Core, TypeScript/browser, no-npm console, and package-producing Fable
+bindings lanes. It deliberately does not add a
 `language:` field or any TypeScript-specific lifecycle concept: SDD's evidence boundary consumes
 runner-produced TRX and JUnit XML by their common report contract.
 
 The acceptance test runs both lanes, copies their reports into one lifecycle work item, and invokes
-`evidence --from-test-report` once for each report before the normal `verify` and `ship` stages.
+`evidence --from-test-report` once for each report before the normal `verify`, `ship`, and `doctor` stages.
 `evidence` only reads the supplied report; it never launches either test suite.
 
 To run the fixture manually:

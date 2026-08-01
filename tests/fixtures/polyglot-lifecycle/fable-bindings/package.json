@@ -1,0 +1,12 @@
+{
+  "name": "polyglot-fable-bindings-acceptance",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@fable-org/fable-library-js": "^2.0.0"
+  },
+  "scripts": {
+    "compile": "fable FableBindings.fsproj --outDir dist",
+    "test": "npm run compile && node runtime.test.mjs"
+  }
+}

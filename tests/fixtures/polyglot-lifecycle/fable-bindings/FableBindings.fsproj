@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <PackageId>Polyglot.Fable.Bindings.Acceptance</PackageId>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Bindings.fs" />
+    <PackageReference Include="Fable.Core" Version="5.2.0" />
+  </ItemGroup>
+</Project>
