@@ -64,13 +64,15 @@ module PolyglotLifecycleAcceptanceTests =
             Threading.Thread.Sleep 1500
 
             let browser =
-                runToCompletion
+                runToCompletionCapturingOutput
                     "/usr/sbin/chromium"
                     [ "--headless"; "--no-sandbox"; "--dump-dom"; "http://127.0.0.1:51817" ]
                     fixtureRoot
                     30_000
 
             assertGreen "Vite browser runtime" browser
+            Assert.Contains("data-executed=\"typescript\"", browser.Diagnostic)
+            Assert.Contains("polyglot browser ready", browser.Diagnostic)
 
             if not vite.HasExited then
                 vite.Kill(true)
@@ -140,6 +142,10 @@ module PolyglotLifecycleAcceptanceTests =
 
         assertGreen "no-npm console lane" console
 
+        let consoleTests =
+            runToCompletion "dotnet" [ "test"; "no-npm-console.tests/NoNpm.Console.Tests.fsproj"; "--logger"; "trx;LogFileName=console.trx"; "--results-directory"; "results" ] fixtureRoot 120_000
+        assertGreen "no-npm console test lane" consoleTests
+
         let installClient = runToCompletion "npm" [ "ci" ] (fixturePath "client") 120_000
         assertGreen "TypeScript client dependency restore" installClient
 
@@ -176,7 +182,7 @@ module PolyglotLifecycleAcceptanceTests =
         let trx = Path.Combine(reportsRoot, "server.trx")
         let junit = Path.Combine(reportsRoot, "client.junit.xml")
         let fableJunit = Path.Combine(reportsRoot, "fable.junit.xml")
-        let consoleJunit = Path.Combine(reportsRoot, "console.junit.xml")
+        let consoleJunit = Path.Combine(reportsRoot, "console.trx")
         Assert.True(File.Exists trx, "dotnet test did not emit its TRX report.")
         Assert.True(File.Exists junit, "npm test did not emit its JUnit report.")
         Assert.True(File.Exists fableJunit, "Fable runtime did not emit its JUnit report.")
@@ -193,7 +199,7 @@ module PolyglotLifecycleAcceptanceTests =
         copyFile trx (Path.Combine(root, "artifacts", "server.trx"))
         copyFile junit (Path.Combine(root, "artifacts", "client.junit.xml"))
         copyFile fableJunit (Path.Combine(root, "artifacts", "fable.junit.xml"))
-        copyFile consoleJunit (Path.Combine(root, "artifacts", "console.junit.xml"))
+        copyFile consoleJunit (Path.Combine(root, "artifacts", "console.trx"))
 
         let importReport path =
             { TestSupport.evidenceRequest root workId "Polyglot lifecycle acceptance" with
@@ -227,12 +233,12 @@ module PolyglotLifecycleAcceptanceTests =
         |> activateMissing 1
         |> TestSupport.writeRelative root $"work/{workId}/evidence.yml"
 
-        importReport "artifacts/console.junit.xml" |> assertNoErrors
+        importReport "artifacts/console.trx" |> assertNoErrors
         let finalEvidence = evidenceText root workId
         Assert.Contains("source: artifacts/server.trx", finalEvidence)
         Assert.Contains("source: artifacts/client.junit.xml", finalEvidence)
         Assert.Contains("source: artifacts/fable.junit.xml", finalEvidence)
-        Assert.Contains("source: artifacts/console.junit.xml", finalEvidence)
+        Assert.Contains("source: artifacts/console.trx", finalEvidence)
 
         let verify = TestSupport.runVerify root workId "Polyglot lifecycle acceptance"
         let ship = TestSupport.runShip root workId "Polyglot lifecycle acceptance"
@@ -266,6 +272,6 @@ module PolyglotLifecycleAcceptanceTests =
                     [ "artifacts/server.trx"
                       "artifacts/client.junit.xml"
                       "artifacts/fable.junit.xml"
-                      "artifacts/console.junit.xml" ],
+                      "artifacts/console.trx" ],
                 sources
             )
