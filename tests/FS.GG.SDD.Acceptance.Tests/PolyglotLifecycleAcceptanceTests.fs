@@ -1,7 +1,9 @@
 namespace FS.GG.SDD.Acceptance.Tests
 
 open System
+open System.Diagnostics
 open System.IO
+open System.Net.Http
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.CommandReports
 open FS.GG.SDD.Commands.CommandTypes
@@ -29,6 +31,27 @@ module PolyglotLifecycleAcceptanceTests =
     let private assertGreen lane result =
         Assert.True(result.Started, $"{lane} did not start: {result.Diagnostic}")
         Assert.True(result.ExitCode = 0, $"{lane} failed: {result.Diagnostic}")
+
+    let private assertServerEndpoint () =
+        let start =
+            ProcessStartInfo("dotnet", "run --no-restore --project server/Polyglot.Server.fsproj")
+
+        start.WorkingDirectory <- fixtureRoot
+        start.Environment["ASPNETCORE_URLS"] <- "http://127.0.0.1:51816"
+        start.RedirectStandardOutput <- true
+        start.RedirectStandardError <- true
+
+        match Process.Start start with
+        | null -> failwith "could not start the ASP.NET Core fixture"
+        | server ->
+            use server = server
+            Threading.Thread.Sleep 3000
+            use client = new HttpClient()
+            let body = client.GetStringAsync("http://127.0.0.1:51816/health").Result
+            Assert.Equal("polyglot server ready", body)
+
+            if not server.HasExited then
+                server.Kill(true)
 
     let private evidenceText root workId =
         TestSupport.readRelative root $"work/{workId}/evidence.yml"
@@ -81,6 +104,7 @@ module PolyglotLifecycleAcceptanceTests =
                 300_000
 
         assertGreen "F# server test lane" server
+        assertServerEndpoint ()
 
         let console =
             runToCompletion
