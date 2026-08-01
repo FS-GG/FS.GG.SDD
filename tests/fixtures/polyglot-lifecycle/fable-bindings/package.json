@@ -6,7 +6,7 @@
     "@fable-org/fable-library-js": "^2.0.0"
   },
   "scripts": {
-    "compile": "fable FableBindings.fsproj --outDir dist",
+    "compile": "dotnet tool restore && dotnet tool run fable -- FableBindings.fsproj --outDir dist",
     "test": "npm run compile && node --test --test-reporter=junit runtime.test.mjs > ../results/fable.junit.xml"
   }
 }

@@ -8,6 +8,9 @@ compile/runtime command runs its generated JavaScript. It has no provider identi
 or language classification in SDD; the acceptance test supplies the server/client
 reports to one ordinary lifecycle work item and drives it through verify, ship, and doctor.
 
+The Fable lane restores its fixture-local, version-pinned compiler manifest before compiling;
+it does not rely on a developer or runner having a global `fable` command on `PATH`.
+
 Run the lanes from this directory:
 
 ```sh
