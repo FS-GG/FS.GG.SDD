@@ -176,9 +176,11 @@ module PolyglotLifecycleAcceptanceTests =
         let trx = Path.Combine(reportsRoot, "server.trx")
         let junit = Path.Combine(reportsRoot, "client.junit.xml")
         let fableJunit = Path.Combine(reportsRoot, "fable.junit.xml")
+        let consoleJunit = Path.Combine(reportsRoot, "console.junit.xml")
         Assert.True(File.Exists trx, "dotnet test did not emit its TRX report.")
         Assert.True(File.Exists junit, "npm test did not emit its JUnit report.")
         Assert.True(File.Exists fableJunit, "Fable runtime did not emit its JUnit report.")
+        Assert.True(File.Exists consoleJunit, "no-npm console did not emit its JUnit report.")
 
         let workId = "816-polyglot-lifecycle"
         let root = TestSupport.tempDirectory ()
@@ -191,6 +193,7 @@ module PolyglotLifecycleAcceptanceTests =
         copyFile trx (Path.Combine(root, "artifacts", "server.trx"))
         copyFile junit (Path.Combine(root, "artifacts", "client.junit.xml"))
         copyFile fableJunit (Path.Combine(root, "artifacts", "fable.junit.xml"))
+        copyFile consoleJunit (Path.Combine(root, "artifacts", "console.junit.xml"))
 
         let importReport path =
             { TestSupport.evidenceRequest root workId "Polyglot lifecycle acceptance" with
@@ -209,7 +212,7 @@ module PolyglotLifecycleAcceptanceTests =
         // Reactivate the client obligations. EV001 retains the TRX receipt, while the newly
         // pass-claiming obligations are still unobserved and can receive the JUnit receipt.
         evidenceText root workId
-        |> activateMissing 3
+        |> activateMissing 2
         |> TestSupport.writeRelative root $"work/{workId}/evidence.yml"
 
         importReport "artifacts/client.junit.xml" |> assertNoErrors
@@ -219,10 +222,17 @@ module PolyglotLifecycleAcceptanceTests =
         |> TestSupport.writeRelative root $"work/{workId}/evidence.yml"
 
         importReport "artifacts/fable.junit.xml" |> assertNoErrors
+
+        evidenceText root workId
+        |> activateMissing 1
+        |> TestSupport.writeRelative root $"work/{workId}/evidence.yml"
+
+        importReport "artifacts/console.junit.xml" |> assertNoErrors
         let finalEvidence = evidenceText root workId
         Assert.Contains("source: artifacts/server.trx", finalEvidence)
         Assert.Contains("source: artifacts/client.junit.xml", finalEvidence)
         Assert.Contains("source: artifacts/fable.junit.xml", finalEvidence)
+        Assert.Contains("source: artifacts/console.junit.xml", finalEvidence)
 
         let verify = TestSupport.runVerify root workId "Polyglot lifecycle acceptance"
         let ship = TestSupport.runShip root workId "Polyglot lifecycle acceptance"
@@ -255,6 +265,7 @@ module PolyglotLifecycleAcceptanceTests =
                 set
                     [ "artifacts/server.trx"
                       "artifacts/client.junit.xml"
-                      "artifacts/fable.junit.xml" ],
+                      "artifacts/fable.junit.xml"
+                      "artifacts/console.junit.xml" ],
                 sources
             )
