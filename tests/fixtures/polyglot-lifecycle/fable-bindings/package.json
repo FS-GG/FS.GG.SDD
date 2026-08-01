@@ -7,6 +7,6 @@
   },
   "scripts": {
     "compile": "fable FableBindings.fsproj --outDir dist",
-    "test": "npm run compile && node runtime.test.mjs"
+    "test": "npm run compile && node --test --test-reporter=junit runtime.test.mjs > ../results/fable.junit.xml"
   }
 }
