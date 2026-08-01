@@ -30,6 +30,16 @@ module PolyglotLifecycleAcceptanceTests =
     let private evidenceText root workId =
         TestSupport.readRelative root $"work/{workId}/evidence.yml"
 
+    let private onlyFirstObligationClaimsPass (text: string) =
+        let marker = "result: pass"
+        let first = text.IndexOf(marker, StringComparison.Ordinal)
+
+        if first < 0 then
+            failwith "fixture evidence has no passing obligation"
+
+        text.Substring(0, first + marker.Length)
+        + text.Substring(first + marker.Length).Replace(marker, "result: missing")
+
     [<Fact>]
     let ``one lifecycle imports real TRX and JUnit reports without a language taxonomy`` () =
         let reportsRoot = Path.Combine(fixtureRoot, "results")
@@ -63,6 +73,11 @@ module PolyglotLifecycleAcceptanceTests =
         let workId = "816-polyglot-lifecycle"
         let root = TestSupport.tempDirectory ()
         TestSupport.initializeAnalyzedProject root workId "Polyglot lifecycle acceptance"
+
+        evidenceText root workId
+        |> onlyFirstObligationClaimsPass
+        |> TestSupport.writeRelative root $"work/{workId}/evidence.yml"
+
         copyFile trx (Path.Combine(root, "artifacts", "server.trx"))
         copyFile junit (Path.Combine(root, "artifacts", "client.junit.xml"))
 
@@ -80,8 +95,16 @@ module PolyglotLifecycleAcceptanceTests =
         importReport "artifacts/server.trx" |> assertNoErrors
         Assert.Contains("source: artifacts/server.trx", evidenceText root workId)
 
+        // Reactivate the client obligations. EV001 retains the TRX receipt, while the newly
+        // pass-claiming obligations are still unobserved and can receive the JUnit receipt.
+        evidenceText root workId
+        |> fun text -> text.Replace("result: missing", "result: pass")
+        |> TestSupport.writeRelative root $"work/{workId}/evidence.yml"
+
         importReport "artifacts/client.junit.xml" |> assertNoErrors
-        Assert.Contains("source: artifacts/client.junit.xml", evidenceText root workId)
+        let finalEvidence = evidenceText root workId
+        Assert.Contains("source: artifacts/server.trx", finalEvidence)
+        Assert.Contains("source: artifacts/client.junit.xml", finalEvidence)
 
         let verify = TestSupport.runVerify root workId "Polyglot lifecycle acceptance"
         let ship = TestSupport.runShip root workId "Polyglot lifecycle acceptance"
@@ -91,14 +114,16 @@ module PolyglotLifecycleAcceptanceTests =
         let parsed =
             parseEvidenceArtifact
                 { Path = $"work/{workId}/evidence.yml"
-                  Text = evidenceText root workId }
+                  Text = finalEvidence }
 
         match parsed with
         | Error diagnostics -> failwithf "evidence did not parse after report import: %A" diagnostics
         | Ok artifact ->
-            artifact.Evidence
-            |> List.filter claimsRealPass
-            |> List.iter (fun declaration ->
-                match declaration.ObservedRun with
-                | Some observed -> Assert.Equal("artifacts/client.junit.xml", observed.Source)
-                | None -> failwithf "%s lost its observed report receipt" declaration.Id.Value)
+            let sources =
+                artifact.Evidence
+                |> List.filter claimsRealPass
+                |> List.choose _.ObservedRun
+                |> List.map _.Source
+                |> Set.ofList
+
+            Assert.Equal<string Set>(set [ "artifacts/server.trx"; "artifacts/client.junit.xml" ], sources)
