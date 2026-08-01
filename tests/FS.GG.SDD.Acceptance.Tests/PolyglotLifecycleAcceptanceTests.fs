@@ -53,6 +53,28 @@ module PolyglotLifecycleAcceptanceTests =
             if not server.HasExited then
                 server.Kill(true)
 
+    let private assertBrowserRuntime () =
+        let start = ProcessStartInfo("npm", "run serve --silent")
+        start.WorkingDirectory <- fixturePath "client"
+
+        match Process.Start start with
+        | null -> failwith "could not start Vite"
+        | vite ->
+            use vite = vite
+            Threading.Thread.Sleep 1500
+
+            let browser =
+                runToCompletion
+                    "/usr/sbin/chromium"
+                    [ "--headless"; "--no-sandbox"; "--dump-dom"; "http://127.0.0.1:51817" ]
+                    fixtureRoot
+                    30_000
+
+            assertGreen "Vite browser runtime" browser
+
+            if not vite.HasExited then
+                vite.Kill(true)
+
     let private evidenceText root workId =
         TestSupport.readRelative root $"work/{workId}/evidence.yml"
 
@@ -125,6 +147,7 @@ module PolyglotLifecycleAcceptanceTests =
             runToCompletion "npm" [ "--prefix"; "client"; "test"; "--silent" ] fixtureRoot 120_000
 
         assertGreen "Node client test lane" client
+        assertBrowserRuntime ()
 
         let package =
             runToCompletion
