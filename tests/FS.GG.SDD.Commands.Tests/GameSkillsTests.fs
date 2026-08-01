@@ -18,6 +18,11 @@ module GameSkillsTests =
     let private playtestSha256 =
         "f070f0719dde93b55d1a41ea8aa881b90e41cd20a20e558771d87ef3fe28f642"
 
+    // The FS.GG.Game.Skills 0.7.0 lockstep profile is owner-sourced and must be
+    // carried through the same content-addressed materializer as the existing game skills.
+    let private gameFableSha256 =
+        "443a82d24a0b4bbd21f4499b06f6e3d12b95a36a858f3880b414b74cae1a5c50"
+
     let private roots = [ ".agents"; ".claude" ]
 
     let private skillPathFor id =
@@ -58,6 +63,7 @@ module GameSkillsTests =
               "fs-gg-collision"
               "fs-gg-effects"
               "fs-gg-game-core"
+              "fs-gg-game-fable"
               "fs-gg-grids"
               "fs-gg-line-drawing"
               "fs-gg-mapcraft"
@@ -71,6 +77,20 @@ module GameSkillsTests =
         Assert.Empty outcome.VerifyFailedIds
         Assert.Empty outcome.PredicateUnevaluatedIds
         Assert.Empty outcome.NamespaceCollisionIds
+
+    [<Fact>]
+    let ``plan materializes the FS.GG.Game.Skills fable lockstep skill with its declared digest`` () =
+        let outcome = GameSkills.plan gameProfile
+
+        Assert.Contains("fs-gg-game-fable", outcome.MaterializedIds)
+
+        let digests =
+            outcome.ProvenancePaths
+            |> List.filter (fun (path, _) -> path.Contains "fs-gg-game-fable")
+            |> List.map snd
+            |> List.distinct
+
+        Assert.Equal<string list>([ gameFableSha256 ], digests)
 
     [<Fact>]
     let ``plan on the app profile materializes only the app-gated fs-gg-audio`` () =

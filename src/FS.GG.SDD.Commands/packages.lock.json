@@ -10,9 +10,9 @@
       },
       "FS.GG.Game.Skills": {
         "type": "Direct",
-        "requested": "[0.6.0, )",
-        "resolved": "0.6.0",
-        "contentHash": "EUUAr3EMBryD/EENB3WCkIOXQyi1HV2CyRrMpHTCqMLXWAMirSFQ4H27Q9hcQYPM1YTMLTRzywZFGwXU8AWv7g=="
+        "requested": "[0.7.0, )",
+        "resolved": "0.7.0",
+        "contentHash": "XxWHqYPxezfZcY7wXkUE3KGzl8dak7eViir0TRCouSVgSkBbVkD8/UxXLZUyGcsTaz5dMM/jBtbsAE6TqGJEhA=="
       },
       "FSharp.Core": {
         "type": "Direct",
