@@ -63,12 +63,32 @@ module PolyglotLifecycleAcceptanceTests =
             use vite = vite
             Threading.Thread.Sleep 1500
 
-            let browser =
-                runToCompletionCapturingOutput
-                    "/usr/sbin/chromium"
-                    [ "--headless"; "--no-sandbox"; "--dump-dom"; "http://127.0.0.1:51817" ]
-                    fixtureRoot
-                    30_000
+            // Hosted runners and developer machines install the same browser under different
+            // prefixes. Let the process edge resolve it through PATH, just as a shell would, and
+            // fall back only when a candidate could not be started at all. A browser that starts
+            // but fails remains a real acceptance failure rather than being hidden by fallback.
+            let rec runBrowser candidates diagnostics =
+                match candidates with
+                | [] ->
+                    { Started = false
+                      ExitCode = -1
+                      Diagnostic =
+                        "could not start a supported browser from PATH (tried chromium and google-chrome): "
+                        + String.concat "; " (List.rev diagnostics) }
+                | executable :: remaining ->
+                    let result =
+                        runToCompletionCapturingOutput
+                            executable
+                            [ "--headless"; "--no-sandbox"; "--dump-dom"; "http://127.0.0.1:51817" ]
+                            fixtureRoot
+                            30_000
+
+                    if result.Started then
+                        result
+                    else
+                        runBrowser remaining ($"{executable}: {result.Diagnostic}" :: diagnostics)
+
+            let browser = runBrowser [ "chromium"; "google-chrome" ] []
 
             assertGreen "Vite browser runtime" browser
             Assert.Contains("data-executed=\"typescript\"", browser.Diagnostic)
@@ -143,7 +163,17 @@ module PolyglotLifecycleAcceptanceTests =
         assertGreen "no-npm console lane" console
 
         let consoleTests =
-            runToCompletion "dotnet" [ "test"; "no-npm-console.tests/NoNpm.Console.Tests.fsproj"; "--logger"; "trx;LogFileName=console.trx"; "--results-directory"; "results" ] fixtureRoot 120_000
+            runToCompletion
+                "dotnet"
+                [ "test"
+                  "no-npm-console.tests/NoNpm.Console.Tests.fsproj"
+                  "--logger"
+                  "trx;LogFileName=console.trx"
+                  "--results-directory"
+                  "results" ]
+                fixtureRoot
+                120_000
+
         assertGreen "no-npm console test lane" consoleTests
 
         let installClient = runToCompletion "npm" [ "ci" ] (fixturePath "client") 120_000
