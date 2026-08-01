@@ -1,0 +1,15 @@
+{
+  "name": "polyglot-client-acceptance",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "compile": "tsc --project tsconfig.json",
+    "serve": "vite --host 127.0.0.1 --port 51817",
+    "test": "npm run compile && node --test --test-reporter=junit dist/client.test.js > ../results/client.junit.xml"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.0"
+  }
+}

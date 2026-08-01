@@ -73,6 +73,28 @@ module TestReport =
         let skipped = sum "skipped"
         let failed = failures + errors
 
+        // Node's built-in JUnit reporter (and a few browser runners) emits one `<testcase>`
+        // per executed test but no aggregate attributes on the enclosing `<testsuites>` element.
+        // The report is still runner-produced evidence: derive counts from the cases only when
+        // every aggregate is absent/zero, preserving declared suite totals when they exist.
+        let cases = descendantsNamed "testcase" root |> List.ofSeq
+
+        let caseHas name (testCase: XElement) =
+            testCase.Elements()
+            |> Seq.exists (fun child -> String.Equals(localName child, name, StringComparison.OrdinalIgnoreCase))
+
+        let total, failed, skipped =
+            if total = 0 && failed = 0 && skipped = 0 && not (List.isEmpty cases) then
+                let failed =
+                    cases
+                    |> List.filter (fun testCase -> caseHas "failure" testCase || caseHas "error" testCase)
+                    |> List.length
+
+                let skipped = cases |> List.filter (caseHas "skipped") |> List.length
+                List.length cases, failed, skipped
+            else
+                total, failed, skipped
+
         // `passed` is not a JUnit attribute — it is the remainder. Clamped at zero so a report whose
         // parts exceed its total (a producer bug) yields a coherent receipt rather than a negative
         // count that `observedRunInconsistency` would then have to reject.

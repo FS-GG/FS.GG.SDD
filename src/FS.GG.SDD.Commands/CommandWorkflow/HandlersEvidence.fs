@@ -283,9 +283,10 @@ module internal HandlersEvidence =
                             :: untypedAdvisory
                     | Ok run -> Some run, untypedAdvisory
 
-    /// Stamp the receipt onto every obligation the run discharges. Idempotent: re-running
-    /// `--from-test-report` over the same report rewrites the same bytes, because every field of the
-    /// receipt is derived from the report.
+    /// Stamp the receipt onto every previously-unobserved obligation the run discharges. A feature can
+    /// have independently-run server and client lanes, so a later report must not erase the durable
+    /// receipt from an earlier lane. `--sync-observed-run` remains the explicit maintenance route for
+    /// re-stamping receipts that already name a regenerated report.
     let recordObservedRun (run: ObservedRun option) (artifact: EvidenceArtifact) =
         match run with
         | None -> artifact
@@ -294,7 +295,7 @@ module internal HandlersEvidence =
                 Evidence =
                     artifact.Evidence
                     |> List.map (fun declaration ->
-                        if dischargedByARun declaration then
+                        if dischargedByARun declaration && declaration.ObservedRun.IsNone then
                             { declaration with
                                 ObservedRun = Some run }
                         else

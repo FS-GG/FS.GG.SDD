@@ -293,6 +293,17 @@ module AcceptanceSupport =
               ExitCode = -1
               Diagnostic = timeout.Message }
 
+    let runToCompletionCapturingOutput fileName args workingDir timeoutMs =
+        match TestShared.ChildProcess.tryRunBounded timeoutMs (probeStartInfo fileName args workingDir) with
+        | Some completion ->
+            { Started = true
+              ExitCode = completion.ExitCode
+              Diagnostic = (completion.StandardError + completion.StandardOutput).Trim() }
+        | None ->
+            { Started = false
+              ExitCode = -1
+              Diagnostic = $"could not start `{fileName}`." }
+
     // ---------- feature 035: declared-or-default probe-command resolution ----------
 
     /// Deterministic runnable-project discovery (FR-008): enumerate `*.fsproj`/`*.csproj`
