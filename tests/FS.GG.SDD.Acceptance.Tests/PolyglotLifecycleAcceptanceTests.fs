@@ -9,12 +9,15 @@ open FS.GG.SDD.Commands.Tests
 open Xunit
 open AcceptanceSupport
 
-/// Exercises one ordinary lifecycle over reports emitted by independently-run F# and Node lanes.
+/// Exercises one ordinary lifecycle over reports emitted by independently-run ASP.NET Core and
+/// TypeScript/browser lanes, plus no-npm console and package-producing Fable binding witnesses.
 /// The fixture is intentionally provider- and taxonomy-free: SDD reads TRX/JUnit bytes; it never
 /// launches either suite as part of `evidence`.
 module PolyglotLifecycleAcceptanceTests =
     let private fixtureRoot =
         Path.Combine(repoRoot, "tests", "fixtures", "polyglot-lifecycle")
+
+    let private fixturePath path = Path.Combine(fixtureRoot, path)
 
     let private copyFile (source: string) (destination: string) =
         match Path.GetDirectoryName destination with
@@ -60,10 +63,49 @@ module PolyglotLifecycleAcceptanceTests =
 
         assertGreen "F# server test lane" server
 
+        let console =
+            runToCompletion
+                "dotnet"
+                [ "run"
+                  "--project"
+                  "no-npm-console/NoNpm.Console.fsproj"
+                  "--disable-build-servers" ]
+                fixtureRoot
+                120_000
+
+        assertGreen "no-npm console lane" console
+
+        let installClient = runToCompletion "npm" [ "ci" ] (fixturePath "client") 120_000
+        assertGreen "TypeScript client dependency restore" installClient
+
         let client =
             runToCompletion "npm" [ "--prefix"; "client"; "test"; "--silent" ] fixtureRoot 120_000
 
         assertGreen "Node client test lane" client
+
+        let package =
+            runToCompletion
+                "dotnet"
+                [ "pack"
+                  "fable-bindings/FableBindings.fsproj"
+                  "--output"
+                  "fable-bindings/packages"
+                  "--disable-build-servers" ]
+                fixtureRoot
+                120_000
+
+        assertGreen "Fable bindings package lane" package
+        Assert.NotEmpty(Directory.GetFiles(fixturePath "fable-bindings/packages", "*.nupkg"))
+
+        let installBindings =
+            runToCompletion "npm" [ "ci" ] (fixturePath "fable-bindings") 120_000
+
+        assertGreen "Fable bindings npm restore" installBindings
+
+        let bindings =
+            runToCompletion "npm" [ "test"; "--silent" ] (fixturePath "fable-bindings") 120_000
+
+        assertGreen "Fable bindings compile/runtime lane" bindings
 
         let trx = Path.Combine(reportsRoot, "server.trx")
         let junit = Path.Combine(reportsRoot, "client.junit.xml")
@@ -108,8 +150,15 @@ module PolyglotLifecycleAcceptanceTests =
 
         let verify = TestSupport.runVerify root workId "Polyglot lifecycle acceptance"
         let ship = TestSupport.runShip root workId "Polyglot lifecycle acceptance"
+
+        let doctor =
+            { TestSupport.request Doctor root with
+                WorkId = Some workId }
+            |> TestSupport.runRequest
+
         assertNoErrors verify
         assertNoErrors ship
+        assertNoErrors doctor
 
         let parsed =
             parseEvidenceArtifact
