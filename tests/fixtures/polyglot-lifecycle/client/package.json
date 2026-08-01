@@ -1,0 +1,8 @@
+{
+  "name": "polyglot-client-acceptance",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-reporter=junit client.test.mjs > ../results/client.junit.xml"
+  }
+}

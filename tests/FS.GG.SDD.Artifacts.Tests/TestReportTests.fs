@@ -99,6 +99,24 @@ module TestReportTests =
         Assert.Equal(3, run.Passed)
         Assert.Equal(0, run.Skipped)
 
+    [<Fact>]
+    let ``JUnit: testcase-only output records executed tests`` () =
+        // Node's built-in JUnit reporter omits aggregate attributes and writes testcase entries
+        // directly below testsuites. It is observed runner output, not a synthetic summary.
+        let junit =
+            """<testsuites>
+  <testcase name="server call" />
+  <testcase name="browser render"><skipped /></testcase>
+  <testcase name="client failure"><failure /></testcase>
+</testsuites>"""
+
+        let run = TestReport.parse "artifacts/node.junit.xml" junit |> orFail "node junit"
+
+        Assert.Equal("failed", run.Outcome)
+        Assert.Equal(1, run.Passed)
+        Assert.Equal(1, run.Failed)
+        Assert.Equal(1, run.Skipped)
+
     // ---- The failure legs: a report that cannot be believed is REFUSED, never recorded ----
 
     [<Theory>]
