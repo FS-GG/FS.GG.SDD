@@ -43,6 +43,25 @@ module PolyglotLifecycleAcceptanceTests =
         text.Substring(0, first + marker.Length)
         + text.Substring(first + marker.Length).Replace(marker, "result: missing")
 
+    let private activateMissing (count: int) (text: string) =
+        let marker = "result: missing"
+
+        let rec replace (remaining: int) (offset: int) (current: string) =
+            if remaining = 0 then
+                current
+            else
+                let index = current.IndexOf(marker, offset, StringComparison.Ordinal)
+
+                if index < 0 then
+                    current
+                else
+                    replace
+                        (remaining - 1)
+                        (index + "result: pass".Length)
+                        (current.Remove(index, marker.Length).Insert(index, "result: pass"))
+
+        replace count 0 text
+
     [<Fact>]
     let ``one lifecycle imports real TRX and JUnit reports without a language taxonomy`` () =
         let reportsRoot = Path.Combine(fixtureRoot, "results")
@@ -109,8 +128,10 @@ module PolyglotLifecycleAcceptanceTests =
 
         let trx = Path.Combine(reportsRoot, "server.trx")
         let junit = Path.Combine(reportsRoot, "client.junit.xml")
+        let fableJunit = Path.Combine(reportsRoot, "fable.junit.xml")
         Assert.True(File.Exists trx, "dotnet test did not emit its TRX report.")
         Assert.True(File.Exists junit, "npm test did not emit its JUnit report.")
+        Assert.True(File.Exists fableJunit, "Fable runtime did not emit its JUnit report.")
 
         let workId = "816-polyglot-lifecycle"
         let root = TestSupport.tempDirectory ()
@@ -122,6 +143,7 @@ module PolyglotLifecycleAcceptanceTests =
 
         copyFile trx (Path.Combine(root, "artifacts", "server.trx"))
         copyFile junit (Path.Combine(root, "artifacts", "client.junit.xml"))
+        copyFile fableJunit (Path.Combine(root, "artifacts", "fable.junit.xml"))
 
         let importReport path =
             { TestSupport.evidenceRequest root workId "Polyglot lifecycle acceptance" with
@@ -140,13 +162,20 @@ module PolyglotLifecycleAcceptanceTests =
         // Reactivate the client obligations. EV001 retains the TRX receipt, while the newly
         // pass-claiming obligations are still unobserved and can receive the JUnit receipt.
         evidenceText root workId
-        |> fun text -> text.Replace("result: missing", "result: pass")
+        |> activateMissing 3
         |> TestSupport.writeRelative root $"work/{workId}/evidence.yml"
 
         importReport "artifacts/client.junit.xml" |> assertNoErrors
+
+        evidenceText root workId
+        |> activateMissing 1
+        |> TestSupport.writeRelative root $"work/{workId}/evidence.yml"
+
+        importReport "artifacts/fable.junit.xml" |> assertNoErrors
         let finalEvidence = evidenceText root workId
         Assert.Contains("source: artifacts/server.trx", finalEvidence)
         Assert.Contains("source: artifacts/client.junit.xml", finalEvidence)
+        Assert.Contains("source: artifacts/fable.junit.xml", finalEvidence)
 
         let verify = TestSupport.runVerify root workId "Polyglot lifecycle acceptance"
         let ship = TestSupport.runShip root workId "Polyglot lifecycle acceptance"
@@ -175,4 +204,10 @@ module PolyglotLifecycleAcceptanceTests =
                 |> List.map _.Source
                 |> Set.ofList
 
-            Assert.Equal<string Set>(set [ "artifacts/server.trx"; "artifacts/client.junit.xml" ], sources)
+            Assert.Equal<string Set>(
+                set
+                    [ "artifacts/server.trx"
+                      "artifacts/client.junit.xml"
+                      "artifacts/fable.junit.xml" ],
+                sources
+            )
