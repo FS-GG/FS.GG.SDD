@@ -809,11 +809,25 @@ module internal HandlersEvidence =
         // FS.GG.SDD#349: every path a satisfying declaration cites but that is not on disk. The
         // diagnostic names the *paths*, not the declaration ids — the path is what the author has to
         // go and fix, and it is the fact the gate was missing.
-        let missingArtifactPaths =
+        //
+        // FS.GG.SDD#822: one of those paths is structurally special — this work item's own
+        // `readiness/<id>/ship-verdict.json`. Every other cited artifact genuinely CAN be produced
+        // before evidence runs; this one cannot, because `ship` is the stage that writes it, two
+        // stages after evidence. Routed to its own diagnostic below so the author is told the
+        // ordering rule instead of being told to go produce or retype a file that cannot exist yet.
+        let isOwnShipVerdictPath path =
+            String.Equals(
+                normalizeRelativePath path,
+                normalizeRelativePath (shipVerdictPath workId),
+                StringComparison.OrdinalIgnoreCase
+            )
+
+        let selfShipVerdictPaths, missingArtifactPaths =
             artifact.Evidence
             |> List.collect (missingCitedArtifacts artifactExists)
             |> List.distinct
             |> List.sort
+            |> List.partition isOwnShipVerdictPath
 
         let performanceEvaluations =
             evaluatePerformanceBudgets artifactText artifact.Evidence
@@ -859,6 +873,8 @@ module internal HandlersEvidence =
               missingVisualInspectionArtifact path missingVisualArtifacts
           if not (List.isEmpty missingArtifactPaths) then
               evidenceArtifactNotFound path missingArtifactPaths
+          if not (List.isEmpty selfShipVerdictPaths) then
+              evidenceSelfShipVerdictCitedFromEvidence path selfShipVerdictPaths
           match performanceIntent with
           | Some intent when
               intent.Disposition.Equals("active", StringComparison.OrdinalIgnoreCase)

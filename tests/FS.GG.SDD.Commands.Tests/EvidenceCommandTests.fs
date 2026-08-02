@@ -1527,6 +1527,78 @@ evidence:
 
         Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
 
+    // ---------------------------------------------------------------------------------------------
+    // FS.GG.SDD#822 — a work item's own `readiness/<id>/ship-verdict.json` cannot exist yet at the
+    // evidence stage: `ship` writes it, and `ship` runs two stages after `evidence`. Citing it is a
+    // stage-ordering fact, not a fixable authoring mistake, so it must not raise the generic
+    // `evidence.artifactNotFound` message (which tells the author to go produce the file).
+    // ---------------------------------------------------------------------------------------------
+
+    /// The acceptance criteria's own scenario: a pass citing this work item's own not-yet-produced
+    /// ship verdict gets a diagnostic naming the ordering rule, not the generic missing-file message.
+    [<Fact>]
+    let ``evidence names the stage-ordering rule when a work item cites its own ship verdict`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+        let ownShipVerdictPath = $"readiness/{workId}/ship-verdict.json"
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                $"    artifacts: [{ownShipVerdictPath}]\n    sourceRefs: []\n    result: pass\n    synthetic: false\n")
+        |> ignore
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+        let diagnostic =
+            report.Diagnostics
+            |> List.find (fun diagnostic -> diagnostic.Id = "evidence.selfShipVerdictCitedFromEvidence")
+
+        Assert.Contains(ownShipVerdictPath, diagnostic.RelatedIds)
+        Assert.Contains("ship", diagnostic.Message)
+
+        // The generic missing-artifact diagnostic must not ALSO fire for this path — the sibling
+        // diagnostic replaces it, it does not merely accompany it.
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
+
+    /// The generic `artifactNotFound` message stays exactly as it was for a path that is genuinely
+    /// missing/mistyped, even when a self-ship-verdict citation is present in the same run — the two
+    /// diagnostics must route by path, not collapse into one or the other.
+    [<Fact>]
+    let ``evidence still raises the generic diagnostic for a genuinely missing artifact alongside a self ship-verdict citation``
+        ()
+        =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+        let ownShipVerdictPath = $"readiness/{workId}/ship-verdict.json"
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                $"    artifacts: [{ownShipVerdictPath}, evidence/frame-that-was-never-rendered.png]\n    sourceRefs: []\n    result: pass\n    synthetic: false\n")
+        |> ignore
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+        let selfShipVerdict =
+            report.Diagnostics
+            |> List.find (fun diagnostic -> diagnostic.Id = "evidence.selfShipVerdictCitedFromEvidence")
+
+        let genericMissing =
+            report.Diagnostics
+            |> List.find (fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
+
+        Assert.Equal<string list>([ ownShipVerdictPath ], selfShipVerdict.RelatedIds)
+        Assert.Equal<string list>([ "evidence/frame-that-was-never-rendered.png" ], genericMissing.RelatedIds)
+
     /// FR-005 / SC-002: a disclosed synthetic pass is honest, so it does not BLOCK — but it never
     /// satisfies. The gate must not reclassify it `invalid`; the existing cascade records it
     /// `synthetic`, which is unsatisfying by the satisfaction rule this feature inherits.

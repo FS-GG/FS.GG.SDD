@@ -806,6 +806,20 @@ module internal DiagnosticConstructors =
             "Produce the cited artifact, correct the path, or stop claiming a pass — a cited path that is not on disk proves nothing."
             paths
 
+    // FS-GG/FS.GG.SDD#822: the one cited path that `artifactNotFound`'s generic message is wrong
+    // advice for — a work item's own `readiness/<id>/ship-verdict.json`. Every other citation
+    // genuinely CAN be produced before evidence runs; this one structurally cannot, because `ship`
+    // is the stage that writes it, two stages after evidence. Telling the author to "produce the
+    // cited artifact" frames a stage-ordering fact as a fixable authoring mistake, so this sibling
+    // names the rule instead of repeating the missing-file message.
+    let evidenceSelfShipVerdictCitedFromEvidence path paths =
+        errorDiagnostic
+            "evidence.selfShipVerdictCitedFromEvidence"
+            (Some path)
+            "Evidence cites this work item's own ship-verdict.json, which cannot exist yet: ship writes it, and ship runs after evidence."
+            "Do not cite readiness/<id>/ship-verdict.json from this work item's own evidence.yml — it is produced by `fsgg-sdd ship`, two stages after evidence. Cite a different artifact, or record a deferral saying why the obligation is satisfied without it."
+            paths
+
     /// FS.GG.SDD#359 / #365. The sibling of `artifactNotFound`, one step earlier: that path is legal
     /// but absent; this path is not legal at all. It is the author's typo, not a tool defect, and it
     /// is refused BEFORE any filesystem probe is planned for it — a `..` chain used to be resolved
