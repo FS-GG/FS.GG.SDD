@@ -132,20 +132,40 @@ module MergePolicyTests =
 
         Assert.Contains("- Mine, and mine alone.", text)
 
-    /// FS.GG.SDD#824. `plan`'s `Source Snapshot`/`Performance Intent` rewrite is two direct
-    /// `replaceSectionBody` calls, not a policy-driven fold like `rederiveChecklist`/
-    /// `appendPlanEntries` above — so nothing short of an explicit check ties what those calls
-    /// actually rewrite (`PlanAuthoring.rederivedHeadings`) to what `MergePolicies.plan` declares
-    /// `rederived`. Before #824, `Performance Intent` was rewritten by exactly such a call while
-    /// absent from the policy entirely, and every other coherence check here still passed — they
-    /// all validate internal consistency of what IS declared, never that every section a stage
-    /// actually writes is represented in the policy at all. This is that missing check.
+    /// FS.GG.SDD#827. `plan`'s wholesale rewrites are direct `replaceSectionBody` calls, not a
+    /// policy-driven fold like `rederiveChecklist`/`appendPlanEntries`. PlanAuthoring shadows the
+    /// generic primitive with a policy-checked boundary, so F# application shape cannot change the
+    /// verdict. This is executable registration, not a maintained list or source-text parser:
+    /// comments and strings that merely mention `replaceSectionBody "Foo"` are not call sites and
+    /// therefore cannot become false positives.
     [<Fact>]
-    let ``plan's rederived rewrite sites agree with what MergePolicies.plan declares rederived`` () =
-        Assert.Equal<Set<string>>(
-            Set.ofList (MergePolicy.rederivedSections MergePolicies.plan),
-            Set.ofList PlanAuthoring.rederivedHeadings
-        )
+    let ``plan rewrite boundary rejects undeclared headings in pipeline and direct application`` () =
+        let text = "## Source Snapshot\nold\n\n## Foo\nauthored\n"
+        let body = [ "new" ]
+
+        // False-positive control: source scanners can mistake this body text for an executable call;
+        // the runtime boundary sees only the declared heading argument and permits the rewrite.
+        let commentLikeBody = [ "// |> replaceSectionBody \"Foo\" [ \"bar\" ]" ]
+
+        let pipedDeclared =
+            text |> PlanAuthoring.replaceSectionBody "Source Snapshot" commentLikeBody
+
+        let directDeclared =
+            PlanAuthoring.replaceSectionBody "Source Snapshot" commentLikeBody text
+
+        Assert.Equal(pipedDeclared, directDeclared)
+        Assert.Contains(commentLikeBody.Head, pipedDeclared)
+
+        let pipedFailure =
+            Assert.Throws<ArgumentException>(fun () -> text |> PlanAuthoring.replaceSectionBody "Foo" body |> ignore)
+
+        let directFailure =
+            Assert.Throws<ArgumentException>(fun () ->
+                let rewritten = PlanAuthoring.replaceSectionBody "Foo" body text
+                rewritten |> ignore)
+
+        Assert.Contains("Foo", pipedFailure.Message)
+        Assert.Contains("Foo", directFailure.Message)
 
     [<Fact>]
     let ``mergeAuthoredTaskState under a section policy preserves the prior graph`` () =

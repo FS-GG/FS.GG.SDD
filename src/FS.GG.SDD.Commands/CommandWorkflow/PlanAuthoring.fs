@@ -655,18 +655,20 @@ No blocking planning findings recorded.
     let private sourceSnapshotHeading = "Source Snapshot"
     let private performanceIntentHeading = "Performance Intent"
 
-    /// FS.GG.SDD#824. The headings `plan`'s update path rewrites wholesale via a direct
-    /// `replaceSectionBody` call rather than the generic `replaceSectionBodies` fold
-    /// `appendPlanEntries` uses for `appended` sections — `Source Snapshot` re-derives only under
-    /// `--accept-upstream` (FR-004/FR-005: an unconditional rewrite would make a digest-drift block
-    /// unrecoverable); `Performance Intent` re-derives on every non-stale run, since it is a pure
-    /// projection of spec.md's front matter with no staleness gate of its own (#821). Both call sites
-    /// below spell their heading through the two constants above, and this list is built from those
-    /// same constants, so it cannot drift from what is actually rewritten. `MergePolicyTests` pins
-    /// this list equal to `MergePolicy.rederivedSections MergePolicies.plan` — the coherence check
-    /// that was missing when `Performance Intent` was rewritten here without being declared there at
-    /// all (the #824 defect: a heading rewritten outside the policy's knowledge entirely).
-    let rederivedHeadings = [ sourceSnapshotHeading; performanceIntentHeading ]
+    // FS.GG.SDD#827. PlanAuthoring intentionally shadows the generic markdown primitive with the
+    // plan's policy boundary. Every unqualified call below — piped or applied directly — resolves
+    // here, so call formatting cannot hide a wholesale rewrite from MergePolicies.plan. A fully
+    // qualified EarlyStageAuthoring call would be an explicit bypass visible at review, rather than
+    // an ordinary alternative application shape that silently escapes a source-text regex.
+    let replaceSectionBody heading bodyLines text =
+        let rederived = MergePolicy.rederivedSections MergePolicies.plan |> Set.ofList
+
+        if not (Set.contains heading rederived) then
+            invalidArg
+                (nameof heading)
+                $"PlanAuthoring cannot re-derive undeclared plan section '{heading}'. Add it to MergePolicies.plan first."
+
+        EarlyStageAuthoring.replaceSectionBody heading bodyLines text
 
     // Feature 090 (#163). Re-baseline the plan's own snapshot, mirroring `rederiveChecklist`'s
     // `replaceSectionBody "Source Snapshot"`. Touches no other section: the plan's authored prose is

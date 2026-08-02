@@ -138,8 +138,8 @@ module CommandTypes =
                 // FS.GG.SDD#824. `Performance Intent` is a pure projection of spec.md's typed
                 // `performanceIntent` front matter (#821) — rewritten wholesale on every non-stale
                 // `plan` run, same as `Source Snapshot`, never appended to or left for the author.
-                // `PlanAuthoring.rederivedHeadings` names exactly this pair; `MergePolicyTests` pins
-                // the two lists equal so a hardcoded rewrite can never again go undeclared here.
+                // `PlanAuthoring.replaceSectionBody` enforces this policy at the executable rewrite
+                // boundary, independently of whether its caller uses pipeline or direct application.
                 [ "Source Snapshot"; "Performance Intent" ],
                 [ "Plan Decisions"
                   "Contract Impact"
