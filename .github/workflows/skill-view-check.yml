@@ -134,10 +134,11 @@
 #
 # So the generate lands ahead of the checks, in the same commit that untracks the root — never before
 # it (`skill-view generate` refuses a root git TRACKS, with no override, and would die), and never
-# after it (that is the RED window). `--roots` names the VIEW root explicitly, exactly as
-# `FsggKitViewSkillRoots` does for the materializer: letting the tool fall back to the default pair
-# would also try to resolve `.claude/skills`, this repo's tracked source, and be a refusal rather than
-# a no-op.
+# after it (that is the RED window). `--receiver-proj .config/kit/FS.GG.Kit.receiver.proj` names the
+# source AND the view roots from THE DECLARATION (FS.GG.SDD#801), exactly as `FsggKitViewSkillRoots`
+# does for the materializer: it is refused alongside `--source`/`--roots`, so there is no fallback to
+# the default pair to worry about resolving `.claude/skills`, this repo's tracked source, into a
+# refusal — the declaration is the whole input set by construction.
 #
 # It is NOT conditional on whether the root happens to be missing, and it must never become so.
 # "Generate whatever is absent, then assert it is present" is the fail-open shape this whole item
@@ -221,8 +222,13 @@ jobs:
       # UNCONDITIONAL, and ahead of all three assertions. `.agents/skills` is a VIEW root: git-ignored,
       # and therefore absent in this checkout exactly as it is in every fresh clone. See the header
       # block for why this may be neither conditional nor moved.
+      #
+      # `--receiver-proj`, NOT a hand-copied `--source .claude/skills --roots ".agents/skills"`
+      # (FS.GG.SDD#801): the pair below reads the SAME declaration `--receiver-proj` grades at line
+      # ~278, so a legal disposition swap in `<FsggKitSkillRoots>`/`<FsggKitViewSkillRoots>` cannot
+      # leave this generate targeting a pair the check step no longer agrees with.
       - name: Resolve the view root this tree no longer commits
-        run: bash scripts/skill-view generate --source .claude/skills --roots ".agents/skills"
+        run: bash scripts/skill-view generate --receiver-proj .config/kit/FS.GG.Kit.receiver.proj
 
       # ADR-0067 §8's replacement alarm DEMONSTRATES IT CAN FIRE, and the demonstration now ships
       # inside the tool (FS-GG/.github#1710/#1770). `scripts/check-skill-view-roots.sh` used to carry
