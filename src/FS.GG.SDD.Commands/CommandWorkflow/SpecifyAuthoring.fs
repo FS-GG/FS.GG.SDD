@@ -337,7 +337,10 @@ Prose status: specified
             | _ -> diagnostic)
 
     let parseSpecificationForCommand path text : Result<SpecificationFacts * Diagnostic list, Diagnostic list> =
-        let snapshot = { Path = path; Text = text }
+        let snapshot =
+            { Path = path
+              Text = text
+              RawBytes = None }
 
         match parseSpecificationFacts snapshot with
         | Error diagnostics -> Error(mapSpecificationDiagnostics path diagnostics)

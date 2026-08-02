@@ -239,6 +239,7 @@ FS.GG.SDD.Artifacts.SchemaVersion.isDeprecated
 FS.GG.SDD.Artifacts.SchemaVersion.isSupported
 FS.GG.SDD.Artifacts.SchemaVersion.outputSha256Text
 FS.GG.SDD.Artifacts.SchemaVersion.parse
+FS.GG.SDD.Artifacts.SchemaVersion.sha256Bytes
 FS.GG.SDD.Artifacts.SchemaVersion.sha256Text
 FS.GG.SDD.Artifacts.SchemaVersion.statusValue
 FS.GG.SDD.Artifacts.Serialization.checkGeneratedWorkModelCurrency
@@ -258,6 +259,7 @@ FS.GG.SDD.Artifacts.Specification.specificationStandardSections
 FS.GG.SDD.Artifacts.Task.parseTaskFacts
 FS.GG.SDD.Artifacts.Task.parseTasks
 FS.GG.SDD.Artifacts.TestReport.parse
+FS.GG.SDD.Artifacts.TestReport.parseBytes
 FS.GG.SDD.Artifacts.Verify.parseVerificationView
 FS.GG.SDD.Artifacts.WorkItem.loadWorkItemFromSnapshots
 FS.GG.SDD.Artifacts.WorkItemMetadata.parseWorkItemMetadata

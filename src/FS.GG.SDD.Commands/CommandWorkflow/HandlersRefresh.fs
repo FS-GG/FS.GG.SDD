@@ -346,8 +346,16 @@ module internal HandlersRefresh =
                         // treat a view this run authored as unread.
                         { Effect = ReadFile path
                           Succeeded = true
-                          Read = Bytes { Path = path; Text = text }
-                          Snapshot = Some { Path = path; Text = text }
+                          Read =
+                            Bytes
+                                { Path = path
+                                  Text = text
+                                  RawBytes = None }
+                          Snapshot =
+                            Some
+                                { Path = path
+                                  Text = text
+                                  RawBytes = None }
                           Process = None
                           Confirmed = None
                           Diagnostic = None }

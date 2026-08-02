@@ -111,7 +111,12 @@ module internal HandlersEvidence =
             | _ -> diagnostic)
 
     let parseEvidenceArtifactForCommand path text : Result<EvidenceArtifact * Diagnostic list, Diagnostic list> =
-        match parseEvidenceArtifact { Path = path; Text = text } with
+        match
+            parseEvidenceArtifact
+                { Path = path
+                  Text = text
+                  RawBytes = None }
+        with
         | Ok artifact -> Ok(artifact, mapEvidenceDiagnostics path artifact.Diagnostics)
         | Error diagnostics -> Error(mapEvidenceDiagnostics path diagnostics)
 
@@ -265,7 +270,12 @@ module internal HandlersEvidence =
                 match snapshot path model with
                 | None -> None, [ DiagnosticConstructors.testReportNotFound artifactPath path ]
                 | Some report ->
-                    match TestReport.parse path report.Text with
+                    match
+                        TestReport.parseBytes
+                            path
+                            (report.RawBytes |> Option.defaultValue (Encoding.UTF8.GetBytes report.Text))
+                            report.Text
+                    with
                     | Error reason -> None, [ DiagnosticConstructors.testReportUnparseable artifactPath reason ]
                     | Ok run when run.Failed > 0 ->
                         // The run is real and it FAILED, while an obligation claims a pass. Block, and
@@ -365,7 +375,12 @@ module internal HandlersEvidence =
                     match snapshot path model with
                     | None -> None, [ DiagnosticConstructors.testReportNotFound artifactPath path ]
                     | Some report ->
-                        match TestReport.parse path report.Text with
+                        match
+                            TestReport.parseBytes
+                                path
+                                (report.RawBytes |> Option.defaultValue (Encoding.UTF8.GetBytes report.Text))
+                                report.Text
+                        with
                         | Error reason -> None, [ DiagnosticConstructors.testReportUnparseable artifactPath reason ]
                         | Ok run when run.Failed > 0 ->
                             // The regenerated run now FAILS, while these obligations claim a pass. Block
@@ -427,24 +442,32 @@ module internal HandlersEvidence =
         else
             true
 
-    let private sha256Digest (text: string) =
-        Encoding.UTF8.GetBytes text
-        |> System.Security.Cryptography.SHA256.HashData
-        |> Array.map (fun value -> value.ToString("x2"))
-        |> String.concat ""
-        |> fun value -> "sha256:" + value
-
     /// A structurally valid journey receipt is still unsupported when the bytes it cites have
     /// moved. Keep this predicate at the disposition boundary: a diagnostic alone must never let a
     /// stale producer report retain a supported ED-/TD- state through ship and Governance.
-    let journeyReceiptReportIsCurrent (artifactText: string -> string option) declaration =
+    let journeyReceiptReportIsCurrent (artifactBytes: string -> byte array option) declaration =
         hasValidJourneyReceipt declaration
         && match declaration.JourneyReceipt with
            | Some receipt when citedPathIsContained receipt.ObservedReportSource ->
-               artifactText receipt.ObservedReportSource
-               |> Option.exists (fun text ->
-                   receipt.ObservedReportDigest.Equals(sha256Digest text, StringComparison.OrdinalIgnoreCase))
+               artifactBytes receipt.ObservedReportSource
+               |> Option.exists (fun bytes ->
+                   let digest = SchemaVersionModule.sha256Bytes bytes
+
+                   receipt.ObservedReportDigest.Equals($"sha256:{digest.Value}", StringComparison.OrdinalIgnoreCase))
            | _ -> false
+
+    /// A normal observed-run receipt remains evidence only while it names the exact bytes currently
+    /// at its contained source path. The receipt contract is checked explicitly so an older
+    /// normalized-text digest can never be reinterpreted as byte-exact merely because the values
+    /// happen to coincide for an LF/no-BOM report.
+    let observedRunIsCurrent (artifactBytes: string -> byte array option) declaration =
+        match declaration.ObservedRun with
+        | Some run when run.DigestContract = "exact-bytes-v1" && citedPathIsContained run.Source ->
+            artifactBytes run.Source
+            |> Option.exists (fun bytes ->
+                let digest = SchemaVersionModule.sha256Bytes bytes
+                run.Digest.Equals($"sha256:{digest.Value}", StringComparison.OrdinalIgnoreCase))
+        | _ -> false
 
     let evidenceSourceSnapshot label path text =
         EvidenceDomain.sourceSnapshot label path text
@@ -708,6 +731,8 @@ module internal HandlersEvidence =
         // Performance evidence is interpreted from the same already-sensed snapshots. This is an
         // injected lookup, not filesystem IO in the pure handler.
         (artifactText: string -> string option)
+        // Exact report bytes drive both normal observed-run and production-journey currentness.
+        (artifactBytes: string -> byte array option)
         (artifact: EvidenceArtifact)
         =
         let path = evidencePath workId
@@ -977,9 +1002,10 @@ module internal HandlersEvidence =
 
                   match declaration.JourneyReceipt with
                   | Some receipt when citedPathIsContained receipt.ObservedReportSource ->
-                      match artifactText receipt.ObservedReportSource with
-                      | Some reportText ->
-                          let actualDigest = sha256Digest reportText
+                      match artifactBytes receipt.ObservedReportSource with
+                      | Some reportBytes ->
+                          let digest = SchemaVersionModule.sha256Bytes reportBytes
+                          let actualDigest = $"sha256:{digest.Value}"
 
                           if
                               not (
@@ -1013,9 +1039,8 @@ module internal HandlersEvidence =
         // FS.GG.SDD#349: same injected probe result as the gate above, so the `ED-` disposition and
         // the blocking diagnostic cannot disagree about which declarations are supported.
         (artifactExists: string -> bool)
-        // FS.GG.SDD#709: existence is insufficient for a journey receipt. Classification must read
-        // the cited report bytes and bind their digest, or a stale report remains "supported".
-        (artifactText: string -> string option)
+        // FS.GG.SDD#709/#835: normal and journey receipts bind exact raw report bytes.
+        (artifactBytes: string -> byte array option)
         (artifact: EvidenceArtifact)
         : EvidenceDispositionDraft list =
         obligations
@@ -1110,6 +1135,13 @@ module internal HandlersEvidence =
                 elif
                     matches
                     |> List.exists (fun declaration ->
+                        declaration.ObservedRun.IsSome
+                        && not (observedRunIsCurrent artifactBytes declaration))
+                then
+                    "invalid", [ "evidence.observedRunStale" ]
+                elif
+                    matches
+                    |> List.exists (fun declaration ->
                         normalizedEvidenceResult declaration.Result = "pass" && declaration.Synthetic)
                 then
                     "synthetic", []
@@ -1125,7 +1157,7 @@ module internal HandlersEvidence =
                        |> List.exists (fun declaration ->
                            normalizedEvidenceResult declaration.Result = "pass"
                            && not declaration.Synthetic)
-                    && not (matches |> List.exists (journeyReceiptReportIsCurrent artifactText))
+                    && not (matches |> List.exists (journeyReceiptReportIsCurrent artifactBytes))
                 then
                     if matches |> List.exists hasValidJourneyReceipt then
                         "invalid", [ "evidence.productionJourneyReceiptStale" ]
@@ -1493,13 +1525,14 @@ sourceAnalysis: {analysisPath workId}
                                     currentSnapshots
                                     (citedArtifactExists model)
                                     (fun artifactPath -> snapshot artifactPath model |> Option.map _.Text)
+                                    (fun artifactPath -> snapshot artifactPath model |> Option.bind _.RawBytes)
                                     merged
 
                             let dispositions =
                                 evidenceDispositions
                                     obligations
                                     (citedArtifactExists model)
-                                    (fun artifactPath -> snapshot artifactPath model |> Option.map _.Text)
+                                    (fun artifactPath -> snapshot artifactPath model |> Option.bind _.RawBytes)
                                     artifact
 
                             let dispositionDiagnostics =

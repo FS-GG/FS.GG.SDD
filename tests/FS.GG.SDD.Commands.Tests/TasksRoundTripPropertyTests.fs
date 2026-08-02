@@ -237,7 +237,12 @@ module TasksRoundTripPropertyTests =
                   "  publicOrToolFacingImpact: true"
                   "tasks: []" ]
 
-        match parseTaskFacts { Path = tasksPath; Text = text } with
+        match
+            parseTaskFacts
+                { Path = tasksPath
+                  Text = text
+                  RawBytes = None }
+        with
         | Ok facts -> facts.FrontMatter
         | Error diagnostics -> failwithf "base tasks.yml did not parse: %A" diagnostics
 
@@ -300,7 +305,12 @@ module TasksRoundTripPropertyTests =
     let private roundTrips (authored: AuthoredTasks) =
         let text = renderText authored
 
-        match parseTaskFacts { Path = tasksPath; Text = text } with
+        match
+            parseTaskFacts
+                { Path = tasksPath
+                  Text = text
+                  RawBytes = None }
+        with
         | Error diagnostics -> failwithf "round-trip parse failed: %A\n--- rendered ---\n%s" diagnostics text
         | Ok facts -> authoredPartition authored = parsedPartition facts
 
@@ -335,7 +345,8 @@ module TasksRoundTripPropertyTests =
         match
             parseTaskFacts
                 { Path = tasksPath
-                  Text = renderText authored }
+                  Text = renderText authored
+                  RawBytes = None }
         with
         | Error diagnostics -> failwithf "anchor round-trip parse failed: %A" diagnostics
         | Ok facts ->
@@ -363,7 +374,12 @@ module TasksRoundTripPropertyTests =
         let text = renderText authored
         Assert.Contains("tasks: []", text) // inline marker, not `tasks:\n[]`
 
-        match parseTaskFacts { Path = tasksPath; Text = text } with
+        match
+            parseTaskFacts
+                { Path = tasksPath
+                  Text = text
+                  RawBytes = None }
+        with
         | Error diagnostics ->
             failwithf "empty-tasks round-trip parse failed: %A\n--- rendered ---\n%s" diagnostics text
         | Ok facts ->

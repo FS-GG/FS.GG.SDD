@@ -16,7 +16,8 @@ module WorkModelTests =
                         ) }
             elif snapshot.Path.EndsWith("/spec.md") && Option.isSome intent then
                 { snapshot with
-                    Text = snapshot.Text.Replace("status: draft\n---", $"status: draft\n{Option.get intent}---") }
+                    Text = snapshot.Text.Replace("status: draft\n---", $"status: draft\n{Option.get intent}---")
+                    RawBytes = None }
             else
                 snapshot)
         |> fun snapshots -> Serialization.normalizeSnapshotsToWorkModel snapshots "001-sdd-artifact-model"
@@ -191,7 +192,8 @@ module WorkModelTests =
 
     let private decisionSnapshot (line: string) : FileSnapshot =
         { Path = "work/demo/clarifications.md"
-          Text = $"## Decisions\n{line}\n" }
+          Text = $"## Decisions\n{line}\n"
+          RawBytes = None }
 
     /// FR-011. Every FR/US/AC the line names reaches the model, sorted and deduplicated.
     [<Fact>]

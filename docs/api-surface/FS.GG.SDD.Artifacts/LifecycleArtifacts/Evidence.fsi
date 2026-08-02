@@ -47,12 +47,16 @@ module Evidence =
     /// It does not make evidence unforgeable — it moves the bar from an assertion to an artifact of a
     /// declared format, whose counts must agree and whose file must still be on disk at `verify`.
     type ObservedRun =
-        { Source: string
-          Digest: string
-          Outcome: string
-          Passed: int
-          Failed: int
-          Skipped: int }
+        {
+            Source: string
+            Digest: string
+            /// `exact-bytes-v1`; legacy receipts missing the field require explicit re-sync.
+            DigestContract: string
+            Outcome: string
+            Passed: int
+            Failed: int
+            Skipped: int
+        }
 
     type JourneyReceipt =
         { SchemaVersion: int
@@ -217,6 +221,7 @@ module Evidence =
         type ObservedRunDraft =
             { Source: string option
               Digest: string option
+              DigestContract: string option
               Outcome: string option
               Passed: int
               Failed: int

@@ -239,13 +239,13 @@ module ReleaseContract =
 
     let currentRelease () : ReleaseReadiness =
         let identity =
-            { Version = "0.32.0"
-              Channel = channelOfVersion "0.32.0"
+            { Version = "1.0.0"
+              Channel = channelOfVersion "1.0.0"
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "0.32.x"
+            [ { SddVersionLine = "1.0.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "2.x" } ]
 
@@ -1127,10 +1127,15 @@ module ReleaseContract =
           //
           // And enumerate EVERY breaking change: a note that under-reports is the exact failure
           // the note exists to prevent.
-          // 0.32.0 is a MINOR: it adopts the expanded product-skill and work-board driver payloads
-          // while preserving public schemas and the schema-v1 compatibility path, so no migration
-          // note is required.
-          Migrations = [] }
+          // 1.0.0 is a MAJOR boundary: FileSnapshot/ObservedRun record shapes and the TestReport /
+          // SchemaVersion functions change the public Artifacts surface. The note names both the
+          // API adaptation and the persisted observedRun receipt migration.
+          Migrations =
+            [ { Version = "1.0.0"
+                Path = "docs/release/migrations/1.0.0.md"
+                BreakingChanges =
+                  [ "FileSnapshot carries exact raw bytes from filesystem reads"
+                    "ObservedRun identifies its digest contract and legacy receipts require explicit re-sync" ] } ] }
 
     // ---- canonical serialization ----
 

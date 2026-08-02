@@ -80,7 +80,8 @@ module SchemaContractTests =
 
     let private projectSnapshot text : FileSnapshot =
         { Path = ".fsgg/project.yml"
-          Text = text }
+          Text = text
+          RawBytes = None }
 
     let private parsedTestFramework text =
         match parseProjectConfig (projectSnapshot text) with

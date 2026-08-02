@@ -792,7 +792,8 @@ module internal ViewGeneration =
             match
                 parseEvidence
                     { Path = evidencePath workId
-                      Text = text }
+                      Text = text
+                      RawBytes = None }
             with
             | Ok declarations -> Some declarations
             | Error _ -> None)
@@ -881,28 +882,40 @@ module internal ViewGeneration =
           snapshot ".fsgg/sdd.yml" model
           snapshot ".fsgg/agents.yml" model
           specText
-          |> Option.map (fun text -> { Path = specPath workId; Text = text })
+          |> Option.map (fun text ->
+              { Path = specPath workId
+                Text = text
+                RawBytes = None })
           |> Option.orElseWith (fun () -> snapshot (specPath workId) model)
           clarificationText
           |> Option.map (fun text ->
               { Path = clarificationPath workId
-                Text = text })
+                Text = text
+                RawBytes = None })
           |> Option.orElseWith (fun () -> snapshot (clarificationPath workId) model)
           checklistText
           |> Option.map (fun text ->
               { Path = checklistPath workId
-                Text = text })
+                Text = text
+                RawBytes = None })
           |> Option.orElseWith (fun () -> snapshot (checklistPath workId) model)
           planText
-          |> Option.map (fun text -> { Path = planPath workId; Text = text })
+          |> Option.map (fun text ->
+              { Path = planPath workId
+                Text = text
+                RawBytes = None })
           |> Option.orElseWith (fun () -> snapshot (planPath workId) model)
           tasksText
-          |> Option.map (fun text -> { Path = tasksPath workId; Text = text })
+          |> Option.map (fun text ->
+              { Path = tasksPath workId
+                Text = text
+                RawBytes = None })
           |> Option.orElseWith (fun () -> snapshot (tasksPath workId) model)
           evidenceText
           |> Option.map (fun text ->
               { Path = evidencePath workId
-                Text = text })
+                Text = text
+                RawBytes = None })
           |> Option.orElseWith (fun () -> snapshot (evidencePath workId) model) ]
         |> List.choose id
         |> fun snapshots -> snapshots @ performanceEvidenceSnapshots workId evidenceText model

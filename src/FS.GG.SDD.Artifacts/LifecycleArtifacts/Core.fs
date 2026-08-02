@@ -13,7 +13,15 @@ open YamlDotNet.RepresentationModel
 
 [<AutoOpen>]
 module Core =
-    type FileSnapshot = { Path: string; Text: string }
+    /// A decoded body plus, when it came from the filesystem edge, the exact bytes read.
+    ///
+    /// Most artifact parsers deliberately consume `Text`. Evidence receipts are the exception:
+    /// they attest to a committed artifact and must therefore hash `RawBytes` rather than a
+    /// representation that decoding may have changed (BOM/preamble and line endings).
+    type FileSnapshot =
+        { Path: string
+          Text: string
+          RawBytes: byte array option }
 
     type AnalysisSourceRecord =
         { Path: string

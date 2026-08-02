@@ -97,7 +97,10 @@ module internal TaskGraphAuthoring =
           AdvisoryCount = facts.AdvisoryNotes.Length }
 
     let parseTasksForCommand path text : Result<TaskFacts * Diagnostic list, Diagnostic list> =
-        let snapshot = { Path = path; Text = text }
+        let snapshot =
+            { Path = path
+              Text = text
+              RawBytes = None }
 
         match parseTaskFacts snapshot with
         | Error diagnostics ->

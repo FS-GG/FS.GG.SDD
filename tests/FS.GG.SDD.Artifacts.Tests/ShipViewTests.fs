@@ -61,7 +61,8 @@ module ShipViewTests =
         match
             parseShipView
                 { Path = "readiness/013-ship-command/ship.json"
-                  Text = validShipJson }
+                  Text = validShipJson
+                  RawBytes = None }
         with
         | Ok view ->
             Assert.Equal(1, view.SchemaVersion.Major)
@@ -76,7 +77,8 @@ module ShipViewTests =
         match
             parseShipView
                 { Path = "readiness/013-ship-command/ship.json"
-                  Text = validShipJson }
+                  Text = validShipJson
+                  RawBytes = None }
         with
         | Ok view ->
             Assert.Equal("shipReady", view.Disposition)
@@ -94,7 +96,8 @@ module ShipViewTests =
         match
             parseShipView
                 { Path = "readiness/013-ship-command/ship.json"
-                  Text = "{ not valid ship json" }
+                  Text = "{ not valid ship json"
+                  RawBytes = None }
         with
         | Ok _ -> failwith "Expected malformed ship view to fail parsing."
         | Error diagnostics -> Assert.NotEmpty diagnostics
@@ -112,7 +115,8 @@ module ShipViewTests =
         match
             parseShipView
                 { Path = "readiness/013-ship-command/ship.json"
-                  Text = withBlocking }
+                  Text = withBlocking
+                  RawBytes = None }
         with
         | Ok view -> Assert.Equal<string list>([ "SF001"; "SF002" ], view.DispositionBlockingFindingIds)
         | Error diagnostics -> failwith $"Expected a valid ship view, got {diagnostics}."
@@ -126,7 +130,8 @@ module ShipViewTests =
                     validShipJson.Replace(
                         "\"blockingFindingIds\": [],\n    \"warningFindingIds\"",
                         "\"warningFindingIds\""
-                    ) }
+                    )
+                  RawBytes = None }
         with
         | Ok view -> Assert.Empty view.DispositionBlockingFindingIds
         | Error diagnostics -> failwith $"Expected a valid ship view, got {diagnostics}."
@@ -139,7 +144,8 @@ module ShipViewTests =
         match
             parseShipView
                 { Path = "readiness/013-ship-command/ship.json"
-                  Text = futureJson }
+                  Text = futureJson
+                  RawBytes = None }
         with
         | Ok _ -> failwith "Expected future schema version to fail parsing."
         | Error diagnostics -> Assert.NotEmpty diagnostics

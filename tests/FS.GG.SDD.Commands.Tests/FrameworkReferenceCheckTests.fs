@@ -68,7 +68,8 @@ No blocking planning findings recorded.
         match
             parsePlanFacts
                 { Path = "work/008-plan-command/plan.md"
-                  Text = text }
+                  Text = text
+                  RawBytes = None }
         with
         | Ok facts -> facts
         | Error diagnostics -> failwith $"plan did not parse: {diagnostics}"

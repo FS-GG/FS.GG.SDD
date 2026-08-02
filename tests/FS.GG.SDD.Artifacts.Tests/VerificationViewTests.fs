@@ -95,7 +95,8 @@ module VerificationViewTests =
     let ``parseVerificationView reads schema version 1 shape`` () =
         let snapshot =
             { Path = "readiness/012-verify-command/verify.json"
-              Text = validVerifyJson }
+              Text = validVerifyJson
+              RawBytes = None }
 
         match parseVerificationView snapshot with
         | Ok view ->
@@ -114,7 +115,8 @@ module VerificationViewTests =
     let ``parseVerificationView recovers evidence and test disposition states`` () =
         let snapshot =
             { Path = "readiness/012-verify-command/verify.json"
-              Text = validVerifyJson }
+              Text = validVerifyJson
+              RawBytes = None }
 
         match parseVerificationView snapshot with
         | Ok view ->
@@ -130,7 +132,8 @@ module VerificationViewTests =
     let ``parseVerificationView reports malformed generated JSON`` () =
         let snapshot =
             { Path = "readiness/012-verify-command/verify.json"
-              Text = "{ not-json" }
+              Text = "{ not-json"
+              RawBytes = None }
 
         match parseVerificationView snapshot with
         | Ok _ -> failwith "Expected malformed verification view to fail."

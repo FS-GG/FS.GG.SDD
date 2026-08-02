@@ -70,7 +70,12 @@ module ShipCommandTests =
         let shipJson = TestSupport.readRelative root shipPath
         let verdictJson = TestSupport.readRelative root shipVerdictPath
 
-        match parseShipView { Path = shipPath; Text = shipJson } with
+        match
+            parseShipView
+                { Path = shipPath
+                  Text = shipJson
+                  RawBytes = None }
+        with
         | Error diagnostics -> failwith $"ship.json did not parse: {diagnostics}."
         | Ok view ->
             // The verdict is a projection: re-project the parsed ship view and demand byte equality
@@ -158,7 +163,12 @@ module ShipCommandTests =
         Assert.Contains(report.GeneratedViews, fun view -> view.Path = shipPath && view.Kind = "ship")
         Assert.Equal(Some "ship.next.protectedBoundary", report.NextAction |> Option.map _.ActionId)
 
-        match parseShipView { Path = shipPath; Text = shipJson } with
+        match
+            parseShipView
+                { Path = shipPath
+                  Text = shipJson
+                  RawBytes = None }
+        with
         | Ok view ->
             Assert.Equal("shipReady", view.Readiness)
             Assert.Equal(workId, view.WorkId.Value)
@@ -488,7 +498,8 @@ module ShipCommandTests =
         match
             parseShipView
                 { Path = shipPath
-                  Text = TestSupport.readRelative root shipPath }
+                  Text = TestSupport.readRelative root shipPath
+                  RawBytes = None }
         with
         | Error diagnostics -> failwith $"ship.json did not parse: {diagnostics}."
         | Ok view ->

@@ -35,6 +35,8 @@ module SchemaVersion =
     val createSourceDigest: algorithm: string -> value: string -> Result<SourceDigest, string>
     val createOutputDigest: algorithm: string -> value: string -> Result<OutputDigest, string>
     val sha256Text: text: string -> SourceDigest
+    /// SHA-256 over exact bytes, with no decoding, BOM removal, or newline normalization.
+    val sha256Bytes: bytes: byte array -> SourceDigest
     val outputSha256Text: text: string -> OutputDigest
     val createGeneratorVersion: id: string -> version: string -> Result<GeneratorVersion, string>
     val currentGeneratorVersion: unit -> GeneratorVersion

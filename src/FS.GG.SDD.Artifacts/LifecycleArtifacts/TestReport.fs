@@ -102,7 +102,7 @@ module TestReport =
 
         Ok(passed, failed, skipped)
 
-    let parse (source: string) (text: string) : Result<ObservedRun, string> =
+    let private parseWithDigest (source: string) (text: string) (digest: SourceDigest) : Result<ObservedRun, string> =
         if String.IsNullOrWhiteSpace text then
             Error "The report is empty."
         else
@@ -152,11 +152,10 @@ module TestReport =
                                 $"The report records no executed tests (passed: {passed}, failed: {failed}, skipped: {skipped}). A run in which nothing executed proves nothing."
                         else
 
-                            let digest = sha256Text text
-
                             Ok
                                 { Source = source
                                   Digest = $"sha256:{digest.Value}"
+                                  DigestContract = "exact-bytes-v1"
                                   // Derived, never copied from the report's own summary attribute (FR-005):
                                   // TRX says `outcome="Completed"` for a run with failures, and JUnit has no
                                   // outcome at all. The counts are the only thing both formats agree on.
@@ -164,3 +163,11 @@ module TestReport =
                                   Passed = passed
                                   Failed = failed
                                   Skipped = skipped }))
+
+    /// Text-only compatibility entry point. New command-path receipts use `parseBytes`.
+    let parse (source: string) (text: string) : Result<ObservedRun, string> =
+        parseWithDigest source text (sha256Text text)
+
+    /// The receipt names exactly the bytes that were read, never a normalized decoded form.
+    let parseBytes (source: string) (bytes: byte array) (text: string) : Result<ObservedRun, string> =
+        parseWithDigest source text (sha256Bytes bytes)

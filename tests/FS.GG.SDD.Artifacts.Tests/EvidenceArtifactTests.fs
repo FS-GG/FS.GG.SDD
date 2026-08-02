@@ -70,7 +70,12 @@ lifecycleNotes:
             .Replace("    laterLifecycleVisibility: null\n", "")
 
     let private declarationsOf label text =
-        match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+        match
+            parseEvidenceArtifact
+                { Path = evidencePath
+                  Text = text
+                  RawBytes = None }
+        with
         | Ok artifact -> artifact.Evidence
         | Error diagnostics -> failwith $"Expected the {label} evidence artifact to parse, got {diagnostics}."
 
@@ -78,7 +83,8 @@ lifecycleNotes:
     let ``parseEvidenceArtifact reads schema version 1 shape`` () =
         let snapshot =
             { Path = evidencePath
-              Text = validEvidenceYaml }
+              Text = validEvidenceYaml
+              RawBytes = None }
 
         match parseEvidenceArtifact snapshot with
         | Ok artifact ->
@@ -121,7 +127,8 @@ lifecycleNotes:
             match
                 parseEvidenceArtifact
                     { Path = evidencePath
-                      Text = withBudget }
+                      Text = withBudget
+                      RawBytes = None }
             with
             | Ok artifact -> Assert.Single artifact.Evidence
             | Error diagnostics -> failwith $"Expected performance evidence to parse, got {diagnostics}."
@@ -490,7 +497,8 @@ lifecycleNotes:
         match
             parseEvidenceArtifact
                 { Path = evidencePath
-                  Text = validEvidenceYaml }
+                  Text = validEvidenceYaml
+                  RawBytes = None }
         with
         | Ok artifact ->
             let declaration = Assert.Single(artifact.Evidence)
@@ -508,7 +516,12 @@ lifecycleNotes:
                 .Replace("rationale: null", "rationale: \"null\"")
                 .Replace("owner: null", "owner: \"null\"")
 
-        match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+        match
+            parseEvidenceArtifact
+                { Path = evidencePath
+                  Text = text
+                  RawBytes = None }
+        with
         | Ok artifact ->
             let declaration = Assert.Single(artifact.Evidence)
             Assert.Equal(Some "null", declaration.Rationale)
@@ -548,7 +561,12 @@ lifecycleNotes:
         Assert.Equal(Some "null", rationaleOf (validEvidenceYaml.Replace("rationale: null", "rationale: \"null\"")))
 
     let private singleDeclarationOf label text =
-        match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+        match
+            parseEvidenceArtifact
+                { Path = evidencePath
+                  Text = text
+                  RawBytes = None }
+        with
         | Ok artifact -> Assert.Single(artifact.Evidence)
         | Error diagnostics -> failwith $"Expected the {label} evidence artifact to parse, got {diagnostics}."
 
@@ -615,7 +633,12 @@ lifecycleNotes:
         Assert.Equal(None, reference.Result)
 
     let private singleSnapshotOf text =
-        match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+        match
+            parseEvidenceArtifact
+                { Path = evidencePath
+                  Text = text
+                  RawBytes = None }
+        with
         | Ok artifact -> Assert.Single(artifact.SourceSnapshots)
         | Error diagnostics -> failwith $"Expected evidence artifact to parse, got {diagnostics}."
 
@@ -665,7 +688,12 @@ lifecycleNotes:
                 "evidence:\n  - id: EV001\n    kind: verification\n    subject:\n      type: task\n      id: T002\n    result: pass\n  - id: EV001"
             )
 
-        match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+        match
+            parseEvidenceArtifact
+                { Path = evidencePath
+                  Text = text
+                  RawBytes = None }
+        with
         | Ok artifact -> Assert.Contains(artifact.Diagnostics, fun diagnostic -> diagnostic.Id = "duplicateIdentifier")
         | Error diagnostics -> failwith $"Expected duplicate ids to be artifact diagnostics, got {diagnostics}."
 
@@ -785,7 +813,8 @@ lifecycleNotes:
             match
                 parseEvidence
                     { Path = "docs/examples/lifecycle-artifacts/evidence.yml"
-                      Text = text }
+                      Text = text
+                      RawBytes = None }
             with
             | Ok declarations -> declarations
             | Error diagnostics -> failwith $"the shipped example does not parse: %A{diagnostics}"
@@ -807,7 +836,12 @@ lifecycleNotes:
     // own bad path was reported to them as a tool defect. These tests are the failure leg: the parse
     // must be TOTAL and must NAME the offending path.
     let private diagnosticsOf text =
-        match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+        match
+            parseEvidenceArtifact
+                { Path = evidencePath
+                  Text = text
+                  RawBytes = None }
+        with
         | Ok artifact -> artifact.Diagnostics
         | Error diagnostics -> diagnostics
 
@@ -850,7 +884,8 @@ lifecycleNotes:
             match
                 parseEvidenceArtifact
                     { Path = evidencePath
-                      Text = citedPathYaml "sourceRefs" "../../../../../../../../etc/passwd" }
+                      Text = citedPathYaml "sourceRefs" "../../../../../../../../etc/passwd"
+                      RawBytes = None }
             with
             | Ok artifact -> artifact.Evidence
             | Error diagnostics -> failwith $"expected a parse with diagnostics, got %A{diagnostics}"
@@ -869,7 +904,12 @@ lifecycleNotes:
         Assert.DoesNotContain(diagnostics, fun d -> d.Id = "malformedArtifactPath")
 
         let cited =
-            match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+            match
+                parseEvidenceArtifact
+                    { Path = evidencePath
+                      Text = text
+                      RawBytes = None }
+            with
             | Ok artifact -> artifact.Evidence |> List.collect citedArtifactPaths
             | Error diagnostics -> failwith $"expected the contained path to parse: %A{diagnostics}"
 

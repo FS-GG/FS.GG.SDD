@@ -57,12 +57,17 @@ module Evidence =
     /// receipt's *provenance* is CI's job; deciding what an unobserved obligation costs is
     /// Governance's (ADR-0035 §3).
     type ObservedRun =
-        { Source: string
-          Digest: string
-          Outcome: string
-          Passed: int
-          Failed: int
-          Skipped: int }
+        {
+            Source: string
+            Digest: string
+            /// `exact-bytes-v1` is the only current receipt contract. Missing fields parse as the
+            /// legacy normalized-text contract and are deliberately rejected until re-synced.
+            DigestContract: string
+            Outcome: string
+            Passed: int
+            Failed: int
+            Skipped: int
+        }
 
     /// FS.GG.SDD#709 / ADR-0065. The producer-issued, schema-versioned proof that a passing test
     /// traversed the real producer-owned production composition. Every value is imported from the
@@ -1305,7 +1310,10 @@ module Evidence =
             // on what the field says.
             let outcome = run.Outcome.Trim().ToLowerInvariant()
 
-            outcome = "passed" && run.Failed = 0 && run.Passed > 0)
+            run.DigestContract = "exact-bytes-v1"
+            && outcome = "passed"
+            && run.Failed = 0
+            && run.Passed > 0)
 
     /// The receipt's internal-consistency rule (FS.GG.SDD#350, FR-005). `TestReport.parse` derives
     /// `Outcome` from the counts, so a *recorded* receipt cannot fail this. An **authored** one can:
@@ -1335,6 +1343,9 @@ module Evidence =
             Some "outcome 'failed' contradicts failed: 0"
         elif not wellFormedDigest then
             Some $"digest '{run.Digest}' is not a sha256:<hex> digest"
+        elif not (String.Equals(run.DigestContract, "exact-bytes-v1", StringComparison.Ordinal)) then
+            Some
+                $"digestContract '{run.DigestContract}' is legacy; re-run evidence --sync-observed-run to migrate it to exact-bytes-v1"
         elif String.IsNullOrWhiteSpace run.Source then
             Some "source names no report"
         else
@@ -1478,6 +1489,7 @@ module Evidence =
         type ObservedRunDraft =
             { Source: string option
               Digest: string option
+              DigestContract: string option
               Outcome: string option
               Passed: int
               Failed: int
@@ -1486,6 +1498,7 @@ module Evidence =
         let observedRunDraftSeed =
             { Source = None
               Digest = None
+              DigestContract = None
               Outcome = None
               Passed = 0
               Failed = 0
@@ -1494,6 +1507,8 @@ module Evidence =
         let observedRunFields: ArtifactCodec.FieldCodec<ObservedRunDraft> list =
             [ ArtifactCodec.optionalScalar "source" (fun r -> r.Source) (fun v r -> { r with Source = v })
               ArtifactCodec.optionalScalar "digest" (fun r -> r.Digest) (fun v r -> { r with Digest = v })
+              ArtifactCodec.optionalScalar "digestContract" (fun r -> r.DigestContract) (fun v r ->
+                  { r with DigestContract = v })
               ArtifactCodec.optionalScalar "outcome" (fun r -> r.Outcome) (fun v r -> { r with Outcome = v })
               ArtifactCodec.intScalar "passed" 0 (fun r -> r.Passed) (fun v r -> { r with Passed = v })
               ArtifactCodec.intScalar "failed" 0 (fun r -> r.Failed) (fun v r -> { r with Failed = v })
@@ -1510,6 +1525,7 @@ module Evidence =
                 Some
                     { Source = source
                       Digest = digest
+                      DigestContract = draft.DigestContract |> Option.defaultValue "normalized-text-v1"
                       Outcome = draft.Outcome |> Option.defaultValue ""
                       Passed = draft.Passed
                       Failed = draft.Failed
@@ -1519,6 +1535,7 @@ module Evidence =
         let lowerObservedRun (run: ObservedRun) : ObservedRunDraft =
             { Source = Some run.Source
               Digest = Some run.Digest
+              DigestContract = Some run.DigestContract
               Outcome = Some run.Outcome
               Passed = run.Passed
               Failed = run.Failed

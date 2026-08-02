@@ -24,7 +24,10 @@ module TestReport =
     /// about. A recorded receipt therefore cannot be self-inconsistent by construction — which is
     /// what leaves `Evidence.observedRunInconsistency` policing only *authored* receipts.
     ///
-    /// `Digest` is `sha256:<hex>` over the text via `SchemaVersion.sha256Text`, which normalises
-    /// CRLF→LF. A receipt whose digest flipped between Windows and Linux CI would be useless to
-    /// exactly the audience it is for.
+    /// `Digest` is `sha256:<hex>` over the exact supplied report bytes. Decoding is used only to
+    /// parse XML; it never changes the bytes being attested.
     val parse: source: string -> text: string -> Result<ObservedRun, string>
+
+    /// Parse decoded report text while attesting the exact bytes read at the effect edge. This is
+    /// the command-path entry point; `parse` remains for text-only callers and hashes UTF-8 text.
+    val parseBytes: source: string -> bytes: byte array -> text: string -> Result<ObservedRun, string>

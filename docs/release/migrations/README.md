@@ -33,18 +33,18 @@ Use [TEMPLATE.md](TEMPLATE.md) as the starting point for a new note.
 
 | Version | Note | Breaking changes |
 |---|---|---|
+| `1.0.0` | [`1.0.0.md`](1.0.0.md) | **(1)** `ObservedRun` adds the explicit exact-byte digest contract; legacy receipts must be re-synchronized. **(2)** `FileSnapshot` adds optional raw bytes so filesystem evidence can preserve exact content. |
 | `0.9.0` | [`0.9.0.md`](0.9.0.md) | **(1)** Removed `specification.unresolvedAmbiguityCount` from the `--json` command-report contract — it gated nothing; the gate is `clarification.blockingAmbiguityCount`, on a **different** block. **(2)** `tasks` can now exit `1` (`missingDisposition`). **(3)** `plan` can now exit `1` (`stalePlanSnapshot`; use `--accept-upstream`). **(4)** Every command can now exit `1` (`unknownOption`); an unrecognized option used to be silently ignored. |
 
-The current `0.9.0` release is **breaking** and therefore carries the note above.
+The current `1.0.0` release is **breaking** and therefore carries the note above.
 The `migrations[]` array in [`release-readiness.json`](../release-readiness.json)
 lists it, and a test asserts the referenced file exists — the obligation is a
-file, not a claim. Under the `0.x` carve-out the changes ride a **minor** bump;
-the note is still mandatory.
+file, not a claim. The move from `0.32.0` to `1.0.0` is the required major bump
+for the breaking public F# record-shape changes.
 
-A migration note must enumerate **every** breaking change in its release. Three of
-the four above are exit-code contract changes, not field removals — the policy
-table classes both as Breaking, and a note that lists only the field removal is
-the exact failure this obligation exists to prevent.
+A migration note must enumerate **every** breaking change in its release. Exit-code
+contract changes and public record-shape changes both classify as Breaking; listing
+only one kind is the exact failure this obligation exists to prevent.
 
 Releases `0.2.0` through `0.8.0` were additive-only and intentionally carry no
 note. The paragraphs below record each of those additive changes; they are the

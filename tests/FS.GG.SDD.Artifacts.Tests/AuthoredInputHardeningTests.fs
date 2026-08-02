@@ -41,7 +41,8 @@ module AuthoredInputHardeningTests =
     let ``parseProjectConfig diagnoses tab-indented YAML instead of crashing`` () =
         let snapshot: FileSnapshot =
             { Path = ".fsgg/project.yml"
-              Text = "project:\n\tid: fs-gg-sdd\n" }
+              Text = "project:\n\tid: fs-gg-sdd\n"
+              RawBytes = None }
 
         match parseProjectConfig snapshot with
         | Error diagnostics -> Assert.NotEmpty diagnostics
@@ -51,7 +52,8 @@ module AuthoredInputHardeningTests =
     let ``parseProjectConfig diagnoses a duplicate mapping key instead of crashing`` () =
         let snapshot: FileSnapshot =
             { Path = ".fsgg/project.yml"
-              Text = "schemaVersion: 1\nproject:\n  id: a\n  id: b\n" }
+              Text = "schemaVersion: 1\nproject:\n  id: a\n  id: b\n"
+              RawBytes = None }
 
         match parseProjectConfig snapshot with
         | Error diagnostics -> Assert.NotEmpty diagnostics
@@ -80,7 +82,8 @@ module AuthoredInputHardeningTests =
     let ``a malformed evidence document reports the YAML error with its line and column`` () =
         let snapshot: FileSnapshot =
             { Path = "work/001-demo/evidence.yml"
-              Text = nestedQuoteEvidence }
+              Text = nestedQuoteEvidence
+              RawBytes = None }
 
         let diagnostic =
             theDiagnostic "a nested double-quote" (parseEvidenceArtifact snapshot)
@@ -106,7 +109,8 @@ module AuthoredInputHardeningTests =
     let ``an apostrophe in a single-quoted scalar reports the quote as the cause`` () =
         let snapshot: FileSnapshot =
             { Path = "work/001-demo/evidence.yml"
-              Text = "schemaVersion: 1\nworkId: 001-demo\nnotes: 'RM1's shell scope'\n" }
+              Text = "schemaVersion: 1\nworkId: 001-demo\nnotes: 'RM1's shell scope'\n"
+              RawBytes = None }
 
         let diagnostic =
             theDiagnostic "an apostrophe in a single-quoted scalar" (parseEvidenceArtifact snapshot)
@@ -122,7 +126,8 @@ module AuthoredInputHardeningTests =
     let ``a quote-free malformed document does not get the quote hint`` () =
         let snapshot: FileSnapshot =
             { Path = "work/001-demo/evidence.yml"
-              Text = "schemaVersion: 1\nworkId: 001-demo\ntasks:\n\t- id: T001\n" }
+              Text = "schemaVersion: 1\nworkId: 001-demo\ntasks:\n\t- id: T001\n"
+              RawBytes = None }
 
         let diagnostic =
             theDiagnostic "a tab-indented document" (parseEvidenceArtifact snapshot)
@@ -134,7 +139,8 @@ module AuthoredInputHardeningTests =
     let ``a genuinely empty evidence document still reports that it is empty`` () =
         let snapshot: FileSnapshot =
             { Path = "work/001-demo/evidence.yml"
-              Text = "" }
+              Text = ""
+              RawBytes = None }
 
         let diagnostic = theDiagnostic "an empty document" (parseEvidenceArtifact snapshot)
 
@@ -146,7 +152,8 @@ module AuthoredInputHardeningTests =
     let ``a comment-only evidence document is empty, not malformed`` () =
         let snapshot: FileSnapshot =
             { Path = "work/001-demo/evidence.yml"
-              Text = "# no evidence yet\n" }
+              Text = "# no evidence yet\n"
+              RawBytes = None }
 
         let diagnostic =
             theDiagnostic "a comment-only document" (parseEvidenceArtifact snapshot)
@@ -160,7 +167,8 @@ module AuthoredInputHardeningTests =
         // author is looking at the file, so the diagnostic must say 3.
         let snapshot: FileSnapshot =
             { Path = "work/001-demo/spec.md"
-              Text = "---\nschemaVersion: 1\nnotes: \"he said \"hi\" loudly\"\n---\n\n# Spec\n" }
+              Text = "---\nschemaVersion: 1\nnotes: \"he said \"hi\" loudly\"\n---\n\n# Spec\n"
+              RawBytes = None }
 
         let diagnostic =
             theDiagnostic "a malformed front matter" (parseSpecificationFacts snapshot)
@@ -172,7 +180,8 @@ module AuthoredInputHardeningTests =
     let ``a malformed tasks document is not reported as empty`` () =
         let snapshot: FileSnapshot =
             { Path = "work/001-demo/tasks.yml"
-              Text = "schemaVersion: 1\ntasks:\n\t- id: T001\n" }
+              Text = "schemaVersion: 1\ntasks:\n\t- id: T001\n"
+              RawBytes = None }
 
         let diagnostic = theDiagnostic "a tab-indented tasks file" (parseTaskFacts snapshot)
 
@@ -193,7 +202,8 @@ module AuthoredInputHardeningTests =
 
         let snapshot: FileSnapshot =
             { Path = "work/001-demo/evidence.yml"
-              Text = $"schemaVersion: 1\nnotes: {bomb}\n" }
+              Text = $"schemaVersion: 1\nnotes: {bomb}\n"
+              RawBytes = None }
 
         let diagnostic =
             theDiagnostic "a deeply-nested document" (parseEvidenceArtifact snapshot)
@@ -210,7 +220,8 @@ module AuthoredInputHardeningTests =
 
         let snapshot: FileSnapshot =
             { Path = "work/001-demo/tasks.yml"
-              Text = $"schemaVersion: 1\ntasks: {bomb}\n" }
+              Text = $"schemaVersion: 1\ntasks: {bomb}\n"
+              RawBytes = None }
 
         let diagnostic =
             theDiagnostic "a compact-block-sequence bomb" (parseTaskFacts snapshot)
@@ -226,7 +237,8 @@ module AuthoredInputHardeningTests =
 
         let snapshot: FileSnapshot =
             { Path = "work/001-demo/evidence.yml"
-              Text = $"schemaVersion: 1\nnotes:\n{items}" }
+              Text = $"schemaVersion: 1\nnotes:\n{items}"
+              RawBytes = None }
 
         match parseEvidenceArtifact snapshot with
         | Ok _ -> ()
@@ -241,7 +253,8 @@ module AuthoredInputHardeningTests =
 
         let snapshot: FileSnapshot =
             { Path = "work/001-demo/evidence.yml"
-              Text = huge }
+              Text = huge
+              RawBytes = None }
 
         let diagnostic =
             theDiagnostic "an over-sized document" (parseEvidenceArtifact snapshot)
@@ -256,7 +269,8 @@ module AuthoredInputHardeningTests =
         // window: the contract is the parser's cost for an already-read authored artifact.
         let warmup: FileSnapshot =
             { Path = "work/001-demo/evidence.yml"
-              Text = "schemaVersion: 1\nworkId: 001-demo\nnotes: warm\n" }
+              Text = "schemaVersion: 1\nworkId: 001-demo\nnotes: warm\n"
+              RawBytes = None }
 
         parseEvidenceArtifact warmup |> ignore
 
@@ -265,7 +279,8 @@ module AuthoredInputHardeningTests =
 
         let snapshot: FileSnapshot =
             { Path = "work/001-demo/evidence.yml"
-              Text = prefix + String('a', maxSupportedChars - prefix.Length) }
+              Text = prefix + String('a', maxSupportedChars - prefix.Length)
+              RawBytes = None }
 
         Assert.Equal(maxSupportedChars, snapshot.Text.Length)
 
@@ -315,7 +330,8 @@ module AuthoredInputHardeningTests =
     let ``an authored construct that throws a non-YamlException diagnoses instead of escaping`` (text: string) =
         let snapshot: FileSnapshot =
             { Path = "work/001-demo/evidence.yml"
-              Text = text }
+              Text = text
+              RawBytes = None }
 
         let diagnostic =
             theDiagnostic "a non-YamlException authored construct" (parseEvidenceArtifact snapshot)
@@ -331,7 +347,8 @@ module AuthoredInputHardeningTests =
             { Path = "work/001-demo/evidence.yml"
               Text =
                 "schemaVersion: 1\nworkId: 001-demo\n"
-                + "obligations:\n  - id: OB-001\n    tags: [a, b, [c, d]]\n    result: pass\n" }
+                + "obligations:\n  - id: OB-001\n    tags: [a, b, [c, d]]\n    result: pass\n"
+              RawBytes = None }
 
         match parseEvidenceArtifact snapshot with
         // Either it parses, or it is rejected for an ordinary reason — never for depth/size.

@@ -76,7 +76,8 @@ module TasksCommandTests =
             Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
             |> Seq.map (fun path ->
                 { Path = Path.GetRelativePath(root, path).Replace('\\', '/')
-                  Text = File.ReadAllText(path) })
+                  Text = File.ReadAllText(path)
+                  RawBytes = None })
             |> Seq.toList
 
         let generated =

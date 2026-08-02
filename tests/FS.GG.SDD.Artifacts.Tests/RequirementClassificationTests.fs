@@ -63,7 +63,8 @@ module RequirementClassificationTests =
         let requirements =
             RequirementModel.parseRequirements
                 { Path = "work/001-classification/spec.md"
-                  Text = text }
+                  Text = text
+                  RawBytes = None }
 
         let classificationFor id =
             requirements

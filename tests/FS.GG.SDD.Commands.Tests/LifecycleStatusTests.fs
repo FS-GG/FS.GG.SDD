@@ -23,11 +23,13 @@ module LifecycleStatusTests =
           Read =
             Bytes
                 { Path = dir
-                  Text = String.concat "\n" paths }
+                  Text = String.concat "\n" paths
+                  RawBytes = None }
           Snapshot =
             Some
                 { Path = dir
-                  Text = String.concat "\n" paths }
+                  Text = String.concat "\n" paths
+                  RawBytes = None }
           Process = None
           Confirmed = None
           Diagnostic = None }

@@ -24,7 +24,8 @@ module ExampleArtifactsContractTests =
         let path = Path.Combine(examplesDir, name)
 
         { Path = $"work/001-example/{name}"
-          Text = File.ReadAllText path }
+          Text = File.ReadAllText path
+          RawBytes = None }
 
     /// A diagnostic that would block the stage (error severity). Advisory
     /// missing-section notes on an isolated artifact are acceptable in an example.

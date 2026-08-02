@@ -26,7 +26,8 @@ module TestSupport =
         Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
         |> Seq.map (fun path ->
             ({ Path = relativePath root path
-               Text = File.ReadAllText path }
+               Text = File.ReadAllText path
+               RawBytes = None }
             : FileSnapshot))
         |> Seq.toList
 
@@ -36,7 +37,8 @@ module TestSupport =
         Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
         |> Seq.map (fun path ->
             ({ Path = relativePath root path
-               Text = File.ReadAllText path }
+               Text = File.ReadAllText path
+               RawBytes = None }
             : FileSnapshot))
         |> Seq.toList
 

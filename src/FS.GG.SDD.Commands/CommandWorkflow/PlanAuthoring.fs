@@ -91,7 +91,10 @@ module internal PlanAuthoring =
             | _ -> diagnostic)
 
     let parsePlanForCommand path text : Result<PlanFacts * Diagnostic list, Diagnostic list> =
-        let snapshot = { Path = path; Text = text }
+        let snapshot =
+            { Path = path
+              Text = text
+              RawBytes = None }
 
         match parsePlanFacts snapshot with
         | Error diagnostics -> Error(mapPlanDiagnostics path diagnostics)

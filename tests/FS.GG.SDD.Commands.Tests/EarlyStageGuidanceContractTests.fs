@@ -188,7 +188,8 @@ module EarlyStageGuidanceContractTests =
             match
                 Specification.parseSpecificationFacts
                     { Path = "work/001-early-stage-guard/spec.md"
-                      Text = text }
+                      Text = text
+                      RawBytes = None }
             with
             | Ok facts ->
                 Assert.True(
@@ -209,7 +210,8 @@ module EarlyStageGuidanceContractTests =
             match
                 Evidence.parseEvidence
                     { Path = "work/001-early-stage-guard/evidence.yml"
-                      Text = text }
+                      Text = text
+                      RawBytes = None }
             with
             | Ok declarations ->
                 Assert.NotEmpty declarations

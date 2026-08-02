@@ -208,7 +208,8 @@ module AcceptanceSupport =
         if existsRelative root registryPath then
             let snapshot: FileSnapshot =
                 { Path = registryPath
-                  Text = readRelative root registryPath }
+                  Text = readRelative root registryPath
+                  RawBytes = None }
 
             Config.parseProviderRegistry snapshot
             |> Result.toOption

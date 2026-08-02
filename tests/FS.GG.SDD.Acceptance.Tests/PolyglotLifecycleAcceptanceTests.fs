@@ -285,7 +285,8 @@ module PolyglotLifecycleAcceptanceTests =
         let parsed =
             parseEvidenceArtifact
                 { Path = $"work/{workId}/evidence.yml"
-                  Text = finalEvidence }
+                  Text = finalEvidence
+                  RawBytes = None }
 
         match parsed with
         | Error diagnostics -> failwithf "evidence did not parse after report import: %A" diagnostics

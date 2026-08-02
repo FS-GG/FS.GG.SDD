@@ -68,7 +68,8 @@ module NormalizedWorkModelTests =
             match
                 WorkModel.parseWorkModel
                     { Path = result.OutputPath
-                      Text = result.Json }
+                      Text = result.Json
+                      RawBytes = None }
             with
             | Ok model -> model
             | Error diagnostics -> failwith $"Expected a parseable work model, got {diagnostics}"
@@ -98,7 +99,8 @@ module NormalizedWorkModelTests =
             match
                 WorkModel.parseWorkModel
                     { Path = result.OutputPath
-                      Text = result.Json }
+                      Text = result.Json
+                      RawBytes = None }
             with
             | Ok model -> model
             | Error diagnostics -> failwith $"Expected a parseable work model, got {diagnostics}"
@@ -155,7 +157,8 @@ module NormalizedWorkModelTests =
             match
                 WorkModel.parseWorkModel
                     { Path = result.OutputPath
-                      Text = result.Json }
+                      Text = result.Json
+                      RawBytes = None }
             with
             | Ok model -> model
             | Error diagnostics -> failwith $"Expected a parseable work model, got {diagnostics}"

@@ -250,7 +250,8 @@ discharges. Every field is derived from the report SDD read; none is authored:
   synthetic: false
   observedRun:                                 # recorded by the tool, never typed
     source: artifacts/test-results.trx         # cited: probed for existence at verify (#349)
-    digest: "sha256:9f2c…"                     # of the report's bytes, computed by SDD
+    digest: "sha256:9f2c…"                     # SHA-256 of the exact report bytes, computed by SDD
+    digestContract: exact-bytes-v1              # BOM and line endings are part of the evidence identity
     outcome: passed                            # DERIVED from the counts, never copied
     passed: 1630
     failed: 0
@@ -260,6 +261,10 @@ discharges. Every field is derived from the report SDD read; none is authored:
 An obligation carrying a **passing** receipt counts as `observed`; one without counts as
 `selfAttested`. The report is a cited path, so a receipt whose report is later deleted turns its
 obligation `invalid` at `verify` through the existing `evidence.artifactNotFound` cascade.
+
+Receipts created before `digestContract: exact-bytes-v1` used normalized decoded text. They are
+classified as legacy rather than silently reinterpreted: retain the report and run
+`fsgg-sdd evidence --sync-observed-run <path>` to re-stamp an exact-byte receipt.
 
 **SDD never runs a test.** ADR-0035 rejected shelling out to a runner: it would put toolchain
 knowledge inside a lifecycle tool that must also serve Rust, TypeScript, and Godot workspaces. SDD

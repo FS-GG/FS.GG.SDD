@@ -95,7 +95,7 @@ module ReleaseContractTests =
 
     [<Fact>]
     let ``T011 channel is derived from the version (major 0 implies preRelease)`` () =
-        Assert.Equal(PreRelease, release.Identity.Channel)
+        Assert.Equal(StableRelease, release.Identity.Channel)
         Assert.Equal(PreRelease, channelOfVersion "0.2.0")
         Assert.Equal(StableRelease, channelOfVersion "1.0.0")
         Assert.Equal(StableRelease, channelOfVersion "2.3.4")
@@ -103,7 +103,7 @@ module ReleaseContractTests =
     [<Fact>]
     let ``T011 the compatibility entry carries a Spec Kit range and tolerates a null Governance range`` () =
         let entry = List.exactlyOne release.Compatibility
-        Assert.Equal("0.32.x", entry.SddVersionLine)
+        Assert.Equal("1.0.x", entry.SddVersionLine)
         Assert.False(String.IsNullOrWhiteSpace entry.SpecKitRange)
 
         // ...and the literal above is only half the guard. What makes a compatibility entry TRUE
@@ -284,14 +284,15 @@ module ReleaseContractTests =
                     Path = "docs/release/migrations/9.9.9.md" } // names a file nobody wrote
         )
 
-    // ...and the classification of THIS release, pinned separately, so the vacuous guard above is a
-    // MEASURED verdict rather than a presence nobody accounted for. 0.28.0 is ADDITIVE: it updates
-    // embedded driver bytes so scaffolds gain padd-item, without removing/retyping an SDD public
-    // contract. The 0.27.0 breaking migration note remains on disk as history.
+    // ...and the classification of THIS release, pinned separately. 1.0.0 changes two public record
+    // shapes and deliberately refuses legacy normalized-text observed-run receipts.
     [<Fact>]
-    let ``T023 this additive pre-1_0 release carries no migration note`` () =
-        Assert.False(migrationNoteRequired Additive)
-        Assert.Empty release.Migrations
+    let ``T023 this breaking 1_0 release carries its migration note`` () =
+        Assert.True(migrationNoteRequired Breaking)
+        let note = Assert.Single release.Migrations
+        Assert.Equal("1.0.0", note.Version)
+        Assert.Equal("docs/release/migrations/1.0.0.md", note.Path)
+        Assert.NotEmpty note.BreakingChanges
 
     [<Fact>]
     let ``T023 a breaking release is obliged to carry a migration note`` () =
