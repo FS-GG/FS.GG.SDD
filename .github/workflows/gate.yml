@@ -133,16 +133,37 @@ jobs:
       # gate that cannot fail. The authorisation to generate comes from this repo DECLARING the root a
       # view in `<FsggKitViewSkillRoots>`, never from observing that one is missing.
       #
-      # `--roots` names the VIEW root explicitly. The default set also contains `.claude/skills`, this
-      # repo's TRACKED source, and `skill-view generate` refuses a root git tracks with no override —
-      # so the fallback would be a refusal rather than a no-op.
+      # `--receiver-proj` names the source root AND the view roots from THE DECLARATION
+      # (`.config/kit/FS.GG.Kit.receiver.proj`'s `<FsggKitSkillRoots>` / `<FsggKitViewSkillRoots>`)
+      # rather than a hand-copied `--source`/`--roots` pair (FS.GG.SDD#801). Before this, the pair
+      # written here had to independently agree with the declaration the materializer and `check`
+      # already read, so a legal disposition swap in the declaration — moving which root is the
+      # tracked source and which is the generated view — could leave this step generating the WRONG
+      # PAIR, silently, until `skill-view check`'s own `--receiver-proj` lane caught the mismatch
+      # downstream. `--receiver-proj` makes that class unrepresentable: there is one declaration and
+      # every reader, including this generate, resolves it the same way. It is refused alongside
+      # `--source`/`--roots` by construction, so the fallback this repo's tracked source used to force
+      # (`skill-view generate` refuses a root git tracks with no override) cannot recur either.
       #
       # `.github/workflows/skill-view-check.yml` carries the same step for its own job, and
       # `FsggSddGenerateSkillView` in `.config/kit/FS.GG.Kit.receiver.proj` covers the two MATERIALIZE
       # trees — this workflow's `build-config-drift` job and `kit-materialize.yml`, the latter being a
-      # `uses:` of a reusable workflow that this repo cannot add a step to at all.
+      # `uses:` of a reusable workflow that this repo cannot add a step to at all. That target reads
+      # `$(FsggKitSkillRoots)`/`$(FsggKitViewSkillRoots)` directly because it lives INSIDE the file
+      # that IS the declaration — it is the declaration's own resolution, not a third hand-copy.
       - name: Resolve the view root this tree no longer commits
-        run: bash scripts/skill-view generate --source .claude/skills --roots ".agents/skills"
+        run: bash scripts/skill-view generate --receiver-proj .config/kit/FS.GG.Kit.receiver.proj
+
+      # FS.GG.SDD#801. Pins that THIS file's and skill-view-check.yml's `skill-view generate` steps
+      # spell the declared `--receiver-proj` invocation, not a hand-copied `--source`/`--roots` pair
+      # that could silently drift from `.config/kit/FS.GG.Kit.receiver.proj` on a legal ADR-0065
+      # disposition change. Reads the two workflow files verbatim (so it is revert-sensitive to this
+      # step and the matching one in skill-view-check.yml, directly), then demonstrates by mutation
+      # that the retired hand-copied form is genuinely blind to a swapped declaration while
+      # `--receiver-proj` is not. No .NET, no restore: pure bash over this repo's own workflow files
+      # plus synthetic trees, same shape as the root-asymmetry test below.
+      - name: Unit-test the skill-view generate invocation (FS.GG.SDD#801)
+        run: bash scripts/tests/skill-view-generate-invocation.test.sh
 
       - name: Unit-test the root-asymmetry check
         run: bash scripts/tests/check-root-asymmetry.test.sh
