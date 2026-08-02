@@ -589,6 +589,68 @@ No material ambiguities recorded.
         if blockedCreate.Outcome = CommandOutcome.Blocked then
             Assert.DoesNotContain(blockedCreate.Diagnostics, fun diagnostic -> diagnostic.Id = "planAuthoringWindow")
 
+    /// FS.GG.SDD#821. `## Performance Intent` is a generated view of spec.md's front matter, not an
+    /// authored region, but nothing said so: the section's rendered body was silently replaced on
+    /// every re-run while `planAuthoringWindow` claimed, on the very same run, that "editing plan.md
+    /// itself ... needs no re-baseline". This pins both halves of the fix — a diagnostic that names
+    /// the reclaimed section and its durable home fires exactly when its content is about to change,
+    /// and the general authoring-window reassurance no longer claims a blanket safety that does not
+    /// hold for this section. Revert the fix and this test reddens: `performanceIntentReclaimed` never
+    /// fires (`Assert.Contains` fails) and `planAuthoringWindow`'s message stays unqualified
+    /// (`Assert.Contains("Performance Intent", window.Message)` fails) even though the author's line
+    /// is still silently gone.
+    [<Fact>]
+    let ``plan names a reclaimed Performance Intent section instead of discarding it silently`` () =
+        let root = initializedChecklistReadyProject ()
+        TestSupport.runPlan root workId title |> ignore
+
+        let authored =
+            (TestSupport.readRelative root planPath)
+                .Replace(
+                    "## Performance Intent\nNo performance intent is declared for this work item.",
+                    "## Performance Intent\n- Author-written note: must sustain 144 fps under load."
+                )
+
+        TestSupport.writeRelative root planPath authored
+
+        let rerun = TestSupport.runPlan root workId title
+
+        // The section-naming diagnostic fires and points at the durable, authored home instead of
+        // plan.md.
+        Assert.Contains(rerun.Diagnostics, fun diagnostic -> diagnostic.Id = "performanceIntentReclaimed")
+
+        let reclaimed =
+            rerun.Diagnostics
+            |> List.find (fun diagnostic -> diagnostic.Id = "performanceIntentReclaimed")
+
+        Assert.Equal(FS.GG.SDD.Artifacts.Diagnostics.DiagnosticWarning, reclaimed.Severity)
+        Assert.Contains("spec.md", reclaimed.Correction)
+
+        // The generic authoring-window reassurance no longer claims unqualified safety: it must carve
+        // out the one section this run just discarded.
+        let window =
+            rerun.Diagnostics
+            |> List.find (fun diagnostic -> diagnostic.Id = "planAuthoringWindow")
+
+        Assert.Contains("Performance Intent", window.Message)
+
+        // The authored text really is gone from the rewritten file — this is regression coverage for
+        // the loss itself, not just for the diagnostic's presence.
+        let rewritten = TestSupport.readRelative root planPath
+        Assert.DoesNotContain("Author-written note", rewritten)
+
+    /// FS.GG.SDD#821 sibling. A coherent re-run where nothing under `## Performance Intent` changed
+    /// (the common case — no performance profile declared, section stays the untouched placeholder)
+    /// must not spuriously warn every time `plan` runs.
+    [<Fact>]
+    let ``plan does not warn about Performance Intent when its projection is unchanged`` () =
+        let root = initializedChecklistReadyProject ()
+        TestSupport.runPlan root workId title |> ignore
+
+        let rerun = TestSupport.runPlan root workId title
+
+        Assert.DoesNotContain(rerun.Diagnostics, fun diagnostic -> diagnostic.Id = "performanceIntentReclaimed")
+
     /// Review finding. The `plan.acceptUpstream` NextAction fires whenever the snapshot is stale,
     /// which may be alongside an unrelated blocker. It must report the FULL blocking set, not just
     /// its own id — an agent driving off `BlockingDiagnosticIds` would otherwise loop once per
