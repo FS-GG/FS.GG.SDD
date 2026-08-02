@@ -118,6 +118,12 @@ module Plan =
           "Plan Decisions"
           "Contract Impact"
           "Verification Obligations"
+          // FS.GG.SDD#824. Was omitted here even though `PlanAuthoring.fs` has always rendered it
+          // (the write path rewrote it via a hardcoded, undeclared call outside this list) — so a
+          // plan.md predating this entry, or hand-authored without the heading, parsed as though the
+          // section did not exist at all. It is `## Source Snapshot`'s sibling: also `rederived`
+          // (`MergePolicies.plan`), never author-owned.
+          "Performance Intent"
           "Migration Posture"
           "Generated View Impact"
           "Accepted Deferrals"

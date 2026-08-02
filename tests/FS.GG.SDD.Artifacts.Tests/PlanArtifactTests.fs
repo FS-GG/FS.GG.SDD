@@ -41,6 +41,9 @@ Prose status: planned
 ## Verification Obligations
 - VO-001 [PD-001] [PC-001] semanticTest: Run command tests and CLI smoke evidence.
 
+## Performance Intent
+No performance intent is declared for this work item.
+
 ## Migration Posture
 - PM-001 [PC-001] diagnoseOnly: Plan schemaVersion 1 is accepted.
 

@@ -135,7 +135,12 @@ module CommandTypes =
         let plan =
             SectionMerge(
                 planStandardSections (),
-                [ "Source Snapshot" ],
+                // FS.GG.SDD#824. `Performance Intent` is a pure projection of spec.md's typed
+                // `performanceIntent` front matter (#821) — rewritten wholesale on every non-stale
+                // `plan` run, same as `Source Snapshot`, never appended to or left for the author.
+                // `PlanAuthoring.rederivedHeadings` names exactly this pair; `MergePolicyTests` pins
+                // the two lists equal so a hardcoded rewrite can never again go undeclared here.
+                [ "Source Snapshot"; "Performance Intent" ],
                 [ "Plan Decisions"
                   "Contract Impact"
                   "Verification Obligations"
