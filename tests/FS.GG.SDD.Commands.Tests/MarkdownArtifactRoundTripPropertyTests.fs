@@ -331,6 +331,7 @@ module MarkdownArtifactRoundTripPropertyTests =
                |> List.map (fun i -> sprintf "- PD-%03d [FR-%03d] [AC-%03d] complete: Decision %d." i i i i))
               "Contract Impact", [ "- PC-001 [PD-001] command report: fsgg-sdd plan JSON is tool-facing." ]
               "Verification Obligations", [ "- VO-001 [PD-001] [PC-001] semanticTest: Run command tests." ]
+              "Performance Intent", [ "No performance intent is declared for this work item." ]
               "Migration Posture", [ "- PM-001 [PC-001] diagnoseOnly: Plan schemaVersion 1 is accepted." ]
               "Generated View Impact", [ "- GV-001 [PD-001] workModel: work-model refreshes from plan sources." ]
               "Accepted Deferrals", [ "No accepted deferrals recorded." ]

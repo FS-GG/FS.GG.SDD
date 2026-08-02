@@ -132,6 +132,21 @@ module MergePolicyTests =
 
         Assert.Contains("- Mine, and mine alone.", text)
 
+    /// FS.GG.SDD#824. `plan`'s `Source Snapshot`/`Performance Intent` rewrite is two direct
+    /// `replaceSectionBody` calls, not a policy-driven fold like `rederiveChecklist`/
+    /// `appendPlanEntries` above — so nothing short of an explicit check ties what those calls
+    /// actually rewrite (`PlanAuthoring.rederivedHeadings`) to what `MergePolicies.plan` declares
+    /// `rederived`. Before #824, `Performance Intent` was rewritten by exactly such a call while
+    /// absent from the policy entirely, and every other coherence check here still passed — they
+    /// all validate internal consistency of what IS declared, never that every section a stage
+    /// actually writes is represented in the policy at all. This is that missing check.
+    [<Fact>]
+    let ``plan's rederived rewrite sites agree with what MergePolicies.plan declares rederived`` () =
+        Assert.Equal<Set<string>>(
+            Set.ofList (MergePolicy.rederivedSections MergePolicies.plan),
+            Set.ofList PlanAuthoring.rederivedHeadings
+        )
+
     [<Fact>]
     let ``mergeAuthoredTaskState under a section policy preserves the prior graph`` () =
         // Mis-tagging `tasks.yml` as a markdown hybrid must cost a regeneration, never an author's

@@ -46,6 +46,9 @@ Prose status: planned
 ## Verification Obligations
 - VO-001 [PD-001] [PC-001] semanticTest: Win two consecutive rallies with the same player and assert the serve goes to the same opponent twice — the failure leg of the serve rule: the loser serves, it does not alternate.
 
+## Performance Intent
+No performance intent is declared for this work item.
+
 ## Migration Posture
 - PM-001 [PC-001] diagnoseOnly: No persisted match state changes shape, so there is nothing to migrate; a stored match from before this change still loads.
 
