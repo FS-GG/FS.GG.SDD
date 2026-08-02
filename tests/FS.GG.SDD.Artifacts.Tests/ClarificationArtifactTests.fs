@@ -42,7 +42,8 @@ publicOrToolFacingImpact: true
 
     let snapshot text =
         ({ Path = "work/006-clarify-command/clarifications.md"
-           Text = text }
+           Text = text
+           RawBytes = None }
         : FileSnapshot)
 
     [<Fact>]

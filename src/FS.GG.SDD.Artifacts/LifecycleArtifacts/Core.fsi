@@ -9,7 +9,14 @@ open FS.GG.SDD.Artifacts.SchemaVersion
 
 [<AutoOpen>]
 module Core =
-    type FileSnapshot = { Path: string; Text: string }
+    type FileSnapshot =
+        {
+            Path: string
+            Text: string
+            /// Exact bytes read at the effect edge, when available. Parsers use `Text`; evidence
+            /// receipts use these bytes so decoding cannot alter their attested identity.
+            RawBytes: byte array option
+        }
 
     type AnalysisSourceRecord =
         { Path: string

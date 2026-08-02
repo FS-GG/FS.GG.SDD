@@ -116,8 +116,16 @@ module CommandEffects =
             Missing
         else
             try
-                match Fsgg.SkillMirror.decodeBody (File.ReadAllBytes absolute) with
-                | Ok text -> Body({ Path = path; Text = text }: FileSnapshot)
+                let bytes = File.ReadAllBytes absolute
+
+                match Fsgg.SkillMirror.decodeBody bytes with
+                | Ok text ->
+                    Body(
+                        { Path = path
+                          Text = text
+                          RawBytes = Some bytes }
+                        : FileSnapshot
+                    )
                 | Error(Fsgg.SkillMirror.NotDecodable byteOffset) -> DecodeRefusal byteOffset
             with ex ->
                 IoRefusal ex.Message
@@ -264,7 +272,11 @@ module CommandEffects =
                     |> Seq.sortBy fst
                     |> Seq.toList
 
-                let snapshot = { Path = path; Text = entries }: FileSnapshot
+                let snapshot =
+                    { Path = path
+                      Text = entries
+                      RawBytes = None }
+                    : FileSnapshot
 
                 match skipped with
                 | [] -> Bytes snapshot
@@ -652,7 +664,8 @@ module CommandEffects =
                     effect
                     (Bytes(
                         { Path = $"{packageId}@{version}"
-                          Text = String.concat "\n" symbols }
+                          Text = String.concat "\n" symbols
+                          RawBytes = None }
                         : FileSnapshot
                     ))
         with _ ->
@@ -767,7 +780,12 @@ module CommandEffects =
 
                 let existing =
                     if Directory.Exists absolute then
-                        Bytes({ Path = path; Text = "<directory>" }: FileSnapshot)
+                        Bytes(
+                            { Path = path
+                              Text = "<directory>"
+                              RawBytes = None }
+                            : FileSnapshot
+                        )
                     else
                         Absent
 

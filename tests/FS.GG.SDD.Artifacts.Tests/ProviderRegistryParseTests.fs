@@ -11,7 +11,8 @@ open Xunit
 module ProviderRegistryParseTests =
     let private snapshot text : FileSnapshot =
         { Path = ".fsgg/providers.yml"
-          Text = text }
+          Text = text
+          RawBytes = None }
 
     let private one result =
         match result with

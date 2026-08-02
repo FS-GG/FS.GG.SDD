@@ -80,7 +80,10 @@ module internal ClarifyAuthoring =
             | _ -> diagnostic)
 
     let parseClarificationForCommand path text : Result<ClarificationFacts * Diagnostic list, Diagnostic list> =
-        let snapshot = { Path = path; Text = text }
+        let snapshot =
+            { Path = path
+              Text = text
+              RawBytes = None }
 
         match parseClarificationFacts snapshot with
         | Error diagnostics -> Error(mapClarificationDiagnostics path diagnostics)

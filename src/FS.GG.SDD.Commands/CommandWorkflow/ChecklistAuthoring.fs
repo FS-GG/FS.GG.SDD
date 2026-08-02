@@ -76,7 +76,10 @@ module internal ChecklistAuthoring =
             | _ -> diagnostic)
 
     let parseChecklistForCommand path text : Result<ChecklistFacts * Diagnostic list, Diagnostic list> =
-        let snapshot = { Path = path; Text = text }
+        let snapshot =
+            { Path = path
+              Text = text
+              RawBytes = None }
 
         match parseChecklistFacts snapshot with
         | Error diagnostics -> Error(mapChecklistDiagnostics path diagnostics)

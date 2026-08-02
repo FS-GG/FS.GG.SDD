@@ -1,5 +1,6 @@
 namespace FS.GG.SDD.Artifacts.Tests
 
+open System.Text
 open FS.GG.SDD.Artifacts
 open Xunit
 
@@ -170,6 +171,26 @@ module TestReportTests =
 
         Assert.NotEqual<string>(a.Digest, b.Digest)
 
+    [<Fact>]
+    let ``parseBytes attests BOM plus CRLF bytes exactly`` () =
+        let text = trx 1 0 0 0 |> fun value -> value.Replace("\n", "\r\n")
+        let bytes = Array.append [| 0xEFuy; 0xBBuy; 0xBFuy |] (Encoding.UTF8.GetBytes text)
+
+        let run =
+            TestReport.parseBytes "artifacts/results.trx" bytes text |> orFail "bom-crlf"
+
+        Assert.Equal("exact-bytes-v1", run.DigestContract)
+        Assert.Equal($"sha256:{(SchemaVersion.sha256Bytes bytes).Value}", run.Digest)
+        Assert.NotEqual($"sha256:{(SchemaVersion.sha256Text text).Value}", run.Digest)
+
+    [<Fact>]
+    let ``exact byte digests are binary-safe and one byte changes the digest`` () =
+        let original = [| 0x00uy; 0xFFuy; 0x0Duy; 0x0Auy; 0x80uy |]
+        let mutated = Array.copy original
+        mutated[2] <- 0x0Auy
+
+        Assert.NotEqual((SchemaVersion.sha256Bytes original).Value, (SchemaVersion.sha256Bytes mutated).Value)
+
     // ---- isObserved: the seam #398 built, now load-bearing ----
 
     let private declarationWith result synthetic receipt =
@@ -182,6 +203,7 @@ module TestReportTests =
         Some
             { Source = "artifacts/results.trx"
               Digest = "sha256:" + String.replicate 64 "a"
+              DigestContract = "exact-bytes-v1"
               Outcome = "passed"
               Passed = 3
               Failed = 0
@@ -191,6 +213,7 @@ module TestReportTests =
         Some
             { Source = "artifacts/results.trx"
               Digest = "sha256:" + String.replicate 64 "a"
+              DigestContract = "exact-bytes-v1"
               Outcome = "failed"
               Passed = 2
               Failed = 1
@@ -216,6 +239,7 @@ module TestReportTests =
             Some
                 { Source = "artifacts/results.trx"
                   Digest = "sha256:" + String.replicate 64 "a"
+                  DigestContract = "exact-bytes-v1"
                   Outcome = "passed"
                   Passed = 2
                   Failed = 7
@@ -263,6 +287,7 @@ module TestReportTests =
         let run =
             { Source = "artifacts/results.trx"
               Digest = digest
+              DigestContract = "exact-bytes-v1"
               Outcome = outcome
               Passed = passed
               Failed = failed
@@ -278,6 +303,7 @@ module TestReportTests =
         let run =
             { Source = "  "
               Digest = "sha256:" + String.replicate 64 "a"
+              DigestContract = "exact-bytes-v1"
               Outcome = "passed"
               Passed = 1
               Failed = 0
@@ -344,6 +370,7 @@ module TestReportTests =
             Some
                 { Source = "artifacts/results.trx"
                   Digest = "sha256:" + String.replicate 64 "a"
+                  DigestContract = "exact-bytes-v1"
                   Outcome = "  Passed  "
                   Passed = 3
                   Failed = 0
@@ -359,6 +386,7 @@ module TestReportTests =
         let empty =
             { Source = "artifacts/results.trx"
               Digest = "sha256:" + String.replicate 64 "a"
+              DigestContract = "exact-bytes-v1"
               Outcome = "passed"
               Passed = 0
               Failed = 0

@@ -67,7 +67,8 @@ module AnalysisViewTests =
     let ``parseAnalysisView reads schema version 1 shape`` () =
         let snapshot =
             { Path = "readiness/010-analyze-command/analysis.json"
-              Text = validAnalysisJson }
+              Text = validAnalysisJson
+              RawBytes = None }
 
         match parseAnalysisView snapshot with
         | Ok view ->
@@ -82,7 +83,8 @@ module AnalysisViewTests =
     let ``parseAnalysisView reports malformed generated JSON`` () =
         let snapshot =
             { Path = "readiness/010-analyze-command/analysis.json"
-              Text = "{ not-json" }
+              Text = "{ not-json"
+              RawBytes = None }
 
         match parseAnalysisView snapshot with
         | Ok _ -> failwith "Expected malformed analysis view to fail."
@@ -100,7 +102,8 @@ module AnalysisViewTests =
     let ``parseAnalysisView missing schemaVersion returns malformed-schema Error and never raises`` () =
         let snapshot =
             { Path = "readiness/010-analyze-command/analysis.json"
-              Text = """{ "workId": "010-analyze-command", "stage": "analyze" }""" }
+              Text = """{ "workId": "010-analyze-command", "stage": "analyze" }"""
+              RawBytes = None }
 
         match parseAnalysisView snapshot with
         | Ok _ -> failwith "Expected missing schemaVersion to fail."

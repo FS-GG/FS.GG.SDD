@@ -177,6 +177,12 @@ module SchemaVersion =
         let digest = SHA256.HashData bytes |> hex
         ({ Algorithm = "sha256"; Value = digest }: SourceDigest)
 
+    /// SHA-256 over the exact supplied bytes. Unlike `sha256Text`, this performs no decoding,
+    /// BOM handling, or line-ending normalization.
+    let sha256Bytes (bytes: byte array) =
+        let digest = SHA256.HashData bytes |> hex
+        ({ Algorithm = "sha256"; Value = digest }: SourceDigest)
+
     let outputSha256Text text =
         let digest = sha256Text text
 

@@ -172,7 +172,8 @@ module internal HandlersShip =
             match
                 WorkModelModule.parseWorkModel
                     { Path = workModelPath workId
-                      Text = wmJson }
+                      Text = wmJson
+                      RawBytes = None }
             with
             | Ok workModel ->
                 // The handoff's own three-source currency (identical for ship and a clean refresh).
@@ -238,7 +239,8 @@ module internal HandlersShip =
         match
             ShipModule.parseShipView
                 { Path = shipPath workId
-                  Text = shipText }
+                  Text = shipText
+                  RawBytes = None }
         with
         | Ok view ->
             let verdictJson = ShipVerdictModule.toJson (ShipVerdictModule.fromShipView view)

@@ -54,7 +54,8 @@ No blocking findings recorded.
 
     let snapshot text =
         ({ Path = "work/007-checklist-command/checklist.md"
-           Text = text }
+           Text = text
+           RawBytes = None }
         : FileSnapshot)
 
     [<Fact>]

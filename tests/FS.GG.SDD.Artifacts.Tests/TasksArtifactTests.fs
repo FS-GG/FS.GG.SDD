@@ -61,7 +61,8 @@ lifecycleNotes:
 
     let snapshot text =
         ({ Path = "work/009-tasks-command/tasks.yml"
-           Text = text }
+           Text = text
+           RawBytes = None }
         : FileSnapshot)
 
     [<Fact>]

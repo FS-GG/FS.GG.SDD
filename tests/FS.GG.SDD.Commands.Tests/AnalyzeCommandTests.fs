@@ -61,7 +61,8 @@ module AnalyzeCommandTests =
         match
             parseAnalysisView
                 { Path = analysisPath
-                  Text = analysisJson }
+                  Text = analysisJson
+                  RawBytes = None }
         with
         | Ok view -> Assert.Equal("implementationReady", view.Readiness.Status)
         | Error diagnostics -> failwith $"Generated analysis view did not parse: {diagnostics}."

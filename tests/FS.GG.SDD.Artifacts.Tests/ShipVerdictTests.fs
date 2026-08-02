@@ -75,7 +75,8 @@ module ShipVerdictTests =
         match
             Ship.parseShipView
                 { Path = "readiness/092/ship.json"
-                  Text = text }
+                  Text = text
+                  RawBytes = None }
         with
         | Ok view -> view
         | Error diagnostics -> failwithf "expected a parseable ship.json, got %A" diagnostics

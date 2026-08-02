@@ -58,7 +58,10 @@ module MarkdownArtifactRoundTripPropertyTests =
                       3 ]
         }
 
-    let private snapshotOf path text : FileSnapshot = { Path = path; Text = text }
+    let private snapshotOf path text : FileSnapshot =
+        { Path = path
+          Text = text
+          RawBytes = None }
 
     // Assemble a document from a fixed prefix (front matter + H1 + prose, ending in a blank line)
     // and its ordered sections; an empty `lines` still emits the `## Heading` so `hasSection` holds.

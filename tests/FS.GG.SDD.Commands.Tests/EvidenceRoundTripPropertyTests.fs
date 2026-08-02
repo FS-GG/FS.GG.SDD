@@ -63,7 +63,12 @@ module EvidenceRoundTripPropertyTests =
                   "evidence: []"
                   "lifecycleNotes: []" ]
 
-        match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+        match
+            parseEvidenceArtifact
+                { Path = evidencePath
+                  Text = text
+                  RawBytes = None }
+        with
         | Ok artifact -> artifact
         | Error diagnostics -> failwithf "base evidence.yml did not parse: %A" diagnostics
 
@@ -206,6 +211,7 @@ module EvidenceRoundTripPropertyTests =
                       Some
                           { Source = source
                             Digest = "sha256:" + System.String(hex)
+                            DigestContract = "exact-bytes-v1"
                             Outcome = (if failed = 0 then "passed" else "failed")
                             Passed = passed
                             Failed = failed
@@ -389,7 +395,12 @@ module EvidenceRoundTripPropertyTests =
     let private roundTrips (artifact: EvidenceArtifact) =
         let text = renderText artifact
 
-        match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+        match
+            parseEvidenceArtifact
+                { Path = evidencePath
+                  Text = text
+                  RawBytes = None }
+        with
         | Error diagnostics -> failwithf "round-trip parse failed: %A\n--- rendered ---\n%s" diagnostics text
         | Ok parsed -> authoredPartition artifact = authoredPartition parsed
 
@@ -439,6 +450,7 @@ module EvidenceRoundTripPropertyTests =
                 Some
                     { Source = "artifacts/test-results.trx"
                       Digest = "sha256:" + String.replicate 64 "a"
+                      DigestContract = "exact-bytes-v1"
                       Outcome = "passed"
                       Passed = 1630
                       Failed = 0
@@ -481,7 +493,8 @@ module EvidenceRoundTripPropertyTests =
         match
             parseEvidenceArtifact
                 { Path = evidencePath
-                  Text = renderText artifact }
+                  Text = renderText artifact
+                  RawBytes = None }
         with
         | Error diagnostics -> failwithf "anchor round-trip parse failed: %A" diagnostics
         | Ok parsed ->

@@ -1,5 +1,7 @@
 namespace FS.GG.SDD.Commands.Tests
 
+open System.IO
+open System.Text
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.TestShared
@@ -61,7 +63,12 @@ module ObservedRunCommandTests =
     let private parsedEvidence root =
         let text = TestSupport.readRelative root evidencePath
 
-        match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+        match
+            parseEvidenceArtifact
+                { Path = evidencePath
+                  Text = text
+                  RawBytes = None }
+        with
         | Ok artifact -> artifact
         | Error diagnostics -> failwith $"evidence.yml did not parse: {diagnostics}"
 
@@ -90,6 +97,31 @@ module ObservedRunCommandTests =
                 // The digest is SDD's, computed over the bytes it read — not a field the author
                 // could supply. This is the single fact that separates a receipt from an assertion.
                 Assert.Equal($"sha256:{(SchemaVersion.sha256Text (trxWith 1630 0)).Value}", run.Digest)
+
+    [<Fact>]
+    let ``a BOM plus CRLF TRX records the committed byte digest, not normalized text`` () =
+        let root = evidencedProjectClaimingPass ()
+        let text = (trxWith 3 0).Replace("\n", "\r\n")
+        let bytes = Array.append [| 0xEFuy; 0xBBuy; 0xBFuy |] (Encoding.UTF8.GetBytes text)
+
+        let absolute =
+            Path.Combine(root, reportPath.Replace('/', Path.DirectorySeparatorChar))
+
+        match Path.GetDirectoryName absolute with
+        | null -> failwith "Report fixture path has no parent directory."
+        | directory -> Directory.CreateDirectory(directory) |> ignore
+
+        File.WriteAllBytes(absolute, bytes)
+
+        let report = runWithReport root (Some reportPath)
+        Assert.DoesNotContain(report.Diagnostics, fun d -> d.Severity = Diagnostics.DiagnosticError)
+
+        let run =
+            parsedEvidence root |> _.Evidence |> List.choose _.ObservedRun |> List.head
+
+        Assert.Equal("exact-bytes-v1", run.DigestContract)
+        Assert.Equal($"sha256:{(SchemaVersion.sha256Bytes bytes).Value}", run.Digest)
+        Assert.NotEqual($"sha256:{(SchemaVersion.sha256Text text).Value}", run.Digest)
 
     [<Fact>]
     let ``recording a receipt is idempotent`` () =

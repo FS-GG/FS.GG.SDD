@@ -101,7 +101,12 @@ evidence:
         Assert.Contains(report.GeneratedViews, fun view -> view.Path = workModelPath)
         Assert.Equal(Some "evidence.next.verify", report.NextAction |> Option.map _.ActionId)
 
-        match parseEvidenceArtifact { Path = evidencePath; Text = evidence } with
+        match
+            parseEvidenceArtifact
+                { Path = evidencePath
+                  Text = evidence
+                  RawBytes = None }
+        with
         | Ok artifact -> Assert.Equal("evidenceReady", artifact.Status)
         | Error diagnostics -> failwith $"Generated evidence artifact did not parse: {diagnostics}."
 
@@ -340,7 +345,12 @@ evidence:
         TestSupport.runEvidence root workId title |> ignore
         let evidence = TestSupport.readRelative root evidencePath
 
-        match parseEvidenceArtifact { Path = evidencePath; Text = evidence } with
+        match
+            parseEvidenceArtifact
+                { Path = evidencePath
+                  Text = evidence
+                  RawBytes = None }
+        with
         | Ok artifact -> artifact
         | Error diagnostics -> failwith $"Scaffolded evidence artifact did not parse: {diagnostics}."
 
@@ -419,7 +429,8 @@ evidence:
             match
                 parseEvidenceArtifact
                     { Path = evidencePath
-                      Text = TestSupport.readRelative root evidencePath }
+                      Text = TestSupport.readRelative root evidencePath
+                      RawBytes = None }
             with
             | Ok artifact -> artifact.Evidence
             | Error diagnostics -> failwith $"Evidence did not parse: {diagnostics}."
@@ -592,7 +603,12 @@ evidence:
 
         Assert.Empty(offenders)
 
-        match parseEvidenceArtifact { Path = evidencePath; Text = evidence } with
+        match
+            parseEvidenceArtifact
+                { Path = evidencePath
+                  Text = evidence
+                  RawBytes = None }
+        with
         | Ok _ -> ()
         | Error diagnostics -> failwith $"Slimmed evidence artifact did not parse: {diagnostics}."
 
@@ -667,7 +683,12 @@ evidence:
             + "lifecycleNotes:\n  - Next lifecycle action: verify.\n"
 
         let seededArtifact =
-            match parseEvidenceArtifact { Path = evidencePath; Text = seed } with
+            match
+                parseEvidenceArtifact
+                    { Path = evidencePath
+                      Text = seed
+                      RawBytes = None }
+            with
             | Ok artifact -> artifact
             | Error diagnostics -> failwith $"Seed evidence did not parse: {diagnostics}."
 
@@ -690,7 +711,8 @@ evidence:
         match
             parseEvidenceArtifact
                 { Path = evidencePath
-                  Text = reRendered }
+                  Text = reRendered
+                  RawBytes = None }
         with
         | Ok artifact ->
             let reference = Assert.Single((Assert.Single(artifact.Evidence)).SourceRefs)
@@ -906,7 +928,12 @@ evidence:
 
         let evidence = TestSupport.readRelative root evidencePath
 
-        match parseEvidenceArtifact { Path = evidencePath; Text = evidence } with
+        match
+            parseEvidenceArtifact
+                { Path = evidencePath
+                  Text = evidence
+                  RawBytes = None }
+        with
         | Ok artifact -> artifact
         | Error diagnostics -> failwith $"Scaffolded evidence artifact did not parse: {diagnostics}."
 
@@ -1029,7 +1056,12 @@ evidence:
         let spliced =
             original.Substring(0, blockStart) + strippedBlock + original.Substring(blockEnd)
 
-        match parseEvidenceArtifact { Path = evidencePath; Text = spliced } with
+        match
+            parseEvidenceArtifact
+                { Path = evidencePath
+                  Text = spliced
+                  RawBytes = None }
+        with
         | Error diagnostics -> failwith $"Digest-less evidence artifact did not parse: {diagnostics}."
         | Ok artifact ->
             let snapshot = Assert.Single(artifact.SourceSnapshots)
@@ -1073,7 +1105,8 @@ tasks:
         match
             Task.parseTaskFacts
                 { Path = $"work/{workId}/tasks.yml"
-                  Text = text }
+                  Text = text
+                  RawBytes = None }
         with
         | Ok facts -> facts
         | Error diagnostics -> failwith $"Two-task fixture did not parse: {diagnostics}."
@@ -1125,7 +1158,12 @@ tasks:
 evidence:
 {declaration}"""
 
-        match parseEvidenceArtifact { Path = evidencePath; Text = text } with
+        match
+            parseEvidenceArtifact
+                { Path = evidencePath
+                  Text = text
+                  RawBytes = None }
+        with
         | Ok artifact -> artifact
         | Error diagnostics -> failwith $"Task-ref-only evidence fixture did not parse: {diagnostics}."
 
@@ -1212,7 +1250,8 @@ tasks:
         match
             Task.parseTaskFacts
                 { Path = $"work/{workId}/tasks.yml"
-                  Text = text }
+                  Text = text
+                  RawBytes = None }
         with
         | Ok facts -> facts
         | Error diagnostics -> failwith $"Done-task fixture did not parse: {diagnostics}."
@@ -1716,7 +1755,8 @@ evidence:
             match
                 parseEvidenceArtifact
                     { Path = evidencePath
-                      Text = TestSupport.readRelative root evidencePath }
+                      Text = TestSupport.readRelative root evidencePath
+                      RawBytes = None }
             with
             | Ok artifact -> artifact
             | Error diagnostics -> failwith $"Scaffolded evidence artifact did not parse: {diagnostics}."
@@ -2042,7 +2082,8 @@ tasks:
         match
             Task.parseTaskFacts
                 { Path = $"work/{workId}/tasks.yml"
-                  Text = text }
+                  Text = text
+                  RawBytes = None }
         with
         | Ok facts -> facts
         | Error diagnostics -> failwith $"gameplay task facts did not parse: {diagnostics}"

@@ -28,7 +28,8 @@ module AgentsCommandTests =
         match
             parseGeneratedAgentGuidance
                 { Path = path
-                  Text = TestSupport.readRelative root path }
+                  Text = TestSupport.readRelative root path
+                  RawBytes = None }
         with
         | Ok manifest -> manifest
         | Error diagnostics -> failwith $"Expected a well-formed {target} manifest, got: {diagnostics}"

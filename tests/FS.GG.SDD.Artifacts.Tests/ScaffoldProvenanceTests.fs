@@ -9,7 +9,8 @@ open Xunit
 module ScaffoldProvenanceTests =
     let private snapshot text : FileSnapshot =
         { Path = ".fsgg/providers.yml"
-          Text = text }
+          Text = text
+          RawBytes = None }
 
     let private validRegistry =
         """schemaVersion: 1

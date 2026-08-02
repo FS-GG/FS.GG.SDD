@@ -111,7 +111,12 @@ module internal HandlersEvidence =
             | _ -> diagnostic)
 
     let parseEvidenceArtifactForCommand path text : Result<EvidenceArtifact * Diagnostic list, Diagnostic list> =
-        match parseEvidenceArtifact { Path = path; Text = text } with
+        match
+            parseEvidenceArtifact
+                { Path = path
+                  Text = text
+                  RawBytes = None }
+        with
         | Ok artifact -> Ok(artifact, mapEvidenceDiagnostics path artifact.Diagnostics)
         | Error diagnostics -> Error(mapEvidenceDiagnostics path diagnostics)
 
@@ -265,7 +270,12 @@ module internal HandlersEvidence =
                 match snapshot path model with
                 | None -> None, [ DiagnosticConstructors.testReportNotFound artifactPath path ]
                 | Some report ->
-                    match TestReport.parse path report.Text with
+                    match
+                        TestReport.parseBytes
+                            path
+                            (report.RawBytes |> Option.defaultValue (Encoding.UTF8.GetBytes report.Text))
+                            report.Text
+                    with
                     | Error reason -> None, [ DiagnosticConstructors.testReportUnparseable artifactPath reason ]
                     | Ok run when run.Failed > 0 ->
                         // The run is real and it FAILED, while an obligation claims a pass. Block, and
@@ -365,7 +375,12 @@ module internal HandlersEvidence =
                     match snapshot path model with
                     | None -> None, [ DiagnosticConstructors.testReportNotFound artifactPath path ]
                     | Some report ->
-                        match TestReport.parse path report.Text with
+                        match
+                            TestReport.parseBytes
+                                path
+                                (report.RawBytes |> Option.defaultValue (Encoding.UTF8.GetBytes report.Text))
+                                report.Text
+                        with
                         | Error reason -> None, [ DiagnosticConstructors.testReportUnparseable artifactPath reason ]
                         | Ok run when run.Failed > 0 ->
                             // The regenerated run now FAILS, while these obligations claim a pass. Block

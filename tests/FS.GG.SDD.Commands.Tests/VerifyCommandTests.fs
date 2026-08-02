@@ -118,7 +118,12 @@ module VerifyCommandTests =
         Assert.Contains(report.GeneratedViews, fun view -> view.Path = verifyPath && view.Kind = "verification")
         Assert.Equal(Some "verify.next.ship", report.NextAction |> Option.map _.ActionId)
 
-        match parseVerificationView { Path = verifyPath; Text = verifyJson } with
+        match
+            parseVerificationView
+                { Path = verifyPath
+                  Text = verifyJson
+                  RawBytes = None }
+        with
         | Ok view ->
             Assert.Equal("verificationReady", view.Readiness)
             Assert.Equal(workId, view.WorkId.Value)
@@ -524,14 +529,24 @@ module VerifyCommandTests =
     let private authoredTasks root =
         let text = TestSupport.readRelative root tasksPath
 
-        match Task.parseTasks { Path = tasksPath; Text = text } with
+        match
+            Task.parseTasks
+                { Path = tasksPath
+                  Text = text
+                  RawBytes = None }
+        with
         | Ok tasks -> tasks
         | Error diagnostics -> failwith $"Generated tasks.yml did not parse: {diagnostics}."
 
     let private parsedVerifyView root =
         let text = TestSupport.readRelative root verifyPath
 
-        match parseVerificationView { Path = verifyPath; Text = text } with
+        match
+            parseVerificationView
+                { Path = verifyPath
+                  Text = text
+                  RawBytes = None }
+        with
         | Ok view -> view
         | Error diagnostics -> failwith $"Generated verification view did not parse: {diagnostics}."
 
@@ -612,7 +627,12 @@ tasks:
     requiredEvidence: [EV001]
 """
 
-        match Task.parseTaskFacts { Path = tasksPath; Text = text } with
+        match
+            Task.parseTaskFacts
+                { Path = tasksPath
+                  Text = text
+                  RawBytes = None }
+        with
         | Ok facts -> facts
         | Error diagnostics -> failwith $"Two-task fixture did not parse: {diagnostics}."
 

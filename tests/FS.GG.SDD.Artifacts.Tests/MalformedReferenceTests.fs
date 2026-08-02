@@ -38,7 +38,8 @@ tasks:
 
     let private tasksSnapshot text : FileSnapshot =
         { Path = "work/060-x/tasks.yml"
-          Text = text }
+          Text = text
+          RawBytes = None }
 
     [<Fact>]
     let ``a malformed task dependency yields a malformedReference diagnostic`` () =
@@ -88,7 +89,8 @@ evidence:
 
     let private evidenceSnapshot text : FileSnapshot =
         { Path = "work/060-x/evidence.yml"
-          Text = text }
+          Text = text
+          RawBytes = None }
 
     [<Fact>]
     let ``a malformed evidence requirement ref yields a malformedReference diagnostic`` () =
@@ -163,7 +165,8 @@ evidence:
         match
             parseWorkModel
                 { Path = "readiness/060-x/work-model.json"
-                  Text = workModelJson 3 }
+                  Text = workModelJson 3
+                  RawBytes = None }
         with
         | Ok _ -> failwith "schemaVersion 3 should block (it blocks everywhere else)."
         | Error diagnostics -> Assert.NotEmpty diagnostics
@@ -173,7 +176,8 @@ evidence:
         match
             parseWorkModel
                 { Path = "readiness/060-x/work-model.json"
-                  Text = workModelJson 1 }
+                  Text = workModelJson 1
+                  RawBytes = None }
         with
         | Ok model -> Assert.Equal("060-x", model.WorkId)
         | Error diagnostics -> failwith $"schemaVersion 1 should parse: {diagnostics}"
