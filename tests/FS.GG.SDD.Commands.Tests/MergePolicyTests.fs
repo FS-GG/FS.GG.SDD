@@ -2,6 +2,7 @@ namespace FS.GG.SDD.Commands.Tests
 
 open System
 open System.IO
+open System.Text.RegularExpressions
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.Internal
@@ -28,6 +29,40 @@ module MergePolicyTests =
 
     let private taxonomyDoc =
         Path.Combine(repoRoot, "docs", "reference", "artifact-taxonomy.md")
+
+    let private planAuthoringSource =
+        Path.Combine(repoRoot, "src", "FS.GG.SDD.Commands", "CommandWorkflow", "PlanAuthoring.fs")
+
+    /// The plan update path uses direct `replaceSectionBody` calls instead of a policy-driven fold.
+    /// Read the call sites rather than duplicating their headings in a second declaration: a new literal
+    /// call (for example, `replaceSectionBody "Foo"`) must fail this guard until its policy is explicit.
+    let private planRewriteHeadings () =
+        let source = File.ReadAllText(planAuthoringSource)
+
+        let constants =
+            Regex.Matches(source, "let private (?<name>\\w+Heading) = \\\"(?<heading>[^\\\"]+)\\\"")
+            |> Seq.cast<Match>
+            |> Seq.map (fun matched -> matched.Groups["name"].Value, matched.Groups["heading"].Value)
+            |> Map.ofSeq
+
+        let calls =
+            Regex.Matches(source, "(?m)^\\s*\\|>\\s*replaceSectionBody\\s+(?<argument>\\w+|\\\"[^\\\"]+\\\")")
+            |> Seq.cast<Match>
+            |> Seq.map (fun matched -> matched.Groups["argument"].Value)
+            |> Seq.toList
+
+        let unresolved =
+            calls
+            |> List.filter (fun argument -> not (argument.StartsWith("\"") || Map.containsKey argument constants))
+
+        Assert.Empty(unresolved)
+
+        calls
+        |> List.map (fun argument ->
+            if argument.StartsWith("\"") then
+                argument.Trim('"')
+            else
+                Map.find argument constants)
 
     let private policies =
         MergePolicies.byStage
@@ -132,19 +167,16 @@ module MergePolicyTests =
 
         Assert.Contains("- Mine, and mine alone.", text)
 
-    /// FS.GG.SDD#824. `plan`'s `Source Snapshot`/`Performance Intent` rewrite is two direct
-    /// `replaceSectionBody` calls, not a policy-driven fold like `rederiveChecklist`/
-    /// `appendPlanEntries` above — so nothing short of an explicit check ties what those calls
-    /// actually rewrite (`PlanAuthoring.rederivedHeadings`) to what `MergePolicies.plan` declares
-    /// `rederived`. Before #824, `Performance Intent` was rewritten by exactly such a call while
-    /// absent from the policy entirely, and every other coherence check here still passed — they
-    /// all validate internal consistency of what IS declared, never that every section a stage
-    /// actually writes is represented in the policy at all. This is that missing check.
+    /// FS.GG.SDD#827. `plan`'s wholesale rewrites are direct `replaceSectionBody` calls, not a
+    /// policy-driven fold like `rederiveChecklist`/`appendPlanEntries`. Derive their headings from
+    /// `PlanAuthoring.fs` so this is a source-to-policy boundary check, rather than two maintained
+    /// declarations agreeing with each other. In particular, an unregistered
+    /// `replaceSectionBody "Foo"` call is included in the actual set and fails this assertion.
     [<Fact>]
     let ``plan's rederived rewrite sites agree with what MergePolicies.plan declares rederived`` () =
         Assert.Equal<Set<string>>(
             Set.ofList (MergePolicy.rederivedSections MergePolicies.plan),
-            Set.ofList PlanAuthoring.rederivedHeadings
+            Set.ofList (planRewriteHeadings ())
         )
 
     [<Fact>]
