@@ -30,6 +30,129 @@ module internal HandlersVerify =
     module DiagnosticsModule = FS.GG.SDD.Artifacts.Diagnostics
     module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
 
+    // Governance#366 owns the fsharp-public-surface/v1 evaluator.  This consumer deliberately
+    // accepts only its persisted receipt: duplicating the capabilities/policy parser here would
+    // create a second authority and let the two products disagree about a glob or exemption.
+    let fsharpSurfaceReceiptPath = "readiness/fsharp-public-surface.json"
+
+    let fsharpSurfaceReceiptDiagnostics workId (specFacts: SpecificationFacts option) model =
+        let publicImpactFromFacts =
+            specFacts
+            |> Option.exists (fun facts ->
+                facts.FrontMatter.ChangeTier.Equals("tier1", StringComparison.OrdinalIgnoreCase)
+                || facts.FrontMatter.PublicOrToolFacingImpact = Some true)
+
+        // Keep the receipt gate fail-closed even when a malformed/stale specification could not
+        // yield typed facts. Its raw front matter is still sufficient to identify a claimed
+        // Tier-1/public-impact surface; never turn that parse failure into a clean ship verdict.
+        let publicImpactFromSource =
+            snapshot (specPath workId) model
+            |> Option.exists (fun spec ->
+                spec.Text.Contains("changeTier: tier1", StringComparison.OrdinalIgnoreCase)
+                || spec.Text.Contains("publicOrToolFacingImpact: true", StringComparison.OrdinalIgnoreCase))
+
+        let publicImpact = publicImpactFromFacts || publicImpactFromSource
+
+        // A malformed/incomplete optional capabilities file remains compatible with the historic
+        // SDD-only route. Only a declared block-on-ship surface adopts this producer obligation.
+        // We deliberately do not parse its policy here: the typed producer receipt remains the
+        // authority for the glob, applicability, cardinality, and policy freshness.
+        let governanceConfigured =
+            (snapshot ".fsgg/capabilities.yml" model
+             |> Option.exists (fun capabilities ->
+                 capabilities.Text.Contains("block-on-ship", StringComparison.OrdinalIgnoreCase)))
+            || snapshot fsharpSurfaceReceiptPath model |> Option.isSome
+
+        if not publicImpact || not governanceConfigured then
+            []
+        else
+            let malformed message =
+                [ errorForPath
+                      "verify.fsharpSurfaceReceiptMalformed"
+                      fsharpSurfaceReceiptPath
+                      $"Work item '{workId}' has public-impact/Tier-1 F# obligations, but Governance public-surface receipt is invalid: {message}"
+                      "Run the Governance F# public-surface producer and commit a valid fsharp-public-surface/v1 receipt; malformed input never certifies ship readiness." ]
+
+            match snapshot fsharpSurfaceReceiptPath model with
+            | None ->
+                [ errorForPath
+                      "verify.fsharpSurfaceReceiptMissing"
+                      fsharpSurfaceReceiptPath
+                      $"Work item '{workId}' has public-impact/Tier-1 F# obligations and declares Governance capabilities, but no public-surface receipt was found."
+                      "Run the Governance F# public-surface producer. A block-on-ship F# surface must be evaluated before SDD can certify this work." ]
+            | Some receipt ->
+                try
+                    use document = JsonDocument.Parse receipt.Text
+                    let root = document.RootElement
+
+                    let stringField (name: string) =
+                        match root.TryGetProperty name with
+                        | true, value when value.ValueKind = JsonValueKind.String -> value.GetString() |> Option.ofObj
+                        | _ -> None
+
+                    let boolField (name: string) =
+                        match root.TryGetProperty name with
+                        | true, value when value.ValueKind = JsonValueKind.True || value.ValueKind = JsonValueKind.False ->
+                            Some(value.GetBoolean())
+                        | _ -> None
+
+                    let intField (name: string) =
+                        match root.TryGetProperty name with
+                        | true, value when value.ValueKind = JsonValueKind.Number ->
+                            value.TryGetInt32()
+                            |> function
+                                | true, n -> Some n
+                                | _ -> None
+                        | _ -> None
+
+                    match
+                        intField "schemaVersion",
+                        stringField "kind",
+                        stringField "maturity",
+                        stringField "applicability",
+                        boolField "applicable",
+                        stringField "declaredGlob",
+                        intField "matchedModuleCount",
+                        stringField "cardinality",
+                        stringField "malformed"
+                    with
+                    | Some 1,
+                      Some "fsharp-public-surface",
+                      Some maturity,
+                      Some applicability,
+                      Some applicable,
+                      Some glob,
+                      Some count,
+                      Some cardinality,
+                      malformedValue ->
+                        if malformedValue.IsSome then
+                            malformed "the receipt reports malformed source or policy input"
+                        elif maturity <> "block-on-ship" then
+                            // This receipt is a real fact, but not the declared blocking surface.
+                            []
+                        elif not applicable then
+                            if applicability = "not-applicable" then
+                                []
+                            else
+                                malformed "a non-applicable receipt lacks the explicit not-applicable disposition"
+                        elif count = 0 && cardinality = "zero" then
+                            [ errorForPath
+                                  "verify.emptyBlockingFSharpSurface"
+                                  fsharpSurfaceReceiptPath
+                                  $"Work item '{workId}' has public-impact/Tier-1 F# obligations, but block-on-ship surface glob '{glob}' matched zero signatures. Declare the public F# API in compiled .fsi files or record a validated non-applicability disposition."
+                                  "Author/update the compiled .fsi signature surface before implementation hardens the public contract, then regenerate the Governance receipt." ]
+                        elif
+                            count < 0
+                            || (count = 1 && cardinality <> "one")
+                            || (count > 1 && cardinality <> "many")
+                        then
+                            malformed "matchedModuleCount and cardinality disagree"
+                        else
+                            []
+                    | _ -> malformed "expected fsharp-public-surface/v1 fields are missing or have the wrong type"
+                with ex ->
+                    malformed ex.Message
+
 
     type VerifyEvidenceDispositionView =
         {
@@ -590,6 +713,9 @@ module internal HandlersVerify =
 
                 let verifyViewDiagnostics = existingVerifyDiagnostic workId model |> Option.toList
 
+                let fsharpSurfaceDiagnostics =
+                    fsharpSurfaceReceiptDiagnostics workId specFacts model
+
                 let verificationDiagnostics, evidenceSummaryOpt, evidenceViews, testViews, skillViews =
                     match
                         specFacts,
@@ -736,6 +862,7 @@ module internal HandlersVerify =
                     @ existingEvidenceDiagnostics
                     @ evidencePresenceDiagnostics
                     @ verifyViewDiagnostics
+                    @ fsharpSurfaceDiagnostics
                     @ verificationDiagnostics
                     |> DiagnosticsModule.sort
 

@@ -568,6 +568,10 @@ module internal HandlersShip =
                     shipVerificationPrerequisite workId model.Request.RequireObserved model
 
                 let shipViewDiagnostics = existingShipDiagnostic workId model |> Option.toList
+                // A stale earlier verify.json cannot bypass a receipt produced after it.  Recheck
+                // the external, versioned receipt at the ship boundary as well.
+                let fsharpSurfaceDiagnostics =
+                    fsharpSurfaceReceiptDiagnostics workId specFacts model
 
                 let commandDiagnostics =
                     projectDiagnostics
@@ -583,6 +587,7 @@ module internal HandlersShip =
                     @ evidencePresenceDiagnostics
                     @ verificationPrereqDiagnostics
                     @ shipViewDiagnostics
+                    @ fsharpSurfaceDiagnostics
                     |> DiagnosticsModule.sort
 
                 let generatedDiagnostics, workModelView, workModelEffects =
