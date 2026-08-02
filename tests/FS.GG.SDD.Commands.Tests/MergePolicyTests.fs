@@ -2,7 +2,6 @@ namespace FS.GG.SDD.Commands.Tests
 
 open System
 open System.IO
-open System.Text.RegularExpressions
 open FS.GG.SDD.Artifacts
 open FS.GG.SDD.Commands.CommandTypes
 open FS.GG.SDD.Commands.Internal
@@ -29,40 +28,6 @@ module MergePolicyTests =
 
     let private taxonomyDoc =
         Path.Combine(repoRoot, "docs", "reference", "artifact-taxonomy.md")
-
-    let private planAuthoringSource =
-        Path.Combine(repoRoot, "src", "FS.GG.SDD.Commands", "CommandWorkflow", "PlanAuthoring.fs")
-
-    /// The plan update path uses direct `replaceSectionBody` calls instead of a policy-driven fold.
-    /// Read the call sites rather than duplicating their headings in a second declaration: a new literal
-    /// call (for example, `replaceSectionBody "Foo"`) must fail this guard until its policy is explicit.
-    let private planRewriteHeadings () =
-        let source = File.ReadAllText(planAuthoringSource)
-
-        let constants =
-            Regex.Matches(source, "let private (?<name>\\w+Heading) = \\\"(?<heading>[^\\\"]+)\\\"")
-            |> Seq.cast<Match>
-            |> Seq.map (fun matched -> matched.Groups["name"].Value, matched.Groups["heading"].Value)
-            |> Map.ofSeq
-
-        let calls =
-            Regex.Matches(source, "(?m)^\\s*\\|>\\s*replaceSectionBody\\s+(?<argument>\\w+|\\\"[^\\\"]+\\\")")
-            |> Seq.cast<Match>
-            |> Seq.map (fun matched -> matched.Groups["argument"].Value)
-            |> Seq.toList
-
-        let unresolved =
-            calls
-            |> List.filter (fun argument -> not (argument.StartsWith("\"") || Map.containsKey argument constants))
-
-        Assert.Empty(unresolved)
-
-        calls
-        |> List.map (fun argument ->
-            if argument.StartsWith("\"") then
-                argument.Trim('"')
-            else
-                Map.find argument constants)
 
     let private policies =
         MergePolicies.byStage
@@ -168,16 +133,39 @@ module MergePolicyTests =
         Assert.Contains("- Mine, and mine alone.", text)
 
     /// FS.GG.SDD#827. `plan`'s wholesale rewrites are direct `replaceSectionBody` calls, not a
-    /// policy-driven fold like `rederiveChecklist`/`appendPlanEntries`. Derive their headings from
-    /// `PlanAuthoring.fs` so this is a source-to-policy boundary check, rather than two maintained
-    /// declarations agreeing with each other. In particular, an unregistered
-    /// `replaceSectionBody "Foo"` call is included in the actual set and fails this assertion.
+    /// policy-driven fold like `rederiveChecklist`/`appendPlanEntries`. PlanAuthoring shadows the
+    /// generic primitive with a policy-checked boundary, so F# application shape cannot change the
+    /// verdict. This is executable registration, not a maintained list or source-text parser:
+    /// comments and strings that merely mention `replaceSectionBody "Foo"` are not call sites and
+    /// therefore cannot become false positives.
     [<Fact>]
-    let ``plan's rederived rewrite sites agree with what MergePolicies.plan declares rederived`` () =
-        Assert.Equal<Set<string>>(
-            Set.ofList (MergePolicy.rederivedSections MergePolicies.plan),
-            Set.ofList (planRewriteHeadings ())
-        )
+    let ``plan rewrite boundary rejects undeclared headings in pipeline and direct application`` () =
+        let text = "## Source Snapshot\nold\n\n## Foo\nauthored\n"
+        let body = [ "new" ]
+
+        // False-positive control: source scanners can mistake this body text for an executable call;
+        // the runtime boundary sees only the declared heading argument and permits the rewrite.
+        let commentLikeBody = [ "// |> replaceSectionBody \"Foo\" [ \"bar\" ]" ]
+
+        let pipedDeclared =
+            text |> PlanAuthoring.replaceSectionBody "Source Snapshot" commentLikeBody
+
+        let directDeclared =
+            PlanAuthoring.replaceSectionBody "Source Snapshot" commentLikeBody text
+
+        Assert.Equal(pipedDeclared, directDeclared)
+        Assert.Contains(commentLikeBody.Head, pipedDeclared)
+
+        let pipedFailure =
+            Assert.Throws<ArgumentException>(fun () -> text |> PlanAuthoring.replaceSectionBody "Foo" body |> ignore)
+
+        let directFailure =
+            Assert.Throws<ArgumentException>(fun () ->
+                let rewritten = PlanAuthoring.replaceSectionBody "Foo" body text
+                rewritten |> ignore)
+
+        Assert.Contains("Foo", pipedFailure.Message)
+        Assert.Contains("Foo", directFailure.Message)
 
     [<Fact>]
     let ``mergeAuthoredTaskState under a section policy preserves the prior graph`` () =

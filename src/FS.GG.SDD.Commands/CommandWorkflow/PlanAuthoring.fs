@@ -655,6 +655,21 @@ No blocking planning findings recorded.
     let private sourceSnapshotHeading = "Source Snapshot"
     let private performanceIntentHeading = "Performance Intent"
 
+    // FS.GG.SDD#827. PlanAuthoring intentionally shadows the generic markdown primitive with the
+    // plan's policy boundary. Every unqualified call below — piped or applied directly — resolves
+    // here, so call formatting cannot hide a wholesale rewrite from MergePolicies.plan. A fully
+    // qualified EarlyStageAuthoring call would be an explicit bypass visible at review, rather than
+    // an ordinary alternative application shape that silently escapes a source-text regex.
+    let replaceSectionBody heading bodyLines text =
+        let rederived = MergePolicy.rederivedSections MergePolicies.plan |> Set.ofList
+
+        if not (Set.contains heading rederived) then
+            invalidArg
+                (nameof heading)
+                $"PlanAuthoring cannot re-derive undeclared plan section '{heading}'. Add it to MergePolicies.plan first."
+
+        EarlyStageAuthoring.replaceSectionBody heading bodyLines text
+
     // Feature 090 (#163). Re-baseline the plan's own snapshot, mirroring `rederiveChecklist`'s
     // `replaceSectionBody "Source Snapshot"`. Touches no other section: the plan's authored prose is
     // not this function's business, and `plan` has no other tool-writable region.
