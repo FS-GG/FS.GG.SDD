@@ -514,14 +514,39 @@ module internal DiagnosticConstructors =
     // re-baseline. Nothing said so before — operators discovered it by tripping over it. A
     // DiagnosticInfo, so `ReportAssembly.outcome` (which inspects only Error and Warning) leaves the
     // outcome, exit code, and changedArtifacts untouched. It adds a fact, not an outcome.
+    //
+    // FS.GG.SDD#821: the reassurance below used to be unqualified, and fired on the very run that
+    // silently discarded authored text under `## Performance Intent` — a section this message's
+    // "editing plan.md itself ... needs no re-baseline" blanket claim does not describe, because
+    // that one heading is a generated view (`performanceIntentReclaimed` below fires alongside this
+    // on the run that actually rewrites it) and is never preserved across a re-run. The carve-out is
+    // unconditional — true on every run, not only the one that rewrites the section — because the
+    // false claim was the defect, not just its timing.
     let planAuthoringWindow path (snapshottedSources: string list) =
         commandDiagnostic
             "planAuthoringWindow"
             DiagnosticSeverity.DiagnosticInfo
             (Some path)
-            "Plan snapshotted its upstream sources (spec, clarifications, checklist). Editing plan.md itself — resolving the PD-###/PC-###/VO-### lines — is expected and needs no re-baseline; only a later edit to one of those upstream sources does."
-            "Re-run fsgg-sdd plan --accept-upstream only after editing the specification, clarifications, or checklist — not after editing plan.md."
+            "Plan snapshotted its upstream sources (spec, clarifications, checklist). Editing plan.md itself — resolving the PD-###/PC-###/VO-### lines — is expected and needs no re-baseline; only a later edit to one of those upstream sources does. The one exception is '## Performance Intent': that section is a generated view of spec.md's front matter and is re-derived on every plan run, so text written directly under that heading is not preserved."
+            "Re-run fsgg-sdd plan --accept-upstream only after editing the specification, clarifications, or checklist — not after editing plan.md. Author performance intent in spec.md's front matter, not under plan.md's '## Performance Intent' heading."
             snapshottedSources
+
+    // FS.GG.SDD#821. `## Performance Intent` in plan.md is a rendered projection of the typed
+    // `performanceIntent` declaration in spec.md's front matter (docs/reference/performance-budgets.md)
+    // — a tool-owned region, like `## Source Snapshot`, even though nothing distinguished it from the
+    // neighbouring PD-###/PC-###/VO-### prose that `planAuthoringWindow` correctly calls safe to
+    // hand-edit. `PlanAuthoring.withEntries` fires this whenever the section's rendered body is about
+    // to change on this run — whatever was there before (author-typed prose, or a stale projection of
+    // an older spec value) is about to be overwritten — naming the section and its durable, authored
+    // home so an author has a signal at the moment content is discarded rather than discovering the
+    // loss later. DiagnosticWarning, unlike `planAuthoringWindow`: this one *is* an outcome-relevant
+    // fact — content just changed underneath the author — not a no-op reassurance.
+    let performanceIntentReclaimed path =
+        warningForPath
+            "performanceIntentReclaimed"
+            path
+            "The '## Performance Intent' section of plan.md is a generated view of the typed 'performanceIntent' declaration in spec.md's front matter. Its body was just rewritten from that source on this run, and any different text previously under this heading is discarded without a re-baseline warning naming it."
+            "Author performance intent under spec.md's front matter 'performanceIntent:' mapping (see docs/reference/performance-budgets.md), not directly under plan.md's '## Performance Intent' heading — that heading is re-derived on every successful plan run and this text will be discarded again."
 
     let missingPlanPrerequisite path message =
         errorForPath

@@ -429,6 +429,38 @@ module internal PlanAuthoring =
             |> String.concat "\n")
         |> Option.defaultValue "No performance intent is declared for this work item."
 
+    // FS.GG.SDD#821. The current body of an existing `## heading` section — the lines between it and
+    // the next `##` heading, trailing blanks trimmed — or `None` if the heading is absent. A read-only
+    // sibling of `EarlyStageAuthoring.replaceSectionBody`, used only to detect whether a rewrite is
+    // about to change what is already on disk, so the loss can be diagnosed rather than applied
+    // silently. Deliberately mirrors `replaceSectionBody`'s own heading/next-heading scan so "did the
+    // body change" agrees, byte for byte, with what that function is about to overwrite.
+    let private currentSectionBody heading (text: string) =
+        let normalized =
+            (if String.IsNullOrEmpty text then "" else text).Replace("\r\n", "\n")
+
+        let split = normalized.Split('\n') |> Array.toList
+        let headingPattern = $"^##\\s+{Regex.Escape heading}\\s*$"
+
+        match split |> List.tryFindIndex (fun line -> Regex.IsMatch(line, headingPattern)) with
+        | None -> None
+        | Some start ->
+            let next =
+                split
+                |> List.mapi (fun index line -> index, line)
+                |> List.tryFind (fun (index, line) -> index > start && Regex.IsMatch(line, "^##\\s+"))
+                |> Option.map fst
+                |> Option.defaultValue split.Length
+
+            split
+            |> List.skip (start + 1)
+            |> List.take (next - start - 1)
+            |> List.rev
+            |> List.skipWhile (fun line -> line.Trim() = "")
+            |> List.rev
+            |> String.concat "\n"
+            |> Some
+
     let planTemplate
         (request: CommandRequest)
         (workId: string)
@@ -801,6 +833,21 @@ No blocking planning findings recorded.
                             Some(planSummary existingFacts)
                         else
 
+                            let performanceIntentProjectedBody = performanceIntentProjection specText
+
+                            // FS.GG.SDD#821. Read the section's body from `existing.Text` — BEFORE
+                            // `ensureSections`/`replaceSectionBody` below touch it — and compare it
+                            // against what this run is about to write. `None` (heading absent, e.g. a
+                            // plan predating this section) means there is nothing to discard, so it must
+                            // not diagnose a loss that is not happening; `Some previous <> projected`
+                            // means a rewrite is about to replace real content, whether that content was
+                            // hand-authored prose or a stale projection of an older spec value — either
+                            // way the author's plan.md view is about to change underneath them.
+                            let performanceIntentSectionChanged =
+                                match currentSectionBody "Performance Intent" existing.Text with
+                                | Some previous -> previous.Trim() <> performanceIntentProjectedBody.Trim()
+                                | None -> false
+
                             let ensuredText = ensurePlanSections workId existing.Text
 
                             let entries =
@@ -815,8 +862,7 @@ No blocking planning findings recorded.
                                 appendPlanEntries ensuredText entries
                                 |> replaceSectionBody
                                     "Performance Intent"
-                                    (performanceIntentProjection specText
-                                     |> fun text -> text.Split('\n') |> Array.toList)
+                                    (performanceIntentProjectedBody.Split('\n') |> Array.toList)
 
                             // FR-004. Rewrite the plan's own `## Source Snapshot` body — and nothing else —
                             // whenever the operator asks for it with `--accept-upstream`.
@@ -859,11 +905,22 @@ No blocking planning findings recorded.
                                 let unknownDiagnostics =
                                     unknownPlanReferences path specFacts clarificationFacts checklistFacts proposedFacts
 
+                                // FS.GG.SDD#821. Fires alongside `planAuthoringWindow` on the same run,
+                                // naming the section this run actually reclaimed and where its durable,
+                                // authored home is — the diagnostic that was missing when this section's
+                                // content was discarded silently.
+                                let performanceIntentDiagnostics =
+                                    if performanceIntentSectionChanged then
+                                        [ performanceIntentReclaimed path ]
+                                    else
+                                        []
+
                                 let rerun =
                                     blockingParserDiagnostics
                                     @ proposedDiagnostics
                                     @ unknownDiagnostics
                                     @ staleDiagnostics
+                                    @ performanceIntentDiagnostics
 
                                 rerun @ authoringWindowIfSucceeded rerun |> DiagnosticsModule.sort,
                                 Some proposedText,
