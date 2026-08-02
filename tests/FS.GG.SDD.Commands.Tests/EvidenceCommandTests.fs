@@ -1304,6 +1304,21 @@ tasks:
     let private renderFrame root (relativePath: string) =
         TestSupport.writeRelative root relativePath "not-a-real-png-but-a-real-file"
 
+    /// FS.GG.SDD#825. `renderFrame` above writes ordinary UTF-8 text, so every existing cited-artifact
+    /// fixture reads back through `SkillMirror.decodeBody` cleanly and never exercises the rendering
+    /// evidence route's actual, preferred proof: a real image. This writes bytes decodeBody refuses —
+    /// a PNG signature (FS.GG.SDD#748's own `NotDecodable` trigger) — so a test can cite it exactly as
+    /// Rogue3 cited a produced frame and observe whether the gate still calls it "not there".
+    let private renderBinaryFrame root (relativePath: string) =
+        let absolute =
+            System.IO.Path.Combine(root, relativePath.Replace('/', System.IO.Path.DirectorySeparatorChar))
+
+        match System.IO.Path.GetDirectoryName absolute with
+        | null -> ()
+        | directory -> System.IO.Directory.CreateDirectory directory |> ignore
+
+        System.IO.File.WriteAllBytes(absolute, [| 0x89uy; 0x50uy; 0x4Euy; 0x47uy; 0x0Duy; 0x0Auy; 0x1Auy; 0x0Auy |])
+
     /// FR-004 / SC-003: a non-synthetic `pass` that names no rendered artifact is exactly the shape
     /// of Breakout1's green suite over an invisible ball. It blocks.
     [<Fact>]
@@ -1372,6 +1387,41 @@ tasks:
         let report = TestSupport.runEvidence root workId title
 
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+
+    /// FS.GG.SDD#825. The rendering evidence route's own preferred proof is the produced image
+    /// itself, and citing it directly used to block: the cited-artifact probe reads every candidate
+    /// through `SkillMirror.decodeBody` (built for `SKILL.md`-shaped text), so a PNG's bytes refused
+    /// to decode and `citedArtifactExists` — which asked `snapshot` whether the probe returned
+    /// decoded text, not whether the path exists — read the refusal as "not there". The gate then
+    /// raised `evidence.artifactNotFound` ("citing an artifact that does not exist") about a file the
+    /// tool had just finished reading off disk. `citedArtifactExists` now asks the read edge's own
+    /// `ReadResult` instead, where `Unreadable` (decode refusal included) already means "exists, but
+    /// its bytes did not carry" — so a real, cited PNG satisfies the gate without a
+    /// `reference-evidence.md` indirection standing in for the image it exists to describe.
+    [<Fact>]
+    let ``evidence accepts a visual-inspection pass whose rendered artifact is a real (binary, undecodable) image`` () =
+        let root = visualSurfaceScaffoldedProject ()
+        let obligationId = visualObligationId root
+        renderBinaryFrame root "evidence/frame-ceiling-bounce.png"
+
+        declareVisualEvidence
+            root
+            (visualDeclaration
+                obligationId
+                "T006"
+                "    artifacts: [evidence/frame-ceiling-bounce.png]\n    sourceRefs: []\n    result: pass\n    synthetic: false\n")
+        |> ignore
+
+        let report = TestSupport.runEvidence root workId title
+
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.artifactNotFound")
+
+        Assert.DoesNotContain(
+            report.Diagnostics,
+            fun diagnostic -> diagnostic.Id = "evidence.missingVisualInspectionArtifact"
+        )
 
     // ---------------------------------------------------------------------------------------------
     // FS.GG.SDD#349 — a cited artifact must exist. The failure leg is asserted on the diagnostic id,

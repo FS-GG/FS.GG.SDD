@@ -401,11 +401,29 @@ module internal HandlersEvidence =
     /// The existence verdict, read back off the interpreted effect log. A path counts as present only
     /// when it was probed *and* the probe returned a snapshot; a path that was never probed is treated
     /// as present, so a planning bug degrades to today's behaviour rather than to a false refusal.
+    ///
+    /// FS.GG.SDD#825: this asks "is the cited path *there*", not "did it decode as text" — those are
+    /// different questions, and `snapshot`'s `None` cannot tell them apart (`Absent` and `Unreadable`
+    /// both project to `None`, by `snapshot`'s own contract). A `ReadResult.Unreadable` — including
+    /// the FS.GG.SDD#748 `DecodeRefusal` case a binary artifact (a cited `.png`, the rendering evidence
+    /// route's own preferred proof) always hits — means `File.Exists` answered true and something about
+    /// the bytes then went wrong; the file is unmistakably ON DISK. Reading that as "missing" is what
+    /// turned `evidence.artifactNotFound` — "citing an artifact that does not exist" — into a false
+    /// claim about a file the tool had just finished looking at. `readOf` (`ReadResult`, the edge's own
+    /// three/four-state answer) is asked instead of `snapshot` so existence is decided on the state that
+    /// actually carries it; the still-emitted `undecodableFile`/`unreadableFile` warning is untouched and
+    /// keeps telling the operator which file and why its bytes did not decode.
     let citedArtifactExists (model: CommandModel) (path: string) =
         let key = readEffectKey path
 
         if hasInterpreted key model then
-            (snapshot path model).IsSome
+            match readOf path model with
+            | Bytes _
+            | Unreadable _ -> true
+            | Absent
+            // `Truncated` is `EnumerateDirectory`'s state, never `ReadFile`'s — unreachable for a
+            // `read:`-keyed path, but every `ReadResult` fold must still say so explicitly (#743/#745).
+            | Truncated _ -> false
         else
             true
 
