@@ -534,6 +534,28 @@ module internal HandlersShip =
                 let existingEvidenceArtifact, existingEvidenceDiagnostics, evidenceText =
                     parseExistingEvidence workId model
 
+                let observedRunCurrentnessDiagnostics =
+                    existingEvidenceArtifact
+                    |> Option.toList
+                    |> List.collect (fun artifact ->
+                        let stale =
+                            artifact.Evidence
+                            |> List.filter (fun declaration ->
+                                declaration.ObservedRun.IsSome
+                                && not (
+                                    observedRunIsCurrent
+                                        (fun path -> snapshot path model |> Option.bind _.RawBytes)
+                                        declaration
+                                ))
+                            |> List.map _.Id.Value
+                            |> List.distinct
+                            |> List.sort
+
+                        if List.isEmpty stale then
+                            []
+                        else
+                            [ observedRunStale (evidencePath workId) stale ])
+
                 let evidencePresenceDiagnostics =
                     match existingEvidenceArtifact, snapshot (evidencePath workId) model with
                     | None, None ->
@@ -557,6 +579,7 @@ module internal HandlersShip =
                     @ taskDiagnostics
                     @ analysisDiagnostics
                     @ existingEvidenceDiagnostics
+                    @ observedRunCurrentnessDiagnostics
                     @ evidencePresenceDiagnostics
                     @ verificationPrereqDiagnostics
                     @ shipViewDiagnostics

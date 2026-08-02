@@ -38,6 +38,16 @@ module ObservedRunCommandTests =
 
     let private reportPath = "artifacts/test-results.trx"
 
+    let private writeReportBytes root (bytes: byte array) =
+        let absolute =
+            Path.Combine(root, reportPath.Replace('/', Path.DirectorySeparatorChar))
+
+        match Path.GetDirectoryName absolute with
+        | null -> failwith "Report fixture path has no parent directory."
+        | directory -> Directory.CreateDirectory(directory) |> ignore
+
+        File.WriteAllBytes(absolute, bytes)
+
     let private replaceFirst (needle: string) (replacement: string) (text: string) =
         match text.IndexOf(needle, System.StringComparison.Ordinal) with
         | -1 -> failwithf "Fixture drift: %s not found in evidence.yml." needle
@@ -104,14 +114,7 @@ module ObservedRunCommandTests =
         let text = (trxWith 3 0).Replace("\n", "\r\n")
         let bytes = Array.append [| 0xEFuy; 0xBBuy; 0xBFuy |] (Encoding.UTF8.GetBytes text)
 
-        let absolute =
-            Path.Combine(root, reportPath.Replace('/', Path.DirectorySeparatorChar))
-
-        match Path.GetDirectoryName absolute with
-        | null -> failwith "Report fixture path has no parent directory."
-        | directory -> Directory.CreateDirectory(directory) |> ignore
-
-        File.WriteAllBytes(absolute, bytes)
+        writeReportBytes root bytes
 
         let report = runWithReport root (Some reportPath)
         Assert.DoesNotContain(report.Diagnostics, fun d -> d.Severity = Diagnostics.DiagnosticError)
@@ -500,6 +503,55 @@ module ObservedRunCommandTests =
         { TestSupport.shipRequest root workId title with
             RequireObserved = true }
         |> TestSupport.runRequest
+
+    [<Fact>]
+    let ``BOM plus CRLF receipt blocks verify and ship after replacement with LF bytes`` () =
+        let root = evidencedProjectClaimingPass ()
+        let lf = trxWith 4 0
+        let crlf = lf.Replace("\n", "\r\n")
+
+        let recordedBytes =
+            Array.append [| 0xEFuy; 0xBBuy; 0xBFuy |] (Encoding.UTF8.GetBytes crlf)
+
+        writeReportBytes root recordedBytes
+        runWithReport root (Some reportPath) |> ignore
+
+        // Same XML meaning, byte-distinct committed artifact: no BOM and LF line endings.
+        writeReportBytes root (Encoding.UTF8.GetBytes lf)
+
+        match (runVerifyRequiringObserved root).Verification with
+        | Some verification -> Assert.NotEqual<string>("verificationReady", verification.Readiness)
+        | None -> failwith "verify produced no summary"
+
+        let shipped = runShipRequiringObserved root
+        Assert.Contains(shipped.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.observedRunStale")
+
+        match shipped.Ship with
+        | Some ship -> Assert.NotEqual<string>("shipReady", ship.Readiness)
+        | None -> failwith "ship produced no summary"
+
+    [<Fact>]
+    let ``one byte mutation after receipt blocks both verify and ship`` () =
+        let root = evidencedProjectClaimingPass ()
+        let original = Encoding.UTF8.GetBytes(trxWith 5 0)
+        writeReportBytes root original
+        runWithReport root (Some reportPath) |> ignore
+
+        let mutated = Array.copy original
+        let index = mutated |> Array.findIndex ((=) (byte ' '))
+        mutated[index] <- byte '\t'
+        writeReportBytes root mutated
+
+        match (runVerifyRequiringObserved root).Verification with
+        | Some verification -> Assert.NotEqual<string>("verificationReady", verification.Readiness)
+        | None -> failwith "verify produced no summary"
+
+        let shipped = runShipRequiringObserved root
+        Assert.Contains(shipped.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.observedRunStale")
+
+        match shipped.Ship with
+        | Some ship -> Assert.NotEqual<string>("shipReady", ship.Readiness)
+        | None -> failwith "ship produced no summary"
 
     /// **The FS.GG.SDD#350 failure leg, committed.** This is the boilerplate probe from the issue —
     /// a lifecycle walked on pure scaffolding, `result: pass` / `synthetic: false` on every

@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "generatorVersion": {
     "id": "FS.GG.SDD.Artifacts",
-    "version": "0.32.0"
+    "version": "1.0.0"
   },
   "identity": {
-    "version": "0.32.0",
-    "channel": "preRelease",
+    "version": "1.0.0",
+    "channel": "stable",
     "packageIds": [
       "FS.GG.SDD.Artifacts",
       "FS.GG.SDD.Commands",
@@ -16,7 +16,7 @@
   },
   "compatibility": [
     {
-      "sddVersionLine": "0.32.x",
+      "sddVersionLine": "1.0.x",
       "specKitRange": "\u003E=0.8.5",
       "governanceContractVersionRange": "2.x"
     }
@@ -3854,5 +3854,14 @@
       "durableGenerated": false
     }
   ],
-  "migrations": []
+  "migrations": [
+    {
+      "version": "1.0.0",
+      "path": "docs/release/migrations/1.0.0.md",
+      "breakingChanges": [
+        "FileSnapshot carries exact raw bytes from filesystem reads",
+        "ObservedRun identifies its digest contract and legacy receipts require explicit re-sync"
+      ]
+    }
+  ]
 }

@@ -1188,7 +1188,7 @@ evidence:
     synthetic: false"""
 
         let ev001 =
-            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) (fun _ -> None) artifact
+            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) (fun _ -> None) (fun _ -> None) artifact
             |> List.find (fun disposition -> disposition.ObligationId = "EV001")
 
         Assert.Equal("missing", ev001.State)
@@ -1217,7 +1217,7 @@ evidence:
     synthetic: false"""
 
         let ev001 =
-            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) (fun _ -> None) artifact
+            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) (fun _ -> None) (fun _ -> None) artifact
             |> List.find (fun disposition -> disposition.ObligationId = "EV001")
 
         Assert.Equal("supported", ev001.State)
@@ -1278,7 +1278,7 @@ tasks:
     synthetic: false"""
 
         let completion =
-            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) (fun _ -> None) artifact
+            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) (fun _ -> None) (fun _ -> None) artifact
             |> List.find (fun disposition -> disposition.ObligationId = completionId)
 
         Assert.Equal("supported", completion.State)
@@ -1876,7 +1876,12 @@ evidence:
     let private gameplayDisposition (declaration: string) =
         let artifact = evidenceArtifactWith declaration
 
-        HandlersEvidence.evidenceDispositions [ gameplayObligation "EV001" ] (fun _ -> true) (fun _ -> None) artifact
+        HandlersEvidence.evidenceDispositions
+            [ gameplayObligation "EV001" ]
+            (fun _ -> true)
+            (fun _ -> None)
+            (fun _ -> None)
+            artifact
         |> List.find (fun disposition -> disposition.ObligationId = "EV001")
 
     let private journeyDisposition reportText (declaration: string) =
@@ -1891,6 +1896,11 @@ evidence:
             (fun path ->
                 if path = "artifacts/journey.trx" then
                     Some reportText
+                else
+                    None)
+            (fun path ->
+                if path = "artifacts/journey.trx" then
+                    Some(System.Text.Encoding.UTF8.GetBytes reportText)
                 else
                     None)
             (evidenceArtifactWith declaration)
@@ -1924,6 +1934,7 @@ evidence:
     observedRun:
       source: artifacts/journey.trx
       digest: "{digest}"
+      digestContract: exact-bytes-v1
       outcome: passed
       passed: 1
       failed: 0
@@ -1994,7 +2005,7 @@ evidence:
 
         let staleReport = journeyDisposition "changed journey report bytes" declaration
         Assert.Equal("invalid", staleReport.State)
-        Assert.Contains("evidence.productionJourneyReceiptStale", staleReport.DiagnosticIds)
+        Assert.Contains("evidence.observedRunStale", staleReport.DiagnosticIds)
         Assert.Equal(1, HandlersEvidence.journeyObligationsUnmetCount [ staleReport ])
 
     [<Fact>]
@@ -2023,6 +2034,7 @@ evidence:
             HandlersEvidence.evidenceDispositions
                 [ evidenceObligation "EV001" ]
                 (fun _ -> true)
+                (fun _ -> None)
                 (fun _ -> None)
                 (evidenceArtifactWith (declarationOfKind "implementation" false))
             |> List.find (fun disposition -> disposition.ObligationId = "EV001")
@@ -2118,6 +2130,7 @@ tasks:
                 (gameplayTaskFacts ())
                 (fun _ -> true)
                 (fun _ -> None)
+                (fun _ -> None)
                 false
                 artifact
             |> List.find (fun view -> view.ObligationId = "EV001")
@@ -2148,9 +2161,14 @@ tasks:
                         Some "changed journey report bytes"
                     else
                         None)
+                (fun path ->
+                    if path = "artifacts/journey.trx" then
+                        Some(System.Text.Encoding.UTF8.GetBytes "changed journey report bytes")
+                    else
+                        None)
                 false
                 artifact
             |> List.find (fun disposition -> disposition.ObligationId = "EV001")
 
         Assert.Equal("invalid", view.State)
-        Assert.Contains("evidence.productionJourneyReceiptStale", view.DiagnosticIds)
+        Assert.Contains("evidence.observedRunStale", view.DiagnosticIds)

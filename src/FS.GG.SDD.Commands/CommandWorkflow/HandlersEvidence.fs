@@ -461,6 +461,19 @@ module internal HandlersEvidence =
                    receipt.ObservedReportDigest.Equals(sha256Digest text, StringComparison.OrdinalIgnoreCase))
            | _ -> false
 
+    /// A normal observed-run receipt remains evidence only while it names the exact bytes currently
+    /// at its contained source path. The receipt contract is checked explicitly so an older
+    /// normalized-text digest can never be reinterpreted as byte-exact merely because the values
+    /// happen to coincide for an LF/no-BOM report.
+    let observedRunIsCurrent (artifactBytes: string -> byte array option) declaration =
+        match declaration.ObservedRun with
+        | Some run when run.DigestContract = "exact-bytes-v1" && citedPathIsContained run.Source ->
+            artifactBytes run.Source
+            |> Option.exists (fun bytes ->
+                let digest = SchemaVersionModule.sha256Bytes bytes
+                run.Digest.Equals($"sha256:{digest.Value}", StringComparison.OrdinalIgnoreCase))
+        | _ -> false
+
     let evidenceSourceSnapshot label path text =
         EvidenceDomain.sourceSnapshot label path text
 
@@ -1031,6 +1044,8 @@ module internal HandlersEvidence =
         // FS.GG.SDD#709: existence is insufficient for a journey receipt. Classification must read
         // the cited report bytes and bind their digest, or a stale report remains "supported".
         (artifactText: string -> string option)
+        // FS.GG.SDD#835: normal observed-run receipts bind exact raw bytes, not decoded text.
+        (artifactBytes: string -> byte array option)
         (artifact: EvidenceArtifact)
         : EvidenceDispositionDraft list =
         obligations
@@ -1122,6 +1137,13 @@ module internal HandlersEvidence =
                         not (List.isEmpty (missingCitedArtifacts artifactExists declaration)))
                 then
                     "invalid", [ "evidence.artifactNotFound" ]
+                elif
+                    matches
+                    |> List.exists (fun declaration ->
+                        declaration.ObservedRun.IsSome
+                        && not (observedRunIsCurrent artifactBytes declaration))
+                then
+                    "invalid", [ "evidence.observedRunStale" ]
                 elif
                     matches
                     |> List.exists (fun declaration ->
@@ -1515,6 +1537,7 @@ sourceAnalysis: {analysisPath workId}
                                     obligations
                                     (citedArtifactExists model)
                                     (fun artifactPath -> snapshot artifactPath model |> Option.map _.Text)
+                                    (fun artifactPath -> snapshot artifactPath model |> Option.bind _.RawBytes)
                                     artifact
 
                             let dispositionDiagnostics =

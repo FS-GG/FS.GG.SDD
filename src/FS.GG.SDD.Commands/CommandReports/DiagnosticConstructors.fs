@@ -946,6 +946,14 @@ module internal DiagnosticConstructors =
             "Do not hand-write observedRun. Record it with `fsgg-sdd evidence --from-tests <report>`, which derives every field from a report it read."
             ids
 
+    let observedRunStale path (ids: string list) =
+        errorDiagnostic
+            "evidence.observedRunStale"
+            (Some path)
+            "An observedRun receipt no longer matches the exact bytes of its cited test report."
+            "Re-run the suite and then `fsgg-sdd evidence --sync-observed-run <report>` before verify or ship."
+            ids
+
     let missingRequiredSkill path ids =
         errorDiagnostic
             "evidence.missingRequiredSkill"
