@@ -22,6 +22,7 @@ module ObservedRunCommandTests =
     let workId = "011-evidence-command"
     let title = "Evidence Command"
     let evidencePath = $"work/{workId}/evidence.yml"
+    let tasksPath = $"work/{workId}/tasks.yml"
 
     let private initializedAnalyzedProject () =
         let root = TestSupport.tempDirectory ()
@@ -70,6 +71,15 @@ module ObservedRunCommandTests =
             FromTestReport = report }
         |> TestSupport.runRequest
 
+    let private markEveryTaskAsProductionJourney root =
+        TestSupport.readRelative root tasksPath
+        |> fun text -> text.Replace("requiredSkills: [", "requiredSkills: [production-journey, ")
+        |> TestSupport.writeRelative root tasksPath
+
+        TestSupport.runRefresh root workId |> ignore
+        TestSupport.runAnalyze root workId title |> ignore
+        TestSupport.runEvidence root workId title |> ignore
+
     let private parsedEvidence root =
         let text = TestSupport.readRelative root evidencePath
 
@@ -81,6 +91,47 @@ module ObservedRunCommandTests =
         with
         | Ok artifact -> artifact
         | Error diagnostics -> failwith $"evidence.yml did not parse: {diagnostics}"
+
+    let private attachJourneyReceipts root =
+        let run =
+            parsedEvidence root
+            |> _.Evidence
+            |> List.choose _.ObservedRun
+            |> List.tryHead
+            |> Option.defaultWith (fun () -> failwith "expected an observed run before attaching journey receipts")
+
+        let receipt =
+            $"""      skipped: {run.Skipped}
+    journeyReceipt:
+      schemaVersion: 1
+      runner:
+        identity: "FS.GG.Game.Harness.Journey"
+        version: "0.12.0"
+      origin: production-journey
+      routeId: "FS.GG.Game.Reference/Composition"
+      scenarioId: "boot-to-vault-exit"
+      testId: "GP-JOURNEY-001"
+      input:
+        kind: fixed-script
+        digest: "{run.Digest}"
+      replayDigest: "{run.Digest}"
+      traceDigest: "{run.Digest}"
+      initialFingerprint: "{run.Digest}"
+      terminalFingerprint: "{run.Digest}"
+      terminalPredicate:
+        reached: true
+      outcome: passed
+      maximumSteps: 32
+      actualSteps: 12
+      observedTestReport:
+        source: {run.Source}
+        digest: "{run.Digest}"
+        testName: "ReferenceProof GP-JOURNEY-001"
+        outcome: passed"""
+
+        TestSupport.readRelative root evidencePath
+        |> fun text -> text.Replace($"      skipped: {run.Skipped}", receipt)
+        |> TestSupport.writeRelative root evidencePath
 
     // ---- US1: a receipt is READ from a report, not typed ----
 
@@ -503,6 +554,84 @@ module ObservedRunCommandTests =
         { TestSupport.shipRequest root workId title with
             RequireObserved = true }
         |> TestSupport.runRequest
+
+    let private productionJourneyWithReport (bytes: byte array) =
+        let root = evidencedProjectClaimingPass ()
+        markEveryTaskAsProductionJourney root
+        writeReportBytes root bytes
+
+        let recorded = runWithReport root (Some reportPath)
+        Assert.DoesNotContain(recorded.Diagnostics, fun diagnostic -> diagnostic.Severity = Diagnostics.DiagnosticError)
+
+        attachJourneyReceipts root
+        Assert.Contains("production-journey", TestSupport.readRelative root tasksPath)
+        Assert.All(parsedEvidence root |> _.Evidence, fun declaration -> Assert.True(declaration.JourneyReceipt.IsSome))
+        root
+
+    [<Fact>]
+    let ``production journey BOM plus CRLF exact receipt remains green through verify and ship`` () =
+        let crlf = (trxWith 6 0).Replace("\n", "\r\n")
+
+        let bytes = Array.append [| 0xEFuy; 0xBBuy; 0xBFuy |] (Encoding.UTF8.GetBytes crlf)
+
+        let root = productionJourneyWithReport bytes
+        let verified = runVerifyRequiringObserved root
+
+        Assert.DoesNotContain(
+            verified.Diagnostics,
+            fun diagnostic -> diagnostic.Id = "evidence.productionJourneyReceiptStale"
+        )
+
+        match verified.Verification with
+        | Some verification -> Assert.Equal("verificationReady", verification.Readiness)
+        | None -> failwith "verify produced no summary"
+
+        let shipped = runShipRequiringObserved root
+
+        match shipped.Ship with
+        | Some ship -> Assert.Equal("shipReady", ship.Readiness)
+        | None -> failwith "ship produced no summary"
+
+    [<Fact>]
+    let ``production journey normalization after exact receipt blocks verify and ship`` () =
+        let lf = trxWith 7 0
+        let crlf = lf.Replace("\n", "\r\n")
+
+        let bytes = Array.append [| 0xEFuy; 0xBBuy; 0xBFuy |] (Encoding.UTF8.GetBytes crlf)
+
+        let root = productionJourneyWithReport bytes
+        writeReportBytes root (Encoding.UTF8.GetBytes lf)
+
+        match (runVerifyRequiringObserved root).Verification with
+        | Some verification -> Assert.NotEqual<string>("verificationReady", verification.Readiness)
+        | None -> failwith "verify produced no summary"
+
+        let shipped = runShipRequiringObserved root
+        Assert.Contains(shipped.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.observedRunStale")
+
+        match shipped.Ship with
+        | Some ship -> Assert.NotEqual<string>("shipReady", ship.Readiness)
+        | None -> failwith "ship produced no summary"
+
+    [<Fact>]
+    let ``production journey one byte mutation after exact receipt blocks verify and ship`` () =
+        let original = Encoding.UTF8.GetBytes(trxWith 8 0)
+        let root = productionJourneyWithReport original
+        let mutated = Array.copy original
+        let index = mutated |> Array.findIndex ((=) (byte ' '))
+        mutated[index] <- byte '\t'
+        writeReportBytes root mutated
+
+        match (runVerifyRequiringObserved root).Verification with
+        | Some verification -> Assert.NotEqual<string>("verificationReady", verification.Readiness)
+        | None -> failwith "verify produced no summary"
+
+        let shipped = runShipRequiringObserved root
+        Assert.Contains(shipped.Diagnostics, fun diagnostic -> diagnostic.Id = "evidence.observedRunStale")
+
+        match shipped.Ship with
+        | Some ship -> Assert.NotEqual<string>("shipReady", ship.Readiness)
+        | None -> failwith "ship produced no summary"
 
     [<Fact>]
     let ``BOM plus CRLF receipt blocks verify and ship after replacement with LF bytes`` () =

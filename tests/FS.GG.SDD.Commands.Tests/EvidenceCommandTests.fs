@@ -1188,7 +1188,7 @@ evidence:
     synthetic: false"""
 
         let ev001 =
-            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) (fun _ -> None) (fun _ -> None) artifact
+            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) (fun _ -> None) artifact
             |> List.find (fun disposition -> disposition.ObligationId = "EV001")
 
         Assert.Equal("missing", ev001.State)
@@ -1217,7 +1217,7 @@ evidence:
     synthetic: false"""
 
         let ev001 =
-            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) (fun _ -> None) (fun _ -> None) artifact
+            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) (fun _ -> None) artifact
             |> List.find (fun disposition -> disposition.ObligationId = "EV001")
 
         Assert.Equal("supported", ev001.State)
@@ -1278,7 +1278,7 @@ tasks:
     synthetic: false"""
 
         let completion =
-            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) (fun _ -> None) (fun _ -> None) artifact
+            HandlersEvidence.evidenceDispositions obligations (fun _ -> true) (fun _ -> None) artifact
             |> List.find (fun disposition -> disposition.ObligationId = completionId)
 
         Assert.Equal("supported", completion.State)
@@ -1876,15 +1876,10 @@ evidence:
     let private gameplayDisposition (declaration: string) =
         let artifact = evidenceArtifactWith declaration
 
-        HandlersEvidence.evidenceDispositions
-            [ gameplayObligation "EV001" ]
-            (fun _ -> true)
-            (fun _ -> None)
-            (fun _ -> None)
-            artifact
+        HandlersEvidence.evidenceDispositions [ gameplayObligation "EV001" ] (fun _ -> true) (fun _ -> None) artifact
         |> List.find (fun disposition -> disposition.ObligationId = "EV001")
 
-    let private journeyDisposition reportText (declaration: string) =
+    let private journeyDisposition (reportText: string) (declaration: string) =
         let obligation =
             { evidenceObligation "EV001" with
                 RequiredEvidenceKinds = Evidence.realTestEvidenceKinds
@@ -1893,11 +1888,6 @@ evidence:
         HandlersEvidence.evidenceDispositions
             [ obligation ]
             (fun _ -> true)
-            (fun path ->
-                if path = "artifacts/journey.trx" then
-                    Some reportText
-                else
-                    None)
             (fun path ->
                 if path = "artifacts/journey.trx" then
                     Some(System.Text.Encoding.UTF8.GetBytes reportText)
@@ -2035,7 +2025,6 @@ evidence:
                 [ evidenceObligation "EV001" ]
                 (fun _ -> true)
                 (fun _ -> None)
-                (fun _ -> None)
                 (evidenceArtifactWith (declarationOfKind "implementation" false))
             |> List.find (fun disposition -> disposition.ObligationId = "EV001")
 
@@ -2130,7 +2119,6 @@ tasks:
                 (gameplayTaskFacts ())
                 (fun _ -> true)
                 (fun _ -> None)
-                (fun _ -> None)
                 false
                 artifact
             |> List.find (fun view -> view.ObligationId = "EV001")
@@ -2156,11 +2144,6 @@ tasks:
             HandlersVerify.verifyTestDispositionViews
                 journeyFacts
                 (fun _ -> true)
-                (fun path ->
-                    if path = "artifacts/journey.trx" then
-                        Some "changed journey report bytes"
-                    else
-                        None)
                 (fun path ->
                     if path = "artifacts/journey.trx" then
                         Some(System.Text.Encoding.UTF8.GetBytes "changed journey report bytes")

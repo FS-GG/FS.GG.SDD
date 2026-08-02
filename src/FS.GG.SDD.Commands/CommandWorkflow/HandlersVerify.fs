@@ -227,9 +227,7 @@ module internal HandlersVerify =
         // must still be caught here — otherwise the check only ever fires at authoring time and a
         // stale citation walks straight past the boundary that matters (FR-004, US2).
         (artifactExists: string -> bool)
-        // #709: the production-journey receipt binds report bytes, not mere path existence.
-        (artifactText: string -> string option)
-        // #835: exact raw bytes for normal observed-run receipt currentness.
+        // #709/#835: normal and production-journey receipts bind exact raw report bytes.
         (artifactBytes: string -> byte array option)
         // FS.GG.SDD#350 / ADR-0035 stage 3: `verify --require-observed`. `false` (the default) leaves
         // this function byte-for-byte what it was — the `unobserved` arm below is unreachable and a
@@ -310,7 +308,7 @@ module internal HandlersVerify =
                        |> List.exists (fun declaration ->
                            normalizedEvidenceResult declaration.Result = "pass"
                            && not declaration.Synthetic)
-                    && not (matches |> List.exists (journeyReceiptReportIsCurrent artifactText))
+                    && not (matches |> List.exists (journeyReceiptReportIsCurrent artifactBytes))
                 then
                     if matches |> List.exists hasValidJourneyReceipt then
                         "invalid", [ "evidence.productionJourneyReceiptStale" ]
@@ -647,6 +645,7 @@ module internal HandlersVerify =
                                 currentSnapshots
                                 (citedArtifactExists model)
                                 (fun artifactPath -> snapshot artifactPath model |> Option.map _.Text)
+                                (fun artifactPath -> snapshot artifactPath model |> Option.bind _.RawBytes)
                                 artifact
 
                         let obligations = evidenceObligations taskFacts
@@ -655,7 +654,6 @@ module internal HandlersVerify =
                             evidenceDispositions
                                 obligations
                                 (citedArtifactExists model)
-                                (fun artifactPath -> snapshot artifactPath model |> Option.map _.Text)
                                 (fun artifactPath -> snapshot artifactPath model |> Option.bind _.RawBytes)
                                 artifact
 
@@ -668,7 +666,6 @@ module internal HandlersVerify =
                             verifyTestDispositionViews
                                 taskFacts
                                 (citedArtifactExists model)
-                                (fun artifactPath -> snapshot artifactPath model |> Option.map _.Text)
                                 (fun artifactPath -> snapshot artifactPath model |> Option.bind _.RawBytes)
                                 model.Request.RequireObserved
                                 artifact

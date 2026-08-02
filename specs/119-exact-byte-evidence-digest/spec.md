@@ -13,3 +13,5 @@
 - LF and arbitrary binary byte arrays demonstrate byte sensitivity.
 - The command path records the same digest as the committed report bytes.
 - `verify` and `ship` re-read the cited bytes and block if they changed after the receipt was written.
+- Production-journey receipt currentness uses that same raw-byte digest domain; BOM/CRLF evidence is
+  accepted unchanged and rejected after normalization or a one-byte mutation.
