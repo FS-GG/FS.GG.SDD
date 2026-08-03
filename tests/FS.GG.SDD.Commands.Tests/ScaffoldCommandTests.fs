@@ -652,10 +652,9 @@ module ScaffoldCommandTests =
         // exactly as the provenance/tool-manifest SDD writes are. The pinned FS.GG.Drivers package
         // ships five `always` drivers, including work-board-normal and work-board-best.
         let driverPaths = summary.MaterializedDriverPaths |> List.sort
+
         let expectedDriverPathCount =
-            DriverSkills.plan Set.empty
-            |> _.ProvenancePaths
-            |> List.length
+            DriverSkills.plan Set.empty |> _.ProvenancePaths |> List.length
 
         Assert.Equal(expectedDriverPathCount, driverPaths.Length)
         Assert.Contains(".agents/skills/work-board/references/host-loop.md", driverPaths)

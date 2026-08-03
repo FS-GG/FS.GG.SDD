@@ -447,6 +447,7 @@ module DriverSkillsTests =
         Assert.Contains("padd-item", outcome.MaterializedIds)
         Assert.Contains("work-board", outcome.MaterializedIds)
         Assert.Contains("work-roadmap", outcome.MaterializedIds)
+
         let expectedPathCount =
             deliveredFiles
             |> Map.values
