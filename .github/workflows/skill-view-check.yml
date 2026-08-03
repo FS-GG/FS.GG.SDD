@@ -230,6 +230,26 @@ jobs:
       - name: Resolve the view root this tree no longer commits
         run: bash scripts/skill-view generate --receiver-proj .config/kit/FS.GG.Kit.receiver.proj
 
+      # The receiver pin is deliberately executable and immediately adjacent to its call site.
+      # `skill-view selftest` owns fixture and swapped-root behaviour; this receiver only proves that
+      # its exact production invocation refuses every retired or malformed spelling.
+      - name: Pin the receiver-project generate invocation
+        shell: bash
+        run: |
+          set -euo pipefail
+          reject() {
+            if bash scripts/skill-view "$@"; then
+              echo "::error::skill-view generate unexpectedly accepted: $*" >&2
+              exit 1
+            fi
+          }
+          reject generate --receiver-proj .config/kit/FS.GG.Kit.receiver.proj --source .claude/skills
+          reject generate --receiver-proj .config/kit/FS.GG.Kit.receiver.proj --roots .agents/skills
+          reject generate --receiver-proj .config/kit/not-the-receiver.proj
+          reject generate --receiver-proj .config/kit/FS.GG.Kit.receiver.proj --extra-flag
+          # Restore and prove the exact production argv after every negative mutation.
+          bash scripts/skill-view generate --receiver-proj .config/kit/FS.GG.Kit.receiver.proj
+
       # ADR-0067 §8's replacement alarm DEMONSTRATES IT CAN FIRE, and the demonstration now ships
       # inside the tool (FS-GG/.github#1710/#1770). `scripts/check-skill-view-roots.sh` used to carry
       # its own `*_can_fire` fixtures — 23,050 bytes of them, one of five such files in the fleet with

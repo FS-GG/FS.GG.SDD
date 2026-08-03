@@ -154,16 +154,25 @@ jobs:
       - name: Resolve the view root this tree no longer commits
         run: bash scripts/skill-view generate --receiver-proj .config/kit/FS.GG.Kit.receiver.proj
 
-      # FS.GG.SDD#801. Pins that THIS file's and skill-view-check.yml's `skill-view generate` steps
-      # spell the declared `--receiver-proj` invocation, not a hand-copied `--source`/`--roots` pair
-      # that could silently drift from `.config/kit/FS.GG.Kit.receiver.proj` on a legal ADR-0065
-      # disposition change. Reads the two workflow files verbatim (so it is revert-sensitive to this
-      # step and the matching one in skill-view-check.yml, directly), then demonstrates by mutation
-      # that the retired hand-copied form is genuinely blind to a swapped declaration while
-      # `--receiver-proj` is not. No .NET, no restore: pure bash over this repo's own workflow files
-      # plus synthetic trees, same shape as the root-asymmetry test below.
-      - name: Unit-test the skill-view generate invocation (FS.GG.SDD#801)
-        run: bash scripts/tests/skill-view-generate-invocation.test.sh
+      # The receiver pin is deliberately executable and immediately adjacent to its call site.
+      # `skill-view selftest` owns fixture and swapped-root behaviour; this receiver only proves that
+      # its exact production invocation refuses every retired or malformed spelling.
+      - name: Pin the receiver-project generate invocation
+        shell: bash
+        run: |
+          set -euo pipefail
+          reject() {
+            if bash scripts/skill-view "$@"; then
+              echo "::error::skill-view generate unexpectedly accepted: $*" >&2
+              exit 1
+            fi
+          }
+          reject generate --receiver-proj .config/kit/FS.GG.Kit.receiver.proj --source .claude/skills
+          reject generate --receiver-proj .config/kit/FS.GG.Kit.receiver.proj --roots .agents/skills
+          reject generate --receiver-proj .config/kit/not-the-receiver.proj
+          reject generate --receiver-proj .config/kit/FS.GG.Kit.receiver.proj --extra-flag
+          # Restore and prove the exact production argv after every negative mutation.
+          bash scripts/skill-view generate --receiver-proj .config/kit/FS.GG.Kit.receiver.proj
 
       - name: Unit-test the root-asymmetry check
         run: bash scripts/tests/check-root-asymmetry.test.sh
