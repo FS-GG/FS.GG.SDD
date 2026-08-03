@@ -649,10 +649,15 @@ module ScaffoldCommandTests =
         // provider output).
         // 108 / ADR-0054: the always-on driver skills scaffold materializes into every runtime root
         // are SDD-owned (owner `driver`), not the provider's — excluded from the app-only diff
-        // exactly as the provenance/tool-manifest SDD writes are. FS.GG.Drivers 0.9.0 ships five
-        // `always` drivers, adding work-board-normal and work-board-best.
+        // exactly as the provenance/tool-manifest SDD writes are. The pinned FS.GG.Drivers package
+        // ships five `always` drivers, including work-board-normal and work-board-best.
         let driverPaths = summary.MaterializedDriverPaths |> List.sort
-        Assert.Equal(21 * Fsgg.Schemas.agentSkillRoots.Length, driverPaths.Length)
+        let expectedDriverPathCount =
+            DriverSkills.plan Set.empty
+            |> _.ProvenancePaths
+            |> List.length
+
+        Assert.Equal(expectedDriverPathCount, driverPaths.Length)
         Assert.Contains(".agents/skills/work-board/references/host-loop.md", driverPaths)
 
         let preexisting =
