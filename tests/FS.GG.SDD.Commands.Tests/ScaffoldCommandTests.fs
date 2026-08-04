@@ -1951,10 +1951,12 @@ module ScaffoldCommandTests =
 
         // 073/ADR-0018: the seeded regenerable-output `.gitignore` is an authored skeleton seed too.
         // 085: `init` also writes the dev-repo `.fsgg/scaffold-provenance.json` anchor.
+        // 845/docs/decisions/0005: and the opt-in reference-gate-set resolution project.
         let authoredSeeds =
             Set.ofList (
                 [ ".fsgg/constitution.md"
                   ".fsgg/early-stage-guidance.md"
+                  FS.GG.SDD.Commands.Internal.Foundation.governanceResolutionPath
                   ".gitignore"
                   provenancePath ]
                 @ seededSkillPaths
