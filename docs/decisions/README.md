@@ -8,14 +8,19 @@ defining document.
 
 | Series | Home | Numbering | What it records |
 |---|---|---|---|
-| **Repo-local** | `docs/decisions/` (this folder) | `0001`–`0004` | Decisions internal to **FS.GG.SDD** |
+| **Repo-local** | `docs/decisions/` (this folder) | `0001`–`0005` | Decisions internal to **FS.GG.SDD** |
 | **Org (cross-repo)** | [`FS-GG/.github/docs/adr/`](https://github.com/FS-GG/.github/tree/main/docs/adr) | `0001`–`0027`+ | Decisions spanning more than one FS-GG repo |
 
-The two series **number independently and collide on `0001`–`0003`**: repo-local
+The two series **number independently and collide on `0001`–`0005`**: repo-local
 [`0002`](0002-retire-defect-classes-via-structural-invariants.md) ("Retire Defect Classes")
 is a different document from org `0002` ("Composition by scaffold"). Inside this repo,
 `ADR-0001`/`ADR-0002`/`ADR-0003` mean the **repo-local** records below; **every other
 `ADR-####` citation refers to the org series** and resolves via the table further down.
+
+Repo-local [`0004`](0004-plan-time-framework-api-resolution-against-captured-surface.md) and
+[`0005`](0005-generated-product-governance-resolution-route.md) collide with **cited** org ADRs
+(0004 "constitution ownership", 0005 "`.fsgg/` slot ownership") and are therefore deliberately
+**not** exceptions to that rule: cite them by path or link, never as a bare `ADR-####`.
 
 ## Repo-local ADRs (`docs/decisions/`)
 
@@ -25,9 +30,14 @@ is a different document from org `0002` ("Composition by scaffold"). Inside this
 | [0002](0002-retire-defect-classes-via-structural-invariants.md) | Retire Defect Classes via Structural Invariants |
 | [0003](0003-gap-d-work-model-decision-grammar-and-currency.md) | Gap D — Converge the Decision Grammar and Retire Work-Model Decoration |
 | [0004](0004-plan-time-framework-api-resolution-against-captured-surface.md) | Plan-time Resolution of Framework-API References Against a Captured Authoritative Package Surface |
+| [0005](0005-generated-product-governance-resolution-route.md) | A Generated Product Gets a Pinned, Opt-in Route to the Org Reference Gate Set |
 
 New repo-local decisions continue this sequence. Cross-repo decisions belong in the org
-series (open a PR against `FS-GG/.github`), not here.
+series (open a PR against `FS-GG/.github`), not here — with one boundary worth naming:
+where a cross-repo decision is recorded in the **owning** repo (as
+[`0005`](0005-generated-product-governance-resolution-route.md)'s shared half is, in
+FS.GG.Governance), a repo-local record documenting only **this repo's** side of that contract
+belongs here.
 
 ## Org ADRs cited from this repo
 

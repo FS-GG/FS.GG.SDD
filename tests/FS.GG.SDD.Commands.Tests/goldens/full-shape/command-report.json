@@ -483,6 +483,19 @@
       "diagnosticIds": []
     },
     {
+      "path": ".fsgg/governance-resolution.proj",
+      "kind": "structuredSource",
+      "ownership": "authored",
+      "operation": "create",
+      "beforeDigest": null,
+      "afterDigest": {
+        "algorithm": "sha256",
+        "value": "a9cd7c6d696b20243e2002258d4147a98d9179f2c943a7df2e542fac36c8f2b9"
+      },
+      "safeWriteDecision": "dryRunOnly",
+      "diagnosticIds": []
+    },
+    {
       "path": ".fsgg/project.yml",
       "kind": "structuredSource",
       "ownership": "authored",

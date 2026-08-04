@@ -400,6 +400,93 @@ For the full authoring contracts, see `docs/reference/authoring-contracts.md`.
 
     let earlyStageGuidancePath = ".fsgg/early-stage-guidance.md"
 
+    // ── The generated-product route to the org reference gate set ──────────────────────────────
+    // docs/decisions/0005; FS.GG.SDD#845, answering FS-GG/FS.GG.Governance#385 AC3 under the
+    // FS-GG/FS.GG.Governance#386 decision.
+    //
+    // THE PIN. Explicit and re-pinnable by construction (#845 AC2): the version is this one named
+    // constant, interpolated into the one emitted artifact, so a product reads it in its own tree
+    // and bumps it deliberately. There is no floating `*` and no "latest" resolution anywhere on
+    // this path. Advance this constant to change what NEW products are seeded with; an existing
+    // product's copy is `StructuredSource` (no-clobber), so it is never rewritten underneath it.
+    let referenceGateSetPackageId = "FS.GG.Governance.ReferenceGateSet"
+
+    let referenceGateSetVersion = "1.6.0"
+
+    let governanceResolutionPath = ".fsgg/governance-resolution.proj"
+
+    // WHY A PROJECT AND NOT CONTENT. SDD does not author Governance content and does not parse
+    // Governance semantics (FR-011, and FS.GG.SDD#833 rejected duplicating them here). What `init`
+    // is missing is not a declaration — it is a ROUTE. So this seeds the pinned reference and
+    // defers entirely to the verb Governance itself ships in the package
+    // (`buildTransitive/FS.GG.Governance.ReferenceGateSet.targets`, `FsggResolveReferenceGateSet`),
+    // rather than inventing a second resolution mechanism SDD would then own. Every byte of the
+    // resolved profile comes from the package; none of it is written by this tool.
+    //
+    // WHY IT IS SAFE TO SEED UNCONDITIONALLY. Running the verb is a separate, explicit act. Until
+    // a product runs it, `.fsgg/policy.yml`, `.fsgg/capabilities.yml` and `.fsgg/tooling.yml` stay
+    // ABSENT, so the `optionalGovernance*` / `notEvaluated` facts stay literally true (#845 AC4)
+    // and a product that declines Governance is unchanged — it deletes this file, and because the
+    // path is deliberately NOT in `Drift.expectedArtifactPaths`, neither `doctor` nor `upgrade`
+    // re-seeds it or reports it missing. Declining is a supported end state, not drift.
+    //
+    // WHY IT LIVES IN `.fsgg/`. `init` owns `.fsgg/`, and the package's `.fsgg/` payload
+    // (`governance.yml`, `capabilities.yml`, `policy.yml`, `tooling.yml`, plus the
+    // controlled-import contract files) collides with none of the files `init` writes there. It
+    // also keeps a second buildable project out of the product root, where `dotnet build`/`restore`
+    // with no argument would then find two. `FsggReferenceGateSetDestination` must therefore be
+    // overridden: the target's default is `$(MSBuildProjectDirectory)/.fsgg`, which from inside
+    // `.fsgg/` would resolve to `.fsgg/.fsgg`.
+    //
+    // `ManagePackageVersionsCentrally=false` is load-bearing, not defensive: the org-shared build
+    // baseline turns Central Package Management ON repo-wide, and a `Version=` attribute under CPM
+    // is NU1008. Opting this one project out is what keeps the pin inside the artifact that carries
+    // it. `EnableDefaultItems=false` stops the SDK globbing `.fsgg/` content into the project.
+    let governanceResolutionText =
+        $"""<!-- The generated-product route to the FS-GG org reference gate set (FS.GG.SDD#845,
+     answering FS-GG/FS.GG.Governance#385 AC3). OPTIONAL and OPT-IN: `fsgg-sdd init` seeds this
+     file, it does nothing until you run the verb below, and deleting it is a supported choice
+     that `fsgg-sdd doctor`/`upgrade` will not undo.
+
+     Adopt the org profile into this repository's `.fsgg/`:
+
+         cd .fsgg
+         dotnet restore governance-resolution.proj
+         dotnet msbuild governance-resolution.proj -t:FsggResolveReferenceGateSet
+
+     This writes `governance.yml`, `capabilities.yml`, `policy.yml`, `tooling.yml` and the
+     controlled-import contract files into `.fsgg/`. Add `-p:FsggReferenceGateSetOverwrite=false`
+     to refuse overwriting files you have since edited locally.
+
+     `FsggResolveReferenceGateSet` is defined by FS.GG.Governance, not by FS.GG.SDD — this file
+     only pins the package and points the destination at this repository's `.fsgg/`.
+
+     THIS IS DISTRIBUTION, NOT ENFORCEMENT. The org's inherited gate floor is embedded in the
+     Governance runtime and is read from no file (FS.GG.Governance ADR-0009 §Decision 1, preserved
+     by its docs/decisions/0011). Never resolving, or editing or deleting what you resolved,
+     changes what this product DECLARES; it cannot change what this product INHERITS.
+
+     FS.GG.SDD itself never reads these files to gate, route, or alter its output — it reports them
+     as optional `notEvaluated` compatibility facts whether they are present, absent, or partial.
+     See docs/adopting-governance.md.
+
+     RE-PINNING: edit the Version below deliberately, then re-run the verb. -->
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <FsggReferenceGateSetDestination>$([MSBuild]::NormalizeDirectory('$(MSBuildProjectDirectory)'))</FsggReferenceGateSetDestination>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="{referenceGateSetPackageId}" Version="{referenceGateSetVersion}" />
+  </ItemGroup>
+
+</Project>
+"""
+
     // 073/ADR-0018: the seeded `.gitignore` that keeps regenerable lifecycle output out of a
     // scaffolded product's history at birth. Per-work-item `readiness/<id>/` views are generated
     // by `fsgg-sdd` and regenerated by `fsgg-sdd refresh` — transient, ignored by *role* (not
@@ -466,6 +553,10 @@ nuget-cache/
           WriteFile(".fsgg/project.yml", projectConfigText projectId, StructuredSource)
           WriteFile(".fsgg/sdd.yml", sddConfigText, StructuredSource)
           WriteFile(".fsgg/agents.yml", agentsConfigText, StructuredSource)
+          // 845: the OPT-IN route to the org reference gate set. Seeded, never executed — it
+          // declares no Governance content and emits none, so the `optionalGovernance*` facts
+          // stay `notEvaluated` until a product chooses to run the Governance-owned verb.
+          WriteFile(governanceResolutionPath, governanceResolutionText, StructuredSource)
           WriteFile(".fsgg/constitution.md", constitutionText, AgentGuidanceTarget)
           WriteFile(earlyStageGuidancePath, earlyStageGuidanceText, AgentGuidanceTarget)
           WriteFile("AGENTS.md", agentGuidance "Codex", AgentGuidanceTarget)

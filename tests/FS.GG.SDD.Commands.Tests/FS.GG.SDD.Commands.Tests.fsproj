@@ -41,6 +41,7 @@
     <Compile Include="ToolVersionTests.fs" />
     <Compile Include="TextProjectionTests.fs" />
     <Compile Include="GovernanceBoundaryCommandTests.fs" />
+    <Compile Include="GovernanceResolutionRouteTests.fs" />
     <Compile Include="LifecycleSmokeTests.fs" />
     <Compile Include="GovernanceHandoffTests.fs" />
     <Compile Include="ReleaseConformanceTests.fs" />
