@@ -31,6 +31,42 @@ module VerifyCommandTests =
         TestSupport.initializeEvidencedProject root workId title
         root
 
+    let private configureBlockingFSharpSurface root receipt =
+        // Rogue3-shaped product: a declared public API fence whose signature glob resolves to
+        // zero files.  The receipt is producer-owned Governance evidence, not re-parsed SDD policy.
+        TestSupport.writeRelative
+            root
+            ".fsgg/capabilities.yml"
+            "schemaVersion: 2\nsurfaces:\n  - id: public-api\n    maturity: block-on-ship\n"
+
+        TestSupport.writeRelative root "readiness/fsharp-public-surface.json" receipt
+        let spec = TestSupport.readRelative root specPath
+
+        let withImpact =
+            if spec.Contains("publicOrToolFacingImpact:") then
+                spec.Replace("publicOrToolFacingImpact: false", "publicOrToolFacingImpact: true")
+            else
+                spec.Replace("status: specified", "status: specified\npublicOrToolFacingImpact: true")
+
+        TestSupport.writeRelative root specPath withImpact
+
+    let private fsharpReceipt
+        (maturity: string)
+        (applicability: string)
+        (applicable: bool)
+        (glob: string)
+        (count: int)
+        (cardinality: string)
+        (malformed: string option)
+        =
+        let malformed =
+            malformed
+            |> Option.map (fun value -> $"\"{value}\"")
+            |> Option.defaultValue "null"
+
+        let applicableValue = if applicable then "true" else "false"
+        $"""{{"schemaVersion":1,"kind":"fsharp-public-surface","maturity":"{maturity}","applicability":"{applicability}","applicable":{applicableValue},"declaredGlob":"{glob}","matchedModuleCount":{count},"cardinality":"{cardinality}","malformed":{malformed}}}"""
+
     let private addPerformanceBudget root p95 p99 deferralIssue =
         let artifactPath = $"readiness/{workId}/performance-evidence.json"
 
@@ -258,6 +294,70 @@ module VerifyCommandTests =
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "verify.malformedVerificationView")
         Assert.Equal(before, TestSupport.readRelative root verifyPath)
+
+    [<Fact>]
+    let ``verify fails closed for Rogue3-shaped empty block-on-ship FSharp surface`` () =
+        let root = initializedEvidencedProject ()
+
+        configureBlockingFSharpSurface
+            root
+            (fsharpReceipt "block-on-ship" "applicable" true "src/**/*.fsi" 0 "zero" None)
+
+        let report = TestSupport.runVerify root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+
+        let finding =
+            report.Diagnostics
+            |> List.find (fun diagnostic -> diagnostic.Id = "verify.emptyBlockingFSharpSurface")
+
+        Assert.Contains(workId, finding.Message)
+        Assert.Contains("src/**/*.fsi", finding.Message)
+        Assert.Contains(".fsi", finding.Message)
+        Assert.False(TestSupport.existsRelative root verifyPath)
+
+    [<Fact>]
+    let ``verify accepts explicit non-applicability and populated FSharp signature receipts`` () =
+        let nonApplicable = initializedEvidencedProject ()
+
+        configureBlockingFSharpSurface
+            nonApplicable
+            (fsharpReceipt "block-on-ship" "not-applicable" false "src/**/*.fsi" 0 "zero" None)
+
+        Assert.NotEqual(CommandOutcome.Blocked, (TestSupport.runVerify nonApplicable workId title).Outcome)
+
+        let populated = initializedEvidencedProject ()
+
+        configureBlockingFSharpSurface
+            populated
+            (fsharpReceipt "block-on-ship" "applicable" true "src/**/*.fsi" 1 "one" None)
+
+        Assert.NotEqual(CommandOutcome.Blocked, (TestSupport.runVerify populated workId title).Outcome)
+
+    [<Fact>]
+    let ``verify refuses malformed public surface receipt without a verdict`` () =
+        let root = initializedEvidencedProject ()
+        configureBlockingFSharpSurface root "{not-json"
+
+        let report = TestSupport.runVerify root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "verify.fsharpSurfaceReceiptMalformed")
+        Assert.False(TestSupport.existsRelative root verifyPath)
+
+    [<Fact>]
+    let ``ship rechecks a newly introduced blocking surface receipt`` () =
+        let root = initializedEvidencedProject ()
+        Assert.NotEqual(CommandOutcome.Blocked, (TestSupport.runVerify root workId title).Outcome)
+
+        configureBlockingFSharpSurface
+            root
+            (fsharpReceipt "block-on-ship" "applicable" true "src/**/*.fsi" 0 "zero" None)
+
+        let report = TestSupport.runShip root workId title
+
+        Assert.Equal(CommandOutcome.Blocked, report.Outcome)
+        Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "verify.emptyBlockingFSharpSurface")
 
     [<Fact>]
     let ``verify outside project blocks`` () =
