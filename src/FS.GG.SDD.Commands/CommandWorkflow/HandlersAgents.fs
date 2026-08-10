@@ -190,6 +190,13 @@ module internal HandlersAgents =
 
         builder.AppendLine("") |> ignore
 
+        builder.AppendLine(
+            "For public-impact F# work, author or update the compiled `.fsi` signature before implementation hardens the surface. Prefer simple modules, functions, records, and discriminated unions; keep effects at explicit boundaries."
+        )
+        |> ignore
+
+        builder.AppendLine("") |> ignore
+
         skills
         |> List.sortBy (fun skill -> skill.Id)
         |> List.iter (fun skill ->

@@ -137,12 +137,16 @@ The convention that satisfies it:
    `--no-require-observed` to restore the pre-flip behavior; the legacy `--require-observed` stays a
    recognized, now-redundant explicit accept.
 
-   > **Note.** This repo self-develops with **Spec Kit**, not the `fsgg-sdd` lifecycle, so it has no
-   > `work/` items of its own to record onto — its `readiness/` bundles are pinned proof from
-   > already-merged features, whose frozen test counts a current run would not match. The org
-   > receipt census therefore first moves off zero on the first repo that runs an `fsgg-sdd`
-   > lifecycle under the flipped default. The recording path itself is proven end-to-end by the real
-   > CLI (`ObservedRunCommandTests`, "the real CLI accepts --from-test-report and records the
+   > **Note.** This repo's contributor process remains **Spec Kit** (`specs/*`), not the
+   > `fsgg-sdd` lifecycle — that distinction from the top of this document still holds. But a
+   > *coordination item* routed `sdd-required` carries its own `fsgg-sdd` package (`work/<id>/` +
+   > `readiness/<id>/`) alongside whatever Spec Kit artifacts this repo's own contributor process
+   > produces; the two coexist without conflating. `work/833-shipready-public-surface/` (FS-GG/FS.GG.SDD#833)
+   > is the first of these — this repo's other `readiness/` bundles remain pinned proof from
+   > already-merged Spec Kit features, whose frozen test counts a current run would not match. The
+   > org receipt census therefore moves off zero starting with this package, run under the flipped
+   > default. The recording path itself is proven end-to-end by the real CLI
+   > (`ObservedRunCommandTests`, "the real CLI accepts --from-test-report and records the
    > receipt").
 
 3. **A failing run is a receipt too.** `evidence --from-test-report` refuses to stamp a report with

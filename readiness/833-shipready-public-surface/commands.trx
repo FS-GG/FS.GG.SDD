@@ -1,0 +1,58 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="e2948988-628e-4d17-8973-ebffaa5df448" name="@0bc8bbef51b6 2026-08-03 00:17:28" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-03T00:17:28.8652123+02:00" queuing="2026-08-03T00:17:28.8652124+02:00" start="2026-08-03T00:17:27.7616711+02:00" finish="2026-08-03T00:17:28.8683646+02:00" />
+  <TestSettings name="default" id="6ca450ae-8f2d-4f1c-a8cb-7a569b41695b">
+    <Deployment runDeploymentRoot="_0bc8bbef51b6_2026-08-03_00_17_28" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="dbbf9e4d-64fd-4738-91ec-e2e01292e0f1" testId="051dba92-233b-5518-a3a6-dbb77f42fa30" testName="FS.GG.SDD.Commands.Tests.VerifyCommandTests.ship rechecks a newly introduced blocking surface receipt" computerName="0bc8bbef51b6" duration="00:00:00.0676577" startTime="2026-08-03T00:17:28.6043715+02:00" endTime="2026-08-03T00:17:28.6716837+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="dbbf9e4d-64fd-4738-91ec-e2e01292e0f1" />
+    <UnitTestResult executionId="3a780795-d19a-49cd-b9b9-a0bac1af0854" testId="891d68bd-2569-d27d-49e1-9f88d7e1437b" testName="FS.GG.SDD.Commands.Tests.VerifyCommandTests.verify fails closed for Rogue3-shaped empty block-on-ship FSharp surface" computerName="0bc8bbef51b6" duration="00:00:00.0484639" startTime="2026-08-03T00:17:28.5615698+02:00" endTime="2026-08-03T00:17:28.6039599+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="3a780795-d19a-49cd-b9b9-a0bac1af0854" />
+    <UnitTestResult executionId="be10a53a-f006-4ea0-b74f-d41c36c22bc6" testId="3f690d5f-ca1e-9e4f-b881-33cc6cbfe77a" testName="FS.GG.SDD.Commands.Tests.VerifyCommandTests.verify accepts explicit non-applicability and populated FSharp signature receipts" computerName="0bc8bbef51b6" duration="00:00:00.4450741" startTime="2026-08-03T00:17:28.1074060+02:00" endTime="2026-08-03T00:17:28.5555384+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="be10a53a-f006-4ea0-b74f-d41c36c22bc6" />
+    <UnitTestResult executionId="d25e8328-14f9-4ee8-8798-2f7debf41807" testId="35f09ee4-cd5d-4692-9824-013fa5f1e314" testName="FS.GG.SDD.Commands.Tests.AgentsCommandTests.agents generates per-target guidance with real filesystem evidence" computerName="0bc8bbef51b6" duration="00:00:00.0748725" startTime="2026-08-03T00:17:28.7214998+02:00" endTime="2026-08-03T00:17:28.7961362+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="d25e8328-14f9-4ee8-8798-2f7debf41807" />
+    <UnitTestResult executionId="69eac0f4-9e1f-4dee-aaf7-cace0499881d" testId="302cf310-c766-32da-c461-8754b77fb12a" testName="FS.GG.SDD.Commands.Tests.VerifyCommandTests.verify refuses malformed public surface receipt without a verdict" computerName="0bc8bbef51b6" duration="00:00:00.0485325" startTime="2026-08-03T00:17:28.6718204+02:00" endTime="2026-08-03T00:17:28.7202802+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="69eac0f4-9e1f-4dee-aaf7-cace0499881d" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.AgentsCommandTests.agents generates per-target guidance with real filesystem evidence" storage="/home/developer/projects/fs.gg.sdd-833/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="35f09ee4-cd5d-4692-9824-013fa5f1e314">
+      <Execution id="d25e8328-14f9-4ee8-8798-2f7debf41807" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-833/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.AgentsCommandTests" name="agents generates per-target guidance with real filesystem evidence" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.VerifyCommandTests.ship rechecks a newly introduced blocking surface receipt" storage="/home/developer/projects/fs.gg.sdd-833/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="051dba92-233b-5518-a3a6-dbb77f42fa30">
+      <Execution id="dbbf9e4d-64fd-4738-91ec-e2e01292e0f1" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-833/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.VerifyCommandTests" name="ship rechecks a newly introduced blocking surface receipt" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.VerifyCommandTests.verify fails closed for Rogue3-shaped empty block-on-ship FSharp surface" storage="/home/developer/projects/fs.gg.sdd-833/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="891d68bd-2569-d27d-49e1-9f88d7e1437b">
+      <Execution id="3a780795-d19a-49cd-b9b9-a0bac1af0854" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-833/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.VerifyCommandTests" name="verify fails closed for Rogue3-shaped empty block-on-ship FSharp surface" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.VerifyCommandTests.verify accepts explicit non-applicability and populated FSharp signature receipts" storage="/home/developer/projects/fs.gg.sdd-833/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="3f690d5f-ca1e-9e4f-b881-33cc6cbfe77a">
+      <Execution id="be10a53a-f006-4ea0-b74f-d41c36c22bc6" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-833/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.VerifyCommandTests" name="verify accepts explicit non-applicability and populated FSharp signature receipts" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.VerifyCommandTests.verify refuses malformed public surface receipt without a verdict" storage="/home/developer/projects/fs.gg.sdd-833/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="302cf310-c766-32da-c461-8754b77fb12a">
+      <Execution id="69eac0f4-9e1f-4dee-aaf7-cace0499881d" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-833/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.VerifyCommandTests" name="verify refuses malformed public surface receipt without a verdict" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="051dba92-233b-5518-a3a6-dbb77f42fa30" executionId="dbbf9e4d-64fd-4738-91ec-e2e01292e0f1" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="891d68bd-2569-d27d-49e1-9f88d7e1437b" executionId="3a780795-d19a-49cd-b9b9-a0bac1af0854" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="3f690d5f-ca1e-9e4f-b881-33cc6cbfe77a" executionId="be10a53a-f006-4ea0-b74f-d41c36c22bc6" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="35f09ee4-cd5d-4692-9824-013fa5f1e314" executionId="d25e8328-14f9-4ee8-8798-2f7debf41807" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="302cf310-c766-32da-c461-8754b77fb12a" executionId="69eac0f4-9e1f-4dee-aaf7-cace0499881d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="5" executed="5" passed="5" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.5+1b188a7b0a (64-bit .NET 10.0.10)
+[xUnit.net 00:00:00.06]   Discovering: FS.GG.SDD.Commands.Tests
+[xUnit.net 00:00:00.13]   Discovered:  FS.GG.SDD.Commands.Tests
+[xUnit.net 00:00:00.15]   Starting:    FS.GG.SDD.Commands.Tests
+[xUnit.net 00:00:00.85]   Finished:    FS.GG.SDD.Commands.Tests
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

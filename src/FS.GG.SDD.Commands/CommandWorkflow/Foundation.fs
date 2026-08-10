@@ -689,6 +689,9 @@ nuget-cache/
           ReadFile(analysisPath workId)
           ReadFile(workModelPath workId)
           ReadFile(verifyPath workId)
+          // Governance#366 emits this versioned, deterministic public-surface receipt.  SDD
+          // consumes the receipt rather than reimplementing Governance's policy/glob parser.
+          ReadFile "readiness/fsharp-public-surface.json"
           EnumerateDirectory "work" ]
 
     let shipReadEffects workId =
@@ -709,6 +712,7 @@ nuget-cache/
           ReadFile(workModelPath workId)
           ReadFile(verifyPath workId)
           ReadFile(shipPath workId)
+          ReadFile "readiness/fsharp-public-surface.json"
           EnumerateDirectory "work" ]
 
     let agentsReadEffects workId =
@@ -740,6 +744,7 @@ nuget-cache/
           ReadFile(workModelPath workId)
           ReadFile(verifyPath workId)
           ReadFile(shipPath workId)
+          ReadFile "readiness/fsharp-public-surface.json"
           // Scaffold provenance: provider-produced paths are excluded from refresh.
           ReadFile ".fsgg/scaffold-provenance.json"
           ReadFile(GenerationManifestModule.expectedGovernanceHandoffOutputPath workId)

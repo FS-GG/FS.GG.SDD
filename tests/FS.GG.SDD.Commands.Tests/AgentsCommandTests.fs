@@ -50,6 +50,12 @@ module AgentsCommandTests =
                     $"Expected generated {target}/{file}."
                 )
 
+            let skills =
+                TestSupport.readRelative root $"readiness/{workId}/agent-commands/{target}/skills.md"
+
+            Assert.Contains("author or update the compiled `.fsi` signature", skills)
+            Assert.Contains("Prefer simple modules, functions, records, and discriminated unions", skills)
+
         match report.AgentGuidance with
         | Some summary ->
             Assert.Equal<string list>([ "claude"; "codex" ], summary.GeneratedTargetIds)

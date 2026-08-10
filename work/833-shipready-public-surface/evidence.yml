@@ -1,0 +1,538 @@
+schemaVersion: 1
+workId: 833-shipready-public-surface
+stage: evidence
+status: evidenceReady
+sourceSpec: work/833-shipready-public-surface/spec.md
+sourceClarifications: work/833-shipready-public-surface/clarifications.md
+sourceChecklist: work/833-shipready-public-surface/checklist.md
+sourcePlan: work/833-shipready-public-surface/plan.md
+sourceTasks: work/833-shipready-public-surface/tasks.yml
+sourceAnalysis: readiness/833-shipready-public-surface/analysis.json
+sourceSnapshots:
+  - label: analysis
+    path: readiness/833-shipready-public-surface/analysis.json
+    digest: 35941729f43641da140bea6d8a4b64ad96367c175d5e739d72b6a43bef50ddf8
+    schemaVersion: 1
+  - label: checklist
+    path: work/833-shipready-public-surface/checklist.md
+    digest: 1f3d6efffc1c44cd4b5a54d30a3d45da5dbbd326b295cfd73ed8005761f99fed
+    schemaVersion: 1
+  - label: clarifications
+    path: work/833-shipready-public-surface/clarifications.md
+    digest: 969fefc775fd3ee984e3170b7605a9247e43c578d4712e061ee55af610899606
+    schemaVersion: 1
+  - label: plan
+    path: work/833-shipready-public-surface/plan.md
+    digest: c792d83650e6edf96aa80f3a23b8e77901eab2e976ac124e09e1a4610d3cfce2
+    schemaVersion: 1
+  - label: spec
+    path: work/833-shipready-public-surface/spec.md
+    digest: bad74b191b05a04cc629109807504e915818f16eb64162d79c51e092c7a72333
+    schemaVersion: 1
+  - label: tasks
+    path: work/833-shipready-public-surface/tasks.yml
+    digest: 692c9f8db1fe6e1bfaad17a9aeb20be312f9e6593f9b93f77643e2123d24f632
+    schemaVersion: 1
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV001]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV002
+    kind: verification
+    subject:
+      type: task
+      id: T002
+    taskRefs: [T002]
+    requirementRefs: [FR-002]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002]
+    obligationRefs: [EV002]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV003
+    kind: verification
+    subject:
+      type: task
+      id: T003
+    taskRefs: [T003]
+    requirementRefs: [FR-003]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-003]
+    obligationRefs: [EV003]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV004
+    kind: verification
+    subject:
+      type: task
+      id: T004
+    taskRefs: [T004]
+    requirementRefs: [FR-004]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV004]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV005
+    kind: verification
+    subject:
+      type: task
+      id: T005
+    taskRefs: [T005]
+    requirementRefs: [FR-005]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-005]
+    obligationRefs: [EV005]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV006
+    kind: verification
+    subject:
+      type: task
+      id: T006
+    taskRefs: [T006]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV006]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV007
+    kind: verification
+    subject:
+      type: task
+      id: T007
+    taskRefs: [T007]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV007]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV008
+    kind: verification
+    subject:
+      type: task
+      id: T008
+    taskRefs: [T008]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV008]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV009
+    kind: verification
+    subject:
+      type: task
+      id: T009
+    taskRefs: [T009]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV009]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV010
+    kind: verification
+    subject:
+      type: task
+      id: T010
+    taskRefs: [T010]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV010]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV011
+    kind: verification
+    subject:
+      type: task
+      id: T011
+    taskRefs: [T011]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002]
+    obligationRefs: [EV011]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV012
+    kind: verification
+    subject:
+      type: task
+      id: T012
+    taskRefs: [T012]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-003]
+    obligationRefs: [EV012]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV013
+    kind: verification
+    subject:
+      type: task
+      id: T013
+    taskRefs: [T013]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-005]
+    obligationRefs: [EV013]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV014
+    kind: verification
+    subject:
+      type: task
+      id: T014
+    taskRefs: [T014]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV014]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV015
+    kind: verification
+    subject:
+      type: task
+      id: T015
+    taskRefs: [T015]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-003]
+    obligationRefs: [EV015]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV016
+    kind: verification
+    subject:
+      type: task
+      id: T016
+    taskRefs: [T016]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV016]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV017
+    kind: verification
+    subject:
+      type: task
+      id: T017
+    taskRefs: [T017]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-005]
+    obligationRefs: [EV017]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV018
+    kind: verification
+    subject:
+      type: task
+      id: T018
+    taskRefs: [T018]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV018]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV019
+    kind: verification
+    subject:
+      type: task
+      id: T019
+    taskRefs: [T019]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV019]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+  - id: EV020
+    kind: verification
+    subject:
+      type: task
+      id: T020
+    taskRefs: [T020]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-005]
+    obligationRefs: [EV020]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/VerifyCommandTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/833-shipready-public-surface/commands.trx
+      digest: "sha256:02b39ab199027b410c6f6defcc5cfc27c4937729ff27a1031996d8cf7b2e22a4"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 5
+      failed: 0
+      skipped: 0
+    notes: [Observed by the focused public-surface regression suite.]
+lifecycleNotes:
+  - "Next lifecycle action: verify."
