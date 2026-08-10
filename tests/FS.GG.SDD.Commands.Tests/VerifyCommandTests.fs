@@ -50,6 +50,21 @@ module VerifyCommandTests =
 
         TestSupport.writeRelative root specPath withImpact
 
+    // Grounding for the "block-on-ship" + zero-cardinality shape asserted below: this is not an
+    // invented combination. FS-GG/FS.GG.Governance#375 (closed) fixed the producer that used to
+    // hardcode `maturity: "warn"` regardless of the configured policy — the exact defect that let
+    // SDD#833's initial review (PR #838, 2026-08-02) pass real Rogue3-shaped input while only a
+    // synthetic forged-maturity receipt could reach this consumer's blocking branch. The fix landed
+    // in FS.GG.Governance commit 47bfdbb ("fix: persist effective F# surface maturity", PR #376) and
+    // its own producer test proves the real, fixed contract for exactly this shape: a project
+    // configured `block-on-ship` with zero matching compiled `.fsi` signatures now persists
+    // `maturity: "block-on-ship"`, `cardinality: "zero"` (FS.GG.Governance
+    // tests/FS.GG.Governance.DesignChecks.Tests/FSharpSurfaceCommandTests.fs:92, assertion
+    // `("block-on-ship", "zero") "zero receipt carries configured blocking maturity"`). SDD does not
+    // build or invoke that producer directly (it is an unpublished, `IsPackable=false` source tool
+    // gated behind a private feed SDD's hermetic `nuget.config` never adds — the ownership boundary
+    // FR-011 and `docs/adopting-governance.md` describe), so this fixture reproduces the producer's
+    // now-real, now-tested output shape rather than an arbitrary one.
     let private fsharpReceipt
         (maturity: string)
         (applicability: string)
@@ -358,6 +373,70 @@ module VerifyCommandTests =
 
         Assert.Equal(CommandOutcome.Blocked, report.Outcome)
         Assert.Contains(report.Diagnostics, fun diagnostic -> diagnostic.Id = "verify.emptyBlockingFSharpSurface")
+
+    // AC-4's second half, at the `ship` boundary rather than only `verify`: a fixture matching
+    // Rogue3's shape must not merely fail to block cleanly, it must reach `shipReady` again once a
+    // compiled signature clears the finding — proving the gate is a real fail-closed check and not
+    // a one-way trap that also happens to reject the fixed state.
+    [<Fact>]
+    let ``ship reaches shipReady once a compiled signature clears the Rogue3-shaped finding`` () =
+        let root = initializedEvidencedProject ()
+
+        configureBlockingFSharpSurface
+            root
+            (fsharpReceipt "block-on-ship" "applicable" true "src/**/*.fsi" 0 "zero" None)
+
+        let blocked = TestSupport.runShip root workId title
+        Assert.Equal(CommandOutcome.Blocked, blocked.Outcome)
+        Assert.Contains(blocked.Diagnostics, fun diagnostic -> diagnostic.Id = "verify.emptyBlockingFSharpSurface")
+
+        // The product authors the missing `.fsi` signature; Governance's producer re-evaluates and
+        // persists a populated, one-match receipt. SDD consumes only the regenerated receipt.
+        TestSupport.writeRelative
+            root
+            "readiness/fsharp-public-surface.json"
+            (fsharpReceipt "block-on-ship" "applicable" true "src/**/*.fsi" 1 "one" None)
+
+        let cleared = TestSupport.runVerify root workId title
+        Assert.NotEqual(CommandOutcome.Blocked, cleared.Outcome)
+
+        let report = TestSupport.runShip root workId title
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        Assert.DoesNotContain(report.Diagnostics, fun diagnostic -> diagnostic.Id = "verify.emptyBlockingFSharpSurface")
+        TestSupport.assertShipSummary report "shipReady" "shipReady"
+
+    // AC-5: internal Tier-2 work in a product that declares no public surface at all must never be
+    // asked to fabricate one. This is the negative space of every fixture above — no
+    // `.fsgg/capabilities.yml`, no receipt, and (unlike the module default) an explicit Tier-2
+    // classification with no public/tool-facing impact — and it must clear both commands identically
+    // to a product that had never heard of Governance.
+    [<Fact>]
+    let ``internal Tier-2 work with no declared public surface ships without fabricating signatures`` () =
+        let root = initializedEvidencedProject ()
+        let spec = TestSupport.readRelative root specPath
+
+        let withTier2 = spec.Replace("changeTier: tier1", "changeTier: tier2")
+
+        let tier2Spec =
+            if withTier2.Contains("publicOrToolFacingImpact:") then
+                withTier2.Replace("publicOrToolFacingImpact: true", "publicOrToolFacingImpact: false")
+            else
+                withTier2.Replace("status: specified", "status: specified\npublicOrToolFacingImpact: false")
+
+        Assert.DoesNotContain("changeTier: tier1", tier2Spec)
+        Assert.Contains("publicOrToolFacingImpact: false", tier2Spec)
+        TestSupport.writeRelative root specPath tier2Spec
+
+        Assert.False(TestSupport.existsRelative root ".fsgg/capabilities.yml")
+        Assert.False(TestSupport.existsRelative root "readiness/fsharp-public-surface.json")
+
+        let verify = TestSupport.runVerify root workId title
+        Assert.NotEqual(CommandOutcome.Blocked, verify.Outcome)
+        Assert.DoesNotContain(verify.Diagnostics, fun diagnostic -> diagnostic.Id.StartsWith "verify.fsharpSurfaceReceipt")
+
+        let report = TestSupport.runShip root workId title
+        Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
+        TestSupport.assertShipSummary report "shipReady" "shipReady"
 
     [<Fact>]
     let ``verify outside project blocks`` () =
