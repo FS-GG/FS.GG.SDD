@@ -17,21 +17,21 @@ module DriverSkillsTests =
 
     // The pinned digests of the delivered driver bodies (the drift-guard goldens).
     let private workRoadmapSha256 =
-        "7eb9f056104bdbcfdcbd6a73cc82199f481b46864f762a8f0f041d6757529c4f"
+        "31be8937f49f6b4656f3e2adfb75f23d9b24814595b0ad8eca2fe83c4787138c"
 
     // work-board ships in FS.GG.Drivers 0.8.0, `materializes-when: always` like work-roadmap.
     let private workBoardSha256 =
-        "0e44ecccfb46537cdb40296c7351dd08a0e5494ea6144ff13ceefd27872a8855"
+        "c0c6096537dc0bc22854bb3d5f011a2eec135e2ac0fe71c9eeb8b27c92d6ac28"
 
     // padd-item is the product-workspace board filer added by FS.GG.Drivers 0.8.0 (#703).
     let private paddItemSha256 =
         "f77540a387627a13ed88133e259eee6fc8d956213a23b18097977bcc07520aca"
 
     let private workBoardNormalSha256 =
-        "4649b17f1e05e2302626927b77462eee91ba41ceb3eb7b72df8d933fbd5863db"
+        "535454433c62cdb9088861ca7afbdf8b7c650dc870d789fa211f7715a2a03e07"
 
     let private workBoardBestSha256 =
-        "2b0577726f7cab6aa27169888c0f47370ad26ddadbcb6fda300acf1a00e754e3"
+        "04b3a71ef552162a1e99032085b425586fd0a0779f4b7c0eab9134c099eabf05"
 
     let private roots = [ ".agents"; ".claude" ]
 
@@ -52,10 +52,12 @@ module DriverSkillsTests =
               "work-roadmap",
               [ "SKILL.md"
                 "agents/openai.yaml"
+                "references/critique-contract.md"
                 "references/deep-detail.md"
                 "references/feedback-contract.md"
                 "references/host-loop.md"
                 "references/roadmap-ledger.md"
+                "scripts/validate-critique-state.py"
                 "scripts/validate-feedback-state.py" ] ]
 
     let private driverPathFor id =
@@ -71,7 +73,7 @@ module DriverSkillsTests =
 
     // ---------- the embedded delivery (real bytes) ----------
 
-    // All `always` driver rows FS.GG.Drivers 0.9.0 ships materialize; the operator-scoped
+    // All `always` driver rows in the pinned FS.GG.Drivers package materialize; operator-scoped
     // rows (`drive-board`, `p-add`, `cut-nuget-release`) do not — asserted separately below.
     [<Fact>]
     let ``plan materializes the delivered always-on drivers into both runtime roots`` () =
@@ -153,8 +155,8 @@ module DriverSkillsTests =
         Assert.Contains(workBoardSha256, shas)
         Assert.Contains(workBoardNormalSha256, shas)
         Assert.Contains(workBoardBestSha256, shas)
-        // The two driver feedback validators are byte-identical, so 21 files yield 20 distinct digests.
-        Assert.Equal(20, shas.Count)
+        // The two driver feedback validators are byte-identical, so 23 files yield 22 distinct digests.
+        Assert.Equal(22, shas.Count)
 
     // ---------- the fail-closed classes (planFrom, synthetic) ----------
 
@@ -445,8 +447,14 @@ module DriverSkillsTests =
         Assert.Contains("padd-item", outcome.MaterializedIds)
         Assert.Contains("work-board", outcome.MaterializedIds)
         Assert.Contains("work-roadmap", outcome.MaterializedIds)
-        // Twenty-one declared files across the five `always` drivers × two runtime roots.
-        Assert.Equal(42, outcome.ProvenancePaths |> List.length)
+
+        let expectedPathCount =
+            deliveredFiles
+            |> Map.values
+            |> Seq.sumBy List.length
+            |> fun files -> files * roots.Length
+
+        Assert.Equal(expectedPathCount, outcome.ProvenancePaths |> List.length)
 
     // FR-005/FR-009: a provider that shipped its own `work-roadmap` (its `.agents` skill, mirrored to
     // the other roots by the preceding tick) already occupies that driver's targets — the no-clobber

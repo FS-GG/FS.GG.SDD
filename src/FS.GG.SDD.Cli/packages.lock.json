@@ -40,7 +40,7 @@
         "type": "Project",
         "dependencies": {
           "FS.GG.Contracts": "[7.5.2, )",
-          "FS.GG.Drivers": "[0.9.0, )",
+          "FS.GG.Drivers": "[0.16.1, )",
           "FS.GG.Game.Skills": "[0.7.0, )",
           "FS.GG.SDD.Artifacts": "[1.0.0, )",
           "FSharp.Core": "[10.1.302, )"
@@ -56,9 +56,9 @@
       },
       "FS.GG.Drivers": {
         "type": "CentralTransitive",
-        "requested": "[0.9.0, )",
-        "resolved": "0.9.0",
-        "contentHash": "rB+hA6dnLGGxtFijdLvHXA0iPQnWvyoFL7uwsrpRBlRv0iZH3WMzaJoZXZTQG6GCxupksqANpvfveUrifhGuHA=="
+        "requested": "[0.16.1, )",
+        "resolved": "0.16.1",
+        "contentHash": "TtAzIz6soMpb/ekqnK+XZyicGtz77yRE5HtVM0OhYiIa4fjInuq5ojCH1KVQ+po3jOcatGqRAgDkHA0TzBaxFw=="
       },
       "FS.GG.Game.Skills": {
         "type": "CentralTransitive",
