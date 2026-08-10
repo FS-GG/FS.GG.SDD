@@ -1,12 +1,12 @@
 ---
 schemaVersion: 1
-workId: 110-empty-public-surface
+workId: 833-shipready-public-surface
 title: Empty Public Surface
 stage: checklist
 changeTier: tier1
 status: checklistReady
-sourceSpec: work/110-empty-public-surface/spec.md
-sourceClarifications: work/110-empty-public-surface/clarifications.md
+sourceSpec: work/833-shipready-public-surface/spec.md
+sourceClarifications: work/833-shipready-public-surface/clarifications.md
 publicOrToolFacingImpact: true
 ---
 
@@ -15,14 +15,14 @@ publicOrToolFacingImpact: true
 Prose status: checklistReady
 
 ## Source Specification
-- work/110-empty-public-surface/spec.md
+- work/833-shipready-public-surface/spec.md
 
 ## Source Clarifications
-- work/110-empty-public-surface/clarifications.md
+- work/833-shipready-public-surface/clarifications.md
 
 ## Source Snapshot
-- spec: work/110-empty-public-surface/spec.md sha256:79109adf1ace08961ee34e2ead3269a739fa6038ba360e88917a9a1de02766c6 schemaVersion:1
-- clarifications: work/110-empty-public-surface/clarifications.md sha256:8957ae94ed9ce33b96e9798d54f0eb7acdc8c80eefdecd9b6ed9b23b26641ef0 schemaVersion:1
+- spec: work/833-shipready-public-surface/spec.md sha256:bad74b191b05a04cc629109807504e915818f16eb64162d79c51e092c7a72333 schemaVersion:1
+- clarifications: work/833-shipready-public-surface/clarifications.md sha256:969fefc775fd3ee984e3170b7605a9247e43c578d4712e061ee55af610899606 schemaVersion:1
 
 ## Checklist Items
 - CHK-001 [FR-001] [AC-001] blocking: Requirement FR-001 is testable and linked to acceptance coverage.
@@ -50,4 +50,4 @@ No advisory notes recorded.
 ## Lifecycle Notes
 - Specification requirements reviewed: 5.
 - Clarification decisions reviewed: 4.
-- Next lifecycle action: `fsgg-sdd plan --work 110-empty-public-surface`.
+- Next lifecycle action: `fsgg-sdd plan --work 833-shipready-public-surface`.

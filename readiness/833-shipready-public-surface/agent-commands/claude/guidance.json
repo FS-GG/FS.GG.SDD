@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
   "viewVersion": "1.0",
-  "workId": "110-empty-public-surface",
-  "targetId": "codex",
+  "workId": "833-shipready-public-surface",
+  "targetId": "claude",
   "generator": "FS.GG.SDD.Artifacts/1.0.0",
   "generated": true,
   "sources": [
     {
-      "path": "readiness/110-empty-public-surface/work-model.json",
+      "path": "readiness/833-shipready-public-surface/work-model.json",
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "5135a4d1d1aba59901d9bd534df9867e98b62d41ff567d0c3ecc754394c0b324"
+        "value": "67f8793901a10bb3bc34ee285bdc41130b089dcbf253566d2ab33f753fd7ebda"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -19,7 +19,7 @@
   ],
   "behaviorModelDigest": {
     "algorithm": "sha256",
-    "value": "bd63b4bf16f30d3f5708b88d485345e515eed0b2f90d4a0902796b15ab461bec"
+    "value": "8d34b4d03a76f56ae6f48365df2d4ad36d638224a6d82a17f39eaf0a628547f7"
   },
   "commands": [
     {
@@ -307,24 +307,13 @@
   ],
   "renderedFiles": [
     {
-      "path": "readiness/110-empty-public-surface/agent-commands/codex/commands.md",
+      "path": "readiness/833-shipready-public-surface/agent-commands/claude/commands.md",
       "kind": "commands"
     },
     {
-      "path": "readiness/110-empty-public-surface/agent-commands/codex/skills.md",
+      "path": "readiness/833-shipready-public-surface/agent-commands/claude/skills.md",
       "kind": "skills"
     }
   ],
-  "diagnostics": [
-    {
-      "id": "agents.staleGeneratedGuidance",
-      "severity": "warning",
-      "artifact": "readiness/110-empty-public-surface/agent-commands/codex/guidance.json",
-      "message": "Generated agent guidance for target \u0027codex\u0027 no longer matches the current normalized work model.",
-      "correction": "Regenerate agent guidance so the generated view matches the current work model.",
-      "relatedIds": [
-        "codex"
-      ]
-    }
-  ]
+  "diagnostics": []
 }

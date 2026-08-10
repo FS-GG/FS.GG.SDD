@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "modelVersion": "1.2.0",
-  "workId": "110-empty-public-surface",
+  "workId": "833-shipready-public-surface",
   "project": {
     "id": "fs.gg.sdd-833",
     "defaultWorkRoot": "work",
@@ -45,7 +45,7 @@
       }
     },
     {
-      "path": "work/110-empty-public-surface/checklist.md",
+      "path": "work/833-shipready-public-surface/checklist.md",
       "kind": "checklist",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -53,11 +53,11 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "be53c07ef055cc7ae7f752e2a5279e3f6819e67a0d08c1d7d88c2526b648c1ac"
+        "value": "1f3d6efffc1c44cd4b5a54d30a3d45da5dbbd326b295cfd73ed8005761f99fed"
       }
     },
     {
-      "path": "work/110-empty-public-surface/clarifications.md",
+      "path": "work/833-shipready-public-surface/clarifications.md",
       "kind": "clarifications",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -65,11 +65,11 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "8957ae94ed9ce33b96e9798d54f0eb7acdc8c80eefdecd9b6ed9b23b26641ef0"
+        "value": "969fefc775fd3ee984e3170b7605a9247e43c578d4712e061ee55af610899606"
       }
     },
     {
-      "path": "work/110-empty-public-surface/evidence.yml",
+      "path": "work/833-shipready-public-surface/evidence.yml",
       "kind": "evidence",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -77,11 +77,11 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "9a4b2ab0fffd83e69f88391cf35f3e70a59f12637e935e62af41a702a9edba62"
+        "value": "88fd5f56c2d6fced46bda3084c003f9978540025bb54a69b731dbda2bc59c68a"
       }
     },
     {
-      "path": "work/110-empty-public-surface/plan.md",
+      "path": "work/833-shipready-public-surface/plan.md",
       "kind": "plan",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -89,11 +89,11 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "e05108f0956f9b21fecdf88dfe43a6b52d75dd71d72cc1f12589e3cec0057218"
+        "value": "c792d83650e6edf96aa80f3a23b8e77901eab2e976ac124e09e1a4610d3cfce2"
       }
     },
     {
-      "path": "work/110-empty-public-surface/spec.md",
+      "path": "work/833-shipready-public-surface/spec.md",
       "kind": "spec",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -101,11 +101,11 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "79109adf1ace08961ee34e2ead3269a739fa6038ba360e88917a9a1de02766c6"
+        "value": "bad74b191b05a04cc629109807504e915818f16eb64162d79c51e092c7a72333"
       }
     },
     {
-      "path": "work/110-empty-public-surface/tasks.yml",
+      "path": "work/833-shipready-public-surface/tasks.yml",
       "kind": "tasks",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -113,12 +113,12 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "dcebd545ac99d96b907d12ac36ac2eba03fcff0dcdcbd89241a983b979fa3273"
+        "value": "692c9f8db1fe6e1bfaad17a9aeb20be312f9e6593f9b93f77643e2123d24f632"
       }
     }
   ],
   "workItem": {
-    "id": "110-empty-public-surface",
+    "id": "833-shipready-public-surface",
     "title": "Empty Public Surface",
     "stage": "specify",
     "changeTier": "tier1",
@@ -135,7 +135,7 @@
       ],
       "priority": null,
       "classification": [],
-      "source": "work/110-empty-public-surface/spec.md",
+      "source": "work/833-shipready-public-surface/spec.md",
       "sourceLocation": {
         "line": 35,
         "column": 1
@@ -156,7 +156,7 @@
       ],
       "priority": null,
       "classification": [],
-      "source": "work/110-empty-public-surface/spec.md",
+      "source": "work/833-shipready-public-surface/spec.md",
       "sourceLocation": {
         "line": 36,
         "column": 1
@@ -177,7 +177,7 @@
       ],
       "priority": null,
       "classification": [],
-      "source": "work/110-empty-public-surface/spec.md",
+      "source": "work/833-shipready-public-surface/spec.md",
       "sourceLocation": {
         "line": 37,
         "column": 1
@@ -198,7 +198,7 @@
       ],
       "priority": null,
       "classification": [],
-      "source": "work/110-empty-public-surface/spec.md",
+      "source": "work/833-shipready-public-surface/spec.md",
       "sourceLocation": {
         "line": 38,
         "column": 1
@@ -219,7 +219,7 @@
       ],
       "priority": null,
       "classification": [],
-      "source": "work/110-empty-public-surface/spec.md",
+      "source": "work/833-shipready-public-surface/spec.md",
       "sourceLocation": {
         "line": 39,
         "column": 1
@@ -240,7 +240,7 @@
       "requirementRefs": [],
       "storyRefs": [],
       "acceptanceRefs": [],
-      "source": "work/110-empty-public-surface/clarifications.md",
+      "source": "work/833-shipready-public-surface/clarifications.md",
       "sourceLocation": {
         "line": 24,
         "column": 1
@@ -256,7 +256,7 @@
       "requirementRefs": [],
       "storyRefs": [],
       "acceptanceRefs": [],
-      "source": "work/110-empty-public-surface/clarifications.md",
+      "source": "work/833-shipready-public-surface/clarifications.md",
       "sourceLocation": {
         "line": 26,
         "column": 1
@@ -272,7 +272,7 @@
       "requirementRefs": [],
       "storyRefs": [],
       "acceptanceRefs": [],
-      "source": "work/110-empty-public-surface/clarifications.md",
+      "source": "work/833-shipready-public-surface/clarifications.md",
       "sourceLocation": {
         "line": 29,
         "column": 1
@@ -288,7 +288,7 @@
       "requirementRefs": [],
       "storyRefs": [],
       "acceptanceRefs": [],
-      "source": "work/110-empty-public-surface/clarifications.md",
+      "source": "work/833-shipready-public-surface/clarifications.md",
       "sourceLocation": {
         "line": 32,
         "column": 1
@@ -321,7 +321,7 @@
       "requiredEvidence": [
         "EV001"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 1,
         "column": 1
@@ -349,7 +349,7 @@
       "requiredEvidence": [
         "EV002"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 2,
         "column": 1
@@ -377,7 +377,7 @@
       "requiredEvidence": [
         "EV003"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 3,
         "column": 1
@@ -405,7 +405,7 @@
       "requiredEvidence": [
         "EV004"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 4,
         "column": 1
@@ -433,7 +433,7 @@
       "requiredEvidence": [
         "EV005"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 5,
         "column": 1
@@ -461,7 +461,7 @@
       "requiredEvidence": [
         "EV006"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 6,
         "column": 1
@@ -489,7 +489,7 @@
       "requiredEvidence": [
         "EV007"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 7,
         "column": 1
@@ -517,7 +517,7 @@
       "requiredEvidence": [
         "EV008"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 8,
         "column": 1
@@ -545,7 +545,7 @@
       "requiredEvidence": [
         "EV009"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 9,
         "column": 1
@@ -571,7 +571,7 @@
       "requiredEvidence": [
         "EV010"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 10,
         "column": 1
@@ -597,7 +597,7 @@
       "requiredEvidence": [
         "EV011"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 11,
         "column": 1
@@ -623,7 +623,7 @@
       "requiredEvidence": [
         "EV012"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 12,
         "column": 1
@@ -649,7 +649,7 @@
       "requiredEvidence": [
         "EV013"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 13,
         "column": 1
@@ -677,7 +677,7 @@
       "requiredEvidence": [
         "EV014"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 14,
         "column": 1
@@ -705,7 +705,7 @@
       "requiredEvidence": [
         "EV015"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 15,
         "column": 1
@@ -733,7 +733,7 @@
       "requiredEvidence": [
         "EV016"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 16,
         "column": 1
@@ -761,7 +761,7 @@
       "requiredEvidence": [
         "EV017"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 17,
         "column": 1
@@ -787,7 +787,7 @@
       "requiredEvidence": [
         "EV018"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 18,
         "column": 1
@@ -813,7 +813,7 @@
       "requiredEvidence": [
         "EV019"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 19,
         "column": 1
@@ -839,7 +839,7 @@
       "requiredEvidence": [
         "EV020"
       ],
-      "source": "work/110-empty-public-surface/tasks.yml",
+      "source": "work/833-shipready-public-surface/tasks.yml",
       "sourceLocation": {
         "line": 20,
         "column": 1
@@ -867,7 +867,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 1,
         "column": 1
@@ -893,7 +893,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 2,
         "column": 1
@@ -919,7 +919,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 3,
         "column": 1
@@ -945,7 +945,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 4,
         "column": 1
@@ -971,7 +971,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 5,
         "column": 1
@@ -995,7 +995,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 6,
         "column": 1
@@ -1019,7 +1019,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 7,
         "column": 1
@@ -1043,7 +1043,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 8,
         "column": 1
@@ -1067,7 +1067,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 9,
         "column": 1
@@ -1091,7 +1091,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 10,
         "column": 1
@@ -1115,7 +1115,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 11,
         "column": 1
@@ -1139,7 +1139,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 12,
         "column": 1
@@ -1163,7 +1163,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 13,
         "column": 1
@@ -1187,7 +1187,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 14,
         "column": 1
@@ -1211,7 +1211,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 15,
         "column": 1
@@ -1235,7 +1235,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 16,
         "column": 1
@@ -1259,7 +1259,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 17,
         "column": 1
@@ -1283,7 +1283,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 18,
         "column": 1
@@ -1307,7 +1307,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 19,
         "column": 1
@@ -1331,7 +1331,7 @@
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/110-empty-public-surface/evidence.yml",
+      "source": "work/833-shipready-public-surface/evidence.yml",
       "sourceLocation": {
         "line": 20,
         "column": 1
@@ -1340,7 +1340,7 @@
   ],
   "generatedViews": [
     {
-      "path": "readiness/110-empty-public-surface/work-model.json",
+      "path": "readiness/833-shipready-public-surface/work-model.json",
       "kind": "workModel",
       "schemaVersion": 1,
       "generator": {
@@ -1373,57 +1373,57 @@
           "schemaVersion": 1
         },
         {
-          "path": "work/110-empty-public-surface/checklist.md",
+          "path": "work/833-shipready-public-surface/checklist.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "be53c07ef055cc7ae7f752e2a5279e3f6819e67a0d08c1d7d88c2526b648c1ac"
+            "value": "1f3d6efffc1c44cd4b5a54d30a3d45da5dbbd326b295cfd73ed8005761f99fed"
           },
           "schemaVersion": 1
         },
         {
-          "path": "work/110-empty-public-surface/clarifications.md",
+          "path": "work/833-shipready-public-surface/clarifications.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "8957ae94ed9ce33b96e9798d54f0eb7acdc8c80eefdecd9b6ed9b23b26641ef0"
+            "value": "969fefc775fd3ee984e3170b7605a9247e43c578d4712e061ee55af610899606"
           },
           "schemaVersion": 1
         },
         {
-          "path": "work/110-empty-public-surface/evidence.yml",
+          "path": "work/833-shipready-public-surface/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "9a4b2ab0fffd83e69f88391cf35f3e70a59f12637e935e62af41a702a9edba62"
+            "value": "88fd5f56c2d6fced46bda3084c003f9978540025bb54a69b731dbda2bc59c68a"
           },
           "schemaVersion": 1
         },
         {
-          "path": "work/110-empty-public-surface/plan.md",
+          "path": "work/833-shipready-public-surface/plan.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "e05108f0956f9b21fecdf88dfe43a6b52d75dd71d72cc1f12589e3cec0057218"
+            "value": "c792d83650e6edf96aa80f3a23b8e77901eab2e976ac124e09e1a4610d3cfce2"
           },
           "schemaVersion": 1
         },
         {
-          "path": "work/110-empty-public-surface/spec.md",
+          "path": "work/833-shipready-public-surface/spec.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "79109adf1ace08961ee34e2ead3269a739fa6038ba360e88917a9a1de02766c6"
+            "value": "bad74b191b05a04cc629109807504e915818f16eb64162d79c51e092c7a72333"
           },
           "schemaVersion": 1
         },
         {
-          "path": "work/110-empty-public-surface/tasks.yml",
+          "path": "work/833-shipready-public-surface/tasks.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "dcebd545ac99d96b907d12ac36ac2eba03fcff0dcdcbd89241a983b979fa3273"
+            "value": "692c9f8db1fe6e1bfaad17a9aeb20be312f9e6593f9b93f77643e2123d24f632"
           },
           "schemaVersion": 1
         }
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "753577c9c90a4d1aad4311d352a855103c7bdfd42f0a5fe8403686fd0a823c7b"
+        "value": "9001b2d00b9087e47d55b3383f649513f568693741f58b3c5e1b624ea2a951c1"
       },
       "currency": "current"
     }

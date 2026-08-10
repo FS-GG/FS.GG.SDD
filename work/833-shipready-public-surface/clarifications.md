@@ -1,18 +1,18 @@
 ---
 schemaVersion: 1
-workId: 110-empty-public-surface
+workId: 833-shipready-public-surface
 title: Empty Public Surface
 stage: clarify
 changeTier: tier1
 status: clarified
-sourceSpec: work/110-empty-public-surface/spec.md
+sourceSpec: work/833-shipready-public-surface/spec.md
 publicOrToolFacingImpact: true
 ---
 
 # Empty Public Surface Clarifications
 
 ## Source Specification
-- work/110-empty-public-surface/spec.md
+- work/833-shipready-public-surface/spec.md
 
 ## Clarification Questions
 No clarification questions recorded.
@@ -39,4 +39,4 @@ No accepted deferrals recorded.
 No blocking ambiguity remains.
 
 ## Lifecycle Notes
-- Next lifecycle action: `fsgg-sdd checklist --work 110-empty-public-surface`.
+- Next lifecycle action: `fsgg-sdd checklist --work 833-shipready-public-surface`.

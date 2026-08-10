@@ -1,6 +1,6 @@
 # Agent commands for claude (generated)
 
-Generated from `readiness/110-empty-public-surface/work-model.json`. This is a generated projection of the
+Generated from `readiness/833-shipready-public-surface/work-model.json`. This is a generated projection of the
 normalized work model, not an authored source of truth. See `guidance.json`.
 
 ## T001 — Implement requirement FR-001

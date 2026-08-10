@@ -1,6 +1,6 @@
 ---
 schemaVersion: 1
-workId: 110-empty-public-surface
+workId: 833-shipready-public-surface
 title: Block ship readiness for declared but empty public signature surfaces
 stage: charter
 changeTier: tier1
@@ -16,7 +16,7 @@ policyPointers:
 # Block ship readiness for declared but empty public signature surfaces Charter
 
 ## Identity
-- Work id: `110-empty-public-surface`
+- Work id: `833-shipready-public-surface`
 - Lifecycle stage: charter
 - Status: chartered
 

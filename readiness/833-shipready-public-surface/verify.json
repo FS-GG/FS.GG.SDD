@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "viewVersion": "1.0",
-  "workId": "110-empty-public-surface",
+  "workId": "833-shipready-public-surface",
   "stage": "verify",
   "status": "verificationReady",
   "generator": "FS.GG.SDD.Artifacts/1.0.0",
@@ -37,81 +37,81 @@
       "schemaStatus": "current"
     },
     {
-      "path": "readiness/110-empty-public-surface/analysis.json",
+      "path": "readiness/833-shipready-public-surface/analysis.json",
       "kind": "analysis",
       "digest": {
         "algorithm": "sha256",
-        "value": "422c96ed044eb8f2a604b3d30c056aa06acb98a671e27aa4d720e6e8c4fda2cf"
+        "value": "07c0268b402c7e43d1b8bee106381cd6e14f9f99d403551d36515daa7fcd04b7"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "readiness/110-empty-public-surface/work-model.json",
+      "path": "readiness/833-shipready-public-surface/work-model.json",
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "5135a4d1d1aba59901d9bd534df9867e98b62d41ff567d0c3ecc754394c0b324"
+        "value": "67f8793901a10bb3bc34ee285bdc41130b089dcbf253566d2ab33f753fd7ebda"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/110-empty-public-surface/checklist.md",
+      "path": "work/833-shipready-public-surface/checklist.md",
       "kind": "checklist",
       "digest": {
         "algorithm": "sha256",
-        "value": "be53c07ef055cc7ae7f752e2a5279e3f6819e67a0d08c1d7d88c2526b648c1ac"
+        "value": "1f3d6efffc1c44cd4b5a54d30a3d45da5dbbd326b295cfd73ed8005761f99fed"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/110-empty-public-surface/clarifications.md",
+      "path": "work/833-shipready-public-surface/clarifications.md",
       "kind": "clarification",
       "digest": {
         "algorithm": "sha256",
-        "value": "8957ae94ed9ce33b96e9798d54f0eb7acdc8c80eefdecd9b6ed9b23b26641ef0"
+        "value": "969fefc775fd3ee984e3170b7605a9247e43c578d4712e061ee55af610899606"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/110-empty-public-surface/evidence.yml",
+      "path": "work/833-shipready-public-surface/evidence.yml",
       "kind": "evidence",
       "digest": {
         "algorithm": "sha256",
-        "value": "9a4b2ab0fffd83e69f88391cf35f3e70a59f12637e935e62af41a702a9edba62"
+        "value": "88fd5f56c2d6fced46bda3084c003f9978540025bb54a69b731dbda2bc59c68a"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/110-empty-public-surface/plan.md",
+      "path": "work/833-shipready-public-surface/plan.md",
       "kind": "plan",
       "digest": {
         "algorithm": "sha256",
-        "value": "e05108f0956f9b21fecdf88dfe43a6b52d75dd71d72cc1f12589e3cec0057218"
+        "value": "c792d83650e6edf96aa80f3a23b8e77901eab2e976ac124e09e1a4610d3cfce2"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/110-empty-public-surface/spec.md",
+      "path": "work/833-shipready-public-surface/spec.md",
       "kind": "specification",
       "digest": {
         "algorithm": "sha256",
-        "value": "79109adf1ace08961ee34e2ead3269a739fa6038ba360e88917a9a1de02766c6"
+        "value": "bad74b191b05a04cc629109807504e915818f16eb64162d79c51e092c7a72333"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
     },
     {
-      "path": "work/110-empty-public-surface/tasks.yml",
+      "path": "work/833-shipready-public-surface/tasks.yml",
       "kind": "tasks",
       "digest": {
         "algorithm": "sha256",
-        "value": "dcebd545ac99d96b907d12ac36ac2eba03fcff0dcdcbd89241a983b979fa3273"
+        "value": "692c9f8db1fe6e1bfaad17a9aeb20be312f9e6593f9b93f77643e2123d24f632"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -926,7 +926,7 @@
         "T017"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/110-empty-public-surface/tasks.yml",
+      "sourceArtifactPath": "work/833-shipready-public-surface/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -938,7 +938,7 @@
         "T020"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/110-empty-public-surface/tasks.yml",
+      "sourceArtifactPath": "work/833-shipready-public-surface/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -961,7 +961,7 @@
         "T013"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/110-empty-public-surface/tasks.yml",
+      "sourceArtifactPath": "work/833-shipready-public-surface/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -980,7 +980,7 @@
         "T009"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/110-empty-public-surface/tasks.yml",
+      "sourceArtifactPath": "work/833-shipready-public-surface/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -994,7 +994,7 @@
         "T017"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/110-empty-public-surface/tasks.yml",
+      "sourceArtifactPath": "work/833-shipready-public-surface/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -1005,7 +1005,7 @@
         "T018"
       ],
       "visibility": "visible",
-      "sourceArtifactPath": "work/110-empty-public-surface/tasks.yml",
+      "sourceArtifactPath": "work/833-shipready-public-surface/tasks.yml",
       "severity": "ready",
       "diagnosticIds": [],
       "correction": ""
@@ -1013,19 +1013,36 @@
   ],
   "generatedViews": [
     {
-      "path": "readiness/110-empty-public-surface/analysis.json",
+      "path": "readiness/833-shipready-public-surface/analysis.json",
       "kind": "verification",
       "currency": "current",
       "diagnosticIds": []
     },
     {
-      "path": "readiness/110-empty-public-surface/work-model.json",
+      "path": "readiness/833-shipready-public-surface/work-model.json",
       "kind": "workModel",
       "currency": "current",
       "diagnosticIds": []
     }
   ],
-  "findings": [],
+  "findings": [
+    {
+      "id": "VF001",
+      "severity": "warning",
+      "category": "warning",
+      "path": "work/833-shipready-public-surface/evidence.yml",
+      "relatedIds": [
+        "analysis",
+        "checklist",
+        "clarifications",
+        "plan",
+        "spec",
+        "tasks"
+      ],
+      "message": "One or more evidence source snapshots no longer match current source digests.",
+      "correction": "Rerun the evidence command after reviewing the changed source artifacts."
+    }
+  ],
   "governanceCompatibility": [
     {
       "path": ".fsgg/policy.yml",
@@ -1049,7 +1066,23 @@
       "diagnosticIds": []
     }
   ],
-  "diagnostics": [],
+  "diagnostics": [
+    {
+      "id": "evidence.staleEvidenceSource",
+      "severity": "warning",
+      "artifact": "work/833-shipready-public-surface/evidence.yml",
+      "message": "One or more evidence source snapshots no longer match current source digests.",
+      "correction": "Rerun the evidence command after reviewing the changed source artifacts.",
+      "relatedIds": [
+        "analysis",
+        "checklist",
+        "clarifications",
+        "plan",
+        "spec",
+        "tasks"
+      ]
+    }
+  ],
   "readiness": "verificationReady",
   "nextAction": {
     "actionId": "verify.next.ship",

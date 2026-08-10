@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
   "viewVersion": "1.0",
-  "workId": "110-empty-public-surface",
+  "workId": "833-shipready-public-surface",
   "stage": "ship",
   "status": "shipReady",
   "generator": "FS.GG.SDD.Artifacts/1.0.0",
   "sourcesDigest": {
     "algorithm": "sha256",
-    "value": "25768cbf6d49302827ff36984b69b634614f62443da6286a15d6a717a19e458e"
+    "value": "dcb3ab11e1c945bf1623a29eff7681bc2b8b58427b47af083c6cc8ad8a381ade"
   },
   "verificationReadiness": {
     "status": "verificationReady",

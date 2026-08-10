@@ -1,6 +1,6 @@
 ---
 schemaVersion: 1
-workId: 110-empty-public-surface
+workId: 833-shipready-public-surface
 title: Empty Public Surface
 stage: specify
 changeTier: tier1
@@ -45,4 +45,4 @@ No material ambiguities recorded.
 - This changes the typed surface-match and lifecycle readiness contracts, ship/verify diagnostics, and generated Claude/Codex guidance.
 
 ## Lifecycle Notes
-- Next lifecycle action: `fsgg-sdd clarify --work 110-empty-public-surface`.
+- Next lifecycle action: `fsgg-sdd clarify --work 833-shipready-public-surface`.

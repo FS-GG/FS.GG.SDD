@@ -1,13 +1,13 @@
 ---
 schemaVersion: 1
-workId: 110-empty-public-surface
+workId: 833-shipready-public-surface
 title: Empty Public Surface
 stage: plan
 changeTier: tier1
 status: planned
-sourceSpec: work/110-empty-public-surface/spec.md
-sourceClarifications: work/110-empty-public-surface/clarifications.md
-sourceChecklist: work/110-empty-public-surface/checklist.md
+sourceSpec: work/833-shipready-public-surface/spec.md
+sourceClarifications: work/833-shipready-public-surface/clarifications.md
+sourceChecklist: work/833-shipready-public-surface/checklist.md
 publicOrToolFacingImpact: true
 ---
 
@@ -16,12 +16,12 @@ publicOrToolFacingImpact: true
 Prose status: planned
 
 ## Source Snapshot
-- spec: work/110-empty-public-surface/spec.md sha256:79109adf1ace08961ee34e2ead3269a739fa6038ba360e88917a9a1de02766c6 schemaVersion:1
-- clarifications: work/110-empty-public-surface/clarifications.md sha256:8957ae94ed9ce33b96e9798d54f0eb7acdc8c80eefdecd9b6ed9b23b26641ef0 schemaVersion:1
-- checklist: work/110-empty-public-surface/checklist.md sha256:be53c07ef055cc7ae7f752e2a5279e3f6819e67a0d08c1d7d88c2526b648c1ac schemaVersion:1
+- spec: work/833-shipready-public-surface/spec.md sha256:bad74b191b05a04cc629109807504e915818f16eb64162d79c51e092c7a72333 schemaVersion:1
+- clarifications: work/833-shipready-public-surface/clarifications.md sha256:969fefc775fd3ee984e3170b7605a9247e43c578d4712e061ee55af610899606 schemaVersion:1
+- checklist: work/833-shipready-public-surface/checklist.md sha256:1f3d6efffc1c44cd4b5a54d30a3d45da5dbbd326b295cfd73ed8005761f99fed schemaVersion:1
 
 ## Plan Scope
-- Work item 110-empty-public-surface is planned from the current specification, clarification, and checklist facts.
+- Work item 833-shipready-public-surface is planned from the current specification, clarification, and checklist facts.
 - Requirement count: 5.
 - Clarification decision count: 4.
 - Checklist result count: 5.
@@ -53,7 +53,7 @@ No performance intent is declared for this work item.
 
 ## Generated View Impact
 - GV-001 [PD-001] workModel: The work model carries public impact into the configured-surface obligation and reports stale generated views.
-- GV-002 [PD-005] agentCommands: `readiness/110-empty-public-surface/agent-commands/{claude,codex}` projects the same signature-first instruction.
+- GV-002 [PD-005] agentCommands: `readiness/833-shipready-public-surface/agent-commands/{claude,codex}` projects the same signature-first instruction.
 
 ## Accepted Deferrals
 No accepted plan deferrals recorded.
@@ -65,4 +65,4 @@ No blocking planning findings recorded.
 - Optional Governance pointers remain compatibility facts only.
 
 ## Lifecycle Notes
-- Next lifecycle action: `fsgg-sdd tasks --work 110-empty-public-surface`.
+- Next lifecycle action: `fsgg-sdd tasks --work 833-shipready-public-surface`.

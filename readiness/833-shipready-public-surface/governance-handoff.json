@@ -2,21 +2,21 @@
   "schemaVersion": 1,
   "contractVersion": "2.0.0",
   "generatorVersion": "FS.GG.SDD.Artifacts/1.0.0",
-  "workId": "110-empty-public-surface",
+  "workId": "833-shipready-public-surface",
   "sources": [
     {
-      "path": "readiness/110-empty-public-surface/ship.json",
-      "digest": "sha256:a00c88480d0356c10fcfd7b19df346a3f8e67315fb470a66bd463124b747532c",
+      "path": "readiness/833-shipready-public-surface/ship.json",
+      "digest": "sha256:9fff8264e9c31aa51ff4bae1f4a7268ac72c098fe2c22257e4980c279888ed17",
       "schemaVersion": 1
     },
     {
-      "path": "readiness/110-empty-public-surface/verify.json",
-      "digest": "sha256:be9561c598cbbbe6d398ad371f8ae866e1eee16c48ae929da382a65c7f1fda39",
+      "path": "readiness/833-shipready-public-surface/verify.json",
+      "digest": "sha256:1b88177ba0fab737b6c6b51e06668a5ba18884f4a763c0b64d1c1216a0c1284a",
       "schemaVersion": 1
     },
     {
-      "path": "readiness/110-empty-public-surface/work-model.json",
-      "digest": "sha256:5135a4d1d1aba59901d9bd534df9867e98b62d41ff567d0c3ecc754394c0b324",
+      "path": "readiness/833-shipready-public-surface/work-model.json",
+      "digest": "sha256:67f8793901a10bb3bc34ee285bdc41130b089dcbf253566d2ab33f753fd7ebda",
       "schemaVersion": 1
     }
   ],
