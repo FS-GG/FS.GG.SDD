@@ -432,7 +432,11 @@ module VerifyCommandTests =
 
         let verify = TestSupport.runVerify root workId title
         Assert.NotEqual(CommandOutcome.Blocked, verify.Outcome)
-        Assert.DoesNotContain(verify.Diagnostics, fun diagnostic -> diagnostic.Id.StartsWith "verify.fsharpSurfaceReceipt")
+
+        Assert.DoesNotContain(
+            verify.Diagnostics,
+            fun diagnostic -> diagnostic.Id.StartsWith "verify.fsharpSurfaceReceipt"
+        )
 
         let report = TestSupport.runShip root workId title
         Assert.NotEqual(CommandOutcome.Blocked, report.Outcome)
