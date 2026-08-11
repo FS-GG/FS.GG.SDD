@@ -284,15 +284,12 @@ module ReleaseContractTests =
                     Path = "docs/release/migrations/9.9.9.md" } // names a file nobody wrote
         )
 
-    // ...and the classification of THIS release, pinned separately. 1.0.0 changes two public record
-    // shapes and deliberately refuses legacy normalized-text observed-run receipts.
+    // ...and the classification of THIS release, pinned separately. The 1.0.1 patch republishes
+    // the #857 determinism fix without a breaking public-contract change.
     [<Fact>]
-    let ``T023 this breaking 1_0 release carries its migration note`` () =
-        Assert.True(migrationNoteRequired Breaking)
-        let note = Assert.Single release.Migrations
-        Assert.Equal("1.0.0", note.Version)
-        Assert.Equal("docs/release/migrations/1.0.0.md", note.Path)
-        Assert.NotEmpty note.BreakingChanges
+    let ``T023 this patch release carries no migration note`` () =
+        Assert.False(migrationNoteRequired Clarifying)
+        Assert.Empty release.Migrations
 
     [<Fact>]
     let ``T023 a breaking release is obliged to carry a migration note`` () =

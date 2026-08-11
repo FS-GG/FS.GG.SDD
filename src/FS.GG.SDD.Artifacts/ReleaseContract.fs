@@ -238,9 +238,11 @@ module ReleaseContract =
           DurableGenerated = false }
 
     let currentRelease () : ReleaseReadiness =
+        let version = (currentGeneratorVersion ()).Version
+
         let identity =
-            { Version = "1.0.0"
-              Channel = channelOfVersion "1.0.0"
+            { Version = version
+              Channel = channelOfVersion version
               PackageIds = [ "FS.GG.SDD.Artifacts"; "FS.GG.SDD.Commands"; "FS.GG.SDD.Cli" ]
               CliCommandName = "fsgg-sdd" }
 
@@ -1127,15 +1129,8 @@ module ReleaseContract =
           //
           // And enumerate EVERY breaking change: a note that under-reports is the exact failure
           // the note exists to prevent.
-          // 1.0.0 is a MAJOR boundary: FileSnapshot/ObservedRun record shapes and the TestReport /
-          // SchemaVersion functions change the public Artifacts surface. The note names both the
-          // API adaptation and the persisted observedRun receipt migration.
-          Migrations =
-            [ { Version = "1.0.0"
-                Path = "docs/release/migrations/1.0.0.md"
-                BreakingChanges =
-                  [ "FileSnapshot carries exact raw bytes from filesystem reads"
-                    "ObservedRun identifies its digest contract and legacy receipts require explicit re-sync" ] } ] }
+          // This patch has no breaking public-contract change, so it declares no migration note.
+          Migrations = [] }
 
     // ---- canonical serialization ----
 

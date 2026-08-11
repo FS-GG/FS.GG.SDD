@@ -62,9 +62,19 @@ if ! ls "$pkg_dir"/FS.GG.SDD.Cli.*.nupkg >/dev/null 2>&1; then
 fi
 
 # 2. Install from the local source ONLY (no org feed) — proves self-containment.
+# An inherited user-level package-source mapping rejects a bare --add-source even though this
+# smoke deliberately has one source. Give the install an isolated config so the test measures
+# the packed closure, not the caller's NuGet policy.
+nuget_config="$work/NuGet.Config"
+printf '%s\n' \
+  '<configuration>' \
+  '  <packageSources><clear /><add key="packed-tool" value="'"$pkg_dir"'" /></packageSources>' \
+  '</configuration>' > "$nuget_config"
+
 dotnet tool install FS.GG.SDD.Cli \
   --tool-path "$tool_dir" \
-  --add-source "$pkg_dir" \
+  --configfile "$nuget_config" \
+  --source "$pkg_dir" \
   --version "$version"
 
 fsgg_sdd="$tool_dir/fsgg-sdd"
