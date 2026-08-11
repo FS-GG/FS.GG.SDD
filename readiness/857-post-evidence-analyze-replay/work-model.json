@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "modelVersion": "1.2.0",
-  "workId": "247-full-shape-golden",
+  "workId": "857-post-evidence-analyze-replay",
   "project": {
-    "id": "247-full-shape-golden",
+    "id": "fs.gg.sdd-833",
     "defaultWorkRoot": "work",
     "profile": null
   },
@@ -29,7 +29,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "f8f1f5985f56f10a5810b9fee0ca5d66830709fb66a5cb5b50de2cccc997e984"
+        "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
       }
     },
     {
@@ -45,7 +45,7 @@
       }
     },
     {
-      "path": "work/247-full-shape-golden/checklist.md",
+      "path": "work/857-post-evidence-analyze-replay/checklist.md",
       "kind": "checklist",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -53,11 +53,11 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "41bf3db807b9102f1d86f0fa4044ccf51726ae124a575fd43461a3b22ff3b962"
+        "value": "9ee7953280f07d0b0971c75e6410246524e7c568eef00109ae28fa71f5720b87"
       }
     },
     {
-      "path": "work/247-full-shape-golden/clarifications.md",
+      "path": "work/857-post-evidence-analyze-replay/clarifications.md",
       "kind": "clarifications",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -65,11 +65,11 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "4542445521975c320a043e9839f530beba8346bce1e1942b59485d29a46d119f"
+        "value": "bf7527567b30665e92d7e0a1b85d60da926c5bc6816013a4130747a7c819295f"
       }
     },
     {
-      "path": "work/247-full-shape-golden/evidence.yml",
+      "path": "work/857-post-evidence-analyze-replay/evidence.yml",
       "kind": "evidence",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -77,11 +77,11 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "5769a71e4d9ef1c11397dc0a78fa9b52545920eb34ff7f520561a322a7afb497"
+        "value": "82465a484881893be52f26359a40477520244fbc439bee1b16ab2f20134aaf1e"
       }
     },
     {
-      "path": "work/247-full-shape-golden/plan.md",
+      "path": "work/857-post-evidence-analyze-replay/plan.md",
       "kind": "plan",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -89,11 +89,11 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "041794a1345a817362553cc831a625a4a5b466f9fa4a56489113df715b8d32a8"
+        "value": "4e06fe6ba2b4faa6b92d7864ff19fd8752423ed5390f3fd4308ed5a77aa2d74f"
       }
     },
     {
-      "path": "work/247-full-shape-golden/spec.md",
+      "path": "work/857-post-evidence-analyze-replay/spec.md",
       "kind": "spec",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -101,11 +101,11 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "0ee3ca5951c1c32227cc99360053008408d1006e7409d9d09a2d8f7fec0c7ff5"
+        "value": "1783997b173b1868be88744a3de140291daa9200f682aefb70e7d8858dc0e9e3"
       }
     },
     {
-      "path": "work/247-full-shape-golden/tasks.yml",
+      "path": "work/857-post-evidence-analyze-replay/tasks.yml",
       "kind": "tasks",
       "owner": "sdd",
       "schemaVersion": 1,
@@ -113,13 +113,13 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "eb96c6a7e2c44b03d88171c3c93fc985c59be85d6b23e731c67f80e6adff256f"
+        "value": "81f711f796d0929174d3fdd8a853d1aa4c6452fb4ed91554fa2c859ef839f1bd"
       }
     }
   ],
   "workItem": {
-    "id": "247-full-shape-golden",
-    "title": "Full Shape Golden",
+    "id": "857-post-evidence-analyze-replay",
+    "title": "Post Evidence Analyze Replay",
     "stage": "specify",
     "changeTier": "tier1",
     "status": "specified"
@@ -128,22 +128,24 @@
   "requirements": [
     {
       "id": "FR-001",
-      "title": "create a specification artifact with stable ids (Stories: US-001; Acceptance: AC-001)",
-      "text": "create a specification artifact with stable ids (Stories: US-001; Acceptance: AC-001)",
+      "title": "The shared work-model generator MUST retain existing evidence after it exists; work-model source identity MUST omit only tool-owned evidence source-snapshot payload while preserving sourceAnalysis, evidence declarations, and stale-source detection. Analyze MUST remain operable without evidence as the mandatory pre-implementation gate. (Stories: US-001; Acceptance: AC-001)",
+      "text": "The shared work-model generator MUST retain existing evidence after it exists; work-model source identity MUST omit only tool-owned evidence source-snapshot payload while preserving sourceAnalysis, evidence declarations, and stale-source detection. Analyze MUST remain operable without evidence as the mandatory pre-implementation gate. (Stories: US-001; Acceptance: AC-001)",
       "acceptanceCriteria": [
         "AC-001"
       ],
       "priority": null,
       "classification": [],
-      "source": "work/247-full-shape-golden/spec.md",
+      "source": "work/857-post-evidence-analyze-replay/spec.md",
       "sourceLocation": {
-        "line": 31,
+        "line": 32,
         "column": 1
       },
       "linkedTaskIds": [
         "T001"
       ],
-      "linkedEvidenceIds": []
+      "linkedEvidenceIds": [
+        "EV001"
+      ]
     }
   ],
   "decisions": [],
@@ -151,7 +153,7 @@
     {
       "id": "T001",
       "title": "Implement requirement FR-001",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [],
       "requirements": [
@@ -170,7 +172,7 @@
       "requiredEvidence": [
         "EV001"
       ],
-      "source": "work/247-full-shape-golden/tasks.yml",
+      "source": "work/857-post-evidence-analyze-replay/tasks.yml",
       "sourceLocation": {
         "line": 1,
         "column": 1
@@ -179,7 +181,7 @@
     {
       "id": "T002",
       "title": "Update contract surface PC-001",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -196,7 +198,7 @@
       "requiredEvidence": [
         "EV002"
       ],
-      "source": "work/247-full-shape-golden/tasks.yml",
+      "source": "work/857-post-evidence-analyze-replay/tasks.yml",
       "sourceLocation": {
         "line": 2,
         "column": 1
@@ -205,7 +207,7 @@
     {
       "id": "T003",
       "title": "Record verification evidence VO-001",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -224,7 +226,7 @@
       "requiredEvidence": [
         "EV003"
       ],
-      "source": "work/247-full-shape-golden/tasks.yml",
+      "source": "work/857-post-evidence-analyze-replay/tasks.yml",
       "sourceLocation": {
         "line": 3,
         "column": 1
@@ -233,7 +235,7 @@
     {
       "id": "T004",
       "title": "Handle migration posture PM-001",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -250,7 +252,7 @@
       "requiredEvidence": [
         "EV004"
       ],
-      "source": "work/247-full-shape-golden/tasks.yml",
+      "source": "work/857-post-evidence-analyze-replay/tasks.yml",
       "sourceLocation": {
         "line": 4,
         "column": 1
@@ -259,7 +261,7 @@
     {
       "id": "T005",
       "title": "Refresh generated view impact GV-001",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -276,7 +278,7 @@
       "requiredEvidence": [
         "EV005"
       ],
-      "source": "work/247-full-shape-golden/tasks.yml",
+      "source": "work/857-post-evidence-analyze-replay/tasks.yml",
       "sourceLocation": {
         "line": 5,
         "column": 1
@@ -292,17 +294,17 @@
       "taskRefs": [
         "T001"
       ],
-      "requirementRefs": [],
-      "artifactRefs": [
-        "tests/EvidenceLadder.Tests/T001Tests.fs"
+      "requirementRefs": [
+        "FR-001"
       ],
+      "artifactRefs": [],
       "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/247-full-shape-golden/evidence.yml",
+      "source": "work/857-post-evidence-analyze-replay/evidence.yml",
       "sourceLocation": {
         "line": 1,
         "column": 1
@@ -317,16 +319,14 @@
         "T002"
       ],
       "requirementRefs": [],
-      "artifactRefs": [
-        "tests/EvidenceLadder.Tests/T002Tests.fs"
-      ],
+      "artifactRefs": [],
       "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/247-full-shape-golden/evidence.yml",
+      "source": "work/857-post-evidence-analyze-replay/evidence.yml",
       "sourceLocation": {
         "line": 2,
         "column": 1
@@ -341,16 +341,14 @@
         "T003"
       ],
       "requirementRefs": [],
-      "artifactRefs": [
-        "tests/EvidenceLadder.Tests/T003Tests.fs"
-      ],
+      "artifactRefs": [],
       "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/247-full-shape-golden/evidence.yml",
+      "source": "work/857-post-evidence-analyze-replay/evidence.yml",
       "sourceLocation": {
         "line": 3,
         "column": 1
@@ -365,16 +363,14 @@
         "T004"
       ],
       "requirementRefs": [],
-      "artifactRefs": [
-        "tests/EvidenceLadder.Tests/T004Tests.fs"
-      ],
+      "artifactRefs": [],
       "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/247-full-shape-golden/evidence.yml",
+      "source": "work/857-post-evidence-analyze-replay/evidence.yml",
       "sourceLocation": {
         "line": 4,
         "column": 1
@@ -389,16 +385,14 @@
         "T005"
       ],
       "requirementRefs": [],
-      "artifactRefs": [
-        "tests/EvidenceLadder.Tests/T005Tests.fs"
-      ],
+      "artifactRefs": [],
       "result": "pass",
       "synthetic": false,
       "performanceBudget": null,
       "performanceEvidenceArtifact": null,
       "performanceMeasurements": [],
       "rationale": null,
-      "source": "work/247-full-shape-golden/evidence.yml",
+      "source": "work/857-post-evidence-analyze-replay/evidence.yml",
       "sourceLocation": {
         "line": 5,
         "column": 1
@@ -407,7 +401,7 @@
   ],
   "generatedViews": [
     {
-      "path": "readiness/247-full-shape-golden/work-model.json",
+      "path": "readiness/857-post-evidence-analyze-replay/work-model.json",
       "kind": "workModel",
       "schemaVersion": 1,
       "generator": {
@@ -427,7 +421,7 @@
           "path": ".fsgg/project.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "f8f1f5985f56f10a5810b9fee0ca5d66830709fb66a5cb5b50de2cccc997e984"
+            "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
           },
           "schemaVersion": 1
         },
@@ -440,57 +434,57 @@
           "schemaVersion": 1
         },
         {
-          "path": "work/247-full-shape-golden/checklist.md",
+          "path": "work/857-post-evidence-analyze-replay/checklist.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "41bf3db807b9102f1d86f0fa4044ccf51726ae124a575fd43461a3b22ff3b962"
+            "value": "9ee7953280f07d0b0971c75e6410246524e7c568eef00109ae28fa71f5720b87"
           },
           "schemaVersion": 1
         },
         {
-          "path": "work/247-full-shape-golden/clarifications.md",
+          "path": "work/857-post-evidence-analyze-replay/clarifications.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "4542445521975c320a043e9839f530beba8346bce1e1942b59485d29a46d119f"
+            "value": "bf7527567b30665e92d7e0a1b85d60da926c5bc6816013a4130747a7c819295f"
           },
           "schemaVersion": 1
         },
         {
-          "path": "work/247-full-shape-golden/evidence.yml",
+          "path": "work/857-post-evidence-analyze-replay/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "5769a71e4d9ef1c11397dc0a78fa9b52545920eb34ff7f520561a322a7afb497"
+            "value": "82465a484881893be52f26359a40477520244fbc439bee1b16ab2f20134aaf1e"
           },
           "schemaVersion": 1
         },
         {
-          "path": "work/247-full-shape-golden/plan.md",
+          "path": "work/857-post-evidence-analyze-replay/plan.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "041794a1345a817362553cc831a625a4a5b466f9fa4a56489113df715b8d32a8"
+            "value": "4e06fe6ba2b4faa6b92d7864ff19fd8752423ed5390f3fd4308ed5a77aa2d74f"
           },
           "schemaVersion": 1
         },
         {
-          "path": "work/247-full-shape-golden/spec.md",
+          "path": "work/857-post-evidence-analyze-replay/spec.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "0ee3ca5951c1c32227cc99360053008408d1006e7409d9d09a2d8f7fec0c7ff5"
+            "value": "1783997b173b1868be88744a3de140291daa9200f682aefb70e7d8858dc0e9e3"
           },
           "schemaVersion": 1
         },
         {
-          "path": "work/247-full-shape-golden/tasks.yml",
+          "path": "work/857-post-evidence-analyze-replay/tasks.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "eb96c6a7e2c44b03d88171c3c93fc985c59be85d6b23e731c67f80e6adff256f"
+            "value": "81f711f796d0929174d3fdd8a853d1aa4c6452fb4ed91554fa2c859ef839f1bd"
           },
           "schemaVersion": 1
         }
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "e8e452020c7559c6b3b5f88fa07be9514b962f330aec95b11314617f18e53f70"
+        "value": "a9f95ea523727dd5a0927e0d2c1900133fdee2bc4a19a26edd4f593671ef0e55"
       },
       "currency": "current"
     }

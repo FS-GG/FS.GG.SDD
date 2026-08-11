@@ -2,21 +2,21 @@
   "schemaVersion": 1,
   "contractVersion": "2.0.0",
   "generatorVersion": "FS.GG.SDD.Artifacts/1.0.0",
-  "workId": "247-full-shape-golden",
+  "workId": "857-post-evidence-analyze-replay",
   "sources": [
     {
-      "path": "readiness/247-full-shape-golden/ship.json",
-      "digest": "sha256:1417e80647311b23fc1927576356c22842ee3391e00d4175a0dc203c7dc32e9d",
+      "path": "readiness/857-post-evidence-analyze-replay/ship.json",
+      "digest": "sha256:938a43e9bd4fa59515d625885a7f118aba09327041698dc6581a9bf0060e2ec4",
       "schemaVersion": 1
     },
     {
-      "path": "readiness/247-full-shape-golden/verify.json",
-      "digest": "sha256:aa1ff7764ae43c69b0d037a6b7d55cad11b312de985c945117c6e6589fb7bb9b",
+      "path": "readiness/857-post-evidence-analyze-replay/verify.json",
+      "digest": "sha256:eaf52f98055301d4d9308e731b5d1ed9e19535f6c4c76c2130dbfdc01cbcac49",
       "schemaVersion": 1
     },
     {
-      "path": "readiness/247-full-shape-golden/work-model.json",
-      "digest": "sha256:773456221ad58d9e1aaef94ea3fd942ba1b1f67bbb09e63e19bef6fb3e3caab2",
+      "path": "readiness/857-post-evidence-analyze-replay/work-model.json",
+      "digest": "sha256:c76c5d681ac0e78957b9690cfaa95751de8838fc396d8e9592b1ac64a5c36ddb",
       "schemaVersion": 1
     }
   ],
@@ -49,27 +49,27 @@
       },
       {
         "id": "task:T001",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       },
       {
         "id": "task:T002",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       },
       {
         "id": "task:T003",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       },
       {
         "id": "task:T004",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       },
       {
         "id": "task:T005",
-        "state": "pending",
+        "state": "real",
         "rationale": null
       }
     ],
