@@ -15,9 +15,9 @@ the analysis/model/evidence relationship self-referential.
 
 ## Requirements
 
-- **FR-001**: `analyze` MUST use the existing evidence artifact as a work-model
-  source when evidence exists, while still operating without it as the mandatory
-  pre-implementation readiness gate.
+- **FR-001**: The shared work-model generator MUST retain existing evidence as a
+  source when it exists, while `analyze` continues to operate without evidence as
+  the mandatory pre-implementation readiness gate.
 - **FR-002**: Work-model source identity for evidence MUST exclude only the
   tool-owned `sourceSnapshots` payload. It MUST retain `sourceAnalysis`, all
   author-declared evidence, and all other evidence fields.

@@ -130,7 +130,7 @@ module LifecycleSmokeTests =
 
     [<Fact>]
     let ``smoke drives init through ship plus agents and refresh without blocking`` () =
-        let d = driven.Value
+        let d = driveLifecycle ()
 
         for (command, report) in lifecycleStages d do
             notBlocked (commandName command) report
@@ -173,6 +173,43 @@ module LifecycleSmokeTests =
 
         for (path, expected) in before do
             Assert.Equal(expected, TestSupport.readRelative d.Root path)
+
+    [<Fact>]
+    let ``analyze ignores only tool-owned evidence snapshots when calculating work-model currency`` () =
+        // Regression for #857: `sourceSnapshots` contains provenance, including analysis.json
+        // which cites the work model. It must not participate in the work-model source identity,
+        // or a completed replay creates a digest cycle. The rest of evidence remains a source.
+        let d = driveLifecycle ()
+        let evidencePath = $"work/{workId}/evidence.yml"
+        let workModelPath = $"readiness/{workId}/work-model.json"
+        let before = TestSupport.readRelative d.Root workModelPath
+        let evidence = TestSupport.readRelative d.Root evidencePath
+
+        let changedSnapshot =
+            evidence.Replace(
+                "sourceSnapshots:\n",
+                "sourceSnapshots:\n  - label: fixture-only\n    path: ignored\n    digest: 0000000000000000000000000000000000000000000000000000000000000000\n"
+            )
+
+        Assert.NotEqual(evidence, changedSnapshot)
+        TestSupport.writeRelative d.Root evidencePath changedSnapshot
+
+        let report = TestSupport.runAnalyze d.Root workId title
+        Assert.Equal(before, TestSupport.readRelative d.Root workModelPath)
+        notBlocked "analyze after provenance-only edit" report
+
+        let changedSourceAnalysis =
+            changedSnapshot.Replace(
+                $"sourceAnalysis: readiness/{workId}/analysis.json",
+                $"sourceAnalysis: readiness/{workId}/retained-analysis.json"
+            )
+
+        Assert.NotEqual(changedSnapshot, changedSourceAnalysis)
+        TestSupport.writeRelative d.Root evidencePath changedSourceAnalysis
+
+        let retainedSourceReport = TestSupport.runAnalyze d.Root workId title
+        notBlocked "analyze after sourceAnalysis edit" retainedSourceReport
+        Assert.NotEqual(before, TestSupport.readRelative d.Root workModelPath)
 
     [<Fact>]
     let ``smoke writes each stage authored source`` () =

@@ -29,7 +29,7 @@ changing forever, while evidence still honestly detects changed sources.
 - AC-001 [US-001] [FR-001]: Given a ship-ready package with observed evidence, when `analyze -> evidence -> verify -> ship -> refresh -> agents` is run twice, then every command in the second replay reports noChange and the generated artifacts remain byte-identical.
 
 ## Functional Requirements
-- FR-001: Analyze MUST retain the evidence-enriched work-model source after evidence exists; work-model source identity MUST omit only tool-owned evidence source-snapshot payload while preserving sourceAnalysis, evidence declarations, and stale-source detection. (Stories: US-001; Acceptance: AC-001)
+- FR-001: The shared work-model generator MUST retain existing evidence after it exists; work-model source identity MUST omit only tool-owned evidence source-snapshot payload while preserving sourceAnalysis, evidence declarations, and stale-source detection. Analyze MUST remain operable without evidence as the mandatory pre-implementation gate. (Stories: US-001; Acceptance: AC-001)
 
 ## Ambiguities
 No material ambiguities recorded.

@@ -77,7 +77,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "6f3d1fd73ee4de78006e8b43aacd2ebc17812c6b5908dddc3c7f8db9cb875a90"
+        "value": "82465a484881893be52f26359a40477520244fbc439bee1b16ab2f20134aaf1e"
       }
     },
     {
@@ -89,7 +89,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "8df4e80b8e5b4293a7a116f0d39f9008f53a0d87d870dec7c99772fca6c6ae46"
+        "value": "4e06fe6ba2b4faa6b92d7864ff19fd8752423ed5390f3fd4308ed5a77aa2d74f"
       }
     },
     {
@@ -101,7 +101,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "b0d3efd9a4a6e5ed17f1e139a20395c4edc67c56368b1799f312d3f3bd5b77db"
+        "value": "1783997b173b1868be88744a3de140291daa9200f682aefb70e7d8858dc0e9e3"
       }
     },
     {
@@ -113,7 +113,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "632d70d1db7b892e1bb56a2f5296e1a2ee88fb15eaffc798c8b54d075cf9a84e"
+        "value": "81f711f796d0929174d3fdd8a853d1aa4c6452fb4ed91554fa2c859ef839f1bd"
       }
     }
   ],
@@ -128,8 +128,8 @@
   "requirements": [
     {
       "id": "FR-001",
-      "title": "Analyze MUST retain the evidence-enriched work-model source after evidence exists; work-model source identity MUST omit only tool-owned evidence source-snapshot payload while preserving sourceAnalysis, evidence declarations, and stale-source detection. (Stories: US-001; Acceptance: AC-001)",
-      "text": "Analyze MUST retain the evidence-enriched work-model source after evidence exists; work-model source identity MUST omit only tool-owned evidence source-snapshot payload while preserving sourceAnalysis, evidence declarations, and stale-source detection. (Stories: US-001; Acceptance: AC-001)",
+      "title": "The shared work-model generator MUST retain existing evidence after it exists; work-model source identity MUST omit only tool-owned evidence source-snapshot payload while preserving sourceAnalysis, evidence declarations, and stale-source detection. Analyze MUST remain operable without evidence as the mandatory pre-implementation gate. (Stories: US-001; Acceptance: AC-001)",
+      "text": "The shared work-model generator MUST retain existing evidence after it exists; work-model source identity MUST omit only tool-owned evidence source-snapshot payload while preserving sourceAnalysis, evidence declarations, and stale-source detection. Analyze MUST remain operable without evidence as the mandatory pre-implementation gate. (Stories: US-001; Acceptance: AC-001)",
       "acceptanceCriteria": [
         "AC-001"
       ],
@@ -453,7 +453,7 @@
           "path": "work/857-post-evidence-analyze-replay/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "6f3d1fd73ee4de78006e8b43aacd2ebc17812c6b5908dddc3c7f8db9cb875a90"
+            "value": "82465a484881893be52f26359a40477520244fbc439bee1b16ab2f20134aaf1e"
           },
           "schemaVersion": 1
         },
@@ -461,7 +461,7 @@
           "path": "work/857-post-evidence-analyze-replay/plan.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "8df4e80b8e5b4293a7a116f0d39f9008f53a0d87d870dec7c99772fca6c6ae46"
+            "value": "4e06fe6ba2b4faa6b92d7864ff19fd8752423ed5390f3fd4308ed5a77aa2d74f"
           },
           "schemaVersion": 1
         },
@@ -469,7 +469,7 @@
           "path": "work/857-post-evidence-analyze-replay/spec.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "b0d3efd9a4a6e5ed17f1e139a20395c4edc67c56368b1799f312d3f3bd5b77db"
+            "value": "1783997b173b1868be88744a3de140291daa9200f682aefb70e7d8858dc0e9e3"
           },
           "schemaVersion": 1
         },
@@ -477,14 +477,14 @@
           "path": "work/857-post-evidence-analyze-replay/tasks.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "632d70d1db7b892e1bb56a2f5296e1a2ee88fb15eaffc798c8b54d075cf9a84e"
+            "value": "81f711f796d0929174d3fdd8a853d1aa4c6452fb4ed91554fa2c859ef839f1bd"
           },
           "schemaVersion": 1
         }
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "a24cf3c512a816c6e811809761982dee10eb7665afc0105e2d0fba3aab1bfb71"
+        "value": "a9f95ea523727dd5a0927e0d2c1900133fdee2bc4a19a26edd4f593671ef0e55"
       },
       "currency": "current"
     }

@@ -11,7 +11,7 @@ sourceAnalysis: readiness/857-post-evidence-analyze-replay/analysis.json
 sourceSnapshots:
   - label: analysis
     path: readiness/857-post-evidence-analyze-replay/analysis.json
-    digest: 784237cf2a7e88ea21ccadea9db4e3f27f02737ef361f23e59243bd435b5add1
+    digest: 4485fa114df885274d0d78fafccecca6037dc35f75c38cd89b23b75bc83291eb
     schemaVersion: 1
   - label: checklist
     path: work/857-post-evidence-analyze-replay/checklist.md
@@ -23,15 +23,15 @@ sourceSnapshots:
     schemaVersion: 1
   - label: plan
     path: work/857-post-evidence-analyze-replay/plan.md
-    digest: 8df4e80b8e5b4293a7a116f0d39f9008f53a0d87d870dec7c99772fca6c6ae46
+    digest: 4e06fe6ba2b4faa6b92d7864ff19fd8752423ed5390f3fd4308ed5a77aa2d74f
     schemaVersion: 1
   - label: spec
     path: work/857-post-evidence-analyze-replay/spec.md
-    digest: b0d3efd9a4a6e5ed17f1e139a20395c4edc67c56368b1799f312d3f3bd5b77db
+    digest: 1783997b173b1868be88744a3de140291daa9200f682aefb70e7d8858dc0e9e3
     schemaVersion: 1
   - label: tasks
     path: work/857-post-evidence-analyze-replay/tasks.yml
-    digest: 632d70d1db7b892e1bb56a2f5296e1a2ee88fb15eaffc798c8b54d075cf9a84e
+    digest: 81f711f796d0929174d3fdd8a853d1aa4c6452fb4ed91554fa2c859ef839f1bd
     schemaVersion: 1
 evidence:
   - id: EV001
@@ -54,7 +54,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/857-post-evidence-analyze-replay/commands.trx
-      digest: "sha256:df73c802c209108e263e58745f5e3ff0001e86fb97d093be790bed2842e29f58"
+      digest: "sha256:ce283e29fc904366d76984523cc1d35a08d1c576537be2c5ba83affbdf12715f"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 13
@@ -81,7 +81,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/857-post-evidence-analyze-replay/commands.trx
-      digest: "sha256:df73c802c209108e263e58745f5e3ff0001e86fb97d093be790bed2842e29f58"
+      digest: "sha256:ce283e29fc904366d76984523cc1d35a08d1c576537be2c5ba83affbdf12715f"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 13
@@ -108,7 +108,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/857-post-evidence-analyze-replay/commands.trx
-      digest: "sha256:df73c802c209108e263e58745f5e3ff0001e86fb97d093be790bed2842e29f58"
+      digest: "sha256:ce283e29fc904366d76984523cc1d35a08d1c576537be2c5ba83affbdf12715f"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 13
@@ -135,7 +135,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/857-post-evidence-analyze-replay/commands.trx
-      digest: "sha256:df73c802c209108e263e58745f5e3ff0001e86fb97d093be790bed2842e29f58"
+      digest: "sha256:ce283e29fc904366d76984523cc1d35a08d1c576537be2c5ba83affbdf12715f"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 13
@@ -162,7 +162,7 @@ evidence:
     synthetic: false
     observedRun:
       source: readiness/857-post-evidence-analyze-replay/commands.trx
-      digest: "sha256:df73c802c209108e263e58745f5e3ff0001e86fb97d093be790bed2842e29f58"
+      digest: "sha256:ce283e29fc904366d76984523cc1d35a08d1c576537be2c5ba83affbdf12715f"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 13

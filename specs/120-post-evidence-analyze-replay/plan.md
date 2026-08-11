@@ -4,9 +4,9 @@
 
 ## Design
 
-`analyze` supplies the on-disk evidence text to the common work-model generator
-when it exists. The generator canonicalises only the `sourceSnapshots` block for
-the evidence source digest. `evidence` still parses and validates the untouched
+The common work-model generator obtains the on-disk evidence snapshot when it
+exists. It canonicalises only the `sourceSnapshots` block for the evidence source
+digest. `evidence` still parses and validates the untouched
 artifact, so its stale-source check remains an honest comparison.
 
 The same canonicalisation is used both for generation and generated-view currency

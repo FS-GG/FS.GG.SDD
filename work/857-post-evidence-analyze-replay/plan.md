@@ -16,7 +16,7 @@ publicOrToolFacingImpact: true
 Prose status: planned
 
 ## Source Snapshot
-- spec: work/857-post-evidence-analyze-replay/spec.md sha256:b0d3efd9a4a6e5ed17f1e139a20395c4edc67c56368b1799f312d3f3bd5b77db schemaVersion:1
+- spec: work/857-post-evidence-analyze-replay/spec.md sha256:1783997b173b1868be88744a3de140291daa9200f682aefb70e7d8858dc0e9e3 schemaVersion:1
 - clarifications: work/857-post-evidence-analyze-replay/clarifications.md sha256:bf7527567b30665e92d7e0a1b85d60da926c5bc6816013a4130747a7c819295f schemaVersion:1
 - checklist: work/857-post-evidence-analyze-replay/checklist.md sha256:9ee7953280f07d0b0971c75e6410246524e7c568eef00109ae28fa71f5720b87 schemaVersion:1
 
@@ -27,7 +27,7 @@ Prose status: planned
 - Checklist result count: 1.
 
 ## Plan Decisions
-- PD-001 [AC-001] [FR-001] complete: Feed existing evidence into analyze's work-model generation and canonicalize only `sourceSnapshots` in both source generation and currency checks; evidence validation continues to compare the full recorded snapshots, so stale sources remain blocking.
+- PD-001 [AC-001] [FR-001] complete: Preserve the shared generator's existing-evidence snapshot path and canonicalize only `sourceSnapshots` in both source generation and currency checks; evidence validation continues to compare the full recorded snapshots, so stale sources remain blocking.
 
 ## Contract Impact
 - PC-001 [PD-001] command report: The behavior is internal to generated work-model source identity; no CLI argument, public F# signature, or persisted schema changes, and command reports retain their current shapes.
