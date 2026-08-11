@@ -77,7 +77,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "59abe74d4ec95be9ac850ff04dacfe7c796533095eafde6abaca56fef3a9f352"
+        "value": "6f3d1fd73ee4de78006e8b43aacd2ebc17812c6b5908dddc3c7f8db9cb875a90"
       }
     },
     {
@@ -453,7 +453,7 @@
           "path": "work/857-post-evidence-analyze-replay/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "59abe74d4ec95be9ac850ff04dacfe7c796533095eafde6abaca56fef3a9f352"
+            "value": "6f3d1fd73ee4de78006e8b43aacd2ebc17812c6b5908dddc3c7f8db9cb875a90"
           },
           "schemaVersion": 1
         },
@@ -484,7 +484,7 @@
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "fb6eae489dc6b71102a4da7936060616e2401bbf067dd6dac8bbf480d7e48a12"
+        "value": "a24cf3c512a816c6e811809761982dee10eb7665afc0105e2d0fba3aab1bfb71"
       },
       "currency": "current"
     }

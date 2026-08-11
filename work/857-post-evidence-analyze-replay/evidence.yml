@@ -11,7 +11,7 @@ sourceAnalysis: readiness/857-post-evidence-analyze-replay/analysis.json
 sourceSnapshots:
   - label: analysis
     path: readiness/857-post-evidence-analyze-replay/analysis.json
-    digest: 0f61688cf15ddcd2c594bc58265bcb9b89f260f9b99c4f0cdcd47293deedc758
+    digest: 784237cf2a7e88ea21ccadea9db4e3f27f02737ef361f23e59243bd435b5add1
     schemaVersion: 1
   - label: checklist
     path: work/857-post-evidence-analyze-replay/checklist.md
@@ -53,8 +53,8 @@ evidence:
     result: pass
     synthetic: false
     observedRun:
-      source: artifacts/test-results/FS.GG.SDD.Commands.Tests.trx
-      digest: "sha256:801c62098179c1866662ab70a7f465073d04087af381c3d92818e7fb4fb5491e"
+      source: readiness/857-post-evidence-analyze-replay/commands.trx
+      digest: "sha256:df73c802c209108e263e58745f5e3ff0001e86fb97d093be790bed2842e29f58"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 13
@@ -80,8 +80,8 @@ evidence:
     result: pass
     synthetic: false
     observedRun:
-      source: artifacts/test-results/FS.GG.SDD.Commands.Tests.trx
-      digest: "sha256:801c62098179c1866662ab70a7f465073d04087af381c3d92818e7fb4fb5491e"
+      source: readiness/857-post-evidence-analyze-replay/commands.trx
+      digest: "sha256:df73c802c209108e263e58745f5e3ff0001e86fb97d093be790bed2842e29f58"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 13
@@ -107,8 +107,8 @@ evidence:
     result: pass
     synthetic: false
     observedRun:
-      source: artifacts/test-results/FS.GG.SDD.Commands.Tests.trx
-      digest: "sha256:801c62098179c1866662ab70a7f465073d04087af381c3d92818e7fb4fb5491e"
+      source: readiness/857-post-evidence-analyze-replay/commands.trx
+      digest: "sha256:df73c802c209108e263e58745f5e3ff0001e86fb97d093be790bed2842e29f58"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 13
@@ -134,8 +134,8 @@ evidence:
     result: pass
     synthetic: false
     observedRun:
-      source: artifacts/test-results/FS.GG.SDD.Commands.Tests.trx
-      digest: "sha256:801c62098179c1866662ab70a7f465073d04087af381c3d92818e7fb4fb5491e"
+      source: readiness/857-post-evidence-analyze-replay/commands.trx
+      digest: "sha256:df73c802c209108e263e58745f5e3ff0001e86fb97d093be790bed2842e29f58"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 13
@@ -161,8 +161,8 @@ evidence:
     result: pass
     synthetic: false
     observedRun:
-      source: artifacts/test-results/FS.GG.SDD.Commands.Tests.trx
-      digest: "sha256:801c62098179c1866662ab70a7f465073d04087af381c3d92818e7fb4fb5491e"
+      source: readiness/857-post-evidence-analyze-replay/commands.trx
+      digest: "sha256:df73c802c209108e263e58745f5e3ff0001e86fb97d093be790bed2842e29f58"
       digestContract: exact-bytes-v1
       outcome: passed
       passed: 13

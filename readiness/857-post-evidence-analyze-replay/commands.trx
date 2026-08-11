@@ -1,0 +1,106 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="a5d40be9-8a7b-4e1f-a0cf-700e7da9396e" name="@60c9e64cc8e0 2026-08-11 17:34:56" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-08-11T17:34:56.7699753+02:00" queuing="2026-08-11T17:34:56.7699753+02:00" start="2026-08-11T17:34:53.7643333+02:00" finish="2026-08-11T17:34:56.9562644+02:00" />
+  <TestSettings name="default" id="0d5a1ef9-cfbd-4258-94b5-de106c691ec1">
+    <Deployment runDeploymentRoot="_60c9e64cc8e0_2026-08-11_17_34_56" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="71c9e1d2-4af7-4978-bd72-2ec918ca7566" testId="a0c5379f-b056-cc7a-bb8e-78126899349e" testName="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke summary is marked generated and records its sources" computerName="60c9e64cc8e0" duration="00:00:02.3022758" startTime="2026-08-11T17:34:54.1295738+02:00" endTime="2026-08-11T17:34:56.4349555+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="71c9e1d2-4af7-4978-bd72-2ec918ca7566" />
+    <UnitTestResult executionId="76fc937d-14eb-441f-9d1b-7f7e38a64a8d" testId="88c1e1a9-7fc2-3cd3-bd76-c9bec7ba2bd2" testName="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke generated readiness views record sources and generator identity in the report" computerName="60c9e64cc8e0" duration="00:00:00.0002414" startTime="2026-08-11T17:34:56.4456028+02:00" endTime="2026-08-11T17:34:56.4457965+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="76fc937d-14eb-441f-9d1b-7f7e38a64a8d" />
+    <UnitTestResult executionId="03417fee-6b19-401c-a48f-038e70473031" testId="49f0abed-87a4-ebe1-2614-5f297d3fbfa3" testName="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke completes with no Governance files present or required" computerName="60c9e64cc8e0" duration="00:00:00.0007423" startTime="2026-08-11T17:34:56.9047670+02:00" endTime="2026-08-11T17:34:56.9054539+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="03417fee-6b19-401c-a48f-038e70473031" />
+    <UnitTestResult executionId="c6f298c7-2550-45e1-8e76-3f939e7cc2ca" testId="f1ce6249-5704-166e-e4f0-39fd101897e9" testName="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.ship-ready replay keeps analysis evidence and the enriched work model at one fixed point" computerName="60c9e64cc8e0" duration="00:00:00.1469445" startTime="2026-08-11T17:34:56.7589949+02:00" endTime="2026-08-11T17:34:56.9040172+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="c6f298c7-2550-45e1-8e76-3f939e7cc2ca" />
+    <UnitTestResult executionId="39c278a8-382f-4a0d-bd5f-5bbca051c699" testId="48da181b-136a-da00-7def-ddc691aa5a9f" testName="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke confirms the canonical lifecycle order map" computerName="60c9e64cc8e0" duration="00:00:00.0023776" startTime="2026-08-11T17:34:56.4422342+02:00" endTime="2026-08-11T17:34:56.4422455+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="39c278a8-382f-4a0d-bd5f-5bbca051c699" />
+    <UnitTestResult executionId="40d0bb57-5af6-4603-98e3-0bfb774713b5" testId="bb8fca66-6935-5f5f-ba4d-eb5bbdf1c736" testName="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke depends only on the SDD projects with no Rendering or monorepo" computerName="60c9e64cc8e0" duration="00:00:00.0077604" startTime="2026-08-11T17:34:56.4423267+02:00" endTime="2026-08-11T17:34:56.4455158+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="40d0bb57-5af6-4603-98e3-0bfb774713b5" />
+    <UnitTestResult executionId="0878e9df-f8d8-4591-9366-f6e40ddcfab8" testId="52262144-5e26-9e75-629c-9ba1ba02f697" testName="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke emits the documented next-action pointer per stage" computerName="60c9e64cc8e0" duration="00:00:00.0004316" startTime="2026-08-11T17:34:56.9043348+02:00" endTime="2026-08-11T17:34:56.9046868+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="0878e9df-f8d8-4591-9366-f6e40ddcfab8" />
+    <UnitTestResult executionId="4907305f-3d17-431c-aa1d-974f23420454" testId="4f9a0336-9864-0efd-96de-d02430237f83" testName="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke readiness views parse and carry a generation manifest" computerName="60c9e64cc8e0" duration="00:00:00.0005972" startTime="2026-08-11T17:34:56.4459349+02:00" endTime="2026-08-11T17:34:56.4464326+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="4907305f-3d17-431c-aa1d-974f23420454" />
+    <UnitTestResult executionId="66e25aad-9a26-4701-9fe6-ac0788f8e7ee" testId="66ddad70-4128-261a-fe6e-fe50b1ff4161" testName="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke yields byte-identical readiness across two runs over identical inputs" computerName="60c9e64cc8e0" duration="00:00:00.1875954" startTime="2026-08-11T17:34:56.5685315+02:00" endTime="2026-08-11T17:34:56.7560787+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="66e25aad-9a26-4701-9fe6-ac0788f8e7ee" />
+    <UnitTestResult executionId="b631c8fe-21a3-40e6-a065-334311c26e2b" testId="c7b698da-bb30-b29c-5b74-60908706ed49" testName="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke stays usable with present-but-incomplete Governance files" computerName="60c9e64cc8e0" duration="00:00:00.1217865" startTime="2026-08-11T17:34:56.4465262+02:00" endTime="2026-08-11T17:34:56.5683665+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="b631c8fe-21a3-40e6-a065-334311c26e2b" />
+    <UnitTestResult executionId="36201c88-bd76-4d3c-89e4-d81be8d6b1ac" testId="98dc8240-405e-158b-0569-313a7824c44b" testName="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke drives init through ship plus agents and refresh without blocking" computerName="60c9e64cc8e0" duration="00:00:00.0008251" startTime="2026-08-11T17:34:56.7567178+02:00" endTime="2026-08-11T17:34:56.7569142+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="36201c88-bd76-4d3c-89e4-d81be8d6b1ac" />
+    <UnitTestResult executionId="ea6b1fbc-684e-4703-b8f1-80e596b212cc" testId="238b36e6-d622-d0ce-b5df-e635d39cfad6" testName="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke refreshes or reports each generated readiness view" computerName="60c9e64cc8e0" duration="00:00:00.0003657" startTime="2026-08-11T17:34:56.4418219+02:00" endTime="2026-08-11T17:34:56.4418498+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="ea6b1fbc-684e-4703-b8f1-80e596b212cc" />
+    <UnitTestResult executionId="f7721aab-4fdd-4115-b17b-c0cda5ff58b2" testId="463a2f4c-0e0c-1768-1502-a6d264a7f8de" testName="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke writes each stage authored source" computerName="60c9e64cc8e0" duration="00:00:00.0002336" startTime="2026-08-11T17:34:56.9042295+02:00" endTime="2026-08-11T17:34:56.9042473+02:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="f7721aab-4fdd-4115-b17b-c0cda5ff58b2" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke stays usable with present-but-incomplete Governance files" storage="/home/developer/projects/fs.gg.sdd-item-857/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="c7b698da-bb30-b29c-5b74-60908706ed49">
+      <Execution id="b631c8fe-21a3-40e6-a065-334311c26e2b" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-item-857/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests" name="smoke stays usable with present-but-incomplete Governance files" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke depends only on the SDD projects with no Rendering or monorepo" storage="/home/developer/projects/fs.gg.sdd-item-857/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="bb8fca66-6935-5f5f-ba4d-eb5bbdf1c736">
+      <Execution id="40d0bb57-5af6-4603-98e3-0bfb774713b5" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-item-857/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests" name="smoke depends only on the SDD projects with no Rendering or monorepo" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke readiness views parse and carry a generation manifest" storage="/home/developer/projects/fs.gg.sdd-item-857/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="4f9a0336-9864-0efd-96de-d02430237f83">
+      <Execution id="4907305f-3d17-431c-aa1d-974f23420454" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-item-857/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests" name="smoke readiness views parse and carry a generation manifest" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke refreshes or reports each generated readiness view" storage="/home/developer/projects/fs.gg.sdd-item-857/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="238b36e6-d622-d0ce-b5df-e635d39cfad6">
+      <Execution id="ea6b1fbc-684e-4703-b8f1-80e596b212cc" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-item-857/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests" name="smoke refreshes or reports each generated readiness view" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.ship-ready replay keeps analysis evidence and the enriched work model at one fixed point" storage="/home/developer/projects/fs.gg.sdd-item-857/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="f1ce6249-5704-166e-e4f0-39fd101897e9">
+      <Execution id="c6f298c7-2550-45e1-8e76-3f939e7cc2ca" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-item-857/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests" name="ship-ready replay keeps analysis evidence and the enriched work model at one fixed point" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke yields byte-identical readiness across two runs over identical inputs" storage="/home/developer/projects/fs.gg.sdd-item-857/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="66ddad70-4128-261a-fe6e-fe50b1ff4161">
+      <Execution id="66e25aad-9a26-4701-9fe6-ac0788f8e7ee" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-item-857/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests" name="smoke yields byte-identical readiness across two runs over identical inputs" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke completes with no Governance files present or required" storage="/home/developer/projects/fs.gg.sdd-item-857/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="49f0abed-87a4-ebe1-2614-5f297d3fbfa3">
+      <Execution id="03417fee-6b19-401c-a48f-038e70473031" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-item-857/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests" name="smoke completes with no Governance files present or required" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke confirms the canonical lifecycle order map" storage="/home/developer/projects/fs.gg.sdd-item-857/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="48da181b-136a-da00-7def-ddc691aa5a9f">
+      <Execution id="39c278a8-382f-4a0d-bd5f-5bbca051c699" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-item-857/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests" name="smoke confirms the canonical lifecycle order map" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke emits the documented next-action pointer per stage" storage="/home/developer/projects/fs.gg.sdd-item-857/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="52262144-5e26-9e75-629c-9ba1ba02f697">
+      <Execution id="0878e9df-f8d8-4591-9366-f6e40ddcfab8" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-item-857/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests" name="smoke emits the documented next-action pointer per stage" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke generated readiness views record sources and generator identity in the report" storage="/home/developer/projects/fs.gg.sdd-item-857/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="88c1e1a9-7fc2-3cd3-bd76-c9bec7ba2bd2">
+      <Execution id="76fc937d-14eb-441f-9d1b-7f7e38a64a8d" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-item-857/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests" name="smoke generated readiness views record sources and generator identity in the report" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke drives init through ship plus agents and refresh without blocking" storage="/home/developer/projects/fs.gg.sdd-item-857/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="98dc8240-405e-158b-0569-313a7824c44b">
+      <Execution id="36201c88-bd76-4d3c-89e4-d81be8d6b1ac" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-item-857/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests" name="smoke drives init through ship plus agents and refresh without blocking" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke writes each stage authored source" storage="/home/developer/projects/fs.gg.sdd-item-857/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="463a2f4c-0e0c-1768-1502-a6d264a7f8de">
+      <Execution id="f7721aab-4fdd-4115-b17b-c0cda5ff58b2" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-item-857/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests" name="smoke writes each stage authored source" />
+    </UnitTest>
+    <UnitTest name="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests.smoke summary is marked generated and records its sources" storage="/home/developer/projects/fs.gg.sdd-item-857/tests/fs.gg.sdd.commands.tests/bin/release/net10.0/fs.gg.sdd.commands.tests.dll" id="a0c5379f-b056-cc7a-bb8e-78126899349e">
+      <Execution id="71c9e1d2-4af7-4978-bd72-2ec918ca7566" />
+      <TestMethod codeBase="/home/developer/projects/FS.GG.SDD-item-857/tests/FS.GG.SDD.Commands.Tests/bin/Release/net10.0/FS.GG.SDD.Commands.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="FS.GG.SDD.Commands.Tests.LifecycleSmokeTests" name="smoke summary is marked generated and records its sources" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="a0c5379f-b056-cc7a-bb8e-78126899349e" executionId="71c9e1d2-4af7-4978-bd72-2ec918ca7566" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="88c1e1a9-7fc2-3cd3-bd76-c9bec7ba2bd2" executionId="76fc937d-14eb-441f-9d1b-7f7e38a64a8d" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="49f0abed-87a4-ebe1-2614-5f297d3fbfa3" executionId="03417fee-6b19-401c-a48f-038e70473031" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="f1ce6249-5704-166e-e4f0-39fd101897e9" executionId="c6f298c7-2550-45e1-8e76-3f939e7cc2ca" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="48da181b-136a-da00-7def-ddc691aa5a9f" executionId="39c278a8-382f-4a0d-bd5f-5bbca051c699" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="bb8fca66-6935-5f5f-ba4d-eb5bbdf1c736" executionId="40d0bb57-5af6-4603-98e3-0bfb774713b5" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="52262144-5e26-9e75-629c-9ba1ba02f697" executionId="0878e9df-f8d8-4591-9366-f6e40ddcfab8" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="4f9a0336-9864-0efd-96de-d02430237f83" executionId="4907305f-3d17-431c-aa1d-974f23420454" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="66ddad70-4128-261a-fe6e-fe50b1ff4161" executionId="66e25aad-9a26-4701-9fe6-ac0788f8e7ee" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="c7b698da-bb30-b29c-5b74-60908706ed49" executionId="b631c8fe-21a3-40e6-a065-334311c26e2b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="98dc8240-405e-158b-0569-313a7824c44b" executionId="36201c88-bd76-4d3c-89e4-d81be8d6b1ac" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="238b36e6-d622-d0ce-b5df-e635d39cfad6" executionId="ea6b1fbc-684e-4703-b8f1-80e596b212cc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="463a2f4c-0e0c-1768-1502-a6d264a7f8de" executionId="f7721aab-4fdd-4115-b17b-c0cda5ff58b2" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Completed">
+    <Counters total="13" executed="13" passed="13" failed="0" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>[xUnit.net 00:00:00.00] xUnit.net VSTest Adapter v3.1.5+1b188a7b0a (64-bit .NET 10.0.10)
+[xUnit.net 00:00:00.06]   Discovering: FS.GG.SDD.Commands.Tests
+[xUnit.net 00:00:00.14]   Discovered:  FS.GG.SDD.Commands.Tests
+[xUnit.net 00:00:00.16]   Starting:    FS.GG.SDD.Commands.Tests
+[xUnit.net 00:00:02.95]   Finished:    FS.GG.SDD.Commands.Tests
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>
