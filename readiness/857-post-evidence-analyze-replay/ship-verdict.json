@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
   "viewVersion": "1.0",
-  "workId": "068-readiness-golden",
+  "workId": "857-post-evidence-analyze-replay",
   "stage": "ship",
   "status": "shipReady",
   "generator": "FS.GG.SDD.Artifacts/1.0.0",
   "sourcesDigest": {
     "algorithm": "sha256",
-    "value": "0c7b0773fbcb497a5c2a554d5b2c5b4ef46c177ece3f035d2a1c2369c9f27067"
+    "value": "c5cd04907120085439ffaefa5992a1766c4ae9dd990b128ee4f63b407434c890"
   },
   "verificationReadiness": {
     "status": "verificationReady",
     "evidenceSupportedCount": 5,
-    "evidenceSelfAttestedCount": 5,
-    "evidenceObservedCount": 0
+    "evidenceSelfAttestedCount": 0,
+    "evidenceObservedCount": 5
   },
   "disposition": {
     "state": "shipReady",

@@ -182,7 +182,10 @@ module internal HandlersAnalyze =
                             (Some checklistText)
                             (Some planText)
                             (Some taskText)
-                            None
+                            // Once evidence exists, analyze must retain the same evidence-enriched
+                            // work-model input that verify and ship use. Before implementation the
+                            // artifact is absent, so this remains the mandatory pre-evidence gate.
+                            (snapshot (evidencePath workId) model |> Option.map _.Text)
                             commandDiagnostics
                             model
                     | _ -> blockedWorkModelPlan workId commandDiagnostics model.Request.GeneratorVersion

@@ -139,6 +139,42 @@ module LifecycleSmokeTests =
         notBlocked "refresh" d.Refresh
 
     [<Fact>]
+    let ``ship-ready replay keeps analysis evidence and the enriched work model at one fixed point`` () =
+        // Regression for #857: analysis formerly regenerated a pre-evidence work model, while
+        // evidence snapshotted that analysis and verify/ship regenerated an evidence-enriched model.
+        // Replaying the documented post-ship sequence then changed every downstream view forever.
+        let d = driven.Value
+
+        let replay () =
+            [ "analyze", TestSupport.runAnalyze d.Root workId title
+              "evidence", TestSupport.runEvidence d.Root workId title
+              "verify", TestSupport.runVerify d.Root workId title
+              "ship", TestSupport.runShip d.Root workId title
+              "refresh", TestSupport.runRefresh d.Root workId
+              "agents", TestSupport.runAgents d.Root workId ]
+
+        // The first replay advances older, pre-#857 generated views to the stable post-evidence
+        // representation.  The second must be a true no-op, rather than another digest lap.
+        for (stage, report) in replay () do
+            notBlocked stage report
+
+        let before =
+            readinessViews
+            @ [ $"readiness/{workId}/summary.md"
+                $"readiness/{workId}/agent-commands/claude/guidance.json"
+                $"readiness/{workId}/agent-commands/codex/guidance.json" ]
+            |> List.map (fun path -> path, TestSupport.readRelative d.Root path)
+
+        for (stage, report) in replay () do
+            Assert.True(
+                report.Outcome = CommandOutcome.NoChange,
+                $"{stage} replay was {report.Outcome}: {report.Diagnostics}"
+            )
+
+        for (path, expected) in before do
+            Assert.Equal(expected, TestSupport.readRelative d.Root path)
+
+    [<Fact>]
     let ``smoke writes each stage authored source`` () =
         let d = driven.Value
 

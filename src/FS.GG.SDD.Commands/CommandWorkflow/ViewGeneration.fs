@@ -786,6 +786,22 @@ module internal ViewGeneration =
           SchemaVersion = Some 1
           SchemaStatus = Some "current" }
 
+    /// Evidence snapshots are provenance for the evidence gate, not evidence meaning.  The
+    /// snapshot includes `analysis.json`, which itself cites the work model; hashing it into that
+    /// same model creates a digest cycle when a completed lifecycle is replayed.  Retain the
+    /// mandatory `sourceAnalysis` pointer and all author-declared evidence, while canonicalising
+    /// only the tool-owned snapshot payload for the work-model source digest.  Evidence validation
+    /// continues to read the original artifact and therefore still rejects stale source snapshots.
+    let private evidenceTextForWorkModel (text: string) =
+        Regex.Replace(text, "(?ms)^sourceSnapshots:\\s*.*?(?=^evidence:)", "sourceSnapshots: []\n")
+
+    let private evidenceSnapshotForWorkModel workId (snapshot: FileSnapshot) =
+        if normalizeRelativePath snapshot.Path = evidencePath workId then
+            { snapshot with
+                Text = evidenceTextForWorkModel snapshot.Text }
+        else
+            snapshot
+
     let performanceEvidenceSnapshots workId evidenceText model =
         evidenceText
         |> Option.bind (fun text ->
@@ -831,6 +847,7 @@ module internal ViewGeneration =
                       snapshot (planPath workId) model
                       snapshot (tasksPath workId) model
                       snapshot (evidencePath workId) model
+                      |> Option.map (evidenceSnapshotForWorkModel workId)
                       Some generated ]
                     |> List.choose id
                     |> fun snapshots ->
@@ -914,9 +931,11 @@ module internal ViewGeneration =
           evidenceText
           |> Option.map (fun text ->
               { Path = evidencePath workId
-                Text = text
+                Text = evidenceTextForWorkModel text
                 RawBytes = None })
-          |> Option.orElseWith (fun () -> snapshot (evidencePath workId) model) ]
+          |> Option.orElseWith (fun () ->
+              snapshot (evidencePath workId) model
+              |> Option.map (evidenceSnapshotForWorkModel workId)) ]
         |> List.choose id
         |> fun snapshots -> snapshots @ performanceEvidenceSnapshots workId evidenceText model
         |> List.map (fun snapshot ->

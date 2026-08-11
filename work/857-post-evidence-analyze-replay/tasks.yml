@@ -1,0 +1,86 @@
+schemaVersion: 1
+work:
+  id: 857-post-evidence-analyze-replay
+  title: "Post Evidence Analyze Replay"
+  stage: tasks
+  status: tasksReady
+  sourceSpec: work/857-post-evidence-analyze-replay/spec.md
+  sourceClarifications: work/857-post-evidence-analyze-replay/clarifications.md
+  sourceChecklist: work/857-post-evidence-analyze-replay/checklist.md
+  sourcePlan: work/857-post-evidence-analyze-replay/plan.md
+  publicOrToolFacingImpact: true
+
+sources:
+  - label: spec
+    path: work/857-post-evidence-analyze-replay/spec.md
+    digest: b0d3efd9a4a6e5ed17f1e139a20395c4edc67c56368b1799f312d3f3bd5b77db
+    schemaVersion: 1
+  - label: clarifications
+    path: work/857-post-evidence-analyze-replay/clarifications.md
+    digest: bf7527567b30665e92d7e0a1b85d60da926c5bc6816013a4130747a7c819295f
+    schemaVersion: 1
+  - label: checklist
+    path: work/857-post-evidence-analyze-replay/checklist.md
+    digest: 9ee7953280f07d0b0971c75e6410246524e7c568eef00109ae28fa71f5720b87
+    schemaVersion: 1
+  - label: plan
+    path: work/857-post-evidence-analyze-replay/plan.md
+    digest: 8df4e80b8e5b4293a7a116f0d39f9008f53a0d87d870dec7c99772fca6c6ae46
+    schemaVersion: 1
+tasks:
+  - id: T001
+    title: Implement requirement FR-001
+    status: done
+    owner: sdd
+    dependencies: []
+    requirements: [FR-001]
+    decisions: []
+    sourceIds: [AC-001, FR-001, PD-001]
+    requiredSkills: [fsharp, implementation]
+    requiredEvidence: [EV001]
+  - id: T002
+    title: Update contract surface PC-001
+    status: done
+    owner: sdd
+    dependencies: [T001]
+    requirements: []
+    decisions: []
+    sourceIds: [PC-001, PD-001]
+    requiredSkills: [fsharp]
+    requiredEvidence: [EV002]
+  - id: T003
+    title: Record verification evidence VO-001
+    status: done
+    owner: sdd
+    dependencies: [T001]
+    requirements: []
+    decisions: []
+    sourceIds: [PC-001, PD-001, VO-001]
+    requiredSkills: [automated-tests, readiness-evidence]
+    requiredEvidence: [EV003]
+  - id: T004
+    title: Handle migration posture PM-001
+    status: done
+    owner: sdd
+    dependencies: [T001]
+    requirements: []
+    decisions: []
+    sourceIds: [PC-001, PM-001]
+    requiredSkills: [schema-versioning]
+    requiredEvidence: [EV004]
+  - id: T005
+    title: Refresh generated view impact GV-001
+    status: done
+    owner: sdd
+    dependencies: [T001]
+    requirements: []
+    decisions: []
+    sourceIds: [GV-001, PD-001]
+    requiredSkills: [deterministic-json]
+    requiredEvidence: [EV005]
+acceptedDeferrals: []
+findings: []
+advisoryNotes:
+  - "Optional Governance pointers remain compatibility facts only."
+lifecycleNotes:
+  - "Next lifecycle action: fsgg-sdd analyze --work 857-post-evidence-analyze-replay."
