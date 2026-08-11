@@ -60,11 +60,11 @@ module ScaffoldCliCoherenceTests =
     let private cliBehind (report: CommandReport) =
         report.Diagnostics |> List.filter (fun d -> d.Id = "scaffold.cliBehindMinimum")
 
-    // US2 scenario 1 (SC-002): installed 1.0.0 < declared 1.1.0 ⇒ exactly one
+    // US2 scenario 1 (SC-002): installed 1.0.1 < declared 1.1.0 ⇒ exactly one
     // scaffold.cliBehindMinimum (info) naming installed, minimum, and the gap.
     // The minimum tracks the installed version by exactly one minor, so the "behind by
     // 1 minor version" assertion keeps testing the gap arithmetic and not a constant.
-    // 1.1.0 > 1.0.0 numerically (components are ints, not strings) — see Fsgg.Version.
+    // 1.1.0 > 1.0.1 numerically (components are ints, not strings) — see Fsgg.Version.
     [<Fact; Trait("tier", "slow")>]
     let ``behind minimum emits exactly one cliBehindMinimum advisory naming installed minimum and gap`` () =
         let root = TestSupport.tempDirectory ()
@@ -75,7 +75,7 @@ module ScaffoldCliCoherenceTests =
         | [ diagnostic ] ->
             Assert.Equal("info", severityValue diagnostic.Severity)
             Assert.Contains("1.1.0", diagnostic.Message)
-            Assert.Contains("1.0.0", diagnostic.Message)
+            Assert.Contains("1.0.1", diagnostic.Message)
             Assert.Contains("behind by 1 minor version", diagnostic.Message)
         | other -> Assert.True(false, $"expected exactly one cliBehindMinimum, got {List.length other}")
 
