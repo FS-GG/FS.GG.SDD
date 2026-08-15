@@ -4,7 +4,7 @@
   "workId": "865-record-discharged-obligations",
   "stage": "analyze",
   "status": "implementationReady",
-  "generator": "FS.GG.SDD.Artifacts/1.0.1",
+  "generator": "FS.GG.SDD.Artifacts/1.1.0",
   "sources": [
     {
       "path": ".fsgg/agents.yml",
@@ -37,11 +37,21 @@
       "schemaStatus": "current"
     },
     {
+      "path": "readiness/865-record-discharged-obligations/work-model.json",
+      "kind": "workModel",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "c331b10bf05be3e815452b6b9228040c43b11975321719b8345a08dda18d1a5f"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    },
+    {
       "path": "work/865-record-discharged-obligations/checklist.md",
       "kind": "checklist",
       "digest": {
         "algorithm": "sha256",
-        "value": "b53c682c5f858ee157088cead28f8a80cd24f80d44931f0f22208cbb25735ce8"
+        "value": "93b7817504e7b02fb3657570f15eb92b7cd40a97006531770edad9a14dddf791"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -61,7 +71,7 @@
       "kind": "plan",
       "digest": {
         "algorithm": "sha256",
-        "value": "3a2f37158287d7c45aa0b9ecbd2e520dd1169195bad7ee5ce3c1a04c8562b2ca"
+        "value": "42ae4cf57b1a9c6a620549c3d5c58d50abcd7f7a9eac054f10b6e85f634bb4e2"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -71,7 +81,7 @@
       "kind": "specification",
       "digest": {
         "algorithm": "sha256",
-        "value": "21d019efa96537b148f56ff75c938544a0604459ef56bd4a1a1d2a84d466acd6"
+        "value": "fcbeb35c2cd5c0e3626a2b2e638e74a5aef5b2e7fb08268d9f68f1bd7eceedd1"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -81,7 +91,7 @@
       "kind": "tasks",
       "digest": {
         "algorithm": "sha256",
-        "value": "4ea9fb2e63f91341561807e2ac14168ce2e5d4ba53df910fef38e616b67c2c7c"
+        "value": "31d967bcabdb4cfb7632699ac402a19820e466c58c72fdbb81e21efe28fcce89"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -362,6 +372,16 @@
       "id": "AR028",
       "sourcePath": "work/865-record-discharged-obligations/plan.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceId": "PD-012",
+      "targetId": null,
+      "relationship": "planDecisionDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR029",
+      "sourcePath": "work/865-record-discharged-obligations/plan.md",
+      "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": null,
       "targetId": null,
       "relationship": "taskSourcePlan",
@@ -369,7 +389,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR029",
+      "id": "AR030",
       "sourcePath": "work/865-record-discharged-obligations/plan.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "VO-001",
@@ -379,7 +399,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR030",
+      "id": "AR031",
       "sourcePath": "work/865-record-discharged-obligations/plan.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "VO-002",
@@ -389,7 +409,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR031",
+      "id": "AR032",
       "sourcePath": "work/865-record-discharged-obligations/plan.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "VO-003",
@@ -399,7 +419,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR032",
+      "id": "AR033",
       "sourcePath": "work/865-record-discharged-obligations/plan.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "VO-004",
@@ -409,7 +429,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR033",
+      "id": "AR034",
       "sourcePath": "work/865-record-discharged-obligations/plan.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "VO-005",
@@ -419,7 +439,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR034",
+      "id": "AR035",
       "sourcePath": "work/865-record-discharged-obligations/plan.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "VO-006",
@@ -429,7 +449,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR035",
+      "id": "AR036",
       "sourcePath": "work/865-record-discharged-obligations/plan.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "VO-007",
@@ -439,7 +459,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR036",
+      "id": "AR037",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "AC-001",
@@ -449,7 +469,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR037",
+      "id": "AR038",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "AC-002",
@@ -459,7 +479,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR038",
+      "id": "AR039",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "AC-003",
@@ -469,7 +489,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR039",
+      "id": "AR040",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "AC-004",
@@ -479,7 +499,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR040",
+      "id": "AR041",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "AC-005",
@@ -489,7 +509,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR041",
+      "id": "AR042",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "AC-006",
@@ -499,7 +519,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR042",
+      "id": "AR043",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "AC-007",
@@ -509,7 +529,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR043",
+      "id": "AR044",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "AC-008",
@@ -519,7 +539,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR044",
+      "id": "AR045",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "AC-009",
@@ -529,7 +549,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR045",
+      "id": "AR046",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "AC-010",
@@ -539,7 +559,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR046",
+      "id": "AR047",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "AC-011",
@@ -549,7 +569,17 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR047",
+      "id": "AR048",
+      "sourcePath": "work/865-record-discharged-obligations/spec.md",
+      "targetPath": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceId": "AC-012",
+      "targetId": null,
+      "relationship": "acceptanceDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR049",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/checklist.md",
       "sourceId": null,
@@ -559,7 +589,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR048",
+      "id": "AR050",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/plan.md",
       "sourceId": null,
@@ -569,7 +599,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR049",
+      "id": "AR051",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "FR-001",
@@ -579,7 +609,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR050",
+      "id": "AR052",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "FR-002",
@@ -589,7 +619,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR051",
+      "id": "AR053",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "FR-003",
@@ -599,7 +629,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR052",
+      "id": "AR054",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "FR-004",
@@ -609,7 +639,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR053",
+      "id": "AR055",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "FR-005",
@@ -619,7 +649,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR054",
+      "id": "AR056",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "FR-006",
@@ -629,7 +659,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR055",
+      "id": "AR057",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "FR-007",
@@ -639,7 +669,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR056",
+      "id": "AR058",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "FR-008",
@@ -649,7 +679,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR057",
+      "id": "AR059",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "FR-009",
@@ -659,7 +689,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR058",
+      "id": "AR060",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "FR-010",
@@ -669,7 +699,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR059",
+      "id": "AR061",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "FR-011",
@@ -679,7 +709,17 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR060",
+      "id": "AR062",
+      "sourcePath": "work/865-record-discharged-obligations/spec.md",
+      "targetPath": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceId": "FR-012",
+      "targetId": null,
+      "relationship": "requirementDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR063",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/clarifications.md",
       "sourceId": null,
@@ -689,7 +729,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR061",
+      "id": "AR064",
       "sourcePath": "work/865-record-discharged-obligations/spec.md",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": null,
@@ -699,7 +739,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR062",
+      "id": "AR065",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T012",
@@ -709,7 +749,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR063",
+      "id": "AR066",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T013",
@@ -719,7 +759,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR064",
+      "id": "AR067",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T014",
@@ -729,7 +769,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR065",
+      "id": "AR068",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T015",
@@ -739,7 +779,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR066",
+      "id": "AR069",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T016",
@@ -749,7 +789,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR067",
+      "id": "AR070",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T017",
@@ -759,7 +799,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR068",
+      "id": "AR071",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T018",
@@ -769,7 +809,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR069",
+      "id": "AR072",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T019",
@@ -779,7 +819,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR070",
+      "id": "AR073",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T020",
@@ -789,7 +829,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR071",
+      "id": "AR074",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T021",
@@ -799,7 +839,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR072",
+      "id": "AR075",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T022",
@@ -809,7 +849,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR073",
+      "id": "AR076",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T023",
@@ -819,7 +859,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR074",
+      "id": "AR077",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T024",
@@ -829,7 +869,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR075",
+      "id": "AR078",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T025",
@@ -839,7 +879,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR076",
+      "id": "AR079",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T026",
@@ -849,7 +889,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR077",
+      "id": "AR080",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T027",
@@ -859,7 +899,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR078",
+      "id": "AR081",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T028",
@@ -869,7 +909,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR079",
+      "id": "AR082",
       "sourcePath": "work/865-record-discharged-obligations/tasks.yml",
       "targetPath": "work/865-record-discharged-obligations/tasks.yml",
       "sourceId": "T029",
@@ -881,7 +921,7 @@
   ],
   "readiness": {
     "status": "implementationReady",
-    "readyCount": 79,
+    "readyCount": 82,
     "advisoryCount": 0,
     "warningCount": 0,
     "blockingCount": 0,
@@ -896,7 +936,7 @@
     {
       "path": "readiness/865-record-discharged-obligations/work-model.json",
       "kind": "workModel",
-      "currency": "missing",
+      "currency": "current",
       "diagnosticIds": []
     }
   ],

@@ -16,15 +16,15 @@ publicOrToolFacingImpact: true
 Prose status: planned
 
 ## Source Snapshot
-- spec: work/865-record-discharged-obligations/spec.md sha256:21d019efa96537b148f56ff75c938544a0604459ef56bd4a1a1d2a84d466acd6 schemaVersion:1
+- spec: work/865-record-discharged-obligations/spec.md sha256:fcbeb35c2cd5c0e3626a2b2e638e74a5aef5b2e7fb08268d9f68f1bd7eceedd1 schemaVersion:1
 - clarifications: work/865-record-discharged-obligations/clarifications.md sha256:78ecbbb052f7126f8b2e5b29833e544eefa3c3d1f0877067b3b9a18e52733d2d schemaVersion:1
-- checklist: work/865-record-discharged-obligations/checklist.md sha256:b53c682c5f858ee157088cead28f8a80cd24f80d44931f0f22208cbb25735ce8 schemaVersion:1
+- checklist: work/865-record-discharged-obligations/checklist.md sha256:93b7817504e7b02fb3657570f15eb92b7cd40a97006531770edad9a14dddf791 schemaVersion:1
 
 ## Plan Scope
 - Work item 865-record-discharged-obligations is planned from the current specification, clarification, and checklist facts.
-- Requirement count: 11.
+- Requirement count: 12.
 - Clarification decision count: 3.
-- Checklist result count: 11.
+- Checklist result count: 12.
 
 ## Plan Decisions
 - PD-001 [AC-001] [FR-001] complete: Add `EvidenceObligation.DischargeClass` (`test` | `record`), set from the `record-discharge` capability tag in `EvidenceDomain.obligations`, and carry it as an additive `RecordRequirement` boolean on `EvidenceDisposition` and `RequiredTestDisposition`. This mirrors how `ClassifiedRequirement`/`JourneyRequirement` were added, so `ship` and the Governance handoff read the class off the committed view instead of re-deriving it.
@@ -38,6 +38,7 @@ Prose status: planned
 - PD-009 [AC-009] [FR-009] complete: Read every new persisted field tolerantly — `jsonBool … |> Option.defaultValue false` for `recordRequirement`, a null-aware lift for `recordReceipt` — and move no `schemaVersion`. A view or evidence file written before this channel parses to exactly the values it already meant.
 - PD-010 [AC-010] [FR-010] complete: Add no new effect. Receipt validation is pure over strings; existence and byte-currency reuse the already-injected `artifactExists` / `artifactBytes` probes resolved at the effect edge, exactly as `missingCitedArtifacts` and `observedRunIsCurrent` already do.
 - PD-011 [AC-011] [FR-011] complete: Extend `docs/release/schema-reference.md` with the record channel beside the `observedRun` channel, and correct its stale claim that requiring an observed run is opt-in and off by default — `0.14.0` inverted that default and the paragraph was never updated.
+- PD-012 [AC-012] [FR-012] complete: Re-check both measured occurrences in a **clean `FS-GG/.github` worktree at `origin/main`**, driven by this branch's CLI with `--root`, and record the outcome in `work/865-record-discharged-obligations/verification/verification-evidence.md`. The record must state what the re-check does NOT show as plainly as what it does: reaching `ship` with placeholder receipts proves the structural block is gone, and proves nothing about whether either item's obligations are actually discharged. Nothing in `.github` is modified and neither row is reopened — that judgement belongs to whoever owns them.
 
 ## Contract Impact
 - PC-001 [PD-001] [PD-011] command report: The `verify` and `ship` command reports gain no new block and no new counter — the record channel is reported through the existing `evidenceObservedCount` / `evidenceSelfAttestedCount` pair and the existing disposition arrays, so every consumer of the JSON contract keeps working unchanged. What does change is which obligations can appear in which state, and that is documented in `docs/release/schema-reference.md` rather than encoded in a new field.

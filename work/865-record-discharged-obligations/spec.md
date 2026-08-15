@@ -80,6 +80,7 @@ repeatedly. The gap is in the gate's vocabulary, and that is what this work clos
 - AC-009 [US-003] [FR-009]: Given an `evidence.yml` and a `verify.json` authored before this channel existed, when they are parsed and re-verified, then they parse without diagnostics, keep their prior verdict, and no persisted `schemaVersion` has moved.
 - AC-010 [US-003] [FR-010]: Given any command run against a package carrying `issue` and `commit` receipts, when it runs with no network available, then it completes with the same result it has with one.
 - AC-011 [US-003] [FR-011]: Given `docs/release/schema-reference.md`, when a reader consults it for how an obligation is discharged, then it describes the record channel and states the actual default for requiring an observed run.
+- AC-012 [US-002] [FR-012]: Given the two measured occurrences, when each is re-checked against the change in a clean checkout, then the outcome is recorded — including what the re-check does not show — whether or not either row is reopened.
 
 ## Functional Requirements
 
@@ -94,6 +95,7 @@ repeatedly. The gap is in the gate's vocabulary, and that is what this work clos
 - FR-009: The channel is additive. An `evidence.yml`, `verify.json`, or `ship-verdict.json` written before it parses unchanged, keeps its verdict, and no persisted `schemaVersion` moves. (Stories: US-003; Acceptance: AC-009)
 - FR-010: No command dereferences a record locator, and the record channel introduces no network access anywhere in SDD. (Stories: US-003; Acceptance: AC-010)
 - FR-011: `docs/release/schema-reference.md` documents the record channel and states the actual, 0.14.0-inverted default for requiring an observed run, replacing the stale description of it as opt-in. (Stories: US-003; Acceptance: AC-011)
+- FR-012: The two measured occurrences are re-checked against the change and the outcome is recorded durably, stating both what the re-check shows and what it does not — in particular that removing the structural block is not the same as discharging either item's obligations. (Stories: US-002; Acceptance: AC-012)
 
 ## Ambiguities
 

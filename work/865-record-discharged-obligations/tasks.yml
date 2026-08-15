@@ -13,7 +13,7 @@ work:
 sources:
   - label: spec
     path: work/865-record-discharged-obligations/spec.md
-    digest: 21d019efa96537b148f56ff75c938544a0604459ef56bd4a1a1d2a84d466acd6
+    digest: fcbeb35c2cd5c0e3626a2b2e638e74a5aef5b2e7fb08268d9f68f1bd7eceedd1
     schemaVersion: 1
   - label: clarifications
     path: work/865-record-discharged-obligations/clarifications.md
@@ -21,11 +21,11 @@ sources:
     schemaVersion: 1
   - label: checklist
     path: work/865-record-discharged-obligations/checklist.md
-    digest: b53c682c5f858ee157088cead28f8a80cd24f80d44931f0f22208cbb25735ce8
+    digest: 93b7817504e7b02fb3657570f15eb92b7cd40a97006531770edad9a14dddf791
     schemaVersion: 1
   - label: plan
     path: work/865-record-discharged-obligations/plan.md
-    digest: 3a2f37158287d7c45aa0b9ecbd2e520dd1169195bad7ee5ce3c1a04c8562b2ca
+    digest: 42ae4cf57b1a9c6a620549c3d5c58d50abcd7f7a9eac054f10b6e85f634bb4e2
     schemaVersion: 1
 tasks:
   - id: T001
@@ -136,7 +136,7 @@ tasks:
     requirements: [FR-011]
     decisions: []
     sourceIds: [AC-011, FR-011, PD-011]
-    requiredSkills: [fsharp, implementation]
+    requiredSkills: [fsharp, implementation, record-discharge]
     requiredEvidence: [EV011]
   - id: T012
     title: Implement clarification decision DEC-001
@@ -146,7 +146,7 @@ tasks:
     requirements: []
     decisions: [DEC-001]
     sourceIds: [DEC-001]
-    requiredSkills: [fsharp, implementation]
+    requiredSkills: [fsharp, implementation, record-discharge]
     requiredEvidence: [EV012]
   - id: T013
     title: Implement clarification decision DEC-002
@@ -156,7 +156,7 @@ tasks:
     requirements: []
     decisions: [DEC-002]
     sourceIds: [DEC-002]
-    requiredSkills: [fsharp, implementation]
+    requiredSkills: [fsharp, implementation, record-discharge]
     requiredEvidence: [EV013]
   - id: T014
     title: Implement clarification decision DEC-003
@@ -166,7 +166,7 @@ tasks:
     requirements: []
     decisions: [DEC-003]
     sourceIds: [DEC-003]
-    requiredSkills: [fsharp, implementation]
+    requiredSkills: [fsharp, implementation, record-discharge]
     requiredEvidence: [EV014]
   - id: T015
     title: Update contract surface PC-001
@@ -276,7 +276,7 @@ tasks:
     requirements: []
     decisions: []
     sourceIds: [PC-001, PD-010, PD-011, VO-007]
-    requiredSkills: [automated-tests, readiness-evidence]
+    requiredSkills: [automated-tests, readiness-evidence, record-discharge]
     requiredEvidence: [EV025]
   - id: T026
     title: Handle migration posture PM-001
@@ -286,7 +286,7 @@ tasks:
     requirements: []
     decisions: []
     sourceIds: [PC-001, PC-004, PM-001]
-    requiredSkills: [schema-versioning]
+    requiredSkills: [record-discharge, schema-versioning]
     requiredEvidence: [EV026]
   - id: T027
     title: Handle migration posture PM-002
@@ -296,7 +296,7 @@ tasks:
     requirements: []
     decisions: []
     sourceIds: [PC-003, PM-002]
-    requiredSkills: [schema-versioning]
+    requiredSkills: [record-discharge, schema-versioning]
     requiredEvidence: [EV027]
   - id: T028
     title: Refresh generated view impact GV-001
@@ -318,6 +318,16 @@ tasks:
     sourceIds: [GV-002, PD-009]
     requiredSkills: [deterministic-json]
     requiredEvidence: [EV029]
+  - id: T030
+    title: Implement requirement FR-012
+    status: pending
+    owner: sdd
+    dependencies: []
+    requirements: [FR-012]
+    decisions: []
+    sourceIds: [AC-012, FR-012, PD-012]
+    requiredSkills: [record-discharge, fsharp, implementation]
+    requiredEvidence: [EV030]
 acceptedDeferrals: []
 findings: []
 advisoryNotes:
