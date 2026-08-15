@@ -65,20 +65,12 @@ module TestReport =
 
         let suites = if List.isEmpty suites then [ root ] else suites
 
-        // Keep these accumulators explicit. Newer F# compilers otherwise emit a public
-        // implementation closure for the local List.sumBy helper, which leaks a compiler detail
-        // into the assembly surface even though the parser contract itself has not changed.
-        let mutable total = 0
-        let mutable failures = 0
-        let mutable errors = 0
-        let mutable skipped = 0
+        let sum name = suites |> List.sumBy (count name)
 
-        for suite in suites do
-            total <- total + count "tests" suite
-            failures <- failures + count "failures" suite
-            errors <- errors + count "errors" suite
-            skipped <- skipped + count "skipped" suite
-
+        let total = sum "tests"
+        let failures = sum "failures"
+        let errors = sum "errors"
+        let skipped = sum "skipped"
         let failed = failures + errors
 
         // Node's built-in JUnit reporter (and a few browser runners) emits one `<testcase>`
