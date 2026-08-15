@@ -6,17 +6,17 @@
   "sources": [
     {
       "path": "readiness/865-record-discharged-obligations/ship.json",
-      "digest": "sha256:10a6a2fb8623b78cc856cbad7be590e193f85bb2ea1791e9e3a2d88c23a5a2d5",
+      "digest": "sha256:f62c51802693506d5fd64d0e35e84e829322b504b2d11d17fbd5de25bd54f5a0",
       "schemaVersion": 1
     },
     {
       "path": "readiness/865-record-discharged-obligations/verify.json",
-      "digest": "sha256:a42f9a3e48c0ddffed609d7bfbd022761b9a5f6cd5aceff866eb4ab89c1bdfc6",
+      "digest": "sha256:90c279d0422db19765d13563491d7bc0b7888d4f9c16b149d737471122f133bc",
       "schemaVersion": 1
     },
     {
       "path": "readiness/865-record-discharged-obligations/work-model.json",
-      "digest": "sha256:7c7f84c3ab5ac7873e001744722bcad13373a6560d8b1feb43aa6ad41acc6c64",
+      "digest": "sha256:987ab49250d43ee07af8c4803d0d1d2f6472a0544b3acae9dc256088a2a8d8b4",
       "schemaVersion": 1
     }
   ],

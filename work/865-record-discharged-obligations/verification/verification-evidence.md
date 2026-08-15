@@ -43,6 +43,47 @@ Two harness properties are worth recording, because either one silently corrupts
   nothing, including an `Artifacts` failure under a `Commands`-only mutation.
 * **Assert the baseline green before each mutation**, for the same reason in the other direction.
 
+### Repair 1 — the boundary this change decalibrated, and the guard that now holds it
+
+Critic `heron-d9ac` measured (M1) that `min-equal.providers.yml` still declared `minimumFsggSdd.version:
+"1.0.0"` after this change moved the installed version to `1.1.0`. The equality test
+(`ScaffoldCliCoherenceTests.equal to minimum emits no cliBehindMinimum advisory`) was therefore running
+the strictly-**above** case — a second copy of what `min-satisfied` already covers — and `Assert.Empty`
+cannot tell the two apart.
+
+The repair is a **fixture** re-anchor to `1.1.0`, not an assertion change: weakening or re-scoping the
+assertion would keep the test green while leaving the boundary untested, which is the failure itself
+rather than a fix for it.
+
+Reproduced on both axes — boundary intact/broken × fixture `1.0.0` (pre-repair) / `1.1.0` (repaired),
+where "boundary broken" is `HandlersScaffold.fs:368` `| Some -1` widened to `| Some -1 | Some 0`:
+
+| boundary | fixture | `equal to minimum …` |
+|---|---|---|
+| intact | `1.1.0` (repaired) | **pass** — correct behaviour preserved |
+| **broken** | `1.0.0` (pre-repair) | **pass** — the surviving inversion, reproduced |
+| **broken** | `1.1.0` (repaired) | **FAIL** — the gate is restored |
+
+The middle row is the point: the same mutation that the suite absorbed silently before this repair is
+caught after it, and nothing about the assertion changed between them.
+
+**A guard was added so the calibration cannot drift silently again.** `min-equal` and `min-behind` are
+hand-anchored to the installed version and nothing re-anchors them when `<Version>` moves; when they
+drift, *neither* of the tests that use them fails, because both assert only on the presence or absence
+of an advisory. `the min-equal and min-behind fixtures stay anchored to the installed version` compares
+each fixture's declared minimum against `currentGeneratorVersion ()` through the **same**
+`Fsgg.Version.compare` the production arm calls, so the fixtures are calibrated against the rule rather
+than against a literal the test happens to agree with. It is inverted by decalibrating the fixture it
+guards:
+
+| guard | fixture | result |
+|---|---|---|
+| present | `1.0.0` (decalibrated) | **FAIL** |
+| present | `1.1.0` | **pass** |
+
+This drift had already happened once before this PR — `min-equal` sat a patch below the installed
+`1.0.1` on `main` — which is why the remedy is a check rather than a comment.
+
 ## 2. Re-check of the two measured occurrences (item acceptance criterion 5)
 
 Both were re-checked against the change in a **clean `FS-GG/.github` worktree at `origin/main`**

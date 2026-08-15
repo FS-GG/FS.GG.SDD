@@ -772,7 +772,7 @@ evidence:
       kind: decision
       locator: work/865-record-discharged-obligations/verification/verification-evidence.md
       locatorContract: durable-locator-v1
-      digest: "sha256:ce285d5a894884e12931bcf0775c3d920b6f86e8dcfed875b9ca033ad37e4518"
+      digest: "sha256:5cea61ced321be0d00a0c30e3e745bb9151926a20a9b7c9c77b8027fb261899a"
       statement: "verification-evidence.md records both measured occurrences re-checked in a clean .github worktree at origin/main — .github#2380 and .github#2545 each reaching shipReady once their record obligations declare their class — and states plainly that placeholder receipts prove the structural block is gone and prove nothing about whether either item's obligations are discharged."
       recordedAt: "2026-08-15T19:40:00Z"
     notes: ["FR-012: the re-check is a record, not a run — no suite can re-check another repository's committed lifecycle package, and the note says what the re-check does not show as plainly as what it does."]
