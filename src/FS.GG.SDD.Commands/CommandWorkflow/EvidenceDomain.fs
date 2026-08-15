@@ -90,16 +90,35 @@ module internal EvidenceDomain =
                         realTestEvidenceKinds
                     else
                         []
+                  // FS.GG.SDD#865: the obligation states WHAT CLASS OF EVIDENCE could ever discharge it.
+                  // Derived here, at the one place an obligation is minted, from the authored task tag
+                  // (DEC-003) — and derived through `dischargeClassFromTags` rather than by testing the
+                  // tag inline, so the tag has exactly one meaning-site.
+                  DischargeClass = dischargeClassFromTags task.RequiredSkills
                   RequiredSkillOrCapabilityTags = task.RequiredSkills
                   Blocking = true
                   Correction =
-                    $"Add evidence {id} for {task.Id.Value} with result: pass and synthetic: false (a synthetic pass does not satisfy it), or an accepted deferral linked to {task.Id.Value}." }))
+                    if isRecordDischargeTagged task.RequiredSkills then
+                        // A record obligation's correction must not tell the author to run a suite that
+                        // cannot exist for it. Naming the receipt is the whole remedy.
+                        $"Add evidence {id} for {task.Id.Value} with result: pass, synthetic: false, and a recordReceipt naming the durable record that discharges it (kind: decision | issue | commit), or an accepted deferral linked to {task.Id.Value}."
+                    else
+                        $"Add evidence {id} for {task.Id.Value} with result: pass and synthetic: false (a synthetic pass does not satisfy it), or an accepted deferral linked to {task.Id.Value}." }))
         |> List.groupBy _.ObligationId
         |> List.map (fun (_, group) ->
+            let mergedTags =
+                group |> List.collect _.RequiredSkillOrCapabilityTags |> List.distinct
+
             { List.head group with
                 LinkedTaskIds = group |> List.collect _.LinkedTaskIds |> List.distinct
                 LinkedRequirementIds = group |> List.collect _.LinkedRequirementIds |> List.distinct
                 LinkedDecisionIds = group |> List.collect _.LinkedDecisionIds |> List.distinct
                 LinkedSourceIds = group |> List.collect _.LinkedSourceIds |> List.distinct
-                RequiredSkillOrCapabilityTags = group |> List.collect _.RequiredSkillOrCapabilityTags |> List.distinct
+                RequiredSkillOrCapabilityTags = mergedTags
+                // FS.GG.SDD#865: re-derive the class from the MERGED tags, not from `List.head`. Where
+                // several tasks share one obligation the tags are unioned, and a class taken from
+                // whichever task happened to sort first would disagree with the tag set sitting beside
+                // it in the same record — and, downstream, with the `RecordRequirement` flag the `ED-`
+                // and `TD-` ladders derive from those same merged tags.
+                DischargeClass = dischargeClassFromTags mergedTags
                 RequiredEvidenceKinds = group |> List.collect _.RequiredEvidenceKinds |> List.distinct })

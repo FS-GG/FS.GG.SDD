@@ -6,8 +6,16 @@ providers:
     source: __FIXTURE__/ok
     # Coherent-set orchestrator axis (ADR-0008): the minimum coherent fsgg-sdd version
     # is the nested minimumFsggSdd.version scalar (matches FS.GG.Templates providers/rendering.providers.yml).
+    #
+    # THIS VALUE MUST EQUAL THE INSTALLED VERSION — `<Version>` in Directory.Build.local.props — and
+    # must be re-anchored with every bump. It is the ONLY fixture that exercises the equality boundary
+    # of `cliCoherenceDiagnostics` (`Some 0`, no advisory); the moment it drifts below the installed
+    # version it silently becomes a second copy of the strictly-above case that `min-satisfied`
+    # already covers, and `Assert.Empty` cannot tell the two apart. That is not hypothetical: it drifted
+    # to a patch below on 1.0.1 and went unnoticed, which is what `equalMinimumFixtureTracksInstalled`
+    # in ScaffoldCliCoherenceTests now fails loudly about instead of leaving to review.
     minimumFsggSdd:
-      version: "1.0.0"
+      version: "1.1.0"
     parameters:
       - key: productName
         required: true

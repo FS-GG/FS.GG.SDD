@@ -69,6 +69,57 @@ module Evidence =
             Skipped: int
         }
 
+    /// A durable **record** the obligation rests on, rather than a run (FS.GG.SDD#865).
+    ///
+    /// `ObservedRun` above answers "did a test run discharge this?", and for an obligation discharged by
+    /// filing a row, recording a decision, or performing a routing the honest answer is that no run ever
+    /// could. Before this type existed that obligation could not reach `Observed: true` by ANY route, so
+    /// `verify.unobservedRequiredTest` fired forever and `ship` was unreachable — measured twice, on
+    /// `.github#2380` and `.github#2545`, both of which merged with `verify` blocked and said so.
+    ///
+    /// This is the second observable channel, deliberately shaped like the first rather than weaker:
+    ///
+    ///   * `Kind` names WHAT class of durable artifact backs the claim, from a closed set.
+    ///   * `Locator` names the artifact itself, in a form checked against that kind — so a later reader
+    ///     can go and look. The locator is committed into `verify.json` and the ship verdict verbatim,
+    ///     which is what "re-checkable" means operationally.
+    ///   * `Digest` binds the artifact's EXACT BYTES when the record is repository-local
+    ///     (`kind: decision`) — the same `sha256:` binding `ObservedRun` uses, and the reason a local
+    ///     record is strictly stronger evidence than a remote one. It is empty for `issue`/`commit`,
+    ///     where there are no local bytes to hash.
+    ///   * `Statement` says what the record is asserted to establish, so a reader knows what to check
+    ///     the artifact AGAINST rather than merely that it exists.
+    ///   * `RecordedAt` dates the claim.
+    ///
+    /// **SDD never dereferences `Locator`** (DEC-001). Judging a remote record live would put a network
+    /// call inside a lifecycle gate that must reproduce offline in every consuming repository —
+    /// `.github#2545` measured that cost concretely, its check script containing no network call of any
+    /// kind — and it would buy less than it looks: resolving a URL proves the locator resolves, not that
+    /// what it resolves to says what `Statement` claims. The reader still has to look.
+    ///
+    /// **This does not make a record unforgeable, and must not be sold as if it did** — the same
+    /// disclaimer `ObservedRun` carries, for the same reason. It moves the bar from an unattributed
+    /// `result: pass` to a named, dated, classified artifact that a reader can refute. What it must not
+    /// do is let the author's word back in, and it does not: a record-class obligation with no receipt,
+    /// or with an incoherent one, does not satisfy.
+    type RecordReceipt =
+        {
+            /// One of `recordReceiptKinds`: `decision`, `issue`, or `commit`.
+            Kind: string
+            /// The durable reference, in the form `Kind` requires.
+            Locator: string
+            /// `durable-locator-v1` is the only current contract. Anything else is rejected rather than
+            /// reinterpreted — the lesson `DigestContract` already learned.
+            LocatorContract: string
+            /// `sha256:<64 hex>` of the record's exact bytes for a repository-local `decision` record;
+            /// empty for `issue`/`commit`, which have no local bytes.
+            Digest: string
+            /// What the record is asserted to establish.
+            Statement: string
+            /// When the record was made, as an ISO-8601 instant.
+            RecordedAt: string
+        }
+
     /// FS.GG.SDD#709 / ADR-0065. The producer-issued, schema-versioned proof that a passing test
     /// traversed the real producer-owned production composition. Every value is imported from the
     /// producer's
@@ -252,6 +303,11 @@ module Evidence =
             /// FS.GG.SDD#350: the receipt, when a run was observed. `None` is the honest state for an
             /// obligation discharged on the author's word — it is what `isSelfAttested` counts.
             ObservedRun: ObservedRun option
+            /// FS.GG.SDD#865: the receipt, when the obligation rests on a durable record rather than a
+            /// run. `None` is the honest state for a record-class obligation nobody has recorded yet —
+            /// and, for a test-class obligation, the ordinary state, since a record does not discharge
+            /// a test (DEC-002).
+            RecordReceipt: RecordReceipt option
             JourneyReceipt: JourneyReceipt option
             PerformanceBudget: PerformanceBudgetDeclaration option
             Rationale: string option
@@ -264,27 +320,39 @@ module Evidence =
         }
 
     type EvidenceObligation =
-        { ObligationId: string
-          Kind: string
-          SourceArtifactPath: string
-          SourceId: string option
-          LinkedTaskIds: TaskId list
-          LinkedRequirementIds: RequirementId list
-          LinkedDecisionIds: string list
-          // Feature 077: the originating task's full source-id lineage bag, carried verbatim so
-          // scaffolding can grammar-route it into the declaration's typed ref buckets. Recovers
-          // the plan-decision id (and any FR it traces to) that task.Requirements/task.Decisions
-          // drop for a plan-decision task.
-          LinkedSourceIds: string list
-          ExpectedEvidenceKinds: string list
-          // WI-4 (ADR-0048): the "real test kind ∧ synthetic:false" gate a classified {gameplay}
-          // FR obligation carries. Non-empty ⇒ satisfied only by a non-synthetic pass whose kind is
-          // one of these. Empty (every other obligation) ⇒ no kind restriction — additive and
-          // backward-compatible.
-          RequiredEvidenceKinds: string list
-          RequiredSkillOrCapabilityTags: string list
-          Blocking: bool
-          Correction: string }
+        {
+            ObligationId: string
+            Kind: string
+            SourceArtifactPath: string
+            SourceId: string option
+            LinkedTaskIds: TaskId list
+            LinkedRequirementIds: RequirementId list
+            LinkedDecisionIds: string list
+            // Feature 077: the originating task's full source-id lineage bag, carried verbatim so
+            // scaffolding can grammar-route it into the declaration's typed ref buckets. Recovers
+            // the plan-decision id (and any FR it traces to) that task.Requirements/task.Decisions
+            // drop for a plan-decision task.
+            LinkedSourceIds: string list
+            ExpectedEvidenceKinds: string list
+            // WI-4 (ADR-0048): the "real test kind ∧ synthetic:false" gate a classified {gameplay}
+            // FR obligation carries. Non-empty ⇒ satisfied only by a non-synthetic pass whose kind is
+            // one of these. Empty (every other obligation) ⇒ no kind restriction — additive and
+            // backward-compatible.
+            RequiredEvidenceKinds: string list
+            /// FS.GG.SDD#865: WHAT CLASS OF EVIDENCE COULD EVER DISCHARGE THIS — one of
+            /// `dischargeClasses`. `testDischargeClass` (the default, and what every obligation minted
+            /// before this field existed meant) says a test run discharges it; `recordDischargeClass`
+            /// says a durable record does, and that no run ever will.
+            ///
+            /// This is the axis the type was missing. `RequiredEvidenceKinds` above restricts WHICH
+            /// declaration kind satisfies; `State` records HOW WELL the evidence stands up. Neither can
+            /// express "no runner report will ever exist for this obligation", so `Observed` had exactly
+            /// one true-maker and a record obligation blocked `verify` permanently.
+            DischargeClass: string
+            RequiredSkillOrCapabilityTags: string list
+            Blocking: bool
+            Correction: string
+        }
 
     type EvidenceArtifact =
         { SchemaVersion: SchemaVersion
@@ -378,6 +446,57 @@ module Evidence =
     let isProductionJourneyTagged (tags: string list) =
         tags
         |> List.exists (fun tag -> String.Equals(tag, productionJourneyCapability, StringComparison.OrdinalIgnoreCase))
+
+    // FS.GG.SDD#865: the capability tag marking a task — and the obligation minted from it — as
+    // discharged by a durable RECORD rather than by a test run. It lives here, in Artifacts, for the
+    // same reason as `visualInspectionSkill` and `gameplayTestCapability`: the modules that stamp it
+    // and read it back sit in different parts of `Commands` and must agree on one literal.
+    //
+    // DEC-003: the class rides this AUTHORED task tag rather than a new spec classification facet.
+    // `requiredSkills` is authored state the task generator unions across regeneration
+    // (FS.GG.SDD#310, AC7), so the tag survives a `tasks` re-run — which means declaring it costs the
+    // author one token in the artifact where they already declare what a task needs, and costs the
+    // task generator nothing.
+    let recordDischargeCapability = "record-discharge"
+
+    /// The obligation discharge classes (FS.GG.SDD#865). `test` is the default and the only thing any
+    /// obligation minted before this axis existed could have meant.
+    let testDischargeClass = "test"
+
+    let recordDischargeClass = "record"
+
+    let dischargeClasses = [ testDischargeClass; recordDischargeClass ]
+
+    /// Does this obligation's skill/capability tag set mark it a record-discharged obligation?
+    let isRecordDischargeTagged (tags: string list) =
+        tags
+        |> List.exists (fun tag -> String.Equals(tag, recordDischargeCapability, StringComparison.OrdinalIgnoreCase))
+
+    /// The discharge class these tags declare — the one place the tag is turned into the class, so the
+    /// obligation minter and any later reader cannot disagree about what the tag means.
+    let dischargeClassFromTags (tags: string list) =
+        if isRecordDischargeTagged tags then
+            recordDischargeClass
+        else
+            testDischargeClass
+
+    /// Is this obligation record-class? Read from the class STRING rather than re-derived from tags,
+    /// because the class is what `verify` persists and `ship` reads back. An unrecognized or absent
+    /// value reads as test-class — the fail-closed direction, since a test-class obligation is held to
+    /// the stricter, longer-standing `observedRun` requirement.
+    let isRecordDischargeClass (dischargeClass: string) =
+        String.Equals(dischargeClass, recordDischargeClass, StringComparison.OrdinalIgnoreCase)
+
+    /// The closed set of durable-record kinds a `RecordReceipt` may name (FS.GG.SDD#865).
+    ///
+    ///   * `decision` — a record committed in THIS repository: an ADR, a spec section, a lifecycle
+    ///     note. Locator is a contained repository-relative path, and the receipt binds its bytes.
+    ///   * `issue`    — a row filed in a tracker. Locator is an absolute `https` URI.
+    ///   * `commit`   — a landed commit. Locator is a 40-character hex object name.
+    let recordReceiptKinds = [ "decision"; "issue"; "commit" ]
+
+    /// The only current `RecordReceipt.LocatorContract`.
+    let recordLocatorContract = "durable-locator-v1"
 
     let private sha256Digest value =
         not (String.IsNullOrWhiteSpace value)
@@ -1255,6 +1374,27 @@ module Evidence =
           match declaration.ObservedRun with
           | Some run when named run.Source && citedPathIsContained run.Source -> run.Source
           | _ -> ()
+          // FS.GG.SDD#865, the exact analogue one field along. A `decision` receipt names a record
+          // committed in THIS repository, so its locator IS a cited local path and belongs in the same
+          // bucket — and then the #349 cascade probes it for free: a decision record deleted after the
+          // receipt was written turns its obligation `invalid` at `verify`, with no new gate. Only
+          // `decision` is included; an `issue` URI and a `commit` object name are not local files and
+          // are never probed, the same line `sourceRefs[].uri` already sits on.
+          // The `:// ` clause mirrors `recordReceiptInconsistency`'s decision-locator rule exactly, and
+          // is not redundant with it. Without it a `decision` receipt carrying a URI would be cited as a
+          // local path, `exists` would report it absent, and the ladder's `artifactNotFound` arm — which
+          // sits ABOVE the receipt arms — would report "artifact not found" for what is really "your
+          // locator is the wrong kind for this receipt". The author would be sent looking for a file
+          // they never meant to name.
+          match declaration.RecordReceipt with
+          | Some receipt when
+              String.Equals(receipt.Kind.Trim(), "decision", StringComparison.OrdinalIgnoreCase)
+              && named receipt.Locator
+              && citedPathIsContained receipt.Locator
+              && not (receipt.Locator.Contains "://")
+              ->
+              receipt.Locator
+          | _ -> ()
           match declaration.JourneyReceipt with
           | Some receipt when
               not (String.IsNullOrWhiteSpace receipt.ObservedReportSource)
@@ -1381,6 +1521,125 @@ module Evidence =
         let passes = declarations |> List.filter claimsRealPass
 
         not (List.isEmpty passes) && passes |> List.forall isObserved
+
+    /// The record receipt's internal-consistency rule (FS.GG.SDD#865, FR-003) — the exact shape of
+    /// `observedRunInconsistency` above, and for the same reason. A record receipt is *authored*: unlike
+    /// `ObservedRun`, which `--from-test-report` derives from a file, there is no runner to read a record
+    /// from, so every field here is user input. Judging the receipt's form is therefore the whole of what
+    /// stops it becoming a second, roomier place to type `pass`.
+    ///
+    /// Returns the reason, or `None` when the receipt is coherent. Total and I/O-free: this decides form,
+    /// never existence or content. Existence of a `decision` record is the #349 cited-artifact cascade's
+    /// job (via `citedArtifactPaths`), byte-currency is `recordReceiptIsCurrent`'s, and the CONTENT of a
+    /// remote record is a later reader's — deliberately, because reading it here would mean dereferencing
+    /// it, which DEC-001 refused.
+    let recordReceiptInconsistency (receipt: RecordReceipt) : string option =
+        // Normalised, NOT compared raw — the same agreement `isObserved` and `observedRunInconsistency`
+        // reached over `outcome`: two rules reading one field must read it the same way, or the author
+        // is told a receipt is fine by one and silently ignored by the other.
+        let kind = receipt.Kind.Trim().ToLowerInvariant()
+        let locator = receipt.Locator.Trim()
+
+        // The recorded form, identical to `ObservedRun.Digest`: `sha256:` + a 64-hex digest.
+        let wellFormedDigest =
+            Regex.IsMatch(receipt.Digest, @"^sha256:[a-f0-9]{64}$", RegexOptions.CultureInvariant)
+
+        let knownKinds = String.Join(", ", recordReceiptKinds)
+
+        if not (List.contains kind recordReceiptKinds) then
+            Some $"kind '{receipt.Kind}' is not one of {knownKinds}"
+        elif not (String.Equals(receipt.LocatorContract, recordLocatorContract, StringComparison.Ordinal)) then
+            Some $"locatorContract '{receipt.LocatorContract}' is not '{recordLocatorContract}'"
+        elif String.IsNullOrWhiteSpace locator then
+            Some "locator names no record"
+        // Each kind's locator is checked against the form THAT kind must take, because a locator
+        // checked only for non-emptiness is a free-text field wearing a schema. The forms are
+        // deliberately generic: no tracker host, no repository, no provider literal appears here.
+        // `citedPathIsContained` answers "does this path escape the repository?", and a URI does not —
+        // `https://host/x` carries no `..` and is not rooted, so containment alone ACCEPTS it. That is
+        // right for what containment is for and wrong for what a `decision` locator means: a decision
+        // record is a file in this repository whose bytes the receipt binds, and a URI names no such
+        // file. Both conditions are therefore required, and the scheme check is the one that stops a
+        // remote locator from being smuggled in under the strongest kind — which would let it claim the
+        // byte-binding it can never have.
+        elif
+            kind = "decision"
+            && (not (citedPathIsContained locator) || locator.Contains "://")
+        then
+            Some $"decision locator '{locator}' is not a contained repository-relative path"
+        elif
+            kind = "issue"
+            && not (Regex.IsMatch(locator, @"^https://[^\s]+$", RegexOptions.CultureInvariant))
+        then
+            Some $"issue locator '{locator}' is not an absolute https URI"
+        elif
+            kind = "commit"
+            && not (Regex.IsMatch(locator, @"^[a-f0-9]{40}$", RegexOptions.CultureInvariant))
+        then
+            Some $"commit locator '{locator}' is not a 40-character hex object name"
+        // A repository-local record is byte-bound; a remote one has no local bytes to bind, and a
+        // digest offered for it would be an unverifiable number. Both directions are errors: the
+        // missing binding weakens the receipt, the impossible one misrepresents it.
+        elif kind = "decision" && not wellFormedDigest then
+            Some $"decision receipt digest '{receipt.Digest}' is not a sha256:<hex> digest"
+        elif kind <> "decision" && not (String.IsNullOrWhiteSpace receipt.Digest) then
+            Some $"a {kind} receipt has no local bytes to digest, but carries digest '{receipt.Digest}'"
+        elif String.IsNullOrWhiteSpace receipt.Statement then
+            // Without this the receipt says only "a record exists", leaving a reader who opens the
+            // locator nothing to check the record AGAINST. The statement is what makes it refutable.
+            Some "statement says nothing the record is asserted to establish"
+        elif String.IsNullOrWhiteSpace receipt.RecordedAt then
+            Some "recordedAt names no date"
+        else
+            match
+                DateTimeOffset.TryParse(
+                    receipt.RecordedAt,
+                    Globalization.CultureInfo.InvariantCulture,
+                    Globalization.DateTimeStyles.RoundtripKind
+                )
+            with
+            | true, _ -> None
+            | _ -> Some $"recordedAt '{receipt.RecordedAt}' is not an ISO-8601 instant"
+
+    /// Does this declaration rest on a durable record the tool can hand a later reader?
+    /// (FS.GG.SDD#865, FR-002/FR-005.) The record twin of `isObserved`, and deliberately NOT folded
+    /// into it: keeping the two rules separate is what makes DEC-002 hold — a record receipt cannot
+    /// discharge a test obligation, because nothing that asks "was a run observed?" consults this.
+    ///
+    /// Total and I/O-free, like `isObserved`. A coherent receipt is the whole condition here; whether
+    /// the record it names is still on disk and still says the same bytes is decided by the cited-path
+    /// cascade and by `recordReceiptIsCurrent` at the effect edge, exactly as for `ObservedRun`.
+    let isRecorded (declaration: EvidenceDeclaration) =
+        declaration.RecordReceipt
+        |> Option.exists (fun receipt -> Option.isNone (recordReceiptInconsistency receipt))
+
+    /// Was an *obligation* — matched by these declarations — discharged by a durable record?
+    /// (FS.GG.SDD#865, FR-005.) The record twin of `obligationIsObserved`, sharing its two load-bearing
+    /// decisions rather than restating them: only the declarations claiming a real pass are consulted,
+    /// and **all** of them must be recorded. One receipt must not launder a bare `result: pass` sitting
+    /// beside it — the same fail-open defect class, one channel over.
+    let obligationIsRecorded (declarations: EvidenceDeclaration list) =
+        let passes = declarations |> List.filter claimsRealPass
+
+        not (List.isEmpty passes) && passes |> List.forall isRecorded
+
+    /// **The one kind-directed discharge rule** (FS.GG.SDD#865, FR-008 / DEC-002), consumed by the
+    /// `ED-` ladder, the `TD-` ladder, `ship`, and the committed verdict.
+    ///
+    /// It exists so those four cannot drift on what discharges an obligation — the same discipline
+    /// `obligationIsObserved` already imposed on what "observed" means, and `missingCitedArtifacts` on
+    /// what "cited" means. A caller that branched on the class itself would be one edit away from a
+    /// `verify` that certifies what `ship` refuses.
+    ///
+    /// Fail-closed in both directions: a record receipt never discharges a test-class obligation, and an
+    /// observed run never discharges a record-class one. The alternative — accept either — would let an
+    /// author attach whichever receipt they happen to hold to whichever obligation is blocking, which is
+    /// precisely the laundering the `forall` above exists to prevent.
+    let obligationDischarged (dischargeClass: string) (declarations: EvidenceDeclaration list) =
+        if isRecordDischargeClass dischargeClass then
+            obligationIsRecorded declarations
+        else
+            obligationIsObserved declarations
 
     let parseArtifactRefs values =
         // Total: a rejected path is DROPPED here rather than raised, and is reported as malformed
@@ -1540,6 +1799,79 @@ module Evidence =
               Passed = run.Passed
               Failed = run.Failed
               Skipped = run.Skipped }
+
+        // FS.GG.SDD#865. The record receipt reads through a draft for exactly the reason the observed-run
+        // receipt does: its identifying scalars are null-aware, and a partial or blank mapping must lift
+        // to `None` (no receipt) rather than to a receipt made of empty strings. A receipt of empty
+        // strings that still counted as "recorded" would be the fail-open this channel exists to avoid
+        // opening.
+        //
+        // `digest` is option-carrying but lifts to a plain string, because absence is MEANINGFUL and
+        // legal here (an `issue`/`commit` record has no local bytes) rather than a defect —
+        // `recordReceiptInconsistency` decides per kind whether the absence is right, instead of the
+        // codec dropping the receipt over it.
+        type RecordReceiptDraft =
+            { Kind: string option
+              Locator: string option
+              LocatorContract: string option
+              Digest: string option
+              Statement: string option
+              RecordedAt: string option }
+
+        let recordReceiptDraftSeed =
+            { Kind = None
+              Locator = None
+              LocatorContract = None
+              Digest = None
+              Statement = None
+              RecordedAt = None }
+
+        let recordReceiptFields: ArtifactCodec.FieldCodec<RecordReceiptDraft> list =
+            [ ArtifactCodec.optionalScalar "kind" (fun r -> r.Kind) (fun v r -> { r with Kind = v })
+              ArtifactCodec.optionalScalar "locator" (fun r -> r.Locator) (fun v r -> { r with Locator = v })
+              ArtifactCodec.optionalScalar "locatorContract" (fun r -> r.LocatorContract) (fun v r ->
+                  { r with LocatorContract = v })
+              ArtifactCodec.optionalScalar "digest" (fun r -> r.Digest) (fun v r -> { r with Digest = v })
+              ArtifactCodec.optionalScalar "statement" (fun r -> r.Statement) (fun v r -> { r with Statement = v })
+              ArtifactCodec.optionalScalar "recordedAt" (fun r -> r.RecordedAt) (fun v r -> { r with RecordedAt = v }) ]
+
+        /// A record receipt exists only if it names BOTH what class of record backs the claim and the
+        /// record itself. Either alone is not a receipt: a kind with no locator is a category, and a
+        /// locator with no kind is a string nobody knows how to check. Both blank/absent → `None`, and
+        /// the obligation is unrecorded.
+        ///
+        /// Everything the draft does NOT gate on is lifted verbatim — an empty `locatorContract`,
+        /// `statement` or `recordedAt` survives into the receipt and is REFUSED by
+        /// `recordReceiptInconsistency` with a reason naming the field. That is the deliberate split:
+        /// the codec decides whether a receipt was written, the coherence rule decides whether it is
+        /// any good, and a malformed receipt is never silently downgraded to "no receipt at all".
+        let liftRecordReceipt (draft: RecordReceiptDraft) : RecordReceipt option =
+            match draft.Kind, draft.Locator with
+            | Some kind, Some locator when
+                not (String.IsNullOrWhiteSpace kind) && not (String.IsNullOrWhiteSpace locator)
+                ->
+                Some
+                    { Kind = kind
+                      Locator = locator
+                      LocatorContract = draft.LocatorContract |> Option.defaultValue ""
+                      Digest = draft.Digest |> Option.defaultValue ""
+                      Statement = draft.Statement |> Option.defaultValue ""
+                      RecordedAt = draft.RecordedAt |> Option.defaultValue "" }
+            | _ -> None
+
+        let lowerRecordReceipt (receipt: RecordReceipt) : RecordReceiptDraft =
+            { Kind = Some receipt.Kind
+              Locator = Some receipt.Locator
+              LocatorContract = Some receipt.LocatorContract
+              // Rendered only when present, so a round-trip of an `issue`/`commit` receipt does not
+              // grow a `digest: ` line the reader would then have to explain.
+              Digest =
+                (if String.IsNullOrWhiteSpace receipt.Digest then
+                     None
+                 else
+                     Some receipt.Digest)
+              Statement = Some receipt.Statement
+              RecordedAt = Some receipt.RecordedAt }
 
         let journeyReceiptSeed: JourneyReceipt =
             { SchemaVersion = 0
@@ -1783,6 +2115,7 @@ module Evidence =
               Synthetic = false
               SyntheticDisclosure = None
               ObservedRun = None
+              RecordReceipt = None
               JourneyReceipt = None
               PerformanceBudget = None
               Rationale = None
@@ -1879,6 +2212,18 @@ module Evidence =
                   lowerObservedRun
                   (fun d -> d.ObservedRun)
                   (fun v d -> { d with ObservedRun = v })
+              // FS.GG.SDD#865. AUTHORED, unlike `observedRun` — there is no runner to read a record
+              // from, which is the whole reason this channel exists — but round-tripped through the
+              // same shared field list for the same reason: a receipt the renderer emitted and the
+              // reader dropped would silently un-record every obligation on the next `evidence` run.
+              ArtifactCodec.optionalNestedVia
+                  "recordReceipt"
+                  recordReceiptFields
+                  recordReceiptDraftSeed
+                  liftRecordReceipt
+                  lowerRecordReceipt
+                  (fun d -> d.RecordReceipt)
+                  (fun v d -> { d with RecordReceipt = v })
               ArtifactCodec.optionalNestedVia
                   "journeyReceipt"
                   journeyReceiptFields

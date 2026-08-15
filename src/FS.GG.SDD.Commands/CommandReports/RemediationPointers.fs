@@ -125,11 +125,17 @@ module internal RemediationPointers =
           "evidence.unsupportedResultState", at evidenceSkill evidenceDecl
           "evidence.unsafeUpdate", at evidenceSkill evidenceDecl
           "evidence.identityMismatch", at evidenceSkill frontMatter
+          // FS.GG.SDD#865 — the record channel's authoring faults land in the same declaration grammar
+          // as every other evidence fault, so they point at the same place.
+          "evidence.recordReceiptInvalid", at evidenceSkill evidenceDecl
+          "evidence.recordReceiptStale", at evidenceSkill evidenceDecl
           // verify
           "verify.missingRequiredTest", at evidenceSkill evidenceDecl
           "verify.unobservedRequiredTest", at evidenceSkill evidenceDecl
+          "verify.unrecordedRequiredRecord", at evidenceSkill evidenceDecl
           // ship
-          "ship.unobservedEvidence", at evidenceSkill evidenceDecl ]
+          "ship.unobservedEvidence", at evidenceSkill evidenceDecl
+          "ship.unrecordedEvidence", at evidenceSkill evidenceDecl ]
         |> Map.ofList
 
     /// The deterministic pointer sentence appended to a covered diagnostic's Correction, or `""`

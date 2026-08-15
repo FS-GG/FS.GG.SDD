@@ -1831,6 +1831,7 @@ evidence:
           LinkedSourceIds = []
           ExpectedEvidenceKinds = []
           RequiredEvidenceKinds = []
+          DischargeClass = Evidence.testDischargeClass
           RequiredSkillOrCapabilityTags = []
           Blocking = true
           Correction = "" }

@@ -954,6 +954,31 @@ module internal DiagnosticConstructors =
             "Re-run the suite and then `fsgg-sdd evidence --sync-observed-run <report>` before verify or ship."
             ids
 
+    /// FS.GG.SDD#865. The record channel's twin of `observedRunInconsistent`, and the reason the record
+    /// channel does not reopen FS.GG.SDD#350's hole: a record receipt is ALWAYS hand-written — there is
+    /// no runner to derive one from — so its form is the whole of what distinguishes it from typing
+    /// `pass`. The reason is carried verbatim so the author is told which field is wrong, not merely
+    /// that something is.
+    let recordReceiptInvalid path (ids: string list) (reason: string) =
+        errorDiagnostic
+            "evidence.recordReceiptInvalid"
+            (Some path)
+            $"A recordReceipt is not usable as evidence: {reason}"
+            "Correct the recordReceipt: kind must be decision, issue or commit; locator must match that kind (a contained repository path, an absolute https URI, or a 40-hex commit); locatorContract must be durable-locator-v1; a decision receipt must carry the sha256 digest of the record's bytes and the others must carry none; statement and recordedAt must be present."
+            ids
+
+    /// FS.GG.SDD#865. The record channel's twin of `observedRunStale`: a `decision` receipt binds the
+    /// exact bytes of a record committed in this repository, so an edit to that record after the receipt
+    /// was written invalidates it. Without this a receipt could stay attached to a paragraph that has
+    /// since been changed to say something else.
+    let recordReceiptStale path (ids: string list) =
+        errorDiagnostic
+            "evidence.recordReceiptStale"
+            (Some path)
+            "A recordReceipt no longer matches the exact bytes of the decision record it cites."
+            "Re-read the record, confirm it still establishes the receipt's statement, and update the receipt's digest — or correct the record."
+            ids
+
     let missingRequiredSkill path ids =
         errorDiagnostic
             "evidence.missingRequiredSkill"
@@ -1124,12 +1149,39 @@ module internal DiagnosticConstructors =
     /// which is the whole point: a `verify.json` that went green BEFORE the receipt policy was asked
     /// for is still sitting on disk, still digest-current, and would otherwise certify a pass nobody
     /// observed. Ship refuses it rather than inheriting a verdict that predates the question.
+    /// FS.GG.SDD#865, raised in place of `unobservedRequiredTest` for a RECORD-discharged obligation.
+    ///
+    /// The distinction is the point of the whole issue. Telling the author of a decision or a filed row
+    /// to "run the suite, then record the receipt" names a remedy that cannot exist for their
+    /// obligation, which is why `verify` blocked forever and two items merged with it red. This says
+    /// what is actually missing: the record.
+    let unrecordedRequiredRecord path ids =
+        errorDiagnostic
+            "verify.unrecordedRequiredRecord"
+            (Some path)
+            "One or more record-discharged obligations are satisfied only by an authored 'result: pass' — no recordReceipt names the durable record that discharges them."
+            "Add a recordReceipt naming the record: kind decision (a contained repository path, byte-bound by sha256 digest), issue (an absolute https URI), or commit (a 40-hex object name), with the statement it establishes and the date it was made. SDD never dereferences the locator; it commits it so a later reader can."
+            ids
+
     let unobservedShipEvidence path (ids: string list) =
         errorDiagnostic
             "ship.unobservedEvidence"
             (Some path)
             $"{ids.Length} supported evidence obligation(s) carry no observedRun receipt — the recorded verification is a self-attestation, not an observed run."
             "Re-run 'fsgg-sdd verify --require-observed' after recording receipts with 'fsgg-sdd evidence --from-test-report <trx-or-junit>'. A verify.json produced before the receipt policy does not satisfy it."
+            ids
+
+    /// FS.GG.SDD#865, the merge-boundary twin of `unrecordedRequiredRecord` and the record-class
+    /// counterpart of `unobservedShipEvidence`. It fires over the record `verify` wrote — the
+    /// `recordRequirement` flag on each disposition — for the same reason its observed twin does: a
+    /// green `verify.json` predating the record channel is still on disk and still digest-current, and
+    /// `ship` refuses to inherit a verdict that predates the question.
+    let unrecordedShipEvidence path (ids: string list) =
+        errorDiagnostic
+            "ship.unrecordedEvidence"
+            (Some path)
+            $"{ids.Length} supported record-discharged obligation(s) carry no recordReceipt — the recorded verification names no durable record."
+            "Add a recordReceipt to each obligation's evidence and re-run 'fsgg-sdd verify'. A verify.json produced before the record channel does not satisfy it."
             ids
 
     let staleRequiredTest path ids =

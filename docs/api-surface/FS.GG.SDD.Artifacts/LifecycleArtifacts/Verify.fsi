@@ -35,6 +35,13 @@ module Verify =
             /// obligations unmet" over the committed verify view. Absent in a pre-WI-4 view ⇒ `false`.
             ClassifiedRequirement: bool
             JourneyRequirement: bool
+            /// FS.GG.SDD#865: is this the disposition of a RECORD-discharged obligation — one no test
+            /// run could ever discharge, whose `Observed` flag was therefore earned by a `recordReceipt`
+            /// rather than an `observedRun`? The axis whose absence gave `Observed` exactly one
+            /// true-maker and left a record obligation blocking `verify` permanently. Carried
+            /// per-disposition so `ship` and the Governance handoff read the class off the committed
+            /// view. Absent in a pre-#865 view ⇒ `false`.
+            RecordRequirement: bool
             EvidenceIds: EvidenceId list
             AffectedTaskIds: TaskId list
             AffectedSourceIds: string list
@@ -61,6 +68,10 @@ module Verify =
             /// FS.GG.SDD#398: the `TD-` attestation basis — the disposition named for a test that,
             /// until FS.GG.SDD#350, nothing had ever run. See `Evidence.obligationIsObserved`.
             Observed: bool
+            /// FS.GG.SDD#865: the `TD-` mirror of `EvidenceDisposition.RecordRequirement`. When `true`,
+            /// this obligation's shortfall state is `unrecorded`, never `unobserved` — the two ladders
+            /// must not disagree about which class an obligation is in.
+            RecordRequirement: bool
             EvidenceIds: EvidenceId list
             AffectedTaskIds: TaskId list
             AffectedRequirementIds: RequirementId list

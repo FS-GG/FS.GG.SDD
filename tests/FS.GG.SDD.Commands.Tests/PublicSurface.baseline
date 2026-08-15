@@ -118,6 +118,8 @@ FS.GG.SDD.Commands.CommandReports.unknownTaskDependency
 FS.GG.SDD.Commands.CommandReports.unknownTaskSourceReference
 FS.GG.SDD.Commands.CommandReports.unobservedRequiredTest
 FS.GG.SDD.Commands.CommandReports.unobservedShipEvidence
+FS.GG.SDD.Commands.CommandReports.unrecordedRequiredRecord
+FS.GG.SDD.Commands.CommandReports.unrecordedShipEvidence
 FS.GG.SDD.Commands.CommandReports.unresolvedBlockingAmbiguity
 FS.GG.SDD.Commands.CommandReports.unsafeDecisionChange
 FS.GG.SDD.Commands.CommandReports.unsafeEvidenceUpdate

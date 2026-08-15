@@ -1,0 +1,2113 @@
+{
+  "schemaVersion": 1,
+  "modelVersion": "1.2.0",
+  "workId": "865-record-discharged-obligations",
+  "project": {
+    "id": "fs.gg.sdd-833",
+    "defaultWorkRoot": "work",
+    "profile": null
+  },
+  "sources": [
+    {
+      "path": ".fsgg/agents.yml",
+      "kind": "agentsConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+      }
+    },
+    {
+      "path": ".fsgg/project.yml",
+      "kind": "projectConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
+      }
+    },
+    {
+      "path": ".fsgg/sdd.yml",
+      "kind": "sddConfig",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
+      }
+    },
+    {
+      "path": "work/865-record-discharged-obligations/checklist.md",
+      "kind": "checklist",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "93b7817504e7b02fb3657570f15eb92b7cd40a97006531770edad9a14dddf791"
+      }
+    },
+    {
+      "path": "work/865-record-discharged-obligations/clarifications.md",
+      "kind": "clarifications",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "78ecbbb052f7126f8b2e5b29833e544eefa3c3d1f0877067b3b9a18e52733d2d"
+      }
+    },
+    {
+      "path": "work/865-record-discharged-obligations/evidence.yml",
+      "kind": "evidence",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "974ce82740714eced742f142da57ef31053705da7ee927c507a7eda4999e3161"
+      }
+    },
+    {
+      "path": "work/865-record-discharged-obligations/plan.md",
+      "kind": "plan",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "42ae4cf57b1a9c6a620549c3d5c58d50abcd7f7a9eac054f10b6e85f634bb4e2"
+      }
+    },
+    {
+      "path": "work/865-record-discharged-obligations/spec.md",
+      "kind": "spec",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "fcbeb35c2cd5c0e3626a2b2e638e74a5aef5b2e7fb08268d9f68f1bd7eceedd1"
+      }
+    },
+    {
+      "path": "work/865-record-discharged-obligations/tasks.yml",
+      "kind": "tasks",
+      "owner": "sdd",
+      "schemaVersion": 1,
+      "rawSchemaVersion": "1",
+      "schemaStatus": "current",
+      "sourceDigest": {
+        "algorithm": "sha256",
+        "value": "31d967bcabdb4cfb7632699ac402a19820e466c58c72fdbb81e21efe28fcce89"
+      }
+    }
+  ],
+  "workItem": {
+    "id": "865-record-discharged-obligations",
+    "title": "Record Discharged Obligations",
+    "stage": "specify",
+    "changeTier": "tier1",
+    "status": "specified"
+  },
+  "performanceIntent": null,
+  "requirements": [
+    {
+      "id": "FR-001",
+      "title": "An evidence obligation carries a declared discharge class \u2014 \u0060test\u0060 (the default) or \u0060record\u0060, taken from the authored \u0060record-discharge\u0060 task capability tag \u2014 and \u0060verify\u0060 records that class on both the evidence and required-test dispositions it writes. (Stories: US-001; Acceptance: AC-001)",
+      "text": "An evidence obligation carries a declared discharge class \u2014 \u0060test\u0060 (the default) or \u0060record\u0060, taken from the authored \u0060record-discharge\u0060 task capability tag \u2014 and \u0060verify\u0060 records that class on both the evidence and required-test dispositions it writes. (Stories: US-001; Acceptance: AC-001)",
+      "acceptanceCriteria": [
+        "AC-001"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/865-record-discharged-obligations/spec.md",
+      "sourceLocation": {
+        "line": 87,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T001"
+      ],
+      "linkedEvidenceIds": [
+        "EV001"
+      ]
+    },
+    {
+      "id": "FR-002",
+      "title": "A record-class obligation whose matching real passes each carry a coherent \u0060recordReceipt\u0060 reaches \u0060Observed: true\u0060, on the same footing an \u0060observedRun\u0060 receipt gives a test obligation, and therefore reaches \u0060satisfied\u0060 at \u0060verify\u0060 and passes \u0060ship\u0060. (Stories: US-001; Acceptance: AC-002)",
+      "text": "A record-class obligation whose matching real passes each carry a coherent \u0060recordReceipt\u0060 reaches \u0060Observed: true\u0060, on the same footing an \u0060observedRun\u0060 receipt gives a test obligation, and therefore reaches \u0060satisfied\u0060 at \u0060verify\u0060 and passes \u0060ship\u0060. (Stories: US-001; Acceptance: AC-002)",
+      "acceptanceCriteria": [
+        "AC-002"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/865-record-discharged-obligations/spec.md",
+      "sourceLocation": {
+        "line": 88,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T002"
+      ],
+      "linkedEvidenceIds": [
+        "EV002"
+      ]
+    },
+    {
+      "id": "FR-003",
+      "title": "A \u0060recordReceipt\u0060 is coherent only when its \u0060kind\u0060 is one of \u0060decision\u0060, \u0060issue\u0060, \u0060commit\u0060; its \u0060locator\u0060 is well-formed for that kind; its \u0060locatorContract\u0060 is exactly \u0060durable-locator-v1\u0060; and it carries a non-blank \u0060statement\u0060 and a parseable ISO-8601 \u0060recordedAt\u0060. An incoherent receipt makes its obligation \u0060invalid\u0060, never merely unobserved. (Stories: US-001; Acceptance: AC-003)",
+      "text": "A \u0060recordReceipt\u0060 is coherent only when its \u0060kind\u0060 is one of \u0060decision\u0060, \u0060issue\u0060, \u0060commit\u0060; its \u0060locator\u0060 is well-formed for that kind; its \u0060locatorContract\u0060 is exactly \u0060durable-locator-v1\u0060; and it carries a non-blank \u0060statement\u0060 and a parseable ISO-8601 \u0060recordedAt\u0060. An incoherent receipt makes its obligation \u0060invalid\u0060, never merely unobserved. (Stories: US-001; Acceptance: AC-003)",
+      "acceptanceCriteria": [
+        "AC-003"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/865-record-discharged-obligations/spec.md",
+      "sourceLocation": {
+        "line": 89,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T003"
+      ],
+      "linkedEvidenceIds": [
+        "EV003"
+      ]
+    },
+    {
+      "id": "FR-004",
+      "title": "A \u0060decision\u0060 receipt names a lexically contained, repository-relative path and binds that file\u0027s exact bytes with a \u0060sha256:\u0060 digest; the path is a cited artifact, so a deleted record turns the obligation \u0060invalid\u0060 through the existing cascade and an edited record turns the receipt stale. (Stories: US-001; Acceptance: AC-004)",
+      "text": "A \u0060decision\u0060 receipt names a lexically contained, repository-relative path and binds that file\u0027s exact bytes with a \u0060sha256:\u0060 digest; the path is a cited artifact, so a deleted record turns the obligation \u0060invalid\u0060 through the existing cascade and an edited record turns the receipt stale. (Stories: US-001; Acceptance: AC-004)",
+      "acceptanceCriteria": [
+        "AC-004"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/865-record-discharged-obligations/spec.md",
+      "sourceLocation": {
+        "line": 90,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T004"
+      ],
+      "linkedEvidenceIds": [
+        "EV004"
+      ]
+    },
+    {
+      "id": "FR-005",
+      "title": "A record-class obligation resting on \u0060result: pass\u0060 with no receipt does not satisfy; the record channel adds a second observable footing, not a second place to type a pass. (Stories: US-002; Acceptance: AC-005)",
+      "text": "A record-class obligation resting on \u0060result: pass\u0060 with no receipt does not satisfy; the record channel adds a second observable footing, not a second place to type a pass. (Stories: US-002; Acceptance: AC-005)",
+      "acceptanceCriteria": [
+        "AC-005"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/865-record-discharged-obligations/spec.md",
+      "sourceLocation": {
+        "line": 91,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T005"
+      ],
+      "linkedEvidenceIds": [
+        "EV005"
+      ]
+    },
+    {
+      "id": "FR-006",
+      "title": "\u0060verify.unobservedRequiredTest\u0060 is raised only for test-class obligations; a record-class obligation lacking its record reaches the non-satisfying disposition \u0060unrecorded\u0060 and raises \u0060verify.unrecordedRequiredRecord\u0060, which names the obligations and what is missing. (Stories: US-002; Acceptance: AC-006)",
+      "text": "\u0060verify.unobservedRequiredTest\u0060 is raised only for test-class obligations; a record-class obligation lacking its record reaches the non-satisfying disposition \u0060unrecorded\u0060 and raises \u0060verify.unrecordedRequiredRecord\u0060, which names the obligations and what is missing. (Stories: US-002; Acceptance: AC-006)",
+      "acceptanceCriteria": [
+        "AC-006"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/865-record-discharged-obligations/spec.md",
+      "sourceLocation": {
+        "line": 92,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T006"
+      ],
+      "linkedEvidenceIds": [
+        "EV006"
+      ]
+    },
+    {
+      "id": "FR-007",
+      "title": "\u0060ship\u0060 mirrors the split at the merge boundary over the record \u0060verify\u0060 wrote: \u0060ship.unrecordedEvidence\u0060 for record-class obligations, \u0060ship.unobservedEvidence\u0060 for test-class ones. (Stories: US-002; Acceptance: AC-007)",
+      "text": "\u0060ship\u0060 mirrors the split at the merge boundary over the record \u0060verify\u0060 wrote: \u0060ship.unrecordedEvidence\u0060 for record-class obligations, \u0060ship.unobservedEvidence\u0060 for test-class ones. (Stories: US-002; Acceptance: AC-007)",
+      "acceptanceCriteria": [
+        "AC-007"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/865-record-discharged-obligations/spec.md",
+      "sourceLocation": {
+        "line": 93,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T007"
+      ],
+      "linkedEvidenceIds": [
+        "EV007"
+      ]
+    },
+    {
+      "id": "FR-008",
+      "title": "The discharge rule is kind-directed and stated once for \u0060verify\u0060, \u0060ship\u0060, and the committed verdict: a \u0060recordReceipt\u0060 never discharges a test-class obligation and an \u0060observedRun\u0060 never discharges a record-class one. (Stories: US-002; Acceptance: AC-008)",
+      "text": "The discharge rule is kind-directed and stated once for \u0060verify\u0060, \u0060ship\u0060, and the committed verdict: a \u0060recordReceipt\u0060 never discharges a test-class obligation and an \u0060observedRun\u0060 never discharges a record-class one. (Stories: US-002; Acceptance: AC-008)",
+      "acceptanceCriteria": [
+        "AC-008"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/865-record-discharged-obligations/spec.md",
+      "sourceLocation": {
+        "line": 94,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T008"
+      ],
+      "linkedEvidenceIds": [
+        "EV008"
+      ]
+    },
+    {
+      "id": "FR-009",
+      "title": "The channel is additive. An \u0060evidence.yml\u0060, \u0060verify.json\u0060, or \u0060ship-verdict.json\u0060 written before it parses unchanged, keeps its verdict, and no persisted \u0060schemaVersion\u0060 moves. (Stories: US-003; Acceptance: AC-009)",
+      "text": "The channel is additive. An \u0060evidence.yml\u0060, \u0060verify.json\u0060, or \u0060ship-verdict.json\u0060 written before it parses unchanged, keeps its verdict, and no persisted \u0060schemaVersion\u0060 moves. (Stories: US-003; Acceptance: AC-009)",
+      "acceptanceCriteria": [
+        "AC-009"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/865-record-discharged-obligations/spec.md",
+      "sourceLocation": {
+        "line": 95,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T009"
+      ],
+      "linkedEvidenceIds": [
+        "EV009"
+      ]
+    },
+    {
+      "id": "FR-010",
+      "title": "No command dereferences a record locator, and the record channel introduces no network access anywhere in SDD. (Stories: US-003; Acceptance: AC-010)",
+      "text": "No command dereferences a record locator, and the record channel introduces no network access anywhere in SDD. (Stories: US-003; Acceptance: AC-010)",
+      "acceptanceCriteria": [
+        "AC-010"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/865-record-discharged-obligations/spec.md",
+      "sourceLocation": {
+        "line": 96,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T010"
+      ],
+      "linkedEvidenceIds": [
+        "EV010"
+      ]
+    },
+    {
+      "id": "FR-011",
+      "title": "\u0060docs/release/schema-reference.md\u0060 documents the record channel and states the actual, 0.14.0-inverted default for requiring an observed run, replacing the stale description of it as opt-in. (Stories: US-003; Acceptance: AC-011)",
+      "text": "\u0060docs/release/schema-reference.md\u0060 documents the record channel and states the actual, 0.14.0-inverted default for requiring an observed run, replacing the stale description of it as opt-in. (Stories: US-003; Acceptance: AC-011)",
+      "acceptanceCriteria": [
+        "AC-011"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/865-record-discharged-obligations/spec.md",
+      "sourceLocation": {
+        "line": 97,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T011"
+      ],
+      "linkedEvidenceIds": [
+        "EV011"
+      ]
+    },
+    {
+      "id": "FR-012",
+      "title": "The two measured occurrences are re-checked against the change and the outcome is recorded durably, stating both what the re-check shows and what it does not \u2014 in particular that removing the structural block is not the same as discharging either item\u0027s obligations. (Stories: US-002; Acceptance: AC-012)",
+      "text": "The two measured occurrences are re-checked against the change and the outcome is recorded durably, stating both what the re-check shows and what it does not \u2014 in particular that removing the structural block is not the same as discharging either item\u0027s obligations. (Stories: US-002; Acceptance: AC-012)",
+      "acceptanceCriteria": [
+        "AC-012"
+      ],
+      "priority": null,
+      "classification": [],
+      "source": "work/865-record-discharged-obligations/spec.md",
+      "sourceLocation": {
+        "line": 98,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T030"
+      ],
+      "linkedEvidenceIds": [
+        "EV030"
+      ]
+    }
+  ],
+  "decisions": [
+    {
+      "id": "DEC-001",
+      "title": "A record receipt is validated for **form and re-checkability, never dereferenced**. \u0060kind\u0060, \u0060locator\u0060, \u0060locatorContract\u0060, \u0060statement\u0060 and \u0060recordedAt\u0060 are judged structurally; a \u0060decision\u0060 receipt \u2014 the case where the record is repository-local \u2014 is additionally bound to the file\u0027s exact bytes by \u0060sha256:\u0060 digest and probed for existence through the cited-artifact cascade that already exists. An \u0060issue\u0060 or \u0060commit\u0060 locator is judged for form only and committed verbatim into \u0060verify.json\u0060 and the ship verdict, so a later reader \u2014 human, or CI holding a credential SDD does not \u2014 can re-check it out of band. SDD gains no network access.",
+      "decision": "A record receipt is validated for **form and re-checkability, never dereferenced**. \u0060kind\u0060, \u0060locator\u0060, \u0060locatorContract\u0060, \u0060statement\u0060 and \u0060recordedAt\u0060 are judged structurally; a \u0060decision\u0060 receipt \u2014 the case where the record is repository-local \u2014 is additionally bound to the file\u0027s exact bytes by \u0060sha256:\u0060 digest and probed for existence through the cited-artifact cascade that already exists. An \u0060issue\u0060 or \u0060commit\u0060 locator is judged for form only and committed verbatim into \u0060verify.json\u0060 and the ship verdict, so a later reader \u2014 human, or CI holding a credential SDD does not \u2014 can re-check it out of band. SDD gains no network access.",
+      "requirementRefs": [
+        "FR-003",
+        "FR-004",
+        "FR-010"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [
+        "AC-003",
+        "AC-004",
+        "AC-010"
+      ],
+      "source": "work/865-record-discharged-obligations/clarifications.md",
+      "sourceLocation": {
+        "line": 28,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T012"
+      ]
+    },
+    {
+      "id": "DEC-002",
+      "title": "The discharge rule is **kind-directed and fail-closed**. A \u0060recordReceipt\u0060 never discharges a test-class obligation, and an \u0060observedRun\u0060 never discharges a record-class one. One shared function answers \u0022was this obligation discharged?\u0022 for \u0060verify\u0060, \u0060ship\u0060, and the committed verdict, so the three cannot drift \u2014 the same discipline \u0060obligationIsObserved\u0060 already imposes. Accepting either receipt for either class would let an author attach whichever receipt they happen to hold to whichever obligation is blocking, which is the laundering \u0060obligationIsObserved\u0060\u0027s \u0060forall\u0060 exists to prevent.",
+      "decision": "The discharge rule is **kind-directed and fail-closed**. A \u0060recordReceipt\u0060 never discharges a test-class obligation, and an \u0060observedRun\u0060 never discharges a record-class one. One shared function answers \u0022was this obligation discharged?\u0022 for \u0060verify\u0060, \u0060ship\u0060, and the committed verdict, so the three cannot drift \u2014 the same discipline \u0060obligationIsObserved\u0060 already imposes. Accepting either receipt for either class would let an author attach whichever receipt they happen to hold to whichever obligation is blocking, which is the laundering \u0060obligationIsObserved\u0060\u0027s \u0060forall\u0060 exists to prevent.",
+      "requirementRefs": [
+        "FR-008"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [
+        "AC-008"
+      ],
+      "source": "work/865-record-discharged-obligations/clarifications.md",
+      "sourceLocation": {
+        "line": 29,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T013"
+      ]
+    },
+    {
+      "id": "DEC-003",
+      "title": "The class rides the **authored \u0060record-discharge\u0060 task capability tag** in \u0060tasks.yml\u0060 \u0060requiredSkills\u0060, exactly as \u0060visual-inspection\u0060 does. \u0060requiredSkills\u0060 is authored state that the task generator unions across regeneration (FS.GG.SDD#310, AC7), so the tag survives a \u0060tasks\u0060 re-run. This adds no spec classification facet, does not touch \u0060TaskGraphAuthoring\u0060, and keeps the declaration where the author already declares what a task needs.",
+      "decision": "The class rides the **authored \u0060record-discharge\u0060 task capability tag** in \u0060tasks.yml\u0060 \u0060requiredSkills\u0060, exactly as \u0060visual-inspection\u0060 does. \u0060requiredSkills\u0060 is authored state that the task generator unions across regeneration (FS.GG.SDD#310, AC7), so the tag survives a \u0060tasks\u0060 re-run. This adds no spec classification facet, does not touch \u0060TaskGraphAuthoring\u0060, and keeps the declaration where the author already declares what a task needs.",
+      "requirementRefs": [
+        "FR-001"
+      ],
+      "storyRefs": [],
+      "acceptanceRefs": [
+        "AC-001"
+      ],
+      "source": "work/865-record-discharged-obligations/clarifications.md",
+      "sourceLocation": {
+        "line": 30,
+        "column": 1
+      },
+      "linkedTaskIds": [
+        "T014"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "Implement requirement FR-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-001"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-001",
+        "FR-001",
+        "PD-001"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV001"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "T002",
+      "title": "Implement requirement FR-002",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-002"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-002",
+        "FR-002",
+        "PD-002"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV002"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "T003",
+      "title": "Implement requirement FR-003",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-003"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-003",
+        "FR-003",
+        "PD-003"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV003"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 3,
+        "column": 1
+      }
+    },
+    {
+      "id": "T004",
+      "title": "Implement requirement FR-004",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-004"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-004",
+        "FR-004",
+        "PD-004"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV004"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "T005",
+      "title": "Implement requirement FR-005",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-005"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-005",
+        "FR-005",
+        "PD-005"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV005"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 5,
+        "column": 1
+      }
+    },
+    {
+      "id": "T006",
+      "title": "Implement requirement FR-006",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-006"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-006",
+        "FR-006",
+        "PD-006"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV006"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 6,
+        "column": 1
+      }
+    },
+    {
+      "id": "T007",
+      "title": "Implement requirement FR-007",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-007"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-007",
+        "FR-007",
+        "PD-007"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV007"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "id": "T008",
+      "title": "Implement requirement FR-008",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-008"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-008",
+        "FR-008",
+        "PD-008"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV008"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 8,
+        "column": 1
+      }
+    },
+    {
+      "id": "T009",
+      "title": "Implement requirement FR-009",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-009"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-009",
+        "FR-009",
+        "PD-009"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV009"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 9,
+        "column": 1
+      }
+    },
+    {
+      "id": "T010",
+      "title": "Implement requirement FR-010",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-010"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-010",
+        "FR-010",
+        "PD-010"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation"
+      ],
+      "requiredEvidence": [
+        "EV010"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 10,
+        "column": 1
+      }
+    },
+    {
+      "id": "T011",
+      "title": "Implement requirement FR-011",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-011"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-011",
+        "FR-011",
+        "PD-011"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation",
+        "record-discharge"
+      ],
+      "requiredEvidence": [
+        "EV011"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 11,
+        "column": 1
+      }
+    },
+    {
+      "id": "T012",
+      "title": "Implement clarification decision DEC-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [
+        "DEC-001"
+      ],
+      "sourceIds": [
+        "DEC-001"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation",
+        "record-discharge"
+      ],
+      "requiredEvidence": [
+        "EV012"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 12,
+        "column": 1
+      }
+    },
+    {
+      "id": "T013",
+      "title": "Implement clarification decision DEC-002",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [
+        "DEC-002"
+      ],
+      "sourceIds": [
+        "DEC-002"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation",
+        "record-discharge"
+      ],
+      "requiredEvidence": [
+        "EV013"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 13,
+        "column": 1
+      }
+    },
+    {
+      "id": "T014",
+      "title": "Implement clarification decision DEC-003",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [
+        "DEC-003"
+      ],
+      "sourceIds": [
+        "DEC-003"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation",
+        "record-discharge"
+      ],
+      "requiredEvidence": [
+        "EV014"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 14,
+        "column": 1
+      }
+    },
+    {
+      "id": "T015",
+      "title": "Update contract surface PC-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PD-001",
+        "PD-011"
+      ],
+      "requiredSkills": [
+        "fsharp"
+      ],
+      "requiredEvidence": [
+        "EV015"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 15,
+        "column": 1
+      }
+    },
+    {
+      "id": "T016",
+      "title": "Update contract surface PC-002",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-002",
+        "PD-002",
+        "PD-005",
+        "PD-008"
+      ],
+      "requiredSkills": [
+        "fsharp"
+      ],
+      "requiredEvidence": [
+        "EV016"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 16,
+        "column": 1
+      }
+    },
+    {
+      "id": "T017",
+      "title": "Update contract surface PC-003",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-003",
+        "PD-009"
+      ],
+      "requiredSkills": [
+        "fsharp"
+      ],
+      "requiredEvidence": [
+        "EV017"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 17,
+        "column": 1
+      }
+    },
+    {
+      "id": "T018",
+      "title": "Update contract surface PC-004",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-004",
+        "PD-003",
+        "PD-006",
+        "PD-007"
+      ],
+      "requiredSkills": [
+        "fsharp"
+      ],
+      "requiredEvidence": [
+        "EV018"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 18,
+        "column": 1
+      }
+    },
+    {
+      "id": "T019",
+      "title": "Record verification evidence VO-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PD-001",
+        "VO-001"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV019"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 19,
+        "column": 1
+      }
+    },
+    {
+      "id": "T020",
+      "title": "Record verification evidence VO-002",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-002",
+        "PD-002",
+        "VO-002"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV020"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 20,
+        "column": 1
+      }
+    },
+    {
+      "id": "T021",
+      "title": "Record verification evidence VO-003",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-004",
+        "PD-003",
+        "VO-003"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV021"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 21,
+        "column": 1
+      }
+    },
+    {
+      "id": "T022",
+      "title": "Record verification evidence VO-004",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-002",
+        "PD-004",
+        "VO-004"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV022"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 22,
+        "column": 1
+      }
+    },
+    {
+      "id": "T023",
+      "title": "Record verification evidence VO-005",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-004",
+        "PD-006",
+        "PD-007",
+        "VO-005"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV023"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 23,
+        "column": 1
+      }
+    },
+    {
+      "id": "T024",
+      "title": "Record verification evidence VO-006",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-003",
+        "PD-009",
+        "VO-006"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence"
+      ],
+      "requiredEvidence": [
+        "EV024"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 24,
+        "column": 1
+      }
+    },
+    {
+      "id": "T025",
+      "title": "Record verification evidence VO-007",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PD-010",
+        "PD-011",
+        "VO-007"
+      ],
+      "requiredSkills": [
+        "automated-tests",
+        "readiness-evidence",
+        "record-discharge"
+      ],
+      "requiredEvidence": [
+        "EV025"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 25,
+        "column": 1
+      }
+    },
+    {
+      "id": "T026",
+      "title": "Handle migration posture PM-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-001",
+        "PC-004",
+        "PM-001"
+      ],
+      "requiredSkills": [
+        "record-discharge",
+        "schema-versioning"
+      ],
+      "requiredEvidence": [
+        "EV026"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 26,
+        "column": 1
+      }
+    },
+    {
+      "id": "T027",
+      "title": "Handle migration posture PM-002",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "PC-003",
+        "PM-002"
+      ],
+      "requiredSkills": [
+        "record-discharge",
+        "schema-versioning"
+      ],
+      "requiredEvidence": [
+        "EV027"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 27,
+        "column": 1
+      }
+    },
+    {
+      "id": "T028",
+      "title": "Refresh generated view impact GV-001",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "GV-001",
+        "PD-001",
+        "PD-003"
+      ],
+      "requiredSkills": [
+        "deterministic-json"
+      ],
+      "requiredEvidence": [
+        "EV028"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 28,
+        "column": 1
+      }
+    },
+    {
+      "id": "T029",
+      "title": "Refresh generated view impact GV-002",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [
+        "T001"
+      ],
+      "requirements": [],
+      "decisions": [],
+      "sourceIds": [
+        "GV-002",
+        "PD-009"
+      ],
+      "requiredSkills": [
+        "deterministic-json"
+      ],
+      "requiredEvidence": [
+        "EV029"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 29,
+        "column": 1
+      }
+    },
+    {
+      "id": "T030",
+      "title": "Implement requirement FR-012",
+      "status": "pending",
+      "owner": "sdd",
+      "dependencies": [],
+      "requirements": [
+        "FR-012"
+      ],
+      "decisions": [],
+      "sourceIds": [
+        "AC-012",
+        "FR-012",
+        "PD-012"
+      ],
+      "requiredSkills": [
+        "fsharp",
+        "implementation",
+        "record-discharge"
+      ],
+      "requiredEvidence": [
+        "EV030"
+      ],
+      "source": "work/865-record-discharged-obligations/tasks.yml",
+      "sourceLocation": {
+        "line": 30,
+        "column": 1
+      }
+    }
+  ],
+  "evidence": [
+    {
+      "id": "EV001",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T001",
+      "taskRefs": [
+        "T001"
+      ],
+      "requirementRefs": [
+        "FR-001"
+      ],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 1,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV002",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T002",
+      "taskRefs": [
+        "T002"
+      ],
+      "requirementRefs": [
+        "FR-002"
+      ],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 2,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV003",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T003",
+      "taskRefs": [
+        "T003"
+      ],
+      "requirementRefs": [
+        "FR-003"
+      ],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Artifacts.Tests/RecordReceiptTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 3,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV004",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T004",
+      "taskRefs": [
+        "T004"
+      ],
+      "requirementRefs": [
+        "FR-004"
+      ],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV005",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T005",
+      "taskRefs": [
+        "T005"
+      ],
+      "requirementRefs": [
+        "FR-005"
+      ],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Artifacts.Tests/RecordReceiptTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 5,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV006",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T006",
+      "taskRefs": [
+        "T006"
+      ],
+      "requirementRefs": [
+        "FR-006"
+      ],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 6,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV007",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T007",
+      "taskRefs": [
+        "T007"
+      ],
+      "requirementRefs": [
+        "FR-007"
+      ],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 7,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV008",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T008",
+      "taskRefs": [
+        "T008"
+      ],
+      "requirementRefs": [
+        "FR-008"
+      ],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Artifacts.Tests/RecordReceiptTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 8,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV009",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T009",
+      "taskRefs": [
+        "T009"
+      ],
+      "requirementRefs": [
+        "FR-009"
+      ],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 9,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV010",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T010",
+      "taskRefs": [
+        "T010"
+      ],
+      "requirementRefs": [
+        "FR-010"
+      ],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Artifacts.Tests/RecordReceiptTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 10,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV011",
+      "kind": "review",
+      "subjectType": "task",
+      "subjectId": "T011",
+      "taskRefs": [
+        "T011"
+      ],
+      "requirementRefs": [
+        "FR-011"
+      ],
+      "artifactRefs": [],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 11,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV012",
+      "kind": "review",
+      "subjectType": "task",
+      "subjectId": "T012",
+      "taskRefs": [
+        "T012"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 12,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV013",
+      "kind": "review",
+      "subjectType": "task",
+      "subjectId": "T013",
+      "taskRefs": [
+        "T013"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 13,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV014",
+      "kind": "review",
+      "subjectType": "task",
+      "subjectId": "T014",
+      "taskRefs": [
+        "T014"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 14,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV015",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T015",
+      "taskRefs": [
+        "T015"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 15,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV016",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T016",
+      "taskRefs": [
+        "T016"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Artifacts.Tests/PublicSurface.baseline"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 16,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV017",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T017",
+      "taskRefs": [
+        "T017"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 17,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV018",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T018",
+      "taskRefs": [
+        "T018"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 18,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV019",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T019",
+      "taskRefs": [
+        "T019"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 19,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV020",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T020",
+      "taskRefs": [
+        "T020"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 20,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV021",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T021",
+      "taskRefs": [
+        "T021"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Artifacts.Tests/RecordReceiptTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 21,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV022",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T022",
+      "taskRefs": [
+        "T022"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 22,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV023",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T023",
+      "taskRefs": [
+        "T023"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 23,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV024",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T024",
+      "taskRefs": [
+        "T024"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 24,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV025",
+      "kind": "review",
+      "subjectType": "task",
+      "subjectId": "T025",
+      "taskRefs": [
+        "T025"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 25,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV026",
+      "kind": "review",
+      "subjectType": "task",
+      "subjectId": "T026",
+      "taskRefs": [
+        "T026"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 26,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV027",
+      "kind": "review",
+      "subjectType": "task",
+      "subjectId": "T027",
+      "taskRefs": [
+        "T027"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 27,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV028",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T028",
+      "taskRefs": [
+        "T028"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 28,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV029",
+      "kind": "verification",
+      "subjectType": "task",
+      "subjectId": "T029",
+      "taskRefs": [
+        "T029"
+      ],
+      "requirementRefs": [],
+      "artifactRefs": [
+        "tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs"
+      ],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 29,
+        "column": 1
+      }
+    },
+    {
+      "id": "EV030",
+      "kind": "review",
+      "subjectType": "task",
+      "subjectId": "T030",
+      "taskRefs": [
+        "T030"
+      ],
+      "requirementRefs": [
+        "FR-012"
+      ],
+      "artifactRefs": [],
+      "result": "pass",
+      "synthetic": false,
+      "performanceBudget": null,
+      "performanceEvidenceArtifact": null,
+      "performanceMeasurements": [],
+      "rationale": null,
+      "source": "work/865-record-discharged-obligations/evidence.yml",
+      "sourceLocation": {
+        "line": 30,
+        "column": 1
+      }
+    }
+  ],
+  "generatedViews": [
+    {
+      "path": "readiness/865-record-discharged-obligations/work-model.json",
+      "kind": "workModel",
+      "schemaVersion": 1,
+      "generator": {
+        "id": "FS.GG.SDD.Artifacts",
+        "version": "1.1.0"
+      },
+      "sources": [
+        {
+          "path": ".fsgg/agents.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "c67035b1cf31b6fa802c10f761eeb1e5bf5d198c38d159b54fac299957b5aac3"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/project.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "be4476afd42c740b523196b48c2cb28465bb6f18df4d0be77e46a0305414d874"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": ".fsgg/sdd.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "fe5a7c270a975153e80ab0d08a610c9b302585dcb0b5f7c654841ceced9272cb"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/865-record-discharged-obligations/checklist.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "93b7817504e7b02fb3657570f15eb92b7cd40a97006531770edad9a14dddf791"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/865-record-discharged-obligations/clarifications.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "78ecbbb052f7126f8b2e5b29833e544eefa3c3d1f0877067b3b9a18e52733d2d"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/865-record-discharged-obligations/evidence.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "974ce82740714eced742f142da57ef31053705da7ee927c507a7eda4999e3161"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/865-record-discharged-obligations/plan.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "42ae4cf57b1a9c6a620549c3d5c58d50abcd7f7a9eac054f10b6e85f634bb4e2"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/865-record-discharged-obligations/spec.md",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "fcbeb35c2cd5c0e3626a2b2e638e74a5aef5b2e7fb08268d9f68f1bd7eceedd1"
+          },
+          "schemaVersion": 1
+        },
+        {
+          "path": "work/865-record-discharged-obligations/tasks.yml",
+          "digest": {
+            "algorithm": "sha256",
+            "value": "31d967bcabdb4cfb7632699ac402a19820e466c58c72fdbb81e21efe28fcce89"
+          },
+          "schemaVersion": 1
+        }
+      ],
+      "outputDigest": {
+        "algorithm": "sha256",
+        "value": "cf57c507af3ff2a1d0b1196139a7853a4ec7e269bf360510d6d321fb229658c8"
+      },
+      "currency": "current"
+    }
+  ],
+  "diagnostics": [],
+  "governanceBoundaries": []
+}

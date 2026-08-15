@@ -275,31 +275,31 @@ an assertion to an artifact of a declared format, whose bytes are hashed, whose 
 whose file must exist. Trusting a receipt's *provenance* is CI's job; whether an unobserved obligation
 may cross a merge boundary is **Governance's** (ADR-0035 §3). SDD reports the fact; it does not enforce.
 
-**A pass with no receipt still satisfies — unless you ask it not to.** ADR-0035 stages the migration
-deliberately: disclose (#398), record (#415), then fail closed. Stage 3 has landed as an **opt-in**
-gate, `--require-observed`, accepted by **both** `verify` and `ship`:
+**A pass with no receipt does not satisfy, and that is the default.** ADR-0035 staged the migration
+deliberately: disclose (#398), record (#415), then fail closed. Stage 3 landed `--require-observed` as
+an **opt-in** gate on `0.13.0`; stage 3b (#497) **inverted the default on `0.14.0`**, so requiring the
+receipt is now what both `verify` and `ship` do unless told otherwise:
 
 ```sh
-fsgg-sdd verify --work <id> --require-observed    # a pass with no receipt -> `unobserved`, and BLOCKS
-fsgg-sdd ship   --work <id> --require-observed    # refuses to certify what verify recorded unobserved
+fsgg-sdd verify --work <id>                       # a pass with no receipt -> `unobserved`, and BLOCKS
+fsgg-sdd ship   --work <id>                       # refuses to certify what verify recorded unobserved
+fsgg-sdd verify --work <id> --no-require-observed # the pre-0.14.0 behavior, byte for byte
+fsgg-sdd ship   --work <id> --no-require-observed
 ```
 
-Under it, a test obligation whose `result: pass` carries no `observedRun` receipt reaches the
+`--require-observed` is still recognized as a now-redundant explicit accept, so pre-flip invocations
+do not become an unrecognized-option error. See
+[`migrations/0.14.0.md`](migrations/0.14.0.md) §1 for the adaptation paths.
+
+Under the default, a test obligation whose `result: pass` carries no `observedRun` receipt reaches the
 non-satisfying disposition **`unobserved`** (`verify.unobservedRequiredTest`) instead of `satisfied`,
 and `ship` refuses the merge boundary (`ship.unobservedEvidence`). A disclosed `synthetic` pass and an
 honest deferral are untouched — neither claims a run, so neither can fail to evidence one.
 
-**Pass it to both stages.** This is not redundancy. A blocked `verify` writes nothing (an incomplete
+**Both stages assert it, and that is not redundancy.** A blocked `verify` writes nothing (an incomplete
 run never reports complete), so it leaves the *previous*, green, still-digest-current `verify.json` on
 disk — and a `ship` that trusted `verificationReady` alone would certify a lifecycle `verify` had just
 refused. `ship` therefore re-asserts the receipt against the record `verify` wrote.
-
-**The default is off, and stays off until a human flips it.** ADR-0035 gates the flip on *"once the
-fleet is green"*, and the fleet is not: no `evidence.yml` in this repo yet carries a receipt, so
-defaulting it on would turn every ship-ready work item in every FS-GG repo not-ship-ready at once,
-with no remedy available. With the flag absent, behavior is byte-for-byte what it was: the obligation
-satisfies and reports itself `selfAttested`. Flipping the default is a **breaking** change to the
-evidence contract and is gated on a schema major.
 
 A report recording **no executed tests** (`passed + failed = 0`) is refused rather than recorded: a
 run in which nothing executed proves nothing, and `failed = 0` would otherwise derive `outcome:
@@ -309,6 +309,90 @@ Blocking diagnostics: `evidence.testReportUnparseable`, `evidence.testReportNotF
 `evidence.testReportPathEscape`, `evidence.observedRunFailed`, `evidence.observedRunInconsistent`.
 Each records **nothing** — a gate that degraded to "no receipt" on an unreadable report would fail
 open in a new place.
+
+### Record receipts, and obligation discharge class (FS.GG.SDD#865)
+
+The section above assumes every obligation is discharged by a **test run**. Many are not. Stating a root
+cause, adjudicating two mechanisms, filing a row at its cause, routing a decision for a human, keeping a
+deferral visible — these are discharged by a durable **record**, and no runner report will ever exist for
+them.
+
+Until this channel existed that was unrepresentable. `Observed` had exactly one true-maker, an
+`observedRun` receipt, so a record obligation was `observed: false` **by construction**,
+`verify.unobservedRequiredTest` fired forever, and `ship` was unreachable. The only exits were to
+fabricate a receipt or to merge with `verify` blocked, and two items took the second:
+`.github#2380` (10 of 14 obligations unreceipted) and `.github#2545` (5 of 24). Both disclosed it in
+their `lifecycle-status.md` rather than relabelling record obligations `kind: verification` so an
+unrelated receipt would attach, or widening their check scripts with legs that assert *X is recorded* by
+grepping for X's name.
+
+**The obligation declares its class.** A task tagged `record-discharge` in `requiredSkills` mints an
+obligation of discharge class `record`; every other obligation is class `test`, which is what they all
+implicitly were. `requiredSkills` is authored state the task generator unions across regeneration
+(#310), so the tag survives a `tasks` re-run:
+
+```yaml
+- id: T007
+  requiredSkills: [record-discharge]         # this obligation is discharged by a record, not a run
+  requiredEvidence: [EV007]
+```
+
+**The receipt names the record.** It is authored — there is no runner to derive it from — so its
+strength is its form:
+
+```yaml
+- id: EV007
+  kind: review
+  result: pass
+  synthetic: false
+  recordReceipt:
+    kind: decision                            # decision | issue | commit
+    locator: docs/decisions/adr-0063.md       # the form depends on kind (below)
+    locatorContract: durable-locator-v1       # the only current contract
+    digest: "sha256:9f2c…"                    # decision only: SHA-256 of the record's exact bytes
+    statement: "ADR-0063 is deliberately not amended."   # what the record establishes
+    recordedAt: "2026-08-15T09:49:00Z"
+```
+
+| `kind` | `locator` must be | `digest` |
+|---|---|---|
+| `decision` | a **contained repository-relative path** — a record committed in this repository | **required**, `sha256:<64 hex>` of the record's exact bytes |
+| `issue` | an **absolute `https` URI** — a filed row | must be **absent** |
+| `commit` | a **40-character hex object name** | must be **absent** |
+
+A `decision` locator is a cited path, so a record deleted after the receipt was written turns its
+obligation `invalid` through the same `evidence.artifactNotFound` cascade the observed-run report uses,
+and a record *edited* after the receipt was written turns it `evidence.recordReceiptStale` — re-asserted
+at `ship` as well as `verify`, because a blocked `verify` leaves the previous green record standing.
+
+**SDD never dereferences a locator.** Judging a remote record live would put a network call inside a
+lifecycle gate that must reproduce offline in every consuming repository, and it would buy less than it
+looks: resolving a URL proves the locator resolves, not that what it resolves to says what `statement`
+claims. The reader still has to look. So the locator is committed verbatim into `verify.json` and the
+ship views, and re-checking it is a later reader's job — human, or CI holding a credential SDD does not.
+That is the trade this channel makes, and it is the reason a `decision` record — whose bytes SDD *can*
+hash — is the strongest of the three kinds.
+
+**This does not let the author's word back in.** A record-class obligation resting on `result: pass`
+with no receipt reaches the non-satisfying disposition **`unrecorded`**
+(`verify.unrecordedRequiredRecord`), and `ship` refuses it (`ship.unrecordedEvidence`). A receipt that is
+present but malformed is `invalid` (`evidence.recordReceiptInvalid`) rather than merely unrecorded, so an
+author is told which field is wrong instead of being told to add the receipt they already wrote. As for
+observed runs, the rule is `forall` over the obligation's real passes: one receipt cannot launder a bare
+`result: pass` sitting beside it.
+
+**The two channels do not substitute for each other.** A `recordReceipt` never discharges a test-class
+obligation and an `observedRun` never discharges a record-class one — one kind-directed rule
+(`Evidence.obligationDischarged`) answers "was this discharged?" for `verify`, `ship`, and the committed
+verdict, so the three cannot drift.
+
+Both dispositions in `verify.json` carry an additive `recordRequirement` boolean recording the class, so
+`ship` and the Governance handoff read it rather than re-deriving it from tasks they no longer hold. It
+is `additiveOptional`: absent in a view written before this channel, where it reads `false` — which is
+what it meant. No persisted `schemaVersion` moves, and no existing package changes verdict.
+
+Blocking diagnostics: `evidence.recordReceiptInvalid`, `evidence.recordReceiptStale`,
+`verify.unrecordedRequiredRecord`, `ship.unrecordedEvidence`.
 - **`governance-handoff.json`** — `contractVersion` *(Stable)*, `diagnostics`,
   `evidence`, `generatorVersion`, `governanceConfig`, `governedReferences`,
   `readiness`, `schemaVersion` *(Stable)*, `sources`, `workId`.

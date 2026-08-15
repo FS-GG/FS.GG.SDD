@@ -168,6 +168,11 @@ module internal HandlersVerify =
             /// "classified-FR obligations unmet" over the committed dispositions without re-deriving it.
             ClassifiedRequirement: bool
             JourneyRequirement: bool
+            /// FS.GG.SDD#865: is this a RECORD-discharged obligation, whose `Observed` above was earned
+            /// by a `recordReceipt` rather than an `observedRun`? Carried from the draft and serialized
+            /// into verify.json so `ship` partitions its shortfall report by class without re-deriving
+            /// it from tasks it no longer holds at the merge boundary.
+            RecordRequirement: bool
             EvidenceIds: string list
             TaskIds: string list
             SourceIds: string list
@@ -186,6 +191,9 @@ module internal HandlersVerify =
             /// here ever observed a test. Same rule object (`obligationIsObserved`), so `ED-` and `TD-`
             /// cannot drift on what "observed" means, exactly as #349 did for "cited".
             Observed: bool
+            /// FS.GG.SDD#865: the `TD-` mirror of the record class. When `true` this obligation's
+            /// shortfall state is `unrecorded`, never `unobserved`.
+            RecordRequirement: bool
             EvidenceIds: string list
             TaskIds: string list
             RequirementIds: string list
@@ -331,6 +339,7 @@ module internal HandlersVerify =
               Observed = draft.Observed
               ClassifiedRequirement = draft.ClassifiedRequirement
               JourneyRequirement = draft.JourneyRequirement
+              RecordRequirement = draft.RecordRequirement
               EvidenceIds = draft.EvidenceIds
               TaskIds = draft.TaskIds
               SourceIds = affectedSourceIds draft.TaskIds
@@ -363,6 +372,16 @@ module internal HandlersVerify =
         |> List.groupBy fst
         |> List.map (fun (obligationId, entries) ->
             let tasks = entries |> List.map snd
+
+            // FS.GG.SDD#865. Derived from the same union of task tags the `ED-` obligation minter reads,
+            // through the same `dischargeClassFromTags` meaning-site, so the two ladders cannot disagree
+            // about which class an obligation is in — the discipline #349 established for "cited" and
+            // #350 for "observed", applied to "what could discharge this".
+            let recordDischarged =
+                tasks
+                |> List.collect (fun task -> task.RequiredSkills)
+                |> dischargeClassFromTags
+                |> isRecordDischargeClass
 
             let matches =
                 artifact.Evidence
@@ -414,6 +433,24 @@ module internal HandlersVerify =
                         && not (observedRunIsCurrent artifactBytes declaration))
                 then
                     "invalid", [ "evidence.observedRunStale" ]
+                // #865: mirror the `ED-` record arms, in the same order and with the same guards, so
+                // `ED-` and `TD-` cannot drift on when a record receipt is malformed versus stale.
+                elif
+                    matches
+                    |> List.exists (fun declaration ->
+                        declaration.RecordReceipt
+                        |> Option.exists (fun receipt -> Option.isSome (recordReceiptInconsistency receipt)))
+                then
+                    "invalid", [ "evidence.recordReceiptInvalid" ]
+                elif
+                    matches
+                    |> List.exists (fun declaration ->
+                        declaration.RecordReceipt
+                        |> Option.exists (fun receipt ->
+                            Option.isNone (recordReceiptInconsistency receipt)
+                            && not (recordReceiptIsCurrent artifactBytes declaration)))
+                then
+                    "invalid", [ "evidence.recordReceiptStale" ]
                 elif
                     matches
                     |> List.exists (fun declaration ->
@@ -470,11 +507,33 @@ module internal HandlersVerify =
                 // receipt against that `Observed` flag. Giving `ED-` an `unobserved` STATE would
                 // instead change a persisted enum on the governance-handoff surface — a schema
                 // change this stage deliberately does not make.
+                //
+                // FS.GG.SDD#865 SPLIT THIS ARM IN TWO, and the split is the fix. As written above, the
+                // arm asked "was a run observed?" of EVERY obligation — including obligations no run
+                // could ever discharge, for which the answer is `false` by construction and stays
+                // `false` forever. `verify` then blocked permanently and `ship` was unreachable; two
+                // `.github` items merged with the gate red rather than fabricate a receipt.
+                //
+                // So the guard is now the obligation's own declared class, and the consequence follows
+                // it: a record obligation lacking its record is `unrecorded` and is told to name the
+                // record, and a test obligation lacking its run keeps exactly the state, diagnostic and
+                // wording it has always had. Every remark below about ordering, about `forall`, about
+                // synthetics and deferrals never arriving here, holds unchanged for both arms — they
+                // consume the same `obligationDischarged` rule, which dispatches once in `Artifacts`.
                 elif
                     requireObserved
+                    && recordDischarged
                     && matches
                        |> List.exists (fun declaration -> normalizedEvidenceResult declaration.Result = "pass")
-                    && not (obligationIsObserved matches)
+                    && not (obligationDischarged Evidence.recordDischargeClass matches)
+                then
+                    "unrecorded", [ "verify.unrecordedRequiredRecord" ]
+                elif
+                    requireObserved
+                    && not recordDischarged
+                    && matches
+                       |> List.exists (fun declaration -> normalizedEvidenceResult declaration.Result = "pass")
+                    && not (obligationDischarged Evidence.testDischargeClass matches)
                 then
                     "unobserved", [ "verify.unobservedRequiredTest" ]
                 elif
@@ -507,7 +566,17 @@ module internal HandlersVerify =
             { Id = "TD-" + obligationId
               ObligationId = obligationId
               State = state
-              Observed = state = "satisfied" && obligationIsObserved matches
+              // #865: the same one kind-directed rule the `ED-` site consumes, so the `TD-` view cannot
+              // call an obligation discharged that `ED-` calls unobserved, or the reverse.
+              Observed =
+                state = "satisfied"
+                && obligationDischarged
+                    (if recordDischarged then
+                         Evidence.recordDischargeClass
+                     else
+                         Evidence.testDischargeClass)
+                    matches
+              RecordRequirement = recordDischarged
               EvidenceIds =
                 matches
                 |> List.map (fun declaration -> declaration.Id.Value)
@@ -614,6 +683,7 @@ module internal HandlersVerify =
                 writer.WriteBoolean("observed", view.Observed)
                 writer.WriteBoolean("classifiedRequirement", view.ClassifiedRequirement)
                 writer.WriteBoolean("journeyRequirement", view.JourneyRequirement)
+                writer.WriteBoolean("recordRequirement", view.RecordRequirement)
                 writeStringArray writer "evidenceIds" view.EvidenceIds
                 writeStringArray writer "affectedTaskIds" view.TaskIds
                 writeStringArray writer "affectedSourceIds" view.SourceIds
@@ -632,6 +702,7 @@ module internal HandlersVerify =
                 writer.WriteString("obligationId", view.ObligationId)
                 writer.WriteString("state", view.State)
                 writer.WriteBoolean("observed", view.Observed)
+                writer.WriteBoolean("recordRequirement", view.RecordRequirement)
                 writeStringArray writer "evidenceIds" view.EvidenceIds
                 writeStringArray writer "affectedTaskIds" view.TaskIds
                 writeStringArray writer "affectedRequirementIds" view.RequirementIds
@@ -819,10 +890,20 @@ module internal HandlersVerify =
                                 |> List.map _.ObligationId
                                 |> List.sort
 
+                            // FS.GG.SDD#865: the record class's own shortfall list, so the two are
+                            // reported separately rather than one standing in for the other.
+                            let unrecorded =
+                                testViews
+                                |> List.filter (fun view -> view.State = "unrecorded")
+                                |> List.map _.ObligationId
+                                |> List.sort
+
                             [ if not (List.isEmpty missing) then
                                   missingRequiredTest (tasksPath workId) missing
                               if not (List.isEmpty unobserved) then
                                   unobservedRequiredTest (tasksPath workId) unobserved
+                              if not (List.isEmpty unrecorded) then
+                                  unrecordedRequiredRecord (tasksPath workId) unrecorded
                               if not (List.isEmpty stale) then
                                   staleRequiredTest (tasksPath workId) stale ]
 

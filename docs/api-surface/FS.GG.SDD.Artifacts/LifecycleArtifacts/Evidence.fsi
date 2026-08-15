@@ -58,6 +58,39 @@ module Evidence =
             Skipped: int
         }
 
+    /// A durable **record** the obligation rests on, rather than a run (FS.GG.SDD#865).
+    ///
+    /// `ObservedRun` answers "did a test run discharge this?". For an obligation discharged by filing a
+    /// row, recording a decision, or performing a routing, no run ever could — so before this type
+    /// existed such an obligation could not reach `Observed: true` by any route,
+    /// `verify.unobservedRequiredTest` fired forever, and `ship` was unreachable.
+    ///
+    /// It is authored, not derived: there is no runner to read a record from. Its strength is therefore
+    /// its FORM — a closed-set `Kind`, a `Locator` checked against that kind, a byte `Digest` when the
+    /// record is repository-local, a `Statement` a reader can check the record against, and a date. SDD
+    /// never dereferences the locator (DEC-001); the locator is committed into `verify.json` and the
+    /// ship verdict so a later reader can re-check it out of band.
+    ///
+    /// It does not make a record unforgeable, exactly as `ObservedRun` does not make a run unforgeable.
+    /// What it must not do is let the author's word back in, and it does not: a record-class obligation
+    /// with no receipt, or an incoherent one, does not satisfy.
+    type RecordReceipt =
+        {
+            /// One of `recordReceiptKinds`: `decision`, `issue`, or `commit`.
+            Kind: string
+            /// The durable reference, in the form `Kind` requires.
+            Locator: string
+            /// `durable-locator-v1`; anything else is rejected rather than reinterpreted.
+            LocatorContract: string
+            /// `sha256:<64 hex>` of a repository-local `decision` record's exact bytes; empty for
+            /// `issue`/`commit`, which have no local bytes.
+            Digest: string
+            /// What the record is asserted to establish.
+            Statement: string
+            /// When the record was made, as an ISO-8601 instant.
+            RecordedAt: string
+        }
+
     type JourneyReceipt =
         { SchemaVersion: int
           RunnerIdentity: string
@@ -147,6 +180,10 @@ module Evidence =
             /// FS.GG.SDD#350: the receipt, when a run was observed. `None` is the honest state for an
             /// obligation discharged on the author's word — it is what `isSelfAttested` counts.
             ObservedRun: ObservedRun option
+            /// FS.GG.SDD#865: the receipt, when the obligation rests on a durable record rather than a
+            /// run. `None` is the honest state for an unrecorded record-class obligation, and the
+            /// ordinary state for a test-class one — a record does not discharge a test (DEC-002).
+            RecordReceipt: RecordReceipt option
             JourneyReceipt: JourneyReceipt option
             PerformanceBudget: PerformanceBudgetDeclaration option
             Rationale: string option
@@ -179,6 +216,15 @@ module Evidence =
             /// for every other obligation) imposes no kind restriction, so this is additive and
             /// backward-compatible.
             RequiredEvidenceKinds: string list
+            /// FS.GG.SDD#865: what class of evidence could EVER discharge this — one of
+            /// `dischargeClasses`. `test` (the default, and what every obligation minted before this
+            /// field existed meant) says a test run discharges it; `record` says a durable record does,
+            /// and that no run ever will.
+            ///
+            /// This is the axis the type was missing: `RequiredEvidenceKinds` restricts which
+            /// declaration kind satisfies and the disposition `State` records how well the evidence
+            /// stands up, but neither can say "no runner report will ever exist for this obligation".
+            DischargeClass: string
             RequiredSkillOrCapabilityTags: string list
             Blocking: bool
             Correction: string
@@ -234,6 +280,29 @@ module Evidence =
         /// source with no digest is a filename, a digest with no source is a number.
         val liftObservedRun: draft: ObservedRunDraft -> ObservedRun option
         val lowerObservedRun: run: ObservedRun -> ObservedRunDraft
+
+        /// FS.GG.SDD#865. The record receipt's read draft: its scalars are null-aware, so a partial or
+        /// blank mapping lifts to `None` (no receipt) rather than to a receipt of empty strings.
+        /// `digest` is option-carrying because its absence is legal for an `issue`/`commit` record —
+        /// `recordReceiptInconsistency` decides per kind whether the absence is right.
+        type RecordReceiptDraft =
+            { Kind: string option
+              Locator: string option
+              LocatorContract: string option
+              Digest: string option
+              Statement: string option
+              RecordedAt: string option }
+
+        val recordReceiptDraftSeed: RecordReceiptDraft
+        val recordReceiptFields: ArtifactCodec.FieldCodec<RecordReceiptDraft> list
+
+        /// A receipt exists only if it names BOTH the class of record and the record itself: a kind with
+        /// no locator is a category, a locator with no kind is a string nobody knows how to check. Every
+        /// other field lifts verbatim and is refused, by name, by `recordReceiptInconsistency` — a
+        /// malformed receipt is never silently downgraded to "no receipt".
+        val liftRecordReceipt: draft: RecordReceiptDraft -> RecordReceipt option
+
+        val lowerRecordReceipt: receipt: RecordReceipt -> RecordReceiptDraft
         val journeyReceiptSeed: JourneyReceipt
         val journeyReceiptFields: ArtifactCodec.FieldCodec<JourneyReceipt> list
 
@@ -286,6 +355,37 @@ module Evidence =
 
     val isGameplayTestTagged: tags: string list -> bool
     val isProductionJourneyTagged: tags: string list -> bool
+
+    /// FS.GG.SDD#865: the capability tag marking a task, and the obligation minted from it, as
+    /// discharged by a durable RECORD rather than by a test run. DEC-003 puts the class on this
+    /// authored task tag rather than a new spec classification facet, because `requiredSkills` is
+    /// authored state the task generator unions across regeneration (FS.GG.SDD#310, AC7).
+    val recordDischargeCapability: string
+
+    /// The obligation discharge classes. `test` is the default and the only thing an obligation minted
+    /// before this axis existed could have meant.
+    val testDischargeClass: string
+
+    val recordDischargeClass: string
+    val dischargeClasses: string list
+    val isRecordDischargeTagged: tags: string list -> bool
+
+    /// The discharge class these tags declare — the one place a tag becomes a class, so the obligation
+    /// minter and every later reader cannot disagree about what the tag meant.
+    val dischargeClassFromTags: tags: string list -> string
+
+    /// Is this class record-discharged? Read from the persisted class STRING, not re-derived from tags,
+    /// because the class is what `verify` writes and `ship` reads back. Unrecognized or absent reads as
+    /// test-class — the fail-closed direction, since test-class carries the stricter requirement.
+    val isRecordDischargeClass: dischargeClass: string -> bool
+
+    /// The closed set of durable-record kinds a `RecordReceipt` may name: `decision` (a record committed
+    /// in this repository, located by contained relative path and byte-bound), `issue` (a filed row,
+    /// located by absolute https URI), `commit` (a landed commit, located by 40-hex object name).
+    val recordReceiptKinds: string list
+
+    /// The only current `RecordReceipt.LocatorContract`.
+    val recordLocatorContract: string
     val journeyReceiptProblems: declaration: EvidenceDeclaration -> string list
     val hasValidJourneyReceipt: declaration: EvidenceDeclaration -> bool
 
@@ -370,6 +470,37 @@ module Evidence =
     /// launder a hand-asserted pass sitting beside it. Both moot while `isObserved` is constantly
     /// `false`; both load-bearing the day FS.GG.SDD#350 lands.
     val obligationIsObserved: declarations: EvidenceDeclaration list -> bool
+
+    /// The record receipt's internal-consistency rule (FS.GG.SDD#865, FR-003) — the exact shape of
+    /// `observedRunInconsistency`, and for the same reason. A record receipt is *authored*: there is no
+    /// runner to derive it from, so every field is user input, and judging its form is the whole of what
+    /// stops it becoming a second, roomier place to type `pass`.
+    ///
+    /// Decides FORM only, and is total and I/O-free. Existence of a `decision` record is the cited-path
+    /// cascade's job, byte-currency is `recordReceiptIsCurrent`'s, and the CONTENT of a remote record is
+    /// a later reader's — deliberately, because reading it here would mean dereferencing it (DEC-001).
+    ///
+    /// Returns the reason, or `None` when the receipt is coherent.
+    val recordReceiptInconsistency: receipt: RecordReceipt -> string option
+
+    /// Does this declaration rest on a durable record a later reader can be handed? (FS.GG.SDD#865.)
+    /// The record twin of `isObserved`, deliberately NOT folded into it — keeping them separate is what
+    /// makes a record receipt unable to discharge a test obligation (DEC-002).
+    val isRecorded: declaration: EvidenceDeclaration -> bool
+
+    /// Was an *obligation* discharged by a durable record? The record twin of `obligationIsObserved`,
+    /// sharing its two load-bearing decisions rather than restating them: only declarations claiming a
+    /// real pass are consulted, and **all** must be recorded, so one receipt cannot launder a bare
+    /// `result: pass` beside it.
+    val obligationIsRecorded: declarations: EvidenceDeclaration list -> bool
+
+    /// **The one kind-directed discharge rule** (FS.GG.SDD#865, FR-008 / DEC-002) — the single function
+    /// the `ED-` ladder, the `TD-` ladder, `ship`, and the committed verdict all consume, so the four
+    /// cannot drift on what discharges an obligation.
+    ///
+    /// Fail-closed both ways: a record receipt never discharges a test-class obligation, and an observed
+    /// run never discharges a record-class one.
+    val obligationDischarged: dischargeClass: string -> declarations: EvidenceDeclaration list -> bool
 
     val parseEvidenceArtifact: snapshot: FileSnapshot -> Result<EvidenceArtifact, Diagnostic list>
     val parseEvidence: snapshot: FileSnapshot -> Result<EvidenceDeclaration list, Diagnostic list>

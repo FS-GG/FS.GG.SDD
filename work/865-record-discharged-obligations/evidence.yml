@@ -1,0 +1,780 @@
+schemaVersion: 1
+workId: 865-record-discharged-obligations
+stage: evidence
+status: evidenceReady
+sourceSpec: work/865-record-discharged-obligations/spec.md
+sourceClarifications: work/865-record-discharged-obligations/clarifications.md
+sourceChecklist: work/865-record-discharged-obligations/checklist.md
+sourcePlan: work/865-record-discharged-obligations/plan.md
+sourceTasks: work/865-record-discharged-obligations/tasks.yml
+sourceAnalysis: readiness/865-record-discharged-obligations/analysis.json
+sourceSnapshots:
+  - label: analysis
+    path: readiness/865-record-discharged-obligations/analysis.json
+    digest: a6a0ccfe7668eea373f41d5362162a5131de5191ede910794e893d523b6ee26a
+    schemaVersion: 1
+  - label: checklist
+    path: work/865-record-discharged-obligations/checklist.md
+    digest: 93b7817504e7b02fb3657570f15eb92b7cd40a97006531770edad9a14dddf791
+    schemaVersion: 1
+  - label: clarifications
+    path: work/865-record-discharged-obligations/clarifications.md
+    digest: 78ecbbb052f7126f8b2e5b29833e544eefa3c3d1f0877067b3b9a18e52733d2d
+    schemaVersion: 1
+  - label: plan
+    path: work/865-record-discharged-obligations/plan.md
+    digest: 42ae4cf57b1a9c6a620549c3d5c58d50abcd7f7a9eac054f10b6e85f634bb4e2
+    schemaVersion: 1
+  - label: spec
+    path: work/865-record-discharged-obligations/spec.md
+    digest: fcbeb35c2cd5c0e3626a2b2e638e74a5aef5b2e7fb08268d9f68f1bd7eceedd1
+    schemaVersion: 1
+  - label: tasks
+    path: work/865-record-discharged-obligations/tasks.yml
+    digest: 31d967bcabdb4cfb7632699ac402a19820e466c58c72fdbb81e21efe28fcce89
+    schemaVersion: 1
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV001]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/commands.trx
+      digest: "sha256:312d093ffedc8947033023d337df2bd0cecab1391dd02189b54086c5917c47b3"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 128
+      failed: 0
+      skipped: 0
+    notes: ["FR-001: `a record-discharge tagged task mints a record-class obligation` asserts DischargeClass at the one minting site, and `verify writes recordRequirement onto both disposition arrays` asserts the flag on the WRITTEN view, which is what ship reads at the merge boundary."]
+  - id: EV002
+    kind: verification
+    subject:
+      type: task
+      id: T002
+    taskRefs: [T002]
+    requirementRefs: [FR-002]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002]
+    obligationRefs: [EV002]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/commands.trx
+      digest: "sha256:312d093ffedc8947033023d337df2bd0cecab1391dd02189b54086c5917c47b3"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 128
+      failed: 0
+      skipped: 0
+    notes: ["FR-002: `a record obligation with a coherent receipt is observed, satisfied, and reaches shipReady` walks verify and ship over a package whose obligations are discharged only by records — the state that was unreachable before this change."]
+  - id: EV003
+    kind: verification
+    subject:
+      type: task
+      id: T003
+    taskRefs: [T003]
+    requirementRefs: [FR-003]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-003]
+    obligationRefs: [EV003]
+    artifacts: [tests/FS.GG.SDD.Artifacts.Tests/RecordReceiptTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/artifacts.trx
+      digest: "sha256:b5fb0b8e11c5b83c184320bd09c0b807a6dac1e38643e251b4a491fd506fda1b"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 101
+      failed: 0
+      skipped: 0
+    notes: ["FR-003: RecordReceiptTests gives every refusal branch of recordReceiptInconsistency its own case — unrecognized kind, each kind's locator form, locatorContract, the digest rule in both directions, blank statement, unparseable recordedAt — each mutating ONE field of a receipt the first case proves coherent."]
+  - id: EV004
+    kind: verification
+    subject:
+      type: task
+      id: T004
+    taskRefs: [T004]
+    requirementRefs: [FR-004]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV004]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/commands.trx
+      digest: "sha256:312d093ffedc8947033023d337df2bd0cecab1391dd02189b54086c5917c47b3"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 128
+      failed: 0
+      skipped: 0
+    notes: ["FR-004: `editing the decision record after the receipt turns it stale at verify and at ship` proves the fixture green BEFORE the edit, and `deleting the decision record turns the obligation invalid through the cited-artifact cascade` asserts the EXISTING #349 diagnostic id, which is what shows the locator really joined the cited set."]
+  - id: EV005
+    kind: verification
+    subject:
+      type: task
+      id: T005
+    taskRefs: [T005]
+    requirementRefs: [FR-005]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-005]
+    obligationRefs: [EV005]
+    artifacts: [tests/FS.GG.SDD.Artifacts.Tests/RecordReceiptTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/artifacts.trx
+      digest: "sha256:b5fb0b8e11c5b83c184320bd09c0b807a6dac1e38643e251b4a491fd506fda1b"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 101
+      failed: 0
+      skipped: 0
+    notes: ["FR-005: `obligationIsRecorded is forall over the real passes, so one receipt cannot launder a bare pass` and `a declaration is recorded only when it carries a coherent receipt`. The author's word alone still does not discharge."]
+  - id: EV006
+    kind: verification
+    subject:
+      type: task
+      id: T006
+    taskRefs: [T006]
+    requirementRefs: [FR-006]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-006]
+    obligationRefs: [EV006]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/commands.trx
+      digest: "sha256:312d093ffedc8947033023d337df2bd0cecab1391dd02189b54086c5917c47b3"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 128
+      failed: 0
+      skipped: 0
+    notes: ["FR-006: `an unmet record obligation and an unmet test obligation are named by their own diagnostics` puts both classes unmet in ONE package and asserts each diagnostic's RelatedIds name only its own class — a gate that merely renamed the old diagnostic fails here."]
+  - id: EV007
+    kind: verification
+    subject:
+      type: task
+      id: T007
+    taskRefs: [T007]
+    requirementRefs: [FR-007]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-007]
+    obligationRefs: [EV007]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/commands.trx
+      digest: "sha256:312d093ffedc8947033023d337df2bd0cecab1391dd02189b54086c5917c47b3"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 128
+      failed: 0
+      skipped: 0
+    notes: ["FR-007: the ship half of the same test constructs the scenario ship's own gate exists for — a green verify.json recorded without the requirement — and asserts ship.unrecordedEvidence names only EV001."]
+  - id: EV008
+    kind: verification
+    subject:
+      type: task
+      id: T008
+    taskRefs: [T008]
+    requirementRefs: [FR-008]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-008]
+    obligationRefs: [EV008]
+    artifacts: [tests/FS.GG.SDD.Artifacts.Tests/RecordReceiptTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/artifacts.trx
+      digest: "sha256:b5fb0b8e11c5b83c184320bd09c0b807a6dac1e38643e251b4a491fd506fda1b"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 101
+      failed: 0
+      skipped: 0
+    notes: ["FR-008: `a record receipt does not discharge a test-class obligation` and `an observed run never discharges a record-class obligation` assert the DISPATCH over receipts the same tests first prove valid, so a green case cannot come from an incidental malformation."]
+  - id: EV009
+    kind: verification
+    subject:
+      type: task
+      id: T009
+    taskRefs: [T009]
+    requirementRefs: [FR-009]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-009]
+    obligationRefs: [EV009]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/commands.trx
+      digest: "sha256:312d093ffedc8947033023d337df2bd0cecab1391dd02189b54086c5917c47b3"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 128
+      failed: 0
+      skipped: 0
+    notes: ["FR-009: `a package that never mentions the record channel keeps its previous verdict` and `a verify view written before the record channel parses with recordRequirement false`."]
+  - id: EV010
+    kind: verification
+    subject:
+      type: task
+      id: T010
+    taskRefs: [T010]
+    requirementRefs: [FR-010]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-010]
+    obligationRefs: [EV010]
+    artifacts: [tests/FS.GG.SDD.Artifacts.Tests/RecordReceiptTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/artifacts.trx
+      digest: "sha256:b5fb0b8e11c5b83c184320bd09c0b807a6dac1e38643e251b4a491fd506fda1b"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 101
+      failed: 0
+      skipped: 0
+    notes: ["FR-010: the receipt rules are pure over strings and this whole lane runs with no network available. It shows the rules make no call; it does not show that none exists anywhere, which is why VO-007 carries that claim as a review obligation (EV025) instead of pretending a run settled it."]
+  - id: EV011
+    kind: review
+    subject:
+      type: task
+      id: T011
+    taskRefs: [T011]
+    requirementRefs: [FR-011]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-011]
+    obligationRefs: [EV011]
+    artifacts: []
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    recordReceipt:
+      kind: decision
+      locator: docs/release/schema-reference.md
+      locatorContract: durable-locator-v1
+      digest: "sha256:f2b850c17cd00185de28e62a2d11e22a1a22bec712bfe9409be3c6d95eabcd91"
+      statement: "docs/release/schema-reference.md documents the record channel — the three kinds, each kind's locator form, the digest rule in both directions, and the no-dereference decision — and states the actual 0.14.0-inverted default for requiring an observed run, replacing its stale description of that default as opt-in and off."
+      recordedAt: "2026-08-15T19:00:00Z"
+    notes: ["FR-011: the document IS the deliverable, so the receipt binds its bytes; a later edit re-stales this receipt, which is exactly the behaviour this change adds."]
+  - id: EV012
+    kind: review
+    subject:
+      type: task
+      id: T012
+    taskRefs: [T012]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV012]
+    artifacts: []
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    recordReceipt:
+      kind: decision
+      locator: work/865-record-discharged-obligations/clarifications.md
+      locatorContract: durable-locator-v1
+      digest: "sha256:78ecbbb052f7126f8b2e5b29833e544eefa3c3d1f0877067b3b9a18e52733d2d"
+      statement: "DEC-001 records that a record receipt is validated for form and re-checkability and is never dereferenced, with the hermeticity cost measured on .github#2545's network-free check script rather than assumed."
+      recordedAt: "2026-08-15T19:00:00Z"
+    notes: ["DEC-001 is a design decision. No test run can discharge it — this is the obligation class the whole item exists to make dischargeable — and the decision record can."]
+  - id: EV013
+    kind: review
+    subject:
+      type: task
+      id: T013
+    taskRefs: [T013]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV013]
+    artifacts: []
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    recordReceipt:
+      kind: decision
+      locator: work/865-record-discharged-obligations/clarifications.md
+      locatorContract: durable-locator-v1
+      digest: "sha256:78ecbbb052f7126f8b2e5b29833e544eefa3c3d1f0877067b3b9a18e52733d2d"
+      statement: "DEC-002 records that the discharge rule is kind-directed and fail-closed in both directions: a record receipt never discharges a test obligation and an observed run never discharges a record one."
+      recordedAt: "2026-08-15T19:00:00Z"
+    notes: ["DEC-002 is a design decision. Its CONSEQUENCE is separately test-discharged by EV008; the decision itself is a record."]
+  - id: EV014
+    kind: review
+    subject:
+      type: task
+      id: T014
+    taskRefs: [T014]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV014]
+    artifacts: []
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    recordReceipt:
+      kind: decision
+      locator: work/865-record-discharged-obligations/clarifications.md
+      locatorContract: durable-locator-v1
+      digest: "sha256:78ecbbb052f7126f8b2e5b29833e544eefa3c3d1f0877067b3b9a18e52733d2d"
+      statement: "DEC-003 records that the discharge class rides the authored record-discharge task capability tag, which the task generator unions across regeneration, rather than a new spec classification facet."
+      recordedAt: "2026-08-15T19:00:00Z"
+    notes: ["DEC-003 is a design decision. Its consequence is test-discharged by EV001; the decision itself is a record."]
+  - id: EV015
+    kind: verification
+    subject:
+      type: task
+      id: T015
+    taskRefs: [T015]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001, PD-011]
+    obligationRefs: [EV015]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/commands.trx
+      digest: "sha256:312d093ffedc8947033023d337df2bd0cecab1391dd02189b54086c5917c47b3"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 128
+      failed: 0
+      skipped: 0
+    notes: ["PC-001: the command-report and readiness goldens are unchanged in shape — the record channel added no block and no counter, and reports through the existing disposition arrays."]
+  - id: EV016
+    kind: verification
+    subject:
+      type: task
+      id: T016
+    taskRefs: [T016]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002, PD-005, PD-008]
+    obligationRefs: [EV016]
+    artifacts: [tests/FS.GG.SDD.Artifacts.Tests/PublicSurface.baseline]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/artifacts.trx
+      digest: "sha256:b5fb0b8e11c5b83c184320bd09c0b807a6dac1e38643e251b4a491fd506fda1b"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 101
+      failed: 0
+      skipped: 0
+    notes: ["PC-002: SurfaceBaselineTests compares the built public surface against the committed baseline, which this change re-captured; the additions are visible in the baseline diff and no entry was removed."]
+  - id: EV017
+    kind: verification
+    subject:
+      type: task
+      id: T017
+    taskRefs: [T017]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-009]
+    obligationRefs: [EV017]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/commands.trx
+      digest: "sha256:312d093ffedc8947033023d337df2bd0cecab1391dd02189b54086c5917c47b3"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 128
+      failed: 0
+      skipped: 0
+    notes: ["PC-003: ReleaseConformanceTests T015 requires every produced verify.json field to be catalogued in the release contract, and the legacy-view test proves recordRequirement reads false when absent."]
+  - id: EV018
+    kind: verification
+    subject:
+      type: task
+      id: T018
+    taskRefs: [T018]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-003, PD-006, PD-007]
+    obligationRefs: [EV018]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/commands.trx
+      digest: "sha256:312d093ffedc8947033023d337df2bd0cecab1391dd02189b54086c5917c47b3"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 128
+      failed: 0
+      skipped: 0
+    notes: ["PC-004: each of the four new diagnostic ids is asserted by name in the test that provokes it, and each is registered in RemediationPointers."]
+  - id: EV019
+    kind: verification
+    subject:
+      type: task
+      id: T019
+    taskRefs: [T019]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV019]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/commands.trx
+      digest: "sha256:312d093ffedc8947033023d337df2bd0cecab1391dd02189b54086c5917c47b3"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 128
+      failed: 0
+      skipped: 0
+    notes: ["VO-001: asserted over the written verify.json, parsed back through parseVerificationView, rather than over the in-memory draft."]
+  - id: EV020
+    kind: verification
+    subject:
+      type: task
+      id: T020
+    taskRefs: [T020]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002]
+    obligationRefs: [EV020]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/commands.trx
+      digest: "sha256:312d093ffedc8947033023d337df2bd0cecab1391dd02189b54086c5917c47b3"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 128
+      failed: 0
+      skipped: 0
+    notes: ["VO-002: the positive fixture reaches supported with observed:true, satisfied on the TD- mirror, and shipReady."]
+  - id: EV021
+    kind: verification
+    subject:
+      type: task
+      id: T021
+    taskRefs: [T021]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-003]
+    obligationRefs: [EV021]
+    artifacts: [tests/FS.GG.SDD.Artifacts.Tests/RecordReceiptTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/artifacts.trx
+      digest: "sha256:b5fb0b8e11c5b83c184320bd09c0b807a6dac1e38643e251b4a491fd506fda1b"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 101
+      failed: 0
+      skipped: 0
+    notes: ["VO-003: the branch enumeration is exhaustive by construction — each case mutates exactly one field of the reference receipt, so a refusal is attributable to that field and to nothing else."]
+  - id: EV022
+    kind: verification
+    subject:
+      type: task
+      id: T022
+    taskRefs: [T022]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV022]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/commands.trx
+      digest: "sha256:312d093ffedc8947033023d337df2bd0cecab1391dd02189b54086c5917c47b3"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 128
+      failed: 0
+      skipped: 0
+    notes: ["VO-004: both failure routes for a local record — mutated bytes and a deleted file — with the pre-mutation green asserted first."]
+  - id: EV023
+    kind: verification
+    subject:
+      type: task
+      id: T023
+    taskRefs: [T023]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-006, PD-007]
+    obligationRefs: [EV023]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/commands.trx
+      digest: "sha256:312d093ffedc8947033023d337df2bd0cecab1391dd02189b54086c5917c47b3"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 128
+      failed: 0
+      skipped: 0
+    notes: ["VO-005: one record-class and one test-class obligation unmet in the same package; verify and ship both partition them, and each diagnostic names only its own."]
+  - id: EV024
+    kind: verification
+    subject:
+      type: task
+      id: T024
+    taskRefs: [T024]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-009]
+    obligationRefs: [EV024]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/commands.trx
+      digest: "sha256:312d093ffedc8947033023d337df2bd0cecab1391dd02189b54086c5917c47b3"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 128
+      failed: 0
+      skipped: 0
+    notes: ["VO-006: a pre-channel verify.json parses without diagnostics, reads recordRequirement as false, and keeps the observed values it recorded."]
+  - id: EV025
+    kind: review
+    subject:
+      type: task
+      id: T025
+    taskRefs: [T025]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-010, PD-011]
+    obligationRefs: [EV025]
+    artifacts: []
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    recordReceipt:
+      kind: decision
+      locator: docs/release/schema-reference.md
+      locatorContract: durable-locator-v1
+      digest: "sha256:f2b850c17cd00185de28e62a2d11e22a1a22bec712bfe9409be3c6d95eabcd91"
+      statement: "The record channel adds no effect type and no network call: schema-reference states that SDD never dereferences a locator, and that the locator is committed into verify.json and the ship views so a later reader can re-check it out of band."
+      recordedAt: "2026-08-15T19:00:00Z"
+    notes: ["VO-007 is a documentation review obligation. A suite can show that no call was made in the cases it runs — EV010 records exactly that and no more — but it cannot show that none exists, so this is recorded as review and says so."]
+  - id: EV026
+    kind: review
+    subject:
+      type: task
+      id: T026
+    taskRefs: [T026]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV026]
+    artifacts: []
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    recordReceipt:
+      kind: decision
+      locator: work/865-record-discharged-obligations/plan.md
+      locatorContract: durable-locator-v1
+      digest: "sha256:42ae4cf57b1a9c6a620549c3d5c58d50abcd7f7a9eac054f10b6e85f634bb4e2"
+      statement: "PM-001 records that the four new diagnostics are additive ids which rename nothing: verify.unobservedRequiredTest and ship.unobservedEvidence keep their ids, severities and wording for the population they already matched, so no consumer migration is owed."
+      recordedAt: "2026-08-15T19:00:00Z"
+    notes: ["PM-001 is a migration-posture statement — a claim about what is NOT owed, which no run can produce."]
+  - id: EV027
+    kind: review
+    subject:
+      type: task
+      id: T027
+    taskRefs: [T027]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV027]
+    artifacts: []
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    recordReceipt:
+      kind: decision
+      locator: work/865-record-discharged-obligations/plan.md
+      locatorContract: durable-locator-v1
+      digest: "sha256:42ae4cf57b1a9c6a620549c3d5c58d50abcd7f7a9eac054f10b6e85f634bb4e2"
+      statement: "PM-002 records that a view or evidence file written before the record channel is read, not migrated: an absent recordRequirement is false and an absent recordReceipt is None, which is what each already meant, and no re-sync command is introduced."
+      recordedAt: "2026-08-15T19:00:00Z"
+    notes: ["PM-002 is a migration-posture statement. Its readable half is test-discharged by EV024; the posture itself is a record."]
+  - id: EV028
+    kind: verification
+    subject:
+      type: task
+      id: T028
+    taskRefs: [T028]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001, PD-003]
+    obligationRefs: [EV028]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/commands.trx
+      digest: "sha256:312d093ffedc8947033023d337df2bd0cecab1391dd02189b54086c5917c47b3"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 128
+      failed: 0
+      skipped: 0
+    notes: ["GV-001: the committed readiness and full-shape goldens show work-model.json gained no field, and GeneratedModelCurrency stays green — discharge class is derived from requiredSkills, which the work model already carried."]
+  - id: EV029
+    kind: verification
+    subject:
+      type: task
+      id: T029
+    taskRefs: [T029]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-009]
+    obligationRefs: [EV029]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RecordDischargedObligationTests.fs]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/865-record-discharged-obligations/commands.trx
+      digest: "sha256:312d093ffedc8947033023d337df2bd0cecab1391dd02189b54086c5917c47b3"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 128
+      failed: 0
+      skipped: 0
+    notes: ["GV-002: readiness/865-record-discharged-obligations/verify.json and ship.json are this package's own back half, produced by the changed tool over record-discharged obligations."]
+  - id: EV030
+    kind: review
+    subject:
+      type: task
+      id: T030
+    taskRefs: [T030]
+    requirementRefs: [FR-012]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-012]
+    obligationRefs: [EV030]
+    artifacts: []
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    recordReceipt:
+      kind: decision
+      locator: work/865-record-discharged-obligations/verification/verification-evidence.md
+      locatorContract: durable-locator-v1
+      digest: "sha256:5cea61ced321be0d00a0c30e3e745bb9151926a20a9b7c9c77b8027fb261899a"
+      statement: "verification-evidence.md records both measured occurrences re-checked in a clean .github worktree at origin/main — .github#2380 and .github#2545 each reaching shipReady once their record obligations declare their class — and states plainly that placeholder receipts prove the structural block is gone and prove nothing about whether either item's obligations are discharged."
+      recordedAt: "2026-08-15T19:40:00Z"
+    notes: ["FR-012: the re-check is a record, not a run — no suite can re-check another repository's committed lifecycle package, and the note says what the re-check does not show as plainly as what it does."]
+lifecycleNotes:
+  - "Next lifecycle action: verify."

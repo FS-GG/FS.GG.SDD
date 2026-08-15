@@ -497,6 +497,14 @@ module ArtifactCodecTests =
                           Passed = 7
                           Failed = 0
                           Skipped = 3 }
+                RecordReceipt =
+                    Some
+                        { Kind = "decision"
+                          Locator = "docs/recordlocatorval.md"
+                          LocatorContract = "durable-locator-v1"
+                          Digest = "sha256:" + String.replicate 64 "c"
+                          Statement = "statementval"
+                          RecordedAt = "2026-08-15T00:00:00Z" }
                 JourneyReceipt =
                     Some
                         { EvidenceCodec.journeyReceiptSeed with
@@ -565,6 +573,7 @@ module ArtifactCodecTests =
               "Synthetic", [ "synthetic", "synthetic: true" ]
               "SyntheticDisclosure", [ "syntheticDisclosure", "syntheticDisclosure:\n  standsInFor: standsval" ]
               "ObservedRun", [ "observedRun", "observedRun:\n  source: observedsourceval" ]
+              "RecordReceipt", [ "recordReceipt", "recordReceipt:\n  kind: decision" ]
               "JourneyReceipt", [ "journeyReceipt", "journeyReceipt:\n  schemaVersion: 1" ]
               "PerformanceBudget", [ "performanceBudget", "performanceBudget:\n  artifactPath: readiness/perfval.txt" ]
               "Rationale", [ "rationale", "rationale: rationaleval" ]

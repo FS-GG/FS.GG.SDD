@@ -1,6 +1,7 @@
 namespace FS.GG.SDD.Commands.Tests
 
 open System.IO
+open System.Text.RegularExpressions
 open FS.GG.SDD.Artifacts.Diagnostics
 open FS.GG.SDD.Artifacts.SchemaVersion
 open FS.GG.SDD.Commands
@@ -60,11 +61,11 @@ module ScaffoldCliCoherenceTests =
     let private cliBehind (report: CommandReport) =
         report.Diagnostics |> List.filter (fun d -> d.Id = "scaffold.cliBehindMinimum")
 
-    // US2 scenario 1 (SC-002): installed 1.0.1 < declared 1.1.0 ⇒ exactly one
+    // US2 scenario 1 (SC-002): installed 1.1.0 < declared 1.2.0 ⇒ exactly one
     // scaffold.cliBehindMinimum (info) naming installed, minimum, and the gap.
     // The minimum tracks the installed version by exactly one minor, so the "behind by
     // 1 minor version" assertion keeps testing the gap arithmetic and not a constant.
-    // 1.1.0 > 1.0.1 numerically (components are ints, not strings) — see Fsgg.Version.
+    // 1.2.0 > 1.1.0 numerically (components are ints, not strings) — see Fsgg.Version.
     [<Fact; Trait("tier", "slow")>]
     let ``behind minimum emits exactly one cliBehindMinimum advisory naming installed minimum and gap`` () =
         let root = TestSupport.tempDirectory ()
@@ -74,8 +75,8 @@ module ScaffoldCliCoherenceTests =
         match cliBehind report with
         | [ diagnostic ] ->
             Assert.Equal("info", severityValue diagnostic.Severity)
+            Assert.Contains("1.2.0", diagnostic.Message)
             Assert.Contains("1.1.0", diagnostic.Message)
-            Assert.Contains("1.0.1", diagnostic.Message)
             Assert.Contains("behind by 1 minor version", diagnostic.Message)
         | other -> Assert.True(false, $"expected exactly one cliBehindMinimum, got {List.length other}")
 
@@ -133,12 +134,57 @@ module ScaffoldCliCoherenceTests =
         Assert.Empty(cliBehind report)
 
     // US2 edge (boundary): installed exactly equal to the minimum is coherent — no advisory.
+    //
+    // This is the ONLY case that exercises `cliCoherenceDiagnostics`' equality arm (`Some 0`). It does
+    // so only while `min-equal.providers.yml` declares EXACTLY the installed version: one patch below
+    // and it is a second copy of the strictly-above case `min-satisfied` already covers, `Assert.Empty`
+    // passes either way, and breaking the boundary to `| Some -1 | Some 0` survives. The guard below is
+    // what keeps that from being a silent property of the fixture.
     [<Fact; Trait("tier", "slow")>]
     let ``equal to minimum emits no cliBehindMinimum advisory`` () =
         let root = TestSupport.tempDirectory ()
         writeRegistry root "min-equal.providers.yml"
         let report = runScaffold (scaffoldRequest root)
         Assert.Empty(cliBehind report)
+
+    /// The calibration this pair of fixtures depends on, asserted instead of assumed.
+    ///
+    /// `min-equal` and `min-behind` are hand-anchored to the installed version — one AT it, one a minor
+    /// ABOVE it — and nothing re-anchors them when `<Version>` moves. When they drift, neither of the
+    /// tests that use them fails: both assert on the presence or absence of an advisory, and a drifted
+    /// `min-equal` still produces no advisory (for the wrong reason) while a drifted `min-behind` still
+    /// produces one (for the wrong reason). The suite stays green and the boundary stops being tested.
+    ///
+    /// It has already happened once: `min-equal` sat a patch below the installed version and went
+    /// unnoticed. So the calibration is checked here, where a bump fails loudly and the remedy is one
+    /// line in each fixture.
+    [<Fact>]
+    let ``the min-equal and min-behind fixtures stay anchored to the installed version`` () =
+        let installed = (currentGeneratorVersion ()).Version
+
+        let declaredMinimum fixture =
+            let text = File.ReadAllText(Path.Combine(fixturesRoot, "registries", fixture))
+
+            let matched =
+                Regex.Match(text, "minimumFsggSdd:\\s*\\r?\\n\\s*version:\\s*\"(?<v>[^\"]+)\"")
+
+            Assert.True(matched.Success, $"{fixture} declares no minimumFsggSdd.version")
+            let declared = matched.Groups["v"].Value
+
+            Assert.True(
+                Option.isSome (Fsgg.Version.tryParse declared),
+                $"{fixture} declares an unparseable minimum '{declared}'"
+            )
+
+            declared
+
+        // Compared through the SAME `Fsgg.Version.compare` the production arm calls, so the fixtures
+        // are calibrated against the rule rather than against a literal this test happens to agree
+        // with. `compare installed minimum` is the production argument order (HandlersScaffold), where
+        // `Some -1` means installed < minimum.
+        Assert.Equal(Some 0, Fsgg.Version.compare installed (declaredMinimum "min-equal.providers.yml"))
+
+        Assert.Equal(Some -1, Fsgg.Version.compare installed (declaredMinimum "min-behind.providers.yml"))
 
     // US2 scenario 4 (SC-003): provider declares no minimum ⇒ nothing to compare, no advisory.
     [<Fact; Trait("tier", "slow")>]
