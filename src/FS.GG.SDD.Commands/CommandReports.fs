@@ -286,6 +286,12 @@ module CommandReports =
     let unobservedShipEvidence path ids =
         DiagnosticConstructors.unobservedShipEvidence path ids
 
+    let unrecordedRequiredRecord path ids =
+        DiagnosticConstructors.unrecordedRequiredRecord path ids
+
+    let unrecordedShipEvidence path ids =
+        DiagnosticConstructors.unrecordedShipEvidence path ids
+
     let staleRequiredTest path ids =
         DiagnosticConstructors.staleRequiredTest path ids
 

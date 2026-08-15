@@ -247,7 +247,7 @@ module ReleaseContract =
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "1.0.x"
+            [ { SddVersionLine = "1.1.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "2.x" } ]
 
@@ -520,6 +520,9 @@ module ReleaseContract =
                   "evidenceDispositions[].id"
                   "evidenceDispositions[].obligationId"
                   "evidenceDispositions[].observed"
+                  // FS.GG.SDD#865: additiveOptional, exactly like `classifiedRequirement` above —
+                  // absent in a view written before the record channel, where it reads `false`.
+                  "evidenceDispositions[].recordRequirement"
                   "evidenceDispositions[].severity"
                   "evidenceDispositions[].state"
                   "findings"
@@ -586,6 +589,7 @@ module ReleaseContract =
                   "testDispositions[].id"
                   "testDispositions[].obligationId"
                   "testDispositions[].observed"
+                  "testDispositions[].recordRequirement"
                   "testDispositions[].severity"
                   "testDispositions[].state"
                   "viewVersion"

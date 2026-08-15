@@ -40,6 +40,20 @@ module Verify =
             /// committed verify view without re-deriving it. Absent in a pre-WI-4 view ⇒ `false`.
             ClassifiedRequirement: bool
             JourneyRequirement: bool
+            /// FS.GG.SDD#865: is this the disposition of a RECORD-discharged obligation — one no test
+            /// run could ever discharge, whose `Observed` flag above was therefore earned by a
+            /// `recordReceipt` rather than by an `observedRun`?
+            ///
+            /// This is the axis whose absence was the defect. `Observed` had exactly one true-maker, an
+            /// `observedRun` receipt parsed from a runner's report, so a record obligation was
+            /// `Observed: false` by construction, `verify.unobservedRequiredTest` fired forever, and
+            /// `ship` was unreachable — measured on `.github#2380` and `.github#2545`.
+            ///
+            /// Carried per-disposition, so `ship` and the Governance handoff READ the class off the
+            /// committed view instead of re-deriving it from tasks they no longer have, and so a reader
+            /// of `verify.json` can tell the two footings apart rather than seeing one undifferentiated
+            /// `observed: true`. Absent in a pre-#865 view ⇒ `false`, which is what it meant.
+            RecordRequirement: bool
             EvidenceIds: EvidenceId list
             AffectedTaskIds: TaskId list
             AffectedSourceIds: string list
@@ -66,6 +80,11 @@ module Verify =
             /// FS.GG.SDD#398: the `TD-` attestation basis — the disposition named for a test that,
             /// until FS.GG.SDD#350, nothing had ever run. See `Evidence.obligationIsObserved`.
             Observed: bool
+            /// FS.GG.SDD#865: the `TD-` mirror of `EvidenceDisposition.RecordRequirement`. When `true`,
+            /// this obligation's shortfall state is `unrecorded` (`verify.unrecordedRequiredRecord`) and
+            /// never `unobserved` — the two ladders must not disagree about which class an obligation is
+            /// in, any more than they may disagree about what "observed" means.
+            RecordRequirement: bool
             EvidenceIds: EvidenceId list
             AffectedTaskIds: TaskId list
             AffectedRequirementIds: RequirementId list
@@ -179,6 +198,10 @@ module Verify =
           // throw (Principle VIII), and no `schemaVersion` bump.
           ClassifiedRequirement = jsonBool "classifiedRequirement" element |> Option.defaultValue false
           JourneyRequirement = jsonBool "journeyRequirement" element |> Option.defaultValue false
+          // FS.GG.SDD#865: absent in a pre-#865 view parses to `false` — which is exactly what it
+          // meant, since no obligation could be record-discharged then. Degrade, don't throw
+          // (Principle VIII), and no `schemaVersion` bump.
+          RecordRequirement = jsonBool "recordRequirement" element |> Option.defaultValue false
           EvidenceIds = evidenceIdsFromJson "evidenceIds" element
           AffectedTaskIds = taskIdsFromJson "affectedTaskIds" element
           AffectedSourceIds = jsonStringList "affectedSourceIds" element
@@ -192,6 +215,8 @@ module Verify =
           State = jsonRequiredString "state" element |> requiredTestDispositionStateFromString
           // #398: absent in a pre-feature view, and `false` is what it meant. Tolerant, no bump.
           Observed = jsonBool "observed" element |> Option.defaultValue false
+          // #865: likewise absent in a pre-#865 view, and `false` is what it meant.
+          RecordRequirement = jsonBool "recordRequirement" element |> Option.defaultValue false
           EvidenceIds = evidenceIdsFromJson "evidenceIds" element
           AffectedTaskIds = taskIdsFromJson "affectedTaskIds" element
           AffectedRequirementIds = requirementIdsFromJson "affectedRequirementIds" element

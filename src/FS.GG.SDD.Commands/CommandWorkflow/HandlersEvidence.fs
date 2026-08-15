@@ -44,6 +44,12 @@ module internal HandlersEvidence =
             /// re-correlating each disposition back to its obligation's tags.
             ClassifiedRequirement: bool
             JourneyRequirement: bool
+            /// FS.GG.SDD#865: is this the obligation of a RECORD-discharged task — one no test run could
+            /// discharge, whose `Observed` above was earned by a `recordReceipt`? Carried here for the
+            /// same reason `ClassifiedRequirement` is: so `verify` writes it into the committed view and
+            /// `ship` reads the class back rather than re-correlating each disposition to its
+            /// obligation's tags, which it no longer holds at the merge boundary.
+            RecordRequirement: bool
             EvidenceIds: string list
             TaskIds: string list
             DiagnosticIds: string list
@@ -469,6 +475,31 @@ module internal HandlersEvidence =
                 run.Digest.Equals($"sha256:{digest.Value}", StringComparison.OrdinalIgnoreCase))
         | _ -> false
 
+    /// FS.GG.SDD#865, the byte-currency twin of `observedRunIsCurrent` for a repository-local record.
+    ///
+    /// A `decision` receipt binds the record's exact bytes, so an edit to the record after the receipt
+    /// was written must invalidate it: otherwise a receipt could be attached to a paragraph that later
+    /// says something else, which is the "compare against reality, not against a record of reality"
+    /// failure the observed-run receipt already learned. Deletion is caught one layer up, by the cited
+    /// path cascade.
+    ///
+    /// `true` for a receipt with no local bytes to bind — `issue` and `commit` — because there is
+    /// nothing to be stale ABOUT. That is why callers must guard this on the receipt being present and
+    /// otherwise coherent rather than reading `false` as "no receipt": the two are different facts.
+    let recordReceiptIsCurrent (artifactBytes: string -> byte array option) declaration =
+        match declaration.RecordReceipt with
+        | None -> false
+        | Some receipt ->
+            if not (String.Equals(receipt.Kind.Trim(), "decision", StringComparison.OrdinalIgnoreCase)) then
+                true
+            elif not (citedPathIsContained receipt.Locator) then
+                false
+            else
+                artifactBytes receipt.Locator
+                |> Option.exists (fun bytes ->
+                    let digest = SchemaVersionModule.sha256Bytes bytes
+                    receipt.Digest.Equals($"sha256:{digest.Value}", StringComparison.OrdinalIgnoreCase))
+
     let evidenceSourceSnapshot label path text =
         EvidenceDomain.sourceSnapshot label path text
 
@@ -604,6 +635,12 @@ module internal HandlersEvidence =
           // once the author has flipped the result to a real pass. Seeding one here would record an
           // observation of an obligation nobody has yet claimed to have discharged.
           ObservedRun = None
+          // #865: and a record receipt is not seeded either, for the same reason plus one more. The
+          // scaffolded obligation claims nothing yet, so there is no record to name — and unlike the
+          // observed-run receipt, no later command can stamp this one: a record is authored, because
+          // there is no runner to read it from. Seeding a placeholder would be seeding the author's
+          // word, which is exactly what the receipt exists to replace.
+          RecordReceipt = None
           JourneyReceipt = None
           PerformanceBudget = None
           Rationale = None
@@ -979,6 +1016,19 @@ module internal HandlersEvidence =
                   | None -> ()
               | None -> ()
 
+              // FS.GG.SDD#865 (FR-003), and the argument above applies with MORE force here: a record
+              // receipt is always typed — there is no runner to derive one from — so its form is the
+              // entirety of what stops `recordReceipt` becoming exactly the "new and more
+              // official-looking place to write `pass` by hand" that sentence warns about. Raised at
+              // `evidence` as well as at `verify` so the author learns which field is wrong while they
+              // are still writing the file, not at the merge boundary.
+              match declaration.RecordReceipt with
+              | Some receipt ->
+                  match recordReceiptInconsistency receipt with
+                  | Some reason -> recordReceiptInvalid path [ declaration.Id.Value ] reason
+                  | None -> ()
+              | None -> ()
+
               if
                   declaration.JourneyReceipt.IsSome
                   || declaration.RequirementRefs
@@ -1139,6 +1189,31 @@ module internal HandlersEvidence =
                         && not (observedRunIsCurrent artifactBytes declaration))
                 then
                     "invalid", [ "evidence.observedRunStale" ]
+                // FS.GG.SDD#865. A receipt that is PRESENT but malformed is `invalid`, not merely
+                // unrecorded, and it sits here — beside its observed-run twin, above `synthetic` — for
+                // the same reason that one does. Demoting a malformed receipt to "no receipt" would
+                // silently swallow the author's mistake: they would see `unrecorded` and be told to add
+                // the receipt they had already written. Naming it says which field is wrong.
+                elif
+                    matches
+                    |> List.exists (fun declaration ->
+                        declaration.RecordReceipt
+                        |> Option.exists (fun receipt -> Option.isSome (recordReceiptInconsistency receipt)))
+                then
+                    "invalid", [ "evidence.recordReceiptInvalid" ]
+                // #865: and a coherent receipt whose local record no longer hashes to the recorded
+                // digest is stale — the exact analogue of `evidence.observedRunStale` one field along.
+                // Guarded on coherence so a malformed receipt reports the arm above (the specific
+                // fault) rather than this one (a consequence of it).
+                elif
+                    matches
+                    |> List.exists (fun declaration ->
+                        declaration.RecordReceipt
+                        |> Option.exists (fun receipt ->
+                            Option.isNone (recordReceiptInconsistency receipt)
+                            && not (recordReceiptIsCurrent artifactBytes declaration)))
+                then
+                    "invalid", [ "evidence.recordReceiptStale" ]
                 elif
                     matches
                     |> List.exists (fun declaration ->
@@ -1212,9 +1287,16 @@ module internal HandlersEvidence =
                // on what "observed" means, which is the same discipline #349's `missingCitedArtifacts`
                // imposed on what "cited" means. Today it is false for everything, and saying so out
                // loud — in the console and in the committed verdict — is the feature.
-               Observed = state = "supported" && obligationIsObserved matches
+               //
+               // FS.GG.SDD#865 changed the rule this line CONSUMES, not the line: `obligationDischarged`
+               // dispatches on the obligation's own declared class, so a record-discharged obligation is
+               // observed when its record is recorded and a test obligation still only when its run was
+               // observed. The kind-directedness lives in `Artifacts` beside the two rules it chooses
+               // between, so this site cannot drift from the `TD-` site or from `ship`.
+               Observed = state = "supported" && obligationDischarged obligation.DischargeClass matches
                ClassifiedRequirement = isGameplayTestTagged obligation.RequiredSkillOrCapabilityTags
                JourneyRequirement = isProductionJourneyTagged obligation.RequiredSkillOrCapabilityTags
+               RecordRequirement = isRecordDischargeClass obligation.DischargeClass
                EvidenceIds =
                  matches
                  |> List.map (fun declaration -> declaration.Id.Value)

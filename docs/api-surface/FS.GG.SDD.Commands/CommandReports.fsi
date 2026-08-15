@@ -127,6 +127,14 @@ module CommandReports =
     val missingRequiredTest: path: string -> ids: string list -> Diagnostic
     val unobservedRequiredTest: path: string -> ids: string list -> Diagnostic
     val unobservedShipEvidence: path: string -> ids: string list -> Diagnostic
+
+    /// FS.GG.SDD#865. The record-class counterpart of `unobservedRequiredTest`: raised for an obligation
+    /// no test run could discharge, and naming the remedy that exists for it — the record.
+    val unrecordedRequiredRecord: path: string -> ids: string list -> Diagnostic
+
+    /// FS.GG.SDD#865. The merge-boundary twin of `unrecordedRequiredRecord`, raised over the
+    /// `recordRequirement` flag `verify` wrote.
+    val unrecordedShipEvidence: path: string -> ids: string list -> Diagnostic
     val staleRequiredTest: path: string -> ids: string list -> Diagnostic
     val toolDefect: path: string option -> message: string -> Diagnostic
     val missingVerificationPrerequisite: path: string -> message: string -> Diagnostic

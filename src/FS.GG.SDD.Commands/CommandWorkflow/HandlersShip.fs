@@ -332,22 +332,47 @@ module internal HandlersShip =
                 // the attestation fact — so it needs no new persisted state, and the two ladders keep
                 // answering the two different questions they exist to answer: "is there evidence?"
                 // (`ED-`) versus "did an observed run discharge the required test?" (`TD-`).
-                let unobservedIds =
+                //
+                // FS.GG.SDD#865 partitions that one list in two, by the `recordRequirement` flag
+                // `verify` wrote onto the same disposition. The gate is unchanged — a supported
+                // obligation with `Observed: false` is still refused, whatever its class — but WHICH
+                // shortfall is reported now matches which one occurred. Reporting a record-discharged
+                // obligation as lacking an `observedRun` was not a cosmetic mislabel: it named a remedy
+                // ("run the suite, record the receipt") that cannot exist for a decision or a filed row,
+                // which is how two items reached merge with the gate red and no way forward.
+                //
+                // The flag is read off the committed view rather than re-derived, for the same reason
+                // `Observed` is: at the merge boundary `ship` no longer holds the tasks the class came
+                // from.
+                let supportedButUndischarged =
                     if requireObserved then
                         view.EvidenceDispositions
                         |> List.filter (fun disposition ->
                             disposition.State = EvidenceSupported && not disposition.Observed)
-                        |> List.map _.ObligationId
-                        |> List.distinct
-                        |> List.sort
                     else
                         []
 
+                let obligationIdsOf dispositions =
+                    dispositions
+                    |> List.map (fun (disposition: EvidenceDisposition) -> disposition.ObligationId)
+                    |> List.distinct
+                    |> List.sort
+
+                let unobservedIds =
+                    supportedButUndischarged
+                    |> List.filter (fun disposition -> not disposition.RecordRequirement)
+                    |> obligationIdsOf
+
+                let unrecordedIds =
+                    supportedButUndischarged
+                    |> List.filter _.RecordRequirement
+                    |> obligationIdsOf
+
                 let unobserved =
-                    if List.isEmpty unobservedIds then
-                        []
-                    else
-                        [ unobservedShipEvidence path unobservedIds ]
+                    [ if not (List.isEmpty unobservedIds) then
+                          unobservedShipEvidence path unobservedIds
+                      if not (List.isEmpty unrecordedIds) then
+                          unrecordedShipEvidence path unrecordedIds ]
 
                 notReady @ failed @ unobserved, Some view
 
@@ -556,6 +581,36 @@ module internal HandlersShip =
                         else
                             [ observedRunStale (evidencePath workId) stale ])
 
+                // FS.GG.SDD#865, the record channel's half of the same merge-boundary re-assertion. A
+                // decision record edited after `verify` ran leaves a green `verify.json` whose source
+                // digests all still match — the identical blind spot the block above exists to cover —
+                // so the receipt's byte binding is re-checked here too. Guarded on coherence so a
+                // malformed receipt is reported by `evidence`/`verify` as malformed rather than
+                // surfacing here as merely stale.
+                let recordReceiptCurrentnessDiagnostics =
+                    existingEvidenceArtifact
+                    |> Option.toList
+                    |> List.collect (fun artifact ->
+                        let stale =
+                            artifact.Evidence
+                            |> List.filter (fun declaration ->
+                                declaration.RecordReceipt
+                                |> Option.exists (fun receipt ->
+                                    Option.isNone (recordReceiptInconsistency receipt)
+                                    && not (
+                                        recordReceiptIsCurrent
+                                            (fun path -> snapshot path model |> Option.bind _.RawBytes)
+                                            declaration
+                                    )))
+                            |> List.map _.Id.Value
+                            |> List.distinct
+                            |> List.sort
+
+                        if List.isEmpty stale then
+                            []
+                        else
+                            [ recordReceiptStale (evidencePath workId) stale ])
+
                 let evidencePresenceDiagnostics =
                     match existingEvidenceArtifact, snapshot (evidencePath workId) model with
                     | None, None ->
@@ -584,6 +639,7 @@ module internal HandlersShip =
                     @ analysisDiagnostics
                     @ existingEvidenceDiagnostics
                     @ observedRunCurrentnessDiagnostics
+                    @ recordReceiptCurrentnessDiagnostics
                     @ evidencePresenceDiagnostics
                     @ verificationPrereqDiagnostics
                     @ shipViewDiagnostics

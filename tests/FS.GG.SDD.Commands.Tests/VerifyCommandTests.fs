@@ -831,6 +831,7 @@ tasks:
               Observed = false
               ClassifiedRequirement = false
               JourneyRequirement = false
+              RecordRequirement = false
               EvidenceIds = [ "EV001" ]
               TaskIds = [ "T001"; "T002" ]
               DiagnosticIds = [] }

@@ -218,6 +218,38 @@ module EvidenceRoundTripPropertyTests =
                             Skipped = skipped }
               } ]
 
+    // FS.GG.SDD#865. The record receipt joins the same round-trip property, and for the same reason the
+    // observed-run receipt did: a field the renderer emits and the reader drops would silently
+    // un-record every obligation on the next `evidence` run. The generator ranges over all three kinds
+    // — including the two that carry NO digest — because the render/read asymmetry most likely to hide
+    // is an optional field, and `lowerRecordReceipt` deliberately omits an empty digest.
+    let private recordReceipt: Gen<RecordReceipt option> =
+        Gen.oneof
+            [ Gen.constant None
+              gen {
+                  let! hex = Gen.elements [ 'a' .. 'f' ] |> Gen.arrayOfLength 64
+                  let! statement = nonNullSafeToken
+                  let! shaHex = Gen.elements [ 'a' .. 'f' ] |> Gen.arrayOfLength 40
+                  let! locatorToken = nonNullSafeToken
+
+                  let! kindAndLocatorAndDigest =
+                      Gen.elements
+                          [ "decision", "docs/decisions/" + locatorToken + ".md", "sha256:" + System.String(hex)
+                            "issue", "https://example.invalid/rows/" + locatorToken, ""
+                            "commit", System.String(shaHex), "" ]
+
+                  let kind, locator, digest = kindAndLocatorAndDigest
+
+                  return
+                      Some
+                          { Kind = kind
+                            Locator = locator
+                            LocatorContract = "durable-locator-v1"
+                            Digest = digest
+                            Statement = statement
+                            RecordedAt = "2026-08-15T00:00:00Z" }
+              } ]
+
     let private performanceBudget: Gen<PerformanceBudgetDeclaration option> =
         Gen.oneof
             [ Gen.constant None
@@ -292,6 +324,7 @@ module EvidenceRoundTripPropertyTests =
             let! synthetic = Gen.elements [ true; false ]
             let! syntheticDisclosure = disclosure
             let! receipt = observedRun
+            let! record = recordReceipt
             let! performance = performanceBudget
             let! rationale = optScalar
             let! owner = optScalar
@@ -316,6 +349,7 @@ module EvidenceRoundTripPropertyTests =
                   Synthetic = synthetic
                   SyntheticDisclosure = syntheticDisclosure
                   ObservedRun = receipt
+                  RecordReceipt = record
                   JourneyReceipt = None
                   PerformanceBudget = performance
                   Rationale = rationale
@@ -455,6 +489,18 @@ module EvidenceRoundTripPropertyTests =
                       Passed = 1630
                       Failed = 0
                       Skipped = 4 }
+              // #865: the record receipt is authored rather than recorded, which makes surviving
+              // render→parse MORE important, not less — there is no `--from-test-report` to re-stamp it
+              // if a run drops it. `decision` is the kind chosen here because it is the only one that
+              // carries a digest, so the anchor exercises every field the type has.
+              RecordReceipt =
+                Some
+                    { Kind = "decision"
+                      Locator = "docs/decisions/adr-0035.md"
+                      LocatorContract = "durable-locator-v1"
+                      Digest = "sha256:" + String.replicate 64 "b"
+                      Statement = "ADR-0035 records that SDD never runs a test."
+                      RecordedAt = "2026-08-15T00:00:00Z" }
               JourneyReceipt = None
               PerformanceBudget =
                 Some
