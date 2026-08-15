@@ -369,7 +369,10 @@ module RecordDischargedObligationTests =
 
         // The receipt is coherent — so this asserts the DISPATCH, not an incidental malformation.
         let byId =
-            parsedEvidence root |> _.Evidence |> List.map (fun d -> d.Id.Value, d) |> Map.ofList
+            parsedEvidence root
+            |> _.Evidence
+            |> List.map (fun d -> d.Id.Value, d)
+            |> Map.ofList
 
         Assert.True(Evidence.isRecorded byId["EV001"])
 

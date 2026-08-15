@@ -364,9 +364,7 @@ module internal HandlersShip =
                     |> obligationIdsOf
 
                 let unrecordedIds =
-                    supportedButUndischarged
-                    |> List.filter _.RecordRequirement
-                    |> obligationIdsOf
+                    supportedButUndischarged |> List.filter _.RecordRequirement |> obligationIdsOf
 
                 let unobserved =
                     [ if not (List.isEmpty unobservedIds) then

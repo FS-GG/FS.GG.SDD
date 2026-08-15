@@ -320,37 +320,39 @@ module Evidence =
         }
 
     type EvidenceObligation =
-        { ObligationId: string
-          Kind: string
-          SourceArtifactPath: string
-          SourceId: string option
-          LinkedTaskIds: TaskId list
-          LinkedRequirementIds: RequirementId list
-          LinkedDecisionIds: string list
-          // Feature 077: the originating task's full source-id lineage bag, carried verbatim so
-          // scaffolding can grammar-route it into the declaration's typed ref buckets. Recovers
-          // the plan-decision id (and any FR it traces to) that task.Requirements/task.Decisions
-          // drop for a plan-decision task.
-          LinkedSourceIds: string list
-          ExpectedEvidenceKinds: string list
-          // WI-4 (ADR-0048): the "real test kind ∧ synthetic:false" gate a classified {gameplay}
-          // FR obligation carries. Non-empty ⇒ satisfied only by a non-synthetic pass whose kind is
-          // one of these. Empty (every other obligation) ⇒ no kind restriction — additive and
-          // backward-compatible.
-          RequiredEvidenceKinds: string list
-          /// FS.GG.SDD#865: WHAT CLASS OF EVIDENCE COULD EVER DISCHARGE THIS — one of
-          /// `dischargeClasses`. `testDischargeClass` (the default, and what every obligation minted
-          /// before this field existed meant) says a test run discharges it; `recordDischargeClass`
-          /// says a durable record does, and that no run ever will.
-          ///
-          /// This is the axis the type was missing. `RequiredEvidenceKinds` above restricts WHICH
-          /// declaration kind satisfies; `State` records HOW WELL the evidence stands up. Neither can
-          /// express "no runner report will ever exist for this obligation", so `Observed` had exactly
-          /// one true-maker and a record obligation blocked `verify` permanently.
-          DischargeClass: string
-          RequiredSkillOrCapabilityTags: string list
-          Blocking: bool
-          Correction: string }
+        {
+            ObligationId: string
+            Kind: string
+            SourceArtifactPath: string
+            SourceId: string option
+            LinkedTaskIds: TaskId list
+            LinkedRequirementIds: RequirementId list
+            LinkedDecisionIds: string list
+            // Feature 077: the originating task's full source-id lineage bag, carried verbatim so
+            // scaffolding can grammar-route it into the declaration's typed ref buckets. Recovers
+            // the plan-decision id (and any FR it traces to) that task.Requirements/task.Decisions
+            // drop for a plan-decision task.
+            LinkedSourceIds: string list
+            ExpectedEvidenceKinds: string list
+            // WI-4 (ADR-0048): the "real test kind ∧ synthetic:false" gate a classified {gameplay}
+            // FR obligation carries. Non-empty ⇒ satisfied only by a non-synthetic pass whose kind is
+            // one of these. Empty (every other obligation) ⇒ no kind restriction — additive and
+            // backward-compatible.
+            RequiredEvidenceKinds: string list
+            /// FS.GG.SDD#865: WHAT CLASS OF EVIDENCE COULD EVER DISCHARGE THIS — one of
+            /// `dischargeClasses`. `testDischargeClass` (the default, and what every obligation minted
+            /// before this field existed meant) says a test run discharges it; `recordDischargeClass`
+            /// says a durable record does, and that no run ever will.
+            ///
+            /// This is the axis the type was missing. `RequiredEvidenceKinds` above restricts WHICH
+            /// declaration kind satisfies; `State` records HOW WELL the evidence stands up. Neither can
+            /// express "no runner report will ever exist for this obligation", so `Observed` had exactly
+            /// one true-maker and a record obligation blocked `verify` permanently.
+            DischargeClass: string
+            RequiredSkillOrCapabilityTags: string list
+            Blocking: bool
+            Correction: string
+        }
 
     type EvidenceArtifact =
         { SchemaVersion: SchemaVersion
@@ -1560,14 +1562,20 @@ module Evidence =
         // file. Both conditions are therefore required, and the scheme check is the one that stops a
         // remote locator from being smuggled in under the strongest kind — which would let it claim the
         // byte-binding it can never have.
-        elif kind = "decision" && (not (citedPathIsContained locator) || locator.Contains "://") then
+        elif
+            kind = "decision"
+            && (not (citedPathIsContained locator) || locator.Contains "://")
+        then
             Some $"decision locator '{locator}' is not a contained repository-relative path"
         elif
             kind = "issue"
             && not (Regex.IsMatch(locator, @"^https://[^\s]+$", RegexOptions.CultureInvariant))
         then
             Some $"issue locator '{locator}' is not an absolute https URI"
-        elif kind = "commit" && not (Regex.IsMatch(locator, @"^[a-f0-9]{40}$", RegexOptions.CultureInvariant)) then
+        elif
+            kind = "commit"
+            && not (Regex.IsMatch(locator, @"^[a-f0-9]{40}$", RegexOptions.CultureInvariant))
+        then
             Some $"commit locator '{locator}' is not a 40-character hex object name"
         // A repository-local record is byte-bound; a remote one has no local bytes to bind, and a
         // digest offered for it would be an unverifiable number. Both directions are errors: the
@@ -1825,8 +1833,7 @@ module Evidence =
                   { r with LocatorContract = v })
               ArtifactCodec.optionalScalar "digest" (fun r -> r.Digest) (fun v r -> { r with Digest = v })
               ArtifactCodec.optionalScalar "statement" (fun r -> r.Statement) (fun v r -> { r with Statement = v })
-              ArtifactCodec.optionalScalar "recordedAt" (fun r -> r.RecordedAt) (fun v r ->
-                  { r with RecordedAt = v }) ]
+              ArtifactCodec.optionalScalar "recordedAt" (fun r -> r.RecordedAt) (fun v r -> { r with RecordedAt = v }) ]
 
         /// A record receipt exists only if it names BOTH what class of record backs the claim and the
         /// record itself. Either alone is not a receipt: a kind with no locator is a category, and a
@@ -1858,7 +1865,11 @@ module Evidence =
               LocatorContract = Some receipt.LocatorContract
               // Rendered only when present, so a round-trip of an `issue`/`commit` receipt does not
               // grow a `digest: ` line the reader would then have to explain.
-              Digest = (if String.IsNullOrWhiteSpace receipt.Digest then None else Some receipt.Digest)
+              Digest =
+                (if String.IsNullOrWhiteSpace receipt.Digest then
+                     None
+                 else
+                     Some receipt.Digest)
               Statement = Some receipt.Statement
               RecordedAt = Some receipt.RecordedAt }
 

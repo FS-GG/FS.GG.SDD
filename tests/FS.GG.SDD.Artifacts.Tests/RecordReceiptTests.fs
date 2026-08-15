@@ -58,8 +58,7 @@ module RecordReceiptTests =
 
     [<Fact>]
     let ``an unrecognized kind is refused`` () =
-        let reason =
-            recordReceiptInconsistency { decisionReceipt with Kind = "tweet" }
+        let reason = recordReceiptInconsistency { decisionReceipt with Kind = "tweet" }
 
         Assert.True(Option.isSome reason)
         Assert.Contains("kind", Option.get reason)
@@ -104,9 +103,12 @@ module RecordReceiptTests =
     let ``a decision receipt without a well-formed byte digest is refused`` () =
         // The digest is what makes a repository-local record STRONGER evidence than a remote one, so a
         // decision receipt that omits it has given up the only property SDD can check itself.
-        for digest in [ ""; "deadbeef"; "sha1:" + String.replicate 40 "a"; "sha256:" + String.replicate 63 "a" ] do
-            let reason =
-                recordReceiptInconsistency { decisionReceipt with Digest = digest }
+        for digest in
+            [ ""
+              "deadbeef"
+              "sha1:" + String.replicate 40 "a"
+              "sha256:" + String.replicate 63 "a" ] do
+            let reason = recordReceiptInconsistency { decisionReceipt with Digest = digest }
 
             Assert.True(Option.isSome reason, $"decision digest '{digest}' must be refused")
             Assert.Contains("digest", Option.get reason)
@@ -117,8 +119,7 @@ module RecordReceiptTests =
         // `commit` locator, so a digest offered for one is a number nothing can ever check. Accepting it
         // would let a receipt LOOK byte-bound while binding nothing.
         for receipt in [ issueReceipt; commitReceipt ] do
-            let reason =
-                recordReceiptInconsistency { receipt with Digest = sha "b" }
+            let reason = recordReceiptInconsistency { receipt with Digest = sha "b" }
 
             Assert.True(Option.isSome reason, $"a {receipt.Kind} receipt must not carry a digest")
             Assert.Contains("digest", Option.get reason)
@@ -225,10 +226,7 @@ module RecordReceiptTests =
         // This is what makes a deleted record `invalid` through the existing #349 cascade with no new
         // gate — and what keeps a URI and an object name, which are not local files, from ever being
         // probed.
-        Assert.Contains(
-            "docs/decisions/adr-0035.md",
-            citedArtifactPaths (declarationWith (Some decisionReceipt))
-        )
+        Assert.Contains("docs/decisions/adr-0035.md", citedArtifactPaths (declarationWith (Some decisionReceipt)))
 
         Assert.Empty(citedArtifactPaths (declarationWith (Some issueReceipt)))
         Assert.Empty(citedArtifactPaths (declarationWith (Some commitReceipt)))
