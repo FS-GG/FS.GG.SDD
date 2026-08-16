@@ -1247,14 +1247,19 @@ nuget-cache/
         : GeneratedViewState =
         generatedViewState path "workModel" generator [] GeneratedViewCurrency.Blocked blockingIds
 
-    /// The blocked-work-model generated-view plan `(diagnostics, [view], effects)` a stage
-    /// returns when its prerequisites are missing: no diagnostics and no effects, a single
+    /// The blocked-work-model generated-view plan `(diagnostics, [view], effects, blockingSources)`
+    /// a stage returns when its prerequisites are missing: no diagnostics and no effects, a single
     /// blocked work-model view carrying the blocking diagnostic ids. Shared across every
     /// stage that computes a work model (feature 061 / issue #71).
+    ///
+    /// `blockingSources` is empty here and that is a fact, not a placeholder (FS.GG.SDD#869): this
+    /// arm is reached when a prerequisite is ABSENT, so no source was read and none can be at
+    /// fault for what it says. `refresh` reports the absent source directly from `missingAuthored`
+    /// and never consults this list on that path.
     let blockedWorkModelPlan (workId: string) (commandDiagnostics: Diagnostic list) (generator: GeneratorVersion) =
         let path = workModelPath workId
         let ids = blockingDiagnosticIds commandDiagnostics
-        [], blockedWorkModelView path generator ids, []
+        [], blockedWorkModelView path generator ids, [], []
 
     /// The three front-matter identity checks every authored lifecycle artifact shares —
     /// supported schemaVersion, work-id match, and expected stage — emitting the same

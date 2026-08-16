@@ -41,7 +41,7 @@ module internal HandlersEarly =
                     projectDiagnostics @ duplicateDiagnostics @ charterDiagnostics
                     |> DiagnosticsModule.sort
 
-                let generatedDiagnostics, generatedView, generatedEffects =
+                let generatedDiagnostics, generatedView, generatedEffects, _ =
                     generatedViewPlan
                         model.Request
                         workId
@@ -79,7 +79,7 @@ module internal HandlersEarly =
                     @ specificationDiagnostics
                     |> DiagnosticsModule.sort
 
-                let generatedDiagnostics, generatedView, generatedEffects =
+                let generatedDiagnostics, generatedView, generatedEffects, _ =
                     match charterText with
                     | Some text ->
                         generatedViewPlan
@@ -136,7 +136,7 @@ module internal HandlersEarly =
                     @ clarificationDiagnostics
                     |> DiagnosticsModule.sort
 
-                let generatedDiagnostics, generatedView, generatedEffects =
+                let generatedDiagnostics, generatedView, generatedEffects, _ =
                     match specText with
                     | Some text ->
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text
@@ -223,7 +223,7 @@ module internal HandlersEarly =
                     @ checklistDiagnostics
                     |> DiagnosticsModule.sort
 
-                let generatedDiagnostics, generatedView, generatedEffects =
+                let generatedDiagnostics, generatedView, generatedEffects, _ =
                     match specText, clarificationText with
                     | Some specText, Some clarificationText ->
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text
@@ -308,7 +308,7 @@ module internal HandlersEarly =
                     @ planDiagnostics
                     |> DiagnosticsModule.sort
 
-                let generatedDiagnostics, generatedView, generatedEffects =
+                let generatedDiagnostics, generatedView, generatedEffects, _ =
                     match specText, clarificationText, checklistText with
                     | Some specText, Some clarificationText, Some checklistText ->
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text
@@ -408,7 +408,7 @@ module internal HandlersEarly =
                     @ taskDiagnostics
                     |> DiagnosticsModule.sort
 
-                let generatedDiagnostics, generatedView, generatedEffects =
+                let generatedDiagnostics, generatedView, generatedEffects, _ =
                     match specText, clarificationText, checklistText, planText with
                     | Some specText, Some clarificationText, Some checklistText, Some planText ->
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text

@@ -30,6 +30,42 @@ module internal HandlersRefresh =
     module SchemaVersionModule = FS.GG.SDD.Artifacts.SchemaVersion
     module ShipModule = FS.GG.SDD.Artifacts.Ship
 
+    /// FS.GG.SDD#869. Which declared source does a work model that will not derive get blamed on?
+    ///
+    /// Extracted from `computeRefreshPlan` so the attribution rule can be exercised with real
+    /// inputs at every arm, including the one no lifecycle input currently reaches. Pure: three
+    /// lists in, diagnostics out.
+    ///
+    /// - `missingAuthored` — a declared source is ABSENT. That outranks everything else: nothing a
+    ///   present source says can matter while a required one is not there.
+    /// - `blockingSources` — every source the generator's own blocking diagnostics NAME. This was a
+    ///   hard-coded `spec.md`, so every blocked work model accused the specification whatever the
+    ///   real cause, and an author following the diagnostic re-linted an artifact `lint` had
+    ///   already reported clean. One diagnostic per distinct source: a blockage can genuinely span
+    ///   two artifacts, and collapsing them would reinstate the placeholder in a smaller form.
+    /// - Neither — the blocking diagnostics name no source at all. Refresh says so rather than
+    ///   picking one; "could not look" is never a negative verdict about a particular file
+    ///   (ADR-0002). No lifecycle input reaches this arm today: every diagnostic
+    ///   `WorkModel.blockingDiagnostics` can return originates in `referenceDiagnostics` /
+    ///   `validationDiagnostics` and carries `Some artifact`, and `refresh` passes
+    ///   `commandDiagnostics = []` into `generatedViewPlan`, so the one branch that could return a
+    ///   `Blocked` view alongside empty sources is unreachable from here. It is fail-safe against a
+    ///   future diagnostic that carries none, and it is the arm that must never silently become
+    ///   "blame the spec" again.
+    let blockedWorkModelAttribution (viewPath: string) (missingAuthored: string list) (blockingSources: string list) =
+        match missingAuthored with
+        | missing :: _ -> [ refreshMissingSource viewPath missing ]
+        | [] ->
+            match blockingSources with
+            | [] -> [ refreshUnattributedBlockedView viewPath ]
+            | sources ->
+                sources
+                |> List.map (fun source ->
+                    refreshMalformedSource
+                        viewPath
+                        source
+                        $"Declared source '{source}' blocks derivation of '{viewPath}'.")
+
     // Feature 068 / US2 (2b): the internal per-view currency classification, formerly raw strings
     // woven through computeRefreshPlan (the review's worst complexity hotspot). Purely internal
     // working state — it lives on no DTO (RefreshSummary.PerViewState stays a (string * string)
@@ -400,7 +436,7 @@ module internal HandlersRefresh =
 
                 // 1. Regenerate the normalized work model from its current declared sources.
                 //    Reusing the same generator the lifecycle uses keeps output byte-identical.
-                let wmDiags, wmView, wmEffects =
+                let wmDiags, wmView, wmEffects, wmBlockingSources =
                     generatedViewPlan
                         request
                         workId
@@ -648,13 +684,7 @@ module internal HandlersRefresh =
 
                 let workModelDiags =
                     if wmClass = ViewCurrencyClass.Blocked then
-                        match missingAuthored with
-                        | missing :: _ -> [ refreshMissingSource (workModelPath workId) missing ]
-                        | [] ->
-                            [ refreshMalformedSource
-                                  (workModelPath workId)
-                                  (specPath workId)
-                                  $"A declared source for '{workModelPath workId}' is malformed or schema-incompatible." ]
+                        blockedWorkModelAttribution (workModelPath workId) missingAuthored wmBlockingSources
                     elif wmChanged then
                         match snapshot (workModelPath workId) model with
                         | Some existing ->
@@ -989,6 +1019,9 @@ module internal HandlersRefresh =
                 // wmDiags are the reused generator's own staleness heuristics about the
                 // prior on-disk work model; refresh reports its own per-view diagnostics
                 // (allDiags), so the generator's internal diagnostics are not surfaced.
+                // The one fact worth keeping from that call — which declared source the
+                // blocking diagnostics name — is now carried out separately as
+                // `wmBlockingSources` rather than dying here with the rest (FS.GG.SDD#869).
                 ignore wmDiags
 
                 allDiags, Some summaryRecord, generatedViews, effects

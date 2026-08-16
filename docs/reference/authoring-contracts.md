@@ -781,3 +781,38 @@ a write.
 - **The only re-run that blocks** is the `<!-- fsgg-sdd: unsafe-overwrite -->` opt-out,
   whose `unsafeOverwrite` diagnostic names the exact file to delete and command to re-run —
   no supported recovery ever requires guessing an `rm`.
+
+## Adding a requirement to a package that already has `evidence.yml`
+
+Adding an `FR-###` to a package that has already reached `evidence` (or beyond) mints a new
+evidence obligation, and `evidence.yml` will not declare it. That state is **incomplete, not
+inconsistent**, and the lifecycle is built to derive through it. The documented sequence is:
+
+```
+fsgg-sdd clarify   --work <id>     # only if the amendment raised a new AMB-###
+fsgg-sdd checklist --work <id>
+fsgg-sdd plan      --work <id> --accept-upstream   # the remedy plan.acceptUpstream names
+                                                   # then author the new PD-### prose
+fsgg-sdd tasks     --work <id>
+fsgg-sdd refresh   --work <id>
+fsgg-sdd analyze   --work <id>     # implementationReady
+fsgg-sdd evidence  --work <id>     # seeds the new declaration
+```
+
+Two facts make this work, and both are deliberate (FS.GG.SDD#869):
+
+- **`requiredEvidence` is the one reference in `tasks.yml` that points DOWNSTREAM.** A task
+  requiring an evidence id `evidence.yml` has not declared yet reports the non-blocking
+  `undeclaredEvidenceObligation` against `evidence.yml`, and the work model still derives. The
+  other three reference fields — `requirements`, `decisions`, `dependencies` — point UPSTREAM at
+  artifacts that already exist, so an unresolved reference there still blocks with
+  `unknownReference`. The rule is the direction of the edge, not the identity of the artifact.
+- **`evidence` seeds what is missing, into a file you already own.** For every obligation your
+  `evidence.yml` declares nothing for, `evidence` appends a `kind/result: missing` skeleton and
+  reports the ids it seeded as `evidence.seededObligations`. It rewrites no declaration you
+  authored, and a seeded declaration claims nothing — `verify` still refuses until you author its
+  kind, result and evidence.
+
+You never hand-write a declaration to escape this, and you never delete `evidence.yml`. Both were
+previously the only ways out, neither was documented, and deleting the file discards every
+authored declaration in it.

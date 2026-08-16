@@ -644,7 +644,7 @@ module internal HandlersShip =
                     @ fsharpSurfaceDiagnostics
                     |> DiagnosticsModule.sort
 
-                let generatedDiagnostics, workModelView, workModelEffects =
+                let generatedDiagnostics, workModelView, workModelEffects, _ =
                     match specText, clarificationText, checklistText, planText, taskText with
                     | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText ->
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text

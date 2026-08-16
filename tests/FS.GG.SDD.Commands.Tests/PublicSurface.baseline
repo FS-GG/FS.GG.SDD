@@ -91,6 +91,7 @@ FS.GG.SDD.Commands.CommandReports.refreshMalformedGeneratedView
 FS.GG.SDD.Commands.CommandReports.refreshMalformedSource
 FS.GG.SDD.Commands.CommandReports.refreshMissingSource
 FS.GG.SDD.Commands.CommandReports.refreshStaleView
+FS.GG.SDD.Commands.CommandReports.refreshUnattributedBlockedView
 FS.GG.SDD.Commands.CommandReports.refreshUnrenderableSummary
 FS.GG.SDD.Commands.CommandReports.shipIdentityMismatch
 FS.GG.SDD.Commands.CommandReports.skippedTaskMissingRationale

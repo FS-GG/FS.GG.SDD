@@ -656,6 +656,26 @@ module internal HandlersEvidence =
     // that declared none, and the empty-list fallback in `evidenceArtifactText` re-injects it.
     let private defaultEvidenceLifecycleNote = "Next lifecycle action: verify."
 
+    /// FS.GG.SDD#869. The `EV###` obligations an already-authored artifact declares NOTHING for.
+    ///
+    /// The match mirrors `evidenceDispositionDrafts`' id-first rule — `id` or `obligationRefs` —
+    /// so "the merge seeded it" and "the disposition found it" cannot disagree about the same
+    /// obligation. The completion obligations' extra `TaskRefs` clause is deliberately absent:
+    /// those are never scaffolded (the `EV` filter here excludes them, exactly as the fresh-file
+    /// path does), so including it could only suppress a seed that is owed.
+    let private undeclaredObligations (artifact: EvidenceArtifact) (obligations: EvidenceObligation list) =
+        obligations
+        |> List.filter (fun obligation ->
+            obligation.ObligationId.StartsWith("EV", StringComparison.OrdinalIgnoreCase)
+            && not (
+                artifact.Evidence
+                |> List.exists (fun declaration ->
+                    declaration.Id.Value = obligation.ObligationId
+                    || declaration.ObligationRefs
+                       |> List.exists (fun id ->
+                           String.Equals(id, obligation.ObligationId, StringComparison.OrdinalIgnoreCase)))
+            ))
+
     let mergeEvidenceArtifacts
         (workId: string)
         (fromTests: string option)
@@ -663,6 +683,54 @@ module internal HandlersEvidence =
         (input: EvidenceArtifact option)
         (obligations: EvidenceObligation list)
         : EvidenceArtifact option * Diagnostic list =
+        // FS.GG.SDD#869. The evidence `ArtifactRef` the skeleton seeder needs. The fresh-file arm
+        // below builds and reports its own (it must distinguish the two `Ok`s it needs); this is
+        // the same plan-validated path for the ALREADY-EXISTING arms, where a failure can only be
+        // the unreachable tool defect that arm already names.
+        let seedSource =
+            FS.GG.SDD.Artifacts.ArtifactRef.create (evidencePath workId) ArtifactKind.Evidence ArtifactOwner.Sdd true
+            |> function
+                | Ok source -> Some source
+                | Error _ -> None
+
+        /// FS.GG.SDD#869. Seed a `result: missing` skeleton for every obligation the artifact
+        /// declares nothing for, and say so.
+        ///
+        /// This is the SECOND of the deadlock's two locks, and the measurement that found it also
+        /// refutes the either/or the report was filed under. With only the work model's lock opened
+        /// (`Diagnostics.undeclaredEvidenceObligation`), `analyze` reaches `implementationReady`
+        /// and `evidence` finally RUNS — and then refuses anyway with
+        /// `evidence.missingRequiredEvidence`, because the no-clobber merge returned the existing
+        /// artifact untouched. With only this lock opened, `evidence` never reaches the merge at
+        /// all: it is still refused at the `analysisNotReady` gate. Neither fix alone converges;
+        /// both together do.
+        ///
+        /// It clobbers nothing. The no-clobber rule protects AUTHORED declarations from being
+        /// rewritten, and this adds declarations for obligations no declaration names — the same
+        /// skeleton, from the same seeder, that the fresh-file path already writes for every
+        /// obligation at once. It also starts at `kind/result: missing`, so seeding can never make
+        /// an obligation verification-ready; it only makes the gap authorable in place instead of
+        /// by hand.
+        let withSeededObligations (artifact: EvidenceArtifact) : EvidenceArtifact * Diagnostic list =
+            match undeclaredObligations artifact obligations, seedSource with
+            | [], _ -> artifact, []
+            | missing, Some source ->
+                { artifact with
+                    Evidence =
+                        (artifact.Evidence
+                         @ (missing |> List.map (skeletonEvidenceDeclaration source fromTests)))
+                        |> List.sortBy (fun declaration -> declaration.Id.Value) },
+                [ DiagnosticConstructors.seededEvidenceObligations
+                      (evidencePath workId)
+                      (missing |> List.map _.ObligationId |> List.distinct |> List.sort) ]
+            | _, None ->
+                artifact,
+                [ DiagnosticConstructors.toolDefect
+                      (Some(evidencePath workId))
+                      $"Evidence skeleton for work id '{workId}' could not be seeded into the existing \
+                        artifact — the plan-validated evidence artifact path was rejected. This is a \
+                        tool defect, not authored input." ]
+
         // `None` (with a `toolDefect` diagnostic) means the fresh-skeleton path could not seed an
         // artifact — an unreachable invariant, since `workIdDiagnostics` (Foundation) already
         // validates the work id at plan time. The caller reports the diagnostic and produces no
@@ -694,15 +762,19 @@ module internal HandlersEvidence =
                 else
                     [ unsafeEvidenceUpdate (evidencePath workId) (unsafeIds |> List.distinct |> List.sort) ]
 
-            Some(
-                { existingArtifact with
-                    Evidence =
-                        (existingArtifact.Evidence @ additions)
-                        |> List.sortBy (fun declaration -> declaration.Id.Value) }
-                : EvidenceArtifact
-            ),
-            diagnostics
-        | Some existingArtifact, None -> Some existingArtifact, []
+            let merged, seedDiagnostics =
+                withSeededObligations (
+                    { existingArtifact with
+                        Evidence =
+                            (existingArtifact.Evidence @ additions)
+                            |> List.sortBy (fun declaration -> declaration.Id.Value) }
+                    : EvidenceArtifact
+                )
+
+            Some merged, diagnostics @ seedDiagnostics
+        | Some existingArtifact, None ->
+            let merged, seedDiagnostics = withSeededObligations existingArtifact
+            Some merged, seedDiagnostics
         | None, Some inputArtifact -> Some inputArtifact, []
         | None, None ->
             // Both re-derivations are of a plan-validated work id, so both are guaranteed `Ok`;
@@ -1646,7 +1718,7 @@ sourceAnalysis: {analysisPath workId}
                     @ mergeDiagnostics
                     |> DiagnosticsModule.sort
 
-                let generatedDiagnostics, generatedView, generatedEffects =
+                let generatedDiagnostics, generatedView, generatedEffects, _ =
                     match specText, clarificationText, checklistText, planText, taskText with
                     | Some specText, Some clarificationText, Some checklistText, Some planText, Some taskText ->
                         let charterText = snapshot (charterPath workId) model |> Option.map _.Text

@@ -36,6 +36,7 @@
     <Compile Include="CommandDomainServiceTests.fs" />
     <Compile Include="AgentsCommandTests.fs" />
     <Compile Include="RefreshCommandTests.fs" />
+    <Compile Include="RefreshEvidenceDeadlockTests.fs" />
     <Compile Include="GeneratedViewCommandTests.fs" />
     <Compile Include="CommandReportJsonTests.fs" />
     <Compile Include="CommandTypeFamilyTests.fs" />
