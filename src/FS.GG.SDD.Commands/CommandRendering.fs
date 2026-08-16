@@ -407,6 +407,18 @@ module CommandRendering =
             |> List.sort
             |> List.iter (fun path -> builder.AppendLine($"scaffoldMaterializedGameSkillPath: {path}") |> ignore)
 
+            // ADR-0063 third instance / FS.GG.SDD#864: the rendering-owner-authored product skill
+            // copies materialized from the pinned rendering-skills package, one line each
+            // (parity with the json array).
+            builder.AppendLine(
+                $"scaffoldMaterializedRenderingSkillPaths: {List.length scaffold.MaterializedRenderingSkillPaths}"
+            )
+            |> ignore
+
+            scaffold.MaterializedRenderingSkillPaths
+            |> List.sort
+            |> List.iter (fun path -> builder.AppendLine($"scaffoldMaterializedRenderingSkillPath: {path}") |> ignore)
+
             scaffold.EffectiveParameters
             |> List.sortBy fst
             |> List.iter (fun (key, value) -> builder.AppendLine($"scaffoldEffectiveParam: {key}={value}") |> ignore)

@@ -22,6 +22,14 @@ module ArtifactRef =
         /// skill roots. Externally owned, so `refresh` never regenerates it. Serialized
         /// `"gameSkill"`; appears only in `ScaffoldProvenanceRecord.GameSkillPaths`.
         | GameSkill
+        /// ADR-0063 third instance / FS.GG.SDD#864: an rendering-owner-authored **product** skill
+        /// (e.g. `fs-gg-feedback-report`) delivered as bytes in the pinned
+        /// the rendering-skills package package and materialized by the SDD scaffolder into a product's
+        /// skill roots. Distinct from `GameSkill` so a delivered path names the channel that
+        /// delivered it, and distinct from `Rendering` (a rendering-repo artifact, not a
+        /// materialized skill). Externally owned, so `refresh` never regenerates it. Serialized
+        /// `"renderingSkill"`; appears only in `ScaffoldProvenanceRecord.RenderingSkillPaths`.
+        | RenderingSkill
 
     type ArtifactKind =
         | ProjectConfig

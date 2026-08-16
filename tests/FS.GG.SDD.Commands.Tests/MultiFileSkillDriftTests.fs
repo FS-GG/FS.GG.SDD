@@ -939,7 +939,7 @@ module MultiFileSkillDriftTests =
     /// pure fold cases elsewhere in this file depend on that, so #750's fold cases build their own.
     /// The rows come from the same plan the fixtures materialize, so the declaration is the real one.
     let private ownerDeclaringRecord () =
-        let driverRows, gameRows = ownerSourcedProvenanceRows []
+        let driverRows, gameRows, renderingRows = ownerSourcedProvenanceRows []
 
         let produced owner (path, sha256) =
             { FS.GG.SDD.Artifacts.ScaffoldProvenance.ScaffoldProducedPath.Path = path
@@ -955,7 +955,14 @@ module MultiFileSkillDriftTests =
                       FS.GG.SDD.Artifacts.ArtifactRef.GeneratedProduct
                       (Fsgg.SkillMirror.skillPath ".agents" productSkillId, Fsgg.SkillMirror.sha256 productSkillBody) ]
             DriverPaths = driverRows |> List.map (produced FS.GG.SDD.Artifacts.ArtifactRef.Driver)
-            GameSkillPaths = gameRows |> List.map (produced FS.GG.SDD.Artifacts.ArtifactRef.GameSkill) }
+            GameSkillPaths = gameRows |> List.map (produced FS.GG.SDD.Artifacts.ArtifactRef.GameSkill)
+            // FS.GG.SDD#864: `ownerSourcedCopies` now MATERIALIZES the fourth channel's copies, so
+            // this record must DECLARE them. Writing without declaring is the permanent-`Undeclared`
+            // shape #750/#798 exist to prevent, and a fixture that reproduced it would be asserting
+            // a defect rather than a baseline.
+            RenderingSkillPaths =
+                renderingRows
+                |> List.map (produced FS.GG.SDD.Artifacts.ArtifactRef.RenderingSkill) }
 
     /// The coherent body map for that record: the seeded skeleton, the owner-sourced copies with
     /// the bodies their plan verified, and the product skill in all three roots.
@@ -1508,7 +1515,7 @@ module MultiFileSkillDriftTests =
     /// `ScaffoldProvenanceRecord` — the declaration `Drift` reads. `rewrite` maps each recorded
     /// `(path, sha256)` row, so a case can make one digest deliberately wrong.
     let private ownerRecordWith (rewrite: string * string -> string * string) =
-        let driverRows, gameRows = ownerSourcedProvenanceRows []
+        let driverRows, gameRows, renderingRows = ownerSourcedProvenanceRows []
 
         let produced owner rows =
             rows
@@ -1520,7 +1527,9 @@ module MultiFileSkillDriftTests =
 
         { record None with
             DriverPaths = produced FS.GG.SDD.Artifacts.ArtifactRef.ArtifactOwner.Driver driverRows
-            GameSkillPaths = produced FS.GG.SDD.Artifacts.ArtifactRef.ArtifactOwner.GameSkill gameRows }
+            GameSkillPaths = produced FS.GG.SDD.Artifacts.ArtifactRef.ArtifactOwner.GameSkill gameRows
+            // FS.GG.SDD#864 — see `ownerDeclaringRecord`: materialized ⇒ declared.
+            RenderingSkillPaths = produced FS.GG.SDD.Artifacts.ArtifactRef.ArtifactOwner.RenderingSkill renderingRows }
 
     /// The record a real scaffold writes — every digest the one it verified against.
     let private ownerRecord () = ownerRecordWith (fun row -> row)

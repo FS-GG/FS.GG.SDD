@@ -47,6 +47,13 @@ module ScaffoldParityTests =
             [ ".agents/skills/fs-gg-playtest/SKILL.md"
               ".claude/skills/fs-gg-playtest/SKILL.md"
               ".codex/skills/fs-gg-playtest/SKILL.md" ]
+          // FS.GG.SDD#864: the fourth channel projects its own list, so the rich/plain parity
+          // fixture carries a NON-EMPTY one — an empty list would prove only that the projections
+          // agree about nothing.
+          MaterializedRenderingSkillPaths =
+            [ ".agents/skills/fs-gg-feedback-report/SKILL.md"
+              ".claude/skills/fs-gg-feedback-report/SKILL.md"
+              ".codex/skills/fs-gg-feedback-report/SKILL.md" ]
           EffectiveParameters = [ "productName", "Acme"; "variant", "alpha" ]
           RepoInitOutcome = "initialized"
           ToolManifestOutcome = "pinned"

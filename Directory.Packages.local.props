@@ -16,6 +16,13 @@
          FS.GG.Game#449, FS.GG.SDD#623). Pinned + restored at CLI build time, its bytes embedded
          and materialized at scaffold time (offline). Its own version cadence — first release 0.1.0. -->
     <PackageVersion Include="FS.GG.Game.Skills" Version="0.7.0" />
+    <!-- FS.GG.Rendering's owner-authored product skill bytes as one versioned package — the
+         FOURTH enrollment channel (ADR-0063 third instance; FS.GG.SDD#864, .github#2545/#2639).
+         Exactly the FS.GG.Game.Skills seam, one owner over: pinned + restored at CLI build time,
+         its bytes embedded and materialized at scaffold time (offline). Measured on nuget.org at
+         implementation time (2026-08-16): 0.1.0 is the ONLY published version, listed, prefix
+         `verified: true`; the registration index carries `count: 1`. The pin binds that literal. -->
+    <PackageVersion Include="FS.GG.Rendering.Skills" Version="0.1.0" />
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
     <PackageVersion Include="System.Text.Json" Version="10.0.9" />
     <PackageVersion Include="Spectre.Console" Version="0.57.2" />

@@ -61,11 +61,28 @@ module ScaffoldCliCoherenceTests =
     let private cliBehind (report: CommandReport) =
         report.Diagnostics |> List.filter (fun d -> d.Id = "scaffold.cliBehindMinimum")
 
-    // US2 scenario 1 (SC-002): installed 1.1.0 < declared 1.2.0 ⇒ exactly one
-    // scaffold.cliBehindMinimum (info) naming installed, minimum, and the gap.
-    // The minimum tracks the installed version by exactly one minor, so the "behind by
-    // 1 minor version" assertion keeps testing the gap arithmetic and not a constant.
-    // 1.2.0 > 1.1.0 numerically (components are ints, not strings) — see Fsgg.Version.
+    /// The `minimumFsggSdd.version` a registry fixture declares. Shared by the message assertions
+    /// and the anchoring guard below so both read the fixture rather than a literal.
+    let private declaredMinimumOf (fixture: string) =
+        let text = File.ReadAllText(Path.Combine(fixturesRoot, "registries", fixture))
+
+        let matched =
+            Regex.Match(text, "minimumFsggSdd:\\s*\\r?\\n\\s*version:\\s*\"(?<v>[^\"]+)\"")
+
+        Assert.True(matched.Success, $"{fixture} declares no minimumFsggSdd.version")
+        matched.Groups["v"].Value
+
+    // US2 scenario 1 (SC-002): installed < declared ⇒ exactly one scaffold.cliBehindMinimum (info)
+    // naming installed, minimum, and the gap. The fixture's minimum tracks the installed version by
+    // exactly one minor (the anchoring guard below enforces that), so the "behind by 1 minor
+    // version" assertion tests the gap ARITHMETIC and not a constant.
+    //
+    // FS.GG.SDD#864: both versions are now READ — installed from `currentGeneratorVersion`, the
+    // minimum from the fixture — rather than written here as literals. They were literals, and a
+    // version bump therefore reddened this test with a message that was entirely correct; the
+    // comment two lines up already said the point was the arithmetic, so the literals were
+    // contradicting the test's own stated intent. Deriving them means the next bump re-anchors one
+    // line in one fixture and this assertion simply keeps holding.
     [<Fact; Trait("tier", "slow")>]
     let ``behind minimum emits exactly one cliBehindMinimum advisory naming installed minimum and gap`` () =
         let root = TestSupport.tempDirectory ()
@@ -75,8 +92,8 @@ module ScaffoldCliCoherenceTests =
         match cliBehind report with
         | [ diagnostic ] ->
             Assert.Equal("info", severityValue diagnostic.Severity)
-            Assert.Contains("1.2.0", diagnostic.Message)
-            Assert.Contains("1.1.0", diagnostic.Message)
+            Assert.Contains(declaredMinimumOf "min-behind.providers.yml", diagnostic.Message)
+            Assert.Contains((currentGeneratorVersion ()).Version, diagnostic.Message)
             Assert.Contains("behind by 1 minor version", diagnostic.Message)
         | other -> Assert.True(false, $"expected exactly one cliBehindMinimum, got {List.length other}")
 
@@ -163,13 +180,7 @@ module ScaffoldCliCoherenceTests =
         let installed = (currentGeneratorVersion ()).Version
 
         let declaredMinimum fixture =
-            let text = File.ReadAllText(Path.Combine(fixturesRoot, "registries", fixture))
-
-            let matched =
-                Regex.Match(text, "minimumFsggSdd:\\s*\\r?\\n\\s*version:\\s*\"(?<v>[^\"]+)\"")
-
-            Assert.True(matched.Success, $"{fixture} declares no minimumFsggSdd.version")
-            let declared = matched.Groups["v"].Value
+            let declared = declaredMinimumOf fixture
 
             Assert.True(
                 Option.isSome (Fsgg.Version.tryParse declared),

@@ -81,6 +81,12 @@ FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderUnavailable
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderUnknown
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderVersionUnsupported
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldProviderWroteSddTree
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldRenderingSkillChannelYielded
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldRenderingSkillManifestMalformed
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldRenderingSkillNamespaceCollision
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldRenderingSkillPredicateUnevaluated
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldRenderingSkillSidecarsUndeclared
+FS.GG.SDD.Artifacts.Diagnostics.scaffoldRenderingSkillVerifyFailed
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldRepoInitSkippedExistingRepository
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldRepoInitSkippedGitUnavailable
 FS.GG.SDD.Artifacts.Diagnostics.scaffoldScriptsNotMadeExecutable

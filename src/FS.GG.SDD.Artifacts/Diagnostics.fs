@@ -568,6 +568,135 @@ module Diagnostics =
             [ message ]
         |> markToolDefect
 
+    // ---------- ADR-0063 third instance / FS.GG.SDD#864: the rendering-owner product-skill channel ----------
+    //
+    // The four classes below are the sibling owner-skill seam's, one owner over, and they are DISTINCT diagnostic
+    // ids rather than a reuse of the `gameSkill*` ones on purpose: the defect this channel exists to
+    // close is that a delivered path could not be attributed to a channel, and an operator reading a
+    // failure needs to know WHICH package to go and fix. The two after them have no sibling-seam
+    // counterpart; each carries its own reason.
+
+    // FR-003, one owner over: a delivered rendering-skill body failed its content-addressed check
+    // (its `sha256` disagreed with the manifest, or its body was absent). Fail closed — the skill is
+    // not written. A corrupt embedded set is a CLI build/packaging defect, so: tool-defect class.
+    let scaffoldRenderingSkillVerifyFailed (ids: string list) =
+        let ordered = ids |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.renderingSkillVerifyFailed"
+            DiagnosticError
+            None
+            None
+            $"rendering-owned skill(s) failed the content-addressed verify and were not materialized: {rendered}."
+            "The embedded rendering-skills package bytes do not match their manifest sha256 (a CLI packaging defect). Rebuild/republish the CLI from a coherent rendering-skills package pin; the skill was not written and was not recorded as materialized."
+            ordered
+        |> markToolDefect
+
+    // FR-004, one owner over: a rendering-skill row's `materializes-when` predicate is a form the
+    // materializer does not evaluate, so the row is skipped (never materialized by default).
+    // Non-blocking advisory — the scaffold otherwise succeeds.
+    let scaffoldRenderingSkillPredicateUnevaluated (ids: string list) =
+        let ordered = ids |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.renderingSkillPredicateUnevaluated"
+            DiagnosticWarning
+            None
+            None
+            $"rendering-owned skill(s) skipped — their `materializes-when` predicate was not evaluable by this CLI: {rendered}."
+            "Upgrade `fsgg-sdd` to a version that understands the predicate, or adjust the delivered rendering-skills manifest; the row was skipped (fail-closed), not materialized."
+            ordered
+
+    // A rendering-skill row's id collides with the reserved seeded `fs-gg-sdd-*` namespace. Rejected
+    // so a delivered skill can never shadow the SDD-owned skeleton. Tool-defect class.
+    let scaffoldRenderingSkillNamespaceCollision (ids: string list) =
+        let ordered = ids |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.renderingSkillNamespaceCollision"
+            DiagnosticError
+            None
+            None
+            $"rendering-owned skill(s) rejected — their id collides with the reserved seeded `fs-gg-sdd-*` namespace: {rendered}."
+            "A delivered skill may not shadow an SDD-owned seeded skill. Fix the rendering-skills package manifest to use a non-reserved id; the row was not materialized."
+            ordered
+        |> markToolDefect
+
+    // The embedded rendering-skill manifest could not be parsed — a CLI packaging defect.
+    let scaffoldRenderingSkillManifestMalformed (message: string) =
+        create
+            "scaffold.renderingSkillManifestMalformed"
+            DiagnosticError
+            None
+            None
+            $"The embedded rendering-skills package manifest is malformed: {message}."
+            "Rebuild/republish the CLI from a coherent rendering-skills package pin; no rendering-owned skill was materialized."
+            [ message ]
+        |> markToolDefect
+
+    // FS.GG.SDD#864, and it has no counterpart in the sibling owner-skill seam because the established package has never had one
+    // to report: the established owner-skills package ships exactly one file per skill.
+    //
+    // the pinned rendering-skills package ships sidecars — `fs-gg-feedback-report/scripts/*`,
+    // `fs-gg-symbol-design/reference*`, `fs-gg-symbology/reference*` — while its manifest is
+    // schemaVersion 1, which declares ONE `sha256` per skill, covering `SKILL.md` alone. ADR-0014 is
+    // fail-closed, so a file with no declared digest cannot be written; the row's `SKILL.md` is
+    // delivered and verified, and these files are not delivered at all.
+    //
+    // WARNING, NOT ERROR, and the boundary matters. The scaffold succeeded at everything it owns:
+    // every byte it wrote was verified, and the tree is coherent. What it cannot do is make the
+    // producer declare a digest. Blocking here would red a scaffold for a defect in another
+    // repository's manifest schema, on a path the operator cannot repair locally. So this SAYS the
+    // fact — which is the whole difference between a channel that is observed and one that is merely
+    // declared — and points at the producer, where the remedy is a schemaVersion-2 `files` array of
+    // the kind `FS.GG.Drivers` already ships and `DriverSkills` already consumes.
+    let scaffoldRenderingSkillSidecarsUndeclared (entries: string list) =
+        let ordered = entries |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.renderingSkillSidecarsUndeclared"
+            DiagnosticWarning
+            None
+            None
+            $"rendering-owned skill file(s) were delivered in the package but declare no manifest digest, so they were NOT materialized: {rendered}."
+            "The the rendering-skills package's manifest is schemaVersion 1 and records one sha256 per skill, covering `SKILL.md` only; an undeclared file cannot be content-verified and is never written (ADR-0014, fail-closed). Publish a schemaVersion-2 manifest declaring a per-file `files` array — the shape `FS.GG.Drivers` ships — and these files become deliverable. A skill body that references one of them cannot follow that instruction until then."
+            ordered
+
+    // FS.GG.SDD#864, and likewise with no counterpart in the sibling owner-skill seam: before a fourth channel existed
+    // there was no second product channel to collide WITH.
+    //
+    // Measured on the pinned packages: `fs-gg-collision`, `fs-gg-grids`, `fs-gg-line-drawing` and
+    // `fs-gg-visibility` are shipped by BOTH the established owner-skills package and the rendering-skills package
+    // 0.1.0, with different bodies and the identical profile-gated predicate.
+    // `.github`'s `registry/skills.yml` carries exactly one row for each, `owner: fs-gg-rendering`,
+    // whose sha256 is the rendering owner's — so on the registry's own reading the established package is
+    // shipping four ids it does not own.
+    //
+    // THE MATERIALIZER DOES NOT ADJUDICATE THAT. It resolves the mechanical question only — one path
+    // gets one write from one channel, and provenance attributes it to that channel — by having the
+    // newer channel YIELD. Silently letting both plan the path is the failure mode this whole item
+    // exists to end: two writes, the no-clobber second discarded, and a provenance record naming one
+    // path under two owners with two different digests.
+    //
+    // WARNING, NOT ERROR: the tree is complete and coherent either way, and the ownership question
+    // belongs to the two producers and the registry, not to a scaffold run.
+    let scaffoldRenderingSkillChannelYielded (ids: string list) =
+        let ordered = ids |> List.sort
+        let rendered = String.concat ", " ordered
+
+        create
+            "scaffold.renderingSkillChannelYielded"
+            DiagnosticWarning
+            None
+            None
+            $"rendering-owned skill(s) were not materialized because another channel already owns the same path: {rendered}."
+            "Two pinned owner-skill packages ship the same skill id. The already-established channel keeps the path and the rendering-owned copy was withheld, so exactly one channel owns each path in `scaffold-provenance.json`. Resolve the duplicate at the producers — `registry/skills.yml` records the owning repository — and the withheld copy will materialize once only one package ships the id."
+            ordered
+
     // ADR-0063 tail / FS.GG.SDD#739: `ProductSkillManifest.amend` DECLINED to rewrite the
     // provider-shipped product `skill-manifest.json`, so the driver + owner-sourced skills this
     // scaffold materialized are not declared in it and the consumer skill-union gate will read them

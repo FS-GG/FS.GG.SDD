@@ -427,7 +427,7 @@ module UpgradeCommandTests =
     /// The `(path, recorded sha256)` rows a game-profile scaffold materializes for the owner-sourced
     /// GAME class, from the same plan the lane reconciles against.
     let private gameSkillRows () =
-        ownerSourcedProvenanceRows gameProfile |> snd
+        ownerSourcedProvenanceRows gameProfile |> fun (_, game, _) -> game
 
     let private producedRows owner rows : ScaffoldProducedPath list =
         rows
@@ -456,7 +456,7 @@ module UpgradeCommandTests =
     /// the re-seed's provenance write has to fire on the game class alone (#798 AC2).
     let private gameBackfillFixture (missing: string) =
         let root = makeFixture (Some farBehindMinimum) Drift.expectedArtifactPaths true
-        let driverRows, gameRows = ownerSourcedProvenanceRows gameProfile
+        let driverRows, gameRows, renderingRows = ownerSourcedProvenanceRows gameProfile
 
         let updated =
             { record (Some farBehindMinimum) with
@@ -514,7 +514,10 @@ module UpgradeCommandTests =
             // to fire on the game class alone — exactly the case `if List.isEmpty newDriverPaths`
             // used to drop. The driver declaration is carried through untouched.
             Assert.Equal<string list>(
-                ownerSourcedProvenanceRows gameProfile |> fst |> List.map fst |> List.sort,
+                ownerSourcedProvenanceRows gameProfile
+                |> fun (driver, _, _) -> driver
+                |> List.map fst
+                |> List.sort,
                 provenance.DriverPaths |> List.map _.Path |> List.sort
             )
 

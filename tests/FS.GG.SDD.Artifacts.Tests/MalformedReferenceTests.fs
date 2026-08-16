@@ -198,6 +198,7 @@ evidence:
           SddOwnedPaths = []
           DriverPaths = []
           GameSkillPaths = []
+          RenderingSkillPaths = []
           EffectiveParameters = [] }
 
     [<Fact>]
