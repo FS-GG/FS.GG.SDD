@@ -177,6 +177,25 @@ jobs:
       - name: Unit-test the root-asymmetry check
         run: bash scripts/tests/check-root-asymmetry.test.sh
 
+      # Mutation-test the working-tree cleanliness check (FS.GG.SDD#870 AC3) BEFORE the suite runs,
+      # so that a broken checker is a red naming itself rather than a silent pass on the step below.
+      # Ten paired legs over synthetic repositories under `mktemp -d`: clean vs one untracked file
+      # (the #870 condition in miniature), vs a modified tracked file, vs a staged addition; the same
+      # `dist/keep.txt` once as ignored generated output (clean) and once as COMMITTED content the
+      # same rule hides ([tracked-ignored]); and the fail-closed family — non-git directory, work
+      # tree with zero tracked files, absent tree, unknown flag — all exit 2, never a pass
+      # (epic FS-GG/.github#266).
+      #
+      # It found a real defect in its own subject while being written: `git check-ignore --stdin`
+      # consults the index and reports NOTHING for a tracked path, so the tracked-ignored leg
+      # answered "clean" by construction for every possible repository until `--no-index` was added.
+      # That is precisely the class it exists to catch, and it is why this is a step and not a note.
+      #
+      # Pure bash, no .NET, no restore, no network — it is cheap enough to run ahead of the build,
+      # and it is in THIS job so it inherits the required `gate` context.
+      - name: Unit-test the working-tree cleanliness check
+        run: bash scripts/tests/check-tree-clean.test.sh
+
       # The bulk of the suite (Artifacts / Commands / Validation / Contracts / Cli, plus the
       # offline acceptance facts) had no per-PR enforcement — only Contracts.Tests and Cli.Tests
       # ran, and only on release events. Run the whole offline suite here so a red suite blocks
@@ -203,6 +222,30 @@ jobs:
       - name: Test (offline suite)
         id: test
         run: bash scripts/test.sh --no-build -c Debug --results-dir artifacts/test-results
+
+      # FS.GG.SDD#870 AC2/AC3, and it is placed HERE — immediately after the suite, before anything
+      # else writes — because the subject is precisely "what the step above left behind".
+      #
+      # The polyglot lifecycle acceptance fixture runs `npm ci`, `npm test`, a vite serve, `dotnet
+      # pack` and `dotnet test --results-directory results`. Measured at 2342ca3, that left 541
+      # untracked files under `tests/fixtures/polyglot-lifecycle/` that no `bin/`-shaped rule in
+      # `.gitignore` reached, and `git add -A && git commit` then staged `588 files changed, 684650
+      # insertions(+)` with nothing anywhere reporting the size. The rules added in `.gitignore`
+      # close the fixture that exists; this step closes the CLASS, so the next fixture that starts
+      # generating reds the pull request that introduces it.
+      #
+      # AN ORDINARY STEP, DELIBERATELY — no `if: always()`. A tree dirtied by a suite that FAILED is
+      # not the finding; it is noise pointing away from the real red, exactly as this workflow's
+      # API-surface step argues for itself. When Test is red this is skipped and the failing suite
+      # keeps the operator's attention.
+      #
+      # Everything the earlier steps generate is already ignored and this step is what keeps that
+      # true: the build's `bin/`/`obj/`, the `--results-dir artifacts/test-results` TRX bundle under
+      # `artifacts/`, and the `/.agents/skills` view resolved above. If any of them ever stops being
+      # covered, this is where it surfaces — as a red on the PR that changed it, not as a 684k-line
+      # diff on some unrelated one.
+      - name: Working tree stayed clean (the suite must not dirty it)
+        run: bash scripts/check-tree-clean.sh --label "scripts/test.sh --no-build -c Debug (full tier)"
 
       # Publish the TRX bundle so it outlives the run and a work item's `verify` can cite it.
       # Uploaded whenever the suite actually RAN — a red suite still writes a per-project report,

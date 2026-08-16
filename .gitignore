@@ -48,3 +48,32 @@ TestResults/
 # matches that directory itself.
 specs/*/readiness/*/*
 !specs/*/readiness/*/ship-verdict.json
+
+# --- FS.GG.SDD#870: byproducts of the polyglot lifecycle acceptance fixture ----------------
+# `tests/FS.GG.SDD.Acceptance.Tests/PolyglotLifecycleAcceptanceTests.fs` drives the fixture the way a
+# real polyglot repository is driven — `npm ci` in `client/` and `fable-bindings/`, `npm test`, a
+# vite serve, `dotnet pack`, and `dotnet test --results-directory results`. That output is the point
+# of the fixture, not a defect. What was missing is a rule for WHERE it lands: every other byproduct
+# rule in this file names a directory the .NET toolchain chooses (`bin/`, `obj/`, `artifacts/`,
+# `TestResults/`), and npm/vite/Fable choose `node_modules/`, `dist/` and — via the fixture's own
+# `--results-directory results` — `results/`, none of which any rule above reaches.
+#
+# Measured at 2342ca3 in a clean worktree: `dotnet test tests/FS.GG.SDD.Acceptance.Tests -c Debug
+# --filter FullyQualifiedName~PolyglotLifecycle` passed and left 541 untracked files under exactly
+# the five roots below. `git add -A` — the ordinary way to stage a change across several trees —
+# then stages all of them, and `git commit` reports nothing about the size (FS.GG.SDD#870).
+#
+# DELIBERATELY ANCHORED TO THIS ONE FIXTURE, not to `tests/fixtures/`. Three of this repository's
+# fixture trees are scaffold TEMPLATES (`tests/fixtures/scaffold-provider` alone tracks 105 files),
+# and a template may one day legitimately track a `dist/` placeholder. A `tests/fixtures/**` rule
+# would un-track it silently with a clean `git status` — the same failure shape
+# `scripts/check-root-asymmetry.sh` exists to refuse. Generality belongs to the GATE, not to the
+# pattern: `scripts/check-tree-clean.sh` runs on `gate` after the suite, so the NEXT fixture that
+# starts generating reds the PR that introduces it instead of silently needing a rule here.
+#
+# Verified no tracked file becomes ignored:
+#   git ls-files | grep -cE '(^|/)(node_modules|dist|results)/'   -> 0   (whole repository)
+#   git ls-files tests/fixtures/polyglot-lifecycle | wc -l        -> 26  (before and after)
+tests/fixtures/polyglot-lifecycle/**/node_modules/
+tests/fixtures/polyglot-lifecycle/**/dist/
+tests/fixtures/polyglot-lifecycle/results/
