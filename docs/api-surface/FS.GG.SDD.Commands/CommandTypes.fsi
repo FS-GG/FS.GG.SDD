@@ -515,6 +515,12 @@ module CommandTypes =
             /// materialized (off-profile, verify failed, or no package pinned). Projected after
             /// `materializedDriverPaths`.
             MaterializedGameSkillPaths: string list
+            /// ADR-0063 third instance / FS.GG.SDD#864: the rendering-owner-authored product skills
+            /// (e.g. `fs-gg-feedback-report`) materialized from the pinned rendering-skills package
+            /// package into every agent skill root. Sorted; `[]` when none materialized
+            /// (off-profile, verify failed, yielded to another channel, or no package pinned).
+            /// Projected after `materializedGameSkillPaths`.
+            MaterializedRenderingSkillPaths: string list
             /// The effective `key → value` parameters forwarded to the provider —
             /// provider-declared `default`s overlaid by author `--param` overrides
             /// (author wins). Sorted ascending by key; `[]` when none forwarded

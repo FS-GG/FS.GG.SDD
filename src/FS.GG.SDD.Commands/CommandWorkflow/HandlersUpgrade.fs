@@ -176,9 +176,17 @@ module internal HandlersUpgrade =
 
             let driver = DriverSkills.plan presentIds
             let product = GameSkills.plan (record.EffectiveParameters |> Map.ofList)
+            // FS.GG.SDD#864: the fourth channel, under the #798 invariant stated above — every
+            // owner-sourced file this step writes leaves the run DECLARED in the record that governs
+            // it. It is added to both halves (the writes and the re-declaration) together, because
+            // adding it to one alone is precisely the permanent-`Undeclared`-drift defect #798
+            // names. The `distinctBy` keeps the established channel's body on a doubly-shipped id,
+            // matching `Drift.ownerSourcedBackfill` and scaffold time.
+            let rendering = RenderingSkills.plan (record.EffectiveParameters |> Map.ofList)
 
             let writes =
-                driver.Writes @ product.Writes
+                driver.Writes @ product.Writes @ rendering.Writes
+                |> List.distinctBy (fun effect -> effectPath effect)
                 |> List.filter (fun effect -> effectPath effect |> Option.exists targetSet.Contains)
 
             let affectedSkillIds = targets |> List.choose ownerSkillIdOfPath |> Set.ofList
@@ -189,18 +197,30 @@ module internal HandlersUpgrade =
             let newGameSkillPaths =
                 ownerBackfillRows ArtifactOwner.GameSkill affectedSkillIds product.ProvenancePaths
 
+            let gameOwnedPaths = product.ProvenancePaths |> List.map fst |> Set.ofList
+
+            let newRenderingSkillPaths =
+                rendering.ProvenancePaths
+                |> List.filter (fun (path, _) -> not (gameOwnedPaths.Contains path))
+                |> ownerBackfillRows ArtifactOwner.RenderingSkill affectedSkillIds
+
             // #798 AC2: EITHER class having new rows is a reason to record. Gating on the driver
             // rows alone dropped a GameSkill-only backfill even once the rows above existed — and a
             // GameSkill-only backfill is the whole shape this item is about, since a step's targets need
             // not touch a driver id at all.
             let provenanceWrite =
-                if List.isEmpty newDriverPaths && List.isEmpty newGameSkillPaths then
+                if
+                    List.isEmpty newDriverPaths
+                    && List.isEmpty newGameSkillPaths
+                    && List.isEmpty newRenderingSkillPaths
+                then
                     []
                 else
                     let updated =
                         { record with
                             DriverPaths = mergeProducedRows record.DriverPaths newDriverPaths
-                            GameSkillPaths = mergeProducedRows record.GameSkillPaths newGameSkillPaths }
+                            GameSkillPaths = mergeProducedRows record.GameSkillPaths newGameSkillPaths
+                            RenderingSkillPaths = mergeProducedRows record.RenderingSkillPaths newRenderingSkillPaths }
 
                     [ WriteFile(ScaffoldProvenance.provenancePath, ScaffoldProvenance.serialize updated, GeneratedView) ]
 

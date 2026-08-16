@@ -340,6 +340,7 @@ module CommandSerialization =
             // from the pinned the owner-skills package (owner `gameSkill` in provenance), sorted;
             // `[]` when none materialized.
             writeStringList writer Sorted "materializedGameSkillPaths" summary.MaterializedGameSkillPaths
+            writeStringList writer Sorted "materializedRenderingSkillPaths" summary.MaterializedRenderingSkillPaths
             writer.WriteStartArray("effectiveParameters")
 
             summary.EffectiveParameters

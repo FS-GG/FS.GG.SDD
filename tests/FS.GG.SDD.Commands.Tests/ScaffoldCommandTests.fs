@@ -659,8 +659,29 @@ module ScaffoldCommandTests =
         Assert.Equal(expectedDriverPathCount, driverPaths.Length)
         Assert.Contains(".agents/skills/work-board/references/host-loop.md", driverPaths)
 
+        // FS.GG.SDD#864 acceptance 2, and it is the measurement the whole row turns on. This
+        // scaffold ran through the `fixture` provider — a NON-rendering provider, with no rendering
+        // template restored and no rendering-shaped parameter anywhere in the request. Before the
+        // fourth channel it received ZERO rendering-owned product skills; the row was filed because
+        // `fs-gg-feedback-report` is `materializes-when: "always"` and reached no tree at all.
+        //
+        // Note what makes this OBSERVED rather than declared: the paths below are read back off the
+        // summary AND off the on-disk provenance document AND excluded from the app-only diff
+        // because the files really are in the target directory. A channel that only planned would
+        // fail the diff, not pass it.
+        let renderingSkillPaths = summary.MaterializedRenderingSkillPaths |> List.sort
+
+        Assert.NotEmpty renderingSkillPaths
+
+        for root in Fsgg.Schemas.agentSkillRoots do
+            Assert.Contains($"{root}/skills/fs-gg-feedback-report/SKILL.md", renderingSkillPaths)
+
         let preexisting =
-            Set.ofList ([ provenancePath; toolManifestPath; ".fsgg/providers.yml" ] @ driverPaths)
+            Set.ofList (
+                [ provenancePath; toolManifestPath; ".fsgg/providers.yml" ]
+                @ driverPaths
+                @ renderingSkillPaths
+            )
 
         let producedExpected =
             relativeFiles appRoot
@@ -684,7 +705,15 @@ module ScaffoldCommandTests =
         Assert.Equal(1, countOf "\"owner\": \"sdd\"")
         // 108: the work-roadmap driver, materialized into all three roots (owner `driver`).
         Assert.Equal(driverPaths.Length, countOf "\"owner\": \"driver\"")
-        Assert.Equal(countOf "\"owner\":", producedExpected.Length + 1 + driverPaths.Length)
+        // FS.GG.SDD#864 acceptance 3: the newly delivered paths are ATTRIBUTED, under their own
+        // owner token, exactly as `driverPaths` attributes the driver channel. An unattributed path
+        // is what made .github#2380 an investigation rather than a lookup.
+        Assert.Equal(renderingSkillPaths.Length, countOf "\"owner\": \"renderingSkill\"")
+
+        Assert.Equal(
+            countOf "\"owner\":",
+            producedExpected.Length + 1 + driverPaths.Length + renderingSkillPaths.Length
+        )
 
         let parsed =
             ScaffoldProvenance.tryParse provenance
@@ -699,6 +728,36 @@ module ScaffoldCommandTests =
         Assert.Equal<string list>(driverPaths, parsed.DriverPaths |> List.map (fun p -> p.Path) |> List.sort)
         Assert.All(parsed.DriverPaths, fun p -> Assert.Equal(ArtifactOwner.Driver, p.Owner))
         Assert.All(parsed.DriverPaths, fun p -> Assert.True(Option.isSome p.Sha256))
+
+        // FS.GG.SDD#864 acceptance 2 + 3, round-tripped through the real document: every delivered
+        // path is recorded under `renderingSkillPaths`, owner `renderingSkill`, each carrying the
+        // manifest digest it was content-verified against — and the digest is the manifest's, not a
+        // value this test invented.
+        Assert.Equal<string list>(
+            renderingSkillPaths,
+            parsed.RenderingSkillPaths |> List.map (fun p -> p.Path) |> List.sort
+        )
+
+        Assert.All(parsed.RenderingSkillPaths, fun p -> Assert.Equal(ArtifactOwner.RenderingSkill, p.Owner))
+        Assert.All(parsed.RenderingSkillPaths, fun p -> Assert.True(Option.isSome p.Sha256))
+
+        // The delivered body's digest matches the manifest (acceptance 2's second half), asserted
+        // against the file ON DISK rather than against the plan that wrote it.
+        for path in renderingSkillPaths do
+            if path.EndsWith "/fs-gg-feedback-report/SKILL.md" then
+                let onDisk = TestSupport.readRelative appRoot path
+
+                Assert.Equal(
+                    "a181389dd537861295ea6c7e1b012befa8ac91f0228e22dc07c110e56f73df15",
+                    Fsgg.SkillMirror.sha256 onDisk
+                )
+
+                let recorded =
+                    parsed.RenderingSkillPaths
+                    |> List.find (fun p -> p.Path = path)
+                    |> fun p -> p.Sha256
+
+                Assert.Equal(Some(Fsgg.SkillMirror.sha256 onDisk), recorded)
 
         // P3 restated against the new list: SDD's own writes never leak into producedPaths.
         Assert.DoesNotContain(toolManifestPath, parsed.ProducedPaths |> List.map (fun p -> p.Path))

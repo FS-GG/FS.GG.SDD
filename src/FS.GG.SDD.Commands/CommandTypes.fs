@@ -556,6 +556,7 @@ module CommandTypes =
           MirroredPaths: string list
           MaterializedDriverPaths: string list
           MaterializedGameSkillPaths: string list
+          MaterializedRenderingSkillPaths: string list
           EffectiveParameters: (string * string) list
           RepoInitOutcome: string
           ToolManifestOutcome: string

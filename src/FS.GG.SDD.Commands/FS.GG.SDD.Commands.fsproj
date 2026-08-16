@@ -22,6 +22,7 @@
     <Compile Include="CommandWorkflow/SeededSkills.fs" />
     <Compile Include="CommandWorkflow/DriverSkills.fs" />
     <Compile Include="CommandWorkflow/GameSkills.fs" />
+    <Compile Include="CommandWorkflow/RenderingSkills.fs" />
     <Compile Include="CommandWorkflow/ProcessSkillManifest.fsi" />
     <Compile Include="CommandWorkflow/ProcessSkillManifest.fs" />
     <Compile Include="CommandWorkflow/Drift.fs" />
@@ -115,6 +116,32 @@
     </EmbeddedResource>
   </ItemGroup>
 
+  <!-- ADR-0063 third instance / FS.GG.SDD#864 (.github#2545, unblocking .github#2639): FS.GG.Rendering's
+       owner-authored PRODUCT skill bytes, linked from the pinned `FS.GG.Rendering.Skills` package's
+       restored content ($(FsggRenderingSkillsContentDir), exposed by the package's own
+       build/FS.GG.Rendering.Skills.props) as embedded resources, so the scaffold materializer reads
+       compiled-in bytes at scaffold time (offline; FR-002). The glob names no specific skill id, so no
+       FS.GG.Rendering/provider literal enters generic SDD.
+
+       THE GLOB IS `**/*`, NOT `**/SKILL.md`, AND THAT IS DELIBERATE — it is the one place this channel
+       differs from the game seam it otherwise mirrors, and the reason is a measured fact about the
+       package rather than a preference. `FS.GG.Game.Skills` 0.7.0 ships exactly one file per skill
+       (15 skills, 15 `SKILL.md`), so its `**/SKILL.md` glob loses nothing. `FS.GG.Rendering.Skills`
+       0.1.0 ships SIX sidecar files across three skills (`fs-gg-feedback-report/scripts/*`,
+       `fs-gg-symbol-design/reference*`, `fs-gg-symbology/reference*`) — and its `skill-manifest.json`
+       is schemaVersion 1, which records ONE `sha256` per skill, covering `SKILL.md` alone. A sidecar
+       therefore has no declared digest, so ADR-0014 forbids WRITING it (fail-closed: never materialize
+       an unverified body). Embedding it anyway is what lets `RenderingSkills.plan` SEE that the
+       delivered set is incomplete and say so, offline and purely, instead of shipping a skill whose own
+       body points at files that will never arrive. `RenderingSkills.undeliverableSidecars` is that
+       report; `scaffold.renderingSkillSidecarsUndeclared` is where an operator meets it. -->
+  <ItemGroup>
+    <EmbeddedResource Include="$(FsggRenderingSkillsContentDir)/skill-manifest.json" LogicalName="RenderingSkill.manifest" />
+    <EmbeddedResource Include="$(FsggRenderingSkillsContentDir)/skills/**/*">
+      <LogicalName>RenderingSkill.skill/%(RecursiveDir)%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
   <ItemGroup>
     <InternalsVisibleTo Include="FS.GG.SDD.Commands.Tests" />
   </ItemGroup>
@@ -125,5 +152,6 @@
     <PackageReference Include="FSharp.Core" />
     <PackageReference Include="FS.GG.Drivers" GeneratePathProperty="true" />
     <PackageReference Include="FS.GG.Game.Skills" GeneratePathProperty="true" />
+    <PackageReference Include="FS.GG.Rendering.Skills" GeneratePathProperty="true" />
   </ItemGroup>
 </Project>

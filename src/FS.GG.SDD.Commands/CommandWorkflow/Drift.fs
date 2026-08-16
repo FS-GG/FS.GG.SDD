@@ -196,11 +196,26 @@ module internal Drift =
         let driver = DriverSkills.plan presentIds
         let product = GameSkills.plan (record.EffectiveParameters |> Map.ofList)
 
-        (driver.Writes @ product.Writes)
+        // ADR-0063 third instance / FS.GG.SDD#864 — this is acceptance 5's answer, made TRUE rather
+        // than merely stated: existing scaffolds ARE backfilled, by `fsgg-sdd upgrade`, through this
+        // very plan. Adding the fourth channel here is what lets a tree scaffolded before it existed
+        // acquire its rendering-owned skills without a re-scaffold or a re-vendor.
+        //
+        // The established channel keeps precedence here exactly as it does at scaffold time: `product.Writes`
+        // precedes `rendering.Writes`, and the `distinctBy` below drops a later duplicate path. That
+        // ordering is the same resolution `HandlersScaffold.plannedRenderingSkillOutcome` applies, so
+        // a backfilled tree cannot end up with different bytes than a freshly scaffolded one.
+        let rendering = RenderingSkills.plan (record.EffectiveParameters |> Map.ofList)
+
+        (driver.Writes @ product.Writes @ rendering.Writes)
         |> List.choose (fun effect ->
             match effect with
             | WriteFile(path, body, _) -> Some(path, body)
             | _ -> None)
+        // One path, one body. Four ids are shipped by both owner-skill packages with different
+        // bodies (FS.GG.SDD#864); without this the backfill would carry two candidate bodies for
+        // one path and the caller would silently take whichever it folded last.
+        |> List.distinctBy fst
 
     let private expectedSkills (provenance: ScaffoldProvenanceRecord option) : SkillMirror.ExpectedSkill list =
         // Process (SDD-seeded) skills verify by presence + cross-root byte-identity ONLY — an
@@ -269,7 +284,11 @@ module internal Drift =
             let alreadyExpected =
                 expectedSkills provenance |> List.map (fun skill -> skill.Id) |> Set.ofList
 
-            record.DriverPaths @ record.GameSkillPaths
+            // FS.GG.SDD#864: the fourth channel's recorded paths join the same owner-sourced class.
+            // Reading them here is what stops a rendering-owned copy edited away from its recorded
+            // digest from reading coherent at `doctor` — the identical hole #733 closed for the
+            // driver class.
+            record.DriverPaths @ record.GameSkillPaths @ record.RenderingSkillPaths
             |> List.choose (fun produced ->
                 // The SAME root-anchored parser the fold and the body collector share. A recorded
                 // path that is not a confined skill-copy path names no skill copy, whatever it says.

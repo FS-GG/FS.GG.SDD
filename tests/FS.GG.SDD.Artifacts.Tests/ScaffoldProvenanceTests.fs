@@ -147,6 +147,7 @@ providers:
           SddOwnedPaths = []
           DriverPaths = []
           GameSkillPaths = []
+          RenderingSkillPaths = []
           EffectiveParameters = [ "variant", "alpha"; "productName", "Demo" ] }
 
     [<Fact>]

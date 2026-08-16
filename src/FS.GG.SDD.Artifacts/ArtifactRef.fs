@@ -25,6 +25,17 @@ module ArtifactRef =
         // so `refresh` never regenerates it; recorded only in
         // `ScaffoldProvenanceRecord.GameSkillPaths`. Serialized `"gameSkill"`.
         | GameSkill
+        // ADR-0063 third instance / FS.GG.SDD#864: an rendering-owner-authored **product** skill
+        // (e.g. `fs-gg-feedback-report`) delivered as bytes in the pinned rendering-skills package
+        // package and materialized by the SDD scaffolder into a product's skill roots. A DISTINCT
+        // owner rather than a reuse of `GameSkill`, because the whole point of the fourth channel is
+        // that a delivered path can be ATTRIBUTED to the channel that delivered it — an unattributed
+        // path is what made .github#2380 an investigation rather than a lookup. Note this is also
+        // distinct from the long-standing `Rendering` case above, which classifies a rendering-repo
+        // artifact, not a skill this channel materialized. Externally owned (like `Driver`/
+        // `GameSkill`), so `refresh` never regenerates it; recorded only in
+        // `ScaffoldProvenanceRecord.RenderingSkillPaths`. Serialized `"renderingSkill"`.
+        | RenderingSkill
 
     type ArtifactKind =
         | ProjectConfig
@@ -80,6 +91,7 @@ module ArtifactRef =
         | Mirrored -> "mirrored"
         | Driver -> "driver"
         | GameSkill -> "gameSkill"
+        | RenderingSkill -> "renderingSkill"
 
     let kindValue kind =
         match kind with

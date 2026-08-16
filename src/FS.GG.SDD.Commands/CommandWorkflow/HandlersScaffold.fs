@@ -158,6 +158,7 @@ module internal HandlersScaffold =
           MirroredPaths = []
           MaterializedDriverPaths = []
           MaterializedGameSkillPaths = []
+          MaterializedRenderingSkillPaths = []
           EffectiveParameters = []
           RepoInitOutcome = "notApplicable"
           ToolManifestOutcome = "notApplicable"
@@ -517,6 +518,103 @@ module internal HandlersScaffold =
           if not (List.isEmpty outcome.PredicateUnevaluatedIds) then
               yield DiagnosticsModule.scaffoldGameSkillPredicateUnevaluated outcome.PredicateUnevaluatedIds ]
 
+    // ADR-0063 third instance / FS.GG.SDD#864: the FOURTH enrollment channel — the
+    // rendering-owner-authored product-skill materialization planned from the CLI's embedded
+    // the rendering-skills package bytes, gated by the effective scaffold parameter set. Pure &
+    // deterministic (reads only compiled-in resources + `producedPaths` + `effective` + the established
+    // channel's kept set), re-derivable each tick exactly like its two siblings, so the TICK-A
+    // write/provenance and the finalize summary/diagnostics draw from one plan.
+    //
+    // IT TAKES THE ESTABLISHED CHANNEL'S KEPT PATHS AS AN INPUT, and that is the one structural difference
+    // from `plannedGameSkillOutcome`. Four ids — `fs-gg-collision`, `fs-gg-grids`,
+    // `fs-gg-line-drawing`, `fs-gg-visibility` — are shipped by BOTH pinned owner-skill packages with
+    // different bodies and the identical profile-gated predicate, so on a
+    // scaffold on the shared profile both channels plan the same paths. This layer is the only one that can
+    // see both plans, so it is where the overlap is resolved: the established channel keeps the path
+    // and this one yields, which is what keeps ONE path attributed to ONE channel in
+    // `scaffold-provenance.json`. The yielded ids are reported (never dropped silently) — an
+    // unattributed or double-claimed path is exactly what made .github#2380 an investigation.
+    let plannedRenderingSkillOutcome
+        (producedPaths: string list)
+        (effective: Map<string, string>)
+        (gameSkillKeptPaths: string list)
+        =
+        let outcome = RenderingSkills.plan effective
+
+        // No-clobber honesty, identical to the two sibling channels: a target already occupied by
+        // the provider's own output — its `.agents/skills/<id>` skill, or the `.claude`/`.codex`
+        // mirror copies the preceding TICK-MIRROR fanned out — is *preserved* by the
+        // `AgentGuidanceTarget` write, not materialized by us; claiming it would double-own the path.
+        // The established channel's kept paths join that set for the reason above.
+        let occupied =
+            Set.ofList (producedPaths @ plannedMirroredPaths producedPaths @ gameSkillKeptPaths)
+
+        let kept =
+            outcome.ProvenancePaths
+            |> List.filter (fun (path, _) -> not (occupied.Contains path))
+
+        let keptPaths = kept |> List.map fst |> Set.ofList
+
+        // An id is YIELDED when it planned at least one path and kept none of them — i.e. every
+        // copy it would have written is already owned. Reported as `renderingSkillChannelYielded`
+        // only for the cross-channel case; a path the PROVIDER itself supplied is the ordinary
+        // no-clobber preservation the sibling channels have always performed quietly.
+        let gameOwned = Set.ofList gameSkillKeptPaths
+
+        let yieldedIds =
+            outcome.ProvenancePaths
+            |> List.filter (fun (path, _) -> gameOwned.Contains path)
+            |> List.choose (fun (path, _) -> Fsgg.SkillMirror.skillIdOfPath path)
+            |> List.distinct
+            |> List.sort
+
+        { outcome with
+            Writes =
+                outcome.Writes
+                |> List.filter (fun effect ->
+                    match effectPath effect with
+                    | Some path -> keptPaths.Contains path
+                    | None -> true)
+            ProvenancePaths = kept
+            MaterializedIds =
+                kept
+                |> List.choose (fun (path, _) -> Fsgg.SkillMirror.skillIdOfPath path)
+                |> List.distinct
+            YieldedIds = yieldedIds
+            // A withheld sidecar is only worth reporting for a row this scaffold actually
+            // materialized; a yielded row's files are the other channel's business now.
+            UndeliverableSidecars =
+                let materialized =
+                    kept
+                    |> List.choose (fun (path, _) -> Fsgg.SkillMirror.skillIdOfPath path)
+                    |> Set.ofList
+
+                outcome.UndeliverableSidecars
+                |> List.filter (fun entry ->
+                    match entry.Split('/') |> Array.tryHead with
+                    | Some id -> materialized.Contains id
+                    | None -> false) }
+
+    // The fail-closed rendering-skill diagnostics for a planned outcome (empty on a clean plan with
+    // no withheld files and no yield). Same three classes as the driver/owner-skill seams — manifest defect
+    // and namespace-collision/verify failures are tool-defect errors, an unevaluable predicate is a
+    // non-blocking advisory — plus the two this channel is the first to need.
+    let renderingSkillDiagnostics (outcome: RenderingSkills.RenderingSkillOutcome) : Diagnostic list =
+        [ yield!
+              outcome.ManifestError
+              |> Option.map DiagnosticsModule.scaffoldRenderingSkillManifestMalformed
+              |> Option.toList
+          if not (List.isEmpty outcome.NamespaceCollisionIds) then
+              yield DiagnosticsModule.scaffoldRenderingSkillNamespaceCollision outcome.NamespaceCollisionIds
+          if not (List.isEmpty outcome.VerifyFailedIds) then
+              yield DiagnosticsModule.scaffoldRenderingSkillVerifyFailed outcome.VerifyFailedIds
+          if not (List.isEmpty outcome.PredicateUnevaluatedIds) then
+              yield DiagnosticsModule.scaffoldRenderingSkillPredicateUnevaluated outcome.PredicateUnevaluatedIds
+          if not (List.isEmpty outcome.YieldedIds) then
+              yield DiagnosticsModule.scaffoldRenderingSkillChannelYielded outcome.YieldedIds
+          if not (List.isEmpty outcome.UndeliverableSidecars) then
+              yield DiagnosticsModule.scaffoldRenderingSkillSidecarsUndeclared outcome.UndeliverableSidecars ]
+
     // ----- product skill-manifest union (ADR-0063 tail / skill-union coherence) -----
 
     // The product's on-disk producer manifest, at the neutral `.agents` source root. A compliant
@@ -625,9 +723,18 @@ module internal HandlersScaffold =
     let productManifestAdditions
         (driverOutcome: DriverSkills.DriverOutcome)
         (gameSkillOutcome: GameSkills.GameSkillOutcome)
+        (renderingSkillOutcome: RenderingSkills.RenderingSkillOutcome)
         =
+        // FS.GG.SDD#864: the rendering arm is appended LAST, and the `distinctBy` below is why the
+        // order is load-bearing rather than cosmetic. `plannedRenderingSkillOutcome` has already
+        // removed every path the established channel kept, so on the four doubly-shipped ids there is
+        // nothing left here to deduplicate — but if that subtraction ever regressed, appending last
+        // means `distinctBy` keeps the entry whose bytes were actually WRITTEN (the established channel's,
+        // which the no-clobber write laid down first) instead of silently declaring a digest for a
+        // body no file on disk carries.
         manifestEntriesOf driverOutcome.ProvenancePaths driverOutcome.MaterializedScopes "process"
         @ manifestEntriesOf gameSkillOutcome.ProvenancePaths gameSkillOutcome.MaterializedScopes "product"
+        @ manifestEntriesOf renderingSkillOutcome.ProvenancePaths renderingSkillOutcome.MaterializedScopes "product"
         |> List.distinctBy (fun (entry: ProductSkillManifest.ProductManifestEntry) -> entry.Id)
 
     // FS.GG.SDD#739: the amend as ONE function of the model plus the plan, so the tick that consumes
@@ -675,6 +782,7 @@ module internal HandlersScaffold =
         (sddOwnedPaths: string list)
         (driverPaths: (string * string) list)
         (gameSkillPaths: (string * string) list)
+        (renderingSkillPaths: (string * string) list)
         (skillDigests: Map<string, string>)
         (effective: Map<string, string>)
         =
@@ -736,6 +844,22 @@ module internal HandlersScaffold =
                 |> List.map (fun (path, sha256) ->
                     { Path = path
                       Owner = ArtifactOwner.GameSkill
+                      Sha256 =
+                        (if String.IsNullOrWhiteSpace sha256 then
+                             None
+                         else
+                             Some sha256) })
+              // ADR-0063 third instance / FS.GG.SDD#864: the rendering-owner-authored product skill
+              // copies materialized from the pinned rendering-skills package, owner
+              // `RenderingSkill`, each carrying the manifest `sha256` it was content-verified
+              // against. A SEPARATE list from `GameSkillPaths` so every delivered path names the
+              // channel that delivered it — acceptance 3 of FS.GG.SDD#864, and the property whose
+              // absence made .github#2380 an investigation. Empty on every non-success path.
+              RenderingSkillPaths =
+                renderingSkillPaths
+                |> List.map (fun (path, sha256) ->
+                    { Path = path
+                      Owner = ArtifactOwner.RenderingSkill
                       Sha256 =
                         (if String.IsNullOrWhiteSpace sha256 then
                              None
@@ -803,6 +927,7 @@ module internal HandlersScaffold =
               MaterializedDriverPaths = []
               // ...and no owner-sourced skill either (ADR-0063 / FS.GG.SDD#623).
               MaterializedGameSkillPaths = []
+              MaterializedRenderingSkillPaths = []
               EffectiveParameters = Map.toList effective
               RepoInitOutcome = "notApplicable"
               ToolManifestOutcome = "notApplicable"
@@ -826,6 +951,7 @@ module internal HandlersScaffold =
                   MirroredPaths = []
                   MaterializedDriverPaths = []
                   MaterializedGameSkillPaths = []
+                  MaterializedRenderingSkillPaths = []
                   // The dry-run preview records exactly what would be forwarded
                   // (FR-003 audit preview): the resolved effective set.
                   EffectiveParameters = Map.toList effective
@@ -894,6 +1020,7 @@ module internal HandlersScaffold =
                             []
                             []
                             []
+                            []
                             Map.empty
                             effective
                     )
@@ -912,6 +1039,7 @@ module internal HandlersScaffold =
                             descriptor
                             ProviderFailed
                             producedPaths
+                            []
                             []
                             []
                             []
@@ -1012,6 +1140,13 @@ module internal HandlersScaffold =
         // what was written and recorded under `gameSkillPaths` in provenance.
         let gameSkillOutcome = plannedGameSkillOutcome producedPaths effective
 
+        // ADR-0063 third instance / FS.GG.SDD#864: re-derived (pure) from the same plan TICK A
+        // emitted the rendering writes from — including the same yield against the established channel's
+        // kept paths — so the summary, the diagnostics and `renderingSkillPaths` in provenance all
+        // describe one plan.
+        let renderingSkillOutcome =
+            plannedRenderingSkillOutcome producedPaths effective (gameSkillOutcome.ProvenancePaths |> List.map fst)
+
         let summary: ScaffoldSummary =
             { ProviderName = Some descriptor.Name
               ProviderContractVersion = Some descriptor.ContractVersion
@@ -1024,6 +1159,7 @@ module internal HandlersScaffold =
               MirroredPaths = mirroredPaths
               MaterializedDriverPaths = driverOutcome.ProvenancePaths |> List.map fst |> List.sort
               MaterializedGameSkillPaths = gameSkillOutcome.ProvenancePaths |> List.map fst |> List.sort
+              MaterializedRenderingSkillPaths = renderingSkillOutcome.ProvenancePaths |> List.map fst |> List.sort
               EffectiveParameters = Map.toList effective
               RepoInitOutcome = repoInitOutcome
               ToolManifestOutcome = toolManifestOutcome
@@ -1037,7 +1173,11 @@ module internal HandlersScaffold =
         // verdict is the one that actually decided whether the union was written. On the ordinary
         // path this is empty; when `amend` refused, the refusal is finally stated.
         let productManifestDiagnostics =
-            match productManifestAmend model (productManifestAdditions driverOutcome gameSkillOutcome) with
+            match
+                productManifestAmend
+                    model
+                    (productManifestAdditions driverOutcome gameSkillOutcome renderingSkillOutcome)
+            with
             | Some(Error refusal) -> [ productManifestRefusalDiagnostic refusal ]
             | _ -> []
 
@@ -1048,6 +1188,7 @@ module internal HandlersScaffold =
         @ execDiagnostics
         @ driverDiagnostics driverOutcome
         @ gameSkillDiagnostics gameSkillOutcome
+        @ renderingSkillDiagnostics renderingSkillOutcome
         @ productManifestDiagnostics
 
     // The post-instantiation machine, re-derived from the interpreted-effect log each tick
@@ -1089,6 +1230,7 @@ module internal HandlersScaffold =
                   MirroredPaths = []
                   MaterializedDriverPaths = []
                   MaterializedGameSkillPaths = []
+                  MaterializedRenderingSkillPaths = []
                   EffectiveParameters = Map.toList effective
                   RepoInitOutcome = "notApplicable"
                   ToolManifestOutcome = "notApplicable"
@@ -1104,6 +1246,7 @@ module internal HandlersScaffold =
                     descriptor
                     ProviderFailed
                     producedPaths
+                    []
                     []
                     []
                     []
@@ -1293,6 +1436,16 @@ module internal HandlersScaffold =
                 // this same batch so they are interpreted before finalize (TICK C).
                 let gameSkillOutcome = plannedGameSkillOutcome producedPaths effective
 
+                // ADR-0063 third instance / FS.GG.SDD#864: the FOURTH channel — the same
+                // no-clobber embedded-bytes plan, gated by the same effective parameters, yielding
+                // every path the established channel above already kept so one path has one owner. Its
+                // content-verified paths are recorded in provenance under `renderingSkillPaths`.
+                let renderingSkillOutcome =
+                    plannedRenderingSkillOutcome
+                        producedPaths
+                        effective
+                        (gameSkillOutcome.ProvenancePaths |> List.map fst)
+
                 // ADR-0063 tail / skill-union coherence: fold the driver + owner-sourced skills we
                 // just materialized into the provider-shipped product `skill-manifest.json`, so the
                 // consumer skill-union gate no longer flags them [dangling]. Only when the provider
@@ -1301,7 +1454,8 @@ module internal HandlersScaffold =
                 // gets none synthesized. Written over the provider's copy in EVERY root (GeneratedView
                 // — the tool owns the union), and the 3 copies' provenance digests are re-pointed to the
                 // amended bytes so `scaffold-provenance.json` stays coherent with disk.
-                let manifestAdditions = productManifestAdditions driverOutcome gameSkillOutcome
+                let manifestAdditions =
+                    productManifestAdditions driverOutcome gameSkillOutcome renderingSkillOutcome
 
                 // FS.GG.SDD#739: a REFUSED amend writes nothing, exactly as before — but it is no
                 // longer swallowed here. The refusal is re-derived (purely) at finalize and reported
@@ -1322,6 +1476,7 @@ module internal HandlersScaffold =
                 let effects =
                     driverOutcome.Writes
                     @ gameSkillOutcome.Writes
+                    @ renderingSkillOutcome.Writes
                     @ manifestWrites
                     @ provenanceWriteEffect
                         model.Request
@@ -1332,6 +1487,7 @@ module internal HandlersScaffold =
                         sddOwnedPaths
                         driverOutcome.ProvenancePaths
                         gameSkillOutcome.ProvenancePaths
+                        renderingSkillOutcome.ProvenancePaths
                         manifestDigests
                         effective
                     @ [ RunProcess("git", [ "rev-parse"; "--is-inside-work-tree" ], "") ]

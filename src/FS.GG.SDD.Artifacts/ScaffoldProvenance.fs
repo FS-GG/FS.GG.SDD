@@ -37,6 +37,12 @@ module ScaffoldProvenance =
           // (owner `GameSkill`), each with its content `sha256`. Externally owned like `DriverPaths`,
           // so `refresh` excludes them. Additive; empty when none materialized (schema stays v1).
           GameSkillPaths: ScaffoldProducedPath list
+          // ADR-0063 third instance / FS.GG.SDD#864: the rendering-owner-authored product skills
+          // (e.g. `fs-gg-feedback-report`) materialized from the pinned rendering-skills package
+          // package into the product's skill roots (owner `RenderingSkill`), each with its content
+          // `sha256`. Externally owned like `GameSkillPaths`, so `refresh` excludes them. Additive;
+          // empty when none materialized (schema stays v1).
+          RenderingSkillPaths: ScaffoldProducedPath list
           EffectiveParameters: (string * string) list }
 
     let provenancePath = ".fsgg/scaffold-provenance.json"
@@ -66,6 +72,7 @@ module ScaffoldProvenance =
           SddOwnedPaths = []
           DriverPaths = []
           GameSkillPaths = []
+          RenderingSkillPaths = []
           EffectiveParameters = [] }
 
     let ownerFromValue (value: string) =
@@ -76,6 +83,7 @@ module ScaffoldProvenance =
         | "mirrored" -> ArtifactOwner.Mirrored
         | "driver" -> ArtifactOwner.Driver
         | "gameSkill" -> ArtifactOwner.GameSkill
+        | "renderingSkill" -> ArtifactOwner.RenderingSkill
         | _ -> ArtifactOwner.GeneratedProduct
 
     // Additive (contract 1.1.0, ADR-0014): emit `sha256` only when a digest was
@@ -192,6 +200,25 @@ module ScaffoldProvenance =
             writer.WriteString("path", gameSkill.Path)
             writer.WriteString("owner", ownerValue gameSkill.Owner)
             writeSha256 writer gameSkill.Sha256
+            writer.WriteEndObject())
+
+        writer.WriteEndArray()
+
+        // ADR-0063 third instance / FS.GG.SDD#864: additive rendering-skill record — the
+        // rendering-owner-authored product skills materialized from the pinned
+        // the rendering-skills package package, owner `renderingSkill`, each with its content `sha256`.
+        // Sorted by path, immediately after `gameSkillPaths`; empty array when none (schema stays
+        // v1). `"renderingSkill"` appears only inside this array — which is the whole point: an
+        // operator reading `scaffold-provenance.json` can see WHICH channel delivered a path.
+        writer.WriteStartArray("renderingSkillPaths")
+
+        record.RenderingSkillPaths
+        |> List.sortBy (fun renderingSkill -> renderingSkill.Path)
+        |> List.iter (fun renderingSkill ->
+            writer.WriteStartObject()
+            writer.WriteString("path", renderingSkill.Path)
+            writer.WriteString("owner", ownerValue renderingSkill.Owner)
+            writeSha256 writer renderingSkill.Sha256
             writer.WriteEndObject())
 
         writer.WriteEndArray()
@@ -316,6 +343,23 @@ module ScaffoldProvenance =
                                           Sha256 = readSha256 element }
                                 | _ -> None)
 
+                        // ADR-0063 third instance / FS.GG.SDD#864: additive rendering-skill
+                        // record. Absent/null ⇒ `[]`, so every provenance document written before
+                        // this channel existed still parses (schema stays v1).
+                        let renderingSkillPaths =
+                            jsonArray "renderingSkillPaths" root
+                            |> List.choose (fun element ->
+                                match jsonString "path" element with
+                                | Some path when not (String.IsNullOrWhiteSpace path) ->
+                                    Some
+                                        { Path = path
+                                          Owner =
+                                            jsonString "owner" element
+                                            |> Option.map ownerFromValue
+                                            |> Option.defaultValue ArtifactOwner.RenderingSkill
+                                          Sha256 = readSha256 element }
+                                | _ -> None)
+
                         // Additive optional field (D3): absent ⇒ `[]`, so provenance
                         // written before `effectiveParameters` still parses.
                         let effectiveParameters =
@@ -345,6 +389,7 @@ module ScaffoldProvenance =
                               SddOwnedPaths = sddOwnedPaths
                               DriverPaths = driverPaths
                               GameSkillPaths = gameSkillPaths
+                              RenderingSkillPaths = renderingSkillPaths
                               EffectiveParameters = effectiveParameters }
                     | _ -> None
                 | None -> None

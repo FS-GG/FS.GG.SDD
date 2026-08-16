@@ -33,12 +33,21 @@ module RemediationSupport =
         let presentIds = Set.ofList SeededSkills.skillNames
         let driver = DriverSkills.plan presentIds
         let game = GameSkills.plan (Map.ofList parameters)
+        // FS.GG.SDD#864: the fourth channel. A scaffold at the CURRENT generator carries the
+        // rendering-owned product skills too, so a fixture that means to be COHERENT must carry
+        // them — otherwise it models a tree no current scaffold produces and `doctor` correctly
+        // reports the missing copies as drift. `fs-gg-feedback-report` is `materializes-when:
+        // "always"`, so this is non-empty for EVERY parameter set, including the empty one.
+        let rendering = RenderingSkills.plan (Map.ofList parameters)
 
-        (driver.Writes @ game.Writes)
+        (driver.Writes @ game.Writes @ rendering.Writes)
         |> List.choose (fun effect ->
             match effect with
             | WriteFile(path, body, _) -> Some(path, body)
             | _ -> None)
+        // One path, one body — the established channel keeps a doubly-shipped id, exactly as
+        // `HandlersScaffold.plannedRenderingSkillOutcome` and `Drift.ownerSourcedBackfill` resolve it.
+        |> List.distinctBy fst
 
     /// The seeded skeleton PLUS the owner-sourced copies — the present-set a pure `Drift.compute`
     /// test passes to assert a fully coherent scaffold now that owner-sourced skills are expected.
@@ -53,13 +62,23 @@ module RemediationSupport =
         let presentIds = Set.ofList SeededSkills.skillNames
         let driver = DriverSkills.plan presentIds
         let game = GameSkills.plan (Map.ofList parameters)
-        driver.ProvenancePaths, game.ProvenancePaths
+        let rendering = RenderingSkills.plan (Map.ofList parameters)
+        let gameOwned = game.ProvenancePaths |> List.map fst |> Set.ofList
+
+        // FS.GG.SDD#864: three fields now, kept apart because provenance keeps them apart — and the
+        // rendering rows are filtered against the established channel's, because a path declared
+        // under two owners with two digests is the self-contradicting record this item exists to
+        // prevent. The filter mirrors the production yield exactly.
+        driver.ProvenancePaths,
+        game.ProvenancePaths,
+        rendering.ProvenancePaths
+        |> List.filter (fun (path, _) -> not (gameOwned.Contains path))
 
     /// The `"driverPaths":[…],"gameSkillPaths":[…]` JSON fragment (leading comma) a current-generator
     /// provenance document carries. Empty arrays when no owner-skill package is embedded in THIS
     /// build, because there is then nothing for a scaffold to have materialized or recorded.
     let ownerSourcedProvenanceJson (parameters: (string * string) list) =
-        let driverRows, gameRows = ownerSourcedProvenanceRows parameters
+        let driverRows, gameRows, renderingRows = ownerSourcedProvenanceRows parameters
 
         let rows owner entries =
             entries
@@ -69,7 +88,9 @@ module RemediationSupport =
 
         let driverJson = rows "driver" driverRows
         let gameJson = rows "gameSkill" gameRows
-        $",\"driverPaths\":[{driverJson}],\"gameSkillPaths\":[{gameJson}]"
+        let renderingJson = rows "renderingSkill" renderingRows
+
+        $",\"driverPaths\":[{driverJson}],\"gameSkillPaths\":[{gameJson}],\"renderingSkillPaths\":[{renderingJson}]"
 
     let private providersYml (minimum: string option) =
         let minBlock =
@@ -333,6 +354,7 @@ sdd:
           SddOwnedPaths = []
           DriverPaths = []
           GameSkillPaths = []
+          RenderingSkillPaths = []
           EffectiveParameters = [] }
 
     let descriptor (minimum: string option) : ProviderDescriptor =

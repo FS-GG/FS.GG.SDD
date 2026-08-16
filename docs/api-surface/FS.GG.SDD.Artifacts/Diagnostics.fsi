@@ -148,6 +148,12 @@ module Diagnostics =
     val scaffoldGameSkillPredicateUnevaluated: ids: string list -> Diagnostic
     val scaffoldGameSkillNamespaceCollision: ids: string list -> Diagnostic
     val scaffoldGameSkillManifestMalformed: message: string -> Diagnostic
+    val scaffoldRenderingSkillVerifyFailed: ids: string list -> Diagnostic
+    val scaffoldRenderingSkillPredicateUnevaluated: ids: string list -> Diagnostic
+    val scaffoldRenderingSkillNamespaceCollision: ids: string list -> Diagnostic
+    val scaffoldRenderingSkillManifestMalformed: message: string -> Diagnostic
+    val scaffoldRenderingSkillSidecarsUndeclared: entries: string list -> Diagnostic
+    val scaffoldRenderingSkillChannelYielded: ids: string list -> Diagnostic
 
     /// ADR-0063 tail / FS.GG.SDD#739: `ProductSkillManifest.amend` refused to rewrite the product
     /// `skill-manifest.json`, so the materialized skills are left undeclared in it. A WARNING, not an

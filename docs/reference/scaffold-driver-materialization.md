@@ -123,6 +123,63 @@ previewed under the `artifactReSeed` step (kept out of the seeded-skeleton
 `driverPaths` with every affected directory member and digest — in the same written-body domain
 described above — including the pre-existing `SKILL.md`; present files remain no-clobber.
 
+## The fourth channel: rendering-owned product skills
+
+*FS.GG.SDD#864 · ADR-0063 third instance · `.github#2545`, unblocking `.github#2639`.*
+
+Before this channel the scaffold materializer had **three** enrollment channels — the hard-coded
+`fs-gg-sdd-*` seeded skeleton (`SeededSkills`), the driver class above (`DriverSkills`), and the
+owner-authored product class (`GameSkills`) — and none of them could carry a `scope: product` skill
+owned by the rendering repo. Measured on a scaffold produced through a non-rendering provider: 42
+driver paths, the 16 process skills, 2 owner-skill paths, and **zero** rendering-owned product
+skills, including `fs-gg-feedback-report`, whose registry predicate is `materializes-when: "always"`.
+That is the class ADR-0063 named — *declared ∧ gated-in ∧ supplied-from-nowhere* — for the third time.
+
+`RenderingSkills` is the fourth channel and is deliberately the **same shape** as `GameSkills`, one
+owner over: the pin lives in `Directory.Packages.local.props`, the package's `skill-manifest.json`
+and `skills/<id>/**` are embedded at build time (`RenderingSkill.manifest`,
+`RenderingSkill.skill/<id>/<relative-path>`), every body is content-addressed against its manifest
+`sha256` before any write, rows are gated by the `materializes-when` predicate over the effective
+scaffold parameters, and writes are no-clobber `AgentGuidanceTarget`. Provenance records them under
+the additive `renderingSkillPaths` array (owner **`renderingSkill`**), and the scaffold report
+projects `materializedRenderingSkillPaths` / `scaffoldMaterializedRenderingSkillPath`. As everywhere
+else on this page, no rendering package id, template id, or skill id enters generic SDD source as
+behavior: the identity is a pin in the `.fsproj` and a glob (`scaffold` FR-002 / SC-005, enforced by
+`ScaffoldGuardTests`).
+
+Two things are specific to this channel, and both follow from measured facts about the packages:
+
+- **Undeclared sidecar files are reported, never written.** The pinned package ships files that are
+  not `SKILL.md` (`scripts/**`, `reference/**`), while its manifest is **schemaVersion 1** — one
+  `sha256` per skill, covering `SKILL.md` alone, per its own `resolvablePath`. A file with no
+  declared digest cannot be content-verified, and ADR-0014 is fail-closed, so it is **not
+  materialized**. Suppressing that silently would ship a skill whose own body instructs a reader to
+  run a script that never arrives, so the withheld files are surfaced as the non-blocking
+  `scaffold.renderingSkillSidecarsUndeclared` advisory. The remedy is a **schemaVersion-2** manifest
+  with a per-file `files` array — the shape `FS.GG.Drivers` already ships and `DriverSkills` already
+  consumes as a closed multi-file directory transport — and it belongs to the producer, not here. The
+  bytes are already embedded and become deliverable the day the manifest declares them.
+- **One path has one owner.** Two pinned owner-skill packages ship four ids in common
+  (`fs-gg-collision`, `fs-gg-grids`, `fs-gg-line-drawing`, `fs-gg-visibility`) with different bodies
+  and the same profile-gated predicate. Unresolved, both channels would plan the same paths: the
+  no-clobber write would silently keep the first while provenance recorded that path under two owners
+  with two different digests — the unattributed path that turns a lookup into an investigation. The
+  established channel keeps the path, this one yields, and the yielded ids are reported as
+  `scaffold.renderingSkillChannelYielded`. The materializer resolves only the mechanical question;
+  which repository *should* own a duplicated id is a producer/registry question and is left to them.
+
+### Backfill (the third asking)
+
+ADR-0063's Consequences asked it, FS.GG.SDD#620 asked it again, and FS.GG.SDD#864 asks it a third
+time, so the answer is stated here rather than implied: **existing scaffolds are backfilled by
+`fsgg-sdd upgrade`; no re-scaffold and no re-vendor is required.** The fourth channel joins the same
+`ownerSourcedBackfill` plan and the same `artifactReSeed` reconciliation step as the driver and
+owner-skill classes, under the FS.GG.SDD#798 invariant that every owner-sourced file the step writes
+leaves the run **declared** in the provenance record that governs it — so the next `doctor` sees a
+tree its own provenance accounts for. `doctor` reports the same gap read-only. Re-vendoring also
+backfills by construction, as it always has; it remains the heavier path for a tree being regenerated
+anyway.
+
 ## Not covered here
 
 - Authoring or editing driver skill **content** — owned by `.github`; SDD lays the bytes down
