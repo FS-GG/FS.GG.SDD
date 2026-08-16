@@ -34,17 +34,67 @@ Use [TEMPLATE.md](TEMPLATE.md) as the starting point for a new note.
 | Version | Note | Breaking changes |
 |---|---|---|
 | `1.0.0` | [`1.0.0.md`](1.0.0.md) | **(1)** `ObservedRun` adds the explicit exact-byte digest contract; legacy receipts must be re-synchronized. **(2)** `FileSnapshot` adds optional raw bytes so filesystem evidence can preserve exact content. |
+| `0.30.0` | [`0.30.0.md`](0.30.0.md) | **None enumerated** — the note opens *"This release is additive"*. It records the opt-in `{production-journey}` requirement class, whose schema-v1 journey receipt must come from FS.GG.Game `0.12.0` and be bound to the same passing observed test report; unclassified and `{gameplay}` requirements keep their existing evidence semantics. |
+| `0.27.0` | [`0.27.0.md`](0.27.0.md) | **(1)** Interactive and render-loop projects must declare `project.profile` and a typed `performanceIntent` in `spec.md` front matter before `analyze` can report `implementationReady`, and a later `evidence[].performanceBudget.intent` must equal that declaration. Non-interactive projects and legacy evidence keep their previous behavior. Carries `FS.GG.Contracts` `7.0.0` and governance-handoff contract `2.0.0`. |
+| `0.26.1` | [`0.26.1.md`](0.26.1.md) | **(1)** An active `evidence[].performanceBudget` now requires an independently verifiable JSON artifact with `contractVersion: performance-evidence-v1`; the summary-only text accepted by `0.24.x`/`0.25.x` is malformed, because producer-authored p95/p99/catch-up values cannot be recomputed. **(2)** Carries `FS.GG.Contracts` `6.0.0`, whose `GovernanceHandoffSchema` constructor now requires the typed `PerformanceEvidence` list. |
+| `0.24.0` | [`0.24.0.md`](0.24.0.md) | **None enumerated** — *"Existing schema-v1 evidence files need no edits"*. The note records the optional `evidence[].performanceBudget` mapping and the fail-closed behavior that a mapping activates once authored. |
+| `0.14.0` | [`0.14.0.md`](0.14.0.md) | **(1)** `verify` and `ship` now require an observed run receipt **by default**: a test obligation claiming `result: pass` with no `observedRun` receipt no longer reaches `satisfied`, and both stages block it. Record a receipt with `fsgg-sdd evidence --from-test-report`, or pass `--no-require-observed` during migration. |
+| `0.10.0` | [`0.10.0.md`](0.10.0.md) | **(1)** The seven lifecycle artifacts now report `kind: "hybridArtifact"` / `ownership: "hybrid"` (were `"authoredSource"` / `"authored"`). **(2)** A work item with `n` requirements derives `n` implementation tasks, not `2n`; a `PD-###` plan-decision task subsumed by a requirement task is folded, so re-run `fsgg-sdd tasks` and drop any `evidence.yml` declaration naming a folded task. |
 | `0.9.0` | [`0.9.0.md`](0.9.0.md) | **(1)** Removed `specification.unresolvedAmbiguityCount` from the `--json` command-report contract — it gated nothing; the gate is `clarification.blockingAmbiguityCount`, on a **different** block. **(2)** `tasks` can now exit `1` (`missingDisposition`). **(3)** `plan` can now exit `1` (`stalePlanSnapshot`; use `--accept-upstream`). **(4)** Every command can now exit `1` (`unknownOption`); an unrecognized option used to be silently ignored. |
 
-The current `1.0.0` release is **breaking** and therefore carries the note above.
+Two of those pages — `0.24.0.md` and `0.30.0.md` — enumerate no breaking change and
+are release-adaptation notes rather than migration notes. They are listed because
+they exist in this directory and a reader needs to find them, not because the
+obligation above admits them — that rule says an additive-only release **MUST NOT**
+carry a note. Whether each page is better retitled, reclassified, or withdrawn is
+not settled here; the index's job is to be complete about what exists.
+
+The `1.0.0` release is **breaking** and therefore carries the note above. The move
+from `0.32.0` to `1.0.0` was the required major bump for the breaking public F#
+record-shape changes.
+
 The `migrations[]` array in [`release-readiness.json`](../release-readiness.json)
-lists it, and a test asserts the referenced file exists — the obligation is a
-file, not a claim. The move from `0.32.0` to `1.0.0` is the required major bump
-for the breaking public F# record-shape changes.
+declares the notes of the release that artifact currently describes — not every
+note ever published — and a test asserts that each note it declares is for that
+release and exists on disk, so the obligation is a file and not a claim. An
+additive-only release therefore leaves `migrations[]` empty; that is the state the
+current line is in, and the per-release paragraphs below are its record. Every
+`<version>.md` note in this directory is listed in the index above, so the index —
+not `migrations[]` — is where a reader finds the notes earlier releases published.
 
 A migration note must enumerate **every** breaking change in its release. Exit-code
 contract changes and public record-shape changes both classify as Breaking; listing
 only one kind is the exact failure this obligation exists to prevent.
+
+Release `1.1.0` is additive-only: `FS.GG.SDD.Artifacts` gains the public
+`RecordReceipt` type and its null-aware `RecordReceiptDraft` read draft, an
+evidence obligation gains the optional `RecordReceipt` field and the
+`DischargeClass` scalar, and the `verify`/`ship` reports gain the matching
+`evidenceDispositions[].recordRequirement` field — so an obligation that no test
+run could ever discharge (one resting on a filed row, a recorded decision, or a
+commit) can reach `Observed` on a durable record instead of blocking `ship`
+forever (FS.GG.SDD#865). It breaks no existing public contract: every pre-existing
+field, key order, stream, and exit code is unchanged, and `DischargeClass` defaults
+to `test`, which is what every obligation minted before the field existed already
+meant. Per this policy an additive change carries **no `<version>.md` migration
+note** (`release-readiness.json` `migrations[]` stays empty); this paragraph
+records the change instead.
+
+Declaring a version and publishing it are distinct acts, and `1.1.0` is a case
+where they fell to different rows: FS.GG.SDD#865 moved the declared version to
+`1.1.0` as part of a feature change and published nothing, so FS.GG.SDD#872 owns
+the publication. That split is not this repository's invariable shape — `1.0.1`
+ran both halves under one row (FS.GG.SDD#859) and one pull request (#860), whose
+merge commit carries the version bump itself and whose publication was a
+`workflow_dispatch` of `release.yml` against `main` moments later. A deliberately
+separate release act does have a precedent here: `0.5.0`, recorded below as the
+"separate release dance" under FS-GG/FS.GG.SDD#57.
+
+Either shape is sound; what is not is stopping after the first half. While a
+declared version is unpublished, `docs/release` states a supported line no feed
+serves, which is why the publishing half is tracked as a defect rather than a
+chore, and why its row does not close until both feeds serve the version and the
+published bytes have been checked against canonical.
 
 Releases `0.2.0` through `0.8.0` were additive-only and intentionally carry no
 note. The paragraphs below record each of those additive changes; they are the
