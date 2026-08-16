@@ -169,6 +169,38 @@ module Diagnostics =
             correction
             [ id ]
 
+    /// FS.GG.SDD#869. A `tasks.yml` task requires an evidence id that `evidence.yml` does not
+    /// declare.
+    ///
+    /// This is the ONE reference in `tasks.yml` that points DOWNSTREAM — at an artifact a LATER
+    /// lifecycle stage authors. The other three (requirements, decisions, task dependencies) point
+    /// UPSTREAM at artifacts that already exist, so an unresolved edge there is a genuine
+    /// inconsistency with no later stage to close it, and it rightly blocks with
+    /// `unknownReference`. An unresolved edge HERE is an INCOMPLETE lifecycle, not an inconsistent
+    /// one, and blocking it deadlocked the lifecycle outright: the work model refused to derive
+    /// until `evidence` had run, `evidence` refused to run until `analyze` was
+    /// `implementationReady`, and `analyze` could not be `implementationReady` while the work model
+    /// would not derive. No ordering of the documented commands escaped it.
+    ///
+    /// Warning severity, so `WorkModel.blockingDiagnostics` does not pick it up and the model
+    /// derives. That relocates no gate and deletes none: an obligation that is never declared is
+    /// still refused by `evidence.missingRequiredEvidence` and by the `verify`/`ship`
+    /// unmet-obligation checks, each of which names the same id. The check that is dropped here is
+    /// a redundant, coarser copy that named only the file.
+    ///
+    /// The artifact is `evidence.yml` — the file that must change — not the `tasks.yml` that cites
+    /// the id, because a diagnostic names where the failure LIVES, not where it was DETECTED
+    /// (`.github#266`). `citedBy` carries the detecting artifact so neither fact is lost.
+    let undeclaredEvidenceObligation artifact (id: string) (citedBy: string) =
+        create
+            "undeclaredEvidenceObligation"
+            DiagnosticWarning
+            (Some artifact)
+            None
+            $"Evidence obligation '{id}' is required by '{citedBy}' but is not declared in '{artifact.Path}'."
+            "Run `fsgg-sdd evidence --work <id>` to scaffold the missing declaration, or drop the id from the task's requiredEvidence."
+            [ id; citedBy ]
+
     // A declared cross-reference whose value is not a well-formed id of its kind (e.g. a task
     // dependency `T01` instead of `T001`). Previously such values were silently dropped by the
     // `Result.toOption` id parsers, so the malformed edge never reached referenceDiagnostics —

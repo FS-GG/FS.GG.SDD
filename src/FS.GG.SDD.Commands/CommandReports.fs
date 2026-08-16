@@ -352,6 +352,9 @@ module CommandReports =
     let refreshMalformedSource viewPath sourcePath message =
         DiagnosticConstructors.refreshMalformedSource viewPath sourcePath message
 
+    let refreshUnattributedBlockedView viewPath =
+        DiagnosticConstructors.refreshUnattributedBlockedView viewPath
+
     let refreshStaleView viewPath sourcePaths =
         DiagnosticConstructors.refreshStaleView viewPath sourcePaths
 

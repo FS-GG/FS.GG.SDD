@@ -84,6 +84,14 @@ module Diagnostics =
     val futureSchemaVersion: artifact: ArtifactRef -> value: string -> Diagnostic
     val duplicateIdentifier: artifact: ArtifactRef -> id: string -> locations: SourceLocation list -> Diagnostic
     val unknownReference: artifact: ArtifactRef -> id: string -> correction: string -> Diagnostic
+
+    /// FS.GG.SDD#869: a `tasks.yml` task requires an evidence id `evidence.yml` has not declared.
+    /// The one DOWNSTREAM reference in `tasks.yml`, so it reports an INCOMPLETE lifecycle rather
+    /// than an inconsistent one and is non-blocking; the obligation is still enforced by
+    /// `evidence`, `verify` and `ship`. `artifact` is `evidence.yml`, the file that must change;
+    /// `citedBy` is the `tasks.yml` that detected it.
+    val undeclaredEvidenceObligation: artifact: ArtifactRef -> id: string -> citedBy: string -> Diagnostic
+
     val malformedReference: artifact: ArtifactRef -> kind: string -> value: string -> Diagnostic
 
     /// FS.GG.SDD#359 / #365: a cited artifact path that escapes the repository. Malformed user

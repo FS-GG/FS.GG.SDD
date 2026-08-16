@@ -980,7 +980,7 @@ module internal ViewGeneration =
                     GeneratedViewCurrency.Blocked
                     blockingCommandIds
 
-            currentDiagnostic |> Option.toList, view, []
+            currentDiagnostic |> Option.toList, view, [], []
         else
             let snapshots =
                 workModelSnapshots
@@ -1024,7 +1024,7 @@ module internal ViewGeneration =
                     [ CreateDirectory(readinessDirectory workId)
                       WriteFile(path, result.Json, GeneratedView) ]
 
-                currentDiagnostic |> Option.toList, view, effects
+                currentDiagnostic |> Option.toList, view, effects, []
             else
                 let existing = snapshot path model
 
@@ -1094,7 +1094,21 @@ module internal ViewGeneration =
                 let view =
                     generatedViewState path "workModel" request.GeneratorVersion sources currency diagnosticIds
 
-                diagnostics, view, []
+                // FS.GG.SDD#869. The declared sources the blocking diagnostics actually name.
+                // `relatedIds` above carries only their diagnostic IDS, and `blockedGeneratedViewRefresh`
+                // wraps those, so every path was destroyed on the way up and `HandlersRefresh` had
+                // nothing left to report — which is why it hard-coded `spec.md` and accused a clean
+                // specification of every blockage there is. Returned as a typed value rather than
+                // appended to `relatedIds`, so no consumer has to sniff one untyped list for two
+                // different kinds of value.
+                let blockingSources =
+                    blockingModelDiagnostics
+                    |> List.choose _.Artifact
+                    |> List.map _.Path
+                    |> List.distinct
+                    |> List.sort
+
+                diagnostics, view, [], blockingSources
 
     let charterWriteEffects workId text =
         [ CreateDirectory($"work/{workId}")

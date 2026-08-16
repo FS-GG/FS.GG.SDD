@@ -192,6 +192,16 @@ module WorkModel =
         let evidenceIds =
             parsed.Evidence |> List.map (fun evidence -> evidence.Id.Value) |> Set.ofList
 
+        // FS.GG.SDD#869. `evidence.yml` is the artifact an undeclared obligation lives in, and it
+        // is named here rather than taken from `parsed.Evidence` because the case that matters is
+        // exactly the one where the declaration — and possibly the whole file — is absent. The
+        // shape matches `WorkItem.requiredFiles`' own declaration for this artifact.
+        let evidenceArtifact: ArtifactRef =
+            { Path = $"work/{parsed.WorkId.Value}/evidence.yml"
+              Kind = ArtifactKind.Evidence
+              Owner = ArtifactOwner.Sdd
+              RequiredBySdd = true }
+
         let taskDiagnostics =
             parsed.Tasks
             |> List.collect (fun task ->
@@ -218,15 +228,18 @@ module WorkModel =
                           []
                       else
                           unknown id.Value artifact "Declare the dependency task or remove the dependency.")
+                  // FS.GG.SDD#869: the one DOWNSTREAM edge. `evidence.yml` is authored by a LATER
+                  // stage, so an unresolved reference here is an incomplete lifecycle rather than
+                  // an inconsistent one and must not block derivation — see
+                  // `Diagnostics.undeclaredEvidenceObligation` for the deadlock it caused and for
+                  // why relocating the check loses no enforcement. The three edges above stay on
+                  // `unknown`, unchanged.
                   task.RequiredEvidence
                   |> List.collect (fun id ->
                       if Set.contains id.Value evidenceIds then
                           []
                       else
-                          unknown
-                              id.Value
-                              artifact
-                              "Declare the evidence id in evidence.yml or update requiredEvidence.") ]
+                          [ Diagnostics.undeclaredEvidenceObligation evidenceArtifact id.Value artifact.Path ]) ]
                 |> List.concat)
 
         let evidenceDiagnostics =

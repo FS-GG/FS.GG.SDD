@@ -13,19 +13,19 @@ work:
 sources:
   - label: spec
     path: work/869-refresh-evidence-deadlock/spec.md
-    digest: c760240f6229501e5e0052157a1fa9bf4a72b5da2ba6e1f1489b34cde9e8ef83
+    digest: 9531f3dee6f5366a1569f018ccd5e7b725f816dc0a3ac662f4e8c893a363d1ca
     schemaVersion: 1
   - label: clarifications
     path: work/869-refresh-evidence-deadlock/clarifications.md
-    digest: 58b919d6060f74b444e5566874f31b76d1897fb58005ad03f3a81b546fc2a038
+    digest: 597461b55eeff51d53442e820c7a419b435650218f8b13a1d26f0094725417af
     schemaVersion: 1
   - label: checklist
     path: work/869-refresh-evidence-deadlock/checklist.md
-    digest: cd8724230429ed8fe3fffca3b8e6eb3d3c58ac441fb1a326a00290430acf09cf
+    digest: 32a2955ae3522960c62bb7ddc8371f9aa34fef0f3c952e4a762bf2c6c33cefd9
     schemaVersion: 1
   - label: plan
     path: work/869-refresh-evidence-deadlock/plan.md
-    digest: d4b1e20271362a41b83a8005bfc08ea6cd45478f3e9a0446851686652a8096a9
+    digest: 7ee6d5b63ae67f3085e008d3ee900421d1bec7fccb627161da3945d5a9861aae
     schemaVersion: 1
 tasks:
   - id: T001
@@ -278,6 +278,46 @@ tasks:
     sourceIds: [GV-002, PD-001]
     requiredSkills: [deterministic-json]
     requiredEvidence: [EV025]
+  - id: T026
+    title: Implement requirement FR-009
+    status: pending
+    owner: sdd
+    dependencies: []
+    requirements: [FR-009]
+    decisions: []
+    sourceIds: [AC-009, FR-009, PD-009]
+    requiredSkills: [fsharp, implementation]
+    requiredEvidence: [EV026]
+  - id: T027
+    title: Implement clarification decision DEC-005
+    status: pending
+    owner: sdd
+    dependencies: [T001]
+    requirements: []
+    decisions: [DEC-005]
+    sourceIds: [DEC-005]
+    requiredSkills: [fsharp, implementation]
+    requiredEvidence: [EV027]
+  - id: T028
+    title: Update contract surface PC-005
+    status: pending
+    owner: sdd
+    dependencies: [T001]
+    requirements: []
+    decisions: []
+    sourceIds: [PC-005, PD-009]
+    requiredSkills: [fsharp]
+    requiredEvidence: [EV028]
+  - id: T029
+    title: Record verification evidence VO-007
+    status: pending
+    owner: sdd
+    dependencies: [T001]
+    requirements: []
+    decisions: []
+    sourceIds: [PC-005, PD-009, VO-007]
+    requiredSkills: [automated-tests, readiness-evidence]
+    requiredEvidence: [EV029]
 acceptedDeferrals: []
 findings: []
 advisoryNotes:

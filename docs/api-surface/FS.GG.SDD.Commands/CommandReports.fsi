@@ -155,6 +155,11 @@ module CommandReports =
     val agentsBehaviorDivergence: path: string -> targetIds: string list -> Diagnostic
     val refreshMissingSource: viewPath: string -> sourcePath: string -> Diagnostic
     val refreshMalformedSource: viewPath: string -> sourcePath: string -> message: string -> Diagnostic
+
+    /// FS.GG.SDD#869: the work model will not derive and its blocking diagnostics name no declared
+    /// source. Reported instead of `refresh.malformedSource`, which exists to accuse a specific
+    /// artifact and must not be handed an arbitrary one when there is no candidate.
+    val refreshUnattributedBlockedView: viewPath: string -> Diagnostic
     val refreshStaleView: viewPath: string -> sourcePaths: string list -> Diagnostic
     val refreshMalformedGeneratedView: viewPath: string -> message: string -> Diagnostic
     val refreshBlockedUpstreamView: viewPath: string -> upstreamViewPath: string -> Diagnostic

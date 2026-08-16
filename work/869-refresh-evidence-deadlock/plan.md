@@ -16,9 +16,9 @@ publicOrToolFacingImpact: true
 Prose status: planned
 
 ## Source Snapshot
-- spec: work/869-refresh-evidence-deadlock/spec.md sha256:c760240f6229501e5e0052157a1fa9bf4a72b5da2ba6e1f1489b34cde9e8ef83 schemaVersion:1
-- clarifications: work/869-refresh-evidence-deadlock/clarifications.md sha256:58b919d6060f74b444e5566874f31b76d1897fb58005ad03f3a81b546fc2a038 schemaVersion:1
-- checklist: work/869-refresh-evidence-deadlock/checklist.md sha256:cd8724230429ed8fe3fffca3b8e6eb3d3c58ac441fb1a326a00290430acf09cf schemaVersion:1
+- spec: work/869-refresh-evidence-deadlock/spec.md sha256:9531f3dee6f5366a1569f018ccd5e7b725f816dc0a3ac662f4e8c893a363d1ca schemaVersion:1
+- clarifications: work/869-refresh-evidence-deadlock/clarifications.md sha256:597461b55eeff51d53442e820c7a419b435650218f8b13a1d26f0094725417af schemaVersion:1
+- checklist: work/869-refresh-evidence-deadlock/checklist.md sha256:32a2955ae3522960c62bb7ddc8371f9aa34fef0f3c952e4a762bf2c6c33cefd9 schemaVersion:1
 
 ## Plan Scope
 - Work item 869-refresh-evidence-deadlock is planned from the current specification, clarification, and checklist facts.
@@ -35,12 +35,13 @@ Prose status: planned
 - PD-006 [AC-006] [FR-006] complete: Add a fixture that drives a package to `shipReady`, appends one requirement, and then runs only the documented sequence, asserting `implementationReady` and a scaffolded declaration with no hand-edit and no deletion.
 - PD-007 [AC-007] [FR-007] complete: Record the PD-006 fixture's behaviour against the pre-change code by inverting the subject — restoring the blocking edge — and capturing the exact red, so the fixture is shown to be capable of failing.
 - PD-008 [AC-008] [FR-008] complete: Document the post-amendment step in `docs/reference/authoring-contracts.md` and make the new diagnostic's correction name the command that closes the gap.
-
+- PD-009 [AC-009] [FR-009] complete: Give `mergeEvidenceArtifacts` a `withSeededObligations` step that appends a `skeletonEvidenceDeclaration` for every obligation the existing artifact matches nothing for — the same seeder the fresh-file path already uses — and report the seeded ids as the non-blocking `evidence.seededObligations`. Match on id or `obligationRefs`, mirroring the disposition rule, so the merge and the disposition cannot disagree; touch no authored declaration.
 
 ## Contract Impact
 - PC-001 [PD-001] [PD-002] public surface: `FS.GG.SDD.Artifacts` gains one public diagnostic constructor, `undeclaredEvidenceObligation`. Additive; `Diagnostics.fsi`, its `docs/api-surface` baseline and the reflection `PublicSurface.baseline` all move together.
 - PC-002 [PD-005] public surface: `FS.GG.SDD.Commands` gains one public refresh diagnostic constructor for the unattributed case, mirrored in `CommandReports.fsi` and its baseline.
 - PC-003 [PD-001] [PD-004] persisted artifact: `readiness/<id>/work-model.json` may now carry a warning entry in its existing `diagnostics` array, and may now be written in a state where it previously was not. No schema major; every committed package keeps parsing.
+- PC-005 [PD-009] command report: `fsgg-sdd evidence` gains the non-blocking `evidence.seededObligations` report line and, on this one path, appends to an artifact the author owns. Additive; no persisted schema change.
 - PC-004 [PD-004] command report: `fsgg-sdd refresh`'s `refresh.malformedSource` changes which artifact its `relatedIds` name. The id, severity and message are unchanged; only the accusation becomes true.
 
 
@@ -51,6 +52,7 @@ Prose status: planned
 - VO-004 [PD-004] [PD-005] [PC-002] [PC-004] semanticTest: A blocked work model attributes to the source its blocking diagnostics name, and reports the unattributed case when they name none.
 - VO-005 [PD-006] [PD-007] semanticTest: The documented sequence recovers a package that gained a requirement, and the same fixture is shown red against the restored blocking edge.
 - VO-006 [PD-008] documentationReview: The authoring contract states the post-amendment step and the diagnostic correction points at it.
+- VO-007 [PD-009] [PC-005] semanticTest: `evidence` seeds the missing declaration into an authored `evidence.yml`, names the seeded ids, and the seeded declaration is still `result: missing` so `verify` keeps refusing.
 
 
 ## Performance Intent

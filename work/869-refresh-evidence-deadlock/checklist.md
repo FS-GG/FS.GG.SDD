@@ -21,8 +21,8 @@ Prose status: checklistReady
 - work/869-refresh-evidence-deadlock/clarifications.md
 
 ## Source Snapshot
-- spec: work/869-refresh-evidence-deadlock/spec.md sha256:c760240f6229501e5e0052157a1fa9bf4a72b5da2ba6e1f1489b34cde9e8ef83 schemaVersion:1
-- clarifications: work/869-refresh-evidence-deadlock/clarifications.md sha256:58b919d6060f74b444e5566874f31b76d1897fb58005ad03f3a81b546fc2a038 schemaVersion:1
+- spec: work/869-refresh-evidence-deadlock/spec.md sha256:9531f3dee6f5366a1569f018ccd5e7b725f816dc0a3ac662f4e8c893a363d1ca schemaVersion:1
+- clarifications: work/869-refresh-evidence-deadlock/clarifications.md sha256:597461b55eeff51d53442e820c7a419b435650218f8b13a1d26f0094725417af schemaVersion:1
 
 ## Checklist Items
 - CHK-001 [FR-001] [AC-001] blocking: Requirement FR-001 is testable and linked to acceptance coverage.
@@ -33,6 +33,7 @@ Prose status: checklistReady
 - CHK-006 [FR-006] [AC-006] blocking: Requirement FR-006 is testable and linked to acceptance coverage.
 - CHK-007 [FR-007] [AC-007] blocking: Requirement FR-007 is testable and linked to acceptance coverage.
 - CHK-008 [FR-008] [AC-008] blocking: Requirement FR-008 is testable and linked to acceptance coverage.
+- CHK-009 [FR-009] [AC-009] blocking: Requirement FR-009 is testable and linked to acceptance coverage.
 
 ## Review Results
 - CR-001 [CHK:CHK-001] [FR-001] [AC-001] pass: Requirement FR-001 is testable and linked to acceptance coverage.
@@ -43,6 +44,7 @@ Prose status: checklistReady
 - CR-006 [CHK:CHK-006] [FR-006] [AC-006] pass: Requirement FR-006 is testable and linked to acceptance coverage.
 - CR-007 [CHK:CHK-007] [FR-007] [AC-007] pass: Requirement FR-007 is testable and linked to acceptance coverage.
 - CR-008 [CHK:CHK-008] [FR-008] [AC-008] pass: Requirement FR-008 is testable and linked to acceptance coverage.
+- CR-009 [CHK:CHK-009] [FR-009] [AC-009] pass: Requirement FR-009 is testable and linked to acceptance coverage.
 
 ## Accepted Deferrals
 No accepted checklist deferrals recorded.

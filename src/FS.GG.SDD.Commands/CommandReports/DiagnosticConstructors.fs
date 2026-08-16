@@ -908,6 +908,24 @@ module internal DiagnosticConstructors =
             "Type each obligation's kind and result (e.g. kind: verification with a claimed pass) before rerunning --from-test-report, or author the observedRun receipts by hand."
             [ string untyped ]
 
+    /// FS.GG.SDD#869. `evidence` seeded `result: missing` skeletons into an ALREADY-AUTHORED
+    /// `evidence.yml` for obligations it declared nothing for — the state a package enters the
+    /// moment a requirement is added to it. Non-blocking (DiagnosticInfo, so `ReportAssembly.outcome`
+    /// ignores it): the seed is the repair, not a defect.
+    ///
+    /// It is reported rather than done silently because this is the one path on which SDD adds
+    /// lines to a file the author owns. Saying which ids were seeded is also the step the tool used
+    /// to leave to the author to invent: before this, the only way out was to hand-write exactly
+    /// this declaration, and nothing ever suggested it.
+    let seededEvidenceObligations path (ids: string list) =
+        commandDiagnostic
+            "evidence.seededObligations"
+            DiagnosticSeverity.DiagnosticInfo
+            (Some path)
+            $"""Seeded {ids.Length} obligation(s) into '{path}' as kind/result: missing — {String.Join(", ", ids)}."""
+            "Author each seeded declaration's kind, result and evidence before running verify; a seeded declaration claims nothing."
+            ids
+
     /// FS.GG.SDD#550. `--sync-observed-run` was pointed at a report that NO obligation carries a receipt
     /// from, so there was nothing to re-stamp. Non-blocking (DiagnosticInfo): the author asked to refresh
     /// receipts sourced from a report that discharges none of them — discoverability, not a defect. A
@@ -1349,6 +1367,19 @@ module internal DiagnosticConstructors =
             message
             "Repair the malformed or schema-incompatible declared source before refreshing the generated view."
             sourcePath
+
+    /// FS.GG.SDD#869. The work model will not derive, and its blocking diagnostics name no
+    /// declared source at all. `refresh.malformedSource` cannot be used here: it exists to accuse a
+    /// specific artifact, and having no candidate is not a reason to pick one. Naming an arbitrary
+    /// artifact is exactly the defect this work removed — a hard-coded `spec.md` sent authors to
+    /// re-lint a clean specification for every blockage there is. "Could not look" is never a
+    /// negative verdict about a particular file (ADR-0002).
+    let refreshUnattributedBlockedView viewPath =
+        errorForPath
+            "refresh.unattributedBlockedView"
+            viewPath
+            $"Generated view '{viewPath}' cannot be refreshed, and its blocking diagnostics name no declared source to attribute it to."
+            "Run the responsible lifecycle command for this view and read its own diagnostics, which carry the detail refresh could not attribute."
 
     let refreshStaleView viewPath sourcePaths =
         warningDiagnostic

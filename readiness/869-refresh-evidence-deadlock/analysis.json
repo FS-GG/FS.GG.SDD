@@ -37,11 +37,21 @@
       "schemaStatus": "current"
     },
     {
+      "path": "readiness/869-refresh-evidence-deadlock/work-model.json",
+      "kind": "workModel",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "c80192e61be7c5f9c7d7bef8c7206feb330807afade1c6c28fa66562b278bc9c"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    },
+    {
       "path": "work/869-refresh-evidence-deadlock/checklist.md",
       "kind": "checklist",
       "digest": {
         "algorithm": "sha256",
-        "value": "cd8724230429ed8fe3fffca3b8e6eb3d3c58ac441fb1a326a00290430acf09cf"
+        "value": "32a2955ae3522960c62bb7ddc8371f9aa34fef0f3c952e4a762bf2c6c33cefd9"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -51,7 +61,7 @@
       "kind": "clarification",
       "digest": {
         "algorithm": "sha256",
-        "value": "58b919d6060f74b444e5566874f31b76d1897fb58005ad03f3a81b546fc2a038"
+        "value": "597461b55eeff51d53442e820c7a419b435650218f8b13a1d26f0094725417af"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -61,7 +71,7 @@
       "kind": "plan",
       "digest": {
         "algorithm": "sha256",
-        "value": "d4b1e20271362a41b83a8005bfc08ea6cd45478f3e9a0446851686652a8096a9"
+        "value": "7ee6d5b63ae67f3085e008d3ee900421d1bec7fccb627161da3945d5a9861aae"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -71,7 +81,7 @@
       "kind": "specification",
       "digest": {
         "algorithm": "sha256",
-        "value": "c760240f6229501e5e0052157a1fa9bf4a72b5da2ba6e1f1489b34cde9e8ef83"
+        "value": "9531f3dee6f5366a1569f018ccd5e7b725f816dc0a3ac662f4e8c893a363d1ca"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -81,7 +91,7 @@
       "kind": "tasks",
       "digest": {
         "algorithm": "sha256",
-        "value": "363fd43bce6bba03e26a09dd3c7b14a5e84911981b5e73450e4425d7d294b4cb"
+        "value": "c81f01d1bb43ee6ccd8ede60ef1192cb426c05c63963d544b297b14b4e75bb03"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -161,6 +171,16 @@
     {
       "id": "AR008",
       "sourcePath": "work/869-refresh-evidence-deadlock/clarifications.md",
+      "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
+      "sourceId": "DEC-005",
+      "targetId": null,
+      "relationship": "clarificationDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR009",
+      "sourcePath": "work/869-refresh-evidence-deadlock/clarifications.md",
       "targetPath": "work/869-refresh-evidence-deadlock/plan.md",
       "sourceId": null,
       "targetId": null,
@@ -169,7 +189,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR009",
+      "id": "AR010",
       "sourcePath": "work/869-refresh-evidence-deadlock/clarifications.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": null,
@@ -179,7 +199,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR010",
+      "id": "AR011",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "PC-001",
@@ -189,7 +209,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR011",
+      "id": "AR012",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "PC-002",
@@ -199,7 +219,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR012",
+      "id": "AR013",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "PC-003",
@@ -209,7 +229,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR013",
+      "id": "AR014",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "PC-004",
@@ -219,7 +239,17 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR014",
+      "id": "AR015",
+      "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
+      "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
+      "sourceId": "PC-005",
+      "targetId": null,
+      "relationship": "contractDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR016",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "GV-001",
@@ -229,7 +259,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR015",
+      "id": "AR017",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "GV-002",
@@ -239,7 +269,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR016",
+      "id": "AR018",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "PM-001",
@@ -249,7 +279,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR017",
+      "id": "AR019",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "PD-001",
@@ -259,7 +289,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR018",
+      "id": "AR020",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "PD-002",
@@ -269,7 +299,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR019",
+      "id": "AR021",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "PD-003",
@@ -279,7 +309,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR020",
+      "id": "AR022",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "PD-004",
@@ -289,7 +319,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR021",
+      "id": "AR023",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "PD-005",
@@ -299,7 +329,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR022",
+      "id": "AR024",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "PD-006",
@@ -309,7 +339,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR023",
+      "id": "AR025",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "PD-007",
@@ -319,7 +349,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR024",
+      "id": "AR026",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "PD-008",
@@ -329,7 +359,17 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR025",
+      "id": "AR027",
+      "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
+      "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
+      "sourceId": "PD-009",
+      "targetId": null,
+      "relationship": "planDecisionDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR028",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": null,
@@ -339,7 +379,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR026",
+      "id": "AR029",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "VO-001",
@@ -349,7 +389,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR027",
+      "id": "AR030",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "VO-002",
@@ -359,7 +399,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR028",
+      "id": "AR031",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "VO-003",
@@ -369,7 +409,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR029",
+      "id": "AR032",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "VO-004",
@@ -379,7 +419,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR030",
+      "id": "AR033",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "VO-005",
@@ -389,7 +429,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR031",
+      "id": "AR034",
       "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "VO-006",
@@ -399,7 +439,17 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR032",
+      "id": "AR035",
+      "sourcePath": "work/869-refresh-evidence-deadlock/plan.md",
+      "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
+      "sourceId": "VO-007",
+      "targetId": null,
+      "relationship": "verificationDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR036",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "AC-001",
@@ -409,7 +459,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR033",
+      "id": "AR037",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "AC-002",
@@ -419,7 +469,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR034",
+      "id": "AR038",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "AC-003",
@@ -429,7 +479,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR035",
+      "id": "AR039",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "AC-004",
@@ -439,7 +489,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR036",
+      "id": "AR040",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "AC-005",
@@ -449,7 +499,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR037",
+      "id": "AR041",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "AC-006",
@@ -459,7 +509,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR038",
+      "id": "AR042",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "AC-007",
@@ -469,7 +519,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR039",
+      "id": "AR043",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "AC-008",
@@ -479,7 +529,17 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR040",
+      "id": "AR044",
+      "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
+      "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
+      "sourceId": "AC-009",
+      "targetId": null,
+      "relationship": "acceptanceDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR045",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/checklist.md",
       "sourceId": null,
@@ -489,7 +549,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR041",
+      "id": "AR046",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/plan.md",
       "sourceId": null,
@@ -499,7 +559,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR042",
+      "id": "AR047",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "FR-001",
@@ -509,7 +569,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR043",
+      "id": "AR048",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "FR-002",
@@ -519,7 +579,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR044",
+      "id": "AR049",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "FR-003",
@@ -529,7 +589,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR045",
+      "id": "AR050",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "FR-004",
@@ -539,7 +599,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR046",
+      "id": "AR051",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "FR-005",
@@ -549,7 +609,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR047",
+      "id": "AR052",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "FR-006",
@@ -559,7 +619,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR048",
+      "id": "AR053",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "FR-007",
@@ -569,7 +629,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR049",
+      "id": "AR054",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "FR-008",
@@ -579,7 +639,17 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR050",
+      "id": "AR055",
+      "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
+      "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
+      "sourceId": "FR-009",
+      "targetId": null,
+      "relationship": "requirementDisposition",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR056",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/clarifications.md",
       "sourceId": null,
@@ -589,7 +659,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR051",
+      "id": "AR057",
       "sourcePath": "work/869-refresh-evidence-deadlock/spec.md",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": null,
@@ -599,7 +669,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR052",
+      "id": "AR058",
       "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "T009",
@@ -609,7 +679,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR053",
+      "id": "AR059",
       "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "T010",
@@ -619,7 +689,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR054",
+      "id": "AR060",
       "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "T011",
@@ -629,7 +699,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR055",
+      "id": "AR061",
       "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "T012",
@@ -639,7 +709,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR056",
+      "id": "AR062",
       "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "T013",
@@ -649,7 +719,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR057",
+      "id": "AR063",
       "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "T014",
@@ -659,7 +729,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR058",
+      "id": "AR064",
       "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "T015",
@@ -669,7 +739,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR059",
+      "id": "AR065",
       "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "T016",
@@ -679,7 +749,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR060",
+      "id": "AR066",
       "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "T017",
@@ -689,7 +759,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR061",
+      "id": "AR067",
       "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "T018",
@@ -699,7 +769,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR062",
+      "id": "AR068",
       "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "T019",
@@ -709,7 +779,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR063",
+      "id": "AR069",
       "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "T020",
@@ -719,7 +789,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR064",
+      "id": "AR070",
       "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "T021",
@@ -729,7 +799,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR065",
+      "id": "AR071",
       "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "T022",
@@ -739,7 +809,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR066",
+      "id": "AR072",
       "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "T023",
@@ -749,7 +819,7 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR067",
+      "id": "AR073",
       "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "T024",
@@ -759,10 +829,40 @@
       "diagnosticIds": []
     },
     {
-      "id": "AR068",
+      "id": "AR074",
       "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
       "sourceId": "T025",
+      "targetId": "T001",
+      "relationship": "taskDependency",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR075",
+      "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
+      "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
+      "sourceId": "T027",
+      "targetId": "T001",
+      "relationship": "taskDependency",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR076",
+      "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
+      "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
+      "sourceId": "T028",
+      "targetId": "T001",
+      "relationship": "taskDependency",
+      "state": "current",
+      "diagnosticIds": []
+    },
+    {
+      "id": "AR077",
+      "sourcePath": "work/869-refresh-evidence-deadlock/tasks.yml",
+      "targetPath": "work/869-refresh-evidence-deadlock/tasks.yml",
+      "sourceId": "T029",
       "targetId": "T001",
       "relationship": "taskDependency",
       "state": "current",
@@ -771,7 +871,7 @@
   ],
   "readiness": {
     "status": "implementationReady",
-    "readyCount": 68,
+    "readyCount": 77,
     "advisoryCount": 0,
     "warningCount": 0,
     "blockingCount": 0,
@@ -786,7 +886,7 @@
     {
       "path": "readiness/869-refresh-evidence-deadlock/work-model.json",
       "kind": "workModel",
-      "currency": "missing",
+      "currency": "current",
       "diagnosticIds": []
     }
   ],

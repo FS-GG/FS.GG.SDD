@@ -77,6 +77,7 @@ state with none.
 - AC-006 [US-001] [FR-006]: Given a package brought to `shipReady` and then given one added requirement, when the documented sequence is run, then it reaches `implementationReady` and `evidence` scaffolds the new declaration, with no hand-editing and no deletion of `evidence.yml`.
 - AC-007 [US-001] [FR-007]: Given the pre-change code, when the AC-006 fixture runs against it, then it fails at the deadlock, so the fixture is shown to test the fix rather than to pass either way.
 - AC-008 [US-001] [FR-008]: Given the authoring documentation, when an author consults it for what to do after adding a requirement, then it states the step and the diagnostics point at it.
+- AC-009 [US-001] [FR-009]: Given an already-authored `evidence.yml` that declares nothing for a newly minted obligation, when `evidence` runs, then it seeds a `result: missing` declaration for that obligation, names the ids it seeded, and modifies no authored declaration.
 
 ## Functional Requirements
 
@@ -88,13 +89,15 @@ state with none.
 - FR-006: A package that gains a requirement after `evidence.yml` exists returns to `implementationReady` and through `evidence` using only the documented commands, with no hand-editing of `evidence.yml` and no deletion of an authored artifact. (Stories: US-001; Acceptance: AC-006)
 - FR-007: The FR-006 fixture is shown to fail against the pre-change behaviour, so it is evidence of the fix rather than a test that passes either way. (Stories: US-001; Acceptance: AC-007)
 - FR-008: The authoring documentation records the post-amendment step, and the new diagnostic's correction points the author at it. (Stories: US-001; Acceptance: AC-008)
+- FR-009: `evidence` seeds a `result: missing` skeleton into an already-authored `evidence.yml` for every obligation it declares nothing for, reports which ids it seeded, and rewrites no authored declaration. (Stories: US-001; Acceptance: AC-009)
 
 ## Ambiguities
 
-- AMB-001: The reported defect admits three outcomes, and they are mutually exclusive. Either
+- AMB-001: The reported defect was filed as admitting three MUTUALLY EXCLUSIVE outcomes. Either
   `evidence` may scaffold a missing declaration while analysis is blocked on that very fact, or the
   work model may be derived from an `evidence.yml` that is merely incomplete, or neither command
-  changes and the deadlock becomes a documented authoring step. Decided at clarify.
+  changes and the deadlock becomes a documented authoring step. Whether they are in fact exclusive
+  is itself the question. Decided at clarify.
 - AMB-002: If the work model may be derived from an incomplete `evidence.yml`, the demoted
   diagnostic could keep its existing id at a lower severity or take a new id of its own. Decided at
   clarify.
