@@ -109,7 +109,32 @@ echo "check-tree-clean: tree='$toplevel' ($tracked_count tracked file(s))${LABEL
 findings=0
 
 # LEG 1 — the contributor-visible condition, spelled exactly as FS.GG.SDD#870 AC2 spells it.
-status_out="$(git status --porcelain 2>&1)"
+#
+# `-c status.showUntrackedFiles=normal` IS LOAD-BEARING, and this is the same remedy, for the same
+# reason, that FS-GG/.github's `scripts/fsgg-coord-guards.sh:467,532` already applies to its own
+# dirty-tree probe under FS-GG/.github#1043. `--porcelain` is a FORMATTING flag: it does not override
+# `status.showUntrackedFiles`. With that set to `no` — from `.git/config` or from `~/.gitconfig` —
+# a bare `git status --porcelain` answers EMPTY over a tree carrying the whole of #870, and this
+# check then prints OK and exits 0. Measured on both vectors at b4cd931 against a fixture holding
+# `tests/fixtures/demo/node_modules/left-pad/index.js`: bare status 0 lines, this script exit 0;
+# with the flag, 1 line and exit 1.
+#
+# THE POPULATION THAT SETS IT IS THE POPULATION THIS GATE IS FOR. AC2 names the contributor as who
+# relies on `git status` being usable, and `showUntrackedFiles=no` is what someone sets precisely
+# BECAUSE 541 untracked files made it unusable. Left unguarded, the check is blind for exactly the
+# people it exists to protect, and silent about it.
+#
+# NOT NEUTRALISED HERE, DELIBERATELY: `core.excludesFile`. A personal global ignore also hides paths
+# from this probe, but it is a different act — the contributor has DECLARED those paths uninteresting,
+# whereas `showUntrackedFiles=no` is a display preference that says nothing about which paths are
+# generated. Overriding the former would red a developer's run for their own `.DS_Store` or editor
+# swap files, which is a false red, not a caught defect; and no CI runner carries one, so it cannot
+# fail open where the verdict is authoritative. Considered and declined, not overlooked.
+#
+# Line 121's summary re-read passes `--untracked-files=all` EXPLICITLY, and an explicit flag does
+# override the config — verified on the same blind fixture, which reported 1 file there while the
+# bare call reported 0 — so that call needs no `-c` and does not get a redundant one.
+status_out="$(git -c status.showUntrackedFiles=normal status --porcelain 2>&1)"
 rc=$?
 [ "$rc" -eq 0 ] || die "git status --porcelain failed in '$toplevel' (exit $rc), so this check has no verdict:
 $status_out"

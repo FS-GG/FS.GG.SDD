@@ -23,11 +23,28 @@
 #   7..10     the fail-CLOSED family: a non-git directory, a work tree with zero tracked files, an
 #             absent tree, an unknown flag. Each is exit 2, paired against leg 1 — the same script,
 #             a usable subject, exit 0. "I could not evaluate this" is never "it passed".
+#  11 <-> 12  leg 2's fixture again, unchanged, under `status.showUntrackedFiles=no` — set in
+#             `.git/config` and then in `~/.gitconfig`. Both must STILL red. See the warning below:
+#             these two exist because the hermeticism directly above them hid this defect once.
 #
-# HERMETIC. Every fixture is a fresh repository under `mktemp -d`, outside this checkout, with the
-# global and system git config forced empty so a developer's `core.excludesFile` cannot make a leg
-# pass or fail. No network, no build, no dotnet, no npm — this is why it can run as its own cheap
-# gate step ahead of the suite.
+# HERMETIC — AND THAT IS ALSO A HAZARD THIS FILE HAS ALREADY BEEN BITTEN BY.
+#
+# Every fixture is a fresh repository under `mktemp -d`, outside this checkout, with the global and
+# system git config forced empty. That is right for legs 1-10: a developer's `core.excludesFile`
+# must not decide whether they pass. No network, no build, no dotnet, no npm — which is why this can
+# run as its own cheap gate step ahead of the suite.
+#
+# But forcing the config empty ALSO means no leg here exercises a configured git, so a check that is
+# blind under a common contributor config looks fully covered. That is not hypothetical: at b4cd931
+# the subject ran a bare `git status --porcelain`, which `--porcelain` does NOT protect from
+# `status.showUntrackedFiles=no`, so it printed OK and exited 0 on a tree carrying the whole of
+# FS.GG.SDD#870 — and all 24 assertions here passed, precisely BECAUSE `GIT_CONFIG_GLOBAL=/dev/null`
+# meant none of them could see it. The hermeticism did not cause the defect; it made it invisible
+# while appearing to have handled config-dependence.
+#
+# So legs 11 and 12 deliberately UN-force the config, one vector each. When adding a leg here, ask
+# which git configuration it silently assumes — the answer for legs 1-10 is "none, by construction",
+# and that is a coverage claim, not a safety one.
 #
 # Run:  bash scripts/tests/check-tree-clean.test.sh
 set -uo pipefail
@@ -203,6 +220,46 @@ expect_out "9. says why" "not a directory"
 run_check "$t1" --no-such-flag
 expect_rc "10. unknown argument" 2
 expect_out "10. names the argument" "unknown argument: --no-such-flag"
+
+# --- 11/12. status.showUntrackedFiles=no must NOT be able to silence the gate ------------------
+#
+# `--porcelain` is a FORMATTING flag and does not override `status.showUntrackedFiles`. Both legs
+# reuse leg 2's fixture UNCHANGED — the same untracked `node_modules/left-pad/index.js`, the #870
+# condition in miniature — and assert the same exit 1. The only thing that varies is where git reads
+# the setting from, because the two vectors are configured in different places and a fix that
+# addressed only one would still leave the other blind.
+#
+# Both legs are red without `-c status.showUntrackedFiles=normal` in the subject: they return exit 0
+# with the OK line, over a tree that leg 2 proves is dirty. That is the pairing.
+
+# 11. the repository's own .git/config.
+t11="$(make_repo blind-repo-local)"
+mkdir -p "$t11/tests/fixtures/demo/node_modules/left-pad"
+printf 'vendored\n' >"$t11/tests/fixtures/demo/node_modules/left-pad/index.js"
+git -C "$t11" config status.showUntrackedFiles no
+# Precondition: a bare porcelain status really is blind here, or the leg proves nothing.
+if [ -n "$(git -C "$t11" status --porcelain)" ]; then
+  bad "11. fixture precondition: expected a bare 'git status --porcelain' to be BLIND under this config"
+fi
+run_check "$t11"
+expect_rc "11. dirty tree, status.showUntrackedFiles=no in .git/config" 1
+expect_out "11. still classifies it [dirty]" "check-tree-clean: [dirty]"
+
+# 12. the user's ~/.gitconfig. `GIT_CONFIG_GLOBAL` is what this file forces to /dev/null for every
+# other leg, so here it is pointed at a real config instead — the one vector the hermeticism hides.
+t12="$(make_repo blind-global)"
+mkdir -p "$t12/tests/fixtures/demo/node_modules/left-pad"
+printf 'vendored\n' >"$t12/tests/fixtures/demo/node_modules/left-pad/index.js"
+printf '[status]\n\tshowUntrackedFiles = no\n' >"$work/global-gitconfig"
+GIT_CONFIG_GLOBAL="$work/global-gitconfig" run_check "$t12"
+expect_rc "12. dirty tree, status.showUntrackedFiles=no in ~/.gitconfig" 1
+expect_out "12. still classifies it [dirty]" "check-tree-clean: [dirty]"
+# Prove leg 12's vector was actually in force, rather than the leg passing for leg 2's reason.
+if [ -n "$(GIT_CONFIG_GLOBAL="$work/global-gitconfig" git -C "$t12" status --porcelain)" ]; then
+  bad "12. fixture precondition: GIT_CONFIG_GLOBAL was not in force — a bare porcelain status still saw the file, so this leg did not test its vector"
+else
+  ok "12. the global vector was genuinely in force (a bare porcelain status was blind)"
+fi
 
 echo
 if [ "$fail" -ne 0 ]; then
