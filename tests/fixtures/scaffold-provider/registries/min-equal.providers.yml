@@ -12,8 +12,10 @@ providers:
     # of `cliCoherenceDiagnostics` (`Some 0`, no advisory); the moment it drifts below the installed
     # version it silently becomes a second copy of the strictly-above case that `min-satisfied`
     # already covers, and `Assert.Empty` cannot tell the two apart. That is not hypothetical: it drifted
-    # to a patch below on 1.0.1 and went unnoticed, which is what `equalMinimumFixtureTracksInstalled`
-    # in ScaffoldCliCoherenceTests now fails loudly about instead of leaving to review.
+    # to a patch below on 1.0.1 and went unnoticed, which is what the guard
+    # `the min-equal and min-behind fixtures stay anchored to the installed version` — in
+    # tests/FS.GG.SDD.Commands.Tests/ScaffoldCliCoherenceTests.fs — now fails loudly about instead of
+    # leaving to review.
     minimumFsggSdd:
       version: "1.1.0"
     parameters:
