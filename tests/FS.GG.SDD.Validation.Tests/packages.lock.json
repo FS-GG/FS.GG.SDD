@@ -112,17 +112,17 @@
         "dependencies": {
           "FS.GG.Contracts": "[7.5.2, )",
           "FS.GG.Drivers": "[0.16.1, )",
-          "FS.GG.Game.Skills": "[0.7.0, )",
+          "FS.GG.Game.Skills": "[0.8.0, )",
           "FS.GG.Rendering.Skills": "[0.1.0, )",
-          "FS.GG.SDD.Artifacts": "[1.1.0, )",
+          "FS.GG.SDD.Artifacts": "[1.2.0, )",
           "FSharp.Core": "[10.1.302, )"
         }
       },
       "fs.gg.sdd.validation": {
         "type": "Project",
         "dependencies": {
-          "FS.GG.SDD.Artifacts": "[1.1.0, )",
-          "FS.GG.SDD.Commands": "[1.1.0, )",
+          "FS.GG.SDD.Artifacts": "[1.2.0, )",
+          "FS.GG.SDD.Commands": "[1.2.0, )",
           "FSharp.Core": "[10.1.302, )"
         }
       },
@@ -134,9 +134,9 @@
       },
       "FS.GG.Game.Skills": {
         "type": "CentralTransitive",
-        "requested": "[0.7.0, )",
-        "resolved": "0.7.0",
-        "contentHash": "XxWHqYPxezfZcY7wXkUE3KGzl8dak7eViir0TRCouSVgSkBbVkD8/UxXLZUyGcsTaz5dMM/jBtbsAE6TqGJEhA=="
+        "requested": "[0.8.0, )",
+        "resolved": "0.8.0",
+        "contentHash": "Jfijq4dCJiZCChg6M9C9aJXTLAq0VqbCIcrvxG8ENK01YHiPt7u/dMtIWlTi4iFd4pneBZj4QWLwuAK316TEBQ=="
       },
       "FS.GG.Rendering.Skills": {
         "type": "CentralTransitive",
