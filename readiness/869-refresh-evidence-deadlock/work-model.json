@@ -53,7 +53,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "32a2955ae3522960c62bb7ddc8371f9aa34fef0f3c952e4a762bf2c6c33cefd9"
+        "value": "9dd2e53d6ed44813a89f9a17148d8d18d9b0aaec9a2802821bc5bc20428a7174"
       }
     },
     {
@@ -65,7 +65,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "597461b55eeff51d53442e820c7a419b435650218f8b13a1d26f0094725417af"
+        "value": "e9974df1bcfa62859b53389e55c71b082155955bf7605b40c9f87cfb585d3bb9"
       }
     },
     {
@@ -77,7 +77,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "23fe0aab09beda98ccaca9fb9df48145d222eb30f84fbe87e9dfb202805c826a"
+        "value": "7f2f008f4430196b8125b1687b8a7b8d8088574dd11520057758625b5d2a1a55"
       }
     },
     {
@@ -89,7 +89,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "7ee6d5b63ae67f3085e008d3ee900421d1bec7fccb627161da3945d5a9861aae"
+        "value": "e8e20f867a37f98016c7b17c9e2d8f4ed9dc935ddeff402d24d5691203ae0f2d"
       }
     },
     {
@@ -101,7 +101,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "9531f3dee6f5366a1569f018ccd5e7b725f816dc0a3ac662f4e8c893a363d1ca"
+        "value": "7b3d688546e89712116ca5ec76c8fac46fe3f2d7b460e2a0fd3f47e7f76c1081"
       }
     },
     {
@@ -113,7 +113,7 @@
       "schemaStatus": "current",
       "sourceDigest": {
         "algorithm": "sha256",
-        "value": "c81f01d1bb43ee6ccd8ede60ef1192cb426c05c63963d544b297b14b4e75bb03"
+        "value": "f4fb57e9ca7c8cf163d1c4a0614544851cba0d1f43eba15a81097c47297e2913"
       }
     }
   ],
@@ -170,8 +170,8 @@
     },
     {
       "id": "FR-003",
-      "title": "\u0060evidence\u0060, \u0060verify\u0060 and \u0060ship\u0060 continue to refuse an evidence obligation that carries no declaration and no accepted deferral, naming the obligation id. (Stories: US-003; Acceptance: AC-003)",
-      "text": "\u0060evidence\u0060, \u0060verify\u0060 and \u0060ship\u0060 continue to refuse an evidence obligation that carries no declaration and no accepted deferral, naming the obligation id. (Stories: US-003; Acceptance: AC-003)",
+      "title": "An evidence obligation that carries no declaration and no accepted deferral is still refused downstream by id \u2014 \u0060verify\u0060 blocks naming it and \u0060ship\u0060 blocks behind the verification view it did not produce \u2014 while \u0060evidence\u0060 seeds it rather than refusing, and that seeding cannot satisfy it. The gate carries a control leg, because a fixture that blocks for an unrelated reason blocks identically. (Stories: US-003; Acceptance: AC-003)",
+      "text": "An evidence obligation that carries no declaration and no accepted deferral is still refused downstream by id \u2014 \u0060verify\u0060 blocks naming it and \u0060ship\u0060 blocks behind the verification view it did not produce \u2014 while \u0060evidence\u0060 seeds it rather than refusing, and that seeding cannot satisfy it. The gate carries a control leg, because a fixture that blocks for an unrelated reason blocks identically. (Stories: US-003; Acceptance: AC-003)",
       "acceptanceCriteria": [
         "AC-003"
       ],
@@ -387,8 +387,8 @@
     },
     {
       "id": "DEC-004",
-      "title": "No gate is deleted. The regression coverage asserts positively that an obligation which is never declared still stops \u0060evidence\u0060, \u0060verify\u0060 and \u0060ship\u0060, so the relocation in DEC-001 is shown to have moved the check rather than removed it.",
-      "decision": "No gate is deleted. The regression coverage asserts positively that an obligation which is never declared still stops \u0060evidence\u0060, \u0060verify\u0060 and \u0060ship\u0060, so the relocation in DEC-001 is shown to have moved the check rather than removed it.",
+      "title": "No gate is deleted, and the coverage that says so carries a CONTROL leg. Measured, the three commands do not all do the same thing: \u0060evidence\u0060 SEEDS the undeclared obligation and names it (that is DEC-005, and asserting a refusal there would assert the opposite of what this change intends), \u0060verify\u0060 refuses naming each id, and \u0060ship\u0060 refuses behind the verification view \u0060verify\u0060 declined to produce. The control leg is the load-bearing part: the obvious fixture for this property never runs \u0060analyze\u0060, so \u0060verify\u0060 refuses at \u0060evidence.missingAnalysisPrerequisite\u0060 whether the declarations are present or absent, and a test asserting only the outcome would pass against a build with the enforcement deleted outright.",
+      "decision": "No gate is deleted, and the coverage that says so carries a CONTROL leg. Measured, the three commands do not all do the same thing: \u0060evidence\u0060 SEEDS the undeclared obligation and names it (that is DEC-005, and asserting a refusal there would assert the opposite of what this change intends), \u0060verify\u0060 refuses naming each id, and \u0060ship\u0060 refuses behind the verification view \u0060verify\u0060 declined to produce. The control leg is the load-bearing part: the obvious fixture for this property never runs \u0060analyze\u0060, so \u0060verify\u0060 refuses at \u0060evidence.missingAnalysisPrerequisite\u0060 whether the declarations are present or absent, and a test asserting only the outcome would pass against a build with the enforcement deleted outright.",
       "requirementRefs": [
         "FR-003"
       ],
@@ -432,7 +432,7 @@
     {
       "id": "T001",
       "title": "Implement requirement FR-001",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [],
       "requirements": [
@@ -460,7 +460,7 @@
     {
       "id": "T002",
       "title": "Implement requirement FR-002",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [],
       "requirements": [
@@ -488,7 +488,7 @@
     {
       "id": "T003",
       "title": "Implement requirement FR-003",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [],
       "requirements": [
@@ -516,7 +516,7 @@
     {
       "id": "T004",
       "title": "Implement requirement FR-004",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [],
       "requirements": [
@@ -544,7 +544,7 @@
     {
       "id": "T005",
       "title": "Implement requirement FR-005",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [],
       "requirements": [
@@ -572,7 +572,7 @@
     {
       "id": "T006",
       "title": "Implement requirement FR-006",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [],
       "requirements": [
@@ -600,7 +600,7 @@
     {
       "id": "T007",
       "title": "Implement requirement FR-007",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [],
       "requirements": [
@@ -628,7 +628,7 @@
     {
       "id": "T008",
       "title": "Implement requirement FR-008",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [],
       "requirements": [
@@ -656,7 +656,7 @@
     {
       "id": "T009",
       "title": "Implement clarification decision DEC-001",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -684,7 +684,7 @@
     {
       "id": "T010",
       "title": "Implement clarification decision DEC-002",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -712,7 +712,7 @@
     {
       "id": "T011",
       "title": "Implement clarification decision DEC-003",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -740,7 +740,7 @@
     {
       "id": "T012",
       "title": "Implement clarification decision DEC-004",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -768,7 +768,7 @@
     {
       "id": "T013",
       "title": "Update contract surface PC-001",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -795,7 +795,7 @@
     {
       "id": "T014",
       "title": "Update contract surface PC-002",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -821,7 +821,7 @@
     {
       "id": "T015",
       "title": "Update contract surface PC-003",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -848,7 +848,7 @@
     {
       "id": "T016",
       "title": "Update contract surface PC-004",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -874,7 +874,7 @@
     {
       "id": "T017",
       "title": "Record verification evidence VO-001",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -902,7 +902,7 @@
     {
       "id": "T018",
       "title": "Record verification evidence VO-002",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -930,7 +930,7 @@
     {
       "id": "T019",
       "title": "Record verification evidence VO-003",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -958,7 +958,7 @@
     {
       "id": "T020",
       "title": "Record verification evidence VO-004",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -988,7 +988,7 @@
     {
       "id": "T021",
       "title": "Record verification evidence VO-005",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -1016,7 +1016,7 @@
     {
       "id": "T022",
       "title": "Record verification evidence VO-006",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -1043,7 +1043,7 @@
     {
       "id": "T023",
       "title": "Handle migration posture PM-001",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -1070,7 +1070,7 @@
     {
       "id": "T024",
       "title": "Refresh generated view impact GV-001",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -1097,7 +1097,7 @@
     {
       "id": "T025",
       "title": "Refresh generated view impact GV-002",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -1123,7 +1123,7 @@
     {
       "id": "T026",
       "title": "Implement requirement FR-009",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [],
       "requirements": [
@@ -1151,7 +1151,7 @@
     {
       "id": "T027",
       "title": "Implement clarification decision DEC-005",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -1179,7 +1179,7 @@
     {
       "id": "T028",
       "title": "Update contract surface PC-005",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -1205,7 +1205,7 @@
     {
       "id": "T029",
       "title": "Record verification evidence VO-007",
-      "status": "pending",
+      "status": "done",
       "owner": "sdd",
       "dependencies": [
         "T001"
@@ -1400,7 +1400,8 @@
         "FR-007"
       ],
       "artifactRefs": [
-        "tests/FS.GG.SDD.Commands.Tests/RefreshEvidenceDeadlockTests.fs"
+        "tests/FS.GG.SDD.Commands.Tests/RefreshEvidenceDeadlockTests.fs",
+        "work/869-refresh-evidence-deadlock/verification/verification-evidence.md"
       ],
       "result": "pass",
       "synthetic": false,
@@ -1985,7 +1986,7 @@
           "path": "work/869-refresh-evidence-deadlock/checklist.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "32a2955ae3522960c62bb7ddc8371f9aa34fef0f3c952e4a762bf2c6c33cefd9"
+            "value": "9dd2e53d6ed44813a89f9a17148d8d18d9b0aaec9a2802821bc5bc20428a7174"
           },
           "schemaVersion": 1
         },
@@ -1993,7 +1994,7 @@
           "path": "work/869-refresh-evidence-deadlock/clarifications.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "597461b55eeff51d53442e820c7a419b435650218f8b13a1d26f0094725417af"
+            "value": "e9974df1bcfa62859b53389e55c71b082155955bf7605b40c9f87cfb585d3bb9"
           },
           "schemaVersion": 1
         },
@@ -2001,7 +2002,7 @@
           "path": "work/869-refresh-evidence-deadlock/evidence.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "23fe0aab09beda98ccaca9fb9df48145d222eb30f84fbe87e9dfb202805c826a"
+            "value": "7f2f008f4430196b8125b1687b8a7b8d8088574dd11520057758625b5d2a1a55"
           },
           "schemaVersion": 1
         },
@@ -2009,7 +2010,7 @@
           "path": "work/869-refresh-evidence-deadlock/plan.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "7ee6d5b63ae67f3085e008d3ee900421d1bec7fccb627161da3945d5a9861aae"
+            "value": "e8e20f867a37f98016c7b17c9e2d8f4ed9dc935ddeff402d24d5691203ae0f2d"
           },
           "schemaVersion": 1
         },
@@ -2017,7 +2018,7 @@
           "path": "work/869-refresh-evidence-deadlock/spec.md",
           "digest": {
             "algorithm": "sha256",
-            "value": "9531f3dee6f5366a1569f018ccd5e7b725f816dc0a3ac662f4e8c893a363d1ca"
+            "value": "7b3d688546e89712116ca5ec76c8fac46fe3f2d7b460e2a0fd3f47e7f76c1081"
           },
           "schemaVersion": 1
         },
@@ -2025,14 +2026,14 @@
           "path": "work/869-refresh-evidence-deadlock/tasks.yml",
           "digest": {
             "algorithm": "sha256",
-            "value": "c81f01d1bb43ee6ccd8ede60ef1192cb426c05c63963d544b297b14b4e75bb03"
+            "value": "f4fb57e9ca7c8cf163d1c4a0614544851cba0d1f43eba15a81097c47297e2913"
           },
           "schemaVersion": 1
         }
       ],
       "outputDigest": {
         "algorithm": "sha256",
-        "value": "e819a2e05bdaff69d6fde9b5e7c42054369c02d872b50e295f13547a2a186587"
+        "value": "9ad73af97c8fec399f7b00f5c062d6138a90f4a60d761e7b0d90ffa40a4e8e70"
       },
       "currency": "current"
     }

@@ -45,9 +45,13 @@ module internal HandlersRefresh =
     ///   two artifacts, and collapsing them would reinstate the placeholder in a smaller form.
     /// - Neither — the blocking diagnostics name no source at all. Refresh says so rather than
     ///   picking one; "could not look" is never a negative verdict about a particular file
-    ///   (ADR-0002). No lifecycle input reaches this arm today, because every work-model diagnostic
-    ///   carries its artifact; it is fail-safe against one that does not, and it is the arm that
-    ///   must never silently become "blame the spec" again.
+    ///   (ADR-0002). No lifecycle input reaches this arm today: every diagnostic
+    ///   `WorkModel.blockingDiagnostics` can return originates in `referenceDiagnostics` /
+    ///   `validationDiagnostics` and carries `Some artifact`, and `refresh` passes
+    ///   `commandDiagnostics = []` into `generatedViewPlan`, so the one branch that could return a
+    ///   `Blocked` view alongside empty sources is unreachable from here. It is fail-safe against a
+    ///   future diagnostic that carries none, and it is the arm that must never silently become
+    ///   "blame the spec" again.
     let blockedWorkModelAttribution (viewPath: string) (missingAuthored: string list) (blockingSources: string list) =
         match missingAuthored with
         | missing :: _ -> [ refreshMissingSource viewPath missing ]

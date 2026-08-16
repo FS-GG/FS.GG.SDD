@@ -21,8 +21,8 @@ Prose status: checklistReady
 - work/869-refresh-evidence-deadlock/clarifications.md
 
 ## Source Snapshot
-- spec: work/869-refresh-evidence-deadlock/spec.md sha256:9531f3dee6f5366a1569f018ccd5e7b725f816dc0a3ac662f4e8c893a363d1ca schemaVersion:1
-- clarifications: work/869-refresh-evidence-deadlock/clarifications.md sha256:597461b55eeff51d53442e820c7a419b435650218f8b13a1d26f0094725417af schemaVersion:1
+- spec: work/869-refresh-evidence-deadlock/spec.md sha256:7b3d688546e89712116ca5ec76c8fac46fe3f2d7b460e2a0fd3f47e7f76c1081 schemaVersion:1
+- clarifications: work/869-refresh-evidence-deadlock/clarifications.md sha256:e9974df1bcfa62859b53389e55c71b082155955bf7605b40c9f87cfb585d3bb9 schemaVersion:1
 
 ## Checklist Items
 - CHK-001 [FR-001] [AC-001] blocking: Requirement FR-001 is testable and linked to acceptance coverage.

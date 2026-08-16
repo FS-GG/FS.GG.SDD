@@ -11,7 +11,7 @@
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "c80192e61be7c5f9c7d7bef8c7206feb330807afade1c6c28fa66562b278bc9c"
+        "value": "15786b5d2cf9a7a294b7e19bebf51a30b0e455625d98c8f4fb85ccaee73ed781"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -19,14 +19,14 @@
   ],
   "behaviorModelDigest": {
     "algorithm": "sha256",
-    "value": "09fdf715f76fa90e4ed392659948197982f773a2b40c0e7d4deac7811dfa8512"
+    "value": "45f610226ddb6f050f85d11b22a578b0ff7e98149ea0e1612a3b48ac2018a5a4"
   },
   "commands": [
     {
       "id": "T001",
       "title": "Implement requirement FR-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T001 (pending) covering AC-001, FR-001, PD-001.",
+      "purpose": "Carry out lifecycle task T001 (done) covering AC-001, FR-001, PD-001.",
       "relatedIds": [
         "AC-001",
         "FR-001",
@@ -37,7 +37,7 @@
       "id": "T002",
       "title": "Implement requirement FR-002",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T002 (pending) covering AC-002, FR-002, PD-002.",
+      "purpose": "Carry out lifecycle task T002 (done) covering AC-002, FR-002, PD-002.",
       "relatedIds": [
         "AC-002",
         "FR-002",
@@ -48,7 +48,7 @@
       "id": "T003",
       "title": "Implement requirement FR-003",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T003 (pending) covering AC-003, FR-003, PD-003.",
+      "purpose": "Carry out lifecycle task T003 (done) covering AC-003, FR-003, PD-003.",
       "relatedIds": [
         "AC-003",
         "FR-003",
@@ -59,7 +59,7 @@
       "id": "T004",
       "title": "Implement requirement FR-004",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T004 (pending) covering AC-004, FR-004, PD-004.",
+      "purpose": "Carry out lifecycle task T004 (done) covering AC-004, FR-004, PD-004.",
       "relatedIds": [
         "AC-004",
         "FR-004",
@@ -70,7 +70,7 @@
       "id": "T005",
       "title": "Implement requirement FR-005",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T005 (pending) covering AC-005, FR-005, PD-005.",
+      "purpose": "Carry out lifecycle task T005 (done) covering AC-005, FR-005, PD-005.",
       "relatedIds": [
         "AC-005",
         "FR-005",
@@ -81,7 +81,7 @@
       "id": "T006",
       "title": "Implement requirement FR-006",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T006 (pending) covering AC-006, FR-006, PD-006.",
+      "purpose": "Carry out lifecycle task T006 (done) covering AC-006, FR-006, PD-006.",
       "relatedIds": [
         "AC-006",
         "FR-006",
@@ -92,7 +92,7 @@
       "id": "T007",
       "title": "Implement requirement FR-007",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T007 (pending) covering AC-007, FR-007, PD-007.",
+      "purpose": "Carry out lifecycle task T007 (done) covering AC-007, FR-007, PD-007.",
       "relatedIds": [
         "AC-007",
         "FR-007",
@@ -103,7 +103,7 @@
       "id": "T008",
       "title": "Implement requirement FR-008",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T008 (pending) covering AC-008, FR-008, PD-008.",
+      "purpose": "Carry out lifecycle task T008 (done) covering AC-008, FR-008, PD-008.",
       "relatedIds": [
         "AC-008",
         "FR-008",
@@ -114,7 +114,7 @@
       "id": "T009",
       "title": "Implement clarification decision DEC-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T009 (pending) covering DEC-001.",
+      "purpose": "Carry out lifecycle task T009 (done) covering DEC-001.",
       "relatedIds": [
         "DEC-001"
       ]
@@ -123,7 +123,7 @@
       "id": "T010",
       "title": "Implement clarification decision DEC-002",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T010 (pending) covering DEC-002.",
+      "purpose": "Carry out lifecycle task T010 (done) covering DEC-002.",
       "relatedIds": [
         "DEC-002"
       ]
@@ -132,7 +132,7 @@
       "id": "T011",
       "title": "Implement clarification decision DEC-003",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T011 (pending) covering DEC-003.",
+      "purpose": "Carry out lifecycle task T011 (done) covering DEC-003.",
       "relatedIds": [
         "DEC-003"
       ]
@@ -141,7 +141,7 @@
       "id": "T012",
       "title": "Implement clarification decision DEC-004",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T012 (pending) covering DEC-004.",
+      "purpose": "Carry out lifecycle task T012 (done) covering DEC-004.",
       "relatedIds": [
         "DEC-004"
       ]
@@ -150,7 +150,7 @@
       "id": "T013",
       "title": "Update contract surface PC-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T013 (pending) covering PC-001, PD-001, PD-002.",
+      "purpose": "Carry out lifecycle task T013 (done) covering PC-001, PD-001, PD-002.",
       "relatedIds": [
         "PC-001",
         "PD-001",
@@ -161,7 +161,7 @@
       "id": "T014",
       "title": "Update contract surface PC-002",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T014 (pending) covering PC-002, PD-005.",
+      "purpose": "Carry out lifecycle task T014 (done) covering PC-002, PD-005.",
       "relatedIds": [
         "PC-002",
         "PD-005"
@@ -171,7 +171,7 @@
       "id": "T015",
       "title": "Update contract surface PC-003",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T015 (pending) covering PC-003, PD-001, PD-004.",
+      "purpose": "Carry out lifecycle task T015 (done) covering PC-003, PD-001, PD-004.",
       "relatedIds": [
         "PC-003",
         "PD-001",
@@ -182,7 +182,7 @@
       "id": "T016",
       "title": "Update contract surface PC-004",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T016 (pending) covering PC-004, PD-004.",
+      "purpose": "Carry out lifecycle task T016 (done) covering PC-004, PD-004.",
       "relatedIds": [
         "PC-004",
         "PD-004"
@@ -192,7 +192,7 @@
       "id": "T017",
       "title": "Record verification evidence VO-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T017 (pending) covering PC-001, PD-001, VO-001.",
+      "purpose": "Carry out lifecycle task T017 (done) covering PC-001, PD-001, VO-001.",
       "relatedIds": [
         "PC-001",
         "PD-001",
@@ -203,7 +203,7 @@
       "id": "T018",
       "title": "Record verification evidence VO-002",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T018 (pending) covering PC-001, PD-002, VO-002.",
+      "purpose": "Carry out lifecycle task T018 (done) covering PC-001, PD-002, VO-002.",
       "relatedIds": [
         "PC-001",
         "PD-002",
@@ -214,7 +214,7 @@
       "id": "T019",
       "title": "Record verification evidence VO-003",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T019 (pending) covering PC-003, PD-003, VO-003.",
+      "purpose": "Carry out lifecycle task T019 (done) covering PC-003, PD-003, VO-003.",
       "relatedIds": [
         "PC-003",
         "PD-003",
@@ -225,7 +225,7 @@
       "id": "T020",
       "title": "Record verification evidence VO-004",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T020 (pending) covering PC-002, PC-004, PD-004, PD-005, VO-004.",
+      "purpose": "Carry out lifecycle task T020 (done) covering PC-002, PC-004, PD-004, PD-005, VO-004.",
       "relatedIds": [
         "PC-002",
         "PC-004",
@@ -238,7 +238,7 @@
       "id": "T021",
       "title": "Record verification evidence VO-005",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T021 (pending) covering PD-006, PD-007, VO-005.",
+      "purpose": "Carry out lifecycle task T021 (done) covering PD-006, PD-007, VO-005.",
       "relatedIds": [
         "PD-006",
         "PD-007",
@@ -249,7 +249,7 @@
       "id": "T022",
       "title": "Record verification evidence VO-006",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T022 (pending) covering PD-008, VO-006.",
+      "purpose": "Carry out lifecycle task T022 (done) covering PD-008, VO-006.",
       "relatedIds": [
         "PD-008",
         "VO-006"
@@ -259,7 +259,7 @@
       "id": "T023",
       "title": "Handle migration posture PM-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T023 (pending) covering PC-001, PC-003, PM-001.",
+      "purpose": "Carry out lifecycle task T023 (done) covering PC-001, PC-003, PM-001.",
       "relatedIds": [
         "PC-001",
         "PC-003",
@@ -270,7 +270,7 @@
       "id": "T024",
       "title": "Refresh generated view impact GV-001",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T024 (pending) covering GV-001, PD-001, PD-004.",
+      "purpose": "Carry out lifecycle task T024 (done) covering GV-001, PD-001, PD-004.",
       "relatedIds": [
         "GV-001",
         "PD-001",
@@ -281,7 +281,7 @@
       "id": "T025",
       "title": "Refresh generated view impact GV-002",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T025 (pending) covering GV-002, PD-001.",
+      "purpose": "Carry out lifecycle task T025 (done) covering GV-002, PD-001.",
       "relatedIds": [
         "GV-002",
         "PD-001"
@@ -291,7 +291,7 @@
       "id": "T026",
       "title": "Implement requirement FR-009",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T026 (pending) covering AC-009, FR-009, PD-009.",
+      "purpose": "Carry out lifecycle task T026 (done) covering AC-009, FR-009, PD-009.",
       "relatedIds": [
         "AC-009",
         "FR-009",
@@ -302,7 +302,7 @@
       "id": "T027",
       "title": "Implement clarification decision DEC-005",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T027 (pending) covering DEC-005.",
+      "purpose": "Carry out lifecycle task T027 (done) covering DEC-005.",
       "relatedIds": [
         "DEC-005"
       ]
@@ -311,7 +311,7 @@
       "id": "T028",
       "title": "Update contract surface PC-005",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T028 (pending) covering PC-005, PD-009.",
+      "purpose": "Carry out lifecycle task T028 (done) covering PC-005, PD-009.",
       "relatedIds": [
         "PC-005",
         "PD-009"
@@ -321,7 +321,7 @@
       "id": "T029",
       "title": "Record verification evidence VO-007",
       "stage": "specify",
-      "purpose": "Carry out lifecycle task T029 (pending) covering PC-005, PD-009, VO-007.",
+      "purpose": "Carry out lifecycle task T029 (done) covering PC-005, PD-009, VO-007.",
       "relatedIds": [
         "PC-005",
         "PD-009",
@@ -433,5 +433,16 @@
       "kind": "skills"
     }
   ],
-  "diagnostics": []
+  "diagnostics": [
+    {
+      "id": "agents.staleGeneratedGuidance",
+      "severity": "warning",
+      "artifact": "readiness/869-refresh-evidence-deadlock/agent-commands/claude/guidance.json",
+      "message": "Generated agent guidance for target \u0027claude\u0027 no longer matches the current normalized work model.",
+      "correction": "Regenerate agent guidance so the generated view matches the current work model.",
+      "relatedIds": [
+        "claude"
+      ]
+    }
+  ]
 }

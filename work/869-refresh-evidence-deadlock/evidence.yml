@@ -11,27 +11,27 @@ sourceAnalysis: readiness/869-refresh-evidence-deadlock/analysis.json
 sourceSnapshots:
   - label: analysis
     path: readiness/869-refresh-evidence-deadlock/analysis.json
-    digest: c92a4cc25a5d9d7a7b0d65fb306b72192636f441160a57221c69380ef01e18e3
+    digest: b4901747df3b1a72b476fd119af5ffe41b39b611767c620974ebf52fb69c5159
     schemaVersion: 1
   - label: checklist
     path: work/869-refresh-evidence-deadlock/checklist.md
-    digest: 32a2955ae3522960c62bb7ddc8371f9aa34fef0f3c952e4a762bf2c6c33cefd9
+    digest: 9dd2e53d6ed44813a89f9a17148d8d18d9b0aaec9a2802821bc5bc20428a7174
     schemaVersion: 1
   - label: clarifications
     path: work/869-refresh-evidence-deadlock/clarifications.md
-    digest: 597461b55eeff51d53442e820c7a419b435650218f8b13a1d26f0094725417af
+    digest: e9974df1bcfa62859b53389e55c71b082155955bf7605b40c9f87cfb585d3bb9
     schemaVersion: 1
   - label: plan
     path: work/869-refresh-evidence-deadlock/plan.md
-    digest: 7ee6d5b63ae67f3085e008d3ee900421d1bec7fccb627161da3945d5a9861aae
+    digest: e8e20f867a37f98016c7b17c9e2d8f4ed9dc935ddeff402d24d5691203ae0f2d
     schemaVersion: 1
   - label: spec
     path: work/869-refresh-evidence-deadlock/spec.md
-    digest: 9531f3dee6f5366a1569f018ccd5e7b725f816dc0a3ac662f4e8c893a363d1ca
+    digest: 7b3d688546e89712116ca5ec76c8fac46fe3f2d7b460e2a0fd3f47e7f76c1081
     schemaVersion: 1
   - label: tasks
     path: work/869-refresh-evidence-deadlock/tasks.yml
-    digest: c81f01d1bb43ee6ccd8ede60ef1192cb426c05c63963d544b297b14b4e75bb03
+    digest: f4fb57e9ca7c8cf163d1c4a0614544851cba0d1f43eba15a81097c47297e2913
     schemaVersion: 1
 evidence:
   - id: EV001
@@ -196,7 +196,7 @@ evidence:
     checklistResultRefs: []
     planDecisionRefs: [PD-007]
     obligationRefs: [EV007]
-    artifacts: [tests/FS.GG.SDD.Commands.Tests/RefreshEvidenceDeadlockTests.fs]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/RefreshEvidenceDeadlockTests.fs, work/869-refresh-evidence-deadlock/verification/verification-evidence.md]
     sourceRefs: []
     result: pass
     synthetic: false
