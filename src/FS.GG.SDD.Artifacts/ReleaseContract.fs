@@ -247,7 +247,7 @@ module ReleaseContract =
               CliCommandName = "fsgg-sdd" }
 
         let compatibility =
-            [ { SddVersionLine = "1.1.x"
+            [ { SddVersionLine = "1.2.x"
                 SpecKitRange = ">=0.8.5"
                 GovernanceContractVersionRange = Some "2.x" } ]
 

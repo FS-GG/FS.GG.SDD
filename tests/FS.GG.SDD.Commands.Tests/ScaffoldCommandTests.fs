@@ -373,9 +373,23 @@ module ScaffoldCommandTests =
         // Producing CLI version (generator) is present…
         Assert.Contains("\"generator\":", provenance)
         Assert.Contains("\"version\":", provenance)
-        // …alongside the provider-declared required minimum, recorded verbatim. min-behind declares
-        // one minor above the installed version, so it tracks the bump (installed 1.1.0 ⇒ 1.2.0).
-        Assert.Contains("\"requiredMinimumCliVersion\": \"1.2.0\"", provenance)
+        // …alongside the provider-declared required minimum, recorded VERBATIM — which is the claim
+        // being tested, so the expected value is READ FROM THE FIXTURE rather than written here as a
+        // literal (FS.GG.SDD#864). It was a literal, and because `min-behind` tracks the installed
+        // version by one minor, a version bump reddened this test with provenance that was entirely
+        // correct. Reading the fixture tests "recorded verbatim" directly, and a bump now re-anchors
+        // one line in one fixture instead of two files.
+        let declaredMinimum =
+            let text =
+                File.ReadAllText(Path.Combine(fixturesRoot, "registries", "min-behind.providers.yml"))
+
+            let matched =
+                Regex.Match(text, "minimumFsggSdd:\\s*\\r?\\n\\s*version:\\s*\"(?<v>[^\"]+)\"")
+
+            Assert.True(matched.Success, "min-behind.providers.yml declares no minimumFsggSdd.version")
+            matched.Groups["v"].Value
+
+        Assert.Contains($"\"requiredMinimumCliVersion\": \"{declaredMinimum}\"", provenance)
 
     // Feature 052 US1 scenario 2: no provider minimum ⇒ the field is recorded as null
     // (absent, not fabricated); the producing CLI version is still recorded.
@@ -705,6 +719,15 @@ module ScaffoldCommandTests =
         Assert.Equal(1, countOf "\"owner\": \"sdd\"")
         // 108: the work-roadmap driver, materialized into all three roots (owner `driver`).
         Assert.Equal(driverPaths.Length, countOf "\"owner\": \"driver\"")
+        // FS.GG.SDD#864: the withheld-sidecar advisory reaches an operator through the REAL route —
+        // the whole MVU loop, the report the CLI actually prints — not merely through the plan's
+        // data. The channel embeds files it cannot content-verify (the pinned package ships sidecars
+        // under a schemaVersion-1 manifest that declares one digest per skill), withholds them, and
+        // must SAY SO; a withheld file that is never reported is the silent half-truth this row
+        // exists to end. On a clean scaffold it is the only diagnostic, so the assertion is exact
+        // rather than a `Contains` that a noisier report could satisfy by accident.
+        Assert.Equal<string list>([ "scaffold.renderingSkillSidecarsUndeclared" ], diagnosticIds report)
+
         // FS.GG.SDD#864 acceptance 3: the newly delivered paths are ATTRIBUTED, under their own
         // owner token, exactly as `driverPaths` attributes the driver channel. An unattributed path
         // is what made .github#2380 an investigation rather than a lookup.

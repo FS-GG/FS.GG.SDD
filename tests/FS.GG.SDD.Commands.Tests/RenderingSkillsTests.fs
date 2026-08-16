@@ -269,6 +269,96 @@ module RenderingSkillsTests =
 
         Assert.Empty outcome.YieldedIds
 
+    // ---------- the REPORT, not just the data ----------
+    //
+    // These exist because the critic on round 1 of PR #882 found the gap and had to close it with a
+    // temporary probe: every fact above measured what the channel *decided*, and none named a
+    // diagnostic id, so the whole advisory surface could have been deleted with the suite still
+    // green. Deciding to withhold a file and TELLING someone are two different behaviours, and on
+    // this channel the telling is the point — a withheld sidecar that is never reported is exactly
+    // the silent half-truth FS.GG.SDD#864 exists to end.
+    //
+    // `HandlersScaffold.renderingSkillDiagnostics` is the production projection itself, not a
+    // re-implementation of it: it is the function the scaffold finalize and TICK-A paths both call.
+
+    [<Fact>]
+    let ``a clean plan reports nothing except the withheld-sidecar advisory`` () =
+        let outcome = RenderingSkills.plan Map.empty
+
+        let ids =
+            HandlersScaffold.renderingSkillDiagnostics outcome |> List.map (fun d -> d.Id)
+
+        Assert.Equal<string list>([ "scaffold.renderingSkillSidecarsUndeclared" ], ids)
+
+    [<Fact>]
+    let ``every fail-closed class reaches an operator under its own diagnostic id`` () =
+        // One id per class, and DISTINCT ids rather than a reused sibling-seam id, so a failure tells
+        // an operator which package to go and fix. Each outcome shape is fed to the production
+        // projection; the assertion is the id it emits.
+        let cases =
+            [ { RenderingSkills.empty with
+                  ManifestError = Some "boom" },
+              "scaffold.renderingSkillManifestMalformed"
+              { RenderingSkills.empty with
+                  NamespaceCollisionIds = [ "fs-gg-sdd-plan" ] },
+              "scaffold.renderingSkillNamespaceCollision"
+              { RenderingSkills.empty with
+                  VerifyFailedIds = [ "fs-gg-widget" ] },
+              "scaffold.renderingSkillVerifyFailed"
+              { RenderingSkills.empty with
+                  PredicateUnevaluatedIds = [ "fs-gg-widget" ] },
+              "scaffold.renderingSkillPredicateUnevaluated"
+              { RenderingSkills.empty with
+                  YieldedIds = [ "fs-gg-collision" ] },
+              "scaffold.renderingSkillChannelYielded"
+              { RenderingSkills.empty with
+                  UndeliverableSidecars = [ "fs-gg-widget/scripts/x.fsx" ] },
+              "scaffold.renderingSkillSidecarsUndeclared" ]
+
+        for outcome, expectedId in cases do
+            let ids =
+                HandlersScaffold.renderingSkillDiagnostics outcome |> List.map (fun d -> d.Id)
+
+            Assert.Equal<string list>([ expectedId ], ids)
+
+        // Bound against a check that matches nothing: an EMPTY outcome must report NOTHING, so the
+        // six assertions above cannot be satisfied by a projection that emits everything always.
+        Assert.Empty(HandlersScaffold.renderingSkillDiagnostics RenderingSkills.empty)
+
+        // And the six ids really are six, not one id counted six times.
+        Assert.Equal(6, cases |> List.map snd |> List.distinct |> List.length)
+
+    [<Fact>]
+    let ``the blocking classes are tool-defect errors and the advisory ones are not`` () =
+        // The severity split is a contract, not a detail: an error is `Blocked` at
+        // `ReportAssembly.outcome` and exits non-zero, so classifying the two advisories as errors
+        // would red every scaffold for a defect in another repository's manifest — a path the
+        // operator cannot repair locally.
+        let severityOf outcome =
+            HandlersScaffold.renderingSkillDiagnostics outcome
+            |> List.map (fun d -> d.Severity, d.IsToolDefect)
+
+        Assert.Equal<(Diagnostics.DiagnosticSeverity * bool) list>(
+            [ Diagnostics.DiagnosticError, true ],
+            severityOf
+                { RenderingSkills.empty with
+                    VerifyFailedIds = [ "fs-gg-widget" ] }
+        )
+
+        Assert.Equal<(Diagnostics.DiagnosticSeverity * bool) list>(
+            [ Diagnostics.DiagnosticWarning, false ],
+            severityOf
+                { RenderingSkills.empty with
+                    UndeliverableSidecars = [ "fs-gg-widget/scripts/x.fsx" ] }
+        )
+
+        Assert.Equal<(Diagnostics.DiagnosticSeverity * bool) list>(
+            [ Diagnostics.DiagnosticWarning, false ],
+            severityOf
+                { RenderingSkills.empty with
+                    YieldedIds = [ "fs-gg-collision" ] }
+        )
+
     // ---------- the fail-closed classes (planFrom, synthetic) ----------
 
     let private manifestOf (rows: string) =
