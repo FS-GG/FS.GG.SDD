@@ -11,7 +11,7 @@ sourceAnalysis: readiness/886-comment-quality-policy/analysis.json
 sourceSnapshots:
   - label: analysis
     path: readiness/886-comment-quality-policy/analysis.json
-    digest: 75958d149fc60680f7a3aacfc24798d7aa099599e2fbab6a2f50d98793cab0b2
+    digest: 031a09a0165ec4fbf6409eaf44e88268def0d09f8d9e8d0f277ac97522c741cc
     schemaVersion: 1
   - label: checklist
     path: work/886-comment-quality-policy/checklist.md

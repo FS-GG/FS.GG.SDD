@@ -37,6 +37,16 @@
       "schemaStatus": "current"
     },
     {
+      "path": "readiness/886-comment-quality-policy/work-model.json",
+      "kind": "workModel",
+      "digest": {
+        "algorithm": "sha256",
+        "value": "ce4f4bc5a3efb3dc2f00ccc0fad5f77bc152586f788b732335bc026b3cc9aab2"
+      },
+      "schemaVersion": 1,
+      "schemaStatus": "current"
+    },
+    {
       "path": "work/886-comment-quality-policy/checklist.md",
       "kind": "checklist",
       "digest": {
@@ -81,7 +91,7 @@
       "kind": "tasks",
       "digest": {
         "algorithm": "sha256",
-        "value": "6899976ae45c3b9981104380e69cb061701d92019a557e129d1041c3d1f37c04"
+        "value": "8c2f8916c7952bf294ac17dfe5ba7757a344f1c6ad43b9789856ac37c1e4dada"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
@@ -506,7 +516,7 @@
     {
       "path": "readiness/886-comment-quality-policy/work-model.json",
       "kind": "workModel",
-      "currency": "missing",
+      "currency": "current",
       "diagnosticIds": []
     }
   ],
