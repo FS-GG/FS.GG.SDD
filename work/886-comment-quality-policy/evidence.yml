@@ -1,0 +1,363 @@
+schemaVersion: 1
+workId: 886-comment-quality-policy
+stage: evidence
+status: evidenceReady
+sourceSpec: work/886-comment-quality-policy/spec.md
+sourceClarifications: work/886-comment-quality-policy/clarifications.md
+sourceChecklist: work/886-comment-quality-policy/checklist.md
+sourcePlan: work/886-comment-quality-policy/plan.md
+sourceTasks: work/886-comment-quality-policy/tasks.yml
+sourceAnalysis: readiness/886-comment-quality-policy/analysis.json
+sourceSnapshots:
+  - label: analysis
+    path: readiness/886-comment-quality-policy/analysis.json
+    digest: 75958d149fc60680f7a3aacfc24798d7aa099599e2fbab6a2f50d98793cab0b2
+    schemaVersion: 1
+  - label: checklist
+    path: work/886-comment-quality-policy/checklist.md
+    digest: 4614b02b661d32e5f939ac6f365b9cd69847c72e84f07350a64bb696e5953fbe
+    schemaVersion: 1
+  - label: clarifications
+    path: work/886-comment-quality-policy/clarifications.md
+    digest: 877c62e6bcd140f5f67d95dc915b53b4e8787f69917a9f92fcb03b348fbfedec
+    schemaVersion: 1
+  - label: plan
+    path: work/886-comment-quality-policy/plan.md
+    digest: 4e2af46d21785615d8cb571d0a63da21c69e2a3ae2c2b0b8a57b4c0deacea718
+    schemaVersion: 1
+  - label: spec
+    path: work/886-comment-quality-policy/spec.md
+    digest: ed7d13830d283b1ac1a1ed0ee5b2157f0c4a8b85cd3892490b11825540cc5fd8
+    schemaVersion: 1
+  - label: tasks
+    path: work/886-comment-quality-policy/tasks.yml
+    digest: 8c2f8916c7952bf294ac17dfe5ba7757a344f1c6ad43b9789856ac37c1e4dada
+    schemaVersion: 1
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV001]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/InitCommandTests.fs, tests/FS.GG.SDD.Commands.Tests/goldens/full-shape/command-report.json]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/886-comment-quality-policy/commands.trx
+      digest: "sha256:7f747aefc96fa62bb3e14cb9e1328489e37c78b47a267b4705c7e075501d97a5"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1315
+      failed: 0
+      skipped: 0
+    notes: ["Observed gate inversion red; restored focused gate 23/23 green; full solution 1315/1315 green."]
+  - id: EV002
+    kind: verification
+    subject:
+      type: task
+      id: T002
+    taskRefs: [T002]
+    requirementRefs: [FR-002]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002]
+    obligationRefs: [EV002]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/InitCommandTests.fs, tests/FS.GG.SDD.Commands.Tests/goldens/full-shape/command-report.json]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/886-comment-quality-policy/commands.trx
+      digest: "sha256:7f747aefc96fa62bb3e14cb9e1328489e37c78b47a267b4705c7e075501d97a5"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1315
+      failed: 0
+      skipped: 0
+    notes: ["Observed gate inversion red; restored focused gate 23/23 green; full solution 1315/1315 green."]
+  - id: EV003
+    kind: verification
+    subject:
+      type: task
+      id: T003
+    taskRefs: [T003]
+    requirementRefs: [FR-003]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-003]
+    obligationRefs: [EV003]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/InitCommandTests.fs, tests/FS.GG.SDD.Commands.Tests/goldens/full-shape/command-report.json]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/886-comment-quality-policy/commands.trx
+      digest: "sha256:7f747aefc96fa62bb3e14cb9e1328489e37c78b47a267b4705c7e075501d97a5"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1315
+      failed: 0
+      skipped: 0
+    notes: ["Observed gate inversion red; restored focused gate 23/23 green; full solution 1315/1315 green."]
+  - id: EV004
+    kind: verification
+    subject:
+      type: task
+      id: T004
+    taskRefs: [T004]
+    requirementRefs: [FR-004]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-004]
+    obligationRefs: [EV004]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/InitCommandTests.fs, tests/FS.GG.SDD.Commands.Tests/goldens/full-shape/command-report.json]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/886-comment-quality-policy/commands.trx
+      digest: "sha256:7f747aefc96fa62bb3e14cb9e1328489e37c78b47a267b4705c7e075501d97a5"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1315
+      failed: 0
+      skipped: 0
+    notes: ["Observed gate inversion red; restored focused gate 23/23 green; full solution 1315/1315 green."]
+  - id: EV005
+    kind: verification
+    subject:
+      type: task
+      id: T005
+    taskRefs: [T005]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV005]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/InitCommandTests.fs, tests/FS.GG.SDD.Commands.Tests/goldens/full-shape/command-report.json]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/886-comment-quality-policy/commands.trx
+      digest: "sha256:7f747aefc96fa62bb3e14cb9e1328489e37c78b47a267b4705c7e075501d97a5"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1315
+      failed: 0
+      skipped: 0
+    notes: ["Observed gate inversion red; restored focused gate 23/23 green; full solution 1315/1315 green."]
+  - id: EV006
+    kind: verification
+    subject:
+      type: task
+      id: T006
+    taskRefs: [T006]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV006]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/InitCommandTests.fs, tests/FS.GG.SDD.Commands.Tests/goldens/full-shape/command-report.json]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/886-comment-quality-policy/commands.trx
+      digest: "sha256:7f747aefc96fa62bb3e14cb9e1328489e37c78b47a267b4705c7e075501d97a5"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1315
+      failed: 0
+      skipped: 0
+    notes: ["Observed gate inversion red; restored focused gate 23/23 green; full solution 1315/1315 green."]
+  - id: EV007
+    kind: verification
+    subject:
+      type: task
+      id: T007
+    taskRefs: [T007]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV007]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/InitCommandTests.fs, tests/FS.GG.SDD.Commands.Tests/goldens/full-shape/command-report.json]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/886-comment-quality-policy/commands.trx
+      digest: "sha256:7f747aefc96fa62bb3e14cb9e1328489e37c78b47a267b4705c7e075501d97a5"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1315
+      failed: 0
+      skipped: 0
+    notes: ["Observed gate inversion red; restored focused gate 23/23 green; full solution 1315/1315 green."]
+  - id: EV008
+    kind: verification
+    subject:
+      type: task
+      id: T008
+    taskRefs: [T008]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002]
+    obligationRefs: [EV008]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/InitCommandTests.fs, tests/FS.GG.SDD.Commands.Tests/goldens/full-shape/command-report.json]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/886-comment-quality-policy/commands.trx
+      digest: "sha256:7f747aefc96fa62bb3e14cb9e1328489e37c78b47a267b4705c7e075501d97a5"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1315
+      failed: 0
+      skipped: 0
+    notes: ["Observed gate inversion red; restored focused gate 23/23 green; full solution 1315/1315 green."]
+  - id: EV009
+    kind: verification
+    subject:
+      type: task
+      id: T009
+    taskRefs: [T009]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV009]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/InitCommandTests.fs, tests/FS.GG.SDD.Commands.Tests/goldens/full-shape/command-report.json]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/886-comment-quality-policy/commands.trx
+      digest: "sha256:7f747aefc96fa62bb3e14cb9e1328489e37c78b47a267b4705c7e075501d97a5"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1315
+      failed: 0
+      skipped: 0
+    notes: ["Observed gate inversion red; restored focused gate 23/23 green; full solution 1315/1315 green."]
+  - id: EV010
+    kind: verification
+    subject:
+      type: task
+      id: T010
+    taskRefs: [T010]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-002]
+    obligationRefs: [EV010]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/InitCommandTests.fs, tests/FS.GG.SDD.Commands.Tests/goldens/full-shape/command-report.json]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/886-comment-quality-policy/commands.trx
+      digest: "sha256:7f747aefc96fa62bb3e14cb9e1328489e37c78b47a267b4705c7e075501d97a5"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1315
+      failed: 0
+      skipped: 0
+    notes: ["Observed gate inversion red; restored focused gate 23/23 green; full solution 1315/1315 green."]
+  - id: EV011
+    kind: verification
+    subject:
+      type: task
+      id: T011
+    taskRefs: [T011]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-003]
+    obligationRefs: [EV011]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/InitCommandTests.fs, tests/FS.GG.SDD.Commands.Tests/goldens/full-shape/command-report.json]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/886-comment-quality-policy/commands.trx
+      digest: "sha256:7f747aefc96fa62bb3e14cb9e1328489e37c78b47a267b4705c7e075501d97a5"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1315
+      failed: 0
+      skipped: 0
+    notes: ["Observed gate inversion red; restored focused gate 23/23 green; full solution 1315/1315 green."]
+  - id: EV012
+    kind: verification
+    subject:
+      type: task
+      id: T012
+    taskRefs: [T012]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV012]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/InitCommandTests.fs, tests/FS.GG.SDD.Commands.Tests/goldens/full-shape/command-report.json]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/886-comment-quality-policy/commands.trx
+      digest: "sha256:7f747aefc96fa62bb3e14cb9e1328489e37c78b47a267b4705c7e075501d97a5"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1315
+      failed: 0
+      skipped: 0
+    notes: ["Observed gate inversion red; restored focused gate 23/23 green; full solution 1315/1315 green."]
+  - id: EV013
+    kind: verification
+    subject:
+      type: task
+      id: T013
+    taskRefs: [T013]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV013]
+    artifacts: [tests/FS.GG.SDD.Commands.Tests/InitCommandTests.fs, tests/FS.GG.SDD.Commands.Tests/goldens/full-shape/command-report.json]
+    sourceRefs: []
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/886-comment-quality-policy/commands.trx
+      digest: "sha256:7f747aefc96fa62bb3e14cb9e1328489e37c78b47a267b4705c7e075501d97a5"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1315
+      failed: 0
+      skipped: 0
+    notes: ["Observed gate inversion red; restored focused gate 23/23 green; full solution 1315/1315 green."]
+lifecycleNotes:
+  - "Next lifecycle action: verify."

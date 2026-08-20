@@ -155,6 +155,41 @@ module InitCommandTests =
         Assert.Contains("# Product Constitution", content)
         Assert.Contains("## Core Principles", content)
 
+    // 121 (FR-001/FR-002/FR-004): the checked-in contract owns the exact seed bytes,
+    // while these clause assertions keep the semantic policy visible when that contract evolves.
+    [<Fact>]
+    let ``init emits the authoritative complete comment-quality policy`` () =
+        let root = TestSupport.tempDirectory ()
+        runInit root |> ignore
+
+        let content = TestSupport.readRelative root ".fsgg/constitution.md"
+
+        let contractPath =
+            Path.Combine(
+                TestSupport.repoRoot,
+                "specs",
+                "033-skeleton-constitution",
+                "contracts",
+                "constitution-content.md"
+            )
+
+        let contract = File.ReadAllText contractPath
+        let opening = "```markdown\n"
+
+        let bodyStart =
+            contract.IndexOf(opening, System.StringComparison.Ordinal) + opening.Length
+
+        let bodyEnd = contract.IndexOf("\n```", bodyStart, System.StringComparison.Ordinal)
+
+        Assert.True(bodyStart >= opening.Length, "The authoritative constitution contract has a markdown body.")
+        Assert.True(bodyEnd > bodyStart, "The authoritative constitution contract closes its markdown body.")
+        Assert.Equal(contract.Substring(bodyStart, bodyEnd - bodyStart) + "\n", content)
+        Assert.Contains("explain non-obvious\npurpose, invariants, constraints, trade-offs", content)
+        Assert.Contains("MUST NOT narrate what the code plainly states or preserve edit\nhistory", content)
+        Assert.Contains("Public documentation describes the caller contract", content)
+        Assert.Contains("the comment\nMUST stand alone", content)
+        Assert.Contains("cannot be completely\nenforced by automatic linting", content)
+
     // T003 (US1-AC1 report / FR-010): the report attributes it to the SDD skeleton as a
     // created authored agent-guidance artifact (same surface as CLAUDE.md/AGENTS.md).
     [<Fact>]
