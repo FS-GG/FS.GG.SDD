@@ -93,6 +93,21 @@ failures, missing artifacts, stale views, conflicting state, and integration
 failures. Distinguish malformed user input from tool defects. Critical paths fail
 fast and visibly; optional integrations degrade explicitly rather than silently.
 
+## Comment Quality
+
+Comments MUST describe the code as it exists today and explain non-obvious
+purpose, invariants, constraints, trade-offs, and why the implementation has its
+shape. They MUST NOT narrate what the code plainly states or preserve edit
+history.
+
+Public documentation describes the caller contract. Implementation comments
+explain non-obvious reasoning. An issue reference MAY add context, but the comment
+MUST stand alone.
+
+Semantic comment quality requires human judgment and cannot be completely
+enforced by automatic linting. Automated checks MAY catch structural omissions,
+but they MUST NOT claim semantic completeness.
+
 ## Change Classification
 
 Every change declares a tier in its spec:

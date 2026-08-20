@@ -1,18 +1,17 @@
 <!--
 Sync Impact Report
 ==================
-This file: FS.GG.SDD Constitution v1.1.0
+This file: FS.GG.SDD Constitution v1.2.0
 
-Version change: 1.0.0 -> 1.1.0
-Bump rationale: Engineering Constraint "package namespace is FS.GG.SDD.*"
-materially expanded with an explicit carve-out for org-shared contract packages
-owned by SDD (e.g. FS.GG.Contracts), which intentionally use a cross-repo shared
-namespace so Governance, Templates, and Rendering can re-type onto one source of
-truth. MINOR: relaxes/expands an existing obligation without breaking any
-in-scope package.
+Version change: 1.1.0 -> 1.2.0
+Bump rationale: Core Principle IX adds the shared rationale-first comment-quality
+contract, including the caller-documentation/implementation-reasoning boundary,
+standalone context rule, and honest human-review boundary. MINOR: adds a new
+engineering obligation without changing any public API or persisted schema.
 
-Prior rationale (1.0.0): Initial ratification for a separate FS.GG spec-driven
-development product.
+Prior rationale (1.1.0): Engineering Constraint "package namespace is
+FS.GG.SDD.*" gained an explicit carve-out for SDD-owned org-shared contract
+packages such as FS.GG.Contracts.
 
 Source: adapted from the fsharp-opinionated Spec Kit preset and the sibling
 FS.GG.Governance constitution, with governance-kernel-specific language removed.
@@ -154,6 +153,21 @@ agent-command generation errors, and governance-integration failures.
 Failures must distinguish malformed user input from tool defects. Critical
 paths fail fast; optional integrations degrade explicitly.
 
+### IX. Comments Explain Reasoning, Not History
+
+Comments MUST describe the code as it exists today and explain non-obvious
+purpose, invariants, constraints, trade-offs, and why the implementation has its
+shape. They MUST NOT narrate what the code plainly states or preserve edit
+history.
+
+Public documentation describes the caller contract. Implementation comments
+explain non-obvious reasoning. An issue reference MAY add context, but the comment
+MUST stand alone.
+
+Semantic comment quality requires human judgment and cannot be completely
+enforced by automatic linting. Automated checks MAY catch structural omissions,
+but they MUST NOT claim semantic completeness.
+
 ## Change Classification
 
 Every feature declares a tier in its spec:
@@ -215,4 +229,4 @@ Versioning policy:
 - MINOR: new principles or materially expanded obligations.
 - PATCH: clarifications that do not change obligations.
 
-**Version**: 1.1.0 | **Ratified**: 2026-06-19 | **Last Amended**: 2026-06-28
+**Version**: 1.2.0 | **Ratified**: 2026-06-19 | **Last Amended**: 2026-08-20
