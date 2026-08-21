@@ -127,6 +127,8 @@ touch-set before editing. Heartbeat during long work.
 ## 3. Implement and verify
 
 Change only the declared paths. If scope must grow, use `widen` before touching it; stop on overlap.
+Apply the shared [measurement discipline](references/measurement-discipline.md) to every absence,
+count, or unchanged assertion in implementation evidence and review handoffs.
 Before implementing interactive/game work, run the
 [performance-first planning gate](references/performance-first.md). Then fix causes, add focused
 regression coverage, and run proportionate build/test/format gates. Poll inbox at phase boundaries.
@@ -145,10 +147,13 @@ Fix in-scope causes now. For a distinct cause, **establish the root cause before
 is where a defect *surfaced*, which is rarely where it *lives*, and filing the surface is how one defect
 gets seven numbers (#266). Then **dedupe over REST against that cause, not against the symptom**: reuse
 an existing issue that expresses the same cause and transplant your evidence onto it instead of opening
-a second row. File only when no row carries that cause. The issue states observed behavior, **the root
-cause** — or, where you could not establish one, says so explicitly and gives what you measured instead
-(#1858) — acceptance criteria, verification, and a narrow `Paths:` declaration. Link dependencies only
-when authorship truly depends on landed work, then add it to the follow-up queue.
+a second row. File only when no row carries that cause. Use the complete `fsgg.coord.intake/v1` draft
+shown in [deep detail](references/deep-detail.md): put observed behavior, **the root cause** — or the
+measurement that remains unestablished — acceptance, verification, `paths`, `class`, `severity`, and
+optional `blockedBy` in the draft, run `scripts/fsgg-coord intake validate`, then `intake apply` on
+that same file. A hand-authored `Paths:` or `Class:` line in a created body is a defect, not a style
+choice. Link dependencies only when authorship truly depends on landed work, then add it to the
+follow-up queue.
 
 [findings-and-filing](references/findings-and-filing.md) carries the rest of this rule and is **binding,
 not elaboration** — load it for the dedupe reads and the judgement boundaries. This section owns
@@ -223,13 +228,13 @@ scripts/fsgg-coord review --snapshot <fresh-review-snapshot.json> --json
 ```
 
 It returns exactly one closed state (awaiting initial review, changes requiring repair, awaiting
-implementer repair, awaiting the same critic's confirmation, passed awaiting checks, awaiting host
+implementer repair, awaiting a fresh successor's full review, passed awaiting checks, awaiting host
 acceptance, ordinary exhaustion, repair-phase setup, repair-phase active review, accepted, or terminal
 human park) and the one typed next action that follows from it — dispatch critic, resume implementer,
-resume the same critic, await checks, request host acceptance, enter the one permitted fresh repair
+dispatch a fresh successor critic, await checks, request host acceptance, enter the one permitted fresh repair
 phase, accept, or park for human action — bound to a freshness token that a changed head invalidates.
 This is a mechanical cross-check, not a substitute for the qualitative judgement below: materiality,
-same-critic continuity, and repair-phase provenance are still read from the live PR by both the worker
+critic-generation continuity, durable wait receipts, and repair-phase provenance are read from the live PR by both the worker
 and the critic.
 
 Push the candidate, open its PR, and ask the host to assign a fresh critic agent. Keep the implementing worker and
@@ -239,13 +244,21 @@ implementation: it checks requirements, diff, tests, architecture, release oblig
 searches code/history and existing work for each candidate root cause; and files only unresolved,
 distinct **material** work. For a meaningful runtime behavior reachable through more than one route,
 the handoff supplies a built artifact and runnable production-route evidence so the critic can execute
-or measure the comparison required by `independent-review`, not infer it from source alone. The same
-critic reviews up to three numbered repair rounds. If material findings remain after round three,
+or measure the comparison required by `independent-review`, not infer it from source alone. A fresh
+successor performs each numbered repair review. If material findings remain after round three,
 never start round four or merge that PR: close it without merging and automatically enter the one
 fresh-worker, fresh-critic
 [repair phase](references/independent-review.md#repair-phase). Park the item on `Blocked on:
 human/action` and release the claim only if that repair phase exhausts or its required route is
 unavailable.
+
+Before yielding at every protocol-created critic queue, write the bounded entry event with
+`scripts/fsgg-coord review wait <ref> <event.json> --pr <n> --json`. After a critic record lands, write
+the matching completion event; cancellation and bounded timeout use the same command and generation.
+Never treat a sleeping process as the receipt. On resumption, run live `review` and revalidate or
+reacquire the current claim generation before any mutation. Use the canonical generation token
+`<head>:initial-review:0` or `<head>:repair-confirmation:<round>`; dispatch and `review record` fail
+closed without the matching waiting entry, and acceptance requires its completed critic-record evidence.
 
 [independent-review](references/independent-review.md) is the binding contract for materiality, critic
 ownership, the durable PR record, direct filing, confirmation, and host verification. Its
