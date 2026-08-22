@@ -60,6 +60,27 @@ module internal HandlersAnalyze =
                 |> List.distinct
                 |> List.map ReadFile
 
+    /// A post-evidence `analyze` rebuilds the work model from the recovered evidence declaration.
+    /// Its active performance artifact is therefore a second-wave source, just like evidence-stage
+    /// cited artifacts: it cannot be known until `evidence.yml` has been read, and it must be in the
+    /// model before `generatedViewPlan` derives its source snapshots.
+    let performanceEvidenceReadEffects workId (model: CommandModel) : CommandEffect list =
+        let alreadyPlanned = plannedReadPaths model |> Set.ofList
+
+        snapshot (evidencePath workId) model
+        |> Option.bind (fun evidenceSnapshot ->
+            match parseEvidence evidenceSnapshot with
+            | Ok declarations -> Some declarations
+            | Error _ -> None)
+        |> Option.defaultValue []
+        |> List.choose _.PerformanceBudget
+        |> List.map _.ArtifactPath
+        |> List.map normalizeRelativePath
+        |> List.filter (fun path -> not (Set.contains path alreadyPlanned))
+        |> List.distinct
+        |> List.sort
+        |> List.map ReadFile
+
     let computeAnalyzePlan model =
         let ((specification, clarification, checklist, plan, tasks, analysisSummary),
              diagnostics,

@@ -133,7 +133,9 @@ module CommandWorkflow =
                         // resolves against. `Analyze` only — the paths become known once plan.md is
                         // read, so they join the same second wave as the cited-artifact probes.
                         @ (match model.Request.Command with
-                           | Analyze -> frameworkCaptureReadEffects workId model
+                           | Analyze ->
+                               frameworkCaptureReadEffects workId model
+                               @ performanceEvidenceReadEffects workId model
                            | _ -> [])
 
                     match candidateReads with

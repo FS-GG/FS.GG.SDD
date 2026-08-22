@@ -937,7 +937,18 @@ module internal ViewGeneration =
               snapshot (evidencePath workId) model
               |> Option.map (evidenceSnapshotForWorkModel workId)) ]
         |> List.choose id
-        |> fun snapshots -> snapshots @ performanceEvidenceSnapshots workId evidenceText model
+        |> fun snapshots ->
+            // `analyze` intentionally arrives without an explicit evidence argument before
+            // implementation, but a post-evidence replay recovers the existing snapshot above.
+            // Performance sources must parse that recovered snapshot too; passing the original
+            // absent argument drops active artifacts on every analyze and makes verify/ship
+            // rewrite the work model back again.
+            let performanceEvidenceText =
+                snapshots
+                |> List.tryFind (fun snapshot -> normalizeRelativePath snapshot.Path = evidencePath workId)
+                |> Option.map _.Text
+
+            snapshots @ performanceEvidenceSnapshots workId performanceEvidenceText model
         |> List.map (fun snapshot ->
             { snapshot with
                 Path = normalizeRelativePath snapshot.Path })
