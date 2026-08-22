@@ -114,7 +114,7 @@
           "FS.GG.Drivers": "[0.16.1, )",
           "FS.GG.Game.Skills": "[0.7.0, )",
           "FS.GG.Rendering.Skills": "[0.1.0, )",
-          "FS.GG.SDD.Artifacts": "[1.1.0, )",
+          "FS.GG.SDD.Artifacts": "[1.2.0, )",
           "FSharp.Core": "[10.1.302, )"
         }
       },
