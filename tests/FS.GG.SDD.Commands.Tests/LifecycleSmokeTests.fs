@@ -53,10 +53,65 @@ module LifecycleSmokeTests =
         + "  config: .fsgg/sdd.yml\n"
         + "  agents: .fsgg/agents.yml\n"
 
+    let private addActivePerformanceEvidence root =
+        let evidencePath = $"work/{workId}/evidence.yml"
+        let artifactPath = $"readiness/{workId}/performance-evidence.json"
+
+        TestSupport.readRelative root evidencePath
+        |> fun evidence ->
+            evidence.Replace(
+                "    result: pass\n    synthetic: false",
+                $"""    performanceBudget:
+      artifactPath: {artifactPath}
+      intent:
+        id: PI-001
+        disposition: active
+        targetFps: 60
+        workloadIds: [normal-play]
+        workloadDefinitionDigests: [normal-play=sha256:normal-v1]
+        maximumExpectedScale: 10000 sprites
+        maxP95Ms: 16.67
+        maxP99Ms: 25
+        maxCatchUpFrames: 0
+        structuralCostBudgets: [draw-calls<=500]
+        requiredCapability: bounded-headless-update-render
+        liveCompositorRequired: false
+        evidenceRefs: []
+      targetFps: 60
+      workloadIds: [normal-play]
+      stressWorkloadIds: [pointer-stress]
+      workloadDefinitionDigests: [normal-play=sha256:normal-v1, pointer-stress=sha256:stress-v1]
+      currencyToken: commit:bootstrap-smoke
+      capturedAfterUtc: 2026-08-22T00:00:00Z
+      maxP95Ms: 16.67
+      maxP99Ms: 25
+      maxCatchUpFrames: 0
+      measurementScope: normal
+      requiredCapability: bounded-headless-update-render
+      liveCompositorRequired: false
+    result: pass
+    synthetic: false"""
+            )
+        |> TestSupport.writeRelative root evidencePath
+
+        let durations = (List.replicate 95 "12" @ List.replicate 5 "20") |> String.concat ","
+
+        TestSupport.writeRelative
+            root
+            artifactPath
+            $$"""{"contractVersion":"performance-evidence-v1","claimedBudgetPassed":true,"sampleSets":[{
+"workloadId":"normal-play","workloadDefinitionDigest":"sha256:normal-v1","workloadClass":"normal-play",
+"targetFps":60,"maxP95Ms":16.67,"maxP99Ms":25,"maxCatchUpFrames":0,
+"measurementScope":"normal","requiredCapability":"bounded-headless-update-render",
+"hostProfile":"linux-x64-ci","packageVersions":["FS.GG.Game@1.2.3"],"measurementMode":"headless",
+"capabilities":["bounded-headless-update-render"],"warmupPolicy":"120-frames","samplePolicy":"nearest-rank/100",
+"capturedAtUtc":"2026-08-22T00:00:00Z","currencyToken":"commit:bootstrap-smoke","probeReadbackContaminated":false,
+"durationSamplesMs":[{{durations}}],"catchUpFrames":[0]}]}"""
+
     /// Drive one disposable project through the full lifecycle plus generators.
     /// When [pinConfig] is set, the project config is fixed after init so two runs
     /// share identical inputs for the determinism comparison.
-    let private driveLifecycleWith pinConfig =
+    let private driveLifecycleWith pinConfig includeActivePerformanceEvidence =
         let root = TestSupport.tempDirectory ()
         TestSupport.initializeProject root
 
@@ -65,6 +120,7 @@ module LifecycleSmokeTests =
 
         let charter = TestSupport.runCharter root workId title
         let specify = TestSupport.runSpecify root workId title
+
         // specify carried no ambiguity, so clarify runs with no extra intent (the
         // same known-green path TestSupport.initializePlanReadyProject uses).
         let clarify =
@@ -80,6 +136,10 @@ module LifecycleSmokeTests =
         let tasks = TestSupport.runTasks root workId title
         // Authored passing task evidence so analyze/evidence/verify/ship are ready.
         TestSupport.writePassingTaskEvidenceFor root workId
+
+        if includeActivePerformanceEvidence then
+            addActivePerformanceEvidence root
+
         let analyze = TestSupport.runAnalyze root workId title
         let evidence = TestSupport.runEvidence root workId title
         let verify = TestSupport.runVerify root workId title
@@ -104,7 +164,7 @@ module LifecycleSmokeTests =
     // The read-only assertions (stage artifacts, next-action chain, no-Governance,
     // well-formed readiness) all observe one full drive; sharing it keeps the
     // in-process smoke well under the <10s budget.
-    let private driveLifecycle () = driveLifecycleWith false
+    let private driveLifecycle () = driveLifecycleWith false false
 
     let private driven = lazy (driveLifecycle ())
 
@@ -173,6 +233,47 @@ module LifecycleSmokeTests =
 
         for (path, expected) in before do
             Assert.Equal(expected, TestSupport.readRelative d.Root path)
+
+    [<Fact>]
+    let ``post-evidence analyze verify and ship retain active performance evidence at a byte-stable fixed point`` () =
+        // Regression for #868: analyze receives no explicit evidence input, but on a post-evidence
+        // replay it must use the recovered snapshot for both ordinary and performance evidence.
+        // Otherwise analyze drops this artifact and verify/ship restore it, rewriting the model.
+        let d = driveLifecycle ()
+        addActivePerformanceEvidence d.Root
+
+        let initialAnalyze = TestSupport.runAnalyze d.Root workId title
+        notBlocked "fixture analyze" initialAnalyze
+
+        Assert.Contains(
+            "\"performanceEvidenceArtifact\": {",
+            TestSupport.readRelative d.Root $"readiness/{workId}/work-model.json"
+        )
+
+        TestSupport.runAnalyze d.Root workId title |> notBlocked "settle fixture analyze"
+
+        // The authored fixture changes the evidence declaration after its initial source snapshot.
+        // Regenerate it once, then establish a ship-ready fixed point before direct replay.
+        TestSupport.runEvidence d.Root workId title |> notBlocked "fixture evidence"
+
+        let replay () =
+            [ "analyze", TestSupport.runAnalyze d.Root workId title
+              "verify", TestSupport.runVerify d.Root workId title
+              "ship", TestSupport.runShip d.Root workId title ]
+
+        // Bring the manually authored active fixture to its first generated fixed point.
+        for (stage, report) in replay () do
+            notBlocked stage report
+
+        let tracked =
+            readinessViews
+            |> List.map (fun path -> path, TestSupport.readRelative d.Root path)
+
+        for (stage, report) in replay () do
+            notBlocked stage report
+
+            for (path, expected) in tracked do
+                Assert.Equal(expected, TestSupport.readRelative d.Root path)
 
     [<Fact>]
     let ``analyze ignores only tool-owned evidence snapshots when calculating work-model currency`` () =
@@ -383,8 +484,8 @@ module LifecycleSmokeTests =
             let projectId = (DirectoryInfo root).Name.ToLowerInvariant()
             text.Replace(root, "<ROOT>").Replace(root.Replace('\\', '/'), "<ROOT>").Replace(projectId, "<ID>")
 
-        let first = driveLifecycleWith true
-        let second = driveLifecycleWith true
+        let first = driveLifecycleWith true false
+        let second = driveLifecycleWith true false
 
         for path in readinessViews do
             let a = normalize first.Root (TestSupport.readRelative first.Root path)

@@ -1,0 +1,173 @@
+schemaVersion: 1
+workId: 868-performance-evidence-analyze-replay
+stage: evidence
+status: evidenceReady
+sourceSpec: work/868-performance-evidence-analyze-replay/spec.md
+sourceClarifications: work/868-performance-evidence-analyze-replay/clarifications.md
+sourceChecklist: work/868-performance-evidence-analyze-replay/checklist.md
+sourcePlan: work/868-performance-evidence-analyze-replay/plan.md
+sourceTasks: work/868-performance-evidence-analyze-replay/tasks.yml
+sourceAnalysis: readiness/868-performance-evidence-analyze-replay/analysis.json
+sourceSnapshots:
+  - label: analysis
+    path: readiness/868-performance-evidence-analyze-replay/analysis.json
+    digest: 50d71c526893f5e4d00bd1bd8fc002b9f12730cf4bf6ffb71a3a681401283412
+    schemaVersion: 1
+  - label: checklist
+    path: work/868-performance-evidence-analyze-replay/checklist.md
+    digest: 611230416b2ce747b7598fca0c3d91bcef91697cc69c1cdf8ed34ccf5ec53c35
+    schemaVersion: 1
+  - label: clarifications
+    path: work/868-performance-evidence-analyze-replay/clarifications.md
+    digest: d2765337101bdfb2d1a269fb344045e61d5080b9b42873319bb5990e6452fb9a
+    schemaVersion: 1
+  - label: plan
+    path: work/868-performance-evidence-analyze-replay/plan.md
+    digest: cc6026af58b1d98545a7102e661c220bc2e605afaa3ef14f672ab7c27d7cc4e6
+    schemaVersion: 1
+  - label: spec
+    path: work/868-performance-evidence-analyze-replay/spec.md
+    digest: a927cc013c794d54a114ee8578a5a706d6456bf1bff564832daa435b98eb22d2
+    schemaVersion: 1
+  - label: tasks
+    path: work/868-performance-evidence-analyze-replay/tasks.yml
+    digest: 78652cc2dcc10721ead71ff06e63b0651b261f3221dd42dc93daa6e17c95e7d3
+    schemaVersion: 1
+evidence:
+  - id: EV001
+    kind: verification
+    subject:
+      type: task
+      id: T001
+    taskRefs: [T001]
+    requirementRefs: [FR-001]
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV001]
+    artifacts: []
+    sourceRefs:
+      - kind: test
+        path: tests/FS.GG.SDD.Commands.Tests/LifecycleSmokeTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/868-performance-evidence-analyze-replay/868-performance-evidence.trx
+      digest: "sha256:77cb568f8ccb6f489f6d40191ac8454939b1b157c8eb6153baf5636226756031"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV002
+    kind: verification
+    subject:
+      type: task
+      id: T002
+    taskRefs: [T002]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV002]
+    artifacts: []
+    sourceRefs:
+      - kind: test
+        path: tests/FS.GG.SDD.Commands.Tests/LifecycleSmokeTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/868-performance-evidence-analyze-replay/868-performance-evidence.trx
+      digest: "sha256:77cb568f8ccb6f489f6d40191ac8454939b1b157c8eb6153baf5636226756031"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV003
+    kind: verification
+    subject:
+      type: task
+      id: T003
+    taskRefs: [T003]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV003]
+    artifacts: []
+    sourceRefs:
+      - kind: test
+        path: tests/FS.GG.SDD.Commands.Tests/LifecycleSmokeTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/868-performance-evidence-analyze-replay/868-performance-evidence.trx
+      digest: "sha256:77cb568f8ccb6f489f6d40191ac8454939b1b157c8eb6153baf5636226756031"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV004
+    kind: verification
+    subject:
+      type: task
+      id: T004
+    taskRefs: [T004]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: []
+    obligationRefs: [EV004]
+    artifacts: []
+    sourceRefs:
+      - kind: test
+        path: tests/FS.GG.SDD.Commands.Tests/LifecycleSmokeTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/868-performance-evidence-analyze-replay/868-performance-evidence.trx
+      digest: "sha256:77cb568f8ccb6f489f6d40191ac8454939b1b157c8eb6153baf5636226756031"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+  - id: EV005
+    kind: verification
+    subject:
+      type: task
+      id: T005
+    taskRefs: [T005]
+    requirementRefs: []
+    acceptanceScenarioRefs: []
+    clarificationDecisionRefs: []
+    checklistResultRefs: []
+    planDecisionRefs: [PD-001]
+    obligationRefs: [EV005]
+    artifacts: []
+    sourceRefs:
+      - kind: test
+        path: tests/FS.GG.SDD.Commands.Tests/LifecycleSmokeTests.fs
+    result: pass
+    synthetic: false
+    observedRun:
+      source: readiness/868-performance-evidence-analyze-replay/868-performance-evidence.trx
+      digest: "sha256:77cb568f8ccb6f489f6d40191ac8454939b1b157c8eb6153baf5636226756031"
+      digestContract: exact-bytes-v1
+      outcome: passed
+      passed: 1
+      failed: 0
+      skipped: 0
+    notes: [Evidence required before verify.]
+lifecycleNotes:
+  - "Next lifecycle action: verify."
