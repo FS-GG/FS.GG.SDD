@@ -1,5 +1,5 @@
 command: init
-toolVersion: 1.2.4
+toolVersion: 1.2.5
 outcome: succeeded
 changedArtifacts: 45
 generatedViews: 0

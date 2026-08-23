@@ -1,22 +1,22 @@
 {
   "schemaVersion": 1,
   "contractVersion": "2.0.0",
-  "generatorVersion": "FS.GG.SDD.Artifacts/1.2.4",
+  "generatorVersion": "FS.GG.SDD.Artifacts/1.2.5",
   "workId": "247-full-shape-golden",
   "sources": [
     {
       "path": "readiness/247-full-shape-golden/ship.json",
-      "digest": "sha256:49ed6d3186d006afcf8be06a06a4e3e8242eeb06ade79d4ab9afd4ca2b6813cd",
+      "digest": "sha256:a57e318b598fd66bfd101d43f2bc47ae17c53d71d3153cb0536cb5c129270694",
       "schemaVersion": 1
     },
     {
       "path": "readiness/247-full-shape-golden/verify.json",
-      "digest": "sha256:1446b8b80f0d1a31a49c157cbf977b8a66db7c41360eaf8518b9c7bfd2317b7b",
+      "digest": "sha256:0c7629ee58522e515abd6d0e35d21b6bae3cfe1d4662a4237a03110a1dd0463d",
       "schemaVersion": 1
     },
     {
       "path": "readiness/247-full-shape-golden/work-model.json",
-      "digest": "sha256:807ae58f07a1f34377b5ada2f8e01c4dcb131e7d765644d888c75c9d42f10973",
+      "digest": "sha256:54fd072e5e58d4406a17bb731f9c3f104e3138852183182c738d8a44a9ec7329",
       "schemaVersion": 1
     }
   ],

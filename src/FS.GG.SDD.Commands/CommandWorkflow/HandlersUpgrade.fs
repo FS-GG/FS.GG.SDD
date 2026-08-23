@@ -204,37 +204,80 @@ module internal HandlersUpgrade =
                 |> List.filter (fun (path, _) -> not (gameOwnedPaths.Contains path))
                 |> ownerBackfillRows ArtifactOwner.RenderingSkill affectedSkillIds
 
-            // #798 AC2: EITHER class having new rows is a reason to record. Gating on the driver
-            // rows alone dropped a GameSkill-only backfill even once the rows above existed — and a
-            // GameSkill-only backfill is the whole shape this item is about, since a step's targets need
-            // not touch a driver id at all.
-            let provenanceWrite =
-                if
-                    List.isEmpty newDriverPaths
-                    && List.isEmpty newGameSkillPaths
-                    && List.isEmpty newRenderingSkillPaths
-                then
-                    []
-                else
-                    let updated =
-                        { record with
-                            DriverPaths = mergeProducedRows record.DriverPaths newDriverPaths
-                            GameSkillPaths = mergeProducedRows record.GameSkillPaths newGameSkillPaths
-                            RenderingSkillPaths = mergeProducedRows record.RenderingSkillPaths newRenderingSkillPaths }
+            // The product manifest is the second governing declaration for every owner-sourced
+            // skill SDD materializes. Scaffold already composes this union; upgrade must perform
+            // the identical transaction when it backfills a missing copy, or the recovered file is
+            // immediately dangling to the consumer gate. Restrict additions to ids this step
+            // actually writes, and amend only an existing provider manifest — a workspace without
+            // one does not acquire a new contract during remediation.
+            let manifestAdditions =
+                HandlersScaffold.productManifestAdditions driver product rendering
+                |> List.filter (fun entry -> affectedSkillIds.Contains entry.Id)
 
-                    [ WriteFile(ScaffoldProvenance.provenancePath, ScaffoldProvenance.serialize updated, GeneratedView) ]
+            let manifestPlan = HandlersScaffold.productManifestAmend model manifestAdditions
 
-            writes @ provenanceWrite
-        | None -> []
+            match manifestPlan with
+            | Some(Error refusal) -> Error refusal
+            | _ ->
+                let manifestWrites, manifestDigest =
+                    match manifestPlan with
+                    | Some(Ok text) ->
+                        HandlersScaffold.productSkillManifestPaths
+                        |> List.map (fun path -> WriteFile(path, text, GeneratedView)),
+                        Some(Fsgg.SkillMirror.sha256 text)
+                    | None -> [], None
+                    | Some(Error _) -> failwith "unreachable: refused manifest amend handled above"
+
+                let refreshManifestDigests rows =
+                    match manifestDigest with
+                    | None -> rows
+                    | Some digest ->
+                        let manifestPaths = HandlersScaffold.productSkillManifestPaths |> Set.ofList
+
+                        rows
+                        |> List.map (fun (row: ScaffoldProvenance.ScaffoldProducedPath) ->
+                            if manifestPaths.Contains row.Path then
+                                { row with Sha256 = Some digest }
+                            else
+                                row)
+
+                // #798 AC2: EITHER class having new rows is a reason to record. The same write also
+                // advances the recorded digest of each manifest copy, so provenance and the manifest
+                // cannot disagree after one half of this transaction changes its bytes.
+                let provenanceWrite =
+                    if
+                        List.isEmpty newDriverPaths
+                        && List.isEmpty newGameSkillPaths
+                        && List.isEmpty newRenderingSkillPaths
+                    then
+                        []
+                    else
+                        let updated =
+                            { record with
+                                ProducedPaths = refreshManifestDigests record.ProducedPaths
+                                MirroredPaths = refreshManifestDigests record.MirroredPaths
+                                DriverPaths = mergeProducedRows record.DriverPaths newDriverPaths
+                                GameSkillPaths = mergeProducedRows record.GameSkillPaths newGameSkillPaths
+                                RenderingSkillPaths =
+                                    mergeProducedRows record.RenderingSkillPaths newRenderingSkillPaths }
+
+                        [ WriteFile(
+                              ScaffoldProvenance.provenancePath,
+                              ScaffoldProvenance.serialize updated,
+                              GeneratedView
+                          ) ]
+
+                Ok(writes @ manifestWrites @ provenanceWrite)
+        | None -> Ok []
 
     let applyEffectsFor model (request: CommandRequest) (step: ReconciliationStep) =
         match step.StepId with
-        | ReconciliationStepId.CliSelfUpdate -> [ selfUpdateEffect ]
+        | ReconciliationStepId.CliSelfUpdate -> Ok [ selfUpdateEffect ]
         | ReconciliationStepId.ArtifactReSeed ->
-            reSeedEffects request step.TargetPaths
-            @ ownerBackfillEffects model step.TargetPaths
+            ownerBackfillEffects model step.TargetPaths
+            |> Result.map (fun effects -> reSeedEffects request step.TargetPaths @ effects)
         // templateRePin is `noTarget` in this feature (R6) and never actionable.
-        | ReconciliationStepId.TemplateRePin -> []
+        | ReconciliationStepId.TemplateRePin -> Ok []
 
     // FS-GG/FS.GG.SDD#736: the advisory that closes an `upgrade` over un-repaired skill drift must
     // name the condition it actually found. There were three conditions and ONE sentence, and the
@@ -419,42 +462,53 @@ module internal HandlersUpgrade =
             | ReconciliationStepId.ArtifactReSeed -> ownerBackfillPreservedFiles model step.TargetPaths
             | _ -> []
 
-        let verificationReads = preservedFiles |> List.map (fst >> ReadFile)
+        let verificationReads =
+            (match step.StepId with
+             | ReconciliationStepId.ArtifactReSeed when not (List.isEmpty step.TargetPaths) ->
+                 (HandlersScaffold.productSkillManifestSourcePath, "") :: preservedFiles
+             | _ -> preservedFiles)
+            |> List.map (fst >> ReadFile)
+            |> List.distinct
 
-        let readsInterpreted =
+        let outstandingReads =
             verificationReads
-            |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
+            |> List.filter (fun effect -> not (hasInterpreted (effectKey effect) model))
 
-        let readsPlanned =
-            verificationReads
-            |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
+        let unemittedReads =
+            outstandingReads
+            |> List.filter (fun effect -> not (hasPlanned (effectKey effect) model))
 
-        if not readsInterpreted then
-            if readsPlanned then
+        if not (List.isEmpty outstandingReads) then
+            if List.isEmpty unemittedReads then
                 Awaiting
             else
-                EmitEffects verificationReads
+                EmitEffects unemittedReads
         elif not (preservedFilesVerified model preservedFiles) then
             // A missing/unreadable/tampered preserved file must never be laundered into a fresh
             // canonical digest in provenance. Fail before emitting any recovery write.
             Resolved ReconciliationOutcome.Failed
         else
-            let effects = applyEffectsFor model request step
+            match applyEffectsFor model request step with
+            | Error _ ->
+                // A malformed or future product manifest is not a reason to materialize bytes
+                // without their governing declaration. Refuse the whole re-seed before its first
+                // write; the generic failed-step diagnostic remains the upgrade-facing contract.
+                Resolved ReconciliationOutcome.Failed
+            | Ok effects ->
+                let allInterpreted =
+                    effects |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
 
-            let allInterpreted =
-                effects |> List.forall (fun effect -> hasInterpreted (effectKey effect) model)
+                let anyPlanned =
+                    effects |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
 
-            let anyPlanned =
-                effects |> List.exists (fun effect -> hasPlanned (effectKey effect) model)
-
-            if List.isEmpty effects then
-                Resolved ReconciliationOutcome.Applied
-            elif allInterpreted then
-                Resolved(applyOutcome model effects)
-            elif anyPlanned then
-                Awaiting
-            else
-                EmitEffects effects
+                if List.isEmpty effects then
+                    Resolved ReconciliationOutcome.Applied
+                elif allInterpreted then
+                    Resolved(applyOutcome model effects)
+                elif anyPlanned then
+                    Awaiting
+                else
+                    EmitEffects effects
 
     let private stepProgress model (request: CommandRequest) (step: ReconciliationStep) =
         if request.AssumeYes then
@@ -588,7 +642,7 @@ module internal HandlersUpgrade =
         let failedOnUnreadableTarget stepId =
             actionable
             |> List.filter (fun step -> step.StepId = stepId)
-            |> List.collect (applyEffectsFor model request)
+            |> List.collect (fun step -> applyEffectsFor model request step |> Result.defaultValue [])
             |> List.exists (fun effect ->
                 model.InterpretedEffects
                 |> List.exists (fun result ->
