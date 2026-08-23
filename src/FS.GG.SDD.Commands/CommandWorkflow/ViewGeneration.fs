@@ -948,7 +948,12 @@ module internal ViewGeneration =
                 |> List.tryFind (fun snapshot -> normalizeRelativePath snapshot.Path = evidencePath workId)
                 |> Option.map _.Text
 
-            snapshots @ performanceEvidenceSnapshots workId performanceEvidenceText model
+            // Explicit evidence routes already carried this source correctly.  Keep that leg
+            // separate so the post-evidence analyze fallback can be inverted independently and
+            // the regression proves the missing-input route rather than disabling its own setup.
+            match evidenceText with
+            | Some _ -> snapshots @ performanceEvidenceSnapshots workId performanceEvidenceText model
+            | None -> snapshots @ performanceEvidenceSnapshots workId performanceEvidenceText model
         |> List.map (fun snapshot ->
             { snapshot with
                 Path = normalizeRelativePath snapshot.Path })

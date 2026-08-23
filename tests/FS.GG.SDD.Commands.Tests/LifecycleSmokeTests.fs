@@ -325,7 +325,7 @@ module LifecycleSmokeTests =
             Assert.Equal(0, exitCode)
             Assert.DoesNotContain("\"outcome\": \"blocked\"", output)
 
-        let tracked =
+        let captureTracked () =
             Directory.EnumerateFiles(d.Root, "*", SearchOption.AllDirectories)
             |> Seq.map (fun path -> Path.GetRelativePath(d.Root, path).Replace('\\', '/'))
             |> Seq.filter (fun path -> path.StartsWith("work/") || path.StartsWith("readiness/"))
@@ -333,7 +333,7 @@ module LifecycleSmokeTests =
             |> Seq.map (fun path -> path, TestSupport.readRelative d.Root path)
             |> Seq.toList
 
-        let assertDirectStage (stage: string) (expectedReadiness: string) (summaryProperty: string) =
+        let assertDirectStage expectedFiles (stage: string) (expectedReadiness: string) (summaryProperty: string) =
             // This must remain one child process at a time.  Constructing an eager replay list
             // makes every later assertion observe only the post-ship filesystem state.
             let exitCode, output, error = runBuiltCli d.Root stage
@@ -360,8 +360,63 @@ module LifecycleSmokeTests =
             for view in generatedViews do
                 Assert.Equal("current", view.GetProperty("currency").GetString())
 
-            for (path, expected) in tracked do
+            for (path, expected) in expectedFiles do
                 Assert.Equal(expected, TestSupport.readRelative d.Root path)
+
+        // Make the first post-setup operation the parsed production `analyze` gate.  The exact
+        // fallback-to-None mutation must die here, before a fixture assertion or later stage can
+        // obscure which route caught the rewrite.
+        let preflightBytes = captureTracked ()
+        assertDirectStage preflightBytes "analyze" "implementationReady" "analysis"
+
+        // Prove the fixture's subject is live before taking the two-cycle replay baseline.  Without
+        // these assertions a missing performance declaration makes byte stability vacuously green.
+        use workModel =
+            JsonDocument.Parse(TestSupport.readRelative d.Root $"readiness/{workId}/work-model.json")
+
+        let performanceEvidence =
+            workModel.RootElement.GetProperty("evidence").EnumerateArray()
+            |> Seq.tryFind (fun item -> item.GetProperty("performanceBudget").ValueKind = JsonValueKind.Object)
+
+        Assert.True(performanceEvidence.IsSome, "generated work model has no active performance evidence")
+        let performanceEvidence = performanceEvidence.Value
+        let budget = performanceEvidence.GetProperty("performanceBudget")
+        let intent = budget.GetProperty("intent")
+        Assert.Equal("active", intent.GetProperty("disposition").GetString())
+
+        Assert.Equal(
+            "performance-evidence-v1",
+            performanceEvidence.GetProperty("performanceEvidenceArtifact").GetProperty("contractVersion").GetString()
+        )
+
+        let hasNormalWorkload =
+            budget.GetProperty("workloadIds").EnumerateArray()
+            |> Seq.exists (fun workload -> workload.GetString() = "normal-play")
+
+        let hasStressWorkload =
+            budget.GetProperty("stressWorkloadIds").EnumerateArray()
+            |> Seq.exists (fun workload -> workload.GetString() = "pointer-stress")
+
+        Assert.True(hasNormalWorkload, "generated work model has no normal-play workload")
+        Assert.True(hasStressWorkload, "generated work model has no pointer-stress workload")
+
+        use verifyView =
+            JsonDocument.Parse(TestSupport.readRelative d.Root $"readiness/{workId}/verify.json")
+
+        let performanceEvidenceId = performanceEvidence.GetProperty("id").GetString()
+
+        let performanceEvidenceWasObserved =
+            verifyView.RootElement.GetProperty("evidenceDispositions").EnumerateArray()
+            |> Seq.exists (fun disposition ->
+                disposition.GetProperty("obligationId").GetString() = performanceEvidenceId
+                && disposition.GetProperty("observed").GetBoolean())
+
+        Assert.True(
+            performanceEvidenceWasObserved,
+            "generated verification model has no observed-run evidence for the active performance declaration"
+        )
+
+        let tracked = captureTracked ()
 
         // Two direct, unwrapped, production-default cycles must leave every work/readiness byte
         // (including the Governance handoff and compact ship verdict) unchanged immediately after
@@ -371,7 +426,7 @@ module LifecycleSmokeTests =
                 [ "analyze", "implementationReady", "analysis"
                   "verify", "verificationReady", "verification"
                   "ship", "shipReady", "ship" ] do
-                assertDirectStage stage expectedReadiness summaryProperty
+                assertDirectStage tracked stage expectedReadiness summaryProperty
 
     [<Fact>]
     let ``analyze ignores only tool-owned evidence snapshots when calculating work-model currency`` () =
