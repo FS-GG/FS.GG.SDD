@@ -327,7 +327,9 @@ module internal HandlersScaffold =
             else
                 [ installEffect ]
 
-        refreshEffects @ scaffoldInitEffects request @ [ RunProcess("dotnet", createArgs, "") ]
+        refreshEffects
+        @ scaffoldInitEffects request
+        @ [ RunProcess("dotnet", createArgs, "") ]
 
     let plannedCreateCommand
         (descriptor: ProviderDescriptor)
@@ -715,6 +717,7 @@ module internal HandlersScaffold =
     let private manifestEntriesOf
         (provenancePaths: (string * string) list)
         (materializedScopes: Map<string, string>)
+        (materializedSuppliers: Map<string, string>)
         (fallbackScope: string)
         =
         provenancePaths
@@ -741,7 +744,7 @@ module internal HandlersScaffold =
                       Sha256 = skillSha256
                       ResolvablePath = Some(Fsgg.SkillMirror.skillPath Fsgg.SkillMirror.providerSourceRoot id)
                       MaterializesWhen = "always"
-                      SuppliedBy = None
+                      SuppliedBy = materializedSuppliers |> Map.tryFind id
                       Files = declaredFiles }
 
                 entry))
@@ -760,9 +763,13 @@ module internal HandlersScaffold =
         // means `distinctBy` keeps the entry whose bytes were actually WRITTEN (the established channel's,
         // which the no-clobber write laid down first) instead of silently declaring a digest for a
         // body no file on disk carries.
-        manifestEntriesOf driverOutcome.ProvenancePaths driverOutcome.MaterializedScopes "process"
-        @ manifestEntriesOf gameSkillOutcome.ProvenancePaths gameSkillOutcome.MaterializedScopes "product"
-        @ manifestEntriesOf renderingSkillOutcome.ProvenancePaths renderingSkillOutcome.MaterializedScopes "product"
+        manifestEntriesOf driverOutcome.ProvenancePaths driverOutcome.MaterializedScopes Map.empty "process"
+        @ manifestEntriesOf gameSkillOutcome.ProvenancePaths gameSkillOutcome.MaterializedScopes Map.empty "product"
+        @ manifestEntriesOf
+            renderingSkillOutcome.ProvenancePaths
+            renderingSkillOutcome.MaterializedScopes
+            renderingSkillOutcome.MaterializedSuppliers
+            "product"
         |> List.distinctBy (fun (entry: ProductSkillManifest.ProductManifestEntry) -> entry.Id)
 
     // FS.GG.SDD#739: the amend as ONE function of the model plus the plan, so the tick that consumes
@@ -1098,7 +1105,8 @@ module internal HandlersScaffold =
         let readEffect = ReadFile rootGitignorePath
 
         let readResult =
-            model.InterpretedEffects |> List.tryFind (fun result -> isRootGitignoreRead result.Effect)
+            model.InterpretedEffects
+            |> List.tryFind (fun result -> isRootGitignoreRead result.Effect)
 
         match readResult with
         | None ->
@@ -1110,8 +1118,7 @@ module internal HandlersScaffold =
                 [ readEffect ]
         | Some _ ->
             let providerBytes =
-                snapshot rootGitignorePath model
-                |> Option.bind (fun value -> value.RawBytes)
+                snapshot rootGitignorePath model |> Option.bind (fun value -> value.RawBytes)
 
             // The policy is deliberately hybrid: the handler has already preserved the complete
             // provider-owned region and only added SDD's declared prefix. AgentGuidanceTarget

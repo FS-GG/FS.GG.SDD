@@ -201,8 +201,7 @@ module ScaffoldCommandTests =
             |> Option.defaultWith (fun () -> failwith "Expected the provider create process.")
 
         match create.Effect with
-        | RunProcess(_, args, _) ->
-            Assert.DoesNotContain("--force", args)
+        | RunProcess(_, args, _) -> Assert.DoesNotContain("--force", args)
         | _ -> failwith "Expected the provider create process."
 
         let createIndex =
@@ -234,7 +233,8 @@ module ScaffoldCommandTests =
             File.Copy(Path.Combine(fixturesRoot, "gitignore-root", file), Path.Combine(source, file))
 
         let template =
-            File.ReadAllText(Path.Combine(fixturesRoot, "gitignore-root", ".template.config", "template.json"))
+            File
+                .ReadAllText(Path.Combine(fixturesRoot, "gitignore-root", ".template.config", "template.json"))
                 .Replace("FsggSdd.Fixture.GitignoreRoot", "FsggSdd.Fixture.GitignoreRawBytes")
                 .Replace("fsgg-fixture-gitignore-root", "fsgg-fixture-gitignore-raw-bytes")
 
@@ -242,6 +242,7 @@ module ScaffoldCommandTests =
         File.WriteAllBytes(Path.Combine(source, ".gitignore"), providerBytes)
 
         let sourceForRegistry = source.Replace('\\', '/')
+
         TestSupport.writeRelative
             root
             ".fsgg/providers.yml"
@@ -261,7 +262,9 @@ providers:
 
         Assert.Equal(0, exitCodeForReport report)
 
-        let expected = Array.append (Encoding.UTF8.GetBytes Foundation.gitignoreSeedText) providerBytes
+        let expected =
+            Array.append (Encoding.UTF8.GetBytes Foundation.gitignoreSeedText) providerBytes
+
         let actual = File.ReadAllBytes(Path.Combine(root, ".gitignore"))
         Assert.Equal<byte array>(expected, actual)
 
@@ -1416,6 +1419,42 @@ providers:
             elmish.Files
             |> List.map (fun (f: ProductSkillManifest.ProductManifestFile) -> f.Path)
             |> List.sort
+        )
+
+        // FS.GG.SDD#864 reopened residue: the provider-owned row remains attributed to the
+        // provider, while the Rendering-owned row injected after provider execution carries the
+        // source attribution from the embedded package manifest. Without the second value both
+        // rows look producer-owned to a downstream product-manifest consumer.
+        Assert.Equal(Some "template/product-skills/fs-gg-elmish/", elmish.SuppliedBy)
+
+        let feedback =
+            entries
+            |> List.find (fun (e: ProductSkillManifest.ProductManifestEntry) -> e.Id = "fs-gg-feedback-report")
+
+        Assert.Equal("product", feedback.Scope)
+        Assert.Equal(Some "template/feedback-report/skill/", feedback.SuppliedBy)
+        Assert.Equal("1b6888de4b8ce96f61e7a98c2bb9e0b249cdca2cd90da7bec6884bdccf055fe2", feedback.Sha256)
+
+        let feedbackOnDisk =
+            let skillRoot = Path.Combine(root, ".agents", "skills", feedback.Id)
+
+            Directory.GetFiles(skillRoot, "*", SearchOption.AllDirectories)
+            |> Array.map (fun path ->
+                Path.GetRelativePath(skillRoot, path).Replace('\\', '/'),
+                Fsgg.SkillMirror.sha256 (File.ReadAllText path))
+            |> Array.sortBy fst
+            |> Array.toList
+
+        let feedbackDeclared =
+            feedback.Files
+            |> List.map (fun (f: ProductSkillManifest.ProductManifestFile) -> f.Path, f.Sha256)
+            |> List.sortBy fst
+
+        Assert.Equal<(string * string) list>(feedbackOnDisk, feedbackDeclared)
+
+        Assert.Equal<string list>(
+            [ "SKILL.md"; "scripts/FeedbackReportTool.fs"; "scripts/feedback-tool.fsx" ],
+            feedback.Files |> List.map _.Path |> List.sort
         )
 
         // (2) EVERY row SDD folded in carries its OWN complete file set, and every declared digest
