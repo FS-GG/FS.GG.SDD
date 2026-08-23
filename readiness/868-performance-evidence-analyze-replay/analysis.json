@@ -4,7 +4,7 @@
   "workId": "868-performance-evidence-analyze-replay",
   "stage": "analyze",
   "status": "implementationReady",
-  "generator": "FS.GG.SDD.Artifacts/1.1.0",
+  "generator": "FS.GG.SDD.Artifacts/1.2.0",
   "sources": [
     {
       "path": ".fsgg/agents.yml",
@@ -41,7 +41,7 @@
       "kind": "workModel",
       "digest": {
         "algorithm": "sha256",
-        "value": "76866f7c0286abd9acbf9baf113a5c1a00e43d68869c807e9e4668bc20e31c6f"
+        "value": "af7db604c0309c86c98fc10ef78f99cdcfd735602f94a3dd70c811576e727ffb"
       },
       "schemaVersion": 1,
       "schemaStatus": "current"
