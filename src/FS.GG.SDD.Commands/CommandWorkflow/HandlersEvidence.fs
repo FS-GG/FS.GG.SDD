@@ -163,7 +163,15 @@ module internal HandlersEvidence =
         // deciding absence. The real verdict is taken in the gate, against the probe results.
         let citedBy (artifact: EvidenceArtifact option) =
             match artifact with
-            | Some artifact -> artifact.Evidence |> List.collect (missingCitedArtifacts (fun _ -> false))
+            | Some artifact ->
+                [ artifact.Evidence |> List.collect (missingCitedArtifacts (fun _ -> false))
+                  // A deferred declaration does not claim its ordinary artifacts exist, but a
+                  // performanceBudget always asks the evaluator to inspect its measured artifact.
+                  // Sense that path independently of the evidence disposition; otherwise the same
+                  // file is readable for `verification` and falsely "absent" for `deferral`.
+                  artifact.Evidence
+                  |> List.choose (fun declaration -> declaration.PerformanceBudget |> Option.map _.ArtifactPath) ]
+                |> List.concat
             | None -> []
 
         // BOTH sources, because the gate validates `merged` (existing ⊕ input), not the on-disk
@@ -176,6 +184,7 @@ module internal HandlersEvidence =
         let input, _ = parseInputEvidence workId model.Request
 
         citedBy existing @ citedBy input
+        |> List.filter citedPathIsContained
         |> List.map normalizeRelativePath
         |> List.filter (fun path -> not (Set.contains path alreadyPlanned))
         |> List.distinct
@@ -984,7 +993,11 @@ module internal HandlersEvidence =
         let performanceEvaluations =
             evaluatePerformanceBudgets artifactText artifact.Evidence
 
-        let performanceIntentBindings =
+        // A budget may omit its optional embedded intent while the producer needed to bind that
+        // intent does not exist yet. The early intent remains canonical, and the budget evaluator
+        // still validates every measurement field it can observe. Only an explicit embedded intent
+        // claims a binding, so only an explicit divergent value is a binding defect.
+        let divergentPerformanceIntentBindings =
             match performanceIntent with
             | Some intent when intent.Disposition.Equals("active", StringComparison.OrdinalIgnoreCase) ->
                 artifact.Evidence
@@ -992,7 +1005,8 @@ module internal HandlersEvidence =
                     declaration.PerformanceBudget
                     |> Option.bind (fun budget ->
                         budget.Intent |> Option.map (fun bound -> declaration.Id.Value, bound)))
-                |> List.filter (fun (_, bound) -> bound = intent)
+                |> List.filter (fun (_, bound) -> bound <> intent)
+                |> List.map fst
             | _ -> []
 
         [ if not (String.Equals(artifact.WorkId.Value, workId, StringComparison.OrdinalIgnoreCase)) then
@@ -1027,18 +1041,13 @@ module internal HandlersEvidence =
               evidenceArtifactNotFound path missingArtifactPaths
           if not (List.isEmpty selfShipVerdictPaths) then
               evidenceSelfShipVerdictCitedFromEvidence path selfShipVerdictPaths
-          match performanceIntent with
-          | Some intent when
-              intent.Disposition.Equals("active", StringComparison.OrdinalIgnoreCase)
-              && List.isEmpty performanceIntentBindings
-              ->
+          if not (List.isEmpty divergentPerformanceIntentBindings) then
               errorDiagnostic
-                  "evidence.performanceIntentUnbound"
+                  "evidence.performanceIntentMismatch"
                   (Some path)
-                  "The active early performance intent is not bound by any performanceBudget declaration."
-                  "Copy the canonical performanceIntent into performanceBudget.intent and cite its measured artifact."
-                  [ intent.Id ]
-          | _ -> ()
+                  "A performanceBudget embeds an intent that diverges from the canonical early performance intent."
+                  "Copy the canonical performanceIntent exactly, or omit performanceBudget.intent until the measured producer can bind it."
+                  divergentPerformanceIntentBindings
           for evaluation in performanceEvaluations do
               match evaluation.State with
               | PerformancePassed ->
