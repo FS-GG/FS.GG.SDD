@@ -473,3 +473,31 @@ module RenderingSkillsTests =
         Assert.Empty outcome.Writes
         Assert.Empty outcome.UndeliverableSidecars
         Assert.Equal(None, outcome.ManifestError)
+
+    [<Fact>]
+    let ``schema-v2 materializes every declared sidecar into every agent root`` () =
+        let body = "skill body\n"
+        let sidecar = "tool body\n"
+        let manifest =
+            Some(sprintf """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always", "files": [ { "path": "SKILL.md", "sha256": "%s" }, { "path": "scripts/tool.fsx", "sha256": "%s" } ] } ] }""" (Fsgg.SkillMirror.sha256 body) (Fsgg.SkillMirror.sha256 body) (Fsgg.SkillMirror.sha256 sidecar))
+        let files =
+            Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body
+                         ("fs-gg-widget", "scripts/tool.fsx"), System.Text.Encoding.UTF8.GetBytes sidecar ]
+        let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
+        Assert.Empty outcome.VerifyFailedIds
+        for root in roots do
+            Assert.Contains($"{root}/skills/fs-gg-widget/SKILL.md", outcome.ProvenancePaths |> List.map fst)
+            Assert.Contains($"{root}/skills/fs-gg-widget/scripts/tool.fsx", outcome.ProvenancePaths |> List.map fst)
+
+    [<Fact>]
+    let ``schema-v2 fails closed when a sidecar is missing or undeclared`` () =
+        let body = "skill body\n"
+        let sidecar = "tool body\n"
+        let manifest =
+            Some(sprintf """{ "schemaVersion": 2, "skills": [ { "id": "fs-gg-widget", "scope": "product", "sha256": "%s", "materializes-when": "always", "files": [ { "path": "SKILL.md", "sha256": "%s" }, { "path": "scripts/tool.fsx", "sha256": "%s" } ] } ] }""" (Fsgg.SkillMirror.sha256 body) (Fsgg.SkillMirror.sha256 body) (Fsgg.SkillMirror.sha256 sidecar))
+        let missing = Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body ]
+        let extra = Map.ofList [ ("fs-gg-widget", "SKILL.md"), System.Text.Encoding.UTF8.GetBytes body; ("fs-gg-widget", "scripts/tool.fsx"), System.Text.Encoding.UTF8.GetBytes sidecar; ("fs-gg-widget", "extra.fsx"), System.Text.Encoding.UTF8.GetBytes "x" ]
+        for files in [ missing; extra ] do
+            let outcome = RenderingSkills.planFilesFrom manifest files Map.empty
+            Assert.Equal<string list>([ "fs-gg-widget" ], outcome.VerifyFailedIds)
+            Assert.Empty outcome.Writes
